@@ -182,8 +182,8 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
 IpxStatus solveModelWithIpx(const HighsLp& lp,
 			    const HighsOptions& options,
-			    HighsModelStatus& highs_model_status,
-			    HighsInfo& highs_info,
+			    HighsModelStatus& unscaled_model_status,
+			    HighsSolutionParams& unscaled_solution_params,
 			    HighsSolution& highs_solution,
                             HighsBasis& highs_basis) {
   int debug = 0;
@@ -221,7 +221,9 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
       lps.Solve(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
                 &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
 
+  printf("IPX Solve: status = %d\n", (int)status);
   if (status != IPX_STATUS_solved) {
+    unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
     // fatal error (invalid input, out of memory, etc.)
     std::cout << " status: " << status << ','
               << " errflag: " << lps.GetInfo().errflag << '\n';
@@ -231,6 +233,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
   // Get solver and solution information.
   ipx::Info ipx_info = lps.GetInfo();
   // Struct ipx_info defined in ipx/include/ipx_info.h
+  printf("IPX Solve: status_ipm = %d\n", (int)ipx_info.status_ipm);
 
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
@@ -247,6 +250,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
 
+  printf("IPX GetInteriorSolution: status_crossover = %d\n", (int)ipx_info.status_crossover);
   if (ipx_info.status_crossover == IPX_STATUS_optimal ||
       ipx_info.status_crossover == IPX_STATUS_imprecise) {
     if (ipx_info.status_crossover == IPX_STATUS_imprecise) {
@@ -279,19 +283,25 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
 			 &ipx_solution.ipx_row_status[0],
 			 &ipx_solution.ipx_col_status[0]);
     
+    printf("IPX GetBasicSolution: status_crossover = %d\n", (int)ipx_info.status_crossover);
+
     // Convert the IPX basic solution to a HiGHS basic solution
     ipxToHighsBasicSolution(lp, rhs, constraint_type, ipx_solution, highs_basis, highs_solution);
+
+    
+    // Set optimal 
+    printf("IPX: May be setting unscaled model status erroneously to OPTIMAL\n");
+    unscaled_model_status = HighsModelStatus::OPTIMAL;
 
     int report_level = -1;
 #ifdef HiGHSDEV
     report_level = 1;
 #endif
-    HighsSolutionParams solution_params;
-    initialiseSolutionParams(solution_params, options);
-    solution_params.ipm_iteration_count = (int)ipx_info.iter;
-    highs_model_status = analyseHighsBasicSolution(lp, highs_basis, highs_solution,
-						   solution_params, report_level, "after IPX");
-    copyFromSolutionParams(highs_info, solution_params);
+    initialiseSolutionParams(unscaled_solution_params, options);
+    unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
+    unscaled_solution_params.objective_function_value = ipx_info.objval;
+    analyseHighsBasicSolution(lp, highs_basis, highs_solution,
+			      unscaled_solution_params, report_level, "after IPX");
   }
   return IpxStatus::OK;
 }

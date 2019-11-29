@@ -1125,6 +1125,14 @@ std::string iterationsToString(const HighsSolutionParams& solution_params) {
   return iteration_statement;
 }
 
+void invalidateModelStatusAndSolutionStatusParams(HighsModelStatus& unscaled_model_status,
+						  HighsModelStatus& scaled_model_status,
+						  HighsSolutionParams& solution_params) {
+  unscaled_model_status = HighsModelStatus::NOTSET;
+  scaled_model_status = HighsModelStatus::NOTSET;
+  invalidateSolutionStatusParams(solution_params);
+}
+
 // Zero a HighsSolutionParams instance
 void invalidateSolutionParams(HighsSolutionParams& solution_params) {
   invalidateSolutionIterationCountParams(solution_params);

@@ -7,25 +7,13 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file ipm/IpxWrapperEmpty.h
- * @brief
+/**@file lp_data/HighsSolve.h
+ * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef INTERIOR_POINT_IPX_WRAPPER_EMPTY_H_
-#define INTERIOR_POINT_IPX_WRAPPER_EMPTY_H_
+#ifndef LP_DATA_HIGHSSOLVE_H_
+#define LP_DATA_HIGHSSOLVE_H_
 
-#include "lp_data/HConst.h"
-#include "lp_data/HighsLp.h"
-#include "ipm/IpxStatus.h"
-
-IpxStatus solveModelWithIpx(const HighsLp& lp,
-			    const HighsOptions& options,
-			    HighsModelStatus& unscaled_model_status,
-			    HighsSolutionParams& unscaled_solution_params,
-			    HighsSolution& solution,
-                            HighsBasis& basis) {
-  highs_model_status = HighsModelStatus::NOTSET;
-  return IpxStatus::Error;
-}
-
-#endif
+#include "lp_data/HighsModelUtils.h"
+HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
+#endif  // LP_DATA_HIGHSSOLVE_H_

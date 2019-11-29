@@ -283,11 +283,6 @@ HighsStatus Highs::run() {
   reportOptions(stdout, options_.records);  //, true);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
 
-  // IPX with no presolve yet.
-  if (options_.solver == "ipm") {
-    int ipx_iteration_count = 0;
-    return callRunSolver(hmos_[0], ipx_iteration_count, "IPX");
-  }
   if (options_.mip) return runBnb();
 
   // Running as LP solver: start the HiGHS clock unless it's already running
@@ -306,8 +301,8 @@ HighsStatus Highs::run() {
   int solved_hmo = original_hmo;
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   int iteration_count;
-  //  printf("\nHighs::run() 1: basis_.valid_ = %d\n",
-  //  basis_.valid_);fflush(stdout);
+  //  printf("\nHighs::run() 1: basis_.valid_ = %d\n", basis_.valid_);
+  //  fflush(stdout);
   if (!basis_.valid_) {
     // No HiGHS basis so consider presolve
     hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -325,7 +320,7 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::NotPresolved: {
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
         HighsStatus return_status =
-            callRunSolver(hmos_[solved_hmo], iteration_count,
+            runSolver(hmos_[solved_hmo], iteration_count,
                           "Not presolved: solving the LP");
         solve_iteration_count += iteration_count;
         if (return_status != HighsStatus::OK) return return_status;
@@ -334,7 +329,7 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
         HighsStatus return_status =
-            callRunSolver(hmos_[solved_hmo], iteration_count,
+            runSolver(hmos_[solved_hmo], iteration_count,
                           "Problem not reduced by presolve: solving the LP");
         solve_iteration_count += iteration_count;
         if (return_status != HighsStatus::OK) return return_status;
@@ -353,7 +348,7 @@ HighsStatus Highs::run() {
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
-        HighsStatus return_status = callRunSolver(
+        HighsStatus return_status = runSolver(
             hmos_[solved_hmo], iteration_count, "Solving the presolved LP");
         solve_iteration_count += iteration_count;
         if (return_status != HighsStatus::OK) return return_status;
@@ -443,7 +438,6 @@ HighsStatus Highs::run() {
 				 hmos_[original_hmo].basis_,
 				 hmos_[original_hmo].solution_,
 				 unscaled_solution_params, report_level, "after returning from postsolve");
-	  //	  copyFromSolutionParams(hmos_[original_hmo].simplex_info_, solution_params);
 
           // Now hot-start the simplex solver for the original_hmo
           solved_hmo = original_hmo;
@@ -451,13 +445,16 @@ HighsStatus Highs::run() {
           // be used
           HighsOptions save_options = hmos_[solved_hmo].options_;
           HighsOptions& options = hmos_[solved_hmo].options_;
+	  // Force the use of simplex to clean up if IPM has been used
+	  // to solve the presolved problem
+	  if (options.solver == ipm_string) options.solver = simplex_string;
           options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
           // Set the message level to ML_ALWAYS so that data for
           // individual iterations are reported
           bool full_iteration_logging = false;
           if (full_iteration_logging) HighsSetMessagelevel(ML_ALWAYS);
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
-          HighsStatus return_status = callRunSolver(
+          HighsStatus return_status = runSolver(
               hmos_[solved_hmo], iteration_count,
               "Solving the original LP from the solution after postsolve");
           postsolve_iteration_count = iteration_count;
@@ -480,7 +477,7 @@ HighsStatus Highs::run() {
     solved_hmo = original_hmo;
     hmos_[solved_hmo].lp_.lp_name_ = "Re-solved LP";
     HighsStatus return_status =
-        callRunSolver(hmos_[solved_hmo], iteration_count, "Re-solving the LP");
+        runSolver(hmos_[solved_hmo], iteration_count, "Re-solving the LP");
     solve_iteration_count += iteration_count;
     if (return_status != HighsStatus::OK) return return_status;
   }
@@ -497,16 +494,24 @@ HighsStatus Highs::run() {
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   // ToDo: make sure the model_status values are corrected
 
+  HighsSolutionParams& unscaled_solution_params = hmos_[solved_hmo].unscaled_solution_params_;
   model_status_ = hmos_[solved_hmo].unscaled_model_status_;
   scaled_model_status_ = hmos_[solved_hmo].scaled_model_status_;
   
-  info_.objective_function_value = hmos_[original_hmo].simplex_info_.dual_objective_value;
+  info_.objective_function_value = unscaled_solution_params.objective_function_value;
+  // Get the total simplex IPM and crossover iteration counts over all HMO
   info_.simplex_iteration_count = 0;
+  info_.ipm_iteration_count = 0;
+  info_.crossover_iteration_count = 0;
   for (int k = 0; k < hmos_size; k++) {
     info_.simplex_iteration_count += hmos_[k].scaled_solution_params_.simplex_iteration_count;
+    info_.ipm_iteration_count += hmos_[k].scaled_solution_params_.ipm_iteration_count;
+    info_.crossover_iteration_count += hmos_[k].scaled_solution_params_.crossover_iteration_count;
   }
-  info_.primal_status = hmos_[original_hmo].unscaled_solution_params_.primal_status;
-  info_.dual_status = hmos_[original_hmo].unscaled_solution_params_.dual_status;
+  info_.primal_status = unscaled_solution_params.primal_status;
+  info_.dual_status = unscaled_solution_params.dual_status;
+  // The HiGHS solution and basis have to come from the original_hmo
+  // for them to have the right dimension.
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
   // Report times
@@ -1095,65 +1100,44 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 }
 
 // The method below runs simplex or ipx solver on the lp.
-HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
+HighsStatus Highs::runSolver(HighsModelObject& model, int& iteration_count,
                                  const string message) {
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
-
-  if (options_.solver == "ipm") {
-    HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
-    IpxStatus ipx_return = solveModelWithIpx(lp_, options_, model_status_,
-					     info_, solution_, basis_);
-    if (ipx_return != IpxStatus::OK) {
-      // todo:
-      return HighsStatus::Error;
-    }
-    return HighsStatus::OK;
-  }
-
-  HighsStatus solver_return_status;
-  if (!model.lp_.numRow_) {
-    // Handle the case of unconstrained LPs here
-    HighsSimplexInterface simplex_interface(model);
-    solver_return_status = solveUnconstrainedLp(model);
-    iteration_count = 0;
-  } else {
-    int initial_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
-    solver_return_status = runSolver(model);
-    int final_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
-    iteration_count = final_iteration_count - initial_iteration_count;
-  }
-  return solver_return_status;
-}
-
-// The method below runs simplex or ipx solver on the lp.
-HighsStatus Highs::runSolver(HighsModelObject& model) {
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
   //  bool normalise = true;
-  HighsStatus assess_lp_status = assessLp(lp_, options_);  //, normalise);
+  HighsStatus assess_lp_status = assessLp(lp_, options_);
   assert(assess_lp_status == HighsStatus::OK);
   if (assess_lp_status != HighsStatus::OK) return HighsStatus::Error;
 #endif
-#ifndef IPX
-  // HiGHS
-  // todo: Without the presolve part, so will be
-  //     = solve_simplex(options, reduced_lp, reduced_solution)
-  HighsStatus return_status = solveModelSimplex(model);
-  if (return_status == HighsStatus::Error) return HighsStatus::Error;
-    //  allow_presolve_ = false;
+
+  if (!model.lp_.numRow_) {
+    // Unconstrained LP so solve directly
+    HighsStatus return_status = solveUnconstrainedLp(model);
+    if (return_status != HighsStatus::OK) return HighsStatus::Error;
+    iteration_count = 0;
+  } else if (options_.solver == ipm_string) {
+    // Use IPM
+#ifdef IPX_ON
+    HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
+    IpxStatus ipx_return = solveModelWithIpx(model.lp_, options_, model.unscaled_model_status_,
+					     model.unscaled_solution_params_, model.solution_, model.basis_);
+    if (ipx_return != IpxStatus::OK) return HighsStatus::Error;
 #else
-  // IPX
-  // todo:Check options for simplex-specific options
-  // use model.lp_, model.solution_
-  // status = runIpxSolver(options_, lp_, solution_);
-  // If ipx crossover did not find optimality set up simplex.
-
+    HighsLogMessage(HighsMessageType::ERROR, "Model cannot be solved with IPM");
+    return HighsStatus::Error;
 #endif
-
-  // Check.
-  if (!isSolutionConsistent(model.lp_, model.solution_)) {
-    std::cout << "Error: Inconsistent solution returned from solver.\n";
+  } else {
+    // Use Simplex
+    int initial_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
+    HighsStatus return_status = solveModelSimplex(model);
+    if (return_status != HighsStatus::OK) return HighsStatus::Error;
+    int final_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
+    iteration_count = final_iteration_count - initial_iteration_count;
+    if (!isSolutionConsistent(model.lp_, model.solution_)) {
+      std::cout << "Error: Inconsistent solution returned from solver.\n";
+    }
   }
   return highsStatusFromHighsModelStatus(model.unscaled_model_status_);
 }
@@ -1264,15 +1248,16 @@ HighsStatus Highs::solveNode(Node& node) {
   int solve0_status;
   int solve1_status;
 
-  iteration_count0 = hmos_[0].scaled_solution_params_.simplex_iteration_count;
+  HighsSolutionParams& scaled_solution_params = hmos_[0].scaled_solution_params_;
+  iteration_count0 = scaled_solution_params.simplex_iteration_count;
 
   HighsStatus return_status = solveModelSimplex(hmos_[0]);
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
   //  allow_presolve_ = false;
 
-  iteration_count1 = hmos_[0].scaled_solution_params_.simplex_iteration_count;
+  iteration_count1 = scaled_solution_params.simplex_iteration_count;
   solve0_iteration_count = iteration_count1 - iteration_count0;
-  solve0_objective_value = hmos_[0].simplex_info_.dual_objective_value;
+  solve0_objective_value = scaled_solution_params.objective_function_value;
   solve0_status = (int)hmos_[0].scaled_model_status_;
   printf("Solve0: Obj = %12g; Iter =%6d; Status =%2d\n", solve0_objective_value,
          solve0_iteration_count, solve0_status);
@@ -1281,12 +1266,12 @@ HighsStatus Highs::solveNode(Node& node) {
     // Generate a fresh model object for the LP at this node
     hmos_[0].simplex_lp_status_.has_basis = false;
     hmos_[0].basis_.valid_ = false;
-    iteration_count0 = hmos_[0].scaled_solution_params_.simplex_iteration_count;
+    iteration_count0 = scaled_solution_params.simplex_iteration_count;
     HighsStatus return_status = solveModelSimplex(hmos_[0]);
     if (return_status != HighsStatus::OK) return return_status;
-    iteration_count1 = hmos_[0].scaled_solution_params_.simplex_iteration_count;
+    iteration_count1 = scaled_solution_params.simplex_iteration_count;
     solve1_iteration_count = iteration_count1 - iteration_count0;
-    solve1_objective_value = hmos_[0].simplex_info_.dual_objective_value;
+    solve1_objective_value = scaled_solution_params.objective_function_value;
     solve1_status = (int)hmos_[0].scaled_model_status_;
     printf("Solve1: Obj = %12g; Iter =%6d; Status =%2d\n",
            solve1_objective_value, solve1_iteration_count, solve1_status);
@@ -1311,7 +1296,7 @@ HighsStatus Highs::solveNode(Node& node) {
   // Set solution.
   if (hmos_[0].scaled_model_status_ == HighsModelStatus::OPTIMAL) {
     node.primal_solution = hmos_[0].solution_.col_value;
-    node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
+    node.objective_value = hmos_[0].scaled_solution_params_.objective_function_value;
   }
 
   // Solve with a new hmo (replace with code above)
@@ -1324,7 +1309,7 @@ HighsStatus Highs::solveNode(Node& node) {
   // // Set solution.
   // if (status == HighsStatus::Optimal) {
   //   node.primal_solution = hmos_[0].solution_.col_value;
-  //   node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
+  //   node.objective_value = hmos_[0].scaled_solution_params_.objective_function_value;
   // }
 
   return highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
@@ -1341,7 +1326,7 @@ HighsStatus Highs::solveRootNode(Node& root) {
 
   if (hmos_[0].scaled_model_status_ == HighsModelStatus::OPTIMAL) {
     root.primal_solution = hmos_[0].solution_.col_value;
-    root.objective_value = hmos_[0].simplex_info_.dual_objective_value;
+    root.objective_value = hmos_[0].scaled_solution_params_.objective_function_value;
   }
 
   return highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
@@ -1411,7 +1396,6 @@ void Highs::updateHighsSolutionBasis() {
     basis_.col_status.resize(lp_.numCol_);
     basis_.row_status.resize(lp_.numRow_);
   }
-  //  if (hmos[0].simplex_lp_status_.has_simplex_lp_.
 }  
 
 void Highs::underDevelopmentLogMessage(const string method_name) {

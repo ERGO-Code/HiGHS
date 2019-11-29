@@ -28,6 +28,7 @@
 #include "simplex/HPrimal.h"
 #include "util/HighsUtils.h"
 #include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolve.h"
 //#include "HRanging.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
@@ -295,24 +296,17 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 // It sets the HiGHS basis within highs_model_object and, if optimal,
 // the HiGHS solution, too
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
+  // Invalidate the model statuses and scaled solution params
   HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
-  // Invalidate the model status and zero the solution params for the
-  // unscaled model values are unknown
-  highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
-  invalidateSolutionStatusParams(scaled_solution_params);
-  
-  // Handle the case of unconstrained LPs here
+  invalidateModelStatusAndSolutionStatusParams(highs_model_object.unscaled_model_status_,
+					       highs_model_object.scaled_model_status_,
+					       scaled_solution_params);
+
   if (!highs_model_object.lp_.numRow_) {
-    setSimplexOptions(highs_model_object);
-    HighsStatus solver_return_status = solveUnconstrainedLp(highs_model_object);
-    if (solver_return_status == HighsStatus::Error) return solver_return_status;
-    // Unconstrained (unscaled) LP solved successfully (may still be
-    // infeasible or unbounded)
-    // 
-    // No scaling performed, so set the scaled_model_status equal to
-    // the unscaled_model_status.
-    highs_model_object.scaled_model_status_ = highs_model_object.unscaled_model_status_;
-    return solver_return_status;
+    // Unconstrained LP so solve directly
+    HighsStatus return_status = solveUnconstrainedLp(highs_model_object);
+    if (return_status != HighsStatus::OK) return HighsStatus::Error;
+    return return_status;
   }
 
   // (Try to) solve the scaled LP

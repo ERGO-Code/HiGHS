@@ -229,6 +229,5 @@ void updateSimplexLpStatus(
 			   LpAction action    // !< Action prompting update
 );
 
-HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
 bool simplexInfoOk(const HighsLp& lp, const HighsLp& simplex_lp, const HighsSimplexInfo& simplex_info);
 #endif  // SIMPLEX_HSIMPLEX_H_

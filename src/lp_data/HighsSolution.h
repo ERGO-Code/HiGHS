@@ -18,6 +18,7 @@
 #include <string>
 //
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsModelObject.h"
 #include "ipm/IpxSolution.h"
 #include "lp_data/HighsOptions.h"
 #ifdef IPX_ON
@@ -85,6 +86,10 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
 #endif
 
 std::string iterationsToString(const HighsSolutionParams& solution_params);
+
+void invalidateModelStatusAndSolutionStatusParams(HighsModelStatus& unscaled_model_status,
+						  HighsModelStatus& scaled_model_status,
+						  HighsSolutionParams& solution_params);
 
 void invalidateSolutionParams(HighsSolutionParams& solution_params);
 void invalidateSolutionIterationCountParams(HighsSolutionParams& solution_params);

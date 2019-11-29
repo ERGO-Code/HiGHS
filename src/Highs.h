@@ -705,9 +705,8 @@ class Highs {
 
   //  bool allow_presolve_;
 
-  HighsStatus callRunSolver(HighsModelObject& model, int& iteration_count,
-                            const string message);
-  HighsStatus runSolver(HighsModelObject& model);
+  HighsStatus runSolver(HighsModelObject& model, int& iteration_count,
+			const string message);
 
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);

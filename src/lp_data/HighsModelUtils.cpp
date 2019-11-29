@@ -255,7 +255,10 @@ std::string utilPrimalDualStatusToString(const int primal_dual_status) {
     return "No solution";
     break;
   case PrimalDualStatus::STATUS_UNKNOWN:
-    return "Solution status unknown";
+    return "Point of unknown feasibility";
+    break;
+  case PrimalDualStatus::STATUS_INFEASIBLE_POINT:
+    return "Infeasible point";
     break;
   case PrimalDualStatus::STATUS_FEASIBLE_POINT:
     return "Feasible point";
