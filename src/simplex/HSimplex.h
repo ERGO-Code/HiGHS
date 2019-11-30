@@ -204,6 +204,19 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
 void update_matrix(HighsModelObject& highs_model_object, int columnIn,
                    int columnOut);
 
+// Wrapper for analyseSimplexBasicSolution when
+// not used to get suggested feasibility tolerances
+HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
+					const bool report=false);
+
+// Analyse the unscaled solution from a Simplex basic solution to get
+// suggested feasibility tolerances for resolving the scaled LP
+// This sets highs_model_object.unscaled_solution_params_
+HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object, 
+					double& new_primal_feasibility_tolerance,
+					double& new_dual_feasibility_tolerance,
+					const bool report=false);
+
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase);
 

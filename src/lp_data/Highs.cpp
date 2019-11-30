@@ -408,16 +408,10 @@ HighsStatus Highs::run() {
           hmos_[original_hmo].basis_.row_status =
               presolve_info.presolve_[0].getRowStatus();
           hmos_[original_hmo].basis_.valid_ = true;
-          // Analyse the Highs basic solution returned from postsolve
-          int report_level = -1;
-#ifdef HiGHSDEV
-          report_level = 1;
-#endif
-	  hmos_[original_hmo].unscaled_model_status_ = 
-	    analyseHighsBasicSolution(hmos_[original_hmo].lp_,
-				 hmos_[original_hmo].basis_,
-				 hmos_[original_hmo].solution_,
-				 unscaled_solution_params, report_level, "after returning from postsolve");
+	  /*
+	  analyseHighsBasicSolution(hmos_[original_hmo],
+				    "after returning from postsolve");
+	  */
 
           // Now hot-start the simplex solver for the original_hmo
           solved_hmo = original_hmo;
@@ -1103,9 +1097,11 @@ HighsStatus Highs::runSolver(HighsModelObject& model, int& iteration_count,
     // Use IPM
 #ifdef IPX_ON
     HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
-    IpxStatus ipx_return = solveModelWithIpx(model.lp_, options_, model.unscaled_model_status_,
-					     model.unscaled_solution_params_, model.solution_, model.basis_);
-    if (ipx_return != IpxStatus::OK) return HighsStatus::Error;
+    HighsStatus return_status = solveModelIpx(model.lp_, options_,
+					 model.basis_, model.solution_,
+					 model.unscaled_model_status_,
+					 model.unscaled_solution_params_);
+    if (return_status != HighsStatus::OK) return HighsStatus::Error;
 #else
     HighsLogMessage(HighsMessageType::ERROR, "Model cannot be solved with IPM");
     return HighsStatus::Error;

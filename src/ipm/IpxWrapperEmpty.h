@@ -18,12 +18,10 @@
 #include "lp_data/HighsLp.h"
 #include "ipm/IpxStatus.h"
 
-IpxStatus solveModelWithIpx(const HighsLp& lp,
-			    const HighsOptions& options,
-			    HighsModelStatus& unscaled_model_status,
-			    HighsSolutionParams& unscaled_solution_params,
-			    HighsSolution& solution,
-                            HighsBasis& basis) {
+IpxStatus solveModelIpx(const HighsLp& lp, const HighsOptions& options,
+			HighsBasis& highs_basis, HighsSolution& highs_solution,
+			HighsModelStatus& unscaled_model_status,
+			HighsSolutionParams& unscaled_solution_params) {
   highs_model_status = HighsModelStatus::NOTSET;
   return IpxStatus::Error;
 }
