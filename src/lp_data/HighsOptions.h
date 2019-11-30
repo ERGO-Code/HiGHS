@@ -442,25 +442,46 @@ class HighsOptions {
 				     true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("find_feasibility",
+    record_bool = new OptionRecordBool("icrash",
 				     "Run iCrash",
-				     advanced, &find_feasibility,
+				     advanced, &icrash,
 				     false);
     records.push_back(record_bool);
 
-    record_int = new OptionRecordInt("feasibility_strategy",
+    record_bool = new OptionRecordBool("icrash_dualize",
+				     "Dualise strategy for iCrash",
+				     advanced, &icrash_dualize,
+				     false);
+    records.push_back(record_bool);
+
+    record_string = new OptionRecordString("icrash_strategy",
 				     "Strategy for iCrash",
-				     advanced, &feasibility_strategy,
-				     FEASIBILITY_STRATEGY_MIN,
-				     FEASIBILITY_STRATEGY_kApproxComponentWise,
-				     FEASIBILITY_STRATEGY_MAX);
+				     advanced, &icrash_strategy, "ICA");
+    records.push_back(record_string);
+
+    record_double = new OptionRecordDouble("icrash_starting_weight",
+				     "iCrash starting weight",
+				     advanced, &icrash_starting_weight,
+				     1e-10, 1e-3, 1e50);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt("icrash_iterations",
+				     "iCrash iterations",
+				     advanced, &icrash_iterations,
+				     0, 30, 200);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("feasibility_strategy_dualize",
-				     "Dualise strategy for iCrash",
-				     advanced, &feasibility_strategy_dualize,
+    record_bool = new OptionRecordBool("icrash_exact",
+				     "Exact subproblem solution for iCrash",
+				     advanced, &icrash_exact,
 				     false);
     records.push_back(record_bool);
+    
+    record_int = new OptionRecordInt("icrash_approximate_minimization_iterations",
+				     "iCrash approximate minimization iterations",
+				     advanced, &icrash_approximate_minimization_iterations,
+				     0, 50, 100);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool("mip", "Run MIP solver", advanced, &mip, false);
     records.push_back(record_bool);
@@ -524,9 +545,13 @@ class HighsOptions {
   bool less_infeasible_DSE_choose_row;
 
   // Options for iCrash
-  bool find_feasibility;
-  int feasibility_strategy;
-  bool feasibility_strategy_dualize;
+  bool icrash;
+  bool icrash_dualize;
+  std::string icrash_strategy;
+  double icrash_starting_weight;
+  int icrash_iterations;
+  int icrash_approximate_minimization_iterations;
+  bool icrash_exact;
 
   // Switch for MIP solver
   bool mip;

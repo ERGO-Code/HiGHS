@@ -14,11 +14,12 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 # Make test executable
 set(TEST_SOURCES
     TestMain.cpp
+    TestOptions.cpp
+    TestPresolve.cpp
     TestIO.cpp
     TestSort.cpp
     TestSetup.cpp
     TestFilereader.cpp
-    TestOptions.cpp
     TestInfo.cpp
     TestBasisSolves.cpp
     TestLpValidation.cpp

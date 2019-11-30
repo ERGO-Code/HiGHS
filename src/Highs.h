@@ -21,6 +21,7 @@
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsStatus.h"
 #include "mip/SolveMip.h"
+#include "presolve/ICrash.h"
 #include "util/HighsTimer.h"
 
 #include <sstream>
@@ -60,23 +61,6 @@ class Highs {
    * @brief Solves the model according to the specified options
    */
   HighsStatus run();
-
-  /**
-   * @brief Returns the current model status
-   */
-  const HighsModelStatus& getModelStatus(
-					 const bool scaled_model=false
-					 ) const;
-
-  /**
-   * @brief Returns the HighsSolution 
-   */
-  const HighsSolution& getSolution() const;
-
-  /**
-   * @brief Returns the HighsBasis 
-   */
-  const HighsBasis& getBasis() const;
 
   /**
    * @brief writes the current solution to a file
@@ -185,6 +169,103 @@ class Highs {
    */
   const HighsLp& getLp() const;
 
+  /**
+   * @brief Returns the HighsSolution 
+   */
+  const HighsSolution& getSolution() const;
+
+  const ICrashInfo& getICrashInfo() const;
+
+  /**
+   * @brief Returns the HighsBasis 
+   */
+  const HighsBasis& getBasis() const;
+
+  /**
+   * @brief Returns the current model status
+   */
+  const HighsModelStatus& getModelStatus(
+					 const bool scaled_model=false
+					 ) const;
+
+  // todo: getRangingInformation(..)
+
+  /**
+   * Methods for operations with the invertible representation of the
+   * current basis matrix
+   */
+
+  /**
+   * @brief Gets the basic variables in the order corresponding to
+   * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
+   * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
+   * required by SCIP, non-negative entries are indices of columns,
+   * and negative entries are -(row_index+1).
+   */
+  HighsStatus getBasicVariables(
+				int* basic_variables  //!< Basic variables
+				);
+  /**
+   * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   */
+  HighsStatus getBasisInverseRow(
+				 const int row,          //!< Index of row required
+				 double* row_vector,     //!< Row required
+				 int* row_num_nz = NULL, //!< Number of nonzeros
+				 int* row_indices = NULL //!< Indices of nonzeros
+				 );  
+
+  /**
+   * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   */
+  HighsStatus getBasisInverseCol(
+				 const int col,          //!< Index of column required
+				 double* col_vector,     //!< Column required
+				 int* col_num_nz = NULL, //!< Number of nonzeros
+				 int* col_indices = NULL //!< Indices of nonzeros
+);
+
+  /**
+   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   */
+  HighsStatus getBasisSolve(
+			    const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
+			    double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$
+			    int* solution_num_nz = NULL, //!< Number of nonzeros
+			    int* solution_indices = NULL //!< Indices of nonzeros
+			    );
+
+  /**
+   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   */
+  HighsStatus getBasisTransposeSolve(
+				     const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
+				     double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$ 
+				     int* solution_nz = NULL,     //!< Number of nonzeros
+				     int* solution_indices = NULL //!< Indices of nonzeros
+				     );
+
+  /**
+   * @brief Forms a row of \f$B^{-1}A\f$
+   */
+  HighsStatus getReducedRow(
+			       const int row,          //!< Index of row required
+			       double* row_vector,     //!< Row required
+			       int* row_num_nz = NULL, //!< Number of nonzeros
+			       int* row_indices = NULL //!< Indices of nonzeros
+			       );
+
+  /**
+   * @brief Forms a column of \f$B^{-1}A\f$
+   */
+  HighsStatus getReducedColumn(
+			       const int col,          //!< Index of column required
+			       double* col_vector,     //!< Column required
+			       int* col_num_nz = NULL, //!< Number of nonzeros
+			       int* col_indices = NULL //!< Indices of nonzeros
+			       );
+
+  
   /**
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject
@@ -586,82 +667,6 @@ class Highs {
   // todo: getRangingInformation(..)
 
   /**
-   * Methods for operations with the invertible representation of the
-   * current basis matrix
-   */
-
-  /**
-   * @brief Gets the basic variables in the order corresponding to
-   * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
-   * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
-   * required by SCIP, non-negative entries are indices of columns,
-   * and negative entries are -(row_index+1).
-   */
-  HighsStatus getBasicVariables(
-				int* basic_variables  //!< Basic variables
-				);
-  /**
-   * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
-   */
-  HighsStatus getBasisInverseRow(
-				 const int row,          //!< Index of row required
-				 double* row_vector,     //!< Row required
-				 int* row_num_nz = NULL, //!< Number of nonzeros
-				 int* row_indices = NULL //!< Indices of nonzeros
-				 );  
-
-  /**
-   * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
-   */
-  HighsStatus getBasisInverseCol(
-				 const int col,          //!< Index of column required
-				 double* col_vector,     //!< Column required
-				 int* col_num_nz = NULL, //!< Number of nonzeros
-				 int* col_indices = NULL //!< Indices of nonzeros
-);
-
-  /**
-   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
-   */
-  HighsStatus getBasisSolve(
-			    const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
-			    double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$
-			    int* solution_num_nz = NULL, //!< Number of nonzeros
-			    int* solution_indices = NULL //!< Indices of nonzeros
-			    );
-
-  /**
-   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
-   */
-  HighsStatus getBasisTransposeSolve(
-				     const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
-				     double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$ 
-				     int* solution_nz = NULL,     //!< Number of nonzeros
-				     int* solution_indices = NULL //!< Indices of nonzeros
-				     );
-
-  /**
-   * @brief Forms a row of \f$B^{-1}A\f$
-   */
-  HighsStatus getReducedRow(
-			       const int row,          //!< Index of row required
-			       double* row_vector,     //!< Row required
-			       int* row_num_nz = NULL, //!< Number of nonzeros
-			       int* row_indices = NULL //!< Indices of nonzeros
-			       );
-
-  /**
-   * @brief Forms a column of \f$B^{-1}A\f$
-   */
-  HighsStatus getReducedColumn(
-			       const int col,          //!< Index of column required
-			       double* col_vector,     //!< Column required
-			       int* col_num_nz = NULL, //!< Number of nonzeros
-			       int* col_indices = NULL //!< Indices of nonzeros
-			       );
-
-  
-  /**
    * @brief Clear data associated with solving the model: basis, solution and internal data etc
    */
   HighsStatus clearSolver();
@@ -685,6 +690,7 @@ class Highs {
   HighsSolution solution_;
   HighsBasis basis_;
   HighsLp lp_;
+  ICrashInfo icrash_info_;
 
   HighsTimer timer_;
 

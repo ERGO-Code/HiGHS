@@ -1,12 +1,13 @@
 #include <cstdio>
 
-#include "FilereaderEms.h"
-#include "HMPSIO.h"
-#include "HMpsFF.h"
 #include "Highs.h"
-#include "HighsIO.h"
-#include "HighsLp.h"
-#include "LoadProblem.h"
+#include "io/FilereaderEms.h"
+#include "io/HMPSIO.h"
+#include "io/HMpsFF.h"
+#include "io/HighsIO.h"
+#include "io/LoadProblem.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpUtils.h"
 #include "catch.hpp"
 
 TEST_CASE("free-format-parser", "[highs_filereader]") {
@@ -105,8 +106,6 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 
 TEST_CASE("dualize", "[highs_data]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  //std::string filename = "/home/s1131817/test-problems/qaps/qap04";
-
   // Read mps.
   HighsOptions options;
   options.model_file = filename;
