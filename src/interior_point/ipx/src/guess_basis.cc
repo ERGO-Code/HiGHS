@@ -227,7 +227,7 @@ std::vector<Int> GuessBasis(const Control& control, const Model& model,
         if (rownumber[i] < 0)
             basis.push_back(n+i);
     }
-    assert(basis.size() == m);
+    assert((int)basis.size() == m);
     return basis;
 }
 
