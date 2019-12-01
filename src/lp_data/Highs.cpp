@@ -478,9 +478,9 @@ HighsStatus Highs::run() {
   info_.ipm_iteration_count = 0;
   info_.crossover_iteration_count = 0;
   for (int k = 0; k < hmos_size; k++) {
-    info_.simplex_iteration_count += hmos_[k].scaled_solution_params_.simplex_iteration_count;
-    info_.ipm_iteration_count += hmos_[k].scaled_solution_params_.ipm_iteration_count;
-    info_.crossover_iteration_count += hmos_[k].scaled_solution_params_.crossover_iteration_count;
+    info_.simplex_iteration_count += hmos_[k].unscaled_solution_params_.simplex_iteration_count;
+    info_.ipm_iteration_count += hmos_[k].unscaled_solution_params_.ipm_iteration_count;
+    info_.crossover_iteration_count += hmos_[k].unscaled_solution_params_.crossover_iteration_count;
   }
   info_.primal_status = unscaled_solution_params.primal_status;
   info_.dual_status = unscaled_solution_params.dual_status;
@@ -1087,20 +1087,23 @@ HighsStatus Highs::runSolver(HighsModelObject& model, int& iteration_count,
   assert(assess_lp_status == HighsStatus::OK);
   if (assess_lp_status != HighsStatus::OK) return HighsStatus::Error;
 #endif
-
+  // Set return_status too error to ensure that it's set.
+  HighsStatus return_status = HighsStatus::Error;
+  // Initialise the solution parameters for the unscaled model
+  initialiseSolutionParams(model.unscaled_solution_params_, model.options_);
   if (!model.lp_.numRow_) {
     // Unconstrained LP so solve directly
-    HighsStatus return_status = solveUnconstrainedLp(model);
+    return_status = solveUnconstrainedLp(model);
     if (return_status != HighsStatus::OK) return HighsStatus::Error;
     iteration_count = 0;
   } else if (options_.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
     HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
-    HighsStatus return_status = solveModelIpx(model.lp_, options_,
-					 model.basis_, model.solution_,
-					 model.unscaled_model_status_,
-					 model.unscaled_solution_params_);
+    return_status = solveModelIpx(model.lp_, options_,
+				  model.basis_, model.solution_,
+				  model.unscaled_model_status_,
+				  model.unscaled_solution_params_);
     if (return_status != HighsStatus::OK) return HighsStatus::Error;
 #else
     HighsLogMessage(HighsMessageType::ERROR, "Model cannot be solved with IPM");
@@ -1109,7 +1112,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model, int& iteration_count,
   } else {
     // Use Simplex
     int initial_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
-    HighsStatus return_status = solveModelSimplex(model);
+    return_status = solveModelSimplex(model);
     if (return_status != HighsStatus::OK) return HighsStatus::Error;
     int final_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
     iteration_count = final_iteration_count - initial_iteration_count;
@@ -1117,6 +1120,11 @@ HighsStatus Highs::runSolver(HighsModelObject& model, int& iteration_count,
       std::cout << "Error: Inconsistent solution returned from solver.\n";
     }
   }
+  return_status = analyseHighsBasicSolution(model.lp_, model.basis_, model.solution_,
+					    model.unscaled_model_status_,
+					    model.unscaled_solution_params_,
+					    message);
+  if (return_status != HighsStatus::OK) return HighsStatus::Error;
   return highsStatusFromHighsModelStatus(model.unscaled_model_status_);
 }
 

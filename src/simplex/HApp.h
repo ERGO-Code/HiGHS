@@ -111,6 +111,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       // Dual feasible
       // Simplex solution is optimal
       highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+      scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
     } else {
       // Only dual infeasible, so maybe use primal simplex
       if (use_simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
@@ -180,6 +182,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     // Official finish of solver
     timer.stop(timer.solve_clock);
 
+    scaled_solution_params.objective_function_value = simplex_info.primal_objective_value;
 #ifdef HiGHSDEV
     timer.stop(simplex_info.clock_[SimplexTotalClock]);
     reportSimplexProfiling(highs_model_object);
@@ -350,7 +353,6 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
-
   return highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 }
 #endif

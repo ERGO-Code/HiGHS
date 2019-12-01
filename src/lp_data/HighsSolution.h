@@ -130,7 +130,8 @@ bool equalSolutionInfeasibilityParams(const HighsSolutionParams& solution_params
 
 void initialiseSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options);
 
-//void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionParams& solution_params);
+void copySolutionIterationCountAndObjectiveParams(const HighsSolutionParams& from_solution_params, 
+						  HighsSolutionParams& to_solution_params);
 
 void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params);
 

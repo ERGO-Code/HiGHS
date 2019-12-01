@@ -228,6 +228,7 @@ struct HighsSimplexInfo {
   bool allow_primal_flips_for_dual_feasibility = true;
   bool analyseLpSolution = true;
 #ifdef HiGHSDEV
+  bool analyseLpSolution = true;
   // Options for reporting timing
   bool report_simplex_inner_clock = false;
   bool report_simplex_outer_clock = false;

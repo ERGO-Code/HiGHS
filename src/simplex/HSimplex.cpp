@@ -560,8 +560,17 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   computePrimalInfeasible(highs_model_object);
   computeDualInfeasible(highs_model_object);
 
-  //  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
-  highs_model_object.scaled_solution_params_.objective_function_value = simplex_info.primal_objective_value;
+  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
+  bool primal_feasible = scaled_solution_params.num_primal_infeasibilities == 0;
+  bool dual_feasible = scaled_solution_params.num_dual_infeasibilities == 0;
+  if (primal_feasible && dual_feasible) {
+    highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+    scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  }
+
+  scaled_solution_params.objective_function_value = simplex_info.primal_objective_value;
+  
 #ifdef HiGHSDEV
     // If there is a HiGHS solution then determine the changes in basic
     // and nonbasic values and duals for columns and rows
@@ -2939,6 +2948,7 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   // highs_model_object
   HighsModelStatus& scaled_model_status = highs_model_object.scaled_model_status_;
   HighsModelStatus& unscaled_model_status = highs_model_object.unscaled_model_status_;
+  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
   HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
   int& num_unscaled_primal_infeasibilities = unscaled_solution_params.num_primal_infeasibilities;
   double& max_unscaled_primal_infeasibility = unscaled_solution_params.max_primal_infeasibility;
@@ -2950,7 +2960,8 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   // Use this just to copy the simplex iteration count and primal/dual
   // objective values, and zero the other iteration counts
   double objective_function_value = simplex_info.primal_objective_value;
-  unscaled_solution_params.objective_function_value = objective_function_value;
+  scaled_solution_params.objective_function_value = objective_function_value;
+  copySolutionIterationCountAndObjectiveParams(scaled_solution_params, unscaled_solution_params);
   local_scaled_solution_params.objective_function_value = objective_function_value;
  
   // Invalidate the unscaled and local scaled infeasibility params 
@@ -3127,6 +3138,8 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   }
 
   unscaled_model_status = scaled_model_status;
+  unscaled_solution_params.primal_status = scaled_solution_params.primal_status;
+  unscaled_solution_params.dual_status = scaled_solution_params.dual_status;
 
   // The solution status for the unscaled LP is inherited from the
   // scaled LP, unless there are infeasibilities in the unscaled

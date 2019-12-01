@@ -303,11 +303,6 @@ HighsStatus solveModelIpx(const HighsLp& lp, const HighsOptions& options,
     unscaled_solution_params.objective_function_value = ipx_info.objval;
     getPrimalDualInfeasibilities(lp, highs_basis, highs_solution,
 				 unscaled_solution_params);
-    // Analyse the Highs basic solution obtained from IPX
-    return analyseHighsBasicSolution(lp, highs_basis, highs_solution,
-				     unscaled_model_status,
-				     unscaled_solution_params,
-				     "after IPX");
   }
   //  return IpxStatus::OK;
   return HighsStatus::OK;

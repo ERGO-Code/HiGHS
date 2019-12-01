@@ -75,7 +75,7 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
 				      const int report_level) {
   
   HighsLogMessage(HighsMessageType::INFO,
-		  "HiGHS basic solution: Analysis %s", message.c_str());
+		  "HiGHS basic solution: Analysis - %s", message.c_str());
   HighsSolutionParams check_solution_params = solution_params;
 
   HighsPrimalDualErrors primal_dual_errors;
@@ -1101,6 +1101,14 @@ void initialiseSolutionParams(HighsSolutionParams& solution_params, const HighsO
   invalidateSolutionIterationCountAndObjectiveParams(solution_params);
   invalidateSolutionStatusParams(solution_params);
   invalidateSolutionInfeasibilityParams(solution_params);
+}
+
+void copySolutionIterationCountAndObjectiveParams(const HighsSolutionParams& from_solution_params, 
+						  HighsSolutionParams& to_solution_params) {
+  to_solution_params.simplex_iteration_count = from_solution_params.simplex_iteration_count;
+  to_solution_params.ipm_iteration_count = from_solution_params.ipm_iteration_count;
+  to_solution_params.crossover_iteration_count = from_solution_params.crossover_iteration_count;
+  to_solution_params.objective_function_value = from_solution_params.objective_function_value;
 }
 
 void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params) {
