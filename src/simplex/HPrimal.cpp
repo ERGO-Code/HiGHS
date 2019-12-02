@@ -370,7 +370,8 @@ void HPrimal::primalRebuild() {
     double totalRebuildTime = timer.read(iClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
-        totalRebuilds, sv_invertHint, scaled_solution_params.simplex_iteration_count,
+        totalRebuilds, sv_invertHint,
+	workHMO.scaled_solution_params_.simplex_iteration_count,
         totalRebuildTime);
   }
 #endif

@@ -226,9 +226,10 @@ struct HighsSimplexInfo {
   // Internal options - can't be changed externally
   bool store_squared_primal_infeasibility = false;
   bool allow_primal_flips_for_dual_feasibility = true;
-  bool analyseLpSolution = false;
-#ifdef HiGHSDEV
-  analyseLpSolution = true;
+#ifndef HiGHSDEV
+  bool analyseLpSolution = true;// false; //
+#else  
+  bool analyseLpSolution = true;
   // Options for reporting timing
   bool report_simplex_inner_clock = false;
   bool report_simplex_outer_clock = false;

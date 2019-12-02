@@ -704,6 +704,7 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
       printf("Basic    row     dual differences: %6d (%11.4g)\n", 
 	     num_basic_row_dual_differences, sum_basic_row_dual_differences);
   }
+  const HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
   printf("grep_transition,%s,%.15g,%d,%g,%d,%g,%s,%d,%g,%d,%g,%d,%g,%d,%g,Primal,%d,%g,%d,%g,Dual,%d,%g,%d,%g\n",
 	 simplex_lp.model_name_.c_str(),
 	 simplex_info.primal_objective_value,

@@ -208,12 +208,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   }
 
   if (simplex_info.analyseLpSolution) {
-    // Analyse the LP solution. Note that this sets
-    // unscaled_solution_params, which is assumed by
-    // analyseHighsBasicSolution.
-    HighsStatus return_status;
+    // Analyse the simplex basic solution, assuming that the scaled solution params are known
     const bool report = true;
-    return_status = analyseSimplexBasicSolution(highs_model_object, report);
+    HighsStatus return_status =
+      analyseSimplexBasicSolution(highs_model_object,
+				  highs_model_object.scaled_solution_params_,
+				  report);
     if (return_status != HighsStatus::OK) return return_status;
 
 #ifdef HiGHSDEV
@@ -248,11 +248,10 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
     HighsLogMessage(HighsMessageType::INFO, "tryToSolveUnscaledLp pass %1d:", pass);
 #endif
     // Deduce the unscaled solution parameters, and new fasibility tolerances if not primal and/or dual feasible
-    HighsStatus return_status =
-      analyseSimplexBasicSolution(highs_model_object, 
-				  new_primal_feasibility_tolerance,
-				  new_dual_feasibility_tolerance);
-    if (return_status != HighsStatus::OK) return return_status;
+    getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(highs_model_object, 
+								    new_primal_feasibility_tolerance,
+								    new_dual_feasibility_tolerance);
+    //    if (return_status != HighsStatus::OK) return return_status;
     // Set the model and solution status according to the unscaled solution parameters
     if (highs_model_object.unscaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
 
@@ -315,6 +314,7 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   // (Try to) solve the scaled LP
   HighsStatus highs_status = runSimplexSolver(highs_model_object);
 #ifdef HiGHSDEV
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   if (simplex_info.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
 #endif
   if (highs_status != HighsStatus::OK) return highs_status;

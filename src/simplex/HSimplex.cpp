@@ -1834,7 +1834,8 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
     //    timer.report(reportCount, reportList, 0.0);
     printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
            highs_model_object.lp_.model_name_.c_str(), simplex_info.pami_cutoff,
-           scaled_solution_params.simplex_iteration_count / (1.0 + simplex_info.multi_iteration));
+	   highs_model_object.scaled_solution_params_.simplex_iteration_count /
+	   (1.0 + simplex_info.multi_iteration));
   }
 
   if (simplex_info.report_simplex_phases_clock) {
@@ -2435,7 +2436,9 @@ int compute_factor(HighsModelObject& highs_model_object) {
     printf(
         "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
         "Total INVERT  time = %11.4g\n",
-        simplex_info.total_inverts, scaled_solution_params.simplex_iteration_count, invertTime,
+        simplex_info.total_inverts,
+	highs_model_object.scaled_solution_params_.simplex_iteration_count,
+	invertTime,
         simplex_info.total_invert_time);
   }
 #endif
@@ -2551,7 +2554,7 @@ void computePrimalInfeasible(HighsModelObject& highs_model_object,
   if (report) {
 #ifdef HiGHSDEV
     if (num_primal_infeasibilities) {
-      int num_iter = scaled_solution_params.simplex_iteration_count;
+      int num_iter = highs_model_object.scaled_solution_params_.simplex_iteration_count;
       printf(
 	     "Iter %d has %d (%d+%d) primal infeasibilities (max = %g = max[%g, "
 	     "%g]) summing to %g (%g+%g)\n",
@@ -2911,75 +2914,338 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
   timer.stop(simplex_info.clock_[UpdateMatrixClock]);
 }
 
-HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
+// Analyse a simplex basic solution when the scaled and unscaled infeasibilities aren't known
+HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object, 
 					const bool report) {
-  double new_primal_feasibility_tolerance;
-  double new_dual_feasibility_tolerance;
-  return analyseSimplexBasicSolution(highs_model_object,
-				     new_primal_feasibility_tolerance,
-				     new_dual_feasibility_tolerance,
+  HighsSolutionParams get_unscaled_solution_params;
+  invalidateSolutionParams(get_unscaled_solution_params);
+  HighsSolutionParams get_scaled_solution_params;
+  invalidateSolutionParams(get_scaled_solution_params);
+  getPrimalDualInfeasibilitiesFromSimplexBasicSolution(highs_model_object,
+						       get_unscaled_solution_params,
+						       get_scaled_solution_params);
+  return analyseSimplexBasicSolution(highs_model_object, 
+				     get_unscaled_solution_params,
+				     get_scaled_solution_params,
 				     report);
 }
 
-HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object, 
-					double& new_primal_feasibility_tolerance,
-					double& new_dual_feasibility_tolerance,
+// Analyse a simplex basic solution when the unscaled infeasibilities aren't known
+HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object, 
+					const HighsSolutionParams& scaled_solution_params,
 					const bool report) {
+  HighsSolutionParams get_unscaled_solution_params = scaled_solution_params;
+  getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(highs_model_object,
+							       get_unscaled_solution_params);
+  return analyseSimplexBasicSolution(highs_model_object, 
+				     get_unscaled_solution_params,
+				     scaled_solution_params,
+				     report);
+}
+
+HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object, 
+					const HighsSolutionParams& unscaled_solution_params,
+					const HighsSolutionParams& scaled_solution_params,
+					const bool report) {
+  /*
   const HighsLp& lp = highs_model_object.lp_;
   const HighsOptions& options = highs_model_object.options_;
   const SimplexBasis& basis = highs_model_object.simplex_basis_;
   const HighsScale& scale = highs_model_object.scale_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  */
 
-  // local_scaled_solution_params is checked against
-  // highs_model_object.scaled_solution_params_ by equating them and
-  // the computing the infeasibilities
-  HighsSolutionParams local_scaled_solution_params = highs_model_object.scaled_solution_params_;
-  // These are the values that are computed here
-  int& num_scaled_primal_infeasibilities = local_scaled_solution_params.num_primal_infeasibilities;
-  double& max_scaled_primal_infeasibility = local_scaled_solution_params.max_primal_infeasibility;
-  double& sum_scaled_primal_infeasibilities = local_scaled_solution_params.sum_primal_infeasibilities;
-  int& num_scaled_dual_infeasibilities = local_scaled_solution_params.num_dual_infeasibilities;
-  double& max_scaled_dual_infeasibility = local_scaled_solution_params.max_dual_infeasibility;
-  double& sum_scaled_dual_infeasibilities = local_scaled_solution_params.sum_dual_infeasibilities;
+    //  const HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
+    //  const HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
 
-  // unscaled_solution_params are the retained values in
-  // highs_model_object
-  HighsModelStatus& scaled_model_status = highs_model_object.scaled_model_status_;
-  HighsModelStatus& unscaled_model_status = highs_model_object.unscaled_model_status_;
-  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
-  HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
-  int& num_unscaled_primal_infeasibilities = unscaled_solution_params.num_primal_infeasibilities;
-  double& max_unscaled_primal_infeasibility = unscaled_solution_params.max_primal_infeasibility;
-  double& sum_unscaled_primal_infeasibilities = unscaled_solution_params.sum_primal_infeasibilities;
-  int& num_unscaled_dual_infeasibilities = unscaled_solution_params.num_dual_infeasibilities;
-  double& max_unscaled_dual_infeasibility = unscaled_solution_params.max_dual_infeasibility;
-  double& sum_unscaled_dual_infeasibilities = unscaled_solution_params.sum_dual_infeasibilities;
-
+  /*
   // Use this just to copy the simplex iteration count and primal/dual
   // objective values, and zero the other iteration counts
   double objective_function_value = simplex_info.primal_objective_value;
   scaled_solution_params.objective_function_value = objective_function_value;
   copySolutionIterationCountAndObjectiveParams(scaled_solution_params, unscaled_solution_params);
-  local_scaled_solution_params.objective_function_value = objective_function_value;
+  get_scaled_solution_params.objective_function_value = objective_function_value;
+  */
  
-  // Invalidate the unscaled and local scaled infeasibility params 
-  invalidateSolutionInfeasibilityParams(unscaled_solution_params);
-  invalidateSolutionInfeasibilityParams(local_scaled_solution_params);
-  // Zero the counts of scaled and unscaled primal and dual infeasibilities 
-  num_scaled_primal_infeasibilities = 0;
-  num_scaled_dual_infeasibilities = 0;
+  // Check the infeasibility parameters against freshly computed values
+  HighsSolutionParams get_unscaled_solution_params;
+  HighsSolutionParams get_scaled_solution_params;
+
+  getPrimalDualInfeasibilitiesFromSimplexBasicSolution(highs_model_object,
+						       get_unscaled_solution_params,
+						       get_scaled_solution_params);
+
+  bool equal_solution_infeasibility_params;
+  equal_solution_infeasibility_params =
+    equalSolutionInfeasibilityParams(get_unscaled_solution_params, unscaled_solution_params);
+  assert(equal_solution_infeasibility_params);
+  equal_solution_infeasibility_params =
+    equalSolutionInfeasibilityParams(get_scaled_solution_params, scaled_solution_params);
+  assert(equal_solution_infeasibility_params);
+
+
+#ifdef HiGHSDEV
+  int num_scaled_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
+  double max_scaled_primal_infeasibility = scaled_solution_params.max_primal_infeasibility;
+  double sum_scaled_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
+  int num_scaled_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
+  double max_scaled_dual_infeasibility = scaled_solution_params.max_dual_infeasibility;
+  double sum_scaled_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
+  //  int num_unscaled_primal_infeasibilities = unscaled_solution_params.num_primal_infeasibilities;
+  //  int num_unscaled_dual_infeasibilities = unscaled_solution_params.num_dual_infeasibilities;
+
+  const HighsModelStatus scaled_model_status = highs_model_object.scaled_model_status_;
+  const HighsModelStatus unscaled_model_status = highs_model_object.unscaled_model_status_;
+  if (scaled_model_status == HighsModelStatus::OPTIMAL) {
+    // If numbers of scaled primal or dual infeasibilities are
+    // inconsistent with the scaled model status, then flag up an error
+    bool should_be_primal_infeasibilities = false;
+    bool should_be_dual_infeasibilities = false;
+    bool infeasibility_error;
+    std::string error_comment;
+    // Consider primal infeasibility errors
+    infeasibility_error = false;
+    if (num_scaled_primal_infeasibilities && !should_be_primal_infeasibilities) {
+      infeasibility_error = true;
+      error_comment = "Scaled primal infeasibilities, but should be none";
+    } else  if (num_scaled_primal_infeasibilities==0 && should_be_primal_infeasibilities) {
+      infeasibility_error = true;
+      error_comment = "No scaled primal infeasibilities, but should be some";
+    }
+    if (infeasibility_error)
+      HighsLogMessage(HighsMessageType::ERROR, "%s: num/max/sum = %6d/%0.4g/%0.4g",
+		      error_comment.c_str(),
+		      num_scaled_primal_infeasibilities,
+		      max_scaled_primal_infeasibility,
+		      sum_scaled_primal_infeasibilities);
+    // Consider dual infeasibility errors
+    infeasibility_error = false;
+    if (num_scaled_dual_infeasibilities && !should_be_dual_infeasibilities) {
+      infeasibility_error = true;
+      error_comment = "Scaled dual infeasibilities, but should be none";
+    } else  if (num_scaled_dual_infeasibilities==0 && should_be_dual_infeasibilities) {
+      infeasibility_error = true;
+      error_comment = "No scaled dual infeasibilities, but should be some";
+    }
+    if (infeasibility_error)
+      HighsLogMessage(HighsMessageType::ERROR, "%s: num/max/sum = %6d/%0.4g/%0.4g",
+		      error_comment.c_str(),
+		      num_scaled_dual_infeasibilities,
+		      max_scaled_dual_infeasibility,
+		      sum_scaled_dual_infeasibilities);
+  }
+#endif
+
+  /*
+  unscaled_model_status = scaled_model_status;
+  unscaled_solution_params.primal_status = scaled_solution_params.primal_status;
+  unscaled_solution_params.dual_status = scaled_solution_params.dual_status;
+
+  // The solution status for the unscaled LP is inherited from the
+  // scaled LP, unless there are infeasibilities in the unscaled
+  // solution
+  // unscaled_solution_params.primal_status = scaled_solution_params.primal_status;
+  // unscaled_solution_params.dual_status = scaled_solution_params.dual_status;
+  if (num_unscaled_primal_infeasibilities) {
+    if (unscaled_model_status == HighsModelStatus::OPTIMAL)
+      unscaled_model_status = HighsModelStatus::NOTSET;
+    unscaled_solution_params.primal_status = STATUS_NO_SOLUTION;
+  }
+  if (num_unscaled_dual_infeasibilities) 
+    unscaled_solution_params.dual_status = STATUS_NO_SOLUTION;
+  */
+
+  if (report) {
+    HighsLogMessage(HighsMessageType::INFO,
+		    "Simplex basic solution: %sObjective = %0.15g",
+		    iterationsToString(scaled_solution_params).c_str(),
+		    scaled_solution_params.objective_function_value);
+    HighsLogMessage(HighsMessageType::INFO,
+		    "Infeasibilities -   scaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
+		    scaled_solution_params.num_primal_infeasibilities,
+		    scaled_solution_params.max_primal_infeasibility,
+		    scaled_solution_params.sum_primal_infeasibilities,
+		    scaled_solution_params.num_dual_infeasibilities,
+		    scaled_solution_params.max_dual_infeasibility,
+		    scaled_solution_params.sum_dual_infeasibilities,
+		    utilHighsModelStatusToString(scaled_model_status).c_str());
+    HighsLogMessage(HighsMessageType::INFO,
+		    "Infeasibilities - unscaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
+		    unscaled_solution_params.num_primal_infeasibilities,
+		    unscaled_solution_params.max_primal_infeasibility,
+		    unscaled_solution_params.sum_primal_infeasibilities,
+		    unscaled_solution_params.num_dual_infeasibilities,
+		    unscaled_solution_params.max_dual_infeasibility,
+		    unscaled_solution_params.sum_dual_infeasibilities,
+		    utilHighsModelStatusToString(unscaled_model_status).c_str());
+  }
+  return HighsStatus::OK;
+}
+
+void getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
+								HighsSolutionParams& get_scaled_solution_params) {
+  const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  HighsSolutionParams get_unscaled_solution_params;
+  double new_scaled_primal_feasibility_tolerance;
+  double new_scaled_dual_feasibility_tolerance;
+  getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+								       highs_model_object.scale_,
+								       highs_model_object.simplex_basis_,
+								       highs_model_object.simplex_info_,
+								       unscaled_primal_feasibility_tolerance,
+								       unscaled_dual_feasibility_tolerance,
+								       highs_model_object.scaled_model_status_,
+								       highs_model_object.unscaled_solution_params_,
+								       highs_model_object.scaled_solution_params_,
+								       get_unscaled_solution_params,
+								       get_scaled_solution_params,
+								       new_scaled_primal_feasibility_tolerance,
+								       new_scaled_dual_feasibility_tolerance);
+}
+
+void getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
+								  HighsSolutionParams& get_unscaled_solution_params) {
+  const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  HighsSolutionParams get_scaled_solution_params;
+  double new_scaled_primal_feasibility_tolerance;
+  double new_scaled_dual_feasibility_tolerance;
+  getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+								       highs_model_object.scale_,
+								       highs_model_object.simplex_basis_,
+								       highs_model_object.simplex_info_,
+								       unscaled_primal_feasibility_tolerance,
+								       unscaled_dual_feasibility_tolerance,
+								       highs_model_object.scaled_model_status_,
+								       highs_model_object.unscaled_solution_params_,
+								       highs_model_object.scaled_solution_params_,
+								       get_unscaled_solution_params,
+								       get_scaled_solution_params,
+								       new_scaled_primal_feasibility_tolerance,
+								       new_scaled_dual_feasibility_tolerance);
+}
+
+void getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
+							  HighsSolutionParams& get_unscaled_solution_params,
+							  HighsSolutionParams& get_scaled_solution_params) {
+  const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  double new_scaled_primal_feasibility_tolerance;
+  double new_scaled_dual_feasibility_tolerance;
+  getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+								       highs_model_object.scale_,
+								       highs_model_object.simplex_basis_,
+								       highs_model_object.simplex_info_,
+								       unscaled_primal_feasibility_tolerance,
+								       unscaled_dual_feasibility_tolerance,
+								       highs_model_object.scaled_model_status_,
+								       highs_model_object.unscaled_solution_params_,
+								       highs_model_object.scaled_solution_params_,
+								       get_unscaled_solution_params,
+								       get_scaled_solution_params,
+								       new_scaled_primal_feasibility_tolerance,
+								       new_scaled_dual_feasibility_tolerance);
+}
+
+// Analyse the unscaled solution from a Simplex basic solution to get
+// suggested feasibility tolerances for resolving the scaled LP
+// This sets highs_model_object.unscaled_solution_params_
+void getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
+								     double& new_scaled_primal_feasibility_tolerance,
+								     double& new_scaled_dual_feasibility_tolerance) {
+  const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  HighsSolutionParams get_unscaled_solution_params;
+  HighsSolutionParams get_scaled_solution_params;
+  getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+								       highs_model_object.scale_,
+								       highs_model_object.simplex_basis_,
+								       highs_model_object.simplex_info_,
+								       unscaled_primal_feasibility_tolerance,
+								       unscaled_dual_feasibility_tolerance,
+								       highs_model_object.scaled_model_status_,
+								       highs_model_object.unscaled_solution_params_,
+								       highs_model_object.scaled_solution_params_,
+								       get_unscaled_solution_params,
+								       get_scaled_solution_params,
+								       new_scaled_primal_feasibility_tolerance,
+								       new_scaled_dual_feasibility_tolerance);
+}
+
+void getPrimalDualInfeasibilities(HighsModelObject& highs_model_object,
+				  double& new_scaled_primal_feasibility_tolerance,
+				  double& new_scaled_dual_feasibility_tolerance) {
+  const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  HighsSolutionParams get_unscaled_solution_params;
+  HighsSolutionParams get_scaled_solution_params;
+  getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+								       highs_model_object.scale_,
+								       highs_model_object.simplex_basis_,
+								       highs_model_object.simplex_info_,
+								       unscaled_primal_feasibility_tolerance,
+								       unscaled_dual_feasibility_tolerance,
+								       highs_model_object.scaled_model_status_,
+								       highs_model_object.unscaled_solution_params_,
+								       highs_model_object.scaled_solution_params_,
+								       get_unscaled_solution_params,
+								       get_scaled_solution_params,
+								       new_scaled_primal_feasibility_tolerance,
+								       new_scaled_dual_feasibility_tolerance);
+}
+
+void getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(const HighsLp& lp,
+									  const HighsScale& scale,
+									  const SimplexBasis& basis,
+									  const HighsSimplexInfo& simplex_info,
+									  const double unscaled_primal_feasibility_tolerance,
+									  const double unscaled_dual_feasibility_tolerance,
+									  const HighsModelStatus scaled_model_status,
+									  const HighsSolutionParams& unscaled_solution_params,
+									  const HighsSolutionParams& scaled_solution_params,
+									  HighsSolutionParams& get_unscaled_solution_params,
+									  HighsSolutionParams& get_scaled_solution_params,
+									  double& new_scaled_primal_feasibility_tolerance,
+									  double& new_scaled_dual_feasibility_tolerance) {
+
+  get_unscaled_solution_params = unscaled_solution_params;
+  get_scaled_solution_params = scaled_solution_params;
+
+  int& num_unscaled_primal_infeasibilities = get_unscaled_solution_params.num_primal_infeasibilities;
+  double& max_unscaled_primal_infeasibility = get_unscaled_solution_params.max_primal_infeasibility;
+  double& sum_unscaled_primal_infeasibilities = get_unscaled_solution_params.sum_primal_infeasibilities;
+  int& num_unscaled_dual_infeasibilities = get_unscaled_solution_params.num_dual_infeasibilities;
+  double& max_unscaled_dual_infeasibility = get_unscaled_solution_params.max_dual_infeasibility;
+  double& sum_unscaled_dual_infeasibilities = get_unscaled_solution_params.sum_dual_infeasibilities;
+  
+  int& num_scaled_primal_infeasibilities = get_scaled_solution_params.num_primal_infeasibilities;
+  double& max_scaled_primal_infeasibility = get_scaled_solution_params.max_primal_infeasibility;
+  double& sum_scaled_primal_infeasibilities = get_scaled_solution_params.sum_primal_infeasibilities;
+  int& num_scaled_dual_infeasibilities = get_scaled_solution_params.num_dual_infeasibilities;
+  double& max_scaled_dual_infeasibility = get_scaled_solution_params.max_dual_infeasibility;
+  double& sum_scaled_dual_infeasibilities = get_scaled_solution_params.sum_dual_infeasibilities;
+
+  // Invalidate the unscaled and scaled infeasibility params 
+  invalidateSolutionInfeasibilityParams(get_unscaled_solution_params);
+  invalidateSolutionInfeasibilityParams(get_scaled_solution_params);
+  // Zero the counts of unscaled and scaled primal and dual infeasibilities 
   num_unscaled_primal_infeasibilities = 0;
   num_unscaled_dual_infeasibilities = 0;
-
+  num_scaled_primal_infeasibilities = 0;
+  num_scaled_dual_infeasibilities = 0;
+  
   // If the scaled LP has beeen solved to optimality, look at the
   // scaled solution and, if there are infeasibilities, identify new
   // feasibility tolerances for the scaled LP
-  const bool get_new_feasibility_tolerances = scaled_model_status == HighsModelStatus::OPTIMAL;
+  const bool get_new_scaled_feasibility_tolerances = scaled_model_status == HighsModelStatus::OPTIMAL;
 
-  if (get_new_feasibility_tolerances) {
-    new_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
-    new_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
+  //  const double scaled_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
+  //  const double scaled_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
+
+  if (get_new_scaled_feasibility_tolerances) {
+    new_scaled_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
+    new_scaled_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
   }
   for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
@@ -3023,10 +3289,10 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
       sum_scaled_dual_infeasibilities += scaled_dual_infeasibility;
     }
     if (unscaled_dual_infeasibility > 0) {
-      if (unscaled_dual_infeasibility >= options.dual_feasibility_tolerance) {
+      if (unscaled_dual_infeasibility >= unscaled_dual_feasibility_tolerance) {
 	num_unscaled_dual_infeasibilities++;
-	if (get_new_feasibility_tolerances) {
-	  double multiplier = options.dual_feasibility_tolerance / scale_mu;
+	if (get_new_scaled_feasibility_tolerances) {
+	  double multiplier = unscaled_dual_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
 	  double value = simplex_info.workValue_[iVar];
 	  HighsLogMessage(HighsMessageType::INFO,
@@ -3035,7 +3301,7 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 			  scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
 			  multiplier);
 #endif
-	  new_dual_feasibility_tolerance = min(multiplier, new_dual_feasibility_tolerance);
+	  new_scaled_dual_feasibility_tolerance = min(multiplier, new_scaled_dual_feasibility_tolerance);
 	}
       }
       max_unscaled_dual_infeasibility = max(unscaled_dual_infeasibility, max_unscaled_dual_infeasibility);
@@ -3068,10 +3334,10 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
     }
     max_scaled_primal_infeasibility = max(scaled_primal_infeasibility, max_scaled_primal_infeasibility);
     sum_scaled_primal_infeasibilities += scaled_primal_infeasibility;
-    if (unscaled_primal_infeasibility > options.primal_feasibility_tolerance) {
+    if (unscaled_primal_infeasibility > unscaled_primal_feasibility_tolerance) {
       num_unscaled_primal_infeasibilities++;
-      if (get_new_feasibility_tolerances) {
-	double multiplier = options.primal_feasibility_tolerance / scale_mu;
+      if (get_new_scaled_feasibility_tolerances) {
+	double multiplier = unscaled_primal_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
 	HighsLogMessage(HighsMessageType::INFO,
 			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
@@ -3079,105 +3345,23 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 			scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
 			multiplier);
 #endif
-	new_primal_feasibility_tolerance = min(multiplier, new_primal_feasibility_tolerance);
+	new_scaled_primal_feasibility_tolerance = min(multiplier, new_scaled_primal_feasibility_tolerance);
       }
     }
     max_unscaled_primal_infeasibility = max(unscaled_primal_infeasibility, max_unscaled_primal_infeasibility);
     sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
   }
-#ifdef HiGHSDEV
-  if (scaled_model_status == HighsModelStatus::OPTIMAL) {
-    // If numbers of scaled primal or dual infeasibilities are
-    // inconsistent with the scaled model status, then flag up an error
-    bool should_be_primal_infeasibilities = false;
-    bool should_be_dual_infeasibilities = false;
-    bool infeasibility_error;
-    std::string error_comment;
-    // Consider primal infeasibility errors
-    infeasibility_error = false;
-    if (num_scaled_primal_infeasibilities && !should_be_primal_infeasibilities) {
-      infeasibility_error = true;
-      error_comment = "Scaled primal infeasibilities, but should be none";
-    } else  if (num_scaled_primal_infeasibilities==0 && should_be_primal_infeasibilities) {
-      infeasibility_error = true;
-      error_comment = "No scaled primal infeasibilities, but should be some";
-    }
-    if (infeasibility_error)
-      HighsLogMessage(HighsMessageType::ERROR, "%s: num/max/sum = %6d/%0.4g/%0.4g",
-		      error_comment.c_str(),
-		      num_scaled_primal_infeasibilities,
-		      max_scaled_primal_infeasibility,
-		      sum_scaled_primal_infeasibilities);
-    // Consider dual infeasibility errors
-    infeasibility_error = false;
-    if (num_scaled_dual_infeasibilities && !should_be_dual_infeasibilities) {
-      infeasibility_error = true;
-      error_comment = "Scaled dual infeasibilities, but should be none";
-    } else  if (num_scaled_dual_infeasibilities==0 && should_be_dual_infeasibilities) {
-      infeasibility_error = true;
-      error_comment = "No scaled dual infeasibilities, but should be some";
-    }
-    if (infeasibility_error)
-      HighsLogMessage(HighsMessageType::ERROR, "%s: num/max/sum = %6d/%0.4g/%0.4g",
-		      error_comment.c_str(),
-		      num_scaled_dual_infeasibilities,
-		      max_scaled_dual_infeasibility,
-		      sum_scaled_dual_infeasibilities);
-  }
-#endif
 
-  bool equal_scaled_solution_params =
-    equalSolutionParams(highs_model_object.scaled_solution_params_,
-			local_scaled_solution_params);
-  //  assert(equal_scaled_solution_params);
-  if (!equal_scaled_solution_params) {
-    HighsLogMessage(HighsMessageType::ERROR,
-		  "Unequal solution_params in analyseSimplexBasicSolution");
-    //    return HighsStatus::Error;
-  }
+  bool equal_solution_infeasibility_params;
+  equal_solution_infeasibility_params =
+    equalSolutionInfeasibilityParams(get_unscaled_solution_params, unscaled_solution_params);
+  assert(equal_solution_infeasibility_params);
+  equal_solution_infeasibility_params =
+    equalSolutionInfeasibilityParams(get_scaled_solution_params, scaled_solution_params);
+  assert(equal_solution_infeasibility_params);
+									      
 
-  unscaled_model_status = scaled_model_status;
-  unscaled_solution_params.primal_status = scaled_solution_params.primal_status;
-  unscaled_solution_params.dual_status = scaled_solution_params.dual_status;
 
-  // The solution status for the unscaled LP is inherited from the
-  // scaled LP, unless there are infeasibilities in the unscaled
-  // solution
-  // unscaled_solution_params.primal_status = scaled_solution_params.primal_status;
-  // unscaled_solution_params.dual_status = scaled_solution_params.dual_status;
-  if (num_unscaled_primal_infeasibilities) {
-    if (unscaled_model_status == HighsModelStatus::OPTIMAL)
-      unscaled_model_status = HighsModelStatus::NOTSET;
-    unscaled_solution_params.primal_status = STATUS_NO_SOLUTION;
-  }
-  if (num_unscaled_dual_infeasibilities) 
-    unscaled_solution_params.dual_status = STATUS_NO_SOLUTION;
-
-  if (report) {
-    HighsLogMessage(HighsMessageType::INFO,
-		    "Simplex basic solution: %sObjective = %0.15g",
-		    iterationsToString(local_scaled_solution_params).c_str(),
-		    local_scaled_solution_params.objective_function_value);
-    HighsLogMessage(HighsMessageType::INFO,
-		    "Infeasibilities -   scaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
-		    local_scaled_solution_params.num_primal_infeasibilities,
-		    local_scaled_solution_params.max_primal_infeasibility,
-		    local_scaled_solution_params.sum_primal_infeasibilities,
-		    local_scaled_solution_params.num_dual_infeasibilities,
-		    local_scaled_solution_params.max_dual_infeasibility,
-		    local_scaled_solution_params.sum_dual_infeasibilities,
-		    utilHighsModelStatusToString(scaled_model_status).c_str());
-    HighsLogMessage(HighsMessageType::INFO,
-		    "Infeasibilities - unscaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
-		    unscaled_solution_params.num_primal_infeasibilities,
-		    unscaled_solution_params.max_primal_infeasibility,
-		    unscaled_solution_params.sum_primal_infeasibilities,
-		    unscaled_solution_params.num_dual_infeasibilities,
-		    unscaled_solution_params.max_dual_infeasibility,
-		    unscaled_solution_params.sum_dual_infeasibilities,
-		    utilHighsModelStatusToString(unscaled_model_status).c_str());
-  }
-  return HighsStatus::OK;
 }
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,

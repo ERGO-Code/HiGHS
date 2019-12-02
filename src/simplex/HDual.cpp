@@ -805,7 +805,8 @@ void HDual::rebuild() {
     printf(
         "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
         "%11.4g\n",
-        solvePhase, totalRebuilds, sv_invertHint, scaled_solution_params.simplex_iteration_count,
+        solvePhase, totalRebuilds, sv_invertHint,
+	workHMO.scaled_solution_params_.simplex_iteration_count,
         totalRebuildTime);
   }
 #endif
@@ -1375,7 +1376,7 @@ void HDual::chooseRow() {
       const bool report_weight_error = false;
       if (report_weight_error && weight_error > 0.5*weight_error_threshhold) {
 	printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
-	       scaled_solution_params.simplex_iteration_count,
+	       workHMO.scaled_solution_params_.simplex_iteration_count,
 	       accept_weight, 
 	       num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
 	       c_weight, u_weight, weight_error, error_type.c_str(),
