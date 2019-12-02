@@ -27,6 +27,7 @@ enum class ICrashStrategy {
 struct ICrashIterationDetails {
   int num;
   double weight;
+  double lambda_norm_2;
 
   double lp_objective;
   double quadratic_objective;

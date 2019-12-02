@@ -82,6 +82,9 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
           "ICrash error: breakpoints does not support dualize option.\n");
       return false;
     }
+    HighsPrintMessage(ML_ALWAYS,
+                      "ICrash error: breakpoints not implemented yet.\n");
+    return false;
   }
   return true;
 }
@@ -146,7 +149,11 @@ void update(Quadratic& idata) {
 }
 
 ICrashIterationDetails fillDetails(const int num, const Quadratic& idata) {
-  return ICrashIterationDetails{num, idata.mu, idata.lp_objective,
+  double lambda_norm_2 = getNorm2(idata.lambda);
+  return ICrashIterationDetails{num,
+                                idata.mu,
+                                lambda_norm_2,
+                                idata.lp_objective,
                                 idata.quadratic_objective,
                                 idata.residual_norm_2};
 }
