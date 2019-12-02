@@ -192,7 +192,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
-// with runSolver(..)
+// with runLpSolver(..)
 HighsStatus Highs::run() {
     /*
   if (options_.message_level >= 0) {
@@ -300,7 +300,7 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::NotPresolved: {
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
         HighsStatus return_status =
-            runSolver(hmos_[solved_hmo], iteration_count,
+            runLpSolver(hmos_[solved_hmo], iteration_count,
                           "Not presolved: solving the LP");
         solve_iteration_count += iteration_count;
         if (return_status != HighsStatus::OK) return return_status;
@@ -309,7 +309,7 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
         HighsStatus return_status =
-            runSolver(hmos_[solved_hmo], iteration_count,
+            runLpSolver(hmos_[solved_hmo], iteration_count,
                           "Problem not reduced by presolve: solving the LP");
         solve_iteration_count += iteration_count;
         if (return_status != HighsStatus::OK) return return_status;
@@ -328,7 +328,7 @@ HighsStatus Highs::run() {
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
-        HighsStatus return_status = runSolver(
+        HighsStatus return_status = runLpSolver(
             hmos_[solved_hmo], iteration_count, "Solving the presolved LP");
         solve_iteration_count += iteration_count;
         if (return_status != HighsStatus::OK) return return_status;
@@ -428,7 +428,7 @@ HighsStatus Highs::run() {
           bool full_iteration_logging = false;
           if (full_iteration_logging) HighsSetMessagelevel(ML_ALWAYS);
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
-          HighsStatus return_status = runSolver(
+          HighsStatus return_status = runLpSolver(
               hmos_[solved_hmo], iteration_count,
               "Solving the original LP from the solution after postsolve");
           postsolve_iteration_count = iteration_count;
@@ -451,7 +451,7 @@ HighsStatus Highs::run() {
     solved_hmo = original_hmo;
     hmos_[solved_hmo].lp_.lp_name_ = "Re-solved LP";
     HighsStatus return_status =
-        runSolver(hmos_[solved_hmo], iteration_count, "Re-solving the LP");
+        runLpSolver(hmos_[solved_hmo], iteration_count, "Re-solving the LP");
     solve_iteration_count += iteration_count;
     if (return_status != HighsStatus::OK) return return_status;
   }
@@ -1076,8 +1076,8 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 }
 
 // The method below runs simplex or ipx solver on the lp.
-HighsStatus Highs::runSolver(HighsModelObject& model, int& iteration_count,
-                                 const string message) {
+HighsStatus Highs::runLpSolver(HighsModelObject& model, int& iteration_count,
+			       const string message) {
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
