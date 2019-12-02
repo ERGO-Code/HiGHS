@@ -56,8 +56,6 @@ bool parseICrashStrategy(const std::string& strategy,
     icrash_strategy = ICrashStrategy::kAdmm;
   else if (lower == "ica")
     icrash_strategy = ICrashStrategy::kICA;
-  else if (lower == "breakpoints")
-    icrash_strategy = ICrashStrategy::kBreakpoints;
   else
     return false;
   return true;
@@ -71,17 +69,17 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
     return false;
   }
 
-  if (options.strategy == ICrashStrategy::kBreakpoints) {
+  if (options.breakpoints) {
     if (options.exact) {
-      HighsPrintMessage(
-          ML_ALWAYS,
-          "ICrash error: exact strategy not allowed for kBreakpoints./n");
+      HighsPrintMessage(ML_ALWAYS,
+                        "ICrash error: exact strategy not allowed for "
+                        "breakpoints minimization./n");
       return false;
     }
     if (options.dualize) {
       HighsPrintMessage(
           ML_ALWAYS,
-          "ICrash error: kBreakpoints does not support dualize option.\n");
+          "ICrash error: breakpoints does not support dualize option.\n");
       return false;
     }
   }
@@ -95,13 +93,13 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
     if (options.dualize) ilp = dualizeEqualityProblem(ilp);
   } else {
     // not equality problem.
-    if (options.strategy != ICrashStrategy::kBreakpoints) {
-      ilp = transformIntoEqualityProblem(ilp);
-      if (options.dualize) {
-        // Add slacks & dualize.
-        // dualizeEqualityProblem returns a minimization equality problem.
-        ilp = dualizeEqualityProblem(ilp);
-      }
+    assert(!options.breakpoints);  // remove when implementing breakpoints and
+                                   // add if else.
+    ilp = transformIntoEqualityProblem(ilp);
+    if (options.dualize) {
+      // Add slacks & dualize.
+      // dualizeEqualityProblem returns a minimization equality problem.
+      ilp = dualizeEqualityProblem(ilp);
     }
   }
 
@@ -137,9 +135,7 @@ void update(Quadratic& idata) {
 
   // residual & residual_norm_2
   calculateRowValues(idata.lp, idata.xk);
-  bool piecewise =
-      (idata.options.strategy == ICrashStrategy::kBreakpoints) ? true : false;
-  updateResidual(piecewise, idata.lp, idata.xk, idata.residual);
+  updateResidual(idata.options.breakpoints, idata.lp, idata.xk, idata.residual);
   idata.residual_norm_2 = getNorm2(idata.residual);
 
   // quadratic_objective
@@ -278,7 +274,7 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
 
     bool success = solveSubproblem(idata, options);
     if (!success) return HighsStatus::Error;
-    
+
     update(idata);
     reportSubproblem(idata, iteration);
     result.details.push_back(fillDetails(iteration, idata));

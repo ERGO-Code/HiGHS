@@ -21,8 +21,7 @@
 enum class ICrashStrategy {
   kPenalty,
   kAdmm,
-  kICA,
-  kBreakpoints,
+  kICA
 };
 
 struct ICrashIterationDetails {
@@ -55,6 +54,7 @@ struct ICrashOptions {
   int iterations;
   int approximate_minimization_iterations;
   bool exact;
+  bool breakpoints; // gets ignored if exact is set to true
 };
 
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
