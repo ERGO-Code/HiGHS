@@ -64,7 +64,7 @@ bool parseICrashStrategy(const std::string& strategy,
 bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
   if (options.exact) {
     HighsPrintMessage(ML_ALWAYS,
-                      "ICrash error: exact subproblem solution not available "
+                      "ICrashError: exact subproblem solution not available "
                       "at the moment.\n");
     return false;
   }
@@ -72,18 +72,18 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
   if (options.breakpoints) {
     if (options.exact) {
       HighsPrintMessage(ML_ALWAYS,
-                        "ICrash error: exact strategy not allowed for "
+                        "ICrashError: exact strategy not allowed for "
                         "breakpoints minimization./n");
       return false;
     }
     if (options.dualize) {
       HighsPrintMessage(
           ML_ALWAYS,
-          "ICrash error: breakpoints does not support dualize option.\n");
+          "ICrashError: breakpoints does not support dualize option.\n");
       return false;
     }
     HighsPrintMessage(ML_ALWAYS,
-                      "ICrash error: breakpoints not implemented yet.\n");
+                      "ICrashError: breakpoints not implemented yet.\n");
     return false;
   }
   return true;
@@ -235,11 +235,11 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
       break;
     }
     case ICrashStrategy::kPenalty: {
-      HighsPrintMessage(ML_ALWAYS, "ICrash error: Not implemented yet./n");
+      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet./n");
       return false;
     }
     default: {
-      HighsPrintMessage(ML_ALWAYS, "ICrash error: Not implemented yet./n");
+      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet./n");
       return false;
     }
   }
@@ -263,12 +263,45 @@ void reportSubproblem(const Quadratic& idata, const int iteration) {
   HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
 }
 
+std::string ICrashtrategyToString(const ICrashStrategy strategy) {
+  switch (strategy) {
+    case ICrashStrategy::kAdmm:
+      return "ADMM";
+    case ICrashStrategy::kPenalty:
+      return "Penalty";
+    case ICrashStrategy::kICA:
+      return "ICA";
+  }
+  return "ICrashError: Unknown strategy.\n";
+}
+
+void reportOptions(const ICrashOptions& options) {
+  std::stringstream ss;
+  // Report outcome.
+  ss << "ICrashOptions: \n"
+     << "dualize: " << std::boolalpha << options.dualize << "\n"
+     << "strategy: " << ICrashtrategyToString(options.strategy) << "\n"
+     << "starting_weight: " << std::scientific << options.starting_weight
+     << "\n"
+     << "iterations: " << options.iterations << "\n";
+  if (!options.exact) {
+    ss << "approximate_minimization_iterations: "
+       << options.approximate_minimization_iterations << "\n"
+       << std::boolalpha << "breakpoints: " << options.breakpoints << "\n";
+  } else {
+    ss << "exact: true\n";
+  }
+  ss << "\n";
+  HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
+}
+
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
                        ICrashInfo& result) {
   if (!checkOptions(lp, options)) return HighsStatus::Error;
 
   // Initialize data structures and initial values.
   Quadratic idata = parseOptions(lp, options);
+  reportOptions(options);
   initialize(idata, options);
   update(idata);
   reportSubproblem(idata, 0);
