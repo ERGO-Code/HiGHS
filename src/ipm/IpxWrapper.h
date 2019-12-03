@@ -301,8 +301,8 @@ HighsStatus solveModelIpx(const HighsLp& lp, const HighsOptions& options,
     initialiseSolutionParams(unscaled_solution_params, options);
     unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
     unscaled_solution_params.objective_function_value = ipx_info.objval;
-    getPrimalDualInfeasibilities(lp, highs_basis, highs_solution,
-				 unscaled_solution_params);
+    getPrimalDualInfeasibilitiesFromHighsBasicSolution(lp, highs_basis, highs_solution,
+						       unscaled_solution_params);
   }
   //  return IpxStatus::OK;
   return HighsStatus::OK;

@@ -722,6 +722,7 @@ class Highs {
   HighsStatus solveNode(Node& node);
 
   void updateHighsSolutionBasis();
+  void getHighsModelStatusAndInfo(const int solved_hmo);
 
   void underDevelopmentLogMessage(const string method_name);
 };

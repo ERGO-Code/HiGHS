@@ -218,36 +218,37 @@ HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_obje
 					const HighsSolutionParams& scaled_solution_params,
 					const bool report=false);
 
-void getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-								HighsSolutionParams& scaled_solution_params);
+HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
+								       HighsSolutionParams& scaled_solution_params);
 
-void getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-								  HighsSolutionParams& unscaled_solution_params);
+HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
+									 HighsSolutionParams& unscaled_solution_params);
 
-void getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-							  HighsSolutionParams& unscaled_solution_params,
-							  HighsSolutionParams& scaled_solution_params);
+HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
+								 HighsSolutionParams& unscaled_solution_params,
+								 HighsSolutionParams& scaled_solution_params);
 
 // Analyse the unscaled solution from a Simplex basic solution to get
 // suggested feasibility tolerances for resolving the scaled LP
 // This sets highs_model_object.unscaled_solution_params_
-void getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-								     double& new_scaled_primal_feasibility_tolerance,
-								     double& new_scaled_dual_feasibility_tolerance);
+HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
+									    HighsSolutionParams& get_unscaled_solution_params,
+									    double& new_scaled_primal_feasibility_tolerance,
+									    double& new_scaled_dual_feasibility_tolerance);
 
-void getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(const HighsLp& lp,
-									  const HighsScale& scale,
-									  const SimplexBasis& basis,
-									  const HighsSimplexInfo& simplex_info,
-									  const double unscaled_primal_feasibility_tolerance,
-									  const double unscaled_dual_feasibility_tolerance,
-									  const HighsModelStatus scaled_model_status,
-									  const HighsSolutionParams& unscaled_solution_params,
-									  const HighsSolutionParams& scaled_solution_params,
-									  HighsSolutionParams& get_unscaled_solution_params,
-									  HighsSolutionParams& get_scaled_solution_params,
-									  double& new_scaled_primal_feasibility_tolerance,
-									  double& new_scaled_dual_feasibility_tolerance);
+HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(const HighsLp& lp,
+										 const HighsScale& scale,
+										 const SimplexBasis& basis,
+										 const HighsSimplexInfo& simplex_info,
+										 const double unscaled_primal_feasibility_tolerance,
+										 const double unscaled_dual_feasibility_tolerance,
+										 const HighsModelStatus scaled_model_status,
+										 const HighsSolutionParams& unscaled_solution_params,
+										 const HighsSolutionParams& scaled_solution_params,
+										 HighsSolutionParams& get_unscaled_solution_params,
+										 HighsSolutionParams& get_scaled_solution_params,
+										 double& new_scaled_primal_feasibility_tolerance,
+										 double& new_scaled_dual_feasibility_tolerance);
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase);

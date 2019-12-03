@@ -17,11 +17,12 @@
 #include "lp_data/HighsSolution.h"
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution and HighsSolutionParams
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
-  // Invalidate the model statuses and unscaled solution params
+  // Reset unscaled and scaled model status and solution params - except for iteration counts
+  resetModelStatusAndSolutionParams(highs_model_object);
+
+  // Aliases to unscaled model status and solution parameters
   HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
-  invalidateModelStatusAndSolutionStatusParams(highs_model_object.unscaled_model_status_,
-					       highs_model_object.scaled_model_status_,
-					       unscaled_solution_params);
+  //  HighsModelStatus& unscaled_model_status = highs_model_object.unscaled_model_status_;
 
   // Check that the LP really is unconstrained!
   const HighsLp& lp = highs_model_object.lp_;
@@ -37,8 +38,8 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   solution.col_dual.assign(lp.numCol_, 0);
   basis.col_status.assign(lp.numCol_, HighsBasisStatus::NONBASIC);
 
-  double primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
-  double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  double primal_feasibility_tolerance = unscaled_solution_params.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = unscaled_solution_params.dual_feasibility_tolerance;
 
   double objective = lp.offset_;
   bool infeasible = false;

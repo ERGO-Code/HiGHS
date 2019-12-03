@@ -248,21 +248,27 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
     HighsLogMessage(HighsMessageType::INFO, "tryToSolveUnscaledLp pass %1d:", pass);
 #endif
     // Deduce the unscaled solution parameters, and new fasibility tolerances if not primal and/or dual feasible
-    getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(highs_model_object, 
-								    new_primal_feasibility_tolerance,
-								    new_dual_feasibility_tolerance);
-    //    if (return_status != HighsStatus::OK) return return_status;
+    HighsStatus return_status =
+      getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(highs_model_object, 
+								      highs_model_object.unscaled_solution_params_,
+								      new_primal_feasibility_tolerance,
+								      new_dual_feasibility_tolerance);
+    if (return_status != HighsStatus::OK) return return_status;
+    int num_unscaled_primal_infeasibilities = highs_model_object.unscaled_solution_params_.num_primal_infeasibilities;
+    int num_unscaled_dual_infeasibilities = highs_model_object.unscaled_solution_params_.num_dual_infeasibilities;
     // Set the model and solution status according to the unscaled solution parameters
+    if (num_unscaled_primal_infeasibilities==0 && num_unscaled_dual_infeasibilities==0)
+      highs_model_object.unscaled_model_status_ = HighsModelStatus::OPTIMAL;
+
     if (highs_model_object.unscaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
 
     //Not optimal
-    assert(highs_model_object.unscaled_solution_params_.num_primal_infeasibilities > 0 ||
-	   highs_model_object.unscaled_solution_params_.num_dual_infeasibilities > 0);
+    assert(num_unscaled_primal_infeasibilities > 0 || num_unscaled_dual_infeasibilities > 0);
 
     HighsLogMessage(HighsMessageType::INFO,
 		    "Have %d primal and %d dual unscaled infeasibilities",
-		    new_primal_feasibility_tolerance,
-		    new_dual_feasibility_tolerance);
+		    num_unscaled_primal_infeasibilities,
+		    num_unscaled_dual_infeasibilities);
     HighsLogMessage(HighsMessageType::INFO,
 		    "Possibly re-solve with feasibility tolerances of %g primal and %g dual",
 		    new_primal_feasibility_tolerance,
@@ -298,11 +304,8 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 // It sets the HiGHS basis within highs_model_object and, if optimal,
 // the HiGHS solution, too
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
-  // Invalidate the model statuses and scaled solution params
-  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
-  invalidateModelStatusAndSolutionStatusParams(highs_model_object.unscaled_model_status_,
-					       highs_model_object.scaled_model_status_,
-					       scaled_solution_params);
+  // Reset unscaled and scaled model status and solution params - except for iteration counts
+  resetModelStatusAndSolutionParams(highs_model_object);
 
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
@@ -321,38 +324,45 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
 
   double cost_scale = highs_model_object.scale_.cost_;
 #ifdef HiGHSDEV
-  if (cost_scale != 1) printf("solveModelSimplex: Cant't handle cost scaling\n");
+  if (cost_scale != 1) printf("solveModelSimplex: Can't handle cost scaling\n");
 #endif
   assert(cost_scale == 1);
   if (cost_scale != 1) return HighsStatus::Error;
 
-  bool try_to_solve_unscaled_lp =
-    highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL &&
-    highs_model_object.scale_.is_scaled_;
-
-  if (try_to_solve_unscaled_lp) {
-    // Either the scaled problem has been solved to optimality or
-    // scaling has been performed, so see whether the scaled problem has been solved
-    //
-    // If the solution isn't optimal, then there's no point in trying
-    // to solve with reduced tolerances.
-    //
-    // If scaling hasn't been used, then the original LP has been
-    // solved to the required tolerances
-    //
-    // Analyse the unscaled solution and, if it doesn't satisfy the
-    // required tolerances, tolerances for the scaled LP are identified
-    // which, if used, might yield an unscaled solution that satisfies
-    // the required tolerances. Can't handle cost scaling
-    //
-    highs_status = tryToSolveUnscaledLp(highs_model_object);
-    if (highs_status != HighsStatus::OK) return highs_status;
+  if (highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL) {
+    // (Scaled) LP solved to optimality
+    if (highs_model_object.scale_.is_scaled_) {
+      // LP solved was scaled, so see whether the scaled problem has
+      // been solved
+      //
+      // Analyse the unscaled solution and, if it doesn't satisfy the
+      // required tolerances, tolerances for the scaled LP are identified
+      // which, if used, might yield an unscaled solution that satisfies
+      // the required tolerances. Can't handle cost scaling
+      //
+      highs_status = tryToSolveUnscaledLp(highs_model_object);
+      if (highs_status != HighsStatus::OK) return highs_status;
+    } else {
+      // If scaling hasn't been used, then the original LP has been
+      // solved to the required tolerances
+      highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
+      highs_model_object.unscaled_solution_params_ = highs_model_object.scaled_solution_params_;
+    }
+  } else {
+      // If the solution isn't optimal, then clear the scaled solution infeasibility parameters
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
+    invalidateSolutionInfeasibilityParams(highs_model_object.scaled_solution_params_);
   }
-  
+    
   // Deduce the HiGHS basis and solution from the simplex basis and solution
   HighsSimplexInterface simplex_interface(highs_model_object);
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
+
+  copySolutionIterationCountAndObjectiveParams(highs_model_object.scaled_solution_params_,
+					       highs_model_object.unscaled_solution_params_);
+  
+  // Assess success according to the scaled model status
   return highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 }
 #endif

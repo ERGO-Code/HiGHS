@@ -43,8 +43,17 @@ struct HighsPrimalDualErrors {
   double sum_dual_residual;
 };
 
-// Analyse the HiGHS basic solution of the unscaled LP in a HighsModelObject instance
+// Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
+// of the unscaled LP in a HighsModelObject instance, after computing
+// the unscaled infeasibilities locally
 HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+				      const string message);
+
+// Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
+// of the unscaled LP in a HighsModelObject instance, assuming that
+// the unscaled infeasibilities are known
+HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+				      const HighsSolutionParams& unscaled_solution_params,
 				      const string message);
 
 // Analyse the HiGHS basic solution of the given LP. Currently only
@@ -68,19 +77,19 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
 				      const string message,
 				      const int report_level);
 
-void getPrimalDualInfeasibilities(const HighsLp& lp,
-				  const HighsBasis& basis,
-				  const HighsSolution& solution,
-				  HighsSolutionParams& solution_params);
+void getPrimalDualInfeasibilitiesFromHighsBasicSolution(const HighsLp& lp,
+							const HighsBasis& basis,
+							const HighsSolution& solution,
+							HighsSolutionParams& solution_params);
 
-void getPrimalDualInfeasibilitiesAndErrors(const HighsLp& lp,
-					   const HighsBasis& basis,
-					   const HighsSolution& solution,
-					   HighsSolutionParams& solution_params,
-					   HighsPrimalDualErrors& primal_dual_errors,
-					   double& primal_objective_value,
-					   double& dual_objective_value,
-					   const int report_level);
+void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(const HighsLp& lp,
+								 const HighsBasis& basis,
+								 const HighsSolution& solution,
+								 HighsSolutionParams& solution_params,
+								 HighsPrimalDualErrors& primal_dual_errors,
+								 double& primal_objective_value,
+								 double& dual_objective_value,
+								 const int report_level=-1);
 bool analyseVarBasicSolution(
 			bool report,
 			const double primal_feasibility_tolerance,
@@ -111,9 +120,8 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 
 std::string iterationsToString(const HighsSolutionParams& solution_params);
 
-void invalidateModelStatusAndSolutionStatusParams(HighsModelStatus& unscaled_model_status,
-						  HighsModelStatus& scaled_model_status,
-						  HighsSolutionParams& solution_params);
+void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
+
 void invalidateSolutionParams(HighsSolutionParams& solution_params);
 void invalidateSolutionIterationCountAndObjectiveParams(HighsSolutionParams& solution_params);
 void invalidateSolutionStatusParams(HighsSolutionParams& solution_params);

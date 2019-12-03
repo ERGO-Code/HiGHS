@@ -227,7 +227,7 @@ struct HighsSimplexInfo {
   bool store_squared_primal_infeasibility = false;
   bool allow_primal_flips_for_dual_feasibility = true;
 #ifndef HiGHSDEV
-  bool analyseLpSolution = true;// false; //
+  bool analyseLpSolution = false; //true;// 
 #else  
   bool analyseLpSolution = true;
   // Options for reporting timing

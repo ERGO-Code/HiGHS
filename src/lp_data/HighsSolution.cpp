@@ -28,14 +28,43 @@
 #endif
 
 // Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
-// of the unscaled LP in a HighsModelObject instance
+// of the unscaled LP in a HighsModelObject instance, after computing
+// the unscaled infeasibilities locally
 HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+				      const string message) {
+
+  HighsSolutionParams get_unscaled_solution_params;
+  invalidateSolutionParams(get_unscaled_solution_params);
+  HighsPrimalDualErrors primal_dual_errors;
+  double primal_objective_value;
+  double dual_objective_value;
+  getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(highs_model_object.lp_,
+							      highs_model_object.basis_,
+							      highs_model_object.solution_,
+							      get_unscaled_solution_params,
+							      primal_dual_errors,
+							      primal_objective_value,
+							      dual_objective_value);
+
+  return analyseHighsBasicSolution(highs_model_object.lp_,
+				   highs_model_object.basis_,
+				   highs_model_object.solution_,
+				   highs_model_object.unscaled_model_status_,
+				   get_unscaled_solution_params,
+				   message);
+}
+
+// Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
+// of the unscaled LP in a HighsModelObject instance, assuming that
+// the unscaled infeasibilities are known
+HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+				      const HighsSolutionParams& unscaled_solution_params,
 				      const string message) {
   return analyseHighsBasicSolution(highs_model_object.lp_,
 				   highs_model_object.basis_,
 				   highs_model_object.solution_,
 				   highs_model_object.unscaled_model_status_,
-				   highs_model_object.unscaled_solution_params_,
+				   unscaled_solution_params,
 				   message);
 }
 
@@ -76,18 +105,27 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
   
   HighsLogMessage(HighsMessageType::INFO,
 		  "HiGHS basic solution: Analysis - %s", message.c_str());
+
+  if (model_status!=HighsModelStatus::OPTIMAL) {
+    HighsLogMessage(HighsMessageType::INFO,
+		    "HiGHS basic solution: %sStatus: %s",
+		    iterationsToString(solution_params).c_str(), 
+		    utilHighsModelStatusToString(model_status).c_str());
+    return HighsStatus::OK;
+  }
+
   HighsSolutionParams check_solution_params = solution_params;
 
   HighsPrimalDualErrors primal_dual_errors;
   double primal_objective_value;
   double dual_objective_value;
 
-  getPrimalDualInfeasibilitiesAndErrors(lp, basis, solution,
-					check_solution_params,
-					primal_dual_errors,
-					primal_objective_value,
-					dual_objective_value,
-					report_level);
+  getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(lp, basis, solution,
+								check_solution_params,
+								primal_dual_errors,
+								primal_objective_value,
+								dual_objective_value,
+								report_level);
 
   int& num_primal_infeasibilities = check_solution_params.num_primal_infeasibilities;
   double& max_primal_infeasibility = check_solution_params.max_primal_infeasibility;
@@ -116,8 +154,8 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
   bool equal_solution_params = equalSolutionParams(solution_params, check_solution_params);
   if (!equal_solution_params) {
     HighsLogMessage(HighsMessageType::ERROR, "Unequal SolutionParams in analyseHighsBasicSolution");
-    // assert(equal_solution_params);
-    //    return HighsStatus::Error;
+    assert(equal_solution_params);
+    return HighsStatus::Error;
   }
 
 
@@ -202,31 +240,31 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
   return HighsStatus::OK;
 }
 
-void getPrimalDualInfeasibilities(const HighsLp& lp,
-				  const HighsBasis& basis,
-				  const HighsSolution& solution,
-				  HighsSolutionParams& solution_params) {
+void getPrimalDualInfeasibilitiesFromHighsBasicSolution(const HighsLp& lp,
+							const HighsBasis& basis,
+							const HighsSolution& solution,
+							HighsSolutionParams& solution_params) {
   HighsPrimalDualErrors primal_dual_errors;
   double primal_objective_value;
   double dual_objective_value;
   const int report_level = -1;
-  getPrimalDualInfeasibilitiesAndErrors(lp, basis, solution,
-					solution_params,
-					primal_dual_errors,
-					primal_objective_value,
-					dual_objective_value,
-					report_level);
+  getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(lp, basis, solution,
+							      solution_params,
+							      primal_dual_errors,
+							      primal_objective_value,
+							      dual_objective_value,
+							      report_level);
 }
 
-void getPrimalDualInfeasibilitiesAndErrors(const HighsLp& lp,
-					   const HighsBasis& basis,
-					   const HighsSolution& solution,
-					   HighsSolutionParams& solution_params,
-					   HighsPrimalDualErrors& primal_dual_errors,
-					   double& primal_objective_value,
-					   double& dual_objective_value,
-					   const int report_level) {
-				       
+void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(const HighsLp& lp,
+								 const HighsBasis& basis,
+								 const HighsSolution& solution,
+								 HighsSolutionParams& solution_params,
+								 HighsPrimalDualErrors& primal_dual_errors,
+								 double& primal_objective_value,
+								 double& dual_objective_value,
+								 const int report_level) {
+  
   double primal_feasibility_tolerance =
     solution_params.primal_feasibility_tolerance;
   double dual_feasibility_tolerance =
@@ -964,12 +1002,33 @@ std::string iterationsToString(const HighsSolutionParams& solution_params) {
   return iteration_statement;
 }
 
-void invalidateModelStatusAndSolutionStatusParams(HighsModelStatus& unscaled_model_status,
-						  HighsModelStatus& scaled_model_status,
-						  HighsSolutionParams& solution_params) {
-  unscaled_model_status = HighsModelStatus::NOTSET;
-  scaled_model_status = HighsModelStatus::NOTSET;
-  invalidateSolutionStatusParams(solution_params);
+void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
+  
+  highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+
+  HighsOptions& options = highs_model_object.options_;
+  HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
+  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
+
+  // Save a copy of the unscaled solution params to recover the iteration counts and objective
+  HighsSolutionParams save_solution_params;
+  copySolutionIterationCountAndObjectiveParams(unscaled_solution_params, save_solution_params);
+
+  // Invalidate the solution params then reset the feasibility
+  // tolerances and recover the iteration counts and objective
+  invalidateSolutionParams(unscaled_solution_params);
+  unscaled_solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  unscaled_solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  copySolutionIterationCountAndObjectiveParams(save_solution_params, unscaled_solution_params);
+
+  // Invalidate the solution params then reset the feasibility
+  // tolerances and recover the iteration counts and objective
+  invalidateSolutionParams(scaled_solution_params);
+  scaled_solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  scaled_solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  copySolutionIterationCountAndObjectiveParams(save_solution_params, scaled_solution_params);
+  
 }
 
 // Invalidate a HighsSolutionParams instance

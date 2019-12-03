@@ -373,7 +373,7 @@ HighsStatus Highs::run() {
       }
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
-    if (hmos_[solved_hmo].unscaled_model_status_ == HighsModelStatus::OPTIMAL) {
+    if (hmos_[solved_hmo].scaled_model_status_ == HighsModelStatus::OPTIMAL) {
       if (presolve_status == HighsPresolveStatus::Reduced ||
           presolve_status == HighsPresolveStatus::ReducedToEmpty) {
         // If presolve is nontrivial, extract the optimal solution
@@ -391,16 +391,11 @@ HighsStatus Highs::run() {
         timer_.stop(timer_.postsolve_clock);
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
           HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
-	  // Set up the solution parameters 
-	  HighsSolutionParams unscaled_solution_params;
-	  initialiseSolutionParams(unscaled_solution_params, hmos_[original_hmo].options_);
 	  //
           // To hot-start the simplex solver for the original_hmo:
 	  //
 	  // Set solution and its status
           hmos_[original_hmo].solution_ = presolve_info.recovered_solution_;
-	  unscaled_solution_params.primal_status = PrimalDualStatus::STATUS_UNKNOWN;
-	  unscaled_solution_params.dual_status = PrimalDualStatus::STATUS_UNKNOWN;
 	  //
 	  // Set basis and its status
           hmos_[original_hmo].basis_.col_status =
@@ -408,11 +403,8 @@ HighsStatus Highs::run() {
           hmos_[original_hmo].basis_.row_status =
               presolve_info.presolve_[0].getRowStatus();
           hmos_[original_hmo].basis_.valid_ = true;
-	  /*
 	  analyseHighsBasicSolution(hmos_[original_hmo],
 				    "after returning from postsolve");
-	  */
-
           // Now hot-start the simplex solver for the original_hmo
           solved_hmo = original_hmo;
           // Save the options to allow the best simplex strategy to
@@ -461,29 +453,10 @@ HighsStatus Highs::run() {
   // }
 
   //   assert(solved_hmo == original_hmo);
-
   // solved_hmo will be original_hmo unless the presolved LP is found to be infeasible or unbounded
-  int hmos_size = hmos_.size();
-  assert(hmos_size > 0);
-  // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
-  // ToDo: make sure the model_status values are corrected
 
-  HighsSolutionParams& unscaled_solution_params = hmos_[solved_hmo].unscaled_solution_params_;
-  model_status_ = hmos_[solved_hmo].unscaled_model_status_;
-  scaled_model_status_ = hmos_[solved_hmo].scaled_model_status_;
-  
-  info_.objective_function_value = unscaled_solution_params.objective_function_value;
-  // Get the total simplex IPM and crossover iteration counts over all HMO
-  info_.simplex_iteration_count = 0;
-  info_.ipm_iteration_count = 0;
-  info_.crossover_iteration_count = 0;
-  for (int k = 0; k < hmos_size; k++) {
-    info_.simplex_iteration_count += hmos_[k].unscaled_solution_params_.simplex_iteration_count;
-    info_.ipm_iteration_count += hmos_[k].unscaled_solution_params_.ipm_iteration_count;
-    info_.crossover_iteration_count += hmos_[k].unscaled_solution_params_.crossover_iteration_count;
-  }
-  info_.primal_status = unscaled_solution_params.primal_status;
-  info_.dual_status = unscaled_solution_params.dual_status;
+  getHighsModelStatusAndInfo(solved_hmo);
+  // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   // The HiGHS solution and basis have to come from the original_hmo
   // for them to have the right dimension.
   solution_ = hmos_[original_hmo].solution_;
@@ -500,7 +473,8 @@ HighsStatus Highs::run() {
   double lp_solve_final_time = timer_.readRunHighsClock();
   HighsPrintMessage(ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
   HighsPrintMessage(ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
-  return highsStatusFromHighsModelStatus(model_status_);
+  // Assess success according to the scaled model status
+  return highsStatusFromHighsModelStatus(scaled_model_status_);
 }
 
 const HighsLp& Highs::getLp() const { return lp_; }
@@ -1087,24 +1061,27 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, int& iteration_count,
   assert(assess_lp_status == HighsStatus::OK);
   if (assess_lp_status != HighsStatus::OK) return HighsStatus::Error;
 #endif
-  // Set return_status too error to ensure that it's set.
-  HighsStatus return_status = HighsStatus::Error;
+  // Set solver solver_return_status to error to ensure that it's set.
+  HighsStatus solver_return_status = HighsStatus::Error;
   // Initialise the solution parameters for the unscaled model
   initialiseSolutionParams(model.unscaled_solution_params_, model.options_);
   if (!model.lp_.numRow_) {
     // Unconstrained LP so solve directly
-    return_status = solveUnconstrainedLp(model);
-    if (return_status != HighsStatus::OK) return HighsStatus::Error;
+    solver_return_status = solveUnconstrainedLp(model);
+    if (solver_return_status != HighsStatus::OK) return HighsStatus::Error;
     iteration_count = 0;
   } else if (options_.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
     HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
-    return_status = solveModelIpx(model.lp_, options_,
+    solver_return_status = solveModelIpx(model.lp_, options_,
 				  model.basis_, model.solution_,
 				  model.unscaled_model_status_,
 				  model.unscaled_solution_params_);
-    if (return_status != HighsStatus::OK) return HighsStatus::Error;
+    if (solver_return_status != HighsStatus::OK) return HighsStatus::Error;
+    // Set the scaled model status and solution params for completeness
+    model.scaled_model_status_ = model.unscaled_model_status_;
+    model.scaled_solution_params_ = model.unscaled_solution_params_;
 #else
     HighsLogMessage(HighsMessageType::ERROR, "Model cannot be solved with IPM");
     return HighsStatus::Error;
@@ -1112,20 +1089,20 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, int& iteration_count,
   } else {
     // Use Simplex
     int initial_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
-    return_status = solveModelSimplex(model);
-    if (return_status != HighsStatus::OK) return HighsStatus::Error;
+    solver_return_status = solveModelSimplex(model);
+    if (solver_return_status != HighsStatus::OK) return HighsStatus::Error;
     int final_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
     iteration_count = final_iteration_count - initial_iteration_count;
     if (!isSolutionConsistent(model.lp_, model.solution_)) {
       std::cout << "Error: Inconsistent solution returned from solver.\n";
     }
   }
-  return_status = analyseHighsBasicSolution(model.lp_, model.basis_, model.solution_,
-					    model.unscaled_model_status_,
-					    model.unscaled_solution_params_,
-					    message);
+  HighsStatus return_status = analyseHighsBasicSolution(model.lp_, model.basis_, model.solution_,
+							model.unscaled_model_status_,
+							model.unscaled_solution_params_,
+							message);
   if (return_status != HighsStatus::OK) return HighsStatus::Error;
-  return highsStatusFromHighsModelStatus(model.unscaled_model_status_);
+  return solver_return_status;
 }
 
 // Branch-and-bound code below here:
@@ -1383,6 +1360,35 @@ void Highs::updateHighsSolutionBasis() {
     basis_.row_status.resize(lp_.numRow_);
   }
 }  
+
+void Highs::getHighsModelStatusAndInfo(const int solved_hmo) {
+  int hmos_size = hmos_.size();
+  assert(hmos_size > 0);
+  
+  model_status_ = hmos_[solved_hmo].unscaled_model_status_;
+  scaled_model_status_ = hmos_[solved_hmo].scaled_model_status_;
+  
+  HighsSolutionParams& solution_params = hmos_[solved_hmo].unscaled_solution_params_;
+  
+  // Get the total simplex IPM and crossover iteration counts over all HMO
+  info_.simplex_iteration_count = 0;
+  info_.ipm_iteration_count = 0;
+  info_.crossover_iteration_count = 0;
+  for (int k = 0; k < hmos_size; k++) {
+    info_.simplex_iteration_count += hmos_[k].unscaled_solution_params_.simplex_iteration_count;
+    info_.ipm_iteration_count += hmos_[k].unscaled_solution_params_.ipm_iteration_count;
+    info_.crossover_iteration_count += hmos_[k].unscaled_solution_params_.crossover_iteration_count;
+  }
+  info_.primal_status = solution_params.primal_status;
+  info_.dual_status = solution_params.dual_status;
+  info_.objective_function_value = solution_params.objective_function_value;
+  info_.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  info_.max_primal_infeasibility = solution_params.max_primal_infeasibility;
+  info_.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
+  info_.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  info_.max_dual_infeasibility = solution_params.max_dual_infeasibility;
+  info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+}
 
 void Highs::underDevelopmentLogMessage(const string method_name) {
   HighsLogMessage(

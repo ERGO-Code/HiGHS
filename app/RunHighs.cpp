@@ -124,20 +124,36 @@ int main(int argc, char** argv) {
   if (run_status != HighsStatus::OK) {
     HighsPrintMessage(ML_ALWAYS, "HiGHS status: %s\n", statusname.c_str());
   } else {
-    HighsModelStatus model_status = highs.getModelStatus();
-    HighsInfo highs_info = highs.getHighsInfo();
     std::stringstream message;
     message << std::endl;
-    message << "Model   status     : " << highs.highsModelStatusToString(model_status) << std::endl;
-    message << "Primal  status     : " << highs.highsPrimalDualStatusToString(highs_info.primal_status) << std::endl;
-    message << "Dual    status     : " << highs.highsPrimalDualStatusToString(highs_info.dual_status) << std::endl;
-    message << "Simplex iterations : " << highs_info.simplex_iteration_count << std::endl;
+    HighsModelStatus model_status = highs.getModelStatus();
+    HighsModelStatus scaled_model_status = highs.getModelStatus(true);
+    HighsInfo highs_info = highs.getHighsInfo();
+    if (model_status != scaled_model_status) {
+      if (scaled_model_status == HighsModelStatus::OPTIMAL) {
+	// The scaled model has been solved to optimality, but not the
+	// unscaled model, flag this up, but report the scaled model
+	// status
+	double max_primal_infeasibility = highs_info.max_primal_infeasibility;
+	double max_dual_infeasibility = highs_info.max_dual_infeasibility;
+	//	message << std::setprecision(9);
+	message << "Primal infeasibility: " << max_primal_infeasibility << std::endl;
+	message << "Dual   infeasibility: " << max_dual_infeasibility << std::endl;
+	model_status = scaled_model_status;
+      }
+    }
+    message << "Model   status      : " << highs.highsModelStatusToString(model_status) << std::endl;
+    message << "Primal  status      : " << highs.highsPrimalDualStatusToString(highs_info.primal_status) << std::endl;
+    message << "Dual    status      : " << highs.highsPrimalDualStatusToString(highs_info.dual_status) << std::endl;
+    message << "Simplex   iterations: " << highs_info.simplex_iteration_count << std::endl;
     if (highs_info.ipm_iteration_count)
-    message << "IMP     iterations : " << highs_info.ipm_iteration_count << std::endl;
+      message << "IPM       iterations: " << highs_info.ipm_iteration_count << std::endl;
+    if (highs_info.crossover_iteration_count)
+      message << "Crossover iterations: " << highs_info.crossover_iteration_count << std::endl;
     if (model_status == HighsModelStatus::OPTIMAL) {
       double objective_function_value;
       highs.getHighsInfoValue("objective_function_value", objective_function_value);
-      message << "Objective value    : " << std::scientific << objective_function_value << std::endl;
+      message << "Objective value     : " << std::scientific << objective_function_value << std::endl;
     }
     message << std::endl;
     std::cout << message.str();
