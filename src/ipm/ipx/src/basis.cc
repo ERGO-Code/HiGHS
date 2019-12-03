@@ -509,8 +509,8 @@ void Basis::CrashBasis(const double* colweights) {
     // rank revealing factorization, but it detects many dependencies in
     // practice.
     std::vector<Int> cols_guessed = GuessBasis(control_, model_, colweights);
-    assert(cols_guessed.size() <= m);
-    assert(cols_guessed.size() == m); // at the moment
+    assert((int)cols_guessed.size() <= m);
+    assert((int)cols_guessed.size() == m); // at the moment
 
     // Initialize the Basis object and factorize the (partial) basis. If
     // basis_[p] is negative, the p-th column of the basis matrix is zero,

@@ -129,10 +129,10 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   Highs highs;
 
-  int* basic_variables = (int*)malloc(sizeof(int) * 1);
-  double* rhs = (double*)malloc(sizeof(double) * 1);
-  double* known_solution = (double*)malloc(sizeof(double) * 1);
-  double* solution_vector = (double*)malloc(sizeof(double) * 1);
+  int* basic_variables = nullptr;
+  double* rhs = nullptr;
+  double* known_solution;
+  double* solution_vector = nullptr;
   int solution_num_nz;
   int* solution_indices = (int*)malloc(sizeof(int) * 1);
 
@@ -277,7 +277,8 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     int var = basic_variables[row];
     if (var>=0) {
       basic_col = var;
-      //      printf("Row %2d; Var %3d; RHS nnz = %d\n", row, basic_col, lp.Astart_[basic_col+1]-lp.Astart_[basic_col]);
+      // int rhs_nnz = lp.Astart_[basic_col+1]-lp.Astart_[basic_col];
+      //      printf("Row %2d; Var %3d; RHS nnz = %d\n", row, basic_col, rhs_nnz);
       for (int ix=0; ix<numRow; ix++) rhs[ix]=0;
       for (int el=lp.Astart_[basic_col]; el<lp.Astart_[basic_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
 
