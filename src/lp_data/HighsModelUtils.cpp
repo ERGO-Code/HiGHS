@@ -359,9 +359,9 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
     return HighsStatus::OK;
   case HighsModelStatus::REACHED_TIME_LIMIT:
-    return HighsStatus::Warning;
+    return HighsStatus::OK;//Warning;
   case HighsModelStatus::REACHED_ITERATION_LIMIT:
-    return HighsStatus::Warning;
+    return HighsStatus::OK;//Warning;
   default:
     return HighsStatus::Error;
   }

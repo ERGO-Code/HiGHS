@@ -1078,26 +1078,34 @@ bool equalSolutionIterationCountAndObjectiveParams(const HighsSolutionParams& so
 						   const HighsSolutionParams& solution_params1) {
   bool equal = true;
   if (solution_params0.simplex_iteration_count != solution_params1.simplex_iteration_count) {
+#ifdef HiGHSDEV
     printf("Solution params: simplex_iteration_count %d != %d\n",
 	   solution_params0.simplex_iteration_count, solution_params1.simplex_iteration_count);
+#endif
     equal = false;
   }
   if (solution_params0.ipm_iteration_count != solution_params1.ipm_iteration_count) {
+#ifdef HiGHSDEV
     printf("Solution params: ipm_iteration_count %d != %d\n",
 	   solution_params0.ipm_iteration_count, solution_params1.ipm_iteration_count);
+#endif
     equal = false;
   }
   if (solution_params0.crossover_iteration_count != solution_params1.crossover_iteration_count) {
+#ifdef HiGHSDEV
     printf("Solution params: crossover_iteration_count %d != %d\n",
 	   solution_params0.crossover_iteration_count, solution_params1.crossover_iteration_count);
+#endif
     equal = false;
   }
   double delta = highs_relative_difference(solution_params0.objective_function_value,
 					   solution_params1.objective_function_value);
   if (solution_params0.objective_function_value != solution_params1.objective_function_value) {
+#ifdef HiGHSDEV
     printf("Solution params: objective_function_value %g != %g Difference = %g\n",
 	   solution_params0.objective_function_value, solution_params1.objective_function_value,
 	   delta);
+#endif
     if (delta > 1e-12) equal = false;
   }
   return equal;
@@ -1107,13 +1115,17 @@ bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
 			       const HighsSolutionParams& solution_params1) {
   bool equal = true;
   if (solution_params0.primal_status != solution_params1.primal_status) {
+#ifdef HiGHSDEV
     printf("Solution params: primal_status %d != %d\n",
 	   solution_params0.primal_status, solution_params1.primal_status);
+#endif
     equal = false;
   }
   if (solution_params0.dual_status != solution_params1.dual_status) {
+#ifdef HiGHSDEV
     printf("Solution params: dual_status %d != %d\n",
 	   solution_params0.dual_status, solution_params1.dual_status);
+#endif
     equal = false;
   }
   return equal;
@@ -1124,17 +1136,21 @@ bool equalSolutionInfeasibilityParams(const HighsSolutionParams& solution_params
   double delta;
   bool equal = true;
   if (solution_params0.num_primal_infeasibilities != solution_params1.num_primal_infeasibilities) {
+#ifdef HiGHSDEV
     printf("Solution params: num_primal_infeasibilities %d != %d\n",
 	   solution_params0.num_primal_infeasibilities, solution_params1.num_primal_infeasibilities);
+#endif
     equal = false;
   }
 
   delta = highs_relative_difference(solution_params0.sum_primal_infeasibilities,
 				    solution_params1.sum_primal_infeasibilities);
   if (solution_params0.sum_primal_infeasibilities != solution_params1.sum_primal_infeasibilities) {
+#ifdef HiGHSDEV
     printf("Solution params: sum_primal_infeasibilities %g != %g Difference = %g\n",
 	   solution_params0.sum_primal_infeasibilities, solution_params1.sum_primal_infeasibilities,
 	   delta);
+#endif
     if (delta > 1e-12) equal = false;
   }
 
@@ -1142,24 +1158,30 @@ bool equalSolutionInfeasibilityParams(const HighsSolutionParams& solution_params
 				    solution_params0.max_primal_infeasibility,
 				    solution_params1.max_primal_infeasibility);
   if (solution_params0.max_primal_infeasibility != solution_params1.max_primal_infeasibility) {
+#ifdef HiGHSDEV
     printf("Solution params: max_primal_infeasibility %g != %g Difference = %g\n",
 	   solution_params0.max_primal_infeasibility, solution_params1.max_primal_infeasibility,
 	   delta);
+#endif
     if (delta > 1e-12) equal = false;
   }
 
   if (solution_params0.num_dual_infeasibilities != solution_params1.num_dual_infeasibilities) {
+#ifdef HiGHSDEV
     printf("Solution params: num_dual_infeasibilities %d != %d\n",
 	   solution_params0.num_dual_infeasibilities, solution_params1.num_dual_infeasibilities);
+#endif
     equal = false;
   }
 
   delta = highs_relative_difference(solution_params0.sum_dual_infeasibilities,
 				    solution_params1.sum_dual_infeasibilities);
   if (solution_params0.sum_dual_infeasibilities != solution_params1.sum_dual_infeasibilities) {
+#ifdef HiGHSDEV
     printf("Solution params: sum_dual_infeasibilities %g != %g Difference = %g\n",
 	   solution_params0.sum_dual_infeasibilities, solution_params1.sum_dual_infeasibilities,
 	   delta);
+#endif
     if (delta > 1e-12) equal = false;
   }
 
@@ -1167,9 +1189,11 @@ bool equalSolutionInfeasibilityParams(const HighsSolutionParams& solution_params
 				    solution_params0.max_dual_infeasibility,
 				    solution_params1.max_dual_infeasibility);
   if (solution_params0.max_dual_infeasibility != solution_params1.max_dual_infeasibility) {
+#ifdef HiGHSDEV
     printf("Solution params: max_dual_infeasibility %g != %g Difference = %g\n",
 	   solution_params0.max_dual_infeasibility, solution_params1.max_dual_infeasibility,
 	   delta);
+#endif
     if (delta > 1e-12) equal = false;
   }
 
