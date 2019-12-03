@@ -1092,13 +1092,13 @@ bool equalSolutionIterationCountAndObjectiveParams(const HighsSolutionParams& so
 	   solution_params0.crossover_iteration_count, solution_params1.crossover_iteration_count);
     equal = false;
   }
-  double delta_objective_function_value =
-    fabs(solution_params0.objective_function_value - solution_params1.objective_function_value);
+  double delta = highs_relative_difference(solution_params0.objective_function_value,
+					   solution_params1.objective_function_value);
   if (solution_params0.objective_function_value != solution_params1.objective_function_value) {
     printf("Solution params: objective_function_value %g != %g Difference = %g\n",
 	   solution_params0.objective_function_value, solution_params1.objective_function_value,
-	   delta_objective_function_value);
-    if (delta_objective_function_value > 1e-12) equal = false;
+	   delta);
+    if (delta > 1e-12) equal = false;
   }
   return equal;
 }
@@ -1121,37 +1121,58 @@ bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
 
 bool equalSolutionInfeasibilityParams(const HighsSolutionParams& solution_params0,
 				      const HighsSolutionParams& solution_params1) {
+  double delta;
   bool equal = true;
   if (solution_params0.num_primal_infeasibilities != solution_params1.num_primal_infeasibilities) {
     printf("Solution params: num_primal_infeasibilities %d != %d\n",
 	   solution_params0.num_primal_infeasibilities, solution_params1.num_primal_infeasibilities);
     equal = false;
   }
+
+  delta = highs_relative_difference(solution_params0.sum_primal_infeasibilities,
+				    solution_params1.sum_primal_infeasibilities);
   if (solution_params0.sum_primal_infeasibilities != solution_params1.sum_primal_infeasibilities) {
-    printf("Solution params: sum_primal_infeasibilities %g != %g\n",
-	   solution_params0.sum_primal_infeasibilities, solution_params1.sum_primal_infeasibilities);
-    equal = false;
+    printf("Solution params: sum_primal_infeasibilities %g != %g Difference = %g\n",
+	   solution_params0.sum_primal_infeasibilities, solution_params1.sum_primal_infeasibilities,
+	   delta);
+    if (delta > 1e-12) equal = false;
   }
+
+  delta = highs_relative_difference(
+				    solution_params0.max_primal_infeasibility,
+				    solution_params1.max_primal_infeasibility);
   if (solution_params0.max_primal_infeasibility != solution_params1.max_primal_infeasibility) {
-    printf("Solution params: max_primal_infeasibility %g != %g\n",
-	   solution_params0.max_primal_infeasibility, solution_params1.max_primal_infeasibility);
-    equal = false;
+    printf("Solution params: max_primal_infeasibility %g != %g Difference = %g\n",
+	   solution_params0.max_primal_infeasibility, solution_params1.max_primal_infeasibility,
+	   delta);
+    if (delta > 1e-12) equal = false;
   }
+
   if (solution_params0.num_dual_infeasibilities != solution_params1.num_dual_infeasibilities) {
     printf("Solution params: num_dual_infeasibilities %d != %d\n",
 	   solution_params0.num_dual_infeasibilities, solution_params1.num_dual_infeasibilities);
     equal = false;
   }
+
+  delta = highs_relative_difference(solution_params0.sum_dual_infeasibilities,
+				    solution_params1.sum_dual_infeasibilities);
   if (solution_params0.sum_dual_infeasibilities != solution_params1.sum_dual_infeasibilities) {
-    printf("Solution params: sum_dual_infeasibilities %g != %g\n",
-	   solution_params0.sum_dual_infeasibilities, solution_params1.sum_dual_infeasibilities);
-    equal = false;
+    printf("Solution params: sum_dual_infeasibilities %g != %g Difference = %g\n",
+	   solution_params0.sum_dual_infeasibilities, solution_params1.sum_dual_infeasibilities,
+	   delta);
+    if (delta > 1e-12) equal = false;
   }
+
+  delta = highs_relative_difference(
+				    solution_params0.max_dual_infeasibility,
+				    solution_params1.max_dual_infeasibility);
   if (solution_params0.max_dual_infeasibility != solution_params1.max_dual_infeasibility) {
-    printf("Solution params: max_dual_infeasibility %g != %g\n",
-	   solution_params0.max_dual_infeasibility, solution_params1.max_dual_infeasibility);
-    equal = false;
+    printf("Solution params: max_dual_infeasibility %g != %g Difference = %g\n",
+	   solution_params0.max_dual_infeasibility, solution_params1.max_dual_infeasibility,
+	   delta);
+    if (delta > 1e-12) equal = false;
   }
+
   return equal;
 }
 

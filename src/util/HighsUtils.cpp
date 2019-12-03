@@ -33,6 +33,8 @@ bool highs_isInfinity(double val) {
   return false;
 }
 
+double highs_relative_difference(const double v0, const double v1) { return fabs(v0-v1)/std::max(v0, std::max(v1, 1.0)); }
+
 #ifdef HiGHSDEV
 void analyseVectorValues(const char* message, int vecDim,
                          const std::vector<double>& vec,
