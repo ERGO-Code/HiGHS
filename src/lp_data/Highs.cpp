@@ -229,7 +229,7 @@ HighsStatus Highs::run() {
   //  bool normalise = true;
   call_status = assessLp(lp_, options_);  //, normalise);
   assert(call_status == HighsStatus::OK);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
 #endif
 
@@ -310,34 +310,18 @@ HighsStatus Highs::run() {
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
         call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
 		      "Not presolved: solving the LP");
-	return_status = worseStatus(call_status, return_status);
+	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
+	if (return_status == HighsStatus::Error) return return_status;
         solve_iteration_count += iteration_count;
-        if (call_status != HighsStatus::OK) {
-	  if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	    printf("HighsStatus::Warning return from runLpSolver\n");
-#endif
-	  } else {
-	    return return_status;
-	  }
-	}
         break;
       }
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
         call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
 				  "Problem not reduced by presolve: solving the LP");
-	return_status = worseStatus(call_status, return_status);
+	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
+	if (return_status == HighsStatus::Error) return return_status;
         solve_iteration_count += iteration_count;
-        if (call_status != HighsStatus::OK) {
-	  if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	    printf("HighsStatus::Warning return from runLpSolver\n");
-#endif
-	  } else {
-	    return return_status;
-	  }
-	}
         break;
       }
       case HighsPresolveStatus::Reduced: {
@@ -355,17 +339,9 @@ HighsStatus Highs::run() {
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
 	call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
 				  "Solving the presolved LP");
-	return_status = worseStatus(call_status, return_status);
+	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
+	if (return_status == HighsStatus::Error) return return_status;
         solve_iteration_count += iteration_count;
-        if (call_status != HighsStatus::OK) {
-	  if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	    printf("HighsStatus::Warning return from runLpSolver\n");
-#endif
-	  } else {
-	    return return_status;
-	  }
-	}
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
@@ -456,23 +432,14 @@ HighsStatus Highs::run() {
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
 	  call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
 				    "Solving the original LP from the solution after postsolve");
-	  return_status = worseStatus(call_status, return_status);
-          postsolve_iteration_count = iteration_count;
-          solve_iteration_count += iteration_count;
+	  return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
           // Recover the options
           options = save_options;
           // Reset the message level
-          if (full_iteration_logging)
-            HighsSetMessagelevel(options_.message_level);
-          if (call_status != HighsStatus::OK) {
-	    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	      printf("HighsStatus::Warning return from runLpSolver\n");
-#endif
-	    } else {
-	      return return_status;
-	    }
-	  }
+          if (full_iteration_logging) HighsSetMessagelevel(options_.message_level);
+	  if (return_status == HighsStatus::Error) return return_status;
+          postsolve_iteration_count = iteration_count;
+          solve_iteration_count += iteration_count;
         }
       }
     } else {
@@ -486,17 +453,9 @@ HighsStatus Highs::run() {
     hmos_[solved_hmo].lp_.lp_name_ = "Re-solved LP";
     call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
 			      "Re-solving the LP");
-    return_status = worseStatus(call_status, return_status);
+    return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
+    if (return_status == HighsStatus::Error) return return_status;
     solve_iteration_count += iteration_count;
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from runLpSolver\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
   }
   // else if (reduced problem failed to solve) {
   //   todo: handle case when presolved problem failed to solve. Try to solve
@@ -524,8 +483,12 @@ HighsStatus Highs::run() {
   double lp_solve_final_time = timer_.readRunHighsClock();
   HighsPrintMessage(ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
   HighsPrintMessage(ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
-  // Assess success according to the scaled model status
-  return highsStatusFromHighsModelStatus(scaled_model_status_);
+
+  // Assess success according to the scaled model status, unless
+  // something worse has happened earlier
+  call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
+  return_status = interpretCallStatus(call_status, return_status);
+  return return_status;
 }
 
 const HighsLp& Highs::getLp() const { return lp_; }
@@ -747,7 +710,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   if (solution.col_value.size() > 0) {
     call_status = calculateRowValues(lp_, solution_);
     if (return_status != HighsStatus::OK) return return_status;
-    return_status = worseStatus(call_status, return_status);
+    return_status = interpretCallStatus(call_status, return_status, "");
+    if (return_status == HighsStatus::Error) return return_status;
     if (call_status != HighsStatus::OK) {
       if (call_status == HighsStatus::Warning) {
 #ifdef HiGHSDEV
@@ -760,16 +724,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   }
   if (solution.row_dual.size() > 0) {
     HighsStatus return_status = calculateColDuals(lp_, solution_);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from calculateColDuals\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "calculateColDuals");
+    if (return_status == HighsStatus::Error) return return_status;
   }
   return return_status;
 }
@@ -1196,22 +1152,15 @@ HighsStatus Highs::runBnb() {
   root->col_upper_bound = lp_.colUpper_;
 
   call_status = solveRootNode(*(root.get()));
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from solveRootNode\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "solveRootNode");
+  if (return_status == HighsStatus::Error) return return_status;
   if (hmos_[0].scaled_model_status_ != HighsModelStatus::OPTIMAL) {
     HighsPrintMessage(ML_ALWAYS,
                       "Root note not solved to optimality. Status: %s\n",
                       utilHighsModelStatusToString(hmos_[0].scaled_model_status_).c_str());
     call_status = highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
-    return_status = worseStatus(call_status, return_status);
+    return_status = interpretCallStatus(call_status, return_status);
+    if (return_status == HighsStatus::Error) return return_status;
     return return_status;
   }
 
@@ -1231,16 +1180,8 @@ HighsStatus Highs::runBnb() {
   while (!tree.empty()) {
     Node& node = tree.next();
     call_status = solveNode(node);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from solveNode\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "solveNode");
+    if (return_status == HighsStatus::Error) return return_status;
     tree.pop();
 
     if (hmos_[0].scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE) continue;
@@ -1310,16 +1251,8 @@ HighsStatus Highs::solveNode(Node& node) {
   iteration_count0 = scaled_solution_params.simplex_iteration_count;
 
   call_status = solveModelSimplex(hmos_[0]);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from solveModelSimplex\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
+  if (return_status == HighsStatus::Error) return return_status;
 
   iteration_count1 = scaled_solution_params.simplex_iteration_count;
   solve0_iteration_count = iteration_count1 - iteration_count0;
@@ -1334,16 +1267,8 @@ HighsStatus Highs::solveNode(Node& node) {
     hmos_[0].basis_.valid_ = false;
     iteration_count0 = scaled_solution_params.simplex_iteration_count;
     call_status = solveModelSimplex(hmos_[0]);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from solveModelSimplex\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
+    if (return_status == HighsStatus::Error) return return_status;
     iteration_count1 = scaled_solution_params.simplex_iteration_count;
     solve1_iteration_count = iteration_count1 - iteration_count0;
     solve1_objective_value = scaled_solution_params.objective_function_value;
@@ -1389,9 +1314,8 @@ HighsStatus Highs::solveNode(Node& node) {
 
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
-  
   call_status = highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status);
   return return_status;
 }
 
@@ -1403,17 +1327,8 @@ HighsStatus Highs::solveRootNode(Node& root) {
   // HighsStatus status = run();
   // call works but simply calling run() should be enough.
   call_status = solveModelSimplex(hmos_[0]);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from solveModelSimplex\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
-  //  allow_presolve_ = false;
+  return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
+  if (return_status == HighsStatus::Error) return return_status;
 
   if (hmos_[0].scaled_model_status_ == HighsModelStatus::OPTIMAL) {
     root.primal_solution = hmos_[0].solution_.col_value;
@@ -1422,7 +1337,7 @@ HighsStatus Highs::solveRootNode(Node& root) {
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status);
   return return_status;
 }
 

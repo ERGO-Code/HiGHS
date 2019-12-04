@@ -73,31 +73,16 @@ HighsStatus HighsSimplexInterface::addCols(
 #endif
   call_status = appendLpCols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper, XnumNewNZ,
 			     XAstart, XAindex, XAvalue, options);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from appendLpCols\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "appendLpCols");
+  if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
     call_status = appendLpCols(simplex_lp, XnumNewCol, XcolCost, XcolLower,
                                XcolUpper, XnumNewNZ, XAstart, XAindex, XAvalue,
                                options);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from appendLpCols\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "appendLpCols");
+    if (return_status == HighsStatus::Error) return return_status;
+    return return_status;
   }
 
   // Now consider scaling
@@ -287,32 +272,17 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   call_status = assessBounds("Row", lp.numRow_, XnumNewRow, true, 0, XnumNewRow-1, false, 0,
 			     NULL, false, NULL, (double*)XrowLower, (double*)XrowUpper,
 			     options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessBounds\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
+  if (return_status == HighsStatus::Error) return return_status;
 
   if (XnumNewNZ) {
     call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewRow, XnumNewNZ,
                                (int*)XARstart, (int*)XARindex,
                                (double*)XARvalue, options.small_matrix_value,
                                options.large_matrix_value, normalise);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from assessMatrix\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "assessMatrix");
+    if (return_status == HighsStatus::Error) return return_status;
+    return return_status;
   }
 
   // Append the columns to the LP vectors and matrix
@@ -324,16 +294,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
       assessBounds("Row", lp.numRow_, newNumRow, true, 0, newNumRow-1, false, 0,
                    NULL, false, NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
                    options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessBounds\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
+  if (return_status == HighsStatus::Error) return return_status;
 
   int lc_XnumNewNZ = XnumNewNZ;
   int* lc_XARstart = (int*)malloc(sizeof(int) * XnumNewRow);
@@ -362,16 +324,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     call_status = assessBounds("Row", simplex_lp.numRow_, newNumRow, true, 0, newNumRow-1, false, 0,
 			       NULL, false, NULL, &simplex_lp.rowLower_[0], &simplex_lp.rowUpper_[0],
 			       options.infinite_bound, normalise);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from assessBounds\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "assessBounds");
+    if (return_status == HighsStatus::Error) return return_status;
   }
   if (lc_XnumNewNZ) {
     appendRowsToLpMatrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart,
@@ -542,20 +496,20 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
   call_status = assessIntervalSetMask(
       lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
       mask, col_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
+  if (from_k < 0 || to_k > lp.numCol_) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
+    return return_status;
   }
-  if (from_k < 0 || to_k > lp.numCol_) return HighsStatus::Error;
   num_col = 0;
   num_nz = 0;
-  if (from_k > to_k) return HighsStatus::OK;
+  if (from_k > to_k) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
+    return return_status;
+  }
   int out_from_col;
   int out_to_col;
   int in_from_col;
@@ -633,20 +587,20 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   HighsLp& lp = highs_model_object.lp_;
   call_status = assessIntervalSetMask(lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
 				      mask, row_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
+  if (from_k < 0 || to_k > lp.numCol_) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
+    return return_status;
   }
-  if (from_k < 0 || to_k > lp.numRow_) return HighsStatus::Error;
   num_row = 0;
   num_nz = 0;
-  if (from_k > to_k) return HighsStatus::OK;
+  if (from_k > to_k) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
+    return return_status;
+  }
   // "Out" means not in the set to be extrated
   // "In" means in the set to be extrated
   int out_from_row;

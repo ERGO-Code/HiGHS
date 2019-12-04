@@ -31,16 +31,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
   HighsStatus call_status;
   // Assess the LP dimensions and vector sizes, returning on error
   call_status = assessLpDimensions(lp);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from calculateColDuals\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessLpDimensions");
+  if (return_status == HighsStatus::Error) return return_status;
 
   // If the LP has no columns there is nothing left to test
   // NB assessLpDimensions returns HighsStatus::Error if lp.numCol_ < 0
@@ -53,59 +45,27 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
   // Assess the LP column costs
   call_status = assessCosts(0, lp.numCol_, true, 0, lp.numCol_-1, false, 0, NULL, false,
 			    NULL, &lp.colCost_[0], options.infinite_cost);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessCosts\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessCosts");
+  if (return_status == HighsStatus::Error) return return_status;
   // Assess the LP column bounds
   call_status = assessBounds("Col", 0, lp.numCol_, true, 0, lp.numCol_-1, false, 0, NULL, false, NULL,
 			     &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessBounds\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
+  if (return_status == HighsStatus::Error) return return_status;
   if (lp.numRow_) {
     // Assess the LP row bounds
     call_status = assessBounds("Row", 0, lp.numRow_, true, 0, lp.numRow_-1, false, 0, NULL, false, NULL,
 			       &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from assessBounds\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "assessBounds");
+    if (return_status == HighsStatus::Error) return return_status;
     // Assess the LP matrix
     int lp_num_nz = lp.Astart_[lp.numCol_];
     call_status = assessMatrix(lp.numRow_, 0, lp.numCol_-1, lp.numCol_, lp_num_nz,
 			       &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
 			       options.small_matrix_value,
 			       options.large_matrix_value, normalise);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from assessMatrix\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "assessMatrix");
+    if (return_status == HighsStatus::Error) return return_status;
     lp.Astart_[lp.numCol_] = lp_num_nz;
   }
   if (return_status == HighsStatus::Error)
@@ -246,16 +206,8 @@ HighsStatus assessCosts(const int ml_col_os, const int col_dim,
   int to_k;
   call_status = assessIntervalSetMask(col_dim, interval, from_col, to_col, set, num_set_entries, col_set, mask,
 				      col_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (from_k > to_k) return return_status;
 
   return_status = HighsStatus::OK;
@@ -325,16 +277,8 @@ HighsStatus assessBounds(const char* type, const int ml_ix_os, const int ix_dim,
   int to_k;
   call_status = assessIntervalSetMask(ix_dim, interval, from_ix, to_ix, set, num_set_entries, ix_set, mask,
 				      ix_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (from_k > to_k) return HighsStatus::OK;
 
   return_status = HighsStatus::OK;
@@ -669,16 +613,8 @@ HighsStatus scaleLpColCosts(HighsLp& lp, vector<double>& colScale,
   int to_k;
   call_status = assessIntervalSetMask(col_dim, interval, from_col, to_col, set, num_set_entries, col_set, mask,
 				      col_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (from_k > to_k) return HighsStatus::OK;
 
   int local_col;
@@ -711,16 +647,8 @@ HighsStatus scaleLpColBounds(HighsLp& lp, vector<double>& colScale,
   int to_k;
   call_status = assessIntervalSetMask(col_dim, interval, from_col, to_col, set, num_set_entries, col_set, mask,
 				      col_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (from_k > to_k) return HighsStatus::OK;
 
   int local_col;
@@ -756,16 +684,8 @@ HighsStatus scaleLpRowBounds(HighsLp& lp, vector<double>& rowScale,
   int to_k;
   call_status = assessIntervalSetMask(row_dim, interval, from_row, to_row, set, num_set_entries, row_set, mask,
 				      row_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (from_k > to_k) return HighsStatus::OK;
 
   int local_row;
@@ -803,13 +723,13 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
   // Assess the column costs
   call_status = assessCosts(lp.numCol_, num_new_col, true, 0, num_new_col-1, false, 0,
 			    NULL, false, NULL, (double*)XcolCost, options.infinite_cost);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the column bounds
   call_status = assessBounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col-1, false,
 			     0, NULL, false, NULL, (double*)XcolLower, (double*)XcolUpper,
 			     options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the matrix columns
   // Need to pass num_new_nz as non-const since assessMatrix can
@@ -820,18 +740,18 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
 			     pass_num_new_nz, (int*)XAstart, (int*)XAindex,
 			     (double*)XAvalue, options.small_matrix_value,
 			     options.large_matrix_value, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the columns to the LP vectors and matrix
-  call_status =
-      appendColsToLpVectors(lp, num_new_col, XcolCost, XcolLower, XcolUpper);
-  return_status = worseStatus(call_status, return_status);
+  call_status = appendColsToLpVectors(lp, num_new_col,
+				      XcolCost, XcolLower, XcolUpper);
+  return_status = interpretCallStatus(call_status, return_status, "appendColsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
   call_status = appendColsToLpMatrix(lp, num_new_col, num_new_nz, XAstart,
 				     XAindex, XAvalue);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "appendColsToLpMatrix");
   if (return_status == HighsStatus::Error) return return_status;
 
   // Normalise the new LP column bounds
@@ -839,7 +759,7 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
   call_status = assessBounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col-1, false,
 			     0, NULL, false, NULL, &lp.colLower_[0], &lp.colUpper_[0],
 			     options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
   if (num_new_nz) {
     // Normalise the new LP matrix columns
@@ -848,9 +768,9 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
                                lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0],
                                &lp.Avalue_[0], options.small_matrix_value,
                                options.large_matrix_value, normalise);
-    lp.Astart_[newNumCol] = lp_num_nz;
-    return_status = worseStatus(call_status, return_status);
+    return_status = interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
+    lp.Astart_[newNumCol] = lp_num_nz;
   }
   return return_status;
 }
@@ -894,7 +814,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
   call_status = assessBounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row-1, false,
 			     0, NULL, false, NULL, (double*)XrowLower, (double*)XrowUpper,
 			     options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the matrix columns
   // Need to pass num_new_nz as non-const since assessMatrix can
@@ -905,12 +825,12 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
 			     pass_num_new_nz, (int*)XARstart, (int*)XARindex,
 			     (double*)XARvalue, options.small_matrix_value,
 			     options.large_matrix_value, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the rows to the LP vectors
   call_status = appendRowsToLpVectors(lp, num_new_row, XrowLower, XrowUpper);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "appendRowsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
   // Normalise the new LP row bounds
@@ -918,7 +838,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
   call_status = assessBounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row-1, false,
 			     0, NULL, false, NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
 			     options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
 
   // Copy the supplied row-wise matrix so it can be normalised before being
@@ -938,7 +858,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
   call_status = assessMatrix(lp.numCol_, 0, num_new_row-1, num_new_row, lc_num_new_nz,
 			     lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value,
 			     options.small_matrix_value, options.large_matrix_value, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessMatrix");
   if (return_status == HighsStatus::Error) {
     free(lc_row_matrix_start);
     free(lc_row_matrix_index);
@@ -949,7 +869,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
   call_status = appendRowsToLpMatrix(lp, num_new_row, lc_num_new_nz,
 				     lc_row_matrix_start, lc_row_matrix_index,
 				     lc_row_matrix_value);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "appendRowsToLpMatrix");
   free(lc_row_matrix_start);
   free(lc_row_matrix_index);
   free(lc_row_matrix_value);
@@ -1103,16 +1023,8 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
   int to_k;
   call_status = assessIntervalSetMask(lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
 				      mask, col_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (col_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteColsFromLpVectors\n");
@@ -1163,16 +1075,8 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
   int to_k;
   call_status = assessIntervalSetMask(lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
 				      mask, col_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (col_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteColsFromLpMatrix\n");
@@ -1236,28 +1140,12 @@ HighsStatus deleteLpRows(HighsLp& lp, const bool interval, const int from_row,
   int new_num_row;
   call_status = deleteRowsFromLpVectors(lp, new_num_row, interval, from_row, to_row, set,
 					num_set_entries, row_set, mask, row_mask);
-  return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   call_status = deleteRowsFromLpMatrix(lp, interval, from_row, to_row, set,
 					 num_set_entries, row_set, mask, row_mask);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from deleteRowsFromLpMatrix\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "deleteRowsFromLpMatrix");
+  if (return_status == HighsStatus::Error) return return_status;
   lp.numRow_ = new_num_row;
   return HighsStatus::OK;
 }
@@ -1274,16 +1162,8 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
   int to_k;
   call_status = assessIntervalSetMask(lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
 				      mask, row_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (row_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteRowsFromLpVectors\n");
@@ -1333,16 +1213,8 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
   int to_k;
   call_status = assessIntervalSetMask(lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
 				      mask, row_mask, from_k, to_k);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from assessIntervalSetMask\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
   if (row_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteRowsFromLpMatrix\n");

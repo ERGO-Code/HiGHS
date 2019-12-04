@@ -29,7 +29,27 @@ std::string HighsStatusToString(HighsStatus status) {
   return "";
 }
 
-HighsStatus worseStatus(HighsStatus status0, HighsStatus status1) {
+HighsStatus interpretCallStatus(const HighsStatus call_status,
+				const HighsStatus from_return_status,
+				const std::string message) {
+  HighsStatus to_return_status;
+  to_return_status = worseStatus(call_status, from_return_status);
+#ifdef HiGHSDEV
+  if (call_status != HighsStatus::OK) {
+    if (message != "") {
+      printf("HighsStatus::%s return from %s\n",
+	     HighsStatusToString(call_status).c_str(),
+	     message.c_str());
+    } else {
+      printf("HighsStatus::%s return\n",
+	     HighsStatusToString(call_status).c_str());
+    }
+  }
+#endif
+  return to_return_status;
+}
+
+HighsStatus worseStatus(const HighsStatus status0, const HighsStatus status1) {
   HighsStatus return_status = HighsStatus::Error;
   if (status0 == HighsStatus::Error || status1 == HighsStatus::Error)
     return_status = HighsStatus::Error;

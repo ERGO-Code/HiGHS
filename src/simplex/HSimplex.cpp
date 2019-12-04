@@ -548,18 +548,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   if (simplex_info.analyseLpSolution) {
     const bool report = true;
     call_status = analyseSimplexBasicSolution(highs_model_object, report);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from analyseSimplexBasicSolution\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "analyseSimplexBasicSolution");
+    if (return_status == HighsStatus::Error) return return_status;
   }
-  return HighsStatus::OK;
+  return return_status;
 }
 
 bool basisConditionOk(HighsModelObject& highs_model_object, const std::string message) {

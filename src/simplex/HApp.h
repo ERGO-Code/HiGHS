@@ -88,16 +88,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   //
   // Transition to the best possible simplex basis and solution
   call_status = transition(highs_model_object);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from transition\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "transition");
+  if (return_status == HighsStatus::Error) return return_status;
   //
   // Given a simplex basis and solution, use the number of primal and
   // dual infeasibilities to determine whether the simplex solver is
@@ -221,16 +213,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     call_status = analyseSimplexBasicSolution(highs_model_object,
 					      highs_model_object.scaled_solution_params_,
 					      report);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from analyseSimplexBasicSolution\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "analyseSimplexBasicSolution");
+    if (return_status == HighsStatus::Error) return return_status;
 
 #ifdef HiGHSDEV
     // For debugging, it's good to be able to check what comes out of
@@ -243,16 +227,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_interface.convertSimplexToHighsBasis();
     call_status = 
       analyseHighsBasicSolution(highs_model_object, "to check simplex basic solution");
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from analyseHighsBasicSolution\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "analyseHighsBasicSolution");
+    if (return_status == HighsStatus::Error) return return_status;
     // Invalidate the basis to make sure it is set again later
     // without HiGHSDEV
     highs_model_object.basis_.valid_ = false;
@@ -280,16 +256,9 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 								      highs_model_object.unscaled_solution_params_,
 								      new_primal_feasibility_tolerance,
 								      new_dual_feasibility_tolerance);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status,
+					"getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution");
+    if (return_status == HighsStatus::Error) return return_status;
     int num_unscaled_primal_infeasibilities = highs_model_object.unscaled_solution_params_.num_primal_infeasibilities;
     int num_unscaled_dual_infeasibilities = highs_model_object.unscaled_solution_params_.num_dual_infeasibilities;
     // Set the model and solution status according to the unscaled solution parameters
@@ -348,29 +317,13 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(highs_model_object);
-    return_status = worseStatus(call_status, return_status);
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from solveUnconstrainedLp\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
+    return_status = interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
+    if (return_status == HighsStatus::Error) return return_status;
   }
   // (Try to) solve the scaled LP
   call_status = runSimplexSolver(highs_model_object);
-  return_status = worseStatus(call_status, return_status);
-  if (call_status != HighsStatus::OK) {
-    if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from runSimplexSolver\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+  if (return_status == HighsStatus::Error) return return_status;
 #ifdef HiGHSDEV
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   if (simplex_info.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
@@ -395,16 +348,8 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
       // the required tolerances. Can't handle cost scaling
       //
       call_status = tryToSolveUnscaledLp(highs_model_object);
-      return_status = worseStatus(call_status, return_status);
-      if (call_status != HighsStatus::OK) {
-	if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	  printf("HighsStatus::Warning return from runSimplexSolver\n");
-#endif
-	} else {
-	  return return_status;
-	}
-      }
+      return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+      if (return_status == HighsStatus::Error) return return_status;
     } else {
       // If scaling hasn't been used, then the original LP has been
       // solved to the required tolerances
@@ -428,7 +373,7 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status);
   return return_status;
 }
 #endif
