@@ -82,7 +82,6 @@ HighsStatus HighsSimplexInterface::addCols(
                                options);
     return_status = interpretCallStatus(call_status, return_status, "appendLpCols");
     if (return_status == HighsStatus::Error) return return_status;
-    return return_status;
   }
 
   // Now consider scaling
@@ -282,7 +281,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
                                options.large_matrix_value, normalise);
     return_status = interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
-    return return_status;
   }
 
   // Append the columns to the LP vectors and matrix
@@ -589,7 +587,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
 				      mask, row_mask, from_k, to_k);
   return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
-  if (from_k < 0 || to_k > lp.numCol_) {
+  if (from_k < 0 || to_k > lp.numRow_) {
     call_status = HighsStatus::Error;
     return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
     return return_status;

@@ -723,7 +723,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     }
   }
   if (solution.row_dual.size() > 0) {
-    HighsStatus return_status = calculateColDuals(lp_, solution_);
+    call_status = calculateColDuals(lp_, solution_);
     return_status = interpretCallStatus(call_status, return_status, "calculateColDuals");
     if (return_status == HighsStatus::Error) return return_status;
   }
