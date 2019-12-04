@@ -2964,25 +2964,6 @@ HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_obje
 						       get_unscaled_solution_params,
 						       get_scaled_solution_params);
 
-  bool equal_solution_infeasibility_params;
-  equal_solution_infeasibility_params =
-    equalSolutionInfeasibilityParams(get_unscaled_solution_params, unscaled_solution_params);
-  if (!equal_solution_infeasibility_params) {
-    HighsLogMessage(HighsMessageType::ERROR,
-		    "Unequal unscaled solution infeasibility params in analyseSimplexBasicSolution");
-    assert(equal_solution_infeasibility_params);
-    return HighsStatus::Error;
-  }
-  equal_solution_infeasibility_params =
-    equalSolutionInfeasibilityParams(get_scaled_solution_params, scaled_solution_params);
-  if (!equal_solution_infeasibility_params) {
-    HighsLogMessage(HighsMessageType::ERROR,
-		    "Unequal scaled solution infeasibility params in analyseSimplexBasicSolution");
-    assert(equal_solution_infeasibility_params);
-    return HighsStatus::Error;
-  }
-
-
   const HighsModelStatus scaled_model_status = highs_model_object.scaled_model_status_;
   const HighsModelStatus unscaled_model_status = highs_model_object.unscaled_model_status_;
 #ifdef HiGHSDEV
@@ -3243,6 +3224,8 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
   // scaled solution and, if there are infeasibilities, identify new
   // feasibility tolerances for the scaled LP
   const bool get_new_scaled_feasibility_tolerances = scaled_model_status == HighsModelStatus::OPTIMAL;
+  // The scaled infeasibility parameters are not known if the time (or iteration?) limit has been reached
+  const bool check_scaled_solution_params = scaled_model_status != HighsModelStatus::REACHED_TIME_LIMIT;
 
   //  const double scaled_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
   //  const double scaled_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
@@ -3365,13 +3348,15 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
     assert(equal_solution_infeasibility_params);
     return HighsStatus::Error;
   }
-  equal_solution_infeasibility_params =
-    equalSolutionInfeasibilityParams(get_scaled_solution_params, scaled_solution_params);
-  if (!equal_solution_infeasibility_params) {
-    HighsLogMessage(HighsMessageType::ERROR,
-		    "Unequal scaled solution infeasibility params in getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
-    assert(equal_solution_infeasibility_params);
-    return HighsStatus::Error;
+  if (check_scaled_solution_params) {
+    equal_solution_infeasibility_params =
+      equalSolutionInfeasibilityParams(get_scaled_solution_params, scaled_solution_params);
+    if (!equal_solution_infeasibility_params) {
+      HighsLogMessage(HighsMessageType::ERROR,
+		      "Unequal scaled solution infeasibility params in getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
+      assert(equal_solution_infeasibility_params);
+      return HighsStatus::Error;
+    }
   }
   return HighsStatus::OK;
 }

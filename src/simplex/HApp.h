@@ -242,7 +242,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
     call_status = 
-      analyseHighsBasicSolution(highs_model_object, "to check simplex basic soulution");
+      analyseHighsBasicSolution(highs_model_object, "to check simplex basic solution");
     return_status = worseStatus(call_status, return_status);
     if (call_status != HighsStatus::OK) {
       if (call_status == HighsStatus::Warning) {
