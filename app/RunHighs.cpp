@@ -84,13 +84,19 @@ int main(int argc, char** argv) {
 
   return_status = highs.passHighsOptions(options);
   if (return_status != HighsStatus::OK) {
-    printf("In main: fail return from passHighsOptions\n");
-    return (int)return_status;
+    if (return_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+      printf("HighsStatus::Warning return from passHighsOptions\n");
+#endif
+    } else {
+      printf("In main: fail return from passHighsOptions\n");
+      return (int)return_status;
+    }
   }
 
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
-  if (read_status != HighsStatus::OK) {
+  if (read_status == HighsStatus::Error) {
     std::cout << "Error loading file" << std::endl;
     return (int)HighsStatus::Error;
   } else {
@@ -107,21 +113,35 @@ int main(int argc, char** argv) {
 
   HighsStatus init_status = highs.passModel(lp);
   if (init_status != HighsStatus::OK) {
-    HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp.\n");
-    return (int)HighsStatus::Error;
+    if (init_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+      printf("HighsStatus::Warning return setting HighsLp\n");
+#endif
+    } else {
+      HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp\n");
+      return (int)HighsStatus::Error;
+    }
   }
 
-  HighsStatus run_status;
   /*
-  run_status = highs.writeModel("write.mps"); 
-  if (run_status != HighsStatus::OK) printf("Error return from highs.writeModel\n");
+  HighsStatus write_status;
+  write_status = highs.writeModel("write.mps"); 
+  if (write_status != HighsStatus::OK) {
+    if (write_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+      printf("HighsStatus::Warning return from highs.writeModel\n");
+#endif
+    } else {
+      printf("Error return from highs.writeModel\n");
+    }
+  }
   */
 
   //  highs.options_ = options;
-  run_status = highs.run();
+  HighsStatus run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
 
-  if (run_status != HighsStatus::OK) {
+  if (run_status == HighsStatus::Error) {
     HighsPrintMessage(ML_ALWAYS, "HiGHS status: %s\n", statusname.c_str());
   } else {
     std::stringstream message;

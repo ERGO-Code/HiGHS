@@ -93,6 +93,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   //
   // Use nonbasicFlag and any HiGHS solution to determine nonbasicMove
   //
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   HighsTimer& timer = highs_model_object.timer_;
   const HighsOptions& options = highs_model_object.options_;
   const HighsSolution& solution = highs_model_object.solution_;
@@ -544,10 +546,18 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Use analyseSimplexBasicSolution to report the model status and
   // solution params for the scaled LP
   if (simplex_info.analyseLpSolution) {
-    HighsStatus return_status;
     const bool report = true;
-    return_status = analyseSimplexBasicSolution(highs_model_object, report);
-    if (return_status != HighsStatus::OK) return return_status;
+    call_status = analyseSimplexBasicSolution(highs_model_object, report);
+    return_status = worseStatus(call_status, return_status);
+    if (call_status != HighsStatus::OK) {
+      if (call_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+	printf("HighsStatus::Warning return from analyseSimplexBasicSolution\n");
+#endif
+      } else {
+	return return_status;
+      }
+    }
   }
   return HighsStatus::OK;
 }

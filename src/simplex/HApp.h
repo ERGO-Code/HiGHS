@@ -67,11 +67,10 @@ void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
 //
 // Also sets the solution parameters for the unscaled LP
 HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsTimer& timer = highs_model_object.timer_;
-  // Set the solver_return_status to error so that not setting it
-  // later is evident
-  HighsStatus solver_return_status = HighsStatus::Error;
 
   // Assumes that the LP has a positive number of rows, since
   // unconstrained LPs should be solved in solveModelSimplex
@@ -88,8 +87,17 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   simplex_timer.initialiseSimplexClocks(highs_model_object);
   //
   // Transition to the best possible simplex basis and solution
-  solver_return_status = transition(highs_model_object);
-  if (solver_return_status != HighsStatus::OK) return solver_return_status;
+  call_status = transition(highs_model_object);
+  return_status = worseStatus(call_status, return_status);
+  if (call_status != HighsStatus::OK) {
+    if (call_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+      printf("HighsStatus::Warning return from transition\n");
+#endif
+    } else {
+      return return_status;
+    }
+  }
   //
   // Given a simplex basis and solution, use the number of primal and
   // dual infeasibilities to determine whether the simplex solver is
@@ -210,11 +218,19 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   if (simplex_info.analyseLpSolution) {
     // Analyse the simplex basic solution, assuming that the scaled solution params are known
     const bool report = true;
-    HighsStatus return_status =
-      analyseSimplexBasicSolution(highs_model_object,
-				  highs_model_object.scaled_solution_params_,
-				  report);
-    if (return_status != HighsStatus::OK) return return_status;
+    call_status = analyseSimplexBasicSolution(highs_model_object,
+					      highs_model_object.scaled_solution_params_,
+					      report);
+    return_status = worseStatus(call_status, return_status);
+    if (call_status != HighsStatus::OK) {
+      if (call_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+	printf("HighsStatus::Warning return from analyseSimplexBasicSolution\n");
+#endif
+      } else {
+	return return_status;
+      }
+    }
 
 #ifdef HiGHSDEV
     // For debugging, it's good to be able to check what comes out of
@@ -225,22 +241,33 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     HighsSimplexInterface simplex_interface(highs_model_object);
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
-    return_status = 
+    call_status = 
       analyseHighsBasicSolution(highs_model_object, "to check simplex basic soulution");
-    if (return_status != HighsStatus::OK) return return_status;
+    return_status = worseStatus(call_status, return_status);
+    if (call_status != HighsStatus::OK) {
+      if (call_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+	printf("HighsStatus::Warning return from analyseHighsBasicSolution\n");
+#endif
+      } else {
+	return return_status;
+      }
+    }
     // Invalidate the basis to make sure it is set again later
     // without HiGHSDEV
     highs_model_object.basis_.valid_ = false;
 #endif
   }
-  solver_return_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+  return_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
 #endif
-  return solver_return_status;
+  return return_status;
 }
 
 HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   for (int pass = 0; pass < 2; pass++) {
     double new_primal_feasibility_tolerance;
     double new_dual_feasibility_tolerance;
@@ -248,12 +275,21 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
     HighsLogMessage(HighsMessageType::INFO, "tryToSolveUnscaledLp pass %1d:", pass);
 #endif
     // Deduce the unscaled solution parameters, and new fasibility tolerances if not primal and/or dual feasible
-    HighsStatus return_status =
+    call_status =
       getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(highs_model_object, 
 								      highs_model_object.unscaled_solution_params_,
 								      new_primal_feasibility_tolerance,
 								      new_dual_feasibility_tolerance);
-    if (return_status != HighsStatus::OK) return return_status;
+    return_status = worseStatus(call_status, return_status);
+    if (call_status != HighsStatus::OK) {
+      if (call_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+	printf("HighsStatus::Warning return from getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution\n");
+#endif
+      } else {
+	return return_status;
+      }
+    }
     int num_unscaled_primal_infeasibilities = highs_model_object.unscaled_solution_params_.num_primal_infeasibilities;
     int num_unscaled_dual_infeasibilities = highs_model_object.unscaled_solution_params_.num_dual_infeasibilities;
     // Set the model and solution status according to the unscaled solution parameters
@@ -304,23 +340,41 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 // It sets the HiGHS basis within highs_model_object and, if optimal,
 // the HiGHS solution, too
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   // Reset unscaled and scaled model status and solution params - except for iteration counts
   resetModelStatusAndSolutionParams(highs_model_object);
 
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
-    HighsStatus return_status = solveUnconstrainedLp(highs_model_object);
-    if (return_status != HighsStatus::OK) return HighsStatus::Error;
-    return return_status;
+    call_status = solveUnconstrainedLp(highs_model_object);
+    return_status = worseStatus(call_status, return_status);
+    if (call_status != HighsStatus::OK) {
+      if (call_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+	printf("HighsStatus::Warning return from solveUnconstrainedLp\n");
+#endif
+      } else {
+	return return_status;
+      }
+    }
   }
-
   // (Try to) solve the scaled LP
-  HighsStatus highs_status = runSimplexSolver(highs_model_object);
+  call_status = runSimplexSolver(highs_model_object);
+  return_status = worseStatus(call_status, return_status);
+  if (call_status != HighsStatus::OK) {
+    if (call_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+      printf("HighsStatus::Warning return from runSimplexSolver\n");
+#endif
+    } else {
+      return return_status;
+    }
+  }
 #ifdef HiGHSDEV
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   if (simplex_info.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
 #endif
-  if (highs_status != HighsStatus::OK) return highs_status;
 
   double cost_scale = highs_model_object.scale_.cost_;
 #ifdef HiGHSDEV
@@ -340,8 +394,17 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
       // which, if used, might yield an unscaled solution that satisfies
       // the required tolerances. Can't handle cost scaling
       //
-      highs_status = tryToSolveUnscaledLp(highs_model_object);
-      if (highs_status != HighsStatus::OK) return highs_status;
+      call_status = tryToSolveUnscaledLp(highs_model_object);
+      return_status = worseStatus(call_status, return_status);
+      if (call_status != HighsStatus::OK) {
+	if (call_status == HighsStatus::Warning) {
+#ifdef HiGHSDEV
+	  printf("HighsStatus::Warning return from runSimplexSolver\n");
+#endif
+	} else {
+	  return return_status;
+	}
+      }
     } else {
       // If scaling hasn't been used, then the original LP has been
       // solved to the required tolerances
@@ -362,7 +425,10 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   copySolutionIterationCountAndObjectiveParams(highs_model_object.scaled_solution_params_,
 					       highs_model_object.unscaled_solution_params_);
   
-  // Assess success according to the scaled model status
-  return highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+  // Assess success according to the scaled model status, unless
+  // something worse has happened earlier
+  call_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+  return_status = worseStatus(call_status, return_status);
+  return return_status;
 }
 #endif
