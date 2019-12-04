@@ -32,6 +32,8 @@ struct ICrashIterationDetails {
   double lp_objective;
   double quadratic_objective;
   double residual_norm_2;
+  
+  double time;
 };
 
 struct ICrashInfo {
@@ -46,6 +48,8 @@ struct ICrashInfo {
 
   std::vector<ICrashIterationDetails> details;
   std::vector<double> x_values;
+
+  double total_time;
 };
 
 struct ICrashOptions {

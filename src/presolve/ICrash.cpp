@@ -14,6 +14,7 @@
 #include "presolve/ICrash.h"
 
 #include <algorithm>
+#include <chrono>
 #include <sstream>
 
 #include "HighsStatus.h"
@@ -155,7 +156,8 @@ ICrashIterationDetails fillDetails(const int num, const Quadratic& idata) {
                                 lambda_norm_2,
                                 idata.lp_objective,
                                 idata.quadratic_objective,
-                                idata.residual_norm_2};
+                                idata.residual_norm_2,
+                                0};
 }
 
 void fillICrashInfo(const int n_iterations, ICrashInfo& result) {
@@ -278,7 +280,7 @@ std::string ICrashtrategyToString(const ICrashStrategy strategy) {
 void reportOptions(const ICrashOptions& options) {
   std::stringstream ss;
   // Report outcome.
-  ss << "ICrashOptions: \n"
+  ss << "ICrashOptions \n"
      << "dualize: " << std::boolalpha << options.dualize << "\n"
      << "strategy: " << ICrashtrategyToString(options.strategy) << "\n"
      << "starting_weight: " << std::scientific << options.starting_weight
@@ -307,17 +309,29 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   reportSubproblem(idata, 0);
   result.details.push_back(fillDetails(0, idata));
 
+  // Initialize clocks.
+  std::chrono::time_point<std::chrono::system_clock> start, end,
+      start_iteration, end_iteration;
+  std::chrono::duration<double> elapsed_seconds;
+  start = std::chrono::system_clock::now();
+
   // Main loop.
   int iteration = 0;
   for (iteration = 1; iteration <= options.iterations; iteration++) {
     updateParameters(idata, options, iteration);
 
+    // Solve subproblem.
+    start_iteration = std::chrono::system_clock::now();
     bool success = solveSubproblem(idata, options);
     if (!success) return HighsStatus::Error;
+    end_iteration = std::chrono::system_clock::now();
+    elapsed_seconds = end_iteration - start_iteration;
 
     update(idata);
     reportSubproblem(idata, iteration);
     result.details.push_back(fillDetails(iteration, idata));
+    assert(iteration == result.details.size());
+    result.details[iteration].time = elapsed_seconds.count();
 
     // Exit if feasible.
     if (idata.residual_norm_2 < kExitTolerance) {
@@ -333,6 +347,14 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   iteration--;
   fillICrashInfo(iteration, result);
   result.x_values = idata.xk.col_value;
+
+  end_iteration = std::chrono::system_clock::now();
+  elapsed_seconds = end - start;
+  result.total_time = elapsed_seconds.count();
+
+  HighsPrintMessage(ML_ALWAYS,
+                    "\nICrash finished successfully after: %.2f sec.\n\n",
+                    result.total_time);
 
   return HighsStatus::OK;
 }
