@@ -179,7 +179,8 @@ HighsStatus Highs::run() {
         options_.icrash_starting_weight,
         options_.icrash_iterations,
         options_.icrash_approximate_minimization_iterations,
-        options_.icrash_exact};
+        options_.icrash_exact,
+        options_.icrash_breakpoints};
  
     // todo: timing. some strange compile issue.
     HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
