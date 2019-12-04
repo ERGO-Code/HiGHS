@@ -20,7 +20,10 @@ std::string HighsStatusToString(HighsStatus status) {
       return "Error";
       break;
     default:
-      return "Status toString() not implemented.";
+#ifdef HiGHSDEV
+      printf("HiGHS status %d not recognised\n", (int)status);
+#endif
+      return "Unrecognised HiGHS status";
       break;
   }
   return "";

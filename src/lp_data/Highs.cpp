@@ -86,7 +86,7 @@ HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
     HighsLogMessage(HighsMessageType::WARNING,
                     "Empty file name so not reading options");
-    return HighsStatus::Error;
+    return HighsStatus::Warning;
   }
   options_.options_file = filename;
   if (!loadOptionsFromFile(options_)) return HighsStatus::Error;
@@ -181,10 +181,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
   if (filename == "") {
     // Empty file name: report model on stdout
-    HighsLogMessage(HighsMessageType::WARNING,
-                    "Empty file name so reporting model on stdout");
     reportLp(model, 2);
-    return HighsStatus::Warning;
+    return HighsStatus::OK;
   } else {
     Filereader* writer = Filereader::getFilereader(filename.c_str());
     return writer->writeModelToFile(filename.c_str(), model);
@@ -1300,7 +1298,6 @@ HighsStatus Highs::writeSolution(const std::string filename, const bool pretty) 
   FILE* file;
   if (filename == "") {
     // Empty file name: report model on stdout
-    HighsLogMessage(HighsMessageType::WARNING, "Empty file name so reporting solution on stdout");
     file = stdout;
   } else {
     file = fopen(filename.c_str(), "w");
@@ -1337,7 +1334,6 @@ HighsStatus Highs::writeSolution(const std::string filename, const bool pretty) 
       fprintf(file, " \n");
     }
   }
-  if (file == stdout) return HighsStatus::Warning;
   return HighsStatus::OK;
 }
 

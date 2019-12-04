@@ -324,24 +324,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Possibly check for basis condition. ToDo Override this for MIP hot start
   bool basis_condition_ok = true;
   if (highs_model_object.options_.simplex_initial_condition_check) {
-    timer.start(simplex_info.clock_[BasisConditionClock]);
-    double basis_condition = computeBasisCondition(highs_model_object);
-    timer.stop(simplex_info.clock_[BasisConditionClock]);
-    double basis_condition_tolerance =
-        highs_model_object.options_.simplex_initial_condition_tolerance;
-    basis_condition_ok = basis_condition < basis_condition_tolerance;
-    HighsMessageType message_type = HighsMessageType::INFO;
-    std::string condition_comment;
-    if (basis_condition_ok) {
-      condition_comment = "is within";
-    } else {
-      message_type = HighsMessageType::WARNING;
-      condition_comment = "exceeds";
-    }
-    HighsLogMessage(
-        message_type,
-        "Initial basis condition estimate of %g %s the tolerance of %g",
-        basis_condition, condition_comment.c_str(), basis_condition_tolerance);
+    basis_condition_ok = basisConditionOk(highs_model_object, "Initial");
   }
   // ToDo Handle ill-conditioned basis with basis crash, in which case
   // ensure that HiGHS and simplex basis are invalidated and simplex
@@ -385,24 +368,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     simplex_lp_status.has_fresh_invert = true;
 
     // Check the condition after the basis crash
-    timer.start(simplex_info.clock_[BasisConditionClock]);
-    double basis_condition = computeBasisCondition(highs_model_object);
-    timer.stop(simplex_info.clock_[BasisConditionClock]);
-    double basis_condition_tolerance =
-        highs_model_object.options_.simplex_initial_condition_tolerance;
-    basis_condition_ok = basis_condition < basis_condition_tolerance;
-    HighsMessageType message_type = HighsMessageType::INFO;
-    std::string condition_comment;
-    if (basis_condition_ok) {
-      condition_comment = "is within";
-    } else {
-      message_type = HighsMessageType::WARNING;
-      condition_comment = "exceeds";
-    }
-    HighsLogMessage(
-        message_type,
-        "Initial basis condition estimate of %11.4g %s the tolerance of %g",
-        basis_condition, condition_comment.c_str(), basis_condition_tolerance);
+    basis_condition_ok = basisConditionOk(highs_model_object, "Initial");
   }
 
   // Now there are nonbasicFlag and basicIndex corresponding to a
@@ -586,6 +552,30 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   return HighsStatus::OK;
 }
 
+bool basisConditionOk(HighsModelObject& highs_model_object, const std::string message) {
+  HighsTimer& timer = highs_model_object.timer_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  bool basis_condition_ok;
+  timer.start(simplex_info.clock_[BasisConditionClock]);
+  double basis_condition = computeBasisCondition(highs_model_object);
+  timer.stop(simplex_info.clock_[BasisConditionClock]);
+  double basis_condition_tolerance =
+    highs_model_object.options_.simplex_initial_condition_tolerance;
+  basis_condition_ok = basis_condition < basis_condition_tolerance;
+  HighsMessageType message_type = HighsMessageType::INFO;
+  std::string condition_comment;
+  if (basis_condition_ok) {
+    condition_comment = "is within";
+  } else {
+    message_type = HighsMessageType::WARNING;
+    condition_comment = "exceeds";
+  }
+  HighsLogMessage(
+		  message_type,
+		  "Initial basis condition estimate of %11.4g %s the tolerance of %g",
+		  basis_condition, condition_comment.c_str(), basis_condition_tolerance);
+  return basis_condition_ok;
+}
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance) {

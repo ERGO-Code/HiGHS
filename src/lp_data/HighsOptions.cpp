@@ -240,7 +240,8 @@ OptionStatus checkOptionValue(OptionRecordDouble& option, const double value) {
 }
 
 OptionStatus checkOptionValue(OptionRecordString& option, const std::string value) {
-  // Setting a string option: check that value is OK
+  // Setting a string option. For some options only particular values
+  // are permitted, so check them
   if (option.name == presolve_string) {
     if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
   } else if (option.name == solver_string) {

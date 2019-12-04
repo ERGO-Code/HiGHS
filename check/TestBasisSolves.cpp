@@ -166,8 +166,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   REQUIRE(highs_status == HighsStatus::OK);
 
   highs_status = highs.writeModel("");
-  //  highs_status = highs.writeModel("");
-  REQUIRE(highs_status==HighsStatus::Warning);
+  REQUIRE(highs_status==HighsStatus::OK);
  
   int numRow = lp.numRow_;
   int numCol = lp.numCol_;

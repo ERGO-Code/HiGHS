@@ -317,7 +317,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   return_status = avgas_highs.writeModel("");
   HighsStatusReport("avgas_highs.writeModel(\"\")", return_status);
-  REQUIRE(return_status == HighsStatus::Warning);
+  REQUIRE(return_status == HighsStatus::OK);
 
 
   Highs highs(options);
@@ -345,7 +345,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   return_status = highs.writeModel("");
   HighsStatusReport("highs.writeModel(\"\")", return_status);
-  REQUIRE(return_status == HighsStatus::Warning);
+  REQUIRE(return_status == HighsStatus::OK);
 
   // Adding row vectors and matrix to model with columns returns OK
   return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
@@ -353,7 +353,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   return_status = highs.writeModel("");
   HighsStatusReport("highs.writeModel(\"\")", return_status);
-  REQUIRE(return_status == HighsStatus::Warning);
+  REQUIRE(return_status == HighsStatus::OK);
 
   //  const HighsLp &reference_avgas = avgas_highs.getLp();
   //  const HighsLp &reference_lp = highs.getLp();

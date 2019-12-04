@@ -28,6 +28,8 @@ HighsStatus transition(
 		       HighsModelObject& highs_model_object  //!< Model object
 		       );
 
+bool basisConditionOk(HighsModelObject& highs_model_object, const std::string message);
+
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance);
