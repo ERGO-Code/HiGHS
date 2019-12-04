@@ -170,7 +170,7 @@ HighsStatus Highs::run() {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
     if (!strategy_ok) {
-      HighsPrintMessage(ML_ALWAYS, "ICrash error: unknown strategy./n");
+      HighsPrintMessage(ML_ALWAYS, "ICrash error: unknown strategy.\n");
       return HighsStatus::Error;
     }
     ICrashOptions icrash_options{

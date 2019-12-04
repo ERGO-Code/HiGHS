@@ -73,7 +73,7 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
     if (options.exact) {
       HighsPrintMessage(ML_ALWAYS,
                         "ICrashError: exact strategy not allowed for "
-                        "breakpoints minimization./n");
+                        "breakpoints minimization.\n");
       return false;
     }
     if (options.dualize) {
@@ -235,11 +235,11 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
       break;
     }
     case ICrashStrategy::kPenalty: {
-      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet./n");
+      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet.\n");
       return false;
     }
     default: {
-      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet./n");
+      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet.\n");
       return false;
     }
   }
