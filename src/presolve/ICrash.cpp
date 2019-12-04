@@ -348,7 +348,7 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   fillICrashInfo(iteration, result);
   result.x_values = idata.xk.col_value;
 
-  end_iteration = std::chrono::system_clock::now();
+  end = std::chrono::system_clock::now();
   elapsed_seconds = end - start;
   result.total_time = elapsed_seconds.count();
 
