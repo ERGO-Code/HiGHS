@@ -151,19 +151,14 @@ HighsStatus Highs::writeHighsInfo(const std::string filename) {
 }
 
 HighsStatus Highs::passModel(const HighsLp& lp) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   // Copy the LP to the internal LP
   lp_ = lp;
   // Check validity of the LP, normalising its values (by default).
-  HighsStatus return_status = assessLp(lp_, options_);
-  if (return_status != HighsStatus::OK) {
-    if (return_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      printf("HighsStatus::Warning return\n");
-#endif
-    } else {
-      return return_status;
-    }
-  }
+  call_status = assessLp(lp_, options_);
+  return_status = interpretCallStatus(call_status, return_status, "passModel");
+  if (return_status == HighsStatus::Error) return return_status;
   // hmos_[0] is the HighsModelObject corresponding to the original LP
   hmos_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
@@ -172,29 +167,38 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
 }
 
 HighsStatus Highs::readModel(const std::string filename) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   Filereader* reader = Filereader::getFilereader(filename.c_str());
   HighsLp model;
   this->options_.model_file = filename;
 
-  FilereaderRetcode retcode = reader->readModelFromFile(this->options_, model);
-  if (retcode != FilereaderRetcode::OK) {
-    return HighsStatus::Error;
+  FilereaderRetcode call_code = reader->readModelFromFile(this->options_, model);
+  if (call_code != FilereaderRetcode::OK) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "readModelFromFile");
+    if (return_status == HighsStatus::Error) return return_status;
   }
-
-  return this->passModel(model);
+  call_status = this->passModel(model);
+  return_status = interpretCallStatus(call_status, return_status, "passModel");
+  return return_status;
 }
 
 HighsStatus Highs::writeModel(const std::string filename) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   HighsLp model = this->lp_;
 
   if (filename == "") {
     // Empty file name: report model on stdout
     reportLp(model, 2);
-    return HighsStatus::OK;
+    return_status = HighsStatus::OK;
   } else {
     Filereader* writer = Filereader::getFilereader(filename.c_str());
-    return writer->writeModelToFile(filename.c_str(), model);
+    call_status = writer->writeModelToFile(filename.c_str(), model);
+    return_status = interpretCallStatus(call_status, return_status, "writeModelToFile");
   }
+  return return_status;
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -709,18 +713,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
   if (solution.col_value.size() > 0) {
     call_status = calculateRowValues(lp_, solution_);
-    if (return_status != HighsStatus::OK) return return_status;
-    return_status = interpretCallStatus(call_status, return_status, "");
+    return_status = interpretCallStatus(call_status, return_status, "calculateRowValues");
     if (return_status == HighsStatus::Error) return return_status;
-    if (call_status != HighsStatus::OK) {
-      if (call_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-	printf("HighsStatus::Warning return from calculateRowValues\n");
-#endif
-      } else {
-	return return_status;
-      }
-    }
   }
   if (solution.row_dual.size() > 0) {
     call_status = calculateColDuals(lp_, solution_);
@@ -1079,33 +1073,36 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::runLpSolver(HighsModelObject& model, int& iteration_count,
 			       const string message) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
   //  bool normalise = true;
-  HighsStatus assess_lp_status = assessLp(lp_, options_);
-  assert(assess_lp_status == HighsStatus::OK);
-  if (assess_lp_status != HighsStatus::OK) return HighsStatus::Error;
+  call_status = assessLp(lp_, options_);
+  assert(call_status == HighsStatus::OK);
+  return_status = interpretCallStatus(call_status, return_status, "assessLp");
+  if (return_status == HighsStatus::Error) return return_status;
 #endif
-  // Set solver solver_return_status to error to ensure that it's set.
-  HighsStatus solver_return_status = HighsStatus::Error;
   // Initialise the solution parameters for the unscaled model
   initialiseSolutionParams(model.unscaled_solution_params_, model.options_);
   if (!model.lp_.numRow_) {
     // Unconstrained LP so solve directly
-    solver_return_status = solveUnconstrainedLp(model);
-    if (solver_return_status != HighsStatus::OK) return HighsStatus::Error;
+    call_status = solveUnconstrainedLp(model);
+    return_status = interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
+    if (return_status == HighsStatus::Error) return return_status;
     iteration_count = 0;
   } else if (options_.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
     HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
-    solver_return_status = solveModelIpx(model.lp_, options_,
-				  model.basis_, model.solution_,
-				  model.unscaled_model_status_,
-				  model.unscaled_solution_params_);
-    if (solver_return_status != HighsStatus::OK) return HighsStatus::Error;
+    call_status = solveModelIpx(model.lp_, options_,
+				model.basis_, model.solution_,
+				model.unscaled_model_status_,
+				model.unscaled_solution_params_);
+    return_status = interpretCallStatus(call_status, return_status, "solveModelIpx");
+    if (return_status == HighsStatus::Error) return return_status;
     // Set the scaled model status and solution params for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
     model.scaled_solution_params_ = model.unscaled_solution_params_;
@@ -1116,20 +1113,23 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, int& iteration_count,
   } else {
     // Use Simplex
     int initial_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
-    solver_return_status = solveModelSimplex(model);
-    if (solver_return_status != HighsStatus::OK) return HighsStatus::Error;
+    call_status = solveModelSimplex(model);
+    return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
+    if (return_status == HighsStatus::Error) return return_status;
+
     int final_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
     iteration_count = final_iteration_count - initial_iteration_count;
     if (!isSolutionConsistent(model.lp_, model.solution_)) {
-      std::cout << "Error: Inconsistent solution returned from solver.\n";
+      HighsLogMessage(HighsMessageType::ERROR, "Inconsistent solution returned from solver");
+      return HighsStatus::Error;
     }
   }
-  HighsStatus return_status = analyseHighsBasicSolution(model.lp_, model.basis_, model.solution_,
-							model.unscaled_model_status_,
-							model.unscaled_solution_params_,
-							message);
-  if (return_status != HighsStatus::OK) return HighsStatus::Error;
-  return solver_return_status;
+  call_status = analyseHighsBasicSolution(model.lp_, model.basis_, model.solution_,
+					  model.unscaled_model_status_,
+					  model.unscaled_solution_params_,
+					  message);
+  return_status = interpretCallStatus(call_status, return_status, "analyseHighsBasicSolution");
+  return return_status;
 }
 
 // Branch-and-bound code below here:

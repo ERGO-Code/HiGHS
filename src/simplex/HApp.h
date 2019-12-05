@@ -286,15 +286,21 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
       options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
       options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
       options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
-      HighsStatus highs_status = runSimplexSolver(highs_model_object);
+      call_status = runSimplexSolver(highs_model_object);
       options = save_options;
-      if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) return highs_status;
+      return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+      if (return_status == HighsStatus::Error) return return_status;
+      // Assess success according to the scaled model status, unless
+      // something worse has happened earlier
+      call_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+      return_status = interpretCallStatus(call_status, return_status);
+      if (return_status == HighsStatus::Error) return return_status;
     } else {
       HighsLogMessage(HighsMessageType::INFO, "Not re-solving with refined tolerances");
-      return HighsStatus::OK;
+      return return_status;
     }
   }
-  return HighsStatus::OK;
+  return return_status;
 }
 
 // Single method to solve an LP with the simplex method. Solves the
