@@ -613,8 +613,13 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
   const HighsSolution& solution = highs_model_object.solution_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   const HighsScale& scale = highs_model_object.scale_;
+
+  const double scaled_primal_feasibility_tolerance = scaled_solution_params.primal_feasibility_tolerance;
+  const double scaled_dual_feasibility_tolerance = scaled_solution_params.dual_feasibility_tolerance;
+
   // Go through the columns, finding the differences in nonbasic column values and duals
   int num_nonbasic_col_value_differences = 0;
   double sum_nonbasic_col_value_differences = 0;
@@ -628,9 +633,9 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
       double local_col_dual = simplex_lp.sense_ * simplex_info.workDual_[iVar] / (scale.col_[iCol] / scale.cost_);
       double value_difference = fabs(local_col_value - solution.col_value[iCol]);
       double dual_difference = fabs(local_col_dual - solution.col_dual[iCol]);
-      if (value_difference > simplex_info.primal_feasibility_tolerance) num_nonbasic_col_value_differences++;
+      if (value_difference > scaled_primal_feasibility_tolerance) num_nonbasic_col_value_differences++;
       sum_nonbasic_col_value_differences += value_difference;
-      if (value_difference > simplex_info.dual_feasibility_tolerance) num_nonbasic_col_dual_differences++;
+      if (value_difference > scaled_dual_feasibility_tolerance) num_nonbasic_col_dual_differences++;
       sum_nonbasic_col_dual_differences += dual_difference; 
     }
   }
@@ -659,9 +664,9 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
       double local_row_dual = simplex_lp.sense_ * simplex_info.workDual_[iVar] * (scale.row_[iRow] * scale.cost_);
       double value_difference = fabs(local_row_value - solution.row_value[iRow]);
       double dual_difference = fabs(local_row_dual - solution.row_dual[iRow]);
-      if (value_difference > simplex_info.primal_feasibility_tolerance) num_nonbasic_row_value_differences++;
+      if (value_difference > scaled_primal_feasibility_tolerance) num_nonbasic_row_value_differences++;
       sum_nonbasic_row_value_differences += value_difference;
-      if (value_difference > simplex_info.dual_feasibility_tolerance) num_nonbasic_row_dual_differences++;
+      if (value_difference > scaled_dual_feasibility_tolerance) num_nonbasic_row_dual_differences++;
       sum_nonbasic_row_dual_differences += dual_difference; 
     }
     // Consider the basic variable associated with this row index
@@ -673,9 +678,9 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
       double local_col_dual = 0;
       double value_difference = fabs(local_col_value - solution.col_value[iCol]);
       double dual_difference = fabs(local_col_dual - solution.col_dual[iCol]);
-      if (value_difference > simplex_info.primal_feasibility_tolerance) num_basic_col_value_differences++;
+      if (value_difference > scaled_primal_feasibility_tolerance) num_basic_col_value_differences++;
       sum_basic_col_value_differences += value_difference;
-      if (value_difference > simplex_info.dual_feasibility_tolerance) num_basic_col_dual_differences++;
+      if (value_difference > scaled_dual_feasibility_tolerance) num_basic_col_dual_differences++;
       sum_basic_col_dual_differences += dual_difference; 
     } else {
       // Consider this basic row
@@ -684,13 +689,13 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
       double local_row_dual = 0;
       double value_difference = fabs(local_row_value - solution.row_value[iRow]);
       double dual_difference = fabs(local_row_dual - solution.row_dual[iRow]);
-      if (value_difference > simplex_info.primal_feasibility_tolerance) num_basic_row_value_differences++;
+      if (value_difference > scaled_primal_feasibility_tolerance) num_basic_row_value_differences++;
       sum_basic_row_value_differences += value_difference;
-      if (value_difference > simplex_info.dual_feasibility_tolerance) num_basic_row_dual_differences++;
+      if (value_difference > scaled_dual_feasibility_tolerance) num_basic_row_dual_differences++;
       sum_basic_row_dual_differences += dual_difference;
     }
   }	
-  double acceptable_difference_sum = simplex_info.primal_feasibility_tolerance + simplex_info.dual_feasibility_tolerance;
+  double acceptable_difference_sum = scaled_primal_feasibility_tolerance + scaled_dual_feasibility_tolerance;
   bool significant_nonbasic_value_differences = sum_nonbasic_col_value_differences + sum_nonbasic_row_value_differences > 0;
   bool significant_basic_value_differences = sum_basic_col_value_differences + sum_basic_row_value_differences > 2*acceptable_difference_sum;      
   bool significant_nonbasic_col_dual_differences = sum_nonbasic_col_dual_differences > acceptable_difference_sum;

@@ -389,7 +389,7 @@ void HPrimal::primalChooseColumn() {
   double* workDual = &workHMO.simplex_info_.workDual_[0];
   const double* workLower = &workHMO.simplex_info_.workLower_[0];
   const double* workUpper = &workHMO.simplex_info_.workUpper_[0];
-  const double dualTolerance = workHMO.simplex_info_.dual_feasibility_tolerance;
+  const double dualTolerance = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
 
   timer.start(simplex_info.clock_[ChuzcPrimalClock]);
   columnIn = -1;
@@ -459,7 +459,7 @@ void HPrimal::primalChooseRow() {
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double primalTolerance =
-      workHMO.simplex_info_.primal_feasibility_tolerance;
+      workHMO.scaled_solution_params_.primal_feasibility_tolerance;
 
   // Compute pivot column
   timer.start(simplex_info.clock_[FtranClock]);
@@ -562,7 +562,7 @@ void HPrimal::primalUpdate() {
   double* workValue = &workHMO.simplex_info_.workValue_[0];
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double primalTolerance =
-      workHMO.simplex_info_.primal_feasibility_tolerance;
+      workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
 
   // Compute thetaPrimal
