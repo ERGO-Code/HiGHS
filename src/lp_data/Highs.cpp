@@ -752,8 +752,10 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
   // Check that there is a HighsModelObject
   if (!haveHmo("addRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
-				    num_new_nz, starts, indices, values);
+  call_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
+				  num_new_nz, starts, indices, values);
+  return_status = interpretCallStatus(call_status, return_status, "addRows");
+  if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
 }
@@ -775,9 +777,10 @@ bool Highs::addCols(const int num_new_col, const double* costs,
   underDevelopmentLogMessage("addCols");
   if (!haveHmo("addCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status =
-      interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
-                        num_new_nz, starts, indices, values);
+  call_status = interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
+				  num_new_nz, starts, indices, values);
+  return_status = interpretCallStatus(call_status, return_status, "addCols");
+  if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
 }
@@ -788,7 +791,9 @@ bool Highs::changeObjectiveSense(const int sense) {
   underDevelopmentLogMessage("changeObjectiveSense");
   if (!haveHmo("changeObjectiveSense")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeObjectiveSense(sense);
+  call_status = interface.changeObjectiveSense(sense);
+  return_status = interpretCallStatus(call_status, return_status, "changeObjectiveSense");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -803,7 +808,9 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
   underDevelopmentLogMessage("changeColsCost");
   if (!haveHmo("changeColsCost")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeCosts(num_set_entries, set, cost);
+  call_status = interface.changeCosts(num_set_entries, set, cost);
+  return_status = interpretCallStatus(call_status, return_status, "changeCosts");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -813,7 +820,9 @@ bool Highs::changeColsCost(const int* mask, const double* cost) {
   underDevelopmentLogMessage("changeColsCost");
   if (!haveHmo("changeColsCost")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeCosts(mask, cost);
+  call_status = interface.changeCosts(mask, cost);
+  return_status = interpretCallStatus(call_status, return_status, "changeCosts");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -829,7 +838,9 @@ bool Highs::changeColsBounds(const int num_set_entries, const int* set,
   underDevelopmentLogMessage("changeColsBounds");
   if (!haveHmo("changeColsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeColBounds(num_set_entries, set, lower, upper);
+  call_status = interface.changeColBounds(num_set_entries, set, lower, upper);
+  return_status = interpretCallStatus(call_status, return_status, "changeColBounds");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -840,7 +851,9 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
   underDevelopmentLogMessage("changeColsBounds");
   if (!haveHmo("changeColsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeColBounds(from_col, to_col, lower, upper);
+  call_status = interface.changeColBounds(from_col, to_col, lower, upper);
+  return_status = interpretCallStatus(call_status, return_status, "changeColBounds");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -851,7 +864,9 @@ bool Highs::changeColsBounds(const int* mask, const double* lower,
   underDevelopmentLogMessage("changeColsBounds");
   if (!haveHmo("changeColsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeColBounds(mask, lower, upper);
+  call_status = interface.changeColBounds(mask, lower, upper);
+  return_status = interpretCallStatus(call_status, return_status, "changeColBounds");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -867,7 +882,9 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
   underDevelopmentLogMessage("changeRowsBounds");
   if (!haveHmo("changeRowsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeRowBounds(num_set_entries, set, lower, upper);
+  call_status = interface.changeRowBounds(num_set_entries, set, lower, upper);
+  return_status = interpretCallStatus(call_status, return_status, "changeRowBounds");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -878,7 +895,9 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
   underDevelopmentLogMessage("changeRowsBounds");
   if (!haveHmo("changeRowsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeRowBounds(mask, lower, upper);
+  call_status = interface.changeRowBounds(mask, lower, upper);
+  return_status = interpretCallStatus(call_status, return_status, "changeRowBounds");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -888,7 +907,9 @@ bool Highs::changeCoeff(const int row, const int col, const double value) {
   underDevelopmentLogMessage("changeCoeff");
   if (!haveHmo("changeCoeff")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.changeCoefficient(row, col, value);
+  call_status = interface.changeCoefficient(row, col, value);
+  return_status = interpretCallStatus(call_status, return_status, "changeCoefficient");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -900,8 +921,10 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
   underDevelopmentLogMessage("getCols");
   if (!haveHmo("getCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.getCols(from_col, to_col, num_col, costs, lower,
-                                    upper, num_nz, start, index, value);
+  call_status = interface.getCols(from_col, to_col, num_col, costs, lower,
+				  upper, num_nz, start, index, value);
+  return_status = interpretCallStatus(call_status, return_status, "getCols");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -913,8 +936,10 @@ bool Highs::getCols(const int n, const int* set, int& num_col, double* costs,
   underDevelopmentLogMessage("getCols");
   if (!haveHmo("getCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.getCols(n, set, num_col, costs, lower, upper,
-                                    num_nz, start, index, value);
+  call_status = interface.getCols(n, set, num_col, costs, lower, upper,
+				  num_nz, start, index, value);
+  return_status = interpretCallStatus(call_status, return_status, "getCols");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -926,8 +951,10 @@ bool Highs::getCols(const int* col_mask, int& num_col, double* costs,
   underDevelopmentLogMessage("getCols");
   if (!haveHmo("getCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.getCols(col_mask, num_col, costs, lower, upper,
-                                    num_nz, start, index, value);
+  call_status = interface.getCols(col_mask, num_col, costs, lower, upper,
+				  num_nz, start, index, value);
+  return_status = interpretCallStatus(call_status, return_status, "getCols");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -939,8 +966,10 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
   underDevelopmentLogMessage("getRows");
   if (!haveHmo("getRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.getRows(from_row, to_row, num_row, lower, upper,
-                                    num_nz, start, index, value);
+  call_status = interface.getRows(from_row, to_row, num_row, lower, upper,
+				  num_nz, start, index, value);
+  return_status = interpretCallStatus(call_status, return_status, "getRows");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -952,8 +981,10 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
   underDevelopmentLogMessage("getRows");
   if (!haveHmo("getRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.getRows(num_set_entries, set, num_row, lower, upper,
-                                    num_nz, start, index, value);
+  call_status = interface.getRows(num_set_entries, set, num_row, lower, upper,
+				  num_nz, start, index, value);
+  return_status = interpretCallStatus(call_status, return_status, "getRows");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -964,8 +995,10 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
   underDevelopmentLogMessage("getRows");
   if (!haveHmo("getRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.getRows(mask, num_row, lower, upper, num_nz, start,
-                                    index, value);
+  call_status = interface.getRows(mask, num_row, lower, upper, num_nz, start,
+				  index, value);
+  return_status = interpretCallStatus(call_status, return_status, "getRows");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -976,7 +1009,9 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
   if (!haveHmo("getCoeff")) return false;
   HighsSimplexInterface interface(hmos_[0]);
 
-  return_status = interface.getCoefficient(row, col, value);
+  call_status = interface.getCoefficient(row, col, value);
+  return_status = interpretCallStatus(call_status, return_status, "getCoefficient");
+  if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
@@ -986,7 +1021,9 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
   underDevelopmentLogMessage("deleteCols");
   if (!haveHmo("deleteCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.deleteCols(from_col, to_col);
+  call_status = interface.deleteCols(from_col, to_col);
+  return_status = interpretCallStatus(call_status, return_status, "deleteCols");
+  if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
 }
@@ -997,7 +1034,9 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
   underDevelopmentLogMessage("deleteCols");
   if (!haveHmo("deleteCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.deleteCols(num_set_entries, set);
+  call_status = interface.deleteCols(num_set_entries, set);
+  return_status = interpretCallStatus(call_status, return_status, "deleteCols");
+  if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
 }
@@ -1008,7 +1047,9 @@ bool Highs::deleteCols(int* mask) {
   underDevelopmentLogMessage("deleteCols");
   if (!haveHmo("deleteCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.deleteCols(mask);
+  call_status = interface.deleteCols(mask);
+  return_status = interpretCallStatus(call_status, return_status, "deleteCols");
+  if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
 }
@@ -1019,7 +1060,9 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
   underDevelopmentLogMessage("deleteRows");
   if (!haveHmo("deleteRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.deleteRows(from_row, to_row);
+  call_status = interface.deleteRows(from_row, to_row);
+  return_status = interpretCallStatus(call_status, return_status, "deleteRows");
+  if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
 }
@@ -1030,7 +1073,9 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
   underDevelopmentLogMessage("deleteRows");
   if (!haveHmo("deleteRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.deleteRows(num_set_entries, set);
+  call_status = interface.deleteRows(num_set_entries, set);
+  return_status = interpretCallStatus(call_status, return_status, "deleteRows");
+  if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
 }
@@ -1041,7 +1086,9 @@ bool Highs::deleteRows(int* mask) {
   underDevelopmentLogMessage("deleteRows");
   if (!haveHmo("deleteRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interface.deleteRows(mask);
+  call_status = interface.deleteRows(mask);
+  return_status = interpretCallStatus(call_status, return_status, "deleteRows");
+  if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
 }
