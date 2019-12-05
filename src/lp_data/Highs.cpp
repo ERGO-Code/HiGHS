@@ -467,7 +467,7 @@ HighsStatus Highs::run() {
   //   assert(solved_hmo == original_hmo);
   // solved_hmo will be original_hmo unless the presolved LP is found to be infeasible or unbounded
 
-  if (!getHighsModelStatusAndInfo(solved_hmo)) return HighsStatus::Error
+  if (!getHighsModelStatusAndInfo(solved_hmo)) return HighsStatus::Error;
 
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   // The HiGHS solution and basis have to come from the original_hmo
@@ -1437,6 +1437,7 @@ bool Highs::updateHighsSolutionBasis() {
     basis_.col_status.resize(lp_.numCol_);
     basis_.row_status.resize(lp_.numRow_);
   }
+  return true;
 }  
 
 bool Highs::getHighsModelStatusAndInfo(const int solved_hmo) {
