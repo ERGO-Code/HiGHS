@@ -671,17 +671,21 @@ class Highs {
    */
   HighsStatus clearSolver();
 
+#ifdef HiGHSDEV
   /**
    * @brief Report the model status, solution and basis vector sizes and basis validity
    */
-  void reportModelStatusSolutionBasis(const std::string message, const HighsModelStatus model_status, const HighsLp &lp, const HighsSolution &solution, const HighsBasis &basis);
+  void reportModelStatusSolutionBasis(const std::string message,
+				      const HighsModelStatus model_status,
+				      const HighsLp &lp,
+				      const HighsSolution &solution,
+				      const HighsBasis &basis);
+#endif
 
   std::string highsModelStatusToString(const HighsModelStatus model_status);
   
   std::string highsPrimalDualStatusToString(const int primal_dual_status);
   
-  // ipx (not implemented)
-
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
 #endif
@@ -721,8 +725,9 @@ class Highs {
   HighsStatus solveRootNode(Node& root);
   HighsStatus solveNode(Node& node);
 
-  void updateHighsSolutionBasis();
-  void getHighsModelStatusAndInfo(const int solved_hmo);
+  bool haveHmo(const string method_name);
+  bool updateHighsSolutionBasis();
+  bool getHighsModelStatusAndInfo(const int solved_hmo);
 
   void underDevelopmentLogMessage(const string method_name);
 };
