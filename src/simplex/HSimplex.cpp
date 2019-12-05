@@ -3074,9 +3074,9 @@ HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const Hig
   const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
   const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
   //  const double unscaled_primal_feasibility_tolerance =
-  //    highs_model_object.scaled_solution_params_.primal_feasibility_tolerance;
+  //    highs_model_object.unscaled_solution_params_.primal_feasibility_tolerance;
   //  const double unscaled_dual_feasibility_tolerance =
-  //    highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
+  //    highs_model_object.unscaled_solution_params_.dual_feasibility_tolerance;
   HighsSolutionParams get_unscaled_solution_params;
   invalidateSolutionParams(get_unscaled_solution_params);
   double new_scaled_primal_feasibility_tolerance;
@@ -3106,9 +3106,9 @@ HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const H
   const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
   const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
   //  const double unscaled_primal_feasibility_tolerance =
-  //    highs_model_object.scaled_solution_params_.primal_feasibility_tolerance;
+  //    highs_model_object.unscaled_solution_params_.primal_feasibility_tolerance;
   //  const double unscaled_dual_feasibility_tolerance =
-  //    highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
+  //    highs_model_object.unscaled_solution_params_.dual_feasibility_tolerance;
   HighsSolutionParams get_scaled_solution_params;
   invalidateSolutionParams(get_scaled_solution_params);
   double new_scaled_primal_feasibility_tolerance;
@@ -3139,9 +3139,9 @@ HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsMode
   const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
   const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
   //  const double unscaled_primal_feasibility_tolerance =
-  //    highs_model_object.scaled_solution_params_.primal_feasibility_tolerance;
+  //    highs_model_object.unscaled_solution_params_.primal_feasibility_tolerance;
   //  const double unscaled_dual_feasibility_tolerance =
-  //    highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
+  //    highs_model_object.unscaled_solution_params_.dual_feasibility_tolerance;
   double new_scaled_primal_feasibility_tolerance;
   double new_scaled_dual_feasibility_tolerance;
   return
@@ -3172,9 +3172,9 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(cons
   const double unscaled_primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
   const double unscaled_dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
   //  const double unscaled_primal_feasibility_tolerance =
-  //    highs_model_object.scaled_solution_params_.primal_feasibility_tolerance;
+  //    highs_model_object.unscaled_solution_params_.primal_feasibility_tolerance;
   //  const double unscaled_dual_feasibility_tolerance =
-  //    highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
+  //    highs_model_object.unscaled_solution_params_.dual_feasibility_tolerance;
   HighsSolutionParams get_scaled_solution_params;
   invalidateSolutionParams(get_scaled_solution_params);
   return
