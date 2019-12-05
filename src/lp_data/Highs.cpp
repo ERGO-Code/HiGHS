@@ -281,7 +281,6 @@ HighsStatus Highs::run() {
   if (!run_highs_clock_already_running) timer_.startRunHighsClock();
   // Record the initial time and zero the overall iteration count
   double initial_time = timer_.readRunHighsClock();
-  int solve_iteration_count = 0;
   int postsolve_iteration_count = 0;
   // Define identifiers to refer to the HMO of the original LP
   // (0) and the HMO created when using presolve (1)
@@ -291,7 +290,6 @@ HighsStatus Highs::run() {
   // original LP
   int solved_hmo = original_hmo;
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
-  int iteration_count;
   //  printf("\nHighs::run() 1: basis_.valid_ = %d\n", basis_.valid_);
   //  fflush(stdout);
   if (!basis_.valid_) {
@@ -310,20 +308,16 @@ HighsStatus Highs::run() {
     switch (presolve_status) {
       case HighsPresolveStatus::NotPresolved: {
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
-        call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
-		      "Not presolved: solving the LP");
+        call_status = runLpSolver(hmos_[solved_hmo], "Not presolved: solving the LP");
 	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
 	if (return_status == HighsStatus::Error) return return_status;
-        solve_iteration_count += iteration_count;
         break;
       }
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
-        call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
-				  "Problem not reduced by presolve: solving the LP");
+        call_status = runLpSolver(hmos_[solved_hmo], "Problem not reduced by presolve: solving the LP");
 	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
 	if (return_status == HighsStatus::Error) return return_status;
-        solve_iteration_count += iteration_count;
         break;
       }
       case HighsPresolveStatus::Reduced: {
@@ -339,11 +333,9 @@ HighsStatus Highs::run() {
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
-	call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
-				  "Solving the presolved LP");
+	call_status = runLpSolver(hmos_[solved_hmo], "Solving the presolved LP");
 	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
 	if (return_status == HighsStatus::Error) return return_status;
-        solve_iteration_count += iteration_count;
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
@@ -427,21 +419,22 @@ HighsStatus Highs::run() {
 	  // to solve the presolved problem
 	  if (options.solver == ipm_string) options.solver = simplex_string;
           options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
-          // Set the message level to ML_ALWAYS so that data for
-          // individual iterations are reported
           bool full_iteration_logging = false;
-          if (full_iteration_logging) HighsSetMessagelevel(ML_ALWAYS);
+          if (full_iteration_logging) {
+	    // Set the message level to ML_ALWAYS so that data for
+	    // individual iterations are reported
+	    HighsSetMessagelevel(ML_ALWAYS);
+	  }
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
-	  call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
-				    "Solving the original LP from the solution after postsolve");
+	  int iteration_count0 = hmos_[solved_hmo].unscaled_solution_params_.simplex_iteration_count;
+	  call_status = runLpSolver(hmos_[solved_hmo], "Solving the original LP from the solution after postsolve");
 	  return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
-          // Recover the options
+          // Recover the options and reset the message level
           options = save_options;
-          // Reset the message level
           if (full_iteration_logging) HighsSetMessagelevel(options_.message_level);
 	  if (return_status == HighsStatus::Error) return return_status;
-          postsolve_iteration_count = iteration_count;
-          solve_iteration_count += iteration_count;
+	  int iteration_count1 = hmos_[solved_hmo].unscaled_solution_params_.simplex_iteration_count;
+	  postsolve_iteration_count = iteration_count1 - iteration_count0;
         }
       }
     } else {
@@ -453,11 +446,9 @@ HighsStatus Highs::run() {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
     solved_hmo = original_hmo;
     hmos_[solved_hmo].lp_.lp_name_ = "Re-solved LP";
-    call_status = runLpSolver(hmos_[solved_hmo], iteration_count,
-			      "Re-solving the LP");
+    call_status = runLpSolver(hmos_[solved_hmo], "Re-solving the LP");
     return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
     if (return_status == HighsStatus::Error) return return_status;
-    solve_iteration_count += iteration_count;
   }
   // else if (reduced problem failed to solve) {
   //   todo: handle case when presolved problem failed to solve. Try to solve
@@ -1152,8 +1143,7 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 }
 
 // The method below runs simplex or ipx solver on the lp.
-HighsStatus Highs::runLpSolver(HighsModelObject& model, int& iteration_count,
-			       const string message) {
+HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
@@ -1173,7 +1163,6 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, int& iteration_count,
     call_status = solveUnconstrainedLp(model);
     return_status = interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
     if (return_status == HighsStatus::Error) return return_status;
-    iteration_count = 0;
   } else if (options_.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
@@ -1193,13 +1182,10 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, int& iteration_count,
 #endif
   } else {
     // Use Simplex
-    int initial_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
     call_status = solveModelSimplex(model);
     return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
     if (return_status == HighsStatus::Error) return return_status;
 
-    int final_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
-    iteration_count = final_iteration_count - initial_iteration_count;
     if (!isSolutionConsistent(model.lp_, model.solution_)) {
       HighsLogMessage(HighsMessageType::ERROR, "Inconsistent solution returned from solver");
       return HighsStatus::Error;

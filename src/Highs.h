@@ -715,8 +715,7 @@ class Highs {
 
   //  bool allow_presolve_;
 
-  HighsStatus runLpSolver(HighsModelObject& model, int& iteration_count,
-			  const string message);
+  HighsStatus runLpSolver(HighsModelObject& model, const string message);
 
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
