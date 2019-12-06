@@ -180,12 +180,12 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   return IpxStatus::OK;
 }
 
-HighsStatus solveModelIpx(const HighsLp& lp, const HighsOptions& options,
-			HighsBasis& highs_basis, HighsSolution& highs_solution,
-			HighsModelStatus& unscaled_model_status,
-			HighsSolutionParams& unscaled_solution_params) {
+HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
+		       HighsBasis& highs_basis, HighsSolution& highs_solution,
+		       HighsModelStatus& unscaled_model_status,
+		       HighsSolutionParams& unscaled_solution_params) {
   int debug = 0;
-
+  resetModelStatusAndSolutionParams(unscaled_model_status, unscaled_solution_params, options);
 #ifdef CMAKE_BUILD_TYPE
   debug = 1;
 #endif
@@ -202,8 +202,8 @@ HighsStatus solveModelIpx(const HighsLp& lp, const HighsOptions& options,
   // Set IPX parameters from options
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
-  parameters.ipm_feasibility_tol = options.primal_feasibility_tolerance;
-  parameters.ipm_optimality_tol = options.dual_feasibility_tolerance;
+  parameters.ipm_feasibility_tol = unscaled_solution_params.primal_feasibility_tolerance;
+  parameters.ipm_optimality_tol = unscaled_solution_params.dual_feasibility_tolerance;
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
 
@@ -298,7 +298,6 @@ HighsStatus solveModelIpx(const HighsLp& lp, const HighsOptions& options,
     // Set optimal 
     printf("IPX: May be setting unscaled model status erroneously to OPTIMAL\n");
     unscaled_model_status = HighsModelStatus::OPTIMAL;
-    initialiseSolutionParams(unscaled_solution_params, options);
     unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
     unscaled_solution_params.objective_function_value = ipx_info.objval;
     getPrimalDualInfeasibilitiesFromHighsBasicSolution(lp, highs_basis, highs_solution,

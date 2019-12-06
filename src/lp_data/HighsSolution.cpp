@@ -1007,32 +1007,29 @@ std::string iterationsToString(const HighsSolutionParams& solution_params) {
 }
 
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
-  
-  highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
-  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  resetModelStatusAndSolutionParams(highs_model_object.unscaled_model_status_,
+				    highs_model_object.unscaled_solution_params_,
+				    highs_model_object.options_);
+  resetModelStatusAndSolutionParams(highs_model_object.scaled_model_status_,
+				    highs_model_object.scaled_solution_params_,
+				    highs_model_object.options_);
+}
 
-  HighsOptions& options = highs_model_object.options_;
-  HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
-  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
+void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
+				       HighsSolutionParams& solution_params,
+				       const HighsOptions& options) {
+  model_status = HighsModelStatus::NOTSET;
+  // Set the feasibility tolerances - not affected by invalidateSolutionParams
+  solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
 
   // Save a copy of the unscaled solution params to recover the iteration counts and objective
   HighsSolutionParams save_solution_params;
-  copySolutionIterationCountAndObjectiveParams(unscaled_solution_params, save_solution_params);
-
+  copySolutionIterationCountAndObjectiveParams(solution_params, save_solution_params);
   // Invalidate the solution params then reset the feasibility
   // tolerances and recover the iteration counts and objective
-  invalidateSolutionParams(unscaled_solution_params);
-  unscaled_solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-  unscaled_solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  copySolutionIterationCountAndObjectiveParams(save_solution_params, unscaled_solution_params);
-
-  // Invalidate the solution params then reset the feasibility
-  // tolerances and recover the iteration counts and objective
-  invalidateSolutionParams(scaled_solution_params);
-  scaled_solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-  scaled_solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  copySolutionIterationCountAndObjectiveParams(save_solution_params, scaled_solution_params);
-  
+  invalidateSolutionParams(solution_params);
+  copySolutionIterationCountAndObjectiveParams(save_solution_params, solution_params);
 }
 
 // Invalidate a HighsSolutionParams instance
@@ -1202,14 +1199,6 @@ bool equalSolutionInfeasibilityParams(const HighsSolutionParams& solution_params
   }
 
   return equal;
-}
-
-void initialiseSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options) {
-  solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  invalidateSolutionIterationCountAndObjectiveParams(solution_params);
-  invalidateSolutionStatusParams(solution_params);
-  invalidateSolutionInfeasibilityParams(solution_params);
 }
 
 void copySolutionIterationCountAndObjectiveParams(const HighsSolutionParams& from_solution_params, 

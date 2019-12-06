@@ -1146,6 +1146,8 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
+  // Reset unscaled and scaled model status and solution params - except for iteration counts
+  resetModelStatusAndSolutionParams(model);
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
@@ -1156,8 +1158,6 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
 #endif
-  // Initialise the solution parameters for the unscaled model
-  initialiseSolutionParams(model.unscaled_solution_params_, model.options_);
   if (!model.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(model);
@@ -1167,11 +1167,11 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
     // Use IPM
 #ifdef IPX_ON
     HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
-    call_status = solveModelIpx(model.lp_, options_,
-				model.basis_, model.solution_,
-				model.unscaled_model_status_,
-				model.unscaled_solution_params_);
-    return_status = interpretCallStatus(call_status, return_status, "solveModelIpx");
+    call_status = solveLpIpx(model.lp_, options_,
+			     model.basis_, model.solution_,
+			     model.unscaled_model_status_,
+			     model.unscaled_solution_params_);
+    return_status = interpretCallStatus(call_status, return_status, "solveLpIpx");
     if (return_status == HighsStatus::Error) return return_status;
     // Set the scaled model status and solution params for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
@@ -1182,8 +1182,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
 #endif
   } else {
     // Use Simplex
-    call_status = solveModelSimplex(model);
-    return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
+    call_status = solveLpSimplex(model);
+    return_status = interpretCallStatus(call_status, return_status, "solveLpSimplex");
     if (return_status == HighsStatus::Error) return return_status;
 
     if (!isSolutionConsistent(model.lp_, model.solution_)) {
@@ -1317,8 +1317,8 @@ HighsStatus Highs::solveNode(Node& node) {
   HighsSolutionParams& scaled_solution_params = hmos_[0].scaled_solution_params_;
   iteration_count0 = scaled_solution_params.simplex_iteration_count;
 
-  call_status = solveModelSimplex(hmos_[0]);
-  return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
+  call_status = solveLpSimplex(hmos_[0]);
+  return_status = interpretCallStatus(call_status, return_status, "solveLpSimplex");
   if (return_status == HighsStatus::Error) return return_status;
 
   iteration_count1 = scaled_solution_params.simplex_iteration_count;
@@ -1333,8 +1333,8 @@ HighsStatus Highs::solveNode(Node& node) {
     hmos_[0].simplex_lp_status_.has_basis = false;
     hmos_[0].basis_.valid_ = false;
     iteration_count0 = scaled_solution_params.simplex_iteration_count;
-    call_status = solveModelSimplex(hmos_[0]);
-    return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
+    call_status = solveLpSimplex(hmos_[0]);
+    return_status = interpretCallStatus(call_status, return_status, "solveLpSimplex");
     if (return_status == HighsStatus::Error) return return_status;
     iteration_count1 = scaled_solution_params.simplex_iteration_count;
     solve1_iteration_count = iteration_count1 - iteration_count0;
@@ -1371,7 +1371,7 @@ HighsStatus Highs::solveNode(Node& node) {
   // lp_.colLower_ = node.col_lower_bound;
   // lp_.colUpper_ = node.col_upper_bound;
 
-  // HighsStatus status = solveModelSimplex(hmos_[0]);
+  // HighsStatus status = solveLpSimplex(hmos_[0]);
 
   // // Set solution.
   // if (status == HighsStatus::Optimal) {
@@ -1393,8 +1393,8 @@ HighsStatus Highs::solveRootNode(Node& root) {
   options_.message_level = ML_NONE;
   // HighsStatus status = run();
   // call works but simply calling run() should be enough.
-  call_status = solveModelSimplex(hmos_[0]);
-  return_status = interpretCallStatus(call_status, return_status, "solveModelSimplex");
+  call_status = solveLpSimplex(hmos_[0]);
+  return_status = interpretCallStatus(call_status, return_status, "solveLpSimplex");
   if (return_status == HighsStatus::Error) return return_status;
 
   if (hmos_[0].scaled_model_status_ == HighsModelStatus::OPTIMAL) {

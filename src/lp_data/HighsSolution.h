@@ -121,6 +121,9 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 std::string iterationsToString(const HighsSolutionParams& solution_params);
 
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
+void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
+				       HighsSolutionParams& solution_params,
+				       const HighsOptions& options);
 
 void invalidateSolutionParams(HighsSolutionParams& solution_params);
 void invalidateSolutionIterationCountAndObjectiveParams(HighsSolutionParams& solution_params);
@@ -135,8 +138,6 @@ bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
 			       const HighsSolutionParams& solution_params1);
 bool equalSolutionInfeasibilityParams(const HighsSolutionParams& solution_params0,
 				      const HighsSolutionParams& solution_params1);
-
-void initialiseSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options);
 
 void copySolutionIterationCountAndObjectiveParams(const HighsSolutionParams& from_solution_params, 
 						  HighsSolutionParams& to_solution_params);

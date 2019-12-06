@@ -63,7 +63,7 @@ void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
 
 // Single function to solve the (scaled) LP according to
 // options. Assumes that the LP has a positive number of rows, since
-// unconstrained LPs should be solved in solveModelSimplex
+// unconstrained LPs should be solved in solveLpSimplex
 //
 // Also sets the solution parameters for the unscaled LP
 HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
@@ -73,7 +73,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsTimer& timer = highs_model_object.timer_;
 
   // Assumes that the LP has a positive number of rows, since
-  // unconstrained LPs should be solved in solveModelSimplex
+  // unconstrained LPs should be solved in solveLpSimplex
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
   assert(positive_num_row);
   if (!positive_num_row) return HighsStatus::Error;
@@ -281,10 +281,11 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
     const bool refinement = false;
     if (refinement) {
       HighsLogMessage(HighsMessageType::INFO, "Re-solving with refined tolerances");
+      highs_model_object.scaled_solution_params_.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
+      highs_model_object.scaled_solution_params_.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+
       HighsOptions save_options = highs_model_object.options_;
       HighsOptions& options = highs_model_object.options_;
-      options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
-      options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
       options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
       call_status = runSimplexSolver(highs_model_object);
       options = save_options;
@@ -314,7 +315,7 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 //
 // It sets the HiGHS basis within highs_model_object and, if optimal,
 // the HiGHS solution, too
-HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
+HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   // Reset unscaled and scaled model status and solution params - except for iteration counts
@@ -337,7 +338,7 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
 
   double cost_scale = highs_model_object.scale_.cost_;
 #ifdef HiGHSDEV
-  if (cost_scale != 1) printf("solveModelSimplex: Can't handle cost scaling\n");
+  if (cost_scale != 1) printf("solveLpSimplex: Can't handle cost scaling\n");
 #endif
   assert(cost_scale == 1);
   if (cost_scale != 1) return HighsStatus::Error;
