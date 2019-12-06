@@ -3059,10 +3059,6 @@ HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_obje
 // values to check from
 HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
 								       HighsSolutionParams& get_scaled_solution_params) {
-  const double unscaled_primal_feasibility_tolerance =
-    highs_model_object.unscaled_solution_params_.primal_feasibility_tolerance;
-  const double unscaled_dual_feasibility_tolerance =
-    highs_model_object.unscaled_solution_params_.dual_feasibility_tolerance;
   HighsSolutionParams get_unscaled_solution_params;
   invalidateSolutionParams(get_unscaled_solution_params);
   double new_scaled_primal_feasibility_tolerance;
@@ -3072,8 +3068,6 @@ HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const Hig
 									 highs_model_object.scale_,
 									 highs_model_object.simplex_basis_,
 									 highs_model_object.simplex_info_,
-									 unscaled_primal_feasibility_tolerance,
-									 unscaled_dual_feasibility_tolerance,
 									 highs_model_object.scaled_model_status_,
 									 highs_model_object.unscaled_solution_params_,
 									 get_scaled_solution_params,
@@ -3089,10 +3083,6 @@ HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const Hig
 // values to check from
 HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
 									 HighsSolutionParams& get_unscaled_solution_params) {
-  const double unscaled_primal_feasibility_tolerance =
-    highs_model_object.unscaled_solution_params_.primal_feasibility_tolerance;
-  const double unscaled_dual_feasibility_tolerance =
-    highs_model_object.unscaled_solution_params_.dual_feasibility_tolerance;
   HighsSolutionParams get_scaled_solution_params;
   invalidateSolutionParams(get_scaled_solution_params);
   double new_scaled_primal_feasibility_tolerance;
@@ -3102,8 +3092,6 @@ HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const H
 									 highs_model_object.scale_,
 									 highs_model_object.simplex_basis_,
 									 highs_model_object.simplex_info_,
-									 unscaled_primal_feasibility_tolerance,
-									 unscaled_dual_feasibility_tolerance,
 									 highs_model_object.scaled_model_status_,
 									 get_unscaled_solution_params,
 									 highs_model_object.scaled_solution_params_,
@@ -3120,10 +3108,6 @@ HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const H
 HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
 								 HighsSolutionParams& get_unscaled_solution_params,
 								 HighsSolutionParams& get_scaled_solution_params) {
-  const double unscaled_primal_feasibility_tolerance =
-    highs_model_object.unscaled_solution_params_.primal_feasibility_tolerance;
-  const double unscaled_dual_feasibility_tolerance =
-    highs_model_object.unscaled_solution_params_.dual_feasibility_tolerance;
   double new_scaled_primal_feasibility_tolerance;
   double new_scaled_dual_feasibility_tolerance;
   return
@@ -3131,8 +3115,6 @@ HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsMode
 									 highs_model_object.scale_,
 									 highs_model_object.simplex_basis_,
 									 highs_model_object.simplex_info_,
-									 unscaled_primal_feasibility_tolerance,
-									 unscaled_dual_feasibility_tolerance,
 									 highs_model_object.scaled_model_status_,
 									 get_unscaled_solution_params,
 									 get_scaled_solution_params,
@@ -3151,10 +3133,6 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(cons
 									    HighsSolutionParams& get_unscaled_solution_params,
 									    double& new_scaled_primal_feasibility_tolerance,
 									    double& new_scaled_dual_feasibility_tolerance) {
-  const double unscaled_primal_feasibility_tolerance =
-    highs_model_object.unscaled_solution_params_.primal_feasibility_tolerance;
-  const double unscaled_dual_feasibility_tolerance =
-    highs_model_object.unscaled_solution_params_.dual_feasibility_tolerance;
   HighsSolutionParams get_scaled_solution_params;
   invalidateSolutionParams(get_scaled_solution_params);
   return
@@ -3162,8 +3140,6 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(cons
 									 highs_model_object.scale_,
 									 highs_model_object.simplex_basis_,
 									 highs_model_object.simplex_info_,
-									 unscaled_primal_feasibility_tolerance,
-									 unscaled_dual_feasibility_tolerance,
 									 highs_model_object.scaled_model_status_,
 									 get_unscaled_solution_params,
 									 highs_model_object.scaled_solution_params_,
@@ -3183,8 +3159,6 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
 										 const HighsScale& scale,
 										 const SimplexBasis& basis,
 										 const HighsSimplexInfo& simplex_info,
-										 const double unscaled_primal_feasibility_tolerance,
-										 const double unscaled_dual_feasibility_tolerance,
 										 const HighsModelStatus scaled_model_status,
 										 const HighsSolutionParams& unscaled_solution_params,
 										 const HighsSolutionParams& scaled_solution_params,
@@ -3193,6 +3167,9 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
 										 double& new_scaled_primal_feasibility_tolerance,
 										 double& new_scaled_dual_feasibility_tolerance) {
   
+  const double unscaled_primal_feasibility_tolerance = unscaled_solution_params.primal_feasibility_tolerance;
+  const double unscaled_dual_feasibility_tolerance = unscaled_solution_params.dual_feasibility_tolerance;
+
   get_unscaled_solution_params = unscaled_solution_params;
   get_scaled_solution_params = scaled_solution_params;
 

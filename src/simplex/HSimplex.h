@@ -242,8 +242,6 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
 										 const HighsScale& scale,
 										 const SimplexBasis& basis,
 										 const HighsSimplexInfo& simplex_info,
-										 const double unscaled_primal_feasibility_tolerance,
-										 const double unscaled_dual_feasibility_tolerance,
 										 const HighsModelStatus scaled_model_status,
 										 const HighsSolutionParams& unscaled_solution_params,
 										 const HighsSolutionParams& scaled_solution_params,
