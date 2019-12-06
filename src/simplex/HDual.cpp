@@ -271,15 +271,20 @@ void HDual::solve(int num_threads) {
   }
 #endif
 
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
+           scaled_solution_params.simplex_iteration_count / n_dvx_fwk);
+  }
+#endif
+
   if (solve_bailout) {
     assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
 	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
   }
 
-#ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
-#endif
   if (solvePhase == 4) {
     // Use primal to clean up if not out of time
     int it0 = scaled_solution_params.simplex_iteration_count;
@@ -292,12 +297,6 @@ void HDual::solve(int num_threads) {
     simplex_info.primal_phase2_iteration_count +=
         (scaled_solution_params.simplex_iteration_count - it0);
   }
-#ifdef HiGHSDEV
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
-    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
-           scaled_solution_params.simplex_iteration_count / n_dvx_fwk);
-  }
-#endif
   ok = ok_to_solve(workHMO, 1, solvePhase);
   if (!ok) {
     printf("NOT OK After Solve???\n");
