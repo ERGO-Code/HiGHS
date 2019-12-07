@@ -244,16 +244,22 @@ bool test_all_delete_keep(int num_row) {
 }
 
 void messageReportLp(const char* message, const HighsLp &lp) {
-  HighsSetMessagelevel(ML_ALWAYS);
-  HighsPrintMessage(ML_VERBOSE, "\nReporting LP: %s\n", message);
+  FILE* output = stdout;
+  int message_level = ML_ALWAYS;
+  HighsSetMessagelevel(message_level);
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+		    "\nReporting LP: %s\n", message);
   reportLp(lp, 2);
   HighsSetMessagelevel(ML_NONE);
 }  
 
 void messageReportMatrix(const char* message, const int num_col, const int num_nz,
 			 const int* start, const int* index, const double* value) {
-  HighsSetMessagelevel(ML_ALWAYS);
-  HighsPrintMessage(ML_VERBOSE, "\nReporting Matrix: %s\n", message);
+  FILE* output = stdout;
+  int message_level = ML_ALWAYS;
+  HighsSetMessagelevel(message_level);
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+		    "\nReporting Matrix: %s\n", message);
   reportMatrix(message, num_col, num_nz, start, index, value);
   HighsSetMessagelevel(ML_NONE);
 }  

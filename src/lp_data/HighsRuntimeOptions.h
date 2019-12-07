@@ -92,7 +92,8 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     }
 
   } catch (const cxxopts::OptionException& e) {
-    HighsLogMessage(HighsMessageType::ERROR, "Error parsing options: %s",
+    HighsLogMessage(options.logfile,
+		    HighsMessageType::ERROR, "Error parsing options: %s",
                     e.what());
     return false;
   }

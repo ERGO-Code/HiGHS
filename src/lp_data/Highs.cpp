@@ -239,7 +239,8 @@ HighsStatus Highs::run() {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
     if (!strategy_ok) {
-      HighsPrintMessage(ML_ALWAYS, "ICrash error: unknown strategy./n");
+      HighsPrintMessage(options_.output, options_.message_level,
+			ML_ALWAYS, "ICrash error: unknown strategy./n");
       return HighsStatus::Error;
     }
     ICrashOptions icrash_options{
@@ -273,7 +274,8 @@ HighsStatus Highs::run() {
   //  reportOptionsToFile("Highs.html", options_.records);
   // Possibly report options settings
   reportOptions(stdout, options_.records);  //, true);
-  HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
+  HighsPrintMessage(options_.output, options_.message_level,
+		    ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
 
   if (options_.mip) return runBnb();
 
@@ -370,7 +372,8 @@ HighsStatus Highs::run() {
       }
       default: {
         // case HighsPresolveStatus::Error
-        HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
+        HighsPrintMessage(options_.output, options_.message_level,
+			  ML_ALWAYS, "Presolve failed.");
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 	hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::PRESOLVE_ERROR;
 	model_status_ = hmos_[original_hmo].unscaled_model_status_;
@@ -395,7 +398,8 @@ HighsStatus Highs::run() {
         HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
         timer_.stop(timer_.postsolve_clock);
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-          HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
+          HighsPrintMessage(options_.output, options_.message_level,
+			    ML_VERBOSE, "Postsolve finished.");
 	  //
           // Now hot-start the simplex solver for the original_hmo:
 	  //
@@ -478,8 +482,10 @@ HighsStatus Highs::run() {
   if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
   double lp_solve_final_time = timer_.readRunHighsClock();
-  HighsPrintMessage(ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
-  HighsPrintMessage(ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
+  HighsPrintMessage(options_.output, options_.message_level,
+		    ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
+  HighsPrintMessage(options_.output, options_.message_level,
+		    ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
 
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
@@ -1169,7 +1175,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
   } else if (options_.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
-    HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
+    HighsPrintMessage(options_.output, options_.message_level,
+		      ML_ALWAYS, "Starting IPX...\n");
     call_status = solveLpIpx(model.lp_, options_,
 			     model.basis_, model.solution_,
 			     model.unscaled_model_status_,
@@ -1207,7 +1214,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
 HighsStatus Highs::runBnb() {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
+  HighsPrintMessage(options_.output, options_.message_level,
+		    ML_ALWAYS, "Using branch and bound solver\n");
 
   // Need to start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
@@ -1225,8 +1233,8 @@ HighsStatus Highs::runBnb() {
   return_status = interpretCallStatus(call_status, return_status, "solveRootNode");
   if (return_status == HighsStatus::Error) return return_status;
   if (hmos_[0].scaled_model_status_ != HighsModelStatus::OPTIMAL) {
-    HighsPrintMessage(ML_ALWAYS,
-                      "Root note not solved to optimality. Status: %s\n",
+    HighsPrintMessage(options_.output, options_.message_level,
+		      ML_ALWAYS, "Root note not solved to optimality. Status: %s\n",
                       utilHighsModelStatusToString(hmos_[0].scaled_model_status_).c_str());
     call_status = highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
     return_status = interpretCallStatus(call_status, return_status);
@@ -1278,10 +1286,12 @@ HighsStatus Highs::runBnb() {
             << mip_solve_final_time - mip_solve_initial_time << std::endl;
     message << std::endl;
 
-    HighsPrintMessage(ML_MINIMAL, message.str().c_str());
+    HighsPrintMessage(options_.output, options_.message_level,
+		      ML_MINIMAL, message.str().c_str());
   } else {
     hmos_[0].unscaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-    HighsPrintMessage(ML_ALWAYS, "No feasible solution found.\n");
+    HighsPrintMessage(options_.output, options_.message_level,
+		      ML_ALWAYS, "No feasible solution found.\n");
   }
 
   return HighsStatus::OK;

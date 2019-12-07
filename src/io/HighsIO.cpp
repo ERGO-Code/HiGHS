@@ -52,15 +52,15 @@ void HighsPrintMessage(int level, const char* format, ...) {
   }
 }
 
-void HighsPrintMessage(int pass_message_level, int level, const char* format, ...) {
-  if (output == NULL) {
+void HighsPrintMessage(FILE* pass_output, const int pass_message_level, const int level, const char* format, ...) {
+  if (pass_output == NULL) {
     return;
   }
-  if (message_level & level) {
+  if (pass_message_level & level) {
     va_list argptr;
     va_start(argptr, format);
     if (printmsgcb == NULL)
-      vfprintf(output, format, argptr);
+      vfprintf(pass_output, format, argptr);
     else {
       int len;
       len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
@@ -73,6 +73,44 @@ void HighsPrintMessage(int pass_message_level, int level, const char* format, ..
     }
     va_end(argptr);
   }
+}
+
+void HighsLogMessage(FILE* pass_logfile, HighsMessageType type, const char* format, ...) {
+  if (pass_logfile == NULL) {
+    return;
+  }
+  
+  time_t rawtime;
+  struct tm* timeinfo;
+
+  time(&rawtime);
+  timeinfo = localtime(&rawtime);
+  va_list argptr;
+  va_start(argptr, format);
+
+  if (logmsgcb == NULL) {
+    fprintf(pass_logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour,
+            timeinfo->tm_min, timeinfo->tm_sec, HighsMessageTypeTag[(int)type]);
+    vfprintf(pass_logfile, format, argptr);
+    fprintf(pass_logfile, "\n");
+  } else {
+    int len;
+    len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ",
+                   timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
+                   HighsMessageTypeTag[(int)type]);
+    if (len < (int)sizeof(msgbuffer))
+      len +=
+          vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
+    if (len < (int)sizeof(msgbuffer) - 1) {
+      msgbuffer[len] = '\n';
+      ++len;
+      msgbuffer[len] = '\0';
+    } else
+      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    logmsgcb(type, msgbuffer, msgcb_data);
+  }
+
+  va_end(argptr);
 }
 
 void HighsLogMessage(HighsMessageType type, const char* format, ...) {
