@@ -836,7 +836,7 @@ void OsiHiGHSSolverInterface::writeMps(const char *filename,
   }
 
   FilereaderMps frmps;
-  HighsStatus rc = frmps.writeModelToFile(fullname.c_str(), highs->lp_);
+  HighsStatus rc = frmps.writeModelToFile(highs->options_, fullname.c_str(), highs->lp_);
 
   if (rc != HighsStatus::OK)
     throw CoinError("Creating MPS file failed", "writeMps",

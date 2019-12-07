@@ -64,9 +64,9 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
   return return_code;
 }
 
-HighsStatus FilereaderMps::writeModelToFile(const char* filename,
+HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options, const char* filename,
 					    HighsLp& model) {
-  return writeLpAsMPS(filename, model);
+  return writeLpAsMPS(options, filename, model);
 }
 
 FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,

@@ -82,7 +82,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
-    HighsLogMessage(HighsMessageType::WARNING,
+    HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
                     "Empty file name so not reading options");
     return HighsStatus::Warning;
   }
@@ -133,19 +133,19 @@ const HighsOptions& Highs::getHighsOptions() const { return options_; }
 const HighsInfo& Highs::getHighsInfo() const { return info_; }
 
 HighsStatus Highs::getHighsInfoValue(const std::string& info, int& value) {
-  if (getInfoValue(info, info_.records, value) == InfoStatus::OK)
+  if (getInfoValue(options_, info, info_.records, value) == InfoStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::getHighsInfoValue(const std::string& info, double& value) {
-  if (getInfoValue(info, info_.records, value) == InfoStatus::OK)
+  if (getInfoValue(options_, info, info_.records, value) == InfoStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::writeHighsInfo(const std::string filename) {
-  return reportInfoToFile(filename, info_.records);
+  return reportInfoToFile(options_, filename, info_.records);
 }
 
 HighsStatus Highs::passModel(const HighsLp& lp) {
@@ -193,7 +193,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
     return_status = HighsStatus::OK;
   } else {
     Filereader* writer = Filereader::getFilereader(filename.c_str());
-    call_status = writer->writeModelToFile(filename.c_str(), model);
+    call_status = writer->writeModelToFile(options_, filename.c_str(), model);
     return_status = interpretCallStatus(call_status, return_status, "writeModelToFile");
   }
   return return_status;
@@ -239,8 +239,8 @@ HighsStatus Highs::run() {
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
     if (!strategy_ok) {
-      HighsPrintMessage(options_.output, options_.message_level,
-			ML_ALWAYS, "ICrash error: unknown strategy./n");
+      HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+			"ICrash error: unknown strategy./n");
       return HighsStatus::Error;
     }
     ICrashOptions icrash_options{
@@ -274,8 +274,8 @@ HighsStatus Highs::run() {
   //  reportOptionsToFile("Highs.html", options_.records);
   // Possibly report options settings
   reportOptions(stdout, options_.records);  //, true);
-  HighsPrintMessage(options_.output, options_.message_level,
-		    ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
+  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+		    "Solving %s", lp_.model_name_.c_str());
 
   if (options_.mip) return runBnb();
 
@@ -332,7 +332,9 @@ HighsStatus Highs::run() {
 
         hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
         // Log the presolve reductions
-        logPresolveReductions(hmos_[original_hmo].lp_, hmos_[presolve_hmo].lp_);
+        logPresolveReductions(hmos_[original_hmo].options_,
+			      hmos_[original_hmo].lp_,
+			      hmos_[presolve_hmo].lp_);
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
@@ -357,9 +359,9 @@ HighsStatus Highs::run() {
           hmos_[original_hmo].unscaled_model_status_ =
               HighsModelStatus::PRIMAL_UNBOUNDED;
         }
-        HighsLogMessage(
-            HighsMessageType::INFO, "Problem status detected on presolve: %s",
-            highsModelStatusToString(hmos_[original_hmo].unscaled_model_status_).c_str());
+        HighsLogMessage(options_.logfile, HighsMessageType::INFO,
+			"Problem status detected on presolve: %s",
+			highsModelStatusToString(hmos_[original_hmo].unscaled_model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a
@@ -372,8 +374,8 @@ HighsStatus Highs::run() {
       }
       default: {
         // case HighsPresolveStatus::Error
-        HighsPrintMessage(options_.output, options_.message_level,
-			  ML_ALWAYS, "Presolve failed.");
+        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+			  "Presolve failed.");
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 	hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::PRESOLVE_ERROR;
 	model_status_ = hmos_[original_hmo].unscaled_model_status_;
@@ -398,8 +400,8 @@ HighsStatus Highs::run() {
         HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
         timer_.stop(timer_.postsolve_clock);
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-          HighsPrintMessage(options_.output, options_.message_level,
-			    ML_VERBOSE, "Postsolve finished.");
+          HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+			    "Postsolve finished.");
 	  //
           // Now hot-start the simplex solver for the original_hmo:
 	  //
@@ -482,10 +484,10 @@ HighsStatus Highs::run() {
   if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
   double lp_solve_final_time = timer_.readRunHighsClock();
-  HighsPrintMessage(options_.output, options_.message_level,
-		    ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
-  HighsPrintMessage(options_.output, options_.message_level,
-		    ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
+  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+		    "Postsolve  : %d\n", postsolve_iteration_count);
+  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+		    "Time       : %0.3g\n", lp_solve_final_time - initial_time);
 
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
@@ -513,15 +515,14 @@ const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
 HighsStatus Highs::getBasicVariables(int* basic_variables) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_basis) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No basis available in getBasicVariables");
     return HighsStatus::Error;
   }
   int numRow = hmos_[0].lp_.numRow_;
   int numCol = hmos_[0].lp_.numCol_;
   if (numRow != hmos_[0].simplex_lp_.numRow_) {
-    HighsLogMessage(
-        HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
         "Model LP and simplex LP row dimension difference (%d-%d=%d", numRow,
         hmos_[0].simplex_lp_.numRow_, numRow - hmos_[0].simplex_lp_.numRow_);
     return HighsStatus::Error;
@@ -542,13 +543,13 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
   if (hmos_.size() == 0) return HighsStatus::Error;
   int numRow = hmos_[0].lp_.numRow_;
   if (row < 0 || row >= numRow) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "Row index %d out of range [0, %d] in getBasisInverseRow",
                     row, numRow - 1);
     return HighsStatus::Error;
   }
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisInverseRow");
     return HighsStatus::Error;
   }
@@ -566,14 +567,13 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
   if (hmos_.size() == 0) return HighsStatus::Error;
   int numRow = hmos_[0].lp_.numRow_;
   if (col < 0 || col >= numRow) {
-    HighsLogMessage(
-        HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
         "Column index %d out of range [0, %d] in getBasisInverseCol", col,
         numRow - 1);
     return HighsStatus::Error;
   }
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisInverseCol");
     return HighsStatus::Error;
   }
@@ -590,7 +590,7 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
                                  int* solution_num_nz, int* solution_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisSolve");
     return HighsStatus::Error;
   }
@@ -610,7 +610,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
                                           int* solution_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisTransposeSolve");
     return HighsStatus::Error;
   }
@@ -628,13 +628,13 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                                  int* row_num_nz, int* row_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (row < 0 || row >= hmos_[0].lp_.numRow_) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "Row index %d out of range [0, %d] in getReducedRow", row,
                     hmos_[0].lp_.numRow_ - 1);
     return HighsStatus::Error;
   }
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getReducedRow");
     return HighsStatus::Error;
   }
@@ -673,13 +673,13 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                                     int* col_num_nz, int* col_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (col < 0 || col >= hmos_[0].lp_.numCol_) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "Column index %d out of range [0, %d] in getReducedColumn",
                     col, hmos_[0].lp_.numCol_ - 1);
     return HighsStatus::Error;
   }
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getReducedColumn");
     return HighsStatus::Error;
   }
@@ -726,7 +726,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   underDevelopmentLogMessage("setBasis");
   if (!basisOk(lp_, basis)) {
-    HighsLogMessage(HighsMessageType::ERROR, "setBasis: invalid basis");
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+		    "setBasis: invalid basis");
     return HighsStatus::Error;
   }
   basis_ = basis;
@@ -1157,7 +1158,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
   HighsStatus call_status;
   // Reset unscaled and scaled model status and solution params - except for iteration counts
   resetModelStatusAndSolutionParams(model);
-  HighsLogMessage(HighsMessageType::INFO, message.c_str());
+  HighsLogMessage(options_.logfile, HighsMessageType::INFO,
+		  message.c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -1175,8 +1177,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
   } else if (options_.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
-    HighsPrintMessage(options_.output, options_.message_level,
-		      ML_ALWAYS, "Starting IPX...\n");
+    HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+		      "Starting IPX...\n");
     call_status = solveLpIpx(model.lp_, options_,
 			     model.basis_, model.solution_,
 			     model.unscaled_model_status_,
@@ -1187,7 +1189,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
     model.scaled_model_status_ = model.unscaled_model_status_;
     model.scaled_solution_params_ = model.unscaled_solution_params_;
 #else
-    HighsLogMessage(HighsMessageType::ERROR, "Model cannot be solved with IPM");
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+		    "Model cannot be solved with IPM");
     return HighsStatus::Error;
 #endif
   } else {
@@ -1197,7 +1200,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
     if (return_status == HighsStatus::Error) return return_status;
 
     if (!isSolutionConsistent(model.lp_, model.solution_)) {
-      HighsLogMessage(HighsMessageType::ERROR, "Inconsistent solution returned from solver");
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+		      "Inconsistent solution returned from solver");
       return HighsStatus::Error;
     }
   }
@@ -1214,8 +1218,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
 HighsStatus Highs::runBnb() {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  HighsPrintMessage(options_.output, options_.message_level,
-		    ML_ALWAYS, "Using branch and bound solver\n");
+  HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+		    "Using branch and bound solver\n");
 
   // Need to start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
@@ -1233,8 +1237,8 @@ HighsStatus Highs::runBnb() {
   return_status = interpretCallStatus(call_status, return_status, "solveRootNode");
   if (return_status == HighsStatus::Error) return return_status;
   if (hmos_[0].scaled_model_status_ != HighsModelStatus::OPTIMAL) {
-    HighsPrintMessage(options_.output, options_.message_level,
-		      ML_ALWAYS, "Root note not solved to optimality. Status: %s\n",
+    HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+		      "Root note not solved to optimality. Status: %s\n",
                       utilHighsModelStatusToString(hmos_[0].scaled_model_status_).c_str());
     call_status = highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
     return_status = interpretCallStatus(call_status, return_status);
@@ -1286,12 +1290,12 @@ HighsStatus Highs::runBnb() {
             << mip_solve_final_time - mip_solve_initial_time << std::endl;
     message << std::endl;
 
-    HighsPrintMessage(options_.output, options_.message_level,
-		      ML_MINIMAL, message.str().c_str());
+    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+		      message.str().c_str());
   } else {
     hmos_[0].unscaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-    HighsPrintMessage(options_.output, options_.message_level,
-		      ML_ALWAYS, "No feasible solution found.\n");
+    HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+		      "No feasible solution found.\n");
   }
 
   return HighsStatus::OK;
@@ -1430,7 +1434,8 @@ HighsStatus Highs::writeSolution(const std::string filename, const bool pretty) 
   } else {
     file = fopen(filename.c_str(), "w");
     if (file == 0) {
-      HighsLogMessage(HighsMessageType::ERROR, "writeSolution: cannot open file");
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+		      "writeSolution: cannot open file");
       return HighsStatus::Error;
     }
   }
@@ -1521,15 +1526,15 @@ bool Highs::haveHmo(const string method_name) {
   assert(have_hmo);
 #ifdef HiGHSDEV
   if (!have_hmo)
-    HighsLogMessage(HighsMessageType::ERROR, "Method %s called without any HighsModelObject",
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+		    "Method %s called without any HighsModelObject",
 		    method_name.c_str());
 #endif  
   return have_hmo;
 }
 
 void Highs::underDevelopmentLogMessage(const string method_name) {
-  HighsLogMessage(
-      HighsMessageType::WARNING,
+  HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
       "Method %s is still under development and behaviour may be unpredictable",
       method_name.c_str());
 }

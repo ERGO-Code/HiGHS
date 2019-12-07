@@ -23,15 +23,20 @@ std::string infoEntryType2string(const HighsInfoType type) {
   }
 }
 
-InfoStatus getInfoIndex(const std::string& name, const std::vector<InfoRecord*>& info_records, int& index) {
+InfoStatus getInfoIndex(const HighsOptions& options,
+			const std::string& name,
+			const std::vector<InfoRecord*>& info_records,
+			int& index) {
   int num_info = info_records.size();
   for (index = 0; index < num_info; index++) if (info_records[index]->name == name) return InfoStatus::OK;
-  HighsLogMessage(HighsMessageType::ERROR, "getInfoIndex: Info \"%s\" is unknown", name.c_str());
+  HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		  "getInfoIndex: Info \"%s\" is unknown", name.c_str());
   return InfoStatus::UNKNOWN_INFO;
 }
 
 
-InfoStatus checkInfo(const std::vector<InfoRecord*>& info_records) {
+InfoStatus checkInfo(const HighsOptions& options,
+		     const std::vector<InfoRecord*>& info_records) {
   bool error_found = false;
   int num_info = info_records.size();
   for (int index = 0; index < num_info; index++) {
@@ -42,7 +47,7 @@ InfoStatus checkInfo(const std::vector<InfoRecord*>& info_records) {
       if (check_index == index) continue;
       std::string check_name = info_records[check_index]->name;
       if (check_name == name) {
-	HighsLogMessage(HighsMessageType::ERROR,
+	HighsLogMessage(options.logfile, HighsMessageType::ERROR,
 			"checkInfo: Info %d (\"%s\") has the same name as info %d \"%s\"",
 			index, name.c_str(),
 			check_index, check_name.c_str());
@@ -59,7 +64,7 @@ InfoStatus checkInfo(const std::vector<InfoRecord*>& info_records) {
 	InfoRecordInt& check_info = ((InfoRecordInt*)info_records[check_index])[0];
 	if (check_info.type == HighsInfoType::INT) {
 	  if (check_info.value == value_pointer) {
-	    HighsLogMessage(HighsMessageType::ERROR,
+	    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
 			    "checkInfo: Info %d (\"%s\") has the same value pointer as info %d (\"%s\")",
 			    index, info.name.c_str(),
 			    check_index, check_info.name.c_str());
@@ -77,7 +82,7 @@ InfoStatus checkInfo(const std::vector<InfoRecord*>& info_records) {
 	InfoRecordDouble& check_info = ((InfoRecordDouble*)info_records[check_index])[0];
 	if (check_info.type == HighsInfoType::DOUBLE) {
 	  if (check_info.value == value_pointer) {
-	    HighsLogMessage(HighsMessageType::ERROR,
+	    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
 			    "checkInfo: Info %d (\"%s\") has the same value pointer as info %d (\"%s\")",
 			    index, info.name.c_str(),
 			    check_index, check_info.name.c_str());
@@ -88,17 +93,22 @@ InfoStatus checkInfo(const std::vector<InfoRecord*>& info_records) {
     }
   }
   if (error_found) return InfoStatus::ILLEGAL_VALUE;
-  HighsLogMessage(HighsMessageType::INFO, "checkInfo: Info are OK");
+  HighsLogMessage(options.logfile, HighsMessageType::INFO, "checkInfo: Info are OK");
   return InfoStatus::OK;
 }
 
-InfoStatus getInfoValue(const std::string& name, const std::vector<InfoRecord*>& info_records, int& value) {
+InfoStatus getInfoValue(const HighsOptions& options,
+			const std::string& name,
+			const std::vector<InfoRecord*>& info_records,
+			int& value) {
   int index;
-  InfoStatus status = getInfoIndex(name, info_records, index);
+  InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::INT) {
-    HighsLogMessage(HighsMessageType::ERROR, "getInfoValue: Info \"%s\" requires value of type %s, not int", name.c_str(), infoEntryType2string(type).c_str());
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "getInfoValue: Info \"%s\" requires value of type %s, not int",
+		    name.c_str(), infoEntryType2string(type).c_str());
     return InfoStatus::ILLEGAL_VALUE;
   }
   InfoRecordInt info = ((InfoRecordInt*)info_records[index])[0];
@@ -106,13 +116,18 @@ InfoStatus getInfoValue(const std::string& name, const std::vector<InfoRecord*>&
   return InfoStatus::OK;
 }
 
-InfoStatus getInfoValue(const std::string& name, const std::vector<InfoRecord*>& info_records, double& value) {
+InfoStatus getInfoValue(const HighsOptions& options, 
+			const std::string& name, 
+			const std::vector<InfoRecord*>& info_records, 
+			double& value) {
   int index;
-  InfoStatus status = getInfoIndex(name, info_records, index);
+  InfoStatus status = getInfoIndex(options, name, info_records, index);
   if (status != InfoStatus::OK) return status;
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::DOUBLE) {
-    HighsLogMessage(HighsMessageType::ERROR, "getInfoValue: Info \"%s\" requires value of type %s, not double", name.c_str(), infoEntryType2string(type).c_str());
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "getInfoValue: Info \"%s\" requires value of type %s, not double",
+		    name.c_str(), infoEntryType2string(type).c_str());
     return InfoStatus::ILLEGAL_VALUE;
   }
   InfoRecordDouble info = ((InfoRecordDouble*)info_records[index])[0];
@@ -120,10 +135,12 @@ InfoStatus getInfoValue(const std::string& name, const std::vector<InfoRecord*>&
   return InfoStatus::OK;
 }
 
-HighsStatus reportInfoToFile(const std::string filename, const std::vector<InfoRecord*>& info_records) {
+HighsStatus reportInfoToFile(const HighsOptions& options, 
+			     const std::string filename, 
+			     const std::vector<InfoRecord*>& info_records) {
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
-    HighsLogMessage(HighsMessageType::ERROR, "reportInfoToFile: cannot open file");
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR, "reportInfoToFile: cannot open file");
     return HighsStatus::Error;
   }
   bool html = false;
@@ -148,7 +165,10 @@ HighsStatus reportInfoToFile(const std::string filename, const std::vector<InfoR
   return HighsStatus::OK;
 }
 
-void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records, const bool force_report, const bool html) {
+void reportInfo(FILE* file, 
+		const std::vector<InfoRecord*>& info_records, 
+		const bool force_report, 
+		const bool html) {
   int num_info = info_records.size();
   for (int index = 0; index < num_info; index++) {
     HighsInfoType type = info_records[index]->type;
@@ -162,7 +182,10 @@ void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records, const 
   }
 }
 
-void reportInfo(FILE* file, const InfoRecordInt& info, const bool force_report, const bool html) {
+void reportInfo(FILE* file, 
+		const InfoRecordInt& info, 
+		const bool force_report, 
+		const bool html) {
   if (force_report || info.default_value != *info.value) {
     if (html) {
       fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", info.name.c_str());
@@ -179,7 +202,10 @@ void reportInfo(FILE* file, const InfoRecordInt& info, const bool force_report, 
   }
 }
 
-void reportInfo(FILE* file, const InfoRecordDouble& info, const bool force_report, const bool html) {
+void reportInfo(FILE* file, 
+		const InfoRecordDouble& info, 
+		const bool force_report, 
+		const bool html) {
   if (force_report || info.default_value != *info.value) {
     if (html) {
       fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", info.name.c_str());

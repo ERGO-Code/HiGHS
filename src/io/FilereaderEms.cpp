@@ -208,7 +208,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
   return FilereaderRetcode::OK;
 }
 
-HighsStatus FilereaderEms::writeModelToFile(const char* filename,
+HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
+					    const char* filename,
 					    HighsLp& model) {
   std::ofstream f;
   f.open(filename, std::ios::out);

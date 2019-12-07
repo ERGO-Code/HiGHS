@@ -41,8 +41,8 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
 
   // In case you want to compare.
   // FilereaderEms ems;
-  // ems.writeModelToFile("fixed.ems", lp_fixed_format);
-  // ems.writeModelToFile("free.ems", lp_free_format);
+  // ems.writeModelToFile(options, "fixed.ems", lp_fixed_format);
+  // ems.writeModelToFile(options, "free.ems", lp_free_format);
 
   REQUIRE(are_the_same);
 }
@@ -62,7 +62,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 
   // Write ems.
   FilereaderEms ems;
-  ems.writeModelToFile("adlittle.ems", lp_mps);
+  ems.writeModelToFile(options, "adlittle.ems", lp_mps);
 
   // Read ems and compare.
   options.model_file = "adlittle.ems"; // todo: check how to specify path

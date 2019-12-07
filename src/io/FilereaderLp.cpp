@@ -941,7 +941,8 @@ void FilereaderLp::writeToFileLineend() {
   this->linelength = 0;
 }
 
-HighsStatus FilereaderLp::writeModelToFile(const char* filename,
+HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
+					   const char* filename,
 					   HighsLp& model) {
   this->file = fopen(filename, "w");
 
