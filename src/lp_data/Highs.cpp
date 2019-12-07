@@ -397,8 +397,10 @@ HighsStatus Highs::run() {
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
           HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
 	  //
-          // To hot-start the simplex solver for the original_hmo:
+          // Now hot-start the simplex solver for the original_hmo:
 	  //
+	  // The original model hasn't been solved, so set up its solution parameters
+	  resetModelStatusAndSolutionParams(hmos_[original_hmo]);
 	  // Set solution and its status
           hmos_[original_hmo].solution_ = presolve_info.recovered_solution_;
 	  //

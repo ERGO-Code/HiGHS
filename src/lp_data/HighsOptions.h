@@ -503,8 +503,10 @@ class HighsOptions {
 				     advanced, &less_infeasible_DSE_choose_row,
 				     true);
     records.push_back(record_bool);
-
   }
+
+  ~HighsOptions() {}
+  
   std::vector<OptionRecord*> records;
 
   // Options read from the command line
