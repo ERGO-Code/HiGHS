@@ -307,7 +307,7 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   initialize(idata, options);
   update(idata);
   reportSubproblem(idata, 0);
-  result.details.push_back(fillDetails(0, idata));
+  idata.details.push_back(fillDetails(0, idata));
 
   // Initialize clocks.
   std::chrono::time_point<std::chrono::system_clock> start, end,
@@ -329,9 +329,9 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
 
     update(idata);
     reportSubproblem(idata, iteration);
-    result.details.push_back(fillDetails(iteration, idata));
-    assert(iteration == result.details.size());
-    result.details[iteration].time = elapsed_seconds.count();
+    idata.details.push_back(fillDetails(iteration, idata));
+    assert(iteration + 1 == (int)idata.details.size());
+    idata.details[iteration].time = elapsed_seconds.count();
 
     // Exit if feasible.
     if (idata.residual_norm_2 < kExitTolerance) {
@@ -345,6 +345,7 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
 
   // Fill in return values.
   iteration--;
+  result.details = std::move(idata.details);
   fillICrashInfo(iteration, result);
   result.x_values = idata.xk.col_value;
 
