@@ -34,6 +34,13 @@ void HighsPrintMessage(
 		       const char* format,  //!< Printing format: must contain exactly one "\n" at
 		       //!< end of format
 		       ...);
+void HighsPrintMessage(
+		       int message_level,
+		       int level,  //!< The message level: Use | operator to display at
+		       //!< level NONE, VERBOSE, DETAILED, MINIMAL
+		       const char* format,  //!< Printing format: must contain exactly one "\n" at
+		       //!< end of format
+		       ...);
 
 /**
  * @brief Used to direct _single-line_ logging output to FILE* logfile,
