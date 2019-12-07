@@ -176,22 +176,13 @@ if (GAMS_FOUND)
 endif()
 
 if (IPX_ON)
-<<<<<<< HEAD
-    set(headers ${headers} ipm/IpxWrapper.h)
-=======
-    set(headers ${headers} interior_point/IpxWrapper.h ${basiclu_headers}
+    set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
->>>>>>> master
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
     target_link_libraries(libipx libbasiclu)
 else ()
-<<<<<<< HEAD
     set(headers ${headers} ipm/IpxWrapperEmpty.h)
-    
-=======
-    set(headers ${headers} interior_point/IpxWrapperEmpty.h)
->>>>>>> master
 endif()
 
 add_library(libhighs ${sources})
