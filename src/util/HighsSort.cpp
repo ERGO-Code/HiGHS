@@ -20,6 +20,11 @@ void maxheapsort(int* heap_v, int n) {
   max_heapsort(heap_v, n);
 }
 
+void maxheapsort(int* heap_v, int* heap_i, int n) {
+  build_maxheap(heap_v, heap_i, n);
+  max_heapsort(heap_v, heap_i, n);
+}
+
 void maxheapsort(double* heap_v, int* heap_i, int n) {
   build_maxheap(heap_v, heap_i, n);
   max_heapsort(heap_v, heap_i, n);
@@ -29,6 +34,13 @@ void build_maxheap(int* heap_v, int n) {
   int i;
   for (i = n / 2; i >= 1; i--) {
     max_heapify(heap_v, i, n);
+  }
+}
+
+void build_maxheap(int* heap_v, int* heap_i, int n) {
+  int i;
+  for (i = n / 2; i >= 1; i--) {
+    max_heapify(heap_v, heap_i, i, n);
   }
 }
 
@@ -47,6 +59,20 @@ void max_heapsort(int* heap_v, int n) {
     heap_v[i] = heap_v[1];
     heap_v[1] = temp_v;
     max_heapify(heap_v, 1, i - 1);
+  }
+}
+
+void max_heapsort(int* heap_v, int* heap_i, int n) {
+  int temp_v;
+  int i, temp_i;
+  for (i = n; i >= 2; i--) {
+    temp_v = heap_v[i];
+    heap_v[i] = heap_v[1];
+    heap_v[1] = temp_v;
+    temp_i = heap_i[i];
+    heap_i[i] = heap_i[1];
+    heap_i[1] = temp_i;
+    max_heapify(heap_v, heap_i, 1, i - 1);
   }
 }
 
@@ -79,6 +105,27 @@ void max_heapify(int* heap_v, int i, int n) {
     }
   }
   heap_v[j / 2] = temp_v;
+  return;
+}
+
+void max_heapify(int* heap_v, int* heap_i, int i, int n) {
+  int temp_v;
+  int j, temp_i;
+  temp_v = heap_v[i];
+  temp_i = heap_i[i];
+  j = 2 * i;
+  while (j <= n) {
+    if (j < n && heap_v[j + 1] > heap_v[j]) j = j + 1;
+    if (temp_v > heap_v[j])
+      break;
+    else if (temp_v <= heap_v[j]) {
+      heap_v[j / 2] = heap_v[j];
+      heap_i[j / 2] = heap_i[j];
+      j = 2 * j;
+    }
+  }
+  heap_v[j / 2] = temp_v;
+  heap_i[j / 2] = temp_i;
   return;
 }
 
@@ -166,4 +213,31 @@ bool increasing_set_ok(const double* set, const int set_num_entries,
     previous_entry = entry;
   }
   return true;
+}
+
+void sortSetData(const int num_entries,
+		 const int* set, 
+		 const double* data0,
+		 const double* data1,
+		 const double* data2,
+		 int* sorted_set, 
+		 double* sorted_data0,
+		 double* sorted_data1,
+		 double* sorted_data2) {
+  
+  int* sort_set = (int*)malloc(sizeof(int) * (1+num_entries));
+  int* perm = (int*)malloc(sizeof(int) * (1+num_entries));
+  for (int ix = 0; ix < num_entries; ix++) {
+    sort_set[1+ix] = set[ix];
+    perm[1+ix] = ix;
+  }
+  maxheapsort(sort_set, perm, num_entries);
+  for (int ix = 0; ix < num_entries; ix++) {
+    sorted_set[ix] = set[perm[1+ix]];
+    if (data0 != NULL) sorted_data0[ix] = data0[perm[1+ix]];
+    if (data1 != NULL) sorted_data1[ix] = data1[perm[1+ix]];
+    if (data2 != NULL) sorted_data2[ix] = data2[perm[1+ix]];
+  }
+  free(sort_set);
+  free(perm);
 }

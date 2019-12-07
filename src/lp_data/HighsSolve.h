@@ -7,17 +7,13 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/LoadProblem.h
- * @brief
+/**@file lp_data/HighsSolve.h
+ * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef IO_LOAD_PROBLEM_H_
-#define IO_LOAD_PROBLEM_H_
+#ifndef LP_DATA_HIGHSSOLVE_H_
+#define LP_DATA_HIGHSSOLVE_H_
 
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsStatus.h"
-
-HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp);
-
-#endif  // IO_LOAD_PROBLEM_H_
+#include "lp_data/HighsModelUtils.h"
+HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
+#endif  // LP_DATA_HIGHSSOLVE_H_

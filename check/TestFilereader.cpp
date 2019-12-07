@@ -106,7 +106,6 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 
 TEST_CASE("dualize", "[highs_data]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-
   // Read mps.
   HighsOptions options;
   options.model_file = filename;
@@ -121,21 +120,23 @@ TEST_CASE("dualize", "[highs_data]") {
 
   Highs highs_lp;
   HighsModelStatus model_status;
-  status = highs_lp.initializeLp(lp);
+  status = highs_lp.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
   status = highs_lp.run();
   model_status = highs_lp.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   Highs highs_primal;
-  status = highs_primal.initializeLp(primal);
+  status = highs_primal.passModel(primal);
   REQUIRE(status == HighsStatus::OK);
   status = highs_primal.run();
   model_status = highs_lp.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  double lp_objective = highs_lp.getObjectiveValue();
-  double primal_objective = highs_primal.getObjectiveValue();
+  double lp_objective;
+  highs_lp.getHighsInfoValue("objective_function_value", lp_objective);
+  double primal_objective;
+  highs_lp.getHighsInfoValue("objective_function_value", primal_objective);
 
   double diff_equality = lp_objective - primal_objective;
   REQUIRE(diff_equality < 0.00000001);
@@ -144,13 +145,14 @@ TEST_CASE("dualize", "[highs_data]") {
   Highs highs_dual;
   status = assessLp(dual, options);
   REQUIRE(status == HighsStatus::OK);
-  status = highs_dual.initializeLp(dual);
+  status = highs_dual.passModel(dual);
   REQUIRE(status == HighsStatus::OK);
   status = highs_dual.run();
   model_status = highs_lp.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  double dual_objective = highs_dual.getObjectiveValue();
+  double dual_objective;
+  highs_dual.getHighsInfoValue("objective_function_value", dual_objective);
 
   double diff_dual = primal_objective + dual_objective;
   REQUIRE(diff_dual < 0.00000001);

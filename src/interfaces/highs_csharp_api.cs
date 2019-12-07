@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 
 // mcs -out:highscslib.dll -t:library highs_csharp_api.cs -unsafe
 
-// TODO: add HighsStatus enum
 public enum HighsStatus
 {
    OK,
@@ -12,7 +11,6 @@ public enum HighsStatus
    Error
 }
 
-// TODO: add HighsBasisStatus enum
 public enum HighsBasisStatus
 {
    Lower,
@@ -23,14 +21,12 @@ public enum HighsBasisStatus
    Super
 }
 
-// TODO: add objective sense enum
 public enum HighsObjectiveSense
 {
    Minimize = 1,
    Maximize = -1
 }
 
-// TODO: add model status enum
 public enum HighsModelStatus
 {
    NOTSET,
@@ -143,13 +139,13 @@ public unsafe class HighsLpSolver
    private static extern int Highs_run(void* highs);
 
    [DllImport(highslibname)]
-   private static extern int Highs_readFromFile(void* highs, string filename);
+   private static extern int Highs_readModel(void* highs, string filename);
 
    [DllImport(highslibname)]
-   private static extern int Highs_writeToFile(void* highs, string filename);
+   private static extern int Highs_writeModel(void* highs, string filename);
 
    [DllImport(highslibname)]
-   private static extern int Highs_loadModel(void* highs, int numcol, int numrow, int numnz, double[] colcost,
+   private static extern int Highs_passLp(void* highs, int numcol, int numrow, int numnz, double[] colcost,
    double[] collower, double[] colupper, double[] rowlower, double[] rowupper, int[] astart, int[] aindex, double[] avalue);
 
    [DllImport(highslibname)]
@@ -328,19 +324,19 @@ public unsafe class HighsLpSolver
       return (HighsStatus)HighsLpSolver.Highs_run(this.highs);
    }
 
-   public HighsStatus readFromFile(string filename)
+   public HighsStatus readModel(string filename)
    {
-      return (HighsStatus)HighsLpSolver.Highs_readFromFile(this.highs, filename);
+      return (HighsStatus)HighsLpSolver.Highs_readModel(this.highs, filename);
    }
 
-   public HighsStatus writeToFile(string filename)
+   public HighsStatus writeModel(string filename)
    {
-      return (HighsStatus)HighsLpSolver.Highs_writeToFile(this.highs, filename);
+      return (HighsStatus)HighsLpSolver.Highs_writeModel(this.highs, filename);
    }
 
-   public HighsStatus loadModel(HighsModel model)
+   public HighsStatus passLp(HighsModel model)
    {
-      return (HighsStatus)HighsLpSolver.Highs_loadModel(this.highs, model.colcost.Length, model.rowlower.Length, model.avalue.Length,
+      return (HighsStatus)HighsLpSolver.Highs_passLp(this.highs, model.colcost.Length, model.rowlower.Length, model.avalue.Length,
       model.colcost, model.collower, model.colupper, model.rowlower, model.rowupper, model.astart, model.aindex, model.avalue);
    }
 

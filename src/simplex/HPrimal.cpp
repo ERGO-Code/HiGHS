@@ -26,9 +26,10 @@
 using std::runtime_error;
 
 void HPrimal::solve() {
+  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  workHMO.model_status_ = HighsModelStatus::NOTSET;
+  workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
   // Cannot solve box-constrained LPs
   if (workHMO.simplex_lp_.numRow_ == 0) return;
 
@@ -125,19 +126,19 @@ void HPrimal::solve() {
 
   while (solvePhase) {
     /*
-    int it0 = simplex_info.iteration_count;
+    int it0 = scaled_solution_params.simplex_iteration_count;
     switch (solvePhase) {
       case 1:
         timer.start(simplex_info.clock_[SimplexPrimalPhase1Clock]);
         solvePhase1();
         timer.stop(simplex_info.clock_[SimplexPrimalPhase1Clock]);
         simplex_info.primal_phase1_iteration_count +=
-    (simplex_info.iteration_count - it0); break; case 2:
+    (scaled_solution_params.simplex_iteration_count - it0); break; case 2:
         timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
         solvePhase2();
         timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
         simplex_info.primal_phase2_iteration_count +=
-    (simplex_info.iteration_count - it0); break; case 4: break; default:
+    (scaled_solution_params.simplex_iteration_count - it0); break; case 4: break; default:
         solvePhase = 0;
         break;
     }
@@ -148,23 +149,23 @@ void HPrimal::solve() {
     */
   }
   solvePhase = 2;
-  if (workHMO.model_status_ != HighsModelStatus::REACHED_TIME_LIMIT) {
+  if (workHMO.scaled_model_status_ != HighsModelStatus::REACHED_TIME_LIMIT) {
     if (solvePhase == 2) {
-      int it0 = simplex_info.iteration_count;
+      int it0 = scaled_solution_params.simplex_iteration_count;
 
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
       solvePhase2();
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
 
       simplex_info.primal_phase2_iteration_count +=
-          (simplex_info.iteration_count - it0);
+          (scaled_solution_params.simplex_iteration_count - it0);
     }
   }
 #ifdef HiGHSDEV
   /*
   if (primal_edge_weight_mode == PrimalEdgeWeightMode::DEVEX) {
     printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
-           simplex_info.iteration_count / n_dvx_fwk);
+           scaled_solution_params.simplex_iteration_count / n_dvx_fwk);
   }
   */
 #endif
@@ -254,7 +255,7 @@ void HPrimal::solvePhase2() {
 
     double currentRunHighsTime = timer.readRunHighsClock();
     if (currentRunHighsTime > workHMO.options_.time_limit) {
-      workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
     }
     // If the data are fresh from rebuild(), break out of
@@ -270,15 +271,15 @@ void HPrimal::solvePhase2() {
     }
   }
 
-  if (workHMO.model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) return;
+  if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) return;
 
   if (columnIn == -1) {
     HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
     HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-    workHMO.model_status_ = HighsModelStatus::OPTIMAL;
+    workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
   } else {
     HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
-    workHMO.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+    workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
   }
   computeDualObjectiveValue(workHMO);
 }
@@ -354,7 +355,11 @@ void HPrimal::primalRebuild() {
   timer.stop(simplex_info.clock_[ComputeDuIfsClock]);
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
-  iterationReportRebuild(sv_invertHint);
+  iterationReportRebuild(
+#ifdef HiGHSDEV
+			 sv_invertHint
+#endif
+			 );
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
@@ -365,7 +370,8 @@ void HPrimal::primalRebuild() {
     double totalRebuildTime = timer.read(iClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
-        totalRebuilds, sv_invertHint, simplex_info.iteration_count,
+        totalRebuilds, sv_invertHint,
+	workHMO.scaled_solution_params_.simplex_iteration_count,
         totalRebuildTime);
   }
 #endif
@@ -383,7 +389,7 @@ void HPrimal::primalChooseColumn() {
   double* workDual = &workHMO.simplex_info_.workDual_[0];
   const double* workLower = &workHMO.simplex_info_.workLower_[0];
   const double* workUpper = &workHMO.simplex_info_.workUpper_[0];
-  const double dualTolerance = workHMO.simplex_info_.dual_feasibility_tolerance;
+  const double dualTolerance = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
 
   timer.start(simplex_info.clock_[ChuzcPrimalClock]);
   columnIn = -1;
@@ -453,7 +459,7 @@ void HPrimal::primalChooseRow() {
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double primalTolerance =
-      workHMO.simplex_info_.primal_feasibility_tolerance;
+      workHMO.scaled_solution_params_.primal_feasibility_tolerance;
 
   // Compute pivot column
   timer.start(simplex_info.clock_[FtranClock]);
@@ -556,7 +562,7 @@ void HPrimal::primalUpdate() {
   double* workValue = &workHMO.simplex_info_.workValue_[0];
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double primalTolerance =
-      workHMO.simplex_info_.primal_feasibility_tolerance;
+      workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
 
   // Compute thetaPrimal
@@ -714,14 +720,14 @@ void HPrimal::primalUpdate() {
   }
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
-  simplex_info.iteration_count++;
+  workHMO.scaled_solution_params_.simplex_iteration_count++;
 
   // Report on the iteration
   iterationReport();
 }
 
 void HPrimal::iterationReport() {
-  int iteration_count = workHMO.simplex_info_.iteration_count;
+  int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
   int iteration_count_difference = iteration_count -
     previous_iteration_report_header_iteration_count;
   bool header = (previous_iteration_report_header_iteration_count < 0)
@@ -767,7 +773,7 @@ void HPrimal::iterationReportIterationAndPhase(int iterate_log_level,
   if (header) {
     HighsPrintMessage(iterate_log_level, " Iteration Ph");
   } else {
-    int iteration_count = workHMO.simplex_info_.iteration_count;
+    int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
     HighsPrintMessage(iterate_log_level, " %9d %2d", iteration_count, solvePhase);
   }
 }
@@ -831,12 +837,16 @@ int HPrimal::intLog10(double v) {
 }
 
 */
-void HPrimal::iterationReportRebuild(const int i_v) {
+void HPrimal::iterationReportRebuild(
+#ifdef HiGHSDEV
+				     const int i_v
+#endif
+				     ) {
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   bool report_condition = simplex_info.analyse_invert_condition;
   HighsPrintMessage(ML_MINIMAL,
-                    "Iter %10d:", workHMO.simplex_info_.iteration_count);
+                    "Iter %10d:", workHMO.scaled_solution_params_.simplex_iteration_count);
   //  iterationReportDsty(ML_MINIMAL, true);
   //  iterationReportDsty(ML_MINIMAL, false);
   iterationReportPrimalObjective(ML_MINIMAL, false);
@@ -850,13 +860,13 @@ void HPrimal::iterationReportRebuild(const int i_v) {
 }
 
 void HPrimal::reportInfeasibility() {
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (simplex_info.sum_primal_infeasibilities > 0) {
+  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
+  if (scaled_solution_params.sum_primal_infeasibilities > 0) {
     HighsPrintMessage(ML_MINIMAL, " Pr: %d(%g);",
-                      simplex_info.num_primal_infeasibilities,
-                      simplex_info.sum_primal_infeasibilities);
+                      scaled_solution_params.num_primal_infeasibilities,
+                      scaled_solution_params.sum_primal_infeasibilities);
   }
   HighsPrintMessage(ML_MINIMAL, " Du: %d(%g)",
-                    simplex_info.num_dual_infeasibilities,
-                    simplex_info.sum_dual_infeasibilities);
+                    scaled_solution_params.num_dual_infeasibilities,
+                    scaled_solution_params.sum_dual_infeasibilities);
 }

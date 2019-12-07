@@ -12,8 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsOptions.h"
-//#include "io/Filereader.h"
-//#include "io/HighsIO.h"
 
 inline const char* bool2string(bool b) { return b ? "true" : "false"; }
 
@@ -24,20 +22,21 @@ std::string optionEntryType2string(const HighsOptionType type) {
     return "int";
   } else if (type == HighsOptionType::DOUBLE) {
     return "double";
-  } else
+  } else {
     return "string";
+  }
 }
 
 bool commandLineOffChooseOnOk(const string& value) {
   if (value == off_string || value == choose_string || value == on_string) return true;
-  HighsLogMessage(HighsMessageType::ERROR, "Command line option value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
+  HighsLogMessage(HighsMessageType::WARNING, "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
 		  value.c_str(), off_string.c_str(), choose_string.c_str(), on_string.c_str());
   return false;
 }
 
 bool commandLineSolverOk(const string& value) {
   if (value == simplex_string || value == choose_string || value == ipm_string) return true;
-  HighsLogMessage(HighsMessageType::ERROR, "Command line option value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
+  HighsLogMessage(HighsMessageType::WARNING, "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
 		  value.c_str(), simplex_string.c_str(), choose_string.c_str(), ipm_string.c_str());
   return false;
 }
@@ -214,6 +213,45 @@ OptionStatus checkOption(const OptionRecordDouble& option) {
   return OptionStatus::OK;
 }
 
+OptionStatus checkOptionValue(OptionRecordInt& option, const int value) {
+  if (value < option.lower_bound) {
+    HighsLogMessage(HighsMessageType::WARNING, "checkOptionValue: Value %d for option \"%s\" is below lower bound of %d",
+		    value, option.name.c_str(), option.lower_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  } else if (value > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::WARNING, "checkOptionValue: Value %d for option \"%s\" is above upper bound of %d",
+		    value, option.name.c_str(), option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus checkOptionValue(OptionRecordDouble& option, const double value) {
+  if (value < option.lower_bound) {
+    HighsLogMessage(HighsMessageType::WARNING, "checkOptionValue: Value %g for option \"%s\" is below lower bound of %g",
+		    value, option.name.c_str(), option.lower_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  } else if (value > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::WARNING, "checkOptionValue: Value %g for option \"%s\" is above upper bound of %g",
+		    value, option.name.c_str(), option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus checkOptionValue(OptionRecordString& option, const std::string value) {
+  // Setting a string option. For some options only particular values
+  // are permitted, so check them
+  if (option.name == presolve_string) {
+    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  } else if (option.name == solver_string) {
+    if (!commandLineSolverOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  } else if (option.name == parallel_string) {
+    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value) {
   int index;
   //  printf("setOptionValue: \"%s\" with bool %d\n", name.c_str(), value);
@@ -306,43 +344,70 @@ OptionStatus setOptionValue(OptionRecordBool& option, const bool value) {
 }
 
 OptionStatus setOptionValue(OptionRecordInt& option, const int value) {
-  if (value < option.lower_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %d below lower bound of %d",
-	   option.name.c_str(), value, option.lower_bound);
-    return OptionStatus::ILLEGAL_VALUE;
-  } else if (value > option.upper_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %d above upper bound of %d",
-	   option.name.c_str(), value, option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
-  }
+  OptionStatus return_status = checkOptionValue(option, value);
+  if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
   return OptionStatus::OK;
 }
 
 OptionStatus setOptionValue(OptionRecordDouble& option, const double value) {
-  if (value < option.lower_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %g below lower bound of %g",
-	   option.name.c_str(), value, option.lower_bound);
-    return OptionStatus::ILLEGAL_VALUE;
-  } else if (value > option.upper_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %g above upper bound of %g",
-	   option.name.c_str(), value, option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
-  }
+  OptionStatus return_status = checkOptionValue(option, value);
+  if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
   return OptionStatus::OK;
 }
 
 OptionStatus setOptionValue(OptionRecordString& option, const std::string value) {
-  // Setting a string option: check that value is OK
-  if (option.name == presolve_string) {
-    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
-  } else if (option.name == solver_string) {
-    if (!commandLineSolverOk(value)) return OptionStatus::ILLEGAL_VALUE;
-  } else if (option.name == parallel_string) {
-    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
-  }
+  OptionStatus return_status = checkOptionValue(option, value);
+  if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus passOptions(const HighsOptions from_options, HighsOptions to_options) {
+  // (Attempt to) set option value from the HighsOptions passed in
+  OptionStatus return_status;
+  int num_options = to_options.records.size();
+  // Check all the option values before setting any of them - in case
+  // to_options are the main Highs options. Checks are only needed for
+  // int, double and string since bool values can't be illegal
+  for (int index = 0; index < num_options; index++) {
+    HighsOptionType type = to_options.records[index]->type;
+    if (type == HighsOptionType::INT) {
+      int value = *(((OptionRecordInt*)from_options.records[index])[0].value);
+      return_status = checkOptionValue(((OptionRecordInt*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else if (type == HighsOptionType::DOUBLE) {
+      double value = *(((OptionRecordDouble*)from_options.records[index])[0].value);
+      return_status = checkOptionValue(((OptionRecordDouble*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else if (type == HighsOptionType::STRING) {
+      std::string value = *(((OptionRecordString*)from_options.records[index])[0].value);
+      return_status = checkOptionValue(((OptionRecordString*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    }
+  }
+  // Checked from_options and found it to be OK, so set all the values
+  for (int index = 0; index < num_options; index++) {
+    HighsOptionType type = to_options.records[index]->type;
+    if (type == HighsOptionType::BOOL) {
+      bool value = *(((OptionRecordBool*)from_options.records[index])[0].value);
+      return_status = setOptionValue(((OptionRecordBool*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else if (type == HighsOptionType::INT) {
+      int value = *(((OptionRecordInt*)from_options.records[index])[0].value);
+      return_status = setOptionValue(((OptionRecordInt*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else if (type == HighsOptionType::DOUBLE) {
+      double value = *(((OptionRecordDouble*)from_options.records[index])[0].value);
+      return_status = setOptionValue(((OptionRecordDouble*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else {
+      std::string value = *(((OptionRecordString*)from_options.records[index])[0].value);
+      return_status = setOptionValue(((OptionRecordString*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    }
+  }
   return OptionStatus::OK;
 }
 
@@ -408,77 +473,131 @@ HighsStatus reportOptionsToFile(const std::string filename, const std::vector<Op
     HighsLogMessage(HighsMessageType::ERROR, "reportOptionsToFile: cannot open file");
     return HighsStatus::Error;
   }
-  reportOptions(file, option_records, true);
+  bool html = false;
+  const char* dot = strrchr(filename.c_str(), '.');
+  if (dot && dot != filename) html = strcmp(dot + 1, "html") == 0;
+  if (html) {
+    fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
+    fprintf(file, "  <title>HiGHS Options</title>\n");
+    fprintf(file, "	<meta charset=\"utf-8\" />\n");
+    fprintf(file, "	<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\" />\n");
+    fprintf(file, "	<link rel=\"stylesheet\" href=\"assets/css/main.css\" />\n");
+    fprintf(file, "</head>\n");
+    fprintf(file, "<body style=\"background-color:f5fafa;\"></body>\n\n");
+    fprintf(file, "<h3>HiGHS Options</h3>\n\n");
+    fprintf(file, "<ul>\n");
+  }
+  reportOptions(file, option_records, true, html);
+  if (html) {
+    fprintf(file, "</ul>\n");
+    fprintf(file, "</body>\n\n</html>\n");
+  }
   return HighsStatus::OK;
 }
 
-void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report) {
+void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report, const bool html) {
   int num_options = option_records.size();
   for (int index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
     //    fprintf(file, "\n# Option %1d\n", index);
+    // Skip the advanced options when creating HTML
+    if (html && option_records[index]->advanced) continue;
     if (type == HighsOptionType::BOOL) {
-      reportOption(file, ((OptionRecordBool*)option_records[index])[0], force_report);
+      reportOption(file, ((OptionRecordBool*)option_records[index])[0], force_report, html);
     } else if (type == HighsOptionType::INT) {
-      reportOption(file, ((OptionRecordInt*)option_records[index])[0], force_report);
+      reportOption(file, ((OptionRecordInt*)option_records[index])[0], force_report, html);
     } else if (type == HighsOptionType::DOUBLE) {
-      reportOption(file, ((OptionRecordDouble*)option_records[index])[0], force_report);
+      reportOption(file, ((OptionRecordDouble*)option_records[index])[0], force_report, html);
     } else {
-      reportOption(file, ((OptionRecordString*)option_records[index])[0], force_report);
+      reportOption(file, ((OptionRecordString*)option_records[index])[0], force_report, html);
     } 
   }
 }
 
-void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report) {
+void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report, const bool html) {
   if (force_report || option.default_value != *option.value) {
-    fprintf(file, "\n# %s\n", option.description.c_str());
-    fprintf(file, "# [type: bool, advanced: %s, range: {false, true}, default: %s]\n",
-	   bool2string(option.advanced),
-	   bool2string(option.default_value));
-    fprintf(file, "%s = %s\n", option.name.c_str(), bool2string(*option.value));
+    if (html) {
+      fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
+      fprintf(file, "%s<br>\n", option.description.c_str());
+      fprintf(file, "type: bool, advanced: %s, range: {false, true}, default: %s\n",
+	      bool2string(option.advanced),
+	      bool2string(option.default_value));
+      fprintf(file, "</li>\n");
+    } else {
+      fprintf(file, "\n# %s\n", option.description.c_str());
+      fprintf(file, "# [type: bool, advanced: %s, range: {false, true}, default: %s]\n",
+	      bool2string(option.advanced),
+	      bool2string(option.default_value));
+      fprintf(file, "%s = %s\n", option.name.c_str(), bool2string(*option.value));
+    }
   }
 }
 
-void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report) {
+void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report, const bool html) {
   if (force_report || option.default_value != *option.value) {
-    fprintf(file, "\n# %s\n", option.description.c_str());
-    fprintf(file, "# [type: int, advanced: %s, range: {%d, %d}, default: %d]\n",
-	   bool2string(option.advanced),
-	   option.lower_bound,
-	   option.upper_bound,
-	   option.default_value);
-    fprintf(file, "%s = %d\n", option.name.c_str(), *option.value);
+    if (html) {
+      fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
+      fprintf(file, "%s<br>\n", option.description.c_str());
+      fprintf(file, "type: int, advanced: %s, range: {%d, %d}, default: %d\n",
+	      bool2string(option.advanced),
+	      option.lower_bound,
+	      option.upper_bound,
+	      option.default_value);
+      fprintf(file, "</li>\n");
+    } else {
+      fprintf(file, "\n# %s\n", option.description.c_str());
+      fprintf(file, "# [type: int, advanced: %s, range: {%d, %d}, default: %d]\n",
+	      bool2string(option.advanced),
+	      option.lower_bound,
+	      option.upper_bound,
+	      option.default_value);
+      fprintf(file, "%s = %d\n", option.name.c_str(), *option.value);
+    }
   }
 }
 
-void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report) {
+void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report, const bool html) {
   if (force_report || option.default_value != *option.value) {
-    fprintf(file, "\n# %s\n", option.description.c_str());
-    fprintf(file, "# [type: double, advanced: %s, range: [%g, %g], default: %g]\n",
-	   bool2string(option.advanced),
-	   option.lower_bound,
-	   option.upper_bound,
-	   option.default_value);
-    fprintf(file, "%s = %g\n", option.name.c_str(), *option.value);
+    if (html) {
+      fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
+      fprintf(file, "%s<br>\n", option.description.c_str());
+      fprintf(file, "type: double, advanced: %s, range: [%g, %g], default: %g\n",
+	      bool2string(option.advanced),
+	      option.lower_bound,
+	      option.upper_bound,
+	      option.default_value);
+      fprintf(file, "</li>\n");
+    } else {
+      fprintf(file, "\n# %s\n", option.description.c_str());
+      fprintf(file, "# [type: double, advanced: %s, range: [%g, %g], default: %g]\n",
+	      bool2string(option.advanced),
+	      option.lower_bound,
+	      option.upper_bound,
+	      option.default_value);
+      fprintf(file, "%s = %g\n", option.name.c_str(), *option.value);
+    }
   }
 }
 
-void reportOption(FILE* file, const OptionRecordString& option, const bool force_report) {
+void reportOption(FILE* file, const OptionRecordString& option, const bool force_report, const bool html) {
   // Don't report for the options file if writing to an options file
-  if (
-      //file != stdout &&
-      option.name == options_file_string) return;
+  if (option.name == options_file_string) return;
   if (force_report || option.default_value != *option.value) {
-    fprintf(file, "\n# %s\n", option.description.c_str());
-    fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",
-	   bool2string(option.advanced),
-	   option.default_value.c_str());
-    fprintf(file, "%s = %s\n", option.name.c_str(), (*option.value).c_str());
+    if (html) {
+      fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
+      fprintf(file, "%s<br>\n", option.description.c_str());
+      fprintf(file, "type: string, advanced: %s, default: \"%s\"\n",
+	      bool2string(option.advanced),
+	      option.default_value.c_str());
+      fprintf(file, "</li>\n");
+    } else {
+      fprintf(file, "\n# %s\n", option.description.c_str());
+      fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",
+	      bool2string(option.advanced),
+	      option.default_value.c_str());
+      fprintf(file, "%s = %s\n", option.name.c_str(), (*option.value).c_str());
+    }
   }
-}
-
-OptionStatus checkOptionsValue(HighsOptions& options) {
-  return OptionStatus::OK;
 }
 
 // Set values of options so that HiGHS runs as Hsol

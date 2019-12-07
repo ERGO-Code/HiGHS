@@ -221,7 +221,7 @@ int setupProblem(
    gh->lp->Avalue_.resize(numNz);
    gmoGetMatrixCol(gh->gmo, &gh->lp->Astart_[0], &gh->lp->Aindex_[0], &gh->lp->Avalue_[0], NULL);
 
-   gh->highs->initializeLp(*gh->lp);
+   gh->highs->passModel(*gh->lp);
 
    //FilereaderLp().writeModelToFile("highs.lp", *gh->lp);
    //FilereaderMps().writeModelToFile("highs.mps", *gh->lp);
@@ -320,17 +320,21 @@ int processSolve(
          gmoSolveStatSet(gmo, gmoSolveStat_Normal);
          break;
 
-      case HighsModelStatus::PRIMAL_FEASIBLE:
+	 //case HighsModelStatus::PRIMAL_FEASIBLE:
+	 /*
          gmoModelStatSet(gmo, gmoModelStat_Feasible);
          gmoSolveStatSet(gmo, gmoSolveStat_Solver);
          writesol = true;
          break;
+	 */
 
-      case HighsModelStatus::DUAL_FEASIBLE:
+	//case HighsModelStatus::DUAL_FEASIBLE:
+	 /*
          gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
          gmoSolveStatSet(gmo, gmoSolveStat_Solver);
          writesol = true;
          break;
+	 */
 
       case HighsModelStatus::OPTIMAL:
          gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);

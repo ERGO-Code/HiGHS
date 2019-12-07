@@ -242,7 +242,9 @@ class HDual {
    * @brief Single line report after rebuild
    */
   void iterationReportRebuild(
-      const int i_v  //!< Integer value for reporting - generally invertHint
+#ifdef HiGHSDEV
+      const int i_v=-1  //!< Integer value for reporting - generally invertHint
+#endif
   );
 
   /**
@@ -436,6 +438,8 @@ class HDual {
    * matrix after a set of minor iterations
    */
   void major_rollback();
+
+  bool dualInfoOk(const HighsLp& lp);
 
 #ifdef HiGHSDEV
   void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);

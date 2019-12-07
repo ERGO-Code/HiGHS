@@ -27,32 +27,56 @@
 #include "simplex/HDual.h"
 #include "simplex/HPrimal.h"
 #include "util/HighsUtils.h"
+#include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolve.h"
 //#include "HRanging.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
 
-// Single function to solve an lp according to options and convert
-// simplex solution and basis
-HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
-  HighsSimplexInterface simplex_interface(highs_model_object);
-  HighsTimer& timer = highs_model_object.timer_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-
-  // Handle the case of unconstrained LPs here
-  if (!highs_model_object.lp_.numRow_) {
-    setSimplexOptions(highs_model_object);
-    HighsStatus solver_return_status = solveUnconstrainedLp(highs_model_object);
-    if (solver_return_status == HighsStatus::Error) return solver_return_status;
-    int report_level = -1;
 #ifdef HiGHSDEV
-    report_level = 1;
+void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  
+  printf("grep_kernel,%s,%s,%d,%d,%d,",
+	 highs_model_object.lp_.model_name_.c_str(),
+	 highs_model_object.lp_.lp_name_.c_str(),
+	 simplex_info.num_invert,
+	 simplex_info.num_kernel,
+	 simplex_info.num_major_kernel);
+  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_dim/simplex_info.num_kernel);
+  printf(",%g,%g,",
+	 simplex_info.running_average_kernel_dim,
+	 simplex_info.max_kernel_dim);
+  if (simplex_info.num_invert) printf("Fill-in,%g", simplex_info.sum_invert_fill_factor/simplex_info.num_invert);
+  printf(",");
+  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_fill_factor/simplex_info.num_kernel);
+  printf(",");
+  if (simplex_info.num_major_kernel) printf("%g", simplex_info.sum_major_kernel_fill_factor/simplex_info.num_major_kernel);
+  printf(",%g,%g,%g\n",
+	 simplex_info.running_average_invert_fill_factor,
+	 simplex_info.running_average_kernel_fill_factor,
+	 simplex_info.running_average_major_kernel_fill_factor);
+}
 #endif
-    if (simplex_info.analyseLpSolution)
-      simplex_interface.analyseHighsSolutionAndBasis(report_level, "after solving unconstrained LP");
-    return solver_return_status;
-  }
+
+// Single function to solve the (scaled) LP according to
+// options. Assumes that the LP has a positive number of rows, since
+// unconstrained LPs should be solved in solveLpSimplex
+//
+// Also sets the solution parameters for the unscaled LP
+HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsTimer& timer = highs_model_object.timer_;
+
+  // Assumes that the LP has a positive number of rows, since
+  // unconstrained LPs should be solved in solveLpSimplex
+  bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
+  assert(positive_num_row);
+  if (!positive_num_row) return HighsStatus::Error;
 
   // Set simplex options from HiGHS options.
   // ToDo: Should only be done when not hot-starting since strategy
@@ -61,13 +85,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 
   SimplexTimer simplex_timer;
   simplex_timer.initialiseSimplexClocks(highs_model_object);
-
   //
   // Transition to the best possible simplex basis and solution
-  highs_model_object.model_status_ = transition(highs_model_object);
-  if (highs_model_object.model_status_ == HighsModelStatus::SOLVE_ERROR) {
-    return highsStatusFromHighsModelStatus(highs_model_object.model_status_);
-  }
+  call_status = transition(highs_model_object);
+  return_status = interpretCallStatus(call_status, return_status, "transition");
+  if (return_status == HighsStatus::Error) return return_status;
+  //
   // Given a simplex basis and solution, use the number of primal and
   // dual infeasibilities to determine whether the simplex solver is
   // needed and, if so, possibly which variant to use.
@@ -81,12 +104,15 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // Copy the simplex stratgy so that it can be modified:
   //
   int use_simplex_strategy = simplex_info.simplex_strategy;
-  if (simplex_info.num_primal_infeasibilities == 0) {
+  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
+  if (scaled_solution_params.num_primal_infeasibilities == 0) {
     // Primal feasible
-    if (simplex_info.num_dual_infeasibilities == 0) {
+    if (scaled_solution_params.num_dual_infeasibilities == 0) {
       // Dual feasible
       // Simplex solution is optimal
-      highs_model_object.model_status_ = HighsModelStatus::OPTIMAL;
+      highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+      scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
     } else {
       // Only dual infeasible, so maybe use primal simplex
       if (use_simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
@@ -97,18 +123,16 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     if (use_simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
       use_simplex_strategy = SIMPLEX_STRATEGY_DUAL;
   }
-  if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) {
+#ifdef HiGHSDEV
+  // reportSimplexLpStatus(simplex_lp_status, "After transition");
+#endif
+  if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
     timer.start(timer.solve_clock);
 #ifdef HiGHSDEV
     timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
-  }
-#ifdef HiGHSDEV
-  // reportSimplexLpStatus(simplex_lp_status, "After transition");
-#endif
-  if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) {
     if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
       HPrimal primal_solver(highs_model_object);
@@ -144,7 +168,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
             simplex_info.dual_phase2_iteration_count +
             simplex_info.primal_phase1_iteration_count +
             simplex_info.primal_phase2_iteration_count !=
-        simplex_info.iteration_count)
+        scaled_solution_params.simplex_iteration_count)
       printf("Iteration total error \n");
 
     if (highs_model_object.options_.simplex_initial_condition_check) {
@@ -158,6 +182,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     // Official finish of solver
     timer.stop(timer.solve_clock);
 
+    scaled_solution_params.objective_function_value = simplex_info.primal_objective_value;
 #ifdef HiGHSDEV
     timer.stop(simplex_info.clock_[SimplexTotalClock]);
     reportSimplexProfiling(highs_model_object);
@@ -170,226 +195,192 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
                       "Iterations [Ph1 %d; Ph2 %d] Total %d",
                       simplex_info.primal_phase1_iteration_count,
                       simplex_info.primal_phase2_iteration_count,
-                      simplex_info.iteration_count);
+                      scaled_solution_params.simplex_iteration_count);
     } else {
       HighsLogMessage(HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d",
                       simplex_info.dual_phase1_iteration_count,
                       simplex_info.dual_phase2_iteration_count,
                       simplex_info.primal_phase2_iteration_count,
-                      simplex_info.iteration_count);
+                      scaled_solution_params.simplex_iteration_count);
     }
 #endif
   }
 
-  // JAJH 230819: Frig to retain highs_model_object.model_status_ 
-  HighsModelStatus save_model_status = highs_model_object.model_status_;
-  if (highs_model_object.model_status_ == HighsModelStatus::OPTIMAL) {
-    // Optimal solution: copy the solution and basis
+  if (simplex_info.analyseLpSolution) {
+    // Analyse the simplex basic solution, assuming that the scaled solution params are known
+    const bool report = true;
+    call_status = analyseSimplexBasicSolution(highs_model_object,
+					      highs_model_object.scaled_solution_params_,
+					      report);
+    return_status = interpretCallStatus(call_status, return_status, "analyseSimplexBasicSolution");
+    if (return_status == HighsStatus::Error) return return_status;
+
+#ifdef HiGHSDEV
+    // For debugging, it's good to be able to check what comes out of
+    // the solver. This is done fully by analyseHighsBasicSolution,
+    // which computes the primal and dual residuals so isn't cheap.
+    //
+    // Copy the solution and basis
+    HighsSimplexInterface simplex_interface(highs_model_object);
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
-    int report_level=-1;
-#ifdef HiGHSDEV
-    report_level = 1;
+    call_status = 
+      analyseHighsBasicSolution(highs_model_object, "to check simplex basic solution");
+    return_status = interpretCallStatus(call_status, return_status, "analyseHighsBasicSolution");
+    if (return_status == HighsStatus::Error) return return_status;
+    // Invalidate the basis to make sure it is set again later
+    // without HiGHSDEV
+    highs_model_object.basis_.valid_ = false;
 #endif
-    if (simplex_info.analyseLpSolution)
-      simplex_interface.analyseHighsSolutionAndBasis(report_level, "after running the simplex solver");
   }
-  // JAJH 230819: Frig to retain highs_model_object.model_status_ 
-  highs_model_object.model_status_ = save_model_status;
+  return_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
 #endif
-  return highsStatusFromHighsModelStatus(highs_model_object.model_status_);
+  return return_status;
 }
 
-HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
-  const bool refinement = false;
-  HighsStatus highs_status = runSimplexSolver(highs_model_object);
-
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_invert_form) {
-    printf("grep_kernel,%s,%s,%d,%d,%d,",
-	   highs_model_object.lp_.model_name_.c_str(),
-	   highs_model_object.lp_.lp_name_.c_str(),
-	   simplex_info.num_invert,
-	   simplex_info.num_kernel,
-	   simplex_info.num_major_kernel);
-    if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_dim/simplex_info.num_kernel);
-    printf(",%g,%g,",
-	   simplex_info.running_average_kernel_dim,
-	   simplex_info.max_kernel_dim);
-    if (simplex_info.num_invert) printf("Fill-in,%g", simplex_info.sum_invert_fill_factor/simplex_info.num_invert);
-    printf(",");
-    if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_fill_factor/simplex_info.num_kernel);
-    printf(",");
-    if (simplex_info.num_major_kernel) printf("%g", simplex_info.sum_major_kernel_fill_factor/simplex_info.num_major_kernel);
-    printf(",%g,%g,%g\n",
-	   simplex_info.running_average_invert_fill_factor,
-	   simplex_info.running_average_kernel_fill_factor,
-	   simplex_info.running_average_major_kernel_fill_factor);
-  }
-#endif
-  HighsModelStatus model_status = highs_model_object.model_status_;
-  if (model_status != HighsModelStatus::OPTIMAL) return highsStatusFromHighsModelStatus(model_status);
-
-  HighsOptions& options = highs_model_object.options_;
-  HighsLp& lp = highs_model_object.lp_;
-  SimplexBasis& basis = highs_model_object.simplex_basis_;
-  HighsScale& scale = highs_model_object.scale_;
-  if (!scale.is_scaled_) return highs_status;
-  double cost_scale = scale.cost_;
-  if (cost_scale != 1) printf("solveModelSimplex: Cant't handle cost scaling\n");
-  assert(cost_scale == 1);
+HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   for (int pass = 0; pass < 2; pass++) {
-    int num_scaled_dual_infeasibilities = 0;
-    double max_scaled_dual_infeasibility = 0;
-    double sum_scaled_dual_infeasibilities = 0;
-    int num_unscaled_dual_infeasibilities = 0;
-    double max_unscaled_dual_infeasibility = 0;
-    double sum_unscaled_dual_infeasibilities = 0;
-    int num_scaled_primal_infeasibilities = 0;
-    double max_scaled_primal_infeasibility = 0;
-    double sum_scaled_primal_infeasibilities = 0;
-    int num_unscaled_primal_infeasibilities = 0;
-    double max_unscaled_primal_infeasibility = 0;
-    double sum_unscaled_primal_infeasibilities = 0;
-    double new_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
-    double new_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
-    for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
-      // Look at the nonbasic dual infeasibilities
-      if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
-      // No dual infeasiblity for fixed rows and columns
-      if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
-      bool col = iVar < lp.numCol_;
-      double scale_mu;
-      int iCol=0;
-      int iRow=0;
-      if (col) {
-	iCol = iVar;
-	scale_mu = 1 / (scale.col_[iCol] / scale.cost_);
-      } else {
-	iRow = iVar - lp.numCol_;
-	scale_mu = scale.row_[iRow] * scale.cost_;
-      }
-      double scaled_dual = simplex_info.workDual_[iVar];
-      double unscaled_dual = scaled_dual * scale_mu;
-      double scaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * scaled_dual, 0.);
-      double unscaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * unscaled_dual, 0.);
-      if (scaled_dual_infeasibility > simplex_info.dual_feasibility_tolerance) {
-	num_scaled_dual_infeasibilities++;
-      }
-      max_scaled_dual_infeasibility = max(scaled_dual_infeasibility, max_scaled_dual_infeasibility);
-      sum_scaled_dual_infeasibilities += scaled_dual_infeasibility;
-      if (unscaled_dual_infeasibility > options.dual_feasibility_tolerance) {
-	num_unscaled_dual_infeasibilities++;
-	double multiplier = options.dual_feasibility_tolerance / scale_mu;
+    double new_primal_feasibility_tolerance;
+    double new_dual_feasibility_tolerance;
 #ifdef HiGHSDEV
-	double lower = simplex_info.workLower_[iVar];
-	double upper = simplex_info.workUpper_[iVar];
-	double value = simplex_info.workValue_[iVar];
-	HighsLogMessage(HighsMessageType::INFO,
-			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
-			iVar, iCol, iRow, lower, value, upper,
-			scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
-			multiplier);
+    HighsLogMessage(HighsMessageType::INFO, "tryToSolveUnscaledLp pass %1d:", pass);
 #endif
-	new_dual_feasibility_tolerance = min(multiplier, new_dual_feasibility_tolerance);
-      }
-      max_unscaled_dual_infeasibility = max(unscaled_dual_infeasibility, max_unscaled_dual_infeasibility);
-      sum_unscaled_dual_infeasibilities += unscaled_dual_infeasibility;
-    }
-    for (int ix = 0; ix < lp.numRow_; ix++) {
-      // Look at the basic primal infeasibilities
-      int iVar = basis.basicIndex_[ix];
-      // No dual infeasiblity for fixed rows and columns
-      if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
-      bool col = iVar < lp.numCol_;
-      double scale_mu;
-      int iCol=0;
-      int iRow=0;
-      if (col) {
-	iCol = iVar;
-	scale_mu = scale.col_[iCol];
-      } else {
-	iRow = iVar - lp.numCol_;
-	scale_mu = 1 / scale.row_[iRow];
-      }
-      double lower = simplex_info.baseLower_[ix];
-      double upper = simplex_info.baseUpper_[ix];
-      double value = simplex_info.baseValue_[ix];
-      double scaled_primal_infeasibility = max(max(lower-value, value-upper), 0.);
-      double unscaled_primal_infeasibility = scaled_primal_infeasibility * scale_mu;
-      if (scaled_primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
-	num_scaled_primal_infeasibilities++;
-      }
-      max_scaled_primal_infeasibility = max(scaled_primal_infeasibility, max_scaled_primal_infeasibility);
-      sum_scaled_primal_infeasibilities += scaled_primal_infeasibility;
-      if (unscaled_primal_infeasibility > options.primal_feasibility_tolerance) {
-	num_unscaled_primal_infeasibilities++;
-	double multiplier = options.primal_feasibility_tolerance / scale_mu;
-#ifdef HiGHSDEV
-	HighsLogMessage(HighsMessageType::INFO,
-			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
-			iVar, iCol, iRow, lower, value, upper,
-			scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
-			multiplier);
-#endif
-	new_primal_feasibility_tolerance = min(multiplier, new_primal_feasibility_tolerance);
-      }
-      max_unscaled_primal_infeasibility = max(unscaled_primal_infeasibility, max_unscaled_primal_infeasibility);
-      sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
-    }
-#ifdef HiGHSDEV
-    HighsLogMessage(HighsMessageType::INFO, "solveModelSimplex pass %1d:", pass);
-    if (num_scaled_primal_infeasibilities>0) {
-      HighsLogMessage(HighsMessageType::ERROR, "  Scaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		      num_scaled_primal_infeasibilities,
-		      max_scaled_primal_infeasibility,
-		      sum_scaled_primal_infeasibilities);
-    }
-    HighsLogMessage(HighsMessageType::INFO, "Unscaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+    // Deduce the unscaled solution parameters, and new fasibility tolerances if not primal and/or dual feasible
+    call_status =
+      getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(highs_model_object, 
+								      highs_model_object.unscaled_solution_params_,
+								      new_primal_feasibility_tolerance,
+								      new_dual_feasibility_tolerance);
+    return_status = interpretCallStatus(call_status, return_status,
+					"getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution");
+    if (return_status == HighsStatus::Error) return return_status;
+    int num_unscaled_primal_infeasibilities = highs_model_object.unscaled_solution_params_.num_primal_infeasibilities;
+    int num_unscaled_dual_infeasibilities = highs_model_object.unscaled_solution_params_.num_dual_infeasibilities;
+    // Set the model and solution status according to the unscaled solution parameters
+    if (num_unscaled_primal_infeasibilities==0 && num_unscaled_dual_infeasibilities==0)
+      highs_model_object.unscaled_model_status_ = HighsModelStatus::OPTIMAL;
+
+    if (highs_model_object.unscaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
+
+    //Not optimal
+    assert(num_unscaled_primal_infeasibilities > 0 || num_unscaled_dual_infeasibilities > 0);
+
+    HighsLogMessage(HighsMessageType::INFO,
+		    "Have %d primal and %d dual unscaled infeasibilities",
 		    num_unscaled_primal_infeasibilities,
-		    max_unscaled_primal_infeasibility,
-		    sum_unscaled_primal_infeasibilities);
-    if (num_scaled_dual_infeasibilities>0) {
-      HighsLogMessage(HighsMessageType::ERROR, "  Scaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		      num_scaled_dual_infeasibilities,
-		      max_scaled_dual_infeasibility,
-		      sum_scaled_dual_infeasibilities);
-    }
-    HighsLogMessage(HighsMessageType::INFO, "Unscaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		    num_unscaled_dual_infeasibilities,
-		    max_unscaled_dual_infeasibility,
-		    sum_unscaled_dual_infeasibilities);
-#endif
-    if (num_unscaled_primal_infeasibilities || num_unscaled_dual_infeasibilities) {
-      HighsLogMessage(HighsMessageType::INFO,
-		      "Have %d primal and %d dual unscaled infeasibilities so possibly re-solve with infeasibility tolerances of %g primal and %g dual",
-		      num_unscaled_primal_infeasibilities,
-		      num_unscaled_dual_infeasibilities,
-		      new_primal_feasibility_tolerance,
-		      new_dual_feasibility_tolerance);
-      if (refinement) {
-	HighsLogMessage(HighsMessageType::INFO, "Re-solving with refined tolerances");
-	HighsOptions save_options = highs_model_object.options_;
-	HighsOptions& options = highs_model_object.options_;
-	options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
-	options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
-	options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
-	HighsStatus highs_status = runSimplexSolver(highs_model_object);
-	if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) return highs_status;
-	options = save_options;
-      } else {
-	HighsLogMessage(HighsMessageType::INFO, "Not re-solving with refined tolerances");
-	return highs_status;
-      }
+		    num_unscaled_dual_infeasibilities);
+    HighsLogMessage(HighsMessageType::INFO,
+		    "Possibly re-solve with feasibility tolerances of %g primal and %g dual",
+		    new_primal_feasibility_tolerance,
+		    new_dual_feasibility_tolerance);
+    const bool refinement = false;
+    if (refinement) {
+      HighsLogMessage(HighsMessageType::INFO, "Re-solving with refined tolerances");
+      highs_model_object.scaled_solution_params_.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
+      highs_model_object.scaled_solution_params_.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+
+      HighsOptions save_options = highs_model_object.options_;
+      HighsOptions& options = highs_model_object.options_;
+      options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
+      call_status = runSimplexSolver(highs_model_object);
+      options = save_options;
+      return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+      if (return_status == HighsStatus::Error) return return_status;
+      // Assess success according to the scaled model status, unless
+      // something worse has happened earlier
+      call_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+      return_status = interpretCallStatus(call_status, return_status);
+      if (return_status == HighsStatus::Error) return return_status;
     } else {
-      return highs_status;
+      HighsLogMessage(HighsMessageType::INFO, "Not re-solving with refined tolerances");
+      return return_status;
     }
   }
-  return highs_status;
+  return return_status;
+}
+
+// Single method to solve an LP with the simplex method. Solves the
+// scaled LP then analyses the unscaled solution. If it doesn't satisfy
+// the required tolerances, tolerances for the scaled LP are
+// identified which, if used, might yield an unscaled solution that
+// satisfies the required tolerances.
+//
+// This method and tryToSolveUnscaledLp may make mutiple calls to
+// runSimplexSolver
+//
+// It sets the HiGHS basis within highs_model_object and, if optimal,
+// the HiGHS solution, too
+HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  // Reset unscaled and scaled model status and solution params - except for iteration counts
+  resetModelStatusAndSolutionParams(highs_model_object);
+
+  if (!highs_model_object.lp_.numRow_) {
+    // Unconstrained LP so solve directly
+    call_status = solveUnconstrainedLp(highs_model_object);
+    return_status = interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
+    if (return_status == HighsStatus::Error) return return_status;
+  }
+  // (Try to) solve the scaled LP
+  call_status = runSimplexSolver(highs_model_object);
+  return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+  if (return_status == HighsStatus::Error) return return_status;
+#ifdef HiGHSDEV
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  if (simplex_info.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
+#endif
+
+  double cost_scale = highs_model_object.scale_.cost_;
+#ifdef HiGHSDEV
+  if (cost_scale != 1) printf("solveLpSimplex: Can't handle cost scaling\n");
+#endif
+  assert(cost_scale == 1);
+  if (cost_scale != 1) return HighsStatus::Error;
+
+  if (highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL) {
+    // (Scaled) LP solved to optimality
+    if (highs_model_object.scale_.is_scaled_) {
+      // LP solved was scaled, so see whether the scaled problem has
+      // been solved
+      //
+      // Analyse the unscaled solution and, if it doesn't satisfy the
+      // required tolerances, tolerances for the scaled LP are identified
+      // which, if used, might yield an unscaled solution that satisfies
+      // the required tolerances. Can't handle cost scaling
+      //
+      call_status = tryToSolveUnscaledLp(highs_model_object);
+      return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+      if (return_status == HighsStatus::Error) return return_status;
+    } else {
+      // If scaling hasn't been used, then the original LP has been
+      // solved to the required tolerances
+      highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
+      highs_model_object.unscaled_solution_params_ = highs_model_object.scaled_solution_params_;
+    }
+  } else {
+      // If the solution isn't optimal, then clear the scaled solution infeasibility parameters
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
+    invalidateSolutionInfeasibilityParams(highs_model_object.scaled_solution_params_);
+  }
+    
+  // Deduce the HiGHS basis and solution from the simplex basis and solution
+  HighsSimplexInterface simplex_interface(highs_model_object);
+  simplex_interface.convertSimplexToHighsSolution();
+  simplex_interface.convertSimplexToHighsBasis();
+
+  copySolutionIterationCountAndObjectiveParams(highs_model_object.scaled_solution_params_,
+					       highs_model_object.unscaled_solution_params_);
+  
+  // Assess success according to the scaled model status, unless
+  // something worse has happened earlier
+  call_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+  return_status = interpretCallStatus(call_status, return_status);
+  return return_status;
 }
 #endif

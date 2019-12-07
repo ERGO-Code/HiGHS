@@ -7,17 +7,26 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/LoadProblem.h
+/**@file ipm/IpxSolution.h
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef IO_LOAD_PROBLEM_H_
-#define IO_LOAD_PROBLEM_H_
+#ifndef IPM_IPX_SOLUTION_H_
+#define IPM_IPX_SOLUTION_H_
 
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsStatus.h"
+#include <stdint.h>
+#include <vector>
+typedef int64_t ipxint;
 
-HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp);
+struct IpxSolution {
+  ipxint num_col;
+  ipxint num_row;
+  std::vector<double> ipx_col_value;
+  std::vector<double> ipx_row_value;
+  std::vector<double> ipx_col_dual;
+  std::vector<double> ipx_row_dual;
+  std::vector<ipxint> ipx_col_status;
+  std::vector<ipxint> ipx_row_status;
+};
 
-#endif  // IO_LOAD_PROBLEM_H_
+#endif

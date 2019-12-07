@@ -39,9 +39,15 @@ using std::flush;
 using std::runtime_error;
 
 void HDual::solve(int num_threads) {
+  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  workHMO.model_status_ = HighsModelStatus::NOTSET;
+  workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
+  bool simplex_info_ok = simplexInfoOk(workHMO.lp_, workHMO.simplex_lp_, simplex_info);
+  if (!simplex_info_ok) {
+    printf("Error in simplex info\n");
+    return;
+  }
   // Cannot solve box-constrained LPs
   if (workHMO.simplex_lp_.numRow_ == 0) return;
 
@@ -56,6 +62,12 @@ void HDual::solve(int num_threads) {
   // initialisation of edge weights to 1s. Should only be called if
   // model dimension changes
   init(num_threads);
+
+  bool dual_info_ok = dualInfoOk(workHMO.lp_);
+  if (!dual_info_ok) {
+    printf("Error in dual info\n");
+    return;
+  }
 
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
   simplex_info.store_squared_primal_infeasibility = true;
@@ -164,7 +176,7 @@ void HDual::solve(int num_threads) {
   compute_dual(workHMO);
   // Determine the number of dual infeasibilities, and hence the solve phase
   computeDualInfeasible(workHMO);
-  /* int num_dual_infeasibilities_without_flips = simplex_info.num_dual_infeasibilities; */
+  /* int num_dual_infeasibilities_without_flips = scaled_solution_params.num_dual_infeasibilities; */
   if (simplex_info.allow_primal_flips_for_dual_feasibility) {
     computeDualInfeasibleWithFlips(workHMO);
   } else {
@@ -172,11 +184,11 @@ void HDual::solve(int num_threads) {
   }
   /*
   printf("Dual infeasibilities with / without flips is %d / %d: Difference = %d\n",
-	 simplex_info.num_dual_infeasibilities,
+	 scaled_solution_params.num_dual_infeasibilities,
 	 num_dual_infeasibilities_without_flips,
-	 num_dual_infeasibilities_without_flips - simplex_info.num_dual_infeasibilities);
+	 num_dual_infeasibilities_without_flips - scaled_solution_params.num_dual_infeasibilities);
   */
-  dualInfeasCount = simplex_info.num_dual_infeasibilities;
+  dualInfeasCount = scaled_solution_params.num_dual_infeasibilities;
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
   //
   // Check that the model is OK to solve:
@@ -204,7 +216,7 @@ void HDual::solve(int num_threads) {
   iterationAnalysisInitialise();
 
   while (solvePhase) {
-    int it0 = simplex_info.iteration_count;
+    int it0 = scaled_solution_params.simplex_iteration_count;
     // When starting a new phase the (updated) dual objective function
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
@@ -216,14 +228,14 @@ void HDual::solve(int num_threads) {
         solvePhase1();
         timer.stop(simplex_info.clock_[SimplexDualPhase1Clock]);
         simplex_info.dual_phase1_iteration_count +=
-            (simplex_info.iteration_count - it0);
+            (scaled_solution_params.simplex_iteration_count - it0);
         break;
       case 2:
         timer.start(simplex_info.clock_[SimplexDualPhase2Clock]);
         solvePhase2();
         timer.stop(simplex_info.clock_[SimplexDualPhase2Clock]);
         simplex_info.dual_phase2_iteration_count +=
-            (simplex_info.iteration_count - it0);
+            (scaled_solution_params.simplex_iteration_count - it0);
         break;
       case 4:
         break;
@@ -259,18 +271,23 @@ void HDual::solve(int num_threads) {
   }
 #endif
 
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
+           scaled_solution_params.simplex_iteration_count / n_dvx_fwk);
+  }
+#endif
+
   if (solve_bailout) {
-    assert(workHMO.model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
-	   workHMO.model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+    assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
   }
 
-#ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
-#endif
   if (solvePhase == 4) {
     // Use primal to clean up if not out of time
-    int it0 = simplex_info.iteration_count;
+    int it0 = scaled_solution_params.simplex_iteration_count;
     HPrimal hPrimal(workHMO);
     //    HighsSetMessagelevel(ML_ALWAYS);
     timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
@@ -278,14 +295,8 @@ void HDual::solve(int num_threads) {
     timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
     //    HighsSetMessagelevel(workHMO.options_.messageLevel);
     simplex_info.primal_phase2_iteration_count +=
-        (simplex_info.iteration_count - it0);
+        (scaled_solution_params.simplex_iteration_count - it0);
   }
-#ifdef HiGHSDEV
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
-    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
-           simplex_info.iteration_count / n_dvx_fwk);
-  }
-#endif
   ok = ok_to_solve(workHMO, 1, solvePhase);
   if (!ok) {
     printf("NOT OK After Solve???\n");
@@ -298,14 +309,15 @@ void HDual::solve(int num_threads) {
 void HDual::options() {
   // Set solver options from simplex options
 
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  const HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  const HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
 
   interpret_dual_edge_weight_strategy(simplex_info.dual_edge_weight_strategy);
   interpret_price_strategy(simplex_info.price_strategy);
 
   // Copy values of simplex solver options to dual simplex options
-  primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
-  dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
+  primal_feasibility_tolerance = scaled_solution_params.primal_feasibility_tolerance;
+  dual_feasibility_tolerance = scaled_solution_params.dual_feasibility_tolerance;
   dual_objective_value_upper_bound =
       workHMO.options_.dual_objective_value_upper_bound;
   //  perturb_costs = simplex_info.perturb_costs;
@@ -467,7 +479,7 @@ void HDual::solvePhase1() {
       }
       if (invertHint) break;
       // printf("HDual::solvePhase1: Iter = %d; Objective = %g\n",
-      // simplex_info.iteration_count, simplex_info.dual_objective_value);
+      // scaled_solution_params.simplex_iteration_count, simplex_info.dual_objective_value);
       double current_dual_objective_value =
           simplex_info.updated_dual_objective_value;
       if (current_dual_objective_value >
@@ -477,7 +489,7 @@ void HDual::solvePhase1() {
                current_dual_objective_value,
                workHMO.options_.dual_objective_value_upper_bound);
 #endif
-        workHMO.model_status_ =
+        workHMO.scaled_model_status_ =
             HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         break;
       }
@@ -485,7 +497,7 @@ void HDual::solvePhase1() {
     double current_run_highs_time = timer.readRunHighsClock();
     if (current_run_highs_time > workHMO.options_.time_limit) {
       solve_bailout = true;
-      workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
     }
     // If the data are fresh from rebuild(), break out of
@@ -512,7 +524,7 @@ void HDual::solvePhase1() {
         // Report dual infeasible
         solvePhase = -1;
         HighsPrintMessage(ML_MINIMAL, "dual-infeasible\n");
-        workHMO.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+        workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
       }
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
@@ -520,7 +532,7 @@ void HDual::solvePhase1() {
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-    workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
+    workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
@@ -532,7 +544,7 @@ void HDual::solvePhase1() {
       // Report strange issues
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-      workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
+      workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
     }
   }
 
@@ -594,20 +606,20 @@ void HDual::solvePhase2() {
                current_dual_objective_value,
                workHMO.options_.dual_objective_value_upper_bound);
 #endif
-        workHMO.model_status_ =
+        workHMO.scaled_model_status_ =
             HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         solve_bailout = true;
         break;
       }
     }
-    if (workHMO.model_status_ ==
+    if (workHMO.scaled_model_status_ ==
         HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
       solve_bailout = true;
       break;
     }
     double current_run_highs_time = timer.readRunHighsClock();
     if (current_run_highs_time > workHMO.options_.time_limit) {
-      workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       solve_bailout = true;
       break;
     }
@@ -638,14 +650,14 @@ void HDual::solvePhase2() {
       // There are no dual infeasiblities after cleanup() so optimal!
       solvePhase = 0;
       HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-      workHMO.model_status_ = HighsModelStatus::OPTIMAL;
+      workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-not-solved\n");
-    workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
+    workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
@@ -657,7 +669,7 @@ void HDual::solvePhase2() {
       // primal infeasible
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "problem-infeasible\n");
-      workHMO.model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+      workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     }
   }
 }
@@ -769,7 +781,11 @@ void HDual::rebuild() {
 #endif
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
-  iterationReportRebuild(sv_invertHint);
+  iterationReportRebuild(
+#ifdef HiGHSDEV
+			 sv_invertHint
+#endif
+			 );
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
@@ -789,7 +805,8 @@ void HDual::rebuild() {
     printf(
         "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
         "%11.4g\n",
-        solvePhase, totalRebuilds, sv_invertHint, simplex_info.iteration_count,
+        solvePhase, totalRebuilds, sv_invertHint,
+	workHMO.scaled_solution_params_.simplex_iteration_count,
         totalRebuildTime);
   }
 #endif
@@ -819,10 +836,10 @@ void HDual::cleanup() {
   computeDualObjectiveValue(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuObjClock]);
 
-  iterationReportRebuild(-1);
+  iterationReportRebuild();
 
   computeDualInfeasible(workHMO);
-  dualInfeasCount = simplex_info.num_dual_infeasibilities;
+  dualInfeasCount = workHMO.scaled_solution_params_.num_dual_infeasibilities;
 }
 
 void HDual::iterate() {
@@ -929,7 +946,7 @@ void HDual::iterateTasks() {
 }
 
 void HDual::iterationAnalysisInitialise() {
-  AnIterIt0 = workHMO.simplex_info_.iteration_count;
+  AnIterIt0 = workHMO.scaled_solution_params_.simplex_iteration_count;
   AnIterCostlyDseFq = 0;
 #ifdef HiGHSDEV
   AnIterPrevRpNumCostlyDseIt = 0;
@@ -1015,7 +1032,7 @@ void HDual::iterationAnalysis() {
     if (CostlyDseIt) {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
-      int lcNumIter = workHMO.simplex_info_.iteration_count - AnIterIt0;
+      int lcNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
       // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations have been costly
       switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
 	(AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
@@ -1057,7 +1074,7 @@ void HDual::iterationAnalysis() {
   }
 
 #ifdef HiGHSDEV
-  int AnIterCuIt = workHMO.simplex_info_.iteration_count;
+  int AnIterCuIt = workHMO.scaled_solution_params_.simplex_iteration_count;
   bool iterLg = AnIterCuIt % 100 == 0;
   iterLg = false;
   if (iterLg) {
@@ -1096,9 +1113,9 @@ void HDual::iterationAnalysis() {
     AnIterNumEdWtIt[(int)dual_edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
 
   AnIterTraceRec* lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-  //  if (workHMO.simplex_info_.iteration_count ==
+  //  if (workHMO.scaled_solution_params_.simplex_iteration_count ==
   //  AnIterTraceIterRec[AnIterTraceNumRec]+AnIterTraceIterDl) {
-  if (workHMO.simplex_info_.iteration_count ==
+  if (workHMO.scaled_solution_params_.simplex_iteration_count ==
       lcAnIter->AnIterTraceIter + AnIterTraceIterDl) {
     if (AnIterTraceNumRec == AN_ITER_TRACE_MX_NUM_REC) {
       for (int rec = 1; rec <= AN_ITER_TRACE_MX_NUM_REC / 2; rec++)
@@ -1108,7 +1125,7 @@ void HDual::iterationAnalysis() {
     } else {
       AnIterTraceNumRec++;
       lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-      lcAnIter->AnIterTraceIter = workHMO.simplex_info_.iteration_count;
+      lcAnIter->AnIterTraceIter = workHMO.scaled_solution_params_.simplex_iteration_count;
       lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = row_epDensity;
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;
@@ -1129,7 +1146,7 @@ void HDual::iterationAnalysis() {
 }
 
 void HDual::iterationReport() {
-  int iteration_count = workHMO.simplex_info_.iteration_count;
+  int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
   int iteration_count_difference = iteration_count -
     previous_iteration_report_header_iteration_count;
   bool header = previous_iteration_report_header_iteration_count < 0
@@ -1168,7 +1185,7 @@ void HDual::iterationReportIterationAndPhase(int iterate_log_level,
   if (header) {
     HighsPrintMessage(iterate_log_level, " Iteration Ph");
   } else {
-    int numIter = workHMO.simplex_info_.iteration_count;
+    int numIter = workHMO.scaled_solution_params_.simplex_iteration_count;
     HighsPrintMessage(iterate_log_level, " %9d %2d", numIter, solvePhase);
   }
 }
@@ -1220,12 +1237,16 @@ void HDual::iterationReportDensity(int iterate_log_level, bool header) {
   }
 }
 
-void HDual::iterationReportRebuild(const int i_v) {
+void HDual::iterationReportRebuild(
+#ifdef HiGHSDEV
+				   const int i_v
+#endif
+				   ) {
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   bool report_condition = simplex_info.analyse_invert_condition;
   HighsPrintMessage(ML_MINIMAL,
-                    "Iter %10d:", workHMO.simplex_info_.iteration_count);
+                    "Iter %10d:", workHMO.scaled_solution_params_.simplex_iteration_count);
   iterationReportDensity(ML_MINIMAL, true);
   iterationReportDensity(ML_MINIMAL, false);
   iterationReportDualObjective(ML_MINIMAL, false);
@@ -1239,14 +1260,14 @@ void HDual::iterationReportRebuild(const int i_v) {
 }
 
 void HDual::reportInfeasibility() {
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsPrintMessage(ML_MINIMAL, " Pr: %d(%g)",
-                    simplex_info.num_primal_infeasibilities,
-                    simplex_info.sum_primal_infeasibilities);
-  if (simplex_info.sum_dual_infeasibilities > 0) {
+                    scaled_solution_params.num_primal_infeasibilities,
+                    scaled_solution_params.sum_primal_infeasibilities);
+  if (scaled_solution_params.sum_dual_infeasibilities > 0) {
     HighsPrintMessage(ML_MINIMAL, "; Du: %d(%g)",
-                      simplex_info.num_dual_infeasibilities,
-                      simplex_info.sum_dual_infeasibilities);
+                      scaled_solution_params.num_dual_infeasibilities,
+                      scaled_solution_params.sum_dual_infeasibilities);
   }
 }
 
@@ -1355,7 +1376,7 @@ void HDual::chooseRow() {
       const bool report_weight_error = false;
       if (report_weight_error && weight_error > 0.5*weight_error_threshhold) {
 	printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
-	       simplex_info.iteration_count,
+	       workHMO.scaled_solution_params_.simplex_iteration_count,
 	       accept_weight, 
 	       num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
 	       c_weight, u_weight, weight_error, error_type.c_str(),
@@ -1853,7 +1874,7 @@ void HDual::updatePivots() {
   // is defined
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
-  workHMO.simplex_info_.iteration_count++;
+  workHMO.scaled_solution_params_.simplex_iteration_count++;
   //
   // Update the invertible representation of the basis matrix
   update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
@@ -1980,6 +2001,27 @@ void HDual::interpret_price_strategy(const int price_strategy) {
   }
 }
 
+bool HDual::dualInfoOk(const HighsLp& lp) {
+  int lp_numCol = lp.numCol_;
+  int lp_numRow = lp.numRow_;
+  bool dimensions_ok;
+  dimensions_ok = lp_numCol == solver_num_col && lp_numRow == solver_num_row;
+  assert(dimensions_ok);
+  if (!dimensions_ok) {
+    printf("LP-Solver dimension incompatibility (%d, %d) != (%d, %d)\n",
+	   lp_numCol, solver_num_col, lp_numRow, solver_num_row);
+    return false;
+  }
+  dimensions_ok = lp_numCol == factor->numCol && lp_numRow == factor->numRow;
+  assert(dimensions_ok);
+  if (!dimensions_ok) {
+    printf("LP-Factor dimension incompatibility (%d, %d) != (%d, %d)\n",
+	   lp_numCol, factor->numCol, lp_numRow, factor->numRow);
+    return false;
+  }
+  return true;
+}
+
 #ifdef HiGHSDEV
 double HDual::checkDualObjectiveValue(const char* message, int phase) {
   static double previous_updated_dual_objective_value = 0;
@@ -2081,9 +2123,9 @@ void HDual::iterateOpRecAf(int opTy, HVector& vector) {
 
 void HDual::iterationAnalysisReport() {
   HighsTimer& timer = workHMO.timer_;
-  int AnIterNumIter = workHMO.simplex_info_.iteration_count - AnIterIt0;
+  int AnIterNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
   printf("\nAnalysis of %d iterations (%d to %d)\n", AnIterNumIter,
-         AnIterIt0 + 1, workHMO.simplex_info_.iteration_count);
+         AnIterIt0 + 1, workHMO.scaled_solution_params_.simplex_iteration_count);
   if (AnIterNumIter <= 0) return;
   int lc_EdWtNumIter;
   lc_EdWtNumIter = AnIterNumEdWtIt[(int)DualEdgeWeightMode::STEEPEST_EDGE];
@@ -2191,7 +2233,7 @@ void HDual::iterationAnalysisReport() {
   AnIterTraceNumRec++;
   AnIterTraceRec* lcAnIter;
   lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-  lcAnIter->AnIterTraceIter = workHMO.simplex_info_.iteration_count;
+  lcAnIter->AnIterTraceIter = workHMO.scaled_solution_params_.simplex_iteration_count;
   lcAnIter->AnIterTraceTime = timer.getTime();
   lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = row_epDensity;
   lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;

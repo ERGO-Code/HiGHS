@@ -123,13 +123,9 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/chip.mps";
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
   
   // printf("CMAKE %s\n", HIGHS_DIR);
-  //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
-
-  //For debugging
-
-  //  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
 
   Highs highs;
 
@@ -138,7 +134,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   double* known_solution;
   double* solution_vector = nullptr;
   int solution_num_nz;
-  int* solution_indices;
+  int* solution_indices = (int*)malloc(sizeof(int) * 1);
 
   HighsStatus highs_status;
 
@@ -163,14 +159,14 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs_status = highs.getReducedColumn(0, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.initializeFromFile(filename);
+  highs_status = highs.readModel(filename);
   REQUIRE(highs_status==HighsStatus::OK);
  
   HighsLp lp = highs.getLp();
   REQUIRE(highs_status == HighsStatus::OK);
 
-  highs_status = highs.writeToFile("");
-  REQUIRE(highs_status==HighsStatus::Warning);
+  highs_status = highs.writeModel("");
+  REQUIRE(highs_status==HighsStatus::OK);
  
   int numRow = lp.numRow_;
   int numCol = lp.numCol_;

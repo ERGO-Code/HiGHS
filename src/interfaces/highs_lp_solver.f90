@@ -39,21 +39,28 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_run
 
-    function Highs_readFromFile ( h, f ) result ( s ) bind ( c, name='Highs_readFromFile' )
+    function Highs_readModel ( h, f ) result ( s ) bind ( c, name='Highs_readModel' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: f(*)
       integer ( c_int ) :: s
-    end function Highs_readFromFile
+    end function Highs_readModel
 
-    function Highs_writeToFile ( h, f ) result ( s ) bind ( c, name='Highs_writeToFile' )
+    function Highs_writeModel ( h, f ) result ( s ) bind ( c, name='Highs_writeModel' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       character( c_char ) :: f(*)
       integer ( c_int ) :: s
-    end function Highs_writeToFile
+    end function Highs_writeModel
 
-    function Highs_loadModel ( h, n, m, nz, cc, cl, cu, rl, ru, as, ai, av) result ( s ) bind ( c, name='Highs_loadModel' )
+    function Highs_writeSolution ( h, f ) result ( s ) bind ( c, name='Highs_writeSolution' )
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      character( c_char ) :: f(*)
+      integer ( c_int ) :: s
+    end function Highs_writeSolution
+
+    function Highs_passLp ( h, n, m, nz, cc, cl, cu, rl, ru, as, ai, av) result ( s ) bind ( c, name='Highs_passLp' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       integer ( c_int ), VALUE :: n
@@ -68,7 +75,7 @@ module highs_lp_solver
       integer ( c_int ) :: ai(*)
       real ( c_double ) :: av(*)
       integer ( c_int ) :: s
-    end function Highs_loadModel
+    end function Highs_passLp
 
     function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setOptionValue' )
       use iso_c_binding

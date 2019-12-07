@@ -7,17 +7,23 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/LoadProblem.h
+/**@file ipm/IpxWrapperEmpty.h
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef IO_LOAD_PROBLEM_H_
-#define IO_LOAD_PROBLEM_H_
+#ifndef IPM_IPX_WRAPPER_EMPTY_H_
+#define IPM_IPX_WRAPPER_EMPTY_H_
 
+#include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsStatus.h"
+#include "ipm/IpxStatus.h"
 
-HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp);
+HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
+		       HighsBasis& highs_basis, HighsSolution& highs_solution,
+		       HighsModelStatus& unscaled_model_status,
+		       HighsSolutionParams& unscaled_solution_params) {
+  unscaled_model_status = HighsModelStatus::NOTSET;
+  return HighsStatus::Error;
+}
 
-#endif  // IO_LOAD_PROBLEM_H_
+#endif

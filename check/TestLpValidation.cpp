@@ -169,11 +169,11 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   Highs highs(options);
   
-  HighsStatus init_status = highs.initializeLp(lp);
+  HighsStatus init_status = highs.passModel(lp);
   REQUIRE(init_status == HighsStatus::OK);
 
   /*
-  HighsStatus write_status =  highs.writeToFile("");
+  HighsStatus write_status =  highs.writeModel("");
   REQUIRE(write_status == HighsStatus::Warning);
   */
 

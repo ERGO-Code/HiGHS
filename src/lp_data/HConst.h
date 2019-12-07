@@ -38,9 +38,13 @@ enum HighsPrintMessageLevel {
 
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING};
 
+enum class HighsInfoType { INT = 1, DOUBLE};
+
 enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 
 enum SolverOption { SOLVER_OPTION_SIMPLEX = -1, SOLVER_OPTION_CHOOSE, SOLVER_OPTION_IPM }; 
+
+enum PrimalDualStatus { STATUS_NOTSET = -1, STATUS_NO_SOLUTION, STATUS_UNKNOWN, STATUS_INFEASIBLE_POINT , STATUS_FEASIBLE_POINT };
 
 const std::string FILENAME_DEFAULT = "";
 

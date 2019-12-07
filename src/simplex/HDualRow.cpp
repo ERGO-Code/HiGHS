@@ -102,7 +102,7 @@ void HDualRow::choose_possible() {
   const double Ta = workHMO.simplex_info_.update_count < 10
                         ? 1e-9
                         : workHMO.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
-  const double Td = workHMO.simplex_info_.dual_feasibility_tolerance;
+  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   const int sourceOut = workDelta < 0 ? -1 : 1;
   workTheta = HIGHS_CONST_INF;
   workCount = 0;
@@ -174,7 +174,7 @@ bool HDualRow::choose_final() {
 #endif
   // 2. Choose by small step BFRT
   timer.start(simplex_info.clock_[Chuzc3Clock]);
-  const double Td = workHMO.simplex_info_.dual_feasibility_tolerance;
+  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   fullCount = workCount;
   workCount = 0;
   totalChange = 1e-12;

@@ -295,7 +295,7 @@ void HDualRHS::update_primal(HVector* column, double theta) {
 
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
-  const double Tp = workHMO.simplex_info_.primal_feasibility_tolerance;
+  const double Tp = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
 
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
@@ -397,7 +397,7 @@ void HDualRHS::update_pivots(int iRow, double value) {
   //
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
-  const double Tp = workHMO.simplex_info_.primal_feasibility_tolerance;
+  const double Tp = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   baseValue[iRow] = value;
   double pivotInfeas = 0;
@@ -455,7 +455,7 @@ void HDualRHS::createArrayOfPrimalInfeasibilities() {
   const double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
-  const double Tp = workHMO.simplex_info_.primal_feasibility_tolerance;
+  const double Tp = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   for (int i = 0; i < numRow; i++) {
     const double value = baseValue[i];
     const double less = baseLower[i] - value;

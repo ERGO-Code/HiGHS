@@ -227,14 +227,15 @@ class HFactor {
   int kernel_dim = 0;
   int kernel_num_el = 0;
 
- private:
   /**
    * Data of the factor
    */
 
+  // private:
   // Problem size, coefficient matrix and update method
   int numRow;
   int numCol;
+ private:
   const int* Astart;
   const int* Aindex;
   const double* Avalue;

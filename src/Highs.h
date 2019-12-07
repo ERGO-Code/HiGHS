@@ -18,6 +18,7 @@
 #include "lp_data/HighsModelBuilder.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsStatus.h"
 #include "mip/SolveMip.h"
 #include "presolve/ICrash.h"
@@ -35,105 +36,132 @@ class Highs {
   Highs(HighsOptions& options) { options_ = options; }
 
   //  virtual ~Highs() { delete &hmos_; }
-  /**
-   * @brief Get the number of columns in the LP of the (first?)
-   * HighsModelObject
-   */
-  int getNumCols() { return lp_.numCol_; }
 
   /**
-   * @brief Get the number of rows in the LP of the (first?)
-   * HighsModelObject
+   * Methods for model input
    */
-  int getNumRows() { return lp_.numRow_; }
 
   /**
-   * @brief Get the number of entries in the LP of the (first?)
-   * HighsModelObject
+   * @brief Clears the vector of HighsModelObjects (hmos), creates a
+   * HighsModelObject for this LP and makes it the first of the vector
+   * of HighsModelObjects
    */
-  int getNumEntries() { if (lp_.numCol_) return lp_.Astart_[lp_.numCol_]; return 0; }
+  HighsStatus passModel(
+      const HighsLp& lp  //!< The HighsLp instance for this LP
+  );
+
+  /**
+   * @brief reads in a model and initializes the HighsModelObject
+   */
+  HighsStatus readModel(
+			const std::string filename  //!< the filename
+  );
+
+  /**
+   * @brief Solves the model according to the specified options
+   */
+  HighsStatus run();
+
+  /**
+   * @brief writes the current solution to a file
+   */
+  HighsStatus writeSolution(
+			    const std::string filename,  //!< the filename
+			    const bool pretty=false      //!< Write in pretty (human-readable) format
+			    );
+  /**
+   * Methods for HiGHS option input/output
+   */
 
   /**
    * @brief Sets an option to the bool/int/double/string  value if it's
    * legal and, for bool/int/double, only if it's of the correct type
    */
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const bool value
+				  const std::string& option, //!< The option name
+                                  const bool value           //!< The option value
 				  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const int value
+				  const std::string& option, //!< The option name
+                                  const int value            //!< The option value
 				  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const double value
+				  const std::string& option, //!< The option name
+                                  const double value         //!< The option value
 				  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const std::string value
+				  const std::string& option, //!< The option name
+                                  const std::string value    //!< The option value
 				  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const char* value
+				  const std::string& option, //!< The option name
+                                  const char* value          //!< The option value
 				  );
 
-  /**
+  HighsStatus readHighsOptions(
+			       const std::string filename  //!< The filename
+			       );
+
+  HighsStatus passHighsOptions(
+			       const HighsOptions& options  //!< The options
+			       );
+
+   /**
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
    */
   HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  bool& value);
+				  const std::string& option, //!< The option name
+                                  bool& value                //!< The option value
+				  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  int& value);
+				  const std::string& option, //!< The option name
+                                  int& value                 //!< The option value
+				  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  double& value);
+				  const std::string& option, //!< The option name
+                                  double& value              //!< The option value
+				  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  std::string& value);
+				  const std::string& option, //!< The option name
+                                  std::string& value         //!< The option value
+				  );
+  
+  const HighsOptions& getHighsOptions() const;
   
   HighsStatus writeHighsOptions(
-				const std::string filename  //!< the filename
+				const std::string filename  //!< The filename
 				);
   
-  /**
-   * @brief Clears the vector of HighsModelObjects (hmos), creates a
-   * HighsModelObject for this LP and makes it the first of the vector
-   * of HighsModelObjects
+   /**
+   * @brief Gets an option value as int/double, and only if it's of the correct type.
    */
-  HighsStatus initializeLp(
-      const HighsLp& lp  //!< The HighsLp instance for this LP
-  );
 
-  /**
-   * @brief reads a model from a file and initializes the Highs object
-   */
-  HighsStatus initializeFromFile(
-				 const std::string filename  //!< the filename
-  );
+  const HighsInfo& getHighsInfo() const;
 
+  HighsStatus getHighsInfoValue(
+				const std::string& info, //!< The info name
+				int& value               //!< The info value
+				);
+  
+  HighsStatus getHighsInfoValue(
+				const std::string& info, //!< The info name
+				double& value            //!< The info value
+				);
+  
+  HighsStatus writeHighsInfo(
+			     const std::string filename  //!< The filename
+			     );
   /**
-   * @brief writes the current model to a file
+   * Methods for model output
    */
-  HighsStatus writeToFile(
-			  const std::string filename  //!< the filename
-  );
-
-  /**
-   * @brief Calls runSolver to solve the LP according to the
-   * specified options
-   */
-  HighsStatus run();
 
   /**
    * @brief Returns the HighsLp instance for the LP of the (first?)
@@ -142,36 +170,30 @@ class Highs {
   const HighsLp& getLp() const;
 
   /**
-   * @brief Returns the HighsSolution instance for the LP of the
-   * (first?)  HighsModelObject
+   * @brief Returns the HighsSolution 
    */
   const HighsSolution& getSolution() const;
 
   const ICrashInfo& getICrashInfo() const;
 
   /**
-   * @brief Returns the HighsBasis instance for the LP of the
-   * (first?) HighsModelObject
+   * @brief Returns the HighsBasis 
    */
   const HighsBasis& getBasis() const;
 
   /**
-   * @brief Returns the current status of the (first?) HighsModelObject
+   * @brief Returns the current model status
    */
-  HighsModelStatus getModelStatus() const;
+  const HighsModelStatus& getModelStatus(
+					 const bool scaled_model=false
+					 ) const;
 
-  /**
-   * @brief Returns the (dual) objective function value for the LP of
-   * the (first?) HighsModelObject
-   */
-  double getObjectiveValue() const;
-
-  /**
-   * @brief Returns the number of simplex iterations for the LP of the
-   * (first?) HighsModelObject
-   */
-  int getIterationCount() const;
   // todo: getRangingInformation(..)
+
+  /**
+   * Methods for operations with the invertible representation of the
+   * current basis matrix
+   */
 
   /**
    * @brief Gets the basic variables in the order corresponding to
@@ -243,83 +265,152 @@ class Highs {
 			       int* col_indices = NULL //!< Indices of nonzeros
 			       );
 
+  
   /**
-   * @brief Uses the HighsSolution passed to set the solution for the
-   * LP of the (first?) HighsModelObject, according to ?? TODO Understand this
-   * ??
+   * @brief Get the number of columns in the LP of the (first?)
+   * HighsModelObject
    */
-  // In the solution passed as a parameter below can have one or many of
-  // col_value, col_dual and row_dual set. If any of them are not set the
-  // solution in Highs does not get updated.
-  HighsStatus setSolution(const HighsSolution& solution);
+  int getNumCols() { return lp_.numCol_; }
 
   /**
-   * @brief Uses the HighsBasis passed to set the basis for the
-   * LP of the (first?) HighsModelObject
+   * @brief Get the number of rows in the LP of the (first?)
+   * HighsModelObject
    */
-  HighsStatus setBasis(const HighsBasis& basis);
+  int getNumRows() { return lp_.numRow_; }
 
   /**
-   * @brief Reports the solution and basis status for the LP of the
-   * (first?) HighsModelObject
+   * @brief Get the number of entries in the LP of the (first?)
+   * HighsModelObject
    */
-  void reportSolution();
+  int getNumEntries() { if (lp_.numCol_) return lp_.Astart_[lp_.numCol_]; return 0; }
 
   /**
-   * @brief Adds a row to the model
+   * @brief Get multiple columns from the model given by an interval
    */
-  bool addRow(
-      const double lower,    //!< Lower bound of the row
-      const double upper,    //!< Upper bound of the row
-      const int num_new_nz,  //!< Number of nonzeros in the row
-      const int* indices,    //!< Array of size num_new_nz with column indices
-      const double* values   //!< Array of size num_new_nz with column values
+  bool getCols(const int from_col,  //!< The index of the first column to get
+                                    //!< from the model
+               const int to_col,  //!< One more than the last column to get from
+                                  //!< the model
+               int& num_col,      //!< Number of columns got from the model
+               double* costs,     //!< Array of size num_col with costs
+               double* lower,     //!< Array of size num_col with lower bounds
+               double* upper,     //!< Array of size num_col with upper bounds
+               int& num_nz,       //!< Number of nonzeros got from the model
+               int* matrix_start,  //!< Array of size num_col with start indices
+                                   //!< of the columns
+               int* matrix_index,  //!< Array of size num_nz with row indices
+                                   //!< for the columns
+               double* matrix_value  //!< Array of size num_nz with row values
+                                     //!< for the columns
   );
 
   /**
-   * @brief Adds multiple rows to the model
+   * @brief Get multiple columns from the model given by a set
    */
-  bool addRows(
-      const int num_new_row,  //!< Number of new rows
-      const double* lower,    //!< Array of size num_new_row with lower bounds
-      const double* upper,    //!< Array of size num_new_row with upper bounds
-      const int num_new_nz,   //!< Number of new nonzeros
-      const int*
-          starts,  //!< Array of size num_new_row with start indices of the rows
-      const int* indices,  //!< Array of size num_new_nz with column indices for
-                           //!< all rows
-      const double*
-          values  //!< Array of size num_new_nz with column values for all rows
+  bool getCols(const int num_set_entries,  //!< The number of indides in the set
+               const int* set,  //!< Array of size num_set_entries with indices
+                                //!< of columns to get
+               int& num_col,    //!< Number of columns got from the model
+               double* costs,   //!< Array of size num_col with costs
+               double* lower,   //!< Array of size num_col with lower bounds
+               double* upper,   //!< Array of size num_col with upper bounds
+               int& num_nz,     //!< Number of nonzeros got from the model
+               int* matrix_start,  //!< Array of size num_col with start indices
+                                   //!< of the columns
+               int* matrix_index,  //!< Array of size num_nz with row indices
+                                   //!< for the columns
+               double* matrix_value  //!< Array of size num_nz with row values
+                                     //!< for the columns
   );
 
   /**
-   * @brief Adds a column to the model
+   * @brief Get multiple columns from the model given by a mask
    */
-  bool addCol(
-      const double cost,     //!< Cost of the column
-      const double lower,    //!< Lower bound of the column
-      const double upper,    //!< Upper bound of the column
-      const int num_new_nz,  //!< Number of nonzeros in the column
-      const int* indices,    //!< Array of size num_new_nz with row indices
-      const double* values   //!< Array of size num_new_nz with row values
+  bool getCols(const int* mask,  //!< Full length array with 1 => get; 0 => not
+               int& num_col,     //!< Number of columns got from the model
+               double* costs,    //!< Array of size num_col with costs
+               double* lower,    //!< Array of size num_col with lower bounds
+               double* upper,    //!< Array of size num_col with upper bounds
+               int& num_nz,      //!< Number of nonzeros got from the model
+               int* matrix_start,    //!<  Array of size num_col with start
+                                     //!<  indices of the columns
+               int* matrix_index,    //!<  Array of size num_nz with row indices
+                                     //!<  for the columns
+               double* matrix_value  //!<  Array of size num_nz with row values
+                                     //!<  for the columns
   );
 
   /**
-   * @brief Adds multiple columns to the model
+   * @brief Get multiple rows from the model given by an interval
    */
-  bool addCols(
-      const int num_new_col,  //!< Number of new columns
-      const double* costs,    //!< Array of size num_new_col with costs
-      const double* lower,    //!< Array of size num_new_col with lower bounds
-      const double* upper,    //!< Array of size num_new_col with upper bounds
-      const int num_new_nz,   //!< Number of new nonzeros
-      const int* starts,   //!< Array of size num_new_row with start indices of
-                           //!< the columns
-      const int* indices,  //!< Array of size num_new_nz with row indices for
-                           //!< all columns
-      const double*
-          values  //!< Array of size num_new_nz with row values for all columns
+  bool getRows(
+      const int from_row,  //!< The index of the first row to get from the model
+      const int to_row,    //!< One more than the last row get from the model
+      int& num_row,        //!< Number of rows got from the model
+      double* lower,       //!< Array of size num_row with lower bounds
+      double* upper,       //!< Array of size num_row with upper bounds
+      int& num_nz,         //!< Number of nonzeros got from the model
+      int* matrix_start,   //!< Array of size num_row with start indices of the
+                           //!< rows
+      int* matrix_index,   //!< Array of size num_nz with column indices for the
+                           //!< rows
+      double* matrix_value  //!< Array of size num_nz with column values for the
+                            //!< rows
   );
+
+  /**
+   * @brief Get multiple rows from the model given by a set
+   */
+  bool getRows(const int num_set_entries,  //!< The number of indides in the set
+               const int* set,  //!< Array of size num_set_entries with indices
+                                //!< of rows to get
+               int& num_row,    //!< Number of rows got from the model
+               double* lower,   //!< Array of size num_row with lower bounds
+               double* upper,   //!< Array of size num_row with upper bounds
+               int& num_nz,     //!< Number of nonzeros got from the model
+               int* matrix_start,  //!< Array of size num_row with start indices
+                                   //!< of the rows
+               int* matrix_index,  //!< Array of size num_nz with column indices
+                                   //!< for the rows
+               double* matrix_value  //!< Array of size num_nz with column
+                                     //!< values for the rows
+  );
+
+  /**
+   * @brief Get multiple rows from the model given by a mask
+   */
+  bool getRows(const int* mask,  //!< Full length array with 1 => get; 0 => not
+               int& num_row,     //!< Number of rows got from the model
+               double* lower,    //!< Array of size num_row with lower bounds
+               double* upper,    //!< Array of size num_row with upper bounds
+               int& num_nz,      //!< Number of nonzeros got from the model
+               int* matrix_start,  //!< Array of size num_row with start indices
+                                   //!< of the rows
+               int* matrix_index,  //!< Array of size num_nz with column indices
+                                   //!< for the rows
+               double* matrix_value  //!< Array of size num_nz with column
+                                     //!< values for the rows
+  );
+
+  /**
+   * @brief Get a matrix coefficient
+   */
+  bool getCoeff(
+		const int row, //!< Row of coefficient to be got
+		const int col, //!< Column of coefficient to be got
+		double& value   //!< Coefficient
+		);
+
+  /**
+   * @brief writes out current model
+   */
+  HighsStatus writeModel(
+			 const std::string filename  //!< the filename
+  );
+
+  /**
+   * Methods for model modification
+   */
 
   /**
    * @brief Change the objective sense of the model
@@ -437,123 +528,62 @@ class Highs {
 		   const int col,     //!< Column of coefficient to be changed
 		   const double value //!< Coefficient
 		   );
-
   /**
-   * @brief Get multiple columns from the model given by an interval
+   * @brief Adds a row to the model
    */
-  bool getCols(const int from_col,  //!< The index of the first column to get
-                                    //!< from the model
-               const int to_col,  //!< One more than the last column to get from
-                                  //!< the model
-               int& num_col,      //!< Number of columns got from the model
-               double* costs,     //!< Array of size num_col with costs
-               double* lower,     //!< Array of size num_col with lower bounds
-               double* upper,     //!< Array of size num_col with upper bounds
-               int& num_nz,       //!< Number of nonzeros got from the model
-               int* matrix_start,  //!< Array of size num_col with start indices
-                                   //!< of the columns
-               int* matrix_index,  //!< Array of size num_nz with row indices
-                                   //!< for the columns
-               double* matrix_value  //!< Array of size num_nz with row values
-                                     //!< for the columns
+  bool addRow(
+      const double lower,    //!< Lower bound of the row
+      const double upper,    //!< Upper bound of the row
+      const int num_new_nz,  //!< Number of nonzeros in the row
+      const int* indices,    //!< Array of size num_new_nz with column indices
+      const double* values   //!< Array of size num_new_nz with column values
   );
 
   /**
-   * @brief Get multiple columns from the model given by a set
+   * @brief Adds multiple rows to the model
    */
-  bool getCols(const int num_set_entries,  //!< The number of indides in the set
-               const int* set,  //!< Array of size num_set_entries with indices
-                                //!< of columns to get
-               int& num_col,    //!< Number of columns got from the model
-               double* costs,   //!< Array of size num_col with costs
-               double* lower,   //!< Array of size num_col with lower bounds
-               double* upper,   //!< Array of size num_col with upper bounds
-               int& num_nz,     //!< Number of nonzeros got from the model
-               int* matrix_start,  //!< Array of size num_col with start indices
-                                   //!< of the columns
-               int* matrix_index,  //!< Array of size num_nz with row indices
-                                   //!< for the columns
-               double* matrix_value  //!< Array of size num_nz with row values
-                                     //!< for the columns
+  bool addRows(
+      const int num_new_row,  //!< Number of new rows
+      const double* lower,    //!< Array of size num_new_row with lower bounds
+      const double* upper,    //!< Array of size num_new_row with upper bounds
+      const int num_new_nz,   //!< Number of new nonzeros
+      const int*
+          starts,  //!< Array of size num_new_row with start indices of the rows
+      const int* indices,  //!< Array of size num_new_nz with column indices for
+                           //!< all rows
+      const double*
+          values  //!< Array of size num_new_nz with column values for all rows
   );
 
   /**
-   * @brief Get multiple columns from the model given by a mask
+   * @brief Adds a column to the model
    */
-  bool getCols(const int* mask,  //!< Full length array with 1 => get; 0 => not
-               int& num_col,     //!< Number of columns got from the model
-               double* costs,    //!< Array of size num_col with costs
-               double* lower,    //!< Array of size num_col with lower bounds
-               double* upper,    //!< Array of size num_col with upper bounds
-               int& num_nz,      //!< Number of nonzeros got from the model
-               int* matrix_start,    //!<  Array of size num_col with start
-                                     //!<  indices of the columns
-               int* matrix_index,    //!<  Array of size num_nz with row indices
-                                     //!<  for the columns
-               double* matrix_value  //!<  Array of size num_nz with row values
-                                     //!<  for the columns
+  bool addCol(
+      const double cost,     //!< Cost of the column
+      const double lower,    //!< Lower bound of the column
+      const double upper,    //!< Upper bound of the column
+      const int num_new_nz,  //!< Number of nonzeros in the column
+      const int* indices,    //!< Array of size num_new_nz with row indices
+      const double* values   //!< Array of size num_new_nz with row values
   );
 
   /**
-   * @brief Get multiple rows from the model given by an interval
+   * @brief Adds multiple columns to the model
    */
-  bool getRows(
-      const int from_row,  //!< The index of the first row to get from the model
-      const int to_row,    //!< One more than the last row get from the model
-      int& num_row,        //!< Number of rows got from the model
-      double* lower,       //!< Array of size num_row with lower bounds
-      double* upper,       //!< Array of size num_row with upper bounds
-      int& num_nz,         //!< Number of nonzeros got from the model
-      int* matrix_start,   //!< Array of size num_row with start indices of the
-                           //!< rows
-      int* matrix_index,   //!< Array of size num_nz with column indices for the
-                           //!< rows
-      double* matrix_value  //!< Array of size num_nz with column values for the
-                            //!< rows
+  bool addCols(
+      const int num_new_col,  //!< Number of new columns
+      const double* costs,    //!< Array of size num_new_col with costs
+      const double* lower,    //!< Array of size num_new_col with lower bounds
+      const double* upper,    //!< Array of size num_new_col with upper bounds
+      const int num_new_nz,   //!< Number of new nonzeros
+      const int* starts,   //!< Array of size num_new_row with start indices of
+                           //!< the columns
+      const int* indices,  //!< Array of size num_new_nz with row indices for
+                           //!< all columns
+      const double*
+          values  //!< Array of size num_new_nz with row values for all columns
   );
 
-  /**
-   * @brief Get multiple rows from the model given by a set
-   */
-  bool getRows(const int num_set_entries,  //!< The number of indides in the set
-               const int* set,  //!< Array of size num_set_entries with indices
-                                //!< of rows to get
-               int& num_row,    //!< Number of rows got from the model
-               double* lower,   //!< Array of size num_row with lower bounds
-               double* upper,   //!< Array of size num_row with upper bounds
-               int& num_nz,     //!< Number of nonzeros got from the model
-               int* matrix_start,  //!< Array of size num_row with start indices
-                                   //!< of the rows
-               int* matrix_index,  //!< Array of size num_nz with column indices
-                                   //!< for the rows
-               double* matrix_value  //!< Array of size num_nz with column
-                                     //!< values for the rows
-  );
-
-  /**
-   * @brief Get multiple rows from the model given by a mask
-   */
-  bool getRows(const int* mask,  //!< Full length array with 1 => get; 0 => not
-               int& num_row,     //!< Number of rows got from the model
-               double* lower,    //!< Array of size num_row with lower bounds
-               double* upper,    //!< Array of size num_row with upper bounds
-               int& num_nz,      //!< Number of nonzeros got from the model
-               int* matrix_start,  //!< Array of size num_row with start indices
-                                   //!< of the rows
-               int* matrix_index,  //!< Array of size num_nz with column indices
-                                   //!< for the rows
-               double* matrix_value  //!< Array of size num_nz with column
-                                     //!< values for the rows
-  );
-
-  /**
-   * @brief Get a matrix coefficient
-   */
-  bool getCoeff(
-		const int row, //!< Row of coefficient to be changed
-		const int col, //!< Column of coefficient to be changed
-		double& value   //!< Coefficient
-		);
 
   /**
    * @brief Delete multiple columns from the model given by an interval
@@ -568,16 +598,17 @@ class Highs {
    * @brief Delete multiple columns from the model given by a set
    */
   bool deleteCols(
-      const int num_set_entries,  //!< The number of indides in the set
-      const int* set  //!< Array of size num_set_entries with indices of columns
-                      //!< to delete
-  );
+		  const int num_set_entries,  //!< The number of indides in the set
+		  const int* set              //!< Array of size num_set_entries with indices of columns
+                                              //!< to delete
+		  );
 
   /**
    * @brief Delete multiple columns from the model given by a mask
    */
-  bool deleteCols(int* mask  //!< Full length array with 1 => delete; 0 => not
-  );
+  bool deleteCols(int* mask  //!< Full length array with 1 => delete; !0 => not. The new index of any column
+			     //!not deleted is returned in place of the value 0.
+		  );
 
   /**
    * @brief Delete multiple rows from the model given by an interval
@@ -592,33 +623,72 @@ class Highs {
    * @brief Delete multiple rows from the model given by a set
    */
   bool deleteRows(
-      const int num_set_entries,  //!< The number of indides in the set
-      const int* set  //!< Array of size num_set_entries with indices of columns
-                      //!< to delete
-  );
+		  const int num_set_entries, //!< The number of indides in the set
+		  const int* set             //!< Array of size num_set_entries with indices of columns
+                                             //!< to delete
+		  );
 
   /**
    * @brief Delete multiple rows from the model given by a mask
    */
   bool deleteRows(
-		  int* mask  //!< Full length array with 1 => delete; 0 => not
-  );
+		  int* mask  //!< Full length array with 1 => delete; 0 => not. The new index of any row
+			     //!< not deleted is returned in place of the value 0.
+		  );
 
-  
+  /**
+   * Other methods for specialist applications
+   */
+
+  /**
+   * Methods for setting the basis and solution
+   */
+
+  /**
+   * @brief Uses the HighsSolution passed to set the solution for the
+   * LP of the (first?) HighsModelObject, according to ?? TODO Understand this
+   * ??
+   */
+  // In the solution passed as a parameter below can have one or many of
+  // col_value, col_dual and row_dual set. If any of them are not set the
+  // solution in Highs does not get updated.
+  HighsStatus setSolution(
+			  const HighsSolution& solution //!< Solution to be used
+			  );
+
+  /**
+   * @brief Uses the HighsBasis passed to set the basis for the
+   * LP of the (first?) HighsModelObject
+   */
+  HighsStatus setBasis(
+		       const HighsBasis& basis //!< Basis to be used
+		       );
+
+  // todo: getRangingInformation(..)
+
   /**
    * @brief Clear data associated with solving the model: basis, solution and internal data etc
    */
   HighsStatus clearSolver();
 
-  // ipx (not implemented)
+#ifdef HiGHSDEV
+  /**
+   * @brief Report the model status, solution and basis vector sizes and basis validity
+   */
+  void reportModelStatusSolutionBasis(const std::string message,
+				      const HighsModelStatus model_status,
+				      const HighsLp &lp,
+				      const HighsSolution &solution,
+				      const HighsBasis &basis);
+#endif
 
-  // todo: Set warm/hot start methods
-
+  std::string highsModelStatusToString(const HighsModelStatus model_status);
+  
+  std::string highsPrimalDualStatusToString(const int primal_dual_status);
+  
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
 #endif
-
-  HighsOptions options_;
 
  private:
   HighsSolution solution_;
@@ -628,6 +698,16 @@ class Highs {
 
   HighsTimer timer_;
 
+  HighsOptions options_;
+  HighsInfo info_;
+
+  // Have copies in the HiGHS class so that const references to them
+  // can be passed back, regardless of whether there is a HMO, or not,
+  // and also to make objective_value and iteration_count independent
+  // of whether simplex or IMP is used as a solver.
+  HighsModelStatus model_status_ = HighsModelStatus::NOTSET;
+  HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
+
   // Each HighsModelObject holds a const ref to its lp_. There are potentially
   // several hmos_ to allow for the solution of several different modified
   // versions of the original LP. For instance different levels of presolve.
@@ -635,9 +715,7 @@ class Highs {
 
   //  bool allow_presolve_;
 
-  HighsStatus callRunSolver(HighsModelObject& model, int& iteration_count,
-                            const string message);
-  HighsStatus runSolver(HighsModelObject& model);
+  HighsStatus runLpSolver(HighsModelObject& model, const string message);
 
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
@@ -645,6 +723,10 @@ class Highs {
   HighsStatus runBnb();
   HighsStatus solveRootNode(Node& root);
   HighsStatus solveNode(Node& node);
+
+  bool haveHmo(const string method_name);
+  bool updateHighsSolutionBasis();
+  bool getHighsModelStatusAndInfo(const int solved_hmo);
 
   void underDevelopmentLogMessage(const string method_name);
 };

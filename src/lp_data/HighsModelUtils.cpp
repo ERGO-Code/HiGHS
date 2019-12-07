@@ -104,7 +104,8 @@ std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
   return "";
 }
 
-void reportModelBoundSol(const bool columns, const int dim,
+void reportModelBoundSol(FILE* file,
+			 const bool columns, const int dim,
                          const std::vector<double>& lower,
                          const std::vector<double>& upper,
                          const std::vector<std::string>& names,
@@ -117,17 +118,15 @@ void reportModelBoundSol(const bool columns, const int dim,
   const bool have_dual = dual.size() > 0;
   std::string ch4_var_status;
   if (columns) {
-    HighsPrintMessage(ML_ALWAYS, "Columns\n");
+    fprintf(file, "Columns\n");
   } else {
-    HighsPrintMessage(ML_ALWAYS, "Rows\n");
+    fprintf(file, "Rows\n");
   }
-  HighsPrintMessage(
-      ML_ALWAYS,
-      "    Index Status        Lower        Upper       Primal         Dual");
+  fprintf(file, "    Index Status        Lower        Upper       Primal         Dual");
   if (have_names) {
-    HighsPrintMessage(ML_ALWAYS, "  Name\n");
+    fprintf(file, "  Name\n");
   } else {
-    HighsPrintMessage(ML_ALWAYS, "\n");
+    fprintf(file, "\n");
   }
   for (int ix = 0; ix < dim; ix++) {
     if (have_basis) {
@@ -135,22 +134,22 @@ void reportModelBoundSol(const bool columns, const int dim,
     } else {
       ch4_var_status = "";
     }
-    HighsPrintMessage(ML_ALWAYS, "%9d   %4s %12g %12g", ix,
+    fprintf(file, "%9d   %4s %12g %12g", ix,
                       ch4_var_status.c_str(), lower[ix], upper[ix]);
     if (have_primal) {
-      HighsPrintMessage(ML_ALWAYS, " %12g", primal[ix]);
+      fprintf(file, " %12g", primal[ix]);
     } else {
-      HighsPrintMessage(ML_ALWAYS, "             ");
+      fprintf(file, "             ");
     }
     if (have_dual) {
-      HighsPrintMessage(ML_ALWAYS, " %12g", dual[ix]);
+      fprintf(file, " %12g", dual[ix]);
     } else {
-      HighsPrintMessage(ML_ALWAYS, "             ");
+      fprintf(file, "             ");
     }
     if (have_names) {
-      HighsPrintMessage(ML_ALWAYS, "  %-s\n", names[ix].c_str());
+      fprintf(file, "  %-s\n", names[ix].c_str());
     } else {
-      HighsPrintMessage(ML_ALWAYS, "\n");
+      fprintf(file, "\n");
     }
   }
 }
@@ -210,8 +209,72 @@ HighsStatus normaliseNames(const std::string name_type, const int num_name, std:
   return HighsStatus::OK;
 }
 
+HighsBasisStatus checkedVarHighsNonbasicStatus(const HighsBasisStatus ideal_status, const double lower, const double upper) {
+  HighsBasisStatus checked_status;
+  if (ideal_status == HighsBasisStatus::LOWER ||
+      ideal_status == HighsBasisStatus::ZERO) {
+    // Looking to give status LOWER or ZERO
+    if (highs_isInfinity(-lower)) {
+      // Lower bound is infinite
+      if (highs_isInfinity(upper)) {
+	// Upper bound is infinite
+	checked_status = HighsBasisStatus::ZERO;
+      } else {
+	// Upper bound is finite
+	checked_status = HighsBasisStatus::UPPER;
+      }
+    } else {
+      checked_status = HighsBasisStatus::LOWER;
+    }
+  } else {
+    // Looking to give status UPPER
+    if (highs_isInfinity(upper)) {
+      // Upper bound is infinite
+      if (highs_isInfinity(-lower)) {
+	// Lower bound is infinite
+	checked_status = HighsBasisStatus::ZERO;
+      } else {
+	// Upper bound is finite
+	checked_status = HighsBasisStatus::LOWER;
+      }
+    } else {
+      checked_status = HighsBasisStatus::UPPER;
+    }
+  }
+  return checked_status;
+}
+
+// Return a string representation of PrimalDualStatus
+std::string utilPrimalDualStatusToString(const int primal_dual_status) {
+
+  switch (primal_dual_status) {
+  case PrimalDualStatus::STATUS_NOTSET:
+    return "Not set";
+    break;
+  case PrimalDualStatus::STATUS_NO_SOLUTION:
+    return "No solution";
+    break;
+  case PrimalDualStatus::STATUS_UNKNOWN:
+    return "Point of unknown feasibility";
+    break;
+  case PrimalDualStatus::STATUS_INFEASIBLE_POINT:
+    return "Infeasible point";
+    break;
+  case PrimalDualStatus::STATUS_FEASIBLE_POINT:
+    return "Feasible point";
+    break;
+  default:
+#ifdef HiGHSDEV
+    printf("Primal/dual status %d not recognised\n", primal_dual_status);
+#endif
+    return "Unrecognised primal/dual status";
+    break;
+  }
+  return "";
+}
+
 // Return a string representation of HighsModelStatus.
-std::string highsModelStatusToString(HighsModelStatus model_status) {
+std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
 
   switch (model_status) {
   case HighsModelStatus::NOTSET:
@@ -235,12 +298,6 @@ std::string highsModelStatusToString(HighsModelStatus model_status) {
   case HighsModelStatus::POSTSOLVE_ERROR:
       return "Postsolve error";
       break;
-  case HighsModelStatus::PRIMAL_FEASIBLE:
-      return "Primal feasible";
-      break;
-  case HighsModelStatus::DUAL_FEASIBLE:
-      return "Dual feasible";
-      break;
   case HighsModelStatus::PRIMAL_INFEASIBLE:
     return "Infeasible";//"Primal infeasible";
       break;
@@ -260,17 +317,21 @@ std::string highsModelStatusToString(HighsModelStatus model_status) {
       return "Reached iteration limit";
       break;
     default:
-      return "Status toString() not implemented.";
+#ifdef HiGHSDEV
+      printf("HiGHS model status %d not recognised\n", (int)model_status);
+#endif
+      return "Unrecognised HiGHS model status";
       break;
   }
   return "";
 }
-
+/*
 // Report a HighsModelStatus.
 void highsModelStatusReport(const char* message, HighsModelStatus model_status) {
   HighsLogMessage(HighsMessageType::INFO, "%s: HighsModelStatus = %d - %s\n",
-                  message, (int)model_status, highsModelStatusToString(model_status).c_str());
+                  message, (int)model_status, utilHighsModelStatusToString(model_status).c_str());
 }
+*/
 
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
@@ -289,10 +350,6 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     return HighsStatus::Error;
   case HighsModelStatus::POSTSOLVE_ERROR:
     return HighsStatus::Error;
-  case HighsModelStatus::PRIMAL_FEASIBLE:
-    return HighsStatus::OK;
-  case HighsModelStatus::DUAL_FEASIBLE:
-    return HighsStatus::OK;
   case HighsModelStatus::PRIMAL_INFEASIBLE:
     return HighsStatus::OK;
   case HighsModelStatus::PRIMAL_UNBOUNDED:
