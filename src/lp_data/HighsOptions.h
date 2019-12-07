@@ -477,6 +477,12 @@ class HighsOptions {
 				     false);
     records.push_back(record_bool);
     
+    record_bool = new OptionRecordBool("icrash_breakpoints",
+				     "Exact subproblem solution for iCrash",
+				     advanced, &icrash_breakpoints,
+				     false);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt("icrash_approximate_minimization_iterations",
 				     "iCrash approximate minimization iterations",
 				     advanced, &icrash_approximate_minimization_iterations,
@@ -552,6 +558,7 @@ class HighsOptions {
   int icrash_iterations;
   int icrash_approximate_minimization_iterations;
   bool icrash_exact;
+  bool icrash_breakpoints;
 
   // Switch for MIP solver
   bool mip;
