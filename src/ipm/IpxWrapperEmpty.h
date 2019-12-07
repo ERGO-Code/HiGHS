@@ -11,8 +11,8 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef INTERIOR_POINT_IPX_WRAPPER_EMPTY_H_
-#define INTERIOR_POINT_IPX_WRAPPER_EMPTY_H_
+#ifndef IPM_IPX_WRAPPER_EMPTY_H_
+#define IPM_IPX_WRAPPER_EMPTY_H_
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
