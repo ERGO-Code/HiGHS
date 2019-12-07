@@ -33,8 +33,7 @@
 HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
 				      const string message) {
 
-  HighsSolutionParams get_unscaled_solution_params;
-  invalidateSolutionParams(get_unscaled_solution_params);
+  HighsSolutionParams get_unscaled_solution_params = highs_model_object.unscaled_solution_params_;
   HighsPrimalDualErrors primal_dual_errors;
   double primal_objective_value;
   double dual_objective_value;
@@ -1019,6 +1018,11 @@ void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
 				       HighsSolutionParams& solution_params,
 				       const HighsOptions& options) {
   model_status = HighsModelStatus::NOTSET;
+  resetSolutionParams(solution_params, options);
+}
+
+void resetSolutionParams(HighsSolutionParams& solution_params,
+			 const HighsOptions& options) {
   // Set the feasibility tolerances - not affected by invalidateSolutionParams
   solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;

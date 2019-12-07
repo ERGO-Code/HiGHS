@@ -124,6 +124,8 @@ void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
 				       HighsSolutionParams& solution_params,
 				       const HighsOptions& options);
+void resetSolutionParams(HighsSolutionParams& solution_params,
+			 const HighsOptions& options);
 
 void invalidateSolutionParams(HighsSolutionParams& solution_params);
 void invalidateSolutionIterationCountAndObjectiveParams(HighsSolutionParams& solution_params);
