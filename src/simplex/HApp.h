@@ -175,7 +175,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       timer.start(simplex_info.clock_[BasisConditionClock]);
       double basis_condition = computeBasisCondition(highs_model_object);
       timer.stop(simplex_info.clock_[BasisConditionClock]);
-      HighsLogMessage(HighsMessageType::INFO,
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                       "Final basis condition estimate is %g", basis_condition);
     }
 
@@ -191,13 +191,13 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
 
     if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
-      HighsLogMessage(HighsMessageType::INFO,
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d] Total %d",
                       simplex_info.primal_phase1_iteration_count,
                       simplex_info.primal_phase2_iteration_count,
                       scaled_solution_params.simplex_iteration_count);
     } else {
-      HighsLogMessage(HighsMessageType::INFO,
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d",
                       simplex_info.dual_phase1_iteration_count,
                       simplex_info.dual_phase2_iteration_count,
@@ -226,7 +226,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
     call_status = 
-      analyseHighsBasicSolution(highs_model_object, "to check simplex basic solution");
+      analyseHighsBasicSolution(highs_model_object.options_.logfile,
+				highs_model_object, "to check simplex basic solution");
     return_status = interpretCallStatus(call_status, return_status, "analyseHighsBasicSolution");
     if (return_status == HighsStatus::Error) return return_status;
     // Invalidate the basis to make sure it is set again later
@@ -248,7 +249,8 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
     double new_primal_feasibility_tolerance;
     double new_dual_feasibility_tolerance;
 #ifdef HiGHSDEV
-    HighsLogMessage(HighsMessageType::INFO, "tryToSolveUnscaledLp pass %1d:", pass);
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		    "tryToSolveUnscaledLp pass %1d:", pass);
 #endif
     // Deduce the unscaled solution parameters, and new fasibility tolerances if not primal and/or dual feasible
     call_status =
@@ -270,17 +272,18 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
     //Not optimal
     assert(num_unscaled_primal_infeasibilities > 0 || num_unscaled_dual_infeasibilities > 0);
 
-    HighsLogMessage(HighsMessageType::INFO,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		    "Have %d primal and %d dual unscaled infeasibilities",
 		    num_unscaled_primal_infeasibilities,
 		    num_unscaled_dual_infeasibilities);
-    HighsLogMessage(HighsMessageType::INFO,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		    "Possibly re-solve with feasibility tolerances of %g primal and %g dual",
 		    new_primal_feasibility_tolerance,
 		    new_dual_feasibility_tolerance);
     const bool refinement = false;
     if (refinement) {
-      HighsLogMessage(HighsMessageType::INFO, "Re-solving with refined tolerances");
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		      "Re-solving with refined tolerances");
       highs_model_object.scaled_solution_params_.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
 
@@ -297,7 +300,8 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
       return_status = interpretCallStatus(call_status, return_status);
       if (return_status == HighsStatus::Error) return return_status;
     } else {
-      HighsLogMessage(HighsMessageType::INFO, "Not re-solving with refined tolerances");
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		      "Not re-solving with refined tolerances");
       return return_status;
     }
   }

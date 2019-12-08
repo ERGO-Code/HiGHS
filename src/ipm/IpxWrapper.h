@@ -292,7 +292,8 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
       printf("IPX GetBasicSolution: status_crossover = %d\n", int_status_crossover);
 
     // Convert the IPX basic solution to a HiGHS basic solution
-    ipxToHighsBasicSolution(lp, rhs, constraint_type, ipx_solution, highs_basis, highs_solution);
+    ipxToHighsBasicSolution(options.logfile,
+			    lp, rhs, constraint_type, ipx_solution, highs_basis, highs_solution);
 
     
     // Set optimal 

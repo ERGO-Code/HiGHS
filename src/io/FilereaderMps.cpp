@@ -26,7 +26,8 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
   // Parse file and return status.
   if (options.mps_parser_type_free) {
     HMpsFF parser{};
-    FreeFormatParserReturnCode result = parser.loadProblem(filename, model);
+    FreeFormatParserReturnCode result = parser.loadProblem(options.logfile,
+							   filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::SUCCESS:
         return FilereaderRetcode::OK;

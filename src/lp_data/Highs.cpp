@@ -412,7 +412,8 @@ HighsStatus Highs::run() {
           hmos_[original_hmo].basis_.row_status =
               presolve_info.presolve_[0].getRowStatus();
           hmos_[original_hmo].basis_.valid_ = true;
-	  analyseHighsBasicSolution(hmos_[original_hmo],
+	  analyseHighsBasicSolution(options_.logfile,
+				    hmos_[original_hmo],
 				    "after returning from postsolve");
           // Now hot-start the simplex solver for the original_hmo
           solved_hmo = original_hmo;
@@ -721,7 +722,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   underDevelopmentLogMessage("setBasis");
-  if (!basisOk(lp_, basis)) {
+  if (!basisOk(options_.logfile, lp_, basis)) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
 		    "setBasis: invalid basis");
     return HighsStatus::Error;
@@ -1213,7 +1214,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
       return HighsStatus::Error;
     }
   }
-  call_status = analyseHighsBasicSolution(model.lp_, model.basis_, model.solution_,
+  call_status = analyseHighsBasicSolution(options_.logfile,
+					  model.lp_, model.basis_, model.solution_,
 					  model.unscaled_model_status_,
 					  model.unscaled_solution_params_,
 					  message);

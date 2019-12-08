@@ -32,7 +32,7 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   lp_fixed_format.nnz_ = lp_fixed_format.Avalue_.size();
   if (status == FilereaderRetcode::OK) {
     HMpsFF parser{};
-    FreeFormatParserReturnCode result = parser.loadProblem(filename, lp_free_format);
+    FreeFormatParserReturnCode result = parser.loadProblem(stdout, filename, lp_free_format);
     if (result != FreeFormatParserReturnCode::SUCCESS)
       status = FilereaderRetcode::PARSERERROR;
     if (status == FilereaderRetcode::OK)
@@ -112,7 +112,7 @@ TEST_CASE("dualize", "[highs_data]") {
 
   HighsLp lp;
   HMpsFF parser{};
-  FreeFormatParserReturnCode result = parser.loadProblem(filename, lp);
+  FreeFormatParserReturnCode result = parser.loadProblem(stdout, filename, lp);
   REQUIRE(result == FreeFormatParserReturnCode::SUCCESS);
 
   HighsLp primal = transformIntoEqualityProblem(lp);

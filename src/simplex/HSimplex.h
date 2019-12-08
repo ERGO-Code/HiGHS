@@ -42,10 +42,10 @@ void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNew
 void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
 void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow);
 
-bool basisOk(const HighsLp& lp, const HighsBasis& basis);
-bool basisOk(const HighsLp& lp, SimplexBasis& simplex_basis);
+bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis);
+bool basisOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis);
 
-bool nonbasicFlagOk(const HighsLp& lp, SimplexBasis& simplex_basis);
+bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis);
 
 #ifdef HiGHSDEV
 void report_basis(HighsLp& lp, HighsBasis& basis);
@@ -238,7 +238,8 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(cons
 									    double& new_scaled_primal_feasibility_tolerance,
 									    double& new_scaled_dual_feasibility_tolerance);
 
-HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(const HighsLp& lp,
+HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(FILE* logfile,
+										 const HighsLp& lp,
 										 const HighsScale& scale,
 										 const SimplexBasis& basis,
 										 const HighsSimplexInfo& simplex_info,

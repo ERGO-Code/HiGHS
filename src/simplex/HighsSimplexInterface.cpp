@@ -21,10 +21,9 @@
 #include "util/HighsUtils.h"
 #include "util/HighsSort.h"
 
-HighsStatus HighsSimplexInterface::addCols(
-    int XnumNewCol, const double* XcolCost, const double* XcolLower,
-    const double* XcolUpper, int XnumNewNZ, const int* XAstart,
-    const int* XAindex, const double* XAvalue) {
+HighsStatus HighsSimplexInterface::addCols(int XnumNewCol, const double* XcolCost, const double* XcolLower,
+					   const double* XcolUpper, int XnumNewNZ, const int* XAstart,
+					   const int* XAindex, const double* XAvalue) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
 #ifdef HiGHSDEV
@@ -111,13 +110,13 @@ HighsStatus HighsSimplexInterface::addCols(
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basis_ok = basisOk(lp, basis);
+    bool basis_ok = basisOk(options.logfile, lp, basis);
     if (!basis_ok) printf("HiGHS basis not OK in addCols\n");
     assert(basis_ok);
     report_basis(lp, basis);
   }
   if (valid_simplex_basis) {
-    bool basis_ok = basisOk(simplex_lp, simplex_basis);
+    bool basis_ok = basisOk(options.logfile, simplex_lp, simplex_basis);
     if (!basis_ok) printf("Simplex basis not OK in addCols\n");
     assert(basis_ok);
     report_basis(simplex_lp, simplex_basis);
@@ -363,13 +362,13 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basis_ok = basisOk(lp, basis);
+    bool basis_ok = basisOk(options.logfile, lp, basis);
     if (!basis_ok) printf("HiGHS basis not OK in addRows\n");
     assert(basis_ok);
     report_basis(lp, basis);
   }
   if (valid_simplex_basis) {
-    bool basis_ok = basisOk(simplex_lp, simplex_basis);
+    bool basis_ok = basisOk(options.logfile, simplex_lp, simplex_basis);
     if (!basis_ok) printf("Simplex basis not OK in addRows\n");
     assert(basis_ok);
     report_basis(simplex_lp, simplex_basis);
@@ -686,7 +685,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     // If the matrix start vector is null then don't get values of
     // indices, otherwise both are meaningless
     if (row_matrix_index != NULL || row_matrix_value != NULL) {
-      HighsLogMessage(HighsMessageType::ERROR,
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
 		      "Cannot supply meaningful row matrix indices/values with null starts");
       free (new_index);
       free (row_matrix_length);
@@ -826,7 +825,7 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
     const double* usr_col_cost) {
   bool null_data = false;
   if (usr_col_cost == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied column costs are NULL");
     null_data = true;
   }
@@ -888,12 +887,12 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
 							  const double* usr_col_upper) {
   bool null_data = false;
   if (usr_col_lower == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied column lower bounds are NULL");
     null_data = true;
   }
   if (usr_col_upper == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied column upper bounds are NULL");
     null_data = true;
   }
@@ -981,12 +980,12 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
     const double* usr_row_lower, const double* usr_row_upper) {
   bool null_data = false;
   if (usr_row_lower == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied row lower bounds are NULL");
     null_data = true;
   }
   if (usr_row_upper == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied row upper bounds are NULL");
     null_data = true;
   }

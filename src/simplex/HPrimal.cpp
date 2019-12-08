@@ -338,7 +338,7 @@ void HPrimal::primalRebuild() {
         absPrimalObjectiveError / max(1.0, fabs(primal_objective_value));
     // TODO Investigate these Primal objective value errors
     if (rlvPrimalObjectiveError >= 1e-8) {
-      HighsLogMessage(HighsMessageType::WARNING,
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
                       "Primal objective value error |rel| = %12g (%12g)",
                       absPrimalObjectiveError, rlvPrimalObjectiveError);
     }

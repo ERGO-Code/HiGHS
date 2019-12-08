@@ -767,8 +767,8 @@ void HDual::rebuild() {
         absDualObjectiveError / max(1.0, fabs(dual_objective_value));
     // TODO Investigate these Dual objective value errors
     if (rlvDualObjectiveError >= 1e-8) {
-      HighsLogMessage(HighsMessageType::WARNING, "Dual objective value error
-    |rel| = %12g (%12g)", absDualObjectiveError, rlvDualObjectiveError);
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING, 
+    "Dual objective value error |rel| = %12g (%12g)", absDualObjectiveError, rlvDualObjectiveError);
     }
   }
   */
@@ -1039,7 +1039,7 @@ void HDual::iterationAnalysis() {
 	(lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot);
 #ifdef HiGHSDEV
       if (switch_to_devex) {
-	HighsLogMessage(HighsMessageType::INFO,
+	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
 			"Switch from DSE to Devex after %d costly DSE iterations of %d: "
 			"Col_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
 			AnIterNumCostlyDseIt, lcNumIter, rowdseDensity, row_epDensity,
@@ -1058,7 +1058,7 @@ void HDual::iterationAnalysis() {
 	dse_weight_error_measure > dse_weight_error_threshhold;
 #ifdef HiGHSDEV
       if (switch_to_devex) {
-	HighsLogMessage(HighsMessageType::INFO,
+	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
 			"Switch from DSE to Devex with log error measure of %g > %g = threshhold",
 			dse_weight_error_measure, dse_weight_error_threshhold);
       }

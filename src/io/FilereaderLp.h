@@ -99,7 +99,8 @@ class LpToken {
  public:
   LpTokenType type;
   virtual void print() {
-    HighsLogMessage(HighsMessageType::INFO, "%s ", LpTokenTypeString[type]);
+    HighsLogMessage(stdout, HighsMessageType::INFO,
+		    "%s ", LpTokenTypeString[type]);
   }
 
   virtual ~LpToken() { ; }
@@ -190,7 +191,7 @@ class LpTokenComparison : public LpToken {
           this->comparison = LpComparisonIndicator::GEQ;
         } else {
           // error
-          HighsLogMessage(HighsMessageType::ERROR,
+          HighsLogMessage(stdout, HighsMessageType::ERROR,
                           "Invalid comparison indicator.\n");
         }
         break;
@@ -199,7 +200,7 @@ class LpTokenComparison : public LpToken {
           this->comparison = LpComparisonIndicator::LEQ;
         } else {
           // error
-          HighsLogMessage(HighsMessageType::ERROR,
+          HighsLogMessage(stdout, HighsMessageType::ERROR,
                           "Invalid comparison indicator.\n");
         }
         break;
@@ -212,13 +213,13 @@ class LpTokenComparison : public LpToken {
           this->comparison = LpComparisonIndicator::LEQ;
         } else {
           // error
-          HighsLogMessage(HighsMessageType::ERROR,
+          HighsLogMessage(stdout, HighsMessageType::ERROR,
                           "Invalid comparison indicator.\n");
         }
         break;
       default:
         // error
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
                         "Invalid comparison indicator.\n");
     }
   }

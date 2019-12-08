@@ -46,13 +46,15 @@ struct HighsPrimalDualErrors {
 // Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
 // of the unscaled LP in a HighsModelObject instance, after computing
 // the unscaled infeasibilities locally
-HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+HighsStatus analyseHighsBasicSolution(FILE* logfile,
+				      const HighsModelObject& highs_model_object,
 				      const string message);
 
 // Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
 // of the unscaled LP in a HighsModelObject instance, assuming that
 // the unscaled infeasibilities are known
-HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+HighsStatus analyseHighsBasicSolution(FILE* logfile,
+				      const HighsModelObject& highs_model_object,
 				      const HighsSolutionParams& unscaled_solution_params,
 				      const string message);
 
@@ -61,7 +63,8 @@ HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object
 // scaled LP. The solution data passed in is assumed to be correct and
 // it is checked as much as possible. Inconsistencies are reported,
 // but not corrected.
-HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
+HighsStatus analyseHighsBasicSolution(FILE* logfile,
+				      const HighsLp& lp,
 				      const HighsBasis& basis,
 				      const HighsSolution& solution,
 				      const HighsModelStatus model_status,
@@ -69,7 +72,8 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
 				      const string message);
 
 // As above, but with report_level
-HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
+HighsStatus analyseHighsBasicSolution(FILE* logfile,
+				      const HighsLp& lp,
 				      const HighsBasis& basis,
 				      const HighsSolution& solution,
 				      const HighsModelStatus model_status,
@@ -91,26 +95,27 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(const HighsLp& 
 								 double& dual_objective_value,
 								 const int report_level=-1);
 bool analyseVarBasicSolution(
-			bool report,
-			const double primal_feasibility_tolerance,
-			const double dual_feasibility_tolerance,
-			const HighsBasisStatus status,
-			const double lower,
-			const double upper,
-			const double value,
-			const double dual,
-			int& num_non_basic_var,
-			int& num_basic_var,
-			double& off_bound_nonbasic,
-			double& primal_infeasibility,
-			double& dual_infeasibility);
+			     bool report,
+			     const double primal_feasibility_tolerance,
+			     const double dual_feasibility_tolerance,
+			     const HighsBasisStatus status,
+			     const double lower,
+			     const double upper,
+			     const double value,
+			     const double dual,
+			     int& num_non_basic_var,
+			     int& num_basic_var,
+			     double& off_bound_nonbasic,
+			     double& primal_infeasibility,
+			     double& dual_infeasibility);
 
 #ifdef HiGHSDEV
 void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_model_object);
 #endif
 
 #ifdef IPX_ON
-HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
+HighsStatus ipxToHighsBasicSolution(FILE* logfile,
+				    const HighsLp& lp,
 				    const std::vector<double>& rhs,
 				    const std::vector<char>& constraint_type,
 				    const IpxSolution& ipx_solution,
