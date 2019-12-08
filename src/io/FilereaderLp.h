@@ -99,7 +99,8 @@ class LpToken {
  public:
   LpTokenType type;
   virtual void print() {
-    HighsLogMessage(HighsMessageType::INFO, "%s ", LpTokenTypeString[type]);
+    HighsLogMessage(stdout, HighsMessageType::INFO,
+		    "%s ", LpTokenTypeString[type]);
   }
 
   virtual ~LpToken() { ; }
@@ -190,7 +191,7 @@ class LpTokenComparison : public LpToken {
           this->comparison = LpComparisonIndicator::GEQ;
         } else {
           // error
-          HighsLogMessage(HighsMessageType::ERROR,
+          HighsLogMessage(stdout, HighsMessageType::ERROR,
                           "Invalid comparison indicator.\n");
         }
         break;
@@ -199,7 +200,7 @@ class LpTokenComparison : public LpToken {
           this->comparison = LpComparisonIndicator::LEQ;
         } else {
           // error
-          HighsLogMessage(HighsMessageType::ERROR,
+          HighsLogMessage(stdout, HighsMessageType::ERROR,
                           "Invalid comparison indicator.\n");
         }
         break;
@@ -212,13 +213,13 @@ class LpTokenComparison : public LpToken {
           this->comparison = LpComparisonIndicator::LEQ;
         } else {
           // error
-          HighsLogMessage(HighsMessageType::ERROR,
+          HighsLogMessage(stdout, HighsMessageType::ERROR,
                           "Invalid comparison indicator.\n");
         }
         break;
       default:
         // error
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
                         "Invalid comparison indicator.\n");
     }
   }
@@ -230,7 +231,8 @@ class FilereaderLp : public Filereader {
                                       HighsLp& model);
   FilereaderRetcode readModelFromFile(const char* filename,
                                       HighsModelBuilder& model);
-  HighsStatus writeModelToFile(const char* filename, HighsLp& model);
+  HighsStatus writeModelToFile(const HighsOptions& options,
+			       const char* filename, HighsLp& model);
   FilereaderLp();
   ~FilereaderLp();
 
@@ -271,7 +273,7 @@ class FilereaderLp : public Filereader {
   void handleBinarySection(HighsModelBuilder& model);
   void handleGeneralSection(HighsModelBuilder& model);
   void handleSemiSection(HighsModelBuilder& model);
-  void handleSosSection(HighsModelBuilder& model);
+  FilereaderRetcode handleSosSection(HighsModelBuilder& model);
 
   LP_FILEREADER_STATUS status;
 

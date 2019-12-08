@@ -10,9 +10,6 @@ enum class HighsStatus {
   Error
 };
 
-// Report a HighsStatus.
-void HighsStatusReport(const char* message, HighsStatus status);
-
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status);
 

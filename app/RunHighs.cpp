@@ -18,48 +18,53 @@
 #include "HighsTimer.h"
 #include "LoadProblem.h"
 
-void HiGHSRun(const char* message = nullptr) {
-  std::stringstream ss;
-  ss << "Running HiGHS " << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR
-     << "." << HIGHS_VERSION_PATCH << " [date: " << HIGHS_COMPILATION_DATE
-     << ", git hash: " << HIGHS_GITHASH << "]" << std::endl;
-
-  HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
-  HighsPrintMessage(ML_ALWAYS,
+void HiGHSRun(FILE* output, const int message_level, const char* message = nullptr) {
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
+		    HIGHS_VERSION_MAJOR,
+		    HIGHS_VERSION_MINOR,
+		    HIGHS_VERSION_PATCH,
+		    HIGHS_COMPILATION_DATE,
+		    HIGHS_GITHASH);
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
                     "Copyright (c) 2019 ERGO-Code under MIT licence terms\n\n");
-
-  if (message != nullptr) {
-  }
-
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   if (message != nullptr) {
-    std::cout << "In " << message << std::endl;
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+		      "In %s\n", message);
   }
 #ifdef OPENMP
-  std::cout << "OPENMP           is     defined" << std::endl;
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "OPENMP           is     defined\n");
 #else
-  std::cout << "OPENMP           is not defined" << std::endl;
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "OPENMP           is not defined\n");
 #endif
 
 #ifdef SCIP_DEV
-  std::cout << "SCIP_DEV         is     defined" << std::endl;
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "SCIP_DEV         is     defined\n");
 #else
-  std::cout << "SCIP_DEV         is not defined" << std::endl;
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "SCIP_DEV         is not defined\n");
 #endif
 
 #ifdef HiGHSDEV
-  std::cout << "HiGHSDEV         is     defined" << std::endl;
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "HiGHSDEV         is     defined\n");
 #else
-  std::cout << "HiGHSDEV         is not defined" << std::endl;
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "HiGHSDEV         is not defined\n");
 #endif
-  std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
-
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "Built with CMAKE_BUILD_TYPE=%s\n", CMAKE_BUILD_TYPE);
 #endif
 }
 
 int main(int argc, char** argv) {
-  HiGHSRun();
+  std::stringstream ss;
+  HiGHSRun(stdout, ML_ALWAYS);
   HighsStatus return_status;
 
   Highs highs;
@@ -70,55 +75,80 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
+  FILE* output;
+  int message_level;
+  output = options.output;
+  message_level = options.message_level;
+
+  bool run_quiet = true; // false;//
+  if (run_quiet) {
+    HighsPrintMessage(output, message_level, ML_ALWAYS, 
+		      "In main: running highs.run() quietly\n");
+  }
   bool force_options_file = false;  // true;//
   if (force_options_file) {
-    printf(
-        "In main: set options.options_file = Options.set so vscode can be "
-        "used to debug\n");
+    HighsPrintMessage(output, message_level, ML_ALWAYS, 
+		      "In main: set options.options_file = Options.set so vscode can be "
+		      "used to debug\n");
     options.options_file = "Options.set";
     if (!loadOptionsFromFile(options)) {
-      printf("In main: fail return from loadOptionsFromFile\n");
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"In main: fail return from loadOptionsFromFile\n");
       return (int)HighsStatus::Error;
     }
   }
+
+  output = options.output;
+  message_level = options.message_level;
 
   return_status = highs.passHighsOptions(options);
   if (return_status != HighsStatus::OK) {
     if (return_status == HighsStatus::Warning) {
 #ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from passHighsOptions\n");
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"HighsStatus::Warning return from passHighsOptions\n");
 #endif
     } else {
-      printf("In main: fail return from passHighsOptions\n");
+      HighsPrintMessage(output, message_level, ML_ALWAYS, 
+			"In main: fail return from passHighsOptions\n");
       return (int)return_status;
     }
+  }
+
+  if (run_quiet) {
+    highs.setHighsLogfile(NULL);
+    highs.setHighsOutput(NULL);
   }
 
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
   if (read_status == HighsStatus::Error) {
-    std::cout << "Error loading file" << std::endl;
+    HighsPrintMessage(output, message_level, ML_ALWAYS, "Error loading file\n");
     return (int)HighsStatus::Error;
   } else {
-    std::stringstream message;
-    message << "LP       : " << lp.model_name_.c_str() << std::endl;
-    message << "Rows     : " << lp.numRow_ << std::endl;
-    message << "Cols     : " << lp.numCol_ << std::endl;
-    message << "Nonzeros : " << lp.Avalue_.size() << std::endl;
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+		      "LP       : %s\n", lp.model_name_.c_str());
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+		      "Rows     : %d\n", lp.numRow_);
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+		      "Cols     : %d\n", lp.numCol_);
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+		      "Nonzeros : %d\n", lp.Avalue_.size());
     if (lp.numInt_)
-      message << "Integer  : " << lp.numInt_ << std::endl;
-    message  << std::endl;
-    std::cout << message.str();
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"Integer  : %d\n", lp.numInt_);
+    HighsPrintMessage(output, message_level, ML_ALWAYS, "\n");
   }
 
   HighsStatus init_status = highs.passModel(lp);
   if (init_status != HighsStatus::OK) {
     if (init_status == HighsStatus::Warning) {
 #ifdef HiGHSDEV
-      printf("HighsStatus::Warning return setting HighsLp\n");
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"HighsStatus::Warning return setting HighsLp\n");
 #endif
     } else {
-      HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp\n");
+      HighsPrintMessage(output, message_level, ML_ALWAYS, "Error setting HighsLp\n");
       return (int)HighsStatus::Error;
     }
   }
@@ -129,23 +159,32 @@ int main(int argc, char** argv) {
   if (write_status != HighsStatus::OK) {
     if (write_status == HighsStatus::Warning) {
 #ifdef HiGHSDEV
-      printf("HighsStatus::Warning return from highs.writeModel\n");
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+                        "HighsStatus::Warning return from highs.writeModel\n");
 #endif
     } else {
-      printf("Error return from highs.writeModel\n");
+      HighsPrintMessage(output, message_level, ML_ALWAYS, 
+                        "Error return from highs.writeModel\n");
     }
   }
   */
 
-  //  highs.options_ = options;
+  // Report all the options to an options file
+  //  reportOptionsToFile(options_.logfile, "Highs.set", options_.records);
+  // Report all the options as HTML
+  //  reportOptionsToFile(options_.logfile, "Highs.html", options_.records);
+  // Possibly report options settings
+  highs.writeHighsOptions("");  //, false);
+
+  if (run_quiet) HighsPrintMessage(output, message_level, ML_ALWAYS, "Before calling highs.run()\n");
   HighsStatus run_status = highs.run();
+  if (run_quiet) HighsPrintMessage(output, message_level, ML_ALWAYS, "After calling highs.run()\n");
   std::string statusname = HighsStatusToString(run_status);
 
   if (run_status == HighsStatus::Error) {
-    HighsPrintMessage(ML_ALWAYS, "HiGHS status: %s\n", statusname.c_str());
+    HighsPrintMessage(output, message_level, ML_ALWAYS, "HiGHS status: %s\n", statusname.c_str());
   } else {
-    std::stringstream message;
-    message << std::endl;
+    HighsPrintMessage(output, message_level, ML_ALWAYS, "\n");
     HighsModelStatus model_status = highs.getModelStatus();
     HighsModelStatus scaled_model_status = highs.getModelStatus(true);
     HighsInfo highs_info = highs.getHighsInfo();
@@ -154,29 +193,42 @@ int main(int argc, char** argv) {
 	// The scaled model has been solved to optimality, but not the
 	// unscaled model, flag this up, but report the scaled model
 	// status
-	double max_primal_infeasibility = highs_info.max_primal_infeasibility;
-	double max_dual_infeasibility = highs_info.max_dual_infeasibility;
-	//	message << std::setprecision(9);
-	message << "Primal infeasibility: " << max_primal_infeasibility << std::endl;
-	message << "Dual   infeasibility: " << max_dual_infeasibility << std::endl;
+	HighsPrintMessage(output, message_level, ML_ALWAYS,
+			  "Primal infeasibility: %11.4e\n",
+			  highs_info.max_primal_infeasibility);
+	HighsPrintMessage(output, message_level, ML_ALWAYS,
+			  "Primal infeasibility: %11.4e\n",
+			  highs_info.max_dual_infeasibility);
 	model_status = scaled_model_status;
       }
     }
-    message << "Model   status      : " << highs.highsModelStatusToString(model_status) << std::endl;
-    message << "Primal  status      : " << highs.highsPrimalDualStatusToString(highs_info.primal_status) << std::endl;
-    message << "Dual    status      : " << highs.highsPrimalDualStatusToString(highs_info.dual_status) << std::endl;
-    message << "Simplex   iterations: " << highs_info.simplex_iteration_count << std::endl;
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"Model   status      : %s\n",
+			highs.highsModelStatusToString(model_status).c_str());
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"Primal  status      : %s\n",
+			highs.highsPrimalDualStatusToString(highs_info.primal_status).c_str());
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"Dual    status      : %s\n",
+			highs.highsPrimalDualStatusToString(highs_info.dual_status).c_str());
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"Simplex   iterations: %d\n",
+			highs_info.simplex_iteration_count);
     if (highs_info.ipm_iteration_count)
-      message << "IPM       iterations: " << highs_info.ipm_iteration_count << std::endl;
+        HighsPrintMessage(output, message_level, ML_ALWAYS,
+			  "IPM       iterations: %d\n",
+			  highs_info.ipm_iteration_count);
     if (highs_info.crossover_iteration_count)
-      message << "Crossover iterations: " << highs_info.crossover_iteration_count << std::endl;
+        HighsPrintMessage(output, message_level, ML_ALWAYS,
+			  "Crossover iterations: %d\n",
+			  highs_info.crossover_iteration_count);
     if (model_status == HighsModelStatus::OPTIMAL) {
       double objective_function_value;
       highs.getHighsInfoValue("objective_function_value", objective_function_value);
-      message << "Objective value     : " << std::scientific << objective_function_value << std::endl;
+      HighsPrintMessage(output, message_level, ML_ALWAYS,
+			"Objective value     : %13.6e\n",
+			objective_function_value);
     }
-    message << std::endl;
-    std::cout << message.str();
 
   // Possibly write the solution to a file
   if (options.write_solution_to_file)

@@ -34,7 +34,11 @@ void reportModelBoundSol(FILE* file,
                          const std::vector<HighsBasisStatus>& status);
 bool namesWithSpaces(const int num_name, const std::vector<std::string>& names, const bool report = false);
 int maxNameLength(const int num_name, const std::vector<std::string>& names);
-HighsStatus normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length);
+HighsStatus normaliseNames(const HighsOptions& options,
+			   const std::string name_type,
+			   const int num_name,
+			   std::vector<std::string>& names,
+			   int& max_name_length);
 
 HighsBasisStatus checkedVarHighsNonbasicStatus(const HighsBasisStatus ideal_status,
 					       const double lower,

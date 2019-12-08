@@ -229,7 +229,8 @@ void HPrimal::solvePhase2() {
 
   // Setup other buffers
 
-  HighsPrintMessage(ML_DETAILED, "primal-phase2-start\n");
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		    "primal-phase2-start\n");
   // Main solving structure
   for (;;) {
     timer.start(simplex_info.clock_[IteratePrimalRebuildClock]);
@@ -274,11 +275,14 @@ void HPrimal::solvePhase2() {
   if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) return;
 
   if (columnIn == -1) {
-    HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
-    HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "primal-optimal\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "problem-optimal\n");
     workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
   } else {
-    HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		      "primal-unbounded\n");
     workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
   }
   computeDualObjectiveValue(workHMO);
@@ -338,7 +342,7 @@ void HPrimal::primalRebuild() {
         absPrimalObjectiveError / max(1.0, fabs(primal_objective_value));
     // TODO Investigate these Primal objective value errors
     if (rlvPrimalObjectiveError >= 1e-8) {
-      HighsLogMessage(HighsMessageType::WARNING,
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
                       "Primal objective value error |rel| = %12g (%12g)",
                       absPrimalObjectiveError, rlvPrimalObjectiveError);
     }
@@ -750,20 +754,26 @@ void HPrimal::iterationReportFull(bool header) {
 #ifdef HiGHSDEV
     iterationReportIterationData(ML_DETAILED, true);
     //    iterationReportDsty(ML_DETAILED, true);
-    //    HighsPrintMessage(ML_DETAILED, " FreeLsZ");
-    if (report_condition) HighsPrintMessage(ML_DETAILED, "   Condition");
+    //    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+    //    " FreeLsZ");
+    if (report_condition) HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+					    "   Condition");
 #endif
-    HighsPrintMessage(ML_DETAILED, "\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "\n");
   } else {
     iterationReportIterationAndPhase(ML_DETAILED, false);
     iterationReportPrimalObjective(ML_DETAILED, false);
 #ifdef HiGHSDEV
     iterationReportIterationData(ML_DETAILED, false);
     //    iterationReportDsty(ML_DETAILED, false);
-    //    HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
-    if (report_condition) HighsPrintMessage(ML_DETAILED, " %11.4g", simplex_info.invert_condition);
+    //    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+    //    " %7d", dualRow.freeListSize);
+    if (report_condition) HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+					    " %11.4g", simplex_info.invert_condition);
 #endif
-    HighsPrintMessage(ML_DETAILED, "\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "\n");
   }
 }
 
@@ -771,10 +781,12 @@ void HPrimal::iterationReportIterationAndPhase(int iterate_log_level,
                                                bool header) {
   int solvePhase = 2;
   if (header) {
-    HighsPrintMessage(iterate_log_level, " Iteration Ph");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      " Iteration Ph");
   } else {
     int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
-    HighsPrintMessage(iterate_log_level, " %9d %2d", iteration_count, solvePhase);
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      " %9d %2d", iteration_count, solvePhase);
   }
 }
 
@@ -782,28 +794,33 @@ void HPrimal::iterationReportPrimalObjective(int iterate_log_level,
                                              bool header) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (header) {
-    HighsPrintMessage(iterate_log_level, "      PrimalObjective");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      "      PrimalObjective");
   } else {
-    HighsPrintMessage(iterate_log_level, " %20.10e",
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      " %20.10e",
                       simplex_info.updated_primal_objective_value);
   }
 }
 
 void HPrimal::iterationReportIterationData(int iterate_log_level, bool header) {
   if (header) {
-    HighsPrintMessage(iterate_log_level,
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      
                       " Inv       NumCk     EnC     LvR     LvC        ThDu    "
                       "    ThPr          Aa");
   } else {
     bool flipped = rowOut < 0;
-    HighsPrintMessage(iterate_log_level, " %3d %11.4g %7d", invertHint,
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      " %3d %11.4g %7d", invertHint,
                       numericalTrouble, columnIn);
     if (flipped) {
-      HighsPrintMessage(iterate_log_level,
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
                         "                 %11.4g %11.4g            ", thetaDual,
                         thetaPrimal);
     } else {
-      HighsPrintMessage(iterate_log_level, " %7d %7d %11.4g %11.4g %11.4g",
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+			" %7d %7d %11.4g %11.4g %11.4g",
                         rowOut, columnOut, thetaDual, thetaPrimal, alpha);
     }
   }
@@ -813,20 +830,26 @@ void HPrimal::iterationReportIterationData(int iterate_log_level, bool header) {
 void HPrimal::iterationReportDsty(int iterate_log_level, bool header) {
   bool rp_dual_steepest_edge = dual_edge_weight_mode ==
 DualEdgeWeightMode::STEEPEST_EDGE; if (header) {
-    HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+ "  Col R_Ep R_Ap");
     if (rp_dual_steepest_edge) {
-      HighsPrintMessage(iterate_log_level, "  DSE");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+ "  DSE");
     } else {
-      HighsPrintMessage(iterate_log_level, "     ");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+ "     ");
     }
   } else {
     int l10ColDse = intLog10(columnDensity);
     int l10REpDse = intLog10(row_epDensity);
     int l10RapDse = intLog10(row_apDensity);
-    HighsPrintMessage(iterate_log_level, " %4d %4d %4d", l10ColDse, l10REpDse,
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+ " %4d %4d %4d", l10ColDse, l10REpDse,
 l10RapDse); if (rp_dual_steepest_edge) { int l10DseDse =
-intLog10(rowdseDensity); HighsPrintMessage(iterate_log_level, " %4d",
-l10DseDse); } else { HighsPrintMessage(iterate_log_level, "     ");
+intLog10(rowdseDensity); HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+ " %4d",
+l10DseDse); } else { HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+ "     ");
     }
   }
 }
@@ -845,15 +868,18 @@ void HPrimal::iterationReportRebuild(
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   bool report_condition = simplex_info.analyse_invert_condition;
-  HighsPrintMessage(ML_MINIMAL,
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
                     "Iter %10d:", workHMO.scaled_solution_params_.simplex_iteration_count);
   //  iterationReportDsty(ML_MINIMAL, true);
   //  iterationReportDsty(ML_MINIMAL, false);
   iterationReportPrimalObjective(ML_MINIMAL, false);
-  HighsPrintMessage(ML_MINIMAL, " PrPh%1d(%2d)", solvePhase, i_v);
-  if (report_condition) HighsPrintMessage(ML_MINIMAL, " k(B)%10.4g", simplex_info.invert_condition);
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		    " PrPh%1d(%2d)", solvePhase, i_v);
+  if (report_condition) HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+					  " k(B)%10.4g", simplex_info.invert_condition);
   if (solvePhase == 2) reportInfeasibility();
-  HighsPrintMessage(ML_MINIMAL, "\n");
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		    "\n");
 #else
   logRebuild(workHMO, true, solvePhase);
 #endif
@@ -862,11 +888,13 @@ void HPrimal::iterationReportRebuild(
 void HPrimal::reportInfeasibility() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   if (scaled_solution_params.sum_primal_infeasibilities > 0) {
-    HighsPrintMessage(ML_MINIMAL, " Pr: %d(%g);",
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		      " Pr: %d(%g);",
                       scaled_solution_params.num_primal_infeasibilities,
                       scaled_solution_params.sum_primal_infeasibilities);
   }
-  HighsPrintMessage(ML_MINIMAL, " Du: %d(%g)",
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		    " Du: %d(%g)",
                     scaled_solution_params.num_dual_infeasibilities,
                     scaled_solution_params.sum_dual_infeasibilities);
 }

@@ -17,7 +17,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsOptions options;
   HighsTimer timer;
   HighsStatus return_status;
-  HighsSetMessagelevel(ML_ALWAYS);
+  options.message_level = ML_ALWAYS;
 
   Avgas avgas;
   const int avgas_num_col = 8;

@@ -21,7 +21,8 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   bool are_the_same = false;
 
   std::vector<int> integerColumn;
-  FilereaderRetcode status = readMPS(filename.c_str(), -1, -1, lp_fixed_format.numRow_,
+  FilereaderRetcode status = readMPS(stdout,
+				     filename.c_str(), -1, -1, lp_fixed_format.numRow_,
 				     lp_fixed_format.numCol_, lp_fixed_format.numInt_, lp_fixed_format.sense_,
 				     lp_fixed_format.offset_, lp_fixed_format.Astart_,
 				     lp_fixed_format.Aindex_, lp_fixed_format.Avalue_,
@@ -32,7 +33,7 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   lp_fixed_format.nnz_ = lp_fixed_format.Avalue_.size();
   if (status == FilereaderRetcode::OK) {
     HMpsFF parser{};
-    FreeFormatParserReturnCode result = parser.loadProblem(filename, lp_free_format);
+    FreeFormatParserReturnCode result = parser.loadProblem(stdout, filename, lp_free_format);
     if (result != FreeFormatParserReturnCode::SUCCESS)
       status = FilereaderRetcode::PARSERERROR;
     if (status == FilereaderRetcode::OK)
@@ -41,8 +42,8 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
 
   // In case you want to compare.
   // FilereaderEms ems;
-  // ems.writeModelToFile("fixed.ems", lp_fixed_format);
-  // ems.writeModelToFile("free.ems", lp_free_format);
+  // ems.writeModelToFile(options, "fixed.ems", lp_fixed_format);
+  // ems.writeModelToFile(options, "free.ems", lp_free_format);
 
   REQUIRE(are_the_same);
 }
@@ -62,7 +63,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 
   // Write ems.
   FilereaderEms ems;
-  ems.writeModelToFile("adlittle.ems", lp_mps);
+  ems.writeModelToFile(options, "adlittle.ems", lp_mps);
 
   // Read ems and compare.
   options.model_file = "adlittle.ems"; // todo: check how to specify path
@@ -112,11 +113,13 @@ TEST_CASE("dualize", "[highs_data]") {
 
   HighsLp lp;
   HMpsFF parser{};
-  FreeFormatParserReturnCode result = parser.loadProblem(filename, lp);
+  FreeFormatParserReturnCode result = parser.loadProblem(stdout, filename, lp);
   REQUIRE(result == FreeFormatParserReturnCode::SUCCESS);
 
-  HighsLp primal = transformIntoEqualityProblem(lp);
+  HighsLp primal;
   HighsStatus status;
+  status = transformIntoEqualityProblem(lp, primal);
+  REQUIRE(status == HighsStatus::OK);
 
   Highs highs_lp;
   HighsModelStatus model_status;
@@ -141,7 +144,9 @@ TEST_CASE("dualize", "[highs_data]") {
   double diff_equality = lp_objective - primal_objective;
   REQUIRE(diff_equality < 0.00000001);
 
-  HighsLp dual = dualizeEqualityProblem(primal);
+  HighsLp dual;
+  status = dualizeEqualityProblem(primal, dual);
+  REQUIRE(status == HighsStatus::OK);
   Highs highs_dual;
   status = assessLp(dual, options);
   REQUIRE(status == HighsStatus::OK);

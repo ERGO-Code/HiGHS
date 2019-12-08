@@ -43,7 +43,7 @@ class Tree {
     nodes_.push_back(ref);
   }
 
-  bool branch(Node& node);
+  bool branch(FILE* output, const int message_level, Node& node);
 
   Node& next() { return nodes_[nodes_.size() - 1]; }
   void pop() { nodes_.erase(nodes_.end() - 1); }

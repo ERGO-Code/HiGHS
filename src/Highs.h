@@ -102,6 +102,14 @@ class Highs {
                                   const char* value          //!< The option value
 				  );
 
+  HighsStatus setHighsLogfile(
+			      FILE* logfile                  //!< The log file
+			      );
+
+  HighsStatus setHighsOutput(
+			     FILE* output                  //!< The log file
+			     );
+
   HighsStatus readHighsOptions(
 			       const std::string filename  //!< The filename
 			       );
@@ -137,7 +145,8 @@ class Highs {
   const HighsOptions& getHighsOptions() const;
   
   HighsStatus writeHighsOptions(
-				const std::string filename  //!< The filename
+				const std::string filename,  //!< The filename
+				const bool report_only_non_default_values=true
 				);
   
    /**

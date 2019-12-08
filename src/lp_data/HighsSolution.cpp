@@ -30,7 +30,8 @@
 // Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
 // of the unscaled LP in a HighsModelObject instance, after computing
 // the unscaled infeasibilities locally
-HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+HighsStatus analyseHighsBasicSolution(FILE* logfile,
+				      const HighsModelObject& highs_model_object,
 				      const string message) {
 
   HighsSolutionParams get_unscaled_solution_params = highs_model_object.unscaled_solution_params_;
@@ -45,7 +46,8 @@ HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object
 							      primal_objective_value,
 							      dual_objective_value);
 
-  return analyseHighsBasicSolution(highs_model_object.lp_,
+  return analyseHighsBasicSolution(logfile,
+				   highs_model_object.lp_,
 				   highs_model_object.basis_,
 				   highs_model_object.solution_,
 				   highs_model_object.unscaled_model_status_,
@@ -56,10 +58,12 @@ HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object
 // Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
 // of the unscaled LP in a HighsModelObject instance, assuming that
 // the unscaled infeasibilities are known
-HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+HighsStatus analyseHighsBasicSolution(FILE* logfile,
+				      const HighsModelObject& highs_model_object,
 				      const HighsSolutionParams& unscaled_solution_params,
 				      const string message) {
-  return analyseHighsBasicSolution(highs_model_object.lp_,
+  return analyseHighsBasicSolution(logfile,
+				   highs_model_object.lp_,
 				   highs_model_object.basis_,
 				   highs_model_object.solution_,
 				   highs_model_object.unscaled_model_status_,
@@ -68,7 +72,8 @@ HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object
 }
 
 // Calls analyseHighsBasicSolution, adding report_level
-HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
+HighsStatus analyseHighsBasicSolution(FILE* logfile,
+				      const HighsLp& lp,
 				      const HighsBasis& basis,
 				      const HighsSolution& solution,
 				      const HighsModelStatus model_status,
@@ -83,7 +88,8 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
 #ifdef HiGHSDEV
   report_level = 1;
 #endif
-  return analyseHighsBasicSolution(lp, basis, solution,
+  return analyseHighsBasicSolution(logfile,
+				   lp, basis, solution,
 				   model_status, solution_params,
 				   message, report_level);
 }
@@ -94,7 +100,8 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
 // via solution_params, which returns the int and double data obtained
 // about the solution. The overall model status is returned in the
 // argument.
-HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
+HighsStatus analyseHighsBasicSolution(FILE* logfile,
+				      const HighsLp& lp,
 				      const HighsBasis& basis,
 				      const HighsSolution& solution,
 				      const HighsModelStatus model_status,
@@ -102,11 +109,11 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
 				      const string message,
 				      const int report_level) {
   
-  HighsLogMessage(HighsMessageType::INFO,
+  HighsLogMessage(logfile, HighsMessageType::INFO,
 		  "HiGHS basic solution: Analysis - %s", message.c_str());
 
   if (model_status!=HighsModelStatus::OPTIMAL) {
-    HighsLogMessage(HighsMessageType::INFO,
+    HighsLogMessage(logfile, HighsMessageType::INFO,
 		    "HiGHS basic solution: %sStatus: %s",
 		    iterationsToString(solution_params).c_str(), 
 		    utilHighsModelStatusToString(model_status).c_str());
@@ -152,7 +159,8 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
 
   bool equal_solution_params = equalSolutionParams(solution_params, check_solution_params);
   if (!equal_solution_params) {
-    HighsLogMessage(HighsMessageType::ERROR, "Unequal SolutionParams in analyseHighsBasicSolution");
+    HighsLogMessage(logfile, HighsMessageType::ERROR,
+		    "Unequal SolutionParams in analyseHighsBasicSolution");
     assert(equal_solution_params);
     return HighsStatus::Error;
   }
@@ -172,29 +180,29 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
     check_model_status = HighsModelStatus::NOTSET;
   }
   if (check_model_status != model_status) {
-    HighsLogMessage(HighsMessageType::WARNING, "Check model status (%s) <> model status (%s)",
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
+		    "Check model status (%s) <> model status (%s)",
 		    utilHighsModelStatusToString(check_model_status).c_str(),
 		    utilHighsModelStatusToString(model_status).c_str());
   }
   if (num_nonzero_basic_duals) {
-    HighsLogMessage(
-		    HighsMessageType::WARNING,
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
 		    "HiGHS basic solution: %d (%d large) nonzero basic duals; max = %g; sum = %g",
 		    num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals);
   }
   if (num_off_bound_nonbasic)  {
-    HighsLogMessage(HighsMessageType::WARNING,
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
                     "Off-bound num/max/sum           %6d/%11.4g/%11.4g",
                     num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic);
   }
   if (report_level>0) {
-    HighsLogMessage(HighsMessageType::INFO,
+    HighsLogMessage(logfile, HighsMessageType::INFO,
                     "Primal    num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
                     "infeasibilities %6d/%11.4g/%11.4g",
                     num_primal_residual, max_primal_residual,
                     sum_primal_residual, num_primal_infeasibilities,
                     max_primal_infeasibility, sum_primal_infeasibilities);
-    HighsLogMessage(HighsMessageType::INFO,
+    HighsLogMessage(logfile, HighsMessageType::INFO,
                     "Dual      num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
                     "infeasibilities %6d/%11.4g/%11.4g",
                     num_dual_residual, max_dual_residual, sum_dual_residual,
@@ -203,15 +211,15 @@ HighsStatus analyseHighsBasicSolution(const HighsLp& lp,
     double relative_objective_difference =
       fabs(primal_objective_value-dual_objective_value)/
       std::max(std::max(1.0, fabs(primal_objective_value)), fabs(dual_objective_value));
-    HighsLogMessage(HighsMessageType::INFO,
+    HighsLogMessage(logfile, HighsMessageType::INFO,
                     "Relative objective difference = %.4g",
                     relative_objective_difference);
   } 
-  HighsLogMessage(HighsMessageType::INFO,
+  HighsLogMessage(logfile, HighsMessageType::INFO,
 		  "HiGHS basic solution: %sObjective = %.15g",
 		  iterationsToString(solution_params).c_str(),
 		  primal_objective_value);
-  HighsLogMessage(HighsMessageType::INFO,
+  HighsLogMessage(logfile, HighsMessageType::INFO,
 		  "Infeasibilities: Pr %d(Max %.4g, Sum %.4g); Du %d(Max %.4g, Sum %.4g); Status: %s",
 		  solution_params.num_primal_infeasibilities,
 		  solution_params.max_primal_infeasibility,
@@ -767,7 +775,8 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
 
 
 #ifdef IPX_ON
-HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
+HighsStatus ipxToHighsBasicSolution(FILE* logfile,
+				    const HighsLp& lp,
 				    const std::vector<double>& rhs,
 				    const std::vector<char>& constraint_type,
 				    const IpxSolution& ipx_solution,
@@ -834,7 +843,8 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 #endif
       assert(!unrecognised);
       if (unrecognised) {
-	HighsLogMessage(HighsMessageType::ERROR, "Unrecognised ipx_col_status value from IPX");
+	HighsLogMessage(logfile, HighsMessageType::ERROR,
+			"Unrecognised ipx_col_status value from IPX");
 	return HighsStatus::Error;
       }
       if (get_row_activities) {
@@ -946,7 +956,8 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 #endif      
       assert(!unrecognised);
       if (unrecognised) {
-	HighsLogMessage(HighsMessageType::ERROR, "Unrecognised ipx_row_status value from IPX");
+	HighsLogMessage(logfile, HighsMessageType::ERROR,
+			"Unrecognised ipx_row_status value from IPX");
 	return HighsStatus::Error;
       }
     }

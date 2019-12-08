@@ -120,7 +120,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   }
   if (simplex_lp_status.has_basis) {
     // There is a simplex basis: it should be valid - since it's set internally - but check
-    bool nonbasic_flag_ok = nonbasicFlagOk(simplex_lp, simplex_basis);
+    bool nonbasic_flag_ok = nonbasicFlagOk(highs_model_object.options_.logfile,
+					   simplex_lp, simplex_basis);
     assert(nonbasic_flag_ok);
     if (!nonbasic_flag_ok) simplex_lp_status.has_basis = false;
   }
@@ -135,10 +136,12 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       // Allocate memory for nonbasicFlag
       simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ +
                                          highs_model_object.lp_.numRow_);
-      basis.valid_ = basisOk(highs_model_object.lp_, basis);
+      basis.valid_ = basisOk(highs_model_object.options_.logfile,
+			     highs_model_object.lp_, basis);
       assert(basis.valid_);
       if (!basis.valid_) {
-	HighsLogMessage(HighsMessageType::ERROR, "Supposed to be a Highs basis, but not valid");
+	 HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
+			 "Supposed to be a Highs basis, but not valid");
 	highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
 	return HighsStatus::Error;
       }
@@ -217,7 +220,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
           if (simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_FALSE)
             num_basic_structurals++;
         }
-        HighsLogMessage(HighsMessageType::INFO,
+         HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                         "Crash has created a basis with %d/%d structurals",
                         num_basic_structurals, simplex_lp.numRow_);
       }
@@ -234,7 +237,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     }
     // There is now a nonbasicFlag that should be valid - have the
     // right number of basic variables - so check this
-    nonbasicFlag_valid = nonbasicFlagOk(simplex_lp, simplex_basis);
+    nonbasicFlag_valid = nonbasicFlagOk(highs_model_object.options_.logfile,
+					simplex_lp, simplex_basis);
     assert(nonbasicFlag_valid);
     if (!nonbasicFlag_valid) {
       // Something's gone wrong: any HiGHS basis has been checked and,
@@ -336,7 +340,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     timer.start(simplex_info.clock_[CrashClock]);
     crash.crash(SIMPLEX_CRASH_STRATEGY_BASIC);
     timer.stop(simplex_info.clock_[CrashClock]);
-    HighsLogMessage(HighsMessageType::INFO,
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                     "Performed crash to prioritise previously basic variables "
                     "in well-conditioned basis");
     // Use nonbasicFlag to form basicIndex
@@ -357,7 +361,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     // Report on the outcome of crash
     int num_basic_structurals =
         simplex_lp.numRow_ - simplex_info.num_basic_logicals;
-    HighsLogMessage(HighsMessageType::INFO,
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                     "Crash has created a basis with %d/%d structurals",
                     num_basic_structurals, simplex_lp.numRow_);
     // Now reinvert
@@ -571,8 +575,7 @@ bool basisConditionOk(HighsModelObject& highs_model_object, const std::string me
     message_type = HighsMessageType::WARNING;
     condition_comment = "exceeds";
   }
-  HighsLogMessage(
-		  message_type,
+   HighsLogMessage(highs_model_object.options_.logfile, message_type,
 		  "Initial basis condition estimate of %11.4g %s the tolerance of %g",
 		  basis_condition, condition_comment.c_str(), basis_condition_tolerance);
   return basis_condition_ok;
@@ -704,18 +707,20 @@ void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow
   }
 }
 
-bool basisOk(const HighsLp& lp, const HighsBasis& basis) {
+bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis) {
   int col_status_size = basis.col_status.size();
   int row_status_size = basis.row_status.size();
   assert(col_status_size == lp.numCol_);
   if (col_status_size != lp.numCol_) {
-    HighsLogMessage(HighsMessageType::ERROR, "Size of basis.col_status is %d, not %d",
+     HighsLogMessage(logfile, HighsMessageType::ERROR,
+		     "Size of basis.col_status is %d, not %d",
 		    col_status_size, lp.numCol_);
     return false;
   }
   assert(row_status_size == lp.numRow_);
   if (row_status_size != lp.numRow_) {
-    HighsLogMessage(HighsMessageType::ERROR, "Size of basis.row_status is %d, not %d",
+     HighsLogMessage(logfile, HighsMessageType::ERROR,
+		     "Size of basis.row_status is %d, not %d",
 		    row_status_size, lp.numRow_);
     return false;
   }
@@ -728,30 +733,33 @@ bool basisOk(const HighsLp& lp, const HighsBasis& basis) {
   }
   assert(num_basic_variables == lp.numRow_);
   if (num_basic_variables != lp.numRow_) {
-    HighsLogMessage(HighsMessageType::ERROR, "HiGHS basis has %d, not %d basic variables",
+     HighsLogMessage(logfile, HighsMessageType::ERROR,
+		     "HiGHS basis has %d, not %d basic variables",
 		    num_basic_variables, lp.numRow_);
     return false;
   }
   return true;
 }
 
-bool basisOk(const HighsLp& lp, SimplexBasis& simplex_basis) {
+bool basisOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis) {
 #ifdef HiGHSDEV
   printf("!! Don't check if basis is invalid! !!\n");
 #endif
-  if (!nonbasicFlagOk(lp, simplex_basis)) return false;
+  if (!nonbasicFlagOk(logfile, lp, simplex_basis)) return false;
   int nonbasicFlag_size = simplex_basis.nonbasicFlag_.size();
   int basicIndex_size = simplex_basis.basicIndex_.size();
   int numTot = lp.numCol_ + lp.numRow_;
   assert(nonbasicFlag_size == numTot);
   if (nonbasicFlag_size != numTot) {
-    HighsLogMessage(HighsMessageType::ERROR, "Size of simplex_basis.nonbasicFlag_ is %d, not %d",
+     HighsLogMessage(logfile, HighsMessageType::ERROR,
+		     "Size of simplex_basis.nonbasicFlag_ is %d, not %d",
 		    nonbasicFlag_size, numTot);
     return false;
   }
   assert(basicIndex_size == lp.numRow_);
   if (basicIndex_size != lp.numRow_) {
-    HighsLogMessage(HighsMessageType::ERROR, "Size of simplex_basis.basicIndex_ is %d, not %d",
+     HighsLogMessage(logfile, HighsMessageType::ERROR,
+		     "Size of simplex_basis.basicIndex_ is %d, not %d",
 		    basicIndex_size, lp.numRow_);
     return false;
   }
@@ -760,18 +768,20 @@ bool basisOk(const HighsLp& lp, SimplexBasis& simplex_basis) {
     int flag = simplex_basis.nonbasicFlag_[col];
     assert(!flag);
     if (flag) {
-      HighsLogMessage(HighsMessageType::ERROR, "Entry basicIndex_[%d] = %d is not basic", row, col);
+       HighsLogMessage(logfile, HighsMessageType::ERROR,
+		       "Entry basicIndex_[%d] = %d is not basic", row, col);
       return false;
     }
   }
   return true;
 }
 
-bool nonbasicFlagOk(const HighsLp& lp, SimplexBasis& simplex_basis) {
+bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis) {
   int numTot = lp.numCol_ + lp.numRow_;
   assert((int)simplex_basis.nonbasicFlag_.size() == numTot);
   if ((int)simplex_basis.nonbasicFlag_.size() != numTot) {
-    HighsLogMessage(HighsMessageType::ERROR, "Size of simplex_basis.nonbasicFlag_ is %d, not %d",
+     HighsLogMessage(logfile, HighsMessageType::ERROR,
+		     "Size of simplex_basis.nonbasicFlag_ is %d, not %d",
 		    (int)simplex_basis.nonbasicFlag_.size(), numTot);
     return false;
   }
@@ -785,7 +795,8 @@ bool nonbasicFlagOk(const HighsLp& lp, SimplexBasis& simplex_basis) {
   }  
   assert(num_basic_variables == lp.numRow_);
   if (num_basic_variables != lp.numRow_) {
-    HighsLogMessage(HighsMessageType::ERROR, "Simplex basis has %d, not %d basic variables",
+     HighsLogMessage(logfile, HighsMessageType::ERROR,
+		     "Simplex basis has %d, not %d basic variables",
 		    num_basic_variables, lp.numRow_);
     return false;
   }
@@ -1101,7 +1112,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   //   no_scaling = false; printf("!!!! FORCE SCALING !!!!\n");
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
-    HighsLogMessage(HighsMessageType::INFO, "Scaling: Matrix has min(max) values of %g(%g) so none performed", min_matrix_value, max_matrix_value);
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		     "Scaling: Matrix has min(max) values of %g(%g) so none performed", min_matrix_value, max_matrix_value);
     // Possibly scale the costs
     if (allow_cost_scaling) {
       scaleCosts(highs_model_object);
@@ -1254,7 +1266,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   double geomean_original_col_equilibration = exp(sum_original_log_col_equilibration/numCol);
   double geomean_original_row_equilibration = exp(sum_original_log_row_equilibration/numRow);
 #ifdef HiGHSDEV
-  HighsLogMessage(HighsMessageType::INFO, "Scaling: Original equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
+   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		   "Scaling: Original equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
 	 min_original_col_equilibration,
 	 geomean_original_col_equilibration,
 	 max_original_col_equilibration,
@@ -1265,7 +1278,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   double geomean_col_equilibration = exp(sum_log_col_equilibration/numCol);
   double geomean_row_equilibration = exp(sum_log_row_equilibration/numRow);
 #ifdef HiGHSDEV
-  HighsLogMessage(HighsMessageType::INFO, "Scaling: Final    equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
+   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		   "Scaling: Final    equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
 	 min_col_equilibration,
 	 geomean_col_equilibration,
 	 max_col_equilibration,
@@ -1295,7 +1309,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 	}
       }
       scaleHighsModelInit(highs_model_object);
-      HighsLogMessage(HighsMessageType::INFO, "Scaling: Extreme equilibration improved by a factor of only %g and mean equilibration by factor of only %g so no scaling applied",
+       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		       "Scaling: Extreme equilibration improved by a factor of only %g and mean equilibration by factor of only %g so no scaling applied",
 		      scale.extreme_equilibration_improvement_, scale.mean_equilibration_improvement_);
       // Possibly scale the costs
       if (allow_cost_scaling) {
@@ -1309,7 +1324,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     }
   }
   scale.is_scaled_ = true;
-  HighsLogMessage(HighsMessageType::INFO, "Scaling: Improved extreme equilibration by factor %g and mean equilibration by factor %g",
+   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		   "Scaling: Improved extreme equilibration by factor %g and mean equilibration by factor %g",
 		  scale.extreme_equilibration_improvement_, scale.mean_equilibration_improvement_);
 
   for (int iCol = 0; iCol < numCol; iCol++) {
@@ -2280,7 +2296,8 @@ bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase) {
   assert(ok);
   if (level <= 0) return ok;
   // Level 1: Basis and data check
-  ok = basisOk(simplex_lp, highs_model_object.simplex_basis_);
+  ok = basisOk(highs_model_object.options_.logfile,
+	       simplex_lp, highs_model_object.simplex_basis_);
   if (!ok) {
     printf("Error in nonbasicFlag and basicIndex\n");
     assert(ok);
@@ -2608,7 +2625,7 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
   }
   // Check that there are no fixed variables with nonzero nonbasicMove
   if (num_fixed_variable_move_errors) {
-    HighsLogMessage(HighsMessageType::ERROR,
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
 		    "In computeDualInfeasible there are %d fixed variables with nonzero nonbasicMove",
 		    num_fixed_variable_move_errors);
   }
@@ -2981,7 +2998,8 @@ HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_obje
       error_comment = "No scaled primal infeasibilities, but should be some";
     }
     if (infeasibility_error)
-      HighsLogMessage(HighsMessageType::ERROR, "%s: num/max/sum = %6d/%0.4g/%0.4g",
+       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
+		       "%s: num/max/sum = %6d/%0.4g/%0.4g",
 		      error_comment.c_str(),
 		      num_scaled_primal_infeasibilities,
 		      max_scaled_primal_infeasibility,
@@ -2996,7 +3014,8 @@ HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_obje
       error_comment = "No scaled dual infeasibilities, but should be some";
     }
     if (infeasibility_error)
-      HighsLogMessage(HighsMessageType::ERROR, "%s: num/max/sum = %6d/%0.4g/%0.4g",
+       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
+		       "%s: num/max/sum = %6d/%0.4g/%0.4g",
 		      error_comment.c_str(),
 		      num_scaled_dual_infeasibilities,
 		      max_scaled_dual_infeasibility,
@@ -3026,11 +3045,11 @@ HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_obje
   if (report) {
     printf("Obj = %g\n", scaled_solution_params.objective_function_value);
     printf("Its = %s\n", iterationsToString(scaled_solution_params).c_str());
-    HighsLogMessage(HighsMessageType::INFO,
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		    "Simplex basic solution: %sObjective = %0.15g",
 		    iterationsToString(scaled_solution_params).c_str(),
 		    scaled_solution_params.objective_function_value);
-    HighsLogMessage(HighsMessageType::INFO,
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		    "Infeasibilities -   scaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
 		    scaled_solution_params.num_primal_infeasibilities,
 		    scaled_solution_params.max_primal_infeasibility,
@@ -3039,7 +3058,7 @@ HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_obje
 		    scaled_solution_params.max_dual_infeasibility,
 		    scaled_solution_params.sum_dual_infeasibilities,
 		    utilHighsModelStatusToString(scaled_model_status).c_str());
-    HighsLogMessage(HighsMessageType::INFO,
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		    "Infeasibilities - unscaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
 		    unscaled_solution_params.num_primal_infeasibilities,
 		    unscaled_solution_params.max_primal_infeasibility,
@@ -3062,7 +3081,8 @@ HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const Hig
   double new_scaled_primal_feasibility_tolerance;
   double new_scaled_dual_feasibility_tolerance;
   return
-    getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+    getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.options_.logfile,
+									 highs_model_object.lp_,
 									 highs_model_object.scale_,
 									 highs_model_object.simplex_basis_,
 									 highs_model_object.simplex_info_,
@@ -3085,7 +3105,8 @@ HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const H
   double new_scaled_primal_feasibility_tolerance;
   double new_scaled_dual_feasibility_tolerance;
   return
-    getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+    getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.options_.logfile,
+									 highs_model_object.lp_,
 									 highs_model_object.scale_,
 									 highs_model_object.simplex_basis_,
 									 highs_model_object.simplex_info_,
@@ -3108,7 +3129,8 @@ HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsMode
   double new_scaled_primal_feasibility_tolerance;
   double new_scaled_dual_feasibility_tolerance;
   return
-    getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+    getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.options_.logfile,
+									 highs_model_object.lp_,
 									 highs_model_object.scale_,
 									 highs_model_object.simplex_basis_,
 									 highs_model_object.simplex_info_,
@@ -3132,7 +3154,8 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(cons
 									    double& new_scaled_dual_feasibility_tolerance) {
   HighsSolutionParams get_scaled_solution_params = highs_model_object.scaled_solution_params_;
   return
-    getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.lp_,
+    getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(highs_model_object.options_.logfile,
+									 highs_model_object.lp_,
 									 highs_model_object.scale_,
 									 highs_model_object.simplex_basis_,
 									 highs_model_object.simplex_info_,
@@ -3151,7 +3174,8 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(cons
 // scaled_solution_params are checked against them. If the scaled LP's
 // model status is optimal, gets suggested feasibility tolerances for
 // resolving the scaled LP
-HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(const HighsLp& lp,
+HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(FILE* logfile,
+										 const HighsLp& lp,
 										 const HighsScale& scale,
 										 const SimplexBasis& basis,
 										 const HighsSimplexInfo& simplex_info,
@@ -3254,7 +3278,7 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
 	  double multiplier = unscaled_dual_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
 	  double value = simplex_info.workValue_[iVar];
-	  HighsLogMessage(HighsMessageType::INFO,
+	  HighsLogMessage(logfile, HighsMessageType::INFO,
 			  "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			  iVar, iCol, iRow, lower, value, upper,
 			  scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
@@ -3298,7 +3322,7 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
       if (get_new_scaled_feasibility_tolerances) {
 	double multiplier = unscaled_primal_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
-	HighsLogMessage(HighsMessageType::INFO,
+	 HighsLogMessage(logfile, HighsMessageType::INFO,
 			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			iVar, iCol, iRow, lower, value, upper,
 			scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
@@ -3315,7 +3339,7 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
   equal_solution_infeasibility_params =
     equalSolutionInfeasibilityParams(get_unscaled_solution_params, unscaled_solution_params);
   if (!equal_solution_infeasibility_params) {
-    HighsLogMessage(HighsMessageType::ERROR,
+     HighsLogMessage(logfile, HighsMessageType::ERROR,
 		    "Unequal unscaled solution infeasibility params in getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
     assert(equal_solution_infeasibility_params);
     return HighsStatus::Error;
@@ -3324,7 +3348,7 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
     equal_solution_infeasibility_params =
       equalSolutionInfeasibilityParams(get_scaled_solution_params, scaled_solution_params);
     if (!equal_solution_infeasibility_params) {
-      HighsLogMessage(HighsMessageType::ERROR,
+       HighsLogMessage(logfile, HighsMessageType::ERROR,
 		      "Unequal scaled solution infeasibility params in getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
       assert(equal_solution_infeasibility_params);
       return HighsStatus::Error;
@@ -3347,17 +3371,18 @@ void logRebuild(HighsModelObject& highs_model_object, const bool primal,
     objective_value = simplex_info.dual_objective_value;
   }
   if (solve_phase < 2) {
-    HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d",
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		     "Iter %10d: %20.10e %sPh%1d",
                     scaled_solution_params.simplex_iteration_count, objective_value,
                     simplex_variant.c_str(), solve_phase);
   } else if (!primal && scaled_solution_params.sum_dual_infeasibilities == 0) {
-    HighsLogMessage(
-        HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d Pr: %d(%g)",
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		     "Iter %10d: %20.10e %sPh%1d Pr: %d(%g)",
         scaled_solution_params.simplex_iteration_count, objective_value, simplex_variant.c_str(),
         solve_phase, scaled_solution_params.num_primal_infeasibilities,
         scaled_solution_params.sum_primal_infeasibilities);
   } else {
-    HighsLogMessage(HighsMessageType::INFO,
+     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                     "Iter %10d: %20.10e %sPh%1d Pr: %d(%g); Du: %d(%g)",
                     scaled_solution_params.simplex_iteration_count, objective_value,
                     simplex_variant.c_str(), solve_phase,

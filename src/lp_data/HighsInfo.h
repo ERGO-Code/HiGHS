@@ -18,7 +18,7 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-
+#include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
 
 enum class InfoStatus { OK = 0, NO_FILE, UNKNOWN_INFO, ILLEGAL_VALUE };
@@ -83,19 +83,35 @@ class InfoRecordDouble : public InfoRecord {
   ~InfoRecordDouble() {}
 };
 
-InfoStatus getInfoIndex(const std::string& name, const std::vector<InfoRecord*>& info_records, int& index);
+InfoStatus getInfoIndex(const HighsOptions& options,
+			const std::string& name,
+			const std::vector<InfoRecord*>& info_records,
+			int& index);
 
-InfoStatus checkInfo(const std::vector<InfoRecord*>& info_records);
+InfoStatus checkInfo(const HighsOptions& options,
+		     const std::vector<InfoRecord*>& info_records);
 InfoStatus checkInfo(const InfoRecordInt& info);
 InfoStatus checkInfo(const InfoRecordDouble& info);
 
-InfoStatus getInfoValue(const std::string& name, const std::vector<InfoRecord*>& info_records, int& value);
-InfoStatus getInfoValue(const std::string& name, const std::vector<InfoRecord*>& info_records, double& value);
+InfoStatus getInfoValue(const HighsOptions& options,
+			const std::string& name,
+			const std::vector<InfoRecord*>& info_records,
+			int& value);
+InfoStatus getInfoValue(const HighsOptions& options,
+			const std::string& name,
+			const std::vector<InfoRecord*>& info_records,
+			double& value);
 
-HighsStatus reportInfoToFile(const std::string filename, const std::vector<InfoRecord*>& info_records);
-void reportInfo(FILE* file, const std::vector<InfoRecord*>& info_records, const bool force_report=false, const bool html=false);
-void reportInfo(FILE* file, const InfoRecordInt& info, const bool force_report=false, const bool html=false);
-void reportInfo(FILE* file, const InfoRecordDouble& info, const bool force_report=false, const bool html=false);
+HighsStatus reportInfoToFile(const HighsOptions& options,
+			     const std::string filename,
+			     const std::vector<InfoRecord*>& info_records);
+void reportInfo(FILE* file,
+		const std::vector<InfoRecord*>& info_records,
+		const bool html=false);
+void reportInfo(FILE* file, const InfoRecordInt& info,
+		const bool html=false);
+void reportInfo(FILE* file, const InfoRecordDouble& info,
+		const bool html=false);
 
 // For now, but later change so HiGHS properties are string based so that new
 // info (for debug and testing too) can be added easily. The info below

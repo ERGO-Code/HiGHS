@@ -1,12 +1,6 @@
 #include "lp_data/HighsStatus.h"
 #include "io/HighsIO.h"
 
-// Report a HighsStatus.
-void HighsStatusReport(const char* message, HighsStatus status) {
-  HighsLogMessage(HighsMessageType::INFO, "%s: HighsStatus = %d - %s\n",
-                  message, (int)status, HighsStatusToString(status).c_str());
-}
-
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {

@@ -3,6 +3,12 @@
 #include "lp_data/HighsLpUtils.h"
 #include "Avgas.h"
 
+void HighsStatusReport(FILE* logfile, const char* message, HighsStatus status) {
+  HighsLogMessage(logfile, HighsMessageType::INFO,
+		  "%s: HighsStatus = %d - %s\n",
+                  message, (int)status, HighsStatusToString(status).c_str());
+}
+
 bool areLpColEqual(
 		   const int num_col0, const double* colCost0, const double* colLower0, const double* colUpper0,
 		   const int num_nz0, const int* Astart0, const int* Aindex0, const double* Avalue0,
@@ -244,18 +250,22 @@ bool test_all_delete_keep(int num_row) {
 }
 
 void messageReportLp(const char* message, const HighsLp &lp) {
-  HighsSetMessagelevel(ML_ALWAYS);
-  HighsPrintMessage(ML_VERBOSE, "\nReporting LP: %s\n", message);
-  reportLp(lp, 2);
-  HighsSetMessagelevel(ML_NONE);
+  HighsOptions options;
+  options.output = stdout;
+  options.message_level = ML_ALWAYS;
+  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+		    "\nReporting LP: %s\n", message);
+  reportLp(options, lp, 2);
 }  
 
 void messageReportMatrix(const char* message, const int num_col, const int num_nz,
 			 const int* start, const int* index, const double* value) {
-  HighsSetMessagelevel(ML_ALWAYS);
-  HighsPrintMessage(ML_VERBOSE, "\nReporting Matrix: %s\n", message);
-  reportMatrix(message, num_col, num_nz, start, index, value);
-  HighsSetMessagelevel(ML_NONE);
+  HighsOptions options;
+  options.output = stdout;
+  options.message_level = ML_ALWAYS;
+  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+		    "\nReporting Matrix: %s\n", message);
+  reportMatrix(options, message, num_col, num_nz, start, index, value);
 }  
 
 // No commas in test case name.
@@ -265,7 +275,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   HighsOptions options;
   options.message_level = ML_ALWAYS;
-  HighsSetMessagelevel(ML_ALWAYS);
 
   Avgas avgas;
   const int avgas_num_col = 8;
@@ -316,7 +325,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   return_status = avgas_highs.writeModel("");
-  HighsStatusReport("avgas_highs.writeModel(\"\")", return_status);
+  HighsStatusReport(options.logfile, "avgas_highs.writeModel(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
 
@@ -329,7 +338,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(model_status == HighsModelStatus::NOTSET);
 
   return_status = highs.run();
-  HighsStatusReport("highs.run()", return_status);
+  HighsStatusReport(options.logfile, "highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();
@@ -344,7 +353,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   return_status = highs.writeModel("");
-  HighsStatusReport("highs.writeModel(\"\")", return_status);
+  HighsStatusReport(options.logfile, "highs.writeModel(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   // Adding row vectors and matrix to model with columns returns OK
@@ -352,7 +361,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   return_status = highs.writeModel("");
-  HighsStatusReport("highs.writeModel(\"\")", return_status);
+  HighsStatusReport(options.logfile, "highs.writeModel(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   //  const HighsLp &reference_avgas = avgas_highs.getLp();
@@ -362,7 +371,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   return_status = highs.run();
-  HighsStatusReport("highs.run()", return_status);
+  HighsStatusReport(options.logfile, "highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();
@@ -441,7 +450,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 #endif
 
   return_status = highs.run();
-  HighsStatusReport("highs.run()", return_status);
+  HighsStatusReport(options.logfile, "highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();
@@ -595,7 +604,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 #endif
 
   return_status = highs.run();
-  HighsStatusReport("highs.run()", return_status);
+  HighsStatusReport(options.logfile, "highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::OK);
   
   model_status = highs.getModelStatus();
@@ -686,7 +695,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 #endif
   
   return_status = highs.run();
-  HighsStatusReport("highs.run()", return_status);
+  HighsStatusReport(options.logfile, "highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::OK);
   
   model_status = highs.getModelStatus();
@@ -708,7 +717,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 #endif
   
   return_status = highs.run();
-  HighsStatusReport("highs.run()", return_status);
+  HighsStatusReport(options.logfile, "highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::OK);
   
   model_status = highs.getModelStatus();

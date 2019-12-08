@@ -20,24 +20,22 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-FILE* logfile = stdout;
-FILE* output = stdout;
-int message_level = ML_MINIMAL;
 void (*printmsgcb)(int, const char*, void*) = NULL;
 void (*logmsgcb)(HighsMessageType, const char*, void*) = NULL;
 void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void HighsPrintMessage(int level, const char* format, ...) {
-  if (output == NULL) {
+void HighsPrintMessage(FILE* pass_output,
+		       const int pass_message_level, const int level, const char* format, ...) {
+  if (pass_output == NULL) {
     return;
   }
-  if (message_level & level) {
+  if (pass_message_level & level) {
     va_list argptr;
     va_start(argptr, format);
     if (printmsgcb == NULL)
-      vfprintf(output, format, argptr);
+      vfprintf(pass_output, format, argptr);
     else {
       int len;
       len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
@@ -52,8 +50,8 @@ void HighsPrintMessage(int level, const char* format, ...) {
   }
 }
 
-void HighsLogMessage(HighsMessageType type, const char* format, ...) {
-  if (logfile == NULL) {
+void HighsLogMessage(FILE* pass_logfile, HighsMessageType type, const char* format, ...) {
+  if (pass_logfile == NULL) {
     return;
   }
   
@@ -66,10 +64,10 @@ void HighsLogMessage(HighsMessageType type, const char* format, ...) {
   va_start(argptr, format);
 
   if (logmsgcb == NULL) {
-    fprintf(logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour,
+    fprintf(pass_logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour,
             timeinfo->tm_min, timeinfo->tm_sec, HighsMessageTypeTag[(int)type]);
-    vfprintf(logfile, format, argptr);
-    fprintf(logfile, "\n");
+    vfprintf(pass_logfile, format, argptr);
+    fprintf(pass_logfile, "\n");
   } else {
     int len;
     len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ",
@@ -90,12 +88,6 @@ void HighsLogMessage(HighsMessageType type, const char* format, ...) {
   va_end(argptr);
 }
 
-void HighsSetLogfile(FILE* lf) { logfile = lf; }
-
-void HighsSetOutput(FILE* op) { output = op; }
-
-void HighsSetMessagelevel(int level) { message_level = level; }
-
 void HighsSetMessageCallback(
     void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
     void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
@@ -106,9 +98,9 @@ void HighsSetMessageCallback(
 }
 
 void HighsSetIO(HighsOptions& options) {
-  logfile = options.logfile;
-  output = options.output;
-  message_level = options.message_level;
+  //  logfile = options.logfile;
+  //  output = options.output;
+  //  message_level = options.message_level;
   printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;

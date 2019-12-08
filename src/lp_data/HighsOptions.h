@@ -160,45 +160,76 @@ void assignvalue(std::string Xvalue) {
 
 inline const char* bool2string(bool b);
 
-bool commandLineOffChooseOnOk(const string& value);
-bool commandLineSolverOk(const string& value);
+bool commandLineOffChooseOnOk(FILE* logfile, const string& value);
+bool commandLineSolverOk(FILE* logfile, const string& value);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
+OptionStatus getOptionIndex(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
 
-OptionStatus checkOptions(const std::vector<OptionRecord*>& option_records);
-OptionStatus checkOption(const OptionRecordInt& option);
-OptionStatus checkOption(const OptionRecordDouble& option);
+OptionStatus checkOptions(FILE* logfile,
+			  const std::vector<OptionRecord*>& option_records);
+OptionStatus checkOption(FILE* logfile, const OptionRecordInt& option);
+OptionStatus checkOption(FILE* logfile, const OptionRecordDouble& option);
 
-OptionStatus checkOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
-OptionStatus checkOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
-OptionStatus checkOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
+OptionStatus checkOptionValue(FILE* logfile,
+			      std::vector<OptionRecord*>& option_records, const int value);
+OptionStatus checkOptionValue(FILE* logfile,
+			      std::vector<OptionRecord*>& option_records, const double value);
+OptionStatus checkOptionValue(FILE* logfile,
+			      std::vector<OptionRecord*>& option_records, const std::string value);
 
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const char* value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const char* value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
-OptionStatus setOptionValue(OptionRecordInt& option, const int value);
-OptionStatus setOptionValue(OptionRecordDouble& option, const double value);
-OptionStatus setOptionValue(OptionRecordString& option, std::string const value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordInt& option, const int value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordDouble& option, const double value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordString& option, std::string const value);
 
-OptionStatus passOptions(const HighsOptions from_options, HighsOptions to_options);
+OptionStatus passOptions(FILE* logfile, const HighsOptions from_options, HighsOptions to_options);
 
-OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
-OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, int& value);
-OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
-OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
+OptionStatus getOptionValue(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
+OptionStatus getOptionValue(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, int& value);
+OptionStatus getOptionValue(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
+OptionStatus getOptionValue(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
 
-HighsStatus reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records);
-void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false, const bool html=false);
-void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false, const bool html=false);
-void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false, const bool html=false);
-void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report=false, const bool html=false);
-void reportOption(FILE* file, const OptionRecordString& option, const bool force_report=false, const bool html=false);
+HighsStatus reportOptionsToFile(FILE* logfile,
+				const std::string filename, const std::vector<OptionRecord*>& option_records,
+				const bool report_only_non_default_values=true);
+void reportOptions(FILE* file,
+		   const std::vector<OptionRecord*>& option_records,
+		   const bool report_only_non_default_values=true,
+		   const bool html=false);
+void reportOption(FILE* file,
+		  const OptionRecordBool& option,
+		  const bool report_only_non_default_values,
+		  const bool html);
+void reportOption(FILE* file,
+		  const OptionRecordInt& option,
+		  const bool report_only_non_default_values,
+		  const bool html);
+void reportOption(FILE* file,
+		  const OptionRecordDouble& option,
+		  const bool report_only_non_default_values,
+		  const bool html);
+void reportOption(FILE* file,
+		  const OptionRecordString& option,
+		  const bool report_only_non_default_values,
+		  const bool html);
 
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";

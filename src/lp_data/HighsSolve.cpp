@@ -29,7 +29,8 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   assert(lp.numRow_==0);
   if (lp.numRow_!=0) return HighsStatus::Error;
 
-  HighsLogMessage(HighsMessageType::INFO, "Solving an unconstrained LP with %d columns", lp.numCol_);
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Solving an unconstrained LP with %d columns", lp.numCol_);
 
   HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;

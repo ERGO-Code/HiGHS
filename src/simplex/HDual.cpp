@@ -39,6 +39,7 @@ using std::flush;
 using std::runtime_error;
 
 void HDual::solve(int num_threads) {
+  HighsOptions& options = workHMO.options_;
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
@@ -71,10 +72,10 @@ void HDual::solve(int num_threads) {
 
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
   simplex_info.store_squared_primal_infeasibility = true;
-  if (workHMO.options_.less_infeasible_DSE_check) {
-    if (isLessInfeasibleDSECandidate(workHMO.simplex_lp_)) {
+  if (options.less_infeasible_DSE_check) {
+    if (isLessInfeasibleDSECandidate(options, workHMO.simplex_lp_)) {
       // LP is a candidate for LiDSE
-      if (workHMO.options_.less_infeasible_DSE_choose_row)
+      if (options.less_infeasible_DSE_choose_row)
 	// Use LiDSE
 	simplex_info.store_squared_primal_infeasibility = false;
     }
@@ -155,14 +156,14 @@ void HDual::solve(int num_threads) {
         timer.stop(simplex_info.clock_[SimplexIzDseWtClock]);
         timer.stop(simplex_info.clock_[DseIzClock]);
         double IzDseWtTT = timer.read(SimplexIzDseWtClock);
-        HighsPrintMessage(ML_DETAILED,
+        HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
                           "Computed %d initial DSE weights in %gs\n",
                           solver_num_row, IzDseWtTT);
 #endif
       }
 #ifdef HiGHSDEV
       else {
-        HighsPrintMessage(ML_DETAILED,
+        HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
                           "solve:: %d basic structurals: starting from B=I so "
                           "unit initial DSE weights\n",
                           num_basic_structurals);
@@ -250,7 +251,7 @@ void HDual::solve(int num_threads) {
   }
 
 #ifdef HiGHSDEV
-  int strategy = workHMO.options_.simplex_dual_edge_weight_strategy;
+  int strategy = options.simplex_dual_edge_weight_strategy;
   if (
       strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE ||
       strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL ||
@@ -289,11 +290,16 @@ void HDual::solve(int num_threads) {
     // Use primal to clean up if not out of time
     int it0 = scaled_solution_params.simplex_iteration_count;
     HPrimal hPrimal(workHMO);
-    //    HighsSetMessagelevel(ML_ALWAYS);
+    const bool full_logging = false;
+    int save_message_level;
+    if (full_logging) {
+      save_message_level = options.message_level;
+      options.message_level = ML_ALWAYS;
+    }
     timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
     hPrimal.solvePhase2();
     timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-    //    HighsSetMessagelevel(workHMO.options_.messageLevel);
+    if (full_logging) options.message_level = save_message_level;
     simplex_info.primal_phase2_iteration_count +=
         (scaled_solution_params.simplex_iteration_count - it0);
   }
@@ -454,7 +460,8 @@ void HDual::solvePhase1() {
   // Set solvePhase=1 so it's set if solvePhase1() is called directly
   solvePhase = 1;
   // Report the phase start
-  HighsPrintMessage(ML_DETAILED, "dual-phase-1-start\n");
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		    "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
   initialise_bound(workHMO, 1);
   initialise_value(workHMO);
@@ -510,7 +517,8 @@ void HDual::solvePhase1() {
   if (solve_bailout) return;
 
   if (rowOut == -1) {
-    HighsPrintMessage(ML_DETAILED, "dual-phase-1-optimal\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "dual-phase-1-optimal\n");
     // Go to phase 2
     if (simplex_info.dual_objective_value == 0) {
       solvePhase = 2;
@@ -523,7 +531,8 @@ void HDual::solvePhase1() {
       } else {
         // Report dual infeasible
         solvePhase = -1;
-        HighsPrintMessage(ML_MINIMAL, "dual-infeasible\n");
+        HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+			  "dual-infeasible\n");
         workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
       }
     }
@@ -531,11 +540,13 @@ void HDual::solvePhase1() {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
-    HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		      "dual-phase-1-not-solved\n");
     workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
-    HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		      "dual-phase-1-unbounded\n");
     if (workHMO.simplex_info_.costs_perturbed) {
       // Clean up perturbation and go on
       cleanup();
@@ -543,7 +554,8 @@ void HDual::solvePhase1() {
     } else {
       // Report strange issues
       solvePhase = -1;
-      HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+			"dual-phase-1-not-solved\n");
       workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
     }
   }
@@ -568,7 +580,8 @@ void HDual::solvePhase2() {
   // Set solvePhase=2 so it's set if solvePhase2() is called directly
   solvePhase = 2;
   // Report the phase start
-  HighsPrintMessage(ML_DETAILED, "dual-phase-2-start\n");
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		    "dual-phase-2-start\n");
   // Collect free variables
   dualRow.create_Freelist();
   // Main solving structure
@@ -635,11 +648,13 @@ void HDual::solvePhase2() {
   }
   if (dualInfeasCount > 0) {
     // There are dual infeasiblities so switch to Phase 1 and return
-    HighsPrintMessage(ML_DETAILED, "dual-phase-2-found-free\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "dual-phase-2-found-free\n");
     solvePhase = 1;
   } else if (rowOut == -1) {
     // There is no candidate in CHUZR, even after rebuild so probably optimal
-    HighsPrintMessage(ML_DETAILED, "dual-phase-2-optimal\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "dual-phase-2-optimal\n");
     //		printf("Rebuild: cleanup()\n");
     cleanup();
     if (dualInfeasCount > 0) {
@@ -649,18 +664,21 @@ void HDual::solvePhase2() {
     } else {
       // There are no dual infeasiblities after cleanup() so optimal!
       solvePhase = 0;
-      HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+			"problem-optimal\n");
       workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
-    HighsPrintMessage(ML_MINIMAL, "dual-phase-2-not-solved\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		      "dual-phase-2-not-solved\n");
     workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
-    HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		      "dual-phase-2-unbounded\n");
     if (workHMO.simplex_info_.costs_perturbed) {
       // If the costs have been perturbed, clean up and return
       cleanup();
@@ -668,7 +686,8 @@ void HDual::solvePhase2() {
       // If the costs have not been perturbed, so dual unbounded---and hence
       // primal infeasible
       solvePhase = -1;
-      HighsPrintMessage(ML_MINIMAL, "problem-infeasible\n");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+			"problem-infeasible\n");
       workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     }
   }
@@ -767,8 +786,8 @@ void HDual::rebuild() {
         absDualObjectiveError / max(1.0, fabs(dual_objective_value));
     // TODO Investigate these Dual objective value errors
     if (rlvDualObjectiveError >= 1e-8) {
-      HighsLogMessage(HighsMessageType::WARNING, "Dual objective value error
-    |rel| = %12g (%12g)", absDualObjectiveError, rlvDualObjectiveError);
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING, 
+    "Dual objective value error |rel| = %12g (%12g)", absDualObjectiveError, rlvDualObjectiveError);
     }
   }
   */
@@ -815,7 +834,8 @@ void HDual::rebuild() {
 }
 
 void HDual::cleanup() {
-  HighsPrintMessage(ML_DETAILED, "dual-cleanup-shift\n");
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		    "dual-cleanup-shift\n");
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Remove perturbation
@@ -1039,7 +1059,7 @@ void HDual::iterationAnalysis() {
 	(lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot);
 #ifdef HiGHSDEV
       if (switch_to_devex) {
-	HighsLogMessage(HighsMessageType::INFO,
+	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
 			"Switch from DSE to Devex after %d costly DSE iterations of %d: "
 			"Col_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
 			AnIterNumCostlyDseIt, lcNumIter, rowdseDensity, row_epDensity,
@@ -1058,7 +1078,7 @@ void HDual::iterationAnalysis() {
 	dse_weight_error_measure > dse_weight_error_threshhold;
 #ifdef HiGHSDEV
       if (switch_to_devex) {
-	HighsLogMessage(HighsMessageType::INFO,
+	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
 			"Switch from DSE to Devex with log error measure of %g > %g = threshhold",
 			dse_weight_error_measure, dse_weight_error_threshhold);
       }
@@ -1165,47 +1185,55 @@ void HDual::iterationReportFull(bool header) {
 #ifdef HiGHSDEV
     iterationReportIterationData(ML_DETAILED, true);
     iterationReportDensity(ML_DETAILED, true);
-    HighsPrintMessage(ML_DETAILED, " FreeLsZ");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      " FreeLsZ");
 #endif
-    HighsPrintMessage(ML_DETAILED, "\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "\n");
   } else {
     iterationReportIterationAndPhase(ML_DETAILED, false);
     iterationReportDualObjective(ML_DETAILED, false);
 #ifdef HiGHSDEV
     iterationReportIterationData(ML_DETAILED, false);
     iterationReportDensity(ML_DETAILED, false);
-    HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      " %7d", dualRow.freeListSize);
 #endif
-    HighsPrintMessage(ML_DETAILED, "\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+		      "\n");
   }
 }
 
 void HDual::iterationReportIterationAndPhase(int iterate_log_level,
                                              bool header) {
   if (header) {
-    HighsPrintMessage(iterate_log_level, " Iteration Ph");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      " Iteration Ph");
   } else {
     int numIter = workHMO.scaled_solution_params_.simplex_iteration_count;
-    HighsPrintMessage(iterate_log_level, " %9d %2d", numIter, solvePhase);
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      " %9d %2d", numIter, solvePhase);
   }
 }
 void HDual::iterationReportDualObjective(int iterate_log_level, bool header) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (header) {
-    HighsPrintMessage(iterate_log_level, "        DualObjective");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      "        DualObjective");
   } else {
-    HighsPrintMessage(iterate_log_level, " %20.10e",
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      " %20.10e",
                       simplex_info.updated_dual_objective_value);
   }
 }
 
 void HDual::iterationReportIterationData(int iterate_log_level, bool header) {
   if (header) {
-    HighsPrintMessage(iterate_log_level,
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
                       " Inv       NumCk     LvR     LvC     EnC        DlPr    "
                       "    ThDu        ThPr          Aa");
   } else {
-    HighsPrintMessage(iterate_log_level,
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
                       " %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g",
                       invertHint, numericalTrouble, rowOut, columnOut, columnIn,
                       deltaPrimal, thetaDual, thetaPrimal, alpha);
@@ -1216,23 +1244,29 @@ void HDual::iterationReportDensity(int iterate_log_level, bool header) {
   bool rp_dual_steepest_edge =
       dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
   if (header) {
-    HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      "  Col R_Ep R_Ap");
     if (rp_dual_steepest_edge) {
-      HighsPrintMessage(iterate_log_level, "  DSE");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+			"  DSE");
     } else {
-      HighsPrintMessage(iterate_log_level, "     ");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+			"     ");
     }
   } else {
     int l10ColDse = intLog10(columnDensity);
     int l10REpDse = intLog10(row_epDensity);
     int l10RapDse = intLog10(row_apDensity);
-    HighsPrintMessage(iterate_log_level, " %4d %4d %4d", l10ColDse, l10REpDse,
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+		      " %4d %4d %4d", l10ColDse, l10REpDse,
                       l10RapDse);
     if (rp_dual_steepest_edge) {
       int l10DseDse = intLog10(rowdseDensity);
-      HighsPrintMessage(iterate_log_level, " %4d", l10DseDse);
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+			" %4d", l10DseDse);
     } else {
-      HighsPrintMessage(iterate_log_level, "     ");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
+			"     ");
     }
   }
 }
@@ -1245,15 +1279,18 @@ void HDual::iterationReportRebuild(
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   bool report_condition = simplex_info.analyse_invert_condition;
-  HighsPrintMessage(ML_MINIMAL,
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
                     "Iter %10d:", workHMO.scaled_solution_params_.simplex_iteration_count);
   iterationReportDensity(ML_MINIMAL, true);
   iterationReportDensity(ML_MINIMAL, false);
   iterationReportDualObjective(ML_MINIMAL, false);
-  HighsPrintMessage(ML_MINIMAL, " DuPh%1d(%2d)", solvePhase, i_v);
-  if (report_condition) HighsPrintMessage(ML_MINIMAL, " k(B)%10.4g", simplex_info.invert_condition);
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		    " DuPh%1d(%2d)", solvePhase, i_v);
+  if (report_condition) HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+					  " k(B)%10.4g", simplex_info.invert_condition);
   if (solvePhase == 2) reportInfeasibility();
-  HighsPrintMessage(ML_MINIMAL, "\n");
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		    "\n");
 #else
   logRebuild(workHMO, false, solvePhase);
 #endif
@@ -1261,11 +1298,13 @@ void HDual::iterationReportRebuild(
 
 void HDual::reportInfeasibility() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
-  HighsPrintMessage(ML_MINIMAL, " Pr: %d(%g)",
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		    " Pr: %d(%g)",
                     scaled_solution_params.num_primal_infeasibilities,
                     scaled_solution_params.sum_primal_infeasibilities);
   if (scaled_solution_params.sum_dual_infeasibilities > 0) {
-    HighsPrintMessage(ML_MINIMAL, "; Du: %d(%g)",
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		      "; Du: %d(%g)",
                       scaled_solution_params.num_dual_infeasibilities,
                       scaled_solution_params.sum_dual_infeasibilities);
   }
@@ -1487,7 +1526,8 @@ void HDual::chooseColumn(HVector* row_ep) {
       if (anPriceEr) {
         bool price_er;
         price_er = matrix->price_er_ck(row_ap, *row_ep);
-        if (!price_er) HighsPrintMessage(ML_VERBOSE, "No ultra PRICE error\n");
+        if (!price_er) HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_VERBOSE,
+					 "No ultra PRICE error\n");
       }
 #endif
     } else if (allow_price_by_row_switch) {
@@ -1958,7 +1998,7 @@ void HDual::interpret_dual_edge_weight_strategy(const int dual_edge_weight_strat
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
   } else {
-    HighsPrintMessage(ML_MINIMAL,
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
                       "HDual::interpret_dual_edge_weight_strategy: "
                       "unrecognised dual_edge_weight_strategy = %d - using "
                       "dual steepest edge with possible switch to Devex\n",
@@ -1990,10 +2030,9 @@ void HDual::interpret_price_strategy(const int price_strategy) {
     allow_price_by_row_switch = true;
     allow_price_ultra = true;
   } else {
-    HighsPrintMessage(
-        ML_MINIMAL,
-        "HDual::interpret_price_strategy: unrecognised price_strategy = %d - "
-        "using row Price with switch or colump price switch\n",
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+		      "HDual::interpret_price_strategy: unrecognised price_strategy = %d - "
+		      "using row Price with switch or colump price switch\n",
         price_strategy);
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;

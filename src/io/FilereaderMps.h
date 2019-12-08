@@ -23,7 +23,8 @@ class FilereaderMps : public Filereader {
                                       HighsLp& model);
   FilereaderRetcode readModelFromFile(const char* filename,
                                       HighsModelBuilder& model);
-  HighsStatus writeModelToFile(const char* filename, HighsLp& model);
+  HighsStatus writeModelToFile(const HighsOptions& options,
+			       const char* filename, HighsLp& model);
 };
 
 #endif

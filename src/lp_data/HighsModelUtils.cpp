@@ -173,7 +173,11 @@ int maxNameLength(const int num_name, const std::vector<std::string>& names) {
     return max_name_length;
 }
 
-HighsStatus normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length) {
+HighsStatus normaliseNames(const HighsOptions& options,
+			   const std::string name_type,
+			   const int num_name,
+			   std::vector<std::string>& names,
+			   int& max_name_length) {
   // Record the desired maximum name length
   int desired_max_name_length = max_name_length;
   // First look for empty names
@@ -192,9 +196,9 @@ HighsStatus normaliseNames(const std::string name_type, const int num_name, std:
     // Construct names, either because they are empty names, or
     // because the existing names are too long
 
-    HighsLogMessage(HighsMessageType::WARNING,
-    "There are empty or excessively-long %s names: using constructed names with prefix %s",
-	   name_type.c_str(), name_prefix.c_str());
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "There are empty or excessively-long %s names: using constructed names with prefix %s",
+		    name_type.c_str(), name_prefix.c_str());
     for (int ix = 0; ix < num_name; ix++)
       names[ix] = name_prefix + std::to_string(ix);
   } else {
@@ -325,13 +329,6 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
   }
   return "";
 }
-/*
-// Report a HighsModelStatus.
-void highsModelStatusReport(const char* message, HighsModelStatus model_status) {
-  HighsLogMessage(HighsMessageType::INFO, "%s: HighsModelStatus = %d - %s\n",
-                  message, (int)model_status, utilHighsModelStatusToString(model_status).c_str());
-}
-*/
 
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
