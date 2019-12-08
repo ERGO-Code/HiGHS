@@ -502,7 +502,9 @@ OptionStatus getOptionValue(FILE* logfile,
 }
 
 HighsStatus reportOptionsToFile(FILE* logfile,
-				const std::string filename, const std::vector<OptionRecord*>& option_records) {
+				const std::string filename,
+				const std::vector<OptionRecord*>& option_records,
+				const bool report_only_non_default_values) {
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
     HighsLogMessage(logfile, HighsMessageType::ERROR,
@@ -523,7 +525,7 @@ HighsStatus reportOptionsToFile(FILE* logfile,
     fprintf(file, "<h3>HiGHS Options</h3>\n\n");
     fprintf(file, "<ul>\n");
   }
-  reportOptions(file, option_records, true, html);
+  reportOptions(file, option_records, report_only_non_default_values, html);
   if (html) {
     fprintf(file, "</ul>\n");
     fprintf(file, "</body>\n\n</html>\n");
@@ -531,7 +533,10 @@ HighsStatus reportOptionsToFile(FILE* logfile,
   return HighsStatus::OK;
 }
 
-void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report, const bool html) {
+void reportOptions(FILE* file,
+		   const std::vector<OptionRecord*>& option_records,
+		   const bool report_only_non_default_values,
+		   const bool html) {
   int num_options = option_records.size();
   for (int index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
@@ -539,19 +544,19 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
     // Skip the advanced options when creating HTML
     if (html && option_records[index]->advanced) continue;
     if (type == HighsOptionType::BOOL) {
-      reportOption(file, ((OptionRecordBool*)option_records[index])[0], force_report, html);
+      reportOption(file, ((OptionRecordBool*)option_records[index])[0], report_only_non_default_values, html);
     } else if (type == HighsOptionType::INT) {
-      reportOption(file, ((OptionRecordInt*)option_records[index])[0], force_report, html);
+      reportOption(file, ((OptionRecordInt*)option_records[index])[0], report_only_non_default_values, html);
     } else if (type == HighsOptionType::DOUBLE) {
-      reportOption(file, ((OptionRecordDouble*)option_records[index])[0], force_report, html);
+      reportOption(file, ((OptionRecordDouble*)option_records[index])[0], report_only_non_default_values, html);
     } else {
-      reportOption(file, ((OptionRecordString*)option_records[index])[0], force_report, html);
+      reportOption(file, ((OptionRecordString*)option_records[index])[0], report_only_non_default_values, html);
     } 
   }
 }
 
-void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report, const bool html) {
-  if (force_report || option.default_value != *option.value) {
+void reportOption(FILE* file, const OptionRecordBool& option, const bool report_only_non_default_values, const bool html) {
+  if (!report_only_non_default_values || option.default_value != *option.value) {
     if (html) {
       fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
       fprintf(file, "%s<br>\n", option.description.c_str());
@@ -569,8 +574,8 @@ void reportOption(FILE* file, const OptionRecordBool& option, const bool force_r
   }
 }
 
-void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report, const bool html) {
-  if (force_report || option.default_value != *option.value) {
+void reportOption(FILE* file, const OptionRecordInt& option, const bool report_only_non_default_values, const bool html) {
+  if (!report_only_non_default_values || option.default_value != *option.value) {
     if (html) {
       fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
       fprintf(file, "%s<br>\n", option.description.c_str());
@@ -592,8 +597,8 @@ void reportOption(FILE* file, const OptionRecordInt& option, const bool force_re
   }
 }
 
-void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report, const bool html) {
-  if (force_report || option.default_value != *option.value) {
+void reportOption(FILE* file, const OptionRecordDouble& option, const bool report_only_non_default_values, const bool html) {
+  if (!report_only_non_default_values || option.default_value != *option.value) {
     if (html) {
       fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
       fprintf(file, "%s<br>\n", option.description.c_str());
@@ -615,10 +620,10 @@ void reportOption(FILE* file, const OptionRecordDouble& option, const bool force
   }
 }
 
-void reportOption(FILE* file, const OptionRecordString& option, const bool force_report, const bool html) {
+void reportOption(FILE* file, const OptionRecordString& option, const bool report_only_non_default_values, const bool html) {
   // Don't report for the options file if writing to an options file
   if (option.name == options_file_string) return;
-  if (force_report || option.default_value != *option.value) {
+  if (!report_only_non_default_values || option.default_value != *option.value) {
     if (html) {
       fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
       fprintf(file, "%s<br>\n", option.description.c_str());

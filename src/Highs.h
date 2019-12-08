@@ -137,7 +137,8 @@ class Highs {
   const HighsOptions& getHighsOptions() const;
   
   HighsStatus writeHighsOptions(
-				const std::string filename  //!< The filename
+				const std::string filename,  //!< The filename
+				const bool report_only_non_default_values=true
 				);
   
    /**
@@ -670,6 +671,8 @@ class Highs {
    * @brief Clear data associated with solving the model: basis, solution and internal data etc
    */
   HighsStatus clearSolver();
+  HighsStatus setLogfile(FILE* logfile);
+  HighsStatus setOutput(FILE* output);
 
 #ifdef HiGHSDEV
   /**

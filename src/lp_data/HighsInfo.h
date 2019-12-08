@@ -107,13 +107,10 @@ HighsStatus reportInfoToFile(const HighsOptions& options,
 			     const std::vector<InfoRecord*>& info_records);
 void reportInfo(FILE* file,
 		const std::vector<InfoRecord*>& info_records,
-		const bool force_report=false,
 		const bool html=false);
 void reportInfo(FILE* file, const InfoRecordInt& info,
-		const bool force_report=false,
 		const bool html=false);
 void reportInfo(FILE* file, const InfoRecordDouble& info,
-		const bool force_report=false,
 		const bool html=false);
 
 // For now, but later change so HiGHS properties are string based so that new

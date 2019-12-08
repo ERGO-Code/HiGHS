@@ -80,6 +80,11 @@ int main(int argc, char** argv) {
   output = options.output;
   message_level = options.message_level;
 
+  bool run_quiet = true; // false;//
+  if (run_quiet) {
+    HighsPrintMessage(output, message_level, ML_ALWAYS, 
+		      "In main: running highs.run() quietly\n");
+  }
   bool force_options_file = false;  // true;//
   if (force_options_file) {
     HighsPrintMessage(output, message_level, ML_ALWAYS, 
@@ -109,6 +114,11 @@ int main(int argc, char** argv) {
 			"In main: fail return from passHighsOptions\n");
       return (int)return_status;
     }
+  }
+
+  if (run_quiet) {
+    highs.setLogfile(NULL);
+    highs.setOutput(NULL);
   }
 
   HighsLp lp;
@@ -160,12 +170,20 @@ int main(int argc, char** argv) {
   }
   */
 
-  //  highs.options_ = options;
+  // Report all the options to an options file
+  //  reportOptionsToFile(options_.logfile, "Highs.set", options_.records);
+  // Report all the options as HTML
+  //  reportOptionsToFile(options_.logfile, "Highs.html", options_.records);
+  // Possibly report options settings
+  highs.writeHighsOptions("");  //, false);
+
+  if (run_quiet) HighsPrintMessage(output, message_level, ML_ALWAYS, "Before calling highs.run()\n");
   HighsStatus run_status = highs.run();
+  if (run_quiet) HighsPrintMessage(output, message_level, ML_ALWAYS, "After calling highs.run()\n");
   std::string statusname = HighsStatusToString(run_status);
 
   if (run_status == HighsStatus::Error) {
-    HighsPrintMessage(ML_ALWAYS, "HiGHS status: %s\n", statusname.c_str());
+    HighsPrintMessage(output, message_level, ML_ALWAYS, "HiGHS status: %s\n", statusname.c_str());
   } else {
     HighsPrintMessage(output, message_level, ML_ALWAYS, "\n");
     HighsModelStatus model_status = highs.getModelStatus();

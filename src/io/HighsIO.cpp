@@ -167,9 +167,9 @@ void HighsSetMessageCallback(
 }
 
 void HighsSetIO(HighsOptions& options) {
-  logfile = options.logfile;
-  output = options.output;
-  message_level = options.message_level;
+  //  logfile = options.logfile;
+  //  output = options.output;
+  //  message_level = options.message_level;
   printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;

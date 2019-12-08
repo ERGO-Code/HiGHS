@@ -124,8 +124,10 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::writeHighsOptions(const std::string filename) {
-  return reportOptionsToFile(options_.logfile, filename, options_.records);
+HighsStatus Highs::writeHighsOptions(const std::string filename,
+				     const bool report_only_non_default_values) {
+  return reportOptionsToFile(options_.logfile, filename, options_.records,
+			     report_only_non_default_values);
 }
 
 const HighsOptions& Highs::getHighsOptions() const { return options_; }
@@ -268,12 +270,6 @@ HighsStatus Highs::run() {
 #ifdef HiGHSDEV
   if (checkOptions(options_.logfile, options_.records) != OptionStatus::OK) return HighsStatus::Error;
 #endif
-  // Report all the options to an options file
-  //  reportOptionsToFile(options_.logfile, "Highs.set", options_.records);
-  // Report all the options as HTML
-  //  reportOptionsToFile(options_.logfile, "Highs.html", options_.records);
-  // Possibly report options settings
-  reportOptions(stdout, options_.records);  //, true);
   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
 		    "Solving %s", lp_.model_name_.c_str());
 
@@ -1099,6 +1095,18 @@ HighsStatus Highs::clearSolver() {
   basis_.valid_ = false;
   return HighsStatus::OK;
 }
+
+HighsStatus Highs::setLogfile(FILE* logfile) {
+  options_.logfile = logfile;
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::setOutput(FILE* output) {
+  options_.output = output;
+  return HighsStatus::OK;
+}
+
+
 
 #ifdef HiGHSDEV
 void Highs::reportModelStatusSolutionBasis(const std::string message,

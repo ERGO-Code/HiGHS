@@ -208,27 +208,28 @@ OptionStatus getOptionValue(FILE* logfile,
 			    const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
 
 HighsStatus reportOptionsToFile(FILE* logfile,
-				const std::string filename, const std::vector<OptionRecord*>& option_records);
+				const std::string filename, const std::vector<OptionRecord*>& option_records,
+				const bool report_only_non_default_values=true);
 void reportOptions(FILE* file,
 		   const std::vector<OptionRecord*>& option_records,
-		   const bool force_report=false,
+		   const bool report_only_non_default_values=true,
 		   const bool html=false);
 void reportOption(FILE* file,
 		  const OptionRecordBool& option,
-		  const bool force_report=false,
-		  const bool html=false);
+		  const bool report_only_non_default_values,
+		  const bool html);
 void reportOption(FILE* file,
 		  const OptionRecordInt& option,
-		  const bool force_report=false,
-		  const bool html=false);
+		  const bool report_only_non_default_values,
+		  const bool html);
 void reportOption(FILE* file,
 		  const OptionRecordDouble& option,
-		  const bool force_report=false,
-		  const bool html=false);
+		  const bool report_only_non_default_values,
+		  const bool html);
 void reportOption(FILE* file,
 		  const OptionRecordString& option,
-		  const bool force_report=false,
-		  const bool html=false);
+		  const bool report_only_non_default_values,
+		  const bool html);
 
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";
