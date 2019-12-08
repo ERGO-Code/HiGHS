@@ -29,7 +29,8 @@ void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void HighsPrintMessage(int level, const char* format, ...) {
+void HighsPrintMessage(int level,
+		       const char* format, ...) {
   if (output == NULL) {
     return;
   }
@@ -52,7 +53,8 @@ void HighsPrintMessage(int level, const char* format, ...) {
   }
 }
 
-void HighsPrintMessage(FILE* pass_output, const int pass_message_level, const int level, const char* format, ...) {
+void HighsPrintMessage(FILE* pass_output,
+		       const int pass_message_level, const int level, const char* format, ...) {
   if (pass_output == NULL) {
     return;
   }

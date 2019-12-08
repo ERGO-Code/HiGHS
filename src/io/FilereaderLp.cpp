@@ -176,7 +176,8 @@ void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
 }
 
 void FilereaderLp::handleSosSection(HighsModelBuilder& model) {
-  HighsPrintMessage(HighsPrintMessageLevel::ML_MINIMAL, "SoS section is not currenlty supported by the .lp filereader.");
+  HighsPrintMessage(HighsPrintMessageLevel::ML_MINIMAL,
+		    "SoS section is not currenlty supported by the .lp filereader.");
 
   if (this->sosSection.size() == 0) {
     return;

@@ -37,7 +37,8 @@ bool Tree::branch(Node& node) {
   if (branch_col == kNoNodeIndex) {
     // All integer variables are feasible. Update best solution.
     // Assuming minimization.
-    HighsPrintMessage(ML_ALWAYS, "Updating best solution at node %d.\n",
+    HighsPrintMessage(ML_ALWAYS,
+		      "Updating best solution at node %d.\n",
                       node.id);
 
     if (node.objective_value < best_objective_) {
@@ -51,10 +52,11 @@ bool Tree::branch(Node& node) {
   double value = node.primal_solution[col];
 
   // todo: change always to whatever.
-  HighsPrintMessage(ML_ALWAYS, "Branching on variable %d\n", col);
+  HighsPrintMessage(ML_ALWAYS,
+		    "Branching on variable %d\n", col);
 
-  HighsPrintMessage(
-      ML_ALWAYS, "%d(%d, %d) left child: %.2f, right child: %.2f\n", node.id,
+  HighsPrintMessage(ML_ALWAYS,
+		    "%d(%d, %d) left child: %.2f, right child: %.2f\n", node.id,
       num_nodes + 1, num_nodes + 2, std::floor(value), std::ceil(value));
 
   // Branch.

@@ -501,8 +501,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile, std::ifstream& file) 
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      HighsPrintMessage(
-          ML_ALWAYS, "COLUMNS section contains row %s not in ROWS section.\n",
+      HighsPrintMessage(ML_ALWAYS,
+			"COLUMNS section contains row %s not in ROWS section.\n",
           marker.c_str());
     } else {
       parsename(marker);  // rowidx set
@@ -530,8 +530,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile, std::ifstream& file) 
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        HighsPrintMessage(
-            ML_ALWAYS, "COLUMNS section contains row %s not in ROWS section.\n",
+        HighsPrintMessage(ML_ALWAYS,
+			  "COLUMNS section contains row %s not in ROWS section.\n",
             marker.c_str());
         continue;
       };
@@ -899,8 +899,8 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      HighsPrintMessage(
-          ML_ALWAYS, "RANGES section contains row %s not in ROWS    section\n",
+      HighsPrintMessage(ML_ALWAYS,
+			"RANGES section contains row %s not in ROWS    section\n",
           marker.c_str());
       continue;
     } else {
@@ -926,10 +926,9 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        HighsPrintMessage(
-            ML_ALWAYS,
-            "RANGES section contains row %s not in ROWS    section\n",
-            marker.c_str());
+        HighsPrintMessage(ML_ALWAYS,
+			  "RANGES section contains row %s not in ROWS    section\n",
+			  marker.c_str());
         continue;
       };
 

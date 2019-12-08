@@ -258,8 +258,7 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
   if (ipx_info.status_crossover == IPX_STATUS_optimal ||
       ipx_info.status_crossover == IPX_STATUS_imprecise) {
     if (ipx_info.status_crossover == IPX_STATUS_imprecise) {
-      HighsPrintMessage(
-          ML_ALWAYS,
+      HighsPrintMessage(ML_ALWAYS,
           "Ipx Crossover status imprecise: at least one of primal and dual "
           "infeasibilities of basic solution is not within parameters pfeastol "
           "and dfeastol. Simplex clean up will be required.\n");

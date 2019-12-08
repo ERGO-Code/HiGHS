@@ -77,9 +77,8 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
       return false;
     }
     if (options.dualize) {
-      HighsPrintMessage(
-          ML_ALWAYS,
-          "ICrashError: breakpoints does not support dualize option.\n");
+      HighsPrintMessage(ML_ALWAYS,
+			"ICrashError: breakpoints does not support dualize option.\n");
       return false;
     }
     HighsPrintMessage(ML_ALWAYS,
@@ -235,11 +234,13 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
       break;
     }
     case ICrashStrategy::kPenalty: {
-      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet./n");
+      HighsPrintMessage(ML_ALWAYS,
+			"ICrashError: Not implemented yet./n");
       return false;
     }
     default: {
-      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet./n");
+      HighsPrintMessage(ML_ALWAYS,
+			"ICrashError: Not implemented yet./n");
       return false;
     }
   }
@@ -260,7 +261,8 @@ void reportSubproblem(const Quadratic& idata, const int iteration) {
        << idata.lp_objective << ", res " << idata.residual_norm_2
        << ", quad_obj " << idata.quadratic_objective << std::endl;
   }
-  HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
+  HighsPrintMessage(ML_ALWAYS,
+		    ss.str().c_str());
 }
 
 std::string ICrashtrategyToString(const ICrashStrategy strategy) {
@@ -292,7 +294,8 @@ void reportOptions(const ICrashOptions& options) {
     ss << "exact: true\n";
   }
   ss << "\n";
-  HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
+  HighsPrintMessage(ML_ALWAYS,
+		    ss.str().c_str());
 }
 
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,

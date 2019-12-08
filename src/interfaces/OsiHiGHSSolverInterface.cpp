@@ -64,8 +64,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
   : status(HighsStatus::OK) {
   HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
 
-  HighsPrintMessage(
-      ML_ALWAYS,
+  HighsPrintMessage(ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   this->highs = new Highs();
   this->dummy_solution = new HighsSolution;
@@ -86,8 +85,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
 {
   HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
 
-  HighsPrintMessage(
-      ML_ALWAYS,
+  HighsPrintMessage(ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   this->highs = new Highs();
   this->dummy_solution = new HighsSolution;
@@ -102,8 +100,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
 }
 
 OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
-  HighsPrintMessage(
-      ML_ALWAYS,
+  HighsPrintMessage(ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface()\n");
 
   HighsSetMessageCallback(NULL, NULL, NULL);
@@ -128,7 +125,8 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
 }
 
 OsiSolverInterface *OsiHiGHSSolverInterface::clone(bool copyData) const {
-  HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::clone()\n");
+  HighsPrintMessage(ML_ALWAYS,
+		    "Calling OsiHiGHSSolverInterface::clone()\n");
   if (!copyData) {
     OsiHiGHSSolverInterface *cln = new OsiHiGHSSolverInterface();
     return cln;
@@ -277,38 +275,34 @@ bool OsiHiGHSSolverInterface::isProvenOptimal() const {
 }
 
 bool OsiHiGHSSolverInterface::isProvenPrimalInfeasible() const {
-  HighsPrintMessage(
-      ML_ALWAYS,
-      "Calling OsiHiGHSSolverInterface::isProvenPrimalInfeasible()\n");
+  HighsPrintMessage(ML_ALWAYS,
+		    "Calling OsiHiGHSSolverInterface::isProvenPrimalInfeasible()\n");
   //  return this->status == HighsStatus::Infeasible;
   return false;
 }
 
 bool OsiHiGHSSolverInterface::isProvenDualInfeasible() const {
-  HighsPrintMessage(
-      ML_ALWAYS, "Calling OsiHiGHSSolverInterface::isProvenDualInfeasible()\n");
+  HighsPrintMessage(ML_ALWAYS,
+		    "Calling OsiHiGHSSolverInterface::isProvenDualInfeasible()\n");
   //  return this->status == HighsStatus::Unbounded;
   return false;
 }
 
 bool OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached() const {
-  HighsPrintMessage(
-      ML_ALWAYS,
+  HighsPrintMessage(ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached()\n");
   return false;
 }
 
 bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
-  HighsPrintMessage(
-      ML_ALWAYS,
+  HighsPrintMessage(ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isDualObjectiveLimitReached()\n");
   //  return this->status == HighsStatus::ReachedDualObjectiveUpperBound;
   return false;
 }
 
 bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
-  HighsPrintMessage(
-      ML_ALWAYS,
+  HighsPrintMessage(ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isIterationLimitReached()\n");
   //  return this->status == HighsStatus::ReachedIterationLimit;
   return false;
@@ -510,7 +504,8 @@ void OsiHiGHSSolverInterface::setObjSense(double s) {
 
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
                                      const double rowlb, const double rowub) {
-  HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addRow()\n");
+  HighsPrintMessage(ML_ALWAYS,
+		    "Calling OsiHiGHSSolverInterface::addRow()\n");
   bool success = this->highs->addRow(rowlb, rowub, 
                                      vec.getNumElements(), vec.getIndices(), vec.getElements());
   assert(success);
@@ -519,7 +514,8 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
                                      const char rowsen, const double rowrhs,
                                      const double rowrng) {
-  HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addRow()\n");
+  HighsPrintMessage(ML_ALWAYS,
+		    "Calling OsiHiGHSSolverInterface::addRow()\n");
   double lb, ub;
   this->convertSenseToBound(rowsen, rowrhs, rowrng, lb, ub);
   this->addRow(vec, lb, ub);
@@ -528,7 +524,8 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
 void OsiHiGHSSolverInterface::addCol(const CoinPackedVectorBase &vec,
                                      const double collb, const double colub,
                                      const double obj) {
-  HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addCol()\n");
+  HighsPrintMessage(ML_ALWAYS,
+		    "Calling OsiHiGHSSolverInterface::addCol()\n");
   bool success = this->highs->addCol(obj, collb, colub, 
                                      vec.getNumElements(), vec.getIndices(), vec.getElements());
   assert(success);
@@ -823,7 +820,8 @@ void OsiHiGHSSolverInterface::loadProblem(
 void OsiHiGHSSolverInterface::writeMps(const char *filename,
                                        const char *extension,
                                        double objSense) const {
-  HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::writeMps()\n");
+  HighsPrintMessage(ML_ALWAYS,
+		    "Calling OsiHiGHSSolverInterface::writeMps()\n");
 
   std::string fullname = std::string(filename) + "." + std::string(extension);
 
@@ -990,6 +988,7 @@ int OsiHiGHSSolverInterface::getIterationCount() const {
 
 void OsiHiGHSSolverInterface::setRowPrice(const double *rowprice) {
   HighsPrintMessage(ML_ALWAYS,
+		    
                     "Calling OsiHiGHSSolverInterface::setRowPrice()\n");
   if (!rowprice) return;
   HighsSolution solution;
@@ -1144,7 +1143,8 @@ bool OsiHiGHSSolverInterface::setWarmStart(const CoinWarmStart *warmstart) {
 }
 
 void OsiHiGHSSolverInterface::resolve() {
-  HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::resolve()\n");
+  HighsPrintMessage(ML_ALWAYS,
+		    "Calling OsiHiGHSSolverInterface::resolve()\n");
   this->status = this->highs->run();
 }
 
