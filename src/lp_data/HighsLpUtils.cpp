@@ -1568,51 +1568,51 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP
-void reportLp(const HighsLp& lp, const int report_level) {
-  reportLpBrief(lp);
+void reportLp(const HighsOptions& options, const HighsLp& lp, const int report_level) {
+  reportLpBrief(options, lp);
   if (report_level >= 1) {
-    reportLpColVectors(lp);
-    reportLpRowVectors(lp);
-    if (report_level >= 2) reportLpColMatrix(lp);
+    reportLpColVectors(options, lp);
+    reportLpRowVectors(options, lp);
+    if (report_level >= 2) reportLpColMatrix(options, lp);
   }
 }
 
 // Report the LP briefly
-void reportLpBrief(const HighsLp& lp) {
-  reportLpDimensions(lp);
-  reportLpObjSense(lp);
+void reportLpBrief(const HighsOptions& options, const HighsLp& lp) {
+  reportLpDimensions(options, lp);
+  reportLpObjSense(options, lp);
 }
 
 // Report the LP dimensions
-void reportLpDimensions(const HighsLp& lp) {
+void reportLpDimensions(const HighsOptions& options, const HighsLp& lp) {
   int lp_num_nz;
   if (lp.numCol_ == 0)
     lp_num_nz = 0;
   else
     lp_num_nz = lp.Astart_[lp.numCol_];
-  HighsPrintMessage(ML_MINIMAL,
+  HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
 		    "LP has %d columns, %d rows", lp.numCol_,
                     lp.numRow_);
   if (lp.numInt_) {
-    HighsPrintMessage(ML_MINIMAL,
+    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
 		      ", %d nonzeros and %d integer columns\n",
                       lp_num_nz, lp.numInt_);
   } else {
-    HighsPrintMessage(ML_MINIMAL,
+    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
 		      " and %d nonzeros\n", lp_num_nz, lp.numInt_);
   }
 }
 
 // Report the LP objective sense
-void reportLpObjSense(const HighsLp& lp) {
+void reportLpObjSense(const HighsOptions& options, const HighsLp& lp) {
   if (lp.sense_ == OBJSENSE_MINIMIZE)
-    HighsPrintMessage(ML_MINIMAL,
+    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
 		      "Objective sense is minimize\n");
   else if (lp.sense_ == OBJSENSE_MAXIMIZE)
-    HighsPrintMessage(ML_MINIMAL,
+    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
 		      "Objective sense is maximize\n");
   else
-    HighsPrintMessage(ML_MINIMAL,
+    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
 		      "Objective sense is ill-defined as %d\n",
                       lp.sense_);
 }
@@ -1640,27 +1640,27 @@ std::string getBoundType(const double lower, const double upper) {
 }
 
 // Report the vectors of LP column data
-void reportLpColVectors(const HighsLp& lp) {
+void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
   if (lp.numCol_ <= 0) return;
   std::string type;
   int count;
   bool have_integer_columns = lp.numInt_;
   bool have_col_names = lp.col_names_.size();
 
-  HighsPrintMessage(ML_VERBOSE,
+  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
                     "  Column        Lower        Upper         Cost       "
                     "Type        Count");
-  if (have_integer_columns) HighsPrintMessage(ML_VERBOSE,
+  if (have_integer_columns) HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 					      "  Discrete");
-  if (have_col_names) HighsPrintMessage(ML_VERBOSE,
+  if (have_col_names) HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 					"  Name");
-  HighsPrintMessage(ML_VERBOSE,
+  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		    "\n");
 
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
     count = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
-    HighsPrintMessage(ML_VERBOSE,
+    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		      "%8d %12g %12g %12g         %2s %12d", iCol,
                       lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol],
                       type.c_str(), count);
@@ -1673,19 +1673,19 @@ void reportLpColVectors(const HighsLp& lp) {
           integer_column = "Integer";
         }
       }
-      HighsPrintMessage(ML_VERBOSE,
+      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 			"  %-8s", integer_column.c_str());
     }
     if (have_col_names)
-      HighsPrintMessage(ML_VERBOSE,
+      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 			"  %-s", lp.col_names_[iCol].c_str());
-    HighsPrintMessage(ML_VERBOSE,
+    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		      "\n");
   }
 }
 
 // Report the vectors of LP row data
-void reportLpRowVectors(const HighsLp& lp) {
+void reportLpRowVectors(const HighsOptions& options, const HighsLp& lp) {
   if (lp.numRow_ <= 0) return;
   std::string type;
   vector<int> count;
@@ -1696,80 +1696,58 @@ void reportLpRowVectors(const HighsLp& lp) {
     for (int el = 0; el < lp.Astart_[lp.numCol_]; el++) count[lp.Aindex_[el]]++;
   }
 
-  HighsPrintMessage(ML_VERBOSE,
+  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		    "     Row        Lower        Upper       Type        Count");
-  if (have_row_names) HighsPrintMessage(ML_VERBOSE,
+  if (have_row_names) HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 					"  Name");
-  HighsPrintMessage(ML_VERBOSE,
+  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		    "\n");
 
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
     std::string name = "";
-    HighsPrintMessage(ML_VERBOSE,
+    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		      "%8d %12g %12g         %2s %12d", iRow,
                       lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(),
                       count[iRow]);
     if (have_row_names)
-      HighsPrintMessage(ML_VERBOSE,
+      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 			"  %-s", lp.row_names_[iRow].c_str());
-    HighsPrintMessage(ML_VERBOSE,
+    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		      "\n");
   }
 }
 
 // Report the LP column-wise matrix
-void reportLpColMatrix(const HighsLp& lp) {
+void reportLpColMatrix(const HighsOptions& options, const HighsLp& lp) {
   if (lp.numCol_ <= 0) return;
   if (lp.numRow_) {
     // With postitive number of rows, can assume that there are index and value vectors to pass
-    reportMatrix("Column", lp.numCol_, lp.Astart_[lp.numCol_], &lp.Astart_[0],
+    reportMatrix(options, "Column", lp.numCol_, lp.Astart_[lp.numCol_], &lp.Astart_[0],
 		 &lp.Aindex_[0], &lp.Avalue_[0]);
   } else {
     // With no rows, can's assume that there are index and value vectors to pass
-    reportMatrix("Column", lp.numCol_, lp.Astart_[lp.numCol_], &lp.Astart_[0], NULL, NULL);
+    reportMatrix(options, "Column", lp.numCol_, lp.Astart_[lp.numCol_], &lp.Astart_[0], NULL, NULL);
   }
 }
 
-void reportMatrix(const char* message, const int num_col, const int num_nz,
+void reportMatrix(const HighsOptions& options, const char* message, const int num_col, const int num_nz,
                   const int* start, const int* index, const double* value) {
   if (num_col <= 0) return;
-  HighsPrintMessage(ML_VERBOSE,
+  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		    "%6s Index              Value\n", message);
   for (int col = 0; col < num_col; col++) {
-    HighsPrintMessage(ML_VERBOSE,
+    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		      "    %8d Start   %10d\n", col, start[col]);
     int to_el = (col < num_col - 1 ? start[col + 1] : num_nz);
     for (int el = start[col]; el < to_el; el++)
-      HighsPrintMessage(ML_VERBOSE,
+      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 			"          %8d %12g\n", index[el],
                         value[el]);
   }
-  HighsPrintMessage(ML_VERBOSE,
+  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		    "             Start   %10d\n", num_nz);
 }
-
-/*
-void reportLpSolution(HighsModelObject &highs_model) {
-  HighsLp lp = highs_model.simplex_lp_;
-  reportLpBrief(lp);
-  //  simplex_interface.report_simplex_solution_status();
-  assert(lp.numCol_ > 0);
-  assert(lp.numRow_ > 0);
-  vector<double> colPrimal(lp.numCol_);
-  vector<double> colDual(lp.numCol_);
-  vector<int> colStatus(lp.numCol_);
-  vector<double> rowPrimal(lp.numRow_);
-  vector<double> rowDual(lp.numRow_);
-  vector<int> rowStatus(lp.numRow_);
-  //  util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  //  if (util_convertWorkingToBaseStat(&colStatus[0], &rowStatus[0])) return;
-  //  util_reportColVecSol(lp.numCol_, lp.colCost_, lp.colLower_, lp.colUpper_,
-colPrimal, colDual, colStatus);
-  //  util_reportRowVecSol(lp.numRow_, lp.rowLower_, lp.rowUpper_, rowPrimal,
-rowDual, rowStatus);
-}
-*/
 
 #ifdef HiGHSDEV
 void analyseLp(const HighsLp& lp, const char* message) {
@@ -2110,9 +2088,9 @@ bool isMatrixDataNull(const HighsOptions& options,
   return null_data;
 }
 
-HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
+HighsStatus transformIntoEqualityProblem(const HighsLp& lp, HighsLp& equality_lp) {
   // Copy lp.
-  HighsLp equality_lp = lp;
+  equality_lp = lp;
 
   // Add slacks for each row with more than one bound.
   std::vector<double> rhs(lp.numRow_, 0);
@@ -2188,16 +2166,16 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
       // equality row
       rhs[row] = lp.rowLower_[row];
     } else {
-      HighsPrintMessage(ML_ALWAYS,
-                        "Unknown row type when adding slacks. \
-                         Returning unmodified lp copy.");
-      return lp;
+#ifdef HiGHSDEV
+      printf("transformIntoEqualityProblem: Unknown row type when adding slacks");
+#endif
+      return HighsStatus::Error;
     }
   }
   equality_lp.rowLower_ = rhs;
   equality_lp.rowUpper_ = rhs;
 
-  return equality_lp;
+  return HighsStatus::OK;
 }
 
 // Given (P) returns (D) for the pair
@@ -2208,7 +2186,7 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
 //    max b'y + l'zl - u'zu
 //     st A'y + zl - zu = c
 //        y free, zl >=0, zu >= 0
-HighsLp dualizeEqualityProblem(const HighsLp& lp) {
+HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
   std::vector<double> colCost = lp.colCost_;
   if (lp.sense_ != OBJSENSE_MINIMIZE) {
     for (int col = 0; col < lp.numCol_; col++) colCost[col] = -colCost[col];
@@ -2216,7 +2194,6 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
 
   assert(lp.rowLower_ == lp.rowUpper_);
 
-  HighsLp dual;
   const int ncols = lp.numRow_;
   const int nrows = lp.numCol_;
 
@@ -2302,10 +2279,11 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
 
   dual.model_name_ = lp.model_name_ + "_dualized";
 
-  HighsPrintMessage(ML_ALWAYS,
-		    "Dualized equality LP.\n");
+#ifdef HiGHSDEV
+  printf("Dualized equality LP\n");
+#endif
 
-  return dual;
+  return HighsStatus::OK;
 }
 
 void logPresolveReductions(const HighsOptions& options,

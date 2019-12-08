@@ -116,8 +116,10 @@ TEST_CASE("dualize", "[highs_data]") {
   FreeFormatParserReturnCode result = parser.loadProblem(stdout, filename, lp);
   REQUIRE(result == FreeFormatParserReturnCode::SUCCESS);
 
-  HighsLp primal = transformIntoEqualityProblem(lp);
+  HighsLp primal;
   HighsStatus status;
+  status = transformIntoEqualityProblem(lp, primal);
+  REQUIRE(status == HighsStatus::OK);
 
   Highs highs_lp;
   HighsModelStatus model_status;
@@ -142,7 +144,9 @@ TEST_CASE("dualize", "[highs_data]") {
   double diff_equality = lp_objective - primal_objective;
   REQUIRE(diff_equality < 0.00000001);
 
-  HighsLp dual = dualizeEqualityProblem(primal);
+  HighsLp dual;
+  status = dualizeEqualityProblem(primal, dual);
+  REQUIRE(status == HighsStatus::OK);
   Highs highs_dual;
   status = assessLp(dual, options);
   REQUIRE(status == HighsStatus::OK);

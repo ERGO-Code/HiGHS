@@ -191,7 +191,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
   if (filename == "") {
     // Empty file name: report model on stdout
-    reportLp(model, 2);
+    reportLp(options_, model, 2);
     return_status = HighsStatus::OK;
   } else {
     Filereader* writer = Filereader::getFilereader(filename.c_str());
@@ -252,7 +252,10 @@ HighsStatus Highs::run() {
         options_.icrash_iterations,
         options_.icrash_approximate_minimization_iterations,
         options_.icrash_exact,
-        options_.icrash_breakpoints};
+	options_.icrash_breakpoints,
+	options_.logfile,
+	options_.output,
+        options_.message_level};
  
     // todo: timing. some strange compile issue.
     HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
@@ -1264,7 +1267,7 @@ HighsStatus Highs::runBnb() {
   int message_level = ML_DETAILED | ML_VERBOSE;
   options_.message_level = message_level;
   Tree tree(*(root.get()));
-  tree.branch(*(root.get()));
+  tree.branch(options_.output, options_.message_level, *(root.get()));
 
   // While stack not empty.
   //   Solve node.
@@ -1279,7 +1282,7 @@ HighsStatus Highs::runBnb() {
     if (hmos_[0].scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE) continue;
 
     options_.message_level = message_level;
-    tree.branch(node);
+    tree.branch(options_.output, options_.message_level, node);
   }
 
   // Stop and read the HiGHS clock, then work out time for this call

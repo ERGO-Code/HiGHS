@@ -219,8 +219,10 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
       lps.Solve(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
                 &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
 
+#ifdef HiGHSDEV
   int int_status = status;
   if (status != 1000) printf("IPX Solve: status = %d\n", int_status);
+#endif
   if (status != IPX_STATUS_solved) {
     unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
     // fatal error (invalid input, out of memory, etc.)
@@ -233,8 +235,10 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
   // Get solver and solution information.
   ipx::Info ipx_info = lps.GetInfo();
   // Struct ipx_info defined in ipx/include/ipx_info.h
+#ifdef HiGHSDEV
   int int_status_ipm = ipx_info.status_ipm;
   if (ipx_info.status_ipm != 1) printf("IPX Solve: status_ipm = %d\n", int_status_ipm);
+#endif
 
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
@@ -251,17 +255,19 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
 
+#ifdef HiGHSDEV
     int int_status_crossover = ipx_info.status_crossover;
     if (int_status_crossover != 1)
       printf("IPX GetInteriorSolution: status_crossover = %d\n", int_status_crossover);
+#endif
 
   if (ipx_info.status_crossover == IPX_STATUS_optimal ||
       ipx_info.status_crossover == IPX_STATUS_imprecise) {
     if (ipx_info.status_crossover == IPX_STATUS_imprecise) {
-      HighsPrintMessage(ML_ALWAYS,
+      HighsLogMessage(options.logfile, HighsMessageType::WARNING, 
           "Ipx Crossover status imprecise: at least one of primal and dual "
           "infeasibilities of basic solution is not within parameters pfeastol "
-          "and dfeastol. Simplex clean up will be required.\n");
+          "and dfeastol. Simplex clean up will be required");
       // const double abs_presidual = ipx_info.abs_presidual;
       // const double abs_dresidual = ipx_info.abs_dresidual;
       // const double rel_presidual = ipx_info.rel_presidual;
@@ -286,9 +292,11 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
 			 &ipx_solution.ipx_row_status[0],
 			 &ipx_solution.ipx_col_status[0]);
     
+#ifdef HiGHSDEV
     int int_status_crossover = ipx_info.status_crossover;
     if (int_status_crossover != 1)
       printf("IPX GetBasicSolution: status_crossover = %d\n", int_status_crossover);
+#endif
 
     // Convert the IPX basic solution to a HiGHS basic solution
     ipxToHighsBasicSolution(options.logfile,
@@ -296,7 +304,9 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
 
     
     // Set optimal 
+#ifdef HiGHSDEV
     printf("IPX: May be setting unscaled model status erroneously to OPTIMAL\n");
+#endif
     unscaled_model_status = HighsModelStatus::OPTIMAL;
     unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
     unscaled_solution_params.objective_function_value = ipx_info.objval;

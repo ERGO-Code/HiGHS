@@ -188,57 +188,76 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
 /**
  * @brief Report the data of an LP
  */
-void reportLp(
-    const HighsLp& lp,          //!< LP whose data are to be reported
-    const int report_level = 0  //!< 0 => scalar [dimensions]; 1=> vector
-                                //!< [costs/bounds]; 2 => vector+matrix
-);
+void reportLp(const HighsOptions& options, 
+	      const HighsLp& lp,          //!< LP whose data are to be reported
+	      const int report_level = 0  //!< 0 => scalar [dimensions]; 
+                                          //!< 1 => vector[costs/bounds];
+                                          //!< 2 => vector+matrix
+	      );
 /**
  * @brief Report the brief data of an LP
  */
-void reportLpBrief(const HighsLp& lp  //!< LP whose data are to be reported
+void reportLpBrief(const HighsOptions& options,
+		   const HighsLp& lp  //!< LP whose data are to be reported
 );
 /**
  * @brief Report the data of an LP
  */
-void reportLpDimensions(const HighsLp& lp  //!< LP whose data are to be reported
+void reportLpDimensions(const HighsOptions& options,
+			const HighsLp& lp  //!< LP whose data are to be reported
 );
 /**
  * @brief Report the data of an LP
  */
-void reportLpObjSense(const HighsLp& lp  //!< LP whose data are to be reported
+void reportLpObjSense(const HighsOptions& options,
+		      const HighsLp& lp  //!< LP whose data are to be reported
 );
 /**
  * @brief Report the data of an LP
  */
-void reportLpColVectors(const HighsLp& lp  //!< LP whose data are to be reported
+void reportLpColVectors(const HighsOptions& options,
+			const HighsLp& lp  //!< LP whose data are to be reported
 );
 /**
  * @brief Report the data of an LP
  */
-void reportLpRowVectors(const HighsLp& lp  //!< LP whose data are to be reported
+void reportLpRowVectors(const HighsOptions& options,
+			const HighsLp& lp  //!< LP whose data are to be reported
 );
 /**
  * @brief Report the data of an LP
  */
-void reportLpColMatrix(const HighsLp& lp  //!< LP whose data are to be reported
+void reportLpColMatrix(const HighsOptions& options,
+		       const HighsLp& lp  //!< LP whose data are to be reported
 );
 
-void reportMatrix(const char* message, const int num_col, const int num_nz,
-                  const int* start, const int* index, const double* value);
+void reportMatrix(const HighsOptions& options,
+		  const char* message,
+		  const int num_col,
+		  const int num_nz,
+                  const int* start,
+		  const int* index,
+		  const double* value
+		  );
 
 // Get the costs for a contiguous set of columns
-HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
+HighsStatus getLpCosts(const HighsLp& lp,
+		       const int from_col,
+		       const int to_col,
                        double* XcolCost);
 
 // Get the bounds for a contiguous set of columns
-HighsStatus getLpColBounds(const HighsLp& lp, const int from_col,
-                           const int to_col, double* XcolLower,
+HighsStatus getLpColBounds(const HighsLp& lp,
+			   const int from_col,
+                           const int to_col,
+			   double* XcolLower,
                            double* XcolUpper);
 
 // Get the bounds for a contiguous set of rows
-HighsStatus getLpRowBounds(const HighsLp& lp, const int from_row,
-                           const int to_row, double* XrowLower,
+HighsStatus getLpRowBounds(const HighsLp& lp,
+			   const int from_row,
+                           const int to_row,
+			   double* XrowLower,
                            double* XrowUpper);
 
 HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int row,
@@ -280,8 +299,8 @@ bool isMatrixDataNull(const HighsOptions& options,
                       const double* usr_matrix_value);
 
 bool isEqualityProblem(const HighsLp& lp);
-HighsLp transformIntoEqualityProblem(const HighsLp& lp);
-HighsLp dualizeEqualityProblem(const HighsLp& lp);
+HighsStatus transformIntoEqualityProblem(const HighsLp& from_lp, HighsLp& to_lp);
+HighsStatus dualizeEqualityProblem(const HighsLp& from_lp, HighsLp& to_lp);
 void convertToMinimization(HighsLp& lp);
 HighsStatus calculateResidual(const HighsLp& lp, HighsSolution& solution,
                               std::vector<double>& residual);
