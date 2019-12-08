@@ -38,9 +38,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       case FreeFormatParserReturnCode::FIXED_FORMAT:
 	HighsLogMessage(options.logfile, HighsMessageType::WARNING,
 			"Free format reader has detected row/col names with spaces: switching to fixed format parser");
-        HighsPrintMessage(ML_DETAILED | ML_VERBOSE, "%s %s\n",
-                          "Whitespaces encountered in row / col name.",
-                          "Switching to fixed format parser.");
         break;
     }
   }

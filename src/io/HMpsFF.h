@@ -309,7 +309,8 @@ HMpsFF::parsekey HMpsFF::parseRows(FILE* logfile, std::ifstream& file) {
     if (key != HMpsFF::parsekey::NONE) {
       numRow = int(nrows);
       if (!hasobj) {
-        std::cout << "WARNING: no objective row found" << std::endl;
+      HighsLogMessage(logfile, HighsMessageType::WARNING,
+		      "No objective row found");
         rowname2idx.emplace("artificial_empty_objective", -1);
       };
       return key;
@@ -501,9 +502,9 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile, std::ifstream& file) 
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      HighsPrintMessage(ML_ALWAYS,
-			"COLUMNS section contains row %s not in ROWS section.\n",
-          marker.c_str());
+      HighsLogMessage(logfile, HighsMessageType::WARNING,
+		      "COLUMNS section contains row %s not in ROWS section",
+		      marker.c_str());
     } else {
       parsename(marker);  // rowidx set
       double value = atof(word.c_str());
@@ -530,9 +531,9 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile, std::ifstream& file) 
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        HighsPrintMessage(ML_ALWAYS,
-			  "COLUMNS section contains row %s not in ROWS section.\n",
-            marker.c_str());
+        HighsLogMessage(logfile, HighsMessageType::WARNING,
+			"COLUMNS section contains row %s not in ROWS section: ignored",
+			marker.c_str());
         continue;
       };
 
@@ -615,9 +616,9 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      HighsPrintMessage(ML_ALWAYS,
-                        "RHS section contains row %s not in ROWS section.\n",
-                        marker.c_str());
+      HighsLogMessage(logfile, HighsMessageType::WARNING,
+		      "RHS section contains row %s not in ROWS section: ignored",
+		      marker.c_str());
     } else {
       parsename(marker, rowidx);
       double value = atof(word.c_str());
@@ -645,9 +646,9 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        HighsPrintMessage(ML_ALWAYS,
-                          "RHS section contains row %s not in ROWS section.\n",
-                          marker.c_str());
+        HighsLogMessage(logfile, HighsMessageType::WARNING,
+			"RHS section contains row %s not in ROWS section: ignored",
+			marker.c_str());
         continue;
       };
 
@@ -763,9 +764,9 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
 
     auto mit = colname2idx.find(marker);
     if (mit == colname2idx.end()) {
-      HighsPrintMessage(ML_ALWAYS,
-                        "BOUNDS section contains col %s not in COLS section.\n",
-                        marker.c_str());
+      HighsLogMessage(logfile, HighsMessageType::WARNING,
+		      "BOUNDS section contains col %s not in COLS section: ignored",
+		      marker.c_str());
       continue;
     };
 
@@ -899,9 +900,9 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      HighsPrintMessage(ML_ALWAYS,
-			"RANGES section contains row %s not in ROWS    section\n",
-          marker.c_str());
+      HighsLogMessage(logfile, HighsMessageType::WARNING,
+		      "RANGES section contains row %s not in ROWS    section: ignored",
+		      marker.c_str());
       continue;
     } else {
       parsename(marker, rowidx);
@@ -926,9 +927,9 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        HighsPrintMessage(ML_ALWAYS,
-			  "RANGES section contains row %s not in ROWS    section\n",
-			  marker.c_str());
+        HighsLogMessage(logfile, HighsMessageType::WARNING,
+			"RANGES section contains row %s not in ROWS    section: ignored",
+			marker.c_str());
         continue;
       };
 
@@ -938,7 +939,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
 
       if (!is_end(strline, end)) {
         HighsLogMessage(logfile, HighsMessageType::ERROR,
-                        "Unknown specifiers in RANGES section for row %s.\n",
+                        "Unknown specifiers in RANGES section for row %s",
                         marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
