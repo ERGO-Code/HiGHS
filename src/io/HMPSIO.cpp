@@ -64,12 +64,6 @@ FilereaderRetcode readMPS(FILE* logfile,
   double data[3];
 
   int num_alien_entries = 0;
-  int alien_entries_message_level = ML_VERBOSE;
-#ifdef HiGHSDEV
-  alien_entries_message_level = ML_ALWAYS;
-  alien_entries_message_level = ML_NONE;
-#endif
-
   int integerCol = 0;
 
   // Load NAME and ROWS
@@ -160,10 +154,10 @@ FilereaderRetcode readMPS(FILE* logfile,
           name = field_5;
         }
         num_alien_entries++;
-        HighsPrintMessage(alien_entries_message_level,
-                          "COLUMNS section contains row %-8s not in ROWS    "
-                          "section, line: %s\n",
-                          name.c_str(), line);
+#ifdef HiGHSDEV
+	printf("COLUMNS section contains row %-8s not in ROWS    section, line: %s\n",
+	       name.c_str(), line);
+#endif
       }
     }
     save_flag1 = flag[1];
@@ -200,19 +194,17 @@ FilereaderRetcode readMPS(FILE* logfile,
           name = field_5;
         }
         num_alien_entries++;
-        HighsPrintMessage(alien_entries_message_level,
-                          "RHS     section contains row %-8s not in ROWS    "
-                          "section, line: %s\n",
-                          name.c_str(), line);
+        HighsLogMessage(logfile, HighsMessageType::INFO,
+			"RHS     section contains row %-8s not in ROWS    section, line: %s",
+			name.c_str(), line);
       }
     } else {
       // Treat a RHS entry for the N row as an objective offset. Not
       // all MPS readers do this, so give different reported objective
       // values for problems (eg e226)
-      HighsPrintMessage(
-          ML_ALWAYS,
-          "Using RHS value of %g for N-row in MPS file as objective offset\n",
-          data[0]);
+#ifdef HiGHSDEV
+      printf("Using RHS value of %g for N-row in MPS file as objective offset\n", data[0]);
+#endif
       objOffset = data[0];  // Objective offset
     }
     save_flag1 = flag[1];
@@ -255,10 +247,10 @@ FilereaderRetcode readMPS(FILE* logfile,
           name = field_5;
         }
         num_alien_entries++;
-        HighsPrintMessage(alien_entries_message_level,
-                          "RANGES  section contains row %-8s not in ROWS    "
-                          "section, line: %s\n",
-                          name.c_str(), line);
+#ifdef HiGHSDEV
+	printf("RANGES  section contains row %-8s not in ROWS    section, line: %s\n",
+	       name.c_str(), line);
+#endif
       }
       save_flag1 = flag[1];
     }
@@ -334,10 +326,10 @@ FilereaderRetcode readMPS(FILE* logfile,
         std::string name(&line[field_3_start],
                          &line[field_3_start] + field_3_width);
         num_alien_entries++;
-        HighsPrintMessage(alien_entries_message_level,
-                          "BOUNDS  section contains col %-8s not in COLUMNS "
-                          "section, line: %s\n",
-                          name.c_str(), line);
+#ifdef HiGHSDEV
+	printf("BOUNDS  section contains col %-8s not in COLUMNS section, line: %s\n",
+	       name.c_str(), line);
+#endif
       }
     }
   }

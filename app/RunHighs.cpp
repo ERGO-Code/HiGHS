@@ -117,8 +117,8 @@ int main(int argc, char** argv) {
   }
 
   if (run_quiet) {
-    highs.setLogfile(NULL);
-    highs.setOutput(NULL);
+    highs.setHighsLogfile(NULL);
+    highs.setHighsOutput(NULL);
   }
 
   HighsLp lp;

@@ -80,6 +80,16 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
+HighsStatus Highs::setHighsLogfile(FILE* logfile) {
+  options_.logfile = logfile;
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::setHighsOutput(FILE* output) {
+  options_.output = output;
+  return HighsStatus::OK;
+}
+
 HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
     HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
@@ -1099,18 +1109,6 @@ HighsStatus Highs::clearSolver() {
   basis_.valid_ = false;
   return HighsStatus::OK;
 }
-
-HighsStatus Highs::setLogfile(FILE* logfile) {
-  options_.logfile = logfile;
-  return HighsStatus::OK;
-}
-
-HighsStatus Highs::setOutput(FILE* output) {
-  options_.output = output;
-  return HighsStatus::OK;
-}
-
-
 
 #ifdef HiGHSDEV
 void Highs::reportModelStatusSolutionBasis(const std::string message,

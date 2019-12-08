@@ -29,30 +29,6 @@ void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void HighsPrintMessage(int level,
-		       const char* format, ...) {
-  if (output == NULL) {
-    return;
-  }
-  if (message_level & level) {
-    va_list argptr;
-    va_start(argptr, format);
-    if (printmsgcb == NULL)
-      vfprintf(output, format, argptr);
-    else {
-      int len;
-      len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
-      if (len >= (int)sizeof(msgbuffer)) {
-        /* output was truncated: for now just ensure string is null-terminated
-         */
-        msgbuffer[sizeof(msgbuffer) - 1] = '\0';
-      }
-      printmsgcb(level, msgbuffer, msgcb_data);
-    }
-    va_end(argptr);
-  }
-}
-
 void HighsPrintMessage(FILE* pass_output,
 		       const int pass_message_level, const int level, const char* format, ...) {
   if (pass_output == NULL) {

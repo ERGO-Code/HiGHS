@@ -74,9 +74,11 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
     this->handleGeneralSection(model);
   if (this->status != LP_FILEREADER_STATUS::ERROR)
     this->handleSemiSection(model);
-  if (this->status != LP_FILEREADER_STATUS::ERROR)
-    this->handleSosSection(model);
-
+  if (this->status != LP_FILEREADER_STATUS::ERROR) {
+    FilereaderRetcode filereader_return_code = 
+      this->handleSosSection(model);
+    if (filereader_return_code != FilereaderRetcode::OK) return FilereaderRetcode::PARSERERROR;
+  }
   assert(this->tokenQueue.size() == 0);
 
   fclose(file);
@@ -175,12 +177,14 @@ void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
   assert(this->semiSection.size() == 0);
 }
 
-void FilereaderLp::handleSosSection(HighsModelBuilder& model) {
-  HighsPrintMessage(HighsPrintMessageLevel::ML_MINIMAL,
-		    "SoS section is not currenlty supported by the .lp filereader.");
+FilereaderRetcode FilereaderLp::handleSosSection(HighsModelBuilder& model) {
+  
+#ifdef HiGHSDEV
+  printf("SoS section is not currenlty supported by the .lp filereader.\n");
+#endif
 
   if (this->sosSection.size() == 0) {
-    return;
+    return FilereaderRetcode::OK;
   }
 
   LpToken* token;
@@ -196,6 +200,7 @@ void FilereaderLp::handleSosSection(HighsModelBuilder& model) {
     this->sosSection.pop_front();
     delete token;
   }
+  return FilereaderRetcode::NOT_IMPLEMENTED;
 }
 
 void FilereaderLp::handleBoundsSection(HighsModelBuilder& model) {

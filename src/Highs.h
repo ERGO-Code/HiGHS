@@ -102,6 +102,14 @@ class Highs {
                                   const char* value          //!< The option value
 				  );
 
+  HighsStatus setHighsLogfile(
+			      FILE* logfile                  //!< The log file
+			      );
+
+  HighsStatus setHighsOutput(
+			     FILE* output                  //!< The log file
+			     );
+
   HighsStatus readHighsOptions(
 			       const std::string filename  //!< The filename
 			       );
@@ -671,8 +679,6 @@ class Highs {
    * @brief Clear data associated with solving the model: basis, solution and internal data etc
    */
   HighsStatus clearSolver();
-  HighsStatus setLogfile(FILE* logfile);
-  HighsStatus setOutput(FILE* output);
 
 #ifdef HiGHSDEV
   /**
