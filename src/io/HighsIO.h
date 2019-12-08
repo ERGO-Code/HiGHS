@@ -51,11 +51,6 @@ void HighsLogMessage(FILE* pass_logfile,
                                           //!< "\n", even at the end of format
                      ...);
 
-void HighsLogMessage(HighsMessageType type,  //!< The message type
-                     const char* format,  //!< Printing format: must not contain
-                                          //!< "\n", even at the end of format
-                     ...);
-
 /*
  * @brief sets the file used for HighsLogMessage
  */

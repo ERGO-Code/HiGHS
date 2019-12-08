@@ -113,44 +113,6 @@ void HighsLogMessage(FILE* pass_logfile, HighsMessageType type, const char* form
   va_end(argptr);
 }
 
-void HighsLogMessage(HighsMessageType type, const char* format, ...) {
-  if (logfile == NULL) {
-    return;
-  }
-  
-  time_t rawtime;
-  struct tm* timeinfo;
-
-  time(&rawtime);
-  timeinfo = localtime(&rawtime);
-  va_list argptr;
-  va_start(argptr, format);
-
-  if (logmsgcb == NULL) {
-    fprintf(logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour,
-            timeinfo->tm_min, timeinfo->tm_sec, HighsMessageTypeTag[(int)type]);
-    vfprintf(logfile, format, argptr);
-    fprintf(logfile, "\n");
-  } else {
-    int len;
-    len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ",
-                   timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
-                   HighsMessageTypeTag[(int)type]);
-    if (len < (int)sizeof(msgbuffer))
-      len +=
-          vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
-    if (len < (int)sizeof(msgbuffer) - 1) {
-      msgbuffer[len] = '\n';
-      ++len;
-      msgbuffer[len] = '\0';
-    } else
-      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
-    logmsgcb(type, msgbuffer, msgcb_data);
-  }
-
-  va_end(argptr);
-}
-
 void HighsSetLogfile(FILE* lf) { logfile = lf; }
 
 void HighsSetOutput(FILE* op) { output = op; }
