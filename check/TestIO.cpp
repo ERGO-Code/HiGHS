@@ -37,7 +37,6 @@ TEST_CASE("msgcb", "[highs_io]") {
   /* printed at level 4 when level is 3 should not print */
   *printedmsg = '\0';
   message_level = 3;
-  HighsSetMessagelevel(message_level);
   HighsPrintMessage(stdout, message_level, 4, "Hi %s!", "HiGHS");
   REQUIRE(*printedmsg == '\0');
 

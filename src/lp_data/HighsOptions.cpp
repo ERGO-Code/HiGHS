@@ -671,8 +671,3 @@ void setHsolOptions(HighsOptions& options) {
   options.less_infeasible_DSE_check = false;
 }
 
-OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
-  HighsSetMessagelevel(value);
-  options.message_level = value;
-  return OptionStatus::OK;
-}

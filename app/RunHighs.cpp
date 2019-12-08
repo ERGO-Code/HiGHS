@@ -100,7 +100,6 @@ int main(int argc, char** argv) {
 
   output = options.output;
   message_level = options.message_level;
-  HighsSetMessagelevel(message_level);
 
   return_status = highs.passHighsOptions(options);
   if (return_status != HighsStatus::OK) {

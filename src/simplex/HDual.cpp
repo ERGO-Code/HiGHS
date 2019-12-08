@@ -39,6 +39,7 @@ using std::flush;
 using std::runtime_error;
 
 void HDual::solve(int num_threads) {
+  HighsOptions& options = workHMO.options_;
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
@@ -71,10 +72,10 @@ void HDual::solve(int num_threads) {
 
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
   simplex_info.store_squared_primal_infeasibility = true;
-  if (workHMO.options_.less_infeasible_DSE_check) {
-    if (isLessInfeasibleDSECandidate(workHMO.options_, workHMO.simplex_lp_)) {
+  if (options.less_infeasible_DSE_check) {
+    if (isLessInfeasibleDSECandidate(options, workHMO.simplex_lp_)) {
       // LP is a candidate for LiDSE
-      if (workHMO.options_.less_infeasible_DSE_choose_row)
+      if (options.less_infeasible_DSE_choose_row)
 	// Use LiDSE
 	simplex_info.store_squared_primal_infeasibility = false;
     }
@@ -155,14 +156,14 @@ void HDual::solve(int num_threads) {
         timer.stop(simplex_info.clock_[SimplexIzDseWtClock]);
         timer.stop(simplex_info.clock_[DseIzClock]);
         double IzDseWtTT = timer.read(SimplexIzDseWtClock);
-        HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+        HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
                           "Computed %d initial DSE weights in %gs\n",
                           solver_num_row, IzDseWtTT);
 #endif
       }
 #ifdef HiGHSDEV
       else {
-        HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
+        HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
                           "solve:: %d basic structurals: starting from B=I so "
                           "unit initial DSE weights\n",
                           num_basic_structurals);
@@ -250,7 +251,7 @@ void HDual::solve(int num_threads) {
   }
 
 #ifdef HiGHSDEV
-  int strategy = workHMO.options_.simplex_dual_edge_weight_strategy;
+  int strategy = options.simplex_dual_edge_weight_strategy;
   if (
       strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE ||
       strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL ||
@@ -289,11 +290,16 @@ void HDual::solve(int num_threads) {
     // Use primal to clean up if not out of time
     int it0 = scaled_solution_params.simplex_iteration_count;
     HPrimal hPrimal(workHMO);
-    //    HighsSetMessagelevel(ML_ALWAYS);
+    const bool full_logging = false;
+    int save_message_level;
+    if (full_logging) {
+      save_message_level = options.message_level;
+      options.message_level = ML_ALWAYS;
+    }
     timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
     hPrimal.solvePhase2();
     timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-    //    HighsSetMessagelevel(workHMO.options_.messageLevel);
+    if (full_logging) options.message_level = save_message_level;
     simplex_info.primal_phase2_iteration_count +=
         (scaled_solution_params.simplex_iteration_count - it0);
   }

@@ -432,25 +432,20 @@ HighsStatus Highs::run() {
           solved_hmo = original_hmo;
           // Save the options to allow the best simplex strategy to
           // be used
-          HighsOptions save_options = hmos_[solved_hmo].options_;
           HighsOptions& options = hmos_[solved_hmo].options_;
+          HighsOptions save_options = options;
+	  const bool full_logging = false;
+	  if (full_logging) options.message_level = ML_ALWAYS;
 	  // Force the use of simplex to clean up if IPM has been used
 	  // to solve the presolved problem
 	  if (options.solver == ipm_string) options.solver = simplex_string;
           options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
-          bool full_iteration_logging = false;
-          if (full_iteration_logging) {
-	    // Set the message level to ML_ALWAYS so that data for
-	    // individual iterations are reported
-	    HighsSetMessagelevel(ML_ALWAYS);
-	  }
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
 	  int iteration_count0 = hmos_[solved_hmo].unscaled_solution_params_.simplex_iteration_count;
 	  call_status = runLpSolver(hmos_[solved_hmo], "Solving the original LP from the solution after postsolve");
 	  return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
-          // Recover the options and reset the message level
+          // Recover the options
           options = save_options;
-          if (full_iteration_logging) HighsSetMessagelevel(options_.message_level);
 	  if (return_status == HighsStatus::Error) return return_status;
 	  int iteration_count1 = hmos_[solved_hmo].unscaled_solution_params_.simplex_iteration_count;
 	  postsolve_iteration_count = iteration_count1 - iteration_count0;

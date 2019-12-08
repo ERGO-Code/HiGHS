@@ -256,7 +256,6 @@ void messageReportLp(const char* message, const HighsLp &lp) {
   HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		    "\nReporting LP: %s\n", message);
   reportLp(options, lp, 2);
-  HighsSetMessagelevel(ML_NONE);
 }  
 
 void messageReportMatrix(const char* message, const int num_col, const int num_nz,
@@ -267,7 +266,6 @@ void messageReportMatrix(const char* message, const int num_col, const int num_n
   HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
 		    "\nReporting Matrix: %s\n", message);
   reportMatrix(options, message, num_col, num_nz, start, index, value);
-  HighsSetMessagelevel(ML_NONE);
 }  
 
 // No commas in test case name.
@@ -277,7 +275,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   HighsOptions options;
   options.message_level = ML_ALWAYS;
-  HighsSetMessagelevel(ML_ALWAYS);
 
   Avgas avgas;
   const int avgas_num_col = 8;

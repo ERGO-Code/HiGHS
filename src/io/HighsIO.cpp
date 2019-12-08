@@ -20,9 +20,6 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 
-FILE* logfile = stdout;
-FILE* output = stdout;
-int message_level = ML_MINIMAL;
 void (*printmsgcb)(int, const char*, void*) = NULL;
 void (*logmsgcb)(HighsMessageType, const char*, void*) = NULL;
 void* msgcb_data = NULL;
@@ -90,12 +87,6 @@ void HighsLogMessage(FILE* pass_logfile, HighsMessageType type, const char* form
 
   va_end(argptr);
 }
-
-void HighsSetLogfile(FILE* lf) { logfile = lf; }
-
-void HighsSetOutput(FILE* op) { output = op; }
-
-void HighsSetMessagelevel(int level) { message_level = level; }
 
 void HighsSetMessageCallback(
     void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),

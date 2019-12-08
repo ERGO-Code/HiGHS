@@ -61,7 +61,6 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   if (found < name.size()) name.erase(found, name.size() - found);
   lp.model_name_ = name;
 
-  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp, 1);
   // Don't check validity of the LP here: do it when calling highs.initializeLp
   //  return assessLp(lp, options);
   return HighsStatus::OK;
