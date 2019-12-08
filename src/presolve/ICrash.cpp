@@ -254,12 +254,12 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
     }
     case ICrashStrategy::kPenalty: {
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			"ICrashError: Not implemented yet./n");
+			"ICrashError: Not implemented yet.\n");
       return false;
     }
     default: {
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			"ICrashError: Not implemented yet./n");
+			"ICrashError: Not implemented yet.\n");
       return false;
     }
   }
