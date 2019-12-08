@@ -270,7 +270,7 @@ void FilereaderLp::handleBoundsSection(HighsModelBuilder& model) {
       delete nextnext;
       delete next;
     } else {
-      HighsLogMessage(HighsMessageType::ERROR,
+      HighsLogMessage(stdout, HighsMessageType::ERROR,
                       "Error when parsing bounds section.\n");
       this->status = LP_FILEREADER_STATUS::ERROR;
       delete current;
@@ -338,7 +338,7 @@ void FilereaderLp::handleConstraintSection(HighsModelBuilder& model) {
         delete next;
       } else {
         // error
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
                         "Error when parsing constraint section\n");
         this->status = LP_FILEREADER_STATUS::ERROR;
         delete current;
@@ -436,7 +436,7 @@ void FilereaderLp::handleObjectiveSection(HighsModelBuilder& model) {
       delete current;
     } else {
       // error
-      HighsLogMessage(HighsMessageType::ERROR,
+      HighsLogMessage(stdout, HighsMessageType::ERROR,
                       "Error when parsing objective section.\n");
       this->status = LP_FILEREADER_STATUS::ERROR;
       delete current;
@@ -480,7 +480,7 @@ void FilereaderLp::splitTokens() {
       case LpSectionKeyword::NONE:
         // error
         this->status = LP_FILEREADER_STATUS::ERROR;
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
                         "Error when splitting tokens.\n");
         return;
     }
@@ -662,7 +662,8 @@ bool FilereaderLp::readNextToken() {
         // should not happen
         this->tokenQueue.pop_back();
         delete previousToken;
-        HighsLogMessage(HighsMessageType::ERROR, "Error when parsing file.\n");
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
+			"Error when parsing file.\n");
         this->status = LP_FILEREADER_STATUS::ERROR;
       }
       this->tokenQueue.push_back(newToken);
@@ -707,7 +708,7 @@ bool FilereaderLp::readNextToken() {
   // read single character, check if it is a lineend, whitespace (tab or space),
   // (partial) comparison, colon (should not happen), sign, or bracket
   if (*this->readingPosition == '\0') {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(stdout, HighsMessageType::ERROR,
                     "NULL character read. Should not have happened.\n");
     this->isFileBufferFullyRead = true;
     this->status = LP_FILEREADER_STATUS::ERROR;
@@ -728,7 +729,7 @@ bool FilereaderLp::readNextToken() {
         return true;
 
       case ':':
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
                         "COLON character read. Should not have happened.\n");
         this->readingPosition += 1;
         this->status = LP_FILEREADER_STATUS::ERROR;
@@ -836,7 +837,8 @@ bool FilereaderLp::readNextToken() {
           return true;
         }
       default:
-        HighsLogMessage(HighsMessageType::ERROR, "Unknown symbol\n");
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
+			"Unknown symbol\n");
         return false;
     }
   }

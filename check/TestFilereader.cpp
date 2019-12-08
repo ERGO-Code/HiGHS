@@ -21,7 +21,8 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   bool are_the_same = false;
 
   std::vector<int> integerColumn;
-  FilereaderRetcode status = readMPS(filename.c_str(), -1, -1, lp_fixed_format.numRow_,
+  FilereaderRetcode status = readMPS(stdout,
+				     filename.c_str(), -1, -1, lp_fixed_format.numRow_,
 				     lp_fixed_format.numCol_, lp_fixed_format.numInt_, lp_fixed_format.sense_,
 				     lp_fixed_format.offset_, lp_fixed_format.Astart_,
 				     lp_fixed_format.Aindex_, lp_fixed_format.Avalue_,

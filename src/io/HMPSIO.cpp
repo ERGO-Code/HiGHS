@@ -26,7 +26,8 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
+FilereaderRetcode readMPS(FILE* logfile,
+			  const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 			  int& numCol, int& numInt, int& objSense, double& objOffset,
 			  vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
 			  vector<double>& colCost, vector<double>& colLower,
@@ -170,10 +171,9 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
   Astart.push_back(Aindex.size());
 
   if (num_alien_entries)
-    HighsLogMessage(HighsMessageType::WARNING,
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
                     "COLUMNS section entries contain %8d with row not in ROWS  "
-                    "  section: ignored",
-                    num_alien_entries);
+                    "  section: ignored", num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read COLUMNS OK\n");
 #endif
@@ -218,10 +218,9 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
     save_flag1 = flag[1];
   }
   if (num_alien_entries)
-    HighsLogMessage(HighsMessageType::WARNING,
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
                     "RHS     section entries contain %8d with row not in ROWS  "
-                    "  section: ignored",
-                    num_alien_entries);
+                    "  section: ignored", num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read RHS     OK\n");
 #endif
@@ -289,10 +288,9 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
     }
   }
   if (num_alien_entries)
-    HighsLogMessage(HighsMessageType::WARNING,
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
                     "RANGES  section entries contain %8d with row not in ROWS  "
-                    "  section: ignored",
-                    num_alien_entries);
+                    "  section: ignored", num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read RANGES  OK\n");
 #endif
@@ -353,10 +351,9 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
     }
   }
   if (num_alien_entries)
-    HighsLogMessage(HighsMessageType::WARNING,
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
                     "BOUNDS  section entries contain %8d with col not in "
-                    "COLUMNS section: ignored",
-                    num_alien_entries);
+                    "COLUMNS section: ignored", num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
@@ -438,7 +435,8 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
   return true;
 }
 
-HighsStatus writeMPS(const char* filename,
+HighsStatus writeMPS(FILE* logfile,
+		     const char* filename,
 		     const int& numRow, const int& numCol,
 		     const int& numInt, const int& objSense, const double& objOffset,
 		     const vector<int>& Astart, const vector<int>& Aindex,
@@ -457,7 +455,8 @@ HighsStatus writeMPS(const char* filename,
 #endif
   FILE* file = fopen(filename, "w");
   if (file == 0) {
-    HighsLogMessage(HighsMessageType::ERROR, "Cannot open file %s", filename);
+    HighsLogMessage(logfile, HighsMessageType::ERROR,
+		    "Cannot open file %s", filename);
     return HighsStatus::Error;
   }
 #ifdef HiGHSDEV
@@ -468,8 +467,9 @@ HighsStatus writeMPS(const char* filename,
   int max_row_name_length = maxNameLength(numRow, row_names);
   int max_name_length = std::max(max_col_name_length, max_row_name_length);
   if (!use_free_format && max_name_length > 8) {
-    HighsLogMessage(HighsMessageType::ERROR, "Cannot write fixed MPS with names of length (up to) %d",
-           max_name_length);
+    HighsLogMessage(logfile, HighsMessageType::ERROR,
+		    "Cannot write fixed MPS with names of length (up to) %d",
+		    max_name_length);
     return HighsStatus::Error;
   }
   vector<int> r_ty;

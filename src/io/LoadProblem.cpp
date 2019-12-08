@@ -25,11 +25,12 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   const char* pathname = options.model_file.c_str();
   printf("loadLpFromFile: %s\n", pathname);
   if (stat(pathname, &info) != 0) {
-    HighsPrintMessage(ML_ALWAYS, "Cannot access %s\n", pathname);
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Cannot access %s", pathname);
     return HighsStatus::Error;
   } else if (info.st_mode & S_IFDIR) {
-    HighsPrintMessage(ML_ALWAYS, "%s is a directory. Please specify a file.\n",
-                      pathname);
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "%s is a directory: please specify a file", pathname);
     return HighsStatus::Error;
   }
 
@@ -39,10 +40,12 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
 
   switch (success) {
     case FilereaderRetcode::FILENOTFOUND:
-      HighsPrintMessage(ML_ALWAYS, "File not found.\n");
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "File not found");
       return HighsStatus::Error;
     case FilereaderRetcode::PARSERERROR:
-      HighsPrintMessage(ML_ALWAYS, "Error when parsing file.\n");
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "Error when parsing file");
       return HighsStatus::Error;
     default:
       break;
@@ -63,40 +66,3 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   //  return assessLp(lp, options);
   return HighsStatus::OK;
 }
-
-/*
-// For extended options to be parsed from a file. Assuming options file is
-// specified.
-bool loadOptionsFromFile(HighsOptions& options) {
-  if (options.options_file.size() == 0) return false;
-
-  string line, option, value;
-  int line_count = 0;
-  std::ifstream file(options.options_file);
-  if (file.is_open()) {
-    while (file.good()) {
-      getline(file, line);
-      line_count++;
-      if (line.size() == 0 || line[0] == '#') continue;
-
-      int equals = line.find_first_of("=");
-      if (equals < 0 || equals >= (int)line.size() - 1) {
-        HighsLogMessage(HighsMessageType::ERROR,
-                        "Error on line %d of options file.", line_count);
-        return false;
-      }
-      option = line.substr(0, equals);
-      value = line.substr(equals + 1, line.size() - equals);
-      trim(option);
-      trim(value);
-      printf("Setting option \"%s\" = \"%s\"\n", option.c_str(), value.c_str());
-      if (setOptionValue(option, options.records, value) != OptionStatus::OK) return false;
-    }
-  } else {
-    HighsLogMessage(HighsMessageType::ERROR, "Options file not found.");
-    return false;
-  }
-
-  return true;
-}
-*/
