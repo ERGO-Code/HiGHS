@@ -178,15 +178,28 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
   if (iteration == 1) return;
 
   // The other strategies are WIP.
-  assert(options.strategy == ICrashStrategy::kICA);
-  // Update mu every third iteration, otherwise update lambda.
-  if (iteration % 3 == 0) {
-    idata.mu = 0.1 * idata.mu;
-  } else {
-    std::vector<double> residual_ica(idata.lp.numRow_, 0);
-    updateResidualIca(idata.lp, idata.xk, residual_ica);
-    for (int row = 0; row < idata.lp.numRow_; row++)
-      idata.lambda[row] = idata.mu * residual_ica[row];
+  switch (options.strategy) {
+    case ICrashStrategy::kICA: {
+      // Update mu every third iteration, otherwise update lambda.
+      if (iteration % 3 == 0) {
+        idata.mu = 0.1 * idata.mu;
+      } else {
+        std::vector<double> residual_ica(idata.lp.numRow_, 0);
+        updateResidualIca(idata.lp, idata.xk, residual_ica);
+        for (int row = 0; row < idata.lp.numRow_; row++)
+          idata.lambda[row] = idata.mu * residual_ica[row];
+      }
+      break;
+    }
+    case ICrashStrategy::kPenalty: {
+      idata.mu = 0.1 * idata.mu;
+      break;
+    }
+    case ICrashStrategy::kAdmm: {
+      HighsPrintMessage(
+          ML_ALWAYS, "ICrash Error: ADMM parameter update not implemented\n.");
+      break;
+    }
   }
 }
 
