@@ -186,7 +186,7 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
     std::vector<double> residual_ica(idata.lp.numRow_, 0);
     updateResidualIca(idata.lp, idata.xk, residual_ica);
     for (int row = 0; row < idata.lp.numRow_; row++)
-      idata.lambda[row] = idata.mu * idata.lambda[row];
+      idata.lambda[row] = idata.mu * residual_ica[row];
   }
 }
 
@@ -248,21 +248,30 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
   return true;
 }
 
-void reportSubproblem(const Quadratic& idata, const int iteration) {
+void reportICrashIterationDetails(
+    const std::vector<ICrashIterationDetails>& details) {
+  // Report iteration outcome.
   std::stringstream ss;
-  // Report outcome.
-  if (iteration == 0) {
-    ss << "Iteration " << std::setw(3) << 0 << ": objective " << std::setw(3)
-       << std::fixed << std::setprecision(2) << idata.lp_objective
-       << " residual " << std::setw(5) << std::scientific
-       << idata.residual_norm_2 << std::endl;
-  } else {
-    ss << "Iter " << std::setw(3) << iteration << ", mu " << idata.mu
-       << std::scientific << ", c'x " << std::setprecision(5)
-       << idata.lp_objective << ", res " << idata.residual_norm_2
-       << ", quad_obj " << idata.quadratic_objective << std::endl;
-  }
+
+  ss << std::endl
+     << " It ,    mu    ,   lambda_2  ,     ctx     ,  quad_obj   ,     r_2    "
+        " , time"
+     << std::endl;
   HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
+
+  for (int k = 0; k < (int)details.size(); k++) {
+    ss.str("");
+    ss.clear();
+    ss << " " << std::left << std::setw(2) << details[k].num << " , "
+       << std::setprecision(2) << std::setw(5) << std::scientific
+       << details[k].weight << " , " << std::setprecision(5) << std::setw(7)
+       << std::scientific << details[k].lambda_norm_2 << " , " << std::setw(7)
+       << std::scientific << details[k].lp_objective << " , " << std::setw(7)
+       << std::scientific << details[k].quadratic_objective << " , "
+       << std::setw(7) << std::scientific << details[k].residual_norm_2 << " , "
+       << std::setw(7) << std::setprecision(2) << details[k].time << std::endl;
+    HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
+  }
 }
 
 std::string ICrashtrategyToString(const ICrashStrategy strategy) {
@@ -306,7 +315,6 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   reportOptions(options);
   initialize(idata, options);
   update(idata);
-  reportSubproblem(idata, 0);
   idata.details.push_back(fillDetails(0, idata));
 
   // Initialize clocks.
@@ -328,7 +336,6 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
     elapsed_seconds = end_iteration - start_iteration;
 
     update(idata);
-    reportSubproblem(idata, iteration);
     idata.details.push_back(fillDetails(iteration, idata));
     assert(iteration + 1 == (int)idata.details.size());
     idata.details[iteration].time = elapsed_seconds.count();
@@ -346,6 +353,7 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   // Fill in return values.
   iteration--;
   result.details = std::move(idata.details);
+  reportICrashIterationDetails(result.details);
   fillICrashInfo(iteration, result);
   result.x_values = idata.xk.col_value;
 
