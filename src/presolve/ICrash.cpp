@@ -87,6 +87,12 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
                       "ICrashError: breakpoints not implemented yet.\n");
     return false;
   }
+
+  if (options.strategy == ICrashStrategy::kPenalty)
+    HighsPrintMessage(
+        ML_ALWAYS,
+        "ICrash Warning: Using solveSubproblemICA with lambda = 0.\n");
+
   return true;
 }
 
@@ -250,8 +256,9 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
       break;
     }
     case ICrashStrategy::kPenalty: {
-      HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet.\n");
-      return false;
+      assert(!options.exact);
+      solveSubproblemICA(idata, options);
+      break;
     }
     default: {
       HighsPrintMessage(ML_ALWAYS, "ICrashError: Not implemented yet.\n");
