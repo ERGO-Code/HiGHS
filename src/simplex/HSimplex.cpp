@@ -1103,18 +1103,24 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   if (hsol_scaling) allow_cost_scaling = false;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
-  double min_matrix_value = HIGHS_CONST_INF, max_matrix_value = 0;
+  double original_matrix_min_value = HIGHS_CONST_INF;
+  double original_matrix_max_value = 0;
   for (int k = 0, AnX = Astart[numCol]; k < AnX; k++) {
     double value = fabs(Avalue[k]);
-    min_matrix_value = min(min_matrix_value, value);
-    max_matrix_value = max(max_matrix_value, value);
+    original_matrix_min_value = min(original_matrix_min_value, value);
+    original_matrix_max_value = max(original_matrix_max_value, value);
   }
-  bool no_scaling = min_matrix_value >= 0.2 && max_matrix_value <= 5;
+  const bool no_scaling_original_matrix_min_value = 0.2;
+  const bool no_scaling_original_matrix_max_value = 5.0;
+  const bool no_scaling = (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
+    (original_matrix_max_value <= no_scaling_original_matrix_max_value);
   //   no_scaling = false; printf("!!!! FORCE SCALING !!!!\n");
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		     "Scaling: Matrix has min(max) values of %g(%g) so none performed", min_matrix_value, max_matrix_value);
+		     "Scaling: Matrix has [min, max] values of [%g, %g] within [%g, %g] so no scaling performed",
+		     original_matrix_min_value, original_matrix_max_value,
+		     no_scaling_original_matrix_min_value, no_scaling_original_matrix_max_value);
     // Possibly scale the costs
     if (allow_cost_scaling) {
       scaleCosts(highs_model_object);
@@ -1209,6 +1215,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     max_row_scale = max(rowScale[iRow], max_row_scale);
   }
   // Apply scaling to matrix and bounds
+  double matrix_min_value = HIGHS_CONST_INF;
+  double matrix_max_value = 0;
   double min_original_col_equilibration = HIGHS_CONST_INF;
   double sum_original_log_col_equilibration = 0;
   double max_original_col_equilibration = 0;
@@ -1244,6 +1252,9 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
       row_min_value[iRow] = min(row_min_value[iRow], value);
       row_max_value[iRow] = max(row_max_value[iRow], value);
     }
+    matrix_min_value = min(matrix_min_value, col_min_value);
+    matrix_max_value = max(matrix_max_value, col_max_value);
+    
     double original_col_equilibration = 1 / sqrt(original_col_min_value * original_col_max_value);
     min_original_col_equilibration = min(original_col_equilibration, min_original_col_equilibration);
     sum_original_log_col_equilibration += log(original_col_equilibration);
@@ -1253,7 +1264,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     sum_log_col_equilibration += log(col_equilibration);
     max_col_equilibration = max(col_equilibration, max_col_equilibration);
   }
-
+  
   for (int iRow = 0; iRow < numRow; iRow++) {
     double original_row_equilibration = 1 / sqrt(original_row_min_value[iRow] * original_row_max_value[iRow]);
     min_original_row_equilibration = min(original_row_equilibration, min_original_row_equilibration);
@@ -1266,55 +1277,80 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   }
   double geomean_original_col_equilibration = exp(sum_original_log_col_equilibration/numCol);
   double geomean_original_row_equilibration = exp(sum_original_log_row_equilibration/numRow);
-#ifdef HiGHSDEV
-   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		   "Scaling: Original equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
-	 min_original_col_equilibration,
-	 geomean_original_col_equilibration,
-	 max_original_col_equilibration,
-	 min_original_row_equilibration,
-	 geomean_original_row_equilibration,
-	 max_original_row_equilibration);
-#endif
   double geomean_col_equilibration = exp(sum_log_col_equilibration/numCol);
   double geomean_row_equilibration = exp(sum_log_row_equilibration/numRow);
-#ifdef HiGHSDEV
-   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		   "Scaling: Final    equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
-	 min_col_equilibration,
-	 geomean_col_equilibration,
-	 max_col_equilibration,
-	 min_row_equilibration,
-	 geomean_row_equilibration,
-	 max_row_equilibration);
-#endif
-  scale.extreme_equilibration_improvement_ =
-    (max_original_col_equilibration/min_original_col_equilibration +
-     max_original_row_equilibration/min_original_row_equilibration)/
-    (max_col_equilibration/min_col_equilibration +
-     max_row_equilibration/min_row_equilibration);
-  scale.mean_equilibration_improvement_ =
-    (max(geomean_original_col_equilibration, 1/geomean_original_col_equilibration)*
-     max(geomean_original_row_equilibration, 1/geomean_original_row_equilibration))/
-    (max(geomean_col_equilibration, 1/geomean_col_equilibration)*
-     max(geomean_row_equilibration, 1/geomean_row_equilibration));
+  //#ifdef HiGHSDEV
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Scaling: Original equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
+		  min_original_col_equilibration,
+		  geomean_original_col_equilibration,
+		  max_original_col_equilibration,
+		  min_original_row_equilibration,
+		  geomean_original_row_equilibration,
+		  max_original_row_equilibration);
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Scaling: Final    equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
+		  min_col_equilibration,
+		  geomean_col_equilibration,
+		  max_col_equilibration,
+		  min_row_equilibration,
+		  geomean_row_equilibration,
+		  max_row_equilibration);
+  //#endif
+  
+  double original_col_ratio = max_original_col_equilibration/min_original_col_equilibration;
+  double original_row_ratio = max_original_row_equilibration/min_original_row_equilibration;
+  double col_ratio = max_col_equilibration/min_col_equilibration;
+  double row_ratio = max_row_equilibration/min_row_equilibration;
+  scale.extreme_equilibration_improvement_ = (original_col_ratio + original_row_ratio)/(col_ratio + row_ratio);
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Scaling: Extreme equilibration improvement = ( %11.4g + %11.4g) / ( %11.4g + %11.4g) = %11.4g / %11.4g = %11.4g",
+		  original_col_ratio, original_row_ratio, col_ratio, row_ratio,
+		  (original_col_ratio + original_row_ratio), (col_ratio + row_ratio),
+		  scale.extreme_equilibration_improvement_);
+  double geomean_original_col = max(geomean_original_col_equilibration, 1/geomean_original_col_equilibration);
+  double geomean_original_row = max(geomean_original_row_equilibration, 1/geomean_original_row_equilibration);
+  double geomean_col = max(geomean_col_equilibration, 1/geomean_col_equilibration);
+  double geomean_row = max(geomean_row_equilibration, 1/geomean_row_equilibration);
+  scale.mean_equilibration_improvement_ = (geomean_original_col*geomean_original_row)/(geomean_col*geomean_row);
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Scaling:    Mean equilibration improvement = ( %11.4g * %11.4g) / ( %11.4g * %11.4g) = %11.4g / %11.4g = %11.4g",
+		  geomean_original_col, geomean_original_row, geomean_col, geomean_row,
+		  (geomean_original_col*geomean_original_row), (geomean_col*geomean_row),
+		  scale.mean_equilibration_improvement_);
+
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Scaling: Matrix has [min, max, ratio] values of [%0.4g, %0.4g, %0.4g]; Originally [%0.4g, %0.4g, %0.4g]",
+		  matrix_min_value, matrix_max_value,
+		  matrix_max_value/matrix_min_value,
+		  original_matrix_min_value, original_matrix_max_value,
+		  original_matrix_max_value/original_matrix_min_value);
+
   const bool possibly_abandon_scaling = (!hsol_scaling &&
 					 simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED);
-  const bool poor_improvement = (scale.extreme_equilibration_improvement_ < 10 &&
-				 scale.mean_equilibration_improvement_ < 1.1);
+  const double extreme_equilibration_improvement_required = 10;
+  const double mean_equilibration_improvement_required = 1.1;
+  
+  const bool poor_improvement = 
+    (scale.extreme_equilibration_improvement_ < extreme_equilibration_improvement_required) &&
+    (scale.mean_equilibration_improvement_ < mean_equilibration_improvement_required);
+
   // Possibly abandon scaling if it's not improved equlibration significantly
-  // Unscale the matrix
   if (possibly_abandon_scaling && poor_improvement) {
+    // Unscale the matrix
     for (int iCol = 0; iCol < numCol; iCol++) {
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
 	int iRow = Aindex[k];
 	Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
     }
-    scaleHighsModelInit(highs_model_object);
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		    "Scaling: Extreme equilibration improved by a factor of only %g and mean equilibration by factor of only %g so no scaling applied",
-		    scale.extreme_equilibration_improvement_, scale.mean_equilibration_improvement_);
+		    "Scaling: Extreme equilibration improved by a factor of only (%0.4g < %0.4g)",
+		    scale.extreme_equilibration_improvement_, extreme_equilibration_improvement_required);
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		    "Scaling:    Mean equilibration improved by a factor of only (%0.4g < %0.4g) so no scaling applied",
+		    scale.mean_equilibration_improvement_, mean_equilibration_improvement_required);
+    scaleHighsModelInit(highs_model_object);
     // Possibly scale the costs
     if (allow_cost_scaling) {
       scaleCosts(highs_model_object);
@@ -1324,10 +1360,21 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
 			  LpAction::SCALE);
     return;
+  } else {
+    if (scale.extreme_equilibration_improvement_ < 1.0) {
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+		      "Scaling: Applying scaling with extreme improvement of %g",
+		      scale.extreme_equilibration_improvement_);
+    }
+    if (scale.mean_equilibration_improvement_ < 1.0) {
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+		      "Scaling: Applying scaling with mean improvement of %g",
+		      scale.mean_equilibration_improvement_);
+    }
   }
   scale.is_scaled_ = true;
-   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		   "Scaling: Improved extreme equilibration by factor %g and mean equilibration by factor %g",
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Scaling: Improved extreme equilibration by factor %0.4g and mean equilibration by factor %0.4g",
 		  scale.extreme_equilibration_improvement_, scale.mean_equilibration_improvement_);
 
   for (int iCol = 0; iCol < numCol; iCol++) {
