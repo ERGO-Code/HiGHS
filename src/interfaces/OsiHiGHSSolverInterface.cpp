@@ -545,6 +545,10 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   bool success = this->highs->addRow(rowlb, rowub, 
                                      vec.getNumElements(), vec.getIndices(), vec.getElements());
   assert(success);
+  if (!success) {
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+		      "Return from OsiHiGHSSolverInterface::addRow() is false\n");
+  }
 }
 
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
@@ -553,7 +557,9 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   HighsOptions& options = this->highs->options_;
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
 		    "Calling OsiHiGHSSolverInterface::addRow()\n");
-  double lb, ub;
+  // Assign arbitrary values so that compilation is clean
+  double lb = 0;
+  double ub = 1e200;  
   this->convertSenseToBound(rowsen, rowrhs, rowrng, lb, ub);
   this->addRow(vec, lb, ub);
 }
@@ -567,6 +573,10 @@ void OsiHiGHSSolverInterface::addCol(const CoinPackedVectorBase &vec,
   bool success = this->highs->addCol(obj, collb, colub, 
                                      vec.getNumElements(), vec.getIndices(), vec.getElements());
   assert(success);
+  if (!success) {
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+		      "Return from OsiHiGHSSolverInterface::addCol() is false\n");
+  }
 }
 
 void OsiHiGHSSolverInterface::deleteCols(const int num, const int *colIndices) {
@@ -1103,7 +1113,9 @@ void OsiHiGHSSolverInterface::setRowType(int index, char sense,
   HighsOptions& options = this->highs->options_;
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setRowType()\n");
-  double lo, hi;
+  // Assign arbitrary values so that compilation is clean
+  double lo = 0;
+  double hi = 1e200;  
   this->convertSenseToBound(sense, rightHandSide, range, lo, hi);
   this->setRowBounds(index, lo, hi);
 }
