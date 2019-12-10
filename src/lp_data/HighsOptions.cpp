@@ -501,19 +501,10 @@ OptionStatus getOptionValue(FILE* logfile,
   return OptionStatus::OK;
 }
 
-HighsStatus reportOptionsToFile(FILE* logfile,
-				const std::string filename,
-				const std::vector<OptionRecord*>& option_records,
-				const bool report_only_non_default_values) {
-  FILE* file = fopen(filename.c_str(), "w");
-  if (file == 0) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-		    "reportOptionsToFile: cannot open file");
-    return HighsStatus::Error;
-  }
-  bool html = false;
-  const char* dot = strrchr(filename.c_str(), '.');
-  if (dot && dot != filename) html = strcmp(dot + 1, "html") == 0;
+HighsStatus writeOptionsToFile(FILE* file,
+			       const std::vector<OptionRecord*>& option_records,
+			       const bool report_only_non_default_values,
+			       const bool html) {
   if (html) {
     fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
     fprintf(file, "  <title>HiGHS Options</title>\n");
@@ -656,7 +647,8 @@ void setHsolOptions(HighsOptions& options) {
   options.infinite_bound = HIGHS_CONST_INF;
   options.small_matrix_value = 0;
   options.large_matrix_value = HIGHS_CONST_INF;
-  options.allowed_simplex_scale_factor = HIGHS_CONST_I_INF;
+  options.allowed_simplex_matrix_scale_factor = HIGHS_CONST_I_INF;
+  options.allowed_simplex_cost_scale_factor = 0;
   options.primal_feasibility_tolerance = 1e-7;
   options.dual_feasibility_tolerance = 1e-7;
   options.dual_objective_value_upper_bound = HIGHS_CONST_INF;

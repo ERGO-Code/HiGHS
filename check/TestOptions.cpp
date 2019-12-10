@@ -50,28 +50,31 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   // Check setting int options
   
-  return_status = setOptionValue(options.logfile, "allowed_simplex_scale_factor", options.records, -1);
+  return_status = setOptionValue(options.logfile, "allowed_simplex_matrix_scale_factor", options.records, -1);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  return_status = setOptionValue(options.logfile, "allowed_simplex_scale_factor", options.records, 25);
+  return_status = setOptionValue(options.logfile, "allowed_simplex_matrix_scale_factor", options.records, 25);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  std::string allowed_simplex_scale_factor_string = "1e-7";
-  return_status = setOptionValue(options.logfile, "allowed_simplex_scale_factor", options.records, allowed_simplex_scale_factor_string);
+  std::string allowed_simplex_matrix_scale_factor_string = "1e-7";
+  return_status = setOptionValue(options.logfile, "allowed_simplex_matrix_scale_factor", options.records,
+				 allowed_simplex_matrix_scale_factor_string);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  return_status = setOptionValue(options.logfile, "allowed_simplex_scale_factor", options.records, "1e-7");
+  return_status = setOptionValue(options.logfile, "allowed_simplex_matrix_scale_factor", options.records, "1e-7");
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  printf("\nAfter setting allowed_simplex_scale_factor to 1\n");
+  printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
   reportOptions(stdout, options.records);
 
-  double allowed_simplex_scale_factor_double = 1e-7;
-  return_status = setOptionValue(options.logfile, "allowed_simplex_scale_factor", options.records, allowed_simplex_scale_factor_double);
+  double allowed_simplex_matrix_scale_factor_double = 1e-7;
+  return_status = setOptionValue(options.logfile, "allowed_simplex_matrix_scale_factor", options.records,
+				 allowed_simplex_matrix_scale_factor_double);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  int allowed_simplex_scale_factor = 12;
-  return_status = setOptionValue(options.logfile, "allowed_simplex_scale_factor", options.records, allowed_simplex_scale_factor);
+  int allowed_simplex_matrix_scale_factor = 12;
+  return_status = setOptionValue(options.logfile, "allowed_simplex_matrix_scale_factor", options.records,
+				 allowed_simplex_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::OK);
 
   printf("\nAfter testing int options\n");
@@ -123,11 +126,12 @@ TEST_CASE("internal-options", "[highs_options]") {
   REQUIRE(return_status == OptionStatus::OK);
   REQUIRE(get_mps_parser_type_free == false);
   
-  int get_allowed_simplex_scale_factor;
+  int get_allowed_simplex_matrix_scale_factor;
   return_status = getOptionValue(options.logfile,
-				 "allowed_simplex_scale_factor", options.records, get_allowed_simplex_scale_factor);
+				 "allowed_simplex_matrix_scale_factor", options.records,
+				 get_allowed_simplex_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::OK);
-  REQUIRE(get_allowed_simplex_scale_factor == allowed_simplex_scale_factor);
+  REQUIRE(get_allowed_simplex_matrix_scale_factor == allowed_simplex_matrix_scale_factor);
   
   double get_small_matrix_value;
   return_status = getOptionValue(options.logfile,
@@ -174,29 +178,33 @@ TEST_CASE("highs-options", "[highs_options]") {
 
   // Check setting int options
   
-  return_status = highs.setHighsOptionValue("allowed_simplex_scale_factor", -1);
+  return_status = highs.setHighsOptionValue("allowed_simplex_matrix_scale_factor", -1);
   REQUIRE(return_status == HighsStatus::Error);
 
-  return_status = highs.setHighsOptionValue("allowed_simplex_scale_factor", 25);
+  return_status = highs.setHighsOptionValue("allowed_simplex_matrix_scale_factor", 25);
   REQUIRE(return_status == HighsStatus::Error);
 
-  std::string allowed_simplex_scale_factor_string = "1e-7";
-  return_status = highs.setHighsOptionValue("allowed_simplex_scale_factor", allowed_simplex_scale_factor_string);
+  std::string allowed_simplex_matrix_scale_factor_string = "1e-7";
+  return_status = highs.setHighsOptionValue("allowed_simplex_matrix_scale_factor",
+					    allowed_simplex_matrix_scale_factor_string);
   REQUIRE(return_status == HighsStatus::Error);
 
-  return_status = highs.setHighsOptionValue("allowed_simplex_scale_factor", "1e-7");
+  return_status = highs.setHighsOptionValue("allowed_simplex_matrix_scale_factor",
+					    "1e-7");
   REQUIRE(return_status == HighsStatus::Error);
 
-  printf("\nAfter setting allowed_simplex_scale_factor to 1\n");
+  printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
   return_status = highs.writeHighsOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::OK);
 
-  double allowed_simplex_scale_factor_double = 1e-7;
-  return_status = highs.setHighsOptionValue("allowed_simplex_scale_factor", allowed_simplex_scale_factor_double);
+  double allowed_simplex_matrix_scale_factor_double = 1e-7;
+  return_status = highs.setHighsOptionValue("allowed_simplex_matrix_scale_factor",
+					    allowed_simplex_matrix_scale_factor_double);
   REQUIRE(return_status == HighsStatus::Error);
 
-  int allowed_simplex_scale_factor = 12;
-  return_status = highs.setHighsOptionValue("allowed_simplex_scale_factor", allowed_simplex_scale_factor);
+  int allowed_simplex_matrix_scale_factor = 12;
+  return_status = highs.setHighsOptionValue("allowed_simplex_matrix_scale_factor",
+					    allowed_simplex_matrix_scale_factor);
   REQUIRE(return_status == HighsStatus::OK);
 
   printf("\nAfter testing int options\n");
@@ -249,10 +257,11 @@ TEST_CASE("highs-options", "[highs_options]") {
   REQUIRE(return_status == HighsStatus::OK);
   REQUIRE(get_mps_parser_type_free == false);
   
-  int get_allowed_simplex_scale_factor;
-  return_status = highs.getHighsOptionValue("allowed_simplex_scale_factor", get_allowed_simplex_scale_factor);
+  int get_allowed_simplex_matrix_scale_factor;
+  return_status = highs.getHighsOptionValue("allowed_simplex_matrix_scale_factor",
+					    get_allowed_simplex_matrix_scale_factor);
   REQUIRE(return_status == HighsStatus::OK);
-  REQUIRE(get_allowed_simplex_scale_factor == allowed_simplex_scale_factor);
+  REQUIRE(get_allowed_simplex_matrix_scale_factor == allowed_simplex_matrix_scale_factor);
   
   double get_small_matrix_value;
   return_status = highs.getHighsOptionValue("small_matrix_value", get_small_matrix_value);
@@ -267,7 +276,7 @@ TEST_CASE("highs-options", "[highs_options]") {
   HighsOptions options = highs.getHighsOptions();
   REQUIRE(options.model_file == model_file);
   REQUIRE(options.small_matrix_value == small_matrix_value);
-  REQUIRE(options.allowed_simplex_scale_factor == allowed_simplex_scale_factor);
+  REQUIRE(options.allowed_simplex_matrix_scale_factor == allowed_simplex_matrix_scale_factor);
   REQUIRE(options.mps_parser_type_free == mps_parser_type_free);
 
 }  

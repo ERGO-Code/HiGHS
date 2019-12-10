@@ -733,7 +733,12 @@ class Highs {
   HighsStatus solveRootNode(Node& root);
   HighsStatus solveNode(Node& node);
 
+  HighsStatus openWriteFile(const string filename,
+			    const string method_name,
+			    FILE*& file, bool& html);
+
   bool haveHmo(const string method_name);
+
   bool updateHighsSolutionBasis();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 

@@ -207,9 +207,10 @@ OptionStatus getOptionValue(FILE* logfile,
 OptionStatus getOptionValue(FILE* logfile,
 			    const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
 
-HighsStatus reportOptionsToFile(FILE* logfile,
-				const std::string filename, const std::vector<OptionRecord*>& option_records,
-				const bool report_only_non_default_values=true);
+HighsStatus writeOptionsToFile(FILE* file,
+			       const std::vector<OptionRecord*>& option_records,
+			       const bool report_only_non_default_values=true,
+			       const bool html=false);
 void reportOptions(FILE* file,
 		   const std::vector<OptionRecord*>& option_records,
 		   const bool report_only_non_default_values=true,
@@ -423,10 +424,16 @@ class HighsOptions {
 				     advanced, &keep_n_rows,
 				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS);
     records.push_back(record_int);
-    record_int = new OptionRecordInt("allowed_simplex_scale_factor",
-				     "Largest power-of-two factor permitted when scaling for the simplex solver",
-				     advanced, &allowed_simplex_scale_factor,
+    record_int = new OptionRecordInt("allowed_simplex_matrix_scale_factor",
+				     "Largest power-of-two factor permitted when scaling the constraint matrix for the simplex solver",
+				     advanced, &allowed_simplex_matrix_scale_factor,
 				     0, 10, 20);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("allowed_simplex_cost_scale_factor",
+				     "Largest power-of-two factor permitted when scaling the costs for the simplex solver",
+				     advanced, &allowed_simplex_cost_scale_factor,
+				     0, 0, 20);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("simplex_dualise_strategy",
@@ -572,7 +579,8 @@ class HighsOptions {
   bool run_as_hsol;
   bool mps_parser_type_free;
   int keep_n_rows;
-  int allowed_simplex_scale_factor;
+  int allowed_simplex_matrix_scale_factor;
+  int allowed_simplex_cost_scale_factor;
   int simplex_dualise_strategy;
   int simplex_permute_strategy;
   int simplex_price_strategy;

@@ -377,14 +377,13 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  const HighsSolution& solution = highs.getSolution();
-  const HighsBasis& basis = highs.getBasis();
-
   double avgas_optimal_objective_value;
   highs.getHighsInfoValue("objective_function_value", avgas_optimal_objective_value);
   double optimal_objective_value;
 
 #ifdef HiGHSDEV
+  const HighsSolution& solution = highs.getSolution();
+  const HighsBasis& basis = highs.getBasis();
   highs.reportModelStatusSolutionBasis("After avgas solve", model_status, highs.getLp(), solution, basis);
 #endif
 

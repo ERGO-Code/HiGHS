@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
   output = options.output;
   message_level = options.message_level;
 
-  bool run_quiet = true; // false;//
+  bool run_quiet = false;//true; // 
   if (run_quiet) {
     HighsPrintMessage(output, message_level, ML_ALWAYS, 
 		      "In main: running highs.run() quietly\n");
@@ -169,10 +169,10 @@ int main(int argc, char** argv) {
   }
   */
 
-  // Report all the options to an options file
-  //  reportOptionsToFile(options_.logfile, "Highs.set", options_.records);
-  // Report all the options as HTML
-  //  reportOptionsToFile(options_.logfile, "Highs.html", options_.records);
+  // Write all the options to an options file
+  //  highs.writeHighsOptions("Highs.set", false);
+  // Write all the options as HTML
+  //  highs.writeHighsOptions("Highs.html", false);
   // Possibly report options settings
   highs.writeHighsOptions("");  //, false);
 
@@ -205,12 +205,14 @@ int main(int argc, char** argv) {
       HighsPrintMessage(output, message_level, ML_ALWAYS,
 			"Model   status      : %s\n",
 			highs.highsModelStatusToString(model_status).c_str());
+      /*
       HighsPrintMessage(output, message_level, ML_ALWAYS,
 			"Primal  status      : %s\n",
 			highs.highsPrimalDualStatusToString(highs_info.primal_status).c_str());
       HighsPrintMessage(output, message_level, ML_ALWAYS,
 			"Dual    status      : %s\n",
 			highs.highsPrimalDualStatusToString(highs_info.dual_status).c_str());
+      */
       HighsPrintMessage(output, message_level, ML_ALWAYS,
 			"Simplex   iterations: %d\n",
 			highs_info.simplex_iteration_count);
@@ -235,7 +237,9 @@ int main(int argc, char** argv) {
     highs.writeSolution(options.solution_file, options.write_solution_pretty);
   }
   /*
-  highs.writeHighsInfo("HighsInfo.dat");
+  highs.writeSolution("", true);
+  highs.writeSolution("", false);
+  highs.writeHighsInfo("");
   highs.writeHighsInfo("HighsInfo.html");
   */
   return (int)run_status;

@@ -136,8 +136,19 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::writeHighsOptions(const std::string filename,
 				     const bool report_only_non_default_values) {
-  return reportOptionsToFile(options_.logfile, filename, options_.records,
-			     report_only_non_default_values);
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsLp lp = this->lp_;
+  FILE* file;
+  bool html;
+  call_status = openWriteFile(filename, "writeHighsOptions", file, html);
+  return_status = interpretCallStatus(call_status, return_status, "openWriteFile");
+  if (return_status == HighsStatus::Error) return return_status;
+  
+  call_status = writeOptionsToFile(file, options_.records,
+				   report_only_non_default_values, html);
+  return_status = interpretCallStatus(call_status, return_status, "writeOptionsToFile");
+  return return_status;
 }
 
 const HighsOptions& Highs::getHighsOptions() const { return options_; }
@@ -157,7 +168,18 @@ HighsStatus Highs::getHighsInfoValue(const std::string& info, double& value) {
 }
 
 HighsStatus Highs::writeHighsInfo(const std::string filename) {
-  return reportInfoToFile(options_, filename, info_.records);
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsLp lp = this->lp_;
+  FILE* file;
+  bool html;
+  call_status = openWriteFile(filename, "writeHighsInfo", file, html);
+  return_status = interpretCallStatus(call_status, return_status, "openWriteFile");
+  if (return_status == HighsStatus::Error) return return_status;
+  
+  call_status = writeInfoToFile(file, info_.records, html);
+  return_status = interpretCallStatus(call_status, return_status, "writeInfoToFile");
+  return return_status;
 }
 
 HighsStatus Highs::passModel(const HighsLp& lp) {
@@ -167,7 +189,7 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   lp_ = lp;
   // Check validity of the LP, normalising its values (by default).
   call_status = assessLp(lp_, options_);
-  return_status = interpretCallStatus(call_status, return_status, "passModel");
+  return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
   // hmos_[0] is the HighsModelObject corresponding to the original LP
   hmos_.clear();
@@ -1432,47 +1454,18 @@ HighsStatus Highs::solveRootNode(Node& root) {
 }
 
 HighsStatus Highs::writeSolution(const std::string filename, const bool pretty) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   HighsLp lp = this->lp_;
+  HighsBasis basis = this->basis_;
+  HighsSolution solution = this->solution_;
   FILE* file;
-  if (filename == "") {
-    // Empty file name: report model on stdout
-    file = stdout;
-  } else {
-    file = fopen(filename.c_str(), "w");
-    if (file == 0) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-		      "writeSolution: cannot open file");
-      return HighsStatus::Error;
-    }
-  }
-  if (pretty) {
-    reportModelBoundSol(file,
-			true, lp_.numCol_, lp_.colLower_, lp_.colUpper_,
-			lp_.col_names_, solution_.col_value, solution_.col_dual,
-			basis_.col_status);
-    reportModelBoundSol(file,
-			false, lp_.numRow_, lp_.rowLower_, lp_.rowUpper_,
-			lp_.row_names_, solution_.row_value, solution_.row_dual,
-			basis_.row_status);
-  } else {
-    fprintf(file, "%d %d : Number of columns and rows for primal and dual solution and basis\n", lp.numCol_, lp.numRow_);
-    const bool with_basis = basis_.valid_;
-    if (with_basis) {
-      fprintf(file, "T\n");
-    } else {
-      fprintf(file, "F\n");
-    }
-    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-      fprintf(file, "%g %g", solution_.col_value[iCol], solution_.col_dual[iCol]);
-      if (with_basis) fprintf(file, " %d", (int)basis_.col_status[iCol]);
-      fprintf(file, " \n");
-    }
-    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-      fprintf(file, "%g %g", solution_.row_value[iRow], solution_.row_dual[iRow]);
-      if (with_basis) fprintf(file, " %d", (int)basis_.row_status[iRow]);
-      fprintf(file, " \n");
-    }
-  }
+  bool html;
+  call_status = openWriteFile(filename, "writeSolution", file, html);
+  return_status = interpretCallStatus(call_status, return_status, "openWriteFile");
+  if (return_status == HighsStatus::Error) return return_status;
+  
+  writeSolutionToFile(file, lp, basis, solution, pretty);
   return HighsStatus::OK;
 }
 
@@ -1525,6 +1518,25 @@ bool Highs::getHighsModelStatusAndInfo(const int solved_hmo) {
   info_.max_dual_infeasibility = solution_params.max_dual_infeasibility;
   info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
   return true;
+}
+
+HighsStatus Highs::openWriteFile(const string filename, const string method_name, FILE*& file, bool& html) {
+  html = false;
+  if (filename == "") {
+    // Empty file name: use stdout
+    file = stdout;
+  } else {
+    file = fopen(filename.c_str(), "w");
+    if (file == 0) {
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+		      "Cannot open writeable file \"%s\" in %s",
+		      filename.c_str(), method_name.c_str());
+      return HighsStatus::Error;
+    }
+    const char* dot = strrchr(filename.c_str(), '.');
+    if (dot && dot != filename) html = strcmp(dot + 1, "html") == 0;
+  }
+  return HighsStatus::OK;
 }
 
 bool Highs::haveHmo(const string method_name) {

@@ -994,7 +994,7 @@ void scaleHighsModelInit(HighsModelObject& highs_model_object) {
 void scaleCosts(HighsModelObject& highs_model_object) {
   // Scale the costs by no less than minAlwCostScale
   double max_allowed_cost_scale =
-      pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
+      pow(2.0, highs_model_object.options_.allowed_simplex_cost_scale_factor);
   double cost_scale;
   double max_nonzero_cost = 0;
   for (int iCol = 0; iCol < highs_model_object.simplex_lp_.numCol_; iCol++) {
@@ -1097,9 +1097,10 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   double* rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
 
   // Allow a switch to/from the original scaling rules
-  bool original_scaling = highs_model_object.options_.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HSOL;
-  bool allow_cost_scaling = false;
-  if (original_scaling) allow_cost_scaling = false;
+  int simplex_scale_strategy = highs_model_object.options_.simplex_scale_strategy;
+  bool hsol_scaling = simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HSOL;
+  bool allow_cost_scaling = highs_model_object.options_.allowed_simplex_cost_scale_factor > 0;
+  if (hsol_scaling) allow_cost_scaling = false;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   double min_matrix_value = HIGHS_CONST_INF, max_matrix_value = 0;
@@ -1130,17 +1131,17 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     if (colCost[i]) min_nonzero_cost = min(fabs(colCost[i]), min_nonzero_cost);
   }
   bool include_cost_in_scaling = false;
-  //  if (original_scaling)
+  //  if (hsol_scaling)
   include_cost_in_scaling = min_nonzero_cost < 0.1;
 
   // Limits on scaling factors
   double max_allow_scale;
   double min_allow_scale;
-  if (original_scaling) {
+  if (hsol_scaling) {
     max_allow_scale = HIGHS_CONST_INF;
   } else {
     max_allow_scale =
-        pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
+        pow(2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);
   }
   min_allow_scale = 1 / max_allow_scale;
 
@@ -1297,31 +1298,32 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
      max(geomean_original_row_equilibration, 1/geomean_original_row_equilibration))/
     (max(geomean_col_equilibration, 1/geomean_col_equilibration)*
      max(geomean_row_equilibration, 1/geomean_row_equilibration));
-  if (!original_scaling) {
-    // Abandon scaling if it's not improved equlibration significantly
-    // Unscale the matrix
-    if (scale.extreme_equilibration_improvement_ < 10 &&
-	scale.mean_equilibration_improvement_ < 1.1) {
-      for (int iCol = 0; iCol < numCol; iCol++) {
-	for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
-	  int iRow = Aindex[k];
-	  Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
-	}
+  const bool possibly_abandon_scaling = (!hsol_scaling &&
+					 simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED);
+  const bool poor_improvement = (scale.extreme_equilibration_improvement_ < 10 &&
+				 scale.mean_equilibration_improvement_ < 1.1);
+  // Possibly abandon scaling if it's not improved equlibration significantly
+  // Unscale the matrix
+  if (possibly_abandon_scaling && poor_improvement) {
+    for (int iCol = 0; iCol < numCol; iCol++) {
+      for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+	int iRow = Aindex[k];
+	Avalue[k] /= (colScale[iCol] * rowScale[iRow]);
       }
-      scaleHighsModelInit(highs_model_object);
-       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		       "Scaling: Extreme equilibration improved by a factor of only %g and mean equilibration by factor of only %g so no scaling applied",
-		      scale.extreme_equilibration_improvement_, scale.mean_equilibration_improvement_);
-      // Possibly scale the costs
-      if (allow_cost_scaling) {
-	scaleCosts(highs_model_object);
-	// Simplex LP is now only scaled if there is a cost scaling factor
-	scale.is_scaled_ = scale.cost_ != 1;
-	  }
-      updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
-			    LpAction::SCALE);
-      return;
     }
+    scaleHighsModelInit(highs_model_object);
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		    "Scaling: Extreme equilibration improved by a factor of only %g and mean equilibration by factor of only %g so no scaling applied",
+		    scale.extreme_equilibration_improvement_, scale.mean_equilibration_improvement_);
+    // Possibly scale the costs
+    if (allow_cost_scaling) {
+      scaleCosts(highs_model_object);
+      // Simplex LP is now only scaled if there is a cost scaling factor
+      scale.is_scaled_ = scale.cost_ != 1;
+    }
+    updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+			  LpAction::SCALE);
+    return;
   }
   scale.is_scaled_ = true;
    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
