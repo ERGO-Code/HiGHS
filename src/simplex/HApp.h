@@ -136,17 +136,16 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       use_simplex_strategy = simplex_strategy;
     }
   }
-  // Check for case where simplex strategy is SIMPLEX_STRATEGY_DUAL
-  // but parallel option is chosen
-  if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL && parallel == on_string) {
-    use_simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
-  }
-
   // Set use_num_threads to correspond to serial code. If parallel
   // stratgies are used, it will be set to the maximum of the minimum
   // required and the number of threads in options_
   int use_num_threads = 1;
-  if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
+  if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL && parallel == on_string) {
+  // Check for case where simplex strategy is SIMPLEX_STRATEGY_DUAL
+  // but parallel option is chosen
+    use_simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
+    use_num_threads = PARALLEL_THREADS_DEFAULT;
+  } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
     use_num_threads = max(DUAL_TASKS_MIN_THREADS, num_threads);
   } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
     use_num_threads = max(DUAL_MULTI_MIN_THREADS, num_threads);
@@ -155,7 +154,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // the option setting
   if (use_num_threads > num_threads) {
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
-		    "Using minimal number threads (%d) for parallel strategy rather than number (%d) specified in options",
+		    "Using %d threads for parallel strategy rather than number (%d) specified in options",
 		    use_num_threads, num_threads);
   }
 #ifdef HiGHSDEV
