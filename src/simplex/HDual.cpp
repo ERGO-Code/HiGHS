@@ -372,7 +372,14 @@ void HDual::init(int num_threads) {
 
   // Initialize for tasks
   if (workHMO.simplex_info_.simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
-    initSlice(num_threads - 2);
+    const int pass_num_slice = num_threads - 2;
+    assert(pass_num_slice > 0);
+    if (pass_num_slice <= 0) {
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		      "SIP trying to use using %d slices due to number of threads (%d) being too small: results unpredictable",
+		      pass_num_slice, num_threads);
+    }
+    initSlice(pass_num_slice);
   }
 
   // Initialize for multi
@@ -385,7 +392,14 @@ void HDual::init(int num_threads) {
       multi_choice[i].column.setup(solver_num_row);
       multi_choice[i].columnBFRT.setup(solver_num_row);
     }
-    initSlice(multi_num - 1);
+    const int pass_num_slice = multi_num - 1;
+    assert(pass_num_slice > 0);
+    if (pass_num_slice <= 0) {
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		      "PAMI trying to use using %d slices due to number of threads (%d) being too small: results unpredictable",
+		      pass_num_slice, num_threads);
+    }
+    initSlice(pass_num_slice);
   }
   multi_iteration = 0;
   //  string partitionFile = model->strOption[STROPT_PARTITION_FILE];
@@ -395,11 +409,18 @@ void HDual::init(int num_threads) {
   //  }
 }
 
-void HDual::initSlice(int init_sliced_num) {
+void HDual::initSlice(const int init_sliced_num) {
   // Number of slices
   slice_num = init_sliced_num;
   if (slice_num < 1) slice_num = 1;
-  if (slice_num > HIGHS_SLICED_LIMIT) slice_num = HIGHS_SLICED_LIMIT;
+  assert(slice_num<=HIGHS_SLICED_LIMIT);
+  if (slice_num > HIGHS_SLICED_LIMIT) {
+#ifdef HiGHSDEV
+    printf("WARNING: %d = slice_num > HIGHS_SLICED_LIMIT = %d so truncating slice_num\n",
+	   slice_num, HIGHS_SLICED_LIMIT);
+#endif  
+    slice_num = HIGHS_SLICED_LIMIT;
+  }
 
   // Alias to the matrix
   const int* Astart = matrix->getAstart();

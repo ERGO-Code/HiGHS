@@ -103,7 +103,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   //
   // Copy the simplex stratgy so that it can be modified:
   //
-  int use_simplex_strategy = simplex_info.simplex_strategy;
+  const int simplex_strategy = highs_model_object.options_.simplex_strategy;
+  const int num_threads = highs_model_object.options_.num_threads;
+  const std::string parallel = highs_model_object.options_.parallel;
+  // Set use_simplex_strategy to an illegal value to check that it is set
+  const int illegal_simplex_strategy = SIMPLEX_STRATEGY_MIN-1;
+  int use_simplex_strategy = illegal_simplex_strategy;
   HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
   if (scaled_solution_params.num_primal_infeasibilities == 0) {
     // Primal feasible
@@ -114,19 +119,57 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
       scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
     } else {
-      // Only dual infeasible, so maybe use primal simplex
-      if (use_simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+      // Only dual infeasible
+      if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) {
+	// Choose to use primal simplex
         use_simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+      } else {
+        use_simplex_strategy = simplex_strategy;
+      }
     }
   } else {
-    // Not primal feasible, so maybe use dual simplex
-    if (use_simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+    // Not primal feasible
+    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) {
+      // Choose to use serial dual simplex
       use_simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+    } else {
+      use_simplex_strategy = simplex_strategy;
+    }
+  }
+  // Check for case where simplex strategy is SIMPLEX_STRATEGY_DUAL
+  // but parallel option is chosen
+  if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL && parallel == on_string) {
+    use_simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
+  }
+
+  // Set use_num_threads to correspond to serial code. If parallel
+  // stratgies are used, it will be set to the maximum of the minimum
+  // required and the number of threads in options_
+  int use_num_threads = 1;
+  if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
+    use_num_threads = max(DUAL_TASKS_MIN_THREADS, num_threads);
+  } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+    use_num_threads = max(DUAL_MULTI_MIN_THREADS, num_threads);
+  }
+  // Give a warning if the number of threads to be used is more than
+  // the option setting
+  if (use_num_threads > num_threads) {
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+		    "Using minimal number threads (%d) for parallel strategy rather than number (%d) specified in options",
+		    use_num_threads, num_threads);
   }
 #ifdef HiGHSDEV
   // reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
   if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
+    assert(use_simplex_strategy > illegal_simplex_strategy);
+    if (use_simplex_strategy <= illegal_simplex_strategy) {
+#ifdef HiGHSDEV
+      printf("Failed to assign use_simplex_strategy in runSimplexSolver\n");
+#endif
+      return HighsStatus::Error;
+    }
+    simplex_info.simplex_strategy = use_simplex_strategy;
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
     timer.start(timer.solve_clock);
@@ -135,6 +178,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #endif
     if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		      "Using primal simplex solver");
       HPrimal primal_solver(highs_model_object);
       primal_solver.solve();
     } else {
@@ -142,26 +187,25 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       HDual dual_solver(highs_model_object);
       dual_solver.options();
       // Solve, depending on the particular strategy
-      if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
-        // Serial
-        dual_solver.solve();
-      } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
+      if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
         // Parallel - SIP
+	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+			"Using parallel simplex solver - SIP with %d threads", use_num_threads);
         // writePivots("tasks");
-        dual_solver.solve(8);
+        dual_solver.solve(use_num_threads);
       } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
         // Parallel - PAMI
+	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+			"Using parallel simplex solver - PAMI with %d threads", use_num_threads);
         // writePivots("multi");
         // if (opt.partitionFile.size() > 0)
         // {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
-        bool FourThreads = false;
-        bool EightThreads = false;
-        if (FourThreads)
-          dual_solver.solve(4);
-        else if (EightThreads)
-          dual_solver.solve(8);
-        else
-          dual_solver.solve();
+          dual_solver.solve(use_num_threads);
+      } else {
+        // Serial
+	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+			"Using dual simplex solver - serial");
+        dual_solver.solve();
       }
     }
     if (simplex_info.dual_phase1_iteration_count +

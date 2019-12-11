@@ -34,13 +34,9 @@ enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
 enum class PriceMode { ROW = 0, COL };
 
 /**
- * Limit on number of threads used to dimension many identifiers
+ * Limit on the number of column slices for parallel calculations. SIP uses num_threads-2 slices; PAMI uses num_threads-1 slices
  */
-const int HIGHS_THREAD_LIMIT = 32;
-/**
- * Limit on the number of column slices for parallel calculations
- */
-const int HIGHS_SLICED_LIMIT = 100;
+const int HIGHS_SLICED_LIMIT = HIGHS_THREAD_LIMIT;//Was 100, but can't see why this should be higher than HIGHS_THREAD_LIMIT;
 
 /**
  * Devex status flags. Each column has a Devex flag which is used as a
@@ -116,8 +112,8 @@ class HDual {
    * TODO generalise call slice_matrix[i].setup_lgBs so slice can be
    * used with non-logical initial basis
    */
-  void initSlice(int init_sliced_num  //!< Ideal number of slices - true number
-                                      //!< is modified in light of limits
+  void initSlice(const int init_sliced_num  //!< Ideal number of slices - true number
+		                            //!< is modified in light of limits
   );
 
   /**

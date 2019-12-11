@@ -3098,8 +3098,6 @@ HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_obje
   */
 
   if (report) {
-    printf("Obj = %g\n", scaled_solution_params.objective_function_value);
-    printf("Its = %s\n", iterationsToString(scaled_solution_params).c_str());
      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		    "Simplex basic solution: %sObjective = %0.15g",
 		    iterationsToString(scaled_solution_params).c_str(),

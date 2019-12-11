@@ -295,12 +295,6 @@ class HighsOptions {
 					   FILENAME_DEFAULT);
     records.push_back(record_string);
     // Options read from the file
-    record_int = new OptionRecordInt("simplex_iteration_limit",
-				     "Iteration limit for simplex solver",
-				     advanced, &simplex_iteration_limit,
-				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
-    records.push_back(record_int);
-    
     record_double = new OptionRecordDouble("infinite_cost",
 					   "Limit on cost coefficient: values larger than this will be treated as infinite",
 					   advanced, &infinite_cost,
@@ -377,12 +371,24 @@ class HighsOptions {
 				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("simplex_iteration_limit",
+				     "Iteration limit for simplex solver",
+				     advanced, &simplex_iteration_limit,
+				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+    
     record_int = new OptionRecordInt("simplex_update_limit",
 				     "Limit on the number of simplex UPDATE operations",
 				     advanced, &simplex_update_limit,
 				     0, 5000, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("num_threads",
+				     "Number of threads in parallel execution",
+				     advanced, &num_threads,
+				     0, 1, HIGHS_THREAD_LIMIT);
+    records.push_back(record_int);
+    
     record_int = new OptionRecordInt("message_level",
 				     "HiGHS message level: bit-mask 1 => VERBOSE; 2 => DETAILED 4 => MINIMAL",
 				     advanced, &message_level,
@@ -556,7 +562,6 @@ class HighsOptions {
   std::string options_file;
   
   // Options read from the file
-  int simplex_iteration_limit;
   double infinite_cost;
   double infinite_bound;
   double small_matrix_value;
@@ -569,7 +574,9 @@ class HighsOptions {
   int simplex_crash_strategy;
   int simplex_dual_edge_weight_strategy;
   int simplex_primal_edge_weight_strategy;
+  int simplex_iteration_limit;
   int simplex_update_limit;
+  int num_threads;
   int message_level;
   std::string solution_file;
   bool write_solution_to_file;

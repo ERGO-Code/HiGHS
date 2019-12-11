@@ -170,9 +170,9 @@ int main(int argc, char** argv) {
   */
 
   // Write all the options to an options file
-  //  highs.writeHighsOptions("Highs.set", false);
+  // highs.writeHighsOptions("Highs.set", false);
   // Write all the options as HTML
-  //  highs.writeHighsOptions("Highs.html", false);
+  // highs.writeHighsOptions("Highs.html", false);
   // Possibly report options settings
   highs.writeHighsOptions("");  //, false);
 
