@@ -1108,8 +1108,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     original_matrix_min_value = min(original_matrix_min_value, value);
     original_matrix_max_value = max(original_matrix_max_value, value);
   }
-  const bool no_scaling_original_matrix_min_value = 0.2;
-  const bool no_scaling_original_matrix_max_value = 5.0;
+  const double no_scaling_original_matrix_min_value = 0.2;
+  const double no_scaling_original_matrix_max_value = 5.0;
   const bool no_scaling = (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
     (original_matrix_max_value <= no_scaling_original_matrix_max_value);
   //   no_scaling = false; printf("!!!! FORCE SCALING !!!!\n");
