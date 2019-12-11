@@ -194,11 +194,13 @@ int main(int argc, char** argv) {
 	// unscaled model, flag this up, but report the scaled model
 	// status
 	HighsPrintMessage(output, message_level, ML_ALWAYS,
-			  "Primal infeasibility: %11.4e\n",
-			  highs_info.max_primal_infeasibility);
+			  "Primal infeasibility: %10.3e (%d)\n",
+			  highs_info.max_primal_infeasibility,
+			  highs_info.num_primal_infeasibilities);
 	HighsPrintMessage(output, message_level, ML_ALWAYS,
-			  "Primal infeasibility: %11.4e\n",
-			  highs_info.max_dual_infeasibility);
+			  "Dual   infeasibility: %10.3e (%d)\n",
+			  highs_info.max_dual_infeasibility,
+			  highs_info.num_dual_infeasibilities);
 	model_status = scaled_model_status;
       }
     }

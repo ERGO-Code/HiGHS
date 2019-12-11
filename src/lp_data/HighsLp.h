@@ -111,8 +111,6 @@ struct HighsScale {
   double cost_;
   std::vector<double> col_;
   std::vector<double> row_;
-  double extreme_equilibration_improvement_;
-  double mean_equilibration_improvement_;
 };
 
 struct SimplexBasis {
