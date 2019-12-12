@@ -41,24 +41,18 @@ void HDual::iterateMulti() {
   if (1.0 * multi_finish[multi_nFinish].row_ep->count / solver_num_row < 0.01)
     slice_PRICE = 0;
 
-  checkNonUnitWeightError("before chooseColumn_slice");
   if (slice_PRICE) {
 #pragma omp parallel
 #pragma omp single
     chooseColumn_slice(multi_finish[multi_nFinish].row_ep);
   } else {
-    checkNonUnitWeightError("before chooseColumn");
     chooseColumn(multi_finish[multi_nFinish].row_ep);
-    checkNonUnitWeightError("after chooseColumn");
   }
-  checkNonUnitWeightError("after chooseColumn_slice");
   // If we failed.
   if (invertHint) {
     major_update();
     return;
   }
-
-  checkNonUnitWeightError("before minor_update");
 
   minor_update();
   major_update();
@@ -72,7 +66,6 @@ void HDual::major_chooseRow() {
   if (!multi_chooseAgain) return;
   multi_chooseAgain = 0;
   multi_iteration++;
-  checkNonUnitWeightError("major_chooseRow");
 
   /**
    * Major loop:
@@ -777,7 +770,7 @@ void HDual::major_rollback() {
 
 bool HDual::checkNonUnitWeightError(std::string message) {
   bool error_found = false;
-  if (dual_edge_weight_mode != DualEdgeWeightMode::STEEPEST_EDGE) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DANTZIG) {
     double unit_wt_error = 0;
     for (int iRow = 0; iRow < solver_num_row; iRow++) {
       unit_wt_error += fabs(dualRHS.workEdWt[iRow]-1.0);
