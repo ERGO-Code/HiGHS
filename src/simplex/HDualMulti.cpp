@@ -14,7 +14,7 @@
 #include "lp_data/HConst.h"
 #include "simplex/HDual.h"
 #include "simplex/HPrimal.h"
-//#include "HTimer.h"
+#include "simplex/SimplexTimer.h"
 
 #include <cassert>
 #include <cmath>
@@ -159,7 +159,9 @@ void HDual::major_chooseRow() {
 }
 
 void HDual::major_chooseRowBtran() {
-  //  timer.recordStart(HTICK_BTRAN);
+  HighsTimer& timer = workHMO.timer_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  timer.start(simplex_info.clock_[BtranClock]);
 
   // 4.1. Prepare BTRAN buffer
   int multi_ntasks = 0;
@@ -197,7 +199,8 @@ void HDual::major_chooseRowBtran() {
   // 4.3 Put back edge weights
   for (int i = 0; i < multi_ntasks; i++)
     multi_choice[multi_iwhich[i]].infeasEdWt = multi_EdWt[i];
-  //  timer.recordFinish(HTICK_BTRAN);
+
+  timer.stop(simplex_info.clock_[BtranClock]);
 }
 
 void HDual::minor_chooseRow() {
@@ -374,7 +377,9 @@ void HDual::minor_updatePivots() {
 }
 
 void HDual::minor_updateRows() {
-  //  timer.recordStart(HTICK_UPDATE_ROW_EP);
+  HighsTimer& timer = workHMO.timer_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  timer.start(simplex_info.clock_[UpdateRowClock]);
   const HVector* Row = multi_finish[multi_nFinish].row_ep;
   int updateRows_inDense =
       (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
@@ -435,7 +440,7 @@ void HDual::minor_updateRows() {
       }
     }
   }
-  //  timer.recordFinish(HTICK_UPDATE_ROW_EP);
+  timer.stop(simplex_info.clock_[UpdateRowClock]);
 }
 
 void HDual::major_update() {
@@ -516,7 +521,9 @@ void HDual::major_updateFtranPrepare() {
 }
 
 void HDual::major_updateFtranParallel() {
-  //  timer.recordStart(HTICK_FTRAN_MIX);
+  HighsTimer& timer = workHMO.timer_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  timer.start(simplex_info.clock_[FtranMixParClock]);
 
   // Prepare buffers
   int multi_ntasks = 0;
@@ -566,11 +573,13 @@ void HDual::major_updateFtranParallel() {
     columnDensity = 0.95 * columnDensity + 0.05 * Col->count / solver_num_row;
     rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / solver_num_row;
   }
-  //  timer.recordFinish(HTICK_FTRAN_MIX);
+  timer.stop(simplex_info.clock_[FtranMixParClock]);
 }
 
 void HDual::major_updateFtranFinal() {
-  //  timer.recordStart(HTICK_FTRAN_MIX);
+  HighsTimer& timer = workHMO.timer_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  timer.start(simplex_info.clock_[FtranMixFinalClock]);
   int updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -628,7 +637,7 @@ void HDual::major_updateFtranFinal() {
       }
     }
   }
-  //  timer.recordFinish(HTICK_FTRAN_MIX);
+  timer.stop(simplex_info.clock_[FtranMixFinalClock]);
 }
 
 void HDual::major_updatePrimal() {

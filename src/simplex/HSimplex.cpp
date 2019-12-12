@@ -54,15 +54,15 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   if (options.run_as_hsol) simplex_info.allow_primal_flips_for_dual_feasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = false;//true;//
+  bool useful_analysis = true;//false;//
   bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
   // Options for analysing the LP and simplex iterations
-  simplex_info.analyseLp = useful_analysis;
-  simplex_info.analyseSimplexIterations = true;// useful_analysis;
+  simplex_info.analyseLp = false;//useful_analysis;
+  simplex_info.analyseSimplexIterations = useful_analysis;
   //  simplex_info.analyse_invert_form = useful_analysis;
   //  simplex_info.analyse_invert_condition = useful_analysis;
   simplex_info.analyse_invert_time = full_timing;
@@ -1901,6 +1901,9 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   //  }
 
   if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+    if (simplex_info.report_simplex_inner_clock) {
+      simplex_timer.reportSimplexMultiInnerClock(highs_model_object);
+    }
     //    int reportList[] = {
     //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
     //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
