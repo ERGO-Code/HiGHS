@@ -1743,11 +1743,13 @@ void HDual::chooseColumn_slice(HVector* row_ep) {
   // If reinversion is needed then skip this method
   if (invertHint) return;
 
-  timer.start(simplex_info.clock_[ChuzrDualClock]);
+  timer.start(simplex_info.clock_[Chuzc0Clock]);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.create_Freemove(row_ep);
+  timer.stop(simplex_info.clock_[Chuzc0Clock]);
 
+  timer.start(simplex_info.clock_[Chuzc1Clock]);
   // Row_ep:         PACK + CC1
 #pragma omp task
   {
@@ -1771,21 +1773,30 @@ void HDual::chooseColumn_slice(HVector* row_ep) {
 #pragma omp taskwait
 
   // Join CC1 results here
-  for (int i = 0; i < slice_num; i++)
+  for (int i = 0; i < slice_num; i++) {
     dualRow.choose_joinpack(&slice_dualRow[i]);
+  }
+
+  timer.stop(simplex_info.clock_[Chuzc1Clock]);
 
   // Infeasible we created before
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
     invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;
-    timer.stop(simplex_info.clock_[ChuzrDualClock]);
     return;
   }
-  timer.stop(simplex_info.clock_[ChuzrDualClock]);
 
   // Choose column 2, This only happens if didn't go out
-  dualRow.choose_final();
+  bool chooseColumnFail = dualRow.choose_final();
+  if (chooseColumnFail) {
+    invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
+    return;
+  }
+
+  timer.start(simplex_info.clock_[Chuzc4Clock]);
   dualRow.delete_Freemove();
+  timer.stop(simplex_info.clock_[Chuzc4Clock]);
+
   columnIn = dualRow.workPivot;
   alphaRow = dualRow.workAlpha;
   thetaDual = dualRow.workTheta;
