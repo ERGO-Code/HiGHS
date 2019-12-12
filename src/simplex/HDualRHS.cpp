@@ -74,6 +74,7 @@ void HDualRHS::choose_normal(int* chIndex) {
         if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
+	  //	  printf("Dense: Row %4d weight = %g\n", iRow, myWeight);
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;

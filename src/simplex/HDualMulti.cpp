@@ -41,18 +41,24 @@ void HDual::iterateMulti() {
   if (1.0 * multi_finish[multi_nFinish].row_ep->count / solver_num_row < 0.01)
     slice_PRICE = 0;
 
+  checkNonUnitWeightError("before chooseColumn_slice");
   if (slice_PRICE) {
 #pragma omp parallel
 #pragma omp single
     chooseColumn_slice(multi_finish[multi_nFinish].row_ep);
   } else {
+    checkNonUnitWeightError("before chooseColumn");
     chooseColumn(multi_finish[multi_nFinish].row_ep);
+    checkNonUnitWeightError("after chooseColumn");
   }
+  checkNonUnitWeightError("after chooseColumn_slice");
   // If we failed.
   if (invertHint) {
     major_update();
     return;
   }
+
+  checkNonUnitWeightError("before minor_update");
 
   minor_update();
   major_update();
@@ -66,6 +72,7 @@ void HDual::major_chooseRow() {
   if (!multi_chooseAgain) return;
   multi_chooseAgain = 0;
   multi_iteration++;
+  checkNonUnitWeightError("major_chooseRow");
 
   /**
    * Major loop:
@@ -93,6 +100,7 @@ void HDual::major_chooseRow() {
         choiceIndex[choiceCount++] = iRow;
       }
     }
+
     if (initialCount == 0 || choiceCount <= initialCount / 3) {
       // Need to do the list again
       dualRHS.create_infeasList(columnDensity);
@@ -115,21 +123,25 @@ void HDual::major_chooseRow() {
       }
     }
 
-    //    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) 
-    // 6. Check updated and computed weight
-    int countWrongEdWt = 0;
-    for (int i = 0; i < multi_num; i++) {
-      const int iRow = multi_choice[i].rowOut;
-      if (iRow < 0) continue;
-      double u_weight = dualRHS.workEdWt[iRow];
-      double c_weight = dualRHS.workEdWt[iRow] = multi_choice[i].infeasEdWt;
-      //      if (u_weight < 0.25 * c_weight) {
-      if (!acceptDualSteepestEdgeWeight(u_weight, c_weight)) {
-        multi_choice[i].rowOut = -1;
-        countWrongEdWt++;
+    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      // 6. Check updated and computed weight
+      int countWrongEdWt = 0;
+      for (int i = 0; i < multi_num; i++) {
+	const int iRow = multi_choice[i].rowOut;
+	if (iRow < 0) continue;
+	double u_weight = dualRHS.workEdWt[iRow];
+	double c_weight = dualRHS.workEdWt[iRow] = multi_choice[i].infeasEdWt;
+	//      if (u_weight < 0.25 * c_weight) {
+	if (!acceptDualSteepestEdgeWeight(u_weight, c_weight)) {
+	  multi_choice[i].rowOut = -1;
+	  countWrongEdWt++;
+	}
       }
+      if (countWrongEdWt <= choiceCount / 3) break;
+    } else {
+      // No checking required if not using DSE so break
+      break;
     }
-    if (countWrongEdWt <= choiceCount / 3) break;
   }
   delete[] choiceIndex;
 
@@ -182,7 +194,11 @@ void HDual::major_chooseRowBtran() {
     work_ep->array[iRow] = 1;
     work_ep->packFlag = true;
     factor->btran(*work_ep, row_epDensity);
-    multi_EdWt[i] = work_ep->norm2();
+    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      multi_EdWt[i] = work_ep->norm2();
+    } else {
+      multi_EdWt[i] = 1.0;
+    }
   }
 
   // 4.3 Put back edge weights
@@ -351,7 +367,9 @@ void HDual::minor_updatePivots() {
   update_pivots(
       workHMO, columnIn, rowOut,
       sourceOut);  // model->updatePivots(columnIn, rowOut, sourceOut);
-  Fin->EdWt /= (alphaRow * alphaRow);
+  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    Fin->EdWt /= (alphaRow * alphaRow);
+  }
   Fin->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
   update_matrix(workHMO, columnIn,
                 columnOut);  // model->updateMatrix(columnIn, columnOut);
@@ -399,12 +417,16 @@ void HDual::minor_updateRows() {
       const double xpivot = multi_xpivot[i];
       nextEp->saxpy(xpivot, Row);
       nextEp->tight();
-      multi_xpivot[i] = nextEp->norm2();
+      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+	multi_xpivot[i] = nextEp->norm2();
+      }
     }
 
     // Put weight back
-    for (int i = 0; i < multi_nTasks; i++)
-      multi_choice[multi_iwhich[i]].infeasEdWt = multi_xpivot[i];
+    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      for (int i = 0; i < multi_nTasks; i++)
+	multi_choice[multi_iwhich[i]].infeasEdWt = multi_xpivot[i];
+    }
   } else {
     // Sparse mode: just do it sequentially
     for (int ich = 0; ich < multi_num; ich++) {
@@ -414,7 +436,9 @@ void HDual::minor_updateRows() {
         if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
         next_ep->saxpy(-pivotX / alphaRow, Row);
         next_ep->tight();
-        multi_choice[ich].infeasEdWt = next_ep->norm2();
+	if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+	  multi_choice[ich].infeasEdWt = next_ep->norm2();
+	}
       }
     }
   }
@@ -509,11 +533,13 @@ void HDual::major_updateFtranParallel() {
   multi_density[multi_ntasks] = columnDensity;
   multi_vector[multi_ntasks] = &columnBFRT;
   multi_ntasks++;
-  // Then DSE
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-    multi_density[multi_ntasks] = rowdseDensity;
-    multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
-    multi_ntasks++;
+  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    // Then DSE
+    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+      multi_density[multi_ntasks] = rowdseDensity;
+      multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
+      multi_ntasks++;
+    }
   }
   // Then Column
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -632,18 +658,20 @@ void HDual::major_updatePrimal() {
 	local_work_infeasibility[iRow] = fabs(infeas);
     }
 
-    // Update the weight in dense
-    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-      const double pivotEdWt = multi_finish[iFn].EdWt;
-      const double* colArray = &multi_finish[iFn].column->array[0];
-      const double* dseArray = &multi_finish[iFn].row_ep->array[0];
-      double Kai = -2 / multi_finish[iFn].alphaRow;
-      double* EdWt = &dualRHS.workEdWt[0];
+    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      // Update the weight in dense
+      for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+	const double pivotEdWt = multi_finish[iFn].EdWt;
+	const double* colArray = &multi_finish[iFn].column->array[0];
+	const double* dseArray = &multi_finish[iFn].row_ep->array[0];
+	double Kai = -2 / multi_finish[iFn].alphaRow;
+	double* EdWt = &dualRHS.workEdWt[0];
 #pragma omp parallel for schedule(static)
-      for (int iRow = 0; iRow < solver_num_row; iRow++) {
-        const double val = colArray[iRow];
-        EdWt[iRow] += val * (pivotEdWt * val + Kai * dseArray[iRow]);
-        if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;
+	for (int iRow = 0; iRow < solver_num_row; iRow++) {
+	  const double val = colArray[iRow];
+	  EdWt[iRow] += val * (pivotEdWt * val + Kai * dseArray[iRow]);
+	  if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;
+	}
       }
     }
   } else {
@@ -651,13 +679,15 @@ void HDual::major_updatePrimal() {
     dualRHS.update_primal(&columnBFRT, 1);
     dualRHS.update_infeasList(&columnBFRT);
 
-    // Update weights
+    // Update weights and infeasList
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
       MFinish* Fin = &multi_finish[iFn];
       HVector* Col = Fin->column;
       HVector* Row = Fin->row_ep;
       double Kai = -2 / Fin->alphaRow;
-      dualRHS.update_weight_DSE(Col, Fin->EdWt, Kai, &Row->array[0]);
+      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+	dualRHS.update_weight_DSE(Col, Fin->EdWt, Kai, &Row->array[0]);
+      }
       dualRHS.update_infeasList(Col);
     }
   }
@@ -670,32 +700,26 @@ void HDual::major_updatePrimal() {
     dualRHS.update_pivots(iRow, value);
   }
 
-  // Update weight value for the pivots
-  for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-    const int iRow = multi_finish[iFn].rowOut;
-    const double pivotEdWt = multi_finish[iFn].EdWt;
-    const double* colArray = &multi_finish[iFn].column->array[0];
-    const double* dseArray = &multi_finish[iFn].row_ep->array[0];
-    double Kai = -2 / multi_finish[iFn].alphaRow;
-    for (int jFn = 0; jFn < iFn; jFn++) {
-      int jRow = multi_finish[jFn].rowOut;
-      double value = colArray[jRow];
-      double EdWt = dualRHS.workEdWt[jRow];
-      EdWt += value * (pivotEdWt * value + Kai * dseArray[jRow]);
-      if (EdWt < 1e-4) EdWt = 1e-4;
-      dualRHS.workEdWt[jRow] = EdWt;
+  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    // Update weight value for the pivots
+    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+      const int iRow = multi_finish[iFn].rowOut;
+      const double pivotEdWt = multi_finish[iFn].EdWt;
+      const double* colArray = &multi_finish[iFn].column->array[0];
+      const double* dseArray = &multi_finish[iFn].row_ep->array[0];
+      double Kai = -2 / multi_finish[iFn].alphaRow;
+      for (int jFn = 0; jFn < iFn; jFn++) {
+	int jRow = multi_finish[jFn].rowOut;
+	double value = colArray[jRow];
+	double EdWt = dualRHS.workEdWt[jRow];
+	EdWt += value * (pivotEdWt * value + Kai * dseArray[jRow]);
+	if (EdWt < 1e-4) EdWt = 1e-4;
+	dualRHS.workEdWt[jRow] = EdWt;
+      }
+      dualRHS.workEdWt[iRow] = pivotEdWt;
     }
-    dualRHS.workEdWt[iRow] = pivotEdWt;
   }
-  /*
-  if (dual_edge_weight_mode != DualEdgeWeightMode::STEEPEST_EDGE) {
-    double unit_wt_error = 0;
-    for (int iRow = 0; iRow < numRow; iRow++) {
-      unit_wt_error += fabs(dualRHS.workEdWt[iRow]-1.0)
-    }
-    if (unit_wt_error>1e-4) printf("Non-unit Edge weight error of %g\n", unit_wt_error);
-  }
-  */
+  checkNonUnitWeightError("999");
 }
 
 void HDual::major_updateFactor() {
@@ -749,4 +773,17 @@ void HDual::major_rollback() {
     // 5. The iteration count
     workHMO.scaled_solution_params_.simplex_iteration_count--;
   }
+}
+
+bool HDual::checkNonUnitWeightError(std::string message) {
+  bool error_found = false;
+  if (dual_edge_weight_mode != DualEdgeWeightMode::STEEPEST_EDGE) {
+    double unit_wt_error = 0;
+    for (int iRow = 0; iRow < solver_num_row; iRow++) {
+      unit_wt_error += fabs(dualRHS.workEdWt[iRow]-1.0);
+    }
+    error_found = unit_wt_error>1e-4;
+    if (error_found) printf("Non-unit Edge weight error of %g: %s\n", unit_wt_error, message.c_str());
+  }
+  return error_found;
 }

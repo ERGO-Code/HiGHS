@@ -441,6 +441,7 @@ class HDual {
    */
   void major_rollback();
 
+  bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);
 
 #ifdef HiGHSDEV
