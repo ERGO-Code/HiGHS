@@ -948,17 +948,29 @@ void HDual::iterate() {
   timer.stop(simplex_info.clock_[IteratePrimalClock]);
   // After primal update in dual simplex the primal objective value is not known
   workHMO.simplex_lp_status_.has_primal_objective_value = false;
-  // Possibly update Devex weights
-  if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (nw_dvx_fwk)) {
-    timer.start(simplex_info.clock_[IterateDevexIzClock]);
-    iz_dvx_fwk();
-    timer.stop(simplex_info.clock_[IterateDevexIzClock]);
-  }
 
+  const bool og_place = true;
+  if (og_place) {
+    // Possibly initialise Devex weights
+    if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (nw_dvx_fwk)) {
+      timer.start(simplex_info.clock_[IterateDevexIzClock]);
+      iz_dvx_fwk();
+      timer.stop(simplex_info.clock_[IterateDevexIzClock]);
+    }
+  }
   // Update the basis representation
   timer.start(simplex_info.clock_[IteratePivotsClock]);
   updatePivots();
   timer.stop(simplex_info.clock_[IteratePivotsClock]);
+
+  if (!og_place) {
+    // Possibly initialise Devex weights
+    if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (nw_dvx_fwk)) {
+      timer.start(simplex_info.clock_[IterateDevexIzClock]);
+      iz_dvx_fwk();
+      timer.stop(simplex_info.clock_[IterateDevexIzClock]);
+    }
+  }
 
   // Analyse the iteration: possibly report; possibly switch strategy
   iterationAnalysis();
@@ -1710,16 +1722,12 @@ void HDual::chooseColumn(HVector* row_ep) {
     // Square maxAllowedDevexWeightRatio due to keeping squared
     // weights
     const double accept_ratio_threshhold = maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio;
-    const double accept_weight_threshhold =  1/accept_ratio_threshhold;
-    const bool accept_weight = updated_weight >= accept_weight_threshhold * computed_weight;
     const bool accept_rao = dvx_rao <= accept_ratio_threshhold;
     const bool accept_it = n_dvx_it <= i_te;
     nw_dvx_fwk = !accept_rao || !accept_it;
-    if (nw_dvx_fwk) {
-      printf("NwDvxFwk: New Devex framework Wt(%11.4g; %11.4g): Ratio(%11.4g; alw=%11.4g; accept=%1d; acceptWt=%d) Its(%7d; alw=%9d; accept=%1d)\n",
-	     updated_weight, computed_weight,
-	     dvx_rao, accept_ratio_threshhold, accept_rao, accept_weight, n_dvx_it, i_te, accept_it);
-    }
+    //    const double accept_weight_threshhold =  1/accept_ratio_threshhold;
+    //    const bool accept_weight = updated_weight >= accept_weight_threshhold * computed_weight;
+    //    nw_dvx_fwk = !accept_weight || !accept_it;
     dualRHS.workEdWt[rowOut] = computed_weight;
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }

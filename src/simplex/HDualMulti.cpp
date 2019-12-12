@@ -115,9 +115,7 @@ void HDual::major_chooseRow() {
       }
     }
 
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      printf("FRED\n");
-    }
+    //    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) 
     // 6. Check updated and computed weight
     int countWrongEdWt = 0;
     for (int i = 0; i < multi_num; i++) {
@@ -689,6 +687,15 @@ void HDual::major_updatePrimal() {
     }
     dualRHS.workEdWt[iRow] = pivotEdWt;
   }
+  /*
+  if (dual_edge_weight_mode != DualEdgeWeightMode::STEEPEST_EDGE) {
+    double unit_wt_error = 0;
+    for (int iRow = 0; iRow < numRow; iRow++) {
+      unit_wt_error += fabs(dualRHS.workEdWt[iRow]-1.0)
+    }
+    if (unit_wt_error>1e-4) printf("Non-unit Edge weight error of %g\n", unit_wt_error);
+  }
+  */
 }
 
 void HDual::major_updateFactor() {
