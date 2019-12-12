@@ -76,7 +76,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // unconstrained LPs should be solved in solveLpSimplex
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
   assert(positive_num_row);
-  if (!positive_num_row) return HighsStatus::Error;
+  if (!positive_num_row) {
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
+		    "runSimplexSolver called for LP with non-positive (%d) number of constraints",
+		    highs_model_object.lp_.numRow_);
+    return HighsStatus::Error;
+  }
 
   // Set simplex options from HiGHS options.
   // ToDo: Should only be done when not hot-starting since strategy
@@ -180,7 +185,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		      "Using primal simplex solver");
       HPrimal primal_solver(highs_model_object);
-      primal_solver.solve();
+      call_status = primal_solver.solve();
+      return_status = interpretCallStatus(call_status, return_status, "HPrimal::solve");
+      if (return_status == HighsStatus::Error) return return_status;
     } else {
       // Use dual simplex solver
       HDual dual_solver(highs_model_object);
@@ -191,7 +198,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 			"Using parallel simplex solver - SIP with %d threads", use_num_threads);
         // writePivots("tasks");
-        dual_solver.solve(use_num_threads);
+        call_status = dual_solver.solve(use_num_threads);
+	return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
+	if (return_status == HighsStatus::Error) return return_status;
       } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
         // Parallel - PAMI
 	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
@@ -199,12 +208,16 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         // writePivots("multi");
         // if (opt.partitionFile.size() > 0)
         // {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
-          dual_solver.solve(use_num_threads);
+          call_status = dual_solver.solve(use_num_threads);
+	  return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
+	  if (return_status == HighsStatus::Error) return return_status;
       } else {
         // Serial
 	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 			"Using dual simplex solver - serial");
-        dual_solver.solve();
+        call_status = dual_solver.solve();
+	return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
+	if (return_status == HighsStatus::Error) return return_status;
       }
     }
     if (simplex_info.dual_phase1_iteration_count +

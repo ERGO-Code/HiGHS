@@ -85,7 +85,7 @@ class HDual {
   /**
    * @brief Solve a model instance with a given number of threads
    */
-  void solve(int num_threads = 1  //!< Default number of threads is 1
+  HighsStatus solve(int num_threads = 1  //!< Default number of threads is 1
   );
 
  public:

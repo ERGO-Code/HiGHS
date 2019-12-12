@@ -115,6 +115,9 @@ void HDual::major_chooseRow() {
       }
     }
 
+    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      printf("FRED\n");
+    }
     // 6. Check updated and computed weight
     int countWrongEdWt = 0;
     for (int i = 0; i < multi_num; i++) {

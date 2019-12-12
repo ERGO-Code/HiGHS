@@ -38,7 +38,7 @@ using std::fabs;
 using std::flush;
 using std::runtime_error;
 
-void HDual::solve(int num_threads) {
+HighsStatus HDual::solve(int num_threads) {
   HighsOptions& options = workHMO.options_;
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -46,11 +46,20 @@ void HDual::solve(int num_threads) {
   workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
   bool simplex_info_ok = simplexInfoOk(workHMO.lp_, workHMO.simplex_lp_, simplex_info);
   if (!simplex_info_ok) {
-    printf("Error in simplex info\n");
-    return;
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
+		    "HPrimalDual::solve has error in simplex information");
+    return HighsStatus::Error;
   }
-  // Cannot solve box-constrained LPs
-  if (workHMO.simplex_lp_.numRow_ == 0) return;
+  // Assumes that the LP has a positive number of rows, since
+  // unconstrained LPs should be solved in solveLpSimplex
+  bool positive_num_row = workHMO.simplex_lp_.numRow_ > 0;
+  assert(positive_num_row);
+  if (!positive_num_row) {
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
+		    "HPrimal::solve called for LP with non-positive (%d) number of constraints",
+		    workHMO.simplex_lp_.numRow_);
+    return HighsStatus::Error;
+  }
 
   HighsTimer& timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
@@ -66,8 +75,9 @@ void HDual::solve(int num_threads) {
 
   bool dual_info_ok = dualInfoOk(workHMO.lp_);
   if (!dual_info_ok) {
-    printf("Error in dual info\n");
-    return;
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
+		    "HPrimalDual::solve has error in dual information");
+    return HighsStatus::Error;
   }
 
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
@@ -283,7 +293,7 @@ void HDual::solve(int num_threads) {
   if (solve_bailout) {
     assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
 	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
-    return;
+    return HighsStatus::Warning;
   }
 
   if (solvePhase == 4) {
@@ -310,6 +320,7 @@ void HDual::solve(int num_threads) {
   }
   assert(ok);
   computePrimalObjectiveValue(workHMO);
+  return HighsStatus::OK;
 }
 
 void HDual::options() {
@@ -535,7 +546,11 @@ void HDual::solvePhase1() {
   }
 
   timer.stop(simplex_info.clock_[IterateClock]);
-  if (solve_bailout) return;
+  if (solve_bailout) {
+    assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+    return;
+  }
 
   if (rowOut == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
@@ -585,6 +600,7 @@ void HDual::solvePhase1() {
     initialise_bound(workHMO);
     initialise_value(workHMO);
   }
+  return;
 }
 
 void HDual::solvePhase2() {
@@ -665,6 +681,8 @@ void HDual::solvePhase2() {
   timer.stop(simplex_info.clock_[IterateClock]);
 
   if (solve_bailout) {
+    assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
   }
   if (dualInfeasCount > 0) {
@@ -712,6 +730,7 @@ void HDual::solvePhase2() {
       workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     }
   }
+  return;
 }
 
 void HDual::rebuild() {
@@ -1433,7 +1452,7 @@ void HDual::chooseRow() {
       max_sum_average_log_extreme_dual_steepest_edge_weight_error = max(max_sum_average_log_extreme_dual_steepest_edge_weight_error,
 									average_log_low_dual_steepest_edge_weight_error + average_log_high_dual_steepest_edge_weight_error);
 #ifdef HiGHSDEV
-      const bool report_weight_error = false;
+      const bool report_weight_error = true;
       if (report_weight_error && weight_error > 0.5*weight_error_threshhold) {
 	printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
 	       workHMO.scaled_solution_params_.simplex_iteration_count,

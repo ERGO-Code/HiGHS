@@ -32,7 +32,7 @@ class HPrimal {
   /**
    * @brief Solve a model instance
    */
-  void solve();
+  HighsStatus solve();
 
   /**
    * @brief Perform Phase 2 primal simplex iterations

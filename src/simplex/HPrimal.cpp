@@ -25,13 +25,21 @@
 
 using std::runtime_error;
 
-void HPrimal::solve() {
+HighsStatus HPrimal::solve() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
-  // Cannot solve box-constrained LPs
-  if (workHMO.simplex_lp_.numRow_ == 0) return;
+  // Assumes that the LP has a positive number of rows, since
+  // unconstrained LPs should be solved in solveLpSimplex
+  bool positive_num_row = workHMO.simplex_lp_.numRow_ > 0;
+  assert(positive_num_row);
+  if (!positive_num_row) {
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
+		    "HPrimal::solve called for LP with non-positive (%d) number of constraints",
+		    workHMO.simplex_lp_.numRow_);
+    return HighsStatus::Error;
+  }
 
   HighsTimer& timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
@@ -175,6 +183,7 @@ void HPrimal::solve() {
   solvePhase); if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
   */
+  return HighsStatus::OK;
 }
 
 void HPrimal::solvePhase2() {
@@ -272,7 +281,9 @@ void HPrimal::solvePhase2() {
     }
   }
 
-  if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) return;
+  if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) {
+    return;
+  }
 
   if (columnIn == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
