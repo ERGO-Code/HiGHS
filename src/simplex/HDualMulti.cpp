@@ -125,7 +125,8 @@ void HDual::major_chooseRow() {
       if (iRow < 0) continue;
       double u_weight = dualRHS.workEdWt[iRow];
       double c_weight = dualRHS.workEdWt[iRow] = multi_choice[i].infeasEdWt;
-      if (u_weight < 0.25 * c_weight) {
+      //      if (u_weight < 0.25 * c_weight) {
+      if (!acceptDualSteepestEdgeWeight(u_weight, c_weight)) {
         multi_choice[i].rowOut = -1;
         countWrongEdWt++;
       }

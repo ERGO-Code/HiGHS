@@ -1411,66 +1411,7 @@ void HDual::chooseRow() {
       // loop. All we worry about is accepting rows with weights
       // which are not too small, since this can make the row look
       // unreasonably attractive
-      const double accept_weight_threshhold = 0.25;
-      const double weight_error_threshhold = 4.0;
-      bool accept_weight = u_weight >= accept_weight_threshhold * c_weight;
-      int low_weight_error = 0;
-      int high_weight_error = 0;
-      double weight_error;
-      string error_type = "  OK";
-      num_dual_steepest_edge_weight_check++;
-      if (!accept_weight) num_dual_steepest_edge_weight_reject++;
-      if (u_weight < c_weight) {
-	// Updated weight is low
-	weight_error = c_weight/u_weight;
-	if (weight_error > weight_error_threshhold) {
-	  low_weight_error = 1;
-	  error_type = " Low";
-	}
-	average_log_low_dual_steepest_edge_weight_error = 0.99*average_log_low_dual_steepest_edge_weight_error + 0.01*log(weight_error);
-      } else {
-	// Updated weight is correct or high
-	weight_error = u_weight/c_weight;
-	if (weight_error > weight_error_threshhold) {
-	  high_weight_error = 1;
-	  error_type = "High";
-	}
-	average_log_high_dual_steepest_edge_weight_error = 0.99*average_log_high_dual_steepest_edge_weight_error + 0.01*log(weight_error);
-      }
-      average_frequency_low_dual_steepest_edge_weight = 0.99*average_frequency_low_dual_steepest_edge_weight + 0.01*low_weight_error;
-      average_frequency_high_dual_steepest_edge_weight = 0.99*average_frequency_high_dual_steepest_edge_weight + 0.01*high_weight_error;
-      max_average_frequency_low_dual_steepest_edge_weight = max(max_average_frequency_low_dual_steepest_edge_weight,
-								average_frequency_low_dual_steepest_edge_weight);
-      max_average_frequency_high_dual_steepest_edge_weight = max(max_average_frequency_high_dual_steepest_edge_weight,
-								 average_frequency_high_dual_steepest_edge_weight);
-      max_sum_average_frequency_extreme_dual_steepest_edge_weight = max(max_sum_average_frequency_extreme_dual_steepest_edge_weight,
-									average_frequency_low_dual_steepest_edge_weight + average_frequency_high_dual_steepest_edge_weight);
-      max_average_log_low_dual_steepest_edge_weight_error = max(max_average_log_low_dual_steepest_edge_weight_error,
-								average_log_low_dual_steepest_edge_weight_error);
-      max_average_log_high_dual_steepest_edge_weight_error = max(max_average_log_high_dual_steepest_edge_weight_error,
-								 average_log_high_dual_steepest_edge_weight_error);
-      max_sum_average_log_extreme_dual_steepest_edge_weight_error = max(max_sum_average_log_extreme_dual_steepest_edge_weight_error,
-									average_log_low_dual_steepest_edge_weight_error + average_log_high_dual_steepest_edge_weight_error);
-#ifdef HiGHSDEV
-      const bool report_weight_error = true;
-      if (report_weight_error && weight_error > 0.5*weight_error_threshhold) {
-	printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
-	       workHMO.scaled_solution_params_.simplex_iteration_count,
-	       accept_weight, 
-	       num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
-	       c_weight, u_weight, weight_error, error_type.c_str(),
-	       average_frequency_low_dual_steepest_edge_weight, average_log_low_dual_steepest_edge_weight_error,
-	       average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error,
-	       max_average_frequency_low_dual_steepest_edge_weight,
-	       max_average_frequency_high_dual_steepest_edge_weight,
-	       max_sum_average_frequency_extreme_dual_steepest_edge_weight,
-	       max_average_log_low_dual_steepest_edge_weight_error,
-	       max_average_log_high_dual_steepest_edge_weight_error,
-	       max_sum_average_log_extreme_dual_steepest_edge_weight_error);
-      }
-#endif
-	     
-      if (accept_weight) break;
+      if (acceptDualSteepestEdgeWeight(u_weight, c_weight)) break;
       // Weight error is unacceptable so look for another
       // candidate. Of course, it's possible that the same
       // candidate is chosen, but the weight will be correct (so
@@ -1502,6 +1443,90 @@ void HDual::chooseRow() {
   // any BTRANs done for skipped candidates
   double lc_OpRsDensity = (double)row_ep.count / solver_num_row;
   uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
+}
+
+bool HDual::acceptDualSteepestEdgeWeight(const double updated_weight, const double computed_weight) {
+  // Accept the updated weight if it is at least a quarter of the
+  // computed weight. Excessively large updated weights don't matter!
+  const double accept_weight_threshhold = 0.25;
+  const double weight_error_threshhold = 4.0;
+  bool accept_weight = updated_weight >= accept_weight_threshhold * computed_weight;
+  int low_weight_error = 0;
+  int high_weight_error = 0;
+  double weight_error;
+#ifdef HiGHSDEV
+  string error_type = "  OK";
+#endif
+  num_dual_steepest_edge_weight_check++;
+  if (!accept_weight) num_dual_steepest_edge_weight_reject++;
+  if (updated_weight < computed_weight) {
+    // Updated weight is low
+    weight_error = computed_weight/updated_weight;
+    if (weight_error > weight_error_threshhold) {
+      low_weight_error = 1;
+#ifdef HiGHSDEV
+      error_type = " Low";
+#endif
+    }
+    average_log_low_dual_steepest_edge_weight_error =
+      0.99*average_log_low_dual_steepest_edge_weight_error +
+      0.01*log(weight_error);
+  } else {
+    // Updated weight is correct or high
+    weight_error = updated_weight/computed_weight;
+    if (weight_error > weight_error_threshhold) {
+      high_weight_error = 1;
+#ifdef HiGHSDEV
+      error_type = "High";
+#endif
+    }
+    average_log_high_dual_steepest_edge_weight_error =
+      0.99*average_log_high_dual_steepest_edge_weight_error +
+      0.01*log(weight_error);
+  }
+  average_frequency_low_dual_steepest_edge_weight = 
+    0.99*average_frequency_low_dual_steepest_edge_weight + 
+    0.01*low_weight_error;
+  average_frequency_high_dual_steepest_edge_weight = 
+    0.99*average_frequency_high_dual_steepest_edge_weight + 
+    0.01*high_weight_error;
+  max_average_frequency_low_dual_steepest_edge_weight =
+    max(max_average_frequency_low_dual_steepest_edge_weight,
+	average_frequency_low_dual_steepest_edge_weight);
+  max_average_frequency_high_dual_steepest_edge_weight =
+    max(max_average_frequency_high_dual_steepest_edge_weight,
+	average_frequency_high_dual_steepest_edge_weight);
+  max_sum_average_frequency_extreme_dual_steepest_edge_weight =
+    max(max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+	average_frequency_low_dual_steepest_edge_weight + average_frequency_high_dual_steepest_edge_weight);
+  max_average_log_low_dual_steepest_edge_weight_error =
+    max(max_average_log_low_dual_steepest_edge_weight_error,
+	average_log_low_dual_steepest_edge_weight_error);
+  max_average_log_high_dual_steepest_edge_weight_error =
+    max(max_average_log_high_dual_steepest_edge_weight_error,
+	average_log_high_dual_steepest_edge_weight_error);
+  max_sum_average_log_extreme_dual_steepest_edge_weight_error =
+    max(max_sum_average_log_extreme_dual_steepest_edge_weight_error,
+	average_log_low_dual_steepest_edge_weight_error + average_log_high_dual_steepest_edge_weight_error);
+#ifdef HiGHSDEV
+  const bool report_weight_error = false;
+  if (report_weight_error && weight_error > 0.5*weight_error_threshhold) {
+    printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
+	   workHMO.scaled_solution_params_.simplex_iteration_count,
+	   accept_weight, 
+	   num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
+	   computed_weight, updated_weight, weight_error, error_type.c_str(),
+	   average_frequency_low_dual_steepest_edge_weight, average_log_low_dual_steepest_edge_weight_error,
+	   average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error,
+	   max_average_frequency_low_dual_steepest_edge_weight,
+	   max_average_frequency_high_dual_steepest_edge_weight,
+	   max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+	   max_average_log_low_dual_steepest_edge_weight_error,
+	   max_average_log_high_dual_steepest_edge_weight_error,
+	   max_sum_average_log_extreme_dual_steepest_edge_weight_error);
+  }
+#endif
+  return accept_weight;
 }
 
 void HDual::chooseColumn(HVector* row_ep) {
@@ -1665,27 +1690,37 @@ void HDual::chooseColumn(HVector* row_ep) {
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     timer.start(simplex_info.clock_[DevexWtClock]);
     // Determine the exact Devex weight
-    double og_dvx_wt_o_rowOut = dualRHS.workEdWt[rowOut];
-    double tru_dvx_wt_o_rowOut = 0;
+    double updated_weight = dualRHS.workEdWt[rowOut];
+    double computed_weight = 0;
     // Loop over [row_ap; row_ep] using the packed values
     for (int el_n = 0; el_n < dualRow.packCount; el_n++) {
       int vr_n = dualRow.packIndex[el_n];
       double pv = dvx_ix[vr_n] * dualRow.packValue[el_n];
-      tru_dvx_wt_o_rowOut += pv * pv;
+      if (fabs(pv)) {
+	computed_weight += pv * pv;
+      }
     }
-    tru_dvx_wt_o_rowOut = max(1.0, tru_dvx_wt_o_rowOut);
+    computed_weight = max(1.0, computed_weight);
     // Analyse the Devex weight to determine whether a new framework
     // should be set up
-    double dvx_rao = max(og_dvx_wt_o_rowOut / tru_dvx_wt_o_rowOut,
-                         tru_dvx_wt_o_rowOut / og_dvx_wt_o_rowOut);
+    double dvx_rao = max(updated_weight / computed_weight,
+                         computed_weight / updated_weight);
     int i_te = solver_num_row / minRlvNumberDevexIterations;
     i_te = max(minAbsNumberDevexIterations, i_te);
     // Square maxAllowedDevexWeightRatio due to keeping squared
     // weights
-    nw_dvx_fwk =
-        dvx_rao > maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio ||
-        n_dvx_it > i_te;
-    dualRHS.workEdWt[rowOut] = tru_dvx_wt_o_rowOut;
+    const double accept_ratio_threshhold = maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio;
+    const double accept_weight_threshhold =  1/accept_ratio_threshhold;
+    const bool accept_weight = updated_weight >= accept_weight_threshhold * computed_weight;
+    const bool accept_rao = dvx_rao <= accept_ratio_threshhold;
+    const bool accept_it = n_dvx_it <= i_te;
+    nw_dvx_fwk = !accept_rao || !accept_it;
+    if (nw_dvx_fwk) {
+      printf("NwDvxFwk: New Devex framework Wt(%11.4g; %11.4g): Ratio(%11.4g; alw=%11.4g; accept=%1d; acceptWt=%d) Its(%7d; alw=%9d; accept=%1d)\n",
+	     updated_weight, computed_weight,
+	     dvx_rao, accept_ratio_threshhold, accept_rao, accept_weight, n_dvx_it, i_te, accept_it);
+    }
+    dualRHS.workEdWt[rowOut] = computed_weight;
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
   return;

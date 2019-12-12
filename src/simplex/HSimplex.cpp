@@ -62,7 +62,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.report_simplex_phases_clock = full_timing;
   // Options for analysing the LP and simplex iterations
   simplex_info.analyseLp = useful_analysis;
-  simplex_info.analyseSimplexIterations = useful_analysis;
+  simplex_info.analyseSimplexIterations = true;// useful_analysis;
   //  simplex_info.analyse_invert_form = useful_analysis;
   //  simplex_info.analyse_invert_condition = useful_analysis;
   simplex_info.analyse_invert_time = full_timing;

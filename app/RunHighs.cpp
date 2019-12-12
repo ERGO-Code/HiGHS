@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     HighsPrintMessage(output, message_level, ML_ALWAYS, 
 		      "In main: running highs.run() quietly\n");
   }
-  bool force_options_file = false;  // true;//
+  bool force_options_file = true;//false;  //
   if (force_options_file) {
     HighsPrintMessage(output, message_level, ML_ALWAYS, 
 		      "In main: set options.options_file = Options.set so vscode can be "

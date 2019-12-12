@@ -261,6 +261,12 @@ class HDual {
   void chooseRow();
 
   /**
+   * @brief Determine whether the updated_weight is accurate enough to
+   * be accepted, and update the analysis of weight errors
+   */
+  bool acceptDualSteepestEdgeWeight(const double updated_weight, const double computed_weight);
+
+  /**
    * @brief Compute pivot row (PRICE) and choose the index of a good column to
    * enter the basis (CHUZC)
    */
