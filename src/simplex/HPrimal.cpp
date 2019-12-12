@@ -85,9 +85,9 @@ HighsStatus HPrimal::solve() {
   initialise_dual_steepest_edge_weights
     // Using dual Devex edge weights
     // Zero the number of Devex frameworks used and set up the first one
-    n_dvx_fwk = 0;
-    dvx_ix.assign(solver_num_tot, 0);
-    iz_dvx_fwk();
+    num_devex_framework = 0;
+    devex_index.assign(solver_num_tot, 0);
+    initialiseDevexFramework();
     // Indicate that edge weights are known
     simplex_lp_status.has_dual_steepest_edge_weights = true;
   }
@@ -172,8 +172,8 @@ HighsStatus HPrimal::solve() {
 #ifdef HiGHSDEV
   /*
   if (primal_edge_weight_mode == PrimalEdgeWeightMode::DEVEX) {
-    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
-           scaled_solution_params.simplex_iteration_count / n_dvx_fwk);
+    printf("Devex: num_devex_framework = %d; Average num_devex_iterations = %d\n", num_devex_framework,
+           scaled_solution_params.simplex_iteration_count / num_devex_framework);
   }
   */
 #endif

@@ -93,9 +93,9 @@ class HDualRHS {
   /**
    * @brief Update the Devex weights
    */
-  void update_weight_Dvx(
-      HVector* column,        //!< Pivotal column
-      double dvx_wt_o_rowOut  //!< max(1, (Edge weight of leaving row)/alpha^2)
+  void updateWeightDevex(
+      HVector* column,            //!< Pivotal column
+      double devexWeightOfRowOut  //!< max(1, (Edge weight of leaving row)/alpha^2)
   );
   /**
    * @brief Update the primal value for the row where the basis change has

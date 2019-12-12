@@ -39,13 +39,6 @@ enum class PriceMode { ROW = 0, COL };
 const int HIGHS_SLICED_LIMIT = HIGHS_THREAD_LIMIT;//Was 100, but can't see why this should be higher than HIGHS_THREAD_LIMIT;
 
 /**
- * Devex status flags. Each column has a Devex flag which is used as a
- * multiplier to save a conditional branch
- */
-const int dvx_in_R = 1;
-const int dvx_not_in_R = 0;
-
-/**
  * Parameters controlling number of Devex iterations.
  *
  * There is a new Devex framework if either
@@ -53,7 +46,7 @@ const int dvx_not_in_R = 0;
  * 1) The weight inaccuracy ratio exceeds maxAllowedDevexWeightRatio
  *
  * 2) There have been max(minAbsNumberDevexIterations,
- * numRow/minRlvNumberDevexIterations) devex iterations
+ * numRow/minRlvNumberDevexIterations) Devex iterations
  */
 const int minAbsNumberDevexIterations = 25;
 const double minRlvNumberDevexIterations = 1e-2;
@@ -328,7 +321,7 @@ class HDual {
    * @brief Initialise a Devex framework: reference set is all basic
    * variables
    */
-  void iz_dvx_fwk();
+  void initialiseDevexFramework();
 
   /**
    * @brief Interpret the dual edge weight strategy as setting of a mode and
@@ -454,11 +447,11 @@ class HDual {
                        //!< calling function
 
   // Devex scalars
-  int n_dvx_fwk;    //!< Number of Devex frameworks used
-  int n_dvx_it;     //!< Number of Devex iterations with the current framework
-  bool nw_dvx_fwk;  //!< Set a new Devex framework
+  int num_devex_framework;   //!< Number of Devex frameworks used
+  int num_devex_iterations;  //!< Number of Devex iterations with the current framework
+  bool new_devex_framework;  //!< Set a new Devex framework
   // Devex std::vector
-  std::vector<int> dvx_ix;  //!< Vector of Devex indices
+  std::vector<int> devex_index;  //!< Vector of Devex indices
 
   // Price scalars
   // DSE scalars

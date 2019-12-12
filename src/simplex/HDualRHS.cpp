@@ -363,7 +363,7 @@ void HDualRHS::update_weight_DSE(HVector* column, double DSE_wt_o_rowOut,
   timer.stop(simplex_info.clock_[UpdateWeightClock]);
 }
 // Update the Devex weights
-void HDualRHS::update_weight_Dvx(HVector* column, double dvx_wt_o_rowOut) {
+void HDualRHS::updateWeightDevex(HVector* column, double devexWeightOfRowOut) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[UpdateWeightClock]);
@@ -377,14 +377,14 @@ void HDualRHS::update_weight_Dvx(HVector* column, double dvx_wt_o_rowOut) {
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       double aa_iRow = columnArray[iRow];
-      double nw_wt = max(workEdWt[iRow], dvx_wt_o_rowOut * aa_iRow * aa_iRow);
+      double nw_wt = max(workEdWt[iRow], devexWeightOfRowOut * aa_iRow * aa_iRow);
       workEdWt[iRow] = nw_wt;
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       int iRow = columnIndex[i];
       double aa_iRow = columnArray[iRow];
-      double nw_wt = max(workEdWt[iRow], dvx_wt_o_rowOut * aa_iRow * aa_iRow);
+      double nw_wt = max(workEdWt[iRow], devexWeightOfRowOut * aa_iRow * aa_iRow);
       workEdWt[iRow] = nw_wt;
     }
   }
