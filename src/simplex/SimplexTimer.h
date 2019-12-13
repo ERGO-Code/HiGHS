@@ -62,6 +62,7 @@ enum iClockSimplex {
   Chuzr2Clock,         //!< CHUZR - Primal stage 2
   ChuzcPrimalClock,    //!< CHUZC - Primal
   Chuzc0Clock,         //!< CHUZC - Dual stage 0
+  PriceChuzc1Clock,    //!< PRICE + CHUZC - Dual stage 1: parallel
   Chuzc1Clock,         //!< CHUZC - Dual stage 1
   Chuzc2Clock,         //!< CHUZC - Dual stage 2
   Chuzc3Clock,         //!< CHUZC - Dual stage 3
@@ -153,6 +154,7 @@ class SimplexTimer {
     simplex_info.clock_[ChuzcPrimalClock] =
         timer.clock_def("CHUZC_PRIMAL", "CCP");
     simplex_info.clock_[Chuzc0Clock] = timer.clock_def("CHUZC0", "CC0");
+    simplex_info.clock_[PriceChuzc1Clock] = timer.clock_def("PRICE_CHUZC1", "PC1");
     simplex_info.clock_[Chuzc1Clock] = timer.clock_def("CHUZC1", "CC1");
     simplex_info.clock_[Chuzc2Clock] = timer.clock_def("CHUZC2", "CC2");
     simplex_info.clock_[Chuzc3Clock] = timer.clock_def("CHUZC3", "CC3");
@@ -253,6 +255,7 @@ class SimplexTimer {
         ComputePrObjClock, ReportRebuildClock,  ChuzrDualClock,
         Chuzr1Clock,       Chuzr2Clock,         BtranClock,
         PriceClock,        ChuzcPrimalClock,    Chuzc0Clock,
+        PriceChuzc1Clock,
         Chuzc1Clock,       Chuzc2Clock,         Chuzc3Clock,
         Chuzc4Clock,       DevexWtClock,        FtranClock,
         FtranBfrtClock,    FtranDseClock,       FtranMixParClock,

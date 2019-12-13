@@ -1664,13 +1664,12 @@ void HDual::chooseColumn(HVector* row_ep) {
   // Section 1: Pack row_ap and row_ep, then determine the possible
   // variables - candidates for CHUZC
   timer.start(simplex_info.clock_[Chuzc1Clock]);
-  dualRow.choose_makepack(
-      &row_ap, 0);  // Pack row_ap into the packIndex/Value of HDualRow
-  dualRow.choose_makepack(
-      row_ep,
-      solver_num_col);  // Pack row_ep into the packIndex/Value of HDualRow
-  dualRow.choose_possible();  // Determine the possible variables - candidates
-                              // for CHUZC
+  // Pack row_ap into the packIndex/Value of HDualRow
+  dualRow.choose_makepack(&row_ap, 0);  
+  // Pack row_ep into the packIndex/Value of HDualRow
+  dualRow.choose_makepack(row_ep, solver_num_col);  
+  // Determine the possible variables - candidates for CHUZC
+  dualRow.choose_possible();  
   timer.stop(simplex_info.clock_[Chuzc1Clock]);
   //
   // Take action if the step to an expanded bound is not positive, or
@@ -1748,7 +1747,7 @@ void HDual::chooseColumn_slice(HVector* row_ep) {
   dualRow.create_Freemove(row_ep);
   timer.stop(simplex_info.clock_[Chuzc0Clock]);
 
-  timer.start(simplex_info.clock_[Chuzc1Clock]);
+  timer.start(simplex_info.clock_[PriceChuzc1Clock]);
   // Row_ep:         PACK + CC1
 #pragma omp task
   {
@@ -1776,7 +1775,7 @@ void HDual::chooseColumn_slice(HVector* row_ep) {
     dualRow.choose_joinpack(&slice_dualRow[i]);
   }
 
-  timer.stop(simplex_info.clock_[Chuzc1Clock]);
+  timer.stop(simplex_info.clock_[PriceChuzc1Clock]);
 
   // Infeasible we created before
   columnIn = -1;
@@ -2041,7 +2040,7 @@ void HDual::initialiseDevexFramework() {
   // Initialise the Devex framework: reference set is all basic
   // variables
   timer.start(simplex_info.clock_[DevexIzClock]);
-  const int* nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
+  const vector<int>& nonbasicFlag = workHMO.simplex_basis_.nonbasicFlag_;
   // Initialise the devex framework. The devex reference set is
   // initialise to be the current set of basic variables - and never
   // changes until a new framework is set up. In a simplex iteration,
