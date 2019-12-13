@@ -205,6 +205,8 @@ struct HighsSimplexInfo {
   std::vector<int> numTotPermutation_;
   std::vector<int> numColPermutation_;
 
+  std::vector<int> devex_index_;
+
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;
   //

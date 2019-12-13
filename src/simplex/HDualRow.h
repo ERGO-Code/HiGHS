@@ -116,12 +116,18 @@ class HDualRow {
   void delete_Freelist(int iColumn  //!< Index of column to remove from Freelist
   );
 
+  /**
+   * @brief Compute (contribution to) the Devex weight
+   */
+  void computeDevexWeight();
+
   HighsModelObject& workHMO;         //!< Local copy of pointer to model
   int workSize = -1;                 //!< Size of the HDualRow slice: Initialise it here to avoid compiler warning
   const int* workNumTotPermutation;  //!< Pointer to model->numTotPermutation();
-  const int* workMove;      //!< Pointer to model->basis_->nonbasicMove_;
-  const double* workDual;   //!< Pointer to model->simplex_->workDual_;
-  const double* workRange;  //!< Pointer to model->simplex_->workRange_;
+  const int* workMove;      //!< Pointer to workHMO.simplex_basis_.nonbasicMove_;
+  const double* workDual;   //!< Pointer to workHMO.simplex_info_.workDual_;
+  const double* workRange;  //!< Pointer to workHMO.simplex_info_.workRange_;
+  const int* work_devex_index; //!< Pointer to workHMO.simplex_info_.devex_index;
 
   // Freelist:
   std::set<int> freeList;  //!< Freelist itself
@@ -132,6 +138,9 @@ class HDualRow {
   std::vector<int> packIndex;     //!< Packed indices
   std::vector<double> packValue;  //!< Packed values
 
+  // (Local) value of computed weight
+  double computed_weight;
+  
   double workDelta;  //!< Local copy of dual.deltaPrimal
   double workAlpha;  //!< Original copy of pivotal computed row-wise
   double workTheta;  //!< Original copy of dual step workDual[workPivot] /

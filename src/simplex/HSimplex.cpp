@@ -1502,6 +1502,11 @@ void allocate_work_and_base_arrays(HighsModelObject& highs_model_object) {
   simplex_info.workRange_.resize(numTot);
   simplex_info.workValue_.resize(numTot);
 
+  // Feel that it should be possible to resize this with in dual
+  // solver, and only if Devex is being used, but a pointer to it
+  // needs to be set up when constructing HDual
+  simplex_info.devex_index_.resize(numTot);
+
   simplex_info.baseLower_.resize(simplex_lp.numRow_);
   simplex_info.baseUpper_.resize(simplex_lp.numRow_);
   simplex_info.baseValue_.resize(simplex_lp.numRow_);

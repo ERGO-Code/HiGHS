@@ -31,6 +31,7 @@ void HDualRow::setupSlice(int size) {
   workMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   workDual = &workHMO.simplex_info_.workDual_[0];
   workRange = &workHMO.simplex_info_.workRange_[0];
+  work_devex_index = &workHMO.simplex_info_.devex_index_[0];
 
   // Allocate spaces
   packCount = 0;
@@ -446,5 +447,14 @@ void HDualRow::delete_Freelist(int iColumn) {
   } else {
     if (freeListSize > 0)
       printf("!! STRANGE: Empty Freelist has size %d\n", freeListSize);
+  }
+}
+
+void HDualRow::computeDevexWeight() {
+  computed_weight = 0;
+  for (int el_n = 0; el_n < packCount; el_n++) {
+    int vr_n = packIndex[el_n];
+    double pv = work_devex_index[vr_n] * packValue[el_n];
+    computed_weight += pv * pv;
   }
 }

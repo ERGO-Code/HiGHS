@@ -113,6 +113,7 @@ HighsStatus HDual::solve(int num_threads) {
       // Zero the number of Devex frameworks used and set up the first one
       num_devex_framework = 0;
       devex_index.assign(solver_num_tot, 0);
+      simplex_info.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // Using dual steepest edge (DSE) weights
@@ -1142,6 +1143,7 @@ void HDual::iterationAnalysis() {
       // Zero the number of Devex frameworks used and set up the first one
       num_devex_framework = 0;
       devex_index.assign(solver_num_tot, 0);
+      workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     }
   }
@@ -1542,6 +1544,26 @@ bool HDual::acceptDualSteepestEdgeWeight(const double updated_weight, const doub
   return accept_weight;
 }
 
+bool HDual::newDevexFramework(const double updated_weight, const double computed_weight) {
+  // Analyse the Devex weight to determine whether a new framework
+  // should be set up
+  bool return_new_devex_framework = false;
+  double devex_ratio = max(updated_weight / computed_weight,
+			   computed_weight / updated_weight);
+  int i_te = solver_num_row / minRlvNumberDevexIterations;
+  i_te = max(minAbsNumberDevexIterations, i_te);
+  // Square maxAllowedDevexWeightRatio due to keeping squared
+  // weights
+  const double accept_ratio_threshhold = maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio;
+  const bool accept_ratio = devex_ratio <= accept_ratio_threshhold;
+  const bool accept_it = num_devex_iterations <= i_te;
+  return_new_devex_framework = !accept_ratio || !accept_it;
+  //    const double accept_weight_threshhold =  1/accept_ratio_threshhold;
+  //    const bool accept_weight = updated_weight >= accept_weight_threshhold * computed_weight;
+  //    new_devex_framework = !accept_weight || !accept_it;
+  return return_new_devex_framework;
+}
+
 void HDual::chooseColumn(HVector* row_ep) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -1701,6 +1723,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     timer.start(simplex_info.clock_[DevexWtClock]);
+        dualRow.computeDevexWeight();
     // Determine the exact Devex weight
     double updated_weight = dualRHS.workEdWt[rowOut];
     double computed_weight = 0;
@@ -1710,22 +1733,10 @@ void HDual::chooseColumn(HVector* row_ep) {
       double pv = devex_index[vr_n] * dualRow.packValue[el_n];
       computed_weight += pv * pv;
     }
+    double computed_weight_error = fabs(computed_weight-dualRow.computed_weight);
+    if (computed_weight_error) printf("computed_weight_error = %g\n", computed_weight_error);
     computed_weight = max(1.0, computed_weight);
-    // Analyse the Devex weight to determine whether a new framework
-    // should be set up
-    double devex_ratio = max(updated_weight / computed_weight,
-                         computed_weight / updated_weight);
-    int i_te = solver_num_row / minRlvNumberDevexIterations;
-    i_te = max(minAbsNumberDevexIterations, i_te);
-    // Square maxAllowedDevexWeightRatio due to keeping squared
-    // weights
-    const double accept_ratio_threshhold = maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio;
-    const bool accept_ratio = devex_ratio <= accept_ratio_threshhold;
-    const bool accept_it = num_devex_iterations <= i_te;
-    new_devex_framework = !accept_ratio || !accept_it;
-    //    const double accept_weight_threshhold =  1/accept_ratio_threshhold;
-    //    const bool accept_weight = updated_weight >= accept_weight_threshhold * computed_weight;
-    //    new_devex_framework = !accept_weight || !accept_it;
+    new_devex_framework = newDevexFramework(updated_weight, computed_weight);
     dualRHS.workEdWt[rowOut] = computed_weight;
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
@@ -2054,6 +2065,7 @@ void HDual::initialiseDevexFramework() {
   // |nonbasicFlag|=1 iff the corresponding variable is nonbasic
   for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
     devex_index[vr_n] = 1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
+    simplex_info.devex_index_[vr_n] = devex_index[vr_n];
   }
   dualRHS.workEdWt.assign(solver_num_row, 1.0);  // Set all initial weights to 1
   num_devex_iterations = 0;    // Zero the count of iterations with this Devex framework
