@@ -285,6 +285,11 @@ void HDual::minor_update() {
   if (countRemain == 0) multi_chooseAgain = 1;
   //    if (multi_nFinish + 1 == multi_num)
   //        multi_chooseAgain = 1;
+
+  if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (new_devex_framework)) {
+    //    printf("Iter %7d: New Devex framework\n", workHMO.scaled_solution_params_.simplex_iteration_count);
+    initialiseDevexFramework();
+  }
 }
 
 void HDual::minor_updateDual() {
@@ -372,10 +377,7 @@ void HDual::minor_updatePrimal() {
       }
     }
   }
-  if (devex) {
-    Fin->EdWt = devexWeightOfRowOut;
-    num_devex_iterations++;
-  }
+  if (devex) Fin->EdWt = devexWeightOfRowOut;
 }
 void HDual::minor_updatePivots() {
   MFinish* Fin = &multi_finish[multi_nFinish];
@@ -694,6 +696,26 @@ void HDual::major_updatePrimal() {
 	  if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;
 	}
       }
+    } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+      for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+	const double pivotEdWt = multi_finish[iFn].EdWt;
+	const int this_rowOut = multi_finish[iFn].rowOut;
+	const double* colArray = &multi_finish[iFn].column->array[0];
+	double* EdWt = &dualRHS.workEdWt[0];
+	// Pivotal row is for the current basis: weights are required for
+	// the next basis so have to divide the current (exact) weight by
+	// the pivotal value
+	const double this_alphaRow = multi_finish[iFn].alphaRow;
+	double this_EdWt = pivotEdWt / (this_alphaRow * this_alphaRow);
+	const double devexWeightOfRowOut = max(1.0, this_EdWt);
+	for (int iRow = 0; iRow < solver_num_row; iRow++) {
+	  const double aa_iRow = colArray[iRow];
+	  double nw_wt = max(EdWt[iRow], devexWeightOfRowOut * aa_iRow * aa_iRow);
+	  //	  EdWt[iRow] = nw_wt;
+	}
+	//	EdWt[this_rowOut] = devexWeightOfRowOut;
+	num_devex_iterations++;
+      }
     }
   } else {
     // Update primal and pivots
@@ -739,6 +761,28 @@ void HDual::major_updatePrimal() {
       }
       dualRHS.workEdWt[iRow] = pivotEdWt;
     }
+  } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+      const int iRow = multi_finish[iFn].rowOut;
+      const double pivotEdWt = multi_finish[iFn].EdWt;
+      const int this_rowOut = multi_finish[iFn].rowOut;
+      const double* colArray = &multi_finish[iFn].column->array[0];
+      double* EdWt = &dualRHS.workEdWt[0];
+      // Pivotal row is for the current basis: weights are required for
+      // the next basis so have to divide the current (exact) weight by
+      // the pivotal value
+      const double this_alphaRow = multi_finish[iFn].alphaRow;
+      double this_EdWt = pivotEdWt / (this_alphaRow * this_alphaRow);
+      const double devexWeightOfRowOut = max(1.0, this_EdWt);
+      for (int jFn = 0; jFn < iFn; jFn++) {
+	int jRow = multi_finish[jFn].rowOut;
+	const double aa_iRow = colArray[iRow];
+	double nw_wt = max(EdWt[iRow], devexWeightOfRowOut * aa_iRow * aa_iRow);
+	//	  EdWt[iRow] = nw_wt;
+      }
+      //	EdWt[this_rowOut] = devexWeightOfRowOut;
+      num_devex_iterations++;
+    }
   }
   checkNonUnitWeightError("999");
 }
@@ -755,10 +799,7 @@ void HDual::major_updateFactor() {
   }
   iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].rowOut;
   if (multi_nFinish > 0)
-    update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep,
-                  iRows,
-                  &invertHint);  // model->updateFactor(multi_finish[0].column,
-                                 // multi_finish[0].row_ep, iRows, &invertHint);
+    update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 &&
       workHMO.simplex_info_.update_count > 200)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
@@ -777,14 +818,11 @@ void HDual::major_rollback() {
     workHMO.simplex_basis_.basicIndex_[Fin->rowOut] = Fin->columnOut;
 
     // 2. Roll back matrix
-    update_matrix(
-        workHMO, Fin->columnOut,
-        Fin->columnIn);  // model->updateMatrix(Fin->columnOut, Fin->columnIn);
+    update_matrix(workHMO, Fin->columnOut, Fin->columnIn);
 
     // 3. Roll back flips
     for (unsigned i = 0; i < Fin->flipList.size(); i++) {
-      flip_bound(workHMO,
-                 Fin->flipList[i]);  // model->flipBound(Fin->flipList[i]);
+      flip_bound(workHMO, Fin->flipList[i]);
     }
 
     // 4. Roll back cost
