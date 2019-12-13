@@ -1723,21 +1723,14 @@ void HDual::chooseColumn(HVector* row_ep) {
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     timer.start(simplex_info.clock_[DevexWtClock]);
-        dualRow.computeDevexWeight();
     // Determine the exact Devex weight
-    double updated_weight = dualRHS.workEdWt[rowOut];
-    double computed_weight = 0;
-    // Loop over [row_ap; row_ep] using the packed values
-    for (int el_n = 0; el_n < dualRow.packCount; el_n++) {
-      int vr_n = dualRow.packIndex[el_n];
-      double pv = devex_index[vr_n] * dualRow.packValue[el_n];
-      computed_weight += pv * pv;
-    }
-    double computed_weight_error = fabs(computed_weight-dualRow.computed_weight);
-    if (computed_weight_error) printf("computed_weight_error = %g\n", computed_weight_error);
+    dualRow.computeDevexWeight();
+    double computed_weight = dualRow.computed_weight;
     computed_weight = max(1.0, computed_weight);
-    new_devex_framework = newDevexFramework(updated_weight, computed_weight);
+    const double updated_weight = dualRHS.workEdWt[rowOut];
+
     dualRHS.workEdWt[rowOut] = computed_weight;
+    new_devex_framework = newDevexFramework(updated_weight, computed_weight);
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
   return;
@@ -1809,6 +1802,21 @@ void HDual::chooseColumn_slice(HVector* row_ep) {
   columnIn = dualRow.workPivot;
   alphaRow = dualRow.workAlpha;
   thetaDual = dualRow.workTheta;
+
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+    timer.start(simplex_info.clock_[DevexWtClock]);
+    // Determine the partial sums of the exact Devex weight
+    for (int i = 0; i < slice_num; i++) slice_dualRow[i].computeDevexWeight();
+    // Accumulate the partial sums
+    double computed_weight = 0;
+    for (int i = 0; i < slice_num; i++) computed_weight += dualRow.computed_weight;
+    computed_weight = max(1.0, computed_weight);
+    const double updated_weight = dualRHS.workEdWt[rowOut];
+
+    dualRHS.workEdWt[rowOut] = computed_weight;
+    new_devex_framework = newDevexFramework(updated_weight, computed_weight);
+    timer.stop(simplex_info.clock_[DevexWtClock]);
+  }
 }
 
 void HDual::updateFtran() {
@@ -1980,7 +1988,7 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
     // Update rest of weights
     dualRHS.updateWeightDevex(&column, devexWeightOfRowOut);
     dualRHS.workEdWt[rowOut] = devexWeightOfRowOut;
-    num_devex_iterations += 1;
+    num_devex_iterations++;
   }
   dualRHS.update_infeasList(&column);
 

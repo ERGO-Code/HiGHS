@@ -108,7 +108,7 @@ void HDual::major_chooseRow() {
     // 4. Parallel BTRAN and compute weight
     major_chooseRowBtran();
 
-    // 5. Update row weights
+    // 5. Update row densities
     for (int ich = 0; ich < multi_num; ich++) {
       if (multi_choice[ich].rowOut >= 0) {
         row_epDensity *= 0.95;
@@ -117,7 +117,7 @@ void HDual::major_chooseRow() {
     }
 
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      // 6. Check updated and computed weight
+      // 6. Check updated and computed weight - just for dual steepest edge
       int countWrongEdWt = 0;
       for (int i = 0; i < multi_num; i++) {
 	const int iRow = multi_choice[i].rowOut;
@@ -132,7 +132,7 @@ void HDual::major_chooseRow() {
       }
       if (countWrongEdWt <= choiceCount / 3) break;
     } else {
-      // No checking required if not using DSE so break
+      // No checking required if not using dual steepest edge so break
       break;
     }
   }
@@ -190,13 +190,16 @@ void HDual::major_chooseRowBtran() {
     work_ep->packFlag = true;
     factor->btran(*work_ep, row_epDensity);
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      // For Dual steepest edge we know the exact weight as the 2-norm of work_ep
       multi_EdWt[i] = work_ep->norm2();
     } else {
-      multi_EdWt[i] = 1.0;
+      // For Devex (and Dantzig) we take the updated edge weight
+      multi_EdWt[i] = dualRHS.workEdWt[iRow];
     }
   }
 
-  // 4.3 Put back edge weights
+  // 4.3 Put back edge weights: the edge weights for the chosen rows
+  // are stored in multi_choice[*].infeasEdWt
   for (int i = 0; i < multi_ntasks; i++)
     multi_choice[multi_iwhich[i]].infeasEdWt = multi_EdWt[i];
 
@@ -224,8 +227,7 @@ void HDual::minor_chooseRow() {
   }
 
   /**
-   * 2. Obtain other info for
-   *        current sub-optimisation choice
+   * 2. Obtain other info for current sub-optimization choice
    */
   rowOut = -1;
   if (multi_iChoice != -1) {
@@ -247,6 +249,7 @@ void HDual::minor_chooseRow() {
     workFinish->row_ep = &workChoice->row_ep;
     workFinish->column = &workChoice->column;
     workFinish->columnBFRT = &workChoice->columnBFRT;
+    // Save the edge weight - over-written later when using Devex
     workFinish->EdWt = workChoice->infeasEdWt;
 
     // Disable current row
@@ -342,6 +345,13 @@ void HDual::minor_updatePrimal() {
    * 5. Update the other primal value
    *    By the pivot (thetaPrimal)
    */
+  const bool devex = dual_edge_weight_mode == DualEdgeWeightMode::DEVEX;
+  double thisEdWt = 0;
+  double devexWeightOfRowOut = 0;
+  if (devex) {
+    thisEdWt = Cho->infeasEdWt / (alphaRow * alphaRow);
+    devexWeightOfRowOut = max(1.0, thisEdWt);
+  }
   for (int ich = 0; ich < multi_num; ich++) {
     if (multi_choice[ich].rowOut >= 0) {
       HVector* this_ep = &multi_choice[ich].row_ep;
@@ -355,7 +365,16 @@ void HDual::minor_updatePrimal() {
       if (value > upper + Tp) infeas = value - upper;
       infeas *= infeas;
       multi_choice[ich].infeasValue = infeas;
+      if (devex) {
+	double aa_iRow = dot;
+	double& this_weight = multi_choice[ich].infeasEdWt;
+	this_weight = max(this_weight, devexWeightOfRowOut * aa_iRow * aa_iRow);
+      }
     }
+  }
+  if (devex) {
+    Fin->EdWt = devexWeightOfRowOut;
+    num_devex_iterations++;
   }
 }
 void HDual::minor_updatePivots() {
@@ -681,13 +700,13 @@ void HDual::major_updatePrimal() {
     dualRHS.update_primal(&columnBFRT, 1);
     dualRHS.update_infeasList(&columnBFRT);
 
-    // Update weights and infeasList
+    // Update any DSE weights and infeasList
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
       MFinish* Fin = &multi_finish[iFn];
       HVector* Col = Fin->column;
-      HVector* Row = Fin->row_ep;
-      double Kai = -2 / Fin->alphaRow;
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+	HVector* Row = Fin->row_ep;
+	double Kai = -2 / Fin->alphaRow;
 	dualRHS.update_weight_DSE(Col, Fin->EdWt, Kai, &Row->array[0]);
       }
       dualRHS.update_infeasList(Col);
