@@ -950,7 +950,7 @@ void HDual::iterate() {
   // After primal update in dual simplex the primal objective value is not known
   workHMO.simplex_lp_status_.has_primal_objective_value = false;
 
-  const bool og_place = true;
+  const bool og_place = false;
   if (og_place) {
     // Possibly initialise Devex weights
     if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (new_devex_framework)) {
