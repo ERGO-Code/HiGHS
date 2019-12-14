@@ -266,11 +266,28 @@ void HDual::minor_update() {
   for (int i = 0; i < dualRow.workCount; i++)
     Fin->flipList.push_back(dualRow.workData[i].first);
 
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+    // With Devex, the edge weight for the pivotal row is computed in
+    // chooseColumn, so can't be stired in the PAMI data structure. As
+    // in the serial code, it's stored in dualRHS.workEdWt[rowOut];
+    //
+    // Restore the weight to multi_finish so that it's picked up in
+    // minor_updatePrimal();
+    rowOut = multi_finish[multi_nFinish].rowOut;
+    multi_finish[multi_nFinish].EdWt = dualRHS.workEdWt[rowOut];
+  }
+
   // Minor update - key parts
   minor_updateDual();
   minor_updatePrimal();
   minor_updatePivots();
   minor_updateRows();
+  if (minor_new_devex_framework) {
+    printf("Iter %7d (Major %7d): Minor new Devex framework\n",
+	   workHMO.scaled_solution_params_.simplex_iteration_count,
+	   multi_iteration);
+    minor_initialiseDevexFramework();
+  }
   multi_nFinish++;
 
   // Minor update - check for the next iteration
@@ -286,10 +303,6 @@ void HDual::minor_update() {
   //    if (multi_nFinish + 1 == multi_num)
   //        multi_chooseAgain = 1;
 
-  if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (new_devex_framework)) {
-    //    printf("Iter %7d: New Devex framework\n", workHMO.scaled_solution_params_.simplex_iteration_count);
-    initialiseDevexFramework();
-  }
 }
 
 void HDual::minor_updateDual() {
@@ -464,6 +477,14 @@ void HDual::minor_updateRows() {
   timer.stop(simplex_info.clock_[UpdateRowClock]);
 }
 
+void HDual::minor_initialiseDevexFramework() {
+  // Set the local Devex weights to 1
+  for (int i = 0; i < multi_num; i++) {
+    multi_choice[i].infeasEdWt = 1.0;
+  }
+  minor_new_devex_framework = false;
+}
+
 void HDual::major_update() {
   /**
    * 0. See if it's ready to perform a major update
@@ -503,6 +524,11 @@ void HDual::major_update() {
   // Major update - primal and factor
   major_updatePrimal();
   major_updateFactor();
+  if (new_devex_framework) {
+    //    printf("Iter %7d: New Devex framework\n", workHMO.scaled_solution_params_.simplex_iteration_count);
+    const bool parallel = true;
+    initialiseDevexFramework(parallel);
+  }
 }
 
 void HDual::major_updateFtranPrepare() {
@@ -696,7 +722,7 @@ void HDual::major_updatePrimal() {
 	  if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;
 	}
       }
-    } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+    } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework) {
       for (int iFn = 0; iFn < multi_nFinish; iFn++) {
 	const double pivotEdWt = multi_finish[iFn].EdWt;
 	const int this_rowOut = multi_finish[iFn].rowOut;
@@ -761,7 +787,7 @@ void HDual::major_updatePrimal() {
       }
       dualRHS.workEdWt[iRow] = pivotEdWt;
     }
-  } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+  } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework) {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
       const int iRow = multi_finish[iFn].rowOut;
       const double pivotEdWt = multi_finish[iFn].EdWt;
@@ -784,6 +810,7 @@ void HDual::major_updatePrimal() {
       num_devex_iterations++;
     }
   }
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) new_devex_framework = true;
   checkNonUnitWeightError("999");
 }
 

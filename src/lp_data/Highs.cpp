@@ -462,6 +462,8 @@ HighsStatus Highs::run() {
 	  // to solve the presolved problem
 	  if (options.solver == ipm_string) options.solver = simplex_string;
           options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
+	  // Ensure that the parallel solver isn't used
+	  options.num_threads = 1;
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
 	  int iteration_count0 = hmos_[solved_hmo].unscaled_solution_params_.simplex_iteration_count;
 	  call_status = runLpSolver(hmos_[solved_hmo], "Solving the original LP from the solution after postsolve");

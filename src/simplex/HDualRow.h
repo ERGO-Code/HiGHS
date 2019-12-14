@@ -119,7 +119,7 @@ class HDualRow {
   /**
    * @brief Compute (contribution to) the Devex weight
    */
-  void computeDevexWeight();
+  void computeDevexWeight(const int slice=-1);
 
   HighsModelObject& workHMO;         //!< Local copy of pointer to model
   int workSize = -1;                 //!< Size of the HDualRow slice: Initialise it here to avoid compiler warning

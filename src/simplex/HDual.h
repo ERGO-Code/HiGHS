@@ -326,7 +326,7 @@ class HDual {
    * @brief Initialise a Devex framework: reference set is all basic
    * variables
    */
-  void initialiseDevexFramework();
+  void initialiseDevexFramework(const bool parallel=false);
 
   /**
    * @brief Interpret the dual edge weight strategy as setting of a mode and
@@ -399,6 +399,11 @@ class HDual {
   void minor_updateRows();
 
   /**
+   * @brief PAMI: Initialise a new Devex framework during minor iterations
+   */
+  void minor_initialiseDevexFramework();
+
+  /**
    * @brief PAMI: Perform updates after a set of minor iterations
    */
   void major_update();
@@ -452,9 +457,10 @@ class HDual {
                        //!< calling function
 
   // Devex scalars
-  int num_devex_framework;   //!< Number of Devex frameworks used
-  int num_devex_iterations;  //!< Number of Devex iterations with the current framework
-  bool new_devex_framework;  //!< Set a new Devex framework
+  int num_devex_framework = 0;   //!< Number of Devex frameworks used
+  int num_devex_iterations = 0;  //!< Number of Devex iterations with the current framework
+  bool new_devex_framework = false;  //!< Set a new Devex framework
+  bool minor_new_devex_framework = false; //!< Set a new Devex framework in PAMI minor iterations
   // Devex std::vector
   std::vector<int> devex_index;  //!< Vector of Devex indices
 

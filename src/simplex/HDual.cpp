@@ -951,27 +951,16 @@ void HDual::iterate() {
   // After primal update in dual simplex the primal objective value is not known
   workHMO.simplex_lp_status_.has_primal_objective_value = false;
 
-  const bool og_place = false;
-  if (og_place) {
-    // Possibly initialise Devex weights
-    if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (new_devex_framework)) {
-      timer.start(simplex_info.clock_[IterateDevexIzClock]);
-      initialiseDevexFramework();
-      timer.stop(simplex_info.clock_[IterateDevexIzClock]);
-    }
-  }
   // Update the basis representation
   timer.start(simplex_info.clock_[IteratePivotsClock]);
   updatePivots();
   timer.stop(simplex_info.clock_[IteratePivotsClock]);
 
-  if (!og_place) {
-    // Possibly initialise Devex weights
-    if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (new_devex_framework)) {
-      timer.start(simplex_info.clock_[IterateDevexIzClock]);
-      initialiseDevexFramework();
-      timer.stop(simplex_info.clock_[IterateDevexIzClock]);
-    }
+  if (new_devex_framework) {
+    // Initialise new Devex framework
+    timer.start(simplex_info.clock_[IterateDevexIzClock]);
+    initialiseDevexFramework();
+    timer.stop(simplex_info.clock_[IterateDevexIzClock]);
   }
 
   // Analyse the iteration: possibly report; possibly switch strategy
@@ -1547,7 +1536,6 @@ bool HDual::acceptDualSteepestEdgeWeight(const double updated_weight, const doub
 bool HDual::newDevexFramework(const double updated_weight, const double computed_weight) {
   // Analyse the Devex weight to determine whether a new framework
   // should be set up
-  bool return_new_devex_framework = false;
   double devex_ratio = max(updated_weight / computed_weight,
 			   computed_weight / updated_weight);
   int i_te = solver_num_row / minRlvNumberDevexIterations;
@@ -1557,11 +1545,14 @@ bool HDual::newDevexFramework(const double updated_weight, const double computed
   const double accept_ratio_threshhold = maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio;
   const bool accept_ratio = devex_ratio <= accept_ratio_threshhold;
   const bool accept_it = num_devex_iterations <= i_te;
+  bool return_new_devex_framework;
   return_new_devex_framework = !accept_ratio || !accept_it;
-  //    const double accept_weight_threshhold =  1/accept_ratio_threshhold;
-  //    const bool accept_weight = updated_weight >= accept_weight_threshhold * computed_weight;
-  //    new_devex_framework = !accept_weight || !accept_it;
-  return return_new_devex_framework;
+  if (return_new_devex_framework) {
+    printf("New Devex framework: updated weight = %11.4g; computed weight = %11.4g; Devex ratio = %11.4g\n",
+	   updated_weight, computed_weight, devex_ratio);
+    return true;
+  }
+  return !accept_ratio || !accept_it;
 }
 
 void HDual::chooseColumn(HVector* row_ep) {
@@ -1721,7 +1712,14 @@ void HDual::chooseColumn(HVector* row_ep) {
                                   // numerical checking
   thetaDual = dualRow.workTheta;  // Dual step length
 
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework) {
+    // When using Devex, unless a new framework is to be used, get the
+    // exact weight for the pivotal row and, based on its accuracy,
+    // determine that a new framework is to be used. In serial
+    // new_devex_framework should only ever be false at this point in
+    // this method, but in PAMI, this method may be called multiple
+    // times in minor iterations and the new framework is set up in
+    // major_update.
     timer.start(simplex_info.clock_[DevexWtClock]);
     // Determine the exact Devex weight
     dualRow.computeDevexWeight();
@@ -1731,6 +1729,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 
     dualRHS.workEdWt[rowOut] = computed_weight;
     new_devex_framework = newDevexFramework(updated_weight, computed_weight);
+    minor_new_devex_framework = new_devex_framework;
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
   return;
@@ -1803,18 +1802,26 @@ void HDual::chooseColumn_slice(HVector* row_ep) {
   alphaRow = dualRow.workAlpha;
   thetaDual = dualRow.workTheta;
 
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework) {
+    // When using Devex, unless a new framework is to be used, get the
+    // exact weight for the pivotal row and, based on its accuracy,
+    // determine that a new framework is to be used. In serial
+    // new_devex_framework should only ever be false at this point in
+    // this method, but in PAMI, this method may be called multiple
+    // times in minor iterations and the new framework is set up in
+    // major_update.
     timer.start(simplex_info.clock_[DevexWtClock]);
     // Determine the partial sums of the exact Devex weight
-    for (int i = 0; i < slice_num; i++) slice_dualRow[i].computeDevexWeight();
+    for (int i = 0; i < slice_num; i++) slice_dualRow[i].computeDevexWeight(i);
     // Accumulate the partial sums
     double computed_weight = 0;
-    for (int i = 0; i < slice_num; i++) computed_weight += dualRow.computed_weight;
+    for (int i = 0; i < slice_num; i++) computed_weight += slice_dualRow[i].computed_weight;
     computed_weight = max(1.0, computed_weight);
     const double updated_weight = dualRHS.workEdWt[rowOut];
 
     dualRHS.workEdWt[rowOut] = computed_weight;
     new_devex_framework = newDevexFramework(updated_weight, computed_weight);
+    minor_new_devex_framework = new_devex_framework;
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
 }
@@ -2053,7 +2060,7 @@ void HDual::updatePivots() {
   }
 }
 
-void HDual::initialiseDevexFramework() {
+void HDual::initialiseDevexFramework(const bool parallel) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Initialise the Devex framework: reference set is all basic
@@ -2075,11 +2082,14 @@ void HDual::initialiseDevexFramework() {
     devex_index[vr_n] = 1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
     simplex_info.devex_index_[vr_n] = devex_index[vr_n];
   }
-  dualRHS.workEdWt.assign(solver_num_row, 1.0);  // Set all initial weights to 1
-  num_devex_iterations = 0;    // Zero the count of iterations with this Devex framework
-  num_devex_framework += 1;  // Increment the number of Devex frameworks
-  new_devex_framework =
-      false;  // Indicate that there's no need for a new Devex framework
+  // Set all initial weights to 1, zero the count of iterations with
+  // this Devex framework, increment the number of Devex frameworks
+  // and indicate that there's no need for a new Devex framework
+  dualRHS.workEdWt.assign(solver_num_row, 1.0);
+  num_devex_iterations = 0;
+  num_devex_framework++;
+  new_devex_framework = false;
+  minor_new_devex_framework = false;
   timer.stop(simplex_info.clock_[DevexIzClock]);
 }
 
