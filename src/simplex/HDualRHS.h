@@ -85,17 +85,17 @@ class HDualRHS {
    * @brief Update the DSE weights
    */
   void updateWeightDualSteepestEdge(
-				    HVector* column,              //!< Pivotal column
-				    const double DSE_wt_o_rowOut, //!< (Edge weight of leaving row)/alpha^2
-				    double Kai,                   //!< -2/alpha
-				    double* dse                   //!< DSE std::vector
+				    HVector* column,           //!< Pivotal column
+				    const double rowOutWeight, //!< (Edge weight of leaving row)/alpha^2
+				    double Kai,                //!< -2/alpha
+				    double* dse                //!< DSE std::vector
   );
   /**
    * @brief Update the Devex weights
    */
   void updateWeightDevex(
-			 HVector* column,                 //!< Pivotal column
-			 const double devexWeightOfRowOut //!< max(1, (Edge weight of leaving row)/alpha^2)
+			 HVector* column,          //!< Pivotal column
+			 const double rowOutWeight //!< max(1, (Edge weight of leaving row)/alpha^2)
   );
   /**
    * @brief Update the primal value for the row where the basis change has

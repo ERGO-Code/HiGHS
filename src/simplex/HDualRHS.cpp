@@ -334,7 +334,7 @@ void HDualRHS::update_primal(HVector* column, double theta) {
 }
 
 // Update the DSE weights
-void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double weightOfRowOut,
+void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double rowOutWeight,
 					    double Kai, double* dseArray) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -349,21 +349,21 @@ void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double weight
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       const double val = columnArray[iRow];
-      workEdWt[iRow] += val * (weightOfRowOut * val + Kai * dseArray[iRow]);
+      workEdWt[iRow] += val * (rowOutWeight * val + Kai * dseArray[iRow]);
       if (workEdWt[iRow] < 1e-4) workEdWt[iRow] = 1e-4;
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       const int iRow = columnIndex[i];
       const double val = columnArray[iRow];
-      workEdWt[iRow] += val * (weightOfRowOut * val + Kai * dseArray[iRow]);
+      workEdWt[iRow] += val * (rowOutWeight * val + Kai * dseArray[iRow]);
       if (workEdWt[iRow] < 1e-4) workEdWt[iRow] = 1e-4;
     }
   }
   timer.stop(simplex_info.clock_[UpdateWeightClock]);
 }
 // Update the Devex weights
-void HDualRHS::updateWeightDevex(HVector* column, const double weightOfRowOut) {
+void HDualRHS::updateWeightDevex(HVector* column, const double rowOutWeight) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[UpdateWeightClock]);
@@ -377,14 +377,14 @@ void HDualRHS::updateWeightDevex(HVector* column, const double weightOfRowOut) {
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       double aa_iRow = columnArray[iRow];
-      double nw_wt = max(workEdWt[iRow], weightOfRowOut * aa_iRow * aa_iRow);
+      double nw_wt = max(workEdWt[iRow], rowOutWeight * aa_iRow * aa_iRow);
       workEdWt[iRow] = nw_wt;
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       int iRow = columnIndex[i];
       double aa_iRow = columnArray[iRow];
-      double nw_wt = max(workEdWt[iRow], weightOfRowOut * aa_iRow * aa_iRow);
+      double nw_wt = max(workEdWt[iRow], rowOutWeight * aa_iRow * aa_iRow);
       workEdWt[iRow] = nw_wt;
     }
   }
