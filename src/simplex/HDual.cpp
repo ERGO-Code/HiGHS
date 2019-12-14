@@ -1976,8 +1976,8 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   dualRHS.update_primal(&column, thetaPrimal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     double thisEdWt = dualRHS.workEdWt[rowOut] / (alpha * alpha);
-    dualRHS.update_weight_DSE(&column, thisEdWt, -2 / alpha,
-                              &DSE_Vector->array[0]);
+    dualRHS.updateWeightDualSteepestEdge(&column, thisEdWt, -2 / alpha,
+					 &DSE_Vector->array[0]);
     dualRHS.workEdWt[rowOut] = thisEdWt;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     // Pivotal row is for the current basis: weights are required for

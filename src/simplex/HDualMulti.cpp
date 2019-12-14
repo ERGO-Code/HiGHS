@@ -707,27 +707,22 @@ void HDual::majorUpdatePrimal() {
 	local_work_infeasibility[iRow] = fabs(infeas);
     }
 
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      // Update the weight in dense
-      for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-	const double pivotEdWt = multi_finish[iFn].EdWt;
-	const double* colArray = &multi_finish[iFn].column->array[0];
+    // Update any edge weights (except weights for pivotal rows) in dense
+    for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+      const double pivotEdWt = multi_finish[iFn].EdWt;
+      const double* colArray = &multi_finish[iFn].column->array[0];
+      double* EdWt = &dualRHS.workEdWt[0];
+      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
 	const double* dseArray = &multi_finish[iFn].row_ep->array[0];
 	double Kai = -2 / multi_finish[iFn].alphaRow;
-	double* EdWt = &dualRHS.workEdWt[0];
 #pragma omp parallel for schedule(static)
 	for (int iRow = 0; iRow < solver_num_row; iRow++) {
 	  const double val = colArray[iRow];
 	  EdWt[iRow] += val * (pivotEdWt * val + Kai * dseArray[iRow]);
 	  if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;
 	}
-      }
-    } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework) {
-      for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-	const double pivotEdWt = multi_finish[iFn].EdWt;
+      } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework) {
 	const int this_rowOut = multi_finish[iFn].rowOut;
-	const double* colArray = &multi_finish[iFn].column->array[0];
-	double* EdWt = &dualRHS.workEdWt[0];
 	// Pivotal row is for the current basis: weights are required for
 	// the next basis so have to divide the current (exact) weight by
 	// the pivotal value
@@ -737,7 +732,7 @@ void HDual::majorUpdatePrimal() {
 	for (int iRow = 0; iRow < solver_num_row; iRow++) {
 	  const double aa_iRow = colArray[iRow];
 	  double nw_wt = max(EdWt[iRow], devexWeightOfRowOut * aa_iRow * aa_iRow);
-	  //	  EdWt[iRow] = nw_wt;
+	  EdWt[iRow] = nw_wt;
 	}
 	//	EdWt[this_rowOut] = devexWeightOfRowOut;
 	num_devex_iterations++;
@@ -748,14 +743,24 @@ void HDual::majorUpdatePrimal() {
     dualRHS.update_primal(&columnBFRT, 1);
     dualRHS.update_infeasList(&columnBFRT);
 
-    // Update any DSE weights and infeasList
+    // Update any edge weights (except weights for pivotal rows) and infeasList
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
       MFinish* Fin = &multi_finish[iFn];
       HVector* Col = Fin->column;
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
 	HVector* Row = Fin->row_ep;
 	double Kai = -2 / Fin->alphaRow;
-	dualRHS.update_weight_DSE(Col, Fin->EdWt, Kai, &Row->array[0]);
+	dualRHS.updateWeightDualSteepestEdge(Col, Fin->EdWt, Kai, &Row->array[0]);
+      } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework) {
+	const int this_rowOut = multi_finish[iFn].rowOut;
+	const double pivotEdWt = multi_finish[iFn].EdWt;
+	const double this_alphaRow = multi_finish[iFn].alphaRow;
+	double this_EdWt = pivotEdWt / (this_alphaRow * this_alphaRow);
+	const double devexWeightOfRowOut = max(1.0, this_EdWt);
+	// Update rest of weights
+	dualRHS.updateWeightDevex(Col, devexWeightOfRowOut);
+	//	dualRHS.workEdWt[this_rowOut] = devexWeightOfRowOut;
+	num_devex_iterations++;
       }
       dualRHS.update_infeasList(Col);
     }
