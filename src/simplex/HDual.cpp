@@ -331,8 +331,8 @@ void HDual::options() {
   const HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   const HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
 
-  interpret_dual_edge_weight_strategy(simplex_info.dual_edge_weight_strategy);
-  interpret_price_strategy(simplex_info.price_strategy);
+  interpretDualEdgeWeightStrategy(simplex_info.dual_edge_weight_strategy);
+  interpretPriceStrategy(simplex_info.price_strategy);
 
   // Copy values of simplex solver options to dual simplex options
   primal_feasibility_tolerance = scaled_solution_params.primal_feasibility_tolerance;
@@ -990,7 +990,7 @@ void HDual::iterateTasks() {
 #pragma omp task
     {
       if (slice_PRICE)
-        chooseColumn_slice(&row_ep);
+        chooseColumnSlice(&row_ep);
       else
         chooseColumn(&row_ep);
 #pragma omp task
@@ -1719,7 +1719,7 @@ void HDual::chooseColumn(HVector* row_ep) {
     // new_devex_framework should only ever be false at this point in
     // this method, but in PAMI, this method may be called multiple
     // times in minor iterations and the new framework is set up in
-    // major_update.
+    // majorUpdate.
     timer.start(simplex_info.clock_[DevexWtClock]);
     // Determine the exact Devex weight
     dualRow.computeDevexWeight();
@@ -1735,7 +1735,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   return;
 }
 
-void HDual::chooseColumn_slice(HVector* row_ep) {
+void HDual::chooseColumnSlice(HVector* row_ep) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Choose the index of a column to enter the basis (CHUZC) by
@@ -1809,7 +1809,7 @@ void HDual::chooseColumn_slice(HVector* row_ep) {
     // new_devex_framework should only ever be false at this point in
     // this method, but in PAMI, this method may be called multiple
     // times in minor iterations and the new framework is set up in
-    // major_update.
+    // majorUpdate.
     timer.start(simplex_info.clock_[DevexWtClock]);
     // Determine the partial sums of the exact Devex weight
     for (int i = 0; i < slice_num; i++) slice_dualRow[i].computeDevexWeight(i);
@@ -2093,7 +2093,7 @@ void HDual::initialiseDevexFramework(const bool parallel) {
   timer.stop(simplex_info.clock_[DevexIzClock]);
 }
 
-void HDual::interpret_dual_edge_weight_strategy(const int dual_edge_weight_strategy) {
+void HDual::interpretDualEdgeWeightStrategy(const int dual_edge_weight_strategy) {
   if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
     dual_edge_weight_mode = DualEdgeWeightMode::DANTZIG;
   } else if (dual_edge_weight_strategy ==
@@ -2116,7 +2116,7 @@ void HDual::interpret_dual_edge_weight_strategy(const int dual_edge_weight_strat
     allow_dual_steepest_edge_to_devex_switch = true;
   } else {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-                      "HDual::interpret_dual_edge_weight_strategy: "
+                      "HDual::interpretDualEdgeWeightStrategy: "
                       "unrecognised dual_edge_weight_strategy = %d - using "
                       "dual steepest edge with possible switch to Devex\n",
                       dual_edge_weight_strategy);
@@ -2126,7 +2126,7 @@ void HDual::interpret_dual_edge_weight_strategy(const int dual_edge_weight_strat
   }
 }
 
-void HDual::interpret_price_strategy(const int price_strategy) {
+void HDual::interpretPriceStrategy(const int price_strategy) {
   allow_price_by_col_switch = false;
   allow_price_by_row_switch = false;
   allow_price_ultra = false;
@@ -2148,7 +2148,7 @@ void HDual::interpret_price_strategy(const int price_strategy) {
     allow_price_ultra = true;
   } else {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-		      "HDual::interpret_price_strategy: unrecognised price_strategy = %d - "
+		      "HDual::interpretPriceStrategy: unrecognised price_strategy = %d - "
 		      "using row Price with switch or colump price switch\n",
         price_strategy);
     price_mode = PriceMode::ROW;
@@ -2211,35 +2211,6 @@ double HDual::checkDualObjectiveValue(const char* message, int phase) {
   return updated_dual_objective_error;
 }
 #endif
-
-// Utility to get a row of the inverse of B for SCIP
-int HDual::util_getBasisInvRow(int r, double* coef, int* inds, int* ninds) {
-  row_ep.clear();
-  row_ep.count = 1;
-  row_ep.index[0] = r;
-  row_ep.array[r] = 1;
-  row_ep.packFlag = true;
-  factor->btran(row_ep, row_epDensity);
-  //  printf("util_getBasisInvRow: nnz = %4d/%4d\n", row_ep.count,
-  //  solver_num_row);
-  for (int row = 0; row < solver_num_row; row++) {
-    //    printf("BasisInvRow(%4d) = %11g\n", row,  row_ep.array[row]);
-    coef[row] = row_ep.array[row];
-  }
-  if (0 <= row_ep.count && row_ep.count <= solver_num_row) {
-    for (int ix = 0; ix < row_ep.count; ix++) inds[ix] = row_ep.index[ix];
-    ninds[0] = row_ep.count;
-  } else {
-    printf(
-        "util_getBasisInvRow: row_ep.count < 0 or row_ep.count > "
-        "solver_num_row: %4d; "
-        "%4d\n",
-        row_ep.count, solver_num_row);
-    ninds[0] = -1;
-  }
-  cout << flush;
-  return 0;
-}
 
 #ifdef HiGHSDEV
 void HDual::iterateOpRecBf(int opTy, HVector& vector, double hist_dsty) {

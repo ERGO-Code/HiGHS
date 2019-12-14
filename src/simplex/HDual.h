@@ -274,7 +274,7 @@ class HDual {
    * @brief Choose the index of a good column to enter the basis (CHUZC) by
    * exploiting slices of the pivotal row - for SIP and PAMI
    */
-  void chooseColumn_slice(HVector* row_ep);
+  void chooseColumnSlice(HVector* row_ep);
 
   /**
    * @brief Compute the pivotal column (FTRAN)
@@ -332,117 +332,108 @@ class HDual {
    * @brief Interpret the dual edge weight strategy as setting of a mode and
    * other actions
    */
-  void interpret_dual_edge_weight_strategy(
-					   const int simplex_dual_edge_weight_strategy
-					   );
+  void interpretDualEdgeWeightStrategy(
+				       const int simplex_dual_edge_weight_strategy
+				       );
 
   /**
    * @brief Interpret the PRICE strategy as setting of a mode and other actions
    */
-  void interpret_price_strategy(
-				const int simplex_price_strategy
-				);
+  void interpretPriceStrategy(
+			      const int simplex_price_strategy
+			      );
 
 #ifdef HiGHSDEV
   double checkDualObjectiveValue(const char* message, int phase = 2);
 #endif
 
   /**
-   * @brief Get a row of the inverse of the basis matrix for SCIP
-   */
-  int util_getBasisInvRow(int r,         //!< Index of row required
-                          double* coef,  //!< Value of entries in row required
-                          int* inds,     //!< Indices of entries in row required
-                          int* ninds     //!< Number of indices in row required
-  );
-
-  /**
    * @brief PAMI: Choose the indices of a good set of rows to leave the
    * basis (CHUZR)
    */
-  void major_chooseRow();
+  void majorChooseRow();
 
   /**
    * @brief PAMI: Perform multiple BTRAN
    */
-  void major_chooseRowBtran();
+  void majorChooseRowBtran();
 
   /**
    * @brief PAMI: Choose the index (from the set of indices) of a good
    * row to leave the basis (CHUZR-MI)
    */
-  void minor_chooseRow();
+  void minorChooseRow();
 
   /**
    * @brief PAMI: Update the data during minor iterations
    */
-  void minor_update();
+  void minorUpdate();
 
   /**
    * @brief PAMI: Update the dual values during minor iterations
    */
-  void minor_updateDual();
+  void minorUpdateDual();
 
   /**
    * @brief PAMI: Update the primal values during minor iterations
    */
-  void minor_updatePrimal();
+  void minorUpdatePrimal();
 
   /**
    * @brief PAMI: Perform a basis change during minor iterations
    */
-  void minor_updatePivots();
+  void minorUpdatePivots();
 
   /**
    * @brief PAMI: Update the tableau rows during minor iterations
    */
-  void minor_updateRows();
+  void minorUpdateRows();
 
   /**
    * @brief PAMI: Initialise a new Devex framework during minor iterations
    */
-  void minor_initialiseDevexFramework();
+  void minorInitialiseDevexFramework();
 
   /**
    * @brief PAMI: Perform updates after a set of minor iterations
    */
-  void major_update();
+  void majorUpdate();
 
   /**
    * @brief PAMI: Prepare for the FTRANs after a set of minor iterations
    */
-  void major_updateFtranPrepare();
+  void majorUpdateFtranPrepare();
 
   /**
    * @brief PAMI: Perform the parallel part of multiple FTRANs after a
    * set of minor iterations
    */
-  void major_updateFtranParallel();
+  void majorUpdateFtranParallel();
 
   /**
    * @brief PAMI: Perform the final part of multiple FTRANs after a set
    * of minor iterations
    */
-  void major_updateFtranFinal();
+  void majorUpdateFtranFinal();
 
   /**
    * @brief PAMI: Update the primal values after a set of minor
    * iterations
    */
-  void major_updatePrimal();
+  void majorUpdatePrimal();
 
   /**
    * @brief PAMI: Update the invertible representation of the basis
    * matrix after a set of minor iterations
    */
-  void major_updateFactor();
+  void majorUpdateFactor();
 
   /**
    * @brief PAMI: Roll back some iterations if numerical trouble
    * detected when updating the invertible representation of the basis
    * matrix after a set of minor iterations
    */
-  void major_rollback();
+  void majorRollback();
 
   bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);

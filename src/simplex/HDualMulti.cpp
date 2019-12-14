@@ -30,8 +30,8 @@ void HDual::iterateMulti() {
   slice_PRICE = 1;
 
   // Report candidate
-  major_chooseRow();
-  minor_chooseRow();
+  majorChooseRow();
+  minorChooseRow();
   if (rowOut == -1) {
     invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
     return;
@@ -44,21 +44,21 @@ void HDual::iterateMulti() {
   if (slice_PRICE) {
 #pragma omp parallel
 #pragma omp single
-    chooseColumn_slice(multi_finish[multi_nFinish].row_ep);
+    chooseColumnSlice(multi_finish[multi_nFinish].row_ep);
   } else {
     chooseColumn(multi_finish[multi_nFinish].row_ep);
   }
   // If we failed.
   if (invertHint) {
-    major_update();
+    majorUpdate();
     return;
   }
 
-  minor_update();
-  major_update();
+  minorUpdate();
+  majorUpdate();
 }
 
-void HDual::major_chooseRow() {
+void HDual::majorChooseRow() {
   /**
    * 0. Initial check to see if we need to do it again
    */
@@ -106,7 +106,7 @@ void HDual::major_chooseRow() {
       multi_choice[ich].rowOut = choiceIndex[ich];
 
     // 4. Parallel BTRAN and compute weight
-    major_chooseRowBtran();
+    majorChooseRowBtran();
 
     // 5. Update row densities
     for (int ich = 0; ich < multi_num; ich++) {
@@ -158,7 +158,7 @@ void HDual::major_chooseRow() {
   multi_nFinish = 0;
 }
 
-void HDual::major_chooseRowBtran() {
+void HDual::majorChooseRowBtran() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[BtranClock]);
@@ -206,7 +206,7 @@ void HDual::major_chooseRowBtran() {
   timer.stop(simplex_info.clock_[BtranClock]);
 }
 
-void HDual::minor_chooseRow() {
+void HDual::minorChooseRow() {
   /**
    * 1. Find which to go out
    *        Because we had other checking code
@@ -257,7 +257,7 @@ void HDual::minor_chooseRow() {
   }
 }
 
-void HDual::minor_update() {
+void HDual::minorUpdate() {
   // Minor update - store roll back data
   MFinish* Fin = &multi_finish[multi_nFinish];
   Fin->moveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
@@ -272,21 +272,21 @@ void HDual::minor_update() {
     // in the serial code, it's stored in dualRHS.workEdWt[rowOut];
     //
     // Restore the weight to multi_finish so that it's picked up in
-    // minor_updatePrimal();
+    // minorUpdatePrimal();
     rowOut = multi_finish[multi_nFinish].rowOut;
     multi_finish[multi_nFinish].EdWt = dualRHS.workEdWt[rowOut];
   }
 
   // Minor update - key parts
-  minor_updateDual();
-  minor_updatePrimal();
-  minor_updatePivots();
-  minor_updateRows();
+  minorUpdateDual();
+  minorUpdatePrimal();
+  minorUpdatePivots();
+  minorUpdateRows();
   if (minor_new_devex_framework) {
     printf("Iter %7d (Major %7d): Minor new Devex framework\n",
 	   workHMO.scaled_solution_params_.simplex_iteration_count,
 	   multi_iteration);
-    minor_initialiseDevexFramework();
+    minorInitialiseDevexFramework();
   }
   multi_nFinish++;
 
@@ -305,7 +305,7 @@ void HDual::minor_update() {
 
 }
 
-void HDual::minor_updateDual() {
+void HDual::minorUpdateDual() {
   /**
    * 1. Update the dual solution
    *    XXX Data parallel (depends on the ap partition before)
@@ -343,7 +343,7 @@ void HDual::minor_updateDual() {
   }
 }
 
-void HDual::minor_updatePrimal() {
+void HDual::minorUpdatePrimal() {
   MChoice* Cho = &multi_choice[multi_iChoice];
   MFinish* Fin = &multi_finish[multi_nFinish];
   double valueOut = Cho->baseValue;
@@ -392,7 +392,7 @@ void HDual::minor_updatePrimal() {
   }
   if (devex) Fin->EdWt = devexWeightOfRowOut;
 }
-void HDual::minor_updatePivots() {
+void HDual::minorUpdatePivots() {
   MFinish* Fin = &multi_finish[multi_nFinish];
   update_pivots(
       workHMO, columnIn, rowOut,
@@ -410,7 +410,7 @@ void HDual::minor_updatePivots() {
   workHMO.scaled_solution_params_.simplex_iteration_count++;
 }
 
-void HDual::minor_updateRows() {
+void HDual::minorUpdateRows() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[UpdateRowClock]);
@@ -477,7 +477,7 @@ void HDual::minor_updateRows() {
   timer.stop(simplex_info.clock_[UpdateRowClock]);
 }
 
-void HDual::minor_initialiseDevexFramework() {
+void HDual::minorInitialiseDevexFramework() {
   // Set the local Devex weights to 1
   for (int i = 0; i < multi_num; i++) {
     multi_choice[i].infeasEdWt = 1.0;
@@ -485,7 +485,7 @@ void HDual::minor_initialiseDevexFramework() {
   minor_new_devex_framework = false;
 }
 
-void HDual::major_update() {
+void HDual::majorUpdate() {
   /**
    * 0. See if it's ready to perform a major update
    */
@@ -493,9 +493,9 @@ void HDual::major_update() {
   if (!multi_chooseAgain) return;
 
   // Major update - FTRANs
-  major_updateFtranPrepare();
-  major_updateFtranParallel();
-  major_updateFtranFinal();
+  majorUpdateFtranPrepare();
+  majorUpdateFtranParallel();
+  majorUpdateFtranFinal();
 
   // Major update - check for roll back
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -515,15 +515,15 @@ void HDual::major_update() {
            << "  multi_nFinish = " << multi_nFinish << endl;
       invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
       // if (startUpdate > 0) {
-      major_rollback();
+      majorRollback();
       return;
       // }
     }
   }
 
   // Major update - primal and factor
-  major_updatePrimal();
-  major_updateFactor();
+  majorUpdatePrimal();
+  majorUpdateFactor();
   if (new_devex_framework) {
     //    printf("Iter %7d: New Devex framework\n", workHMO.scaled_solution_params_.simplex_iteration_count);
     const bool parallel = true;
@@ -531,7 +531,7 @@ void HDual::major_update() {
   }
 }
 
-void HDual::major_updateFtranPrepare() {
+void HDual::majorUpdateFtranPrepare() {
   // Prepare FTRAN BFRT buffer
   columnBFRT.clear();
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -567,7 +567,7 @@ void HDual::major_updateFtranPrepare() {
   }
 }
 
-void HDual::major_updateFtranParallel() {
+void HDual::majorUpdateFtranParallel() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[FtranMixParClock]);
@@ -623,7 +623,7 @@ void HDual::major_updateFtranParallel() {
   timer.stop(simplex_info.clock_[FtranMixParClock]);
 }
 
-void HDual::major_updateFtranFinal() {
+void HDual::majorUpdateFtranFinal() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[FtranMixFinalClock]);
@@ -687,7 +687,7 @@ void HDual::major_updateFtranFinal() {
   timer.stop(simplex_info.clock_[FtranMixFinalClock]);
 }
 
-void HDual::major_updatePrimal() {
+void HDual::majorUpdatePrimal() {
   int updatePrimal_inDense = dualRHS.workCount < 0;
   if (updatePrimal_inDense) {
     // Update the RHS in dense
@@ -814,7 +814,7 @@ void HDual::major_updatePrimal() {
   checkNonUnitWeightError("999");
 }
 
-void HDual::major_updateFactor() {
+void HDual::majorUpdateFactor() {
   /**
    * 9. Update the factor by CFT
    */
@@ -833,7 +833,7 @@ void HDual::major_updateFactor() {
   delete[] iRows;
 }
 
-void HDual::major_rollback() {
+void HDual::majorRollback() {
   for (int iFn = multi_nFinish - 1; iFn >= 0; iFn--) {
     MFinish* Fin = &multi_finish[iFn];
 
