@@ -545,6 +545,7 @@ class HDual {
   double numericalTrouble;
   // (Local) value of computed weight
   double computed_edge_weight;
+  const bool og_devex_weight_check = false;
 
   // Partitioned coefficient matrix
   int slice_num;

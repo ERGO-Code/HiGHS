@@ -258,6 +258,15 @@ void HDual::minorChooseRow() {
 }
 
 void HDual::minorUpdate() {
+
+  if (!og_devex_weight_check) {
+    if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework && rowOut>=0) {
+      const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+      new_devex_framework = newDevexFramework(updated_edge_weight);
+      minor_new_devex_framework = new_devex_framework;
+    }
+  }
+
   // Minor update - store roll back data
   MFinish* Fin = &multi_finish[multi_nFinish];
   Fin->moveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
@@ -265,13 +274,6 @@ void HDual::minorUpdate() {
   Fin->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
     Fin->flipList.push_back(dualRow.workData[i].first);
-
-  // With Devex, the edge weight for the pivotal row is computed in
-  // chooseColumn (if not computed in chooseColumnSlice), so can't be stored in the PAMI data structure.
-  //
-  // Restore the weight to multi_finish so that it's picked up in
-  // minorUpdatePrimal();
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) Fin->EdWt = computed_edge_weight;
 
   // Minor update - key parts
   minorUpdateDual();
@@ -354,6 +356,15 @@ void HDual::minorUpdatePrimal() {
     Fin->basicBound = upperOut;
   }
   Fin->thetaPrimal = thetaPrimal;
+
+  // With Devex, the edge weight for the pivotal row is computed in
+  // chooseColumn (if not computed in chooseColumnSlice), so can't be stored in the PAMI data structure.
+  //
+  // Restore the weight to multi_finish so that it's picked up in
+  // minorUpdatePrimal();
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) Fin->EdWt = computed_edge_weight;
+
+
 
   /**
    * 5. Update the other primal value

@@ -925,6 +925,7 @@ void HDual::iterate() {
 
   timer.start(simplex_info.clock_[IterateFtranClock]);
   updateFtranBFRT();
+
   // updateFtran(); computes the pivotal column in the data structure "column"
   updateFtran();
 
@@ -1548,8 +1549,9 @@ bool HDual::newDevexFramework(const double updated_edge_weight) {
   bool return_new_devex_framework;
   return_new_devex_framework = !accept_ratio || !accept_it;
   if (return_new_devex_framework) {
-    printf("New Devex framework: updated weight = %11.4g; computed weight = %11.4g; Devex ratio = %11.4g\n",
-	   updated_edge_weight, computed_edge_weight, devex_ratio);
+    printf("New Devex framework: (Iter %d) updated weight = %11.4g; computed weight = %11.4g; Devex ratio = %11.4g\n",
+	   workHMO.scaled_solution_params_.simplex_iteration_count,
+    	   updated_edge_weight, computed_edge_weight, devex_ratio);
     return true;
   }
   return !accept_ratio || !accept_it;
@@ -1725,12 +1727,15 @@ void HDual::chooseColumn(HVector* row_ep) {
     dualRow.computeDevexWeight();
     computed_edge_weight = dualRow.computed_edge_weight;
     computed_edge_weight = max(1.0, computed_edge_weight);
-    // Record the updated edge weight before over-writing with the computed value
-    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
-    dualRHS.workEdWt[rowOut] = computed_edge_weight;
-    // Determine whether the updated edge weight accuracy triggers a new Devex framework
-    new_devex_framework = newDevexFramework(updated_edge_weight);
-    minor_new_devex_framework = new_devex_framework;
+
+    if (og_devex_weight_check) {
+      // Record the updated edge weight before over-writing with the computed value
+      const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+      dualRHS.workEdWt[rowOut] = computed_edge_weight;
+      // Determine whether the updated edge weight accuracy triggers a new Devex framework
+      new_devex_framework = newDevexFramework(updated_edge_weight);
+      minor_new_devex_framework = new_devex_framework;
+    }
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
   return;
@@ -1818,12 +1823,15 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     computed_edge_weight = 0;
     for (int i = 0; i < slice_num; i++) computed_edge_weight += slice_dualRow[i].computed_edge_weight;
     computed_edge_weight = max(1.0, computed_edge_weight);
-    // Record the updated edge weight before over-writing with the computed value
-    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
-    dualRHS.workEdWt[rowOut] = computed_edge_weight;
-    // Determine whether the updated edge weight accuracy triggers a new Devex framework
-    new_devex_framework = newDevexFramework(updated_edge_weight);
-    minor_new_devex_framework = new_devex_framework;
+
+    if (og_devex_weight_check) {
+      // Record the updated edge weight before over-writing with the computed value
+      const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+      dualRHS.workEdWt[rowOut] = computed_edge_weight;
+      // Determine whether the updated edge weight accuracy triggers a new Devex framework
+      new_devex_framework = newDevexFramework(updated_edge_weight);
+      minor_new_devex_framework = new_devex_framework;
+    }
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
 }
@@ -1932,6 +1940,7 @@ void HDual::updateVerify() {
   // performed
   if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0) {
     invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+    printf("updateVerify: INVERT_HINT_POSSIBLY_SINGULAR_BASIS\n");
   }
 }
 
@@ -1967,6 +1976,13 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   //
   // If reinversion is needed then skip this method
   if (invertHint) return;
+  if (!og_devex_weight_check) {
+    if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+      const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+      dualRHS.workEdWt[rowOut] = computed_edge_weight;
+      new_devex_framework = newDevexFramework(updated_edge_weight);
+    }
+  }
   // NB DSE_Vector is only computed if dual_edge_weight_mode ==
   // DualEdgeWeightMode::STEEPEST_EDGE Update - primal and weight
   dualRHS.update_primal(&columnBFRT, 1);
