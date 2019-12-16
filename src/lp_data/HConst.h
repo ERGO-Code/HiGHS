@@ -23,7 +23,7 @@ const double HIGHS_CONST_ZERO = 1e-50;
 const std::string off_string = "off";
 const std::string choose_string = "choose";
 const std::string on_string = "on";
-const int HIGHS_THREAD_LIMIT = 32;
+const int HIGHS_THREAD_LIMIT = 8;//32;
 
 constexpr double kBoundTolerance = 1e-8;
 
