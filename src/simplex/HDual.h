@@ -254,15 +254,15 @@ class HDual {
   void chooseRow();
 
   /**
-   * @brief Determine whether the updated_weight is accurate enough to
+   * @brief Determine whether the updated_edge_weight is accurate enough to
    * be accepted, and update the analysis of weight errors
    */
-  bool acceptDualSteepestEdgeWeight(const double updated_weight, const double computed_weight);
+  bool acceptDualSteepestEdgeWeight(const double updated_edge_weight);
 
   /**
-   * @brief Determine whether the updated_weight error should trigger a new Devex framework
+   * @brief Determine whether the updated_edge_weight error should trigger a new Devex framework
    */
-  bool newDevexFramework(const double updated_weight, const double computed_weight);
+  bool newDevexFramework(const double updated_edge_weight);
 
   /**
    * @brief Compute pivot row (PRICE) and choose the index of a good column to
@@ -502,6 +502,7 @@ class HDual {
   bool allow_price_ultra;
   const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
                                        //!< when pi_p has at least this density
+  const double min_dual_steepest_edge_weight = 1e-4;
 
   double Tp;  // Tolerance for primal
   double primal_feasibility_tolerance;
@@ -542,6 +543,8 @@ class HDual {
   double alpha;
   double alphaRow;
   double numericalTrouble;
+  // (Local) value of computed weight
+  double computed_edge_weight;
 
   // Partitioned coefficient matrix
   int slice_num;

@@ -350,14 +350,14 @@ void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double rowOut
     for (int iRow = 0; iRow < numRow; iRow++) {
       const double val = columnArray[iRow];
       workEdWt[iRow] += val * (rowOutWeight * val + Kai * dseArray[iRow]);
-      if (workEdWt[iRow] < 1e-4) workEdWt[iRow] = 1e-4;
+      if (workEdWt[iRow] < min_dual_steepest_edge_weight) workEdWt[iRow] = min_dual_steepest_edge_weight;
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       const int iRow = columnIndex[i];
       const double val = columnArray[iRow];
       workEdWt[iRow] += val * (rowOutWeight * val + Kai * dseArray[iRow]);
-      if (workEdWt[iRow] < 1e-4) workEdWt[iRow] = 1e-4;
+      if (workEdWt[iRow] < min_dual_steepest_edge_weight) workEdWt[iRow] = min_dual_steepest_edge_weight;
     }
   }
   timer.stop(simplex_info.clock_[UpdateWeightClock]);
@@ -377,15 +377,13 @@ void HDualRHS::updateWeightDevex(HVector* column, const double rowOutWeight) {
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       double aa_iRow = columnArray[iRow];
-      double nw_wt = max(workEdWt[iRow], rowOutWeight * aa_iRow * aa_iRow);
-      workEdWt[iRow] = nw_wt;
+      workEdWt[iRow] = max(workEdWt[iRow], rowOutWeight * aa_iRow * aa_iRow);
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       int iRow = columnIndex[i];
       double aa_iRow = columnArray[iRow];
-      double nw_wt = max(workEdWt[iRow], rowOutWeight * aa_iRow * aa_iRow);
-      workEdWt[iRow] = nw_wt;
+      workEdWt[iRow] = max(workEdWt[iRow], rowOutWeight * aa_iRow * aa_iRow);
     }
   }
   timer.stop(simplex_info.clock_[UpdateWeightClock]);

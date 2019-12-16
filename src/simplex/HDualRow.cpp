@@ -451,17 +451,17 @@ void HDualRow::delete_Freelist(int iColumn) {
 }
 
 void HDualRow::computeDevexWeight(const int slice) {
-  //  const double initial_computed_weight = computed_weight;
-  computed_weight = 0;
+  //  const double initial_computed_edge_weight = computed_edge_weight;
+  computed_edge_weight = 0;
   for (int el_n = 0; el_n < packCount; el_n++) {
     int vr_n = packIndex[el_n];
     double pv = work_devex_index[vr_n] * packValue[el_n];
-    computed_weight += pv * pv;
+    computed_edge_weight += pv * pv;
   }
   /*
   if (slice >= 0) {
-    printf("HDualRow::computeDevexWeight: Slice %1d; computed_weight = [%11.4g ->- %11.4g]\n",
-	   slice, initial_computed_weight, computed_weight);
+    printf("HDualRow::computeDevexWeight: Slice %1d; computed_edge_weight = [%11.4g ->- %11.4g]\n",
+	   slice, initial_computed_edge_weight, computed_edge_weight);
   }
   */
 }

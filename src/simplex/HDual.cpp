@@ -1408,14 +1408,14 @@ void HDual::chooseRow() {
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // For DSE, see how accurate the updated weight is
       // Save the updated weight
-      double u_weight = dualRHS.workEdWt[rowOut];
+      double updated_edge_weight = dualRHS.workEdWt[rowOut];
       // Compute the weight from row_ep and over-write the updated weight
-      double c_weight = dualRHS.workEdWt[rowOut] = row_ep.norm2();
+      computed_edge_weight = dualRHS.workEdWt[rowOut] = row_ep.norm2();
       // If the weight error is acceptable then break out of the
       // loop. All we worry about is accepting rows with weights
       // which are not too small, since this can make the row look
       // unreasonably attractive
-      if (acceptDualSteepestEdgeWeight(u_weight, c_weight)) break;
+      if (acceptDualSteepestEdgeWeight(updated_edge_weight)) break;
       // Weight error is unacceptable so look for another
       // candidate. Of course, it's possible that the same
       // candidate is chosen, but the weight will be correct (so
@@ -1449,12 +1449,12 @@ void HDual::chooseRow() {
   uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
 }
 
-bool HDual::acceptDualSteepestEdgeWeight(const double updated_weight, const double computed_weight) {
+bool HDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
   // Accept the updated weight if it is at least a quarter of the
   // computed weight. Excessively large updated weights don't matter!
   const double accept_weight_threshhold = 0.25;
   const double weight_error_threshhold = 4.0;
-  bool accept_weight = updated_weight >= accept_weight_threshhold * computed_weight;
+  bool accept_weight = updated_edge_weight >= accept_weight_threshhold * computed_edge_weight;
   int low_weight_error = 0;
   int high_weight_error = 0;
   double weight_error;
@@ -1463,9 +1463,9 @@ bool HDual::acceptDualSteepestEdgeWeight(const double updated_weight, const doub
 #endif
   num_dual_steepest_edge_weight_check++;
   if (!accept_weight) num_dual_steepest_edge_weight_reject++;
-  if (updated_weight < computed_weight) {
+  if (updated_edge_weight < computed_edge_weight) {
     // Updated weight is low
-    weight_error = computed_weight/updated_weight;
+    weight_error = computed_edge_weight/updated_edge_weight;
     if (weight_error > weight_error_threshhold) {
       low_weight_error = 1;
 #ifdef HiGHSDEV
@@ -1477,7 +1477,7 @@ bool HDual::acceptDualSteepestEdgeWeight(const double updated_weight, const doub
       0.01*log(weight_error);
   } else {
     // Updated weight is correct or high
-    weight_error = updated_weight/computed_weight;
+    weight_error = updated_edge_weight/computed_edge_weight;
     if (weight_error > weight_error_threshhold) {
       high_weight_error = 1;
 #ifdef HiGHSDEV
@@ -1519,7 +1519,7 @@ bool HDual::acceptDualSteepestEdgeWeight(const double updated_weight, const doub
 	   workHMO.scaled_solution_params_.simplex_iteration_count,
 	   accept_weight, 
 	   num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
-	   computed_weight, updated_weight, weight_error, error_type.c_str(),
+	   computed_edge_weight, updated_edge_weight, weight_error, error_type.c_str(),
 	   average_frequency_low_dual_steepest_edge_weight, average_log_low_dual_steepest_edge_weight_error,
 	   average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error,
 	   max_average_frequency_low_dual_steepest_edge_weight,
@@ -1533,11 +1533,11 @@ bool HDual::acceptDualSteepestEdgeWeight(const double updated_weight, const doub
   return accept_weight;
 }
 
-bool HDual::newDevexFramework(const double updated_weight, const double computed_weight) {
+bool HDual::newDevexFramework(const double updated_edge_weight) {
   // Analyse the Devex weight to determine whether a new framework
   // should be set up
-  double devex_ratio = max(updated_weight / computed_weight,
-			   computed_weight / updated_weight);
+  double devex_ratio = max(updated_edge_weight / computed_edge_weight,
+			   computed_edge_weight / updated_edge_weight);
   int i_te = solver_num_row / minRlvNumberDevexIterations;
   i_te = max(minAbsNumberDevexIterations, i_te);
   // Square maxAllowedDevexWeightRatio due to keeping squared
@@ -1549,7 +1549,7 @@ bool HDual::newDevexFramework(const double updated_weight, const double computed
   return_new_devex_framework = !accept_ratio || !accept_it;
   if (return_new_devex_framework) {
     printf("New Devex framework: updated weight = %11.4g; computed weight = %11.4g; Devex ratio = %11.4g\n",
-	   updated_weight, computed_weight, devex_ratio);
+	   updated_edge_weight, computed_edge_weight, devex_ratio);
     return true;
   }
   return !accept_ratio || !accept_it;
@@ -1723,12 +1723,13 @@ void HDual::chooseColumn(HVector* row_ep) {
     timer.start(simplex_info.clock_[DevexWtClock]);
     // Determine the exact Devex weight
     dualRow.computeDevexWeight();
-    double computed_weight = dualRow.computed_weight;
-    computed_weight = max(1.0, computed_weight);
-    const double updated_weight = dualRHS.workEdWt[rowOut];
-
-    dualRHS.workEdWt[rowOut] = computed_weight;
-    new_devex_framework = newDevexFramework(updated_weight, computed_weight);
+    computed_edge_weight = dualRow.computed_edge_weight;
+    computed_edge_weight = max(1.0, computed_edge_weight);
+    // Record the updated edge weight before over-writing with the computed value
+    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+    dualRHS.workEdWt[rowOut] = computed_edge_weight;
+    // Determine whether the updated edge weight accuracy triggers a new Devex framework
+    new_devex_framework = newDevexFramework(updated_edge_weight);
     minor_new_devex_framework = new_devex_framework;
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
@@ -1814,13 +1815,14 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     // Determine the partial sums of the exact Devex weight
     for (int i = 0; i < slice_num; i++) slice_dualRow[i].computeDevexWeight(i);
     // Accumulate the partial sums
-    double computed_weight = 0;
-    for (int i = 0; i < slice_num; i++) computed_weight += slice_dualRow[i].computed_weight;
-    computed_weight = max(1.0, computed_weight);
-    const double updated_weight = dualRHS.workEdWt[rowOut];
-
-    dualRHS.workEdWt[rowOut] = computed_weight;
-    new_devex_framework = newDevexFramework(updated_weight, computed_weight);
+    computed_edge_weight = 0;
+    for (int i = 0; i < slice_num; i++) computed_edge_weight += slice_dualRow[i].computed_edge_weight;
+    computed_edge_weight = max(1.0, computed_edge_weight);
+    // Record the updated edge weight before over-writing with the computed value
+    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+    dualRHS.workEdWt[rowOut] = computed_edge_weight;
+    // Determine whether the updated edge weight accuracy triggers a new Devex framework
+    new_devex_framework = newDevexFramework(updated_edge_weight);
     minor_new_devex_framework = new_devex_framework;
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }

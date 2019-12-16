@@ -139,7 +139,7 @@ class HDualRow {
   std::vector<double> packValue;  //!< Packed values
 
   // (Local) value of computed weight
-  double computed_weight;
+  double computed_edge_weight;
   
   double workDelta;  //!< Local copy of dual.deltaPrimal
   double workAlpha;  //!< Original copy of pivotal computed row-wise
