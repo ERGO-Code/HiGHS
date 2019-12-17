@@ -1993,26 +1993,27 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   thetaPrimal = (x_out - (deltaPrimal < 0 ? l_out : u_out)) / alpha;
   dualRHS.update_primal(&column, thetaPrimal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    const double pivotEdgeWeight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
-    dualRHS.updateWeightDualSteepestEdge(&column, pivotEdgeWeight, -2 / alpha,
+    const double updated_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
+    const double Kai = -2 / alpha;
+    dualRHS.updateWeightDualSteepestEdge(&column, updated_pivotal_edge_weight, Kai,
 					 &DSE_Vector->array[0]);
-    dualRHS.workEdWt[rowOut] = pivotEdgeWeight;
+    dualRHS.workEdWt[rowOut] = updated_pivotal_edge_weight;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     // Pivotal row is for the current basis: weights are required for
     // the next basis so have to divide the current (exact) weight by
     // the pivotal value
-    const double pivotEdgeWeight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
-    double rowOutEdgeWeight = max(1.0, pivotEdgeWeight);
+    double updated_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
+    updated_pivotal_edge_weight = max(1.0, updated_pivotal_edge_weight);
     // nw_wt is max(workEdWt[iRow], NewExactWeight*columnArray[iRow]^2);
     //
-    // But NewExactWeight is rowOutEdgeWeight = max(1.0, dualRHS.workEdWt[rowOut]
+    // But NewExactWeight is updated_pivotal_edge_weight = max(1.0, dualRHS.workEdWt[rowOut]
     // / (alpha * alpha))
     //
-    // so nw_wt = max(workEdWt[iRow], rowOutEdgeWeight*columnArray[iRow]^2);
+    // so nw_wt = max(workEdWt[iRow], updated_pivotal_edge_weight*columnArray[iRow]^2);
     //
     // Update rest of weights
-    dualRHS.updateWeightDevex(&column, rowOutEdgeWeight);
-    dualRHS.workEdWt[rowOut] = rowOutEdgeWeight;
+    dualRHS.updateWeightDevex(&column, updated_pivotal_edge_weight);
+    dualRHS.workEdWt[rowOut] = updated_pivotal_edge_weight;
     num_devex_iterations++;
   }
   dualRHS.update_infeasList(&column);
