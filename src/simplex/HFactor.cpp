@@ -298,14 +298,14 @@ int HFactor::build() {
   return rankDeficiency;
 }
 
-void HFactor::ftran(HVector& vector, double hist_dsty) const {
-  //  timer_.start(factor_clock_[FactorFtran]);
+void HFactor::ftran(HVector& vector, double hist_dsty){ // FactorTimer frig const{
+  timer_.start(factor_clock_[FactorFtran]);
   ftranL(vector, hist_dsty);
   ftranU(vector, hist_dsty);
-  //  timer_.stop(factor_clock_[FactorFtran]);
+  timer_.stop(factor_clock_[FactorFtran]);
 }
 
-void HFactor::btran(HVector& vector, double hist_dsty) const {
+void HFactor::btran(HVector& vector, double hist_dsty){ // FactorTimer frig const{
   btranU(vector, hist_dsty);
   btranL(vector, hist_dsty);
 }
@@ -1155,8 +1155,8 @@ void HFactor::buildFinish() {
   build_syntheticTick += numRow * 80 + (LcountX + UcountX) * 60;
 }
 
-void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
-  //  timer_.start(factor_clock_[FactorFtranLower]);
+void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
+  timer_.start(factor_clock_[FactorFtranLower]);
   //    const double hyperFTRANL = 0.15;
   //    const double hyperCANCEL = 0.05;
 
@@ -1201,10 +1201,10 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
   }
-  //  timer_.stop(factor_clock_[FactorFtranLower]);
+  timer_.stop(factor_clock_[FactorFtranLower]);
 }
 
-void HFactor::btranL(HVector& rhs, double hist_dsty) const {
+void HFactor::btranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
   //    const double hyperBTRANL = 0.10;
   //    const double hyperCANCEL = 0.05;
 
@@ -1251,7 +1251,7 @@ void HFactor::btranL(HVector& rhs, double hist_dsty) const {
   }
 }
 
-void HFactor::ftranU(HVector& rhs, double hist_dsty) const {
+void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
   // The update part
   if (updateMethod == UPDATE_METHOD_FT) {
     ftranFT(rhs);
@@ -1329,7 +1329,7 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty) const {
   }
 }
 
-void HFactor::btranU(HVector& rhs, double hist_dsty) const {
+void HFactor::btranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
   if (updateMethod == UPDATE_METHOD_PF) {
     btranPF(rhs);
   }
@@ -1407,7 +1407,7 @@ void HFactor::btranU(HVector& rhs, double hist_dsty) const {
   }
 }
 
-void HFactor::ftranFT(HVector& vector) const {
+void HFactor::ftranFT(HVector& vector){ // FactorTimer frig const{
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   int* PFpivotIndex = NULL;
@@ -1454,7 +1454,7 @@ void HFactor::ftranFT(HVector& vector) const {
   }
 }
 
-void HFactor::btranFT(HVector& vector) const {
+void HFactor::btranFT(HVector& vector){ // FactorTimer frig const{
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex =
@@ -1500,7 +1500,7 @@ void HFactor::btranFT(HVector& vector) const {
   vector.count = RHScount;
 }
 
-void HFactor::ftranPF(HVector& vector) const {
+void HFactor::ftranPF(HVector& vector){ // FactorTimer frig const{
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex = &this->PFpivotIndex[0];
@@ -1536,7 +1536,7 @@ void HFactor::ftranPF(HVector& vector) const {
   vector.count = RHScount;
 }
 
-void HFactor::btranPF(HVector& vector) const {
+void HFactor::btranPF(HVector& vector){ // FactorTimer frig const{
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex = &this->PFpivotIndex[0];
@@ -1566,7 +1566,7 @@ void HFactor::btranPF(HVector& vector) const {
   vector.count = RHScount;
 }
 
-void HFactor::ftranMPF(HVector& vector) const {
+void HFactor::ftranMPF(HVector& vector){ // FactorTimer frig const{
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1584,7 +1584,7 @@ void HFactor::ftranMPF(HVector& vector) const {
   vector.count = RHScount;
 }
 
-void HFactor::btranMPF(HVector& vector) const {
+void HFactor::btranMPF(HVector& vector){ // FactorTimer frig const{
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1601,7 +1601,7 @@ void HFactor::btranMPF(HVector& vector) const {
   vector.count = RHScount;
 }
 
-void HFactor::ftranAPF(HVector& vector) const {
+void HFactor::ftranAPF(HVector& vector){ // FactorTimer frig const{
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1619,7 +1619,7 @@ void HFactor::ftranAPF(HVector& vector) const {
   vector.count = RHScount;
 }
 
-void HFactor::btranAPF(HVector& vector) const {
+void HFactor::btranAPF(HVector& vector){ // FactorTimer frig const{
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];

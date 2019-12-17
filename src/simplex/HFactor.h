@@ -133,14 +133,14 @@ class HFactor {
    */
   void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
              double hist_dsty  //!< Historical density of the result
-             ) const;
+             ); // FactorTimer frig const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
   void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
              double hist_dsty  //!< Historical density of the result
-             ) const;
+             ); // FactorTimer frig const;
 
   /**
    * @brief Update according to
@@ -336,19 +336,19 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector& vector, double hist_dsty) const;
-  void btranL(HVector& vector, double hist_dsty) const;
-  void ftranU(HVector& vector, double hist_dsty) const;
-  void btranU(HVector& vector, double hist_dsty) const;
+  void ftranL(HVector& vector, double hist_dsty); // FactorTimer frig const;
+  void btranL(HVector& vector, double hist_dsty); // FactorTimer frig const;
+  void ftranU(HVector& vector, double hist_dsty); // FactorTimer frig const;
+  void btranU(HVector& vector, double hist_dsty); // FactorTimer frig const;
 
-  void ftranFT(HVector& vector) const;
-  void btranFT(HVector& vector) const;
-  void ftranPF(HVector& vector) const;
-  void btranPF(HVector& vector) const;
-  void ftranMPF(HVector& vector) const;
-  void btranMPF(HVector& vector) const;
-  void ftranAPF(HVector& vector) const;
-  void btranAPF(HVector& vector) const;
+  void ftranFT(HVector& vector); // FactorTimer frig const;
+  void btranFT(HVector& vector); // FactorTimer frig const;
+  void ftranPF(HVector& vector); // FactorTimer frig const;
+  void btranPF(HVector& vector); // FactorTimer frig const;
+  void ftranMPF(HVector& vector); // FactorTimer frig const;
+  void btranMPF(HVector& vector); // FactorTimer frig const;
+  void ftranAPF(HVector& vector); // FactorTimer frig const;
+  void btranAPF(HVector& vector); // FactorTimer frig const;
 
   void updateCFT(HVector* aq, HVector* ep, int* iRow);//, int* hint);
   void updateFT(HVector* aq, HVector* ep, int iRow);//, int* hint);

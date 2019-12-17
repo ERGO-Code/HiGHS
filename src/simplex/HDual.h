@@ -476,7 +476,8 @@ class HDual {
   int solver_num_tot;
 
   const HMatrix* matrix;
-  const HFactor* factor;
+  //  const HFactor* factor; //FactorTimer frig const
+  HFactor* factor;
 
   const int* jMove;
   const double* workRange;
