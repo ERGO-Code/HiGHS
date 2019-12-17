@@ -18,7 +18,8 @@
 #include <cmath>
 #include <vector>
 
-#include "HConfig.h"
+//#include "HConfig.h"
+#include "simplex/FactorTimer.h"
 
 using std::max;
 using std::min;
@@ -214,6 +215,7 @@ class HFactor {
    */
   void checkInvert();
 #endif
+  void reportTimer();
 
   // Properties of data held in HFactor.h. To "have" them means that
   // they are assigned.
@@ -320,6 +322,11 @@ class HFactor {
   vector<int> PFindex;
   vector<double> PFvalue;
 
+  // Timer
+  HighsTimer timer_;
+  // Values of iClock for factor timing clocks
+  vector<int> factor_clock_;
+ 
   // Implementation
   void buildSimple();
   //    void buildKernel();

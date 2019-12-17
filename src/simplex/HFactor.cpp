@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HFactor.h"
+#include "simplex/FactorTimer.h"
 #include "lp_data/HConst.h"
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
@@ -250,6 +251,9 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   PFstart.reserve(2000 + 1);
   PFindex.reserve(BlimitX * 4);
   PFvalue.reserve(BlimitX * 4);
+
+  FactorTimer factor_timer;
+  factor_timer.initialiseFactorClocks(timer_, factor_clock_);
 }
 
 #ifdef HiGHSDEV
@@ -295,8 +299,10 @@ int HFactor::build() {
 }
 
 void HFactor::ftran(HVector& vector, double hist_dsty) const {
+  //  timer_.start(factor_clock_[FactorFtran]);
   ftranL(vector, hist_dsty);
   ftranU(vector, hist_dsty);
+  //  timer_.stop(factor_clock_[FactorFtran]);
 }
 
 void HFactor::btran(HVector& vector, double hist_dsty) const {
@@ -364,6 +370,12 @@ void HFactor::checkInvert() {
     printf("Checking INVERT: ||B^{-1}B-I||_F = %g\n", invertEr0);
 }
 #endif
+
+void HFactor::reportTimer() {
+  FactorTimer factor_timer;
+  factor_timer.reportFactorLevel0Clock(timer_, factor_clock_);
+  factor_timer.reportFactorLevel1Clock(timer_, factor_clock_);
+}
 
 void HFactor::buildSimple() {
   /**
@@ -1144,6 +1156,7 @@ void HFactor::buildFinish() {
 }
 
 void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
+  //  timer_.start(factor_clock_[FactorFtranLower]);
   //    const double hyperFTRANL = 0.15;
   //    const double hyperCANCEL = 0.05;
 
@@ -1188,6 +1201,7 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
   }
+  //  timer_.stop(factor_clock_[FactorFtranLower]);
 }
 
 void HFactor::btranL(HVector& rhs, double hist_dsty) const {

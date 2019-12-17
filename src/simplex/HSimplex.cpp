@@ -1965,6 +1965,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
       printf("\n");
     }
   }
+  highs_model_object.factor_.reportTimer();
 }
 #endif
 
