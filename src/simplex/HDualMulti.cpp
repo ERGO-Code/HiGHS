@@ -243,14 +243,14 @@ void HDual::minorChooseRow() {
     sourceOut = deltaPrimal < 0 ? -1 : 1;
 
     // Assign buffers
-    MFinish* workFinish = &multi_finish[multi_nFinish];
-    workFinish->rowOut = rowOut;
-    workFinish->columnOut = columnOut;
-    workFinish->row_ep = &workChoice->row_ep;
-    workFinish->column = &workChoice->column;
-    workFinish->columnBFRT = &workChoice->columnBFRT;
+    MFinish* finish = &multi_finish[multi_nFinish];
+    finish->rowOut = rowOut;
+    finish->columnOut = columnOut;
+    finish->row_ep = &workChoice->row_ep;
+    finish->column = &workChoice->column;
+    finish->columnBFRT = &workChoice->columnBFRT;
     // Save the edge weight - over-written later when using Devex
-    workFinish->EdWt = workChoice->infeasEdWt;
+    finish->EdWt = workChoice->infeasEdWt;
 
     // Disable current row
     workChoice->rowOut = -1;
@@ -268,12 +268,12 @@ void HDual::minorUpdate() {
   }
 
   // Minor update - store roll back data
-  MFinish* Fin = &multi_finish[multi_nFinish];
-  Fin->moveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
-  Fin->shiftOut = workHMO.simplex_info_.workShift_[columnOut];
-  Fin->flipList.clear();
+  MFinish* finish = &multi_finish[multi_nFinish];
+  finish->moveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
+  finish->shiftOut = workHMO.simplex_info_.workShift_[columnOut];
+  finish->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
-    Fin->flipList.push_back(dualRow.workData[i].first);
+    finish->flipList.push_back(dualRow.workData[i].first);
 
   // Minor update - key parts
   minorUpdateDual();
@@ -342,27 +342,27 @@ void HDual::minorUpdateDual() {
 }
 
 void HDual::minorUpdatePrimal() {
-  MChoice* Cho = &multi_choice[multi_iChoice];
-  MFinish* Fin = &multi_finish[multi_nFinish];
-  double valueOut = Cho->baseValue;
-  double lowerOut = Cho->baseLower;
-  double upperOut = Cho->baseUpper;
+  MChoice* choice = &multi_choice[multi_iChoice];
+  MFinish* finish = &multi_finish[multi_nFinish];
+  double valueOut = choice->baseValue;
+  double lowerOut = choice->baseLower;
+  double upperOut = choice->baseUpper;
   if (deltaPrimal < 0) {
     thetaPrimal = (valueOut - lowerOut) / alphaRow;
-    Fin->basicBound = lowerOut;
+    finish->basicBound = lowerOut;
   }
   if (deltaPrimal > 0) {
     thetaPrimal = (valueOut - upperOut) / alphaRow;
-    Fin->basicBound = upperOut;
+    finish->basicBound = upperOut;
   }
-  Fin->thetaPrimal = thetaPrimal;
+  finish->thetaPrimal = thetaPrimal;
 
   // With Devex, the edge weight for the pivotal row is computed in
   // chooseColumn (if not computed in chooseColumnSlice), so can't be stored in the PAMI data structure.
   //
   // Restore the weight to multi_finish so that it's picked up in
   // minorUpdatePrimal();
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) Fin->EdWt = computed_edge_weight;
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) finish->EdWt = computed_edge_weight;
 
 
 
@@ -371,22 +371,22 @@ void HDual::minorUpdatePrimal() {
    *    By the pivot (thetaPrimal)
    */
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    const double dl_EdWt = fabs(Cho->infeasEdWt - Fin->EdWt);
+    const double dl_EdWt = fabs(choice->infeasEdWt - finish->EdWt);
     if (dl_EdWt > 0) {
       printf("minorUpdatePrimal: Delta Edge Weight = |%11.4g-%11.4g| = %11.4g\n",
-	     Cho->infeasEdWt, Fin->EdWt, dl_EdWt);
+	     choice->infeasEdWt, finish->EdWt, dl_EdWt);
     }
   }
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     // Transform the edge weight of the pivotal row according to the
     // simplex update
-    Fin->EdWt /= (alphaRow * alphaRow);
-    const double weight_of_RowOut = max(1.0, Fin->EdWt);
+    finish->EdWt /= (alphaRow * alphaRow);
+    const double weight_of_RowOut = max(1.0, finish->EdWt);
     // Store the Devex weight of the leaving row now - OK since it's
-    // stored in Fin->EdWt and the updated weights are stored in
+    // stored in finish->EdWt and the updated weights are stored in
     // multi_choice[*].infeasEdWt
-    Fin->EdWt = weight_of_RowOut;
+    finish->EdWt = weight_of_RowOut;
   }
   for (int ich = 0; ich < multi_num; ich++) {
     if (multi_choice[ich].rowOut >= 0) {
@@ -402,7 +402,7 @@ void HDual::minorUpdatePrimal() {
       infeas *= infeas;
       multi_choice[ich].infeasValue = infeas;
       if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
-	const double weight_of_RowOut = Fin->EdWt;
+	const double weight_of_RowOut = finish->EdWt;
 	double aa_iRow = dot;
 	multi_choice[ich].infeasEdWt = max(multi_choice[ich].infeasEdWt, weight_of_RowOut * aa_iRow * aa_iRow);
       }
@@ -410,18 +410,18 @@ void HDual::minorUpdatePrimal() {
   }
 }
 void HDual::minorUpdatePivots() {
-  MFinish* Fin = &multi_finish[multi_nFinish];
+  MFinish* finish = &multi_finish[multi_nFinish];
   update_pivots(workHMO, columnIn, rowOut, sourceOut);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     // Transform the edge weight of the pivotal row according to the
     // simplex update
-    Fin->EdWt /= (alphaRow * alphaRow);
+    finish->EdWt /= (alphaRow * alphaRow);
   }
-  Fin->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
+  finish->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
   update_matrix(workHMO, columnIn,
                 columnOut);  // model->updateMatrix(columnIn, columnOut);
-  Fin->columnIn = columnIn;
-  Fin->alphaRow = alphaRow;
+  finish->columnIn = columnIn;
+  finish->alphaRow = alphaRow;
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
   workHMO.scaled_solution_params_.simplex_iteration_count++;
@@ -552,9 +552,9 @@ void HDual::majorUpdateFtranPrepare() {
   // Prepare FTRAN BFRT buffer
   columnBFRT.clear();
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-    MFinish* Fin = &multi_finish[iFn];
-    HVector* Vec = Fin->columnBFRT;
-    matrix->collect_aj(*Vec, Fin->columnIn, Fin->thetaPrimal);
+    MFinish* finish = &multi_finish[iFn];
+    HVector* Vec = finish->columnBFRT;
+    matrix->collect_aj(*Vec, finish->columnIn, finish->thetaPrimal);
 
     // Update this buffer by previous Row_ep
     for (int jFn = iFn - 1; jFn >= 0; jFn--) {
@@ -622,18 +622,18 @@ void HDual::majorUpdateFtranParallel() {
 
   // Update ticks
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-    MFinish* Fin = &multi_finish[iFn];
-    HVector* Col = Fin->column;
-    HVector* Row = Fin->row_ep;
+    MFinish* finish = &multi_finish[iFn];
+    HVector* Col = finish->column;
+    HVector* Row = finish->row_ep;
     total_FT_inc_TICK += Col->syntheticTick;  // Was .pseudoTick
     total_FT_inc_TICK += Row->syntheticTick;  // Was .pseudoTick
   }
 
   // Update rates
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-    MFinish* Fin = &multi_finish[iFn];
-    HVector* Col = Fin->column;
-    HVector* Row = Fin->row_ep;
+    MFinish* finish = &multi_finish[iFn];
+    HVector* Col = finish->column;
+    HVector* Row = finish->row_ep;
     columnDensity = 0.95 * columnDensity + 0.05 * Col->count / solver_num_row;
     rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / solver_num_row;
   }
@@ -678,9 +678,9 @@ void HDual::majorUpdateFtranFinal() {
     }
   } else {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-      MFinish* Fin = &multi_finish[iFn];
-      HVector* Col = Fin->column;
-      HVector* Row = Fin->row_ep;
+      MFinish* finish = &multi_finish[iFn];
+      HVector* Col = finish->column;
+      HVector* Row = finish->row_ep;
       for (int jFn = 0; jFn < iFn; jFn++) {
         MFinish* jFinish = &multi_finish[jFn];
         int pivotRow = jFinish->rowOut;
@@ -758,13 +758,13 @@ void HDual::majorUpdatePrimal() {
 
     // Update any edge weights (except weights for pivotal rows) and infeasList
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-      MFinish* Fin = &multi_finish[iFn];
-      HVector* Col = Fin->column;
+      MFinish* finish = &multi_finish[iFn];
+      HVector* Col = finish->column;
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
 	// Update steepest edge weights 
-	HVector* Row = Fin->row_ep;
-	double Kai = -2 / Fin->alphaRow;
-	dualRHS.updateWeightDualSteepestEdge(Col, Fin->EdWt, Kai, &Row->array[0]);
+	HVector* Row = finish->row_ep;
+	double Kai = -2 / finish->alphaRow;
+	dualRHS.updateWeightDualSteepestEdge(Col, finish->EdWt, Kai, &Row->array[0]);
       } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework) {
 	const double weight_of_RowOut = multi_finish[iFn].EdWt;
 	// Update rest of weights
@@ -777,9 +777,9 @@ void HDual::majorUpdatePrimal() {
 
   // Update primal value for the pivots
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-    MFinish* Fin = &multi_finish[iFn];
-    int iRow = Fin->rowOut;
-    double value = baseValue[iRow] - Fin->basicBound + Fin->basicValue;
+    MFinish* finish = &multi_finish[iFn];
+    int iRow = finish->rowOut;
+    double value = baseValue[iRow] - finish->basicBound + finish->basicValue;
     dualRHS.update_pivots(iRow, value);
   }
 
@@ -845,26 +845,26 @@ void HDual::majorUpdateFactor() {
 
 void HDual::majorRollback() {
   for (int iFn = multi_nFinish - 1; iFn >= 0; iFn--) {
-    MFinish* Fin = &multi_finish[iFn];
+    MFinish* finish = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    workHMO.simplex_basis_.nonbasicMove_[Fin->columnIn] = Fin->moveIn;
-    workHMO.simplex_basis_.nonbasicFlag_[Fin->columnIn] = 1;
-    workHMO.simplex_basis_.nonbasicMove_[Fin->columnOut] = 0;
-    workHMO.simplex_basis_.nonbasicFlag_[Fin->columnOut] = 0;
-    workHMO.simplex_basis_.basicIndex_[Fin->rowOut] = Fin->columnOut;
+    workHMO.simplex_basis_.nonbasicMove_[finish->columnIn] = finish->moveIn;
+    workHMO.simplex_basis_.nonbasicFlag_[finish->columnIn] = 1;
+    workHMO.simplex_basis_.nonbasicMove_[finish->columnOut] = 0;
+    workHMO.simplex_basis_.nonbasicFlag_[finish->columnOut] = 0;
+    workHMO.simplex_basis_.basicIndex_[finish->rowOut] = finish->columnOut;
 
     // 2. Roll back matrix
-    update_matrix(workHMO, Fin->columnOut, Fin->columnIn);
+    update_matrix(workHMO, finish->columnOut, finish->columnIn);
 
     // 3. Roll back flips
-    for (unsigned i = 0; i < Fin->flipList.size(); i++) {
-      flip_bound(workHMO, Fin->flipList[i]);
+    for (unsigned i = 0; i < finish->flipList.size(); i++) {
+      flip_bound(workHMO, finish->flipList[i]);
     }
 
     // 4. Roll back cost
-    workHMO.simplex_info_.workShift_[Fin->columnIn] = 0;
-    workHMO.simplex_info_.workShift_[Fin->columnOut] = Fin->shiftOut;
+    workHMO.simplex_info_.workShift_[finish->columnIn] = 0;
+    workHMO.simplex_info_.workShift_[finish->columnOut] = finish->shiftOut;
 
     // 5. The iteration count
     workHMO.scaled_solution_params_.simplex_iteration_count--;
