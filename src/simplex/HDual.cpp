@@ -1727,15 +1727,6 @@ void HDual::chooseColumn(HVector* row_ep) {
     dualRow.computeDevexWeight();
     computed_edge_weight = dualRow.computed_edge_weight;
     computed_edge_weight = max(1.0, computed_edge_weight);
-
-    if (og_devex_weight_check) {
-      // Record the updated edge weight before over-writing with the computed value
-      const double updated_edge_weight = dualRHS.workEdWt[rowOut];
-      dualRHS.workEdWt[rowOut] = computed_edge_weight;
-      // Determine whether the updated edge weight accuracy triggers a new Devex framework
-      new_devex_framework = newDevexFramework(updated_edge_weight);
-      minor_new_devex_framework = new_devex_framework;
-    }
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
   return;
@@ -1823,15 +1814,6 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     computed_edge_weight = 0;
     for (int i = 0; i < slice_num; i++) computed_edge_weight += slice_dualRow[i].computed_edge_weight;
     computed_edge_weight = max(1.0, computed_edge_weight);
-
-    if (og_devex_weight_check) {
-      // Record the updated edge weight before over-writing with the computed value
-      const double updated_edge_weight = dualRHS.workEdWt[rowOut];
-      dualRHS.workEdWt[rowOut] = computed_edge_weight;
-      // Determine whether the updated edge weight accuracy triggers a new Devex framework
-      new_devex_framework = newDevexFramework(updated_edge_weight);
-      minor_new_devex_framework = new_devex_framework;
-    }
     timer.stop(simplex_info.clock_[DevexWtClock]);
   }
 }
@@ -1976,12 +1958,10 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   //
   // If reinversion is needed then skip this method
   if (invertHint) return;
-  if (!og_devex_weight_check) {
-    if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
-      const double updated_edge_weight = dualRHS.workEdWt[rowOut];
-      dualRHS.workEdWt[rowOut] = computed_edge_weight;
-      new_devex_framework = newDevexFramework(updated_edge_weight);
-    }
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+    dualRHS.workEdWt[rowOut] = computed_edge_weight;
+    new_devex_framework = newDevexFramework(updated_edge_weight);
   }
   // NB DSE_Vector is only computed if dual_edge_weight_mode ==
   // DualEdgeWeightMode::STEEPEST_EDGE Update - primal and weight

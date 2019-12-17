@@ -259,12 +259,10 @@ void HDual::minorChooseRow() {
 
 void HDual::minorUpdate() {
 
-  if (!og_devex_weight_check) {
-    if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework && rowOut>=0) {
-      const double updated_edge_weight = dualRHS.workEdWt[rowOut];
-      new_devex_framework = newDevexFramework(updated_edge_weight);
-      minor_new_devex_framework = new_devex_framework;
-    }
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX && !new_devex_framework && rowOut>=0) {
+    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+    new_devex_framework = newDevexFramework(updated_edge_weight);
+    minor_new_devex_framework = new_devex_framework;
   }
 
   // Minor update - store roll back data
