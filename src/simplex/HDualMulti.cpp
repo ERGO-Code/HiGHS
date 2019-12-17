@@ -11,6 +11,7 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "simplex/HDual.h"
 #include "simplex/HPrimal.h"
@@ -383,9 +384,11 @@ void HDual::minorUpdatePrimal() {
       infeas *= infeas;
       multi_choice[ich].infeasValue = infeas;
       if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+	// Update the other Devex weights
 	const double new_pivotal_edge_weight = finish->EdWt;
 	double aa_iRow = dot;
-	multi_choice[ich].infeasEdWt = max(multi_choice[ich].infeasEdWt, new_pivotal_edge_weight * aa_iRow * aa_iRow);
+	multi_choice[ich].infeasEdWt =
+	  max(multi_choice[ich].infeasEdWt, new_pivotal_edge_weight * aa_iRow * aa_iRow);
       }
     }
   }
@@ -399,8 +402,7 @@ void HDual::minorUpdatePivots() {
     finish->EdWt /= (alphaRow * alphaRow);
   }
   finish->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
-  update_matrix(workHMO, columnIn,
-                columnOut);  // model->updateMatrix(columnIn, columnOut);
+  update_matrix(workHMO, columnIn, columnOut);
   finish->columnIn = columnIn;
   finish->alphaRow = alphaRow;
   // Move this to Simplex class once it's created
@@ -500,17 +502,22 @@ void HDual::majorUpdate() {
     MFinish* iFinish = &multi_finish[iFn];
     HVector* iColumn = iFinish->column;
     int iRowOut = iFinish->rowOut;
-    double alphaC = fabs(iColumn->array[iRowOut]);
-    double alphaR = fabs(iFinish->alphaRow);
-    double compare = min(alphaC, alphaR);
-    double alphaDiff = fabs(alphaC - alphaR);
+    double abs_alpha_from_col = fabs(iColumn->array[iRowOut]);
+    double abs_alpha_from_row = fabs(iFinish->alphaRow);
+    double compare = min(abs_alpha_from_col, abs_alpha_from_row);
+    double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
+    numericalTrouble = abs_alpha_diff / compare;
     // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
-    if (alphaDiff / compare > 1e-8 && workHMO.simplex_info_.update_count > 0) {
-      cout << "REPORT " << workHMO.simplex_lp_.model_name_
-           << " NEED-ROLL-BACK   ";
-      cout << workHMO.scaled_solution_params_.simplex_iteration_count << " alpha = " << alphaC
-           << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
-           << "  multi_nFinish = " << multi_nFinish << endl;
+    if (numericalTrouble > 1e-8 && workHMO.simplex_info_.update_count > 0) {
+      //#ifdef HiGHSDEV
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		      "HDual::majorUpdate has identified numerical trouble solving LP %s in iteration %d(%d): "
+		      "Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g] so reinvert",
+		      workHMO.simplex_lp_.model_name_.c_str(),
+		      workHMO.scaled_solution_params_.simplex_iteration_count,
+		      multi_nFinish,
+		      numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
+      //#endif
       invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
       // if (startUpdate > 0) {
       majorRollback();
