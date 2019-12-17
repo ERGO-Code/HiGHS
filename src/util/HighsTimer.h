@@ -357,7 +357,7 @@ class HighsTimer {
 
     // Report one line per clock, the time, number of calls and time per call
     printf(
-        "%s-time  Operation       :    Time                     :    Calls   "
+        "%s-time  Operation         :    Time                     :    Calls   "
         "Time/Call\n",
         grep_stamp);
     // Convert approximate seconds
@@ -373,7 +373,7 @@ class HighsTimer {
       if (clock_num_call[i_clock] > 0) {
         time_per_call = time / clock_num_call[i_clock];
         if (percent_sum_clock_ticks >= tl_per_cent_report) {
-          printf("%s-time  %-16s: %11.4e (%5.1f%%; %5.1f%%):%9d %11.4e\n",
+          printf("%s-time  %-18s: %11.4e (%5.1f%%; %5.1f%%):%9d %11.4e\n",
                  grep_stamp, clock_names[i_clock].c_str(), time,
                  percent_sum_clock_ticks, percent_run_highs,
                  clock_num_call[i_clock], time_per_call);
@@ -384,9 +384,9 @@ class HighsTimer {
     }
     double percent_run_highs = 100.0 * sum_tick / current_run_highs_tick;
     double percent_sum_clock_ticks = 100.0;
-    printf("%s-time  SUM             : %11.4e (%5.1f%%; %5.1f%%)\n", grep_stamp,
+    printf("%s-time  SUM               : %11.4e (%5.1f%%; %5.1f%%)\n", grep_stamp,
            sum_time, percent_sum_clock_ticks, percent_run_highs);
-    printf("%s-time  TOTAL           : %11.4e\n", grep_stamp,
+    printf("%s-time  TOTAL             : %11.4e\n", grep_stamp,
            tick2sec * current_run_highs_tick);
     if (report_for_excel) {
       // Repeat reporting for Excel

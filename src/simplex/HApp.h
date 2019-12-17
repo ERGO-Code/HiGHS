@@ -261,6 +261,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
                       scaled_solution_params.simplex_iteration_count);
     }
 #endif
+    simplex_timer.reportSimplexInnerClock(highs_model_object);
+    highs_model_object.factor_.reportTimer();
   }
 
   if (simplex_info.analyseLpSolution) {

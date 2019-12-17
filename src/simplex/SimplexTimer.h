@@ -176,7 +176,7 @@ class SimplexTimer {
         timer.clock_def("UPDATE_PRIMAL", "UPP");
     simplex_info.clock_[DevexIzClock] = timer.clock_def("DEVEX_IZ", "DIZ");
     simplex_info.clock_[DevexUpdateWeightClock] =
-        timer.clock_def("DEVEX_UPDATE_WEIGHT", "UWS");
+        timer.clock_def("DVX_UPDATE_WEIGHT", "UWS");
     simplex_info.clock_[DseUpdateWeightClock] =
         timer.clock_def("DSE_UPDATE_WEIGHT", "UWD");
     simplex_info.clock_[UpdatePivotsClock] =
