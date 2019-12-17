@@ -42,7 +42,7 @@ class HDualRHS {
   /**
    * @brief Choose the row index of a good variable to leave the basis (CHUZR)
    */
-  void choose_normal(
+  void chooseNormal(
       int* chIndex  //!< Row index of variable chosen to leave the basis
   );
 
@@ -50,33 +50,33 @@ class HDualRHS {
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_global(int* chIndex,  //!< Set of indices of chosen rows
-                           int* chCount,  //!< Number of chosen rows
-                           int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiGlobal(int* chIndex,  //!< Set of indices of chosen rows
+			 int* chCount,  //!< Number of chosen rows
+			 int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_HGauto(int* chIndex,  //!< Set of indices of chosen rows
-                           int* chCount,  //!< Number of chosen rows
-                           int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiHyperGraphAuto(int* chIndex,  //!< Set of indices of chosen rows
+				 int* chCount,  //!< Number of chosen rows
+				 int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_HGpart(int* chIndex,  //!< Set of indices of chosen rows
-                           int* chCount,  //!< Number of chosen rows
-                           int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiHyperGraphPart(int* chIndex,  //!< Set of indices of chosen rows
+				 int* chCount,  //!< Number of chosen rows
+				 int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
    * @brief Update the primal values by adding a multiple of a given std::vector
    */
-  void update_primal(
+  void updatePrimal(
       HVector* column,  //!< Column to add into primal values
       double theta      //!< Multiple of column to add into primal values
   );
@@ -101,22 +101,22 @@ class HDualRHS {
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
-  void update_pivots(int iRow,     //!< row where the basis change has occurred
-                     double value  //!< New primal value in this row
+  void updatePivots(int iRow,     //!< row where the basis change has occurred
+		    double value  //!< New primal value in this row
   );
 
   /**
    * @brief Update the list of primal infeasibilities using indices of primal
    * values which have changed
    */
-  void update_infeasList(HVector* column  //!< Changes in primal values
+  void updateInfeasList(HVector* column  //!< Changes in primal values
   );
 
   /**
    * @brief Create the list of greatest primal infeasibilities for efficient
    * CHUZR
    */
-  void create_infeasList(double columnDensity);
+  void createInfeasList(double columnDensity);
   /**
    * @brief Create the std::vector of primal infeasibilities
    *

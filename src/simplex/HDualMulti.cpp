@@ -77,9 +77,9 @@ void HDual::majorChooseRow() {
     // 1. Multiple CHUZR
     int initialCount = 0;
     
-    dualRHS.choose_multi_HGauto(&choiceIndex[0], &initialCount, multi_num);
-    //        dualRHS.choose_multi_global(&choiceIndex[0], &initialCount,
-    //        multi_num);
+    // Call the hyper-graph method, but partSwitch=0 so just uses choose_multi_global
+    dualRHS.chooseMultiHyperGraphAuto(&choiceIndex[0], &initialCount, multi_num);
+    // dualRHS.chooseMultiGlobal(&choiceIndex[0], &initialCount, multi_num);
     if (initialCount == 0 && dualRHS.workCutoff == 0) {
       // OPTIMAL
       return;
@@ -97,7 +97,7 @@ void HDual::majorChooseRow() {
 
     if (initialCount == 0 || choiceCount <= initialCount / 3) {
       // Need to do the list again
-      dualRHS.create_infeasList(columnDensity);
+      dualRHS.createInfeasList(columnDensity);
       continue;
     }
 
@@ -291,9 +291,6 @@ void HDual::minorUpdate() {
     countRemain += (myInfeas / myWeight > multi_choice[i].infeasLimit);
   }
   if (countRemain == 0) multi_chooseAgain = 1;
-  //    if (multi_nFinish + 1 == multi_num)
-  //        multi_chooseAgain = 1;
-
 }
 
 void HDual::minorUpdateDual() {
@@ -302,23 +299,22 @@ void HDual::minorUpdateDual() {
    *    XXX Data parallel (depends on the ap partition before)
    */
   if (thetaDual == 0) {
-    shift_cost(workHMO, columnIn, -workDual[columnIn]);  // model->shiftCost(columnIn,
-                                                         // -workDual[columnIn]);
+    shift_cost(workHMO, columnIn, -workDual[columnIn]);
   } else {
-    dualRow.update_dual(thetaDual);//, columnOut);
+    dualRow.updateDual(thetaDual);
     if (slice_PRICE) {
       for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].update_dual(thetaDual);//, columnOut);
+        slice_dualRow[i].updateDual(thetaDual);
     }
   }
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
-  shift_back(workHMO, columnOut);  // model->shiftBack(columnOut);
+  shift_back(workHMO, columnOut);
 
   /**
    * 2. Apply global bound flip
    */
-  dualRow.update_flip(multi_finish[multi_nFinish].columnBFRT);
+  dualRow.updateFlip(multi_finish[multi_nFinish].columnBFRT);
 
   /**
    * 3. Apply local bound flips
@@ -741,8 +737,8 @@ void HDual::majorUpdatePrimal() {
     }
   } else {
     // Update primal and pivots
-    dualRHS.update_primal(&columnBFRT, 1);
-    dualRHS.update_infeasList(&columnBFRT);
+    dualRHS.updatePrimal(&columnBFRT, 1);
+    dualRHS.updateInfeasList(&columnBFRT);
 
     // Update any edge weights (except weights for pivotal rows) and infeasList
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -759,7 +755,7 @@ void HDual::majorUpdatePrimal() {
 	dualRHS.updateWeightDevex(Col, new_pivotal_edge_weight);
 	num_devex_iterations++;
       }
-      dualRHS.update_infeasList(Col);
+      dualRHS.updateInfeasList(Col);
     }
   }
 
@@ -768,7 +764,7 @@ void HDual::majorUpdatePrimal() {
     MFinish* finish = &multi_finish[iFn];
     int iRow = finish->rowOut;
     double value = baseValue[iRow] - finish->basicBound + finish->basicValue;
-    dualRHS.update_pivots(iRow, value);
+    dualRHS.updatePivots(iRow, value);
   }
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {

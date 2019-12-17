@@ -622,7 +622,7 @@ void HDual::solvePhase2() {
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
 		    "dual-phase-2-start\n");
   // Collect free variables
-  dualRow.create_Freelist();
+  dualRow.createFreelist();
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
   for (;;) {
@@ -799,7 +799,7 @@ void HDual::rebuild() {
   // Collect primal infeasible as a list
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
   dualRHS.createArrayOfPrimalInfeasibilities();
-  dualRHS.create_infeasList(columnDensity);
+  dualRHS.createInfeasList(columnDensity);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
   timer.start(simplex_info.clock_[ComputePrIfsClock]);
@@ -1378,7 +1378,7 @@ void HDual::chooseRow() {
   // detected
   for (;;) {
     // Choose the index of a good row to leave the basis
-    dualRHS.choose_normal(&rowOut);
+    dualRHS.chooseNormal(&rowOut);
     if (rowOut == -1) {
       // No index found so may be dual optimal. By setting
       // invertHint>0 all subsequent methods in the iteration will
@@ -1669,24 +1669,24 @@ void HDual::chooseColumn(HVector* row_ep) {
   //
   // CHUZC
   //
-  // Section 0: Clear data and call create_Freemove to set a value of
+  // Section 0: Clear data and call createFreemove to set a value of
   // nonbasicMove for all free columns to prevent their dual values
   // from being changed.
   timer.start(simplex_info.clock_[Chuzc0Clock]);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
-  dualRow.create_Freemove(row_ep);
+  dualRow.createFreemove(row_ep);
   timer.stop(simplex_info.clock_[Chuzc0Clock]);
   //
   // Section 1: Pack row_ap and row_ep, then determine the possible
   // variables - candidates for CHUZC
   timer.start(simplex_info.clock_[Chuzc1Clock]);
   // Pack row_ap into the packIndex/Value of HDualRow
-  dualRow.choose_makepack(&row_ap, 0);  
+  dualRow.chooseMakepack(&row_ap, 0);  
   // Pack row_ep into the packIndex/Value of HDualRow
-  dualRow.choose_makepack(row_ep, solver_num_col);  
+  dualRow.chooseMakepack(row_ep, solver_num_col);  
   // Determine the possible variables - candidates for CHUZC
-  dualRow.choose_possible();  
+  dualRow.choosePossible();  
   timer.stop(simplex_info.clock_[Chuzc1Clock]);
   //
   // Take action if the step to an expanded bound is not positive, or
@@ -1699,7 +1699,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   //
   // Sections 2 and 3: Perform (bound-flipping) ratio test. This can
   // fail if the dual values are excessively large
-  bool chooseColumnFail = dualRow.choose_final();
+  bool chooseColumnFail = dualRow.chooseFinal();
   if (chooseColumnFail) {
     invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
     return;
@@ -1707,7 +1707,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   //
   // Section 4: Reset the nonbasicMove values for free columns
   timer.start(simplex_info.clock_[Chuzc4Clock]);
-  dualRow.delete_Freemove();
+  dualRow.deleteFreemove();
   timer.stop(simplex_info.clock_[Chuzc4Clock]);
   // Record values for basis change, checking for numerical problems and update
   // of dual variables
@@ -1746,15 +1746,15 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   timer.start(simplex_info.clock_[Chuzc0Clock]);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
-  dualRow.create_Freemove(row_ep);
+  dualRow.createFreemove(row_ep);
   timer.stop(simplex_info.clock_[Chuzc0Clock]);
 
   timer.start(simplex_info.clock_[PriceChuzc1Clock]);
   // Row_ep:         PACK + CC1
 #pragma omp task
   {
-    dualRow.choose_makepack(row_ep, solver_num_col);
-    dualRow.choose_possible();
+    dualRow.chooseMakepack(row_ep, solver_num_col);
+    dualRow.choosePossible();
   }
 
   // Row_ap: PRICE + PACK + CC1
@@ -1766,15 +1766,15 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
 
       slice_dualRow[i].clear();
       slice_dualRow[i].workDelta = deltaPrimal;
-      slice_dualRow[i].choose_makepack(&slice_row_ap[i], slice_start[i]);
-      slice_dualRow[i].choose_possible();
+      slice_dualRow[i].chooseMakepack(&slice_row_ap[i], slice_start[i]);
+      slice_dualRow[i].choosePossible();
     }
   }
 #pragma omp taskwait
 
   // Join CC1 results here
   for (int i = 0; i < slice_num; i++) {
-    dualRow.choose_joinpack(&slice_dualRow[i]);
+    dualRow.chooseJoinpack(&slice_dualRow[i]);
   }
 
   timer.stop(simplex_info.clock_[PriceChuzc1Clock]);
@@ -1787,14 +1787,14 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   }
 
   // Choose column 2, This only happens if didn't go out
-  bool chooseColumnFail = dualRow.choose_final();
+  bool chooseColumnFail = dualRow.chooseFinal();
   if (chooseColumnFail) {
     invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
     return;
   }
 
   timer.start(simplex_info.clock_[Chuzc4Clock]);
-  dualRow.delete_Freemove();
+  dualRow.deleteFreemove();
   timer.stop(simplex_info.clock_[Chuzc4Clock]);
 
   columnIn = dualRow.workPivot;
@@ -1858,7 +1858,7 @@ void HDual::updateFtranBFRT() {
   if (invertHint) return;
 
   // Only time updateFtranBFRT if dualRow.workCount > 0;
-  // If dualRow.workCount = 0 then dualRow.update_flip(&columnBFRT)
+  // If dualRow.workCount = 0 then dualRow.updateFlip(&columnBFRT)
   // merely clears columnBFRT so no FTRAN is performed
   bool time_updateFtranBFRT = dualRow.workCount > 0;
 
@@ -1866,7 +1866,7 @@ void HDual::updateFtranBFRT() {
     timer.start(simplex_info.clock_[FtranBfrtClock]);
   }
 
-  dualRow.update_flip(&columnBFRT);
+  dualRow.updateFlip(&columnBFRT);
 
   if (columnBFRT.count) {
 #ifdef HiGHSDEV
@@ -1947,15 +1947,13 @@ void HDual::updateDual() {
     // Little to do if thetaDual is zero
     shift_cost(workHMO, columnIn, -workDual[columnIn]);
   else {
-    // Update the dual values (if packCount>0)
-    dualRow.update_dual(thetaDual);//, columnOut);
+    // Update the whole vector of dual values
+    dualRow.updateDual(thetaDual);
     if (workHMO.simplex_info_.simplex_strategy != SIMPLEX_STRATEGY_DUAL_PLAIN &&
         slice_PRICE) {
-      // Update the dual variables slice-by-slice [presumably
-      // nothing is done in the previous call to
-      // dualRow.update_dual. TODO: Check with Qi
+      // Update the slice-by-slice copy of dual variables
       for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].update_dual(thetaDual);//, columnOut);
+        slice_dualRow[i].updateDual(thetaDual);
     }
   }
   workDual[columnIn] = 0;
@@ -1975,13 +1973,13 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   }
   // NB DSE_Vector is only computed if dual_edge_weight_mode ==
   // DualEdgeWeightMode::STEEPEST_EDGE Update - primal and weight
-  dualRHS.update_primal(&columnBFRT, 1);
-  dualRHS.update_infeasList(&columnBFRT);
+  dualRHS.updatePrimal(&columnBFRT, 1);
+  dualRHS.updateInfeasList(&columnBFRT);
   double x_out = baseValue[rowOut];
   double l_out = baseLower[rowOut];
   double u_out = baseUpper[rowOut];
   thetaPrimal = (x_out - (deltaPrimal < 0 ? l_out : u_out)) / alpha;
-  dualRHS.update_primal(&column, thetaPrimal);
+  dualRHS.updatePrimal(&column, thetaPrimal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     const double new_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
     const double Kai = -2 / alpha;
@@ -2006,7 +2004,7 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
     dualRHS.workEdWt[rowOut] = new_pivotal_edge_weight;
     num_devex_iterations++;
   }
-  dualRHS.update_infeasList(&column);
+  dualRHS.updateInfeasList(&column);
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     double lc_OpRsDensity = (double)DSE_Vector->count / solver_num_row;
@@ -2050,12 +2048,12 @@ void HDual::updatePivots() {
   update_matrix(workHMO, columnIn, columnOut);
   //
   // Delete Freelist entry for columnIn
-  dualRow.delete_Freelist(columnIn);
+  dualRow.deleteFreelist(columnIn);
   //
   // Update the primal value for the row where the basis change has
   // occurred, and set the corresponding primal infeasibility value in
   // dualRHS.work_infeasibility
-  dualRHS.update_pivots(
+  dualRHS.updatePivots(
       rowOut, workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock =

@@ -55,7 +55,7 @@ class HDualRow {
    *
    * Offset of numCol is used when packing row_ep
    */
-  void choose_makepack(const HVector* row,  //!< Row to be packed
+  void chooseMakepack(const HVector* row,  //!< Row to be packed
                        const int offset     //!< Offset for indices
   );
   /**
@@ -63,13 +63,13 @@ class HDualRow {
    *
    * TODO: Check with Qi what this is doing
    */
-  void choose_possible();
+  void choosePossible();
 
   /**
    * @brief Join pack of possible candidates in this row with possible
    * candidates in otherRow
    */
-  void choose_joinpack(
+  void chooseJoinpack(
       const HDualRow* otherRow  //!< Other row to join with this
   );
   /**
@@ -78,42 +78,42 @@ class HDualRow {
    * Can fail when there are excessive dual vaules due to EXPAND
    * perturbation not being relatively too small
    */
-  bool choose_final();
+  bool chooseFinal();
 
   /**
    * @brief Update bounds when flips have occurred, and accumulate the
    * RHS for the FTRAN required to update the primal values after BFRT
    */
-  void update_flip(HVector* bfrtColumn  //!< RHS for FTRAN BFRT
+  void updateFlip(HVector* bfrtColumn  //!< RHS for FTRAN BFRT
   );
   /**
    * @brief Update the dual values
    */
-  void update_dual(
+  void updateDual(
       double theta  //!< Multiple of pivotal row to add int to duals
       //      int columnOut  //!< Index of leaving column
   );
   /**
    * @brief Create a list of nonbasic free columns
    */
-  void create_Freelist();
+  void createFreelist();
 
   /**
    * @brief Set a value of nonbasicMove for all free columns to
    * prevent their dual values from being changed
    */
-  void create_Freemove(HVector* row_ep  //!< Row of \f$B^{-1}\f$ to be used to
+  void createFreemove(HVector* row_ep  //!< Row of \f$B^{-1}\f$ to be used to
                                         //!< compute pivotal row entry
   );
   /**
    * @brief Reset the nonbasicMove values for free columns
    */
-  void delete_Freemove();
+  void deleteFreemove();
 
   /**
    * @brief Delete the list of nonbasic free columns
    */
-  void delete_Freelist(int iColumn  //!< Index of column to remove from Freelist
+  void deleteFreelist(int iColumn  //!< Index of column to remove from Freelist
   );
 
   /**

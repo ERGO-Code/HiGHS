@@ -79,7 +79,8 @@ enum iClockSimplex {
   UpdateDualClock,     //!< Update of dual values
   UpdatePrimalClock,   //!< Update of primal values
   DevexIzClock,        //!< Initialisation of new Devex framework
-  UpdateWeightClock,   //!< Update of DSE or Devex weights
+  DevexUpdateWeightClock, //!< Update Devex weights
+  DseUpdateWeightClock,   //!< Update DSE weights
   UpdatePivotsClock,   //!< Update indices of basic and nonbasic after basis
                        //!< change
   UpdateFactorClock,   //!< Update the representation of \f$B^{-1}\f$
@@ -174,8 +175,10 @@ class SimplexTimer {
     simplex_info.clock_[UpdatePrimalClock] =
         timer.clock_def("UPDATE_PRIMAL", "UPP");
     simplex_info.clock_[DevexIzClock] = timer.clock_def("DEVEX_IZ", "DIZ");
-    simplex_info.clock_[UpdateWeightClock] =
-        timer.clock_def("UPDATE_WEIGHT", "UPW");
+    simplex_info.clock_[DevexUpdateWeightClock] =
+        timer.clock_def("DEVEX_UPDATE_WEIGHT", "UWS");
+    simplex_info.clock_[DseUpdateWeightClock] =
+        timer.clock_def("DSE_UPDATE_WEIGHT", "UWD");
     simplex_info.clock_[UpdatePivotsClock] =
         timer.clock_def("UPDATE_PIVOTS", "UPP");
     simplex_info.clock_[UpdateFactorClock] =
@@ -240,8 +243,9 @@ class SimplexTimer {
         Chuzc1Clock,       Chuzc2Clock,         Chuzc3Clock,
         Chuzc4Clock,       DevexWtClock,        FtranClock,
         FtranBfrtClock,    FtranDseClock,       UpdateDualClock,
-        UpdatePrimalClock, UpdateWeightClock,   DevexIzClock,
-        UpdatePivotsClock, UpdateFactorClock,   UpdateMatrixClock};
+        UpdatePrimalClock, DevexUpdateWeightClock,   DseUpdateWeightClock,   
+        DevexIzClock,      UpdatePivotsClock,   UpdateFactorClock,
+        UpdateMatrixClock};
     report_simplex_clock_list("SimplexInner", simplex_clock_list, model_object);
   };
 
@@ -260,8 +264,9 @@ class SimplexTimer {
         Chuzc4Clock,       DevexWtClock,        FtranClock,
         FtranBfrtClock,    FtranDseClock,       FtranMixParClock,
 	FtranMixFinalClock,UpdateRowClock,      UpdateDualClock,
-        UpdatePrimalClock, UpdateWeightClock,   DevexIzClock,
-        UpdatePivotsClock, UpdateFactorClock,   UpdateMatrixClock};
+        UpdatePrimalClock, DevexUpdateWeightClock,   DseUpdateWeightClock,
+        DevexIzClock,      UpdatePivotsClock, UpdateFactorClock,
+	UpdateMatrixClock};
     report_simplex_clock_list("SimplexMultiInner", simplex_clock_list, model_object);
   };
 };

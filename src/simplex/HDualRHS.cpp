@@ -40,7 +40,7 @@ void HDualRHS::setup() {
   partSwitch = 0;
 }
 
-void HDualRHS::choose_normal(int* chIndex) {
+void HDualRHS::chooseNormal(int* chIndex) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Moved the following to the top to avoid starting the clock for a trivial
@@ -53,7 +53,7 @@ void HDualRHS::choose_normal(int* chIndex) {
     return;
   }
 
-  // Since choose_normal calls itself, only start the clock if it's not
+  // Since chooseNormal calls itself, only start the clock if it's not
   // currently running
   bool keepTimerRunning =
       timer.clock_start[simplex_info.clock_[ChuzrDualClock]] < 0;
@@ -119,19 +119,19 @@ void HDualRHS::choose_normal(int* chIndex) {
       createListAgain = 1;
     }
     if (createListAgain) {
-      create_infeasList(0);
-      choose_normal(&bestIndex);
+      createInfeasList(0);
+      chooseNormal(&bestIndex);
     }
     *chIndex = bestIndex;
   }
-  // Since choose_normal calls itself, only stop the clock if it's not currently
+  // Since chooseNormal calls itself, only stop the clock if it's not currently
   // running
   if (!keepTimerRunning) {
     timer.stop(simplex_info.clock_[ChuzrDualClock]);
   }
 }
 
-void HDualRHS::choose_multi_global(int* chIndex, int* chCount, int chLimit) {
+void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[ChuzrDualClock]);
@@ -192,22 +192,22 @@ void HDualRHS::choose_multi_global(int* chIndex, int* chCount, int chLimit) {
   timer.stop(simplex_info.clock_[ChuzrDualClock]);
 }
 
-void HDualRHS::choose_multi_HGauto(int* chIndex, int* chCount, int chLimit) {
+void HDualRHS::chooseMultiHyperGraphAuto(int* chIndex, int* chCount, int chLimit) {
   // Automatically decide to use partition or not
   if (partSwitch)
-    choose_multi_HGpart(chIndex, chCount, chLimit);
+    chooseMultiHyperGraphPart(chIndex, chCount, chLimit);
   else
-    choose_multi_global(chIndex, chCount, chLimit);
+    chooseMultiGlobal(chIndex, chCount, chLimit);
 }
 
-void HDualRHS::choose_multi_HGpart(int* chIndex, int* chCount, int chLimit) {
+void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount, int chLimit) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[ChuzrDualClock]);
 
   // Force to use partition method, unless doesn't exist
   if (partNum != chLimit) {
-    choose_multi_global(chIndex, chCount, chLimit);
+    chooseMultiGlobal(chIndex, chCount, chLimit);
     partSwitch = 0;
     timer.stop(simplex_info.clock_[ChuzrDualClock]);
     return;
@@ -284,7 +284,7 @@ void HDualRHS::choose_multi_HGpart(int* chIndex, int* chCount, int chLimit) {
   timer.stop(simplex_info.clock_[ChuzrDualClock]);
 }
 
-void HDualRHS::update_primal(HVector* column, double theta) {
+void HDualRHS::updatePrimal(HVector* column, double theta) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[UpdatePrimalClock]);
@@ -338,7 +338,7 @@ void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pi
 					    double Kai, double* dseArray) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[UpdateWeightClock]);
+  timer.start(simplex_info.clock_[DseUpdateWeightClock]);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
@@ -360,13 +360,13 @@ void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pi
       if (workEdWt[iRow] < min_dual_steepest_edge_weight) workEdWt[iRow] = min_dual_steepest_edge_weight;
     }
   }
-  timer.stop(simplex_info.clock_[UpdateWeightClock]);
+  timer.stop(simplex_info.clock_[DseUpdateWeightClock]);
 }
 // Update the Devex weights
 void HDualRHS::updateWeightDevex(HVector* column, const double new_pivotal_edge_weight) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[UpdateWeightClock]);
+  timer.start(simplex_info.clock_[DevexUpdateWeightClock]);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
@@ -386,10 +386,10 @@ void HDualRHS::updateWeightDevex(HVector* column, const double new_pivotal_edge_
       workEdWt[iRow] = max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
     }
   }
-  timer.stop(simplex_info.clock_[UpdateWeightClock]);
+  timer.stop(simplex_info.clock_[DevexUpdateWeightClock]);
 }
 
-void HDualRHS::update_pivots(int iRow, double value) {
+void HDualRHS::updatePivots(int iRow, double value) {
   // Update the primal value for the row (iRow) where the basis change
   // has occurred, and set the corresponding squared primal
   // infeasibility value in work_infeasibility
@@ -411,7 +411,7 @@ void HDualRHS::update_pivots(int iRow, double value) {
     work_infeasibility[iRow] = fabs(pivotInfeas);
 }
 
-void HDualRHS::update_infeasList(HVector* column) {
+void HDualRHS::updateInfeasList(HVector* column) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   const int columnCount = column->count;
@@ -468,7 +468,7 @@ void HDualRHS::createArrayOfPrimalInfeasibilities() {
   }
 }
 
-void HDualRHS::create_infeasList(double columnDensity) {
+void HDualRHS::createInfeasList(double columnDensity) {
   int numRow = workHMO.simplex_lp_.numRow_;
   double* dwork = &workEdWtFull[0];
 
@@ -522,17 +522,9 @@ void HDualRHS::create_infeasList(double columnDensity) {
         }
       }
     }
-
-    //        cout
-    //                <<
-    //                "======================================================>
-    //                WORK COUNT = "
-    //                << workCount << "\t icutoff = " << icutoff << "\t maxMerit
-    //                = "
-    //                << maxMerit << "\t cutMerit = " << cutMerit << endl;
   }
 
-  // 3. If there is still too much candidates: disable them
+  // 3. If there are still too many candidates: disable them
   if (workCount > 0.2 * numRow) {
     workCount = -numRow;
     workCutoff = 0;

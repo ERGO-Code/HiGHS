@@ -64,7 +64,7 @@ void HDualRow::clear() {
   workCount = 0;
 }
 
-void HDualRow::choose_makepack(const HVector* row, const int offset) {
+void HDualRow::chooseMakepack(const HVector* row, const int offset) {
   /**
    * Pack the indices and values for the row
    *
@@ -91,11 +91,11 @@ void HDualRow::choose_makepack(const HVector* row, const int offset) {
       packValue[packCount++] = value;
     }
   } else {
-    printf("HDualRow::choose_makepack: Cannot handle rowPWd = %d\n", rowPWd);
+    printf("HDualRow::chooseMakepack: Cannot handle rowPWd = %d\n", rowPWd);
   }
 }
 
-void HDualRow::choose_possible() {
+void HDualRow::choosePossible() {
   /**
    * Determine the possible variables - candidates for CHUZC
    * TODO: Check with Qi what this is doing
@@ -119,7 +119,7 @@ void HDualRow::choose_possible() {
   }
 }
 
-void HDualRow::choose_joinpack(const HDualRow* otherRow) {
+void HDualRow::chooseJoinpack(const HDualRow* otherRow) {
   /**
    * Join pack of possible candidates in this row with possible
    * candidates in otherRow
@@ -131,7 +131,7 @@ void HDualRow::choose_joinpack(const HDualRow* otherRow) {
   workTheta = min(workTheta, otherRow->workTheta);
 }
 
-bool HDualRow::choose_final() {
+bool HDualRow::chooseFinal() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   /**
@@ -316,7 +316,7 @@ bool HDualRow::choose_final() {
   return false;
 }
 
-void HDualRow::update_flip(HVector* bfrtColumn) {
+void HDualRow::updateFlip(HVector* bfrtColumn) {
   //  checkDualObjectiveValue("Before update_flip");
   double* workDual = &workHMO.simplex_info_.workDual_[0];  //
   //  double *workLower = &workHMO.simplex_info_.workLower_[0];
@@ -342,20 +342,16 @@ void HDualRow::update_flip(HVector* bfrtColumn) {
   //  &workHMO.>checkDualObjectiveValue("After  update_flip");
 }
 
-void HDualRow::update_dual(double theta
-			   //, int columnOut
-			   ) {
+void HDualRow::updateDual(double theta) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   //  &workHMO.>checkDualObjectiveValue("Before update_dual");
   timer.start(simplex_info.clock_[UpdateDualClock]);
   double* workDual = &workHMO.simplex_info_.workDual_[0];
-  //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
     // Identify the change to the dual objective
     int iCol = packIndex[i];
-    //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
     double iColWorkValue = workHMO.simplex_info_.workValue_[iCol];
     double dlDuObj =
@@ -366,7 +362,7 @@ void HDualRow::update_dual(double theta
   timer.stop(simplex_info.clock_[UpdateDualClock]);
 }
 
-void HDualRow::create_Freelist() {
+void HDualRow::createFreelist() {
   freeList.clear();
   const int* nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   int ckFreeListSize = 0;
@@ -391,7 +387,7 @@ void HDualRow::create_Freelist() {
   }
 }
 
-void HDualRow::create_Freemove(HVector* row_ep) {
+void HDualRow::createFreemove(HVector* row_ep) {
   // TODO: Check with Qi what this is doing and why it's expensive
   if (!freeList.empty()) {
     double Ta = workHMO.simplex_info_.update_count < 10
@@ -412,7 +408,7 @@ void HDualRow::create_Freemove(HVector* row_ep) {
     }
   }
 }
-void HDualRow::delete_Freemove() {
+void HDualRow::deleteFreemove() {
   if (!freeList.empty()) {
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
@@ -423,7 +419,7 @@ void HDualRow::delete_Freemove() {
   }
 }
 
-void HDualRow::delete_Freelist(int iColumn) {
+void HDualRow::deleteFreelist(int iColumn) {
   if (!freeList.empty()) {
     if (freeList.count(iColumn)) freeList.erase(iColumn);
     //  int freeListSa = *freeList.begin();
