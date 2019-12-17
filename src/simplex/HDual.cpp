@@ -1548,13 +1548,15 @@ bool HDual::newDevexFramework(const double updated_edge_weight) {
   const bool accept_it = num_devex_iterations <= i_te;
   bool return_new_devex_framework;
   return_new_devex_framework = !accept_ratio || !accept_it;
+  /*
   if (return_new_devex_framework) {
     printf("New Devex framework: (Iter %d) updated weight = %11.4g; computed weight = %11.4g; Devex ratio = %11.4g\n",
 	   workHMO.scaled_solution_params_.simplex_iteration_count,
     	   updated_edge_weight, computed_edge_weight, devex_ratio);
     return true;
   }
-  return !accept_ratio || !accept_it;
+  */
+  return return_new_devex_framework;
 }
 
 void HDual::chooseColumn(HVector* row_ep) {
@@ -1922,7 +1924,6 @@ void HDual::updateVerify() {
   // performed
   if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0) {
     invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
-    printf("updateVerify: INVERT_HINT_POSSIBLY_SINGULAR_BASIS\n");
   }
 }
 
@@ -1973,27 +1974,27 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   thetaPrimal = (x_out - (deltaPrimal < 0 ? l_out : u_out)) / alpha;
   dualRHS.update_primal(&column, thetaPrimal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    const double updated_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
+    const double new_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
     const double Kai = -2 / alpha;
-    dualRHS.updateWeightDualSteepestEdge(&column, updated_pivotal_edge_weight, Kai,
+    dualRHS.updateWeightDualSteepestEdge(&column, new_pivotal_edge_weight, Kai,
 					 &DSE_Vector->array[0]);
-    dualRHS.workEdWt[rowOut] = updated_pivotal_edge_weight;
+    dualRHS.workEdWt[rowOut] = new_pivotal_edge_weight;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     // Pivotal row is for the current basis: weights are required for
     // the next basis so have to divide the current (exact) weight by
     // the pivotal value
-    double updated_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
-    updated_pivotal_edge_weight = max(1.0, updated_pivotal_edge_weight);
+    double new_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
+    new_pivotal_edge_weight = max(1.0, new_pivotal_edge_weight);
     // nw_wt is max(workEdWt[iRow], NewExactWeight*columnArray[iRow]^2);
     //
-    // But NewExactWeight is updated_pivotal_edge_weight = max(1.0, dualRHS.workEdWt[rowOut]
+    // But NewExactWeight is new_pivotal_edge_weight = max(1.0, dualRHS.workEdWt[rowOut]
     // / (alpha * alpha))
     //
-    // so nw_wt = max(workEdWt[iRow], updated_pivotal_edge_weight*columnArray[iRow]^2);
+    // so nw_wt = max(workEdWt[iRow], new_pivotal_edge_weight*columnArray[iRow]^2);
     //
     // Update rest of weights
-    dualRHS.updateWeightDevex(&column, updated_pivotal_edge_weight);
-    dualRHS.workEdWt[rowOut] = updated_pivotal_edge_weight;
+    dualRHS.updateWeightDevex(&column, new_pivotal_edge_weight);
+    dualRHS.workEdWt[rowOut] = new_pivotal_edge_weight;
     num_devex_iterations++;
   }
   dualRHS.update_infeasList(&column);

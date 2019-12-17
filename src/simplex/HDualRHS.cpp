@@ -334,7 +334,7 @@ void HDualRHS::update_primal(HVector* column, double theta) {
 }
 
 // Update the DSE weights
-void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double updated_pivotal_edge_weight,
+void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pivotal_edge_weight,
 					    double Kai, double* dseArray) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -349,21 +349,21 @@ void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double update
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       const double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] += aa_iRow * (updated_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
+      workEdWt[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
       if (workEdWt[iRow] < min_dual_steepest_edge_weight) workEdWt[iRow] = min_dual_steepest_edge_weight;
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       const int iRow = columnIndex[i];
       const double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] += aa_iRow * (updated_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
+      workEdWt[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
       if (workEdWt[iRow] < min_dual_steepest_edge_weight) workEdWt[iRow] = min_dual_steepest_edge_weight;
     }
   }
   timer.stop(simplex_info.clock_[UpdateWeightClock]);
 }
 // Update the Devex weights
-void HDualRHS::updateWeightDevex(HVector* column, const double updated_pivotal_edge_weight) {
+void HDualRHS::updateWeightDevex(HVector* column, const double new_pivotal_edge_weight) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[UpdateWeightClock]);
@@ -377,13 +377,13 @@ void HDualRHS::updateWeightDevex(HVector* column, const double updated_pivotal_e
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] = max(workEdWt[iRow], updated_pivotal_edge_weight * aa_iRow * aa_iRow);
+      workEdWt[iRow] = max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       int iRow = columnIndex[i];
       double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] = max(workEdWt[iRow], updated_pivotal_edge_weight * aa_iRow * aa_iRow);
+      workEdWt[iRow] = max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
     }
   }
   timer.stop(simplex_info.clock_[UpdateWeightClock]);
