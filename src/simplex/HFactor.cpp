@@ -279,10 +279,10 @@ int HFactor::build() {
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorInvert]);
 #endif
-  HighsTimer timer;
-  timer.reset();
+  HighsTimer build_timer;
+  build_timer.reset();
   build_syntheticTick = 0;
-  build_realTick = timer.getTick();
+  build_realTick = build_timer.getTick();
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorInvertSimple]);
 #endif
@@ -323,7 +323,7 @@ int HFactor::build() {
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorInvertFinish]);
 #endif
-  build_realTick = timer.getTick() - build_realTick;
+  build_realTick = build_timer.getTick() - build_realTick;
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow-1] + numRow;
   
