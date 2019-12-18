@@ -405,7 +405,7 @@ void HDual::init(int num_threads) {
       multi_choice[i].column.setup(solver_num_row);
       multi_choice[i].columnBFRT.setup(solver_num_row);
     }
-    const int pass_num_slice = multi_num - 1;
+    const int pass_num_slice = max(multi_num - 1, 1);
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
       HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
@@ -922,6 +922,12 @@ void HDual::iterate() {
   timer.start(simplex_info.clock_[IterateChuzcClock]);
   chooseColumn(&row_ep);
   timer.stop(simplex_info.clock_[IterateChuzcClock]);
+
+  const bool rp_iter = false;
+  if (rp_iter)
+  printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
+	 workHMO.scaled_solution_params_.simplex_iteration_count,
+	 rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
 
   timer.start(simplex_info.clock_[IterateFtranClock]);
   updateFtranBFRT();
@@ -1933,6 +1939,13 @@ void HDual::updateVerify() {
 		      numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
     //#endif
     invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+  } else if (numericalTrouble > 1e-8 && workHMO.simplex_info_.update_count > 0) {
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		    "HDual::updateVerify has ALMOST identified numerical trouble solving LP %s in iteration %d: "
+		      "Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g] so reinvert",
+		      workHMO.simplex_lp_.model_name_.c_str(),
+		      workHMO.scaled_solution_params_.simplex_iteration_count,
+		      numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
   }
 }
 
@@ -2056,12 +2069,11 @@ void HDual::updatePivots() {
   dualRHS.updatePivots(
       rowOut, workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
-  bool reinvert_syntheticClock =
-      total_syntheticTick >= factor->build_syntheticTick;
-#ifdef HiGHSDEV
-  //    bool reinvert_syntheticClock = total_fake >=
-  //    factor->build_syntheticTick;
-#endif
+  const double build_syntheticTick = factor->build_syntheticTick;
+  bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick;
+  printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = factor->build_syntheticTick: (%1d, %4d)\n",
+	 total_syntheticTick, build_syntheticTick,
+	 reinvert_syntheticClock, workHMO.simplex_info_.update_count);
   if (reinvert_syntheticClock && workHMO.simplex_info_.update_count >= 50) {
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
   }

@@ -106,7 +106,7 @@ enum InvertHint {
 
 const int PARALLEL_THREADS_DEFAULT = 8;
 const int DUAL_TASKS_MIN_THREADS = 3;
-const int DUAL_MULTI_MIN_THREADS = 2;
+const int DUAL_MULTI_MIN_THREADS = 1;//2;
 
 // TODO: Set this false tactically to make mip interface more
 // efficient by preventing reinversion on optimality in phase 1 or

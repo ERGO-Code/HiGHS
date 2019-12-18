@@ -330,7 +330,7 @@ class HFactor {
   // Timer
   HighsTimer timer_;
   // Values of iClock for factor timing clocks
-  vector<int> factor_clock_;
+  vector<int> clock_;
 #endif
 
   // Implementation

@@ -55,6 +55,14 @@ void HDual::iterateMulti() {
     return;
   }
 
+  const bool rp_iter = false;
+  if (rp_iter)
+  printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
+	 workHMO.scaled_solution_params_.simplex_iteration_count,
+	 rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
+
+
+
   minorUpdate();
   majorUpdate();
 }
@@ -274,9 +282,11 @@ void HDual::minorUpdate() {
   minorUpdatePivots();
   minorUpdateRows();
   if (minor_new_devex_framework) {
+    /*
     printf("Iter %7d (Major %7d): Minor new Devex framework\n",
 	   workHMO.scaled_solution_params_.simplex_iteration_count,
 	   multi_iteration);
+    */
     minorInitialiseDevexFramework();
   }
   multi_nFinish++;
@@ -822,8 +832,25 @@ void HDual::majorUpdateFactor() {
   iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].rowOut;
   if (multi_nFinish > 0)
     update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
-  if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 &&
-      workHMO.simplex_info_.update_count > 200)
+  // Determine whether to reinvert based on the synthetic clock
+  //  const double total_INVERT_TICK_mu = 1.5; // Original
+  const double total_INVERT_TICK_mu = 1.5;
+  //  const int min_update_count = 201; // Original
+  const int min_update_count = 50;
+
+  if (total_INVERT_TICK != factor->build_syntheticTick) {
+    printf("STRANGE: total_INVERT_TICK = %11.4g != %11.4g = factor->build_syntheticTick\n",
+	   total_INVERT_TICK, factor->build_syntheticTick);
+  }
+
+  const double total_syntheticTick = total_FT_inc_TICK;
+  const double build_syntheticTick = total_INVERT_TICK * total_INVERT_TICK_mu;
+  bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick ;
+  printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = (%11.4g*%g) = factor->build_syntheticTick: (%1d, %4d)\n",
+	 total_syntheticTick, build_syntheticTick, total_INVERT_TICK, total_INVERT_TICK_mu,
+	 reinvert_syntheticClock, workHMO.simplex_info_.update_count);
+
+  if (reinvert_syntheticClock && workHMO.simplex_info_.update_count >= min_update_count)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
   delete[] iRows;
 }
