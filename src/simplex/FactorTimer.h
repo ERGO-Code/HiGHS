@@ -113,6 +113,8 @@ class FactorTimer {
   
   void reportFactorLevel2Clock(HighsTimer& timer, std::vector<int>& clock) {
     std::vector<int> factor_clock_list{
+      FactorInvertSimple, FactorInvertKernel,
+	FactorInvertDeficient, FactorInvertFinish,
       FactorFtranLowerAPF, FactorFtranLowerSps, FactorFtranLowerHys,
 	FactorFtranUpperFT, FactorFtranUpperMPF, FactorFtranUpperSps,
 	FactorFtranUpperHys, FactorFtranUpperPF,
