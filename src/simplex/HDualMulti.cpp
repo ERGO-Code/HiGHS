@@ -514,15 +514,19 @@ void HDual::majorUpdate() {
     double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
     numericalTrouble = abs_alpha_diff / compare;
     // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
+    const bool rp_numericalTrouble = false;
+    if (rp_numericalTrouble) {
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		      "HDual::majorUpdate Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g]",
+		      numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
+    }
     if (numericalTrouble > 1e-8 && workHMO.simplex_info_.update_count > 0) {
       //#ifdef HiGHSDEV
       HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		      "HDual::majorUpdate has identified numerical trouble solving LP %s in iteration %d(%d): "
-		      "Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g] so reinvert",
+		      "HDual::majorUpdate has identified numerical trouble solving LP %s in iteration %d(%d): so reinvert",
 		      workHMO.simplex_lp_.model_name_.c_str(),
 		      workHMO.scaled_solution_params_.simplex_iteration_count,
-		      multi_nFinish,
-		      numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
+		      multi_nFinish);
       //#endif
       invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
       // if (startUpdate > 0) {
@@ -834,7 +838,7 @@ void HDual::majorUpdateFactor() {
     update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
   // Determine whether to reinvert based on the synthetic clock
   //  const double total_INVERT_TICK_mu = 1.5; // Original
-  const double total_INVERT_TICK_mu = 1.5;
+  const double total_INVERT_TICK_mu = 1.0;
   //  const int min_update_count = 201; // Original
   const int min_update_count = 50;
 
@@ -846,6 +850,8 @@ void HDual::majorUpdateFactor() {
   const double total_syntheticTick = total_FT_inc_TICK;
   const double build_syntheticTick = total_INVERT_TICK * total_INVERT_TICK_mu;
   bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick ;
+  const bool rp_reinvert_syntheticClock = true;
+  if (rp_reinvert_syntheticClock)
   printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = (%11.4g*%g) = factor->build_syntheticTick: (%1d, %4d)\n",
 	 total_syntheticTick, build_syntheticTick, total_INVERT_TICK, total_INVERT_TICK_mu,
 	 reinvert_syntheticClock, workHMO.simplex_info_.update_count);
