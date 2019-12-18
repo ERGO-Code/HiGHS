@@ -36,6 +36,12 @@
 #include "simplex/SimplexTimer.h"
 
 #ifdef HiGHSDEV
+#ifdef OPENMP
+#include "omp.h"
+#endif
+#endif
+
+#ifdef HiGHSDEV
 void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   
@@ -260,9 +266,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
                       simplex_info.primal_phase2_iteration_count,
                       scaled_solution_params.simplex_iteration_count);
     }
+    int omp_max_threads = 0;
+#ifdef OPENMP
+  omp_max_threads = omp_get_max_threads();
 #endif
-    simplex_timer.reportSimplexInnerClock(highs_model_object);
-    highs_model_object.factor_.reportTimer();
+  if (omp_max_threads <= 1) highs_model_object.factor_.reportTimer();
+#endif
   }
 
   if (simplex_info.analyseLpSolution) {

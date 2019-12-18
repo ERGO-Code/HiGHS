@@ -21,6 +21,12 @@
 #include "HConfig.h"
 #include "lp_data/HConst.h"
 
+/*
+int getOmpNumThreads() {
+  return omp_get_num_threads()
+}
+*/
+
 double getNorm2(const std::vector<double> values) {
   double sum = 0;
   int values_size = values.size();

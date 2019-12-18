@@ -322,11 +322,17 @@ class HFactor {
   vector<int> PFindex;
   vector<double> PFvalue;
 
+  // Record of maximum number of OMP threads. If OMP is available then
+  // it's set to the correct positive number in HFactor::setup()
+  int omp_max_threads = 0; 
+
+#ifdef HiGHSDEV
   // Timer
   HighsTimer timer_;
   // Values of iClock for factor timing clocks
   vector<int> factor_clock_;
- 
+#endif
+
   // Implementation
   void buildSimple();
   //    void buildKernel();

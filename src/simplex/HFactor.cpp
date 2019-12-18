@@ -12,7 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HFactor.h"
+#ifdef HiGHSDEV
 #include "simplex/FactorTimer.h"
+#endif
 #include "lp_data/HConst.h"
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
@@ -21,6 +23,12 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+
+#ifdef HiGHSDEV
+#ifdef OPENMP
+#include "omp.h"
+#endif
+#endif
 
 using std::copy;
 using std::fill_n;
@@ -252,10 +260,15 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   PFindex.reserve(BlimitX * 4);
   PFvalue.reserve(BlimitX * 4);
 
+#ifdef HiGHSDEV
+#ifdef OPENMP
+  omp_max_threads = omp_get_max_threads();
+#endif
   FactorTimer factor_timer;
   factor_timer.initialiseFactorClocks(timer_, factor_clock_);
   timer_.reset();
   timer_.startRunHighsClock();
+#endif
 }
 
 #ifdef HiGHSDEV
@@ -263,35 +276,53 @@ void HFactor::change(int updateMethod_) { updateMethod = updateMethod_; }
 #endif
 
 int HFactor::build() {
-  timer_.start(factor_clock_[FactorInvert]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorInvert]);
+#endif
   HighsTimer timer;
   timer.reset();
   build_syntheticTick = 0;
   build_realTick = timer.getTick();
-  timer_.start(factor_clock_[FactorInvertSimple]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorInvertSimple]);
+#endif
   // Build the L, U factor
   // printf("Before buildSimple(): Model has %d basic indices: ", numRow);
   // for (int i=0; i<numRow; i++){printf(" %d", baseIndex[i]);} printf("\n");
   buildSimple();
-  timer_.stop(factor_clock_[FactorInvertSimple]);
-  timer_.start(factor_clock_[FactorInvertKernel]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorInvertSimple]);
+#endif
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorInvertKernel]);
+#endif
   rankDeficiency = buildKernel();
-  timer_.stop(factor_clock_[FactorInvertKernel]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorInvertKernel]);
+#endif
   if (rankDeficiency > 0) {
-    timer_.start(factor_clock_[FactorInvertDeficient]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorInvertDeficient]);
+#endif
     printf("buildKernel() returns rankDeficiency = %d\n", rankDeficiency);
     // Singular matrix B: reorder the basic variables so that the
     // singular columns are in the position corresponding to the
     // logical which replaces them
     buildHandleRankDeficiency();
     buildRpRankDeficiency();
-    timer_.stop(factor_clock_[FactorInvertDeficient]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorInvertDeficient]);
+#endif
     //      buildMarkSingC();
   }
   // Complete INVERT
-  timer_.start(factor_clock_[FactorInvertFinish]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorInvertFinish]);
+#endif
   buildFinish();
-  timer_.stop(factor_clock_[FactorInvertFinish]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorInvertFinish]);
+#endif
   build_realTick = timer.getTick() - build_realTick;
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow-1] + numRow;
@@ -306,22 +337,32 @@ int HFactor::build() {
 	   kernel_num_el,
 	   nwork);
   }
-  timer_.stop(factor_clock_[FactorInvert]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorInvert]);
+#endif
   return rankDeficiency;
 }
 
 void HFactor::ftran(HVector& vector, double hist_dsty){ // FactorTimer frig const{
-  timer_.start(factor_clock_[FactorFtran]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtran]);
+#endif
   ftranL(vector, hist_dsty);
   ftranU(vector, hist_dsty);
-  timer_.stop(factor_clock_[FactorFtran]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtran]);
+#endif
 }
 
 void HFactor::btran(HVector& vector, double hist_dsty){ // FactorTimer frig const{
-  timer_.start(factor_clock_[FactorBtran]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtran]);
+#endif
   btranU(vector, hist_dsty);
   btranL(vector, hist_dsty);
-  timer_.stop(factor_clock_[FactorBtran]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtran]);
+#endif
 }
 
 void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
@@ -383,7 +424,6 @@ void HFactor::checkInvert() {
   else
     printf("Checking INVERT: ||B^{-1}B-I||_F = %g\n", invertEr0);
 }
-#endif
 
 void HFactor::reportTimer() {
   FactorTimer factor_timer;
@@ -391,6 +431,7 @@ void HFactor::reportTimer() {
   factor_timer.reportFactorLevel1Clock(timer_, factor_clock_);
   factor_timer.reportFactorLevel2Clock(timer_, factor_clock_);
 }
+#endif
 
 void HFactor::buildSimple() {
   /**
@@ -1171,22 +1212,30 @@ void HFactor::buildFinish() {
 }
 
 void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
-  timer_.start(factor_clock_[FactorFtranLower]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranLower]);
+#endif
   //    const double hyperFTRANL = 0.15;
   //    const double hyperCANCEL = 0.05;
 
   if (updateMethod == UPDATE_METHOD_APF) {
-    timer_.start(factor_clock_[FactorFtranLowerAPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranLowerAPF]);
+#endif
     rhs.tight();
     rhs.pack();
     ftranAPF(rhs);
-    timer_.stop(factor_clock_[FactorFtranLowerAPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranLowerAPF]);
+#endif
     rhs.tight();
   }
 
   double curr_dsty = 1.0 * rhs.count / numRow;
   if (curr_dsty > hyperCANCEL || hist_dsty > hyperFTRANL) {
-    timer_.start(factor_clock_[FactorFtranLowerSps]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranLowerSps]);
+#endif
     // Alias to RHS
     int RHScount = 0;
     int* RHSindex = &rhs.index[0];
@@ -1213,27 +1262,39 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 
     // Save the count
     rhs.count = RHScount;
-    timer_.stop(factor_clock_[FactorFtranLowerSps]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranLowerSps]);
+#endif
   } else {
-    timer_.start(factor_clock_[FactorFtranLowerHys]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranLowerHys]);
+#endif
     const int* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
     const double* Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
-    timer_.stop(factor_clock_[FactorFtranLowerHys]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranLowerHys]);
+#endif
   }
-  timer_.stop(factor_clock_[FactorFtranLower]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranLower]);
+#endif
 }
 
 void HFactor::btranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
   //    const double hyperBTRANL = 0.10;
   //    const double hyperCANCEL = 0.05;
 
-  timer_.start(factor_clock_[FactorBtranLower]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranLower]);
+#endif
   double curr_dsty = 1.0 * rhs.count / numRow;
   if (curr_dsty > hyperCANCEL || hist_dsty > hyperBTRANL) {
     // Alias to RHS
-    timer_.start(factor_clock_[FactorBtranLowerSps]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranLowerSps]);
+#endif
     int RHScount = 0;
     int* RHSindex = &rhs.index[0];
     double* RHSarray = &rhs.array[0];
@@ -1260,42 +1321,64 @@ void HFactor::btranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 
     // Save the count
     rhs.count = RHScount;
-    timer_.stop(factor_clock_[FactorBtranLowerSps]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranLowerSps]);
+#endif
   } else {
-    timer_.start(factor_clock_[FactorBtranLowerHys]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranLowerHys]);
+#endif
     const int* LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
     const double* LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &LRstart[0],
                &LRstart[1], &LRindex[0], &LRvalue[0], &rhs);
-    timer_.stop(factor_clock_[FactorBtranLowerHys]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranLowerHys]);
+#endif
   }
 
   if (updateMethod == UPDATE_METHOD_APF) {
-    timer_.start(factor_clock_[FactorBtranLowerAPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranLowerAPF]);
+#endif
     btranAPF(rhs);
     rhs.tight();
     rhs.pack();
-    timer_.stop(factor_clock_[FactorBtranLowerAPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranLowerAPF]);
+#endif
   }
-  timer_.stop(factor_clock_[FactorBtranLower]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranLower]);
+#endif
 }
 
 void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
-  timer_.start(factor_clock_[FactorFtranUpper]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranUpper]);
+#endif
   // The update part
   if (updateMethod == UPDATE_METHOD_FT) {
-    timer_.start(factor_clock_[FactorFtranUpperFT]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranUpperFT]);
+#endif
     ftranFT(rhs);
     rhs.tight();
     rhs.pack();
-    timer_.stop(factor_clock_[FactorFtranUpperFT]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranUpperFT]);
+#endif
   }
   if (updateMethod == UPDATE_METHOD_MPF) {
-    timer_.start(factor_clock_[FactorFtranUpperMPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranUpperMPF]);
+#endif
     ftranMPF(rhs);
     rhs.tight();
     rhs.pack();
-    timer_.stop(factor_clock_[FactorFtranUpperMPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranUpperMPF]);
+#endif
   }
 
   // The regular part
@@ -1304,7 +1387,9 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 
   double curr_dsty = 1.0 * rhs.count / numRow;
   if (curr_dsty > hyperCANCEL || hist_dsty > hyperFTRANU) {
-    timer_.start(factor_clock_[FactorFtranUpperSps]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranUpperSps]);
+#endif
     // Alias to non constant
     //        int RHS_Tick = rhs.pseudoTick;
     double RHS_syntheticTick = 0;
@@ -1350,32 +1435,50 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
     //        rhs.fakeTick += (RHS_Tick - RHS_TickStart) * 15 + (UpivotCount -
     //        numRow) * 10;
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
-    timer_.stop(factor_clock_[FactorFtranUpperSps]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranUpperSps]);
+#endif
   } else {
-    timer_.start(factor_clock_[FactorFtranUpperHys]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranUpperHys]);
+#endif
     const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
     const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
-    timer_.stop(factor_clock_[FactorFtranUpperHys]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranUpperHys]);
+#endif
   }
 
   if (updateMethod == UPDATE_METHOD_PF) {
-    timer_.start(factor_clock_[FactorFtranUpperPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorFtranUpperPF]);
+#endif
     ftranPF(rhs);
     rhs.tight();
     rhs.pack();
-    timer_.stop(factor_clock_[FactorFtranUpperPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranUpperPF]);
+#endif
   }
-  timer_.stop(factor_clock_[FactorFtranUpper]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorFtranUpper]);
+#endif
 }
 
 void HFactor::btranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
-  timer_.start(factor_clock_[FactorBtranUpper]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranUpper]);
+#endif
   if (updateMethod == UPDATE_METHOD_PF) {
-    timer_.start(factor_clock_[FactorBtranUpperPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranUpperPF]);
+#endif
     btranPF(rhs);
-    timer_.stop(factor_clock_[FactorBtranUpperPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranUpperPF]);
+#endif
   }
 
   // The regular part
@@ -1384,7 +1487,9 @@ void HFactor::btranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 
   double curr_dsty = 1.0 * rhs.count / numRow;
   if (curr_dsty > hyperCANCEL || hist_dsty > hyperBTRANU) {
-    timer_.start(factor_clock_[FactorBtranUpperSps]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranUpperSps]);
+#endif
     // Alias to non constant
     //        int RHS_Tick = rhs.pseudoTick;
     double RHS_syntheticTick = 0;
@@ -1431,32 +1536,48 @@ void HFactor::btranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
     //        rhs.fakeTick += (RHS_Tick - RHS_TickStart) * 15 + (UpivotCount -
     //        numRow) * 10;
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
-    timer_.stop(factor_clock_[FactorBtranUpperSps]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranUpperSps]);
+#endif
   } else {
-    timer_.start(factor_clock_[FactorBtranUpperHys]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranUpperHys]);
+#endif
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &URstart[0], &URlastp[0], &URindex[0], &URvalue[0], &rhs);
-    timer_.stop(factor_clock_[FactorBtranUpperHys]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranUpperHys]);
+#endif
   }
 
   // The update part
   if (updateMethod == UPDATE_METHOD_FT) {
-    timer_.start(factor_clock_[FactorBtranUpperFT]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranUpperFT]);
+#endif
     rhs.tight();
     rhs.pack();
     btranFT(rhs);
     rhs.tight();
-    timer_.stop(factor_clock_[FactorBtranUpperFT]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranUpperFT]);
+#endif
   }
   if (updateMethod == UPDATE_METHOD_MPF) {
-    timer_.start(factor_clock_[FactorBtranUpperMPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.start(factor_clock_[FactorBtranUpperMPF]);
+#endif
     rhs.tight();
     rhs.pack();
     btranMPF(rhs);
     rhs.tight();
-    timer_.stop(factor_clock_[FactorBtranUpperMPF]);
+#ifdef HiGHSDEV
+    if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranUpperMPF]);
+#endif
   }
-  timer_.stop(factor_clock_[FactorBtranUpper]);
+#ifdef HiGHSDEV
+  if (omp_max_threads <= 1) timer_.stop(factor_clock_[FactorBtranUpper]);
+#endif
 }
 
 void HFactor::ftranFT(HVector& vector){ // FactorTimer frig const{
