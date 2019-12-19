@@ -61,7 +61,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
   // Options for analysing the LP and simplex iterations
-  simplex_info.analyseLp = false;//useful_analysis;
+  simplex_info.analyseLp = useful_analysis;//false;//
   simplex_info.analyseSimplexIterations = useful_analysis;
   //  simplex_info.analyse_invert_form = useful_analysis;
   //  simplex_info.analyse_invert_condition = useful_analysis;
@@ -2688,9 +2688,20 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
       // Free: any nonzero dual value is infeasible
       dual_infeasibility = fabs(dual);
     } else {
-      // Not fixed: any dual infeasibility is given by value signed by
+      // Not free: any dual infeasibility is given by value signed by
       // nonbasicMove. This assumes that nonbasicMove=0 for fixed
       // variables
+      if (lower==upper) {
+	// Fixed: Check that nonbasicMove=0
+	assert(!simplex_basis.nonbasicMove_[iVar]);
+#ifdef HiGHSDEV
+	if (simplex_basis.nonbasicMove_[iVar]) {
+	  printf("ERROR: Iter %d has fixed variable %d with nonbasicMove = %d\n",
+		 scaled_solution_params.simplex_iteration_count,
+		 iVar, simplex_basis.nonbasicMove_[iVar]);
+	}
+#endif
+      }
       dual_infeasibility = -simplex_basis.nonbasicMove_[iVar] * dual;
       if (lower == upper && simplex_basis.nonbasicMove_[iVar]) num_fixed_variable_move_errors++;
     }

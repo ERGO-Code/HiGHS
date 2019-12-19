@@ -850,7 +850,7 @@ void HDual::majorUpdateFactor() {
   const double total_syntheticTick = total_FT_inc_TICK;
   const double build_syntheticTick = total_INVERT_TICK * total_INVERT_TICK_mu;
   bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick ;
-  const bool rp_reinvert_syntheticClock = true;
+  const bool rp_reinvert_syntheticClock = true;//false;//
   if (rp_reinvert_syntheticClock)
   printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = (%11.4g*%g) = factor->build_syntheticTick: (%1d, %4d)\n",
 	 total_syntheticTick, build_syntheticTick, total_INVERT_TICK, total_INVERT_TICK_mu,

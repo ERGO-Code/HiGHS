@@ -187,19 +187,22 @@ HighsStatus HDual::solve(int num_threads) {
   // Compute the dual values
   compute_dual(workHMO);
   // Determine the number of dual infeasibilities, and hence the solve phase
-  computeDualInfeasible(workHMO);
-  /* int num_dual_infeasibilities_without_flips = scaled_solution_params.num_dual_infeasibilities; */
+  const bool analyse_dual_infeasibilities_with_and_without_flips = false;
+  if (analyse_dual_infeasibilities_with_and_without_flips) { 
+    computeDualInfeasible(workHMO);
+    int num_dual_infeasibilities_without_flips = scaled_solution_params.num_dual_infeasibilities;
+    computeDualInfeasibleWithFlips(workHMO);
+    int num_dual_infeasibilities_with_flips = scaled_solution_params.num_dual_infeasibilities;
+    printf("Dual infeasibilities with / without flips is %d / %d: Difference = %d\n",
+	   scaled_solution_params.num_dual_infeasibilities,
+	   num_dual_infeasibilities_without_flips,
+	   num_dual_infeasibilities_without_flips - num_dual_infeasibilities_with_flips);
+  }
   if (simplex_info.allow_primal_flips_for_dual_feasibility) {
     computeDualInfeasibleWithFlips(workHMO);
   } else {
     computeDualInfeasible(workHMO);
   }
-  /*
-  printf("Dual infeasibilities with / without flips is %d / %d: Difference = %d\n",
-	 scaled_solution_params.num_dual_infeasibilities,
-	 num_dual_infeasibilities_without_flips,
-	 num_dual_infeasibilities_without_flips - scaled_solution_params.num_dual_infeasibilities);
-  */
   dualInfeasCount = scaled_solution_params.num_dual_infeasibilities;
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
   //
@@ -1986,8 +1989,10 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
     dualRHS.workEdWt[rowOut] = computed_edge_weight;
     new_devex_framework = newDevexFramework(updated_edge_weight);
   }
-  // NB DSE_Vector is only computed if dual_edge_weight_mode ==
-  // DualEdgeWeightMode::STEEPEST_EDGE Update - primal and weight
+  // DSE_Vector is either columnDSE = B^{-1}B^{-T}e_p (if using dual
+  // steepest edge weights) or row_ep = B^{-T}e_p.
+  //
+  // Update - primal and weight
   dualRHS.updatePrimal(&columnBFRT, 1);
   dualRHS.updateInfeasList(&columnBFRT);
   double x_out = baseValue[rowOut];
@@ -2028,16 +2033,14 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   double lc_OpRsDensity = (double)column.count / solver_num_row;
   uOpRsDensityRec(lc_OpRsDensity, columnDensity);
 
-  //  total_fake += column.fakeTick;
+  // Whether or not dual steepest edge weights are being used, have to
+  // add in DSE_Vector->syntheticTick since this contains the
+  // contribution from forming row_ep = B^{-T}e_p.
   total_syntheticTick += column.syntheticTick;
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    //      total_fake += DSE_Vector->fakeTick;
-    total_syntheticTick += DSE_Vector->syntheticTick;
-  }
-  total_FT_inc_TICK += column.syntheticTick;  // Was .pseudoTick
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    total_FT_inc_TICK += DSE_Vector->syntheticTick;  // Was .pseudoTick
-  }
+  total_syntheticTick += DSE_Vector->syntheticTick;
+
+  total_FT_inc_TICK += column.syntheticTick;
+  total_FT_inc_TICK += DSE_Vector->syntheticTick;
 }
 
 void HDual::updatePivots() {
@@ -2073,7 +2076,7 @@ void HDual::updatePivots() {
   // Determine whether to reinvert based on the synthetic clock
   const double build_syntheticTick = factor->build_syntheticTick;
   bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick;
-  const bool rp_reinvert_syntheticClock = true;
+  const bool rp_reinvert_syntheticClock = true;//false;//
   if (rp_reinvert_syntheticClock)
   printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = factor->build_syntheticTick: (%1d, %4d)\n",
 	 total_syntheticTick, build_syntheticTick,
@@ -2404,7 +2407,7 @@ void HDual::iterationAnalysisReport() {
     int fmIter = lcAnIter->AnIterTraceIter;
     double fmTime = lcAnIter->AnIterTraceTime;
     printf(
-        "        Iter (      FmIter:      ToIter)     Time      Iter/sec |  "
+        "        Iter (      FmIter:      ToIter)      Time      Iter/sec |  "
         "Col R_Ep R_Ap  DSE | "
         "EdWt | Aux0\n");
     for (int rec = 1; rec <= AnIterTraceNumRec; rec++) {
@@ -2434,7 +2437,7 @@ void HDual::iterationAnalysisReport() {
         str_dual_edge_weight_mode = "Dan";
       else
         str_dual_edge_weight_mode = "XXX";
-      printf("%12d (%12d:%12d) %8.4f  %12d | %4d %4d %4d %4d |  %3s | %4d\n",
+      printf("%12d (%12d:%12d) %9.4f  %12d | %4d %4d %4d %4d |  %3s | %4d\n",
              dlIter, fmIter, toIter, dlTime, iterSpeed, l10ColDse, l10REpDse,
              l10RapDse, l10DseDse, str_dual_edge_weight_mode.c_str(), l10Aux0);
       fmIter = toIter;
