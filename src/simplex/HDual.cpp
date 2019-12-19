@@ -854,11 +854,7 @@ void HDual::rebuild() {
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
 
-  total_INVERT_TICK = factor->build_syntheticTick;  // Was factor->pseudoTick
-  total_FT_inc_TICK = 0;
-#ifdef HiGHSDEV
-  total_fake = 0;
-#endif
+  build_syntheticTick = factor->build_syntheticTick;
   total_syntheticTick = 0;
 
 #ifdef HiGHSDEV
@@ -2038,9 +2034,6 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   // contribution from forming row_ep = B^{-T}e_p.
   total_syntheticTick += column.syntheticTick;
   total_syntheticTick += DSE_Vector->syntheticTick;
-
-  total_FT_inc_TICK += column.syntheticTick;
-  total_FT_inc_TICK += DSE_Vector->syntheticTick;
 }
 
 void HDual::updatePivots() {
@@ -2074,9 +2067,8 @@ void HDual::updatePivots() {
   dualRHS.updatePivots(
       rowOut, workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
-  const double build_syntheticTick = factor->build_syntheticTick;
   bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick;
-  const bool rp_reinvert_syntheticClock = true;//false;//
+  const bool rp_reinvert_syntheticClock = false;//true;//
   if (rp_reinvert_syntheticClock)
   printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = factor->build_syntheticTick: (%1d, %4d)\n",
 	 total_syntheticTick, build_syntheticTick,

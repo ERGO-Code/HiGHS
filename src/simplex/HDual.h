@@ -600,12 +600,8 @@ class HDual {
   MChoice multi_choice[HIGHS_THREAD_LIMIT];
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
+  double build_syntheticTick;
   double total_syntheticTick;
-#ifdef HiGHSDEV
-  double total_fake;
-#endif
-  double total_INVERT_TICK;
-  double total_FT_inc_TICK;
 
   int num_dual_steepest_edge_weight_check;
   int num_dual_steepest_edge_weight_reject;
