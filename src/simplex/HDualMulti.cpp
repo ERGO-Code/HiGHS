@@ -55,13 +55,12 @@ void HDual::iterateMulti() {
     return;
   }
 
-  const bool rp_iter = false;
-  if (rp_iter)
+#ifdef HiGHSDEV
+  if (rp_iter_da)
   printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
 	 workHMO.scaled_solution_params_.simplex_iteration_count,
 	 rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
-
-
+#endif  
 
   minorUpdate();
   majorUpdate();
@@ -514,12 +513,12 @@ void HDual::majorUpdate() {
     double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
     numericalTrouble = abs_alpha_diff / compare;
     // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
-    const bool rp_numericalTrouble = false;//true;//
-    if (rp_numericalTrouble) {
+#ifdef HiGHSDEV
+    if (rp_numericalTrouble)
       HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
 		      "HDual::majorUpdate Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g]",
 		      numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
-    }
+#endif  
     if (numericalTrouble > 1e-8 && workHMO.simplex_info_.update_count > 0) {
       //#ifdef HiGHSDEV
       HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
@@ -840,20 +839,17 @@ void HDual::majorUpdateFactor() {
   if (multi_nFinish > 0)
     update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
   // Determine whether to reinvert based on the synthetic clock
-  //  const double build_syntheticTick_mu = 1.5; // Original
-  const double build_syntheticTick_mu = 1.0;//1.5;//
-  //  const int min_update_count = 201; // Original
-  const int min_update_count = 50;//201;//
-
-  const double use_build_syntheticTick = build_syntheticTick * build_syntheticTick_mu;
-  bool reinvert_syntheticClock = total_syntheticTick >= use_build_syntheticTick ;
-  const bool rp_reinvert_syntheticClock = false;//true;//
-  if (rp_reinvert_syntheticClock)
-  printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = (%11.4g*%g) = use_build_syntheticTick: (%1d, %4d)\n",
-	 total_syntheticTick, use_build_syntheticTick, build_syntheticTick, build_syntheticTick_mu,
-	 reinvert_syntheticClock, workHMO.simplex_info_.update_count);
-
-  if (reinvert_syntheticClock && workHMO.simplex_info_.update_count >= min_update_count)
+  const double use_build_syntheticTick = build_syntheticTick * multi_build_syntheticTick_mu;
+  const bool reinvert_syntheticClock = total_syntheticTick >= use_build_syntheticTick ;
+  const bool performed_min_updates = workHMO.simplex_info_.update_count >=
+    multi_synthetic_tick_reinversion_min_update_count;
+#ifdef HiGHSDEV
+  if (rp_reinvert_syntheticClock && multi_build_syntheticTick_mu == 1.0)
+    printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g build_syntheticTick: (%1d, %4d)\n",
+	   total_syntheticTick, build_syntheticTick, 
+	   reinvert_syntheticClock, workHMO.simplex_info_.update_count);
+#endif  
+  if (reinvert_syntheticClock && performed_min_updates)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
   delete[] iRows;
 }

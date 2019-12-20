@@ -922,11 +922,12 @@ void HDual::iterate() {
   chooseColumn(&row_ep);
   timer.stop(simplex_info.clock_[IterateChuzcClock]);
 
-  const bool rp_iter = false;
-  if (rp_iter)
-  printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
-	 workHMO.scaled_solution_params_.simplex_iteration_count,
-	 rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
+#ifdef HiGHSDEV
+  if (rp_iter_da)
+    printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
+	   workHMO.scaled_solution_params_.simplex_iteration_count,
+	   rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
+#endif  
 
   timer.start(simplex_info.clock_[IterateFtranClock]);
   updateFtranBFRT();
@@ -1928,12 +1929,12 @@ void HDual::updateVerify() {
   numericalTrouble = abs_alpha_diff / min_abs_alpha;
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
-  const bool rp_numericalTrouble = false;
-  if (rp_numericalTrouble) {
+#ifdef HiGHSDEV
+  if (rp_numericalTrouble)
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
 		    "HDual::updateVerify Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g]",
 		    numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
-  }
+#endif  
   if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0) {
     //#ifdef HiGHSDEV
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
@@ -2068,14 +2069,16 @@ void HDual::updatePivots() {
       rowOut, workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick;
-  const bool rp_reinvert_syntheticClock = false;//true;//
+  const bool performed_min_updates = workHMO.simplex_info_.update_count >=
+    synthetic_tick_reinversion_min_update_count;
+#ifdef HiGHSDEV
   if (rp_reinvert_syntheticClock)
-  printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = factor->build_syntheticTick: (%1d, %4d)\n",
-	 total_syntheticTick, build_syntheticTick,
-	 reinvert_syntheticClock, workHMO.simplex_info_.update_count);
-  if (reinvert_syntheticClock && workHMO.simplex_info_.update_count >= 50) {
+    printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = build_syntheticTick: (%1d, %4d)\n",
+	   total_syntheticTick, build_syntheticTick,
+	   reinvert_syntheticClock, workHMO.simplex_info_.update_count);
+#endif  
+  if (reinvert_syntheticClock && performed_min_updates)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
-  }
 }
 
 void HDual::initialiseDevexFramework(const bool parallel) {
