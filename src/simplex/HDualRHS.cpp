@@ -104,6 +104,11 @@ void HDualRHS::chooseNormal(int* chIndex) {
         if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
+
+	  const double myMerit = myInfeas / myWeight;
+	  printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit = %11.4g\n",
+		 iRow, myInfeas, myWeight, myMerit);
+
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;
@@ -170,6 +175,11 @@ void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
       if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
         const double myInfeas = work_infeasibility[iRow];
         const double myWeight = workEdWt[iRow];
+
+	  const double myMerit = myInfeas / myWeight;
+	  printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit = %11.4g\n",
+		 iRow, myInfeas, myWeight, myMerit);
+
         if (cutoffMerit * myWeight < myInfeas) {
           // Save
           setP.push_back(make_pair(-myInfeas / myWeight, iRow));

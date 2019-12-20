@@ -1384,6 +1384,10 @@ void HDual::chooseRow() {
   if (invertHint) return;
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
+  const int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
+  if (iteration_count == 36) {
+    printf("iteration_count = %d\n", iteration_count);
+  }
   for (;;) {
     // Choose the index of a good row to leave the basis
     dualRHS.chooseNormal(&rowOut);
