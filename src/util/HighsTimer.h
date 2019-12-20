@@ -104,9 +104,28 @@ class HighsTimer {
   }
 
   /**
-   * @brief Reset the data for all clocks
+   * @brief Reset a HighsTimer instance to its state after the
+   * constructor
    */
-  void reset() {
+  void resetHighsTimer() {
+    start_time = wall_clock::now();
+    start_tick = getWallTick();
+    num_clock = 0;
+    int i_clock = clock_def("Run HiGHS", "RnH");
+    assert(i_clock == 0);
+    run_highs_clock = i_clock;
+    run_highs_clock_time = 0;
+    run_highs_clock_start_time = initial_clock_start;
+
+    presolve_clock = clock_def("Presolve", "Pre");
+    solve_clock = clock_def("Solve", "Slv");
+    postsolve_clock = clock_def("Postsolve", "Pst");
+  }
+
+  /**
+   * @brief Zero the data for all clocks
+   */
+  void zeroAllClocks() {
     for (int i = 0; i < num_clock; i++) {
       clock_num_call[i] = 0;
       clock_start[i] = initial_clock_start;

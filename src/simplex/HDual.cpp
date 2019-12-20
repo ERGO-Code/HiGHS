@@ -923,10 +923,12 @@ void HDual::iterate() {
   timer.stop(simplex_info.clock_[IterateChuzcClock]);
 
 #ifdef HiGHSDEV
-  if (rp_iter_da)
+  if (rp_iter_da && rowOut>=0) {
+    //for (int row=0; row < workHMO.lp_.numRow_; row++) printf("Row %2d: Devex Weight = %11.4g\n", row, dualRHS.workEdWt[row]);
     printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
 	   workHMO.scaled_solution_params_.simplex_iteration_count,
 	   rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
+  }
 #endif  
 
   timer.start(simplex_info.clock_[IterateFtranClock]);
@@ -1817,9 +1819,14 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     // majorUpdate.
     timer.start(simplex_info.clock_[DevexWtClock]);
     // Determine the partial sums of the exact Devex weight
+    // First the partial sum for row_ep
+    dualRow.computeDevexWeight();
+    // Second the partial sums for the slices of row_ap
     for (int i = 0; i < slice_num; i++) slice_dualRow[i].computeDevexWeight(i);
     // Accumulate the partial sums
-    computed_edge_weight = 0;
+    // Initialse with the partial sum for row_ep
+    computed_edge_weight = dualRow.computed_edge_weight;
+    // Update with the partial sum for row_ep
     for (int i = 0; i < slice_num; i++) computed_edge_weight += slice_dualRow[i].computed_edge_weight;
     computed_edge_weight = max(1.0, computed_edge_weight);
     timer.stop(simplex_info.clock_[DevexWtClock]);

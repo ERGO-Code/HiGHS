@@ -447,17 +447,18 @@ void HDualRow::deleteFreelist(int iColumn) {
 }
 
 void HDualRow::computeDevexWeight(const int slice) {
-  //  const double initial_computed_edge_weight = computed_edge_weight;
+  const bool rp_computed_edge_weight = false;
   computed_edge_weight = 0;
   for (int el_n = 0; el_n < packCount; el_n++) {
     int vr_n = packIndex[el_n];
     double pv = work_devex_index[vr_n] * packValue[el_n];
-    computed_edge_weight += pv * pv;
+    if (pv) {
+      computed_edge_weight += pv * pv;
+    }
   }
-  /*
-  if (slice >= 0) {
-    printf("HDualRow::computeDevexWeight: Slice %1d; computed_edge_weight = [%11.4g ->- %11.4g]\n",
-	   slice, initial_computed_edge_weight, computed_edge_weight);
+  if (rp_computed_edge_weight) {
+    if (slice >= 0)
+      printf("HDualRow::computeDevexWeight: Slice %1d; computed_edge_weight = %11.4g\n",
+	   slice, computed_edge_weight);
   }
-  */
 }

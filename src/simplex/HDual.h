@@ -601,9 +601,9 @@ class HDual {
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
 #ifdef HiGHSDEV
-  const bool rp_iter_da = true;//false;//
-  const bool rp_reinvert_syntheticClock = true;//false;//
-  const bool rp_numericalTrouble = true;//false;//
+  const bool rp_iter_da = false;//true;//
+  const bool rp_reinvert_syntheticClock = false;//true;//
+  const bool rp_numericalTrouble = false;//true;//
 #endif  
   const double original_multi_build_syntheticTick_mu = 1.5;
   const double multi_build_syntheticTick_mu =

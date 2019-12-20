@@ -56,10 +56,12 @@ void HDual::iterateMulti() {
   }
 
 #ifdef HiGHSDEV
-  if (rp_iter_da && rowOut>=0)
-  printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
-	 workHMO.scaled_solution_params_.simplex_iteration_count,
-	 rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
+  if (rp_iter_da && rowOut>=0) {
+    //for (int row=0; row < workHMO.lp_.numRow_; row++) printf("Row %2d: Devex Weight = %11.4g\n", row, dualRHS.workEdWt[row]);
+    printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
+	   workHMO.scaled_solution_params_.simplex_iteration_count,
+	   rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
+  }
 #endif  
 
   minorUpdate();

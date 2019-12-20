@@ -265,9 +265,8 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   omp_max_threads = omp_get_max_threads();
 #endif
   FactorTimer factor_timer;
+  timer_.resetHighsTimer();
   factor_timer.initialiseFactorClocks(timer_, clock_);
-  timer_.reset();
-  timer_.startRunHighsClock();
 #endif
 }
 
@@ -280,7 +279,7 @@ int HFactor::build() {
   if (omp_max_threads <= 1) timer_.start(clock_[FactorInvert]);
 #endif
   HighsTimer build_timer;
-  build_timer.reset();
+  build_timer.resetHighsTimer();
   build_syntheticTick = 0;
   build_realTick = build_timer.getTick();
 #ifdef HiGHSDEV
