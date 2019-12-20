@@ -1753,21 +1753,31 @@ void reportMatrix(const HighsOptions& options, const char* message, const int nu
 void analyseLp(const HighsLp& lp, const char* message) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
+  vector<double> colRange;
+  vector<double> rowRange;
   min_colBound.resize(lp.numCol_);
   min_rowBound.resize(lp.numRow_);
+  colRange.resize(lp.numCol_);
+  rowRange.resize(lp.numRow_);
   for (int col = 0; col < lp.numCol_; col++)
     min_colBound[col] = min(fabs(lp.colLower_[col]), fabs(lp.colUpper_[col]));
   for (int row = 0; row < lp.numRow_; row++)
     min_rowBound[row] = min(fabs(lp.rowLower_[row]), fabs(lp.rowUpper_[row]));
+  for (int col = 0; col < lp.numCol_; col++)
+    colRange[col] = lp.colUpper_[col] - lp.colLower_[col];
+  for (int row = 0; row < lp.numRow_; row++)
+    rowRange[row] = lp.rowUpper_[row] - lp.rowLower_[row];
 
   printf("\n%s model data: Analysis\n", message);
   analyseVectorValues("Column costs", lp.numCol_, lp.colCost_);
   analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_);
   analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_);
   analyseVectorValues("Column min abs bound", lp.numCol_, min_colBound);
+  analyseVectorValues("Column range", lp.numCol_, colRange);
   analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_);
   analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_);
   analyseVectorValues("Row min abs bound", lp.numRow_, min_rowBound);
+  analyseVectorValues("Row range", lp.numRow_, rowRange);
   analyseVectorValues("Matrix sparsity", lp.Astart_[lp.numCol_], lp.Avalue_,
 		      true, lp.model_name_);
   analyseMatrixSparsity("Constraint matrix", lp.numCol_, lp.numRow_, lp.Astart_,
