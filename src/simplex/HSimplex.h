@@ -206,6 +206,13 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
 void update_matrix(HighsModelObject& highs_model_object, int columnIn,
                    int columnOut);
 
+bool reinvertOnNumericalTrouble(const std::string method_name,
+				const HighsModelObject& highs_model_object,
+				double& numerical_trouble_measure,
+				const double alpha_from_col,
+				const double alpha_from_row,
+				const double numerical_trouble_tolerance);
+
 // Wrapper for analyseSimplexBasicSolution when
 // not used to get suggested feasibility tolerances
 HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object,

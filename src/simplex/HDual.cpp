@@ -1920,34 +1920,11 @@ void HDual::updateVerify() {
   // If reinversion is needed then skip this method
   if (invertHint) return;
 
-  // Look at the relative difference between the absolute values of the two
-  // pivot values
-  double abs_alpha_from_col = fabs(alpha);
-  double abs_alpha_from_row = fabs(alphaRow);
-  double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
-  double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
-  numericalTrouble = abs_alpha_diff / min_abs_alpha;
-  // Reinvert if the relative difference is large enough, and updates have been
-  // performed
-#ifdef HiGHSDEV
-  if (rp_numericalTrouble)
-    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		    "HDual::updateVerify Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g]",
-		    numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
-#endif  
-  if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0) {
-    //#ifdef HiGHSDEV
-    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		    "HDual::updateVerify has identified numerical trouble solving LP %s in iteration %d so reinvert",
-		    workHMO.simplex_lp_.model_name_.c_str(),
-		    workHMO.scaled_solution_params_.simplex_iteration_count);
-    //#endif
+  // Use the two pivot values to identify numerical trouble
+  if (reinvertOnNumericalTrouble("HDual::updateVerify", workHMO, numericalTrouble, 
+				 alpha, alphaRow,
+				 numerical_trouble_tolerance)) {
     invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
-  } else if (numericalTrouble > 1e-8 && workHMO.simplex_info_.update_count > 0) {
-    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		    "HDual::updateVerify has ALMOST identified numerical trouble solving LP %s in iteration %d",
-		    workHMO.simplex_lp_.model_name_.c_str(),
-		    workHMO.scaled_solution_params_.simplex_iteration_count);
   }
 }
 

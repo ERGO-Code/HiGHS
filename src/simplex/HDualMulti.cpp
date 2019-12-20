@@ -56,7 +56,7 @@ void HDual::iterateMulti() {
   }
 
 #ifdef HiGHSDEV
-  if (rp_iter_da)
+  if (rp_iter_da && rowOut>=0)
   printf("Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = %11.4g; alpha = %11.4g; Dvx = %d\n",
 	 workHMO.scaled_solution_params_.simplex_iteration_count,
 	 rowOut, columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
@@ -507,34 +507,16 @@ void HDual::majorUpdate() {
     MFinish* iFinish = &multi_finish[iFn];
     HVector* iColumn = iFinish->column;
     int iRowOut = iFinish->rowOut;
-    double abs_alpha_from_col = fabs(iColumn->array[iRowOut]);
-    double abs_alpha_from_row = fabs(iFinish->alphaRow);
-    double compare = min(abs_alpha_from_col, abs_alpha_from_row);
-    double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
-    numericalTrouble = abs_alpha_diff / compare;
-    // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
-#ifdef HiGHSDEV
-    if (rp_numericalTrouble)
-      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		      "HDual::majorUpdate Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g]",
-		      numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
-#endif  
-    if (numericalTrouble > 1e-8 && workHMO.simplex_info_.update_count > 0) {
-      //#ifdef HiGHSDEV
-      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		      "HDual::majorUpdate Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g]",
-		      numericalTrouble, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
-      //#endif
-      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		      "HDual::majorUpdate has identified numerical trouble solving LP %s in iteration %d(%d): so reinvert",
-		      workHMO.simplex_lp_.model_name_.c_str(),
-		      workHMO.scaled_solution_params_.simplex_iteration_count,
-		      multi_nFinish);
+
+    // Use the two pivot values to identify numerical trouble
+    if (reinvertOnNumericalTrouble("HDual::majorUpdate", workHMO, numericalTrouble, 
+				   iColumn->array[iRowOut], iFinish->alphaRow,
+				   multi_numerical_trouble_tolerance)) {
+      // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
       invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
       // if (startUpdate > 0) {
       majorRollback();
       return;
-      // }
     }
   }
 
@@ -845,7 +827,7 @@ void HDual::majorUpdateFactor() {
     multi_synthetic_tick_reinversion_min_update_count;
 #ifdef HiGHSDEV
   if (rp_reinvert_syntheticClock && multi_build_syntheticTick_mu == 1.0)
-    printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g build_syntheticTick: (%1d, %4d)\n",
+    printf("Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = build_syntheticTick: (%1d, %4d)\n",
 	   total_syntheticTick, build_syntheticTick, 
 	   reinvert_syntheticClock, workHMO.simplex_info_.update_count);
 #endif  

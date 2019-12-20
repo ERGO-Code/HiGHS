@@ -61,7 +61,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
   // Options for analysing the LP and simplex iterations
-  simplex_info.analyseLp = useful_analysis;//false;//
+  simplex_info.analyseLp = false;//useful_analysis;//
   simplex_info.analyseSimplexIterations = useful_analysis;
   //  simplex_info.analyse_invert_form = useful_analysis;
   //  simplex_info.analyse_invert_condition = useful_analysis;
@@ -1195,7 +1195,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     row_min_value.assign(numRow, HIGHS_CONST_INF);
     row_max_value.assign(numRow, 1 / HIGHS_CONST_INF);
   }
-  // Make it numerical better
+  // Make it numerically better
   // Also determine the max and min row and column scaling factors
   double min_col_scale = HIGHS_CONST_INF;
   double max_col_scale = 1 / HIGHS_CONST_INF;
@@ -3020,6 +3020,44 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
   timer.start(simplex_info.clock_[UpdateMatrixClock]);
   matrix.update(columnIn, columnOut);
   timer.stop(simplex_info.clock_[UpdateMatrixClock]);
+}
+
+bool reinvertOnNumericalTrouble(const std::string method_name,
+				const HighsModelObject& highs_model_object,
+				double& numerical_trouble_measure,
+				const double alpha_from_col,
+				const double alpha_from_row,
+				const double numerical_trouble_tolerance) {
+  double abs_alpha_from_col = fabs(alpha_from_col);
+  double abs_alpha_from_row = fabs(alpha_from_row);
+  double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
+  double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
+  numerical_trouble_measure = abs_alpha_diff / min_abs_alpha;
+  const int update_count = highs_model_object.simplex_info_.update_count;
+  const int iteration_count = highs_model_object.scaled_solution_params_.simplex_iteration_count;
+  // Reinvert if the relative difference is large enough, and updates have been
+  // performed
+  const bool reinvert = numerical_trouble_measure > numerical_trouble_tolerance && update_count > 0;
+#ifdef HiGHSDEV
+  string model_name = highs_model_object.simplex_lp_.model_name_;
+  const bool rp_numerical_trouble = false;//true;//
+  if (rp_numerical_trouble)
+    printf("%s Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g]\n",
+	   method_name.c_str(), numerical_trouble_measure, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
+  if (reinvert) {
+    printf("%s has identified numerical trouble solving LP %s in iteration %d so reinvert\n",
+	   method_name.c_str(), model_name.c_str(), iteration_count);
+    /*
+  } else if (numerical_trouble_measure > 0.1*numerical_trouble_tolerance && update_count > 0) {
+    printf("%s has ALMOST identified numerical trouble solving LP %s in iteration %d\n",
+	   method_name.c_str(), model_name.c_str(), iteration_count);
+    */
+  }
+#else
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+		    "HiGHS has identified numerical trouble so reinvert");
+#endif
+  return reinvert;
 }
 
 // Analyse a simplex basic solution when the scaled and unscaled infeasibilities aren't known
