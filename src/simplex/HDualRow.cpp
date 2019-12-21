@@ -451,7 +451,11 @@ void HDualRow::computeDevexWeight(const int slice) {
   computed_edge_weight = 0;
   for (int el_n = 0; el_n < packCount; el_n++) {
     int vr_n = packIndex[el_n];
-    double pv = work_devex_index[vr_n] * packValue[el_n];
+    if (!workHMO.simplex_basis_.nonbasicFlag_[vr_n]) {
+      //      printf("Basic variable %d in packIndex is skipped\n", vr_n);
+      continue;
+    }
+    double pv = work_devex_index[vr_n] * packValue[el_n];    
     if (pv) {
       computed_edge_weight += pv * pv;
     }
