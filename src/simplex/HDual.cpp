@@ -1385,7 +1385,7 @@ void HDual::chooseRow() {
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
   const int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
-  if (iteration_count == 36) {
+  if (iteration_count == 41) {
     printf("iteration_count = %d\n", iteration_count);
   }
   for (;;) {

@@ -104,11 +104,11 @@ void HDualRHS::chooseNormal(int* chIndex) {
         if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
-
+	  /*
 	  const double myMerit = myInfeas / myWeight;
 	  printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit = %11.4g\n",
 		 iRow, myInfeas, myWeight, myMerit);
-
+	  */
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;
@@ -147,48 +147,74 @@ void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
   vector<pair<double, int>> setP;
   setP.reserve(chooseCHECK);
 
+  int random = workHMO.random_.integer();
+
   if (workCount < 0) {
     // DENSE mode
     const int numRow = -workCount;
+    int randomStart = random % numRow;
     double cutoffMerit = 0;
-    for (int iRow = 0; iRow < numRow; iRow++) {
-      if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
-        const double myInfeas = work_infeasibility[iRow];
-        const double myWeight = workEdWt[iRow];
-        if (cutoffMerit * myWeight < myInfeas) {
-          // Save
-          setP.push_back(make_pair(-myInfeas / myWeight, iRow));
-          // Shrink
-          if (setP.size() >= chooseCHECK) {
-            sort(setP.begin(), setP.end());
-            setP.resize(chLimit);
-            cutoffMerit = -setP.back().first;
-          }
-        }
+    // Now 
+    for (int section = 0; section < 2; section++) {
+      const int start = (section == 0) ? randomStart : 0;
+      const int end = (section == 0) ? numRow : randomStart;
+      for (int iRow = start; iRow < end; iRow++) {
+	// Was
+	//    for (int iRow = 0; iRow < numRow; iRow++) {
+	// Continue
+	if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+	  const double myInfeas = work_infeasibility[iRow];
+	  const double myWeight = workEdWt[iRow];
+	  if (cutoffMerit * myWeight < myInfeas) {
+	    // Save
+	    setP.push_back(make_pair(-myInfeas / myWeight, iRow));
+	    // Shrink
+	    if (setP.size() >= chooseCHECK) {
+	      sort(setP.begin(), setP.end());
+	      setP.resize(chLimit);
+	      cutoffMerit = -setP.back().first;
+	    }
+	  }
+	}
       }
     }
   } else {
     // SPARSE Mode
+    int randomStart;
+    if (workCount) {
+      randomStart = random % workCount;
+    } else {
+      // workCount = 0
+      randomStart = 0;
+    }
     double cutoffMerit = 0;
-    for (int i = 0; i < workCount; i++) {
-      int iRow = workIndex[i];
-      if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
-        const double myInfeas = work_infeasibility[iRow];
-        const double myWeight = workEdWt[iRow];
-
+    // Now 
+    for (int section = 0; section < 2; section++) {
+      const int start = (section == 0) ? randomStart : 0;
+      const int end = (section == 0) ? workCount : randomStart;
+      for (int i = start; i < end; i++) {
+	// Was
+	//    for (int i = 0; i < workCount; i++) {
+	// Continue
+	int iRow = workIndex[i];
+	if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+	  const double myInfeas = work_infeasibility[iRow];
+	  const double myWeight = workEdWt[iRow];
+	  /*
 	  const double myMerit = myInfeas / myWeight;
 	  printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit = %11.4g\n",
 		 iRow, myInfeas, myWeight, myMerit);
-
-        if (cutoffMerit * myWeight < myInfeas) {
-          // Save
-          setP.push_back(make_pair(-myInfeas / myWeight, iRow));
-          // Shrink
-          if (setP.size() >= chooseCHECK) {
-            sort(setP.begin(), setP.end());
-            setP.resize(chLimit);
-            cutoffMerit = -setP.back().first;
-          }
+	  */	  
+	  if (cutoffMerit * myWeight < myInfeas) {
+	    // Save
+	    setP.push_back(make_pair(-myInfeas / myWeight, iRow));
+	    // Shrink
+	    if (setP.size() >= chooseCHECK) {
+	      sort(setP.begin(), setP.end());
+	      setP.resize(chLimit);
+	      cutoffMerit = -setP.back().first;
+	    }
+	  }
         }
       }
     }
