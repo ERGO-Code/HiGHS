@@ -106,7 +106,7 @@ void HDual::majorChooseRow() {
     if (initialCount == 0 || choiceCount <= initialCount / 3) {
       // Need to do the list again
       analysis->equalDensity(columnDensity, analysis->col_aq_density);
-      dualRHS.createInfeasList(columnDensity);
+      dualRHS.createInfeasList(analysis->col_aq_density);
       continue;
     }
 
@@ -203,7 +203,7 @@ void HDual::majorChooseRowBtran() {
     work_ep->array[iRow] = 1;
     work_ep->packFlag = true;
   analysis->equalDensity(row_epDensity, analysis->row_ep_density);
-    factor->btran(*work_ep, row_epDensity);
+    factor->btran(*work_ep, analysis->row_ep_density);
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // For Dual steepest edge we know the exact weight as the 2-norm of work_ep
       multi_EdWt[i] = work_ep->norm2();
@@ -584,14 +584,14 @@ void HDual::majorUpdateFtranParallel() {
   HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
   // BFRT first
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
-  multi_density[multi_ntasks] = columnDensity;
+  multi_density[multi_ntasks] = analysis->col_aq_density;
   multi_vector[multi_ntasks] = &col_BFRT;
   multi_ntasks++;
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     // Then DSE
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
       analysis->equalDensity(rowdseDensity, analysis->row_DSE_density);
-      multi_density[multi_ntasks] = rowdseDensity;
+      multi_density[multi_ntasks] = analysis->row_DSE_density;
       multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
       multi_ntasks++;
     }
@@ -599,7 +599,7 @@ void HDual::majorUpdateFtranParallel() {
   // Then Column
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     analysis->equalDensity(columnDensity, analysis->col_aq_density);
-    multi_density[multi_ntasks] = columnDensity;
+    multi_density[multi_ntasks] = analysis->col_aq_density;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;
   }

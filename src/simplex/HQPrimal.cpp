@@ -526,7 +526,7 @@ void HQPrimal::primalChooseRow() {
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
-  workHMO.factor_.ftran(col_aq, columnDensity);
+  workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
   timer.stop(simplex_info.clock_[FtranClock]);
 
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
@@ -719,12 +719,12 @@ void HQPrimal::primalUpdate() {
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 #ifdef HiGHSDEV
   //  if (simplex_info.analyseSimplexIterations)
-  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   //  iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
 #endif
-  workHMO.factor_.btran(row_ep, row_epDensity);
+  workHMO.factor_.btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
   //  if (simplex_info.analyseSimplexIterations)
   //  iterateOpRecAf(AnIterOpTy_Btran, row_ep);
@@ -884,7 +884,7 @@ void HQPrimal::phase1ChooseRow() {
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
-  workHMO.factor_.ftran(col_aq, columnDensity);
+  workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
 
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
   columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
@@ -1080,7 +1080,7 @@ void HQPrimal::phase1Update() {
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
   analysis->equalDensity(row_epDensity, analysis->row_ep_density);
-  workHMO.factor_.btran(row_ep, row_epDensity);
+  workHMO.factor_.btran(row_ep, analysis->row_ep_density);
 
   analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
@@ -1298,13 +1298,13 @@ DualEdgeWeightMode::STEEPEST_EDGE; if (header) {
       "     ");
     }
   } else {
-    int l10ColDse = intLog10(columnDensity);
-    int l10REpDse = intLog10(row_epDensity);
-    int l10RapDse = intLog10(row_apDensity);
+    int l10ColDse = intLog10(analysis->col_aq_density);
+    int l10REpDse = intLog10(analysis->row_ep_density);
+    int l10RapDse = intLog10(analysis->row_ap_density);
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
     " %4d %4d %4d", l10ColDse, l10REpDse,
 l10RapDse); if (rp_dual_steepest_edge) { int l10DseDse =
-intLog10(rowdseDensity); HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
+intLog10(analysis->row_DSE_density); HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
 " %4d",
 l10DseDse); } else { HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
 "     ");

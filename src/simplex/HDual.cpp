@@ -165,7 +165,7 @@ HighsStatus HDual::solve(int num_threads) {
           row_ep.array[i] = 1;
           row_ep.packFlag = false;
 	  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
-          factor->btran(row_ep, row_epDensity);
+          factor->btran(row_ep, analysis->row_ep_density);
           dualRHS.workEdWt[i] = row_ep.norm2();
           double lc_OpRsDensity = (double)row_ep.count / solver_num_row;
           uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
@@ -814,7 +814,7 @@ void HDual::rebuild() {
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
   dualRHS.createArrayOfPrimalInfeasibilities();
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
-  dualRHS.createInfeasList(columnDensity);
+  dualRHS.createInfeasList(analysis->col_aq_density);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
   timer.start(simplex_info.clock_[ComputePrIfsClock]);
@@ -1107,15 +1107,15 @@ void HDual::iterationAnalysis() {
   analysis->equalDensity(rowdseDensity, analysis->row_DSE_density);
     double AnIterCostlyDseMeasureDen;
     AnIterCostlyDseMeasureDen =
-      max(max(row_epDensity, columnDensity), row_apDensity);
+      max(max(analysis->row_ep_density, analysis->col_aq_density), analysis->row_ap_density);
     if (AnIterCostlyDseMeasureDen > 0) {
-      AnIterCostlyDseMeasure = rowdseDensity / AnIterCostlyDseMeasureDen;
+      AnIterCostlyDseMeasure = analysis->row_DSE_density / AnIterCostlyDseMeasureDen;
       AnIterCostlyDseMeasure = AnIterCostlyDseMeasure * AnIterCostlyDseMeasure;
     } else {
       AnIterCostlyDseMeasure = 0;
     }
     bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
-      rowdseDensity > AnIterCostlyDseMnDensity;
+      analysis->row_DSE_density > AnIterCostlyDseMnDensity;
     AnIterCostlyDseFq = (1 - runningAverageMu) * AnIterCostlyDseFq;
     if (CostlyDseIt) {
       AnIterNumCostlyDseIt++;
@@ -1133,8 +1133,8 @@ void HDual::iterationAnalysis() {
 	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
 			"Switch from DSE to Devex after %d costly DSE iterations of %d: "
 			"Col_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
-			AnIterNumCostlyDseIt, lcNumIter, rowdseDensity, row_epDensity,
-			columnDensity);
+			AnIterNumCostlyDseIt, lcNumIter, analysis->row_DSE_density, analysis->row_ep_density,
+			analysis->col_aq_density);
       }
 #endif
     }
@@ -1223,12 +1223,12 @@ void HDual::iterationAnalysis() {
   analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   analysis->equalDensity(row_apDensity, analysis->row_ap_density);
   analysis->equalDensity(rowdseDensity, analysis->row_DSE_density);
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = row_epDensity;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = columnDensity;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = columnDensity;
+      lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = analysis->row_ep_density;
+      lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = analysis->row_ap_density;
+      lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = analysis->col_aq_density;
+      lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = analysis->col_aq_density;
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-        lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = rowdseDensity;
+        lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = analysis->row_DSE_density;
         lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
       } else {
         lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
@@ -1334,14 +1334,14 @@ void HDual::iterationReportDensity(int iterate_log_level, bool header) {
   analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   analysis->equalDensity(row_apDensity, analysis->row_ap_density);
   analysis->equalDensity(rowdseDensity, analysis->row_DSE_density);
-    int l10ColDse = intLog10(columnDensity);
-    int l10REpDse = intLog10(row_epDensity);
-    int l10RapDse = intLog10(row_apDensity);
+    int l10ColDse = intLog10(analysis->col_aq_density);
+    int l10REpDse = intLog10(analysis->row_ep_density);
+    int l10RapDse = intLog10(analysis->row_ap_density);
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
 		      " %4d %4d %4d", l10ColDse, l10REpDse,
                       l10RapDse);
     if (rp_dual_steepest_edge) {
-      int l10DseDse = intLog10(rowdseDensity);
+      int l10DseDse = intLog10(analysis->row_DSE_density);
       HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
 			" %4d", l10DseDse);
     } else {
@@ -1432,10 +1432,10 @@ void HDual::chooseRow() {
 #ifdef HiGHSDEV
   analysis->equalDensity(row_epDensity, analysis->row_ep_density);
     if (simplex_info.analyseSimplexIterations)
-      iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
+      iterateOpRecBf(AnIterOpTy_Btran, row_ep, analysis->row_ep_density);
 #endif
     // Perform BTRAN
-    factor->btran(row_ep, row_epDensity);
+    factor->btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
   analysis->equalDensity(row_epDensity, analysis->row_ep_density);
     if (simplex_info.analyseSimplexIterations)
@@ -1618,8 +1618,8 @@ void HDual::chooseColumn(HVector* row_ep) {
   bool anPriceEr = false;
   analysis->equalDensity(row_apDensity, analysis->row_ap_density);
   bool useUltraPrice = allow_price_ultra &&
-                       row_apDensity * solver_num_col * 10 < row_ap.ilP2 &&
-                       row_apDensity < 1e-3;
+                       analysis->row_ap_density * solver_num_col * 10 < row_ap.ilP2 &&
+                       analysis->row_ap_density < 1e-3;
 #endif
   if (price_mode == PriceMode::COL) {
     // Column-wise PRICE
@@ -1656,7 +1656,7 @@ void HDual::chooseColumn(HVector* row_ep) {
     } else if (useUltraPrice) {
       if (simplex_info.analyseSimplexIterations) {
 	analysis->equalDensity(row_apDensity, analysis->row_ap_density);
-        iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
+        iterateOpRecBf(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
         AnIterNumRowPriceUltra++;
       }
       // Perform ultra-sparse row-wise PRICE
@@ -1674,7 +1674,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
 	analysis->equalDensity(row_apDensity, analysis->row_ap_density);
-        iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
+        iterateOpRecBf(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
         AnIterNumRowPriceWSw++;
       }
 #endif
@@ -1683,7 +1683,7 @@ void HDual::chooseColumn(HVector* row_ep) {
       const double sw_dsty = matrix->price_by_row_sw_dsty;
       // Perform hyper-sparse row-wise PRICE with switching
       analysis->equalDensity(row_apDensity, analysis->row_ap_density);
-      matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity, 0, sw_dsty);
+      matrix->price_by_row_w_sw(row_ap, *row_ep, analysis->row_ap_density, 0, sw_dsty);
     } else {
       // No avoiding hyper-sparse PRICE on current density of result
       // or switch if the density of row_ap becomes extreme
@@ -1891,11 +1891,11 @@ void HDual::updateFtran() {
 #ifdef HiGHSDEV
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
   if (simplex_info.analyseSimplexIterations)
-    iterateOpRecBf(AnIterOpTy_Ftran, col_aq, columnDensity);
+    iterateOpRecBf(AnIterOpTy_Ftran, col_aq, analysis->col_aq_density);
 #endif
   // Perform FTRAN
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
-  factor->ftran(col_aq, columnDensity);
+  factor->ftran(col_aq, analysis->col_aq_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations)
     iterateOpRecAf(AnIterOpTy_Ftran, col_aq);
@@ -1928,11 +1928,11 @@ void HDual::updateFtranBFRT() {
 #ifdef HiGHSDEV
     analysis->equalDensity(columnDensity, analysis->col_aq_density);
     if (simplex_info.analyseSimplexIterations)
-      iterateOpRecBf(AnIterOpTy_FtranBFRT, col_BFRT, columnDensity);
+      iterateOpRecBf(AnIterOpTy_FtranBFRT, col_BFRT, analysis->col_aq_density);
 #endif
     // Perform FTRAN BFRT
     analysis->equalDensity(columnDensity, analysis->col_aq_density);
-    factor->ftran(col_BFRT, columnDensity);
+    factor->ftran(col_BFRT, analysis->col_aq_density);
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations)
       iterateOpRecAf(AnIterOpTy_FtranBFRT, col_BFRT);
@@ -1955,10 +1955,10 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
 #ifdef HiGHSDEV
   analysis->equalDensity(rowdseDensity, analysis->row_DSE_density);
   if (simplex_info.analyseSimplexIterations)
-    iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
+    iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, analysis->row_DSE_density);
 #endif
   // Perform FTRAN DSE
-  factor->ftran(*DSE_Vector, rowdseDensity);
+  factor->ftran(*DSE_Vector, analysis->row_DSE_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations)
     iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
@@ -2424,12 +2424,12 @@ void HDual::iterationAnalysisReport() {
   analysis->equalDensity(row_apDensity, analysis->row_ap_density);
   analysis->equalDensity(columnDensity, analysis->col_aq_density);
   analysis->equalDensity(rowdseDensity, analysis->row_DSE_density);
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = row_epDensity;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = columnDensity;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = columnDensity;
+  lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = analysis->row_ep_density;
+  lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = analysis->row_ap_density;
+  lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = analysis->col_aq_density;
+  lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = analysis->col_aq_density;
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = rowdseDensity;
+    lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = analysis->row_DSE_density;
     lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
   } else {
     lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
