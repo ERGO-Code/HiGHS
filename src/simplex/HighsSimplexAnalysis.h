@@ -33,7 +33,7 @@ class HighsSimplexAnalysis {
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
-  double row_dse_density;
+  double row_DSE_density;
 
 };
 

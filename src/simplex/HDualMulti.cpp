@@ -256,8 +256,8 @@ void HDual::minorChooseRow() {
     finish->rowOut = rowOut;
     finish->columnOut = columnOut;
     finish->row_ep = &workChoice->row_ep;
-    finish->column = &workChoice->column;
-    finish->columnBFRT = &workChoice->columnBFRT;
+    finish->col_aq = &workChoice->col_aq;
+    finish->col_BFRT = &workChoice->col_BFRT;
     // Save the edge weight - over-written later when using Devex
     finish->EdWt = workChoice->infeasEdWt;
 
@@ -324,7 +324,7 @@ void HDual::minorUpdateDual() {
   /**
    * 2. Apply global bound flip
    */
-  dualRow.updateFlip(multi_finish[multi_nFinish].columnBFRT);
+  dualRow.updateFlip(multi_finish[multi_nFinish].col_BFRT);
 
   /**
    * 3. Apply local bound flips
@@ -506,7 +506,7 @@ void HDual::majorUpdate() {
   // Major update - check for roll back
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* iFinish = &multi_finish[iFn];
-    HVector* iColumn = iFinish->column;
+    HVector* iColumn = iFinish->col_aq;
     int iRowOut = iFinish->rowOut;
 
     // Use the two pivot values to identify numerical trouble
@@ -533,10 +533,10 @@ void HDual::majorUpdate() {
 
 void HDual::majorUpdateFtranPrepare() {
   // Prepare FTRAN BFRT buffer
-  columnBFRT.clear();
+  col_BFRT.clear();
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
-    HVector* Vec = finish->columnBFRT;
+    HVector* Vec = finish->col_BFRT;
     matrix->collect_aj(*Vec, finish->columnIn, finish->thetaPrimal);
 
     // Update this buffer by previous Row_ep
@@ -554,13 +554,13 @@ void HDual::majorUpdateFtranPrepare() {
         matrix->collect_aj(*Vec, jFinish->columnOut, pivotX);
       }
     }
-    columnBFRT.saxpy(1, Vec);
+    col_BFRT.saxpy(1, Vec);
   }
 
   // Prepare regular FTRAN buffer
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* iFinish = &multi_finish[iFn];
-    HVector* iColumn = iFinish->column;
+    HVector* iColumn = iFinish->col_aq;
     iColumn->clear();
     iColumn->packFlag = true;
     matrix->collect_aj(*iColumn, iFinish->columnIn, 1);
@@ -578,7 +578,7 @@ void HDual::majorUpdateFtranParallel() {
   HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
   // BFRT first
   multi_density[multi_ntasks] = columnDensity;
-  multi_vector[multi_ntasks] = &columnBFRT;
+  multi_vector[multi_ntasks] = &col_BFRT;
   multi_ntasks++;
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     // Then DSE
@@ -591,7 +591,7 @@ void HDual::majorUpdateFtranParallel() {
   // Then Column
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     multi_density[multi_ntasks] = columnDensity;
-    multi_vector[multi_ntasks] = multi_finish[iFn].column;
+    multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;
   }
 
@@ -606,7 +606,7 @@ void HDual::majorUpdateFtranParallel() {
   // Update ticks
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
-    HVector* Col = finish->column;
+    HVector* Col = finish->col_aq;
     HVector* Row = finish->row_ep;
     total_syntheticTick += Col->syntheticTick;
     total_syntheticTick += Row->syntheticTick;
@@ -615,7 +615,7 @@ void HDual::majorUpdateFtranParallel() {
   // Update rates
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
-    HVector* Col = finish->column;
+    HVector* Col = finish->col_aq;
     HVector* Row = finish->row_ep;
     columnDensity = 0.95 * columnDensity + 0.05 * Col->count / solver_num_row;
     rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / solver_num_row;
@@ -630,14 +630,14 @@ void HDual::majorUpdateFtranFinal() {
   int updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-      multi_finish[iFn].column->count = -1;
+      multi_finish[iFn].col_aq->count = -1;
       multi_finish[iFn].row_ep->count = -1;
-      double* myCol = &multi_finish[iFn].column->array[0];
+      double* myCol = &multi_finish[iFn].col_aq->array[0];
       double* myRow = &multi_finish[iFn].row_ep->array[0];
       for (int jFn = 0; jFn < iFn; jFn++) {
         int pivotRow = multi_finish[jFn].rowOut;
         const double pivotAlpha = multi_finish[jFn].alphaRow;
-        const double* pivotArray = &multi_finish[jFn].column->array[0];
+        const double* pivotArray = &multi_finish[jFn].col_aq->array[0];
         double pivotX1 = myCol[pivotRow];
         double pivotX2 = myRow[pivotRow];
 
@@ -662,7 +662,7 @@ void HDual::majorUpdateFtranFinal() {
   } else {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
       MFinish* finish = &multi_finish[iFn];
-      HVector* Col = finish->column;
+      HVector* Col = finish->col_aq;
       HVector* Row = finish->row_ep;
       for (int jFn = 0; jFn < iFn; jFn++) {
         MFinish* jFinish = &multi_finish[jFn];
@@ -671,14 +671,14 @@ void HDual::majorUpdateFtranFinal() {
         // The FTRAN regular buffer
         if (fabs(pivotX1) > HIGHS_CONST_TINY) {
           pivotX1 /= jFinish->alphaRow;
-          Col->saxpy(-pivotX1, jFinish->column);
+          Col->saxpy(-pivotX1, jFinish->col_aq);
           Col->array[pivotRow] = pivotX1;
         }
         // The FTRAN-DSE buffer
         double pivotX2 = Row->array[pivotRow];
         if (fabs(pivotX2) > HIGHS_CONST_TINY) {
           pivotX2 /= jFinish->alphaRow;
-          Row->saxpy(-pivotX2, jFinish->column);
+          Row->saxpy(-pivotX2, jFinish->col_aq);
           Row->array[pivotRow] = pivotX2;
         }
       }
@@ -692,7 +692,7 @@ void HDual::majorUpdatePrimal() {
   if (updatePrimal_inDense) {
     // Dense update of primal values, infeasibility list and
     // non-pivotal edge weights
-    const double* mixArray = &columnBFRT.array[0];
+    const double* mixArray = &col_BFRT.array[0];
     double* local_work_infeasibility = &dualRHS.work_infeasibility[0];
 #pragma omp parallel for schedule(static)
     for (int iRow = 0; iRow < solver_num_row; iRow++) {
@@ -713,7 +713,7 @@ void HDual::majorUpdatePrimal() {
       for (int iFn = 0; iFn < multi_nFinish; iFn++) {
 	// multi_finish[iFn].EdWt has already been transformed to correspond to the new basis
 	const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
-	const double* colArray = &multi_finish[iFn].column->array[0];
+	const double* colArray = &multi_finish[iFn].col_aq->array[0];
 	double* EdWt = &dualRHS.workEdWt[0];
 	if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
 	  // Update steepest edge weights 
@@ -737,8 +737,8 @@ void HDual::majorUpdatePrimal() {
   } else {
     // Sparse update of primal values, infeasibility list and
     // non-pivotal edge weights
-    dualRHS.updatePrimal(&columnBFRT, 1);
-    dualRHS.updateInfeasList(&columnBFRT);
+    dualRHS.updatePrimal(&col_BFRT, 1);
+    dualRHS.updateInfeasList(&col_BFRT);
 
     // Sparse update of any edge weights and infeasList. Weights for
     // rows pivotal in this set of MI are updated, but this is based
@@ -747,7 +747,7 @@ void HDual::majorUpdatePrimal() {
     // weights will be over-written in the next section of code.
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
       MFinish* finish = &multi_finish[iFn];
-      HVector* Col = finish->column;
+      HVector* Col = finish->col_aq;
       const double new_pivotal_edge_weight = finish->EdWt;
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
 	// Update steepest edge weights 
@@ -777,7 +777,7 @@ void HDual::majorUpdatePrimal() {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
       const int iRow = multi_finish[iFn].rowOut;
       const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
-      const double* colArray = &multi_finish[iFn].column->array[0];
+      const double* colArray = &multi_finish[iFn].col_aq->array[0];
       // The weight for this pivot is known, but weights for rows
       // pivotal earlier need to be updated
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -815,12 +815,12 @@ void HDual::majorUpdateFactor() {
   int* iRows = new int[multi_nFinish];
   for (int iCh = 0; iCh < multi_nFinish - 1; iCh++) {
     multi_finish[iCh].row_ep->next = multi_finish[iCh + 1].row_ep;
-    multi_finish[iCh].column->next = multi_finish[iCh + 1].column;
+    multi_finish[iCh].col_aq->next = multi_finish[iCh + 1].col_aq;
     iRows[iCh] = multi_finish[iCh].rowOut;
   }
   iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].rowOut;
   if (multi_nFinish > 0)
-    update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
+    update_factor(workHMO, multi_finish[0].col_aq, multi_finish[0].row_ep, iRows, &invertHint);
   // Determine whether to reinvert based on the synthetic clock
   const double use_build_syntheticTick = build_syntheticTick * multi_build_syntheticTick_mu;
   const bool reinvert_syntheticClock = total_syntheticTick >= use_build_syntheticTick ;

@@ -518,9 +518,9 @@ class HDual {
 
   HVector row_ep;
   HVector row_ap;
-  HVector column;
-  HVector columnBFRT;
-  HVector columnDSE;
+  HVector col_aq;
+  HVector col_BFRT;
+  HVector col_DSE;
   double columnDensity;
   double row_epDensity;
   double row_apDensity;
@@ -567,8 +567,8 @@ class HDual {
     double infeasEdWt;
     double infeasLimit;
     HVector row_ep;
-    HVector column;
-    HVector columnBFRT;
+    HVector col_aq;
+    HVector col_BFRT;
   };
 
   /**
@@ -588,8 +588,8 @@ class HDual {
     double basicValue;
     double EdWt;
     HVector_ptr row_ep;
-    HVector_ptr column;
-    HVector_ptr columnBFRT;
+    HVector_ptr col_aq;
+    HVector_ptr col_BFRT;
   };
 
   int multi_num;

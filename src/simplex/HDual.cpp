@@ -372,9 +372,9 @@ void HDual::init(int num_threads) {
   Td = dual_feasibility_tolerance;
 
   // Setup local vectors
-  columnDSE.setup(solver_num_row);
-  columnBFRT.setup(solver_num_row);
-  column.setup(solver_num_row);
+  col_DSE.setup(solver_num_row);
+  col_BFRT.setup(solver_num_row);
+  col_aq.setup(solver_num_row);
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
   //  row_ap_ultra.setup(solver_num_col);
@@ -405,8 +405,8 @@ void HDual::init(int num_threads) {
     if (multi_num > HIGHS_THREAD_LIMIT) multi_num = HIGHS_THREAD_LIMIT;
     for (int i = 0; i < multi_num; i++) {
       multi_choice[i].row_ep.setup(solver_num_row);
-      multi_choice[i].column.setup(solver_num_row);
-      multi_choice[i].columnBFRT.setup(solver_num_row);
+      multi_choice[i].col_aq.setup(solver_num_row);
+      multi_choice[i].col_BFRT.setup(solver_num_row);
     }
     const int pass_num_slice = max(multi_num - 1, 1);
     assert(pass_num_slice > 0);
@@ -993,8 +993,8 @@ void HDual::iterateTasks() {
   {
 #pragma omp task
     {
-      columnDSE.copy(&row_ep);
-      updateFtranDSE(&columnDSE);
+      col_DSE.copy(&row_ep);
+      updateFtranDSE(&col_DSE);
     }
 #pragma omp task
     {
@@ -1013,7 +1013,7 @@ void HDual::iterateTasks() {
 
   updateVerify();
   updateDual();
-  updatePrimal(&columnDSE);
+  updatePrimal(&col_DSE);
   updatePivots();
 }
 
@@ -1842,23 +1842,23 @@ void HDual::updateFtran() {
   if (invertHint) return;
   timer.start(simplex_info.clock_[FtranClock]);
   // Clear the picotal column and indicate that its values should be packed
-  column.clear();
-  column.packFlag = true;
+  col_aq.clear();
+  col_aq.packFlag = true;
   // Get the constraint matrix column by combining just one column
   // with unit multiplier
-  matrix->collect_aj(column, columnIn, 1);
+  matrix->collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations)
-    iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
+    iterateOpRecBf(AnIterOpTy_Ftran, col_aq, columnDensity);
 #endif
   // Perform FTRAN
-  factor->ftran(column, columnDensity);
+  factor->ftran(col_aq, columnDensity);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations)
-    iterateOpRecAf(AnIterOpTy_Ftran, column);
+    iterateOpRecAf(AnIterOpTy_Ftran, col_aq);
 #endif
   // Save the pivot value computed column-wise - used for numerical checking
-  alpha = column.array[rowOut];
+  alpha = col_aq.array[rowOut];
   timer.stop(simplex_info.clock_[FtranClock]);
 }
 
@@ -1871,26 +1871,26 @@ void HDual::updateFtranBFRT() {
   if (invertHint) return;
 
   // Only time updateFtranBFRT if dualRow.workCount > 0;
-  // If dualRow.workCount = 0 then dualRow.updateFlip(&columnBFRT)
-  // merely clears columnBFRT so no FTRAN is performed
+  // If dualRow.workCount = 0 then dualRow.updateFlip(&col_BFRT)
+  // merely clears col_BFRT so no FTRAN is performed
   bool time_updateFtranBFRT = dualRow.workCount > 0;
 
   if (time_updateFtranBFRT) {
     timer.start(simplex_info.clock_[FtranBfrtClock]);
   }
 
-  dualRow.updateFlip(&columnBFRT);
+  dualRow.updateFlip(&col_BFRT);
 
-  if (columnBFRT.count) {
+  if (col_BFRT.count) {
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations)
-      iterateOpRecBf(AnIterOpTy_FtranBFRT, columnBFRT, columnDensity);
+      iterateOpRecBf(AnIterOpTy_FtranBFRT, col_BFRT, columnDensity);
 #endif
     // Perform FTRAN BFRT
-    factor->ftran(columnBFRT, columnDensity);
+    factor->ftran(col_BFRT, columnDensity);
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations)
-      iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
+      iterateOpRecAf(AnIterOpTy_FtranBFRT, col_BFRT);
 #endif
   }
   if (time_updateFtranBFRT) {
@@ -1970,21 +1970,21 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
     dualRHS.workEdWt[rowOut] = computed_edge_weight;
     new_devex_framework = newDevexFramework(updated_edge_weight);
   }
-  // DSE_Vector is either columnDSE = B^{-1}B^{-T}e_p (if using dual
+  // DSE_Vector is either col_DSE = B^{-1}B^{-T}e_p (if using dual
   // steepest edge weights) or row_ep = B^{-T}e_p.
   //
   // Update - primal and weight
-  dualRHS.updatePrimal(&columnBFRT, 1);
-  dualRHS.updateInfeasList(&columnBFRT);
+  dualRHS.updatePrimal(&col_BFRT, 1);
+  dualRHS.updateInfeasList(&col_BFRT);
   double x_out = baseValue[rowOut];
   double l_out = baseLower[rowOut];
   double u_out = baseUpper[rowOut];
   thetaPrimal = (x_out - (deltaPrimal < 0 ? l_out : u_out)) / alpha;
-  dualRHS.updatePrimal(&column, thetaPrimal);
+  dualRHS.updatePrimal(&col_aq, thetaPrimal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     const double new_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
     const double Kai = -2 / alpha;
-    dualRHS.updateWeightDualSteepestEdge(&column, new_pivotal_edge_weight, Kai,
+    dualRHS.updateWeightDualSteepestEdge(&col_aq, new_pivotal_edge_weight, Kai,
 					 &DSE_Vector->array[0]);
     dualRHS.workEdWt[rowOut] = new_pivotal_edge_weight;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
@@ -2001,23 +2001,23 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
     // so nw_wt = max(workEdWt[iRow], new_pivotal_edge_weight*columnArray[iRow]^2);
     //
     // Update rest of weights
-    dualRHS.updateWeightDevex(&column, new_pivotal_edge_weight);
+    dualRHS.updateWeightDevex(&col_aq, new_pivotal_edge_weight);
     dualRHS.workEdWt[rowOut] = new_pivotal_edge_weight;
     num_devex_iterations++;
   }
-  dualRHS.updateInfeasList(&column);
+  dualRHS.updateInfeasList(&col_aq);
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     double lc_OpRsDensity = (double)DSE_Vector->count / solver_num_row;
     uOpRsDensityRec(lc_OpRsDensity, rowdseDensity);
   }
-  double lc_OpRsDensity = (double)column.count / solver_num_row;
+  double lc_OpRsDensity = (double)col_aq.count / solver_num_row;
   uOpRsDensityRec(lc_OpRsDensity, columnDensity);
 
   // Whether or not dual steepest edge weights are being used, have to
   // add in DSE_Vector->syntheticTick since this contains the
   // contribution from forming row_ep = B^{-T}e_p.
-  total_syntheticTick += column.syntheticTick;
+  total_syntheticTick += col_aq.syntheticTick;
   total_syntheticTick += DSE_Vector->syntheticTick;
 }
 
@@ -2038,7 +2038,7 @@ void HDual::updatePivots() {
   workHMO.scaled_solution_params_.simplex_iteration_count++;
   //
   // Update the invertible representation of the basis matrix
-  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
+  update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
   //
   // Update the row-wise representation of the nonbasic columns
   update_matrix(workHMO, columnIn, columnOut);
