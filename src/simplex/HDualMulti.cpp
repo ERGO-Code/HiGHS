@@ -105,7 +105,7 @@ void HDual::majorChooseRow() {
 
     if (initialCount == 0 || choiceCount <= initialCount / 3) {
       // Need to do the list again
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+      simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
       dualRHS.createInfeasList(columnDensity);
       continue;
     }
@@ -121,8 +121,12 @@ void HDual::majorChooseRow() {
     // 5. Update row densities
     for (int ich = 0; ich < multi_num; ich++) {
       if (multi_choice[ich].rowOut >= 0) {
+	simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
         row_epDensity *= 0.95;
         row_epDensity += 0.05 * multi_choice[ich].row_ep.count / solver_num_row;
+	const double local_row_ep_density = (double)multi_choice[ich].row_ep.count / solver_num_row;
+	simplex_analysis->updateOperationResultDensity(local_row_ep_density, simplex_analysis->row_ep_density);
+	simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
       }
     }
 
@@ -198,6 +202,7 @@ void HDual::majorChooseRowBtran() {
     work_ep->index[0] = iRow;
     work_ep->array[iRow] = 1;
     work_ep->packFlag = true;
+  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
     factor->btran(*work_ep, row_epDensity);
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // For Dual steepest edge we know the exact weight as the 2-norm of work_ep
@@ -585,6 +590,7 @@ void HDual::majorUpdateFtranParallel() {
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     // Then DSE
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+      simplex_analysis->equalDensity(rowdseDensity, simplex_analysis->row_DSE_density);
       multi_density[multi_ntasks] = rowdseDensity;
       multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
       multi_ntasks++;
@@ -592,7 +598,7 @@ void HDual::majorUpdateFtranParallel() {
   }
   // Then Column
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+    simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
     multi_density[multi_ntasks] = columnDensity;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;
@@ -621,13 +627,19 @@ void HDual::majorUpdateFtranParallel() {
     HVector* Col = finish->col_aq;
     HVector* Row = finish->row_ep;
 
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
-    const double local_density = (double)Col->count / solver_num_row;
-    simplex_analysis->updateOperationResultDensity(local_density, simplex_analysis->col_aq_density);
-
+    simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+    const double local_col_aq_density = (double)Col->count / solver_num_row;
+    simplex_analysis->updateOperationResultDensity(local_col_aq_density, simplex_analysis->col_aq_density);
     columnDensity = 0.95 * columnDensity + 0.05 * Col->count / solver_num_row;
-    rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / solver_num_row;
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+    simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+
+    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      simplex_analysis->equalDensity(rowdseDensity, simplex_analysis->row_DSE_density);
+      const double local_row_ep_density = (double)Row->count / solver_num_row;
+      simplex_analysis->updateOperationResultDensity(local_row_ep_density, simplex_analysis->row_ep_density);
+      rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / solver_num_row;
+      simplex_analysis->equalDensity(rowdseDensity, simplex_analysis->row_DSE_density);
+    }
   }
   timer.stop(simplex_info.clock_[FtranMixParClock]);
 }

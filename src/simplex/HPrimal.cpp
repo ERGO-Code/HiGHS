@@ -222,6 +222,8 @@ void HPrimal::solvePhase2() {
 
   printf("HPrimal::solvePhase2 - WARNING: Setting simplex_analysis->col_aq_density = 0\n");
   simplex_analysis->col_aq_density = 0;
+  printf("HPrimal::solvePhase2 - WARNING: Setting simplex_analysis->row_ep_density = 0\n");
+  simplex_analysis->row_ep_density = 0;
 
   no_free_columns = true;
   for (int iCol = 0; iCol < solver_num_tot; iCol++) {
@@ -490,9 +492,9 @@ void HPrimal::primalChooseRow() {
   workHMO.factor_.ftran(col_aq, columnDensity);
   timer.stop(simplex_info.clock_[FtranClock]);
 
-  const double local_density = (double)col_aq.count / solver_num_row;
-  simplex_analysis->updateOperationResultDensity(local_density, simplex_analysis->col_aq_density);
-
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  const double local_col_aq_density = (double)col_aq.count / solver_num_row;
+  simplex_analysis->updateOperationResultDensity(local_col_aq_density, simplex_analysis->col_aq_density);
   columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
   simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
 
@@ -684,6 +686,7 @@ void HPrimal::primalUpdate() {
   //  if (simplex_info.analyseSimplexIterations)
   //  iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
 #endif
+  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
   workHMO.factor_.btran(row_ep, row_epDensity);
 #ifdef HiGHSDEV
   //  if (simplex_info.analyseSimplexIterations)
@@ -694,7 +697,12 @@ void HPrimal::primalUpdate() {
   timer.start(simplex_info.clock_[PriceClock]);
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
+
+  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
   row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
+  const double local_row_ep_density = (double)row_ep.count / solver_num_row;
+  simplex_analysis->updateOperationResultDensity(local_row_ep_density, simplex_analysis->row_ep_density);
+  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
 
   timer.start(simplex_info.clock_[UpdateDualClock]);
   //  double
