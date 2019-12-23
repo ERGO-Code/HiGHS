@@ -104,6 +104,10 @@ enum InvertHint {
   INVERT_HINT_Count
 };
 
+enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
+
+enum class PriceMode { ROW = 0, COL };
+
 const int PARALLEL_THREADS_DEFAULT = 8;
 const int DUAL_TASKS_MIN_THREADS = 3;
 const int DUAL_MULTI_MIN_THREADS = 1;//2;

@@ -28,10 +28,6 @@
 
 class HFactor;
 
-enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
-
-enum class PriceMode { ROW = 0, COL };
-
 /**
  * Limit on the number of column slices for parallel calculations. SIP uses num_threads-2 slices; PAMI uses num_threads-1 slices
  */
