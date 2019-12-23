@@ -217,8 +217,8 @@ void HPrimal::solvePhase2() {
   col_aq.setup(solver_num_row);
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
-  columnDensity = 0;
-  row_epDensity = 0;
+  //  columnDensity = 0;
+  //  row_epDensity = 0;
 
   printf("HPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
   analysis->col_aq_density = 0;
@@ -488,15 +488,15 @@ void HPrimal::primalChooseRow() {
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
-  analysis->equalDensity(columnDensity, analysis->col_aq_density);
+  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
   timer.stop(simplex_info.clock_[FtranClock]);
 
-  analysis->equalDensity(columnDensity, analysis->col_aq_density);
+  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
-  columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
-  analysis->equalDensity(columnDensity, analysis->col_aq_density);
+  //  columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
+  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
 
   const bool check_dual = false;
   if (check_dual) {
@@ -682,7 +682,7 @@ void HPrimal::primalUpdate() {
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
-  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
+  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 #ifdef HiGHSDEV
   //  if (simplex_info.analyseSimplexIterations)
   //  iterateOpRecBf(AnIterOpTy_Btran, row_ep, analysis->row_ep_density);
@@ -698,11 +698,11 @@ void HPrimal::primalUpdate() {
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
 
-  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
-  row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
+  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
+  //  row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
-  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
+  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 
   timer.start(simplex_info.clock_[UpdateDualClock]);
   //  double

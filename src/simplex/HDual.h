@@ -243,10 +243,10 @@ class HDual {
   /**
    * @brief Update an average density record for BTRAN, an FTRAN or PRICE
    */
-  void uOpRsDensityRec(
-      double lc_OpRsDensity,  //!< Recent density of the operation
-      double& opRsDensity     //!< Average density of the operation
-  );
+  //  void uOpRsDensityRec(
+  //      double lc_OpRsDensity,  //!< Recent density of the operation
+  //      double& opRsDensity     //!< Average density of the operation
+  //  );
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
    */
@@ -521,10 +521,10 @@ class HDual {
   HVector col_aq;
   HVector col_BFRT;
   HVector col_DSE;
-  double columnDensity;
-  double row_epDensity;
-  double row_apDensity;
-  double rowdseDensity;
+  //  double columnDensity;
+  //  double row_epDensity;
+  //  double row_apDensity;
+  //  double rowdseDensity;
 
   HDualRow dualRow;
 
