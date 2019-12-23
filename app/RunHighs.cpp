@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
   output = options.output;
   message_level = options.message_level;
 
-  bool run_quiet = false;//true;//
+  bool run_quiet = true;//false;//
   if (run_quiet) {
     HighsPrintMessage(output, message_level, ML_ALWAYS, 
 		      "In main: running highs.run() quietly\n");

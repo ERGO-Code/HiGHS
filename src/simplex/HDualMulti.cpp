@@ -76,11 +76,6 @@ void HDual::majorChooseRow() {
   if (!multi_chooseAgain) return;
   multi_chooseAgain = 0;
   multi_iteration++;
-  const int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
-  if (iteration_count == 41) {
-    printf("iteration_count = %d\n", iteration_count);
-  }
-
   /**
    * Major loop:
    *     repeat 1-5, until we found a good sets of choices
