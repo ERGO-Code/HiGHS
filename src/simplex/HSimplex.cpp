@@ -3034,11 +3034,11 @@ bool reinvertOnNumericalTrouble(const std::string method_name,
   double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
   numerical_trouble_measure = abs_alpha_diff / min_abs_alpha;
   const int update_count = highs_model_object.simplex_info_.update_count;
-  const int iteration_count = highs_model_object.scaled_solution_params_.simplex_iteration_count;
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
   const bool reinvert = numerical_trouble_measure > numerical_trouble_tolerance && update_count > 0;
 #ifdef HiGHSDEV
+  const int iteration_count = highs_model_object.scaled_solution_params_.simplex_iteration_count;
   string model_name = highs_model_object.simplex_lp_.model_name_;
   const bool rp_numerical_trouble = false;//true;//
   if (rp_numerical_trouble)
