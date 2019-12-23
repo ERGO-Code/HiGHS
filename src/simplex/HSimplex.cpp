@@ -3044,19 +3044,21 @@ bool reinvertOnNumericalTrouble(const std::string method_name,
   if (rp_numerical_trouble)
     printf("%s Measure %11.4g from [Col: %11.4g; Row: %11.4g; Diff = %11.4g]\n",
 	   method_name.c_str(), numerical_trouble_measure, abs_alpha_from_col, abs_alpha_from_row, abs_alpha_diff);
+#endif
   if (reinvert) {
+#ifdef HiGHSDEV
     printf("%s has identified numerical trouble solving LP %s in iteration %d so reinvert\n",
 	   method_name.c_str(), model_name.c_str(), iteration_count);
+#else
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+		    "HiGHS has identified numerical trouble so reinvert");
+#endif
     /*
   } else if (numerical_trouble_measure > 0.1*numerical_trouble_tolerance && update_count > 0) {
     printf("%s has ALMOST identified numerical trouble solving LP %s in iteration %d\n",
 	   method_name.c_str(), model_name.c_str(), iteration_count);
     */
   }
-#else
-  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
-		    "HiGHS has identified numerical trouble so reinvert");
-#endif
   return reinvert;
 }
 
