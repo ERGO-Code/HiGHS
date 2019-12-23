@@ -14,11 +14,9 @@
 #ifndef SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 #define SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 
-#include <vector>
+//#include <vector>
 
 #include "HConfig.h"
-#include "lp_data/HighsModelObject.h"
-//#include "simplex/HSimplex.h"
 //#include "simplex/HVector.h"
 
 /**
@@ -26,15 +24,17 @@
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis(HighsModelObject& highs_model_object)
-      : highs_model_object(highs_model_object) {}
-
-  HighsModelObject& highs_model_object;
+  void setup(int numCol_,            //!< Number of columns
+             int numRow_            //!< Number of rows
+	     );
+  int numRow;
+  int numCol;
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
 
+ private:
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXANALYSIS_H_ */

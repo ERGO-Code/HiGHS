@@ -23,7 +23,6 @@
 #include "simplex/HCrash.h"
 #include "simplex/HDualRHS.h"
 #include "simplex/HDualRow.h"
-#include "simplex/HMatrix.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HVector.h"
 
@@ -478,6 +477,7 @@ class HDual {
   const HMatrix* matrix;
   //  const HFactor* factor; //FactorTimer frig const
   HFactor* factor;
+  HighsSimplexAnalysis* simplex_analysis;
 
   const int* jMove;
   const double* workRange;

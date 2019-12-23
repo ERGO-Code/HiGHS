@@ -73,6 +73,12 @@ HighsStatus HDual::solve(int num_threads) {
   // model dimension changes
   init(num_threads);
 
+  printf("In HDual::solve(%d) with simplex_analysis.(numCol; numRow) = (%d; %d); Densities[%g; %g; %g; %g]\n",
+	 num_threads, simplex_analysis->numCol, simplex_analysis->numRow,
+	 simplex_analysis->col_aq_density, simplex_analysis->row_ep_density,
+	 simplex_analysis->row_ap_density, simplex_analysis->row_DSE_density);
+
+
   bool dual_info_ok = dualInfoOk(workHMO.lp_);
   if (!dual_info_ok) {
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
@@ -357,6 +363,7 @@ void HDual::init(int num_threads) {
 
   matrix = &workHMO.matrix_;
   factor = &workHMO.factor_;
+  simplex_analysis = &workHMO.simplex_analysis_;
 
   // Copy pointers
   jMove = &workHMO.simplex_basis_.nonbasicMove_[0];

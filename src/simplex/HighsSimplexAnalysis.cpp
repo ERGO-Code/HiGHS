@@ -13,5 +13,15 @@
  */
 #include "simplex/HighsSimplexAnalysis.h"
 
-//HighsStatus HighsSimplexAnalysis::addCols() {}
-
+void HighsSimplexAnalysis::setup(int numCol_,            //!< Number of columns
+				 int numRow_            //!< Number of rows
+				 ) {
+  
+  // Copy Problem size
+  numRow = numRow_;
+  numCol = numCol_;
+  col_aq_density = 0;
+  row_ep_density = 0;
+  row_ap_density = 0;
+  row_DSE_density = 0;
+}

@@ -63,6 +63,7 @@ class HPrimal {
   int solver_num_col;
   int solver_num_row;
   int solver_num_tot;
+  HighsSimplexAnalysis* simplex_analysis;
 
   bool no_free_columns;
 
