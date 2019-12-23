@@ -191,7 +191,7 @@ void HQPrimal::solvePhase2() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   HighsTimer& timer = workHMO.timer_;
-
+  printf("HQPrimal::solvePhase2\n");
   // When starting a new phase the (updated) primal objective function
   // value isn't known. Indicate this so that when the value
   // computed from scratch in build() isn't checked against the the
@@ -206,6 +206,8 @@ void HQPrimal::solvePhase2() {
   solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
+  simplex_analysis = &workHMO.simplex_analysis_;
+
   // Setup update limits
   simplex_info.update_limit =
       min(100 + solver_num_row / 100,
@@ -213,7 +215,7 @@ void HQPrimal::solvePhase2() {
   simplex_info.update_count = 0;
 
   // Setup local vectors
-  column.setup(solver_num_row);
+  col_aq.setup(solver_num_row);
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
   columnDensity = 0;
@@ -520,12 +522,17 @@ void HQPrimal::primalChooseRow() {
 
   // Compute pivot column
   timer.start(simplex_info.clock_[FtranClock]);
-  column.clear();
-  column.packFlag = true;
-  workHMO.matrix_.collect_aj(column, columnIn, 1);
-  workHMO.factor_.ftran(column, columnDensity);
+  col_aq.clear();
+  col_aq.packFlag = true;
+  workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  workHMO.factor_.ftran(col_aq, columnDensity);
   timer.stop(simplex_info.clock_[FtranClock]);
-  columnDensity = 0.95 * columnDensity + 0.05 * column.count / solver_num_row;
+  columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
+  const double local_density = (double)col_aq.count / solver_num_row;
+  simplex_analysis->updateOperationResultDensity(local_density, simplex_analysis->col_aq_density);
+  
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
 
   const bool check_dual = false;
   if (check_dual) {
@@ -533,10 +540,10 @@ void HQPrimal::primalChooseRow() {
     const double* workDual = &workHMO.simplex_info_.workDual_[0];
     const int* basicIndex = &workHMO.simplex_basis_.basicIndex_[0];
     double check_dual_value = workCost[columnIn];
-    for (int i = 0; i < column.count; i++) {
-      int row = column.index[i];
+    for (int i = 0; i < col_aq.count; i++) {
+      int row = col_aq.index[i];
       int col = basicIndex[row];
-      double value = column.array[row];
+      double value = col_aq.array[row];
       double cost = workCost[col];
       check_dual_value -= value * cost;
       //    printf("Entry %2d: [%2d, %12g] Cost = %12g; check_dual_value =
@@ -567,9 +574,9 @@ void HQPrimal::primalChooseRow() {
   }
   double relaxTheta = 1e100;
   double relaxSpace;
-  for (int i = 0; i < column.count; i++) {
-    int index = column.index[i];
-    alpha = column.array[index] * moveIn;
+  for (int i = 0; i < col_aq.count; i++) {
+    int index = col_aq.index[i];
+    alpha = col_aq.array[index] * moveIn;
     if (alpha > alphaTol) {
       relaxSpace = baseValue[index] - baseLower[index] + primalTolerance;
       if (relaxSpace < relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
@@ -582,9 +589,9 @@ void HQPrimal::primalChooseRow() {
 
   timer.start(simplex_info.clock_[Chuzr2Clock]);
   double bestAlpha = 0;
-  for (int i = 0; i < column.count; i++) {
-    int index = column.index[i];
-    alpha = column.array[index] * moveIn;
+  for (int i = 0; i < col_aq.count; i++) {
+    int index = col_aq.index[i];
+    alpha = col_aq.array[index] * moveIn;
     if (alpha > alphaTol) {
       // Positive pivotal column entry
       double tightSpace = baseValue[index] - baseLower[index];
@@ -627,7 +634,7 @@ void HQPrimal::primalUpdate() {
   //  int
   columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
   //  double
-  alpha = column.array[rowOut];
+  alpha = col_aq.array[rowOut];
   //  double
   thetaPrimal = 0;
   if (alpha * moveIn > 0) {
@@ -662,9 +669,9 @@ void HQPrimal::primalUpdate() {
   }
 
   timer.start(simplex_info.clock_[UpdatePrimalClock]);
-  for (int i = 0; i < column.count; i++) {
-    int index = column.index[i];
-    baseValue[index] -= thetaPrimal * column.array[index];
+  for (int i = 0; i < col_aq.count; i++) {
+    int index = col_aq.index[i];
+    baseValue[index] -= thetaPrimal * col_aq.array[index];
   }
   timer.stop(simplex_info.clock_[UpdatePrimalClock]);
 
@@ -773,7 +780,7 @@ void HQPrimal::primalUpdate() {
   workDual[columnOut] = -thetaDual;
 
   // Update workHMO.factor_ basis
-  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
+  update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
   update_matrix(workHMO, columnIn, columnOut);
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
@@ -867,20 +874,24 @@ void HQPrimal::phase1ChooseRow() {
   const double* baseValue = &workHMO.simplex_info_.baseValue_[0];
 
   /* Compute the transformed pivot column and update its density */
-  column.clear();
-  column.packFlag = true;
-  workHMO.matrix_.collect_aj(column, columnIn, 1);
-  workHMO.factor_.ftran(column, columnDensity);
-  columnDensity = 0.95 * columnDensity + 0.05 * column.count / solver_num_row;
+  col_aq.clear();
+  col_aq.packFlag = true;
+  workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  workHMO.factor_.ftran(col_aq, columnDensity);
+  columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
+  const double local_density = (double)col_aq.count / solver_num_row;
+  simplex_analysis->updateOperationResultDensity(local_density, simplex_analysis->col_aq_density);
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
 
   /* Compute the reducedc cost for the pivot column and compare it with the kept value */
   double dCompDual = 0.0;
-  for (int i = 0; i < column.count; i++) {
-    int iRow = column.index[i];
+  for (int i = 0; i < col_aq.count; i++) {
+    int iRow = col_aq.index[i];
     if (baseValue[iRow] < baseLower[iRow] - dFeasTol) {
-      dCompDual -= column.array[iRow] * -1.0;
+      dCompDual -= col_aq.array[iRow] * -1.0;
     } else if (baseValue[iRow] > baseUpper[iRow] + dFeasTol) {
-      dCompDual -= column.array[iRow] * +1.0;
+      dCompDual -= col_aq.array[iRow] * +1.0;
     }
   }
   if (fabs(workHMO.simplex_info_.workDual_[columnIn] - dCompDual) > (fabs(dCompDual) + 1.0) * 1e-9) {
@@ -894,9 +905,9 @@ void HQPrimal::phase1ChooseRow() {
                            workHMO.simplex_info_.update_count < 20 ? 1e-8 : 1e-7;
   ph1SorterR.clear();
   ph1SorterT.clear();
-  for (int i = 0; i < column.count; i++) {
-    int iRow = column.index[i];
-    double dAlpha = column.array[iRow] * iMoveIn;
+  for (int i = 0; i < col_aq.count; i++) {
+    int iRow = col_aq.index[i];
+    double dAlpha = col_aq.array[iRow] * iMoveIn;
 
     /* When the basic variable x[i] decrease */
     if (dAlpha > +dPivotTol) {
@@ -953,7 +964,7 @@ void HQPrimal::phase1ChooseRow() {
     double dMyTheta = ph1SorterR.at(i).first;
     int index = ph1SorterR.at(i).second;
     int iRow = index >= 0 ? index : index + nRow;
-    dGradient -= fabs(column.array[iRow]);
+    dGradient -= fabs(col_aq.array[iRow]);
     /* Stop when the gradient start to decrease */
     if (dGradient <= 0) {
       break;
@@ -969,7 +980,7 @@ void HQPrimal::phase1ChooseRow() {
     double dMyTheta = ph1SorterT.at(i).first;
     int index = ph1SorterT.at(i).second;
     int iRow = index >= 0 ? index : index + nRow;
-    double dAbsAlpha = fabs(column.array[iRow]);
+    double dAbsAlpha = fabs(col_aq.array[iRow]);
     /* Stop when the theta is too large */
     if (dMyTheta > dMaxTheta) {
       iLast = i;
@@ -988,7 +999,7 @@ void HQPrimal::phase1ChooseRow() {
   for (int i = iLast - 1; i >= 0; i--) {
     int index = ph1SorterT.at(i).second;
     int iRow = index >= 0 ? index : index + nRow;
-    double dAbsAlpha = fabs(column.array[iRow]);
+    double dAbsAlpha = fabs(col_aq.array[iRow]);
     if (dAbsAlpha > dMaxAlpha * 0.1) {
       rowOut = iRow;
       phase1OutBnd = index > 0 ? 1 : -1;
@@ -1013,7 +1024,7 @@ void HQPrimal::phase1Update() {
   const double dFeasTol = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
 
   /* Compute the primal theta and see if we should have do bound flip instead */
-  alpha = column.array[rowOut];
+  alpha = col_aq.array[rowOut];
   thetaPrimal = 0.0;
   if(phase1OutBnd == 1) {
     thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alpha;
@@ -1073,7 +1084,7 @@ void HQPrimal::phase1Update() {
 
    /* Update other things */
   update_pivots(workHMO, columnIn, rowOut, phase1OutBnd);
-  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
+  update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
   update_matrix(workHMO, columnIn, columnOut);
   if (workHMO.simplex_info_.update_count >= workHMO.simplex_info_.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
@@ -1119,11 +1130,11 @@ void HQPrimal::devexReset() {
 void HQPrimal::devexUpdate() {
   /* Compute the pivot weight from the reference set */
   double dPivotWeight = 0.0;
-  for (int i = 0; i < column.count; i++) {
-    int iRow = column.index[i];
+  for (int i = 0; i < col_aq.count; i++) {
+    int iRow = col_aq.index[i];
     int iSeq = workHMO.simplex_basis_.basicIndex_[iRow];
     if (devexRefSet[iSeq]) {
-      double dAlpha = column.array[iRow];
+      double dAlpha = col_aq.array[iRow];
       dPivotWeight += dAlpha * dAlpha;
     }
   }
@@ -1138,7 +1149,7 @@ void HQPrimal::devexUpdate() {
   }
 
   /* Update the devex weight for all */
-  double dPivot = column.array[rowOut];
+  double dPivot = col_aq.array[rowOut];
   dPivotWeight /= fabs(dPivot);
 
   for (int i = 0; i < row_ap.count; i++) {

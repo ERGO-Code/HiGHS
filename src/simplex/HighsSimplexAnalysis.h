@@ -27,8 +27,16 @@ class HighsSimplexAnalysis {
   void setup(int numCol_,            //!< Number of columns
              int numRow_            //!< Number of rows
 	     );
+
+  void updateOperationResultDensity(const double local_density,
+				    double& density
+				    );
+
+  void equalDensity(const double density0, const double density1);
+
   int numRow;
   int numCol;
+  const double running_average_multiplier = 0.05;
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;

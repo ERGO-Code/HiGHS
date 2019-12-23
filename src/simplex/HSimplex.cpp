@@ -3509,7 +3509,16 @@ void logRebuild(HighsModelObject& highs_model_object, const bool primal,
         scaled_solution_params.simplex_iteration_count, objective_value, simplex_variant.c_str(),
         solve_phase, scaled_solution_params.num_primal_infeasibilities,
         scaled_solution_params.sum_primal_infeasibilities);
-  } else {
+  } else if(primal && scaled_solution_params.num_primal_infeasibilities) {
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+                    "Iter %10d: %20.10e %sPh%1d Pr: %d(%g); Du: %d(%g)",
+                    scaled_solution_params.simplex_iteration_count, objective_value,
+                    simplex_variant.c_str(), 1,
+                    scaled_solution_params.num_primal_infeasibilities,
+                    scaled_solution_params.sum_primal_infeasibilities,
+                    scaled_solution_params.num_dual_infeasibilities,
+                    scaled_solution_params.sum_dual_infeasibilities);
+ } else {
      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                     "Iter %10d: %20.10e %sPh%1d Pr: %d(%g); Du: %d(%g)",
                     scaled_solution_params.simplex_iteration_count, objective_value,

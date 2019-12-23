@@ -205,6 +205,8 @@ void HPrimal::solvePhase2() {
   solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
+  simplex_analysis = &workHMO.simplex_analysis_;
+
   // Setup update limits
   simplex_info.update_limit =
       min(100 + solver_num_row / 100,
@@ -212,11 +214,14 @@ void HPrimal::solvePhase2() {
   simplex_info.update_count = 0;
 
   // Setup local vectors
-  column.setup(solver_num_row);
+  col_aq.setup(solver_num_row);
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
   columnDensity = 0;
   row_epDensity = 0;
+
+  printf("HPrimal::solvePhase2 - WARNING: Setting simplex_analysis->col_aq_density = 0\n");
+  simplex_analysis->col_aq_density = 0;
 
   no_free_columns = true;
   for (int iCol = 0; iCol < solver_num_tot; iCol++) {
@@ -478,12 +483,18 @@ void HPrimal::primalChooseRow() {
 
   // Compute pivot column
   timer.start(simplex_info.clock_[FtranClock]);
-  column.clear();
-  column.packFlag = true;
-  workHMO.matrix_.collect_aj(column, columnIn, 1);
-  workHMO.factor_.ftran(column, columnDensity);
+  col_aq.clear();
+  col_aq.packFlag = true;
+  workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  workHMO.factor_.ftran(col_aq, columnDensity);
   timer.stop(simplex_info.clock_[FtranClock]);
-  columnDensity = 0.95 * columnDensity + 0.05 * column.count / solver_num_row;
+
+  const double local_density = (double)col_aq.count / solver_num_row;
+  simplex_analysis->updateOperationResultDensity(local_density, simplex_analysis->col_aq_density);
+
+  columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
 
   const bool check_dual = false;
   if (check_dual) {
@@ -491,10 +502,10 @@ void HPrimal::primalChooseRow() {
     const double* workDual = &workHMO.simplex_info_.workDual_[0];
     const int* basicIndex = &workHMO.simplex_basis_.basicIndex_[0];
     double check_dual_value = workCost[columnIn];
-    for (int i = 0; i < column.count; i++) {
-      int row = column.index[i];
+    for (int i = 0; i < col_aq.count; i++) {
+      int row = col_aq.index[i];
       int col = basicIndex[row];
-      double value = column.array[row];
+      double value = col_aq.array[row];
       double cost = workCost[col];
       check_dual_value -= value * cost;
       //    printf("Entry %2d: [%2d, %12g] Cost = %12g; check_dual_value =
@@ -525,9 +536,9 @@ void HPrimal::primalChooseRow() {
   }
   double relaxTheta = 1e100;
   double relaxSpace;
-  for (int i = 0; i < column.count; i++) {
-    int index = column.index[i];
-    alpha = column.array[index] * moveIn;
+  for (int i = 0; i < col_aq.count; i++) {
+    int index = col_aq.index[i];
+    alpha = col_aq.array[index] * moveIn;
     if (alpha > alphaTol) {
       relaxSpace = baseValue[index] - baseLower[index] + primalTolerance;
       if (relaxSpace < relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
@@ -540,9 +551,9 @@ void HPrimal::primalChooseRow() {
 
   timer.start(simplex_info.clock_[Chuzr2Clock]);
   double bestAlpha = 0;
-  for (int i = 0; i < column.count; i++) {
-    int index = column.index[i];
-    alpha = column.array[index] * moveIn;
+  for (int i = 0; i < col_aq.count; i++) {
+    int index = col_aq.index[i];
+    alpha = col_aq.array[index] * moveIn;
     if (alpha > alphaTol) {
       // Positive pivotal column entry
       double tightSpace = baseValue[index] - baseLower[index];
@@ -585,7 +596,7 @@ void HPrimal::primalUpdate() {
   //  int
   columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
   //  double
-  alpha = column.array[rowOut];
+  alpha = col_aq.array[rowOut];
   //  double
   thetaPrimal = 0;
   if (alpha * moveIn > 0) {
@@ -620,9 +631,9 @@ void HPrimal::primalUpdate() {
   }
 
   timer.start(simplex_info.clock_[UpdatePrimalClock]);
-  for (int i = 0; i < column.count; i++) {
-    int index = column.index[i];
-    baseValue[index] -= thetaPrimal * column.array[index];
+  for (int i = 0; i < col_aq.count; i++) {
+    int index = col_aq.index[i];
+    baseValue[index] -= thetaPrimal * col_aq.array[index];
   }
   timer.stop(simplex_info.clock_[UpdatePrimalClock]);
 
@@ -728,7 +739,7 @@ void HPrimal::primalUpdate() {
   workDual[columnOut] = -thetaDual;
 
   // Update workHMO.factor_ basis
-  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
+  update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
   update_matrix(workHMO, columnIn, columnOut);
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;

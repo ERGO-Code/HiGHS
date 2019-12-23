@@ -84,7 +84,7 @@ class HPrimal {
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
-  HVector column;
+  HVector col_aq;
 
   double row_epDensity;
   double columnDensity;

@@ -105,6 +105,7 @@ void HDual::majorChooseRow() {
 
     if (initialCount == 0 || choiceCount <= initialCount / 3) {
       // Need to do the list again
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
       dualRHS.createInfeasList(columnDensity);
       continue;
     }
@@ -577,6 +578,7 @@ void HDual::majorUpdateFtranParallel() {
   double multi_density[HIGHS_THREAD_LIMIT * 2 + 1];
   HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
   // BFRT first
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
   multi_density[multi_ntasks] = columnDensity;
   multi_vector[multi_ntasks] = &col_BFRT;
   multi_ntasks++;
@@ -590,6 +592,7 @@ void HDual::majorUpdateFtranParallel() {
   }
   // Then Column
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
     multi_density[multi_ntasks] = columnDensity;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;
@@ -617,8 +620,14 @@ void HDual::majorUpdateFtranParallel() {
     MFinish* finish = &multi_finish[iFn];
     HVector* Col = finish->col_aq;
     HVector* Row = finish->row_ep;
+
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+    const double local_density = (double)Col->count / solver_num_row;
+    simplex_analysis->updateOperationResultDensity(local_density, simplex_analysis->col_aq_density);
+
     columnDensity = 0.95 * columnDensity + 0.05 * Col->count / solver_num_row;
     rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / solver_num_row;
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
   }
   timer.stop(simplex_info.clock_[FtranMixParClock]);
 }

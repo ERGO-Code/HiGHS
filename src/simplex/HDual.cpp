@@ -809,6 +809,7 @@ void HDual::rebuild() {
   // Collect primal infeasible as a list
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
   dualRHS.createArrayOfPrimalInfeasibilities();
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
   dualRHS.createInfeasList(columnDensity);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
@@ -1096,6 +1097,7 @@ void HDual::iterationAnalysis() {
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     bool switch_to_devex = false;
     // Firstly consider switching on the basis of NLA cost
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
     double AnIterCostlyDseMeasureDen;
     AnIterCostlyDseMeasureDen =
       max(max(row_epDensity, columnDensity), row_apDensity);
@@ -1118,6 +1120,7 @@ void HDual::iterationAnalysis() {
 	(lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot);
 #ifdef HiGHSDEV
       if (switch_to_devex) {
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
 	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
 			"Switch from DSE to Devex after %d costly DSE iterations of %d: "
 			"Col_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
@@ -1209,6 +1212,7 @@ void HDual::iterationAnalysis() {
       lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = row_epDensity;
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = columnDensity;
       lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = columnDensity;
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -1314,6 +1318,7 @@ void HDual::iterationReportDensity(int iterate_log_level, bool header) {
 			"     ");
     }
   } else {
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
     int l10ColDse = intLog10(columnDensity);
     int l10REpDse = intLog10(row_epDensity);
     int l10RapDse = intLog10(row_apDensity);
@@ -1855,10 +1860,12 @@ void HDual::updateFtran() {
   // with unit multiplier
   matrix->collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
   if (simplex_info.analyseSimplexIterations)
     iterateOpRecBf(AnIterOpTy_Ftran, col_aq, columnDensity);
 #endif
   // Perform FTRAN
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
   factor->ftran(col_aq, columnDensity);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations)
@@ -1890,10 +1897,12 @@ void HDual::updateFtranBFRT() {
 
   if (col_BFRT.count) {
 #ifdef HiGHSDEV
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
     if (simplex_info.analyseSimplexIterations)
       iterateOpRecBf(AnIterOpTy_FtranBFRT, col_BFRT, columnDensity);
 #endif
     // Perform FTRAN BFRT
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
     factor->ftran(col_BFRT, columnDensity);
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations)
@@ -2018,9 +2027,12 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
     double lc_OpRsDensity = (double)DSE_Vector->count / solver_num_row;
     uOpRsDensityRec(lc_OpRsDensity, rowdseDensity);
   }
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
   double lc_OpRsDensity = (double)col_aq.count / solver_num_row;
   uOpRsDensityRec(lc_OpRsDensity, columnDensity);
+  simplex_analysis->updateOperationResultDensity(lc_OpRsDensity, simplex_analysis->col_aq_density);
 
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
   // Whether or not dual steepest edge weights are being used, have to
   // add in DSE_Vector->syntheticTick since this contains the
   // contribution from forming row_ep = B^{-T}e_p.
@@ -2376,6 +2388,7 @@ void HDual::iterationAnalysisReport() {
   lcAnIter->AnIterTraceTime = timer.getTime();
   lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = row_epDensity;
   lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;
+  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
   lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = columnDensity;
   lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = columnDensity;
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
