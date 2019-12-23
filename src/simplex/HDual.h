@@ -477,7 +477,7 @@ class HDual {
   const HMatrix* matrix;
   //  const HFactor* factor; //FactorTimer frig const
   HFactor* factor;
-  HighsSimplexAnalysis* simplex_analysis;
+  HighsSimplexAnalysis* analysis;
 
   const int* jMove;
   const double* workRange;

@@ -206,7 +206,7 @@ void HQPrimal::solvePhase2() {
   solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
-  simplex_analysis = &workHMO.simplex_analysis_;
+  analysis = &workHMO.simplex_analysis_;
 
   // Setup update limits
   simplex_info.update_limit =
@@ -525,15 +525,15 @@ void HQPrimal::primalChooseRow() {
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   workHMO.factor_.ftran(col_aq, columnDensity);
   timer.stop(simplex_info.clock_[FtranClock]);
 
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
-  simplex_analysis->updateOperationResultDensity(local_col_aq_density, simplex_analysis->col_aq_density);
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
 
   const bool check_dual = false;
   if (check_dual) {
@@ -721,7 +721,7 @@ void HQPrimal::primalUpdate() {
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
   //  if (simplex_info.analyseSimplexIterations)
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   //  iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
 #endif
   workHMO.factor_.btran(row_ep, row_epDensity);
@@ -734,11 +734,11 @@ void HQPrimal::primalUpdate() {
   timer.start(simplex_info.clock_[PriceClock]);
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
-  simplex_analysis->updateOperationResultDensity(local_row_ep_density, simplex_analysis->row_ep_density);
+  analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
   row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 
   timer.start(simplex_info.clock_[UpdateDualClock]);
   //  double
@@ -883,14 +883,14 @@ void HQPrimal::phase1ChooseRow() {
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   workHMO.factor_.ftran(col_aq, columnDensity);
 
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
-  simplex_analysis->updateOperationResultDensity(local_col_aq_density, simplex_analysis->col_aq_density);
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
 
   /* Compute the reducedc cost for the pivot column and compare it with the kept value */
   double dCompDual = 0.0;
@@ -1079,14 +1079,14 @@ void HQPrimal::phase1Update() {
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   workHMO.factor_.btran(row_ep, row_epDensity);
 
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
-  simplex_analysis->updateOperationResultDensity(local_row_ep_density, simplex_analysis->row_ep_density);
+  analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
   row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 
   /* Compute the whole pivot row for updating the devex weight */
   row_ap.clear();

@@ -205,7 +205,7 @@ void HPrimal::solvePhase2() {
   solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
-  simplex_analysis = &workHMO.simplex_analysis_;
+  analysis = &workHMO.simplex_analysis_;
 
   // Setup update limits
   simplex_info.update_limit =
@@ -220,10 +220,10 @@ void HPrimal::solvePhase2() {
   columnDensity = 0;
   row_epDensity = 0;
 
-  printf("HPrimal::solvePhase2 - WARNING: Setting simplex_analysis->col_aq_density = 0\n");
-  simplex_analysis->col_aq_density = 0;
-  printf("HPrimal::solvePhase2 - WARNING: Setting simplex_analysis->row_ep_density = 0\n");
-  simplex_analysis->row_ep_density = 0;
+  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
+  analysis->col_aq_density = 0;
+  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->row_ep_density = 0\n");
+  analysis->row_ep_density = 0;
 
   no_free_columns = true;
   for (int iCol = 0; iCol < solver_num_tot; iCol++) {
@@ -488,15 +488,15 @@ void HPrimal::primalChooseRow() {
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   workHMO.factor_.ftran(col_aq, columnDensity);
   timer.stop(simplex_info.clock_[FtranClock]);
 
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
-  simplex_analysis->updateOperationResultDensity(local_col_aq_density, simplex_analysis->col_aq_density);
+  analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
   columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
-  simplex_analysis->equalDensity(columnDensity, simplex_analysis->col_aq_density);
+  analysis->equalDensity(columnDensity, analysis->col_aq_density);
 
   const bool check_dual = false;
   if (check_dual) {
@@ -686,7 +686,7 @@ void HPrimal::primalUpdate() {
   //  if (simplex_info.analyseSimplexIterations)
   //  iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
 #endif
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   workHMO.factor_.btran(row_ep, row_epDensity);
 #ifdef HiGHSDEV
   //  if (simplex_info.analyseSimplexIterations)
@@ -698,11 +698,11 @@ void HPrimal::primalUpdate() {
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
 
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
-  simplex_analysis->updateOperationResultDensity(local_row_ep_density, simplex_analysis->row_ep_density);
-  simplex_analysis->equalDensity(row_epDensity, simplex_analysis->row_ep_density);
+  analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
+  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 
   timer.start(simplex_info.clock_[UpdateDualClock]);
   //  double
