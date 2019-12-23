@@ -26,6 +26,7 @@
 #include "lp_data/HighsStatus.h"
 #include "simplex/HDual.h"
 #include "simplex/HPrimal.h"
+#include "simplex/HQPrimal.h"
 #include "util/HighsUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
