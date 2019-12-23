@@ -26,6 +26,7 @@
 #include "lp_data/HighsStatus.h"
 #include "simplex/HDual.h"
 #include "simplex/HPrimal.h"
+#include "simplex/HQPrimal.h"
 #include "util/HighsUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
@@ -190,9 +191,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       // Use primal simplex solver
       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		      "Using primal simplex solver");
-      HPrimal primal_solver(highs_model_object);
+      HQPrimal primal_solver(highs_model_object);
       call_status = primal_solver.solve();
-      return_status = interpretCallStatus(call_status, return_status, "HPrimal::solve");
+      return_status = interpretCallStatus(call_status, return_status, "HQPrimal::solve");
       if (return_status == HighsStatus::Error) return return_status;
     } else {
       // Use dual simplex solver

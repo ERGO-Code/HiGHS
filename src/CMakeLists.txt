@@ -103,6 +103,7 @@ set(sources
     simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
     simplex/HPrimal.cpp
+    simplex/HQPrimal.cpp
 #    simplex/HRanging.cpp
     simplex/HSimplex.cpp
     simplex/HVector.cpp
@@ -148,6 +149,7 @@ set(headers
     simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
     simplex/HPrimal.h
+    simplex/HQPrimal.h
 #    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/SimplexConst.h
