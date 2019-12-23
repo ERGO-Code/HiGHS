@@ -521,10 +521,6 @@ class HDual {
   HVector col_aq;
   HVector col_BFRT;
   HVector col_DSE;
-  //  double columnDensity;
-  //  double row_epDensity;
-  //  double row_apDensity;
-  //  double rowdseDensity;
 
   HDualRow dualRow;
 

@@ -218,8 +218,6 @@ void HQPrimal::solvePhase2() {
   col_aq.setup(solver_num_row);
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
-  //  columnDensity = 0;
-  //  row_epDensity = 0;
 
   ph1SorterR.reserve(solver_num_row);
   ph1SorterT.reserve(solver_num_row);
@@ -525,15 +523,11 @@ void HQPrimal::primalChooseRow() {
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
-  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
   timer.stop(simplex_info.clock_[FtranClock]);
 
-  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
-  //  columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
-  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
 
   const bool check_dual = false;
   if (check_dual) {
@@ -719,7 +713,6 @@ void HQPrimal::primalUpdate() {
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
-  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 #ifdef HiGHSDEV
   //  if (simplex_info.analyseSimplexIterations)
   //  iterateOpRecBf(AnIterOpTy_Btran, row_ep, analysis->row_ep_density);
@@ -734,11 +727,8 @@ void HQPrimal::primalUpdate() {
   timer.start(simplex_info.clock_[PriceClock]);
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
-  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
-  //  row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
-  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 
   timer.start(simplex_info.clock_[UpdateDualClock]);
   //  double
@@ -883,16 +873,12 @@ void HQPrimal::phase1ChooseRow() {
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
-  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
 
-  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
-  //  columnDensity = 0.95 * columnDensity + 0.05 * col_aq.count / solver_num_row;
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
-  //  analysis->equalDensity(columnDensity, analysis->col_aq_density);
 
-  /* Compute the reducedc cost for the pivot column and compare it with the kept value */
+  /* Compute the reduced cost for the pivot column and compare it with the kept value */
   double dCompDual = 0.0;
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
@@ -1079,14 +1065,10 @@ void HQPrimal::phase1Update() {
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
-  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   workHMO.factor_.btran(row_ep, analysis->row_ep_density);
 
-  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
-  //  row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
-  //  analysis->equalDensity(row_epDensity, analysis->row_ep_density);
 
   /* Compute the whole pivot row for updating the devex weight */
   row_ap.clear();
@@ -1289,7 +1271,7 @@ void HQPrimal::iterationReportDsty(int iterate_log_level, bool header) {
   bool rp_dual_steepest_edge = dual_edge_weight_mode ==
 DualEdgeWeightMode::STEEPEST_EDGE; if (header) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-    "  Col R_Ep R_Ap");
+    " C_Aq R_Ep R_Ap");
     if (rp_dual_steepest_edge) {
       HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
       "  DSE");
