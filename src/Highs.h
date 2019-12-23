@@ -722,7 +722,9 @@ class Highs {
   // versions of the original LP. For instance different levels of presolve.
   std::vector<HighsModelObject> hmos_;
 
-  //  bool allow_presolve_;
+  // Record of maximum number of OMP threads. If OMP is available then
+  // it's set to the correct positive number in Highs::run()
+  int omp_max_threads = 0;
 
   HighsStatus runLpSolver(HighsModelObject& model, const string message);
 
@@ -733,7 +735,12 @@ class Highs {
   HighsStatus solveRootNode(Node& root);
   HighsStatus solveNode(Node& node);
 
+  HighsStatus openWriteFile(const string filename,
+			    const string method_name,
+			    FILE*& file, bool& html);
+
   bool haveHmo(const string method_name);
+
   bool updateHighsSolutionBasis();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 

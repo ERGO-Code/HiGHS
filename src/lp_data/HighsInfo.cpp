@@ -135,17 +135,9 @@ InfoStatus getInfoValue(const HighsOptions& options,
   return InfoStatus::OK;
 }
 
-HighsStatus reportInfoToFile(const HighsOptions& options, 
-			     const std::string filename, 
-			     const std::vector<InfoRecord*>& info_records) {
-  FILE* file = fopen(filename.c_str(), "w");
-  if (file == 0) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR, "reportInfoToFile: cannot open file");
-    return HighsStatus::Error;
-  }
-  bool html = false;
-  const char* dot = strrchr(filename.c_str(), '.');
-  if (dot && dot != filename) html = strcmp(dot + 1, "html") == 0;
+HighsStatus writeInfoToFile(FILE* file,
+			    const std::vector<InfoRecord*>& info_records,
+			    const bool html) {
   if (html) {
     fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
     fprintf(file, "  <title>HiGHS Info</title>\n");

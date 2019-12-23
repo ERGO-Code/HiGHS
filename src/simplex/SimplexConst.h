@@ -42,6 +42,7 @@ enum SimplexScaleStrategy {
   SIMPLEX_SCALE_STRATEGY_MIN = 0,
   SIMPLEX_SCALE_STRATEGY_OFF = SIMPLEX_SCALE_STRATEGY_MIN,
   SIMPLEX_SCALE_STRATEGY_HIGHS,
+  SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED,
   SIMPLEX_SCALE_STRATEGY_HSOL,
   SIMPLEX_SCALE_STRATEGY_MAX = SIMPLEX_SCALE_STRATEGY_HSOL
 };
@@ -102,6 +103,10 @@ enum InvertHint {
   INVERT_HINT_CHOOSE_COLUMN_FAIL,
   INVERT_HINT_Count
 };
+
+const int PARALLEL_THREADS_DEFAULT = 8;
+const int DUAL_TASKS_MIN_THREADS = 3;
+const int DUAL_MULTI_MIN_THREADS = 1;//2;
 
 // TODO: Set this false tactically to make mip interface more
 // efficient by preventing reinversion on optimality in phase 1 or

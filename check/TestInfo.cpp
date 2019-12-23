@@ -20,7 +20,7 @@ TEST_CASE("highs-info", "[highs_info]") {
   REQUIRE(return_status==HighsStatus::OK);
  
   return_status = highs.writeHighsInfo("");
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == HighsStatus::OK);
 
   return_status = highs.writeHighsInfo("Highs.info");
   REQUIRE(return_status == HighsStatus::OK);

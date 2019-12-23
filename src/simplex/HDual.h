@@ -34,20 +34,9 @@ enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
 enum class PriceMode { ROW = 0, COL };
 
 /**
- * Limit on number of threads used to dimension many identifiers
+ * Limit on the number of column slices for parallel calculations. SIP uses num_threads-2 slices; PAMI uses num_threads-1 slices
  */
-const int HIGHS_THREAD_LIMIT = 32;
-/**
- * Limit on the number of column slices for parallel calculations
- */
-const int HIGHS_SLICED_LIMIT = 100;
-
-/**
- * Devex status flags. Each column has a Devex flag which is used as a
- * multiplier to save a conditional branch
- */
-const int dvx_in_R = 1;
-const int dvx_not_in_R = 0;
+const int HIGHS_SLICED_LIMIT = HIGHS_THREAD_LIMIT;//Was 100, but can't see why this should be higher than HIGHS_THREAD_LIMIT;
 
 /**
  * Parameters controlling number of Devex iterations.
@@ -57,7 +46,7 @@ const int dvx_not_in_R = 0;
  * 1) The weight inaccuracy ratio exceeds maxAllowedDevexWeightRatio
  *
  * 2) There have been max(minAbsNumberDevexIterations,
- * numRow/minRlvNumberDevexIterations) devex iterations
+ * numRow/minRlvNumberDevexIterations) Devex iterations
  */
 const int minAbsNumberDevexIterations = 25;
 const double minRlvNumberDevexIterations = 1e-2;
@@ -89,7 +78,7 @@ class HDual {
   /**
    * @brief Solve a model instance with a given number of threads
    */
-  void solve(int num_threads = 1  //!< Default number of threads is 1
+  HighsStatus solve(int num_threads = 1  //!< Default number of threads is 1
   );
 
  public:
@@ -116,8 +105,8 @@ class HDual {
    * TODO generalise call slice_matrix[i].setup_lgBs so slice can be
    * used with non-logical initial basis
    */
-  void initSlice(int init_sliced_num  //!< Ideal number of slices - true number
-                                      //!< is modified in light of limits
+  void initSlice(const int init_sliced_num  //!< Ideal number of slices - true number
+		                            //!< is modified in light of limits
   );
 
   /**
@@ -265,6 +254,17 @@ class HDual {
   void chooseRow();
 
   /**
+   * @brief Determine whether the updated_edge_weight is accurate enough to
+   * be accepted, and update the analysis of weight errors
+   */
+  bool acceptDualSteepestEdgeWeight(const double updated_edge_weight);
+
+  /**
+   * @brief Determine whether the updated_edge_weight error should trigger a new Devex framework
+   */
+  bool newDevexFramework(const double updated_edge_weight);
+
+  /**
    * @brief Compute pivot row (PRICE) and choose the index of a good column to
    * enter the basis (CHUZC)
    */
@@ -274,7 +274,7 @@ class HDual {
    * @brief Choose the index of a good column to enter the basis (CHUZC) by
    * exploiting slices of the pivotal row - for SIP and PAMI
    */
-  void chooseColumn_slice(HVector* row_ep);
+  void chooseColumnSlice(HVector* row_ep);
 
   /**
    * @brief Compute the pivotal column (FTRAN)
@@ -326,119 +326,116 @@ class HDual {
    * @brief Initialise a Devex framework: reference set is all basic
    * variables
    */
-  void iz_dvx_fwk();
+  void initialiseDevexFramework(const bool parallel=false);
 
   /**
    * @brief Interpret the dual edge weight strategy as setting of a mode and
    * other actions
    */
-  void interpret_dual_edge_weight_strategy(
-					   const int simplex_dual_edge_weight_strategy
-					   );
+  void interpretDualEdgeWeightStrategy(
+				       const int simplex_dual_edge_weight_strategy
+				       );
 
   /**
    * @brief Interpret the PRICE strategy as setting of a mode and other actions
    */
-  void interpret_price_strategy(
-				const int simplex_price_strategy
-				);
+  void interpretPriceStrategy(
+			      const int simplex_price_strategy
+			      );
 
 #ifdef HiGHSDEV
   double checkDualObjectiveValue(const char* message, int phase = 2);
 #endif
 
   /**
-   * @brief Get a row of the inverse of the basis matrix for SCIP
-   */
-  int util_getBasisInvRow(int r,         //!< Index of row required
-                          double* coef,  //!< Value of entries in row required
-                          int* inds,     //!< Indices of entries in row required
-                          int* ninds     //!< Number of indices in row required
-  );
-
-  /**
    * @brief PAMI: Choose the indices of a good set of rows to leave the
    * basis (CHUZR)
    */
-  void major_chooseRow();
+  void majorChooseRow();
 
   /**
    * @brief PAMI: Perform multiple BTRAN
    */
-  void major_chooseRowBtran();
+  void majorChooseRowBtran();
 
   /**
    * @brief PAMI: Choose the index (from the set of indices) of a good
    * row to leave the basis (CHUZR-MI)
    */
-  void minor_chooseRow();
+  void minorChooseRow();
 
   /**
    * @brief PAMI: Update the data during minor iterations
    */
-  void minor_update();
+  void minorUpdate();
 
   /**
    * @brief PAMI: Update the dual values during minor iterations
    */
-  void minor_updateDual();
+  void minorUpdateDual();
 
   /**
    * @brief PAMI: Update the primal values during minor iterations
    */
-  void minor_updatePrimal();
+  void minorUpdatePrimal();
 
   /**
    * @brief PAMI: Perform a basis change during minor iterations
    */
-  void minor_updatePivots();
+  void minorUpdatePivots();
 
   /**
    * @brief PAMI: Update the tableau rows during minor iterations
    */
-  void minor_updateRows();
+  void minorUpdateRows();
+
+  /**
+   * @brief PAMI: Initialise a new Devex framework during minor iterations
+   */
+  void minorInitialiseDevexFramework();
 
   /**
    * @brief PAMI: Perform updates after a set of minor iterations
    */
-  void major_update();
+  void majorUpdate();
 
   /**
    * @brief PAMI: Prepare for the FTRANs after a set of minor iterations
    */
-  void major_updateFtranPrepare();
+  void majorUpdateFtranPrepare();
 
   /**
    * @brief PAMI: Perform the parallel part of multiple FTRANs after a
    * set of minor iterations
    */
-  void major_updateFtranParallel();
+  void majorUpdateFtranParallel();
 
   /**
    * @brief PAMI: Perform the final part of multiple FTRANs after a set
    * of minor iterations
    */
-  void major_updateFtranFinal();
+  void majorUpdateFtranFinal();
 
   /**
    * @brief PAMI: Update the primal values after a set of minor
    * iterations
    */
-  void major_updatePrimal();
+  void majorUpdatePrimal();
 
   /**
    * @brief PAMI: Update the invertible representation of the basis
    * matrix after a set of minor iterations
    */
-  void major_updateFactor();
+  void majorUpdateFactor();
 
   /**
    * @brief PAMI: Roll back some iterations if numerical trouble
    * detected when updating the invertible representation of the basis
    * matrix after a set of minor iterations
    */
-  void major_rollback();
+  void majorRollback();
 
+  bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);
 
 #ifdef HiGHSDEV
@@ -451,11 +448,12 @@ class HDual {
                        //!< calling function
 
   // Devex scalars
-  int n_dvx_fwk;    //!< Number of Devex frameworks used
-  int n_dvx_it;     //!< Number of Devex iterations with the current framework
-  bool nw_dvx_fwk;  //!< Set a new Devex framework
+  int num_devex_framework = 0;   //!< Number of Devex frameworks used
+  int num_devex_iterations = 0;  //!< Number of Devex iterations with the current framework
+  bool new_devex_framework = false;  //!< Set a new Devex framework
+  bool minor_new_devex_framework = false; //!< Set a new Devex framework in PAMI minor iterations
   // Devex std::vector
-  std::vector<int> dvx_ix;  //!< Vector of Devex indices
+  std::vector<int> devex_index;  //!< Vector of Devex indices
 
   // Price scalars
   // DSE scalars
@@ -478,7 +476,8 @@ class HDual {
   int solver_num_tot;
 
   const HMatrix* matrix;
-  const HFactor* factor;
+  //  const HFactor* factor; //FactorTimer frig const
+  HFactor* factor;
 
   const int* jMove;
   const double* workRange;
@@ -504,6 +503,7 @@ class HDual {
   bool allow_price_ultra;
   const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
                                        //!< when pi_p has at least this density
+  const double min_dual_steepest_edge_weight = 1e-4;
 
   double Tp;  // Tolerance for primal
   double primal_feasibility_tolerance;
@@ -544,6 +544,8 @@ class HDual {
   double alpha;
   double alphaRow;
   double numericalTrouble;
+  // (Local) value of computed weight
+  double computed_edge_weight;
 
   // Partitioned coefficient matrix
   int slice_num;
@@ -598,12 +600,29 @@ class HDual {
   MChoice multi_choice[HIGHS_THREAD_LIMIT];
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
-  double total_syntheticTick;
 #ifdef HiGHSDEV
-  double total_fake;
-#endif
-  double total_INVERT_TICK;
-  double total_FT_inc_TICK;
+  const bool rp_iter_da = false;//true;//
+  const bool rp_reinvert_syntheticClock = false;//true;//
+  const bool rp_numericalTrouble = false;//true;//
+#endif  
+  const double original_multi_build_syntheticTick_mu = 1.5;
+  const double multi_build_syntheticTick_mu =
+        1.0;
+  //original_multi_build_syntheticTick_mu;//
+  const double numerical_trouble_tolerance = 1e-7;
+  const double original_multi_numerical_trouble_tolerance = 1e-8;
+  const double multi_numerical_trouble_tolerance =
+    1e-7;
+  //original_multi_numerical_trouble_tolerance;
+  
+  const int synthetic_tick_reinversion_min_update_count = 50;
+  const int original_multi_synthetic_tick_reinversion_min_update_count = 201;
+  const int multi_synthetic_tick_reinversion_min_update_count =
+        synthetic_tick_reinversion_min_update_count;
+  //original_multi_synthetic_tick_reinversion_min_update_count;
+
+  double build_syntheticTick;
+  double total_syntheticTick;
 
   int num_dual_steepest_edge_weight_check;
   int num_dual_steepest_edge_weight_reject;

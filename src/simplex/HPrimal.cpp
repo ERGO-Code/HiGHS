@@ -25,13 +25,21 @@
 
 using std::runtime_error;
 
-void HPrimal::solve() {
+HighsStatus HPrimal::solve() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
-  // Cannot solve box-constrained LPs
-  if (workHMO.simplex_lp_.numRow_ == 0) return;
+  // Assumes that the LP has a positive number of rows, since
+  // unconstrained LPs should be solved in solveLpSimplex
+  bool positive_num_row = workHMO.simplex_lp_.numRow_ > 0;
+  assert(positive_num_row);
+  if (!positive_num_row) {
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
+		    "HPrimal::solve called for LP with non-positive (%d) number of constraints",
+		    workHMO.simplex_lp_.numRow_);
+    return HighsStatus::Error;
+  }
 
   HighsTimer& timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
@@ -77,9 +85,9 @@ void HPrimal::solve() {
   initialise_dual_steepest_edge_weights
     // Using dual Devex edge weights
     // Zero the number of Devex frameworks used and set up the first one
-    n_dvx_fwk = 0;
-    dvx_ix.assign(solver_num_tot, 0);
-    iz_dvx_fwk();
+    num_devex_framework = 0;
+    devex_index.assign(solver_num_tot, 0);
+    initialiseDevexFramework();
     // Indicate that edge weights are known
     simplex_lp_status.has_dual_steepest_edge_weights = true;
   }
@@ -164,8 +172,8 @@ void HPrimal::solve() {
 #ifdef HiGHSDEV
   /*
   if (primal_edge_weight_mode == PrimalEdgeWeightMode::DEVEX) {
-    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
-           scaled_solution_params.simplex_iteration_count / n_dvx_fwk);
+    printf("Devex: num_devex_framework = %d; Average num_devex_iterations = %d\n", num_devex_framework,
+           scaled_solution_params.simplex_iteration_count / num_devex_framework);
   }
   */
 #endif
@@ -175,6 +183,7 @@ void HPrimal::solve() {
   solvePhase); if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
   */
+  return HighsStatus::OK;
 }
 
 void HPrimal::solvePhase2() {
@@ -272,7 +281,9 @@ void HPrimal::solvePhase2() {
     }
   }
 
-  if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) return;
+  if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) {
+    return;
+  }
 
   if (columnIn == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,

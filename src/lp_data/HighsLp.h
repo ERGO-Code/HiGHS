@@ -111,8 +111,6 @@ struct HighsScale {
   double cost_;
   std::vector<double> col_;
   std::vector<double> row_;
-  double extreme_equilibration_improvement_;
-  double mean_equilibration_improvement_;
 };
 
 struct SimplexBasis {
@@ -206,6 +204,8 @@ struct HighsSimplexInfo {
   std::vector<double> numTotRandomValue_;
   std::vector<int> numTotPermutation_;
   std::vector<int> numColPermutation_;
+
+  std::vector<int> devex_index_;
 
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;

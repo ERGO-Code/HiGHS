@@ -1751,12 +1751,33 @@ void reportMatrix(const HighsOptions& options, const char* message, const int nu
 
 #ifdef HiGHSDEV
 void analyseLp(const HighsLp& lp, const char* message) {
+  vector<double> min_colBound;
+  vector<double> min_rowBound;
+  vector<double> colRange;
+  vector<double> rowRange;
+  min_colBound.resize(lp.numCol_);
+  min_rowBound.resize(lp.numRow_);
+  colRange.resize(lp.numCol_);
+  rowRange.resize(lp.numRow_);
+  for (int col = 0; col < lp.numCol_; col++)
+    min_colBound[col] = min(fabs(lp.colLower_[col]), fabs(lp.colUpper_[col]));
+  for (int row = 0; row < lp.numRow_; row++)
+    min_rowBound[row] = min(fabs(lp.rowLower_[row]), fabs(lp.rowUpper_[row]));
+  for (int col = 0; col < lp.numCol_; col++)
+    colRange[col] = lp.colUpper_[col] - lp.colLower_[col];
+  for (int row = 0; row < lp.numRow_; row++)
+    rowRange[row] = lp.rowUpper_[row] - lp.rowLower_[row];
+
   printf("\n%s model data: Analysis\n", message);
   analyseVectorValues("Column costs", lp.numCol_, lp.colCost_);
   analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_);
   analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_);
+  analyseVectorValues("Column min abs bound", lp.numCol_, min_colBound);
+  analyseVectorValues("Column range", lp.numCol_, colRange);
   analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_);
   analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_);
+  analyseVectorValues("Row min abs bound", lp.numRow_, min_rowBound);
+  analyseVectorValues("Row range", lp.numRow_, rowRange);
   analyseVectorValues("Matrix sparsity", lp.Astart_[lp.numCol_], lp.Avalue_,
 		      true, lp.model_name_);
   analyseMatrixSparsity("Constraint matrix", lp.numCol_, lp.numRow_, lp.Astart_,
@@ -1765,6 +1786,39 @@ void analyseLp(const HighsLp& lp, const char* message) {
   analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
 #endif
+
+void writeSolutionToFile(FILE* file, const HighsLp& lp,
+			 const HighsBasis& basis, const HighsSolution& solution,
+			 const bool pretty) {
+  if (pretty) {
+    reportModelBoundSol(file,
+			true, lp.numCol_, lp.colLower_, lp.colUpper_,
+			lp.col_names_, solution.col_value, solution.col_dual,
+			basis.col_status);
+    reportModelBoundSol(file,
+			false, lp.numRow_, lp.rowLower_, lp.rowUpper_,
+			lp.row_names_, solution.row_value, solution.row_dual,
+			basis.row_status);
+  } else {
+    fprintf(file, "%d %d : Number of columns and rows for primal and dual solution and basis\n", lp.numCol_, lp.numRow_);
+    const bool with_basis = basis.valid_;
+    if (with_basis) {
+      fprintf(file, "T\n");
+    } else {
+      fprintf(file, "F\n");
+    }
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+      fprintf(file, "%g %g", solution.col_value[iCol], solution.col_dual[iCol]);
+      if (with_basis) fprintf(file, " %d", (int)basis.col_status[iCol]);
+      fprintf(file, " \n");
+    }
+    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+      fprintf(file, "%g %g", solution.row_value[iRow], solution.row_dual[iRow]);
+      if (with_basis) fprintf(file, " %d", (int)basis.row_status[iRow]);
+      fprintf(file, " \n");
+    }
+  }
+}
 
 HighsStatus convertBasis(const HighsLp& lp, const SimplexBasis& basis,
                          HighsBasis& new_basis) {

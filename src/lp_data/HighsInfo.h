@@ -102,9 +102,9 @@ InfoStatus getInfoValue(const HighsOptions& options,
 			const std::vector<InfoRecord*>& info_records,
 			double& value);
 
-HighsStatus reportInfoToFile(const HighsOptions& options,
-			     const std::string filename,
-			     const std::vector<InfoRecord*>& info_records);
+HighsStatus writeInfoToFile(FILE* file,
+			    const std::vector<InfoRecord*>& info_records,
+			    const bool html=false);
 void reportInfo(FILE* file,
 		const std::vector<InfoRecord*>& info_records,
 		const bool html=false);
@@ -145,13 +145,13 @@ class HighsInfo {
     records.push_back(record_int);
 
     record_int = new InfoRecordInt("primal_status",
-				   "Primal status of the model: -1 => Not set; 0 => No solution; 1=> Feasible point",
+				   "Primal status of the model: -1 => Not set; 0 => No solution; 1 => Unknown; 2 => Infeasible point; 3 => Feasible point",
 				   advanced, &primal_status,
 				   (int)PrimalDualStatus::STATUS_NOTSET);
     records.push_back(record_int);
     
     record_int = new InfoRecordInt("dual_status",
-				   "Dual status of the model: -1 => Not set; 0 => No solution; 1=> Feasible point",
+				   "Dual status of the model: -1 => Not set; 0 => No solution; 1 => Unknown; 2 => Infeasible point; 3 => Feasible point",
 				   advanced, &dual_status,
 				   (int)PrimalDualStatus::STATUS_NOTSET);
     records.push_back(record_int);
