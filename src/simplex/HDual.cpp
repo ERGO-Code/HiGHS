@@ -293,7 +293,9 @@ HighsStatus HDual::solve(int num_threads) {
 #endif
 
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
+  if (simplex_info.analyseSimplexIterations) {
+    iterationAnalysisReport();
+  }
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     printf("Devex: Number of Devex frameworks = %d; Average number of Devex iterations = %d\n",
 	   num_devex_framework,
@@ -977,6 +979,7 @@ void HDual::iterate() {
 
   // Analyse the iteration: possibly report; possibly switch strategy
   iterationAnalysis();
+  
 }
 
 void HDual::iterateTasks() {
@@ -1085,6 +1088,34 @@ void HDual::iterationAnalysisInitialise() {
 }
 
 void HDual::iterationAnalysis() {
+  const bool new_analysis = true;
+  if (new_analysis) {
+    HighsOptions& options = workHMO.options_;
+    HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
+    HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+    analysis->simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+    analysis->num_threads = options.num_threads;
+    analysis->edge_weight_mode = dual_edge_weight_mode;
+    analysis->solve_phase = solvePhase;
+    analysis->major_iteration_number = scaled_solution_params.simplex_iteration_count;
+    analysis->minor_iteration_number = 0;
+    analysis->devex_iteration_number = num_devex_iterations;
+    analysis->pivotal_row_index = rowOut;
+    analysis->leaving_variable = columnOut;
+    analysis->entering_variable = columnIn;
+    analysis->invert_hint = invertHint;
+    analysis->freelist_size = dualRow.freeListSize;
+    analysis->reduced_rhs_value = 0;
+    analysis->reduced_cost_value = 0;
+    analysis->edge_weight = 0;
+    analysis->primal_step = thetaPrimal;
+    analysis->dual_step = thetaDual;
+    analysis->pivot_value_from_column = alpha;
+    analysis->pivot_value_from_row = alphaRow;
+    analysis->numerical_trouble = numericalTrouble;
+    analysis->objective_value = simplex_info.updated_dual_objective_value;
+    analysis->iterationReport();
+  }
   // Possibly report on the iteration
   iterationReport();
 
