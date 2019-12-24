@@ -13,7 +13,9 @@
  */
 #include <cmath>
 //#include <cstdio>
+#include "HConfig.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "simplex/HFactor.h"
 
 void HighsSimplexAnalysis::setup(const int numCol_, const int numRow_) {
   
@@ -31,48 +33,49 @@ void HighsSimplexAnalysis::updateOperationResultDensity(const double local_densi
     running_average_multiplier * local_density;
 }
 
+/*
 void HighsSimplexAnalysis::equalDensity(const double density0, const double density1) {
   const double delta_density = std::fabs(density1-density0);
   if (delta_density>1e-15) {
     printf("ERROR: Difference %g in density0 - %g and density1 = %g\n", delta_density, density0, density1);
   }
 }
+*/
 
-  /*
-void HDual::iterationAnalysisInitialise() {
-  AnIterIt0 = workHMO.scaled_solution_params_.simplex_iteration_count;
+void HighsSimplexAnalysis::initialise(const int simplex_iteration_count) {
+  AnIterIt0 = simplex_iteration_count;
   AnIterCostlyDseFq = 0;
 #ifdef HiGHSDEV
   AnIterPrevRpNumCostlyDseIt = 0;
   AnIterPrevIt = 0;
   AnIterOpRec* AnIter;
-  AnIter = &AnIterOp[AnIterOpTy_Btran];
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN];
   AnIter->AnIterOpName = "Btran";
-  AnIter = &AnIterOp[AnIterOpTy_Price];
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE];
   AnIter->AnIterOpName = "Price";
-  AnIter = &AnIterOp[AnIterOpTy_Ftran];
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN];
   AnIter->AnIterOpName = "Ftran";
-  AnIter = &AnIterOp[AnIterOpTy_FtranBFRT];
-  AnIter->AnIterOpName = "FtranBFRT";
-  AnIter = &AnIterOp[AnIterOpTy_FtranDSE];
-  AnIter->AnIterOpName = "FtranDSE";
-  for (int k = 0; k < NumAnIterOpTy; k++) {
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT];
+  AnIter->AnIterOpName = "Ftran BFRT";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_DSE];
+  AnIter->AnIterOpName = "Ftran_DSE";
+  for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIter = &AnIterOp[k];
     AnIter->AnIterOpLog10RsDsty = 0;
     AnIter->AnIterOpSuLog10RsDsty = 0;
-    if (k == AnIterOpTy_Price) {
+    if (k == ANALYSIS_OPERATION_TYPE_PRICE) {
       AnIter->AnIterOpHyperCANCEL = 1.0;
       AnIter->AnIterOpHyperTRAN = 1.0;
-      AnIter->AnIterOpRsDim = solver_num_col;
+      AnIter->AnIterOpRsDim = numCol;
     } else {
-      if (k == AnIterOpTy_Btran) {
+      if (k == ANALYSIS_OPERATION_TYPE_BTRAN) {
         AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
         AnIter->AnIterOpHyperTRAN = hyperBTRANU;
       } else {
         AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
         AnIter->AnIterOpHyperTRAN = hyperFTRANL;
       }
-      AnIter->AnIterOpRsDim = solver_num_row;
+      AnIter->AnIterOpRsDim = numRow;
     }
     AnIter->AnIterOpNumCa = 0;
     AnIter->AnIterOpNumHyperOp = 0;
@@ -103,6 +106,7 @@ void HDual::iterationAnalysisInitialise() {
 #endif
 }
 
+  /*
 void HDual::iterationAnalysis() {
   // Possibly report on the iteration
   iterationReport();
@@ -188,7 +192,7 @@ void HDual::iterationAnalysis() {
     printf("\n");
   }
 
-  for (int k = 0; k < NumAnIterOpTy; k++) {
+  for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIterOpRec* lcAnIterOp = &AnIterOp[k];
     if (lcAnIterOp->AnIterOpNumCa) {
       lcAnIterOp->AnIterOpSuNumCa += lcAnIterOp->AnIterOpNumCa;
@@ -222,15 +226,15 @@ void HDual::iterationAnalysis() {
       lcAnIter = &AnIterTrace[AnIterTraceNumRec];
       lcAnIter->AnIterTraceIter = workHMO.scaled_solution_params_.simplex_iteration_count;
       lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = analysis->row_ep_density;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = analysis->row_ap_density;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = analysis->col_aq_density;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = analysis->col_aq_density;
+      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = analysis->row_ep_density;
+      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = analysis->row_ap_density;
+      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = analysis->col_aq_density;
+      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = analysis->col_aq_density;
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-        lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = analysis->row_DSE_density;
+        lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = analysis->row_DSE_density;
         lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
       } else {
-        lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
+        lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
         lcAnIter->AnIterTraceAux0 = 0;
       }
       lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)dual_edge_weight_mode;
@@ -298,7 +302,7 @@ void HighsSimplexAnalysis::iterationAnalysisReport() {
     printf("Dan for %12d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
   printf("\n");
-  for (int k = 0; k < NumAnIterOpTy; k++) {
+  for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIterOpRec* AnIter = &AnIterOp[k];
     int lcNumCa = AnIter->AnIterOpSuNumCa;
     printf("\n%-9s performed %d times\n", AnIter->AnIterOpName.c_str(),
@@ -392,15 +396,15 @@ void HighsSimplexAnalysis::iterationAnalysisReport() {
   lcAnIter = &AnIterTrace[AnIterTraceNumRec];
   lcAnIter->AnIterTraceIter = workHMO.scaled_solution_params_.simplex_iteration_count;
   lcAnIter->AnIterTraceTime = timer.getTime();
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = analysis->row_ep_density;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = analysis->row_ap_density;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = analysis->col_aq_density;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = analysis->col_aq_density;
+  lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = analysis->row_ep_density;
+  lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = analysis->row_ap_density;
+  lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = analysis->col_aq_density;
+  lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = analysis->col_aq_density;
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = analysis->row_DSE_density;
+    lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = analysis->row_DSE_density;
     lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
   } else {
-    lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
+    lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
     lcAnIter->AnIterTraceAux0 = 0;
   }
   lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)dual_edge_weight_mode;
@@ -427,10 +431,10 @@ void HighsSimplexAnalysis::iterationAnalysisReport() {
       if (dlTime > 0) iterSpeed = dlIter / dlTime;
       int lc_dual_edge_weight_mode =
           lcAnIter->AnIterTrace_dual_edge_weight_mode;
-      int l10ColDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran]);
-      int l10REpDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran]);
-      int l10RapDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Price]);
-      int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE]);
+      int l10ColDse = intLog10(lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN]);
+      int l10REpDse = intLog10(lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN]);
+      int l10RapDse = intLog10(lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE]);
+      int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE]);
       int l10Aux0 = intLog10(lcAnIter->AnIterTraceAux0);
       std::string str_dual_edge_weight_mode;
       if (lc_dual_edge_weight_mode == (int)DualEdgeWeightMode::STEEPEST_EDGE)

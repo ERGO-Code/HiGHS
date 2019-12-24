@@ -18,8 +18,10 @@
 
 #include <cstdio>
 #include <string>
+#include <vector>
 #include "HConfig.h"
-#include "SimplexConst.h"
+#include "simplex/SimplexConst.h"
+#include "util/HighsTimer.h"
 //#include "HSimplex.h"
 //#include "simplex/HVector.h"
 
@@ -33,6 +35,7 @@
     NUM_ANALYSIS_OPERATION_TYPE,
   };
 #endif
+  const double running_average_multiplier = 0.05;
 
 /**
  * @brief Analyse simplex iterations, both for run-time control and data gathering
@@ -47,10 +50,10 @@ class HighsSimplexAnalysis {
 				    double& density
 				    );
 
-  void equalDensity(const double density0, const double density1);
+  //  void equalDensity(const double density0, const double density1);
 
+  void initialise(const int simplex_iteration_count);
   /*
-  void iterationAnalysisInitialise();
   void iterationAnalysis();
 #ifdef HiGHSDEV
   void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
@@ -59,15 +62,45 @@ class HighsSimplexAnalysis {
 #endif
   */
 
+  HighsTimer timer;
+
   int numRow;
   int numCol;
-  const double running_average_multiplier = 0.05;
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
   
+  int simplex_strategy;
+  int num_threads;
+  DualEdgeWeightMode edge_weight_mode;
+  int major_iteration_number;
+  int minor_iteration_number;
+  int devex_iteration_number;
+  int pivotal_row_index;
+  int leaving_variable;
+  int entering_variable;
+  double reduced_rhs_value;
+  double reduced_cost_value;
+  double edge_weight;
+  double primal_step;
+  double dual_step;
+  double pivot_value_from_column;
+  double pivot_value_from_row;
+  
  private:
+  int AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
+  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
+  const double AnIterCostlyDseMeasureLimit = 1000.0;  //!<
+  const double AnIterCostlyDseMnDensity = 0.01;       //!<
+  const double AnIterFracNumTot_ItBfSw = 0.1;         //!<
+  const double AnIterFracNumCostlyDseItbfSw = 0.05;   //!<
+  double AnIterCostlyDseMeasure;
+#ifdef HiGHSDEV
+  int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
+                                   //!< previously reported
+#endif
+
   int AnIterIt0;
 #ifdef HiGHSDEV
   int AnIterPrevIt;
