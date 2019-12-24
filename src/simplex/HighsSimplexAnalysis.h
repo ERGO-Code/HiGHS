@@ -14,18 +14,10 @@
 #ifndef SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 #define SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 
-//#include <vector>
-
-#include <cstdio>
-#include <string>
-#include <vector>
-//#include "HConfig.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 #include "util/HighsTimer.h"
-//#include "HSimplex.h"
-//#include "simplex/HVector.h"
 
 #ifdef HiGHSDEV
   enum ANALYSIS_OPERATION_TYPE {
@@ -48,21 +40,23 @@ class HighsSimplexAnalysis {
 
   void messaging(FILE* logfile_, FILE* output_, const int message_level_);
 
-  void updateOperationResultDensity(const double local_density,
-				    double& density
-				    );
+  void initialise(const int simplex_iteration_count);
+
+  void updateOperationResultDensity(const double local_density, double& density);
 
   //  void equalDensity(const double density0, const double density1);
 
-  void initialise(const int simplex_iteration_count);
+  void iterationReport();
+
   /*
   void iterationAnalysis();
 #ifdef HiGHSDEV
-  void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
-  void iterateOpRecAf(int opTy, HVector& vector);
+  void iterateOpRecBf(const int opTy, const HVector& vector, const double hist_dsty);
+  void iterateOpRecAf(const int opTy, const HVector& vector);
   void iterationAnalysisReport();
 #endif
   */
+  int intLog10(const double v);
 
   HighsTimer timer_;
 
@@ -80,13 +74,15 @@ class HighsSimplexAnalysis {
   int simplex_strategy;
   int num_threads;
   DualEdgeWeightMode edge_weight_mode;
-  int phase;
+  int solve_phase;
   int major_iteration_number;
   int minor_iteration_number;
   int devex_iteration_number;
   int pivotal_row_index;
   int leaving_variable;
   int entering_variable;
+  int invert_hint;
+  int freelist_size;
   double reduced_rhs_value;
   double reduced_cost_value;
   double edge_weight;
@@ -94,8 +90,17 @@ class HighsSimplexAnalysis {
   double dual_step;
   double pivot_value_from_column;
   double pivot_value_from_row;
+  double numerical_trouble;
+  double objective_value;
   
  private:
+
+  void iterationReportFull(const bool header);
+  void iterationReportIterationAndPhase(const int iterate_log_level, const bool header);
+  void iterationReportDualObjective(const int iterate_log_level, const bool header);
+  void iterationReportIterationData(const int iterate_log_level, const bool header);
+  void iterationReportDensity(const int iterate_log_level, const bool header);
+
   int AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
   double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
   const double AnIterCostlyDseMeasureLimit = 1000.0;  //!<
@@ -107,6 +112,8 @@ class HighsSimplexAnalysis {
   int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
                                    //!< previously reported
 #endif
+
+  int previous_iteration_report_header_iteration_count;
 
   int AnIterIt0;
 #ifdef HiGHSDEV
