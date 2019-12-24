@@ -17,15 +17,21 @@
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/HFactor.h"
 
-void HighsSimplexAnalysis::setup(const int numCol_, const int numRow_) {
-  
+void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
   // Copy Problem size
-  numRow = numRow_;
-  numCol = numCol_;
+  numRow = lp.numRow_;
+  numCol = lp.numCol_;
+  messaging(options.logfile, options.output, options.message_level);
   col_aq_density = 0;
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+}
+
+void HighsSimplexAnalysis::messaging(FILE* logfile_, FILE* output_, const int message_level_) {
+  logfile = logfile_;
+  output = output_;
+  message_level = message_level_;
 }
 
 void HighsSimplexAnalysis::updateOperationResultDensity(const double local_density, double& density) {
@@ -44,6 +50,7 @@ void HighsSimplexAnalysis::equalDensity(const double density0, const double dens
 
 void HighsSimplexAnalysis::initialise(const int simplex_iteration_count) {
   AnIterIt0 = simplex_iteration_count;
+  timer_.resetHighsTimer();
   AnIterCostlyDseFq = 0;
 #ifdef HiGHSDEV
   AnIterPrevRpNumCostlyDseIt = 0;
@@ -102,7 +109,7 @@ void HighsSimplexAnalysis::initialise(const int simplex_iteration_count) {
   AnIterTraceIterDl = 1;
   AnIterTraceRec* lcAnIter = &AnIterTrace[0];
   lcAnIter->AnIterTraceIter = AnIterIt0;
-  lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
+  lcAnIter->AnIterTraceTime = timer_.getTime();
 #endif
 }
 

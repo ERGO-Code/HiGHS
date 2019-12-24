@@ -393,7 +393,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // Reset unscaled and scaled model status and solution params - except for iteration counts
   resetModelStatusAndSolutionParams(highs_model_object);
   HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
-  simplex_analysis.setup(highs_model_object.lp_.numCol_, highs_model_object.lp_.numRow_);
+  simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_);
   simplex_analysis.initialise(highs_model_object.scaled_solution_params_.simplex_iteration_count);
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly

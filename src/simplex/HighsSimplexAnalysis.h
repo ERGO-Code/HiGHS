@@ -19,7 +19,9 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-#include "HConfig.h"
+//#include "HConfig.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 #include "util/HighsTimer.h"
 //#include "HSimplex.h"
@@ -42,9 +44,9 @@
  */
 class HighsSimplexAnalysis {
  public:
-  void setup(int numCol_,            //!< Number of columns
-             int numRow_            //!< Number of rows
-	     );
+  void setup(const HighsLp& lp, const HighsOptions& options);
+
+  void messaging(FILE* logfile_, FILE* output_, const int message_level_);
 
   void updateOperationResultDensity(const double local_density,
 				    double& density
@@ -62,10 +64,14 @@ class HighsSimplexAnalysis {
 #endif
   */
 
-  HighsTimer timer;
+  HighsTimer timer_;
 
   int numRow;
   int numCol;
+  FILE* logfile;
+  FILE* output;
+  int message_level;
+
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
@@ -74,6 +80,7 @@ class HighsSimplexAnalysis {
   int simplex_strategy;
   int num_threads;
   DualEdgeWeightMode edge_weight_mode;
+  int phase;
   int major_iteration_number;
   int minor_iteration_number;
   int devex_iteration_number;
