@@ -1088,8 +1088,9 @@ void HDual::iterationAnalysisInitialise() {
 }
 
 void HDual::iterationAnalysis() {
-  const bool new_analysis = true;
-  if (new_analysis) {
+  // Possibly report on the iteration
+  const bool analysis_iteration_report = false;//true;//
+  if (analysis_iteration_report) {
     HighsOptions& options = workHMO.options_;
     HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
     HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -1108,6 +1109,7 @@ void HDual::iterationAnalysis() {
     analysis->reduced_rhs_value = 0;
     analysis->reduced_cost_value = 0;
     analysis->edge_weight = 0;
+    analysis->primal_delta = deltaPrimal;
     analysis->primal_step = thetaPrimal;
     analysis->dual_step = thetaDual;
     analysis->pivot_value_from_column = alpha;
@@ -1115,9 +1117,9 @@ void HDual::iterationAnalysis() {
     analysis->numerical_trouble = numericalTrouble;
     analysis->objective_value = simplex_info.updated_dual_objective_value;
     analysis->iterationReport();
+  } else {
+    iterationReport();
   }
-  // Possibly report on the iteration
-  iterationReport();
 
   // Possibly switch from DSE to Devex
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {

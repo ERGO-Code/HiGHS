@@ -86,6 +86,7 @@ class HighsSimplexAnalysis {
   double reduced_rhs_value;
   double reduced_cost_value;
   double edge_weight;
+  double primal_delta;
   double primal_step;
   double dual_step;
   double pivot_value_from_column;
@@ -113,7 +114,7 @@ class HighsSimplexAnalysis {
                                    //!< previously reported
 #endif
 
-  int previous_iteration_report_header_iteration_count;
+  int previous_iteration_report_header_iteration_count = -1;
 
   int AnIterIt0;
 #ifdef HiGHSDEV

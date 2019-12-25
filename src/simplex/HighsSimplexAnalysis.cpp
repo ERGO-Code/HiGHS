@@ -26,6 +26,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options)
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+  previous_iteration_report_header_iteration_count = -1;
+  
 }
 
 void HighsSimplexAnalysis::messaging(FILE* logfile_, FILE* output_, const int message_level_) {
@@ -109,7 +111,7 @@ void HighsSimplexAnalysis::iterationReportIterationData(const int iterate_log_le
     HighsPrintMessage(output, message_level, iterate_log_level,
                       " %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g",
                       invert_hint, numerical_trouble, pivotal_row_index, leaving_variable, entering_variable,
-                      primal_step, dual_step, reduced_rhs_value, pivot_value_from_column);
+                      primal_delta, dual_step, primal_step, pivot_value_from_column);
   }
 }
 
