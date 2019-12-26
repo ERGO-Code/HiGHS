@@ -127,21 +127,23 @@ HighsStatus HDual::solve(int num_threads) {
           solver_num_row - simplex_info.num_basic_logicals;
       bool computeExactDseWeights =
           num_basic_structurals > 0 && initialise_dual_steepest_edge_weights;
-      // Initialise the measures used to analyse accuracy of steepest edge weights
-      num_dual_steepest_edge_weight_check = 0;
-      num_dual_steepest_edge_weight_reject = 0;
-      num_wrong_low_dual_steepest_edge_weight = 0;
-      num_wrong_high_dual_steepest_edge_weight = 0;
-      average_frequency_low_dual_steepest_edge_weight = 0;
-      average_frequency_high_dual_steepest_edge_weight = 0;
-      average_log_low_dual_steepest_edge_weight_error = 0;
-      average_log_high_dual_steepest_edge_weight_error = 0;
-      max_average_frequency_low_dual_steepest_edge_weight = 0;
-      max_average_frequency_high_dual_steepest_edge_weight = 0;
-      max_sum_average_frequency_extreme_dual_steepest_edge_weight = 0;
-      max_average_log_low_dual_steepest_edge_weight_error = 0;
-      max_average_log_high_dual_steepest_edge_weight_error = 0;
-      max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
+      if (!use_HSA) {
+	// Initialise the measures used to analyse accuracy of steepest edge weights
+	num_dual_steepest_edge_weight_check = 0;
+	num_dual_steepest_edge_weight_reject = 0;
+	num_wrong_low_dual_steepest_edge_weight = 0;
+	num_wrong_high_dual_steepest_edge_weight = 0;
+	average_frequency_low_dual_steepest_edge_weight = 0;
+	average_frequency_high_dual_steepest_edge_weight = 0;
+	average_log_low_dual_steepest_edge_weight_error = 0;
+	average_log_high_dual_steepest_edge_weight_error = 0;
+	max_average_frequency_low_dual_steepest_edge_weight = 0;
+	max_average_frequency_high_dual_steepest_edge_weight = 0;
+	max_sum_average_frequency_extreme_dual_steepest_edge_weight = 0;
+	max_average_log_low_dual_steepest_edge_weight_error = 0;
+	max_average_log_high_dual_steepest_edge_weight_error = 0;
+	max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
+      }
 #ifdef HiGHSDEV
       if (computeExactDseWeights) {
         printf(
@@ -1117,8 +1119,6 @@ void HDual::iterationAnalysis() {
     analysis->numerical_trouble = numericalTrouble;
     analysis->objective_value = simplex_info.updated_dual_objective_value;
 
-    analysis->average_log_high_dual_steepest_edge_weight_error = average_log_high_dual_steepest_edge_weight_error;
-    analysis->average_log_low_dual_steepest_edge_weight_error = average_log_low_dual_steepest_edge_weight_error;
     analysis->iterationReport();
   } else {
     iterationReport();
@@ -1504,8 +1504,12 @@ bool HDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
   // Accept the updated weight if it is at least a quarter of the
   // computed weight. Excessively large updated weights don't matter!
   const double accept_weight_threshhold = 0.25;
+  const bool accept_weight = updated_edge_weight >= accept_weight_threshhold * computed_edge_weight;
+  if (use_HSA) {
+    analysis->dualSteepestEdgeWeightError(computed_edge_weight, updated_edge_weight);
+    return accept_weight;
+  }
   const double weight_error_threshhold = 4.0;
-  bool accept_weight = updated_edge_weight >= accept_weight_threshhold * computed_edge_weight;
   int low_weight_error = 0;
   int high_weight_error = 0;
   double weight_error;

@@ -22,14 +22,38 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options)
   numRow = lp.numRow_;
   numCol = lp.numCol_;
   numTot = numRow + numCol;
+  // Copy tolerances from options
   allow_dual_steepest_edge_to_devex_switch = options.simplex_dual_edge_weight_strategy ==
     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
   dual_steepest_edge_weight_log_error_threshhold = options.dual_steepest_edge_weight_log_error_threshhold;
   messaging(options.logfile, options.output, options.message_level);
+  // Zero the densities
   col_aq_density = 0;
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+  // Initialise the measures used to analyse accuracy of steepest edge weights
+  // 
+  const int dual_edge_weight_strategy = options.simplex_dual_edge_weight_strategy;
+  if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE ||
+      dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL ||
+      dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+    // Initialise the measures used to analyse accuracy of steepest edge weights
+    num_dual_steepest_edge_weight_check = 0;
+    num_dual_steepest_edge_weight_reject = 0;
+    num_wrong_low_dual_steepest_edge_weight = 0;
+    num_wrong_high_dual_steepest_edge_weight = 0;
+    average_frequency_low_dual_steepest_edge_weight = 0;
+    average_frequency_high_dual_steepest_edge_weight = 0;
+    average_log_low_dual_steepest_edge_weight_error = 0;
+    average_log_high_dual_steepest_edge_weight_error = 0;
+    max_average_frequency_low_dual_steepest_edge_weight = 0;
+    max_average_frequency_high_dual_steepest_edge_weight = 0;
+    max_sum_average_frequency_extreme_dual_steepest_edge_weight = 0;
+    max_average_log_low_dual_steepest_edge_weight_error = 0;
+    max_average_log_high_dual_steepest_edge_weight_error = 0;
+    max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
+  }
   previous_iteration_report_header_iteration_count = -1;
   
 }
@@ -53,6 +77,86 @@ void HighsSimplexAnalysis::equalDensity(const double density0, const double dens
   }
 }
 */
+
+void HighsSimplexAnalysis::dualSteepestEdgeWeightError(const double computed_edge_weight,
+						       const double updated_edge_weight) {
+  const bool accept_weight = updated_edge_weight >= accept_weight_threshhold * computed_edge_weight;
+  int low_weight_error = 0;
+  int high_weight_error = 0;
+  double weight_error;
+#ifdef HiGHSDEV
+  string error_type = "  OK";
+#endif
+  num_dual_steepest_edge_weight_check++;
+  if (!accept_weight) num_dual_steepest_edge_weight_reject++;
+  if (updated_edge_weight < computed_edge_weight) {
+    // Updated weight is low
+    weight_error = computed_edge_weight/updated_edge_weight;
+    if (weight_error > weight_error_threshhold) {
+      low_weight_error = 1;
+#ifdef HiGHSDEV
+      error_type = " Low";
+#endif
+    }
+    average_log_low_dual_steepest_edge_weight_error =
+      0.99*average_log_low_dual_steepest_edge_weight_error +
+      0.01*log(weight_error);
+  } else {
+    // Updated weight is correct or high
+    weight_error = updated_edge_weight/computed_edge_weight;
+    if (weight_error > weight_error_threshhold) {
+      high_weight_error = 1;
+#ifdef HiGHSDEV
+      error_type = "High";
+#endif
+    }
+    average_log_high_dual_steepest_edge_weight_error =
+      0.99*average_log_high_dual_steepest_edge_weight_error +
+      0.01*log(weight_error);
+  }
+  average_frequency_low_dual_steepest_edge_weight = 
+    0.99*average_frequency_low_dual_steepest_edge_weight + 
+    0.01*low_weight_error;
+  average_frequency_high_dual_steepest_edge_weight = 
+    0.99*average_frequency_high_dual_steepest_edge_weight + 
+    0.01*high_weight_error;
+  max_average_frequency_low_dual_steepest_edge_weight =
+    max(max_average_frequency_low_dual_steepest_edge_weight,
+	average_frequency_low_dual_steepest_edge_weight);
+  max_average_frequency_high_dual_steepest_edge_weight =
+    max(max_average_frequency_high_dual_steepest_edge_weight,
+	average_frequency_high_dual_steepest_edge_weight);
+  max_sum_average_frequency_extreme_dual_steepest_edge_weight =
+    max(max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+	average_frequency_low_dual_steepest_edge_weight + average_frequency_high_dual_steepest_edge_weight);
+  max_average_log_low_dual_steepest_edge_weight_error =
+    max(max_average_log_low_dual_steepest_edge_weight_error,
+	average_log_low_dual_steepest_edge_weight_error);
+  max_average_log_high_dual_steepest_edge_weight_error =
+    max(max_average_log_high_dual_steepest_edge_weight_error,
+	average_log_high_dual_steepest_edge_weight_error);
+  max_sum_average_log_extreme_dual_steepest_edge_weight_error =
+    max(max_sum_average_log_extreme_dual_steepest_edge_weight_error,
+	average_log_low_dual_steepest_edge_weight_error + average_log_high_dual_steepest_edge_weight_error);
+#ifdef HiGHSDEV
+  const bool report_weight_error = false;
+  if (report_weight_error && weight_error > 0.5*weight_error_threshhold) {
+    printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
+	   simplex_iteration_count,
+	   accept_weight, 
+	   num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
+	   computed_edge_weight, updated_edge_weight, weight_error, error_type.c_str(),
+	   average_frequency_low_dual_steepest_edge_weight, average_log_low_dual_steepest_edge_weight_error,
+	   average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error,
+	   max_average_frequency_low_dual_steepest_edge_weight,
+	   max_average_frequency_high_dual_steepest_edge_weight,
+	   max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+	   max_average_log_low_dual_steepest_edge_weight_error,
+	   max_average_log_high_dual_steepest_edge_weight_error,
+	   max_sum_average_log_extreme_dual_steepest_edge_weight_error);
+  }
+#endif
+}
 
 bool HighsSimplexAnalysis::switchToDevex() {
   bool switch_to_devex = false;
@@ -198,8 +302,8 @@ void HighsSimplexAnalysis::iterationReportDensity(const int iterate_log_level, c
 }
 
 
-void HighsSimplexAnalysis::initialise(const int simplex_iteration_count) {
-  AnIterIt0 = simplex_iteration_count;
+void HighsSimplexAnalysis::initialise(const int simplex_iteration_count_) {
+  AnIterIt0 = simplex_iteration_count_;
   timer_.resetHighsTimer();
   AnIterCostlyDseFq = 0;
 #ifdef HiGHSDEV

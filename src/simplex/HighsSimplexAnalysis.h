@@ -47,8 +47,8 @@ class HighsSimplexAnalysis {
   //  void equalDensity(const double density0, const double density1);
 
   void iterationReport();
+  void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
   bool switchToDevex();
-
 
   /*
   void iterationAnalysis();
@@ -100,9 +100,6 @@ class HighsSimplexAnalysis {
   double numerical_trouble;
   double objective_value;
 
-  double average_log_high_dual_steepest_edge_weight_error;
-  double average_log_low_dual_steepest_edge_weight_error;
-  
  private:
 
   void iterationReportFull(const bool header);
@@ -123,6 +120,23 @@ class HighsSimplexAnalysis {
                                    //!< previously reported
 #endif
 
+  const double accept_weight_threshhold = 0.25;
+  const double weight_error_threshhold = 4.0;
+
+  int num_dual_steepest_edge_weight_check;
+  int num_dual_steepest_edge_weight_reject;
+  int num_wrong_low_dual_steepest_edge_weight;
+  int num_wrong_high_dual_steepest_edge_weight;
+  double average_frequency_low_dual_steepest_edge_weight;
+  double average_frequency_high_dual_steepest_edge_weight;
+  double average_log_low_dual_steepest_edge_weight_error;
+  double average_log_high_dual_steepest_edge_weight_error;
+  double max_average_frequency_low_dual_steepest_edge_weight;
+  double max_average_frequency_high_dual_steepest_edge_weight;
+  double max_sum_average_frequency_extreme_dual_steepest_edge_weight;
+  double max_average_log_low_dual_steepest_edge_weight_error;
+  double max_average_log_high_dual_steepest_edge_weight_error;
+  double max_sum_average_log_extreme_dual_steepest_edge_weight_error;
 
   int previous_iteration_report_header_iteration_count = -1;
 
