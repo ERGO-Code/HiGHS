@@ -17,6 +17,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
+#include "simplex/HVector.h"
 #include "util/HighsTimer.h"
 
 #ifdef HiGHSDEV
@@ -50,14 +51,11 @@ class HighsSimplexAnalysis {
   void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
   bool switchToDevex();
 
-  /*
-  void iterationAnalysis();
 #ifdef HiGHSDEV
-  void iterateOpRecBf(const int opTy, const HVector& vector, const double hist_dsty);
-  void iterateOpRecAf(const int opTy, const HVector& vector);
-  void iterationAnalysisReport();
+  void operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density);
+  void operationRecordAfter(const int operation_type, const HVector& vector);
+  void summaryReport();
 #endif
-  */
   int intLog10(const double v);
 
   HighsTimer timer_;

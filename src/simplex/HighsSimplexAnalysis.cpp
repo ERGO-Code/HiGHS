@@ -367,166 +367,27 @@ void HighsSimplexAnalysis::initialise(const int simplex_iteration_count_) {
 #endif
 }
 
-  /*
-void HighsSimplexAnalysis::iterationAnalysis() {
-  // Possibly report on the iteration
-  iterationReport();
-
-  // Possibly switch from DSE to Devex
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    bool switch_to_devex = false;
-    // Firstly consider switching on the basis of NLA cost
-    double AnIterCostlyDseMeasureDen;
-    AnIterCostlyDseMeasureDen =
-      max(max(row_ep_density, col_aq_density), row_ap_density);
-    if (AnIterCostlyDseMeasureDen > 0) {
-      AnIterCostlyDseMeasure = row_DSE_density / AnIterCostlyDseMeasureDen;
-      AnIterCostlyDseMeasure = AnIterCostlyDseMeasure * AnIterCostlyDseMeasure;
-    } else {
-      AnIterCostlyDseMeasure = 0;
-    }
-    bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
-      row_DSE_density > AnIterCostlyDseMnDensity;
-    AnIterCostlyDseFq = (1 - running_average_multiplier) * AnIterCostlyDseFq;
-    if (CostlyDseIt) {
-      AnIterNumCostlyDseIt++;
-      AnIterCostlyDseFq += running_average_multiplier * 1.0;
-      int lcNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
-      // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations have been costly
-      switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
-	(AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
-	(lcNumIter > AnIterFracNumTot_ItBfSw * numTot);
 #ifdef HiGHSDEV
-      if (switch_to_devex) {
-	HighsLogMessage(logfile, HighsMessageType::INFO,
-			"Switch from DSE to Devex after %d costly DSE iterations of %d: "
-			"C_Aq_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
-			AnIterNumCostlyDseIt, lcNumIter, row_DSE_density, row_ep_density,
-			col_aq_density);
-      }
-#endif
-    }
-    if (!switch_to_devex) {
-      // Secondly consider switching on the basis of weight accuracy
-      double dse_weight_error_measure =
-	average_log_low_dual_steepest_edge_weight_error +
-	average_log_high_dual_steepest_edge_weight_error;
-      double dse_weight_error_threshhold =
-	dual_steepest_edge_weight_log_error_threshhold;
-      switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
-	dse_weight_error_measure > dse_weight_error_threshhold;
-#ifdef HiGHSDEV
-      if (switch_to_devex) {
-	HighsLogMessage(logfile, HighsMessageType::INFO,
-			"Switch from DSE to Devex with log error measure of %g > %g = threshhold",
-			dse_weight_error_measure, dse_weight_error_threshhold);
-      }
-#endif
-    }
-    if (switch_to_devex) {
-      dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
-      // Zero the number of Devex frameworks used and set up the first one
-      num_devex_framework = 0;
-      devex_index.assign(numTot, 0);
-      workHMO.simplex_info_.devex_index_.assign(numTot, 0);
-      initialiseDevexFramework();
-    }
-  }
-
-#ifdef HiGHSDEV
-  int AnIterCuIt = workHMO.scaled_solution_params_.simplex_iteration_count;
-  bool iterLg = AnIterCuIt % 100 == 0;
-  iterLg = false;
-  if (iterLg) {
-    int lc_NumCostlyDseIt = AnIterNumCostlyDseIt - AnIterPrevRpNumCostlyDseIt;
-    AnIterPrevRpNumCostlyDseIt = AnIterNumCostlyDseIt;
-    printf("Iter %10d: ", AnIterCuIt);
-    iterationReportDensity(ML_MINIMAL, true);
-    iterationReportDensity(ML_MINIMAL, false);
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      int lc_pct = (100 * AnIterNumCostlyDseIt) / (AnIterCuIt - AnIterIt0);
-      printf("| Fq = %4.2f; Su =%5d (%3d%%)", AnIterCostlyDseFq,
-             AnIterNumCostlyDseIt, lc_pct);
-
-      if (lc_NumCostlyDseIt > 0) printf("; LcNum =%3d", lc_NumCostlyDseIt);
-    }
-    printf("\n");
-  }
-
-  for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
-    AnIterOpRec* lcAnIterOp = &AnIterOp[k];
-    if (lcAnIterOp->AnIterOpNumCa) {
-      lcAnIterOp->AnIterOpSuNumCa += lcAnIterOp->AnIterOpNumCa;
-      lcAnIterOp->AnIterOpSuNumHyperOp += lcAnIterOp->AnIterOpNumHyperOp;
-      lcAnIterOp->AnIterOpSuNumHyperRs += lcAnIterOp->AnIterOpNumHyperRs;
-      lcAnIterOp->AnIterOpSuLog10RsDsty += lcAnIterOp->AnIterOpLog10RsDsty;
-    }
-    lcAnIterOp->AnIterOpNumCa = 0;
-    lcAnIterOp->AnIterOpNumHyperOp = 0;
-    lcAnIterOp->AnIterOpNumHyperRs = 0;
-    lcAnIterOp->AnIterOpLog10RsDsty = 0;
-  }
-  if (invertHint > 0) AnIterNumInvert[invertHint]++;
-  if (thetaDual <= 0) AnIterNumDuDgnIt++;
-  if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
-  if (AnIterCuIt > AnIterPrevIt)
-    AnIterNumEdWtIt[(int)dual_edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
-
-  AnIterTraceRec* lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-  //  if (workHMO.scaled_solution_params_.simplex_iteration_count ==
-  //  AnIterTraceIterRec[AnIterTraceNumRec]+AnIterTraceIterDl) {
-  if (workHMO.scaled_solution_params_.simplex_iteration_count ==
-      lcAnIter->AnIterTraceIter + AnIterTraceIterDl) {
-    if (AnIterTraceNumRec == AN_ITER_TRACE_MX_NUM_REC) {
-      for (int rec = 1; rec <= AN_ITER_TRACE_MX_NUM_REC / 2; rec++)
-        AnIterTrace[rec] = AnIterTrace[2 * rec];
-      AnIterTraceNumRec = AnIterTraceNumRec / 2;
-      AnIterTraceIterDl = AnIterTraceIterDl * 2;
-    } else {
-      AnIterTraceNumRec++;
-      lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-      lcAnIter->AnIterTraceIter = workHMO.scaled_solution_params_.simplex_iteration_count;
-      lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
-      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
-      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
-      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
-      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
-      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-        lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
-        lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
-      } else {
-        lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
-        lcAnIter->AnIterTraceAux0 = 0;
-      }
-      lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)dual_edge_weight_mode;
-    }
-  }
-  AnIterPrevIt = AnIterCuIt;
-#endif
-}
-
-#ifdef HiGHSDEV
-void HighsSimplexAnalysis::iterateOpRecBf(int opTy, HVector& vector, double hist_dsty) {
-  AnIterOpRec* AnIter = &AnIterOp[opTy];
+void HighsSimplexAnalysis::operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density) {
+  AnIterOpRec* AnIter = &AnIterOp[operation_type];
   AnIter->AnIterOpNumCa++;
-  double curr_dsty = 1.0 * vector.count / solver_num_row;
+  double current_density = 1.0 * vector.count / numRow;
   //  printf("%10s: %g<= %g;  %g<= %g\n", AnIter->AnIterOpName.c_str(),
-  //	 curr_dsty, AnIter->AnIterOpHyperCANCEL,
-  //	 hist_dsty, AnIter->AnIterOpHyperTRAN);
-  if (curr_dsty <= AnIter->AnIterOpHyperCANCEL &&
-      hist_dsty <= AnIter->AnIterOpHyperTRAN)
+  //	 current_density, AnIter->AnIterOpHyperCANCEL,
+  //	 historical_density, AnIter->AnIterOpHyperTRAN);
+  if (current_density <= AnIter->AnIterOpHyperCANCEL &&
+      historical_density <= AnIter->AnIterOpHyperTRAN)
     AnIter->AnIterOpNumHyperOp++;
 }
 
-void HighsSimplexAnalysis::iterateOpRecAf(int opTy, HVector& vector) {
-  AnIterOpRec* AnIter = &AnIterOp[opTy];
+void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const HVector& vector) {
+  AnIterOpRec* AnIter = &AnIterOp[operation_type];
   double rsDsty = 1.0 * vector.count / AnIter->AnIterOpRsDim;
   if (rsDsty <= hyperRESULT) AnIter->AnIterOpNumHyperRs++;
   AnIter->AnIterOpRsMxNNZ = max(vector.count, AnIter->AnIterOpRsMxNNZ);
   if (rsDsty > 0) {
     AnIter->AnIterOpLog10RsDsty += log(rsDsty) / log(10.0);
   } else {
-    */
     /*
     // TODO Investigate these zero norms
     double vectorNorm = 0;
@@ -539,15 +400,13 @@ void HighsSimplexAnalysis::iterateOpRecAf(int opTy, HVector& vector) {
     printf("Strange: operation %s has result density = %g: ||vector|| = %g\n",
     AnIter->AnIterOpName.c_str(), rsDsty, vectorNorm);
     */
-    /*
   }
 }
 
-void HighsSimplexAnalysis::iterationAnalysisReport() {
-  HighsTimer& timer = workHMO.timer_;
-  int AnIterNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
+void HighsSimplexAnalysis::summaryReport() {
+  int AnIterNumIter = simplex_iteration_count - AnIterIt0;
   printf("\nAnalysis of %d iterations (%d to %d)\n", AnIterNumIter,
-         AnIterIt0 + 1, workHMO.scaled_solution_params_.simplex_iteration_count);
+         AnIterIt0 + 1, simplex_iteration_count);
   if (AnIterNumIter <= 0) return;
   int lc_EdWtNumIter;
   lc_EdWtNumIter = AnIterNumEdWtIt[(int)DualEdgeWeightMode::STEEPEST_EDGE];
@@ -655,20 +514,20 @@ void HighsSimplexAnalysis::iterationAnalysisReport() {
   AnIterTraceNumRec++;
   AnIterTraceRec* lcAnIter;
   lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-  lcAnIter->AnIterTraceIter = workHMO.scaled_solution_params_.simplex_iteration_count;
-  lcAnIter->AnIterTraceTime = timer.getTime();
+  lcAnIter->AnIterTraceIter = simplex_iteration_count;
+  lcAnIter->AnIterTraceTime = timer_.getTime();
   lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
   lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
   lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
   lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+  if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
     lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
   } else {
     lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
     lcAnIter->AnIterTraceAux0 = 0;
   }
-  lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)dual_edge_weight_mode;
+  lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)edge_weight_mode;
 
   if (AnIterTraceIterDl >= 100) {
     printf("\n Iteration speed analysis\n");
@@ -716,7 +575,6 @@ void HighsSimplexAnalysis::iterationAnalysisReport() {
   }
 }
 #endif
-    */
 int HighsSimplexAnalysis::intLog10(const double v) {
   int intLog10V = -99;
   if (v > 0) intLog10V = log(v) / log(10.0);
