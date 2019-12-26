@@ -21,6 +21,10 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options)
   // Copy Problem size
   numRow = lp.numRow_;
   numCol = lp.numCol_;
+  numTot = numRow + numCol;
+  allow_dual_steepest_edge_to_devex_switch = options.simplex_dual_edge_weight_strategy ==
+    SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
+  dual_steepest_edge_weight_log_error_threshhold = options.dual_steepest_edge_weight_log_error_threshhold;
   messaging(options.logfile, options.output, options.message_level);
   col_aq_density = 0;
   row_ep_density = 0;
@@ -50,14 +54,65 @@ void HighsSimplexAnalysis::equalDensity(const double density0, const double dens
 }
 */
 
+bool HighsSimplexAnalysis::switchToDevex() {
+  bool switch_to_devex = false;
+  // Firstly consider switching on the basis of NLA cost
+  double AnIterCostlyDseMeasureDen;
+  AnIterCostlyDseMeasureDen = max(max(row_ep_density, col_aq_density), row_ap_density);
+  if (AnIterCostlyDseMeasureDen > 0) {
+    AnIterCostlyDseMeasure = row_DSE_density / AnIterCostlyDseMeasureDen;
+    AnIterCostlyDseMeasure = AnIterCostlyDseMeasure * AnIterCostlyDseMeasure;
+  } else {
+    AnIterCostlyDseMeasure = 0;
+  }
+  bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
+    row_DSE_density > AnIterCostlyDseMnDensity;
+  AnIterCostlyDseFq = (1 - running_average_multiplier) * AnIterCostlyDseFq;
+  if (CostlyDseIt) {
+    AnIterNumCostlyDseIt++;
+    AnIterCostlyDseFq += running_average_multiplier * 1.0;
+    int lcNumIter = simplex_iteration_count - AnIterIt0;
+    // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations have been costly
+    switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
+      (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
+      (lcNumIter > AnIterFracNumTot_ItBfSw * numTot);
+#ifdef HiGHSDEV
+    if (switch_to_devex) {
+      HighsLogMessage(logfile, HighsMessageType::INFO,
+		      "Switch from DSE to Devex after %d costly DSE iterations of %d: "
+		      "C_Aq_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
+		      AnIterNumCostlyDseIt, lcNumIter, row_DSE_density, row_ep_density,
+		      col_aq_density);
+    }
+#endif
+  }
+  if (!switch_to_devex) {
+    // Secondly consider switching on the basis of weight accuracy
+    double dse_weight_error_measure =
+      average_log_low_dual_steepest_edge_weight_error +
+      average_log_high_dual_steepest_edge_weight_error;
+    double dse_weight_error_threshhold = dual_steepest_edge_weight_log_error_threshhold;
+    switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
+      dse_weight_error_measure > dse_weight_error_threshhold;
+#ifdef HiGHSDEV
+    if (switch_to_devex) {
+      HighsLogMessage(logfile, HighsMessageType::INFO,
+		      "Switch from DSE to Devex with log error measure of %g > %g = threshhold",
+		      dse_weight_error_measure, dse_weight_error_threshhold);
+    }
+#endif
+  }
+  return switch_to_devex;
+}
+
 void HighsSimplexAnalysis::iterationReport() {
-  const int iteration_count_difference = major_iteration_number -
+  const int iteration_count_difference = simplex_iteration_count -
     previous_iteration_report_header_iteration_count;
   const bool header = previous_iteration_report_header_iteration_count < 0
     || iteration_count_difference > 10;
   if (header) {
     iterationReportFull(header);
-    previous_iteration_report_header_iteration_count = major_iteration_number;
+    previous_iteration_report_header_iteration_count = simplex_iteration_count;
   }
   iterationReportFull(false);
 }
@@ -91,7 +146,7 @@ void HighsSimplexAnalysis::iterationReportIterationAndPhase(const int iterate_lo
 		      " Iteration Ph");
   } else {
     HighsPrintMessage(output, message_level, iterate_log_level,
-		      " %9d %2d", major_iteration_number, solve_phase);
+		      " %9d %2d", simplex_iteration_count, solve_phase);
   }
 }
 void HighsSimplexAnalysis::iterationReportDualObjective(const int iterate_log_level, const bool header) {
@@ -228,15 +283,15 @@ void HighsSimplexAnalysis::iterationAnalysis() {
     }
     bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
       row_DSE_density > AnIterCostlyDseMnDensity;
-    AnIterCostlyDseFq = (1 - runningAverageMu) * AnIterCostlyDseFq;
+    AnIterCostlyDseFq = (1 - running_average_multiplier) * AnIterCostlyDseFq;
     if (CostlyDseIt) {
       AnIterNumCostlyDseIt++;
-      AnIterCostlyDseFq += runningAverageMu * 1.0;
+      AnIterCostlyDseFq += running_average_multiplier * 1.0;
       int lcNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
       // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations have been costly
       switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
 	(AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
-	(lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot);
+	(lcNumIter > AnIterFracNumTot_ItBfSw * numTot);
 #ifdef HiGHSDEV
       if (switch_to_devex) {
 	HighsLogMessage(logfile, HighsMessageType::INFO,
@@ -258,7 +313,7 @@ void HighsSimplexAnalysis::iterationAnalysis() {
 	dse_weight_error_measure > dse_weight_error_threshhold;
 #ifdef HiGHSDEV
       if (switch_to_devex) {
-	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
+	HighsLogMessage(logfile, HighsMessageType::INFO,
 			"Switch from DSE to Devex with log error measure of %g > %g = threshhold",
 			dse_weight_error_measure, dse_weight_error_threshhold);
       }
@@ -268,8 +323,8 @@ void HighsSimplexAnalysis::iterationAnalysis() {
       dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
       // Zero the number of Devex frameworks used and set up the first one
       num_devex_framework = 0;
-      devex_index.assign(solver_num_tot, 0);
-      workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
+      devex_index.assign(numTot, 0);
+      workHMO.simplex_info_.devex_index_.assign(numTot, 0);
       initialiseDevexFramework();
     }
   }

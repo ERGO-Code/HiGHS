@@ -1089,8 +1089,7 @@ void HDual::iterationAnalysisInitialise() {
 
 void HDual::iterationAnalysis() {
   // Possibly report on the iteration
-  const bool analysis_iteration_report = false;//true;//
-  if (analysis_iteration_report) {
+  if (use_HSA) {
     HighsOptions& options = workHMO.options_;
     HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
     HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -1098,9 +1097,10 @@ void HDual::iterationAnalysis() {
     analysis->num_threads = options.num_threads;
     analysis->edge_weight_mode = dual_edge_weight_mode;
     analysis->solve_phase = solvePhase;
-    analysis->major_iteration_number = scaled_solution_params.simplex_iteration_count;
-    analysis->minor_iteration_number = 0;
-    analysis->devex_iteration_number = num_devex_iterations;
+    analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
+    analysis->major_iteration_count = -1;
+    analysis->minor_iteration_count = -1;
+    analysis->devex_iteration_count = num_devex_iterations;
     analysis->pivotal_row_index = rowOut;
     analysis->leaving_variable = columnOut;
     analysis->entering_variable = columnIn;
@@ -1116,6 +1116,9 @@ void HDual::iterationAnalysis() {
     analysis->pivot_value_from_row = alphaRow;
     analysis->numerical_trouble = numericalTrouble;
     analysis->objective_value = simplex_info.updated_dual_objective_value;
+
+    analysis->average_log_high_dual_steepest_edge_weight_error = average_log_high_dual_steepest_edge_weight_error;
+    analysis->average_log_low_dual_steepest_edge_weight_error = average_log_low_dual_steepest_edge_weight_error;
     analysis->iterationReport();
   } else {
     iterationReport();
@@ -1124,53 +1127,62 @@ void HDual::iterationAnalysis() {
   // Possibly switch from DSE to Devex
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     bool switch_to_devex = false;
-    // Firstly consider switching on the basis of NLA cost
-    double AnIterCostlyDseMeasureDen;
-    AnIterCostlyDseMeasureDen =
-      max(max(analysis->row_ep_density, analysis->col_aq_density), analysis->row_ap_density);
-    if (AnIterCostlyDseMeasureDen > 0) {
-      AnIterCostlyDseMeasure = analysis->row_DSE_density / AnIterCostlyDseMeasureDen;
-      AnIterCostlyDseMeasure = AnIterCostlyDseMeasure * AnIterCostlyDseMeasure;
+    if (use_HSA) {
+      switch_to_devex = analysis->switchToDevex();
     } else {
-      AnIterCostlyDseMeasure = 0;
-    }
-    bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
-      analysis->row_DSE_density > AnIterCostlyDseMnDensity;
-    AnIterCostlyDseFq = (1 - runningAverageMu) * AnIterCostlyDseFq;
-    if (CostlyDseIt) {
-      AnIterNumCostlyDseIt++;
-      AnIterCostlyDseFq += runningAverageMu * 1.0;
-      int lcNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
-      // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations have been costly
-      switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
-	(AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
-	(lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot);
-#ifdef HiGHSDEV
-      if (switch_to_devex) {
-	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
-			"Switch from DSE to Devex after %d costly DSE iterations of %d: "
-			"C_Aq_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
-			AnIterNumCostlyDseIt, lcNumIter, analysis->row_DSE_density, analysis->row_ep_density,
-			analysis->col_aq_density);
+      /*
+	int AnIterCuIt = workHMO.scaled_solution_params_.simplex_iteration_count;
+	int lcNumIter = AnIterCuIt - AnIterIt0;
+	bool iterLg = AnIterCuIt % 100 == 0;
+      */
+      // Firstly consider switching on the basis of NLA cost
+      double AnIterCostlyDseMeasureDen;
+      AnIterCostlyDseMeasureDen =
+	max(max(analysis->row_ep_density, analysis->col_aq_density), analysis->row_ap_density);
+      if (AnIterCostlyDseMeasureDen > 0) {
+	AnIterCostlyDseMeasure = analysis->row_DSE_density / AnIterCostlyDseMeasureDen;
+	AnIterCostlyDseMeasure = AnIterCostlyDseMeasure * AnIterCostlyDseMeasure;
+      } else {
+	AnIterCostlyDseMeasure = 0;
       }
-#endif
-    }
-    if (!switch_to_devex) {
-      // Secondly consider switching on the basis of weight accuracy
-      double dse_weight_error_measure =
-	average_log_low_dual_steepest_edge_weight_error +
-	average_log_high_dual_steepest_edge_weight_error;
-      double dse_weight_error_threshhold =
-	workHMO.options_.dual_steepest_edge_weight_log_error_threshhold;
-      switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
-	dse_weight_error_measure > dse_weight_error_threshhold;
+      bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
+	analysis->row_DSE_density > AnIterCostlyDseMnDensity;
+      AnIterCostlyDseFq = (1 - runningAverageMu) * AnIterCostlyDseFq;
+      if (CostlyDseIt) {
+	AnIterNumCostlyDseIt++;
+	AnIterCostlyDseFq += runningAverageMu * 1.0;
+	int lcNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
+	// Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations have been costly
+	switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
+	  (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
+	  (lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot);
 #ifdef HiGHSDEV
-      if (switch_to_devex) {
-	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
-			"Switch from DSE to Devex with log error measure of %g > %g = threshhold",
-			dse_weight_error_measure, dse_weight_error_threshhold);
-      }
+	if (switch_to_devex) {
+	  HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
+			  "Switch from DSE to Devex after %d costly DSE iterations of %d: "
+			  "C_Aq_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
+			  AnIterNumCostlyDseIt, lcNumIter, analysis->row_DSE_density, analysis->row_ep_density,
+			  analysis->col_aq_density);
+	}
 #endif
+      }
+      if (!switch_to_devex) {
+	// Secondly consider switching on the basis of weight accuracy
+	double dse_weight_error_measure =
+	  average_log_low_dual_steepest_edge_weight_error +
+	  average_log_high_dual_steepest_edge_weight_error;
+	double dse_weight_error_threshhold =
+	  workHMO.options_.dual_steepest_edge_weight_log_error_threshhold;
+	switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
+	  dse_weight_error_measure > dse_weight_error_threshhold;
+#ifdef HiGHSDEV
+	if (switch_to_devex) {
+	  HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
+			  "Switch from DSE to Devex with log error measure of %g > %g = threshhold",
+			  dse_weight_error_measure, dse_weight_error_threshhold);
+	}
+#endif
+      }
     }
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;

@@ -47,6 +47,8 @@ class HighsSimplexAnalysis {
   //  void equalDensity(const double density0, const double density1);
 
   void iterationReport();
+  bool switchToDevex();
+
 
   /*
   void iterationAnalysis();
@@ -62,6 +64,9 @@ class HighsSimplexAnalysis {
 
   int numRow;
   int numCol;
+  int numTot;
+  bool allow_dual_steepest_edge_to_devex_switch;
+  double dual_steepest_edge_weight_log_error_threshhold;
   FILE* logfile;
   FILE* output;
   int message_level;
@@ -75,9 +80,10 @@ class HighsSimplexAnalysis {
   int num_threads;
   DualEdgeWeightMode edge_weight_mode;
   int solve_phase;
-  int major_iteration_number;
-  int minor_iteration_number;
-  int devex_iteration_number;
+  int simplex_iteration_count;
+  int major_iteration_count;
+  int minor_iteration_count;
+  int devex_iteration_count;
   int pivotal_row_index;
   int leaving_variable;
   int entering_variable;
@@ -93,6 +99,9 @@ class HighsSimplexAnalysis {
   double pivot_value_from_row;
   double numerical_trouble;
   double objective_value;
+
+  double average_log_high_dual_steepest_edge_weight_error;
+  double average_log_low_dual_steepest_edge_weight_error;
   
  private:
 
@@ -113,6 +122,7 @@ class HighsSimplexAnalysis {
   int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
                                    //!< previously reported
 #endif
+
 
   int previous_iteration_report_header_iteration_count = -1;
 

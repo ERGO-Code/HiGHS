@@ -592,6 +592,7 @@ class HDual {
   MChoice multi_choice[HIGHS_THREAD_LIMIT];
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
+  const bool use_HSA = true;//false;//
 #ifdef HiGHSDEV
   const bool rp_iter_da = false;//true;//
   const bool rp_reinvert_syntheticClock = false;//true;//
