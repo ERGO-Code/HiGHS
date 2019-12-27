@@ -209,6 +209,7 @@ bool HighsSimplexAnalysis::switchToDevex() {
   return switch_to_devex;
 }
 
+#ifdef HiGHSDEV
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
   bool iterLg = AnIterCuIt % 100 == 0;
@@ -279,6 +280,7 @@ void HighsSimplexAnalysis::iterationRecord() {
   }
   AnIterPrevIt = AnIterCuIt;
 }
+#endif
 
 void HighsSimplexAnalysis::iterationReport() {
   const int iteration_count_difference = simplex_iteration_count -
@@ -377,8 +379,8 @@ void HighsSimplexAnalysis::initialise(const int simplex_iteration_count_) {
   AnIterIt0 = simplex_iteration_count_;
   timer_.resetHighsTimer();
   AnIterCostlyDseFq = 0;
-#ifdef HiGHSDEV
   AnIterPrevRpNumCostlyDseIt = 0;
+#ifdef HiGHSDEV
   AnIterPrevIt = 0;
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN];

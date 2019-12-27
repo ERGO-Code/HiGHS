@@ -50,9 +50,9 @@ class HighsSimplexAnalysis {
   void iterationReport();
   void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
   bool switchToDevex();
-  void iterationRecord();
 
 #ifdef HiGHSDEV
+  void iterationRecord();
   void operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density);
   void operationRecordAfter(const int operation_type, const HVector& vector);
   void summaryReport();
@@ -119,10 +119,8 @@ class HighsSimplexAnalysis {
   const double AnIterFracNumTot_ItBfSw = 0.1;         //!<
   const double AnIterFracNumCostlyDseItbfSw = 0.05;   //!<
   double AnIterCostlyDseMeasure;
-#ifdef HiGHSDEV
   int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
                                    //!< previously reported
-#endif
 
   const double accept_weight_threshhold = 0.25;
   const double weight_error_threshhold = 4.0;
