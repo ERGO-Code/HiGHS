@@ -57,7 +57,6 @@ class HighsSimplexAnalysis {
   void operationRecordAfter(const int operation_type, const HVector& vector);
   void summaryReport();
 #endif
-  int intLog10(const double v);
 
   HighsTimer timer_;
 
@@ -109,8 +108,12 @@ class HighsSimplexAnalysis {
   void iterationReportFull(const bool header);
   void iterationReportIterationAndPhase(const int iterate_log_level, const bool header);
   void iterationReportDualObjective(const int iterate_log_level, const bool header);
+
+#ifdef HiGHSDEV
   void iterationReportIterationData(const int iterate_log_level, const bool header);
   void iterationReportDensity(const int iterate_log_level, const bool header);
+  int intLog10(const double v);
+#endif
 
   int AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
   double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
