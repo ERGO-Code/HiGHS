@@ -302,11 +302,6 @@ HighsStatus HDual::solve(int num_threads) {
       iterationAnalysisReport();
     }
   }
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
-    printf("Devex: Number of Devex frameworks = %d; Average number of Devex iterations = %d\n",
-	   num_devex_framework,
-           scaled_solution_params.simplex_iteration_count / num_devex_framework);
-  }
 #endif
 
   if (solve_bailout) {
@@ -1454,7 +1449,7 @@ void HDual::chooseRow() {
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
       iterateOpRecBf(AnIterOpTy_Btran, row_ep, analysis->row_ep_density);
-      analysis->operationRecordBefore(AnIterOpTy_Btran, row_ep, analysis->row_ep_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
     }
 #endif
     // Perform BTRAN
@@ -1462,7 +1457,7 @@ void HDual::chooseRow() {
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
       iterateOpRecAf(AnIterOpTy_Btran, row_ep);
-      analysis->operationRecordAfter(AnIterOpTy_Btran, row_ep);
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
     }
 #endif
     timer.stop(simplex_info.clock_[BtranClock]);
@@ -1649,7 +1644,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
       iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
-      analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, 0.0);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
       AnIterNumColPrice++;
       analysis->AnIterNumColPrice++;
     }
@@ -1665,7 +1660,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
-	analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, 0.0);
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
         AnIterNumColPrice++;
         analysis->AnIterNumColPrice++;
       }
@@ -1683,7 +1678,7 @@ void HDual::chooseColumn(HVector* row_ep) {
     } else if (useUltraPrice) {
       if (simplex_info.analyseSimplexIterations) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
-	analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
         AnIterNumRowPriceUltra++;
         analysis->AnIterNumRowPriceUltra++;
       }
@@ -1702,7 +1697,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
-	analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
         AnIterNumRowPriceWSw++;
         analysis->AnIterNumRowPriceWSw++;
       }
@@ -1718,7 +1713,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
-	analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, 0.0);
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
         AnIterNumRowPrice++;
         analysis->AnIterNumRowPrice++;
       }
@@ -1739,7 +1734,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
     iterateOpRecAf(AnIterOpTy_Price, row_ap);
-    analysis->operationRecordAfter(AnIterOpTy_Price, row_ap);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
   }
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
@@ -1919,7 +1914,7 @@ void HDual::updateFtran() {
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
     iterateOpRecBf(AnIterOpTy_Ftran, col_aq, analysis->col_aq_density);
-    analysis->operationRecordBefore(AnIterOpTy_Ftran, col_aq, analysis->col_aq_density);
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
   }
 #endif
   // Perform FTRAN
@@ -1927,7 +1922,7 @@ void HDual::updateFtran() {
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
     iterateOpRecAf(AnIterOpTy_Ftran, col_aq);
-    analysis->operationRecordAfter(AnIterOpTy_Ftran, col_aq);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
   }
 #endif
   // Save the pivot value computed column-wise - used for numerical checking
@@ -1958,7 +1953,7 @@ void HDual::updateFtranBFRT() {
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
       iterateOpRecBf(AnIterOpTy_FtranBFRT, col_BFRT, analysis->col_aq_density);
-      analysis->operationRecordBefore(AnIterOpTy_FtranBFRT, col_BFRT, analysis->col_aq_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT, analysis->col_aq_density);
     }
 #endif
     // Perform FTRAN BFRT
@@ -1966,7 +1961,7 @@ void HDual::updateFtranBFRT() {
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
       iterateOpRecAf(AnIterOpTy_FtranBFRT, col_BFRT);
-      analysis->operationRecordAfter(AnIterOpTy_FtranBFRT, col_BFRT);
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT);
     }
 #endif
   }
@@ -1987,7 +1982,7 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
     iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, analysis->row_DSE_density);
-    analysis->operationRecordBefore(AnIterOpTy_FtranDSE, *DSE_Vector, analysis->row_DSE_density);
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector, analysis->row_DSE_density);
   }
 #endif
   // Perform FTRAN DSE
@@ -1995,7 +1990,7 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
     iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
-    analysis->operationRecordAfter(AnIterOpTy_FtranDSE, *DSE_Vector);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector);
   }
 #endif
   timer.stop(simplex_info.clock_[FtranDseClock]);
