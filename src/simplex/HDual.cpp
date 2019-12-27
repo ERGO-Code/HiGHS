@@ -1199,6 +1199,9 @@ void HDual::iterationAnalysis() {
   }
 
 #ifdef HiGHSDEV
+  if (use_HSA) {
+    analysis->iterationRecord();
+  }
   int AnIterCuIt = workHMO.scaled_solution_params_.simplex_iteration_count;
   bool iterLg = AnIterCuIt % 100 == 0;
   iterLg = false;
@@ -1648,6 +1651,7 @@ void HDual::chooseColumn(HVector* row_ep) {
       iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
       analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, 0.0);
       AnIterNumColPrice++;
+      analysis->AnIterNumColPrice++;
     }
 #endif
     // Perform column-wise PRICE
@@ -1663,6 +1667,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
 	analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, 0.0);
         AnIterNumColPrice++;
+        analysis->AnIterNumColPrice++;
       }
 #endif
       // Perform column-wise PRICE
@@ -1680,6 +1685,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
 	analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
         AnIterNumRowPriceUltra++;
+        analysis->AnIterNumRowPriceUltra++;
       }
       // Perform ultra-sparse row-wise PRICE
       matrix->price_by_row_ultra(row_ap, *row_ep);
@@ -1698,6 +1704,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
 	analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
         AnIterNumRowPriceWSw++;
+        analysis->AnIterNumRowPriceWSw++;
       }
 #endif
       // Set the value of the density of row_ap at which the switch to
@@ -1713,6 +1720,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
 	analysis->operationRecordBefore(AnIterOpTy_Price, *row_ep, 0.0);
         AnIterNumRowPrice++;
+        analysis->AnIterNumRowPrice++;
       }
 #endif
       // Perform hyper-sparse row-wise PRICE

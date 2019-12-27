@@ -50,6 +50,7 @@ class HighsSimplexAnalysis {
   void iterationReport();
   void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
   bool switchToDevex();
+  void iterationRecord();
 
 #ifdef HiGHSDEV
   void operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density);
@@ -97,6 +98,11 @@ class HighsSimplexAnalysis {
   double pivot_value_from_row;
   double numerical_trouble;
   double objective_value;
+
+  int AnIterNumColPrice;
+  int AnIterNumRowPrice;
+  int AnIterNumRowPriceWSw;
+  int AnIterNumRowPriceUltra;
 
  private:
 
@@ -174,10 +180,6 @@ class HighsSimplexAnalysis {
   AnIterTraceRec AnIterTrace[1 + AN_ITER_TRACE_MX_NUM_REC + 1];
 
   int AnIterNumInvert[INVERT_HINT_Count];
-  int AnIterNumColPrice;
-  int AnIterNumRowPrice;
-  int AnIterNumRowPriceWSw;
-  int AnIterNumRowPriceUltra;
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
   int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];

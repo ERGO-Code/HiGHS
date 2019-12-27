@@ -209,6 +209,77 @@ bool HighsSimplexAnalysis::switchToDevex() {
   return switch_to_devex;
 }
 
+void HighsSimplexAnalysis::iterationRecord() {
+  int AnIterCuIt = simplex_iteration_count;
+  bool iterLg = AnIterCuIt % 100 == 0;
+  iterLg = false;
+  if (iterLg) {
+    int lc_NumCostlyDseIt = AnIterNumCostlyDseIt - AnIterPrevRpNumCostlyDseIt;
+    AnIterPrevRpNumCostlyDseIt = AnIterNumCostlyDseIt;
+    printf("Iter %10d: ", AnIterCuIt);
+    iterationReportDensity(ML_MINIMAL, true);
+    iterationReportDensity(ML_MINIMAL, false);
+    if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+      int lc_pct = (100 * AnIterNumCostlyDseIt) / (AnIterCuIt - AnIterIt0);
+      printf("| Fq = %4.2f; Su =%5d (%3d%%)", AnIterCostlyDseFq,
+             AnIterNumCostlyDseIt, lc_pct);
+
+      if (lc_NumCostlyDseIt > 0) printf("; LcNum =%3d", lc_NumCostlyDseIt);
+    }
+    printf("\n");
+  }
+
+  for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
+    AnIterOpRec* lcAnIterOp = &AnIterOp[k];
+    if (lcAnIterOp->AnIterOpNumCa) {
+      lcAnIterOp->AnIterOpSuNumCa += lcAnIterOp->AnIterOpNumCa;
+      lcAnIterOp->AnIterOpSuNumHyperOp += lcAnIterOp->AnIterOpNumHyperOp;
+      lcAnIterOp->AnIterOpSuNumHyperRs += lcAnIterOp->AnIterOpNumHyperRs;
+      lcAnIterOp->AnIterOpSuLog10RsDsty += lcAnIterOp->AnIterOpLog10RsDsty;
+    }
+    lcAnIterOp->AnIterOpNumCa = 0;
+    lcAnIterOp->AnIterOpNumHyperOp = 0;
+    lcAnIterOp->AnIterOpNumHyperRs = 0;
+    lcAnIterOp->AnIterOpLog10RsDsty = 0;
+  }
+  if (invert_hint > 0) AnIterNumInvert[invert_hint]++;
+  if (dual_step <= 0) AnIterNumDuDgnIt++;
+  if (primal_step <= 0) AnIterNumPrDgnIt++;
+  if (AnIterCuIt > AnIterPrevIt)
+    AnIterNumEdWtIt[(int)edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
+
+  AnIterTraceRec* lcAnIter = &AnIterTrace[AnIterTraceNumRec];
+  //  if (simplex_iteration_count ==
+  //  AnIterTraceIterRec[AnIterTraceNumRec]+AnIterTraceIterDl) {
+  if (simplex_iteration_count ==
+      lcAnIter->AnIterTraceIter + AnIterTraceIterDl) {
+    if (AnIterTraceNumRec == AN_ITER_TRACE_MX_NUM_REC) {
+      for (int rec = 1; rec <= AN_ITER_TRACE_MX_NUM_REC / 2; rec++)
+        AnIterTrace[rec] = AnIterTrace[2 * rec];
+      AnIterTraceNumRec = AnIterTraceNumRec / 2;
+      AnIterTraceIterDl = AnIterTraceIterDl * 2;
+    } else {
+      AnIterTraceNumRec++;
+      lcAnIter = &AnIterTrace[AnIterTraceNumRec];
+      lcAnIter->AnIterTraceIter = simplex_iteration_count;
+      lcAnIter->AnIterTraceTime = timer_.getTime();
+      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
+      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
+      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
+      lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
+      if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+        lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
+        lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
+      } else {
+        lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
+        lcAnIter->AnIterTraceAux0 = 0;
+      }
+      lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)edge_weight_mode;
+    }
+  }
+  AnIterPrevIt = AnIterCuIt;
+}
+
 void HighsSimplexAnalysis::iterationReport() {
   const int iteration_count_difference = simplex_iteration_count -
     previous_iteration_report_header_iteration_count;
@@ -425,7 +496,7 @@ void HighsSimplexAnalysis::summaryReport() {
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIterOpRec* AnIter = &AnIterOp[k];
     int lcNumCa = AnIter->AnIterOpSuNumCa;
-    printf("\n%-9s performed %d times\n", AnIter->AnIterOpName.c_str(),
+    printf("\n%-10s performed %d times\n", AnIter->AnIterOpName.c_str(),
            AnIter->AnIterOpSuNumCa);
     if (lcNumCa > 0) {
       int lcHyperOp = AnIter->AnIterOpSuNumHyperOp;
