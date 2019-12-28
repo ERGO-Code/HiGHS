@@ -48,6 +48,7 @@ class HighsSimplexAnalysis {
   //  void equalDensity(const double density0, const double density1);
 
   void iterationReport();
+  void invertReport();
   void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
   bool switchToDevex();
 
@@ -85,6 +86,8 @@ class HighsSimplexAnalysis {
   int pivotal_row_index;
   int leaving_variable;
   int entering_variable;
+  int num_primal_infeasibilities;
+  int num_dual_infeasibilities;
   int invert_hint;
   int freelist_size;
   double reduced_rhs_value;
@@ -97,6 +100,9 @@ class HighsSimplexAnalysis {
   double pivot_value_from_row;
   double numerical_trouble;
   double objective_value;
+  double sum_primal_infeasibilities;
+  double sum_dual_infeasibilities;
+  double basis_condition;
 
   int AnIterNumColPrice;
   int AnIterNumRowPrice;
@@ -105,13 +111,17 @@ class HighsSimplexAnalysis {
 
  private:
 
-  void iterationReportFull(const bool header);
-  void iterationReportIterationAndPhase(const int iterate_log_level, const bool header);
-  void iterationReportDualObjective(const int iterate_log_level, const bool header);
-
+  void iterationReport(const bool header);
+  void invertReport(const bool header);
+  void reportAlgorithmPhaseIterationObjective(const bool header, const int this_message_level);
+  void reportInfeasibility(const bool header, const int this_message_level);
 #ifdef HiGHSDEV
-  void iterationReportIterationData(const int iterate_log_level, const bool header);
-  void iterationReportDensity(const int iterate_log_level, const bool header);
+  void reportDensity(const bool header, const int this_message_level);
+  void reportInvert(const bool header, const int this_message_level);
+  void reportCondition(const bool header, const int this_message_level);
+  void reportIterationData(const bool header, const int this_message_level);
+  void reportFreeListSize(const bool header, const int this_message_level);
+  bool dual_algorithm();
   int intLog10(const double v);
 #endif
 

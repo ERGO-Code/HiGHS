@@ -26,6 +26,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options)
   allow_dual_steepest_edge_to_devex_switch = options.simplex_dual_edge_weight_strategy ==
     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
   dual_steepest_edge_weight_log_error_threshhold = options.dual_steepest_edge_weight_log_error_threshhold;
+  // Copy messaging parameter from options
   messaging(options.logfile, options.output, options.message_level);
   // Zero the densities
   col_aq_density = 0;
@@ -149,10 +150,15 @@ void HighsSimplexAnalysis::iterationReport() {
   const bool header = previous_iteration_report_header_iteration_count < 0
     || iteration_count_difference > 10;
   if (header) {
-    iterationReportFull(header);
+    iterationReport(header);
     previous_iteration_report_header_iteration_count = simplex_iteration_count;
   }
-  iterationReportFull(false);
+  iterationReport(false);
+}
+
+void HighsSimplexAnalysis::invertReport() {
+  //  invertReport(true);
+  invertReport(false);
 }
 
 void HighsSimplexAnalysis::dualSteepestEdgeWeightError(const double computed_edge_weight,
@@ -341,36 +347,36 @@ void HighsSimplexAnalysis::iterationRecord() {
 }
 
 void HighsSimplexAnalysis::operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density) {
-  AnIterOpRec* AnIter = &AnIterOp[operation_type];
-  AnIter->AnIterOpNumCa++;
+  AnIterOpRec& AnIter = AnIterOp[operation_type];
+  AnIter.AnIterOpNumCa++;
   double current_density = 1.0 * vector.count / numRow;
-  //  printf("%10s: %g<= %g;  %g<= %g\n", AnIter->AnIterOpName.c_str(),
-  //	 current_density, AnIter->AnIterOpHyperCANCEL,
-  //	 historical_density, AnIter->AnIterOpHyperTRAN);
-  if (current_density <= AnIter->AnIterOpHyperCANCEL &&
-      historical_density <= AnIter->AnIterOpHyperTRAN)
-    AnIter->AnIterOpNumHyperOp++;
+  //  printf("%10s: %g<= %g;  %g<= %g\n", AnIter.AnIterOpName.c_str(),
+  //	 current_density, AnIter.AnIterOpHyperCANCEL,
+  //	 historical_density, AnIter.AnIterOpHyperTRAN);
+  if (current_density <= AnIter.AnIterOpHyperCANCEL &&
+      historical_density <= AnIter.AnIterOpHyperTRAN)
+    AnIter.AnIterOpNumHyperOp++;
 }
 
 void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const HVector& vector) {
-  AnIterOpRec* AnIter = &AnIterOp[operation_type];
-  double rsDsty = 1.0 * vector.count / AnIter->AnIterOpRsDim;
-  if (rsDsty <= hyperRESULT) AnIter->AnIterOpNumHyperRs++;
-  AnIter->AnIterOpRsMxNNZ = max(vector.count, AnIter->AnIterOpRsMxNNZ);
+  AnIterOpRec& AnIter = AnIterOp[operation_type];
+  double rsDsty = 1.0 * vector.count / AnIter.AnIterOpRsDim;
+  if (rsDsty <= hyperRESULT) AnIter.AnIterOpNumHyperRs++;
+  AnIter.AnIterOpRsMxNNZ = max(vector.count, AnIter.AnIterOpRsMxNNZ);
   if (rsDsty > 0) {
-    AnIter->AnIterOpLog10RsDsty += log(rsDsty) / log(10.0);
+    AnIter.AnIterOpLog10RsDsty += log(rsDsty) / log(10.0);
   } else {
     /*
     // TODO Investigate these zero norms
     double vectorNorm = 0;
 
-    for (int index = 0; index < AnIter->AnIterOpRsDim; index++) {
+    for (int index = 0; index < AnIter.AnIterOpRsDim; index++) {
       double vectorValue = vector.array[index];
       vectorNorm += vectorValue * vectorValue;
     }
     vectorNorm = sqrt(vectorNorm);
     printf("Strange: operation %s has result density = %g: ||vector|| = %g\n",
-    AnIter->AnIterOpName.c_str(), rsDsty, vectorNorm);
+    AnIter.AnIterOpName.c_str(), rsDsty, vectorNorm);
     */
   }
 }
@@ -395,20 +401,20 @@ void HighsSimplexAnalysis::summaryReport() {
            (100 * lc_EdWtNumIter) / AnIterNumIter);
   printf("\n");
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
-    AnIterOpRec* AnIter = &AnIterOp[k];
-    int lcNumCa = AnIter->AnIterOpSuNumCa;
-    printf("\n%-10s performed %d times\n", AnIter->AnIterOpName.c_str(),
-           AnIter->AnIterOpSuNumCa);
+    AnIterOpRec& AnIter = AnIterOp[k];
+    int lcNumCa = AnIter.AnIterOpSuNumCa;
+    printf("\n%-10s performed %d times\n", AnIter.AnIterOpName.c_str(),
+           AnIter.AnIterOpSuNumCa);
     if (lcNumCa > 0) {
-      int lcHyperOp = AnIter->AnIterOpSuNumHyperOp;
-      int lcHyperRs = AnIter->AnIterOpSuNumHyperRs;
+      int lcHyperOp = AnIter.AnIterOpSuNumHyperOp;
+      int lcHyperRs = AnIter.AnIterOpSuNumHyperRs;
       int pctHyperOp = (100 * lcHyperOp) / lcNumCa;
       int pctHyperRs = (100 * lcHyperRs) / lcNumCa;
-      double lcRsDsty = pow(10.0, AnIter->AnIterOpSuLog10RsDsty / lcNumCa);
-      int lcAnIterOpRsDim = AnIter->AnIterOpRsDim;
+      double lcRsDsty = pow(10.0, AnIter.AnIterOpSuLog10RsDsty / lcNumCa);
+      int lcAnIterOpRsDim = AnIter.AnIterOpRsDim;
       int lcNumNNz = lcRsDsty * lcAnIterOpRsDim;
-      int lcMxNNz = AnIter->AnIterOpRsMxNNZ;
-      double lcMxNNzDsty = (1.0 * lcMxNNz) / AnIter->AnIterOpRsDim;
+      int lcMxNNz = AnIter.AnIterOpRsMxNNZ;
+      double lcMxNNzDsty = (1.0 * lcMxNNz) / AnIter.AnIterOpRsDim;
       printf("%12d hyper-sparse operations (%3d%%)\n", lcHyperOp, pctHyperOp);
       printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("%12g density of result (%d / %d nonzeros)\n", lcRsDsty, lcNumNNz,
@@ -484,36 +490,35 @@ void HighsSimplexAnalysis::summaryReport() {
   // space in the arrays
   //
   AnIterTraceNumRec++;
-  AnIterTraceRec* lcAnIter;
-  lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-  lcAnIter->AnIterTraceIter = simplex_iteration_count;
-  lcAnIter->AnIterTraceTime = timer_.getTime();
-  lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
-  lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
-  lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
-  lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
+  AnIterTraceRec& lcAnIter = AnIterTrace[AnIterTraceNumRec];
+  lcAnIter.AnIterTraceIter = simplex_iteration_count;
+  lcAnIter.AnIterTraceTime = timer_.getTime();
+  lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
+  lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
+  lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
+  lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
   if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
-    lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
+    lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
+    lcAnIter.AnIterTraceAux0 = AnIterCostlyDseMeasure;
   } else {
-    lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
-    lcAnIter->AnIterTraceAux0 = 0;
+    lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
+    lcAnIter.AnIterTraceAux0 = 0;
   }
-  lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)edge_weight_mode;
+  lcAnIter.AnIterTrace_dual_edge_weight_mode = (int)edge_weight_mode;
 
   if (AnIterTraceIterDl >= 100) {
     printf("\n Iteration speed analysis\n");
-    lcAnIter = &AnIterTrace[0];
-    int fmIter = lcAnIter->AnIterTraceIter;
-    double fmTime = lcAnIter->AnIterTraceTime;
+    lcAnIter = AnIterTrace[0];
+    int fmIter = lcAnIter.AnIterTraceIter;
+    double fmTime = lcAnIter.AnIterTraceTime;
     printf(
         "        Iter (      FmIter:      ToIter)      Time      Iter/sec | "
         "C_Aq R_Ep R_Ap  DSE | "
         "EdWt | Aux0\n");
     for (int rec = 1; rec <= AnIterTraceNumRec; rec++) {
-      lcAnIter = &AnIterTrace[rec];
-      int toIter = lcAnIter->AnIterTraceIter;
-      double toTime = lcAnIter->AnIterTraceTime;
+      lcAnIter = AnIterTrace[rec];
+      int toIter = lcAnIter.AnIterTraceIter;
+      double toTime = lcAnIter.AnIterTraceTime;
       int dlIter = toIter - fmIter;
       if (rec < AnIterTraceNumRec && dlIter != AnIterTraceIterDl)
         printf("STRANGE: %d = dlIter != AnIterTraceIterDl = %d\n", dlIter,
@@ -522,12 +527,12 @@ void HighsSimplexAnalysis::summaryReport() {
       int iterSpeed = 0;
       if (dlTime > 0) iterSpeed = dlIter / dlTime;
       int lc_dual_edge_weight_mode =
-          lcAnIter->AnIterTrace_dual_edge_weight_mode;
-      int l10ColDse = intLog10(lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN]);
-      int l10REpDse = intLog10(lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN]);
-      int l10RapDse = intLog10(lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE]);
-      int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE]);
-      int l10Aux0 = intLog10(lcAnIter->AnIterTraceAux0);
+          lcAnIter.AnIterTrace_dual_edge_weight_mode;
+      int l10ColDse = intLog10(lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN]);
+      int l10REpDse = intLog10(lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN]);
+      int l10RapDse = intLog10(lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE]);
+      int l10DseDse = intLog10(lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE]);
+      int l10Aux0 = intLog10(lcAnIter.AnIterTraceAux0);
       std::string str_dual_edge_weight_mode;
       if (lc_dual_edge_weight_mode == (int)DualEdgeWeightMode::STEEPEST_EDGE)
         str_dual_edge_weight_mode = "DSE";
@@ -550,86 +555,129 @@ void HighsSimplexAnalysis::summaryReport() {
 
 //
 
-
-void HighsSimplexAnalysis::iterationReportFull(const bool header) {
-  if (header) {
-    iterationReportIterationAndPhase(ML_DETAILED, true);
-    iterationReportDualObjective(ML_DETAILED, true);
+void HighsSimplexAnalysis::iterationReport(const bool header) {
+  if (!header && (pivotal_row_index<0 || entering_variable<0)) return;
+  const int this_message_level = ML_DETAILED;
+  reportAlgorithmPhaseIterationObjective(header, this_message_level);
 #ifdef HiGHSDEV
-    iterationReportIterationData(ML_DETAILED, true);
-    iterationReportDensity(ML_DETAILED, true);
-    HighsPrintMessage(output, message_level, ML_DETAILED, " FreeLsZ");
+  reportDensity(header, this_message_level);
+  reportIterationData(header, this_message_level);
+  //  reportFreeListSize(header, this_message_level);
 #endif
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
-  } else {
-    iterationReportIterationAndPhase(ML_DETAILED, false);
-    iterationReportDualObjective(ML_DETAILED, false);
+  HighsPrintMessage(output, message_level, this_message_level, "\n");
+}
+
+void HighsSimplexAnalysis::invertReport(const bool header) {
+  int this_message_level = ML_MINIMAL;
+  reportAlgorithmPhaseIterationObjective(header, this_message_level);
 #ifdef HiGHSDEV
-    iterationReportIterationData(ML_DETAILED, false);
-    iterationReportDensity(ML_DETAILED, false);
-    HighsPrintMessage(output, message_level, ML_DETAILED, " %7d", freelist_size);
+  reportDensity(header, this_message_level);
+  reportInvert(header, this_message_level);
+  //  reportCondition(header, this_message_level);
 #endif
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+  reportInfeasibility(header, this_message_level);
+  HighsPrintMessage(output, message_level, this_message_level, "\n");
+}
+
+void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(const bool header, const int this_message_level) {
+  if (header) {
+    HighsPrintMessage(output, message_level, this_message_level,
+		      "       Iteration        Objective    ");
+  } else {
+    std::string algorithm;
+    if (dual_algorithm()) {
+      algorithm = "Du";
+    } else {
+      algorithm = "Pr";
+    }
+    HighsPrintMessage(output, message_level, this_message_level,
+		      "%2sPh%1d %10d %20.10e",
+		      algorithm.c_str(), solve_phase,
+		      simplex_iteration_count, objective_value);
   }
 }
 
-void HighsSimplexAnalysis::iterationReportIterationAndPhase(const int iterate_log_level,
-                                             const bool header) {
+void HighsSimplexAnalysis::reportInfeasibility(const bool header, const int this_message_level) {
   if (header) {
-    HighsPrintMessage(output, message_level, iterate_log_level,
-		      " Iteration Ph");
+    HighsPrintMessage(output, message_level, this_message_level, " Infeasibilities num(sum)");
   } else {
-    HighsPrintMessage(output, message_level, iterate_log_level,
-		      " %9d %2d", simplex_iteration_count, solve_phase);
-  }
-}
-void HighsSimplexAnalysis::iterationReportDualObjective(const int iterate_log_level, const bool header) {
-  if (header) {
-    HighsPrintMessage(output, message_level, iterate_log_level, "        DualObjective");
-  } else {
-    HighsPrintMessage(output, message_level, iterate_log_level, " %20.10e", objective_value);
+    HighsPrintMessage(output, message_level, this_message_level, 
+		      " Pr: %d(%g)", num_primal_infeasibilities, sum_primal_infeasibilities);
+    if (sum_dual_infeasibilities > 0) {
+      HighsPrintMessage(output, message_level, this_message_level, 
+			"; Du: %d(%g)", num_dual_infeasibilities, sum_dual_infeasibilities);
+    }
   }
 }
 
 #ifdef HiGHSDEV
-void HighsSimplexAnalysis::iterationReportIterationData(const int iterate_log_level, const bool header) {
+void HighsSimplexAnalysis::reportDensity(const bool header, const int this_message_level) {
+  const bool rp_dual_steepest_edge = edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
   if (header) {
-    HighsPrintMessage(output, message_level, iterate_log_level,
-                      " Inv       NumCk     LvR     LvC     EnC        DlPr    "
+    HighsPrintMessage(output, message_level, this_message_level, " R_Ep R_Ap C_Aq");
+    if (rp_dual_steepest_edge) {
+      HighsPrintMessage(output, message_level, this_message_level, "  DSE");
+    } else {
+      HighsPrintMessage(output, message_level, this_message_level, "     ");
+    }
+  } else {
+    const int l10REpDse = intLog10(row_ep_density);
+    const int l10RapDse = intLog10(row_ap_density);
+    const int l10ColDse = intLog10(col_aq_density);
+    HighsPrintMessage(output, message_level, this_message_level,
+		      " %4d %4d %4d", l10REpDse, l10RapDse, l10ColDse);
+    if (rp_dual_steepest_edge) {
+      const int l10DseDse = intLog10(row_DSE_density);
+      HighsPrintMessage(output, message_level, this_message_level,
+			" %4d", l10DseDse);
+    } else {
+      HighsPrintMessage(output, message_level, this_message_level,
+			"     ");
+    }
+  }
+}
+
+void HighsSimplexAnalysis::reportInvert(const bool header, const int this_message_level) {
+  if (header) {
+    HighsPrintMessage(output, message_level, this_message_level, " Inv");
+  } else {
+    HighsPrintMessage(output, message_level, this_message_level, "  %2d", invert_hint);
+  }
+}
+
+void HighsSimplexAnalysis::reportCondition(const bool header, const int this_message_level) {
+  if (header) {
+    HighsPrintMessage(output, message_level, this_message_level, "       k(B)");
+  } else {
+    HighsPrintMessage(output, message_level, this_message_level, " %10.4g", basis_condition);
+  }
+}
+
+void HighsSimplexAnalysis::reportIterationData(const bool header, const int this_message_level) {
+  if (header) {
+    HighsPrintMessage(output, message_level, this_message_level,
+                      "       NumCk     LvR     LvC     EnC        DlPr    "
                       "    ThDu        ThPr          Aa");
   } else {
-    HighsPrintMessage(output, message_level, iterate_log_level,
-                      " %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g",
-                      invert_hint, numerical_trouble, pivotal_row_index, leaving_variable, entering_variable,
+    HighsPrintMessage(output, message_level, this_message_level,
+                      " %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g",
+                      numerical_trouble, pivotal_row_index, leaving_variable, entering_variable,
                       primal_delta, dual_step, primal_step, pivot_value_from_column);
   }
 }
 
-void HighsSimplexAnalysis::iterationReportDensity(const int iterate_log_level, const bool header) {
-  const bool rp_dual_steepest_edge =
-      edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
+void HighsSimplexAnalysis::reportFreeListSize(const bool header, const int this_message_level) {
   if (header) {
-    HighsPrintMessage(output, message_level, iterate_log_level, " C_Aq R_Ep R_Ap");
-    if (rp_dual_steepest_edge) {
-      HighsPrintMessage(output, message_level, iterate_log_level, "  DSE");
-    } else {
-      HighsPrintMessage(output, message_level, iterate_log_level, "     ");
-    }
+    HighsPrintMessage(output, message_level, this_message_level, " FreeLsZ");
   } else {
-    const int l10ColDse = intLog10(col_aq_density);
-    const int l10REpDse = intLog10(row_ep_density);
-    const int l10RapDse = intLog10(row_ap_density);
-    HighsPrintMessage(output, message_level, iterate_log_level,
-		      " %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse);
-    if (rp_dual_steepest_edge) {
-      const int l10DseDse = intLog10(row_DSE_density);
-      HighsPrintMessage(output, message_level, iterate_log_level,
-			" %4d", l10DseDse);
-    } else {
-      HighsPrintMessage(output, message_level, iterate_log_level,
-			"     ");
-    }
+    HighsPrintMessage(output, message_level, this_message_level, " %7d", freelist_size);
   }
+}
+
+bool HighsSimplexAnalysis::dual_algorithm() {
+  return (simplex_strategy == SIMPLEX_STRATEGY_DUAL ||
+	  simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS ||
+	  simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI);
 }
 
 int HighsSimplexAnalysis::intLog10(const double v) {

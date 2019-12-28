@@ -177,9 +177,9 @@ class HDual {
    * @brief Report full iteration headers or data according to value of
    * <tt>header</tt>
    */
-  void iterationReportFull(bool header  //!< Logic to determine whether to write
-                                        //!< out column headers or data
-  );
+  void iterationReportFull(
+			   bool header  //!< Write header or not
+			   );
 
   /**
    * @brief Report iteration number and LP phase headers or data according to
@@ -220,7 +220,8 @@ class HDual {
       bool header  //!< Logic to determine whether to write out column headers
                    //!< or data
   );
-  int intLog10(double v);
+  bool dual_algorithm();
+  int intLog10(const double v);
 
   /**
    * @brief Single line report after rebuild
