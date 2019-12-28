@@ -6,23 +6,24 @@ add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/lp_data)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_point/ipx/src)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_point/basiclu/src)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_point/ipx/include)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_point/basiclu/include)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/ipx/src)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/src)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/ipx/include)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/include)
 
 # Make test executable
 set(TEST_SOURCES
     TestMain.cpp
     TestOptions.cpp
     TestPresolve.cpp
-    TestFilereader.cpp
     TestIO.cpp
     TestSort.cpp
+    TestSetup.cpp
+    TestFilereader.cpp
+    TestInfo.cpp
     TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
-    TestSetup.cpp
     Avgas.cpp)
 
 if (IPX_ON) 
@@ -132,18 +133,18 @@ endif (GAMS_FOUND)
 #
 # define the set of feasible instances
 set(successInstances
-    "25fv47\;2888\;5.50184\;"
-    "80bau3b\;3760\;9.872242\;"
-    "adlittle\;81\;2.254950\;"
+    "25fv47\;2888\; 5.501846\;"
+    "80bau3b\;3760\; 9.872242\;"
+    "adlittle\;81\; 2.254950\;"
     "afiro\;21\;-4.647531\;"
     "etamacro\;507\;-7.557152\;"
     "greenbea\;5249\;-7.255525\;"
-    "pilot87\;9919\;3.017103\;"
-    "shell\;624\;1.208825\;"
+    "pilot87\;9919\; 3.017103\;"
+    "shell\;624\; 1.208825\;"
     "stair\;555\;-2.512670\;"
-    "standata\;74\;1.257699\;"
-    "standgub\;67\;1.257699\;"
-    "standmps\;215\;1.406017\;"
+    "standata\;74\; 1.257699\;"
+    "standgub\;67\; 1.257699\;"
+    "standmps\;215\; 1.406017\;"
     )
 
 set(infeasibleInstances
@@ -200,20 +201,19 @@ foreach(instance ${${instances}})
                 DEPENDS unit_tests_all)
         set_tests_properties (${name}${setting} PROPERTIES
                 PASS_REGULAR_EXPRESSION
-                "Run status : ${solutionstatus}")
+                "Model   status      : ${solutionstatus}")
 
         if(${solutionstatus} STREQUAL "Optimal")
             if(${setting} STREQUAL "--presolve=off")
                 set_tests_properties (${name}${setting} PROPERTIES
                         PASS_REGULAR_EXPRESSION
-                        "Iterations : ${iter}\nObjective  : ${optval}")
+                        "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
             else()
                 set_tests_properties (${name}${setting} PROPERTIES
                         PASS_REGULAR_EXPRESSION
-                        "Objective  : ${optval}")
+                        "Objective value     : ${optval}")
             endif()
         endif()
-
     endforeach(setting)
 endforeach(instance)
 endmacro(add_instancetests)
@@ -233,22 +233,22 @@ set(setting "--presolve=on")
 
 set(inst "${HIGHS_SOURCE_DIR}/check/instances/adlittle.mps")
 add_test(NAME "presolve-adlittle" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-adlittle" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Optimal")
+set_tests_properties ("presolve-adlittle" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Optimal")
 set_tests_properties ("presolve-adlittle" PROPERTIES DEPENDS unit_tests_all)
 
 set(inst "${HIGHS_SOURCE_DIR}/check/instances/scrs8.mps")
 add_test(NAME "presolve-scrs8" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-scrs8" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Optimal")
+set_tests_properties ("presolve-scrs8" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Optimal")
 set_tests_properties ("presolve-scrs8" PROPERTIES DEPENDS unit_tests_all)
 
 
 set(inst "${HIGHS_SOURCE_DIR}/check/instances/woodinfe.mps")
 add_test(NAME "presolve-woodinfe" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-woodinfe" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Infeasible")
+set_tests_properties ("presolve-woodinfe" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Infeasible")
 set_tests_properties ("presolve-woodinfe" PROPERTIES DEPENDS unit_tests_all)
 
 
 set(inst "${HIGHS_SOURCE_DIR}/check/instances/gas11.mps")
 add_test(NAME "presolve-gas11" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-gas11" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Unbounded")
+set_tests_properties ("presolve-gas11" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Unbounded")
 set_tests_properties ("presolve-gas11" PROPERTIES DEPENDS unit_tests_all)

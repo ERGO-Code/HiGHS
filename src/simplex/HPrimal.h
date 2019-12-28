@@ -32,7 +32,7 @@ class HPrimal {
   /**
    * @brief Solve a model instance
    */
-  void solve();
+  HighsStatus solve();
 
   /**
    * @brief Perform Phase 2 primal simplex iterations
@@ -50,7 +50,11 @@ class HPrimal {
   void iterationReportIterationAndPhase(int iterate_log_level, bool header);
   void iterationReportPrimalObjective(int iterate_log_level, bool header);
   void iterationReportIterationData(int iterate_log_level, bool header);
-  void iterationReportRebuild(const int i_v);
+  void iterationReportRebuild(
+#ifdef HiGHSDEV
+			      const int i_v=-1
+#endif
+			      );
   void reportInfeasibility();
 
   // Model pointer

@@ -55,7 +55,7 @@ class HDualRow {
    *
    * Offset of numCol is used when packing row_ep
    */
-  void choose_makepack(const HVector* row,  //!< Row to be packed
+  void chooseMakepack(const HVector* row,  //!< Row to be packed
                        const int offset     //!< Offset for indices
   );
   /**
@@ -63,13 +63,13 @@ class HDualRow {
    *
    * TODO: Check with Qi what this is doing
    */
-  void choose_possible();
+  void choosePossible();
 
   /**
    * @brief Join pack of possible candidates in this row with possible
    * candidates in otherRow
    */
-  void choose_joinpack(
+  void chooseJoinpack(
       const HDualRow* otherRow  //!< Other row to join with this
   );
   /**
@@ -78,50 +78,56 @@ class HDualRow {
    * Can fail when there are excessive dual vaules due to EXPAND
    * perturbation not being relatively too small
    */
-  bool choose_final();
+  bool chooseFinal();
 
   /**
    * @brief Update bounds when flips have occurred, and accumulate the
    * RHS for the FTRAN required to update the primal values after BFRT
    */
-  void update_flip(HVector* bfrtColumn  //!< RHS for FTRAN BFRT
+  void updateFlip(HVector* bfrtColumn  //!< RHS for FTRAN BFRT
   );
   /**
    * @brief Update the dual values
    */
-  void update_dual(
+  void updateDual(
       double theta  //!< Multiple of pivotal row to add int to duals
       //      int columnOut  //!< Index of leaving column
   );
   /**
    * @brief Create a list of nonbasic free columns
    */
-  void create_Freelist();
+  void createFreelist();
 
   /**
    * @brief Set a value of nonbasicMove for all free columns to
    * prevent their dual values from being changed
    */
-  void create_Freemove(HVector* row_ep  //!< Row of \f$B^{-1}\f$ to be used to
+  void createFreemove(HVector* row_ep  //!< Row of \f$B^{-1}\f$ to be used to
                                         //!< compute pivotal row entry
   );
   /**
    * @brief Reset the nonbasicMove values for free columns
    */
-  void delete_Freemove();
+  void deleteFreemove();
 
   /**
    * @brief Delete the list of nonbasic free columns
    */
-  void delete_Freelist(int iColumn  //!< Index of column to remove from Freelist
+  void deleteFreelist(int iColumn  //!< Index of column to remove from Freelist
   );
 
+  /**
+   * @brief Compute (contribution to) the Devex weight
+   */
+  void computeDevexWeight(const int slice=-1);
+
   HighsModelObject& workHMO;         //!< Local copy of pointer to model
-  int workSize;                      //!< Size of the HDualRow slice
+  int workSize = -1;                 //!< Size of the HDualRow slice: Initialise it here to avoid compiler warning
   const int* workNumTotPermutation;  //!< Pointer to model->numTotPermutation();
-  const int* workMove;      //!< Pointer to model->basis_->nonbasicMove_;
-  const double* workDual;   //!< Pointer to model->simplex_->workDual_;
-  const double* workRange;  //!< Pointer to model->simplex_->workRange_;
+  const int* workMove;      //!< Pointer to workHMO.simplex_basis_.nonbasicMove_;
+  const double* workDual;   //!< Pointer to workHMO.simplex_info_.workDual_;
+  const double* workRange;  //!< Pointer to workHMO.simplex_info_.workRange_;
+  const int* work_devex_index; //!< Pointer to workHMO.simplex_info_.devex_index;
 
   // Freelist:
   std::set<int> freeList;  //!< Freelist itself
@@ -132,6 +138,9 @@ class HDualRow {
   std::vector<int> packIndex;     //!< Packed indices
   std::vector<double> packValue;  //!< Packed values
 
+  // (Local) value of computed weight
+  double computed_edge_weight;
+  
   double workDelta;  //!< Local copy of dual.deltaPrimal
   double workAlpha;  //!< Original copy of pivotal computed row-wise
   double workTheta;  //!< Original copy of dual step workDual[workPivot] /

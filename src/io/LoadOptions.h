@@ -14,15 +14,6 @@
 #ifndef IO_LOAD_OPTIONS_H_
 #define IO_LOAD_OPTIONS_H_
 
-//#include <sys/stat.h>
-//#include <sys/types.h>
-//#include <cstdio>
-//#include <fstream>
-
-//#include "io/Filereader.h"
-//#include "io/HighsIO.h"
-//#include "lp_data/HighsLpUtils.h"
-//#include "lp_data/HighsOptions.h"
 #include "util/stringutil.h"
 
 // For extended options to be parsed from a file. Assuming options file is
@@ -41,7 +32,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
 
       int equals = line.find_first_of("=");
       if (equals < 0 || equals >= (int)line.size() - 1) {
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                         "Error on line %d of options file.", line_count);
         return false;
       }
@@ -49,10 +40,11 @@ bool loadOptionsFromFile(HighsOptions& options) {
       value = line.substr(equals + 1, line.size() - equals);
       trim(option);
       trim(value);
-      if (setOptionValue(option, options.records, value) != OptionStatus::OK) return false;
+      if (setOptionValue(options.logfile, option, options.records, value) != OptionStatus::OK) return false;
     }
   } else {
-    HighsLogMessage(HighsMessageType::ERROR, "Options file not found.");
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Options file not found.");
     return false;
   }
 

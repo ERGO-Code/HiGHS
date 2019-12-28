@@ -23,6 +23,7 @@ const double HIGHS_CONST_ZERO = 1e-50;
 const std::string off_string = "off";
 const std::string choose_string = "choose";
 const std::string on_string = "on";
+const int HIGHS_THREAD_LIMIT = 8;//32;
 
 constexpr double kBoundTolerance = 1e-8;
 
@@ -38,9 +39,13 @@ enum HighsPrintMessageLevel {
 
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING};
 
+enum class HighsInfoType { INT = 1, DOUBLE};
+
 enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 
 enum SolverOption { SOLVER_OPTION_SIMPLEX = -1, SOLVER_OPTION_CHOOSE, SOLVER_OPTION_IPM }; 
+
+enum PrimalDualStatus { STATUS_NOTSET = -1, STATUS_NO_SOLUTION, STATUS_UNKNOWN, STATUS_INFEASIBLE_POINT , STATUS_FEASIBLE_POINT };
 
 const std::string FILENAME_DEFAULT = "";
 

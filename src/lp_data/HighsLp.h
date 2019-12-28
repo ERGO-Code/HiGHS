@@ -45,8 +45,6 @@ enum class HighsModelStatus {
     PRESOLVE_ERROR,
     SOLVE_ERROR,
     POSTSOLVE_ERROR,
-    PRIMAL_FEASIBLE,
-    DUAL_FEASIBLE,
     PRIMAL_INFEASIBLE,
     PRIMAL_UNBOUNDED,
     OPTIMAL,
@@ -113,8 +111,6 @@ struct HighsScale {
   double cost_;
   std::vector<double> col_;
   std::vector<double> row_;
-  double extreme_equilibration_improvement_;
-  double mean_equilibration_improvement_;
 };
 
 struct SimplexBasis {
@@ -134,10 +130,9 @@ struct HighsSimplexLpStatus {
   bool is_dualised = false;
   bool is_permuted = false;
   bool scaling_tried = false;
-  bool has_basis = false;  // The LP has a valid simplex basis
-  bool has_matrix_col_wise =
-      false;  // The LP has a column-wise constraint matrix
-  bool has_matrix_row_wise = false;  // The LP has a row-wise constraint matrix
+  bool has_basis = false;  // The simplex LP has a valid simplex basis
+  bool has_matrix_col_wise = false;  // The HMatrix column-wise matrix is valid
+  bool has_matrix_row_wise = false;  // The HMatrix row-wise matrix is valid
   bool has_factor_arrays =
       false;  // Has the arrays for the representation of B^{-1}
   bool has_dual_steepest_edge_weights = false;  // The DSE weights are known
@@ -210,6 +205,8 @@ struct HighsSimplexInfo {
   std::vector<int> numTotPermutation_;
   std::vector<int> numColPermutation_;
 
+  std::vector<int> devex_index_;
+
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;
   //
@@ -219,35 +216,35 @@ struct HighsSimplexInfo {
   int primal_edge_weight_strategy;
   int price_strategy;
 
-  double primal_feasibility_tolerance;
-  double dual_feasibility_tolerance;
+  //  double primal_feasibility_tolerance;
+  //  double dual_feasibility_tolerance;
   bool perturb_costs;
   int update_limit;
   //  int iteration_limit;
   //  double dual_objective_value_upper_bound;
 
   // Internal options - can't be changed externally
-  bool store_squared_primal_infeasibility;
-  bool allow_primal_flips_for_dual_feasibility;
-  bool analyseLpSolution;
-#ifdef HiGHSDEV
+  bool store_squared_primal_infeasibility = false;
+  bool allow_primal_flips_for_dual_feasibility = true;
+#ifndef HiGHSDEV
+  bool analyseLpSolution = false; //true;// 
+#else  
+  bool analyseLpSolution = true;
   // Options for reporting timing
-  bool report_simplex_inner_clock;
-  bool report_simplex_outer_clock;
-  bool report_simplex_phases_clock;
+  bool report_simplex_inner_clock = false;
+  bool report_simplex_outer_clock = false;
+  bool report_simplex_phases_clock = false;
   // Option for analysing the LP simplex iterations, INVERT time and rebuild
   // time
-  bool analyseLp;
-  bool analyseSimplexIterations;
-  bool analyse_invert_form;
-  bool analyse_invert_condition;
-  bool analyse_invert_time;
-  bool analyseRebuildTime;
+  bool analyseLp = false;
+  bool analyseSimplexIterations = false;
+  bool analyse_invert_form = false;
+  bool analyse_invert_condition = false;
+  bool analyse_invert_time = false;
+  bool analyseRebuildTime = false;
 #endif
   // Simplex runtime information
   int costs_perturbed = 0;
-  // Cumulative iteration count - updated in simplex solvers
-  int iteration_count = 0;
   // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;
   int dual_phase2_iteration_count = 0;
@@ -276,13 +273,6 @@ struct HighsSimplexInfo {
   double updated_primal_objective_value;
   // Number of logical variables in the basis
   int num_basic_logicals;
-  // Number/max/sum of primal and dual infeasibilities
-  int num_primal_infeasibilities;
-  double max_primal_infeasibility;
-  double sum_primal_infeasibilities;
-  int num_dual_infeasibilities;
-  double max_dual_infeasibility;
-  double sum_dual_infeasibilities;
 
 #ifdef HiGHSDEV
   // Analysis of INVERT
@@ -314,6 +304,25 @@ struct HighsSimplexInfo {
   vector<double> historyAlpha;
 #endif
   */
+};
+
+struct HighsSolutionParams {
+  // Input to solution analysis method
+  double primal_feasibility_tolerance;
+  double dual_feasibility_tolerance;
+  int simplex_iteration_count = 0;
+  int ipm_iteration_count = 0;
+  int crossover_iteration_count = 0;
+  int primal_status = PrimalDualStatus::STATUS_NOTSET;
+  int dual_status = PrimalDualStatus::STATUS_NOTSET;
+  // Output from solution analysis method
+  double objective_function_value;
+  int num_primal_infeasibilities;
+  double sum_primal_infeasibilities;
+  double max_primal_infeasibility;
+  int num_dual_infeasibilities;
+  double sum_dual_infeasibilities;
+  double max_dual_infeasibility;
 };
 
 struct HighsSolution {

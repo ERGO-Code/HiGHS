@@ -52,21 +52,21 @@ int Highs_run(void* highs  //!< HiGHS object reference
 /*
  * @brief
  */
-int Highs_readFromFile(void* highs,          //!< HiGHS object reference
-                       const char* filename  //!< filename
+  int Highs_readModel(void* highs,          //!< HiGHS object reference
+		      const char* filename  //!< filename
 );
 
 /*
  * @brief
  */
-int Highs_writeToFile(void* highs,          //!< HiGHS object reference
-                      const char* filename  //!< filename
+int Highs_writeModel(void* highs,          //!< HiGHS object reference
+		     const char* filename  //!< filename
 );
 
 /*
- * @brief load full model
+ * @brief pass an LP to HiGHS
  */
-int Highs_loadModel(
+int Highs_passLp(
     void* highs,       //!< HiGHS object reference
     int numcol,        //!< number of columns
     int numrow,        //!< number of rows
@@ -114,14 +114,18 @@ void Highs_getBasis(
 /*
  * @brief
  */
-double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference
-);
+  int Highs_getIntHighsInfoValue(void* highs,    //!< HiGHS object reference
+			       const char* info, //!< The info name
+			       int* value        //!< The info value
+			       );
 
 /*
  * @brief
  */
-int Highs_getIterationCount(void* highs  //!< HiGHS object reference
-);
+  int Highs_getDoubleHighsInfoValue(void* highs,      //!< HiGHS object reference
+				    const char* info, //!< The info name
+				    double* value     //!< The info value
+				    );
 
 /**
  * @brief Adds a row to the model
@@ -496,9 +500,10 @@ int Highs_getNumNz(void* highs  //!< HiGHS object reference
 );
 
 /**
- * @brief Returns the current status of the (first?) HighsModelObject
+ * @brief Returns the status of the (scaled) model
  */
-int Highs_getModelStatus(void* highs  //!< HiGHS object reference
+int Highs_getModelStatus(void* highs,           //!< HiGHS object reference
+			 const int scaled_model //!< 0 (nonzero) for status of (scaled) model
 );
 
 /**
@@ -602,7 +607,7 @@ int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
 //  * HighsModelObject for this LP and makes it the first of the vector
 //  * of HighsModelObjects
 //  */
-// HighsStatus initializeLp(
+// HighsStatus passModel(
 //     const HighsLp &lp  //!< The HighsLp instance for this LP
 // );
 
@@ -618,7 +623,7 @@ int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
 //  * @brief Reports the solution and basis status for the LP of the
 //  * (first?) HighsModelObject
 //  */
-// void reportSolution();
+// void writeSolution(const std::string filename);
 
 #ifdef __cplusplus
 }

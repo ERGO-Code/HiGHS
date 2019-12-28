@@ -60,6 +60,9 @@ struct ICrashOptions {
   int approximate_minimization_iterations;
   bool exact;
   bool breakpoints; // gets ignored if exact is set to true
+  FILE* logfile;
+  FILE* output;
+  int message_level;
 };
 
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,

@@ -10,7 +10,7 @@ int Highs_call(int numcol, int numrow, int numnz, double* colcost,
   Highs highs;
 
   int status =
-      Highs_loadModel(&highs, numcol, numrow, numnz, colcost, collower,
+      Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower,
                       colupper, rowlower, rowupper, astart, aindex, avalue);
   if (status != 0) {
     return status;
@@ -49,15 +49,19 @@ void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
 int Highs_run(void* highs) { return (int)((Highs*)highs)->run(); }
 
-int Highs_readFromFile(void* highs, const char* filename) {
-  return (int)((Highs*)highs)->initializeFromFile(std::string(filename));
+int Highs_readModel(void* highs, const char* filename) {
+  return (int)((Highs*)highs)->readModel(std::string(filename));
 }
 
-int Highs_writeToFile(void* highs, const char* filename) {
-  return (int)((Highs*)highs)->writeToFile(std::string(filename));
+int Highs_writeModel(void* highs, const char* filename) {
+  return (int)((Highs*)highs)->writeModel(std::string(filename));
 }
 
-int Highs_loadModel(void* highs, int numcol, int numrow, int numnz,
+int Highs_writeSolution(void* highs, const char* filename) {
+  return (int)((Highs*)highs)->writeSolution(std::string(filename));
+}
+
+int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
                     double* colcost, double* collower, double* colupper,
                     double* rowlower, double* rowupper, int* astart,
                     int* aindex, double* avalue) {
@@ -86,7 +90,7 @@ int Highs_loadModel(void* highs, int numcol, int numrow, int numnz,
   lp.Aindex_.assign(aindex, aindex + numnz);
   lp.Avalue_.assign(avalue, avalue + numnz);
 
-  return (int)((Highs*)highs)->initializeLp(lp);
+  return (int)((Highs*)highs)->passModel(lp);
 }
 
 int Highs_setHighsOptionValue(void* highs, const char* option,
@@ -128,12 +132,12 @@ void Highs_getBasis(void* highs, int* colstatus, int* rowstatus) {
   }
 }
 
-double Highs_getObjectiveValue(void* highs) {
-  return ((Highs*)highs)->getObjectiveValue();
+int Highs_getIntHighsInfoValue(void* highs, const char* info, int& value) {
+  return (int)((Highs*)highs)->getHighsInfoValue(info, value);
 }
 
-int Highs_getIterationCount(void* highs) {
-  return ((Highs*)highs)->getIterationCount();
+int Highs_getDoubleHighsInfoValue(void* highs, const char* info, double& value) {
+  return (int)((Highs*)highs)->getHighsInfoValue(info, value);
 }
 
 int Highs_addRow(void* highs, const double lower, const double upper,
@@ -335,8 +339,8 @@ int Highs_getNumNz(void* highs) {
   return ((Highs*)highs)->getLp().Astart_[numCol];
 }
 
-int Highs_getModelStatus(void* highs) {
-  return (int)((Highs*)highs)->getModelStatus();
+int Highs_getModelStatus(void* highs, const bool scaled_model) {
+  return (int)((Highs*)highs)->getModelStatus(scaled_model);
 }
 
 int Highs_getBasicVariables(void* highs, int* basic_variables) {

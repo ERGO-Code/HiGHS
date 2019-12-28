@@ -1,12 +1,6 @@
 #include "lp_data/HighsStatus.h"
 #include "io/HighsIO.h"
 
-// Report a HighsStatus.
-void HighsStatusReport(const char* message, HighsStatus status) {
-  HighsLogMessage(HighsMessageType::INFO, "%s: HighsStatus = %d - %s\n",
-                  message, (int)status, HighsStatusToString(status).c_str());
-}
-
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
@@ -20,13 +14,36 @@ std::string HighsStatusToString(HighsStatus status) {
       return "Error";
       break;
     default:
-      return "Status toString() not implemented.";
+#ifdef HiGHSDEV
+      printf("HiGHS status %d not recognised\n", (int)status);
+#endif
+      return "Unrecognised HiGHS status";
       break;
   }
   return "";
 }
 
-HighsStatus worseStatus(HighsStatus status0, HighsStatus status1) {
+HighsStatus interpretCallStatus(const HighsStatus call_status,
+				const HighsStatus from_return_status,
+				const std::string message) {
+  HighsStatus to_return_status;
+  to_return_status = worseStatus(call_status, from_return_status);
+#ifdef HiGHSDEV
+  if (call_status != HighsStatus::OK) {
+    if (message != "") {
+      printf("HighsStatus::%s return from %s\n",
+	     HighsStatusToString(call_status).c_str(),
+	     message.c_str());
+    } else {
+      printf("HighsStatus::%s return\n",
+	     HighsStatusToString(call_status).c_str());
+    }
+  }
+#endif
+  return to_return_status;
+}
+
+HighsStatus worseStatus(const HighsStatus status0, const HighsStatus status1) {
   HighsStatus return_status = HighsStatus::Error;
   if (status0 == HighsStatus::Error || status1 == HighsStatus::Error)
     return_status = HighsStatus::Error;

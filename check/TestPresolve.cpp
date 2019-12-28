@@ -13,7 +13,8 @@ TEST_CASE("irash-qap04", "[highs_presolve]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/qap04.mps";
 
   Highs highs;
-  HighsStatus highs_status = highs.initializeFromFile(filename);
+  //  HighsStatus highs_status = highs.initializeFromFile(filename);
+  HighsStatus highs_status = highs.readModel(filename);
   REQUIRE(highs_status==HighsStatus::OK);
 
   HighsOptions options;
@@ -21,7 +22,10 @@ TEST_CASE("irash-qap04", "[highs_presolve]") {
   options.icrash_starting_weight = 10;
   options.icrash_approximate_minimization_iterations = 100;
 
-  highs.options_ = options;
+  // highs.options_ is now private!
+  // highs.options_ = options;
+  highs_status = highs.passHighsOptions(options);
+  REQUIRE(highs_status==HighsStatus::OK);
 
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);

@@ -7,13 +7,14 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+#include <cstring> // For strrchr
+#include <stdexcept>
+
 #include "io/Filereader.h"
 #include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
-
-#include <cstring>
-#include <stdexcept>
 
 static const char* getFilenameExt(const char* filename) {
   const char* dot = strrchr(filename, '.');

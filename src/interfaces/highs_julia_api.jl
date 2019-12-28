@@ -59,17 +59,17 @@ function Highs_run(highs)
    return ccall((:Highs_run, "libhighs.so"), Cint, (Ptr{Cvoid},), highs)
 end
 
-function Highs_readFromFile(highs, filename)
+function Highs_readModel(highs, filename)
    name = convert(Cstring, pointer(filename))
-   return ccall((:Highs_readFromFile, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring), highs, name)
+   return ccall((:Highs_readModel, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring), highs, name)
 end
 
-function Highs_writeToFile(highs, filename)
+function Highs_writeModel(highs, filename)
    name = convert(Cstring, pointer(filename))
-   return ccall((:Highs_writeToFile, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring), highs, name)
+   return ccall((:Highs_writeModel, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring), highs, name)
 end
 
-function Highs_loadModel(highs, model)
+function Highs_passLp(highs, model)
    n_col = convert(Cint, size(model.colcost, 1))
    n_row = convert(Cint, size(model.rowlower, 1))
    n_nz = convert(Cint, size(model.aindex, 1))
@@ -84,7 +84,7 @@ function Highs_loadModel(highs, model)
    matindex = convert(Array{Cint}, model.aindex)
    matvalue = convert(Array{Cdouble}, model.avalue)
 
-   return ccall((:Highs_loadModel, "libhighs.so"), Cint, (Ptr{Cvoid},Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint},Ptr{Cint},Ptr{Cdouble}),
+   return ccall((:Highs_passLp, "libhighs.so"), Cint, (Ptr{Cvoid},Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint},Ptr{Cint},Ptr{Cdouble}),
    highs, n_col, n_row, n_nz, colcost, collower, colupper, rowlower, rowupper, matstart, matindex, matvalue)
 end
 

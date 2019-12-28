@@ -21,6 +21,12 @@
 #include "HConfig.h"
 #include "lp_data/HConst.h"
 
+/*
+int getOmpNumThreads() {
+  return omp_get_num_threads()
+}
+*/
+
 double getNorm2(const std::vector<double> values) {
   double sum = 0;
   int values_size = values.size();
@@ -32,6 +38,8 @@ bool highs_isInfinity(double val) {
   if (val >= HIGHS_CONST_INF) return true;
   return false;
 }
+
+double highs_relative_difference(const double v0, const double v1) { return fabs(v0-v1)/std::max(v0, std::max(v1, 1.0)); }
 
 #ifdef HiGHSDEV
 void analyseVectorValues(const char* message, int vecDim,
@@ -252,15 +260,15 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
   }
   printf("Max count is %d / %d\n\n", maxColCount, numRow);
 
-  lastRpCat;
+  lastRpCat = -1;
   for (int cat = 0; cat < maxCat + 1; cat++) {
     if (rowCatK[cat]) lastRpCat = cat;
   }
   cat = maxCat;
   if (rowCatK[cat]) lastRpCat = cat;
   sumK = 0;
-  pct;
-  v;
+  pct = 0;
+  v = 0;
   sumPct = 0;
   for (int cat = 0; cat < lastRpCat; cat++) {
     sumK += rowCatK[cat];

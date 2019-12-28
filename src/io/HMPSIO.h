@@ -43,7 +43,8 @@ const int field_5_width = 8;
 const int field_6_start = 49;
 const int field_6_width = 12;
 
-FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
+FilereaderRetcode readMPS(FILE* logfile,
+			  const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 			  int& numCol, int& numInt, int& objSense, double& objOffset,
 			  vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
 			  vector<double>& colCost, vector<double>& colLower,
@@ -52,17 +53,18 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
 			  vector<std::string>& col_names, vector<std::string>& row_names,
 			  const int keep_n_rows = 0);
 
-HighsStatus writeMPS(const char* filename,
-			   const int& numRow, const int& numCol,
-			   const int& numInt, const int& objSense, const double& objOffset,
-			   const vector<int>& Astart, const vector<int>& Aindex,
-			   const vector<double>& Avalue, const vector<double>& colCost,
-			   const vector<double>& colLower, const vector<double>& colUpper,
-			   const vector<double>& rowLower, const vector<double>& rowUpper,
-			   const vector<int>& integerColumn,
-			   const vector<std::string>& col_names,
-			   const vector<std::string>& row_names,
-			   const bool use_free_format = true);
+HighsStatus writeMPS(FILE* logfile,
+		     const char* filename,
+		     const int& numRow, const int& numCol,
+		     const int& numInt, const int& objSense, const double& objOffset,
+		     const vector<int>& Astart, const vector<int>& Aindex,
+		     const vector<double>& Avalue, const vector<double>& colCost,
+		     const vector<double>& colLower, const vector<double>& colUpper,
+		     const vector<double>& rowLower, const vector<double>& rowUpper,
+		     const vector<int>& integerColumn,
+		     const vector<std::string>& col_names,
+		     const vector<std::string>& row_names,
+		     const bool use_free_format = true);
 
 bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
                   double* data);

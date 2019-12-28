@@ -14,7 +14,7 @@
 #ifndef LP_DATA_HIGHS_OPTIONS_H_
 #define LP_DATA_HIGHS_OPTIONS_H_
 
-#include <cstring>
+#include <cstring> // For strrchr
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
@@ -160,39 +160,77 @@ void assignvalue(std::string Xvalue) {
 
 inline const char* bool2string(bool b);
 
-bool commandLineOffChooseOnOk(const string& value);
-bool commandLineSolverOk(const string& value);
+bool commandLineOffChooseOnOk(FILE* logfile, const string& value);
+bool commandLineSolverOk(FILE* logfile, const string& value);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
+OptionStatus getOptionIndex(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
 
-OptionStatus checkOptions(const std::vector<OptionRecord*>& option_records);
-OptionStatus checkOption(const OptionRecordInt& option);
-OptionStatus checkOption(const OptionRecordDouble& option);
+OptionStatus checkOptions(FILE* logfile,
+			  const std::vector<OptionRecord*>& option_records);
+OptionStatus checkOption(FILE* logfile, const OptionRecordInt& option);
+OptionStatus checkOption(FILE* logfile, const OptionRecordDouble& option);
 
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
-OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const char* value);
+OptionStatus checkOptionValue(FILE* logfile,
+			      std::vector<OptionRecord*>& option_records, const int value);
+OptionStatus checkOptionValue(FILE* logfile,
+			      std::vector<OptionRecord*>& option_records, const double value);
+OptionStatus checkOptionValue(FILE* logfile,
+			      std::vector<OptionRecord*>& option_records, const std::string value);
+
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
+OptionStatus setOptionValue(FILE* logfile,
+			    const std::string& name, std::vector<OptionRecord*>& option_records, const char* value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
-OptionStatus setOptionValue(OptionRecordInt& option, const int value);
-OptionStatus setOptionValue(OptionRecordDouble& option, const double value);
-OptionStatus setOptionValue(OptionRecordString& option, std::string const value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordInt& option, const int value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordDouble& option, const double value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordString& option, std::string const value);
 
-OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
-OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, int& value);
-OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
-OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
+OptionStatus passOptions(FILE* logfile, const HighsOptions from_options, HighsOptions to_options);
 
-HighsStatus reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records);
-void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false);
-void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionRecordString& option, const bool force_report=false);
+OptionStatus getOptionValue(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
+OptionStatus getOptionValue(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, int& value);
+OptionStatus getOptionValue(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
+OptionStatus getOptionValue(FILE* logfile,
+			    const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
+
+HighsStatus writeOptionsToFile(FILE* file,
+			       const std::vector<OptionRecord*>& option_records,
+			       const bool report_only_non_default_values=true,
+			       const bool html=false);
+void reportOptions(FILE* file,
+		   const std::vector<OptionRecord*>& option_records,
+		   const bool report_only_non_default_values=true,
+		   const bool html=false);
+void reportOption(FILE* file,
+		  const OptionRecordBool& option,
+		  const bool report_only_non_default_values,
+		  const bool html);
+void reportOption(FILE* file,
+		  const OptionRecordInt& option,
+		  const bool report_only_non_default_values,
+		  const bool html);
+void reportOption(FILE* file,
+		  const OptionRecordDouble& option,
+		  const bool report_only_non_default_values,
+		  const bool html);
+void reportOption(FILE* file,
+		  const OptionRecordString& option,
+		  const bool report_only_non_default_values,
+		  const bool html);
 
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";
@@ -257,12 +295,6 @@ class HighsOptions {
 					   FILENAME_DEFAULT);
     records.push_back(record_string);
     // Options read from the file
-    record_int = new OptionRecordInt("simplex_iteration_limit",
-				     "Iteration limit for simplex solver",
-				     advanced, &simplex_iteration_limit,
-				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
-    records.push_back(record_int);
-    
     record_double = new OptionRecordDouble("infinite_cost",
 					   "Limit on cost coefficient: values larger than this will be treated as infinite",
 					   advanced, &infinite_cost,
@@ -339,17 +371,47 @@ class HighsOptions {
 				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("simplex_iteration_limit",
+				     "Iteration limit for simplex solver",
+				     advanced, &simplex_iteration_limit,
+				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+    
     record_int = new OptionRecordInt("simplex_update_limit",
 				     "Limit on the number of simplex UPDATE operations",
 				     advanced, &simplex_update_limit,
 				     0, 5000, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("num_threads",
+				     "Number of threads in parallel execution",
+				     advanced, &num_threads,
+				     0, 1, HIGHS_THREAD_LIMIT);
+    records.push_back(record_int);
+    
     record_int = new OptionRecordInt("message_level",
 				     "HiGHS message level: bit-mask 1 => VERBOSE; 2 => DETAILED 4 => MINIMAL",
 				     advanced, &message_level,
 				     ML_MIN, ML_MINIMAL, ML_MAX);
     records.push_back(record_int);
+
+    record_string = new OptionRecordString("solution_file",
+					   "Solution file",
+					   advanced, &solution_file,
+					   FILENAME_DEFAULT);
+    records.push_back(record_string);
+
+    record_bool = new OptionRecordBool("write_solution_to_file",
+				       "Write the primal and dual solution to a file",
+				       advanced, &write_solution_to_file,
+				       false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("write_solution_pretty",
+				       "Write the primal and dual solution in a pretty (human-readable) format",
+				       advanced, &write_solution_pretty,
+				       false);
+    records.push_back(record_bool);
 
     // Advanced options
     advanced = true;
@@ -368,10 +430,16 @@ class HighsOptions {
 				     advanced, &keep_n_rows,
 				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS);
     records.push_back(record_int);
-    record_int = new OptionRecordInt("allowed_simplex_scale_factor",
-				     "Largest power-of-two factor permitted when scaling for the simplex solver",
-				     advanced, &allowed_simplex_scale_factor,
+    record_int = new OptionRecordInt("allowed_simplex_matrix_scale_factor",
+				     "Largest power-of-two factor permitted when scaling the constraint matrix for the simplex solver",
+				     advanced, &allowed_simplex_matrix_scale_factor,
 				     0, 10, 20);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("allowed_simplex_cost_scale_factor",
+				     "Largest power-of-two factor permitted when scaling the costs for the simplex solver",
+				     advanced, &allowed_simplex_cost_scale_factor,
+				     0, 0, 20);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("simplex_dualise_strategy",
@@ -479,8 +547,10 @@ class HighsOptions {
 				     advanced, &less_infeasible_DSE_choose_row,
 				     true);
     records.push_back(record_bool);
-
   }
+
+  ~HighsOptions() {}
+  
   std::vector<OptionRecord*> records;
 
   // Options read from the command line
@@ -492,7 +562,6 @@ class HighsOptions {
   std::string options_file;
   
   // Options read from the file
-  int simplex_iteration_limit;
   double infinite_cost;
   double infinite_bound;
   double small_matrix_value;
@@ -505,14 +574,20 @@ class HighsOptions {
   int simplex_crash_strategy;
   int simplex_dual_edge_weight_strategy;
   int simplex_primal_edge_weight_strategy;
+  int simplex_iteration_limit;
   int simplex_update_limit;
+  int num_threads;
   int message_level;
+  std::string solution_file;
+  bool write_solution_to_file;
+  bool write_solution_pretty;
   
   // Advanced options
   bool run_as_hsol;
   bool mps_parser_type_free;
   int keep_n_rows;
-  int allowed_simplex_scale_factor;
+  int allowed_simplex_matrix_scale_factor;
+  int allowed_simplex_cost_scale_factor;
   int simplex_dualise_strategy;
   int simplex_permute_strategy;
   int simplex_price_strategy;
@@ -548,9 +623,6 @@ class HighsOptions {
 };
 
 
-// Called before solve. This would check whether tolerances are set to correct
-// values and all options are consistent.
-OptionStatus checkOptionsValue(HighsOptions& options);
 void setHsolOptions(HighsOptions& options);
 
 #endif

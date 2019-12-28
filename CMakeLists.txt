@@ -134,8 +134,8 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/external
     ${HIGHS_SOURCE_DIR}/src
     ${HIGHS_SOURCE_DIR}/src/io
-    ${HIGHS_SOURCE_DIR}/src/interior_point/ipx
-    ${HIGHS_SOURCE_DIR}/src/interior_point/basiclu
+    ${HIGHS_SOURCE_DIR}/src/ipm/ipx
+    ${HIGHS_SOURCE_DIR}/src/ipm/basiclu
     ${HIGHS_SOURCE_DIR}/src/lp_data
     ${HIGHS_SOURCE_DIR}/src/presolve
     ${HIGHS_SOURCE_DIR}/src/simplex
@@ -181,9 +181,9 @@ enable_cxx_compiler_flag_if_supported("-Wextra")
 enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
 enable_cxx_compiler_flag_if_supported("-pedantic")
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
-    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
-endif()
+#if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
+#    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
+#endif()
 
 if (IPX_ON)
     # use, i.e. don't skip the full RPATH for the build tree

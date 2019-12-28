@@ -74,9 +74,11 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
     this->handleGeneralSection(model);
   if (this->status != LP_FILEREADER_STATUS::ERROR)
     this->handleSemiSection(model);
-  if (this->status != LP_FILEREADER_STATUS::ERROR)
-    this->handleSosSection(model);
-
+  if (this->status != LP_FILEREADER_STATUS::ERROR) {
+    FilereaderRetcode filereader_return_code = 
+      this->handleSosSection(model);
+    if (filereader_return_code != FilereaderRetcode::OK) return FilereaderRetcode::PARSERERROR;
+  }
   assert(this->tokenQueue.size() == 0);
 
   fclose(file);
@@ -175,11 +177,14 @@ void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
   assert(this->semiSection.size() == 0);
 }
 
-void FilereaderLp::handleSosSection(HighsModelBuilder& model) {
-  HighsPrintMessage(HighsPrintMessageLevel::ML_MINIMAL, "SoS section is not currenlty supported by the .lp filereader.");
+FilereaderRetcode FilereaderLp::handleSosSection(HighsModelBuilder& model) {
+  
+#ifdef HiGHSDEV
+  printf("SoS section is not currenlty supported by the .lp filereader.\n");
+#endif
 
   if (this->sosSection.size() == 0) {
-    return;
+    return FilereaderRetcode::OK;
   }
 
   LpToken* token;
@@ -195,6 +200,7 @@ void FilereaderLp::handleSosSection(HighsModelBuilder& model) {
     this->sosSection.pop_front();
     delete token;
   }
+  return FilereaderRetcode::NOT_IMPLEMENTED;
 }
 
 void FilereaderLp::handleBoundsSection(HighsModelBuilder& model) {
@@ -270,7 +276,7 @@ void FilereaderLp::handleBoundsSection(HighsModelBuilder& model) {
       delete nextnext;
       delete next;
     } else {
-      HighsLogMessage(HighsMessageType::ERROR,
+      HighsLogMessage(stdout, HighsMessageType::ERROR,
                       "Error when parsing bounds section.\n");
       this->status = LP_FILEREADER_STATUS::ERROR;
       delete current;
@@ -338,7 +344,7 @@ void FilereaderLp::handleConstraintSection(HighsModelBuilder& model) {
         delete next;
       } else {
         // error
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
                         "Error when parsing constraint section\n");
         this->status = LP_FILEREADER_STATUS::ERROR;
         delete current;
@@ -436,7 +442,7 @@ void FilereaderLp::handleObjectiveSection(HighsModelBuilder& model) {
       delete current;
     } else {
       // error
-      HighsLogMessage(HighsMessageType::ERROR,
+      HighsLogMessage(stdout, HighsMessageType::ERROR,
                       "Error when parsing objective section.\n");
       this->status = LP_FILEREADER_STATUS::ERROR;
       delete current;
@@ -480,7 +486,7 @@ void FilereaderLp::splitTokens() {
       case LpSectionKeyword::NONE:
         // error
         this->status = LP_FILEREADER_STATUS::ERROR;
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
                         "Error when splitting tokens.\n");
         return;
     }
@@ -662,7 +668,8 @@ bool FilereaderLp::readNextToken() {
         // should not happen
         this->tokenQueue.pop_back();
         delete previousToken;
-        HighsLogMessage(HighsMessageType::ERROR, "Error when parsing file.\n");
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
+			"Error when parsing file.\n");
         this->status = LP_FILEREADER_STATUS::ERROR;
       }
       this->tokenQueue.push_back(newToken);
@@ -707,7 +714,7 @@ bool FilereaderLp::readNextToken() {
   // read single character, check if it is a lineend, whitespace (tab or space),
   // (partial) comparison, colon (should not happen), sign, or bracket
   if (*this->readingPosition == '\0') {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(stdout, HighsMessageType::ERROR,
                     "NULL character read. Should not have happened.\n");
     this->isFileBufferFullyRead = true;
     this->status = LP_FILEREADER_STATUS::ERROR;
@@ -728,7 +735,7 @@ bool FilereaderLp::readNextToken() {
         return true;
 
       case ':':
-        HighsLogMessage(HighsMessageType::ERROR,
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
                         "COLON character read. Should not have happened.\n");
         this->readingPosition += 1;
         this->status = LP_FILEREADER_STATUS::ERROR;
@@ -836,7 +843,8 @@ bool FilereaderLp::readNextToken() {
           return true;
         }
       default:
-        HighsLogMessage(HighsMessageType::ERROR, "Unknown symbol\n");
+        HighsLogMessage(stdout, HighsMessageType::ERROR,
+			"Unknown symbol\n");
         return false;
     }
   }
@@ -941,7 +949,8 @@ void FilereaderLp::writeToFileLineend() {
   this->linelength = 0;
 }
 
-HighsStatus FilereaderLp::writeModelToFile(const char* filename,
+HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
+					   const char* filename,
 					   HighsLp& model) {
   this->file = fopen(filename, "w");
 

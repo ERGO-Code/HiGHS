@@ -1,13 +1,27 @@
-#ifndef INTERIOR_POINT_IPX_WRAPPER_H_
-#define INTERIOR_POINT_IPX_WRAPPER_H_
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file ipm/IpxWrapper.h
+ * @brief
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
+#ifndef IPM_IPX_WRAPPER_H_
+#define IPM_IPX_WRAPPER_H_
 
 #include <algorithm>
 
-#include "interior_point/IpxStatus.h"
-#include "interior_point/ipx/include/ipx_status.h"
-#include "interior_point/ipx/src/lp_solver.h"
+#include "ipm/IpxStatus.h"
+#include "ipm/ipx/include/ipx_status.h"
+#include "ipm/ipx/src/lp_solver.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsSolution.h"
 
 IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
                         std::vector<double>& obj, std::vector<double>& col_lb,
@@ -102,12 +116,16 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   Ax.reserve(nnz + num_slack);
 
   // Set starting points of original and newly introduced columns.
-  for (int col = 1; col <= lp.numCol_; col++)
-    Ap[col] = lp.Astart_[col - 1] + sizes[col - 1];
-  for (int col = lp.numCol_; col <= (int)num_col; col++) {
-    Ap[col] = Ap[col - 1] + 1;
+  Ap[0] = 0;
+  for (int col = 0; col < lp.numCol_; col++) {
+    Ap[col+1] = Ap[col] + sizes[col];
+    //    printf("Struc Ap[%2d] = %2d; Al[%2d] = %2d\n", col, (int)Ap[col], col, (int)sizes[col]);
   }
-
+  for (int col = lp.numCol_; col < (int)num_col; col++) {
+    Ap[col+1] = Ap[col] + 1;
+    //    printf("Slack Ap[%2d] = %2d\n", col, (int)Ap[col]);
+  }
+  //  printf("Fictn Ap[%2d] = %2d\n", (int)num_col, (int)Ap[num_col]);
   for (int k = 0; k < nnz; k++) {
     int row = lp.Aindex_[k];
     if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
@@ -144,24 +162,50 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
   obj = lp.colCost_;
   obj.insert(obj.end(), num_slack, 0);
+#ifdef HiGHSDEV
+  printf("IPX model has %d columns, %d rows and %d nonzeros\n", (int)num_col, (int)num_row, (int)Ap[num_col]);
+#endif  
+  /*
+  for (int col = 0; col < num_col; col++)
+    printf("Col %2d: [%11.4g, %11.4g] Cost = %11.4g; Start = %d\n", col, col_lb[col], col_ub[col], obj[col], (int)Ap[col]);
+  for (int row = 0; row < num_row; row++) 
+    printf("Row %2d: RHS = %11.4g; Type = %d\n", row, rhs[row], constraint_type[row]);
+  for (int col = 0; col < num_col; col++) {
+    for (int el = Ap[col]; el < Ap[col+1]; el++) {
+      printf("El %2d: [%2d, %11.4g]\n", el, (int)Ai[el], Ax[el]);
+    }
+  }
+  */
+
   return IpxStatus::OK;
 }
 
-IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
-                            HighsBasis& basis) {
+HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
+		       HighsBasis& highs_basis, HighsSolution& highs_solution,
+		       HighsModelStatus& unscaled_model_status,
+		       HighsSolutionParams& unscaled_solution_params) {
   int debug = 0;
-
+  resetModelStatusAndSolutionParams(unscaled_model_status, unscaled_solution_params, options);
 #ifdef CMAKE_BUILD_TYPE
   debug = 1;
 #endif
 
+  // Create the LpSolver instance
   ipx::LpSolver lps;
+  // Set IPX parameters
+  //
+  // Cannot set internal IPX parameters directly since they are
+  // private, so create instance of parameters
   ipx::Parameters parameters;
-
-  // todo: set tolerances
-
   // parameters.crossover = 1; by default
   if (debug) parameters.debug = 1;
+  // Set IPX parameters from options
+  // Just test feasibility and optimality tolerances for now
+  // ToDo Set more parameters
+  parameters.ipm_feasibility_tol = unscaled_solution_params.primal_feasibility_tolerance;
+  parameters.ipm_optimality_tol = unscaled_solution_params.dual_feasibility_tolerance;
+  // Set the internal IPX parameters
+  lps.SetParameters(parameters);
 
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;
@@ -169,21 +213,33 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
   std::vector<char> constraint_type;
   IpxStatus result = fillInIpxData(lp, num_col, objective, col_lb, col_ub,
                                    num_row, Ap, Ai, Av, rhs, constraint_type);
-  if (result != IpxStatus::OK) return result;
+  if (result != IpxStatus::OK) return HighsStatus::Error;
 
   ipx::Int status =
       lps.Solve(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
                 &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
 
+#ifdef HiGHSDEV
+  int int_status = status;
+  if (status != 1000) printf("IPX Solve: status = %d\n", int_status);
+#endif
   if (status != IPX_STATUS_solved) {
+    unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
     // fatal error (invalid input, out of memory, etc.)
     std::cout << " status: " << status << ','
               << " errflag: " << lps.GetInfo().errflag << '\n';
-    return IpxStatus::ErrorOrNotOptimal;
+    // return IpxStatus::ErrorOrNotOptimal;
+    return HighsStatus::Error;
   }
 
   // Get solver and solution information.
-  ipx::Info info = lps.GetInfo();
+  ipx::Info ipx_info = lps.GetInfo();
+  // Struct ipx_info defined in ipx/include/ipx_info.h
+#ifdef HiGHSDEV
+  int int_status_ipm = ipx_info.status_ipm;
+  if (ipx_info.status_ipm != 1) printf("IPX Solve: status_ipm = %d\n", int_status_ipm);
+#endif
+
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
   // IPM terminated successfully or not. (Only in case of out-of-memory no
@@ -198,34 +254,66 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
 
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
-  // todo: fill up HighsSolution
 
-  if (info.status_crossover == IPX_STATUS_optimal ||
-      info.status_crossover == IPX_STATUS_imprecise) {
-    if (info.status_crossover == IPX_STATUS_imprecise) {
-      HighsPrintMessage(
-          ML_ALWAYS,
+#ifdef HiGHSDEV
+    int int_status_crossover = ipx_info.status_crossover;
+    if (int_status_crossover != 1)
+      printf("IPX GetInteriorSolution: status_crossover = %d\n", int_status_crossover);
+#endif
+
+  if (ipx_info.status_crossover == IPX_STATUS_optimal ||
+      ipx_info.status_crossover == IPX_STATUS_imprecise) {
+    if (ipx_info.status_crossover == IPX_STATUS_imprecise) {
+      HighsLogMessage(options.logfile, HighsMessageType::WARNING, 
           "Ipx Crossover status imprecise: at least one of primal and dual "
           "infeasibilities of basic solution is not within parameters pfeastol "
-          "and dfeastol. Simplex clean up will be required.\n");
-      // const double abs_presidual = info.abs_presidual;
-      // const double abs_dresidual = info.abs_dresidual;
-      // const double rel_presidual = info.rel_presidual;
-      // const double rel_dresidual = info.rel_dresidual;
-      // const double rel_objgap = info.rel_objgap;
+          "and dfeastol. Simplex clean up will be required");
+      // const double abs_presidual = ipx_info.abs_presidual;
+      // const double abs_dresidual = ipx_info.abs_dresidual;
+      // const double rel_presidual = ipx_info.rel_presidual;
+      // const double rel_dresidual = ipx_info.rel_dresidual;
+      // const double rel_objgap = ipx_info.rel_objgap;
     }
 
-    std::vector<double> xbasic(num_col);
-    std::vector<double> ybasic(num_col);
-    std::vector<double> zbasic(num_row);
-    std::vector<double> sbasic(num_row);
-    std::vector<ipx::Int> cbasis(num_row);
-    std::vector<ipx::Int> vbasis(num_col);
+    IpxSolution ipx_solution;
+    ipx_solution.num_col = num_col;
+    ipx_solution.num_row = num_row;
+    ipx_solution.ipx_col_value.resize(num_col);
+    ipx_solution.ipx_row_value.resize(num_row);
+    ipx_solution.ipx_col_dual.resize(num_col);
+    ipx_solution.ipx_row_dual.resize(num_row);
+    ipx_solution.ipx_row_status.resize(num_row);
+    ipx_solution.ipx_col_status.resize(num_col);
 
-    lps.GetBasicSolution(&xbasic[0], &sbasic[0], &ybasic[0], &zbasic[0], &cbasis[0], &vbasis[0]);
-    // todo: fill up HighsBasis
+    lps.GetBasicSolution(&ipx_solution.ipx_col_value[0],
+			 &ipx_solution.ipx_row_value[0],
+			 &ipx_solution.ipx_row_dual[0],
+			 &ipx_solution.ipx_col_dual[0],
+			 &ipx_solution.ipx_row_status[0],
+			 &ipx_solution.ipx_col_status[0]);
+    
+#ifdef HiGHSDEV
+    int int_status_crossover = ipx_info.status_crossover;
+    if (int_status_crossover != 1)
+      printf("IPX GetBasicSolution: status_crossover = %d\n", int_status_crossover);
+#endif
+
+    // Convert the IPX basic solution to a HiGHS basic solution
+    ipxToHighsBasicSolution(options.logfile,
+			    lp, rhs, constraint_type, ipx_solution, highs_basis, highs_solution);
+
+    
+    // Set optimal 
+#ifdef HiGHSDEV
+    printf("IPX: May be setting unscaled model status erroneously to OPTIMAL\n");
+#endif
+    unscaled_model_status = HighsModelStatus::OPTIMAL;
+    unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
+    unscaled_solution_params.objective_function_value = ipx_info.objval;
+    getPrimalDualInfeasibilitiesFromHighsBasicSolution(lp, highs_basis, highs_solution,
+						       unscaled_solution_params);
   }
-
-  return IpxStatus::OK;
+  //  return IpxStatus::OK;
+  return HighsStatus::OK;
 }
 #endif

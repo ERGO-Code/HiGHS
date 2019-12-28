@@ -17,7 +17,7 @@ class Program {
 
       HighsLpSolver solver = new HighsLpSolver();
 
-      HighsStatus status = solver.loadModel(model);
+      HighsStatus status = solver.passLp(model);
       status = solver.run();
       HighsSolution sol = solver.getSolution();
       HighsBasis bas = solver.getBasis();

@@ -25,7 +25,14 @@ double getNorm2(const std::vector<double> values);
  * @brief Logical check of double being +Infinity
  */
 bool highs_isInfinity(double val  //!< Value being tested against +Infinity
-);
+		      );
+/**
+ * @brief Returns the relative difference of two doubles
+ */
+double highs_relative_difference(
+				 const double v0,
+				 const double v1
+				 );
 #ifdef HiGHSDEV
 /**
  * @brief Analyse the values of a vector, assessing how many are in

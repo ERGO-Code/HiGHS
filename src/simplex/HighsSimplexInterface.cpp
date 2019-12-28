@@ -19,27 +19,28 @@
 #include "lp_data/HighsModelUtils.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsUtils.h"
+#include "util/HighsSort.h"
 
-HighsStatus HighsSimplexInterface::addCols(
-    int XnumNewCol, const double* XcolCost, const double* XcolLower,
-    const double* XcolUpper, int XnumNewNZ, const int* XAstart,
-    const int* XAindex, const double* XAvalue) {
+HighsStatus HighsSimplexInterface::addCols(int XnumNewCol, const double* XcolCost, const double* XcolLower,
+					   const double* XcolUpper, int XnumNewNZ, const int* XAstart,
+					   const int* XAindex, const double* XAvalue) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
 #ifdef HiGHSDEV
   printf("Called addCols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol,
          XnumNewNZ);
 #endif
-  HighsStatus return_status = HighsStatus::OK;
+  HighsOptions& options = highs_model_object.options_;
   if (XnumNewCol < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
   if (XnumNewCol == 0) return HighsStatus::OK;
   if (XnumNewCol > 0)
-    if (isColDataNull(XcolCost, XcolLower, XcolUpper))
+    if (isColDataNull(options, XcolCost, XcolLower, XcolUpper))
       return HighsStatus::Error;
   if (XnumNewNZ > 0)
-    if (isMatrixDataNull(XAstart, XAindex, XAvalue)) return HighsStatus::Error;
+    if (isMatrixDataNull(options, XAstart, XAindex, XAvalue)) return HighsStatus::Error;
 
   HighsLp& lp = highs_model_object.lp_;
-  HighsOptions& options = highs_model_object.options_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsScale& scale = highs_model_object.scale_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -49,10 +50,8 @@ HighsStatus HighsSimplexInterface::addCols(
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
-  bool valid_lp_matrix = true;
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -68,27 +67,26 @@ HighsStatus HighsSimplexInterface::addCols(
   // Check that if there is no simplex LP then there is no basis, matrix or
   // scaling
   if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
-  HighsStatus call_status;
-  call_status =
-      appendLpCols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper, XnumNewNZ,
-                   XAstart, XAindex, XAvalue, options, valid_lp_matrix);
-  return_status = worseStatus(call_status, return_status);
+  call_status = appendLpCols(options, lp, XnumNewCol,
+			     XcolCost, XcolLower, XcolUpper,
+			     XnumNewNZ, XAstart, XAindex, XAvalue);
+  return_status = interpretCallStatus(call_status, return_status, "appendLpCols");
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
-    call_status = appendLpCols(simplex_lp, XnumNewCol, XcolCost, XcolLower,
-                               XcolUpper, XnumNewNZ, XAstart, XAindex, XAvalue,
-                               options, valid_simplex_matrix);
-    return_status = worseStatus(call_status, return_status);
+    call_status = appendLpCols(options, simplex_lp, XnumNewCol,
+			       XcolCost, XcolLower, XcolUpper,
+			       XnumNewNZ, XAstart, XAindex, XAvalue);
+    return_status = interpretCallStatus(call_status, return_status, "appendLpCols");
+    if (return_status == HighsStatus::Error) return return_status;
   }
 
   // Now consider scaling
   scale.col_.resize(newNumCol);
-  for (int col = 0; col < XnumNewCol; col++) scale.col_[lp.numCol_ + col] = 1.0;
+  for (int col = 0; col < XnumNewCol; col++) scale.col_[simplex_lp.numCol_ + col] = 1.0;
 
   if (apply_row_scaling) {
     // Determine scaling multipliers for this set of columns
@@ -98,11 +96,12 @@ HighsStatus HighsSimplexInterface::addCols(
   }
 
   // Update the basis correponding to new nonbasic columns
-  if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, newNumCol);
-  if (valid_simplex_basis)
-    append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, newNumCol);
+  if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, XnumNewCol);
+  if (valid_simplex_basis) append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, XnumNewCol);
 
   // Deduce the consequences of adding new columns
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_COLS);
 
   // Increase the number of columns in the LPs
@@ -111,14 +110,15 @@ HighsStatus HighsSimplexInterface::addCols(
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basisOK = highs_basis_ok();//lp, basis);
-    assert(basisOK);
+    bool basis_ok = basisOk(options.logfile, lp, basis);
+    if (!basis_ok) printf("HiGHS basis not OK in addCols\n");
+    assert(basis_ok);
     report_basis(lp, basis);
   }
   if (valid_simplex_basis) {
-    bool simplex_basisOK =
-        nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
-    assert(simplex_basisOK);
+    bool basis_ok = basisOk(options.logfile, simplex_lp, simplex_basis);
+    if (!basis_ok) printf("Simplex basis not OK in addCols\n");
+    assert(basis_ok);
     report_basis(simplex_lp, simplex_basis);
   }
 #endif
@@ -142,45 +142,56 @@ HighsStatus HighsSimplexInterface::deleteCols(int* col_mask) {
 HighsStatus HighsSimplexInterface::deleteColsGeneral(
     bool interval, int from_col, int to_col, bool set, int num_set_entries,
     const int* col_set, bool mask, int* col_mask) {
-  // Uses to_col in iterator style
+  HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;
-
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
-
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+  // Keep a copy of the original number of columns to check whether
+  // any columns have been removed, and if there is mask to be updated
+  int original_num_col = lp.numCol_;
 
-#ifdef HiGHSDEV
-  // Check that if there is no simplex LP then there is no matrix
-  if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
-  }
-#endif
-  bool valid_matrix = true;
   HighsStatus returnStatus;
   returnStatus =
-      deleteLpCols(lp, interval, from_col, to_col, set, num_set_entries,
-                   col_set, mask, col_mask, valid_matrix);
+      deleteLpCols(options, lp, interval, from_col, to_col, set, num_set_entries,
+                   col_set, mask, col_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
-  // ToDo Determine consequences for basis when deleting columns
-  basis.valid_ = false;
-
+  assert(lp.numCol_ <= original_num_col);
+  if (lp.numCol_ < original_num_col) {
+    // Nontrivial deletion so reset the model_status and invalidate
+    // the Highs basis
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
+    basis.valid_ = false;
+  }
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    returnStatus = deleteLpCols(simplex_lp, interval, from_col, to_col, set,
-                                num_set_entries, col_set, mask, col_mask,
-                                valid_simplex_matrix);
+    returnStatus = deleteLpCols(options, simplex_lp, interval, from_col, to_col, set,
+                                num_set_entries, col_set, mask, col_mask);
     if (returnStatus != HighsStatus::OK) return returnStatus;
     //    HighsScale& scale = highs_model_object.scale_;
     //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++)
     //    scale.col_[col] = scale.col_[col + numDeleteCol];
-    // ToDo Determine consequences for basis when deleting columns
-    simplex_lp_status.has_matrix_row_wise = false;
-    simplex_lp_status.has_basis = false;
+    assert(simplex_lp.numCol_ <= original_num_col);
+    if (simplex_lp.numCol_ < original_num_col) {
+    // Nontrivial deletion so invalidate all data relating to the simplex basis
+      invalidateSimplexLpBasis(simplex_lp_status);
+    }
+  }
+  if (mask) {
+    int new_col = 0;
+    for (int col = 0; col < original_num_col; col++) {
+      if (!col_mask[col]) {
+	col_mask[col] = new_col;
+	new_col++;
+      } else {
+	col_mask[col] = -1;
+      }
+    }
+    assert(new_col == lp.numCol_);
   }
   return HighsStatus::OK;
 }
@@ -210,32 +221,34 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
                                            int XnumNewNZ, const int* XARstart,
                                            const int* XARindex,
                                            const double* XARvalue) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
 #ifdef HiGHSDEV
   printf("Called addRows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow,
          XnumNewNZ);
 #endif
-  HighsStatus return_status = HighsStatus::OK;
+  HighsOptions& options = highs_model_object.options_;
   if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
   if (XnumNewRow == 0) return HighsStatus::OK;
   if (XnumNewRow > 0)
-    if (isRowDataNull(XrowLower, XrowUpper)) return HighsStatus::Error;
+    if (isRowDataNull(options, XrowLower, XrowUpper)) return HighsStatus::Error;
   if (XnumNewNZ > 0)
-    if (isMatrixDataNull(XARstart, XARindex, XARvalue))
+    if (isMatrixDataNull(options, XARstart, XARindex, XARvalue))
       return HighsStatus::Error;
 
   HighsLp& lp = highs_model_object.lp_;
-  HighsOptions& options = highs_model_object.options_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsScale& scale = highs_model_object.scale_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+  bool valid_simplex_basis = simplex_lp_status.has_basis;
   bool apply_row_scaling = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -251,24 +264,25 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // Check that if there is no simplex LP then there is no basis, matrix or
   // scaling
   if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
-  HighsStatus call_status;
-  call_status = assessBounds("Row", lp.numRow_, XnumNewRow, true, 0, XnumNewRow-1, false, 0,
+  call_status = assessBounds(options,
+			     "Row", lp.numRow_, XnumNewRow, true, 0, XnumNewRow-1, false, 0,
 			     NULL, false, NULL, (double*)XrowLower, (double*)XrowUpper,
 			     options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
+  if (return_status == HighsStatus::Error) return return_status;
 
   if (XnumNewNZ) {
-    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewRow, XnumNewNZ,
+    call_status = assessMatrix(options,
+			       lp.numCol_, 0, XnumNewRow-1, XnumNewRow, XnumNewNZ,
                                (int*)XARstart, (int*)XARindex,
                                (double*)XARvalue, options.small_matrix_value,
                                options.large_matrix_value, normalise);
-    return_status = worseStatus(call_status, return_status);
+    return_status = interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
   }
 
@@ -278,10 +292,12 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // Normalise the LP row bounds
   normalise = true;
   call_status =
-      assessBounds("Row", lp.numRow_, newNumRow, true, 0, newNumRow-1, false, 0,
+      assessBounds(options,
+		   "Row", lp.numRow_, newNumRow, true, 0, newNumRow-1, false, 0,
                    NULL, false, NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
                    options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
+  return_status = interpretCallStatus(call_status, return_status, "assessBounds");
+  if (return_status == HighsStatus::Error) return return_status;
 
   int lc_XnumNewNZ = XnumNewNZ;
   int* lc_XARstart = (int*)malloc(sizeof(int) * XnumNewRow);
@@ -294,7 +310,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     std::memcpy(lc_XARvalue, XARvalue, sizeof(double) * XnumNewNZ);
     // Normalise the new matrix columns
     normalise = true;
-    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewRow,
+    call_status = assessMatrix(options,
+			       lp.numCol_, 0, XnumNewRow-1, XnumNewRow,
                                lc_XnumNewNZ, lc_XARstart, lc_XARindex,
                                lc_XARvalue, options.small_matrix_value,
                                options.large_matrix_value, normalise);
@@ -307,12 +324,14 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   if (valid_simplex_lp) {
     appendRowsToLpVectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
-    call_status = assessBounds("Row", simplex_lp.numRow_, newNumRow, true, 0, newNumRow-1, false, 0,
-			       NULL, false, NULL, &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0],
+    call_status = assessBounds(options,
+			       "Row", simplex_lp.numRow_, newNumRow, true, 0, newNumRow-1, false, 0,
+			       NULL, false, NULL, &simplex_lp.rowLower_[0], &simplex_lp.rowUpper_[0],
 			       options.infinite_bound, normalise);
-    return_status = worseStatus(call_status, return_status);
+    return_status = interpretCallStatus(call_status, return_status, "assessBounds");
+    if (return_status == HighsStatus::Error) return return_status;
   }
-  if (valid_simplex_matrix && lc_XnumNewNZ) {
+  if (lc_XnumNewNZ) {
     appendRowsToLpMatrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart,
                          lc_XARindex, lc_XARvalue);
   }
@@ -329,12 +348,12 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   }
 
   // Update the basis correponding to new basic rows
-  if (valid_basis) append_basic_rows_to_basis(lp, basis, newNumRow);
-  //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  //  if (simplex_lp_status.has_basis) append_basic_rows_to_basis(simplex_lp,
-  //  simplex_basis, newNumRow);
+  if (valid_basis) append_basic_rows_to_basis(lp, basis, XnumNewRow);
+  if (valid_simplex_basis) append_basic_rows_to_basis(simplex_lp, simplex_basis, XnumNewRow);
 
   // Deduce the consequences of adding new rows
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
 
   // Increase the number of rows in the LPs
@@ -343,17 +362,15 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basisOK = highs_basis_ok();//lp, basis);
-    if (!basisOK) printf("HiGHS basis not OK in addRows\n");
-    assert(basisOK);
+    bool basis_ok = basisOk(options.logfile, lp, basis);
+    if (!basis_ok) printf("HiGHS basis not OK in addRows\n");
+    assert(basis_ok);
     report_basis(lp, basis);
   }
-  if (simplex_lp_status.has_basis) {
-    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    bool simplex_basisOK =
-        nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
-    if (!simplex_basisOK) printf("Simplex basis not OK in addRows\n");
-    assert(simplex_basisOK);
+  if (valid_simplex_basis) {
+    bool basis_ok = basisOk(options.logfile, simplex_lp, simplex_basis);
+    if (!basis_ok) printf("Simplex basis not OK in addRows\n");
+    assert(basis_ok);
     report_basis(simplex_lp, simplex_basis);
   }
 #endif
@@ -380,11 +397,11 @@ HighsStatus HighsSimplexInterface::deleteRows(int* row_mask) {
 HighsStatus HighsSimplexInterface::deleteRowsGeneral(
     bool interval, int from_row, int to_row, bool set, int num_set_entries,
     const int* row_set, bool mask, int* row_mask) {
-  // Uses to_row in iterator style
 #ifdef HiGHSDEV
   printf("Called model.util_deleteRows(from_row=%d, to_row=%d)\n", from_row,
          to_row);
 #endif
+  HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -392,40 +409,50 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+  // Keep a copy of the original number of rows to check whether
+  // any rows have been removed, and if there is mask to be updated
+  int original_num_row = lp.numRow_;
 
-#ifdef HiGHSDEV
-  // Check that if there is no simplex LP then there is no matrix
-  if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
-  }
-#endif
-  bool valid_matrix = true;
   HighsStatus returnStatus;
   returnStatus =
-      deleteLpRows(lp, interval, from_row, to_row, set, num_set_entries,
-                   row_set, mask, row_mask, valid_matrix);
+      deleteLpRows(options, lp, interval, from_row, to_row, set, num_set_entries,
+                   row_set, mask, row_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
-  // ToDo Determine consequences for basis when deleting rows
-  basis.valid_ = false;
-
+  assert(lp.numRow_ <= original_num_row);
+  if (lp.numRow_ < original_num_row) {
+    // Nontrivial deletion so reset the model_status and invalidate
+    // the Highs basis
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
+    basis.valid_ = false;
+  }
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    returnStatus = deleteLpRows(simplex_lp, interval, from_row, to_row, set,
-                                num_set_entries, row_set, mask, row_mask,
-                                valid_simplex_matrix);
+    returnStatus = deleteLpRows(options, simplex_lp, interval, from_row, to_row, set,
+                                num_set_entries, row_set, mask, row_mask);
     if (returnStatus != HighsStatus::OK) return returnStatus;
     //    HighsScale& scale = highs_model_object.scale_;
     //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++)
     //    scale.row_[row] = scale.row_[row + numDeleteRow];
-    // ToDo Determine consequences for basis when deleting rows
-    simplex_lp_status.has_matrix_col_wise = false;
-    simplex_lp_status.has_matrix_row_wise = false;
-    simplex_lp_status.has_basis = false;
+    assert(simplex_lp.numRow_ <= original_num_row);
+    if (simplex_lp.numRow_ < original_num_row) {
+    // Nontrivial deletion so invalidate all data relating to the simplex basis
+      invalidateSimplexLpBasis(simplex_lp_status);
+    }
   }
-  // ToDo Determine consequences for basis when deleting rows
-  //  updateSimplexLpStatus(simplex_lp_status, LpAction::DEL_ROWS);
+  if (mask) {
+    int new_row = 0;
+    for (int row = 0; row < original_num_row; row++) {
+      if (!row_mask[row]) {
+	row_mask[row] = new_row;
+	new_row++;
+      } else {
+	row_mask[row] = -1;
+      }
+    }
+    assert(new_row == lp.numRow_);
+  }
   return HighsStatus::OK;
 }
 
@@ -466,21 +493,33 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
     const int* col_mask, int& num_col, double* col_cost, double* col_lower,
     double* col_upper, int& num_nz, int* col_matrix_start,
     int* col_matrix_index, double* col_matrix_value) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   int from_k;
   int to_k;
   HighsLp& lp = highs_model_object.lp_;
-  HighsStatus return_status = assessIntervalSetMask(
-      lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
-      mask, col_mask, from_k, to_k);
-  if (return_status != HighsStatus::OK) return return_status;
-  if (from_k < 0 || to_k > lp.numCol_) return HighsStatus::Error;
+  HighsOptions& options = highs_model_object.options_;
+  call_status = assessIntervalSetMask(options,
+				      lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
+				      mask, col_mask, from_k, to_k);
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
+  if (from_k < 0 || to_k > lp.numCol_) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
+    return return_status;
+  }
   num_col = 0;
   num_nz = 0;
-  if (from_k > to_k) return HighsStatus::OK;
+  if (from_k > to_k) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
+    return return_status;
+  }
   int out_from_col;
   int out_to_col;
   int in_from_col;
-  int in_to_col = 0;
+  int in_to_col = -1;
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
   for (int k = from_k; k <= to_k; k++) {
@@ -547,23 +586,35 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     const int* row_mask, int& num_row, double* row_lower, double* row_upper,
     int& num_nz, int* row_matrix_start, int* row_matrix_index,
     double* row_matrix_value) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   int from_k;
   int to_k;
   HighsLp& lp = highs_model_object.lp_;
-  HighsStatus return_status = assessIntervalSetMask(
-      lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
-      mask, row_mask, from_k, to_k);
-  if (return_status != HighsStatus::OK) return return_status;
-  if (from_k < 0 || to_k > lp.numRow_) return HighsStatus::Error;
+  HighsOptions& options = highs_model_object.options_;
+  call_status = assessIntervalSetMask(options,
+				      lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
+				      mask, row_mask, from_k, to_k);
+  return_status = interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
+  if (from_k < 0 || to_k > lp.numRow_) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
+    return return_status;
+  }
   num_row = 0;
   num_nz = 0;
-  if (from_k > to_k) return HighsStatus::OK;
+  if (from_k > to_k) {
+    call_status = HighsStatus::Error;
+    return_status = interpretCallStatus(call_status, return_status, "getColsGeneral");
+    return return_status;
+  }
   // "Out" means not in the set to be extrated
   // "In" means in the set to be extrated
   int out_from_row;
   int out_to_row;
   int in_from_row;
-  int in_to_row = 0;
+  int in_to_row = -1;
   int current_set_entry = 0;
   int row_dim = lp.numRow_;
   // Set up a row mask so that entries to be got from the column-wise
@@ -571,7 +622,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   int* new_index = (int*)malloc(sizeof(int) * lp.numRow_);
 
   if (!mask) {
-    out_to_row = 0;
+    out_to_row = -1;
     current_set_entry = 0;
     for (int k = from_k; k <= to_k; k++) {
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
@@ -583,14 +634,14 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
           new_index[row] = -1;
         }
       }
-      for (int row = in_from_row; row < in_to_row; row++) {
+      for (int row = in_from_row; row <= in_to_row; row++) {
         new_index[row] = num_row;
         num_row++;
       }
-      for (int row = out_from_row; row < out_to_row; row++) {
+      for (int row = out_from_row; row <= out_to_row; row++) {
         new_index[row] = -1;
       }
-      if (out_to_row == row_dim) break;
+      if (out_to_row >= row_dim-1) break;
     }
   } else {
     for (int row = 0; row < lp.numRow_; row++) {
@@ -634,7 +685,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     // If the matrix start vector is null then don't get values of
     // indices, otherwise both are meaningless
     if (row_matrix_index != NULL || row_matrix_value != NULL) {
-      HighsLogMessage(HighsMessageType::ERROR,
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
 		      "Cannot supply meaningful row matrix indices/values with null starts");
       free (new_index);
       free (row_matrix_length);
@@ -706,7 +757,9 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow, const int X
   // simplex_lp.reportLp();
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
-  // Otherwise, treat it as if
+  // Otherwise, treat it as if it's a new row
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
   //  simplex_lp.reportLp();
   return HighsStatus::OK;
@@ -740,7 +793,8 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(int Xsense) {
         (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
       // Flip the objective sense
       simplex_lp.sense_ = Xsense;
-      highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+      highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+      highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
     }
   }
   return HighsStatus::OK;
@@ -771,63 +825,102 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
     const double* usr_col_cost) {
   bool null_data = false;
   if (usr_col_cost == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied column costs are NULL");
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
+  int* use_set;
+  double* use_cost;
+  if (set) {
+    // Changing the costs for a set of columns, so ensure that the
+    // set and data are in ascending order
+    use_set = (int*)malloc(sizeof(int) * num_set_entries);
+    use_cost = (double*)malloc(sizeof(double) * num_set_entries);
+    sortSetData(num_set_entries,
+		col_set, usr_col_cost, NULL, NULL,
+		use_set, use_cost, NULL, NULL);
+  } else {
+    use_set = (int*)col_set;
+    use_cost = (double*)usr_col_cost;
+  }
   HighsStatus call_status =
-      changeLpCosts(highs_model_object.lp_, interval, from_col, to_col, set,
-                    num_set_entries, col_set, mask, col_mask, usr_col_cost,
-                    highs_model_object.options_.infinite_cost);
+    changeLpCosts(highs_model_object.options_,
+		  highs_model_object.lp_, interval, from_col, to_col, set,
+		  num_set_entries, use_set, mask, col_mask, use_cost,
+		  highs_model_object.options_.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   // Deduce the consequences of new costs
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                         LpAction::NEW_COSTS);
   return HighsStatus::OK;
 }
 
-HighsStatus HighsSimplexInterface::changeColBounds(
-    int from_col, int to_col, const double* usr_col_lower,
-    const double* usr_col_upper) {
+HighsStatus HighsSimplexInterface::changeColBounds(int from_col, int to_col,
+						   const double* usr_col_lower,
+						   const double* usr_col_upper) {
   return changeColBoundsGeneral(true, from_col, to_col, false, 0, NULL, false,
                                 NULL, usr_col_lower, usr_col_upper);
 }
 
-HighsStatus HighsSimplexInterface::changeColBounds(
-    int num_set_entries, const int* col_set, const double* usr_col_lower,
-    const double* usr_col_upper) {
+HighsStatus HighsSimplexInterface::changeColBounds(int num_set_entries, const int* col_set,
+						   const double* usr_col_lower,
+						   const double* usr_col_upper) {
   return changeColBoundsGeneral(false, 0, 0, true, num_set_entries, col_set,
                                 false, NULL, usr_col_lower, usr_col_upper);
 }
 
-HighsStatus HighsSimplexInterface::changeColBounds(
-    const int* col_mask, const double* usr_col_lower,
-    const double* usr_col_upper) {
+HighsStatus HighsSimplexInterface::changeColBounds(const int* col_mask,
+						   const double* usr_col_lower,
+						   const double* usr_col_upper) {
   return changeColBoundsGeneral(false, 0, 0, false, 0, NULL, true, col_mask,
                                 usr_col_lower, usr_col_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
-    bool interval, int from_col, int to_col, bool set, int num_set_entries,
-    const int* col_set, bool mask, const int* col_mask,
-    const double* usr_col_lower, const double* usr_col_upper) {
+							  bool interval, int from_col, int to_col,
+							  bool set, int num_set_entries, const int* col_set,
+							  bool mask, const int* col_mask,
+							  const double* usr_col_lower,
+							  const double* usr_col_upper) {
   bool null_data = false;
   if (usr_col_lower == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied column lower bounds are NULL");
     null_data = true;
   }
   if (usr_col_upper == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied column upper bounds are NULL");
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
-  HighsStatus call_status = changeLpColBounds(
-      highs_model_object.lp_, interval, from_col, to_col, set, num_set_entries,
-      col_set, mask, col_mask, usr_col_lower, usr_col_upper,
-      highs_model_object.options_.infinite_bound);
+  int* use_set;
+  double* use_lower;
+  double* use_upper;
+  if (set) {
+    // Changing the bounds for a set of columns, so ensure that the set
+    // and data are in ascending order
+    use_set = (int*)malloc(sizeof(int) * num_set_entries);
+    use_lower = (double*)malloc(sizeof(double) * num_set_entries);
+    use_upper = (double*)malloc(sizeof(double) * num_set_entries);
+    sortSetData(num_set_entries,
+		col_set, usr_col_lower, usr_col_upper, NULL,
+		use_set, use_lower, use_upper, NULL);
+  } else {
+    use_set = (int*)col_set;
+    use_lower = (double*)usr_col_lower;
+    use_upper = (double*)usr_col_upper;
+  }
+  HighsStatus call_status = changeLpColBounds(highs_model_object.options_,
+					      highs_model_object.lp_,
+					      interval, from_col, to_col,
+					      set, num_set_entries, use_set,
+					      mask, col_mask,
+					      use_lower, use_upper,
+					      highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -837,17 +930,23 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
     assert(highs_model_object.lp_.numRow_ ==
            highs_model_object.simplex_lp_.numRow_);
 
-    call_status = changeLpColBounds(
-        highs_model_object.simplex_lp_, interval, from_col, to_col, set,
-        num_set_entries, col_set, mask, col_mask, usr_col_lower, usr_col_upper,
-        highs_model_object.options_.infinite_bound);
+    call_status = changeLpColBounds(highs_model_object.options_,
+				    highs_model_object.simplex_lp_,
+				    interval, from_col, to_col,
+				    set, num_set_entries, use_set,
+				    mask, col_mask,
+				    use_lower, use_upper,
+				    highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpColBounds(highs_model_object.simplex_lp_,
-                       highs_model_object.scale_.col_, interval, from_col,
-                       to_col, set, num_set_entries, col_set, mask, col_mask);
+      scaleLpColBounds(highs_model_object.options_,
+		       highs_model_object.simplex_lp_,
+		       highs_model_object.scale_.col_, interval, from_col,
+		       to_col, set, num_set_entries, use_set, mask, col_mask);
     }
-    // Deduce the consequences of new bounds
+    // Deduce the consequences of new col bounds
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::NEW_BOUNDS);
   }
@@ -881,20 +980,40 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
     const double* usr_row_lower, const double* usr_row_upper) {
   bool null_data = false;
   if (usr_row_lower == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied row lower bounds are NULL");
     null_data = true;
   }
   if (usr_row_upper == NULL) {
-    HighsLogMessage(HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
                     "User-supplied row upper bounds are NULL");
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
-  HighsStatus call_status = changeLpRowBounds(
-      highs_model_object.lp_, interval, from_row, to_row, set, num_set_entries,
-      row_set, mask, row_mask, usr_row_lower, usr_row_upper,
-      highs_model_object.options_.infinite_bound);
+  int* use_set;
+  double* use_lower;
+  double* use_upper;
+  if (set) {
+    // Changing the bounds for a set of rows, so ensure that the set
+    // and data are in ascending order
+    use_set = (int*)malloc(sizeof(int) * num_set_entries);
+    use_lower = (double*)malloc(sizeof(double) * num_set_entries);
+    use_upper = (double*)malloc(sizeof(double) * num_set_entries);
+    sortSetData(num_set_entries,
+		row_set, usr_row_lower, usr_row_upper, NULL,
+		use_set, use_lower, use_upper, NULL);
+  } else {
+    use_set = (int*)row_set;
+    use_lower = (double*)usr_row_lower;
+    use_upper = (double*)usr_row_upper;
+  }
+  HighsStatus call_status = changeLpRowBounds(highs_model_object.options_,
+					      highs_model_object.lp_,
+					      interval, from_row, to_row,
+					      set, num_set_entries, use_set,
+					      mask, row_mask,
+					      use_lower, use_upper,
+					      highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   if (highs_model_object.simplex_lp_status_.valid) {
     // Also change the simplex LP's column bounds
@@ -902,18 +1021,23 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
            highs_model_object.simplex_lp_.numCol_);
     assert(highs_model_object.lp_.numRow_ ==
            highs_model_object.simplex_lp_.numRow_);
-
-    call_status = changeLpRowBounds(
-        highs_model_object.simplex_lp_, interval, from_row, to_row, set,
-        num_set_entries, row_set, mask, row_mask, usr_row_lower, usr_row_upper,
-        highs_model_object.options_.infinite_bound);
+    call_status = changeLpRowBounds(highs_model_object.options_,
+				    highs_model_object.simplex_lp_,
+				    interval, from_row, to_row,
+				    set, num_set_entries, use_set,
+				    mask, row_mask,
+				    use_lower, use_upper,
+				    highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpRowBounds(highs_model_object.simplex_lp_,
+      scaleLpRowBounds(highs_model_object.options_,
+		       highs_model_object.simplex_lp_,
                        highs_model_object.scale_.row_, interval, from_row,
                        to_row, set, num_set_entries, row_set, mask, row_mask);
     }
-    // Deduce the consequences of new bounds
+    // Deduce the consequences of new row bounds
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::NEW_BOUNDS);
   }
@@ -1175,6 +1299,7 @@ int HighsSimplexInterface::convertHighsBasisToBaseStat(int* cstat, int* rstat) {
   return 0;
 }
 
+
 void HighsSimplexInterface::convertSimplexToHighsBasis() {
   HighsBasis& basis = highs_model_object.basis_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1190,114 +1315,160 @@ void HighsSimplexInterface::convertSimplexToHighsBasis() {
   int* numColPermutation =
       &highs_model_object.simplex_info_.numColPermutation_[0];
   // numColPermutation[iCol] is the true column in column iCol
+  const bool optimal_basis =
+    highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL;
   bool error_found = false;
   basis.valid_ = false;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     int simplex_var = iCol;
     int lp_col = iCol;
+    const double lower = lp.colLower_[lp_col];
+    const double upper = lp.colUpper_[lp_col];
+    HighsBasisStatus basis_status;
     if (permuted) lp_col = numColPermutation[iCol];
     if (!simplex_basis.nonbasicFlag_[simplex_var]) {
-      basis.col_status[lp_col] = HighsBasisStatus::BASIC;
+      basis_status = HighsBasisStatus::BASIC;
     } else if (simplex_basis.nonbasicMove_[simplex_var] == NONBASIC_MOVE_UP) {
       // Nonbasic and free to move up so should be OK to give status LOWER
+      if (optimal_basis) {
 #ifdef HiGHSDEV
       // Check that the lower bound isn't infinite
-      error_found = highs_isInfinity(-lp.colLower_[lp_col]);
+	error_found = highs_isInfinity(-lower);
 #endif
-      basis.col_status[lp_col] = HighsBasisStatus::LOWER;
+	basis_status = HighsBasisStatus::LOWER;
+      } else {
+	basis_status = checkedVarHighsNonbasicStatus(HighsBasisStatus::LOWER, lower, upper);
+      }
     } else if (simplex_basis.nonbasicMove_[simplex_var] == NONBASIC_MOVE_DN) {
       // Nonbasic and free to move down so should be OK to give status UPPER
+      if (optimal_basis) {
 #ifdef HiGHSDEV
-      // Check that the upper bound isn't infinite
-      error_found = highs_isInfinity(lp.colUpper_[lp_col]);
+	// Check that the upper bound isn't infinite
+	error_found = highs_isInfinity(upper);
 #endif
-      basis.col_status[lp_col] = HighsBasisStatus::UPPER;
+	basis_status = HighsBasisStatus::UPPER;
+      } else {
+	basis_status = checkedVarHighsNonbasicStatus(HighsBasisStatus::UPPER, lower, upper);
+      }
     } else if (simplex_basis.nonbasicMove_[simplex_var] == NONBASIC_MOVE_ZE) {
       // Column is either fixed or free, depending on the bounds
-      if (lp.colLower_[lp_col] == lp.colUpper_[lp_col]) {
+      if (lower == upper) {
         // Equal bounds so should be OK to give status LOWER
+	if (optimal_basis) {
 #ifdef HiGHSDEV
-        // Check that the lower bound isn't infinite
-        error_found = highs_isInfinity(-lp.colLower_[lp_col]);
+	  // Check that the lower bound isn't infinite
+	  error_found = highs_isInfinity(-lower);
 #endif
-        basis.col_status[lp_col] = HighsBasisStatus::LOWER;
+	  basis_status = HighsBasisStatus::LOWER;
+	} else {
+	  basis_status = checkedVarHighsNonbasicStatus(HighsBasisStatus::LOWER, lower, upper);
+	}
       } else {
         // Unequal bounds so should be OK to give status ZERO
+	if (optimal_basis) {
 #ifdef HiGHSDEV
-        // Check that neither of the bounds is finite
-        error_found = !highs_isInfinity(-lp.colLower_[lp_col]) ||
-                      !highs_isInfinity(lp.colUpper_[lp_col]);
+	  // Check that neither of the bounds is finite
+	  error_found = !highs_isInfinity(-lower) ||
+	    !highs_isInfinity(upper);
 #endif
-        basis.col_status[lp_col] = HighsBasisStatus::ZERO;
+	  basis_status = HighsBasisStatus::ZERO;
+	} else {
+	  basis_status = checkedVarHighsNonbasicStatus(HighsBasisStatus::ZERO, lower, upper);
+	}
       }
     } else {
       error_found = true;
     }
+    if (error_found) {
 #ifdef HiGHSDEV
-    if (error_found)
       printf(
-          "Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, "
-          "lower=%g, upper=%g\n",
-          lp_col, simplex_basis.nonbasicFlag_[simplex_var],
-          simplex_basis.nonbasicMove_[simplex_var], lp.colLower_[lp_col],
-          lp.colUpper_[lp_col]);
+	     "Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, "
+	     "lower=%g, upper=%g\n",
+	     lp_col, simplex_basis.nonbasicFlag_[simplex_var],
+	     simplex_basis.nonbasicMove_[simplex_var], lower,
+	     upper);
 #endif
-    assert(!error_found);
-    if (error_found) return;
+      assert(!error_found);
+      return;
+    } else {
+      basis.col_status[lp_col] = basis_status;
+    }
   }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     int simplex_var = lp.numCol_ + iRow;
     int lp_row = iRow;
+    const double lower = lp.rowLower_[lp_row];
+    const double upper = lp.rowUpper_[lp_row];
+    HighsBasisStatus basis_status;
     if (!simplex_basis.nonbasicFlag_[simplex_var]) {
-      basis.row_status[lp_row] = HighsBasisStatus::BASIC;
+      basis_status = HighsBasisStatus::BASIC;
     } else if (simplex_basis.nonbasicMove_[simplex_var] == NONBASIC_MOVE_UP) {
       // Nonbasic and free to move up so should be OK to give status UPPER -
       // since simplex row bounds are flipped and negated
+      if (optimal_basis) {
 #ifdef HiGHSDEV
-      // Check that the upper bound isn't infinite
-      error_found = highs_isInfinity(lp.rowUpper_[lp_row]);
+	// Check that the upper bound isn't infinite
+	error_found = highs_isInfinity(upper);
 #endif
-      basis.row_status[lp_row] = HighsBasisStatus::UPPER;
+	basis_status = HighsBasisStatus::UPPER;
+      } else {
+	basis_status = checkedVarHighsNonbasicStatus(HighsBasisStatus::UPPER, lower, upper);
+      }
     } else if (simplex_basis.nonbasicMove_[simplex_var] == NONBASIC_MOVE_DN) {
       // Nonbasic and free to move down so should be OK to give status
       // LOWER - since simplex row bounds are flipped and negated
+      if (optimal_basis) {
 #ifdef HiGHSDEV
-      // Check that the lower bound isn't infinite
-      error_found = highs_isInfinity(-lp.rowLower_[lp_row]);
+	// Check that the lower bound isn't infinite
+	error_found = highs_isInfinity(-lower);
 #endif
-      basis.row_status[lp_row] = HighsBasisStatus::LOWER;
+	basis_status = HighsBasisStatus::LOWER;
+      } else {
+	basis_status = checkedVarHighsNonbasicStatus(HighsBasisStatus::LOWER, lower, upper);
+      }
     } else if (simplex_basis.nonbasicMove_[simplex_var] == NONBASIC_MOVE_ZE) {
       // Row is either fixed or free, depending on the bounds
-      if (lp.rowLower_[lp_row] == lp.rowUpper_[lp_row]) {
+      if (lower == upper) {
         // Equal bounds so should be OK to give status LOWER
+	if (optimal_basis) {
 #ifdef HiGHSDEV
-        // Check that the lower bound isn't infinite
-        error_found = highs_isInfinity(-lp.rowLower_[lp_row]);
+	  // Check that the lower bound isn't infinite
+	  error_found = highs_isInfinity(-lower);
 #endif
-        basis.row_status[lp_row] = HighsBasisStatus::LOWER;
+	  basis_status = HighsBasisStatus::LOWER;
+	} else {
+	  basis_status = checkedVarHighsNonbasicStatus(HighsBasisStatus::LOWER, lower, upper);
+	}
       } else {
         // Unequal bounds so should be OK to give status ZERO
+	if (optimal_basis) {
 #ifdef HiGHSDEV
-        // Check that neither of the bounds is finite
-        error_found = !highs_isInfinity(-lp.rowLower_[lp_row]) ||
-                      !highs_isInfinity(lp.rowUpper_[lp_row]);
+	  // Check that neither of the bounds is finite
+	  error_found = !highs_isInfinity(-lower) ||
+	    !highs_isInfinity(upper);
 #endif
-        basis.row_status[lp_row] = HighsBasisStatus::ZERO;
+	  basis_status = HighsBasisStatus::ZERO;
+	} else {
+	  basis_status = checkedVarHighsNonbasicStatus(HighsBasisStatus::ZERO, lower, upper);
+	}
       }
     } else {
       error_found = true;
     }
+    if (error_found) {
 #ifdef HiGHSDEV
-    if (error_found)
       printf(
           "Invalid basis status: row=%d, nonbasicFlag=%d, nonbasicMove=%d, "
           "lower=%g, upper=%g\n",
           lp_row, simplex_basis.nonbasicFlag_[simplex_var],
-          simplex_basis.nonbasicMove_[simplex_var], lp.rowLower_[lp_row],
-          lp.rowUpper_[lp_row]);
+          simplex_basis.nonbasicMove_[simplex_var], lower,
+          upper);
 #endif
-    assert(!error_found);
-    if (error_found) return;
+      assert(!error_found);
+      return;
+    } else {
+      basis.row_status[lp_row] = basis_status;
+    }
   }
   basis.valid_ = true;
 }
@@ -1499,412 +1670,6 @@ void HighsSimplexInterface::convertSimplexToHighsSolution() {
   }
 }
 
-bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(
-    bool report, const HighsBasisStatus status, const double lower,
-    const double upper, const double value, const double dual,
-    int& num_non_basic_var, int& num_basic_var, double& off_bound_nonbasic,
-    double& primal_infeasibility, double& dual_infeasibility) {
-  double primal_feasibility_tolerance =
-      highs_model_object.options_.primal_feasibility_tolerance;
-  double dual_feasibility_tolerance =
-      highs_model_object.options_.dual_feasibility_tolerance;
-  double middle = (lower + upper) * 0.5;
-
-  bool query = false;
-  bool count = !report;
-  off_bound_nonbasic = 0;
-  double primal_residual = max(lower - value, value - upper);
-  primal_infeasibility = max(primal_residual, 0.);
-  // ToDo Strange: nonbasic_flag seems to be inverted???
-  if (status == HighsBasisStatus::BASIC) {
-    // Basic variable: look for primal infeasibility
-    if (count) num_basic_var++;
-    if (primal_infeasibility > primal_feasibility_tolerance) {
-      // Outside a bound
-      if (value < lower) {
-        query = true;
-        if (report)
-          printf(": Basic below lower bound by %12g", primal_residual);
-      } else {
-        query = true;
-        if (report)
-          printf(": Basic above upper bound by %12g", primal_residual);
-      }
-    }
-    dual_infeasibility = fabs(dual);
-    if (dual_infeasibility > dual_feasibility_tolerance) {
-      query = true;
-      if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
-    }
-  } else {
-    // Nonbasic variable: look for primal and dual infeasibility
-    if (count) num_non_basic_var++;
-
-    if (primal_infeasibility > primal_feasibility_tolerance) {
-      // Outside a bound
-      dual_infeasibility = 0;
-      if (value < lower) {
-        query = true;
-        if (report)
-          printf(": Nonbasic below lower bound by %12g", primal_residual);
-      } else {
-        query = true;
-        if (report)
-          printf(": Nonbasic above upper bound by %12g", primal_residual);
-      }
-    } else if (primal_residual >= -primal_feasibility_tolerance) {
-      // At a bound: check for dual feasibility
-      if (lower < upper) {
-        // Non-fixed variable
-        if (value < middle) {
-          // At lower
-          dual_infeasibility = max(-dual, 0.);
-          if (dual_infeasibility > dual_feasibility_tolerance) {
-            // Dual infeasiblility
-            query = true;
-            if (report)
-              printf(": Dual infeasibility of %12g", dual_infeasibility);
-          }
-        } else {
-          // At Upper
-          dual_infeasibility = max(dual, 0.);
-          if (dual_infeasibility > dual_feasibility_tolerance) {
-            // Dual infeasiblility
-            query = true;
-            if (report)
-              printf(": Dual infeasibility of %12g", dual_infeasibility);
-          }
-        }
-      } else {
-        // Fixed variable
-        dual_infeasibility = 0;
-      }
-    } else {
-      // Between bounds (or free)
-      if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
-        // Free
-        if (report) printf(": Nonbasic free");
-      } else {
-        query = true;
-        if (report) printf(": Nonbasic off bound by %12g", -primal_residual);
-        off_bound_nonbasic = -primal_residual;
-      }
-      dual_infeasibility = fabs(dual);
-      if (dual_infeasibility > dual_feasibility_tolerance) {
-        query = true;
-        if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
-      }
-    }
-  }
-  query = false;
-  return query;
-}
-
-HighsModelStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
-								     const int report_level,
-								     const string message) {
-  HighsLogMessage(HighsMessageType::INFO, "HiGHS basic solution: Analysis %s", message.c_str());
-  HighsSolution& solution = highs_model_object.solution_;
-  HighsBasis& basis = highs_model_object.basis_;
-  HighsLp& lp = highs_model_object.lp_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
-  double primal_feasibility_tolerance =
-      highs_model_object.options_.primal_feasibility_tolerance;
-  double dual_feasibility_tolerance =
-      highs_model_object.options_.dual_feasibility_tolerance;
-  vector<double> primal_activities;
-  vector<double> dual_activities;
-  primal_activities.assign(lp.numRow_, 0);
-  dual_activities.resize(lp.numCol_);
-  int num_non_basic_var = 0;
-  int num_basic_var = 0;
-  int num_off_bound_nonbasic = 0;
-  double max_off_bound_nonbasic = 0;
-  double sum_off_bound_nonbasic = 0;
-  bool header_written = false;
-  double off_bound_nonbasic;
-  double primal_infeasibility;
-  double dual_infeasibility;
-  int num_primal_infeasibilities = 0;
-  double max_primal_infeasibility = 0;
-  double sum_primal_infeasibilities = 0;
-  int num_dual_infeasibilities = 0;
-  double max_dual_infeasibility = 0;
-  double sum_dual_infeasibilities = 0;
-  int num_nonzero_basic_duals = 0;
-  int num_large_nonzero_basic_duals = 0;
-  double max_nonzero_basic_dual = 0;
-  double sum_nonzero_basic_duals = 0;
-  double local_primal_objective_value = 0;
-  double local_dual_objective_value = 0;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    double lower = lp.colLower_[iCol];
-    double upper = lp.colUpper_[iCol];
-    double value = solution.col_value[iCol];
-    double dual = solution.col_dual[iCol];
-    HighsBasisStatus status = basis.col_status[iCol];
-    local_primal_objective_value += lp.colCost_[iCol] * value;
-    if (status != HighsBasisStatus::BASIC)
-      local_dual_objective_value += value * dual;
-    bool report = false;
-    bool query = analyseSingleHighsSolutionAndBasis(
-        report, status, lower, upper, value, dual, num_non_basic_var,
-        num_basic_var, off_bound_nonbasic, primal_infeasibility,
-        dual_infeasibility);
-    if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
-    max_off_bound_nonbasic = max(off_bound_nonbasic, max_off_bound_nonbasic);
-    sum_off_bound_nonbasic += off_bound_nonbasic;
-    if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
-    max_primal_infeasibility =
-        max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
-    if (status == HighsBasisStatus::BASIC) {
-      double abs_basic_dual = dual_infeasibility;
-      if (abs_basic_dual > 0) {
-	num_nonzero_basic_duals++;
-	if (abs_basic_dual > dual_feasibility_tolerance) num_large_nonzero_basic_duals++;
-	max_nonzero_basic_dual = max(abs_basic_dual, max_nonzero_basic_dual);
-	sum_nonzero_basic_duals += abs_basic_dual;
-      }
-    } else {
-      if (dual_infeasibility > dual_feasibility_tolerance)
-	num_dual_infeasibilities++;
-      max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
-    }
-    report = report_level == 3 || (report_level == 2 && query);
-    if (report) {
-      if (!header_written) {
-        printf(
-            "\nColumns\nIndex NonBs Mv [          LB,           UB]       "
-            "Primal         Dual    PrimalIfs      DualIfs\n");
-        header_written = true;
-      }
-      printf("%5d %5d [%12g, %12g] %12g %12g", iCol, (int)status, lower, upper,
-             value, dual);
-      printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
-      analyseSingleHighsSolutionAndBasis(
-          report, status, lower, upper, value, dual, num_non_basic_var,
-          num_basic_var, off_bound_nonbasic, primal_infeasibility,
-          dual_infeasibility);
-      printf("\n");
-    }
-    dual_activities[iCol] = lp.colCost_[iCol];
-    for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
-      int iRow = lp.Aindex_[el];
-      double Avalue = lp.Avalue_[el];
-      primal_activities[iRow] += value * Avalue;
-      dual_activities[iCol] += solution.row_dual[iRow] * Avalue;
-    }
-  }
-  bool report = report_level >= 2;
-  header_written = false;
-  int num_primal_residual = 0;
-  double max_primal_residual = 0;
-  double sum_primal_residual = 0;
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    double primal_residual =
-        fabs(primal_activities[iRow] - solution.row_value[iRow]);
-    if (primal_residual > primal_feasibility_tolerance) {
-      if (report) {
-        if (!header_written) {
-          printf(
-              "\nRow primal residuals\nIndex     Activity     Solution     "
-              "Residual\n");
-          header_written = true;
-        }
-        printf("%5d %12g %12g %12g\n", iRow, primal_activities[iRow],
-               solution.row_value[iRow], primal_residual);
-      }
-      num_primal_residual++;
-    }
-    max_primal_residual = max(primal_residual, max_primal_residual);
-    sum_primal_residual += primal_residual;
-  }
-  header_written = false;
-  int num_dual_residual = 0;
-  double max_dual_residual = 0;
-  double sum_dual_residual = 0;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    double dual_residual =
-        fabs(dual_activities[iCol] - solution.col_dual[iCol]);
-    if (dual_residual > dual_feasibility_tolerance) {
-      if (report) {
-        if (!header_written) {
-          printf(
-              "\nRow dual residuals\nIndex     Activity     Solution     "
-              "Residual\n");
-          header_written = true;
-        }
-        printf("%5d %12g %12g %12g\n", iCol, dual_activities[iCol],
-               solution.col_dual[iCol], dual_residual);
-      }
-      num_dual_residual++;
-    }
-    max_dual_residual = max(dual_residual, max_dual_residual);
-    sum_dual_residual += dual_residual;
-  }
-  header_written = false;
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    double lower = lp.rowLower_[iRow];
-    double upper = lp.rowUpper_[iRow];
-    double value = solution.row_value[iRow];
-    double dual = -solution.row_dual[iRow];
-    HighsBasisStatus status = basis.row_status[iRow];
-    if (status != HighsBasisStatus::BASIC)
-      local_dual_objective_value += value * dual;
-    bool report = false;
-    bool query = analyseSingleHighsSolutionAndBasis(
-        report, status, lower, upper, value, dual, num_non_basic_var,
-        num_basic_var, off_bound_nonbasic, primal_infeasibility,
-        dual_infeasibility);
-    if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
-    max_off_bound_nonbasic = max(off_bound_nonbasic, max_off_bound_nonbasic);
-    sum_off_bound_nonbasic += off_bound_nonbasic;
-    if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
-    max_primal_infeasibility =
-        max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
-    if (status == HighsBasisStatus::BASIC) {
-      double abs_basic_dual = dual_infeasibility;
-      if (abs_basic_dual > 0) {
-	num_nonzero_basic_duals++;
-	if (abs_basic_dual > dual_feasibility_tolerance) num_large_nonzero_basic_duals++;
-	max_nonzero_basic_dual = max(abs_basic_dual, max_nonzero_basic_dual);
-	sum_nonzero_basic_duals += abs_basic_dual;
-      }
-    } else {
-      if (dual_infeasibility > dual_feasibility_tolerance)
-	num_dual_infeasibilities++;
-      max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
-    }
-    report = report_level == 3 || (report_level == 2 && query);
-    if (report) {
-      if (!header_written) {
-        printf(
-            "Rows\nIndex NonBs Mv [          LB,           UB]       Primal    "
-            "     Dual    PrimalIfs      DualIfs\n");
-        header_written = true;
-      }
-      printf("%5d %5d [%12g, %12g] %12g %12g", iRow, (int)status, lower, upper,
-             value, dual);
-      printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
-      analyseSingleHighsSolutionAndBasis(
-          report, status, lower, upper, value, dual, num_non_basic_var,
-          num_basic_var, off_bound_nonbasic, primal_infeasibility,
-          dual_infeasibility);
-      printf("\n");
-    }
-  }
-  local_primal_objective_value += lp.offset_;
-  local_dual_objective_value += lp.offset_;
-  double primal_objective_value;
-  double dual_objective_value;
-  if (simplex_lp_status.has_primal_objective_value) {
-    primal_objective_value = simplex_info.primal_objective_value;
-  } else {
-    primal_objective_value = local_primal_objective_value;
-  }
-    
-  if (simplex_lp_status.has_dual_objective_value) {
-    dual_objective_value = simplex_info.dual_objective_value;
-  } else {
-    dual_objective_value = local_dual_objective_value;
-  }
-  double primal_objective_error =
-      fabs(primal_objective_value - local_primal_objective_value) /
-      max(1.0, fabs(primal_objective_value));
-  double dual_objective_error =
-      fabs(dual_objective_value - local_primal_objective_value) /
-      max(1.0, fabs(dual_objective_value));
-  double relative_objective_difference =
-      fabs(primal_objective_value - dual_objective_value) /
-      max(fabs(primal_objective_value), max(fabs(dual_objective_value), 1.0));
-  simplex_info.num_primal_infeasibilities = num_primal_infeasibilities;
-  simplex_info.max_primal_infeasibility = max_primal_infeasibility;
-  simplex_info.sum_primal_infeasibilities = sum_primal_infeasibilities;
-  simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
-  simplex_info.max_dual_infeasibility = max_dual_infeasibility;
-  simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
-  HighsModelStatus model_status;
-  bool primal_feasible =
-      num_primal_infeasibilities ==
-      0;  // && max_primal_residual < primal_feasibility_tolerance;
-  bool dual_feasible = num_dual_infeasibilities ==
-                       0;  // && max_dual_residual < dual_feasibility_tolerance;
-  if (primal_feasible) {
-    if (dual_feasible) {
-      model_status = HighsModelStatus::OPTIMAL;
-    } else {
-      model_status = HighsModelStatus::PRIMAL_FEASIBLE;
-    }
-  } else {
-    if (dual_feasible) {
-      model_status = HighsModelStatus::DUAL_FEASIBLE;
-    } else {
-      model_status = HighsModelStatus::NOTSET;
-    }
-  }
-  highs_model_object.model_status_ = model_status;
-  if (num_nonzero_basic_duals) {
-    HighsLogMessage(
-		    HighsMessageType::WARNING,
-		    "HiGHS basic solution: %d (%d large) nonzero basic duals; max = %g; sum = %g",
-		    num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals);
-  }
-  if (num_off_bound_nonbasic)  {
-    HighsLogMessage(HighsMessageType::WARNING,
-                    "Off-bound num/max/sum           %6d/%11.4g/%11.4g",
-                    num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic);
-  }
-  if (report_level>0) {
-    HighsLogMessage(HighsMessageType::INFO,
-                    "Primal    num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
-                    "infeasibilities %6d/%11.4g/%11.4g",
-                    num_primal_residual, max_primal_residual,
-                    sum_primal_residual, num_primal_infeasibilities,
-                    max_primal_infeasibility, sum_primal_infeasibilities);
-    HighsLogMessage(HighsMessageType::INFO,
-                    "Dual      num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
-                    "infeasibilities %6d/%11.4g/%11.4g",
-                    num_dual_residual, max_dual_residual, sum_dual_residual,
-                    num_dual_infeasibilities, max_dual_infeasibility,
-                    sum_dual_infeasibilities);
-    HighsLogMessage(HighsMessageType::INFO,
-                    "Relative objective errors (primal = %.4g; dual = %.4g); "
-                    "relative objective difference = %.4g",
-                    primal_objective_error, dual_objective_error,
-                    relative_objective_difference);
-  } 
-  HighsLogMessage(
-      HighsMessageType::INFO,
-      "HiGHS basic solution: Iterations = %d; Objective = %.15g; "
-      "Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
-      simplex_info.iteration_count, primal_objective_value,
-      simplex_info.num_primal_infeasibilities,
-      simplex_info.sum_primal_infeasibilities,
-      simplex_info.num_dual_infeasibilities,
-      simplex_info.sum_dual_infeasibilities,
-      highsModelStatusToString(highs_model_object.model_status_).c_str());
-#ifdef HiGHSDEV
-  printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
-	 lp.model_name_.c_str(), message.c_str(), primal_objective_value,
-	 highsModelStatusToString(highs_model_object.model_status_).c_str(),
-	 num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals,
-	 num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic,
-	 num_primal_residual, max_primal_residual, sum_primal_residual,
-	 num_primal_infeasibilities, max_primal_infeasibility, sum_primal_infeasibilities,
-	 num_dual_residual, max_dual_residual, sum_dual_residual,
-	 num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
-#endif
-  return model_status;
-}
-
 int HighsSimplexInterface::get_basic_indices(int* bind) {
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
@@ -1917,25 +1682,3 @@ int HighsSimplexInterface::get_basic_indices(int* bind) {
   }
   return 0;
 }
-
-#ifdef HiGHSDEV
-void HighsSimplexInterface::check_load_from_postsolve() {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  bool ok;
-
-  ok = nonbasic_flag_basic_index_ok(simplex_lp,
-                                    highs_model_object.simplex_basis_);
-  printf(
-      "check_load_from_postsolve: return from nonbasic_flag_basic_index_ok = "
-      "%d\n",
-      ok);
-  assert(ok);
-
-  ok = all_nonbasic_move_vs_work_arrays_ok(highs_model_object);
-  printf(
-      "check_load_from_postsolve: return from "
-      "all_nonbasic_move_vs_work_arrays_ok = %d\n",
-      ok);
-  assert(ok);
-}
-#endif

@@ -20,4 +20,4 @@
 
 HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp);
 
-#endif
+#endif  // IO_LOAD_PROBLEM_H_

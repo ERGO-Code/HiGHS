@@ -42,7 +42,7 @@ class HDualRHS {
   /**
    * @brief Choose the row index of a good variable to leave the basis (CHUZR)
    */
-  void choose_normal(
+  void chooseNormal(
       int* chIndex  //!< Row index of variable chosen to leave the basis
   );
 
@@ -50,33 +50,33 @@ class HDualRHS {
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_global(int* chIndex,  //!< Set of indices of chosen rows
-                           int* chCount,  //!< Number of chosen rows
-                           int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiGlobal(int* chIndex,  //!< Set of indices of chosen rows
+			 int* chCount,  //!< Number of chosen rows
+			 int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_HGauto(int* chIndex,  //!< Set of indices of chosen rows
-                           int* chCount,  //!< Number of chosen rows
-                           int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiHyperGraphAuto(int* chIndex,  //!< Set of indices of chosen rows
+				 int* chCount,  //!< Number of chosen rows
+				 int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_HGpart(int* chIndex,  //!< Set of indices of chosen rows
-                           int* chCount,  //!< Number of chosen rows
-                           int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiHyperGraphPart(int* chIndex,  //!< Set of indices of chosen rows
+				 int* chCount,  //!< Number of chosen rows
+				 int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
    * @brief Update the primal values by adding a multiple of a given std::vector
    */
-  void update_primal(
+  void updatePrimal(
       HVector* column,  //!< Column to add into primal values
       double theta      //!< Multiple of column to add into primal values
   );
@@ -84,39 +84,39 @@ class HDualRHS {
   /**
    * @brief Update the DSE weights
    */
-  void update_weight_DSE(
-      HVector* column,         //!< Pivotal column
-      double DSE_wt_o_rowOut,  //!< (Edge weight of leaving row)/alpha^2
-      double Kai,              //!< -2/alpha
-      double* dse              //!< DSE std::vector
+  void updateWeightDualSteepestEdge(
+				    HVector* column,           //!< Pivotal column
+				    const double rowOutWeight, //!< (Edge weight of leaving row)/alpha^2
+				    double Kai,                //!< -2/alpha
+				    double* dse                //!< DSE std::vector
   );
   /**
    * @brief Update the Devex weights
    */
-  void update_weight_Dvx(
-      HVector* column,        //!< Pivotal column
-      double dvx_wt_o_rowOut  //!< max(1, (Edge weight of leaving row)/alpha^2)
+  void updateWeightDevex(
+			 HVector* column,          //!< Pivotal column
+			 const double rowOutWeight //!< max(1, (Edge weight of leaving row)/alpha^2)
   );
   /**
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
-  void update_pivots(int iRow,     //!< row where the basis change has occurred
-                     double value  //!< New primal value in this row
+  void updatePivots(int iRow,     //!< row where the basis change has occurred
+		    double value  //!< New primal value in this row
   );
 
   /**
    * @brief Update the list of primal infeasibilities using indices of primal
    * values which have changed
    */
-  void update_infeasList(HVector* column  //!< Changes in primal values
+  void updateInfeasList(HVector* column  //!< Changes in primal values
   );
 
   /**
    * @brief Create the list of greatest primal infeasibilities for efficient
    * CHUZR
    */
-  void create_infeasList(double columnDensity);
+  void createInfeasList(double columnDensity);
   /**
    * @brief Create the std::vector of primal infeasibilities
    *
@@ -144,6 +144,8 @@ class HDualRHS {
   int partNumCut;
   int partSwitch;
   std::vector<int> workPartition;
+
+  const double min_dual_steepest_edge_weight = 1e-4;
 };
 
 #endif /* SIMPLEX_HDUALRHS_H_ */
