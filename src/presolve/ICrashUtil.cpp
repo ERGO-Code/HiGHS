@@ -29,7 +29,7 @@ void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
   for (int col = 0; col < lp.numCol_; col++) {
     for (int k = lp.Astart_[col]; k < lp.Astart_[col + 1]; k++) {
       const int row = lp.Aindex_[k];
-      result.at(col) += lp.Avalue_[k] * lp.rowUpper_[row];
+      result.at(col) += lp.Avalue_[k] * v[row];
     }
   }
 }
@@ -70,9 +70,7 @@ bool initialize(const HighsLp& lp, HighsSolution& solution,
     else if (lp.colUpper_[col] < 0)
       solution.col_value[col] = lp.colUpper_[col];
     else {
-#ifdef HiGHSDEV
       printf("ICrash error: setting initial value for column %d\n", col);
-#endif
       return false;
     }
   }
