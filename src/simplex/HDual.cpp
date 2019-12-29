@@ -998,7 +998,9 @@ void HDual::iterationAnalysis() {
   analysis->pivot_value_from_row = alphaRow;
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_dual_objective_value;
+#ifdef HiGHSDEV
   analysis->basis_condition = simplex_info.invert_condition;
+#endif
 
   analysis->iterationReport();
 

@@ -581,7 +581,7 @@ void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(const bool hea
 		      "       Iteration        Objective    ");
   } else {
     std::string algorithm;
-    if (dual_algorithm()) {
+    if (dualAlgorithm()) {
       algorithm = "Du";
     } else {
       algorithm = "Pr";
@@ -646,6 +646,7 @@ void HighsSimplexAnalysis::reportInvert(const bool header, const int this_messag
   }
 }
 
+#ifdef HiGHSDEV
 void HighsSimplexAnalysis::reportCondition(const bool header, const int this_message_level) {
   if (header) {
     HighsPrintMessage(output, message_level, this_message_level, "       k(B)");
@@ -653,6 +654,7 @@ void HighsSimplexAnalysis::reportCondition(const bool header, const int this_mes
     HighsPrintMessage(output, message_level, this_message_level, " %10.4g", basis_condition);
   }
 }
+#endif
 
 void HighsSimplexAnalysis::reportIterationData(const bool header, const int this_message_level) {
   if (header) {
@@ -675,12 +677,6 @@ void HighsSimplexAnalysis::reportFreeListSize(const bool header, const int this_
   }
 }
 
-bool HighsSimplexAnalysis::dual_algorithm() {
-  return (simplex_strategy == SIMPLEX_STRATEGY_DUAL ||
-	  simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS ||
-	  simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI);
-}
-
 int HighsSimplexAnalysis::intLog10(const double v) {
   int intLog10V = -99;
   if (v > 0) intLog10V = log(v) / log(10.0);
@@ -688,4 +684,10 @@ int HighsSimplexAnalysis::intLog10(const double v) {
 }
 
 #endif
+
+bool HighsSimplexAnalysis::dualAlgorithm() {
+  return (simplex_strategy == SIMPLEX_STRATEGY_DUAL ||
+	  simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS ||
+	  simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI);
+}
 

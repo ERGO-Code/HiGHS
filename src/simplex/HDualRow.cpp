@@ -73,7 +73,6 @@ void HDualRow::chooseMakepack(const HVector* row, const int offset) {
   const int rowCount = row->count;
   const int* rowIndex = &row->index[0];
   const double* rowArray = &row->array[0];
-  const double* rowPackValue = &row->packValue[0];
 
   for (int i = 0; i < rowCount; i++) {
     const int index = rowIndex[i];

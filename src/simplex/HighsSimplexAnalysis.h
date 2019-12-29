@@ -120,9 +120,9 @@ class HighsSimplexAnalysis {
   void reportCondition(const bool header, const int this_message_level);
   void reportIterationData(const bool header, const int this_message_level);
   void reportFreeListSize(const bool header, const int this_message_level);
-  bool dual_algorithm();
   int intLog10(const double v);
 #endif
+  bool dualAlgorithm();
 
   int AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
   double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
