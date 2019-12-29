@@ -113,10 +113,9 @@ void HighsSimplexAnalysis::initialise(const int simplex_iteration_count_) {
   for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
   AnIterNumPrDgnIt = 0;
   AnIterNumDuDgnIt = 0;
-  AnIterNumColPrice = 0;
-  AnIterNumRowPrice = 0;
-  AnIterNumRowPriceWSw = 0;
-  AnIterNumRowPriceUltra = 0;
+  num_col_price = 0;
+  num_row_price = 0;
+  num_row_price_with_switch = 0;
   int last_dual_edge_weight_mode = (int)DualEdgeWeightMode::STEEPEST_EDGE;
   for (int k = 0; k <= last_dual_edge_weight_mode; k++) {
     AnIterNumEdWtIt[k] = 0;
@@ -468,18 +467,15 @@ void HighsSimplexAnalysis::summaryReport() {
          (100 * AnIterNumPrDgnIt) / AnIterNumIter);
   printf("%12d (%3d%%)   dual degenerate iterations\n", AnIterNumDuDgnIt,
          (100 * AnIterNumDuDgnIt) / AnIterNumIter);
-  int suPrice = AnIterNumColPrice + AnIterNumRowPrice + AnIterNumRowPriceWSw +
-                AnIterNumRowPriceUltra;
+  int suPrice = num_col_price + num_row_price + num_row_price_with_switch;
   if (suPrice > 0) {
     printf("\n%12d Price operations:\n", suPrice);
-    printf("%12d Col Price      (%3d%%)\n", AnIterNumColPrice,
-           (100 * AnIterNumColPrice) / suPrice);
-    printf("%12d Row Price      (%3d%%)\n", AnIterNumRowPrice,
-           (100 * AnIterNumRowPrice) / suPrice);
-    printf("%12d Row PriceWSw   (%3d%%)\n", AnIterNumRowPriceWSw,
-           (100 * AnIterNumRowPriceWSw / suPrice));
-    printf("%12d Row PriceUltra (%3d%%)\n", AnIterNumRowPriceUltra,
-           (100 * AnIterNumRowPriceUltra / suPrice));
+    printf("%12d Col Price      (%3d%%)\n", num_col_price,
+           (100 * num_col_price) / suPrice);
+    printf("%12d Row Price      (%3d%%)\n", num_row_price,
+           (100 * num_row_price) / suPrice);
+    printf("%12d Row PriceWSw   (%3d%%)\n", num_row_price_with_switch,
+           (100 * num_row_price_with_switch / suPrice));
   }
   printf("\n%12d (%3d%%) costly DSE        iterations\n", AnIterNumCostlyDseIt,
          (100 * AnIterNumCostlyDseIt) / AnIterNumIter);

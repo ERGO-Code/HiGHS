@@ -127,23 +127,6 @@ HighsStatus HDual::solve(int num_threads) {
           solver_num_row - simplex_info.num_basic_logicals;
       bool computeExactDseWeights =
           num_basic_structurals > 0 && initialise_dual_steepest_edge_weights;
-      if (!use_HSA) {
-	// Initialise the measures used to analyse accuracy of steepest edge weights
-	num_dual_steepest_edge_weight_check = 0;
-	num_dual_steepest_edge_weight_reject = 0;
-	num_wrong_low_dual_steepest_edge_weight = 0;
-	num_wrong_high_dual_steepest_edge_weight = 0;
-	average_frequency_low_dual_steepest_edge_weight = 0;
-	average_frequency_high_dual_steepest_edge_weight = 0;
-	average_log_low_dual_steepest_edge_weight_error = 0;
-	average_log_high_dual_steepest_edge_weight_error = 0;
-	max_average_frequency_low_dual_steepest_edge_weight = 0;
-	max_average_frequency_high_dual_steepest_edge_weight = 0;
-	max_sum_average_frequency_extreme_dual_steepest_edge_weight = 0;
-	max_average_log_low_dual_steepest_edge_weight_error = 0;
-	max_average_log_high_dual_steepest_edge_weight_error = 0;
-	max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
-      }
 #ifdef HiGHSDEV
       if (computeExactDseWeights) {
         printf(
@@ -234,10 +217,6 @@ HighsStatus HDual::solve(int num_threads) {
   //
   // The major solving loop
   //
-  // Initialise the iteration analysis. Necessary for strategy, but
-  // much is for development and only switched on with HiGHSDEV
-  iterationAnalysisInitialise();
-
   while (solvePhase) {
     int it0 = scaled_solution_params.simplex_iteration_count;
     // When starting a new phase the (updated) dual objective function
@@ -273,35 +252,7 @@ HighsStatus HDual::solve(int num_threads) {
   }
 
 #ifdef HiGHSDEV
-  int strategy = options.simplex_dual_edge_weight_strategy;
-  if (
-      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE ||
-      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL ||
-      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
-    printf("grep_DSE_WtCk,%s,%s,%d,%d,%d,%d,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g\n",
-	   workHMO.lp_.model_name_.c_str(),
-	   workHMO.lp_.lp_name_.c_str(),
-	   num_dual_steepest_edge_weight_check,
-	   num_dual_steepest_edge_weight_reject,
-	   num_wrong_low_dual_steepest_edge_weight,
-	   num_wrong_high_dual_steepest_edge_weight,
-	   max_average_frequency_low_dual_steepest_edge_weight,
-	   max_average_frequency_high_dual_steepest_edge_weight,
-	   max_sum_average_frequency_extreme_dual_steepest_edge_weight,
-	   max_average_log_low_dual_steepest_edge_weight_error,
-	   max_average_log_high_dual_steepest_edge_weight_error,
-	   max_sum_average_log_extreme_dual_steepest_edge_weight_error);
-  }
-#endif
-
-#ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) {
-    if (use_HSA) {
-      analysis->summaryReport();
-    } else {
-      iterationAnalysisReport();
-    }
-  }
+  if (simplex_info.analyseSimplexIterations) analysis->summaryReport();
 #endif
 
   if (solve_bailout) {
@@ -851,11 +802,7 @@ void HDual::rebuild() {
 #endif
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
-  iterationReportRebuild(
-#ifdef HiGHSDEV
-			 sv_invertHint
-#endif
-			 );
+  iterationReportRebuild();
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
@@ -1024,166 +971,42 @@ void HDual::iterateTasks() {
   updatePivots();
 }
 
-void HDual::iterationAnalysisInitialise() {
-  AnIterIt0 = workHMO.scaled_solution_params_.simplex_iteration_count;
-  AnIterCostlyDseFq = 0;
-#ifdef HiGHSDEV
-  AnIterPrevRpNumCostlyDseIt = 0;
-  AnIterPrevIt = 0;
-  AnIterOpRec* AnIter;
-  AnIter = &AnIterOp[AnIterOpTy_Btran];
-  AnIter->AnIterOpName = "Btran";
-  AnIter = &AnIterOp[AnIterOpTy_Price];
-  AnIter->AnIterOpName = "Price";
-  AnIter = &AnIterOp[AnIterOpTy_Ftran];
-  AnIter->AnIterOpName = "Ftran";
-  AnIter = &AnIterOp[AnIterOpTy_FtranBFRT];
-  AnIter->AnIterOpName = "FtranBFRT";
-  AnIter = &AnIterOp[AnIterOpTy_FtranDSE];
-  AnIter->AnIterOpName = "FtranDSE";
-  for (int k = 0; k < NumAnIterOpTy; k++) {
-    AnIter = &AnIterOp[k];
-    AnIter->AnIterOpLog10RsDsty = 0;
-    AnIter->AnIterOpSuLog10RsDsty = 0;
-    if (k == AnIterOpTy_Price) {
-      AnIter->AnIterOpHyperCANCEL = 1.0;
-      AnIter->AnIterOpHyperTRAN = 1.0;
-      AnIter->AnIterOpRsDim = solver_num_col;
-    } else {
-      if (k == AnIterOpTy_Btran) {
-        AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
-        AnIter->AnIterOpHyperTRAN = hyperBTRANU;
-      } else {
-        AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
-        AnIter->AnIterOpHyperTRAN = hyperFTRANL;
-      }
-      AnIter->AnIterOpRsDim = solver_num_row;
-    }
-    AnIter->AnIterOpNumCa = 0;
-    AnIter->AnIterOpNumHyperOp = 0;
-    AnIter->AnIterOpNumHyperRs = 0;
-    AnIter->AnIterOpRsMxNNZ = 0;
-    AnIter->AnIterOpSuNumCa = 0;
-    AnIter->AnIterOpSuNumHyperOp = 0;
-    AnIter->AnIterOpSuNumHyperRs = 0;
-  }
-  int last_invert_hint = INVERT_HINT_Count - 1;
-  for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
-  AnIterNumPrDgnIt = 0;
-  AnIterNumDuDgnIt = 0;
-  AnIterNumColPrice = 0;
-  AnIterNumRowPrice = 0;
-  AnIterNumRowPriceWSw = 0;
-  AnIterNumRowPriceUltra = 0;
-  int last_dual_edge_weight_mode = (int)DualEdgeWeightMode::STEEPEST_EDGE;
-  for (int k = 0; k <= last_dual_edge_weight_mode; k++) {
-    AnIterNumEdWtIt[k] = 0;
-  }
-  AnIterNumCostlyDseIt = 0;
-  AnIterTraceNumRec = 0;
-  AnIterTraceIterDl = 1;
-  AnIterTraceRec* lcAnIter = &AnIterTrace[0];
-  lcAnIter->AnIterTraceIter = AnIterIt0;
-  lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
-#endif
-}
-
 void HDual::iterationAnalysis() {
   // Possibly report on the iteration
-  if (use_HSA) {
-    HighsOptions& options = workHMO.options_;
-    HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
-    HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-    analysis->simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-    analysis->num_threads = options.num_threads;
-    analysis->edge_weight_mode = dual_edge_weight_mode;
-    analysis->solve_phase = solvePhase;
-    analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
-    analysis->major_iteration_count = -1;
-    analysis->minor_iteration_count = -1;
-    analysis->devex_iteration_count = num_devex_iterations;
-    analysis->pivotal_row_index = rowOut;
-    analysis->leaving_variable = columnOut;
-    analysis->entering_variable = columnIn;
-    analysis->invert_hint = invertHint;
-    analysis->freelist_size = dualRow.freeListSize;
-    analysis->reduced_rhs_value = 0;
-    analysis->reduced_cost_value = 0;
-    analysis->edge_weight = 0;
-    analysis->primal_delta = deltaPrimal;
-    analysis->primal_step = thetaPrimal;
-    analysis->dual_step = thetaDual;
-    analysis->pivot_value_from_column = alpha;
-    analysis->pivot_value_from_row = alphaRow;
-    analysis->numerical_trouble = numericalTrouble;
-    analysis->objective_value = simplex_info.updated_dual_objective_value;
-    analysis->basis_condition = simplex_info.invert_condition;
+  HighsOptions& options = workHMO.options_;
+  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  analysis->simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+  analysis->num_threads = options.num_threads;
+  analysis->edge_weight_mode = dual_edge_weight_mode;
+  analysis->solve_phase = solvePhase;
+  analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
+  analysis->major_iteration_count = -1;
+  analysis->minor_iteration_count = -1;
+  analysis->devex_iteration_count = num_devex_iterations;
+  analysis->pivotal_row_index = rowOut;
+  analysis->leaving_variable = columnOut;
+  analysis->entering_variable = columnIn;
+  analysis->invert_hint = invertHint;
+  analysis->freelist_size = dualRow.freeListSize;
+  analysis->reduced_rhs_value = 0;
+  analysis->reduced_cost_value = 0;
+  analysis->edge_weight = 0;
+  analysis->primal_delta = deltaPrimal;
+  analysis->primal_step = thetaPrimal;
+  analysis->dual_step = thetaDual;
+  analysis->pivot_value_from_column = alpha;
+  analysis->pivot_value_from_row = alphaRow;
+  analysis->numerical_trouble = numericalTrouble;
+  analysis->objective_value = simplex_info.updated_dual_objective_value;
+  analysis->basis_condition = simplex_info.invert_condition;
 
-    analysis->iterationReport();
-  } else {
-    iterationReport();
-  }
+  analysis->iterationReport();
 
   // Possibly switch from DSE to Devex
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     bool switch_to_devex = false;
-    if (use_HSA) {
-      switch_to_devex = analysis->switchToDevex();
-    } else {
-      /*
-	int AnIterCuIt = workHMO.scaled_solution_params_.simplex_iteration_count;
-	int lcNumIter = AnIterCuIt - AnIterIt0;
-	bool iterLg = AnIterCuIt % 100 == 0;
-      */
-      // Firstly consider switching on the basis of NLA cost
-      double AnIterCostlyDseMeasureDen;
-      AnIterCostlyDseMeasureDen =
-	max(max(analysis->row_ep_density, analysis->col_aq_density), analysis->row_ap_density);
-      if (AnIterCostlyDseMeasureDen > 0) {
-	AnIterCostlyDseMeasure = analysis->row_DSE_density / AnIterCostlyDseMeasureDen;
-	AnIterCostlyDseMeasure = AnIterCostlyDseMeasure * AnIterCostlyDseMeasure;
-      } else {
-	AnIterCostlyDseMeasure = 0;
-      }
-      bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
-	analysis->row_DSE_density > AnIterCostlyDseMnDensity;
-      AnIterCostlyDseFq = (1 - runningAverageMu) * AnIterCostlyDseFq;
-      if (CostlyDseIt) {
-	AnIterNumCostlyDseIt++;
-	AnIterCostlyDseFq += runningAverageMu * 1.0;
-	int lcNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
-	// Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations have been costly
-	switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
-	  (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
-	  (lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot);
-#ifdef HiGHSDEV
-	if (switch_to_devex) {
-	  HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
-			  "Switch from DSE to Devex after %d costly DSE iterations of %d: "
-			  "C_Aq_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
-			  AnIterNumCostlyDseIt, lcNumIter, analysis->row_DSE_density, analysis->row_ep_density,
-			  analysis->col_aq_density);
-	}
-#endif
-      }
-      if (!switch_to_devex) {
-	// Secondly consider switching on the basis of weight accuracy
-	double dse_weight_error_measure =
-	  average_log_low_dual_steepest_edge_weight_error +
-	  average_log_high_dual_steepest_edge_weight_error;
-	double dse_weight_error_threshhold =
-	  workHMO.options_.dual_steepest_edge_weight_log_error_threshhold;
-	switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
-	  dse_weight_error_measure > dse_weight_error_threshhold;
-#ifdef HiGHSDEV
-	if (switch_to_devex) {
-	  HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
-			  "Switch from DSE to Devex with log error measure of %g > %g = threshhold",
-			  dse_weight_error_measure, dse_weight_error_threshhold);
-	}
-#endif
-      }
-    }
+    switch_to_devex = analysis->switchToDevex();
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
       // Zero the number of Devex frameworks used and set up the first one
@@ -1195,241 +1018,20 @@ void HDual::iterationAnalysis() {
   }
 
 #ifdef HiGHSDEV
-  if (use_HSA) {
-    analysis->iterationRecord();
-  }
-  int AnIterCuIt = workHMO.scaled_solution_params_.simplex_iteration_count;
-  bool iterLg = AnIterCuIt % 100 == 0;
-  iterLg = false;
-  if (iterLg) {
-    int lc_NumCostlyDseIt = AnIterNumCostlyDseIt - AnIterPrevRpNumCostlyDseIt;
-    AnIterPrevRpNumCostlyDseIt = AnIterNumCostlyDseIt;
-    printf("Iter %10d: ", AnIterCuIt);
-    iterationReportDensity(ML_MINIMAL, true);
-    iterationReportDensity(ML_MINIMAL, false);
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      int lc_pct = (100 * AnIterNumCostlyDseIt) / (AnIterCuIt - AnIterIt0);
-      printf("| Fq = %4.2f; Su =%5d (%3d%%)", AnIterCostlyDseFq,
-             AnIterNumCostlyDseIt, lc_pct);
-
-      if (lc_NumCostlyDseIt > 0) printf("; LcNum =%3d", lc_NumCostlyDseIt);
-    }
-    printf("\n");
-  }
-
-  for (int k = 0; k < NumAnIterOpTy; k++) {
-    AnIterOpRec* lcAnIterOp = &AnIterOp[k];
-    if (lcAnIterOp->AnIterOpNumCa) {
-      lcAnIterOp->AnIterOpSuNumCa += lcAnIterOp->AnIterOpNumCa;
-      lcAnIterOp->AnIterOpSuNumHyperOp += lcAnIterOp->AnIterOpNumHyperOp;
-      lcAnIterOp->AnIterOpSuNumHyperRs += lcAnIterOp->AnIterOpNumHyperRs;
-      lcAnIterOp->AnIterOpSuLog10RsDsty += lcAnIterOp->AnIterOpLog10RsDsty;
-    }
-    lcAnIterOp->AnIterOpNumCa = 0;
-    lcAnIterOp->AnIterOpNumHyperOp = 0;
-    lcAnIterOp->AnIterOpNumHyperRs = 0;
-    lcAnIterOp->AnIterOpLog10RsDsty = 0;
-  }
-  if (invertHint > 0) AnIterNumInvert[invertHint]++;
-  if (thetaDual <= 0) AnIterNumDuDgnIt++;
-  if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
-  if (AnIterCuIt > AnIterPrevIt)
-    AnIterNumEdWtIt[(int)dual_edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
-
-  AnIterTraceRec* lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-  //  if (workHMO.scaled_solution_params_.simplex_iteration_count ==
-  //  AnIterTraceIterRec[AnIterTraceNumRec]+AnIterTraceIterDl) {
-  if (workHMO.scaled_solution_params_.simplex_iteration_count ==
-      lcAnIter->AnIterTraceIter + AnIterTraceIterDl) {
-    if (AnIterTraceNumRec == AN_ITER_TRACE_MX_NUM_REC) {
-      for (int rec = 1; rec <= AN_ITER_TRACE_MX_NUM_REC / 2; rec++)
-        AnIterTrace[rec] = AnIterTrace[2 * rec];
-      AnIterTraceNumRec = AnIterTraceNumRec / 2;
-      AnIterTraceIterDl = AnIterTraceIterDl * 2;
-    } else {
-      AnIterTraceNumRec++;
-      lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-      lcAnIter->AnIterTraceIter = workHMO.scaled_solution_params_.simplex_iteration_count;
-      lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = analysis->row_ep_density;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = analysis->row_ap_density;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = analysis->col_aq_density;
-      lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = analysis->col_aq_density;
-      if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-        lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = analysis->row_DSE_density;
-        lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
-      } else {
-        lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
-        lcAnIter->AnIterTraceAux0 = 0;
-      }
-      lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)dual_edge_weight_mode;
-    }
-  }
-  AnIterPrevIt = AnIterCuIt;
+  analysis->iterationRecord();
 #endif
 }
 
-void HDual::iterationReport() {
-  int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
-  int iteration_count_difference = iteration_count -
-    previous_iteration_report_header_iteration_count;
-  bool header = previous_iteration_report_header_iteration_count < 0
-    || iteration_count_difference > 10;
-  if (header) {
-    iterationReportFull(header);
-    previous_iteration_report_header_iteration_count = iteration_count;
-  }
-  iterationReportFull(false);
-}
-
-void HDual::iterationReportFull(bool header) {
-  if (header) {
-    iterationReportIterationAndPhase(ML_DETAILED, true);
-    iterationReportDualObjective(ML_DETAILED, true);
-#ifdef HiGHSDEV
-    iterationReportIterationData(ML_DETAILED, true);
-    iterationReportDensity(ML_DETAILED, true);
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
-		      " FreeLsZ");
-#endif
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
-		      "\n");
-  } else {
-    iterationReportIterationAndPhase(ML_DETAILED, false);
-    iterationReportDualObjective(ML_DETAILED, false);
-#ifdef HiGHSDEV
-    iterationReportIterationData(ML_DETAILED, false);
-    iterationReportDensity(ML_DETAILED, false);
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
-		      " %7d", dualRow.freeListSize);
-#endif
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
-		      "\n");
-  }
-}
-
-void HDual::iterationReportIterationAndPhase(int iterate_log_level,
-                                             bool header) {
-  if (header) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-		      " Iteration Ph");
-  } else {
-    int numIter = workHMO.scaled_solution_params_.simplex_iteration_count;
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-		      " %9d %2d", numIter, solvePhase);
-  }
-}
-void HDual::iterationReportDualObjective(int iterate_log_level, bool header) {
+void HDual::iterationReportRebuild() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (header) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-		      "        DualObjective");
-  } else {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-		      " %20.10e",
-                      simplex_info.updated_dual_objective_value);
-  }
-}
-
-void HDual::iterationReportIterationData(int iterate_log_level, bool header) {
-  if (header) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-                      " Inv       NumCk     LvR     LvC     EnC        DlPr    "
-                      "    ThDu        ThPr          Aa");
-  } else {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-                      " %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g",
-                      invertHint, numericalTrouble, rowOut, columnOut, columnIn,
-                      deltaPrimal, thetaDual, thetaPrimal, alpha);
-  }
-}
-
-void HDual::iterationReportDensity(int iterate_log_level, bool header) {
-  bool rp_dual_steepest_edge =
-      dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
-  if (header) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-		      " C_Aq R_Ep R_Ap");
-    if (rp_dual_steepest_edge) {
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-			"  DSE");
-    } else {
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-			"     ");
-    }
-  } else {
-    int l10ColDse = intLog10(analysis->col_aq_density);
-    int l10REpDse = intLog10(analysis->row_ep_density);
-    int l10RapDse = intLog10(analysis->row_ap_density);
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-		      " %4d %4d %4d", l10ColDse, l10REpDse,
-                      l10RapDse);
-    if (rp_dual_steepest_edge) {
-      int l10DseDse = intLog10(analysis->row_DSE_density);
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-			" %4d", l10DseDse);
-    } else {
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-			"     ");
-    }
-  }
-}
-
-void HDual::iterationReportRebuild(
-#ifdef HiGHSDEV
-				   const int i_v
-#endif
-				   ) {
-#ifdef HiGHSDEV
-  if (use_HSA) {
-    HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-    HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
-    analysis->solve_phase = solvePhase;
-    analysis->objective_value = simplex_info.updated_dual_objective_value;
-    analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
-    analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
-    analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
-    analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
-    analysis->invertReport();
-    return;
-  }
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  bool report_condition = simplex_info.analyse_invert_condition;
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-                    "Iter %10d:", workHMO.scaled_solution_params_.simplex_iteration_count);
-  iterationReportDensity(ML_MINIMAL, true);
-  iterationReportDensity(ML_MINIMAL, false);
-  iterationReportDualObjective(ML_MINIMAL, false);
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-		    " DuPh%1d(%2d)", solvePhase, i_v);
-  if (report_condition) HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-					  " k(B)%10.4g", simplex_info.invert_condition);
-  if (solvePhase == 2) reportInfeasibility();
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-		    "\n");
-#else
-  logRebuild(workHMO, false, solvePhase);
-#endif
-}
-
-void HDual::reportInfeasibility() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-		    " Pr: %d(%g)",
-                    scaled_solution_params.num_primal_infeasibilities,
-                    scaled_solution_params.sum_primal_infeasibilities);
-  if (scaled_solution_params.sum_dual_infeasibilities > 0) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-		      "; Du: %d(%g)",
-                      scaled_solution_params.num_dual_infeasibilities,
-                      scaled_solution_params.sum_dual_infeasibilities);
-  }
-}
-
-int HDual::intLog10(const double v) {
-  int intLog10V = -99;
-  if (v > 0) intLog10V = log(v) / log(10.0);
-  return intLog10V;
+  analysis->solve_phase = solvePhase;
+  analysis->objective_value = simplex_info.updated_dual_objective_value;
+  analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
+  analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
+  analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
+  analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
+  analysis->invertReport();
 }
 
 void HDual::chooseRow() {
@@ -1460,16 +1062,14 @@ void HDual::chooseRow() {
     row_ep.array[rowOut] = 1;
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations) {
+    if (simplex_info.analyseSimplexIterations) 
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
-    }
 #endif
     // Perform BTRAN
     factor->btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations) {
+    if (simplex_info.analyseSimplexIterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
-    }
 #endif
     timer.stop(simplex_info.clock_[BtranClock]);
     // Verify DSE weight
@@ -1521,87 +1121,9 @@ bool HDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
   // Accept the updated weight if it is at least a quarter of the
   // computed weight. Excessively large updated weights don't matter!
   const double accept_weight_threshhold = 0.25;
-  const bool accept_weight = updated_edge_weight >= accept_weight_threshhold * computed_edge_weight;
-  if (use_HSA) {
-    analysis->dualSteepestEdgeWeightError(computed_edge_weight, updated_edge_weight);
-    return accept_weight;
-  }
-  const double weight_error_threshhold = 4.0;
-  int low_weight_error = 0;
-  int high_weight_error = 0;
-  double weight_error;
-#ifdef HiGHSDEV
-  string error_type = "  OK";
-#endif
-  num_dual_steepest_edge_weight_check++;
-  if (!accept_weight) num_dual_steepest_edge_weight_reject++;
-  if (updated_edge_weight < computed_edge_weight) {
-    // Updated weight is low
-    weight_error = computed_edge_weight/updated_edge_weight;
-    if (weight_error > weight_error_threshhold) {
-      low_weight_error = 1;
-#ifdef HiGHSDEV
-      error_type = " Low";
-#endif
-    }
-    average_log_low_dual_steepest_edge_weight_error =
-      0.99*average_log_low_dual_steepest_edge_weight_error +
-      0.01*log(weight_error);
-  } else {
-    // Updated weight is correct or high
-    weight_error = updated_edge_weight/computed_edge_weight;
-    if (weight_error > weight_error_threshhold) {
-      high_weight_error = 1;
-#ifdef HiGHSDEV
-      error_type = "High";
-#endif
-    }
-    average_log_high_dual_steepest_edge_weight_error =
-      0.99*average_log_high_dual_steepest_edge_weight_error +
-      0.01*log(weight_error);
-  }
-  average_frequency_low_dual_steepest_edge_weight = 
-    0.99*average_frequency_low_dual_steepest_edge_weight + 
-    0.01*low_weight_error;
-  average_frequency_high_dual_steepest_edge_weight = 
-    0.99*average_frequency_high_dual_steepest_edge_weight + 
-    0.01*high_weight_error;
-  max_average_frequency_low_dual_steepest_edge_weight =
-    max(max_average_frequency_low_dual_steepest_edge_weight,
-	average_frequency_low_dual_steepest_edge_weight);
-  max_average_frequency_high_dual_steepest_edge_weight =
-    max(max_average_frequency_high_dual_steepest_edge_weight,
-	average_frequency_high_dual_steepest_edge_weight);
-  max_sum_average_frequency_extreme_dual_steepest_edge_weight =
-    max(max_sum_average_frequency_extreme_dual_steepest_edge_weight,
-	average_frequency_low_dual_steepest_edge_weight + average_frequency_high_dual_steepest_edge_weight);
-  max_average_log_low_dual_steepest_edge_weight_error =
-    max(max_average_log_low_dual_steepest_edge_weight_error,
-	average_log_low_dual_steepest_edge_weight_error);
-  max_average_log_high_dual_steepest_edge_weight_error =
-    max(max_average_log_high_dual_steepest_edge_weight_error,
-	average_log_high_dual_steepest_edge_weight_error);
-  max_sum_average_log_extreme_dual_steepest_edge_weight_error =
-    max(max_sum_average_log_extreme_dual_steepest_edge_weight_error,
-	average_log_low_dual_steepest_edge_weight_error + average_log_high_dual_steepest_edge_weight_error);
-#ifdef HiGHSDEV
-  const bool report_weight_error = false;
-  if (report_weight_error && weight_error > 0.5*weight_error_threshhold) {
-    printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
-	   workHMO.scaled_solution_params_.simplex_iteration_count,
-	   accept_weight, 
-	   num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
-	   computed_edge_weight, updated_edge_weight, weight_error, error_type.c_str(),
-	   average_frequency_low_dual_steepest_edge_weight, average_log_low_dual_steepest_edge_weight_error,
-	   average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error,
-	   max_average_frequency_low_dual_steepest_edge_weight,
-	   max_average_frequency_high_dual_steepest_edge_weight,
-	   max_sum_average_frequency_extreme_dual_steepest_edge_weight,
-	   max_average_log_low_dual_steepest_edge_weight_error,
-	   max_average_log_high_dual_steepest_edge_weight_error,
-	   max_sum_average_log_extreme_dual_steepest_edge_weight_error);
-  }
-#endif
+  const bool accept_weight =
+    updated_edge_weight >= accept_weight_threshhold * computed_edge_weight;
+  analysis->dualSteepestEdgeWeightError(computed_edge_weight, updated_edge_weight);
   return accept_weight;
 }
 
@@ -1655,8 +1177,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
-      AnIterNumColPrice++;
-      analysis->AnIterNumColPrice++;
+      analysis->num_col_price++;
     }
 #endif
     // Perform column-wise PRICE
@@ -1670,8 +1191,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
-        AnIterNumColPrice++;
-        analysis->AnIterNumColPrice++;
+        analysis->num_col_price++;
       }
 #endif
       // Perform column-wise PRICE
@@ -1687,8 +1207,7 @@ void HDual::chooseColumn(HVector* row_ep) {
     } else if (useUltraPrice) {
       if (simplex_info.analyseSimplexIterations) {
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
-        AnIterNumRowPriceUltra++;
-        analysis->AnIterNumRowPriceUltra++;
+        analysis->num_col_price++;
       }
       // Perform ultra-sparse row-wise PRICE
       matrix->price_by_row_ultra(row_ap, *row_ep);
@@ -1705,8 +1224,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
-        AnIterNumRowPriceWSw++;
-        analysis->AnIterNumRowPriceWSw++;
+        analysis->num_row_price_with_switch++;
       }
 #endif
       // Set the value of the density of row_ap at which the switch to
@@ -1720,8 +1238,7 @@ void HDual::chooseColumn(HVector* row_ep) {
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
-        AnIterNumRowPrice++;
-        analysis->AnIterNumRowPrice++;
+        analysis->num_row_price++;
       }
 #endif
       // Perform hyper-sparse row-wise PRICE
@@ -1738,9 +1255,8 @@ void HDual::chooseColumn(HVector* row_ep) {
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
   analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) {
+  if (simplex_info.analyseSimplexIterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
-  }
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
   //
@@ -1917,16 +1433,14 @@ void HDual::updateFtran() {
   // with unit multiplier
   matrix->collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) {
+  if (simplex_info.analyseSimplexIterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
-  }
 #endif
   // Perform FTRAN
   factor->ftran(col_aq, analysis->col_aq_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) {
+  if (simplex_info.analyseSimplexIterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
-  }
 #endif
   // Save the pivot value computed column-wise - used for numerical checking
   alpha = col_aq.array[rowOut];
@@ -1954,16 +1468,14 @@ void HDual::updateFtranBFRT() {
 
   if (col_BFRT.count) {
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations) {
+    if (simplex_info.analyseSimplexIterations)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT, analysis->col_aq_density);
-    }
 #endif
     // Perform FTRAN BFRT
     factor->ftran(col_BFRT, analysis->col_aq_density);
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations) {
+    if (simplex_info.analyseSimplexIterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT);
-    }
 #endif
   }
   if (time_updateFtranBFRT) {
@@ -1981,16 +1493,14 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
   if (invertHint) return;
   timer.start(simplex_info.clock_[FtranDseClock]);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) {
+  if (simplex_info.analyseSimplexIterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector, analysis->row_DSE_density);
-  }
 #endif
   // Perform FTRAN DSE
   factor->ftran(*DSE_Vector, analysis->row_DSE_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) {
+  if (simplex_info.analyseSimplexIterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector);
-  }
 #endif
   timer.stop(simplex_info.clock_[FtranDseClock]);
 }
@@ -2288,178 +1798,5 @@ double HDual::checkDualObjectiveValue(const char* message, int phase) {
   // Now have dual objective value
   workHMO.simplex_lp_status_.has_dual_objective_value = true;
   return updated_dual_objective_error;
-}
-
-void HDual::iterationAnalysisReport() {
-  HighsTimer& timer = workHMO.timer_;
-  int AnIterNumIter = workHMO.scaled_solution_params_.simplex_iteration_count - AnIterIt0;
-  printf("\nAnalysis of %d iterations (%d to %d)\n", AnIterNumIter,
-         AnIterIt0 + 1, workHMO.scaled_solution_params_.simplex_iteration_count);
-  if (AnIterNumIter <= 0) return;
-  int lc_EdWtNumIter;
-  lc_EdWtNumIter = AnIterNumEdWtIt[(int)DualEdgeWeightMode::STEEPEST_EDGE];
-  if (lc_EdWtNumIter > 0)
-    printf("DSE for %12d (%3d%%) iterations\n", lc_EdWtNumIter,
-           (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[(int)DualEdgeWeightMode::DEVEX];
-  if (lc_EdWtNumIter > 0)
-    printf("Dvx for %12d (%3d%%) iterations\n", lc_EdWtNumIter,
-           (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[(int)DualEdgeWeightMode::DANTZIG];
-  if (lc_EdWtNumIter > 0)
-    printf("Dan for %12d (%3d%%) iterations\n", lc_EdWtNumIter,
-           (100 * lc_EdWtNumIter) / AnIterNumIter);
-  printf("\n");
-  for (int k = 0; k < NumAnIterOpTy; k++) {
-    AnIterOpRec* AnIter = &AnIterOp[k];
-    int lcNumCa = AnIter->AnIterOpSuNumCa;
-    printf("\n%-9s performed %d times\n", AnIter->AnIterOpName.c_str(),
-           AnIter->AnIterOpSuNumCa);
-    if (lcNumCa > 0) {
-      int lcHyperOp = AnIter->AnIterOpSuNumHyperOp;
-      int lcHyperRs = AnIter->AnIterOpSuNumHyperRs;
-      int pctHyperOp = (100 * lcHyperOp) / lcNumCa;
-      int pctHyperRs = (100 * lcHyperRs) / lcNumCa;
-      double lcRsDsty = pow(10.0, AnIter->AnIterOpSuLog10RsDsty / lcNumCa);
-      int lcAnIterOpRsDim = AnIter->AnIterOpRsDim;
-      int lcNumNNz = lcRsDsty * lcAnIterOpRsDim;
-      int lcMxNNz = AnIter->AnIterOpRsMxNNZ;
-      double lcMxNNzDsty = (1.0 * lcMxNNz) / AnIter->AnIterOpRsDim;
-      printf("%12d hyper-sparse operations (%3d%%)\n", lcHyperOp, pctHyperOp);
-      printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
-      printf("%12g density of result (%d / %d nonzeros)\n", lcRsDsty, lcNumNNz,
-             lcAnIterOpRsDim);
-      printf("%12g density of result with max (%d / %d) nonzeros\n",
-             lcMxNNzDsty, lcMxNNz, lcAnIterOpRsDim);
-    }
-  }
-  int NumInvert = 0;
-
-  int last_invert_hint = INVERT_HINT_Count - 1;
-  for (int k = 1; k <= last_invert_hint; k++) NumInvert += AnIterNumInvert[k];
-  if (NumInvert > 0) {
-    int lcNumInvert = 0;
-    printf("\nInvert    performed %d times: average frequency = %d\n",
-           NumInvert, AnIterNumIter / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_UPDATE_LIMIT_REACHED];
-    if (lcNumInvert > 0)
-      printf("%12d (%3d%%) Invert operations due to update limit reached\n",
-             lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT];
-    if (lcNumInvert > 0)
-      printf("%12d (%3d%%) Invert operations due to pseudo-clock\n",
-             lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_OPTIMAL];
-    if (lcNumInvert > 0)
-      printf("%12d (%3d%%) Invert operations due to possibly optimal\n",
-             lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED];
-    if (lcNumInvert > 0)
-      printf(
-          "%12d (%3d%%) Invert operations due to possibly primal unbounded\n",
-          lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED];
-    if (lcNumInvert > 0)
-      printf("%12d (%3d%%) Invert operations due to possibly dual unbounded\n",
-             lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_SINGULAR_BASIS];
-    if (lcNumInvert > 0)
-      printf("%12d (%3d%%) Invert operations due to possibly singular basis\n",
-             lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert =
-        AnIterNumInvert[INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX];
-    if (lcNumInvert > 0)
-      printf(
-          "%12d (%3d%%) Invert operations due to primal infeasible in primal "
-          "simplex\n",
-          lcNumInvert, (100 * lcNumInvert) / NumInvert);
-  }
-  printf("\n%12d (%3d%%) primal degenerate iterations\n", AnIterNumPrDgnIt,
-         (100 * AnIterNumPrDgnIt) / AnIterNumIter);
-  printf("%12d (%3d%%)   dual degenerate iterations\n", AnIterNumDuDgnIt,
-         (100 * AnIterNumDuDgnIt) / AnIterNumIter);
-  int suPrice = AnIterNumColPrice + AnIterNumRowPrice + AnIterNumRowPriceWSw +
-                AnIterNumRowPriceUltra;
-  if (suPrice > 0) {
-    printf("\n%12d Price operations:\n", suPrice);
-    printf("%12d Col Price      (%3d%%)\n", AnIterNumColPrice,
-           (100 * AnIterNumColPrice) / suPrice);
-    printf("%12d Row Price      (%3d%%)\n", AnIterNumRowPrice,
-           (100 * AnIterNumRowPrice) / suPrice);
-    printf("%12d Row PriceWSw   (%3d%%)\n", AnIterNumRowPriceWSw,
-           (100 * AnIterNumRowPriceWSw / suPrice));
-    printf("%12d Row PriceUltra (%3d%%)\n", AnIterNumRowPriceUltra,
-           (100 * AnIterNumRowPriceUltra / suPrice));
-  }
-  printf("\n%12d (%3d%%) costly DSE        iterations\n", AnIterNumCostlyDseIt,
-         (100 * AnIterNumCostlyDseIt) / AnIterNumIter);
-
-  //
-  // Add a record for the final iterations: may end up with one more
-  // than AN_ITER_TRACE_MX_NUM_REC records, so ensure that there is enough
-  // space in the arrays
-  //
-  AnIterTraceNumRec++;
-  AnIterTraceRec* lcAnIter;
-  lcAnIter = &AnIterTrace[AnIterTraceNumRec];
-  lcAnIter->AnIterTraceIter = workHMO.scaled_solution_params_.simplex_iteration_count;
-  lcAnIter->AnIterTraceTime = timer.getTime();
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = analysis->row_ep_density;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = analysis->row_ap_density;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = analysis->col_aq_density;
-  lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = analysis->col_aq_density;
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = analysis->row_DSE_density;
-    lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
-  } else {
-    lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
-    lcAnIter->AnIterTraceAux0 = 0;
-  }
-  lcAnIter->AnIterTrace_dual_edge_weight_mode = (int)dual_edge_weight_mode;
-
-  if (AnIterTraceIterDl >= 100) {
-    printf("\n Iteration speed analysis\n");
-    lcAnIter = &AnIterTrace[0];
-    int fmIter = lcAnIter->AnIterTraceIter;
-    double fmTime = lcAnIter->AnIterTraceTime;
-    printf(
-        "        Iter (      FmIter:      ToIter)      Time      Iter/sec | "
-        "C_Aq R_Ep R_Ap  DSE | "
-        "EdWt | Aux0\n");
-    for (int rec = 1; rec <= AnIterTraceNumRec; rec++) {
-      lcAnIter = &AnIterTrace[rec];
-      int toIter = lcAnIter->AnIterTraceIter;
-      double toTime = lcAnIter->AnIterTraceTime;
-      int dlIter = toIter - fmIter;
-      if (rec < AnIterTraceNumRec && dlIter != AnIterTraceIterDl)
-        printf("STRANGE: %d = dlIter != AnIterTraceIterDl = %d\n", dlIter,
-               AnIterTraceIterDl);
-      double dlTime = toTime - fmTime;
-      int iterSpeed = 0;
-      if (dlTime > 0) iterSpeed = dlIter / dlTime;
-      int lc_dual_edge_weight_mode =
-          lcAnIter->AnIterTrace_dual_edge_weight_mode;
-      int l10ColDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran]);
-      int l10REpDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran]);
-      int l10RapDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Price]);
-      int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE]);
-      int l10Aux0 = intLog10(lcAnIter->AnIterTraceAux0);
-      std::string str_dual_edge_weight_mode;
-      if (lc_dual_edge_weight_mode == (int)DualEdgeWeightMode::STEEPEST_EDGE)
-        str_dual_edge_weight_mode = "DSE";
-      else if (lc_dual_edge_weight_mode == (int)DualEdgeWeightMode::DEVEX)
-        str_dual_edge_weight_mode = "Dvx";
-      else if (lc_dual_edge_weight_mode == (int)DualEdgeWeightMode::DANTZIG)
-        str_dual_edge_weight_mode = "Dan";
-      else
-        str_dual_edge_weight_mode = "XXX";
-      printf("%12d (%12d:%12d) %9.4f  %12d | %4d %4d %4d %4d |  %3s | %4d\n",
-             dlIter, fmIter, toIter, dlTime, iterSpeed, l10ColDse, l10REpDse,
-             l10RapDse, l10DseDse, str_dual_edge_weight_mode.c_str(), l10Aux0);
-      fmIter = toIter;
-      fmTime = toTime;
-    }
-    printf("\n");
-  }
 }
 #endif

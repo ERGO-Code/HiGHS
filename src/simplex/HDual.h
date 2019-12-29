@@ -151,99 +151,15 @@ class HDual {
   void iterateMulti();  // in HDualMulti.cpp
 
   /**
-   * @brief Initialise the iteration analysis
-   */
-  void iterationAnalysisInitialise();
-
-  /**
    * @brief Perform the iteration analysis
    */
   void iterationAnalysis();
 
-#ifdef HiGHSDEV
-  /**
-   * @brief Report on the iteration analysis
-   */
-  void iterationAnalysisReport();
-#endif
-
-  /**
-   * @brief Report on the iteration using iterationReportFull, possibly using it
-   * to write out column headers
-   */
-  void iterationReport();
-
-  /**
-   * @brief Report full iteration headers or data according to value of
-   * <tt>header</tt>
-   */
-  void iterationReportFull(
-			   bool header  //!< Write header or not
-			   );
-
-  /**
-   * @brief Report iteration number and LP phase headers or data according to
-   * value of <tt>header</tt>
-   */
-  void iterationReportIterationAndPhase(
-      int iterate_log_level,  //!< Iteration logging level
-      bool header  //!< Logic to determine whether to write out column headers
-                   //!< or data
-  );
-
-  /**
-   * @brief Report dual objective value header or data according to value of
-   * <tt>header</tt>
-   */
-  void iterationReportDualObjective(
-      int iterate_log_level,  //!< Iteration logging level
-      bool header  //!< Logic to determine whether to write out column header or
-                   //!< data
-  );
-
-  /**
-   * @brief Report dual iteration data header or data according to value of
-   * <tt>header</tt>
-   */
-  void iterationReportIterationData(
-      int iterate_log_level,  //!< Iteration logging level
-      bool header  //!< Logic to determine whether to write out column headers
-                   //!< or data
-  );
-
-  /**
-   * @brief Report dual iteration operation density header or data according to
-   * value of <tt>header</tt>
-   */
-  void iterationReportDensity(
-      int iterate_log_level,  //!< Iteration logging level
-      bool header  //!< Logic to determine whether to write out column headers
-                   //!< or data
-  );
-  bool dual_algorithm();
-  int intLog10(const double v);
-
   /**
    * @brief Single line report after rebuild
    */
-  void iterationReportRebuild(
-#ifdef HiGHSDEV
-      const int i_v=-1  //!< Integer value for reporting - generally invertHint
-#endif
-  );
+  void iterationReportRebuild();
 
-  /**
-   * @brief Report infeasibility
-   */
-  void reportInfeasibility();
-
-  /**
-   * @brief Update an average density record for BTRAN, an FTRAN or PRICE
-   */
-  //  void uOpRsDensityRec(
-  //      double lc_OpRsDensity,  //!< Recent density of the operation
-  //      double& opRsDensity     //!< Average density of the operation
-  //  );
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
    */
@@ -446,20 +362,6 @@ class HDual {
   // Devex std::vector
   std::vector<int> devex_index;  //!< Vector of Devex indices
 
-  // Price scalars
-  // DSE scalars
-  int AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
-  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
-  const double AnIterCostlyDseMeasureLimit = 1000.0;  //!<
-  const double AnIterCostlyDseMnDensity = 0.01;       //!<
-  const double AnIterFracNumTot_ItBfSw = 0.1;         //!<
-  const double AnIterFracNumCostlyDseItbfSw = 0.05;   //!<
-  double AnIterCostlyDseMeasure;
-#ifdef HiGHSDEV
-  int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
-                                   //!< previously reported
-#endif
-
   // Model
   HighsModelObject& workHMO;
   int solver_num_row;
@@ -588,7 +490,6 @@ class HDual {
   MChoice multi_choice[HIGHS_THREAD_LIMIT];
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
-  const bool use_HSA = true;//false;//
 #ifdef HiGHSDEV
   const bool rp_iter_da = false;//true;//
   const bool rp_reinvert_syntheticClock = false;//true;//
@@ -613,73 +514,6 @@ class HDual {
   double build_syntheticTick;
   double total_syntheticTick;
 
-  int num_dual_steepest_edge_weight_check;
-  int num_dual_steepest_edge_weight_reject;
-  int num_wrong_low_dual_steepest_edge_weight;
-  int num_wrong_high_dual_steepest_edge_weight;
-  double average_frequency_low_dual_steepest_edge_weight;
-  double average_frequency_high_dual_steepest_edge_weight;
-  double average_log_low_dual_steepest_edge_weight_error;
-  double average_log_high_dual_steepest_edge_weight_error;
-  double max_average_frequency_low_dual_steepest_edge_weight;
-  double max_average_frequency_high_dual_steepest_edge_weight;
-  double max_sum_average_frequency_extreme_dual_steepest_edge_weight;
-  double max_average_log_low_dual_steepest_edge_weight_error;
-  double max_average_log_high_dual_steepest_edge_weight_error;
-  double max_sum_average_log_extreme_dual_steepest_edge_weight_error;
-
-  int AnIterIt0;
-#ifdef HiGHSDEV
-  int AnIterPrevIt;
-  // Major operation analysis struct
-  enum AnIterOpTy {
-    AnIterOpTy_Btran = 0,
-    AnIterOpTy_Price,
-    AnIterOpTy_Ftran,
-    AnIterOpTy_FtranBFRT,
-    AnIterOpTy_FtranDSE,
-    NumAnIterOpTy,
-  };
-
-  struct AnIterOpRec {
-    double AnIterOpLog10RsDsty;
-    double AnIterOpSuLog10RsDsty;
-    double AnIterOpHyperCANCEL;
-    double AnIterOpHyperTRAN;
-    int AnIterOpRsDim;
-    int AnIterOpNumCa;
-    int AnIterOpNumHyperOp;
-    int AnIterOpNumHyperRs;
-    int AnIterOpRsMxNNZ;
-    int AnIterOpSuNumCa;
-    int AnIterOpSuNumHyperOp;
-    int AnIterOpSuNumHyperRs;
-    std::string AnIterOpName;
-  };
-  AnIterOpRec AnIterOp[NumAnIterOpTy];
-
-  struct AnIterTraceRec {
-    double AnIterTraceTime;
-    double AnIterTraceDsty[NumAnIterOpTy];
-    double AnIterTraceAux0;
-    int AnIterTraceIter;
-    int AnIterTrace_dual_edge_weight_mode;
-  };
-
-  enum AnIterTraceMxNumRec { AN_ITER_TRACE_MX_NUM_REC = 20 };
-  int AnIterTraceNumRec;
-  int AnIterTraceIterDl;
-  AnIterTraceRec AnIterTrace[1 + AN_ITER_TRACE_MX_NUM_REC + 1];
-
-  int AnIterNumInvert[INVERT_HINT_Count];
-  int AnIterNumColPrice;
-  int AnIterNumRowPrice;
-  int AnIterNumRowPriceWSw;
-  int AnIterNumRowPriceUltra;
-  int AnIterNumPrDgnIt;
-  int AnIterNumDuDgnIt;
-  int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
-#endif
 };
 
 #endif /* SIMPLEX_HDUAL_H_ */

@@ -104,10 +104,9 @@ class HighsSimplexAnalysis {
   double sum_dual_infeasibilities;
   double basis_condition;
 
-  int AnIterNumColPrice;
-  int AnIterNumRowPrice;
-  int AnIterNumRowPriceWSw;
-  int AnIterNumRowPriceUltra;
+  int num_col_price;
+  int num_row_price;
+  int num_row_price_with_switch;
 
  private:
 
