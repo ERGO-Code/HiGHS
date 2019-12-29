@@ -364,109 +364,20 @@ void HMatrix::price_by_row_rm_cancellation(HVector& row_ap) const {
   // Alias
   int* ap_index = &row_ap.index[0];
   double* ap_array = &row_ap.array[0];
-  double* ap_packValue = &row_ap.packValue[0];
-  int valueP = 0;
-  int ap_pWd;
-  // Computation
-
-  bool rpRow = false;
-  //  rpRow = true;
-
   // Try to remove cancellation
   int ap_count = 0;
-  ap_pWd = row_ap.pWd;
   ap_count = row_ap.count;
   const int apcount1 = ap_count;
   ap_count = 0;
-  if (ap_pWd == row_ap.dfSparseDaStr) {
-    for (int i = 0; i < apcount1; i++) {
-      const int index = ap_index[i];
-      const double value = ap_array[index];
-      if (fabs(value) > HIGHS_CONST_TINY) {
-        ap_index[ap_count++] = index;
-      } else {
-        ap_array[index] = 0;
-      }
+  for (int i = 0; i < apcount1; i++) {
+    const int index = ap_index[i];
+    const double value = ap_array[index];
+    if (fabs(value) > HIGHS_CONST_TINY) {
+      ap_index[ap_count++] = index;
+    } else {
+      ap_array[index] = 0;
     }
-  } else if (ap_pWd == row_ap.p0SparseDaStr) {
-    map<int, double>& row_apPackMap = row_ap.packMap;
-    map<int, double>::iterator itPackMap;
-    //    int *ap_packIndex = &row_ap.packIndex[0];
-    for (itPackMap = row_apPackMap.begin(); itPackMap != row_apPackMap.end();
-         ++itPackMap) {
-      int index = itPackMap->first;
-      double value = itPackMap->second;
-      if (fabs(value) > HIGHS_CONST_TINY) {
-        ap_packValue[ap_count] = value;
-        ap_index[ap_count++] = index;
-      }
-    }
-    row_apPackMap.clear();
-  } else if (ap_pWd == row_ap.p1SparseDaStr) {
-    unsigned char* ap_valueP1 = &row_ap.valueP1[0];
-    for (int i = 0; i < apcount1; i++) {
-      const int index = ap_index[i];
-      valueP = ap_valueP1[index];
-      const double value = ap_packValue[valueP];
-      if (fabs(value) > HIGHS_CONST_TINY) {
-        ap_valueP1[index] = ap_count;
-        ap_packValue[ap_count] = value;
-        ap_index[ap_count++] = index;
-      } else {
-        ap_valueP1[index] = row_ap.ilP1;
-        //	ap_packValue[valueP] = 0;
-      }
-    }
-  } else if (ap_pWd == row_ap.p2SparseDaStr) {
-    unsigned short* ap_valueP2 = &row_ap.valueP2[0];
-    if (rpRow) {
-      printf("PRICE cancellation removal for ap_pWd = %1d\n", ap_pWd);
-      fflush(stdout);
-    }
-    if (rpRow) {
-      printf("PRICE cancellation removal for apcount1 = %1d\n", apcount1);
-      fflush(stdout);
-    }
-    for (int i = 0; i < apcount1; i++) {
-      if (rpRow) {
-        printf("PRICE cancellation removal: i=%d", i);
-        fflush(stdout);
-      }
-      const int index = ap_index[i];
-      if (rpRow) {
-        printf(" index=%d numCol=%d", index, numCol);
-        fflush(stdout);
-      }
-      valueP = ap_valueP2[index];
-      if (rpRow) {
-        printf(" valueP=%d", valueP);
-        fflush(stdout);
-      }
-      const double value = ap_packValue[valueP];
-      if (rpRow) {
-        printf(" value=%g\n", value);
-        fflush(stdout);
-      }
-      if (fabs(value) > HIGHS_CONST_TINY) {
-        ap_valueP2[index] = ap_count;
-        ap_packValue[ap_count] = value;
-        ap_index[ap_count++] = index;
-      } else {
-        ap_valueP2[index] = row_ap.ilP2;
-        //	ap_packValue[valueP] = 0;
-      }
-    }
-  } else {
-    printf("PRICE cancellation removal cannot be performed for ap_pWd = %d\n",
-           ap_pWd);
   }
-  /*
-  int rm_cancellation = apcount1-ap_count;
-  if (rm_cancellation>0) printf("Removed %6d cancellation (%3d%%)\n",
-  rm_cancellation, (100*rm_cancellation)/apcount1); if (rpRow) {printf("PRICE
-  cancellation removal is complete with ap_pWd = %1d\n", ap_pWd);
-  fflush(stdout);}
-  */
   row_ap.count = ap_count;
 }
 
