@@ -338,7 +338,6 @@ void HDual::init(int num_threads) {
   col_aq.setup(solver_num_row);
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
-  //  row_ap_ultra.setup(solver_num_col);
   // Setup other buffers
   dualRow.setup();
   dualRHS.setup();
@@ -1168,9 +1167,6 @@ void HDual::chooseColumn(HVector* row_ep) {
 
 #ifdef HiGHSDEV
   bool anPriceEr = false;
-  bool useUltraPrice = allow_price_ultra &&
-                       analysis->row_ap_density * solver_num_col * 10 < row_ap.ilP2 &&
-                       analysis->row_ap_density < 1e-3;
 #endif
   if (price_mode == PriceMode::COL) {
     // Column-wise PRICE
@@ -1202,22 +1198,6 @@ void HDual::chooseColumn(HVector* row_ep) {
       for (int col = 0; col < solver_num_col; col++) {
         row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
       }
-#ifdef HiGHSDEV
-      // Ultra-sparse PRICE is in development
-    } else if (useUltraPrice) {
-      if (simplex_info.analyseSimplexIterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
-        analysis->num_col_price++;
-      }
-      // Perform ultra-sparse row-wise PRICE
-      matrix->price_by_row_ultra(row_ap, *row_ep);
-      if (anPriceEr) {
-        bool price_er;
-        price_er = matrix->price_er_ck(row_ap, *row_ep);
-        if (!price_er) HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_VERBOSE,
-					 "No ultra PRICE error\n");
-      }
-#endif
     } else if (allow_price_by_row_switch) {
       // Avoid hyper-sparse PRICE on current density of result or
       // switch if the density of row_ap becomes extreme
@@ -1718,7 +1698,6 @@ void HDual::interpretDualEdgeWeightStrategy(const int dual_edge_weight_strategy)
 void HDual::interpretPriceStrategy(const int price_strategy) {
   allow_price_by_col_switch = false;
   allow_price_by_row_switch = false;
-  allow_price_ultra = false;
   if (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
     price_mode = PriceMode::COL;
   } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
@@ -1730,11 +1709,6 @@ void HDual::interpretPriceStrategy(const int price_strategy) {
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
-  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_ULTRA) {
-    price_mode = PriceMode::ROW;
-    allow_price_by_col_switch = true;
-    allow_price_by_row_switch = true;
-    allow_price_ultra = true;
   } else {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
 		      "HDual::interpretPriceStrategy: unrecognised price_strategy = %d - "

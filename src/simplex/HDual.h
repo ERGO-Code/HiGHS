@@ -394,7 +394,6 @@ class HDual {
   PriceMode price_mode;
   bool allow_price_by_col_switch;
   bool allow_price_by_row_switch;
-  bool allow_price_ultra;
   const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
                                        //!< when pi_p has at least this density
   const double min_dual_steepest_edge_weight = 1e-4;

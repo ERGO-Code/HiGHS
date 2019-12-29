@@ -91,31 +91,6 @@ class HMatrix {
                              int fm_i          //!< Index of row to work from
                              ) const;
   /**
-   * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$ row-wise
-   * exploiting ultra-sparsity
-   */
-  void price_by_row_ultra(HVector& row_ap,  //!< Vector \f$ \mathbf{y}\f$
-                          HVector& row_ep   //!< Vector \f$ \mathbf{x}\f$
-                          ) const;
-  /**
-   * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
-   * row-wise from a given row, exploiting ultra-sparsity with map to
-   * store indices and nonzeros of result
-   */
-  void price_by_row_ultra0(HVector& row_ap,  //!< Vector \f$ \mathbf{y}\f$
-                           HVector& row_ep,  //!< Vector \f$ \mathbf{x}\f$
-                           int* fm_i_        //!< Index of row to work from
-                           ) const;
-  /**
-   * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
-   * row-wise from a given row, exploiting ultra-sparsity with 1- and
-   * then 2-byte integer pointers into the list of values
-   */
-  void price_by_row_ultra12(HVector& row_ap,  //!< Vector \f$ \mathbf{y} \f$
-                            HVector& row_ep,  //!< Vector \f$ \mathbf{x} \f$
-                            int* fm_i_        //!< Index of row to work from
-                            ) const;
-  /**
    * @brief Remove indices of zeros from vector \f$ \mathbf{y}\f$ created by
    * cancellation in PRICE
    */
