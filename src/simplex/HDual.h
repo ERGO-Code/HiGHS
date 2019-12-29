@@ -434,11 +434,6 @@ class HDual {
   bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);
 
-#ifdef HiGHSDEV
-  void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
-  void iterateOpRecAf(int opTy, HVector& vector);
-#endif
-
   int Crash_Mode = 0;  //!< Crash mode. TODO: handle this otherwise
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
                        //!< calling function

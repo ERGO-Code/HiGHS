@@ -1461,7 +1461,6 @@ void HDual::chooseRow() {
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
-      iterateOpRecBf(AnIterOpTy_Btran, row_ep, analysis->row_ep_density);
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
     }
 #endif
@@ -1469,7 +1468,6 @@ void HDual::chooseRow() {
     factor->btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
-      iterateOpRecAf(AnIterOpTy_Btran, row_ep);
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
     }
 #endif
@@ -1656,7 +1654,6 @@ void HDual::chooseColumn(HVector* row_ep) {
     // Column-wise PRICE
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
-      iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
       AnIterNumColPrice++;
       analysis->AnIterNumColPrice++;
@@ -1672,7 +1669,6 @@ void HDual::chooseColumn(HVector* row_ep) {
       // Use column-wise PRICE due to density of row_ep
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
-	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
         AnIterNumColPrice++;
         analysis->AnIterNumColPrice++;
@@ -1690,7 +1686,6 @@ void HDual::chooseColumn(HVector* row_ep) {
       // Ultra-sparse PRICE is in development
     } else if (useUltraPrice) {
       if (simplex_info.analyseSimplexIterations) {
-	iterateOpRecBf(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
         AnIterNumRowPriceUltra++;
         analysis->AnIterNumRowPriceUltra++;
@@ -1709,7 +1704,6 @@ void HDual::chooseColumn(HVector* row_ep) {
       // switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
-	iterateOpRecBf(AnIterOpTy_Price, *row_ep, analysis->row_ap_density);
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
         AnIterNumRowPriceWSw++;
         analysis->AnIterNumRowPriceWSw++;
@@ -1725,7 +1719,6 @@ void HDual::chooseColumn(HVector* row_ep) {
       // or switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
-	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
         AnIterNumRowPrice++;
         analysis->AnIterNumRowPrice++;
@@ -1746,7 +1739,6 @@ void HDual::chooseColumn(HVector* row_ep) {
   analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
-    iterateOpRecAf(AnIterOpTy_Price, row_ap);
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
   }
 #endif
@@ -1926,7 +1918,6 @@ void HDual::updateFtran() {
   matrix->collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
-    iterateOpRecBf(AnIterOpTy_Ftran, col_aq, analysis->col_aq_density);
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
   }
 #endif
@@ -1934,7 +1925,6 @@ void HDual::updateFtran() {
   factor->ftran(col_aq, analysis->col_aq_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
-    iterateOpRecAf(AnIterOpTy_Ftran, col_aq);
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
   }
 #endif
@@ -1965,7 +1955,6 @@ void HDual::updateFtranBFRT() {
   if (col_BFRT.count) {
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
-      iterateOpRecBf(AnIterOpTy_FtranBFRT, col_BFRT, analysis->col_aq_density);
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT, analysis->col_aq_density);
     }
 #endif
@@ -1973,7 +1962,6 @@ void HDual::updateFtranBFRT() {
     factor->ftran(col_BFRT, analysis->col_aq_density);
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
-      iterateOpRecAf(AnIterOpTy_FtranBFRT, col_BFRT);
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT);
     }
 #endif
@@ -1994,7 +1982,6 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
   timer.start(simplex_info.clock_[FtranDseClock]);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
-    iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, analysis->row_DSE_density);
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector, analysis->row_DSE_density);
   }
 #endif
@@ -2002,7 +1989,6 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
   factor->ftran(*DSE_Vector, analysis->row_DSE_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
-    iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector);
   }
 #endif
@@ -2302,43 +2288,6 @@ double HDual::checkDualObjectiveValue(const char* message, int phase) {
   // Now have dual objective value
   workHMO.simplex_lp_status_.has_dual_objective_value = true;
   return updated_dual_objective_error;
-}
-#endif
-
-#ifdef HiGHSDEV
-void HDual::iterateOpRecBf(int opTy, HVector& vector, double hist_dsty) {
-  AnIterOpRec* AnIter = &AnIterOp[opTy];
-  AnIter->AnIterOpNumCa++;
-  double curr_dsty = 1.0 * vector.count / solver_num_row;
-  //  printf("%10s: %g<= %g;  %g<= %g\n", AnIter->AnIterOpName.c_str(),
-  //	 curr_dsty, AnIter->AnIterOpHyperCANCEL,
-  //	 hist_dsty, AnIter->AnIterOpHyperTRAN);
-  if (curr_dsty <= AnIter->AnIterOpHyperCANCEL &&
-      hist_dsty <= AnIter->AnIterOpHyperTRAN)
-    AnIter->AnIterOpNumHyperOp++;
-}
-
-void HDual::iterateOpRecAf(int opTy, HVector& vector) {
-  AnIterOpRec* AnIter = &AnIterOp[opTy];
-  double rsDsty = 1.0 * vector.count / AnIter->AnIterOpRsDim;
-  if (rsDsty <= hyperRESULT) AnIter->AnIterOpNumHyperRs++;
-  AnIter->AnIterOpRsMxNNZ = max(vector.count, AnIter->AnIterOpRsMxNNZ);
-  if (rsDsty > 0) {
-    AnIter->AnIterOpLog10RsDsty += log(rsDsty) / log(10.0);
-  } else {
-    /*
-    // TODO Investigate these zero norms
-    double vectorNorm = 0;
-
-    for (int index = 0; index < AnIter->AnIterOpRsDim; index++) {
-      double vectorValue = vector.array[index];
-      vectorNorm += vectorValue * vectorValue;
-    }
-    vectorNorm = sqrt(vectorNorm);
-    printf("Strange: operation %s has result density = %g: ||vector|| = %g\n",
-    AnIter->AnIterOpName.c_str(), rsDsty, vectorNorm);
-    */
-  }
 }
 
 void HDual::iterationAnalysisReport() {
