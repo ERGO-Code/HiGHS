@@ -601,8 +601,13 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header, const int this
   if (header) {
     HighsPrintMessage(output, message_level, this_message_level, " Infeasibilities num(sum)");
   } else {
-    HighsPrintMessage(output, message_level, this_message_level, 
-		      " Pr: %d(%g)", num_primal_infeasibilities, sum_primal_infeasibilities);
+    if (solve_phase == 1) {
+      HighsPrintMessage(output, message_level, this_message_level, 
+			" Ph1: %d(%g)", num_primal_infeasibilities, sum_primal_infeasibilities);
+    } else {
+      HighsPrintMessage(output, message_level, this_message_level, 
+			" Pr: %d(%g)", num_primal_infeasibilities, sum_primal_infeasibilities);
+    }
     if (sum_dual_infeasibilities > 0) {
       HighsPrintMessage(output, message_level, this_message_level, 
 			"; Du: %d(%g)", num_dual_infeasibilities, sum_dual_infeasibilities);

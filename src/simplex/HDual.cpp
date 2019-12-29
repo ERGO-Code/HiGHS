@@ -1105,8 +1105,6 @@ void HDual::iterationAnalysis() {
     analysis->pivotal_row_index = rowOut;
     analysis->leaving_variable = columnOut;
     analysis->entering_variable = columnIn;
-    analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
-    analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
     analysis->invert_hint = invertHint;
     analysis->freelist_size = dualRow.freeListSize;
     analysis->reduced_rhs_value = 0;
@@ -1119,8 +1117,6 @@ void HDual::iterationAnalysis() {
     analysis->pivot_value_from_row = alphaRow;
     analysis->numerical_trouble = numericalTrouble;
     analysis->objective_value = simplex_info.updated_dual_objective_value;
-    analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
-    analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
     analysis->basis_condition = simplex_info.invert_condition;
 
     analysis->iterationReport();
@@ -1386,6 +1382,14 @@ void HDual::iterationReportRebuild(
 				   ) {
 #ifdef HiGHSDEV
   if (use_HSA) {
+    HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+    HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
+    analysis->solve_phase = solvePhase;
+    analysis->objective_value = simplex_info.updated_dual_objective_value;
+    analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
+    analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
+    analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
+    analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
     analysis->invertReport();
     return;
   }
