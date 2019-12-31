@@ -37,11 +37,9 @@
  */
 class HighsSimplexAnalysis {
  public:
-  void setup(const HighsLp& lp, const HighsOptions& options);
+  void setup(const HighsLp& lp, const HighsOptions& options, const int simplex_iteration_count_);
 
   void messaging(FILE* logfile_, FILE* output_, const int message_level_);
-
-  void initialise(const int simplex_iteration_count);
 
   void updateOperationResultDensity(const double local_density, double& density);
 
@@ -53,13 +51,12 @@ class HighsSimplexAnalysis {
   bool switchToDevex();
 
 #ifdef HiGHSDEV
+  HighsTimer timer_;
   void iterationRecord();
   void operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density);
   void operationRecordAfter(const int operation_type, const HVector& vector);
   void summaryReport();
 #endif
-
-  HighsTimer timer_;
 
   int numRow;
   int numCol;
@@ -75,38 +72,38 @@ class HighsSimplexAnalysis {
   double row_ap_density;
   double row_DSE_density;
   
-  int simplex_strategy;
-  int num_threads;
-  DualEdgeWeightMode edge_weight_mode;
-  int solve_phase;
-  int simplex_iteration_count;
-  int major_iteration_count;
-  int minor_iteration_count;
-  int devex_iteration_count;
-  int pivotal_row_index;
-  int leaving_variable;
-  int entering_variable;
-  int num_primal_infeasibilities;
-  int num_dual_infeasibilities;
-  int invert_hint;
-  int freelist_size;
-  double reduced_rhs_value;
-  double reduced_cost_value;
-  double edge_weight;
-  double primal_delta;
-  double primal_step;
-  double dual_step;
-  double pivot_value_from_column;
-  double pivot_value_from_row;
-  double numerical_trouble;
-  double objective_value;
-  double sum_primal_infeasibilities;
-  double sum_dual_infeasibilities;
-  double basis_condition;
+  int simplex_strategy = 0;
+  int num_threads = 0;
+  DualEdgeWeightMode edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
+  int solve_phase = 0;
+  int simplex_iteration_count = 0;
+  int major_iteration_count = 0;
+  int minor_iteration_count = 0;
+  int devex_iteration_count = 0;
+  int pivotal_row_index = 0;
+  int leaving_variable = 0;
+  int entering_variable = 0;
+  int num_primal_infeasibilities = 0;
+  int num_dual_infeasibilities = 0;
+  int invert_hint = 0;
+  int freelist_size = 0;
+  double reduced_rhs_value = 0;
+  double reduced_cost_value = 0;
+  double edge_weight = 0;
+  double primal_delta = 0;
+  double primal_step = 0;
+  double dual_step = 0;
+  double pivot_value_from_column = 0;
+  double pivot_value_from_row = 0;
+  double numerical_trouble = 0;
+  double objective_value = 0;
+  double sum_primal_infeasibilities = 0;
+  double sum_dual_infeasibilities = 0;
+  double basis_condition = 0;
 
-  int num_col_price;
-  int num_row_price;
-  int num_row_price_with_switch;
+  int num_col_price = 0;
+  int num_row_price = 0;
+  int num_row_price_with_switch = 0;
 
  private:
 
@@ -137,27 +134,27 @@ class HighsSimplexAnalysis {
   const double accept_weight_threshhold = 0.25;
   const double weight_error_threshhold = 4.0;
 
-  int num_dual_steepest_edge_weight_check;
-  int num_dual_steepest_edge_weight_reject;
-  int num_wrong_low_dual_steepest_edge_weight;
-  int num_wrong_high_dual_steepest_edge_weight;
-  double average_frequency_low_dual_steepest_edge_weight;
-  double average_frequency_high_dual_steepest_edge_weight;
-  double average_log_low_dual_steepest_edge_weight_error;
-  double average_log_high_dual_steepest_edge_weight_error;
-  double max_average_frequency_low_dual_steepest_edge_weight;
-  double max_average_frequency_high_dual_steepest_edge_weight;
-  double max_sum_average_frequency_extreme_dual_steepest_edge_weight;
-  double max_average_log_low_dual_steepest_edge_weight_error;
-  double max_average_log_high_dual_steepest_edge_weight_error;
-  double max_sum_average_log_extreme_dual_steepest_edge_weight_error;
+  int num_dual_steepest_edge_weight_check = 0;
+  int num_dual_steepest_edge_weight_reject = 0;
+  int num_wrong_low_dual_steepest_edge_weight = 0;
+  int num_wrong_high_dual_steepest_edge_weight = 0;
+  double average_frequency_low_dual_steepest_edge_weight = 0;
+  double average_frequency_high_dual_steepest_edge_weight = 0;
+  double average_log_low_dual_steepest_edge_weight_error = 0;
+  double average_log_high_dual_steepest_edge_weight_error = 0;
+  double max_average_frequency_low_dual_steepest_edge_weight = 0;
+  double max_average_frequency_high_dual_steepest_edge_weight = 0;
+  double max_sum_average_frequency_extreme_dual_steepest_edge_weight = 0;
+  double max_average_log_low_dual_steepest_edge_weight_error = 0;
+  double max_average_log_high_dual_steepest_edge_weight_error = 0;
+  double max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
 
   const int iteration_report_message_level = ML_DETAILED;
   const int invert_report_message_level = ML_MINIMAL;
   int num_invert_report_since_last_header = -1;
   int num_iteration_report_since_last_header = -1;
 
-  int AnIterIt0;
+  int AnIterIt0 = 0;
 #ifdef HiGHSDEV
   int AnIterPrevIt;
   // Major operation analysis struct

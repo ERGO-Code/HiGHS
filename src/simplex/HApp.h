@@ -249,9 +249,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     timer.stop(simplex_info.clock_[SimplexTotalClock]);
     reportSimplexProfiling(highs_model_object);
-    // ToDO move iterationAnalysisReport to simplex
-    printf("!! Move iterationAnalysisReport() to HSimplex\n");
-    //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
 
     if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
@@ -393,8 +390,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // Reset unscaled and scaled model status and solution params - except for iteration counts
   resetModelStatusAndSolutionParams(highs_model_object);
   HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
-  simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_);
-  simplex_analysis.initialise(highs_model_object.scaled_solution_params_.simplex_iteration_count);
+  simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
+			 highs_model_object.scaled_solution_params_.simplex_iteration_count);
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(highs_model_object);
@@ -443,6 +440,10 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     invalidateSolutionInfeasibilityParams(highs_model_object.scaled_solution_params_);
   }
     
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) simplex_analysis.summaryReport();
+#endif
+
   // Deduce the HiGHS basis and solution from the simplex basis and solution
   HighsSimplexInterface simplex_interface(highs_model_object);
   simplex_interface.convertSimplexToHighsSolution();

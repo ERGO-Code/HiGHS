@@ -245,10 +245,6 @@ HighsStatus HDual::solve(int num_threads) {
     if (solve_bailout) break;
   }
 
-#ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) analysis->summaryReport();
-#endif
-
   if (solve_bailout) {
     assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
 	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);

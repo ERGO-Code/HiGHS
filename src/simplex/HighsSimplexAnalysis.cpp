@@ -17,7 +17,7 @@
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/HFactor.h"
 
-void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options) {
+void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options, const int simplex_iteration_count_) {
   // Copy Problem size
   numRow = lp.numRow_;
   numCol = lp.numCol_;
@@ -26,6 +26,10 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options)
   allow_dual_steepest_edge_to_devex_switch = options.simplex_dual_edge_weight_strategy ==
     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
   dual_steepest_edge_weight_log_error_threshhold = options.dual_steepest_edge_weight_log_error_threshhold;
+  //
+  AnIterIt0 = simplex_iteration_count_;
+  AnIterCostlyDseFq = 0;
+  AnIterPrevRpNumCostlyDseIt = 0;
   // Copy messaging parameter from options
   messaging(options.logfile, options.output, options.message_level);
   // Zero the densities
@@ -58,21 +62,9 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options)
   num_iteration_report_since_last_header = -1;
   num_invert_report_since_last_header = -1;
   
-}
-
-void HighsSimplexAnalysis::messaging(FILE* logfile_, FILE* output_, const int message_level_) {
-  logfile = logfile_;
-  output = output_;
-  message_level = message_level_;
-}
-
-void HighsSimplexAnalysis::initialise(const int simplex_iteration_count_) {
-  AnIterIt0 = simplex_iteration_count_;
-  timer_.resetHighsTimer();
-  AnIterCostlyDseFq = 0;
-  AnIterPrevRpNumCostlyDseIt = 0;
 #ifdef HiGHSDEV
-  AnIterPrevIt = 0;
+  AnIterPrevIt = simplex_iteration_count_;
+  timer_.resetHighsTimer();
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN];
   AnIter->AnIterOpName = "Btran";
@@ -128,6 +120,13 @@ void HighsSimplexAnalysis::initialise(const int simplex_iteration_count_) {
   lcAnIter->AnIterTraceIter = AnIterIt0;
   lcAnIter->AnIterTraceTime = timer_.getTime();
 #endif
+
+}
+
+void HighsSimplexAnalysis::messaging(FILE* logfile_, FILE* output_, const int message_level_) {
+  logfile = logfile_;
+  output = output_;
+  message_level = message_level_;
 }
 
 void HighsSimplexAnalysis::updateOperationResultDensity(const double local_density, double& density) {
@@ -148,7 +147,7 @@ void HighsSimplexAnalysis::iterationReport() {
   if (!(iteration_report_message_level & message_level)) return;
   const bool header =
     (num_iteration_report_since_last_header < 0) ||
-    (num_iteration_report_since_last_header > 9);
+    (num_iteration_report_since_last_header > 49);
   if (header) {
     iterationReport(header);
     num_iteration_report_since_last_header = 0;
@@ -160,7 +159,7 @@ void HighsSimplexAnalysis::invertReport() {
   if (!(invert_report_message_level & message_level)) return;
   const bool header =
     (num_invert_report_since_last_header < 0) ||
-    (num_invert_report_since_last_header > 9) ||
+    (num_invert_report_since_last_header > 49) ||
     (num_iteration_report_since_last_header >=0) ;
   if (header) {
     invertReport(header);
@@ -391,6 +390,7 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
 
 void HighsSimplexAnalysis::summaryReport() {
   int AnIterNumIter = simplex_iteration_count - AnIterIt0;
+  if (AnIterNumIter<=0) return;
   printf("\nAnalysis of %d iterations (%d to %d)\n", AnIterNumIter,
          AnIterIt0 + 1, simplex_iteration_count);
   if (AnIterNumIter <= 0) return;
@@ -489,31 +489,34 @@ void HighsSimplexAnalysis::summaryReport() {
   printf("\n%12d (%3d%%) costly DSE        iterations\n", AnIterNumCostlyDseIt,
          (100 * AnIterNumCostlyDseIt) / AnIterNumIter);
 
-  //
-  // Add a record for the final iterations: may end up with one more
-  // than AN_ITER_TRACE_MX_NUM_REC records, so ensure that there is enough
-  // space in the arrays
-  //
-  AnIterTraceNumRec++;
-  AnIterTraceRec& lcAnIter = AnIterTrace[AnIterTraceNumRec];
-  lcAnIter.AnIterTraceIter = simplex_iteration_count;
-  lcAnIter.AnIterTraceTime = timer_.getTime();
-  lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
-  lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
-  lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
-  lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
-  if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
-    lcAnIter.AnIterTraceAux0 = AnIterCostlyDseMeasure;
-  } else {
-    lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
-    lcAnIter.AnIterTraceAux0 = 0;
-  }
-  lcAnIter.AnIterTrace_dual_edge_weight_mode = (int)edge_weight_mode;
-
   if (AnIterTraceIterDl >= 100) {
+    // Possibly (usually) add a temporary record for the final
+    // iterations: may end up with one more than
+    // AN_ITER_TRACE_MX_NUM_REC records, so ensure that there is
+    // enough space in the arrays
+    //
+    const bool add_extra_record = simplex_iteration_count > AnIterTrace[AnIterTraceNumRec].AnIterTraceIter;
+    if (add_extra_record) {
+      AnIterTraceNumRec++;
+      AnIterTraceRec& lcAnIter = AnIterTrace[AnIterTraceNumRec];
+      lcAnIter.AnIterTraceIter = simplex_iteration_count;
+      lcAnIter.AnIterTraceTime = timer_.getTime();
+      lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
+      lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
+      lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
+      lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
+      if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+	lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
+	lcAnIter.AnIterTraceAux0 = AnIterCostlyDseMeasure;
+      } else {
+	lcAnIter.AnIterTraceDsty[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = 0;
+	lcAnIter.AnIterTraceAux0 = 0;
+      }
+      lcAnIter.AnIterTrace_dual_edge_weight_mode = (int)edge_weight_mode;
+    }
+
     printf("\n Iteration speed analysis\n");
-    lcAnIter = AnIterTrace[0];
+    AnIterTraceRec& lcAnIter = AnIterTrace[0];
     int fmIter = lcAnIter.AnIterTraceIter;
     double fmTime = lcAnIter.AnIterTraceTime;
     printf(
@@ -521,7 +524,7 @@ void HighsSimplexAnalysis::summaryReport() {
         "C_Aq R_Ep R_Ap  DSE | "
         "EdWt | Aux0\n");
     for (int rec = 1; rec <= AnIterTraceNumRec; rec++) {
-      lcAnIter = AnIterTrace[rec];
+      AnIterTraceRec& lcAnIter = AnIterTrace[rec];
       int toIter = lcAnIter.AnIterTraceIter;
       double toTime = lcAnIter.AnIterTraceTime;
       int dlIter = toIter - fmIter;
@@ -554,6 +557,8 @@ void HighsSimplexAnalysis::summaryReport() {
       fmTime = toTime;
     }
     printf("\n");
+    // Remove any temporary record added for the final iterations
+    if (add_extra_record) AnIterTraceNumRec--;
   }
 }
 #endif
