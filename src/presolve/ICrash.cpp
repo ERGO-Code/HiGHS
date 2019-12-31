@@ -57,6 +57,10 @@ bool parseICrashStrategy(const std::string& strategy,
     icrash_strategy = ICrashStrategy::kAdmm;
   else if (lower == "ica")
     icrash_strategy = ICrashStrategy::kICA;
+  else if (lower == "update_penalty")
+    icrash_strategy = ICrashStrategy::kUpdatePenalty;
+  else if (lower == "update_admm")
+    icrash_strategy = ICrashStrategy::kUpdateAdmm;
   else
     return false;
   return true;
@@ -204,6 +208,16 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
 
   // The other strategies are WIP.
   switch (options.strategy) {
+    case ICrashStrategy::kPenalty: {
+      idata.mu = 0.1 * idata.mu;
+      break;
+    }
+    case ICrashStrategy::kAdmm: {
+      HighsPrintMessage(
+          options.output, options.message_level, ML_ALWAYS,
+          "ICrash Error: ADMM parameter update not implemented\n.");
+      break;
+    }
     case ICrashStrategy::kICA: {
       // Update mu every third iteration, otherwise update lambda.
       if (iteration % 3 == 0) {
@@ -216,18 +230,28 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       }
       break;
     }
-    case ICrashStrategy::kPenalty: {
-      idata.mu = 0.1 * idata.mu;
+    case ICrashStrategy::kUpdatePenalty:{
+      // Update mu every third iteration, otherwise do nothing.
+      if (iteration % 3 == 0)
+        idata.mu = 0.1 * idata.mu;
       break;
     }
-    case ICrashStrategy::kAdmm: {
-      HighsPrintMessage(
-          options.output, options.message_level, ML_ALWAYS,
-          "ICrash Error: ADMM parameter update not implemented\n.");
+    case ICrashStrategy::kUpdateAdmm:{
+      // Update mu every third iteration, otherwise update lambda.
+      if (iteration % 3 == 0) {
+        idata.mu = 0.1 * idata.mu;
+      } else {
+        std::vector<double> residual_ica(idata.lp.numRow_, 0);
+        updateResidualIca(idata.lp, idata.xk, residual_ica);
+        for (int row = 0; row < idata.lp.numRow_; row++)
+          // todo: double check clp.
+          idata.lambda[row] = idata.lambda[row] + idata.mu * residual_ica[row];
+      }
       break;
     }
   }
-}
+                      }               
+    
 
 void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
@@ -270,6 +294,8 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
 
 bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
   switch (options.strategy) {
+    case ICrashStrategy::kUpdatePenalty:
+    case ICrashStrategy::kUpdateAdmm:
     case ICrashStrategy::kICA: {
       assert(!options.exact);
       solveSubproblemICA(idata, options);
@@ -310,12 +336,16 @@ void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
 
 std::string ICrashtrategyToString(const ICrashStrategy strategy) {
   switch (strategy) {
-    case ICrashStrategy::kAdmm:
-      return "ADMM";
     case ICrashStrategy::kPenalty:
       return "Penalty";
+    case ICrashStrategy::kAdmm:
+      return "ADMM";
     case ICrashStrategy::kICA:
       return "ICA";
+    case ICrashStrategy::kUpdatePenalty:
+      return "UpdatePenalty";
+    case ICrashStrategy::kUpdateAdmm:
+      return "UpdateAdmm";
   }
   return "ICrashError: Unknown strategy.\n";
 }

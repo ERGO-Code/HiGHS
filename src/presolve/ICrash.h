@@ -21,7 +21,9 @@
 enum class ICrashStrategy {
   kPenalty,
   kAdmm,
-  kICA
+  kICA,
+  kUpdatePenalty,
+  kUpdateAdmm
 };
 
 struct ICrashIterationDetails {
