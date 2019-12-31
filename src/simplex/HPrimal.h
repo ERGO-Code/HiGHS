@@ -49,19 +49,6 @@ class HPrimal {
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint=-1);
 
-
-  void iterationReport();
-  void iterationReportFull(bool header);
-  void iterationReportIterationAndPhase(int iterate_log_level, bool header);
-  void iterationReportPrimalObjective(int iterate_log_level, bool header);
-  void iterationReportIterationData(int iterate_log_level, bool header);
-  void iterationReportRebuild(
-#ifdef HiGHSDEV
-			      const int i_v=-1
-#endif
-			      );
-  void reportInfeasibility();
-
   // Model pointer
   HighsModelObject& workHMO;
 

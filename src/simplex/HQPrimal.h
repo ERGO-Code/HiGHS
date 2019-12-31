@@ -53,13 +53,20 @@ class HQPrimal {
   void devexReset();
   void devexUpdate();
 
-  void iterationReport();
-  void iterationReportFull(bool header);
-  void iterationReportIterationAndPhase(int iterate_log_level, bool header);
-  void iterationReportPrimalObjective(int iterate_log_level, bool header);
-  void iterationReportIterationData(int iterate_log_level, bool header);
-  void iterationReportRebuild(const int i_v);
-  void reportInfeasibility();
+  /**
+   * @brief Pass the data for the iteration analysis, report and rebuild report
+   */
+  void iterationAnalysisData();
+
+  /**
+   * @brief Perform the iteration analysis
+   */
+  void iterationAnalysis();
+
+  /**
+   * @brief Single line report after rebuild
+   */
+  void reportRebuild(const int rebuild_invert_hint=-1);
 
   // Model pointer
   HighsModelObject& workHMO;

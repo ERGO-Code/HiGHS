@@ -86,9 +86,9 @@ HighsStatus HQPrimal::solve() {
   initialise_dual_steepest_edge_weights
     // Using dual Devex edge weights
     // Zero the number of Devex frameworks used and set up the first one
-    n_dvx_fwk = 0;
-    dvx_ix.assign(solver_num_tot, 0);
-    iz_dvx_fwk();
+    num_devex_framework = 0;
+    devex_index.assign(solver_num_tot, 0);
+    initialiseDevexFramework();
     // Indicate that edge weights are known
     simplex_lp_status.has_dual_steepest_edge_weights = true;
   }
@@ -173,8 +173,8 @@ HighsStatus HQPrimal::solve() {
 #ifdef HiGHSDEV
   /*
   if (primal_edge_weight_mode == PrimalEdgeWeightMode::DEVEX) {
-    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
-           scaled_solution_params.simplex_iteration_count / n_dvx_fwk);
+    printf("Devex: num_devex_framework = %d; Average num_devex_iterations = %d\n", num_devex_framework,
+           scaled_solution_params.simplex_iteration_count / num_devex_framework);
   }
   */
 #endif
@@ -221,6 +221,11 @@ void HQPrimal::solvePhase2() {
 
   ph1SorterR.reserve(solver_num_row);
   ph1SorterT.reserve(solver_num_row);
+
+  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
+  analysis->col_aq_density = 0;
+  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->row_ep_density = 0\n");
+  analysis->row_ep_density = 0;
 
   devexReset();
 
@@ -417,7 +422,7 @@ void HQPrimal::primalRebuild() {
   }
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
-  iterationReportRebuild(sv_invertHint);
+  reportRebuild(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
@@ -523,8 +528,16 @@ void HQPrimal::primalChooseRow() {
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
+#endif
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
   timer.stop(simplex_info.clock_[FtranClock]);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
+#endif
 
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
@@ -680,7 +693,7 @@ void HQPrimal::primalUpdate() {
     rowOut = -1;
     numericalTrouble = 0;
     thetaDual = workDual[columnIn];
-    iterationReport();
+    iterationAnalysis();
     num_flip_since_rebuild++;
     return;
   }
@@ -714,19 +727,27 @@ void HQPrimal::primalUpdate() {
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
-  //  if (simplex_info.analyseSimplexIterations)
-  //  iterateOpRecBf(AnIterOpTy_Btran, row_ep, analysis->row_ep_density);
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
 #endif
   workHMO.factor_.btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
-  //  if (simplex_info.analyseSimplexIterations)
-  //  iterateOpRecAf(AnIterOpTy_Btran, row_ep);
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
-
+  if (simplex_info.analyseSimplexIterations) {
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
+    analysis->num_row_price++;
+  }
   timer.start(simplex_info.clock_[PriceClock]);
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ep);
+#endif
+
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
 
@@ -791,7 +812,7 @@ void HQPrimal::primalUpdate() {
   }
 
   // Report on the iteration
-  iterationReport();
+  iterationAnalysis();
 }
 
 /* Compute the reduced cost for primal phase 1 with artificial cost. */
@@ -804,6 +825,7 @@ void HQPrimal::phase1ComputeDual() {
   const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   const double *baseValue = &workHMO.simplex_info_.baseValue_[0];
 
+  timer.start(simplex_info.clock_[BtranClock]);
   /* Setup artificial cost and compute pi with BTran */
   HVector buffer;
   buffer.setup(nRow);
@@ -818,13 +840,35 @@ void HQPrimal::phase1ComputeDual() {
       buffer.array[iRow] = 0.0;
     }
   }
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, buffer, analysis->row_ep_density);
+#endif
   workHMO.factor_.btran(buffer, 1);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, buffer);
+#endif
+  timer.stop(simplex_info.clock_[BtranClock]);
 
+  timer.start(simplex_info.clock_[PriceClock]);
   /* The compute the phase 1 reduced cost for all variables by SpMV */
   HVector bufferLong;
   bufferLong.setup(nCol);
   bufferLong.clear();
+#ifdef HiGHSDEV
+    if (simplex_info.analyseSimplexIterations) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, buffer, 0.0);
+      analysis->num_col_price++;
+    }
+#endif
   workHMO.matrix_.price_by_col(bufferLong, buffer);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
+#endif
+  timer.stop(simplex_info.clock_[PriceClock]);
+
   const int* nbFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   double *workDual = &workHMO.simplex_info_.workDual_[0];
   for (int iSeq = 0; iSeq < nCol + nRow; iSeq++) {
@@ -870,10 +914,20 @@ void HQPrimal::phase1ChooseRow() {
   const double* baseValue = &workHMO.simplex_info_.baseValue_[0];
 
   /* Compute the transformed pivot column and update its density */
+  timer.start(simplex_info.clock_[FtranClock]);
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
+#endif
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
+  timer.stop(simplex_info.clock_[FtranClock]);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
+#endif
 
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
@@ -1177,160 +1231,55 @@ void HQPrimal::devexUpdate() {
   devexWeight[columnIn] = 1.0;
 }
 
-void HQPrimal::iterationReport() {
-  int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
-  int iteration_count_difference = iteration_count -
-    previous_iteration_report_header_iteration_count;
-  bool header = (previous_iteration_report_header_iteration_count < 0)
-    || (iteration_count_difference > 10);
-  if (header) {
-    iterationReportFull(header);
-    previous_iteration_report_header_iteration_count = iteration_count;
-  }
-  iterationReportFull(false);
-}
-
-void HQPrimal::iterationReportFull(bool header) {
-#ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  bool report_condition = simplex_info.analyse_invert_condition;
-#endif
-  if (header) {
-    iterationReportIterationAndPhase(ML_DETAILED, true);
-    iterationReportPrimalObjective(ML_DETAILED, true);
-#ifdef HiGHSDEV
-    iterationReportIterationData(ML_DETAILED, true);
-    //    iterationReportDsty(ML_DETAILED, true);
-    //    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED, " FreeLsZ");
-    if (report_condition)
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED, 
-			"   Condition");
-#endif
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED, "\n");
-  } else {
-    iterationReportIterationAndPhase(ML_DETAILED, false);
-    iterationReportPrimalObjective(ML_DETAILED, false);
-#ifdef HiGHSDEV
-    iterationReportIterationData(ML_DETAILED, false);
-    //    iterationReportDsty(ML_DETAILED, false);
-    //    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED, " %7d", dualRow.freeListSize);
-    if (report_condition)
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED, 
-			" %11.4g", simplex_info.invert_condition);
-#endif
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED, "\n");
-  }
-}
-
-void HQPrimal::iterationReportIterationAndPhase(int iterate_log_level,
-                                               bool header) {
-  int solvePhase = 2;
-  if (header) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-		      " Iteration Ph");
-  } else {
-    int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-		      " %9d %2d", iteration_count, solvePhase);
-  }
-}
-
-void HQPrimal::iterationReportPrimalObjective(int iterate_log_level,
-                                             bool header) {
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (header) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-		      "      PrimalObjective");
-  } else {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-		      " %20.10e", simplex_info.updated_primal_objective_value);
-  }
-}
-
-void HQPrimal::iterationReportIterationData(int iterate_log_level, bool header) {
-  if (header) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-                      " Inv       NumCk     EnC     LvR     LvC        ThDu    "
-                      "    ThPr          Aa");
-  } else {
-    bool flipped = rowOut < 0;
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-		      " %3d %11.4g %7d", invertHint, numericalTrouble, columnIn);
-    if (flipped) {
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level,
-                        "                 %11.4g %11.4g            ", thetaDual, thetaPrimal);
-    } else {
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-			" %7d %7d %11.4g %11.4g %11.4g", rowOut, columnOut, thetaDual, thetaPrimal, alpha);
-    }
-  }
-}
-
-/*
-void HQPrimal::iterationReportDsty(int iterate_log_level, bool header) {
-  bool rp_dual_steepest_edge = dual_edge_weight_mode ==
-DualEdgeWeightMode::STEEPEST_EDGE; if (header) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-    " C_Aq R_Ep R_Ap");
-    if (rp_dual_steepest_edge) {
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-      "  DSE");
-    } else {
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-      "     ");
-    }
-  } else {
-    int l10ColDse = intLog10(analysis->col_aq_density);
-    int l10REpDse = intLog10(analysis->row_ep_density);
-    int l10RapDse = intLog10(analysis->row_ap_density);
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-    " %4d %4d %4d", l10ColDse, l10REpDse,
-l10RapDse); if (rp_dual_steepest_edge) { int l10DseDse =
-intLog10(analysis->row_DSE_density); HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-" %4d",
-l10DseDse); } else { HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, iterate_log_level, 
-"     ");
-    }
-  }
-}
-int HQPrimal::intLog10(double v) {
-  int intLog10V = -99;
-  if (v > 0) intLog10V = log(v) / log(10.0);
-  return intLog10V;
-}
-
-*/
-void HQPrimal::iterationReportRebuild(const int i_v) {
-#ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  bool report_condition = simplex_info.analyse_invert_condition;
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-                    "Iter %10d:", workHMO.scaled_solution_params_.simplex_iteration_count);
-  //  iterationReportDsty(ML_MINIMAL, true);
-  //  iterationReportDsty(ML_MINIMAL, false);
-  iterationReportPrimalObjective(ML_MINIMAL, false);
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL, 
-		    " PrPh%1d(%2d)", solvePhase, i_v);
-  if (report_condition)
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL, 
-		      " k(B)%10.4g", simplex_info.invert_condition);
-  if (solvePhase == 2) reportInfeasibility();
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL, "\n");
-#else
-  logRebuild(workHMO, true, solvePhase);
-#endif
-}
-
-void HQPrimal::reportInfeasibility() {
+void HQPrimal::iterationAnalysisData() {
+  HighsOptions& options = workHMO.options_;
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
-  if (scaled_solution_params.sum_primal_infeasibilities > 0) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL, 
-		      " Pr: %d(%g);",
-                      scaled_solution_params.num_primal_infeasibilities,
-                      scaled_solution_params.sum_primal_infeasibilities);
-  }
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL, 
-		    " Du: %d(%g)",
-                    scaled_solution_params.num_dual_infeasibilities,
-                    scaled_solution_params.sum_dual_infeasibilities);
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+  analysis->num_threads = options.num_threads;
+  analysis->edge_weight_mode = DualEdgeWeightMode::DANTZIG;
+  analysis->solve_phase = solvePhase;
+  analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
+  analysis->major_iteration_count = -1;
+  analysis->minor_iteration_count = -1;
+  analysis->devex_iteration_count = 0;
+  analysis->pivotal_row_index = rowOut;
+  analysis->leaving_variable = columnOut;
+  analysis->entering_variable = columnIn;
+  analysis->invert_hint = invertHint;
+  analysis->freelist_size = 0;
+  analysis->reduced_rhs_value = 0;
+  analysis->reduced_cost_value = 0;
+  analysis->edge_weight = 0;
+  analysis->primal_delta = 0;
+  analysis->primal_step = thetaPrimal;
+  analysis->dual_step = thetaDual;
+  analysis->pivot_value_from_column = alpha;
+  analysis->pivot_value_from_row = alpha;//Row;
+  analysis->numerical_trouble = numericalTrouble;
+  analysis->objective_value = simplex_info.updated_primal_objective_value;
+  analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
+  analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
+  analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
+  analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
+#ifdef HiGHSDEV
+  analysis->basis_condition = simplex_info.invert_condition;
+#endif
 }
+
+void HQPrimal::iterationAnalysis() {
+  // Possibly report on the iteration
+  iterationAnalysisData();
+  analysis->iterationReport();
+
+#ifdef HiGHSDEV
+  analysis->iterationRecord();
+#endif
+}
+
+void HQPrimal::reportRebuild(const int rebuild_invert_hint) {
+  iterationAnalysisData();
+  analysis->invert_hint = rebuild_invert_hint;
+  analysis->invertReport();
+}
+
