@@ -151,6 +151,11 @@ class HDual {
   void iterateMulti();  // in HDualMulti.cpp
 
   /**
+   * @brief Pass the data for the iteration analysis, report and rebuild report
+   */
+  void iterationAnalysisData();
+
+  /**
    * @brief Perform the iteration analysis
    */
   void iterationAnalysis();
@@ -158,7 +163,7 @@ class HDual {
   /**
    * @brief Single line report after rebuild
    */
-  void iterationReportRebuild();
+  void reportRebuild(const int rebuild_invert_hint=-1);
 
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)

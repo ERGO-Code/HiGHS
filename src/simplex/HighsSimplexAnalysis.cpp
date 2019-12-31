@@ -55,7 +55,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options)
     max_average_log_high_dual_steepest_edge_weight_error = 0;
     max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
   }
-  previous_iteration_report_header_iteration_count = -1;
+  num_iteration_report_since_last_header = -1;
+  num_invert_report_since_last_header = -1;
   
 }
 
@@ -144,20 +145,30 @@ void HighsSimplexAnalysis::equalDensity(const double density0, const double dens
 */
 
 void HighsSimplexAnalysis::iterationReport() {
-  const int iteration_count_difference = simplex_iteration_count -
-    previous_iteration_report_header_iteration_count;
-  const bool header = previous_iteration_report_header_iteration_count < 0
-    || iteration_count_difference > 10;
+  if (!(iteration_report_message_level & message_level)) return;
+  const bool header =
+    (num_iteration_report_since_last_header < 0) ||
+    (num_iteration_report_since_last_header > 9);
   if (header) {
     iterationReport(header);
-    previous_iteration_report_header_iteration_count = simplex_iteration_count;
+    num_iteration_report_since_last_header = 0;
   }
   iterationReport(false);
+  num_iteration_report_since_last_header++;
 }
 
 void HighsSimplexAnalysis::invertReport() {
-  //  invertReport(true);
+  if (!(invert_report_message_level & message_level)) return;
+  const bool header =
+    (num_invert_report_since_last_header < 0) ||
+    (num_invert_report_since_last_header > 9) ||
+    (num_iteration_report_since_last_header >=0) ;
+  if (header) {
+    invertReport(header);
+    num_invert_report_since_last_header = 0;
+  }
   invertReport(false);
+  num_invert_report_since_last_header++;
 }
 
 void HighsSimplexAnalysis::dualSteepestEdgeWeightError(const double computed_edge_weight,
@@ -552,27 +563,27 @@ void HighsSimplexAnalysis::summaryReport() {
 //
 
 void HighsSimplexAnalysis::iterationReport(const bool header) {
+  if (!(iteration_report_message_level & message_level)) return;
   if (!header && (pivotal_row_index<0 || entering_variable<0)) return;
-  const int this_message_level = ML_DETAILED;
-  reportAlgorithmPhaseIterationObjective(header, this_message_level);
+  reportAlgorithmPhaseIterationObjective(header, iteration_report_message_level);
 #ifdef HiGHSDEV
-  reportDensity(header, this_message_level);
-  reportIterationData(header, this_message_level);
-  //  reportFreeListSize(header, this_message_level);
+  reportDensity(header, iteration_report_message_level);
+  reportIterationData(header, iteration_report_message_level);
+  //  reportFreeListSize(header, iteration_report_message_level);
 #endif
-  HighsPrintMessage(output, message_level, this_message_level, "\n");
+  HighsPrintMessage(output, message_level, iteration_report_message_level, "\n");
 }
 
 void HighsSimplexAnalysis::invertReport(const bool header) {
-  int this_message_level = ML_MINIMAL;
-  reportAlgorithmPhaseIterationObjective(header, this_message_level);
+  if (!(invert_report_message_level & message_level)) return;
+  reportAlgorithmPhaseIterationObjective(header, invert_report_message_level);
 #ifdef HiGHSDEV
-  reportDensity(header, this_message_level);
-  reportInvert(header, this_message_level);
-  //  reportCondition(header, this_message_level);
+  reportDensity(header, invert_report_message_level);
+  reportInvert(header, invert_report_message_level);
+  //  reportCondition(header, invert_report_message_level);
 #endif
-  reportInfeasibility(header, this_message_level);
-  HighsPrintMessage(output, message_level, this_message_level, "\n");
+  reportInfeasibility(header, invert_report_message_level);
+  HighsPrintMessage(output, message_level, invert_report_message_level, "\n");
 }
 
 void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(const bool header, const int this_message_level) {

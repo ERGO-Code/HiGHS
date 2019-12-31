@@ -152,7 +152,10 @@ class HighsSimplexAnalysis {
   double max_average_log_high_dual_steepest_edge_weight_error;
   double max_sum_average_log_extreme_dual_steepest_edge_weight_error;
 
-  int previous_iteration_report_header_iteration_count = -1;
+  const int iteration_report_message_level = ML_DETAILED;
+  const int invert_report_message_level = ML_MINIMAL;
+  int num_invert_report_since_last_header = -1;
+  int num_iteration_report_since_last_header = -1;
 
   int AnIterIt0;
 #ifdef HiGHSDEV

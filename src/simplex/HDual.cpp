@@ -73,12 +73,6 @@ HighsStatus HDual::solve(int num_threads) {
   // model dimension changes
   init(num_threads);
 
-  printf("In HDual::solve(%d) with analysis.(numCol; numRow) = (%d; %d); Densities[%g; %g; %g; %g]\n",
-	 num_threads, analysis->numCol, analysis->numRow,
-	 analysis->col_aq_density, analysis->row_ep_density,
-	 analysis->row_ap_density, analysis->row_DSE_density);
-
-
   bool dual_info_ok = dualInfoOk(workHMO.lp_);
   if (!dual_info_ok) {
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
@@ -702,14 +696,14 @@ void HDual::rebuild() {
   // Move this to Simplex class once it's created
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
 
-  int sv_invertHint = invertHint;
+  const int rebuild_invert_hint = invertHint;
   invertHint = INVERT_HINT_NO;
   // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
   if (!invert_if_row_out_negative) {
-    // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint ==
+    // Don't reinvert if rowOut is negative [equivalently, if rebuild_invert_hint ==
     // INVERT_HINT_POSSIBLY_OPTIMAL]
-    if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {
+    if (rebuild_invert_hint == INVERT_HINT_POSSIBLY_OPTIMAL) {
       assert(rowOut == -1);
       reInvert = false;
     }
@@ -801,7 +795,7 @@ void HDual::rebuild() {
 #endif
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
-  iterationReportRebuild();
+  reportRebuild(rebuild_invert_hint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
@@ -817,7 +811,7 @@ void HDual::rebuild() {
     printf(
         "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
         "%11.4g\n",
-        solvePhase, totalRebuilds, sv_invertHint,
+        solvePhase, totalRebuilds, rebuild_invert_hint,
 	workHMO.scaled_solution_params_.simplex_iteration_count,
         totalRebuildTime);
   }
@@ -849,7 +843,9 @@ void HDual::cleanup() {
   computeDualObjectiveValue(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuObjClock]);
 
-  iterationReportRebuild();
+  timer.start(simplex_info.clock_[ReportRebuildClock]);
+  reportRebuild();
+  timer.stop(simplex_info.clock_[ReportRebuildClock]);
 
   computeDualInfeasible(workHMO);
   dualInfeasCount = workHMO.scaled_solution_params_.num_dual_infeasibilities;
@@ -970,8 +966,7 @@ void HDual::iterateTasks() {
   updatePivots();
 }
 
-void HDual::iterationAnalysis() {
-  // Possibly report on the iteration
+void HDual::iterationAnalysisData() {
   HighsOptions& options = workHMO.options_;
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -998,10 +993,18 @@ void HDual::iterationAnalysis() {
   analysis->pivot_value_from_row = alphaRow;
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_dual_objective_value;
+  analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
+  analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
+  analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
+  analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
 #ifdef HiGHSDEV
   analysis->basis_condition = simplex_info.invert_condition;
 #endif
+}
 
+void HDual::iterationAnalysis() {
+  // Possibly report on the iteration
+  iterationAnalysisData();
   analysis->iterationReport();
 
   // Possibly switch from DSE to Devex
@@ -1023,15 +1026,9 @@ void HDual::iterationAnalysis() {
 #endif
 }
 
-void HDual::iterationReportRebuild() {
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
-  analysis->solve_phase = solvePhase;
-  analysis->objective_value = simplex_info.updated_dual_objective_value;
-  analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
-  analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
-  analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
-  analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
+void HDual::reportRebuild(const int rebuild_invert_hint) {
+  iterationAnalysisData();
+  analysis->invert_hint = rebuild_invert_hint;
   analysis->invertReport();
 }
 
