@@ -45,6 +45,11 @@ class HPrimal {
   void primalChooseRow();
   void primalUpdate();
 
+  void iterationAnalysisData();
+  void iterationAnalysis();
+  void reportRebuild(const int rebuild_invert_hint=-1);
+
+
   void iterationReport();
   void iterationReportFull(bool header);
   void iterationReportIterationAndPhase(int iterate_log_level, bool header);

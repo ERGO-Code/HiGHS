@@ -127,11 +127,6 @@ HighsStatus HPrimal::solve() {
 #endif
   // The major solving loop
 
-  // Initialise the iteration analysis. Necessary for strategy, but
-  // much is for development and only switched on with HiGHSDEV
-  // ToDo Move to simplex and adapt so it's OK for primal and dual
-  //  iterationAnalysisInitialise();
-
   while (solvePhase) {
     /*
     int it0 = scaled_solution_params.simplex_iteration_count;
@@ -375,11 +370,7 @@ void HPrimal::primalRebuild() {
   timer.stop(simplex_info.clock_[ComputeDuIfsClock]);
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
-  iterationReportRebuild(
-#ifdef HiGHSDEV
-			 sv_invertHint
-#endif
-			 );
+  reportRebuild(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
@@ -486,8 +477,16 @@ void HPrimal::primalChooseRow() {
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
+#endif
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
   timer.stop(simplex_info.clock_[FtranClock]);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
+#endif
 
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
@@ -643,7 +642,7 @@ void HPrimal::primalUpdate() {
     rowOut = -1;
     numericalTrouble = 0;
     thetaDual = workDual[columnIn];
-    iterationReport();
+    iterationAnalysis();
     num_flip_since_rebuild++;
     return;
   }
@@ -677,19 +676,26 @@ void HPrimal::primalUpdate() {
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
-  //  if (simplex_info.analyseSimplexIterations)
-  //  iterateOpRecBf(AnIterOpTy_Btran, row_ep, analysis->row_ep_density);
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
 #endif
   workHMO.factor_.btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
-  //  if (simplex_info.analyseSimplexIterations)
-  //  iterateOpRecAf(AnIterOpTy_Btran, row_ep);
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
-
+  if (simplex_info.analyseSimplexIterations) {
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
+    analysis->num_row_price++;
+  }
   timer.start(simplex_info.clock_[PriceClock]);
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ep);
+#endif
 
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
@@ -747,9 +753,62 @@ void HPrimal::primalUpdate() {
   workHMO.scaled_solution_params_.simplex_iteration_count++;
 
   // Report on the iteration
-  iterationReport();
+  iterationAnalysis();
 }
 
+void HPrimal::iterationAnalysisData() {
+  HighsOptions& options = workHMO.options_;
+  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+  analysis->num_threads = options.num_threads;
+  analysis->edge_weight_mode = DualEdgeWeightMode::DANTZIG;
+  analysis->solve_phase = solvePhase;
+  analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
+  analysis->major_iteration_count = -1;
+  analysis->minor_iteration_count = -1;
+  analysis->devex_iteration_count = 0;
+  analysis->pivotal_row_index = rowOut;
+  analysis->leaving_variable = columnOut;
+  analysis->entering_variable = columnIn;
+  analysis->invert_hint = invertHint;
+  analysis->freelist_size = 0;
+  analysis->reduced_rhs_value = 0;
+  analysis->reduced_cost_value = 0;
+  analysis->edge_weight = 0;
+  analysis->primal_delta = 0;
+  analysis->primal_step = thetaPrimal;
+  analysis->dual_step = thetaDual;
+  analysis->pivot_value_from_column = alpha;
+  analysis->pivot_value_from_row = alpha;//Row;
+  analysis->numerical_trouble = numericalTrouble;
+  analysis->objective_value = simplex_info.updated_dual_objective_value;
+  analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
+  analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
+  analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
+  analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
+#ifdef HiGHSDEV
+  analysis->basis_condition = simplex_info.invert_condition;
+#endif
+}
+
+void HPrimal::iterationAnalysis() {
+  // Possibly report on the iteration
+  iterationAnalysisData();
+  analysis->iterationReport();
+
+#ifdef HiGHSDEV
+  analysis->iterationRecord();
+#endif
+}
+
+void HPrimal::reportRebuild(const int rebuild_invert_hint) {
+  iterationAnalysisData();
+  analysis->invert_hint = rebuild_invert_hint;
+  analysis->invertReport();
+}
+
+/*
 void HPrimal::iterationReport() {
   int iteration_count = workHMO.scaled_solution_params_.simplex_iteration_count;
   int iteration_count_difference = iteration_count -
@@ -846,7 +905,6 @@ void HPrimal::iterationReportIterationData(int iterate_log_level, bool header) {
   }
 }
 
-/*
 void HPrimal::iterationReportDsty(int iterate_log_level, bool header) {
   bool rp_dual_steepest_edge = dual_edge_weight_mode ==
 DualEdgeWeightMode::STEEPEST_EDGE; if (header) {
@@ -879,7 +937,6 @@ int HPrimal::intLog10(double v) {
   return intLog10V;
 }
 
-*/
 void HPrimal::iterationReportRebuild(
 #ifdef HiGHSDEV
 				     const int i_v
@@ -918,3 +975,4 @@ void HPrimal::reportInfeasibility() {
                     scaled_solution_params.num_dual_infeasibilities,
                     scaled_solution_params.sum_dual_infeasibilities);
 }
+*/

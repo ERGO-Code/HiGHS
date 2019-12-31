@@ -245,6 +245,10 @@ HighsStatus HDual::solve(int num_threads) {
     if (solve_bailout) break;
   }
 
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) analysis->summaryReport();
+#endif
+
   if (solve_bailout) {
     assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
 	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
@@ -256,15 +260,11 @@ HighsStatus HDual::solve(int num_threads) {
     int it0 = scaled_solution_params.simplex_iteration_count;
     HPrimal hPrimal(workHMO);
     const bool full_logging = false;
-    int save_message_level;
-    if (full_logging) {
-      save_message_level = options.message_level;
-      options.message_level = ML_ALWAYS;
-    }
+    if (full_logging) 
+      analysis->messaging(options.logfile, options.output, ML_ALWAYS);
     timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
     hPrimal.solvePhase2();
     timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-    if (full_logging) options.message_level = save_message_level;
     simplex_info.primal_phase2_iteration_count +=
         (scaled_solution_params.simplex_iteration_count - it0);
   }
