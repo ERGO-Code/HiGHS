@@ -154,7 +154,6 @@ void HighsSimplexAnalysis::iterationReport() {
     num_iteration_report_since_last_header = 0;
   }
   iterationReport(false);
-  num_iteration_report_since_last_header++;
 }
 
 void HighsSimplexAnalysis::invertReport() {
@@ -168,7 +167,6 @@ void HighsSimplexAnalysis::invertReport() {
     num_invert_report_since_last_header = 0;
   }
   invertReport(false);
-  num_invert_report_since_last_header++;
 }
 
 void HighsSimplexAnalysis::dualSteepestEdgeWeightError(const double computed_edge_weight,
@@ -572,6 +570,7 @@ void HighsSimplexAnalysis::iterationReport(const bool header) {
   //  reportFreeListSize(header, iteration_report_message_level);
 #endif
   HighsPrintMessage(output, message_level, iteration_report_message_level, "\n");
+  if (!header) num_iteration_report_since_last_header++;
 }
 
 void HighsSimplexAnalysis::invertReport(const bool header) {
@@ -584,6 +583,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
 #endif
   reportInfeasibility(header, invert_report_message_level);
   HighsPrintMessage(output, message_level, invert_report_message_level, "\n");
+  if (!header) num_invert_report_since_last_header++;
 }
 
 void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(const bool header, const int this_message_level) {
