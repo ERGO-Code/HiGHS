@@ -1,5 +1,12 @@
+./HiGHS_CopyrightHeader.pl ../src/Highs.h
+./HiGHS_CopyrightHeader.pl ../src/ipm/*.cpp
+./HiGHS_CopyrightHeader.pl ../src/ipm/*.h
+./HiGHS_CopyrightHeader.pl ../src/interfaces/*.cpp
+./HiGHS_CopyrightHeader.pl ../src/interfaces/*.h
 ./HiGHS_CopyrightHeader.pl ../src/io/*.cpp
 ./HiGHS_CopyrightHeader.pl ../src/io/*.h
+./HiGHS_CopyrightHeader.pl ../src/mip/*.cpp
+./HiGHS_CopyrightHeader.pl ../src/mip/*.h
 ./HiGHS_CopyrightHeader.pl ../src/lp_data/*.h
 ./HiGHS_CopyrightHeader.pl ../src/lp_data/*.cpp
 ./HiGHS_CopyrightHeader.pl ../src/presolve/*.cpp

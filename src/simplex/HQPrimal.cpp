@@ -41,7 +41,6 @@ HighsStatus HQPrimal::solve() {
 		    workHMO.simplex_lp_.numRow_);
     return HighsStatus::Error;
   }
-
   HighsTimer& timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
 
@@ -700,9 +699,9 @@ void HQPrimal::primalUpdate() {
 
   // Pivot in
   int sourceOut = alpha * moveIn > 0 ? -1 : 1;
-  timer.start(simplex_info.clock_[IteratePivotsClock]);
+  timer.start(simplex_info.clock_[UpdatePivotsClock]);
   update_pivots(workHMO, columnIn, rowOut, sourceOut);
-  timer.stop(simplex_info.clock_[IteratePivotsClock]);
+  timer.stop(simplex_info.clock_[UpdatePivotsClock]);
 
   baseValue[rowOut] = valueIn;
 
@@ -825,6 +824,8 @@ void HQPrimal::phase1ComputeDual() {
   const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   const double *baseValue = &workHMO.simplex_info_.baseValue_[0];
 
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsTimer& timer = workHMO.timer_;
   timer.start(simplex_info.clock_[BtranClock]);
   /* Setup artificial cost and compute pi with BTran */
   HVector buffer;
@@ -893,6 +894,9 @@ void HQPrimal::phase1ChooseColumn() {
   const int* nbMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   const double* workDual = &workHMO.simplex_info_.workDual_[0];
   const double dDualTol = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsTimer& timer = workHMO.timer_;
+  timer.start(simplex_info.clock_[ChuzcPrimalClock]);
   double dBestScore = 0;
   columnIn = -1;
   for (int iSeq = 0; iSeq < nSeq; iSeq++) {
@@ -903,6 +907,7 @@ void HQPrimal::phase1ChooseColumn() {
       columnIn = iSeq;
     }
   }
+  timer.stop(simplex_info.clock_[ChuzcPrimalClock]);
 }
 
 /* Choose a pivot row for the phase 1 primal simplex method */
@@ -914,6 +919,8 @@ void HQPrimal::phase1ChooseRow() {
   const double* baseValue = &workHMO.simplex_info_.baseValue_[0];
 
   /* Compute the transformed pivot column and update its density */
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsTimer& timer = workHMO.timer_;
   timer.start(simplex_info.clock_[FtranClock]);
   col_aq.clear();
   col_aq.packFlag = true;
@@ -946,6 +953,7 @@ void HQPrimal::phase1ChooseRow() {
     printf("==> Phase 1 reduced cost. Updated %g, Computed %g\n", workHMO.simplex_info_.workDual_[columnIn], dCompDual);
   }
 
+  timer.start(simplex_info.clock_[Chuzr1Clock]);
   /* Collect phase 1 theta lists */
   int nRow = workHMO.lp_.numRow_;
   const int iMoveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
@@ -993,6 +1001,7 @@ void HQPrimal::phase1ChooseRow() {
     }
   }
 
+  timer.stop(simplex_info.clock_[Chuzr1Clock]);
   /* When there is no candidates at all, we can leave it here */
   if (ph1SorterR.empty()) {
     rowOut = -1;
@@ -1005,6 +1014,7 @@ void HQPrimal::phase1ChooseRow() {
    * TODO: Consider partial sort.
    *       Or heapify [O(n)] and then pop k points [kO(log(n))].
    */
+  timer.start(simplex_info.clock_[Chuzr2Clock]);
   std::sort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
   double dGradient = fabs(workHMO.simplex_info_.workDual_[columnIn]);
@@ -1057,6 +1067,7 @@ void HQPrimal::phase1ChooseRow() {
   if(rowOut != -1) {
     columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
   }
+  timer.stop(simplex_info.clock_[Chuzr2Clock]);
 }
 
 /* Update the primal and dual solutions for the primal phase 1 */
@@ -1070,6 +1081,8 @@ void HQPrimal::phase1Update() {
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const int iMoveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
   const double dFeasTol = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsTimer& timer = workHMO.timer_;
 
   /* Compute the primal theta and see if we should have do bound flip instead */
   alpha = col_aq.array[rowOut];
@@ -1105,7 +1118,9 @@ void HQPrimal::phase1Update() {
       computePrimalInfeasible(workHMO);
       if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
+	timer.start(simplex_info.clock_[ComputeDualClock]);
         phase1ComputeDual();
+	timer.stop(simplex_info.clock_[ComputeDualClock]);
       } else {
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
@@ -1114,40 +1129,69 @@ void HQPrimal::phase1Update() {
   }
 
   /* Compute BTran for update LU */
+  timer.start(simplex_info.clock_[BtranClock]);
   row_ep.clear();
   row_ep.count = 1;
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
+#endif
   workHMO.factor_.btran(row_ep, analysis->row_ep_density);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations) 
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
+#endif
+  timer.stop(simplex_info.clock_[BtranClock]);
 
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
 
   /* Compute the whole pivot row for updating the devex weight */
+  if (simplex_info.analyseSimplexIterations) {
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
+    analysis->num_row_price++;
+  }
+  timer.start(simplex_info.clock_[PriceClock]);
   row_ap.clear();
   workHMO.matrix_.price_by_row(row_ap, row_ep);
-
+  timer.stop(simplex_info.clock_[PriceClock]);
+#ifdef HiGHSDEV
+  if (simplex_info.analyseSimplexIterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ep);
+#endif
 
   /* Update the devex weight */
+  timer.start(simplex_info.clock_[DevexUpdateWeightClock]);
   devexUpdate();
+  timer.stop(simplex_info.clock_[DevexUpdateWeightClock]);
 
    /* Update other things */
+  timer.start(simplex_info.clock_[UpdatePivotsClock]);
   update_pivots(workHMO, columnIn, rowOut, phase1OutBnd);
+  timer.stop(simplex_info.clock_[UpdatePivotsClock]);
+  timer.start(simplex_info.clock_[UpdateFactorClock]);
   update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
+  timer.stop(simplex_info.clock_[UpdateFactorClock]);
+  timer.start(simplex_info.clock_[UpdateMatrixClock]);
   update_matrix(workHMO, columnIn, columnOut);
+  timer.stop(simplex_info.clock_[UpdateMatrixClock]);
   if (workHMO.simplex_info_.update_count >= workHMO.simplex_info_.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
-
 
   /* Recompute dual and primal */
   if (invertHint == 0) {
     compute_primal(workHMO);
     computePrimalInfeasible(workHMO);
+
     if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
+      timer.start(simplex_info.clock_[ComputeDualClock]);
       phase1ComputeDual();
+      timer.stop(simplex_info.clock_[ComputeDualClock]);
     } else {
       invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
     }
