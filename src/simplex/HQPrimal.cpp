@@ -699,9 +699,7 @@ void HQPrimal::primalUpdate() {
 
   // Pivot in
   int sourceOut = alpha * moveIn > 0 ? -1 : 1;
-  timer.start(simplex_info.clock_[UpdatePivotsClock]);
   update_pivots(workHMO, columnIn, rowOut, sourceOut);
-  timer.stop(simplex_info.clock_[UpdatePivotsClock]);
 
   baseValue[rowOut] = valueIn;
 
@@ -1114,7 +1112,9 @@ void HQPrimal::phase1Update() {
   if(ifFlip) {
     /* Recompute things on flip */
     if (invertHint == 0) {
+      timer.start(simplex_info.clock_[ComputePrimalClock]);
       compute_primal(workHMO);
+      timer.stop(simplex_info.clock_[ComputePrimalClock]);
       computePrimalInfeasible(workHMO);
       if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
@@ -1164,27 +1164,21 @@ void HQPrimal::phase1Update() {
 #endif
 
   /* Update the devex weight */
-  timer.start(simplex_info.clock_[DevexUpdateWeightClock]);
   devexUpdate();
-  timer.stop(simplex_info.clock_[DevexUpdateWeightClock]);
 
    /* Update other things */
-  timer.start(simplex_info.clock_[UpdatePivotsClock]);
   update_pivots(workHMO, columnIn, rowOut, phase1OutBnd);
-  timer.stop(simplex_info.clock_[UpdatePivotsClock]);
-  timer.start(simplex_info.clock_[UpdateFactorClock]);
   update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
-  timer.stop(simplex_info.clock_[UpdateFactorClock]);
-  timer.start(simplex_info.clock_[UpdateMatrixClock]);
   update_matrix(workHMO, columnIn, columnOut);
-  timer.stop(simplex_info.clock_[UpdateMatrixClock]);
   if (workHMO.simplex_info_.update_count >= workHMO.simplex_info_.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
 
   /* Recompute dual and primal */
   if (invertHint == 0) {
+    timer.start(simplex_info.clock_[ComputePrimalClock]);
     compute_primal(workHMO);
+    timer.stop(simplex_info.clock_[ComputePrimalClock]);
     computePrimalInfeasible(workHMO);
 
     if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
@@ -1223,6 +1217,9 @@ void HQPrimal::devexReset() {
 
 void HQPrimal::devexUpdate() {
   /* Compute the pivot weight from the reference set */
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsTimer& timer = workHMO.timer_;
+  timer.start(simplex_info.clock_[DevexUpdateWeightClock]);
   double dPivotWeight = 0.0;
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
@@ -1273,6 +1270,7 @@ void HQPrimal::devexUpdate() {
   /* Update devex weight for the pivots */
   devexWeight[columnOut] = max(1.0, dPivotWeight);
   devexWeight[columnIn] = 1.0;
+  timer.stop(simplex_info.clock_[DevexUpdateWeightClock]);
 }
 
 void HQPrimal::iterationAnalysisData() {
