@@ -60,13 +60,14 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.report_simplex_inner_clock = useful_analysis;
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
+  simplex_info.report_HFactor_clock = full_timing;
   // Options for analysing the LP and simplex iterations
-  simplex_info.analyseLp = false;//useful_analysis;//
-  simplex_info.analyseSimplexIterations = false;//useful_analysis;
+  simplex_info.analyse_lp = false;//useful_analysis;//
+  simplex_info.analyse_iterations = useful_analysis;
   //  simplex_info.analyse_invert_form = useful_analysis;
   //  simplex_info.analyse_invert_condition = useful_analysis;
   simplex_info.analyse_invert_time = full_timing;
-  simplex_info.analyseRebuildTime = full_timing;
+  simplex_info.analyse_rebuild_time = full_timing;
 #endif
 }
 
@@ -294,7 +295,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     timer.stop(simplex_info.clock_[ScaleClock]);    
 #ifdef HiGHSDEV
     // Analyse the scaled LP
-    if (simplex_info.analyseLp) {
+    if (simplex_info.analyse_lp) {
       analyseLp(highs_model_object.lp_, "Unscaled");
       HighsScale& scale = highs_model_object.scale_;
       if (scale.is_scaled_) {
@@ -548,7 +549,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 #endif  
   // Use analyseSimplexBasicSolution to report the model status and
   // solution params for the scaled LP
-  if (simplex_info.analyseLpSolution) {
+  if (simplex_info.analyse_lp_solution) {
     const bool report = true;
     call_status = analyseSimplexBasicSolution(highs_model_object, report);
     return_status = interpretCallStatus(call_status, return_status, "analyseSimplexBasicSolution");
@@ -1947,7 +1948,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
       printf("\n");
     }
   }
-  if (simplex_info.analyseRebuildTime) {
+  if (simplex_info.analyse_rebuild_time) {
     double current_run_highs_time = timer.readRunHighsClock();
     HighsClockRecord totalRebuildClock;
     timer.clockInit(totalRebuildClock);

@@ -375,7 +375,7 @@ void HPrimal::primalRebuild() {
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
 #ifdef HiGHSDEV
-  if (simplex_info.analyseRebuildTime) {
+  if (simplex_info.analyse_rebuild_time) {
     int iClock = simplex_info.clock_[IteratePrimalRebuildClock];
     int totalRebuilds = timer.clock_num_call[iClock];
     double totalRebuildTime = timer.read(iClock);
@@ -478,13 +478,13 @@ void HPrimal::primalChooseRow() {
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) 
+  if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
 #endif
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
   timer.stop(simplex_info.clock_[FtranClock]);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) 
+  if (simplex_info.analyse_iterations) 
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
 #endif
 
@@ -676,17 +676,17 @@ void HPrimal::primalUpdate() {
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) 
+  if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
 #endif
   workHMO.factor_.btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) 
+  if (simplex_info.analyse_iterations) 
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations) {
+  if (simplex_info.analyse_iterations) {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
     analysis->num_row_price++;
   }
@@ -695,7 +695,7 @@ void HPrimal::primalUpdate() {
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations)
+  if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ep);
 #endif
 

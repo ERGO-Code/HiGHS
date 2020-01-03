@@ -227,22 +227,22 @@ struct HighsSimplexInfo {
   bool store_squared_primal_infeasibility = false;
   bool allow_primal_flips_for_dual_feasibility = true;
 #ifndef HiGHSDEV
-  bool analyseLpSolution = false; //true;// 
+  bool analyse_lp_solution = false; //true;// 
 #else  
-  bool analyseLpSolution = true;
+  bool analyse_lp_solution = true;
   // Options for reporting timing
   bool report_simplex_inner_clock = false;
   bool report_simplex_outer_clock = false;
   bool report_simplex_phases_clock = false;
+  bool report_HFactor_clock = false;
   // Option for analysing the LP simplex iterations, INVERT time and rebuild
   // time
-  bool analyseLp = false;
-  bool analyseSimplexIterations = false;
+  bool analyse_lp = false;
+  bool analyse_iterations = false;
   bool analyse_invert_form = false;
   bool analyse_invert_condition = false;
   bool analyse_invert_time = false;
-  bool analyse_HFactor_time = false;
-  bool analyseRebuildTime = false;
+  bool analyse_rebuild_time = false;
 #endif
   // Simplex runtime information
   int costs_perturbed = 0;

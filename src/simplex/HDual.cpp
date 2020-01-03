@@ -796,7 +796,7 @@ void HDual::rebuild() {
   total_syntheticTick = 0;
 
 #ifdef HiGHSDEV
-  if (simplex_info.analyseRebuildTime) {
+  if (simplex_info.analyse_rebuild_time) {
     int iClock = simplex_info.clock_[IterateDualRebuildClock];
     int totalRebuilds = timer.clock_num_call[iClock];
     double totalRebuildTime = timer.read(iClock);
@@ -1052,13 +1052,13 @@ void HDual::chooseRow() {
     row_ep.array[rowOut] = 1;
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations) 
+    if (simplex_info.analyse_iterations) 
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
 #endif
     // Perform BTRAN
     factor->btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations)
+    if (simplex_info.analyse_iterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
 #endif
     timer.stop(simplex_info.clock_[BtranClock]);
@@ -1162,7 +1162,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   if (price_mode == PriceMode::COL) {
     // Column-wise PRICE
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations) {
+    if (simplex_info.analyse_iterations) {
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
       analysis->num_col_price++;
     }
@@ -1176,7 +1176,7 @@ void HDual::chooseColumn(HVector* row_ep) {
     if (allow_price_by_col_switch && (lc_dsty > dstyColPriceSw)) {
       // Use column-wise PRICE due to density of row_ep
 #ifdef HiGHSDEV
-      if (simplex_info.analyseSimplexIterations) {
+      if (simplex_info.analyse_iterations) {
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
         analysis->num_col_price++;
       }
@@ -1193,7 +1193,7 @@ void HDual::chooseColumn(HVector* row_ep) {
       // Avoid hyper-sparse PRICE on current density of result or
       // switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
-      if (simplex_info.analyseSimplexIterations) {
+      if (simplex_info.analyse_iterations) {
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
         analysis->num_row_price_with_switch++;
       }
@@ -1207,7 +1207,7 @@ void HDual::chooseColumn(HVector* row_ep) {
       // No avoiding hyper-sparse PRICE on current density of result
       // or switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
-      if (simplex_info.analyseSimplexIterations) {
+      if (simplex_info.analyse_iterations) {
 	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
         analysis->num_row_price++;
       }
@@ -1226,7 +1226,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
   analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations)
+  if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
@@ -1404,13 +1404,13 @@ void HDual::updateFtran() {
   // with unit multiplier
   matrix->collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations)
+  if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
 #endif
   // Perform FTRAN
   factor->ftran(col_aq, analysis->col_aq_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations)
+  if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
 #endif
   // Save the pivot value computed column-wise - used for numerical checking
@@ -1439,13 +1439,13 @@ void HDual::updateFtranBFRT() {
 
   if (col_BFRT.count) {
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations)
+    if (simplex_info.analyse_iterations)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT, analysis->col_aq_density);
 #endif
     // Perform FTRAN BFRT
     factor->ftran(col_BFRT, analysis->col_aq_density);
 #ifdef HiGHSDEV
-    if (simplex_info.analyseSimplexIterations)
+    if (simplex_info.analyse_iterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT);
 #endif
   }
@@ -1464,13 +1464,13 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
   if (invertHint) return;
   timer.start(simplex_info.clock_[FtranDseClock]);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations)
+  if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector, analysis->row_DSE_density);
 #endif
   // Perform FTRAN DSE
   factor->ftran(*DSE_Vector, analysis->row_DSE_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyseSimplexIterations)
+  if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector);
 #endif
   timer.stop(simplex_info.clock_[FtranDseClock]);
