@@ -685,10 +685,12 @@ void HPrimal::primalUpdate() {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
+#ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
     analysis->num_row_price++;
   }
+#endif
   timer.start(simplex_info.clock_[PriceClock]);
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
