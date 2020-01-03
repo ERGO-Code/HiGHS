@@ -241,6 +241,7 @@ struct HighsSimplexInfo {
   bool analyse_invert_form = false;
   bool analyse_invert_condition = false;
   bool analyse_invert_time = false;
+  bool analyse_HFactor_time = false;
   bool analyseRebuildTime = false;
 #endif
   // Simplex runtime information

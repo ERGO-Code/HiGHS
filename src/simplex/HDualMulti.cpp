@@ -289,6 +289,8 @@ void HDual::minorUpdate() {
     */
     minorInitialiseDevexFramework();
   }
+  // Analyse the iteration: possibly report; possibly switch strategy
+  iterationAnalysis();
   multi_nFinish++;
 
   // Minor update - check for the next iteration
