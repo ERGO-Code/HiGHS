@@ -73,7 +73,9 @@ class HighsSimplexAnalysis {
   double row_DSE_density;
   
   int simplex_strategy = 0;
+  int min_threads = 0;
   int num_threads = 0;
+  int max_threads = 0;
   DualEdgeWeightMode edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
   int solve_phase = 0;
   int simplex_iteration_count = 0;

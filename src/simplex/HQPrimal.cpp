@@ -58,7 +58,8 @@ HighsStatus HQPrimal::solve() {
   // Does LOTS, including initialisation of edge weights. Should only
   // be called if model dimension changes
   // ToDo primal simplex version
-  // init(num_threads);
+  // init();
+  // initParallel();
 
   // ToDo primal simplex version
   // initialise_cost(workHMO, 1); //  model->initCost(1);
@@ -1278,7 +1279,9 @@ void HQPrimal::iterationAnalysisData() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
-  analysis->num_threads = options.num_threads;
+  analysis->min_threads = simplex_info.min_threads;
+  analysis->num_threads = simplex_info.num_threads;
+  analysis->max_threads = simplex_info.max_threads;
   analysis->edge_weight_mode = DualEdgeWeightMode::DANTZIG;
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;

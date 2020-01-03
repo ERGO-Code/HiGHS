@@ -383,10 +383,16 @@ class HighsOptions {
 				     0, 5000, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("num_threads",
-				     "Number of threads in parallel execution",
-				     advanced, &num_threads,
-				     0, 1, HIGHS_THREAD_LIMIT);
+    record_int = new OptionRecordInt("highs_min_threads",
+				     "Minimum number of threads in parallel execution",
+				     advanced, &highs_min_threads,
+				     1, 1, HIGHS_THREAD_LIMIT);
+    records.push_back(record_int);
+    
+    record_int = new OptionRecordInt("highs_max_threads",
+				     "Maximum number of threads in parallel execution",
+				     advanced, &highs_max_threads,
+				     1, HIGHS_THREAD_LIMIT, HIGHS_THREAD_LIMIT);
     records.push_back(record_int);
     
     record_int = new OptionRecordInt("message_level",
@@ -576,7 +582,8 @@ class HighsOptions {
   int simplex_primal_edge_weight_strategy;
   int simplex_iteration_limit;
   int simplex_update_limit;
-  int num_threads;
+  int highs_min_threads;
+  int highs_max_threads;
   int message_level;
   std::string solution_file;
   bool write_solution_to_file;

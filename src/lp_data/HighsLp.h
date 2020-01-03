@@ -252,6 +252,10 @@ struct HighsSimplexInfo {
   int primal_phase1_iteration_count = 0;
   int primal_phase2_iteration_count = 0;
 
+  int min_threads = 1;
+  int num_threads = 1;
+  int max_threads = HIGHS_THREAD_LIMIT;
+  
   // Cutoff for PAMI
   double pami_cutoff = 0.95;
 

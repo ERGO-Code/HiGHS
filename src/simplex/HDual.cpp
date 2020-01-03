@@ -38,7 +38,7 @@ using std::fabs;
 using std::flush;
 using std::runtime_error;
 
-HighsStatus HDual::solve(int num_threads) {
+HighsStatus HDual::solve() {
   HighsOptions& options = workHMO.options_;
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -71,7 +71,8 @@ HighsStatus HDual::solve(int num_threads) {
   // Initialise working environment. Does LOTS, including
   // initialisation of edge weights to 1s. Should only be called if
   // model dimension changes
-  init(num_threads);
+  init();
+  initParallel();
 
   bool dual_info_ok = dualInfoOk(workHMO.lp_);
   if (!dual_info_ok) {
@@ -294,7 +295,8 @@ void HDual::options() {
   // Set values of internal options
 }
 
-void HDual::init(int num_threads) {
+void HDual::init() {
+
   // Copy size, matrix and factor
 
   solver_num_col = workHMO.simplex_lp_.numCol_;
@@ -327,6 +329,12 @@ void HDual::init(int num_threads) {
   // Setup other buffers
   dualRow.setup();
   dualRHS.setup();
+
+}
+
+void HDual::initParallel() {
+  // Identify the (current) number of HiGHS tasks to be used
+  const int num_threads = workHMO.simplex_info_.num_threads;
 
   // Initialize for tasks
   if (workHMO.simplex_info_.simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
@@ -367,9 +375,9 @@ void HDual::init(int num_threads) {
   //  }
 }
 
-void HDual::initSlice(const int init_sliced_num) {
+void HDual::initSlice(const int initial_num_slice) {
   // Number of slices
-  slice_num = init_sliced_num;
+  slice_num = initial_num_slice;
   if (slice_num < 1) slice_num = 1;
   assert(slice_num<=HIGHS_SLICED_LIMIT);
   if (slice_num > HIGHS_SLICED_LIMIT) {
@@ -414,8 +422,6 @@ void HDual::initSlice(const int init_sliced_num) {
     sliced_Astart.resize(mycount + 1);
     for (int k = 0; k <= mycount; k++)
       sliced_Astart[k] = Astart[k + mystart] - mystartX;
-    // TODO generalise this call so slice can be used with non-logical initial
-    // basis
     slice_matrix[i].setup_lgBs(mycount, solver_num_row, &sliced_Astart[0],
                                Aindex + mystartX, Avalue + mystartX);
 
@@ -959,11 +965,12 @@ void HDual::iterateTasks() {
 }
 
 void HDual::iterationAnalysisData() {
-  HighsOptions& options = workHMO.options_;
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-  analysis->num_threads = options.num_threads;
+  analysis->min_threads = simplex_info.min_threads;
+  analysis->num_threads = simplex_info.num_threads;
+  analysis->max_threads = simplex_info.max_threads;
   analysis->edge_weight_mode = dual_edge_weight_mode;
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;

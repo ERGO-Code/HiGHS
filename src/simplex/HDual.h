@@ -71,10 +71,9 @@ class HDual {
   }
 
   /**
-   * @brief Solve a model instance with a given number of threads
+   * @brief Solve a model instance
    */
-  HighsStatus solve(int num_threads = 1  //!< Default number of threads is 1
-  );
+  HighsStatus solve();
 
  public:
   /**
@@ -87,11 +86,16 @@ class HDual {
    * Copy dimensions and pointers to matrix, factor and solver-related
    * model data, plus tolerances. Sets up local std::vectors (columnDSE,
    * columnBFRT, column, row_ep and row_ap), scalars for their average
-   * density and buffers for dualRow and dualRHS. Also sets up data
-   * structures for SIP or PAMI (if necessary).
+   * density and buffers for dualRow and dualRHS. 
    */
-  void init(int num_threads  //!< Number of threads for initialisation
-  );
+  void init();
+
+  /**
+   * @brief Initialise parallel aspects of a dual simplex instance
+   *
+   * Sets up data structures for SIP or PAMI
+   */
+  void initParallel();
 
   /**
    * @brief Initialise matrix slices and slices of row_ap or dualRow for SIP or
