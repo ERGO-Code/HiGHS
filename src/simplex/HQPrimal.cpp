@@ -734,10 +734,12 @@ void HQPrimal::primalUpdate() {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
+#ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
     analysis->num_row_price++;
   }
+#endif
   timer.start(simplex_info.clock_[PriceClock]);
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
@@ -1151,10 +1153,12 @@ void HQPrimal::phase1Update() {
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
 
   /* Compute the whole pivot row for updating the devex weight */
+#ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
     analysis->num_row_price++;
   }
+#endif
   timer.start(simplex_info.clock_[PriceClock]);
   row_ap.clear();
   workHMO.matrix_.price_by_row(row_ap, row_ep);
