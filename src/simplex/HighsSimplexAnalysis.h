@@ -53,8 +53,11 @@ class HighsSimplexAnalysis {
 #ifdef HiGHSDEV
   HighsTimer timer_;
   void iterationRecord();
+  void iterationRecordMajor();
   void operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density);
+  void operationRecordBefore(const int operation_type, const int current_count, const double historical_density);
   void operationRecordAfter(const int operation_type, const HVector& vector);
+  void operationRecordAfter(const int operation_type, const int result_count);
   void summaryReport();
 #endif
 
@@ -76,12 +79,14 @@ class HighsSimplexAnalysis {
   int min_threads = 0;
   int num_threads = 0;
   int max_threads = 0;
+  int multi_num = 0;
   DualEdgeWeightMode edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
   int solve_phase = 0;
   int simplex_iteration_count = 0;
-  int major_iteration_count = 0;
-  int minor_iteration_count = 0;
+  int multi_iteration_count = 0;
   int devex_iteration_count = 0;
+  int multi_chosen = 0;
+  int multi_finished = 0;
   int pivotal_row_index = 0;
   int leaving_variable = 0;
   int entering_variable = 0;
@@ -106,7 +111,6 @@ class HighsSimplexAnalysis {
   int num_col_price = 0;
   int num_row_price = 0;
   int num_row_price_with_switch = 0;
-
  private:
 
   void iterationReport(const bool header);
@@ -155,6 +159,10 @@ class HighsSimplexAnalysis {
   const int invert_report_message_level = ML_MINIMAL;
   int num_invert_report_since_last_header = -1;
   int num_iteration_report_since_last_header = -1;
+
+  double average_fraction_of_possible_minor_iterations_performed = 0;
+  int sum_multi_chosen = 0;
+  int sum_multi_finished = 0;
 
   int AnIterIt0 = 0;
 #ifdef HiGHSDEV

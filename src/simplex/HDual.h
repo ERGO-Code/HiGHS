@@ -155,14 +155,34 @@ class HDual {
   void iterateMulti();  // in HDualMulti.cpp
 
   /**
-   * @brief Pass the data for the iteration analysis, report and rebuild report
+   * @brief Pass the data for the serial iteration analysis, report and rebuild report
    */
   void iterationAnalysisData();
 
   /**
-   * @brief Perform the iteration analysis
+   * @brief Perform the serial iteration analysis
    */
   void iterationAnalysis();
+
+  /**
+   * @brief Pass the data for the PAMI iteration analysis for a minor iteration, report and rebuild report
+   */
+  void iterationAnalysisMinorData();
+
+  /**
+   * @brief Perform the PAMI iteration analysis for a minor iteration
+   */
+  void iterationAnalysisMinor();
+
+  /**
+   * @brief Pass the data for the PAMI iteration analysis for a major iteration
+   */
+  void iterationAnalysisMajorData();
+
+  /**
+   * @brief Perform the PAMI iteration analysis for a major iteration
+   */
+  void iterationAnalysisMajor();
 
   /**
    * @brief Single line report after rebuild
@@ -491,6 +511,7 @@ class HDual {
   };
 
   int multi_num;
+  int multi_chosen;
   int multi_iChoice;
   int multi_nFinish;
   int multi_iteration;

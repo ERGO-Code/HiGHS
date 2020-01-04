@@ -62,6 +62,10 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   num_iteration_report_since_last_header = -1;
   num_invert_report_since_last_header = -1;
   
+  average_fraction_of_possible_minor_iterations_performed = -1; // To trigger first average equal to value
+  sum_multi_chosen = 0;
+  sum_multi_finished = 0;
+
 #ifdef HiGHSDEV
   AnIterPrevIt = simplex_iteration_count_;
   timer_.resetHighsTimer();
@@ -144,6 +148,7 @@ void HighsSimplexAnalysis::equalDensity(const double density0, const double dens
 */
 
 void HighsSimplexAnalysis::iterationReport() {
+  printf("multi_iteration_count = %d; multi_chosen = %d; multi_finished = %d; \n", multi_iteration_count, multi_chosen, multi_finished);
   if (!(iteration_report_message_level & message_level)) return;
   const bool header =
     (num_iteration_report_since_last_header < 0) ||
@@ -353,25 +358,46 @@ void HighsSimplexAnalysis::iterationRecord() {
   AnIterPrevIt = AnIterCuIt;
 }
 
+void HighsSimplexAnalysis::iterationRecordMajor() {
+  sum_multi_chosen += multi_chosen;
+  sum_multi_finished += multi_finished;
+  assert(multi_chosen>0);
+  const double fraction_of_possible_minor_iterations_performed = 1.0 * multi_finished / multi_chosen;
+  if (average_fraction_of_possible_minor_iterations_performed < 0) {
+    average_fraction_of_possible_minor_iterations_performed = fraction_of_possible_minor_iterations_performed;
+  } else {
+    average_fraction_of_possible_minor_iterations_performed = running_average_multiplier * fraction_of_possible_minor_iterations_performed +
+    (1-running_average_multiplier) * average_fraction_of_possible_minor_iterations_performed;
+  }
+  printf("sum_multi_chosen = %d; sum_multi_finished = %d; frac_performed = %g; avg_frac_performed = %g\n",
+	 sum_multi_chosen, sum_multi_finished, fraction_of_possible_minor_iterations_performed,
+	 average_fraction_of_possible_minor_iterations_performed);
+}
+
 void HighsSimplexAnalysis::operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density) {
+  operationRecordBefore(operation_type, vector.count, historical_density);
+}
+
+void HighsSimplexAnalysis::operationRecordBefore(const int operation_type, const int current_count, const double historical_density) {
+  double current_density = 1.0 * current_count / numRow;
   AnIterOpRec& AnIter = AnIterOp[operation_type];
   AnIter.AnIterOpNumCa++;
-  double current_density = 1.0 * vector.count / numRow;
-  //  printf("%10s: %g<= %g;  %g<= %g\n", AnIter.AnIterOpName.c_str(),
-  //	 current_density, AnIter.AnIterOpHyperCANCEL,
-  //	 historical_density, AnIter.AnIterOpHyperTRAN);
   if (current_density <= AnIter.AnIterOpHyperCANCEL &&
       historical_density <= AnIter.AnIterOpHyperTRAN)
     AnIter.AnIterOpNumHyperOp++;
 }
 
 void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const HVector& vector) {
+  operationRecordAfter(operation_type, vector.count);
+}
+
+void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const int result_count) {
   AnIterOpRec& AnIter = AnIterOp[operation_type];
-  double rsDsty = 1.0 * vector.count / AnIter.AnIterOpRsDim;
-  if (rsDsty <= hyperRESULT) AnIter.AnIterOpNumHyperRs++;
-  AnIter.AnIterOpRsMxNNZ = max(vector.count, AnIter.AnIterOpRsMxNNZ);
-  if (rsDsty > 0) {
-    AnIter.AnIterOpLog10RsDsty += log(rsDsty) / log(10.0);
+  const double result_density = 1.0 * result_count / AnIter.AnIterOpRsDim;
+  if (result_density <= hyperRESULT) AnIter.AnIterOpNumHyperRs++;
+  AnIter.AnIterOpRsMxNNZ = max(result_count, AnIter.AnIterOpRsMxNNZ);
+  if (result_density > 0) {
+    AnIter.AnIterOpLog10RsDsty += log(result_density) / log(10.0);
   } else {
     /*
     // TODO Investigate these zero norms
@@ -383,7 +409,7 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
     }
     vectorNorm = sqrt(vectorNorm);
     printf("Strange: operation %s has result density = %g: ||vector|| = %g\n",
-    AnIter.AnIterOpName.c_str(), rsDsty, vectorNorm);
+    AnIter.AnIterOpName.c_str(), result_density, vectorNorm);
     */
   }
 }

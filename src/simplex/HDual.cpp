@@ -968,14 +968,9 @@ void HDual::iterationAnalysisData() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-  analysis->min_threads = simplex_info.min_threads;
-  analysis->num_threads = simplex_info.num_threads;
-  analysis->max_threads = simplex_info.max_threads;
   analysis->edge_weight_mode = dual_edge_weight_mode;
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
-  analysis->major_iteration_count = -1;
-  analysis->minor_iteration_count = -1;
   analysis->devex_iteration_count = num_devex_iterations;
   analysis->pivotal_row_index = rowOut;
   analysis->leaving_variable = columnOut;

@@ -148,10 +148,12 @@ void HDual::majorChooseRow() {
   delete[] choiceIndex;
 
   // 6. Take other info associated with choices
+  multi_chosen = 0;
   double pami_cutoff = 0.95;
   for (int i = 0; i < multi_num; i++) {
     const int iRow = multi_choice[i].rowOut;
     if (iRow < 0) continue;
+    multi_chosen++;
     // Other info
     multi_choice[i].baseValue = baseValue[iRow];
     multi_choice[i].baseLower = baseLower[iRow];
@@ -187,6 +189,10 @@ void HDual::majorChooseRowBtran() {
     }
   }
 
+#ifdef HiGHSDEV
+  for (int i = 0; i < multi_ntasks; i++)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, 1, analysis->row_ep_density);
+#endif
   // 4.2 Perform BTRAN
 #pragma omp parallel for schedule(static, 1)
   for (int i = 0; i < multi_ntasks; i++) {
@@ -206,7 +212,10 @@ void HDual::majorChooseRowBtran() {
       multi_EdWt[i] = dualRHS.workEdWt[iRow];
     }
   }
-
+#ifdef HiGHSDEV
+  for (int i = 0; i < multi_ntasks; i++)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, multi_vector[i]->count);
+#endif
   // 4.3 Put back edge weights: the edge weights for the chosen rows
   // are stored in multi_choice[*].infeasEdWt
   for (int i = 0; i < multi_ntasks; i++)
@@ -289,9 +298,9 @@ void HDual::minorUpdate() {
     */
     minorInitialiseDevexFramework();
   }
-  // Analyse the iteration: possibly report; possibly switch strategy
-  iterationAnalysis();
   multi_nFinish++;
+  // Analyse the iteration: possibly report; possibly switch strategy
+  iterationAnalysisMinor();
 
   // Minor update - check for the next iteration
   int countRemain = 0;
@@ -531,6 +540,7 @@ void HDual::majorUpdate() {
     const bool parallel = true;
     initialiseDevexFramework(parallel);
   }
+  iterationAnalysisMajor();
 }
 
 void HDual::majorUpdateFtranPrepare() {
@@ -883,3 +893,67 @@ bool HDual::checkNonUnitWeightError(std::string message) {
   }
   return error_found;
 }
+
+void HDual::iterationAnalysisMinorData() {
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  analysis->min_threads = simplex_info.min_threads;
+  analysis->num_threads = simplex_info.num_threads;
+  analysis->max_threads = simplex_info.max_threads;
+  analysis->multi_iteration_count = multi_iteration;
+  analysis->multi_chosen = multi_chosen;
+  analysis->multi_finished = multi_nFinish;
+}
+
+void HDual::iterationAnalysisMinor() {
+  // Possibly report on the iteration
+  iterationAnalysisData();
+  iterationAnalysisMinorData();
+  analysis->iterationReport();
+
+  /*
+  // Possibly switch from DSE to Devex
+  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    bool switch_to_devex = false;
+    switch_to_devex = analysis->switchToDevex();
+    if (switch_to_devex) {
+      dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
+      // Zero the number of Devex frameworks used and set up the first one
+      num_devex_framework = 0;
+      devex_index.assign(solver_num_tot, 0);
+      workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
+      initialiseDevexFramework();
+    }
+  }
+  */
+
+#ifdef HiGHSDEV
+  analysis->iterationRecord();
+#endif
+}
+
+void HDual::iterationAnalysisMajorData() {
+}
+
+void HDual::iterationAnalysisMajor() {
+  iterationAnalysisMajorData();
+  /*
+  // Possibly switch from DSE to Devex
+  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    bool switch_to_devex = false;
+    switch_to_devex = analysis->switchToDevex();
+    if (switch_to_devex) {
+      dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
+      // Zero the number of Devex frameworks used and set up the first one
+      num_devex_framework = 0;
+      devex_index.assign(solver_num_tot, 0);
+      workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
+      initialiseDevexFramework();
+    }
+  }
+  */
+#ifdef HiGHSDEV
+  analysis->iterationRecord();
+  analysis->iterationRecordMajor();
+#endif
+}
+

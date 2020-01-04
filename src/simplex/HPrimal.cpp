@@ -763,14 +763,9 @@ void HPrimal::iterationAnalysisData() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
-  analysis->min_threads = simplex_info.min_threads;
-  analysis->num_threads = simplex_info.num_threads;
-  analysis->max_threads = simplex_info.max_threads;
   analysis->edge_weight_mode = DualEdgeWeightMode::DANTZIG;
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
-  analysis->major_iteration_count = -1;
-  analysis->minor_iteration_count = -1;
   analysis->devex_iteration_count = 0;
   analysis->pivotal_row_index = rowOut;
   analysis->leaving_variable = columnOut;
