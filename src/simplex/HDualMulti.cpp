@@ -589,12 +589,18 @@ void HDual::majorUpdateFtranParallel() {
   double multi_density[HIGHS_THREAD_LIMIT * 2 + 1];
   HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
   // BFRT first
+#ifdef HiGHSDEV
+  analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT.count, analysis->col_aq_density);
+#endif
   multi_density[multi_ntasks] = analysis->col_aq_density;
   multi_vector[multi_ntasks] = &col_BFRT;
   multi_ntasks++;
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     // Then DSE
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+#ifdef HiGHSDEV
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, multi_finish[iFn].row_ep->count, analysis->row_DSE_density);
+#endif
       multi_density[multi_ntasks] = analysis->row_DSE_density;
       multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
       multi_ntasks++;
@@ -602,6 +608,9 @@ void HDual::majorUpdateFtranParallel() {
   }
   // Then Column
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
+#ifdef HiGHSDEV
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, multi_finish[iFn].col_aq->count, analysis->col_aq_density);
+#endif
     multi_density[multi_ntasks] = analysis->col_aq_density;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;
@@ -625,15 +634,24 @@ void HDual::majorUpdateFtranParallel() {
   }
 
   // Update rates
+#ifdef HiGHSDEV
+  analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT.count);
+#endif
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
     HVector* Col = finish->col_aq;
     HVector* Row = finish->row_ep;
     const double local_col_aq_density = (double)Col->count / solver_num_row;
     analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
+#ifdef HiGHSDEV
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
+#endif
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      const double local_row_ep_density = (double)Row->count / solver_num_row;
-      analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
+      const double local_row_DSE_density = (double)Row->count / solver_num_row;
+      analysis->updateOperationResultDensity(local_row_DSE_density, analysis->row_DSE_density);
+#ifdef HiGHSDEV
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, Row->count);
+#endif
     }
   }
   timer.stop(simplex_info.clock_[FtranMixParClock]);

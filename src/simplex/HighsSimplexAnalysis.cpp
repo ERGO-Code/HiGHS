@@ -580,7 +580,7 @@ void HighsSimplexAnalysis::summaryReport() {
     double fmTime = lcAnIter.AnIterTraceTime;
     printf("        Iter (      FmIter:      ToIter)      Time      Iter/sec ");
     if (report_multi) printf("| PAMI ");
-    printf("| C_Aq R_Ep R_Ap ");
+    printf("| C_Aq R_Ep R_Ap");
     if (report_dse) printf(" DSE ");
     printf("| EdWt");
     if (report_dse) {
@@ -588,7 +588,6 @@ void HighsSimplexAnalysis::summaryReport() {
     } else {
       printf("\n");
     }
-
 
     for (int rec = 1; rec <= AnIterTraceNumRec; rec++) {
       AnIterTraceRec& lcAnIter = AnIterTrace[rec];
@@ -625,7 +624,7 @@ void HighsSimplexAnalysis::summaryReport() {
       if (report_dse) printf("%4d", l10DseDse);
       printf(" |  %3s", str_dual_edge_weight_mode.c_str());
       if (report_dse) {
-	printf("| %4d\n", l10CostlyDse);
+	printf(" | %4d\n", l10CostlyDse);
       } else {
 	printf("\n");
       }
@@ -658,7 +657,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
   if (!(invert_report_message_level & message_level)) return;
   reportAlgorithmPhaseIterationObjective(header, invert_report_message_level);
 #ifdef HiGHSDEV
-  if (average_fraction_of_possible_minor_iterations_performed>0) {
+  if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
     // Report on threads and PAMI
     reportThreads(header, invert_report_message_level);
     reportMulti(header, invert_report_message_level);
@@ -712,19 +711,32 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header, const int this
 void HighsSimplexAnalysis::reportThreads(const bool header, const int this_message_level) {
   if (header) {
     HighsPrintMessage(output, message_level, this_message_level, "  Threads");
-  } else {
+  } else if (num_threads > 0) {
     HighsPrintMessage(output, message_level, this_message_level, " %2d|%2d|%2d",
 		      min_threads, num_threads, max_threads);
+  } else {
+    HighsPrintMessage(output, message_level, this_message_level, "   |  |  ");
   }
 }
 
 void HighsSimplexAnalysis::reportMulti(const bool header, const int this_message_level) {
   if (header) {
     HighsPrintMessage(output, message_level, this_message_level, "  Multi");
-  } else {
+  } else if (average_fraction_of_possible_minor_iterations_performed >=0) {
     HighsPrintMessage(output, message_level, this_message_level, "   %3d%%", (int)(100 * average_fraction_of_possible_minor_iterations_performed));
+  } else {
+    HighsPrintMessage(output, message_level, this_message_level, "       ");
   }
   
+}
+
+void HighsSimplexAnalysis::reportOneDensity(const int this_message_level, const double density) {
+  const int log_10_density = intLog10(density);
+  if (log_10_density > -99) {
+    HighsPrintMessage(output, message_level, this_message_level, " %4d", log_10_density);
+  } else {
+    HighsPrintMessage(output, message_level, this_message_level, "     ");
+  }
 }
 
 void HighsSimplexAnalysis::reportDensity(const bool header, const int this_message_level) {
@@ -737,19 +749,10 @@ void HighsSimplexAnalysis::reportDensity(const bool header, const int this_messa
       HighsPrintMessage(output, message_level, this_message_level, "     ");
     }
   } else {
-    const int l10REpDse = intLog10(row_ep_density);
-    const int l10RapDse = intLog10(row_ap_density);
-    const int l10ColDse = intLog10(col_aq_density);
-    HighsPrintMessage(output, message_level, this_message_level,
-		      " %4d %4d %4d", l10REpDse, l10RapDse, l10ColDse);
-    if (rp_dual_steepest_edge) {
-      const int l10DseDse = intLog10(row_DSE_density);
-      HighsPrintMessage(output, message_level, this_message_level,
-			" %4d", l10DseDse);
-    } else {
-      HighsPrintMessage(output, message_level, this_message_level,
-			"     ");
-    }
+    reportOneDensity(this_message_level, row_ep_density);
+    reportOneDensity(this_message_level, row_ap_density);
+    reportOneDensity(this_message_level, col_aq_density);
+    if (rp_dual_steepest_edge) reportOneDensity(this_message_level, row_DSE_density);
   }
 }
 

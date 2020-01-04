@@ -120,6 +120,7 @@ class HighsSimplexAnalysis {
 #ifdef HiGHSDEV
   void reportThreads(const bool header, const int this_message_level);
   void reportMulti(const bool header, const int this_message_level);
+  void reportOneDensity(const int this_message_level, const double density);
   void reportDensity(const bool header, const int this_message_level);
   void reportInvert(const bool header, const int this_message_level);
   void reportCondition(const bool header, const int this_message_level);

@@ -967,7 +967,7 @@ void HDual::iterateTasks() {
 void HDual::iterationAnalysisData() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  analysis->simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+  analysis->simplex_strategy = simplex_info.simplex_strategy;
   analysis->edge_weight_mode = dual_edge_weight_mode;
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
