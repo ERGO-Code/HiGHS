@@ -118,6 +118,8 @@ class HighsSimplexAnalysis {
   void reportAlgorithmPhaseIterationObjective(const bool header, const int this_message_level);
   void reportInfeasibility(const bool header, const int this_message_level);
 #ifdef HiGHSDEV
+  void reportThreads(const bool header, const int this_message_level);
+  void reportMulti(const bool header, const int this_message_level);
   void reportDensity(const bool header, const int this_message_level);
   void reportInvert(const bool header, const int this_message_level);
   void reportCondition(const bool header, const int this_message_level);
@@ -160,7 +162,8 @@ class HighsSimplexAnalysis {
   int num_invert_report_since_last_header = -1;
   int num_iteration_report_since_last_header = -1;
 
-  double average_fraction_of_possible_minor_iterations_performed = 0;
+  double average_num_threads;
+  double average_fraction_of_possible_minor_iterations_performed;
   int sum_multi_chosen = 0;
   int sum_multi_finished = 0;
 
@@ -169,8 +172,8 @@ class HighsSimplexAnalysis {
   int AnIterPrevIt;
   // Major operation analysis struct
   struct AnIterOpRec {
-    double AnIterOpLog10RsDsty;
-    double AnIterOpSuLog10RsDsty;
+    double AnIterOpLog10RsDensity;
+    double AnIterOpSuLog10RsDensity;
     double AnIterOpHyperCANCEL;
     double AnIterOpHyperTRAN;
     int AnIterOpRsDim;
@@ -187,8 +190,9 @@ class HighsSimplexAnalysis {
 
   struct AnIterTraceRec {
     double AnIterTraceTime;
-    double AnIterTraceDsty[NUM_ANALYSIS_OPERATION_TYPE];
-    double AnIterTraceAux0;
+    double AnIterTraceMulti;
+    double AnIterTraceDensity[NUM_ANALYSIS_OPERATION_TYPE];
+    double AnIterTraceCostlyDse;
     int AnIterTraceIter;
     int AnIterTrace_dual_edge_weight_mode;
   };

@@ -895,10 +895,6 @@ bool HDual::checkNonUnitWeightError(std::string message) {
 }
 
 void HDual::iterationAnalysisMinorData() {
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  analysis->min_threads = simplex_info.min_threads;
-  analysis->num_threads = simplex_info.num_threads;
-  analysis->max_threads = simplex_info.max_threads;
   analysis->multi_iteration_count = multi_iteration;
   analysis->multi_chosen = multi_chosen;
   analysis->multi_finished = multi_nFinish;
@@ -932,6 +928,10 @@ void HDual::iterationAnalysisMinor() {
 }
 
 void HDual::iterationAnalysisMajorData() {
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  analysis->min_threads = simplex_info.min_threads;
+  analysis->num_threads = simplex_info.num_threads;
+  analysis->max_threads = simplex_info.max_threads;
 }
 
 void HDual::iterationAnalysisMajor() {
