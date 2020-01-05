@@ -308,8 +308,8 @@ bool HighsSimplexAnalysis::switchToDevex() {
       HighsLogMessage(logfile, HighsMessageType::INFO,
 		      "Switch from DSE to Devex with log error measure of %g > %g = threshhold",
 		      dse_weight_error_measure, dse_weight_error_threshhold);
-#endif
     }
+#endif
   }
   return switch_to_devex;
 }
