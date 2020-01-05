@@ -923,23 +923,6 @@ void HDual::iterationAnalysisMinor() {
   iterationAnalysisData();
   iterationAnalysisMinorData();
   analysis->iterationReport();
-
-  /*
-  // Possibly switch from DSE to Devex
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    bool switch_to_devex = false;
-    switch_to_devex = analysis->switchToDevex();
-    if (switch_to_devex) {
-      dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
-      // Zero the number of Devex frameworks used and set up the first one
-      num_devex_framework = 0;
-      devex_index.assign(solver_num_tot, 0);
-      workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
-      initialiseDevexFramework();
-    }
-  }
-  */
-
 #ifdef HiGHSDEV
   analysis->iterationRecord();
 #endif

@@ -113,7 +113,6 @@ HighsStatus HDual::solve() {
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       num_devex_framework = 0;
-      devex_index.assign(solver_num_tot, 0);
       simplex_info.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -1009,7 +1008,6 @@ void HDual::iterationAnalysis() {
       dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
       // Zero the number of Devex frameworks used and set up the first one
       num_devex_framework = 0;
-      devex_index.assign(solver_num_tot, 0);
       workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     }
@@ -1640,10 +1638,8 @@ void HDual::initialiseDevexFramework(const bool parallel) {
   // reference set, and 0 otherwise. This is achieved by setting the
   // values of devex_index to be 1-nonbasicFlag^2, ASSUMING
   // |nonbasicFlag|=1 iff the corresponding variable is nonbasic
-  for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
-    devex_index[vr_n] = 1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
-    simplex_info.devex_index_[vr_n] = devex_index[vr_n];
-  }
+  for (int vr_n = 0; vr_n < solver_num_tot; vr_n++)
+    simplex_info.devex_index_[vr_n] = 1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
   // Set all initial weights to 1, zero the count of iterations with
   // this Devex framework, increment the number of Devex frameworks
   // and indicate that there's no need for a new Devex framework

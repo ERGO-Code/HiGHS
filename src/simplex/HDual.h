@@ -388,8 +388,6 @@ class HDual {
   int num_devex_iterations = 0;  //!< Number of Devex iterations with the current framework
   bool new_devex_framework = false;  //!< Set a new Devex framework
   bool minor_new_devex_framework = false; //!< Set a new Devex framework in PAMI minor iterations
-  // Devex std::vector
-  std::vector<int> devex_index;  //!< Vector of Devex indices
 
   // Model
   HighsModelObject& workHMO;

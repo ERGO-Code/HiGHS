@@ -580,11 +580,11 @@ void HighsSimplexAnalysis::summaryReport() {
     double fmTime = lcAnIter.AnIterTraceTime;
     printf("        Iter (      FmIter:      ToIter)      Time      Iter/sec ");
     if (report_multi) printf("| PAMI ");
-    printf("| C_Aq R_Ep R_Ap");
+    printf("| C_Aq R_Ep R_Ap ");
     if (report_dse) printf(" DSE ");
-    printf("| EdWt");
+    printf("| EdWt ");
     if (report_dse) {
-      printf(" | CostlyDse\n");
+      printf("| CostlyDse\n");
     } else {
       printf("\n");
     }
@@ -620,11 +620,11 @@ void HighsSimplexAnalysis::summaryReport() {
 	const int pct = (100 * lcAnIter.AnIterTraceMulti);
 	printf("|  %3d ", pct);
       }
-      printf("| %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse);
-      if (report_dse) printf("%4d", l10DseDse);
-      printf(" |  %3s", str_dual_edge_weight_mode.c_str());
+      printf("| %4d %4d %4d ", l10ColDse, l10REpDse, l10RapDse);
+      if (report_dse) printf("%4d ", l10DseDse);
+      printf("|  %3s ", str_dual_edge_weight_mode.c_str());
       if (report_dse) {
-	printf(" | %4d\n", l10CostlyDse);
+	printf("| %4d\n", l10CostlyDse);
       } else {
 	printf("\n");
       }
