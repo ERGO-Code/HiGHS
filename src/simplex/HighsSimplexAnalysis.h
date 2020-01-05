@@ -38,15 +38,11 @@
 class HighsSimplexAnalysis {
  public:
   void setup(const HighsLp& lp, const HighsOptions& options, const int simplex_iteration_count_);
-
   void messaging(FILE* logfile_, FILE* output_, const int message_level_);
-
   void updateOperationResultDensity(const double local_density, double& density);
-
-  //  void equalDensity(const double density0, const double density1);
-
   void iterationReport();
   void invertReport();
+  void invertReport(const bool header);
   void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
   bool switchToDevex();
 
@@ -114,13 +110,13 @@ class HighsSimplexAnalysis {
  private:
 
   void iterationReport(const bool header);
-  void invertReport(const bool header);
   void reportAlgorithmPhaseIterationObjective(const bool header, const int this_message_level);
   void reportInfeasibility(const bool header, const int this_message_level);
 #ifdef HiGHSDEV
   void reportThreads(const bool header, const int this_message_level);
   void reportMulti(const bool header, const int this_message_level);
   void reportOneDensity(const int this_message_level, const double density);
+  void reportOneDensity(const double density);
   void reportDensity(const bool header, const int this_message_level);
   void reportInvert(const bool header, const int this_message_level);
   void reportCondition(const bool header, const int this_message_level);
