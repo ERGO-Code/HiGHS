@@ -1313,6 +1313,14 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   dualRow.createFreemove(row_ep);
   timer.stop(simplex_info.clock_[Chuzc0Clock]);
 
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations) {
+    int row_ep_count = row_ep->count;
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep_count, analysis->row_ep_density);
+    analysis->num_row_price++;
+  }
+#endif
+    // Perform BTRAN
   timer.start(simplex_info.clock_[PriceChuzc1Clock]);
   // Row_ep:         PACK + CC1
 #pragma omp task
@@ -1335,6 +1343,15 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     }
   }
 #pragma omp taskwait
+
+#ifdef HiGHSDEV
+  // Determine the nonzero count of the whole row
+  if (simplex_info.analyse_iterations) {
+    int row_ap_count = 0;
+    for (int i = 0; i < slice_num; i++) row_ap_count += slice_row_ap[i].count;
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap_count);
+  }
+#endif
 
   // Join CC1 results here
   for (int i = 0; i < slice_num; i++) {
