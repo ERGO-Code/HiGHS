@@ -28,24 +28,6 @@
 
 constexpr double kExitTolerance = 0.00000001;
 
-struct Quadratic {
-  const HighsLp lp;
-  const ICrashOptions options;
-  std::vector<ICrashIterationDetails> details;
-
-  HighsSolution xk;
-
-  double lp_objective;
-  double quadratic_objective;
-  std::vector<double> residual;
-  double residual_norm_2;
-
-  double mu;
-  std::vector<double> lambda;
-
-  Quadratic(HighsLp lp_, ICrashOptions options_) : lp(lp_), options(options_) {}
-};
-
 bool parseICrashStrategy(const std::string& strategy,
                          ICrashStrategy& icrash_strategy) {
   std::string lower = strategy;

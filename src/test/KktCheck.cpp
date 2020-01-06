@@ -16,8 +16,6 @@
 #include <cassert>
 #include <vector>
 
-#include "lp_data/HConst.h"
-
 void KktCheck::printAR() {
   std::cout << "N=" << numCol << ",  M=" << numRow
             << ",  NZ= " << ARstart[numRow] << '\n';
