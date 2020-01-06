@@ -15,8 +15,11 @@
 #ifndef PRESOLVE_QUADRATIC_CRASH_H_
 #define PRESOLVE_QUADRATIC_CRASH_H_
 
+#include <vector>
+
 #include "lp_data/HighsStatus.h"
-#include "lp_data/HighsLp.h"
+
+class HighsLp;
 
 enum class ICrashStrategy {
   kPenalty,

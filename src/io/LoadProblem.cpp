@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 
 #include "io/LoadProblem.h"
+#include "io/Filereader.h"
 #include "lp_data/HighsLpUtils.h"
 
 HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {

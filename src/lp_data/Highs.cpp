@@ -24,7 +24,6 @@
 #include "io/LoadOptions.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
-#include "presolve/Presolve.h"
 #include "simplex/HApp.h"
 #include "simplex/HighsSimplexInterface.h"
 

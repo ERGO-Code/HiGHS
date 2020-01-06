@@ -15,6 +15,8 @@
 #include "util/HighsUtils.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsSolution.h"
+#include "lp_data/HighsModelObject.h"
+
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution and HighsSolutionParams
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   // Reset unscaled and scaled model status and solution params - except for iteration counts

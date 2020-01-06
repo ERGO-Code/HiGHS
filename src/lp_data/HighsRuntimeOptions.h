@@ -5,7 +5,7 @@
 
 #include "io/HighsIO.h"
 #include "io/LoadProblem.h"
-#include "lp_data/HighsOptions.h"
+//#include "lp_data/HighsOptions.h"
 #include "util/stringutil.h"
 
 bool loadOptionsFromFile(HighsOptions& options);

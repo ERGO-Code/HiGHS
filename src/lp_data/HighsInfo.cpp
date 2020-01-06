@@ -13,6 +13,8 @@
  */
 #include "lp_data/HighsInfo.h"
 
+#include "lp_data/HighsOptions.h"
+
 inline const char* bool2string(bool b) { return b ? "true" : "false"; }
 
 std::string infoEntryType2string(const HighsInfoType type) {

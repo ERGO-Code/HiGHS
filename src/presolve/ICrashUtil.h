@@ -13,7 +13,11 @@
  */
 #ifndef PRESOLVE_ICRASH_UTIL_H_
 #define PRESOLVE_ICRASH_UTIL_H_
-#include "lp_data/HighsLp.h"
+
+#include <vector>
+
+class HighsLp;
+class HighsSolution;
 
 // Calculates value of A^t*v in result.
 void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,

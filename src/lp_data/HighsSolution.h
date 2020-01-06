@@ -16,18 +16,15 @@
 
 #include <vector>
 #include <string>
-//
+
 #include "lp_data/HighsLp.h"
-#include "lp_data/HighsModelObject.h"
-#ifdef IPX_ON
-#include "ipm/IpxStatus.h"
-#include "ipm/ipx/include/ipx_status.h"
-#include "ipm/ipx/src/lp_solver.h"
-#endif
 
 class HighsLp;
 class IpxSolution;
 class HighsOptions;
+class HighsModelObject;
+
+using std::string;
 
 struct HighsPrimalDualErrors {
   int num_nonzero_basic_duals;

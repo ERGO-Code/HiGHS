@@ -12,7 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsLp.h"
-#include "lp_data/HConst.h"
 
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
   if (solution.col_dual.size() == (size_t)lp.numCol_ ||
