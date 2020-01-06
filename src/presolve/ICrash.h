@@ -15,13 +15,15 @@
 #ifndef PRESOLVE_QUADRATIC_CRASH_H_
 #define PRESOLVE_QUADRATIC_CRASH_H_
 
-#include "HighsStatus.h"
+#include "lp_data/HighsStatus.h"
 #include "lp_data/HighsLp.h"
 
 enum class ICrashStrategy {
   kPenalty,
   kAdmm,
-  kICA
+  kICA,
+  kUpdatePenalty,
+  kUpdateAdmm
 };
 
 struct ICrashIterationDetails {
@@ -32,6 +34,8 @@ struct ICrashIterationDetails {
   double lp_objective;
   double quadratic_objective;
   double residual_norm_2;
+  
+  double time;
 };
 
 struct ICrashInfo {
@@ -46,6 +50,8 @@ struct ICrashInfo {
 
   std::vector<ICrashIterationDetails> details;
   std::vector<double> x_values;
+
+  double total_time;
 };
 
 struct ICrashOptions {

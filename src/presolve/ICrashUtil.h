@@ -15,14 +15,6 @@
 #define PRESOLVE_ICRASH_UTIL_H_
 #include "lp_data/HighsLp.h"
 
-struct IterationDetails {
-  int num;
-  double lp_objective;
-  double quadratic_objective;
-  double residual_norm_1;
-  double residual_norm_2;
-};
-
 // Calculates value of A^t*v in result.
 void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
                          std::vector<double>& result);

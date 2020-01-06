@@ -14,6 +14,7 @@
 #include "presolve/ICrash.h"
 
 #include <algorithm>
+#include <chrono>
 #include <sstream>
 
 #include "HighsStatus.h"
@@ -56,6 +57,10 @@ bool parseICrashStrategy(const std::string& strategy,
     icrash_strategy = ICrashStrategy::kAdmm;
   else if (lower == "ica")
     icrash_strategy = ICrashStrategy::kICA;
+  else if (lower == "update_penalty")
+    icrash_strategy = ICrashStrategy::kUpdatePenalty;
+  else if (lower == "update_admm")
+    icrash_strategy = ICrashStrategy::kUpdateAdmm;
   else
     return false;
   return true;
@@ -73,18 +78,25 @@ bool checkOptions(const HighsLp& lp, const ICrashOptions options) {
     if (options.exact) {
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                         "ICrashError: exact strategy not allowed for "
-                        "breakpoints minimization./n");
+                        "breakpoints minimization.\n");
       return false;
     }
     if (options.dualize) {
-      HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			"ICrashError: breakpoints does not support dualize option.\n");
+      HighsPrintMessage(
+          options.output, options.message_level, ML_ALWAYS,
+          "ICrashError: breakpoints does not support dualize option.\n");
       return false;
     }
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                       "ICrashError: breakpoints not implemented yet.\n");
     return false;
   }
+
+  if (options.strategy == ICrashStrategy::kPenalty)
+    HighsPrintMessage(
+        options.output, options.message_level, ML_ALWAYS,
+        "ICrash Warning: Using solveSubproblemICA with lambda = 0.\n");
+
   return true;
 }
 
@@ -96,10 +108,10 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
   if (isEqualityProblem(ilp)) {
     if (options.dualize) {
       status = dualizeEqualityProblem(ilp, local_lp);
-      if (status==HighsStatus::OK) {
-	ilp = local_lp;
+      if (status == HighsStatus::OK) {
+        ilp = local_lp;
       } else {
-	printf("Cannot dualise equality problem\n");
+        printf("Cannot dualise equality problem\n");
       }
     }
   } else {
@@ -107,7 +119,7 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
     assert(!options.breakpoints);  // remove when implementing breakpoints and
                                    // add if else.
     status = transformIntoEqualityProblem(ilp, local_lp);
-    if (status==HighsStatus::OK) {
+    if (status == HighsStatus::OK) {
       ilp = local_lp;
     } else {
       printf("Cannot transform into equality problem\n");
@@ -116,10 +128,10 @@ Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options) {
       // Add slacks & dualize.
       // dualizeEqualityProblem returns a minimization equality problem.
       status = dualizeEqualityProblem(ilp, local_lp);
-      if (status==HighsStatus::OK) {
-	ilp = local_lp;
+      if (status == HighsStatus::OK) {
+        ilp = local_lp;
       } else {
-	printf("Cannot dualise equality problem\n");
+        printf("Cannot dualise equality problem\n");
       }
     }
   }
@@ -173,7 +185,8 @@ ICrashIterationDetails fillDetails(const int num, const Quadratic& idata) {
                                 lambda_norm_2,
                                 idata.lp_objective,
                                 idata.quadratic_objective,
-                                idata.residual_norm_2};
+                                idata.residual_norm_2,
+                                0};
 }
 
 void fillICrashInfo(const int n_iterations, ICrashInfo& result) {
@@ -194,17 +207,51 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
   if (iteration == 1) return;
 
   // The other strategies are WIP.
-  assert(options.strategy == ICrashStrategy::kICA);
-  // Update mu every third iteration, otherwise update lambda.
-  if (iteration % 3 == 0) {
-    idata.mu = 0.1 * idata.mu;
-  } else {
-    std::vector<double> residual_ica(idata.lp.numRow_, 0);
-    updateResidualIca(idata.lp, idata.xk, residual_ica);
-    for (int row = 0; row < idata.lp.numRow_; row++)
-      idata.lambda[row] = idata.mu * idata.lambda[row];
+  switch (options.strategy) {
+    case ICrashStrategy::kPenalty: {
+      idata.mu = 0.1 * idata.mu;
+      break;
+    }
+    case ICrashStrategy::kAdmm: {
+      HighsPrintMessage(
+          options.output, options.message_level, ML_ALWAYS,
+          "ICrash Error: ADMM parameter update not implemented\n.");
+      break;
+    }
+    case ICrashStrategy::kICA: {
+      // Update mu every third iteration, otherwise update lambda.
+      if (iteration % 3 == 0) {
+        idata.mu = 0.1 * idata.mu;
+      } else {
+        std::vector<double> residual_ica(idata.lp.numRow_, 0);
+        updateResidualIca(idata.lp, idata.xk, residual_ica);
+        for (int row = 0; row < idata.lp.numRow_; row++)
+          idata.lambda[row] = idata.mu * residual_ica[row];
+      }
+      break;
+    }
+    case ICrashStrategy::kUpdatePenalty:{
+      // Update mu every third iteration, otherwise do nothing.
+      if (iteration % 3 == 0)
+        idata.mu = 0.1 * idata.mu;
+      break;
+    }
+    case ICrashStrategy::kUpdateAdmm:{
+      // Update mu every third iteration, otherwise update lambda.
+      if (iteration % 3 == 0) {
+        idata.mu = 0.1 * idata.mu;
+      } else {
+        std::vector<double> residual_ica(idata.lp.numRow_, 0);
+        updateResidualIca(idata.lp, idata.xk, residual_ica);
+        for (int row = 0; row < idata.lp.numRow_; row++)
+          // todo: double check clp.
+          idata.lambda[row] = idata.lambda[row] + idata.mu * residual_ica[row];
+      }
+      break;
+    }
   }
-}
+                      }               
+    
 
 void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;
@@ -247,6 +294,8 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
 
 bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
   switch (options.strategy) {
+    case ICrashStrategy::kUpdatePenalty:
+    case ICrashStrategy::kUpdateAdmm:
     case ICrashStrategy::kICA: {
       assert(!options.exact);
       solveSubproblemICA(idata, options);
@@ -254,19 +303,20 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
     }
     case ICrashStrategy::kPenalty: {
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			"ICrashError: Not implemented yet.\n");
+                        "ICrashError: Not implemented yet.\n");
       return false;
     }
     default: {
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			"ICrashError: Not implemented yet.\n");
+                        "ICrashError: Not implemented yet.\n");
       return false;
     }
   }
   return true;
 }
 
-void reportSubproblem(const ICrashOptions options, const Quadratic& idata, const int iteration) {
+void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
+                      const int iteration) {
   std::stringstream ss;
   // Report outcome.
   if (iteration == 0) {
@@ -281,17 +331,21 @@ void reportSubproblem(const ICrashOptions options, const Quadratic& idata, const
        << ", quad_obj " << idata.quadratic_objective << std::endl;
   }
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-		    ss.str().c_str());
+                    ss.str().c_str());
 }
 
 std::string ICrashtrategyToString(const ICrashStrategy strategy) {
   switch (strategy) {
-    case ICrashStrategy::kAdmm:
-      return "ADMM";
     case ICrashStrategy::kPenalty:
       return "Penalty";
+    case ICrashStrategy::kAdmm:
+      return "ADMM";
     case ICrashStrategy::kICA:
       return "ICA";
+    case ICrashStrategy::kUpdatePenalty:
+      return "UpdatePenalty";
+    case ICrashStrategy::kUpdateAdmm:
+      return "UpdateAdmm";
   }
   return "ICrashError: Unknown strategy.\n";
 }
@@ -299,7 +353,7 @@ std::string ICrashtrategyToString(const ICrashStrategy strategy) {
 void reportOptions(const ICrashOptions& options) {
   std::stringstream ss;
   // Report outcome.
-  ss << "ICrashOptions: \n"
+  ss << "ICrashOptions \n"
      << "dualize: " << std::boolalpha << options.dualize << "\n"
      << "strategy: " << ICrashtrategyToString(options.strategy) << "\n"
      << "starting_weight: " << std::scientific << options.starting_weight
@@ -314,7 +368,7 @@ void reportOptions(const ICrashOptions& options) {
   }
   ss << "\n";
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-		    ss.str().c_str());
+                    ss.str().c_str());
 }
 
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
@@ -327,19 +381,32 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   initialize(idata, options);
   update(idata);
   reportSubproblem(options, idata, 0);
-  result.details.push_back(fillDetails(0, idata));
+  idata.details.push_back(fillDetails(0, idata));
+
+  // Initialize clocks.
+  std::chrono::time_point<std::chrono::system_clock> start, end,
+      start_iteration, end_iteration;
+  std::chrono::duration<double> elapsed_seconds;
+  start = std::chrono::system_clock::now();
 
   // Main loop.
   int iteration = 0;
   for (iteration = 1; iteration <= options.iterations; iteration++) {
     updateParameters(idata, options, iteration);
 
+    // Solve subproblem.
+    start_iteration = std::chrono::system_clock::now();
     bool success = solveSubproblem(idata, options);
     if (!success) return HighsStatus::Error;
+    end_iteration = std::chrono::system_clock::now();
+    elapsed_seconds = end_iteration - start_iteration;
 
     update(idata);
+
     reportSubproblem(options, idata, iteration);
-    result.details.push_back(fillDetails(iteration, idata));
+    idata.details.push_back(fillDetails(iteration, idata));
+    assert(iteration + 1 == (int)idata.details.size());
+    idata.details[iteration].time = elapsed_seconds.count();
 
     // Exit if feasible.
     if (idata.residual_norm_2 < kExitTolerance) {
@@ -353,8 +420,18 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
 
   // Fill in return values.
   iteration--;
+  result.details = std::move(idata.details);
+  // reportICrashIterationDetails(result.details);
   fillICrashInfo(iteration, result);
   result.x_values = idata.xk.col_value;
+
+  end = std::chrono::system_clock::now();
+  elapsed_seconds = end - start;
+  result.total_time = elapsed_seconds.count();
+
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "\nICrash finished successfully after: %.2f sec.\n\n",
+                    result.total_time);
 
   return HighsStatus::OK;
 }
