@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
 #include <sstream>
 
 #include "HighsStatus.h"

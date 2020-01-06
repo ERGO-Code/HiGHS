@@ -14,10 +14,14 @@
 #ifndef SIMPLEX_HQPRIMAL_H_
 #define SIMPLEX_HQPRIMAL_H_
 
+#include <utility>
+
 #include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HVector.h"
+
+using std::pair;
 
 /**
  * @brief Phase 2 primal simplex solver for HiGHS

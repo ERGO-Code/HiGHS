@@ -14,6 +14,7 @@
 #include "ICrashUtil.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"

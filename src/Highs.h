@@ -15,13 +15,13 @@
 #define HIGHS_H_
 
 #include "lp_data/HighsLp.h"
-#include "lp_data/HighsModelBuilder.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsStatus.h"
 #include "mip/SolveMip.h"
 #include "presolve/ICrash.h"
+#include "presolve/Presolve.h"
 #include "util/HighsTimer.h"
 
 #include <sstream>

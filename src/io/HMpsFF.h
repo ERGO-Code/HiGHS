@@ -31,7 +31,6 @@
 #include <vector>
 
 #include "io/HighsIO.h"
-#include "lp_data/HConst.h"
 #include "util/stringutil.h"
 
 using Triplet = std::tuple<int, int, double>;

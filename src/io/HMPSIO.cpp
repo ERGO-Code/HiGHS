@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "io/HMPSIO.h"
+
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelUtils.h"

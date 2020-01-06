@@ -17,6 +17,7 @@
 #include <algorithm>
 
 #include "ipm/IpxStatus.h"
+#include "ipm/IpxSolution.h"
 #include "ipm/ipx/include/ipx_status.h"
 #include "ipm/ipx/src/lp_solver.h"
 #include "lp_data/HConst.h"

@@ -14,6 +14,8 @@
 #ifndef LP_DATA_HIGHSLPUTILS_H_
 #define LP_DATA_HIGHSLPUTILS_H_
 
+#include <vector>
+
 #include "HConfig.h"
 #include "io/Filereader.h"
 #include "lp_data/HighsLp.h"
@@ -21,6 +23,7 @@
 #include "lp_data/HighsStatus.h"
 
 class HighsLp;
+using std::vector;
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
