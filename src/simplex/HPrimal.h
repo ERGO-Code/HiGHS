@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -45,17 +45,9 @@ class HPrimal {
   void primalChooseRow();
   void primalUpdate();
 
-  void iterationReport();
-  void iterationReportFull(bool header);
-  void iterationReportIterationAndPhase(int iterate_log_level, bool header);
-  void iterationReportPrimalObjective(int iterate_log_level, bool header);
-  void iterationReportIterationData(int iterate_log_level, bool header);
-  void iterationReportRebuild(
-#ifdef HiGHSDEV
-			      const int i_v=-1
-#endif
-			      );
-  void reportInfeasibility();
+  void iterationAnalysisData();
+  void iterationAnalysis();
+  void reportRebuild(const int rebuild_invert_hint=-1);
 
   // Model pointer
   HighsModelObject& workHMO;
@@ -63,6 +55,7 @@ class HPrimal {
   int solver_num_col;
   int solver_num_row;
   int solver_num_tot;
+  HighsSimplexAnalysis* analysis;
 
   bool no_free_columns;
 
@@ -83,7 +76,7 @@ class HPrimal {
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
-  HVector column;
+  HVector col_aq;
 
   double row_epDensity;
   double columnDensity;

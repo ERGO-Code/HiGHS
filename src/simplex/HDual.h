@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -23,15 +23,10 @@
 #include "simplex/HCrash.h"
 #include "simplex/HDualRHS.h"
 #include "simplex/HDualRow.h"
-#include "simplex/HMatrix.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HVector.h"
 
 class HFactor;
-
-enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
-
-enum class PriceMode { ROW = 0, COL };
 
 /**
  * Limit on the number of column slices for parallel calculations. SIP uses num_threads-2 slices; PAMI uses num_threads-1 slices
@@ -76,10 +71,9 @@ class HDual {
   }
 
   /**
-   * @brief Solve a model instance with a given number of threads
+   * @brief Solve a model instance
    */
-  HighsStatus solve(int num_threads = 1  //!< Default number of threads is 1
-  );
+  HighsStatus solve();
 
  public:
   /**
@@ -92,11 +86,16 @@ class HDual {
    * Copy dimensions and pointers to matrix, factor and solver-related
    * model data, plus tolerances. Sets up local std::vectors (columnDSE,
    * columnBFRT, column, row_ep and row_ap), scalars for their average
-   * density and buffers for dualRow and dualRHS. Also sets up data
-   * structures for SIP or PAMI (if necessary).
+   * density and buffers for dualRow and dualRHS. 
    */
-  void init(int num_threads  //!< Number of threads for initialisation
-  );
+  void init();
+
+  /**
+   * @brief Initialise parallel aspects of a dual simplex instance
+   *
+   * Sets up data structures for SIP or PAMI
+   */
+  void initParallel();
 
   /**
    * @brief Initialise matrix slices and slices of row_ap or dualRow for SIP or
@@ -156,98 +155,40 @@ class HDual {
   void iterateMulti();  // in HDualMulti.cpp
 
   /**
-   * @brief Initialise the iteration analysis
+   * @brief Pass the data for the serial iteration analysis, report and rebuild report
    */
-  void iterationAnalysisInitialise();
+  void iterationAnalysisData();
 
   /**
-   * @brief Perform the iteration analysis
+   * @brief Perform the serial iteration analysis
    */
   void iterationAnalysis();
 
-#ifdef HiGHSDEV
   /**
-   * @brief Report on the iteration analysis
+   * @brief Pass the data for the PAMI iteration analysis for a minor iteration, report and rebuild report
    */
-  void iterationAnalysisReport();
-#endif
+  void iterationAnalysisMinorData();
 
   /**
-   * @brief Report on the iteration using iterationReportFull, possibly using it
-   * to write out column headers
+   * @brief Perform the PAMI iteration analysis for a minor iteration
    */
-  void iterationReport();
+  void iterationAnalysisMinor();
 
   /**
-   * @brief Report full iteration headers or data according to value of
-   * <tt>header</tt>
+   * @brief Pass the data for the PAMI iteration analysis for a major iteration
    */
-  void iterationReportFull(bool header  //!< Logic to determine whether to write
-                                        //!< out column headers or data
-  );
+  void iterationAnalysisMajorData();
 
   /**
-   * @brief Report iteration number and LP phase headers or data according to
-   * value of <tt>header</tt>
+   * @brief Perform the PAMI iteration analysis for a major iteration
    */
-  void iterationReportIterationAndPhase(
-      int iterate_log_level,  //!< Iteration logging level
-      bool header  //!< Logic to determine whether to write out column headers
-                   //!< or data
-  );
-
-  /**
-   * @brief Report dual objective value header or data according to value of
-   * <tt>header</tt>
-   */
-  void iterationReportDualObjective(
-      int iterate_log_level,  //!< Iteration logging level
-      bool header  //!< Logic to determine whether to write out column header or
-                   //!< data
-  );
-
-  /**
-   * @brief Report dual iteration data header or data according to value of
-   * <tt>header</tt>
-   */
-  void iterationReportIterationData(
-      int iterate_log_level,  //!< Iteration logging level
-      bool header  //!< Logic to determine whether to write out column headers
-                   //!< or data
-  );
-
-  /**
-   * @brief Report dual iteration operation density header or data according to
-   * value of <tt>header</tt>
-   */
-  void iterationReportDensity(
-      int iterate_log_level,  //!< Iteration logging level
-      bool header  //!< Logic to determine whether to write out column headers
-                   //!< or data
-  );
-  int intLog10(double v);
+  void iterationAnalysisMajor();
 
   /**
    * @brief Single line report after rebuild
    */
-  void iterationReportRebuild(
-#ifdef HiGHSDEV
-      const int i_v=-1  //!< Integer value for reporting - generally invertHint
-#endif
-  );
+  void reportRebuild(const int rebuild_invert_hint=-1);
 
-  /**
-   * @brief Report infeasibility
-   */
-  void reportInfeasibility();
-
-  /**
-   * @brief Update an average density record for BTRAN, an FTRAN or PRICE
-   */
-  void uOpRsDensityRec(
-      double lc_OpRsDensity,  //!< Recent density of the operation
-      double& opRsDensity     //!< Average density of the operation
-  );
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
    */
@@ -438,36 +379,14 @@ class HDual {
   bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);
 
-#ifdef HiGHSDEV
-  void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
-  void iterateOpRecAf(int opTy, HVector& vector);
-#endif
-
   int Crash_Mode = 0;  //!< Crash mode. TODO: handle this otherwise
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
                        //!< calling function
 
   // Devex scalars
-  int num_devex_framework = 0;   //!< Number of Devex frameworks used
   int num_devex_iterations = 0;  //!< Number of Devex iterations with the current framework
   bool new_devex_framework = false;  //!< Set a new Devex framework
   bool minor_new_devex_framework = false; //!< Set a new Devex framework in PAMI minor iterations
-  // Devex std::vector
-  std::vector<int> devex_index;  //!< Vector of Devex indices
-
-  // Price scalars
-  // DSE scalars
-  int AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
-  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
-  const double AnIterCostlyDseMeasureLimit = 1000.0;  //!<
-  const double AnIterCostlyDseMnDensity = 0.01;       //!<
-  const double AnIterFracNumTot_ItBfSw = 0.1;         //!<
-  const double AnIterFracNumCostlyDseItbfSw = 0.05;   //!<
-  double AnIterCostlyDseMeasure;
-#ifdef HiGHSDEV
-  int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
-                                   //!< previously reported
-#endif
 
   // Model
   HighsModelObject& workHMO;
@@ -478,6 +397,7 @@ class HDual {
   const HMatrix* matrix;
   //  const HFactor* factor; //FactorTimer frig const
   HFactor* factor;
+  HighsSimplexAnalysis* analysis;
 
   const int* jMove;
   const double* workRange;
@@ -500,7 +420,6 @@ class HDual {
   PriceMode price_mode;
   bool allow_price_by_col_switch;
   bool allow_price_by_row_switch;
-  bool allow_price_ultra;
   const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
                                        //!< when pi_p has at least this density
   const double min_dual_steepest_edge_weight = 1e-4;
@@ -518,13 +437,9 @@ class HDual {
 
   HVector row_ep;
   HVector row_ap;
-  HVector column;
-  HVector columnBFRT;
-  HVector columnDSE;
-  double columnDensity;
-  double row_epDensity;
-  double row_apDensity;
-  double rowdseDensity;
+  HVector col_aq;
+  HVector col_BFRT;
+  HVector col_DSE;
 
   HDualRow dualRow;
 
@@ -567,8 +482,8 @@ class HDual {
     double infeasEdWt;
     double infeasLimit;
     HVector row_ep;
-    HVector column;
-    HVector columnBFRT;
+    HVector col_aq;
+    HVector col_BFRT;
   };
 
   /**
@@ -588,11 +503,12 @@ class HDual {
     double basicValue;
     double EdWt;
     HVector_ptr row_ep;
-    HVector_ptr column;
-    HVector_ptr columnBFRT;
+    HVector_ptr col_aq;
+    HVector_ptr col_BFRT;
   };
 
   int multi_num;
+  int multi_chosen;
   int multi_iChoice;
   int multi_nFinish;
   int multi_iteration;
@@ -624,73 +540,6 @@ class HDual {
   double build_syntheticTick;
   double total_syntheticTick;
 
-  int num_dual_steepest_edge_weight_check;
-  int num_dual_steepest_edge_weight_reject;
-  int num_wrong_low_dual_steepest_edge_weight;
-  int num_wrong_high_dual_steepest_edge_weight;
-  double average_frequency_low_dual_steepest_edge_weight;
-  double average_frequency_high_dual_steepest_edge_weight;
-  double average_log_low_dual_steepest_edge_weight_error;
-  double average_log_high_dual_steepest_edge_weight_error;
-  double max_average_frequency_low_dual_steepest_edge_weight;
-  double max_average_frequency_high_dual_steepest_edge_weight;
-  double max_sum_average_frequency_extreme_dual_steepest_edge_weight;
-  double max_average_log_low_dual_steepest_edge_weight_error;
-  double max_average_log_high_dual_steepest_edge_weight_error;
-  double max_sum_average_log_extreme_dual_steepest_edge_weight_error;
-
-  int AnIterIt0;
-#ifdef HiGHSDEV
-  int AnIterPrevIt;
-  // Major operation analysis struct
-  enum AnIterOpTy {
-    AnIterOpTy_Btran = 0,
-    AnIterOpTy_Price,
-    AnIterOpTy_Ftran,
-    AnIterOpTy_FtranBFRT,
-    AnIterOpTy_FtranDSE,
-    NumAnIterOpTy,
-  };
-
-  struct AnIterOpRec {
-    double AnIterOpLog10RsDsty;
-    double AnIterOpSuLog10RsDsty;
-    double AnIterOpHyperCANCEL;
-    double AnIterOpHyperTRAN;
-    int AnIterOpRsDim;
-    int AnIterOpNumCa;
-    int AnIterOpNumHyperOp;
-    int AnIterOpNumHyperRs;
-    int AnIterOpRsMxNNZ;
-    int AnIterOpSuNumCa;
-    int AnIterOpSuNumHyperOp;
-    int AnIterOpSuNumHyperRs;
-    std::string AnIterOpName;
-  };
-  AnIterOpRec AnIterOp[NumAnIterOpTy];
-
-  struct AnIterTraceRec {
-    double AnIterTraceTime;
-    double AnIterTraceDsty[NumAnIterOpTy];
-    double AnIterTraceAux0;
-    int AnIterTraceIter;
-    int AnIterTrace_dual_edge_weight_mode;
-  };
-
-  enum AnIterTraceMxNumRec { AN_ITER_TRACE_MX_NUM_REC = 20 };
-  int AnIterTraceNumRec;
-  int AnIterTraceIterDl;
-  AnIterTraceRec AnIterTrace[1 + AN_ITER_TRACE_MX_NUM_REC + 1];
-
-  int AnIterNumInvert[INVERT_HINT_Count];
-  int AnIterNumColPrice;
-  int AnIterNumRowPrice;
-  int AnIterNumRowPriceWSw;
-  int AnIterNumRowPriceUltra;
-  int AnIterNumPrDgnIt;
-  int AnIterNumDuDgnIt;
-  int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
-#endif
 };
 
 #endif /* SIMPLEX_HDUAL_H_ */

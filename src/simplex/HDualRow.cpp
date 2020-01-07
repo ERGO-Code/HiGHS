@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -73,25 +73,12 @@ void HDualRow::chooseMakepack(const HVector* row, const int offset) {
   const int rowCount = row->count;
   const int* rowIndex = &row->index[0];
   const double* rowArray = &row->array[0];
-  const double* rowPackValue = &row->packValue[0];
-  const int rowPWd = row->pWd;
 
-  if (rowPWd == row->dfSparseDaStr) {
-    for (int i = 0; i < rowCount; i++) {
-      const int index = rowIndex[i];
-      const double value = rowArray[index];
-      packIndex[packCount] = index + offset;
-      packValue[packCount++] = value;
-    }
-  } else if (rowPWd >= row->p0SparseDaStr) {
-    for (int i = 0; i < rowCount; i++) {
-      const int index = rowIndex[i];
-      const double value = rowPackValue[i];
-      packIndex[packCount] = index + offset;
-      packValue[packCount++] = value;
-    }
-  } else {
-    printf("HDualRow::chooseMakepack: Cannot handle rowPWd = %d\n", rowPWd);
+  for (int i = 0; i < rowCount; i++) {
+    const int index = rowIndex[i];
+    const double value = rowArray[index];
+    packIndex[packCount] = index + offset;
+    packValue[packCount++] = value;
   }
 }
 

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -14,6 +14,7 @@
 #include "lp_data/HighsOptions.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
+#include "simplex/HighsSimplexAnalysis.h"
 #include "util/HighsRandom.h"
 #include "util/HighsTimer.h"
 // include Sensitivity(or Ranging) header
@@ -46,6 +47,7 @@ class HighsModelObject {
   HighsScale scale_;
   HMatrix matrix_;
   HFactor factor_;
+  HighsSimplexAnalysis simplex_analysis_;
   HighsRandom random_;
 
   bool report_model_operations_clock = false;

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -116,7 +116,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // Copy the simplex stratgy so that it can be modified:
   //
   const int simplex_strategy = highs_model_object.options_.simplex_strategy;
-  const int num_threads = highs_model_object.options_.num_threads;
   const std::string parallel = highs_model_object.options_.parallel;
   // Set use_simplex_strategy to an illegal value to check that it is set
   const int illegal_simplex_strategy = SIMPLEX_STRATEGY_MIN-1;
@@ -148,26 +147,46 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       use_simplex_strategy = simplex_strategy;
     }
   }
-  // Set use_num_threads to correspond to serial code. If parallel
-  // stratgies are used, it will be set to the maximum of the minimum
-  // required and the number of threads in options_
-  int use_num_threads = 1;
+  // Set min/num/max_threads to correspond to serial code. If parallel
+  // stratgies are used, the number of HiGHS threads used will be set
+  // to the maximum of the minimum required and the maximum number of
+  // HiGHS threads allowed in options_
+  //
+  // All this is independent of the number of OMP threads available,
+  // since code with multiple HiGHS threads can be run in serial.
+  const int highs_max_threads = highs_model_object.options_.highs_max_threads;
+  simplex_info.max_threads = 1;
   if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL && parallel == on_string) {
   // Check for case where simplex strategy is SIMPLEX_STRATEGY_DUAL
   // but parallel option is chosen
     use_simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
-    use_num_threads = PARALLEL_THREADS_DEFAULT;
+    simplex_info.max_threads = PARALLEL_THREADS_DEFAULT;
   } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
-    use_num_threads = max(DUAL_TASKS_MIN_THREADS, num_threads);
+    simplex_info.max_threads = max(DUAL_TASKS_MIN_THREADS, highs_max_threads);
   } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
-    use_num_threads = max(DUAL_MULTI_MIN_THREADS, num_threads);
+    simplex_info.max_threads = max(DUAL_MULTI_MIN_THREADS, highs_max_threads);
   }
+  // Set the number of HiGHS threads to be used to be the maximum
+  // number to be used
+  simplex_info.num_threads = simplex_info.max_threads;
   // Give a warning if the number of threads to be used is more than
-  // the option setting
-  if (use_num_threads > num_threads) {
+  // the maximum number of HiGHS threads allowed
+  if (simplex_info.num_threads > highs_max_threads) {
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
-		    "Using %d threads for parallel strategy rather than number (%d) specified in options",
-		    use_num_threads, num_threads);
+		    "Using %d HiGHS threads for parallel strategy rather than maximum number (%d) specified in options",
+		    simplex_info.num_threads, highs_max_threads);
+  }
+  const int highs_min_threads = highs_model_object.options_.highs_min_threads;
+  // Set the minimum number of HiGHS threads to be used to be the
+  // lesser of the number to be used and the minimum number of HiGHS
+  // threads allowed in options_
+  simplex_info.min_threads = min(simplex_info.num_threads, highs_min_threads);
+  // Give a warning if the minimum number of threads to be used is
+  // less than the minimum number of HiGHS threads allowed
+  if (simplex_info.min_threads < highs_min_threads) {
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+		    "Using minimum of %d HiGHS threads for parallel strategy rather than minimum number (%d) specified in options",
+		    simplex_info.min_threads, highs_min_threads);
   }
 #ifdef HiGHSDEV
   // reportSimplexLpStatus(simplex_lp_status, "After transition");
@@ -203,19 +222,19 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
         // Parallel - SIP
 	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-			"Using parallel simplex solver - SIP with %d threads", use_num_threads);
+			"Using parallel simplex solver - SIP with %d threads", simplex_info.num_threads);
         // writePivots("tasks");
-        call_status = dual_solver.solve(use_num_threads);
+        call_status = dual_solver.solve();
 	return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
 	if (return_status == HighsStatus::Error) return return_status;
       } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
         // Parallel - PAMI
 	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-			"Using parallel simplex solver - PAMI with %d threads", use_num_threads);
+			"Using parallel simplex solver - PAMI with %d threads", simplex_info.num_threads);
         // writePivots("multi");
         // if (opt.partitionFile.size() > 0)
         // {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
-          call_status = dual_solver.solve(use_num_threads);
+	call_status = dual_solver.solve();
 	  return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
 	  if (return_status == HighsStatus::Error) return return_status;
       } else {
@@ -249,9 +268,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     timer.stop(simplex_info.clock_[SimplexTotalClock]);
     reportSimplexProfiling(highs_model_object);
-    // ToDO move iterationAnalysisReport to simplex
-    printf("!! Move iterationAnalysisReport() to HSimplex\n");
-    //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
 
     if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
@@ -271,11 +287,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef OPENMP
   omp_max_threads = omp_get_max_threads();
 #endif
-  if (omp_max_threads <= 1) highs_model_object.factor_.reportTimer();
+  if (omp_max_threads <= 1 && simplex_info.report_HFactor_clock)
+    highs_model_object.factor_.reportTimer();
 #endif
   }
 
-  if (simplex_info.analyseLpSolution) {
+  if (simplex_info.analyse_lp_solution) {
     // Analyse the simplex basic solution, assuming that the scaled solution params are known
     const bool report = true;
     call_status = analyseSimplexBasicSolution(highs_model_object,
@@ -392,7 +409,9 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   HighsStatus call_status;
   // Reset unscaled and scaled model status and solution params - except for iteration counts
   resetModelStatusAndSolutionParams(highs_model_object);
-
+  HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
+  simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
+			 highs_model_object.scaled_solution_params_.simplex_iteration_count);
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(highs_model_object);
@@ -441,6 +460,10 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     invalidateSolutionInfeasibilityParams(highs_model_object.scaled_solution_params_);
   }
     
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations) simplex_analysis.summaryReport();
+#endif
+
   // Deduce the HiGHS basis and solution from the simplex basis and solution
   HighsSimplexInterface simplex_interface(highs_model_object);
   simplex_interface.convertSimplexToHighsSolution();

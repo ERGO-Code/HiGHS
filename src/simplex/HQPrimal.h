@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -53,13 +53,20 @@ class HQPrimal {
   void devexReset();
   void devexUpdate();
 
-  void iterationReport();
-  void iterationReportFull(bool header);
-  void iterationReportIterationAndPhase(int iterate_log_level, bool header);
-  void iterationReportPrimalObjective(int iterate_log_level, bool header);
-  void iterationReportIterationData(int iterate_log_level, bool header);
-  void iterationReportRebuild(const int i_v);
-  void reportInfeasibility();
+  /**
+   * @brief Pass the data for the iteration analysis, report and rebuild report
+   */
+  void iterationAnalysisData();
+
+  /**
+   * @brief Perform the iteration analysis
+   */
+  void iterationAnalysis();
+
+  /**
+   * @brief Single line report after rebuild
+   */
+  void reportRebuild(const int rebuild_invert_hint=-1);
 
   // Model pointer
   HighsModelObject& workHMO;
@@ -67,6 +74,7 @@ class HQPrimal {
   int solver_num_col;
   int solver_num_row;
   int solver_num_tot;
+  HighsSimplexAnalysis* analysis;
 
   bool no_free_columns;
 
@@ -92,14 +100,15 @@ class HQPrimal {
   vector<pair<double, int> > ph1SorterT;
 
   // Devex weight
-  int nBadDevexWeight;
-  vector<double> devexWeight;
-  vector<char> devexRefSet;
+  int num_devex_iterations;
+  int num_bad_devex_weight;
+  vector<double> devex_weight;
+  vector<int> devex_index;
 
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
-  HVector column;
+  HVector col_aq;
 
   double row_epDensity;
   double columnDensity;

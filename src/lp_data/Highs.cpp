@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -248,10 +248,10 @@ HighsStatus Highs::run() {
     printf("WARNING: omp_get_max_threads() returns %d\n", omp_max_threads);
   printf("Running with %d OMP thread(s)\n", omp_max_threads);
 #endif
-  if (omp_max_threads < options_.num_threads)
+  if (omp_max_threads < options_.highs_max_threads)
     HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
-		    "Number of OMP threads = %d < %d = Number of HiGHS threads: Parallel performance will be less than anticipated",
-		    omp_max_threads, options_.num_threads);
+		    "Number of OMP threads available = %d < %d = Max number of HiGHS threads requested: Parallel performance will be less than anticipated",
+		    omp_max_threads, options_.highs_max_threads);
 #endif
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
@@ -480,7 +480,8 @@ HighsStatus Highs::run() {
 	  if (options.solver == ipm_string) options.solver = simplex_string;
           options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
 	  // Ensure that the parallel solver isn't used
-	  options.num_threads = 1;
+	  options.highs_min_threads = 1;
+	  options.highs_max_threads = 1;
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
 	  int iteration_count0 = hmos_[solved_hmo].unscaled_solution_params_.simplex_iteration_count;
 	  call_status = runLpSolver(hmos_[solved_hmo], "Solving the original LP from the solution after postsolve");
