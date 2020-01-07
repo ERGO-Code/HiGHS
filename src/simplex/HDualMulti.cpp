@@ -943,8 +943,7 @@ void HDual::iterationAnalysisMajor() {
     switch_to_devex = analysis->switchToDevex();
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
-      // Zero the number of Devex frameworks used and set up the first one
-      num_devex_framework = 0;
+      // Set up the Devex framework
       workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     }

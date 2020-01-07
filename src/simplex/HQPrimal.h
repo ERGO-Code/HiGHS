@@ -100,9 +100,10 @@ class HQPrimal {
   vector<pair<double, int> > ph1SorterT;
 
   // Devex weight
-  int nBadDevexWeight;
-  vector<double> devexWeight;
-  vector<char> devexRefSet;
+  int num_devex_iterations;
+  int num_bad_devex_weight;
+  vector<double> devex_weight;
+  vector<int> devex_index;
 
   // Solve buffer
   HVector row_ep;

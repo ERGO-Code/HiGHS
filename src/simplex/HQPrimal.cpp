@@ -86,7 +86,6 @@ HighsStatus HQPrimal::solve() {
   initialise_dual_steepest_edge_weights
     // Using dual Devex edge weights
     // Zero the number of Devex frameworks used and set up the first one
-    num_devex_framework = 0;
     devex_index.assign(solver_num_tot, 0);
     initialiseDevexFramework();
     // Indicate that edge weights are known
@@ -170,14 +169,6 @@ HighsStatus HQPrimal::solve() {
           (scaled_solution_params.simplex_iteration_count - it0);
     }
   }
-#ifdef HiGHSDEV
-  /*
-  if (primal_edge_weight_mode == PrimalEdgeWeightMode::DEVEX) {
-    printf("Devex: num_devex_framework = %d; Average num_devex_iterations = %d\n", num_devex_framework,
-           scaled_solution_params.simplex_iteration_count / num_devex_framework);
-  }
-  */
-#endif
   /*
   // ToDo Adapt ok_to_solve to be used by primal
   bool ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1,
@@ -471,8 +462,8 @@ void HQPrimal::primalChooseColumn() {
       for (int iCol = fromCol; iCol < toCol; iCol++) {
         // Then look at dual infeasible
         if (jMove[iCol] * workDual[iCol] < -dualTolerance) {
-          if (bestInfeas * devexWeight[iCol] < fabs(workDual[iCol])) {
-            bestInfeas = fabs(workDual[iCol]) / devexWeight[iCol];
+          if (bestInfeas * devex_weight[iCol] < fabs(workDual[iCol])) {
+            bestInfeas = fabs(workDual[iCol]) / devex_weight[iCol];
             columnIn = iCol;
           }
         }
@@ -503,8 +494,8 @@ void HQPrimal::primalChooseColumn() {
         }
         // Then look at dual infeasible
         if (jMove[iCol] * workDual[iCol] < -dualTolerance) {
-          if (bestInfeas * devexWeight[iCol]  < fabs(workDual[iCol])) {
-            bestInfeas = fabs(workDual[iCol]) / devexWeight[iCol];
+          if (bestInfeas * devex_weight[iCol]  < fabs(workDual[iCol])) {
+            bestInfeas = fabs(workDual[iCol]) / devex_weight[iCol];
             columnIn = iCol;
           }
         }
@@ -807,7 +798,7 @@ void HQPrimal::primalUpdate() {
   workHMO.scaled_solution_params_.simplex_iteration_count++;
 
   /* Reset the devex when there are too many errors */
-  if(nBadDevexWeight > 3) {
+  if(num_bad_devex_weight > 3) {
     devexReset();
   }
 
@@ -902,7 +893,7 @@ void HQPrimal::phase1ChooseColumn() {
   columnIn = -1;
   for (int iSeq = 0; iSeq < nSeq; iSeq++) {
     double dMyDual = nbMove[iSeq] * workDual[iSeq];
-    double dMyScore = dMyDual / devexWeight[iSeq];
+    double dMyScore = dMyDual / devex_weight[iSeq];
     if (dMyDual < -dDualTol && dMyScore < dBestScore) {
       dBestScore = dMyScore;
       columnIn = iSeq;
@@ -1197,7 +1188,7 @@ void HQPrimal::phase1Update() {
   }
 
   /* Reset the devex framework when necessary */
-  if(nBadDevexWeight > 3) {
+  if(num_bad_devex_weight > 3) {
     devexReset();
   }
 
@@ -1210,14 +1201,14 @@ void HQPrimal::phase1Update() {
 /* Reset the devex weight */
 void HQPrimal::devexReset() {
   const int nSeq = workHMO.lp_.numCol_ + workHMO.lp_.numRow_;
-  devexWeight.assign(nSeq, 1.0);
-  devexRefSet.assign(nSeq, 0);
+  devex_weight.assign(nSeq, 1.0);
+  devex_index.assign(nSeq, 0);
   for (int iSeq = 0; iSeq < nSeq; iSeq++) {
-    if (workHMO.simplex_basis_.nonbasicFlag_[iSeq]) {
-      devexRefSet[iSeq] = 1;
-    }
+    const int nonbasicFlag = workHMO.simplex_basis_.nonbasicFlag_[iSeq];
+    devex_index[iSeq] = nonbasicFlag*nonbasicFlag;
   }
-  nBadDevexWeight = 0;
+  num_devex_iterations = 0;
+  num_bad_devex_weight = 0;
 }
 
 void HQPrimal::devexUpdate() {
@@ -1229,19 +1220,15 @@ void HQPrimal::devexUpdate() {
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
     int iSeq = workHMO.simplex_basis_.basicIndex_[iRow];
-    if (devexRefSet[iSeq]) {
-      double dAlpha = col_aq.array[iRow];
-      dPivotWeight += dAlpha * dAlpha;
-    }
+    double dAlpha = devex_index[iSeq] * col_aq.array[iRow];
+    dPivotWeight += dAlpha * dAlpha;
   }
-  if (devexRefSet[columnIn]) {
-    dPivotWeight += 1.0;
-  }
+  dPivotWeight += devex_index[columnIn] * 1.0;
   dPivotWeight = sqrt(dPivotWeight);
 
   /* Check if the saved weight is too large */
-  if (devexWeight[columnIn] > 3.0 * dPivotWeight) {
-    nBadDevexWeight++;
+  if (devex_weight[columnIn] > 3.0 * dPivotWeight) {
+    num_bad_devex_weight++;
   }
 
   /* Update the devex weight for all */
@@ -1252,11 +1239,9 @@ void HQPrimal::devexUpdate() {
     int iSeq = row_ap.index[i];
     double alpha = row_ap.array[iSeq];
     double devex = dPivotWeight * fabs(alpha);
-    if (devexRefSet[iSeq]) {
-      devex += 1.0;
-    }
-    if (devexWeight[iSeq] < devex) {
-      devexWeight[iSeq] = devex;
+    devex += devex_index[iSeq] * 1.0;
+    if (devex_weight[iSeq] < devex) {
+      devex_weight[iSeq] = devex;
     }
   }
   for (int i = 0; i < row_ep.count; i++) {
@@ -1264,17 +1249,16 @@ void HQPrimal::devexUpdate() {
     int iSeq = row_ep.index[i] + solver_num_col;
     double alpha = row_ep.array[iPtr];
     double devex = dPivotWeight * fabs(alpha);
-    if (devexRefSet[iSeq]) {
-      devex += 1.0;
-    }
-    if (devexWeight[iSeq] < devex) {
-      devexWeight[iSeq] = devex;
+    devex += devex_index[iSeq] * 1.0;
+    if (devex_weight[iSeq] < devex) {
+      devex_weight[iSeq] = devex;
     }
   }
 
   /* Update devex weight for the pivots */
-  devexWeight[columnOut] = max(1.0, dPivotWeight);
-  devexWeight[columnIn] = 1.0;
+  devex_weight[columnOut] = max(1.0, dPivotWeight);
+  devex_weight[columnIn] = 1.0;
+  num_devex_iterations++;
   timer.stop(simplex_info.clock_[DevexUpdateWeightClock]);
 }
 
@@ -1282,10 +1266,10 @@ void HQPrimal::iterationAnalysisData() {
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
-  analysis->edge_weight_mode = DualEdgeWeightMode::DANTZIG;
+  analysis->edge_weight_mode = DualEdgeWeightMode::DEVEX;
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
-  analysis->devex_iteration_count = 0;
+  analysis->devex_iteration_count = num_devex_iterations;
   analysis->pivotal_row_index = rowOut;
   analysis->leaving_variable = columnOut;
   analysis->entering_variable = columnIn;
@@ -1308,6 +1292,8 @@ void HQPrimal::iterationAnalysisData() {
 #ifdef HiGHSDEV
   analysis->basis_condition = simplex_info.invert_condition;
 #endif
+  if ((analysis->edge_weight_mode == DualEdgeWeightMode::DEVEX) &&
+      (num_devex_iterations == 0)) analysis->num_devex_framework++;
 }
 
 void HQPrimal::iterationAnalysis() {

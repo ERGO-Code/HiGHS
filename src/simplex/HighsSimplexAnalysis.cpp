@@ -59,6 +59,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     max_average_log_high_dual_steepest_edge_weight_error = 0;
     max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
   }
+  num_devex_framework = 0;
+
   num_iteration_report_since_last_header = -1;
   num_invert_report_since_last_header = -1;
   
@@ -533,6 +535,12 @@ void HighsSimplexAnalysis::summaryReport() {
   printf("\n%12d (%3d%%) costly DSE        iterations\n", AnIterNumCostlyDseIt,
          (100 * AnIterNumCostlyDseIt) / AnIterNumIter);
 
+  // Look for any Devex data to summarise
+  if (num_devex_framework) {
+    printf("\nDevex summary\n");
+    printf("%12d Devex frameworks\n", num_devex_framework);
+    printf("%12d average number of iterations\n", AnIterNumEdWtIt[(int)DualEdgeWeightMode::DEVEX]/num_devex_framework);
+  }
   // Look for any PAMI data to summarise
   if (sum_multi_chosen>0) {
     const int pct_minor_iterations_performed = (100 * sum_multi_finished) / sum_multi_chosen;

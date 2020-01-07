@@ -103,6 +103,7 @@ class HighsSimplexAnalysis {
   double sum_primal_infeasibilities = 0;
   double sum_dual_infeasibilities = 0;
   double basis_condition = 0;
+  int num_devex_framework = 0;
 
   int num_col_price = 0;
   int num_row_price = 0;
@@ -135,6 +136,7 @@ class HighsSimplexAnalysis {
   double AnIterCostlyDseMeasure;
   int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
                                    //!< previously reported
+
 
   const double accept_weight_threshhold = 0.25;
   const double weight_error_threshhold = 4.0;

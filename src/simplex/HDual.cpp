@@ -110,9 +110,7 @@ HighsStatus HDual::solve() {
     // Set up edge weights according to dual_edge_weight_mode and
     // initialise_dual_steepest_edge_weights
     if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
-      // Using dual Devex edge weights
-      // Zero the number of Devex frameworks used and set up the first one
-      num_devex_framework = 0;
+      // Using dual Devex edge weights, so set up the first framework
       simplex_info.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -993,6 +991,8 @@ void HDual::iterationAnalysisData() {
 #ifdef HiGHSDEV
   analysis->basis_condition = simplex_info.invert_condition;
 #endif
+  if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) &&
+      (num_devex_iterations == 0)) analysis->num_devex_framework++;
 }
 
 void HDual::iterationAnalysis() {
@@ -1006,8 +1006,7 @@ void HDual::iterationAnalysis() {
     switch_to_devex = analysis->switchToDevex();
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
-      // Zero the number of Devex frameworks used and set up the first one
-      num_devex_framework = 0;
+      // Using dual Devex edge weights, so set up the first framework
       workHMO.simplex_info_.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     }
@@ -1662,7 +1661,6 @@ void HDual::initialiseDevexFramework(const bool parallel) {
   // and indicate that there's no need for a new Devex framework
   dualRHS.workEdWt.assign(solver_num_row, 1.0);
   num_devex_iterations = 0;
-  num_devex_framework++;
   new_devex_framework = false;
   minor_new_devex_framework = false;
   timer.stop(simplex_info.clock_[DevexIzClock]);

@@ -384,7 +384,6 @@ class HDual {
                        //!< calling function
 
   // Devex scalars
-  int num_devex_framework = 0;   //!< Number of Devex frameworks used
   int num_devex_iterations = 0;  //!< Number of Devex iterations with the current framework
   bool new_devex_framework = false;  //!< Set a new Devex framework
   bool minor_new_devex_framework = false; //!< Set a new Devex framework in PAMI minor iterations

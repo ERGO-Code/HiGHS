@@ -86,7 +86,6 @@ HighsStatus HPrimal::solve() {
   initialise_dual_steepest_edge_weights
     // Using dual Devex edge weights
     // Zero the number of Devex frameworks used and set up the first one
-    num_devex_framework = 0;
     devex_index.assign(solver_num_tot, 0);
     initialiseDevexFramework();
     // Indicate that edge weights are known
@@ -165,14 +164,6 @@ HighsStatus HPrimal::solve() {
           (scaled_solution_params.simplex_iteration_count - it0);
     }
   }
-#ifdef HiGHSDEV
-  /*
-  if (primal_edge_weight_mode == PrimalEdgeWeightMode::DEVEX) {
-    printf("Devex: num_devex_framework = %d; Average num_devex_iterations = %d\n", num_devex_framework,
-           scaled_solution_params.simplex_iteration_count / num_devex_framework);
-  }
-  */
-#endif
   /*
   // ToDo Adapt ok_to_solve to be used by primal
   bool ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1,
