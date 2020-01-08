@@ -1323,7 +1323,6 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     analysis->num_row_price++;
   }
 #endif
-    // Perform BTRAN
   timer.start(simplex_info.clock_[PriceChuzc1Clock]);
   // Row_ep:         PACK + CC1
 #pragma omp task

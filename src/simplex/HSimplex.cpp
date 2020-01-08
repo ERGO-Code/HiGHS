@@ -2812,7 +2812,7 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
   timer.start(simplex_info.clock_[PriceClock]);
   row_ap.clear();
 #ifdef HiGHSDEV
-  bool anPriceEr = false;
+  const bool analyse_price_error = false;
 #endif
   if (price_mode == PriceMode::COL) {
     // Column-wise PRICE
@@ -2827,12 +2827,7 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
   } else {
     // By default, use row-wise PRICE, but possibly use column-wise
     // PRICE if the density of row_ep is too high
-    const double local_density = (double)(row_ep).count / solver_num_row;
-    const double alt_local_density = 1.0 * row_ep.count / solver_num_row;
-    if (alt_local_density != local_density) {
-      printf("ODD alt_local_density != local_density |diff| = %g\n", fabs(alt_local_density - local_density));
-    }
-
+    const double local_density = 1.0 * row_ep.count / solver_num_row;
     if (simplex_info.allow_price_by_col_switch && (local_density > density_for_column_price_switch)) {
       // Use column-wise PRICE due to density of row_ep
 #ifdef HiGHSDEV
@@ -2878,9 +2873,7 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
   }
 #ifdef HiGHSDEV
   // Possibly analyse the error in the result of PRICE
-  if (anPriceEr) {
-    matrix->price_er_ck(row_ap, row_ep);
-  }
+  if (analyse_price_error) matrix->price_er_ck(row_ap, row_ep);
 #endif
   // Update the record of average row_ap density
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
