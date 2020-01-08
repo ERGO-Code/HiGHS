@@ -2788,6 +2788,10 @@ void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
   scaled_solution_params.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
+void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mode, const HVector& row_ep, HVector& row_ap) {
+  const HMatrix* matrix = &highs_model_object.matrix_;
+}
+
 void compute_dual(HighsModelObject& highs_model_object) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;

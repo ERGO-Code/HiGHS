@@ -183,6 +183,8 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
 void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
 				    const bool report = false);
 
+void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mode, const HVector& row_ep, HVector& row_ap);
+
 void compute_dual(HighsModelObject& highs_model_object);
 
 void correct_dual(HighsModelObject& highs_model_object,
