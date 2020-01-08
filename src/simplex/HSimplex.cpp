@@ -2789,7 +2789,107 @@ void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
 }
 
 void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mode, const HVector& row_ep, HVector& row_ap) {
+  HighsTimer& timer = highs_model_object.timer_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const HMatrix* matrix = &highs_model_object.matrix_;
+  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
+  
+  const int price_strategy = simplex_info.price_strategy;
+  simplex_info.allow_price_by_col_switch = false;
+  simplex_info.allow_price_by_row_switch = false;
+  if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
+    simplex_info.allow_price_by_row_switch = true;
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
+    simplex_info.allow_price_by_col_switch = true;
+    simplex_info.allow_price_by_row_switch = true;
+  }
+  // By default switch to column PRICE when pi_p has at least this
+  // density
+  const double density_for_column_price_switch = 0.75;
+
+  const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
+  const int solver_num_col = highs_model_object.simplex_lp_.numCol_;
+  timer.start(simplex_info.clock_[PriceClock]);
+  row_ap.clear();
+#ifdef HiGHSDEV
+  bool anPriceEr = false;
+#endif
+  if (price_mode == PriceMode::COL) {
+    // Column-wise PRICE
+#ifdef HiGHSDEV
+    if (simplex_info.analyse_iterations) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, 0.0);
+      analysis->num_col_price++;
+    }
+#endif
+    // Perform column-wise PRICE
+    matrix->price_by_col(row_ap, row_ep);
+  } else {
+    // By default, use row-wise PRICE, but possibly use column-wise
+    // PRICE if the density of row_ep is too high
+    const double local_density = (double)(row_ep).count / solver_num_row;
+    const double alt_local_density = 1.0 * row_ep.count / solver_num_row;
+    if (alt_local_density != local_density) {
+      printf("ODD alt_local_density != local_density |diff| = %g\n", fabs(alt_local_density - local_density));
+    }
+
+    if (simplex_info.allow_price_by_col_switch && (local_density > density_for_column_price_switch)) {
+      // Use column-wise PRICE due to density of row_ep
+#ifdef HiGHSDEV
+      if (simplex_info.analyse_iterations) {
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, 0.0);
+        analysis->num_col_price++;
+      }
+#endif
+      // Perform column-wise PRICE
+      matrix->price_by_col(row_ap, row_ep);
+      // Zero the components of row_ap corresponding to basic variables
+      // (nonbasicFlag[*]=0)
+      const int* nonbasicFlag = &highs_model_object.simplex_basis_.nonbasicFlag_[0];
+      for (int col = 0; col < solver_num_col; col++) {
+        row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
+      }
+    } else if (simplex_info.allow_price_by_row_switch) {
+      // Avoid hyper-sparse PRICE on current density of result or
+      // switch if the density of row_ap becomes extreme
+#ifdef HiGHSDEV
+      if (simplex_info.analyse_iterations) {
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
+        analysis->num_row_price_with_switch++;
+      }
+#endif
+      // Set the value of the density of row_ap at which the switch to
+      // sparse row-wise PRICE should be made
+      const double sw_dsty = matrix->price_by_row_sw_dsty;
+      // Perform hyper-sparse row-wise PRICE with switching
+      matrix->price_by_row_w_sw(row_ap, row_ep, analysis->row_ap_density, 0, sw_dsty);
+    } else {
+      // No avoiding hyper-sparse PRICE on current density of result
+      // or switch if the density of row_ap becomes extreme
+#ifdef HiGHSDEV
+      if (simplex_info.analyse_iterations) {
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, 0.0);
+        analysis->num_row_price++;
+      }
+#endif
+      // Perform hyper-sparse row-wise PRICE
+      matrix->price_by_row(row_ap, row_ep);
+    }
+  }
+#ifdef HiGHSDEV
+  // Possibly analyse the error in the result of PRICE
+  if (anPriceEr) {
+    matrix->price_er_ck(row_ap, row_ep);
+  }
+#endif
+  // Update the record of average row_ap density
+  const double local_row_ap_density = (double)row_ap.count / solver_num_col;
+  analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
+#endif
+  timer.stop(simplex_info.clock_[PriceClock]);
 }
 
 void compute_dual(HighsModelObject& highs_model_object) {

@@ -1152,9 +1152,11 @@ void HDual::chooseColumn(HVector* row_ep) {
   //
   // PRICE
   //
+  if (use_computePrice) {
+    computePrice(workHMO, price_mode, *row_ep, row_ap);
+  } else {
   timer.start(simplex_info.clock_[PriceClock]);
   row_ap.clear();
-
 #ifdef HiGHSDEV
   bool anPriceEr = false;
 #endif
@@ -1229,6 +1231,8 @@ void HDual::chooseColumn(HVector* row_ep) {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
+  }
+
   //
   // CHUZC
   //

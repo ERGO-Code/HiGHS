@@ -57,14 +57,14 @@ class HMatrix {
    * column-wise, maintaining indices of nonzeros in the result
    */
   void price_by_col(HVector& row_ap,  //!< Vector \f$ \mathbf{y}\f$
-                    HVector& row_ep   //!< Vector \f$ \mathbf{x}\f$
+                    const HVector& row_ep   //!< Vector \f$ \mathbf{x}\f$
                     ) const;
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise, maintaining indices of nonzeros in result
    */
   void price_by_row(HVector& row_ap,  //!< Vector \f$ \mathbf{y}\f$
-                    HVector& row_ep   //!< Vector \f$ \mathbf{x}\f$
+                    const HVector& row_ep   //!< Vector \f$ \mathbf{x}\f$
                     ) const;
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
@@ -75,7 +75,7 @@ class HMatrix {
    */
   void price_by_row_w_sw(
       HVector& row_ap,   //!< Vector \f$ \mathbf{y}\f$
-      HVector& row_ep,   //!< Vector \f$ \mathbf{x}\f$
+      const HVector& row_ep,   //!< Vector \f$ \mathbf{x}\f$
       double hist_dsty,  //!< Historical density of PRICE results to be used
       int fm_i,          //!< Index of row to work from
       double sw_dsty     //!< Density for switch to not maintaining indices of
@@ -87,7 +87,7 @@ class HMatrix {
    * result
    */
   void price_by_row_no_index(HVector& row_ap,  //!< Vector \f$ \mathbf{y}\f$
-                             HVector& row_ep,  //!< Vector \f$ \mathbf{x}\f$
+                             const HVector& row_ep,  //!< Vector \f$ \mathbf{x}\f$
                              int fm_i          //!< Index of row to work from
                              ) const;
   /**
@@ -139,8 +139,8 @@ class HMatrix {
 
 #ifdef HiGHSDEV
   bool setup_ok(const int* nonbasicFlag);
-  bool price_er_ck(HVector& row_ap, HVector& row_ep) const;
-  bool price_er_ck_core(HVector& row_ap, HVector& row_ep) const;
+  bool price_er_ck(HVector& row_ap, const HVector& row_ep) const;
+  bool price_er_ck_core(HVector& row_ap, const HVector& row_ep) const;
 #endif
 
   /**

@@ -188,7 +188,7 @@ void HMatrix::collect_aj(HVector& vector, int iCol, double multiplier) const {
   }
 }
 
-void HMatrix::price_by_col(HVector& row_ap, HVector& row_ep) const {
+void HMatrix::price_by_col(HVector& row_ap, const HVector& row_ep) const {
   // Alias
   int ap_count = 0;
   int* ap_index = &row_ap.index[0];
@@ -208,7 +208,7 @@ void HMatrix::price_by_col(HVector& row_ap, HVector& row_ep) const {
   row_ap.count = ap_count;
 }
 
-void HMatrix::price_by_row(HVector& row_ap, HVector& row_ep) const {
+void HMatrix::price_by_row(HVector& row_ap, const HVector& row_ep) const {
   // Vanilla hyper-sparse row-wise PRICE
   // Set up parameters so that price_by_row_w_sw runs as vanilla hyper-sparse
   // PRICE
@@ -219,7 +219,7 @@ void HMatrix::price_by_row(HVector& row_ap, HVector& row_ep) const {
   price_by_row_w_sw(row_ap, row_ep, hist_dsty, fm_i, sw_dsty);
 }
 
-void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep,
+void HMatrix::price_by_row_w_sw(HVector& row_ap, const HVector& row_ep,
                                 double hist_dsty, int fm_i,
                                 double sw_dsty) const {
   // (Continue) hyper-sparse row-wise PRICE with possible switches to
@@ -305,7 +305,7 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep,
   }
 }
 
-void HMatrix::price_by_row_no_index(HVector& row_ap, HVector& row_ep,
+void HMatrix::price_by_row_no_index(HVector& row_ap, const HVector& row_ep,
                                     int fm_i) const {
   // (Continue) standard row-wise PRICE
   // Alias
@@ -405,11 +405,11 @@ bool HMatrix::setup_ok(const int* nonbasicFlag_) {
   }
   return true;
 }
-bool HMatrix::price_er_ck(HVector& row_ap, HVector& row_ep) const {
+bool HMatrix::price_er_ck(HVector& row_ap, const HVector& row_ep) const {
   return price_er_ck_core(row_ap, row_ep);
 }
 
-bool HMatrix::price_er_ck_core(HVector& row_ap, HVector& row_ep) const {
+bool HMatrix::price_er_ck_core(HVector& row_ap, const HVector& row_ep) const {
   // Alias
   int* ap_index = &row_ap.index[0];
   double* ap_array = &row_ap.array[0];
