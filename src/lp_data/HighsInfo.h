@@ -18,8 +18,9 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-#include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
+
+class HighsOptions;
 
 enum class InfoStatus { OK = 0, NO_FILE, UNKNOWN_INFO, ILLEGAL_VALUE };
 

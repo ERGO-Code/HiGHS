@@ -14,11 +14,10 @@
 
 #include "io/HighsIO.h"
 #include "io/LoadProblem.h"
-#include "io/LoadOptions.h"
-#include "lp_data/HConst.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsStatus.h"
+//#include "lp_data/HighsOptions.h"
 #include "util/stringutil.h"
+
+bool loadOptionsFromFile(HighsOptions& options);
 
 bool loadOptions(int argc, char** argv, HighsOptions& options) {
   try {

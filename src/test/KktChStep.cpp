@@ -13,10 +13,9 @@
  */
 #include "test/KktChStep.h"
 
-#include "lp_data/HConst.h"
-#include "test/KktCheck.h"
-
 #include <utility>
+
+#include "test/KktCheck.h"
 
 using std::cout;
 using std::endl;

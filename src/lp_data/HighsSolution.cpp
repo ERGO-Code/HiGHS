@@ -15,12 +15,12 @@
 #include <string>
 
 #include "util/HighsUtils.h"
-#include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsInfo.h"
 #include "ipm/IpxSolution.h"
+
 #ifdef IPX_ON
 #include "ipm/IpxStatus.h"
 #include "ipm/ipx/include/ipx_status.h"
