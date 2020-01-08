@@ -13,7 +13,6 @@ TEST_CASE("irash-qap04", "[highs_presolve]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/qap04.mps";
 
   Highs highs;
-  //  HighsStatus highs_status = highs.initializeFromFile(filename);
   HighsStatus highs_status = highs.readModel(filename);
   REQUIRE(highs_status==HighsStatus::OK);
 

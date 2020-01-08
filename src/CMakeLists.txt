@@ -89,6 +89,7 @@ set(sources
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
+    mip/HighsMipSolver.cpp
     mip/SolveMip.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
@@ -140,6 +141,7 @@ set(headers
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     lp_data/HighsModelBuilder.h
+    mip/HighsMipSolver.h
     mip/SolveMip.h
     simplex/HApp.h
     simplex/FactorTimer.h
