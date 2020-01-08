@@ -2795,84 +2795,56 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
   HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
   
   const int price_strategy = simplex_info.price_strategy;
-  simplex_info.allow_price_by_col_switch = false;
-  simplex_info.allow_price_by_row_switch = false;
-  if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
-    simplex_info.allow_price_by_row_switch = true;
-  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
-    simplex_info.allow_price_by_col_switch = true;
-    simplex_info.allow_price_by_row_switch = true;
-  }
+  const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
+  const int solver_num_col = highs_model_object.simplex_lp_.numCol_;
   // By default switch to column PRICE when pi_p has at least this
   // density
   const double density_for_column_price_switch = 0.75;
-
-  const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
-  const int solver_num_col = highs_model_object.simplex_lp_.numCol_;
-  timer.start(simplex_info.clock_[PriceClock]);
-  row_ap.clear();
+  const double local_density = 1.0 * row_ep.count / solver_num_row;
+   
+  const bool use_col_price = price_mode == PriceMode::COL ||
+    ((price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) &&
+     (local_density > density_for_column_price_switch));
+  const bool use_row_price_w_switch =
+    (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) ||
+    (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH);
 #ifdef HiGHSDEV
-  const bool analyse_price_error = false;
-#endif
-  if (price_mode == PriceMode::COL) {
-    // Column-wise PRICE
-#ifdef HiGHSDEV
-    if (simplex_info.analyse_iterations) {
+  if (simplex_info.analyse_iterations) {
+    if (use_col_price) {
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, 0.0);
       analysis->num_col_price++;
+    } else if (use_row_price_w_switch) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ep_density);
+      analysis->num_row_price_with_switch++;
+    } else {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ep_density);
+      analysis->num_row_price++;
     }
+  }
 #endif
+  timer.start(simplex_info.clock_[PriceClock]);
+  row_ap.clear();
+  if (use_col_price) {
     // Perform column-wise PRICE
     matrix->price_by_col(row_ap, row_ep);
+  } else if (use_row_price_w_switch) {
+    // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap becomes extreme
+    const double sw_dsty = matrix->price_by_row_sw_dsty;
+    matrix->price_by_row_w_sw(row_ap, row_ep, analysis->row_ap_density, 0, sw_dsty);
   } else {
-    // By default, use row-wise PRICE, but possibly use column-wise
-    // PRICE if the density of row_ep is too high
-    const double local_density = 1.0 * row_ep.count / solver_num_row;
-    if (simplex_info.allow_price_by_col_switch && (local_density > density_for_column_price_switch)) {
-      // Use column-wise PRICE due to density of row_ep
-#ifdef HiGHSDEV
-      if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, 0.0);
-        analysis->num_col_price++;
-      }
-#endif
-      // Perform column-wise PRICE
-      matrix->price_by_col(row_ap, row_ep);
-      // Zero the components of row_ap corresponding to basic variables
-      // (nonbasicFlag[*]=0)
-      const int* nonbasicFlag = &highs_model_object.simplex_basis_.nonbasicFlag_[0];
-      for (int col = 0; col < solver_num_col; col++) {
-        row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
-      }
-    } else if (simplex_info.allow_price_by_row_switch) {
-      // Avoid hyper-sparse PRICE on current density of result or
-      // switch if the density of row_ap becomes extreme
-#ifdef HiGHSDEV
-      if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ap_density);
-        analysis->num_row_price_with_switch++;
-      }
-#endif
-      // Set the value of the density of row_ap at which the switch to
-      // sparse row-wise PRICE should be made
-      const double sw_dsty = matrix->price_by_row_sw_dsty;
-      // Perform hyper-sparse row-wise PRICE with switching
-      matrix->price_by_row_w_sw(row_ap, row_ep, analysis->row_ap_density, 0, sw_dsty);
-    } else {
-      // No avoiding hyper-sparse PRICE on current density of result
-      // or switch if the density of row_ap becomes extreme
-#ifdef HiGHSDEV
-      if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, 0.0);
-        analysis->num_row_price++;
-      }
-#endif
-      // Perform hyper-sparse row-wise PRICE
-      matrix->price_by_row(row_ap, row_ep);
-    }
+    // Perform hyper-sparse row-wise PRICE
+    matrix->price_by_row(row_ap, row_ep);
+  }
+
+  if (use_col_price && price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
+    // Zero the components of row_ap corresponding to basic variables
+    // (nonbasicFlag[*]=0)
+    const int* nonbasicFlag = &highs_model_object.simplex_basis_.nonbasicFlag_[0];
+    for (int col = 0; col < solver_num_col; col++) row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
   }
 #ifdef HiGHSDEV
   // Possibly analyse the error in the result of PRICE
+  const bool analyse_price_error = false;
   if (analyse_price_error) matrix->price_er_ck(row_ap, row_ep);
 #endif
   // Update the record of average row_ap density
@@ -2926,7 +2898,12 @@ void compute_dual(HighsModelObject& highs_model_object) {
   HVector bufferLong;
   bufferLong.setup(simplex_lp.numCol_);
   bufferLong.clear();
-  matrix.price_by_col(bufferLong, buffer);
+  const bool use_computePrice = true;//false;//
+  if (use_computePrice) {
+    computePrice(highs_model_object, PriceMode::COL, buffer, bufferLong);
+  } else {
+    matrix.price_by_col(bufferLong, buffer);
+  }
   for (int i = 0; i < simplex_lp.numCol_; i++) {
     simplex_info.workDual_[i] = simplex_info.workCost_[i] - bufferLong.array[i];
   }
