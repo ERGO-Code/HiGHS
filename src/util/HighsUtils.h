@@ -17,8 +17,6 @@
 #include <vector>
 #include <string>
 
-#include "HConfig.h"
-
 double getNorm2(const std::vector<double> values);
 
 /**

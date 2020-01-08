@@ -15,13 +15,14 @@
 #define LP_DATA_HIGHS_OPTIONS_H_
 
 #include <cstring> // For strrchr
+#include <vector>
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-#include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
-#include "presolve/Presolve.h"
 #include "simplex/SimplexConst.h"
+
+using std::string;
 
 enum class OptionStatus { OK = 0, NO_FILE, UNKNOWN_OPTION, ILLEGAL_VALUE };
 

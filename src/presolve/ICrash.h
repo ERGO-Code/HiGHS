@@ -24,8 +24,10 @@
 #ifndef PRESOLVE_QUADRATIC_CRASH_H_
 #define PRESOLVE_QUADRATIC_CRASH_H_
 
-#include "lp_data/HighsStatus.h"
+#include <vector>
+
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsStatus.h"
 
 enum class ICrashStrategy {
   kPenalty,
@@ -43,7 +45,7 @@ struct ICrashIterationDetails {
   double lp_objective;
   double quadratic_objective;
   double residual_norm_2;
-  
+
   double time;
 };
 
@@ -70,16 +72,55 @@ struct ICrashOptions {
   int iterations;
   int approximate_minimization_iterations;
   bool exact;
-  bool breakpoints; // gets ignored if exact is set to true
+  bool breakpoints;  // gets ignored if exact is set to true
   FILE* logfile;
   FILE* output;
   int message_level;
 };
 
+struct Quadratic {
+  const HighsLp lp;
+  const ICrashOptions options;
+  std::vector<ICrashIterationDetails> details;
+
+  HighsSolution xk;
+
+  double lp_objective;
+  double quadratic_objective;
+  std::vector<double> residual;
+  double residual_norm_2;
+
+  double mu;
+  std::vector<double> lambda;
+
+  Quadratic(HighsLp lp_, ICrashOptions options_) : lp(lp_), options(options_) {}
+};
+
+// Functions: Call.
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
                        ICrashInfo& result);
 
+// Functions: Options.
+bool checkOptions(const HighsLp& lp, const ICrashOptions options);
+Quadratic parseOptions(const HighsLp& lp, const ICrashOptions options);
 bool parseICrashStrategy(const std::string& strategy,
                          ICrashStrategy& icrash_strategy);
+std::string ICrashtrategyToString(const ICrashStrategy strategy);
+
+// Functions: Crash.
+bool initialize(Quadratic& idata, const ICrashOptions& options);
+void update(Quadratic& idata);
+void updateParameters(Quadratic& idata, const ICrashOptions& options,
+                      const int iteration);
+void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options);
+bool solveSubproblem(Quadratic& idata, const ICrashOptions& options);
+
+// Functions: Util.
+double getQuadraticObjective(const Quadratic& idata);
+ICrashIterationDetails fillDetails(const int num, const Quadratic& idata);
+void fillICrashInfo(const int n_iterations, ICrashInfo& result);
+void reportSubproblem(const ICrashOptions options, const Quadratic& idata,
+                      const int iteration);
+void reportOptions(const ICrashOptions& options);
 
 #endif

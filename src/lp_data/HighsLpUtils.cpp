@@ -17,6 +17,7 @@
 #include <cassert>
 
 #include "HConfig.h"
+#include "io/Filereader.h"
 #include "io/HMPSIO.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsModelUtils.h"
