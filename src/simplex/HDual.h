@@ -417,7 +417,7 @@ class HDual {
   bool initialise_dual_steepest_edge_weights;
   bool allow_dual_steepest_edge_to_devex_switch;
 
-  const bool use_computePrice = true;//false;//
+  const bool use_computePrice = false;//true;//
 
   PriceMode price_mode;
   bool allow_price_by_col_switch;

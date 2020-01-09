@@ -77,19 +77,22 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN];
   AnIter->AnIterOpName = "Btran";
-  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE];
-  AnIter->AnIterOpName = "Price";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP];
+  AnIter->AnIterOpName = "Price r_ap";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_FULL];
+  AnIter->AnIterOpName = "Price Full";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN];
   AnIter->AnIterOpName = "Ftran";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT];
   AnIter->AnIterOpName = "Ftran BFRT";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_DSE];
-  AnIter->AnIterOpName = "Ftran_DSE";
+  AnIter->AnIterOpName = "Ftran DSE";
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIter = &AnIterOp[k];
     AnIter->AnIterOpLog10RsDensity = 0;
     AnIter->AnIterOpSuLog10RsDensity = 0;
-    if (k == ANALYSIS_OPERATION_TYPE_PRICE) {
+    if ((k == ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP) ||
+	(k == ANALYSIS_OPERATION_TYPE_PRICE_FULL)) {
       AnIter->AnIterOpHyperCANCEL = 1.0;
       AnIter->AnIterOpHyperTRAN = 1.0;
       AnIter->AnIterOpRsDim = numCol;
@@ -292,8 +295,8 @@ bool HighsSimplexAnalysis::switchToDevex() {
     if (switch_to_devex) {
       HighsLogMessage(logfile, HighsMessageType::INFO,
 		      "Switch from DSE to Devex after %d costly DSE iterations of %d: "
-		      "C_Aq_Density = %11.4g; R_Ep_Density = %11.4g; DSE_Density = %11.4g",
-		      AnIterNumCostlyDseIt, lcNumIter, row_ep_density, col_aq_density, row_DSE_density);
+		      "C_Aq_Density = %11.4g; R_Ep_Density = %11.4g; R_Ap_Density = %11.4g; DSE_Density = %11.4g",
+		      AnIterNumCostlyDseIt, lcNumIter, col_aq_density, row_ep_density, row_ap_density, row_DSE_density);
     }
 #endif
   }
@@ -359,7 +362,7 @@ void HighsSimplexAnalysis::iterationRecord() {
 	lcAnIter.AnIterTraceMulti = 0;
       }
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
+      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP] = row_ap_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
       if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -567,9 +570,9 @@ void HighsSimplexAnalysis::summaryReport() {
       } else {
 	lcAnIter.AnIterTraceMulti = 0;
       }
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE] = row_ap_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
+      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
+      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP] = row_ap_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
       if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
 	lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
@@ -634,7 +637,7 @@ void HighsSimplexAnalysis::summaryReport() {
       printf("|");
       reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN]);
       reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN]);
-      reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE]);
+      reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP]);
       double use_row_DSE_density;
       if (rp_dual_steepest_edge) {
 	if (lc_dual_edge_weight_mode == (int)DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -759,16 +762,16 @@ void HighsSimplexAnalysis::reportOneDensity(const double density) {
 void HighsSimplexAnalysis::reportDensity(const bool header, const int this_message_level) {
   const bool rp_dual_steepest_edge = edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
   if (header) {
-    HighsPrintMessage(output, message_level, this_message_level, " R_Ep R_Ap C_Aq");
+    HighsPrintMessage(output, message_level, this_message_level, " C_Aq R_Ep R_Ap");
     if (rp_dual_steepest_edge) {
       HighsPrintMessage(output, message_level, this_message_level, "  DSE");
     } else {
       HighsPrintMessage(output, message_level, this_message_level, "     ");
     }
   } else {
+    reportOneDensity(this_message_level, col_aq_density);
     reportOneDensity(this_message_level, row_ep_density);
     reportOneDensity(this_message_level, row_ap_density);
-    reportOneDensity(this_message_level, col_aq_density);
     double use_row_DSE_density;
     if (rp_dual_steepest_edge) {
       use_row_DSE_density = row_DSE_density;

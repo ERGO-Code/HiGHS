@@ -2811,13 +2811,13 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     if (use_col_price) {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, 0.0);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep, 0.0);
       analysis->num_col_price++;
     } else if (use_row_price_w_switch) {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ep_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep, analysis->row_ep_density);
       analysis->num_row_price_with_switch++;
     } else {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep, analysis->row_ep_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep, analysis->row_ep_density);
       analysis->num_row_price++;
     }
   }
@@ -2852,7 +2852,7 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
   analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ap);
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
 }
@@ -2866,7 +2866,7 @@ void compute_dual(HighsModelObject& highs_model_object) {
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HMatrix& matrix = highs_model_object.matrix_;
   HFactor& factor = highs_model_object.factor_;
-  bool an_compute_dual_norm2 = false;
+  const bool an_compute_dual_norm2 = false;
   double btran_rhs_norm2;
   double btran_sol_norm2;
   double work_dual_norm2;
@@ -2898,7 +2898,7 @@ void compute_dual(HighsModelObject& highs_model_object) {
   HVector bufferLong;
   bufferLong.setup(simplex_lp.numCol_);
   bufferLong.clear();
-  const bool use_computePrice = true;//false;//
+  const bool use_computePrice = false;
   if (use_computePrice) {
     computePrice(highs_model_object, PriceMode::COL, buffer, bufferLong);
   } else {
