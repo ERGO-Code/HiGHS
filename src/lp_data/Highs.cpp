@@ -322,12 +322,6 @@ HighsStatus Highs::run() {
   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
 		    "Solving %s", lp_.model_name_.c_str());
 
-  if (options_.mip) {
-  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-		    "Mip option requires HighsMipSolver.");
-    return HighsStatus::Error;
-  }
-
   // Running as LP solver: start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
   if (!run_highs_clock_already_running) timer_.startRunHighsClock();
