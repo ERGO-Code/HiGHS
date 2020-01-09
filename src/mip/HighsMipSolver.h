@@ -18,6 +18,7 @@ enum class HighsMipStatus {
   kOptimal,
   kTimeout,
   kError,
+  kNodeOptimal,
   kRootNodeError,
   kRootNodeNotOptimal,
   kUnderDevelopment
@@ -26,13 +27,18 @@ enum class HighsMipStatus {
 class HighsMipSolver : Highs {
  public:
   HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
-      : options_mip_(options), mip_(lp) {}
+      : options_mip_(options), mip_(lp) {
+        root_.parent_id = -1;
+      }
 
   HighsMipStatus runMipSolver();
 
  private:
-  HighsStatus solveNode(Node& node);
-  HighsStatus solveRootNode(Node& root);
+  HighsMipStatus solveRootNode();
+  HighsMipStatus solveNode(Node& node);
+  HighsMipStatus solveTree(Node& root);
+  
+  Node root_;
   const HighsOptions options_mip_;
   const HighsLp mip_;
 };

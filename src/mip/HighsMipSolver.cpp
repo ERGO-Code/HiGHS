@@ -14,69 +14,30 @@
 // Branch-and-bound code below here:
 // Solve a mixed integer problem using branch and bound.
 HighsMipStatus HighsMipSolver::runMipSolver() {
-  HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
-  HighsPrintMessage(options_mip_.output, options_mip_.message_level, ML_ALWAYS,
-                    "Using branch and bound solver\n");
+  std::cout << "Warning: HiGHS MIP solver is under construction at the moment."
+            << std::endl
+            << "Running HiGHS MIP solver..." << std::endl;
 
-  // Need to start the HiGHS clock unless it's already running
-  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
-  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
+  // Start timer.
+  timer_.startRunHighsClock();
   double mip_solve_initial_time = timer_.readRunHighsClock();
-
+  
+  HighsMipStatus root_solve = solveRootNode();
+  if (root_solve != HighsMipStatus::kNodeOptimal)
+    return root_solve;
+  
   // Start tree by making root node.
-  std::unique_ptr<Node> root = std::unique_ptr<Node>(new Node(-1, 0, 0));
-
-  root->integer_variables = lp_.integrality_;
-  root->col_lower_bound = lp_.colLower_;
-  root->col_upper_bound = lp_.colUpper_;
-
-  call_status = solveRootNode(*(root.get()));
-  return_status =
-      interpretCallStatus(call_status, return_status, "solveRootNode");
-  if (return_status == HighsStatus::Error)
-    return HighsMipStatus::kRootNodeError;
-  if (hmos_[0].scaled_model_status_ != HighsModelStatus::OPTIMAL) {
-    HighsPrintMessage(
-        options_mip_.output, options_mip_.message_level, ML_ALWAYS,
-        "Root note not solved to optimality. Status: %s\n",
-        utilHighsModelStatusToString(hmos_[0].scaled_model_status_).c_str());
-    call_status =
-        highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
-    return_status = interpretCallStatus(call_status, return_status);
-    if (return_status == HighsStatus::Error)
-      return HighsMipStatus::kRootNodeError;
-    return HighsMipStatus::kRootNodeNotOptimal;
-  }
-
-  // The method branch(...) below calls chooseBranchingVariable(..) which
-  // currently returns the first violated one. If a branching variable is found
-  // children are added to the stack. If there are no more violated integrality
-  // constraints we have a feasible solution, if it is best than current best,
-  // the current best is updated.
-  Tree tree(*(root.get()));
-  tree.branch(options_mip_.output, options_mip_.message_level, *(root.get()));
-
-  // While stack not empty.
-  //   Solve node.
-  //   Branch.
-  while (!tree.empty()) {
-    Node& node = tree.next();
-    call_status = solveNode(node);
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveNode");
-    if (return_status == HighsStatus::Error)
-      return HighsMipStatus::kRootNodeError;
-    tree.pop();
-
-    if (hmos_[0].scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE)
-      continue;
-
-    tree.branch(options_mip_.output, options_mip_.message_level, node);
-  }
+  // Highs ignores integrality constraints.
+  root_.integer_variables = lp_.integrality_;
+  root_.col_lower_bound = lp_.colLower_;
+  root_.col_upper_bound = lp_.colUpper_;
+  Tree tree(root_);
+  
+  HighsMipStatus tree_solve = solveTree();
+  // todo: handle return value
 
   // Stop and read the HiGHS clock, then work out time for this call
-  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+  timer_.stopRunHighsClock();
   double mip_solve_final_time = timer_.readRunHighsClock();
 
   if (tree.getBestSolution().size() > 0) {
@@ -213,25 +174,49 @@ HighsStatus HighsMipSolver::solveNode(Node& node) {
   return return_status;
 }
 
-HighsStatus HighsMipSolver::solveRootNode(Node& root) {
-  HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
-  // No presolve for the moment.
-  // HighsStatus status = run();
-  // call works but simply calling run() should be enough.
-  call_status = run();
-  return_status =
-      interpretCallStatus(call_status, return_status, "solveLpSimplex");
-  if (return_status == HighsStatus::Error) return return_status;
+HighsMipStatus HighsMipSolver::solveRootNode() {
+  // presolve off for the moment.
+  options_.presolve = false;
+  HighsStatus root_lp_solve_status = run();
 
-  if (hmos_[0].scaled_model_status_ == HighsModelStatus::OPTIMAL) {
-    root.primal_solution = hmos_[0].solution_.col_value;
-    root.objective_value =
-        hmos_[0].scaled_solution_params_.objective_function_value;
+  switch (root_lp_solve_status) {
+    case HighsStatus::Warning:
+      return HighsMipStatus::kRootNodeNotOptimal;
+    case HighsStatus::Error:
+      return HighsMipStatus::kRootNodeError;
+    default: break;
   }
-  // Assess success according to the scaled model status, unless
-  // something worse has happened earlier
-  call_status = highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
-  return_status = interpretCallStatus(call_status, return_status);
-  return return_status;
+
+  if (model_status_ != HighsModelStatus::OPTIMAL)
+    return HighsMipStatus::kRootNodeNotOptimal;
+
+  return HighsMipStatus::kNodeOptimal;
+}
+
+
+HighsMipStatus HighsMipSolver::solveTree(Node& root) {
+  // The method branch(...) below calls chooseBranchingVariable(..) which
+  // currently returns the first violated one. If a branching variable is found
+  // children are added to the stack. If there are no more violated integrality
+  // constraints we have a feasible solution, if it is best than current best,
+  // the current best is updated.
+  tree.branch(options_mip_.output, options_mip_.message_level, *(root.get()));
+
+  // While stack not empty.
+  //   Solve node.
+  //   Branch.
+  while (!tree.empty()) {
+    Node& node = tree.next();
+    call_status = solveNode(node);
+    return_status =
+        interpretCallStatus(call_status, return_status, "solveNode");
+    if (return_status == HighsStatus::Error)
+      return HighsMipStatus::kRootNodeError;
+    tree.pop();
+
+    if (hmos_[0].scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE)
+      continue;
+
+    tree.branch(options_mip_.output, options_mip_.message_level, node);
+  }
 }
