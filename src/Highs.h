@@ -67,7 +67,7 @@ class Highs {
   HighsStatus writeSolution(
 			    const std::string filename,  //!< the filename
 			    const bool pretty=false      //!< Write in pretty (human-readable) format
-			    );
+			    ) const;
   /**
    * Methods for HiGHS option input/output
    */

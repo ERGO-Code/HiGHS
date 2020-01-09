@@ -14,16 +14,27 @@
 #include "lp_data/HighsOptions.h"
 #include "mip/SolveMip.h"
 
+enum class HighsMipStatus {
+  kOptimal,
+  kTimeout,
+  kError,
+  kRootNodeError,
+  kRootNodeNotOptimal,
+  kUnderDevelopment
+};
+
 class HighsMipSolver : Highs {
  public:
-  HighsMipSolver(const HighsOptions& options) : options_mip(options) {}
+  HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
+      : options_mip_(options), mip_(lp) {}
 
-  HighsStatus runBnb();
+  HighsMipStatus runMipSolver();
 
  private:
   HighsStatus solveNode(Node& node);
   HighsStatus solveRootNode(Node& root);
-  const HighsOptions options_mip;
+  const HighsOptions options_mip_;
+  const HighsLp mip_;
 };
 
 #endif
