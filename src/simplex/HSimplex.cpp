@@ -2811,13 +2811,13 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     if (use_col_price) {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep, 0.0);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, 0.0);
       analysis->num_col_price++;
     } else if (use_row_price_w_switch) {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep, analysis->row_ep_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ep_density);
       analysis->num_row_price_with_switch++;
     } else {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep, analysis->row_ep_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ep_density);
       analysis->num_row_price++;
     }
   }
@@ -2852,12 +2852,16 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
   analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ap);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
 }
 
 void compute_dual(HighsModelObject& highs_model_object) {
+  //  HighsTimer& timer = highs_model_object.timer_;
+#ifdef HiGHSDEV
+  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
+#endif
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
@@ -2886,9 +2890,16 @@ void compute_dual(HighsModelObject& highs_model_object) {
     btran_rhs_norm2 = buffer.norm2();
     btran_rhs_norm2 = sqrt(btran_rhs_norm2);
   }
-  //  printf("compute_dual: Before BTRAN\n");cout<<flush;
-  factor.btran(buffer, 1);
-  //  printf("compute_dual: After  BTRAN\n");cout<<flush;
+  double btran_full_historical_density = 1;
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer, btran_full_historical_density);
+#endif
+  factor.btran(buffer, btran_full_historical_density);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
+#endif
   if (an_compute_dual_norm2) {
     btran_sol_norm2 = buffer.norm2();
     btran_sol_norm2 = sqrt(btran_sol_norm2);
@@ -2898,12 +2909,22 @@ void compute_dual(HighsModelObject& highs_model_object) {
   HVector bufferLong;
   bufferLong.setup(simplex_lp.numCol_);
   bufferLong.clear();
+  double price_full_historical_density = 1;
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong, price_full_historical_density);
+#endif
   const bool use_computePrice = false;
   if (use_computePrice) {
     computePrice(highs_model_object, PriceMode::COL, buffer, bufferLong);
   } else {
     matrix.price_by_col(bufferLong, buffer);
   }
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong);
+  //  const double local_density = 1.0 * bufferLong.count / simplex_lp.numCol_;
+#endif
   for (int i = 0; i < simplex_lp.numCol_; i++) {
     simplex_info.workDual_[i] = simplex_info.workCost_[i] - bufferLong.array[i];
   }

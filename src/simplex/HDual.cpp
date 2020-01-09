@@ -1052,13 +1052,13 @@ void HDual::chooseRow() {
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations) 
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
 #endif
     // Perform BTRAN
     factor->btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
-      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
     timer.stop(simplex_info.clock_[BtranClock]);
     // Verify DSE weight
@@ -1164,7 +1164,7 @@ void HDual::chooseColumn(HVector* row_ep) {
     // Column-wise PRICE
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations) {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, *row_ep, 0.0);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, *row_ep, 0.0);
       analysis->num_col_price++;
     }
 #endif
@@ -1178,7 +1178,7 @@ void HDual::chooseColumn(HVector* row_ep) {
       // Use column-wise PRICE due to density of row_ep
 #ifdef HiGHSDEV
       if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, *row_ep, 0.0);
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, *row_ep, 0.0);
         analysis->num_col_price++;
       }
 #endif
@@ -1195,7 +1195,7 @@ void HDual::chooseColumn(HVector* row_ep) {
       // switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
       if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, *row_ep, analysis->row_ap_density);
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, *row_ep, analysis->row_ap_density);
         analysis->num_row_price_with_switch++;
       }
 #endif
@@ -1209,7 +1209,7 @@ void HDual::chooseColumn(HVector* row_ep) {
       // or switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
       if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, *row_ep, 0.0);
+	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, *row_ep, 0.0);
         analysis->num_row_price++;
       }
 #endif
@@ -1228,7 +1228,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ap);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
   }
@@ -1319,7 +1319,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     int row_ep_count = row_ep->count;
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep_count, analysis->row_ep_density);
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep_count, analysis->row_ep_density);
     analysis->num_row_price++;
   }
 #endif
@@ -1351,7 +1351,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   if (simplex_info.analyse_iterations) {
     int row_ap_count = 0;
     for (int i = 0; i < slice_num; i++) row_ap_count += slice_row_ap[i].count;
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ap_count);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap_count);
   }
 #endif
 

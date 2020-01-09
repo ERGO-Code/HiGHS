@@ -669,17 +669,17 @@ void HPrimal::primalUpdate() {
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) 
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
 #endif
   workHMO.factor_.btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) 
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep, analysis->row_ap_density);
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ap_density);
     analysis->num_row_price++;
   }
 #endif
@@ -688,7 +688,7 @@ void HPrimal::primalUpdate() {
   timer.stop(simplex_info.clock_[PriceClock]);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP, row_ep);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
 #endif
 
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;

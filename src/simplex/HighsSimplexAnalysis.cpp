@@ -75,29 +75,32 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterPrevIt = simplex_iteration_count_;
   timer_.resetHighsTimer();
   AnIterOpRec* AnIter;
-  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN];
-  AnIter->AnIterOpName = "Btran";
-  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP];
-  AnIter->AnIterOpName = "Price r_ap";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
+  AnIter->AnIterOpName = "BTRAN e_p";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_FULL];
+  AnIter->AnIterOpName = "BTRAN Full";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_AP];
+  AnIter->AnIterOpName = "PRICE a_p";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_FULL];
-  AnIter->AnIterOpName = "Price Full";
+  AnIter->AnIterOpName = "PRICE Full";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN];
-  AnIter->AnIterOpName = "Ftran";
+  AnIter->AnIterOpName = "FTRAN";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT];
-  AnIter->AnIterOpName = "Ftran BFRT";
+  AnIter->AnIterOpName = "FTRAN BFRT";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_DSE];
-  AnIter->AnIterOpName = "Ftran DSE";
+  AnIter->AnIterOpName = "FTRAN DSE";
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIter = &AnIterOp[k];
     AnIter->AnIterOpLog10RsDensity = 0;
     AnIter->AnIterOpSuLog10RsDensity = 0;
-    if ((k == ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP) ||
+    if ((k == ANALYSIS_OPERATION_TYPE_PRICE_AP) ||
 	(k == ANALYSIS_OPERATION_TYPE_PRICE_FULL)) {
       AnIter->AnIterOpHyperCANCEL = 1.0;
       AnIter->AnIterOpHyperTRAN = 1.0;
       AnIter->AnIterOpRsDim = numCol;
     } else {
-      if (k == ANALYSIS_OPERATION_TYPE_BTRAN) {
+      if ((k == ANALYSIS_OPERATION_TYPE_BTRAN_EP) ||
+	  (k == ANALYSIS_OPERATION_TYPE_BTRAN_FULL)) {
         AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
         AnIter->AnIterOpHyperTRAN = hyperBTRANU;
       } else {
@@ -361,9 +364,9 @@ void HighsSimplexAnalysis::iterationRecord() {
       } else {
 	lcAnIter.AnIterTraceMulti = 0;
       }
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP] = row_ap_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
+      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN_EP] = row_ep_density;
+      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_AP] = row_ap_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
       if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
         lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
@@ -571,8 +574,8 @@ void HighsSimplexAnalysis::summaryReport() {
 	lcAnIter.AnIterTraceMulti = 0;
       }
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN] = col_aq_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN] = row_ep_density;
-      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP] = row_ap_density;
+      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN_EP] = row_ep_density;
+      lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_AP] = row_ap_density;
       lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT] = col_aq_density;
       if (edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
 	lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN_DSE] = row_DSE_density;
@@ -636,8 +639,8 @@ void HighsSimplexAnalysis::summaryReport() {
       }
       printf("|");
       reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN]);
-      reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN]);
-      reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_ROW_AP]);
+      reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN_EP]);
+      reportOneDensity(lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_AP]);
       double use_row_DSE_density;
       if (rp_dual_steepest_edge) {
 	if (lc_dual_edge_weight_mode == (int)DualEdgeWeightMode::STEEPEST_EDGE) {

@@ -191,7 +191,7 @@ void HDual::majorChooseRowBtran() {
 
 #ifdef HiGHSDEV
   for (int i = 0; i < multi_ntasks; i++)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, 1, analysis->row_ep_density);
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, 1, analysis->row_ep_density);
 #endif
   // 4.2 Perform BTRAN
 #pragma omp parallel for schedule(static, 1)
@@ -214,7 +214,7 @@ void HDual::majorChooseRowBtran() {
   }
 #ifdef HiGHSDEV
   for (int i = 0; i < multi_ntasks; i++)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, multi_vector[i]->count);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, multi_vector[i]->count);
 #endif
   // 4.3 Put back edge weights: the edge weights for the chosen rows
   // are stored in multi_choice[*].infeasEdWt
