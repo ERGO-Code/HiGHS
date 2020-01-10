@@ -21,7 +21,8 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   // Start timer.
   timer_.startRunHighsClock();
   double mip_solve_initial_time = timer_.readRunHighsClock();
-
+  
+  passModel(mip_);
   HighsMipStatus root_solve = solveRootNode();
   if (root_solve != HighsMipStatus::kNodeOptimal) return root_solve;
 
@@ -31,10 +32,15 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   root.integer_variables = lp_.integrality_;
   root.col_lower_bound = lp_.colLower_;
   root.col_upper_bound = lp_.colUpper_;
+  root.primal_solution = solution_.col_value;
   tree_.pushRootNode(root);
 
-  HighsMipStatus tree_solve = solveTree();
+  HighsMipStatus tree_solve_status = solveTree();
   // todo: handle return value
+  if (tree_solve_status != HighsMipStatus::kNodeOptimal) {
+    std::cout << "Error: root node not solved to optimality." << std::endl;
+    return tree_solve_status;
+  }
 
   // Stop and read the HiGHS clock, then work out time for this call
   timer_.stopRunHighsClock();
@@ -84,6 +90,8 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node) {
 
   if (model_status_ != HighsModelStatus::OPTIMAL)
     return HighsMipStatus::kNodeNotOptimal;
+  
+  node.primal_solution = solution_.col_value;
 
   return HighsMipStatus::kNodeOptimal;
 }
@@ -130,4 +138,5 @@ HighsMipStatus HighsMipSolver::solveTree() {
     tree_.pop();
     tree_.branch(node);
   }
+  return HighsMipStatus::kTreeExhausted;
 }

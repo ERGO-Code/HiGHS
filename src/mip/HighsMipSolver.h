@@ -23,7 +23,8 @@ enum class HighsMipStatus {
   kNodeError,
   kRootNodeNotOptimal,
   kRootNodeError,
-  kUnderDevelopment
+  kUnderDevelopment,
+  kTreeExhausted
 };
 
 class HighsMipSolver : Highs {
