@@ -280,9 +280,11 @@ class HDual {
   /**
    * @brief Interpret the PRICE strategy as setting of a mode and other actions
    */
+  /*
   void interpretPriceStrategy(
 			      const int simplex_price_strategy
 			      );
+  */
 
 #ifdef HiGHSDEV
   double checkDualObjectiveValue(const char* message, int phase = 2);
@@ -417,13 +419,6 @@ class HDual {
   bool initialise_dual_steepest_edge_weights;
   bool allow_dual_steepest_edge_to_devex_switch;
 
-  const bool use_computePrice = false;//true;//
-
-  PriceMode price_mode;
-  bool allow_price_by_col_switch;
-  bool allow_price_by_row_switch;
-  const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
-                                       //!< when pi_p has at least this density
   const double min_dual_steepest_edge_weight = 1e-4;
 
   double Tp;  // Tolerance for primal

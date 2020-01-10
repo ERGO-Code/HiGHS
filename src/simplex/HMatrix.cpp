@@ -232,14 +232,8 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, const HVector& row_ep,
   const int ep_count = row_ep.count;
   const int* ep_index = &row_ep.index[0];
   const double* ep_array = &row_ep.array[0];
-  bool rpRow = false;
-  bool rpOps = false;
-  //  rpRow = true;
-  //  rpOps = true;
   // Computation
 
-  //  if (fm_i>0) printf("price_by_row_w_sw: fm_i = %d; ap_count = %d\n", fm_i,
-  //  ap_count);
   int nx_i = fm_i;
   // Possibly don't perform hyper-sparse PRICE based on historical density
   if (hist_dsty <= hyperPRICE) {
@@ -249,28 +243,13 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, const HVector& row_ep,
       int iRowNNz = AR_Nend[iRow] - ARstart[iRow];
       double lc_dsty = (1.0 * ap_count) / numCol;
       bool price_by_row_sw = ap_count + iRowNNz >= numCol || lc_dsty > sw_dsty;
-      //      if (price_by_row_sw) printf("Stop maintaining nonzeros in PRICE: i
-      //      = %6d; %d >= %d || lc_dsty = %g > %g\n", i, ap_count+iRowNNz,
-      //      numCol, lc_dsty, sw_dsty);
       if (price_by_row_sw) break;
       double multiplier = ep_array[iRow];
-      if (rpRow) {
-        printf("Hyper_p Row %1d: multiplier = %g; NNz = %d\n", i, multiplier,
-               iRowNNz);
-        fflush(stdout);
-      }
       for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
         int index = ARindex[k];
         double value0 = ap_array[index];
         double value1 = value0 + multiplier * ARvalue[k];
         if (value0 == 0) ap_index[ap_count++] = index;
-        if (rpOps) {
-          printf("Entry %6d: index %6d; value %11.4g", k, index, ARvalue[k]);
-          fflush(stdout);
-        }
-        if (rpOps) {
-          printf(" value0 = %11.4g; value1 = %11.4g\n", value0, value1);
-        }
         ap_array[index] =
             (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
       }
@@ -286,22 +265,6 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, const HVector& row_ep,
     // PRICE is complete maintaining nonzeros of result
     // Try to remove cancellation
     price_by_row_rm_cancellation(row_ap);
-    /*
-    const int apcount1 = ap_count;
-    ap_count = 0;
-    for (int i = 0; i < apcount1; i++) {
-      const int index = ap_index[i];
-      const double value = ap_array[index];
-      if (fabs(value) > HIGHS_CONST_TINY) {
-        ap_index[ap_count++] = index;
-      } else {
-        ap_array[index] = 0;
-      }
-    }
-    row_ap.count = ap_count;
-    if (apcount1>ap_count) printf("Removed %d cancellation\n",
-    apcount1-ap_count);
-    */
   }
 }
 
@@ -314,31 +277,14 @@ void HMatrix::price_by_row_no_index(HVector& row_ap, const HVector& row_ep,
   const int ep_count = row_ep.count;
   const int* ep_index = &row_ep.index[0];
   const double* ep_array = &row_ep.array[0];
-  bool rpRow = false;
-  bool rpOps = false;
-  //  rpRow = true;
-  //  rpOps = true;
   // Computation
   for (int i = fm_i; i < ep_count; i++) {
     int iRow = ep_index[i];
-    int iRowNNz = AR_Nend[iRow] - ARstart[iRow];
     double multiplier = ep_array[iRow];
-    if (rpRow) {
-      printf("StdRowPRICE Row %1d: multiplier = %g; NNz = %d\n", i, multiplier,
-             iRowNNz);
-      fflush(stdout);
-    }
     for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
       int index = ARindex[k];
       double value0 = ap_array[index];
       double value1 = value0 + multiplier * ARvalue[k];
-      if (rpOps) {
-        printf("Entry %6d: index %6d; value %11.4g", k, index, ARvalue[k]);
-      }
-      if (rpOps) {
-        printf(" value0 = %11.4g; value1 = %11.4g\n", value0, value1);
-        fflush(stdout);
-      }
       ap_array[index] =
           (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
     }
@@ -351,10 +297,6 @@ void HMatrix::price_by_row_no_index(HVector& row_ap, const HVector& row_ep,
       ap_array[index] = 0;
     } else {
       ap_index[ap_count++] = index;
-      if (rpRow) {
-        printf("Finding indices: ap_count = %3d; ap_array[%6d] = %g\n",
-               ap_count, index, value1);
-      }
     }
   }
   row_ap.count = ap_count;

@@ -2788,7 +2788,7 @@ void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
   scaled_solution_params.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
-void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mode, const HVector& row_ep, HVector& row_ap) {
+void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVector& row_ep, HVector& row_ap) {
   HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const HMatrix* matrix = &highs_model_object.matrix_;
@@ -2796,18 +2796,18 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
   
   const int price_strategy = simplex_info.price_strategy;
   const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
-  const int solver_num_col = highs_model_object.simplex_lp_.numCol_;
   // By default switch to column PRICE when pi_p has at least this
   // density
   const double density_for_column_price_switch = 0.75;
   const double local_density = 1.0 * row_ep.count / solver_num_row;
    
-  const bool use_col_price = price_mode == PriceMode::COL ||
-    ((price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) &&
-     (local_density > density_for_column_price_switch));
+  const bool use_col_price =
+    (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) ||
+    (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH &&
+     local_density > density_for_column_price_switch);
   const bool use_row_price_w_switch =
-    (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) ||
-    (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH);
+    price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH ||
+    price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     if (use_col_price) {
@@ -2836,6 +2836,7 @@ void computePrice(HighsModelObject& highs_model_object, const PriceMode price_mo
     matrix->price_by_row(row_ap, row_ep);
   }
 
+  const int solver_num_col = highs_model_object.simplex_lp_.numCol_;
   if (use_col_price && price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
     // Zero the components of row_ap corresponding to basic variables
     // (nonbasicFlag[*]=0)
@@ -2914,12 +2915,7 @@ void compute_dual(HighsModelObject& highs_model_object) {
   if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong, price_full_historical_density);
 #endif
-  const bool use_computePrice = false;
-  if (use_computePrice) {
-    computePrice(highs_model_object, PriceMode::COL, buffer, bufferLong);
-  } else {
-    matrix.price_by_col(bufferLong, buffer);
-  }
+  matrix.price_by_col(bufferLong, buffer);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong);
