@@ -839,9 +839,9 @@ void HDual::cleanup() {
     const double dual_change = fabs(simplex_info.workDual_[iCol]-original_workDual[iCol]);
     norm_dual_change += dual_change;
   }
-  printf("grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s) and norm dual_change = %g\n",
+  printf("grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s) and average dual_change = %g\n",
 	 workHMO.simplex_lp_.model_name_.c_str(),
-	 num_dual_sign_change, norm_dual_change);
+	 num_dual_sign_change, norm_dual_change/workHMO.simplex_lp_.numCol_);
 #endif
 
   // Compute the dual infeasibilities
