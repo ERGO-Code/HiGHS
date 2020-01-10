@@ -77,10 +77,10 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
   AnIter->AnIterOpName = "BTRAN e_p";
-  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_FULL];
-  AnIter->AnIterOpName = "BTRAN Full";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_AP];
   AnIter->AnIterOpName = "PRICE a_p";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_FULL];
+  AnIter->AnIterOpName = "BTRAN Full";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_FULL];
   AnIter->AnIterOpName = "PRICE Full";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN];

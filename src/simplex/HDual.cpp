@@ -1256,7 +1256,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
 #pragma omp task
     {
       slice_row_ap[i].clear();
-      slice_matrix[i].price_by_row(slice_row_ap[i], *row_ep);
+      slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
 
       slice_dualRow[i].clear();
       slice_dualRow[i].workDelta = deltaPrimal;
@@ -1624,27 +1624,27 @@ void HDual::interpretDualEdgeWeightStrategy(const int dual_edge_weight_strategy)
 
 /*
 void HDual::interpretPriceStrategy(const int price_strategy) {
-  allow_price_by_col_switch = false;
-  allow_price_by_row_switch = false;
+  allow_priceByColumn_switch = false;
+  allow_priceByRowSparseResult_switch = false;
   if (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
     price_mode = PriceMode::COL;
   } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
     price_mode = PriceMode::ROW;
   } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
     price_mode = PriceMode::ROW;
-    allow_price_by_row_switch = true;
+    allow_priceByRowSparseResult_switch = true;
   } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
     price_mode = PriceMode::ROW;
-    allow_price_by_col_switch = true;
-    allow_price_by_row_switch = true;
+    allow_priceByColumn_switch = true;
+    allow_priceByRowSparseResult_switch = true;
   } else {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
 		      "HDual::interpretPriceStrategy: unrecognised price_strategy = %d - "
 		      "using row Price with switch or colump price switch\n",
         price_strategy);
     price_mode = PriceMode::ROW;
-    allow_price_by_col_switch = true;
-    allow_price_by_row_switch = true;
+    allow_priceByColumn_switch = true;
+    allow_priceByRowSparseResult_switch = true;
   }
 }
 */

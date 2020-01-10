@@ -684,7 +684,7 @@ void HPrimal::primalUpdate() {
   }
 #endif
   timer.start(simplex_info.clock_[PriceClock]);
-  workHMO.matrix_.price_by_row(row_ap, row_ep);
+  workHMO.matrix_.priceByRowSparseResult(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)

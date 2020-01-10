@@ -732,7 +732,7 @@ void HQPrimal::primalUpdate() {
   }
 #endif
   timer.start(simplex_info.clock_[PriceClock]);
-  workHMO.matrix_.price_by_row(row_ap, row_ep);
+  workHMO.matrix_.priceByRowSparseResult(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
@@ -855,7 +855,7 @@ void HQPrimal::phase1ComputeDual() {
       analysis->num_col_price++;
     }
 #endif
-  workHMO.matrix_.price_by_col(bufferLong, buffer);
+  workHMO.matrix_.priceByColumn(bufferLong, buffer);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
@@ -1152,7 +1152,7 @@ void HQPrimal::phase1Update() {
 #endif
   timer.start(simplex_info.clock_[PriceClock]);
   row_ap.clear();
-  workHMO.matrix_.price_by_row(row_ap, row_ep);
+  workHMO.matrix_.priceByRowSparseResult(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)

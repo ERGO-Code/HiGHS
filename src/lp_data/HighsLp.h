@@ -279,9 +279,6 @@ struct HighsSimplexInfo {
   // Number of logical variables in the basis
   int num_basic_logicals;
 
-  bool allow_price_by_col_switch;
-  bool allow_price_by_row_switch;
-  
 #ifdef HiGHSDEV
   // Analysis of INVERT
   int num_invert = 0;

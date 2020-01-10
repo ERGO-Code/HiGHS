@@ -188,7 +188,7 @@ void HMatrix::collect_aj(HVector& vector, int iCol, double multiplier) const {
   }
 }
 
-void HMatrix::price_by_col(HVector& row_ap, const HVector& row_ep) const {
+void HMatrix::priceByColumn(HVector& row_ap, const HVector& row_ep) const {
   // Alias
   int ap_count = 0;
   int* ap_index = &row_ap.index[0];
@@ -208,20 +208,20 @@ void HMatrix::price_by_col(HVector& row_ap, const HVector& row_ep) const {
   row_ap.count = ap_count;
 }
 
-void HMatrix::price_by_row(HVector& row_ap, const HVector& row_ep) const {
+void HMatrix::priceByRowSparseResult(HVector& row_ap, const HVector& row_ep) const {
   // Vanilla hyper-sparse row-wise PRICE
-  // Set up parameters so that price_by_row_w_sw runs as vanilla hyper-sparse
+  // Set up parameters so that priceByRowSparseResultWithSwitch runs as vanilla hyper-sparse
   // PRICE
-  const double hist_dsty =
+  const double historical_density =
       -0.1;      // Historical density always forces hyper-sparse PRICE
   int fm_i = 0;  // Always start from first index of row_ep
-  const double sw_dsty = 1.1;  // Never switch to standard row-wise PRICE
-  price_by_row_w_sw(row_ap, row_ep, hist_dsty, fm_i, sw_dsty);
+  const double switch_density = 1.1;  // Never switch to standard row-wise PRICE
+  priceByRowSparseResultWithSwitch(row_ap, row_ep, historical_density, fm_i, switch_density);
 }
 
-void HMatrix::price_by_row_w_sw(HVector& row_ap, const HVector& row_ep,
-                                double hist_dsty, int fm_i,
-                                double sw_dsty) const {
+void HMatrix::priceByRowSparseResultWithSwitch(HVector& row_ap, const HVector& row_ep,
+					       double historical_density, int from_i,
+					       double switch_density) const {
   // (Continue) hyper-sparse row-wise PRICE with possible switches to
   // standard row-wise PRICE either immediately based on historical
   // density or during hyper-sparse PRICE if there is too much fill-in
@@ -234,15 +234,15 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, const HVector& row_ep,
   const double* ep_array = &row_ep.array[0];
   // Computation
 
-  int nx_i = fm_i;
+  int nx_i = from_i;
   // Possibly don't perform hyper-sparse PRICE based on historical density
-  if (hist_dsty <= hyperPRICE) {
+  if (historical_density <= hyperPRICE) {
     for (int i = nx_i; i < ep_count; i++) {
       int iRow = ep_index[i];
       // Possibly switch to standard row-wise price
       int iRowNNz = AR_Nend[iRow] - ARstart[iRow];
       double lc_dsty = (1.0 * ap_count) / numCol;
-      bool price_by_row_sw = ap_count + iRowNNz >= numCol || lc_dsty > sw_dsty;
+      bool price_by_row_sw = ap_count + iRowNNz >= numCol || lc_dsty > switch_density;
       if (price_by_row_sw) break;
       double multiplier = ep_array[iRow];
       for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
@@ -257,19 +257,19 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, const HVector& row_ep,
     }
     row_ap.count = ap_count;
   }
-  fm_i = nx_i;
-  if (fm_i < ep_count) {
+  from_i = nx_i;
+  if (from_i < ep_count) {
     // PRICE is not complete: finish without maintaining nonzeros of result
-    price_by_row_no_index(row_ap, row_ep, fm_i);
+    priceByRowDenseResult(row_ap, row_ep, from_i);
   } else {
     // PRICE is complete maintaining nonzeros of result
     // Try to remove cancellation
-    price_by_row_rm_cancellation(row_ap);
+    priceByRowSparseResultRemoveCancellation(row_ap);
   }
 }
 
-void HMatrix::price_by_row_no_index(HVector& row_ap, const HVector& row_ep,
-                                    int fm_i) const {
+void HMatrix::priceByRowDenseResult(HVector& row_ap, const HVector& row_ep,
+                                    int from_i) const {
   // (Continue) standard row-wise PRICE
   // Alias
   int* ap_index = &row_ap.index[0];
@@ -278,7 +278,7 @@ void HMatrix::price_by_row_no_index(HVector& row_ap, const HVector& row_ep,
   const int* ep_index = &row_ep.index[0];
   const double* ep_array = &row_ep.array[0];
   // Computation
-  for (int i = fm_i; i < ep_count; i++) {
+  for (int i = from_i; i < ep_count; i++) {
     int iRow = ep_index[i];
     double multiplier = ep_array[iRow];
     for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
@@ -302,7 +302,7 @@ void HMatrix::price_by_row_no_index(HVector& row_ap, const HVector& row_ep,
   row_ap.count = ap_count;
 }
 
-void HMatrix::price_by_row_rm_cancellation(HVector& row_ap) const {
+void HMatrix::priceByRowSparseResultRemoveCancellation(HVector& row_ap) const {
   // Alias
   int* ap_index = &row_ap.index[0];
   double* ap_array = &row_ap.array[0];
@@ -362,7 +362,7 @@ bool HMatrix::price_er_ck_core(HVector& row_ap, const HVector& row_ep) const {
   //  int *lc_ap_index = &lc_row_ap.index[0];
   double* lc_ap_array = &lc_row_ap.array[0];
 
-  price_by_row(lc_row_ap, row_ep);
+  priceByRowSparseResult(lc_row_ap, row_ep);
 
   double priceErTl = 1e-4;
   double priceEr1 = 0;

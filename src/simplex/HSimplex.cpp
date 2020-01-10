@@ -2826,20 +2826,21 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVecto
   row_ap.clear();
   if (use_col_price) {
     // Perform column-wise PRICE
-    matrix->price_by_col(row_ap, row_ep);
+    matrix->priceByColumn(row_ap, row_ep);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap becomes extreme
-    const double sw_dsty = matrix->price_by_row_sw_dsty;
-    matrix->price_by_row_w_sw(row_ap, row_ep, analysis->row_ap_density, 0, sw_dsty);
+    const double switch_density = matrix->hyperPRICE;
+    matrix->priceByRowSparseResultWithSwitch(row_ap, row_ep, analysis->row_ap_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    matrix->price_by_row(row_ap, row_ep);
+    matrix->priceByRowSparseResult(row_ap, row_ep);
   }
 
   const int solver_num_col = highs_model_object.simplex_lp_.numCol_;
-  if (use_col_price && price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
-    // Zero the components of row_ap corresponding to basic variables
-    // (nonbasicFlag[*]=0)
+  if (use_col_price) {
+    // Column-wise PRICE computes components of row_ap corresponding
+    // to basic variables, so zero these by exploiting the fact that,
+    // for basic variables, nonbasicFlag[*]=0
     const int* nonbasicFlag = &highs_model_object.simplex_basis_.nonbasicFlag_[0];
     for (int col = 0; col < solver_num_col; col++) row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
   }
@@ -2915,7 +2916,7 @@ void compute_dual(HighsModelObject& highs_model_object) {
   if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong, price_full_historical_density);
 #endif
-  matrix.price_by_col(bufferLong, buffer);
+  matrix.priceByColumn(bufferLong, buffer);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong);
