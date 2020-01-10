@@ -36,8 +36,8 @@ struct Node {
 
   // Minimal information about changes. Just col and its bounds for the moment.
   int branch_col;
-  double col_lower_bound;
-  double col_upper_bound;
+  std::vector<double> col_lower_bound;
+  std::vector<double> col_upper_bound;
 
   std::unique_ptr<Node> left_child;
   std::unique_ptr<Node> right_child;

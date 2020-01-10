@@ -74,15 +74,21 @@ bool Tree::branch(Node& node) {
 
   // Copy bounds from parent.
   node.left_child->branch_col = col;
-  node.left_child->integer_variables = node.integer_variables;
   node.left_child->col_lower_bound = node.col_lower_bound;
-  node.left_child->col_upper_bound = std::floor(value);
+  node.left_child->col_upper_bound = node.col_upper_bound;
+  node.left_child->col_upper_bound[col] = std::floor(value);
 
   node.right_child->branch_col = col;
-  node.right_child->integer_variables = node.integer_variables;
-  node.right_child->col_lower_bound = std::ceil(value);
+  node.right_child->col_lower_bound = node.col_lower_bound;
   node.right_child->col_upper_bound = node.col_upper_bound;
+  node.right_child->col_lower_bound[col] = std::ceil(value);
 
+  //todo: confirm that's how you did it before and right
+  // Set branching column to be continuous? 
+  node.left_child->integer_variables = node.integer_variables;
+  node.left_child->integer_variables[branch_col] = 0;
+  node.right_child->integer_variables = node.integer_variables;
+  node.right_child->integer_variables[branch_col] = 0;
   // Add to stack.
   std::reference_wrapper<Node> left(*(node.left_child).get());
   std::reference_wrapper<Node> right(*(node.right_child).get());

@@ -338,7 +338,7 @@ HighsStatus Highs::run() {
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   //  printf("\nHighs::run() 1: basis_.valid_ = %d\n", basis_.valid_);
   //  fflush(stdout);
-  if (!basis_.valid_) {
+  if (!basis_.valid_ && options_.presolve != off_string) {
     // No HiGHS basis so consider presolve
     hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::NOTSET;
     // Presolve. runPresolve handles the level of presolving (0 = don't

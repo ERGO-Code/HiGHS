@@ -39,7 +39,7 @@ class HighsMipSolver : Highs {
  private:
   HighsMipStatus solveRootNode();
   HighsMipStatus solveNode(Node& node);
-  HighsMipStatus solveTree();
+  HighsMipStatus solveTree(Node& root);
 
   Tree tree_;
   const HighsOptions options_mip_;
