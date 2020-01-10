@@ -137,6 +137,7 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/src/ipm/ipx
     ${HIGHS_SOURCE_DIR}/src/ipm/basiclu
     ${HIGHS_SOURCE_DIR}/src/lp_data
+    ${HIGHS_SOURCE_DIR}/src/mip
     ${HIGHS_SOURCE_DIR}/src/presolve
     ${HIGHS_SOURCE_DIR}/src/simplex
     ${HIGHS_SOURCE_DIR}/src/test

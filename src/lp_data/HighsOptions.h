@@ -540,9 +540,6 @@ class HighsOptions {
 				     0, 50, 100);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("mip", "Run MIP solver", advanced, &mip, false);
-    records.push_back(record_bool);
-
     record_bool = new OptionRecordBool("less_infeasible_DSE_check",
 				     "Check whether LP is candidate for LiDSE",
 				     advanced, &less_infeasible_DSE_check,

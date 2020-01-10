@@ -13,8 +13,8 @@
  */
 #include <sys/stat.h>
 
-#include "io/LoadProblem.h"
 #include "io/Filereader.h"
+#include "io/LoadProblem.h"
 #include "lp_data/HighsLpUtils.h"
 
 HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
@@ -27,11 +27,11 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   printf("loadLpFromFile: %s\n", pathname);
   if (stat(pathname, &info) != 0) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Cannot access %s", pathname);
+                    "Cannot access %s", pathname);
     return HighsStatus::Error;
   } else if (info.st_mode & S_IFDIR) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "%s is a directory: please specify a file", pathname);
+                    "%s is a directory: please specify a file", pathname);
     return HighsStatus::Error;
   }
 
@@ -42,11 +42,11 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   switch (success) {
     case FilereaderRetcode::FILENOTFOUND:
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "File not found");
+                      "File not found");
       return HighsStatus::Error;
     case FilereaderRetcode::PARSERERROR:
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "Error when parsing file");
+                      "Error when parsing file");
       return HighsStatus::Error;
     default:
       break;
@@ -61,6 +61,9 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   found = name.find_last_of(".");
   if (found < name.size()) name.erase(found, name.size() - found);
   lp.model_name_ = name;
+
+  for (unsigned int i = 0; i < lp.integrality_.size(); i++)
+    if (lp.integrality_[i]) lp.numInt_++;
 
   // Don't check validity of the LP here: do it when calling highs.initializeLp
   //  return assessLp(lp, options);
