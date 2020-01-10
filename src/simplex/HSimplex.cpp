@@ -1732,24 +1732,61 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   simplex_info.costs_perturbed = 1;
 
   // Perturb the original costs, scale down if is too big
+#ifdef HiGHSDEV
+  printf("grep_DuPtrb: Cost perturbation for %s\n", highs_model_object.simplex_lp_.model_name_.c_str());
+  int num_original_nonzero_cost = 0;
+#endif
   double bigc = 0;
-  for (int i = 0; i < simplex_lp.numCol_; i++)
-    bigc = max(bigc, fabs(simplex_info.workCost_[i]));
-  if (bigc > 100) bigc = sqrt(sqrt(bigc));
+  for (int i = 0; i < simplex_lp.numCol_; i++) {
+    const double abs_cost = fabs(simplex_info.workCost_[i]);
+    bigc = max(bigc, abs_cost);
+#ifdef HiGHSDEV
+    if (abs_cost) num_original_nonzero_cost++;
+#endif
+  }
+#ifdef HiGHSDEV
+  const int pct0 = (100*num_original_nonzero_cost)/simplex_lp.numCol_;
+  double average_cost = 0;
+  if (num_original_nonzero_cost) {
+    average_cost = bigc/num_original_nonzero_cost;
+  } else {
+    printf("grep_DuPtrb:    STRANGE initial workCost has non nonzeros\n");
+  }
+  printf("grep_DuPtrb:    Initially have %d nonzero costs (%3d%%) with bigc = %g and average = %g\n",
+	 num_original_nonzero_cost, pct0, bigc, average_cost);
+#endif
+  if (bigc > 100) {
+    bigc = sqrt(sqrt(bigc));
+#ifdef HiGHSDEV
+    printf("grep_DuPtrb:    Large so set bigc = sqrt(bigc) = %g\n", bigc);
+#endif
+  }
 
-  // If there's few boxed variables, we will just use Simple perturbation
+  // If there's few boxed variables, we will just use simple perturbation
   double boxedRate = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++)
     boxedRate += (simplex_info.workRange_[i] < 1e30);
   boxedRate /= numTot;
-  if (boxedRate < 0.01) bigc = min(bigc, 1.0);
+  if (boxedRate < 0.01) {
+    bigc = min(bigc, 1.0);
+#ifdef HiGHSDEV
+    printf("grep_DuPtrb:    boxedRate = %g so set bigc = min(bigc, 1.0) = %g\n", boxedRate, bigc);
+#endif
+  }
   if (bigc < 1) {
     //        bigc = sqrt(bigc);
   }
 
   // Determine the perturbation base
   double base = 5e-7 * bigc;
+#ifdef HiGHSDEV
+  printf("grep_DuPtrb:    Perturbation base = %g\n", base);
+  double norm_perturbation1 = 0;
+  int num_perturbation1 = 0;
+  int num_new_nonzero_cost = 0;
+  double norm_perturbation2 = 0;
+#endif
 
   // Now do the perturbation
   for (int i = 0; i < simplex_lp.numCol_; i++) {
@@ -1757,6 +1794,9 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
     double upper = simplex_lp.colUpper_[i];
     double xpert = (fabs(simplex_info.workCost_[i]) + 1) * base *
                    (1 + simplex_info.numTotRandomValue_[i]);
+#ifdef HiGHSDEV
+    const double previous_cost = simplex_info.workCost_[i];
+#endif
     if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
       // Free - no perturb
     } else if (upper == HIGHS_CONST_INF) {  // Lower
@@ -1769,12 +1809,30 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
     } else {
       // Fixed - no perturb
     }
+#ifdef HiGHSDEV
+    const double perturbation1 = fabs(simplex_info.workCost_[i]-previous_cost);
+    if (perturbation1) {
+      num_perturbation1++;
+      if (!simplex_info.workCost_[i]) num_new_nonzero_cost++;
+      norm_perturbation1 += perturbation1;
+    }
+#endif
   }
 
   for (int i = simplex_lp.numCol_; i < numTot; i++) {
-    simplex_info.workCost_[i] +=
-        (0.5 - simplex_info.numTotRandomValue_[i]) * 1e-12;
-  }
+    const double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) * 1e-12;
+    simplex_info.workCost_[i] += perturbation2;
+#ifdef HiGHSDEV
+    norm_perturbation2 += fabs(perturbation2);
+#endif
+ }
+#ifdef HiGHSDEV
+  const int pct1 = (100*num_perturbation1)/simplex_lp.numCol_;
+  printf("grep_DuPtrb:    Average initial perturbation of %d costs (%3d%%) is %g\n",
+	 num_perturbation1, pct1, norm_perturbation1/simplex_lp.numCol_);
+  printf("grep_DuPtrb:    Average general perturbation is %g\n", norm_perturbation2/simplex_lp.numCol_);
+#endif
+
 }
 
 int get_nonbasicMove(HighsModelObject& highs_model_object, int var) {

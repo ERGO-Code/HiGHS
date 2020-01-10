@@ -822,9 +822,27 @@ void HDual::cleanup() {
   initialise_cost(workHMO);
   initialise_bound(workHMO);
   // Compute the dual values
+#ifdef HiGHSDEV
+  vector<double> original_workDual = simplex_info.workDual_;
+#endif
   timer.start(simplex_info.clock_[ComputeDualClock]);
   compute_dual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
+#ifdef HiGHSDEV
+  double norm_dual_change = 0;
+  int num_dual_sign_change = 0;
+  for (int iCol = 0; iCol < workHMO.simplex_lp_.numCol_; iCol++) {
+    const double max_dual = max(fabs(simplex_info.workDual_[iCol]), fabs(original_workDual[iCol]));
+    if (max_dual > workHMO.scaled_solution_params_.dual_feasibility_tolerance) {
+      if (simplex_info.workDual_[iCol] * original_workDual[iCol] < 0) num_dual_sign_change++;
+    }
+    const double dual_change = fabs(simplex_info.workDual_[iCol]-original_workDual[iCol]);
+    norm_dual_change += dual_change;
+  }
+  printf("grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s) and norm dual_change = %g\n",
+	 workHMO.simplex_lp_.model_name_.c_str(),
+	 num_dual_sign_change, norm_dual_change);
+#endif
 
   // Compute the dual infeasibilities
   timer.start(simplex_info.clock_[ComputeDuIfsClock]);
