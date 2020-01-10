@@ -21,18 +21,18 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   // Start timer.
   timer_.startRunHighsClock();
   double mip_solve_initial_time = timer_.readRunHighsClock();
-  
+
   HighsMipStatus root_solve = solveRootNode();
-  if (root_solve != HighsMipStatus::kNodeOptimal)
-    return root_solve;
-  
+  if (root_solve != HighsMipStatus::kNodeOptimal) return root_solve;
+
   // Start tree by making root node.
   // Highs ignores integrality constraints.
-  root_.integer_variables = lp_.integrality_;
-  root_.col_lower_bound = lp_.colLower_;
-  root_.col_upper_bound = lp_.colUpper_;
-  Tree tree(root_);
-  
+  Node root(-1, 0, 0);
+  root.integer_variables = lp_.integrality_;
+  root.col_lower_bound = lp_.colLower_;
+  root.col_upper_bound = lp_.colUpper_;
+  tree_.pushRootNode(root);
+
   HighsMipStatus tree_solve = solveTree();
   // todo: handle return value
 
@@ -40,7 +40,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   timer_.stopRunHighsClock();
   double mip_solve_final_time = timer_.readRunHighsClock();
 
-  if (tree.getBestSolution().size() > 0) {
+  if (tree_.getBestSolution().size() > 0) {
     hmos_[0].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
     std::stringstream message;
     message << std::endl;
@@ -49,7 +49,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
     message << "Run status : "
             << highsModelStatusToString(hmos_[0].unscaled_model_status_)
             << std::endl;
-    message << "Objective  : " << std::scientific << tree.getBestObjective()
+    message << "Objective  : " << std::scientific << tree_.getBestObjective()
             << std::endl;
     message << "Time       : " << std::fixed << std::setprecision(3)
             << mip_solve_final_time - mip_solve_initial_time << std::endl;
@@ -67,111 +67,25 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   return HighsMipStatus::kUnderDevelopment;
 }
 
-HighsStatus HighsMipSolver::solveNode(Node& node) {
-  HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
-  // Apply column bounds from node to LP.
-  const bool check_call = false;
-  const bool call_changeColsBounds = true;
-  if (call_changeColsBounds) {
-    changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0],
-                     &node.col_upper_bound[0]);
-  } else {
-    // Change the LP directly and invalidate the simplex information
-    lp_.colLower_ = node.col_lower_bound;
-    lp_.colUpper_ = node.col_upper_bound;
-    hmos_[0].simplex_lp_status_.valid = false;
+HighsMipStatus HighsMipSolver::solveNode(Node& node) {
+  // Apply changes to LP from node. For the moment only column bounds.
+  changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0],
+                   &node.col_upper_bound[0]);
+  HighsStatus lp_solve_status = run();
+
+  switch (lp_solve_status) {
+    case HighsStatus::Warning:
+      return HighsMipStatus::kNodeNotOptimal;
+    case HighsStatus::Error:
+      return HighsMipStatus::kNodeError;
+    default:
+      break;
   }
 
-  // Call warm start.
-  //  HighsStatus status = run();
-  // call works but simply calling run() should be enough and will call hot
-  // start in the same way as a user would call it from the outside
+  if (model_status_ != HighsModelStatus::OPTIMAL)
+    return HighsMipStatus::kNodeNotOptimal;
 
-  int iteration_count0;
-  int iteration_count1;
-  int solve0_iteration_count;
-  int solve1_iteration_count;
-  double solve0_objective_value;
-  double solve1_objective_value;
-  int solve0_status;
-  int solve1_status;
-
-  HighsSolutionParams& scaled_solution_params =
-      hmos_[0].scaled_solution_params_;
-  iteration_count0 = scaled_solution_params.simplex_iteration_count;
-
-  call_status = run();
-  return_status =
-      interpretCallStatus(call_status, return_status, "solveLpSimplex");
-  if (return_status == HighsStatus::Error) return return_status;
-
-  iteration_count1 = scaled_solution_params.simplex_iteration_count;
-  solve0_iteration_count = iteration_count1 - iteration_count0;
-  solve0_objective_value = scaled_solution_params.objective_function_value;
-  solve0_status = (int)hmos_[0].scaled_model_status_;
-  printf("Solve0: Obj = %12g; Iter =%6d; Status =%2d\n", solve0_objective_value,
-         solve0_iteration_count, solve0_status);
-
-  if (check_call) {
-    // Generate a fresh model object for the LP at this node
-    hmos_[0].simplex_lp_status_.has_basis = false;
-    hmos_[0].basis_.valid_ = false;
-    iteration_count0 = scaled_solution_params.simplex_iteration_count;
-    call_status = run();
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveLpSimplex");
-    if (return_status == HighsStatus::Error) return return_status;
-    iteration_count1 = scaled_solution_params.simplex_iteration_count;
-    solve1_iteration_count = iteration_count1 - iteration_count0;
-    solve1_objective_value = scaled_solution_params.objective_function_value;
-    solve1_status = (int)hmos_[0].scaled_model_status_;
-    printf("Solve1: Obj = %12g; Iter =%6d; Status =%2d\n",
-           solve1_objective_value, solve1_iteration_count, solve1_status);
-    double rlv_objective_value_difference =
-        fabs(solve1_objective_value - solve0_objective_value) /
-        max(1.0, fabs(solve1_objective_value));
-    if (solve0_status != solve1_status) {
-      // Look for unequal status
-      printf(
-          "!! NodeSolveInequality: Status difference: Status0=%2d; Status1=%2d "
-          "!!\n",
-          solve0_status, solve1_status);
-    } else if (solve0_status != (int)HighsModelStatus::PRIMAL_INFEASIBLE) {
-      // Unless infeasible, look for unequal objective
-      if (rlv_objective_value_difference > 1e-12)
-        printf(
-            "!! NodeSolveInequality: Relative objective difference = %12g !!\n",
-            rlv_objective_value_difference);
-    }
-  }
-
-  // Set solution.
-  if (hmos_[0].scaled_model_status_ == HighsModelStatus::OPTIMAL) {
-    node.primal_solution = hmos_[0].solution_.col_value;
-    node.objective_value =
-        hmos_[0].scaled_solution_params_.objective_function_value;
-  }
-
-  // Solve with a new hmo (replace with code above)
-  // passModel(lp_);
-  // lp_.colLower_ = node.col_lower_bound;
-  // lp_.colUpper_ = node.col_upper_bound;
-
-  // HighsStatus status = solveLpSimplex(hmos_[0]);
-
-  // // Set solution.
-  // if (status == HighsStatus::Optimal) {
-  //   node.primal_solution = hmos_[0].solution_.col_value;
-  //   node.objective_value =
-  //   hmos_[0].scaled_solution_params_.objective_function_value;
-  // }
-
-  // Assess success according to the scaled model status, unless
-  // something worse has happened earlier
-  call_status = highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
-  return_status = interpretCallStatus(call_status, return_status);
-  return return_status;
+  return HighsMipStatus::kNodeOptimal;
 }
 
 HighsMipStatus HighsMipSolver::solveRootNode() {
@@ -184,7 +98,8 @@ HighsMipStatus HighsMipSolver::solveRootNode() {
       return HighsMipStatus::kRootNodeNotOptimal;
     case HighsStatus::Error:
       return HighsMipStatus::kRootNodeError;
-    default: break;
+    default:
+      break;
   }
 
   if (model_status_ != HighsModelStatus::OPTIMAL)
@@ -193,30 +108,26 @@ HighsMipStatus HighsMipSolver::solveRootNode() {
   return HighsMipStatus::kNodeOptimal;
 }
 
-
-HighsMipStatus HighsMipSolver::solveTree(Node& root) {
+HighsMipStatus HighsMipSolver::solveTree() {
   // The method branch(...) below calls chooseBranchingVariable(..) which
   // currently returns the first violated one. If a branching variable is found
   // children are added to the stack. If there are no more violated integrality
   // constraints we have a feasible solution, if it is best than current best,
   // the current best is updated.
-  tree.branch(options_mip_.output, options_mip_.message_level, *(root.get()));
+  tree_.branch(tree_.getRootNode());
 
   // While stack not empty.
   //   Solve node.
   //   Branch.
-  while (!tree.empty()) {
-    Node& node = tree.next();
-    call_status = solveNode(node);
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveNode");
-    if (return_status == HighsStatus::Error)
-      return HighsMipStatus::kRootNodeError;
-    tree.pop();
-
-    if (hmos_[0].scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE)
+  while (!tree_.empty()) {
+    Node& node = tree_.next();
+    HighsMipStatus node_solve_status = solveNode(node);
+    if (node_solve_status != HighsMipStatus::kNodeOptimal) {
+      // todo: handle case.
+      std::cout << "Error or warning: Node " << node.id << " not solved to optimality" << std::endl; 
       continue;
-
-    tree.branch(options_mip_.output, options_mip_.message_level, node);
+    } 
+    tree_.pop();
+    tree_.branch(node);
   }
 }
