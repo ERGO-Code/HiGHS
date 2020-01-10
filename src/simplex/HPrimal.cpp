@@ -205,9 +205,12 @@ void HPrimal::solvePhase2() {
   row_ep.setup(solver_num_row);
   row_ap.setup(solver_num_col);
 
+#ifdef HiGHSDEV
   printf("HPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
-  analysis->col_aq_density = 0;
   printf("HPrimal::solvePhase2 - WARNING: Setting analysis->row_ep_density = 0\n");
+#endif
+
+  analysis->col_aq_density = 0;
   analysis->row_ep_density = 0;
 
   no_free_columns = true;
@@ -364,8 +367,7 @@ void HPrimal::primalRebuild() {
   timer.start(simplex_info.clock_[ReportRebuildClock]);
   reportRebuild(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
-  // Indicate that a header must be printed before the next iteration log
-  previous_iteration_report_header_iteration_count = -1;
+
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
     int iClock = simplex_info.clock_[IteratePrimalRebuildClock];

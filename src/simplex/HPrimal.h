@@ -60,7 +60,6 @@ class HPrimal {
   bool no_free_columns;
 
   int solvePhase;
-  int previous_iteration_report_header_iteration_count = -1;
   // Pivot related
   int invertHint;
   int columnIn;

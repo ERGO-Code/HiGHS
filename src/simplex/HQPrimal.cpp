@@ -415,8 +415,6 @@ void HQPrimal::primalRebuild() {
   timer.start(simplex_info.clock_[ReportRebuildClock]);
   reportRebuild(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
-  // Indicate that a header must be printed before the next iteration log
-  previous_iteration_report_header_iteration_count = -1;
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
     int iClock = simplex_info.clock_[IteratePrimalRebuildClock];

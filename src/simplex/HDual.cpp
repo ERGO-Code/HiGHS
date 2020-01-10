@@ -792,8 +792,6 @@ void HDual::rebuild() {
   timer.start(simplex_info.clock_[ReportRebuildClock]);
   reportRebuild(rebuild_invert_hint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
-  // Indicate that a header must be printed before the next iteration log
-  previous_iteration_report_header_iteration_count = -1;
 
   build_syntheticTick = factor->build_syntheticTick;
   total_syntheticTick = 0;
