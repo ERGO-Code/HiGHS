@@ -19,6 +19,8 @@ enum class HighsMipStatus {
   kTimeout,
   kError,
   kNodeOptimal,
+  kNodeInfeasible,
+  kNodeUnbounded,
   kNodeNotOptimal,
   kNodeError,
   kRootNodeNotOptimal,
@@ -30,8 +32,7 @@ enum class HighsMipStatus {
 class HighsMipSolver : Highs {
  public:
   HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
-      : options_mip_(options), mip_(lp) {
-      }
+      : options_mip_(options), mip_(lp) {}
 
   HighsMipStatus runMipSolver();
 
@@ -39,7 +40,7 @@ class HighsMipSolver : Highs {
   HighsMipStatus solveRootNode();
   HighsMipStatus solveNode(Node& node);
   HighsMipStatus solveTree();
-  
+
   Tree tree_;
   const HighsOptions options_mip_;
   const HighsLp mip_;

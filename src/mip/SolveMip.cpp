@@ -59,9 +59,9 @@ bool Tree::branch(Node& node) {
   double value = node.primal_solution[col];
 
   std::cout << "Branching on variable " << col << std::endl
-            << num_nodes + 1 << "," << num_nodes + 2
+            << "(" << num_nodes + 1 << "," << num_nodes + 2
             << ") left child: " << std::floor(value)
-            << "right child:" << std::ceil(value) << std::endl;
+            << " right child:" << std::ceil(value) << std::endl;
 
   // Branch.
   // Create children and add to node.
@@ -73,16 +73,15 @@ bool Tree::branch(Node& node) {
       std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
 
   // Copy bounds from parent.
-  node.left_child->col_lower_bound = node.col_lower_bound;
-  node.left_child->col_upper_bound = node.col_upper_bound;
+  node.left_child->branch_col = col;
   node.left_child->integer_variables = node.integer_variables;
+  node.left_child->col_lower_bound = node.col_lower_bound;
+  node.left_child->col_upper_bound = std::floor(value);
 
-  node.right_child->col_lower_bound = node.col_lower_bound;
-  node.right_child->col_upper_bound = node.col_upper_bound;
+  node.right_child->branch_col = col;
   node.right_child->integer_variables = node.integer_variables;
-
-  node.left_child->col_upper_bound[col] = std::floor(value);
-  node.right_child->col_lower_bound[col] = std::ceil(value);
+  node.right_child->col_lower_bound = std::ceil(value);
+  node.right_child->col_upper_bound = node.col_upper_bound;
 
   // Add to stack.
   std::reference_wrapper<Node> left(*(node.left_child).get());

@@ -21,7 +21,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   // Start timer.
   timer_.startRunHighsClock();
   double mip_solve_initial_time = timer_.readRunHighsClock();
-  
+
   passModel(mip_);
   HighsMipStatus root_solve = solveRootNode();
   if (root_solve != HighsMipStatus::kNodeOptimal) return root_solve;
@@ -30,8 +30,6 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   // Highs ignores integrality constraints.
   Node root(-1, 0, 0);
   root.integer_variables = lp_.integrality_;
-  root.col_lower_bound = lp_.colLower_;
-  root.col_upper_bound = lp_.colUpper_;
   root.primal_solution = solution_.col_value;
   tree_.pushRootNode(root);
 
@@ -75,8 +73,8 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
 
 HighsMipStatus HighsMipSolver::solveNode(Node& node) {
   // Apply changes to LP from node. For the moment only column bounds.
-  changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0],
-                   &node.col_upper_bound[0]);
+  changeColsBounds(node.branch_col, node.branch_col, &node.col_lower_bound,
+                   &node.col_upper_bound);
   HighsStatus lp_solve_status = run();
 
   switch (lp_solve_status) {
@@ -88,12 +86,18 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node) {
       break;
   }
 
-  if (model_status_ != HighsModelStatus::OPTIMAL)
-    return HighsMipStatus::kNodeNotOptimal;
-  
-  node.primal_solution = solution_.col_value;
+  switch (model_status_) {
+    case HighsModelStatus::OPTIMAL:
+      return HighsMipStatus::kNodeOptimal;
+    case HighsModelStatus::PRIMAL_INFEASIBLE:
+      return HighsMipStatus::kNodeInfeasible;
+    case HighsModelStatus::PRIMAL_UNBOUNDED:
+      return HighsMipStatus::kNodeUnbounded;
+    default:
+      break;
+  }
 
-  return HighsMipStatus::kNodeOptimal;
+  return HighsMipStatus::kNodeNotOptimal;
 }
 
 HighsMipStatus HighsMipSolver::solveRootNode() {
@@ -130,13 +134,23 @@ HighsMipStatus HighsMipSolver::solveTree() {
   while (!tree_.empty()) {
     Node& node = tree_.next();
     HighsMipStatus node_solve_status = solveNode(node);
-    if (node_solve_status != HighsMipStatus::kNodeOptimal) {
-      // todo: handle case.
-      std::cout << "Error or warning: Node " << node.id << " not solved to optimality" << std::endl; 
-      continue;
-    } 
-    tree_.pop();
-    tree_.branch(node);
+    switch (node_solve_status)
+    {
+    case HighsMipStatus::kNodeOptimal:
+      tree_.pop();
+      tree_.branch(node);
+      break;
+    case HighsMipStatus::kNodeUnbounded:
+      return HighsMipStatus::kNodeUnbounded;
+    case HighsMipStatus::kNodeInfeasible:
+      tree_.pop();
+      break;
+    default:
+      std::cout << "Error or warning: Node " << node.id
+                << " not solved to optimality" << std::endl;
+      break;
+    }
   }
+
   return HighsMipStatus::kTreeExhausted;
 }

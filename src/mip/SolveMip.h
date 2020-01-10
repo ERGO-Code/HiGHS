@@ -27,15 +27,17 @@ struct Node {
       : id(index), parent_id(parent), level(depth) {
     left_child = nullptr;
     right_child = nullptr;
+    branch_col = -1;
   }
 
   std::vector<int> integer_variables;
   std::vector<double> primal_solution;
   double objective_value;
 
-  // Minimal information about changes. Just bounds for the moment.
-  std::vector<double> col_lower_bound;
-  std::vector<double> col_upper_bound;
+  // Minimal information about changes. Just col and its bounds for the moment.
+  int branch_col;
+  double col_lower_bound;
+  double col_upper_bound;
 
   std::unique_ptr<Node> left_child;
   std::unique_ptr<Node> right_child;
