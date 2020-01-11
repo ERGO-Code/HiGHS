@@ -7,7 +7,7 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/Highs.h
+/**@file Highs.h
  * @brief The HiGHS class
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
@@ -19,7 +19,6 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsStatus.h"
-#include "mip/SolveMip.h"
 #include "presolve/ICrash.h"
 #include "presolve/Presolve.h"
 #include "util/HighsTimer.h"
@@ -68,7 +67,7 @@ class Highs {
   HighsStatus writeSolution(
 			    const std::string filename,  //!< the filename
 			    const bool pretty=false      //!< Write in pretty (human-readable) format
-			    );
+			    ) const;
   /**
    * Methods for HiGHS option input/output
    */
@@ -163,7 +162,7 @@ class Highs {
   HighsStatus getHighsInfoValue(
 				const std::string& info, //!< The info name
 				double& value            //!< The info value
-				);
+				) const;
   
   HighsStatus writeHighsInfo(
 			     const std::string filename  //!< The filename
@@ -691,7 +690,7 @@ class Highs {
 				      const HighsBasis &basis);
 #endif
 
-  std::string highsModelStatusToString(const HighsModelStatus model_status);
+  std::string highsModelStatusToString(const HighsModelStatus model_status) const;
   
   std::string highsPrimalDualStatusToString(const int primal_dual_status);
   
@@ -731,13 +730,9 @@ class Highs {
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
 
-  HighsStatus runBnb();
-  HighsStatus solveRootNode(Node& root);
-  HighsStatus solveNode(Node& node);
-
   HighsStatus openWriteFile(const string filename,
 			    const string method_name,
-			    FILE*& file, bool& html);
+			    FILE*& file, bool& html) const;
 
   bool haveHmo(const string method_name);
 
@@ -745,6 +740,8 @@ class Highs {
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
   void underDevelopmentLogMessage(const string method_name);
+
+  friend class HighsMipSolver; 
 };
 
 #endif

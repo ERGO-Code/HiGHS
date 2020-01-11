@@ -39,16 +39,14 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
 //   int a_;
 // };
 
-bool Tree::branch(FILE* output, const int message_level, Node& node) {
+bool Tree::branch(Node& node) {
   NodeIndex branch_col = chooseBranchingVariable(node);
   if (branch_col == kNodeIndexError) return false;
 
   if (branch_col == kNoNodeIndex) {
     // All integer variables are feasible. Update best solution.
     // Assuming minimization.
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-		      "Updating best solution at node %d.\n",
-                      node.id);
+    std::cout << "Updating best solution at node " << node.id << std::endl;
 
     if (node.objective_value < best_objective_) {
       best_objective_ = node.objective_value;
@@ -60,13 +58,10 @@ bool Tree::branch(FILE* output, const int message_level, Node& node) {
   int col = static_cast<int>(branch_col);
   double value = node.primal_solution[col];
 
-  // todo: change always to whatever.
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
-		    "Branching on variable %d\n", col);
-
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
-		    "%d(%d, %d) left child: %.2f, right child: %.2f\n", node.id,
-		    num_nodes + 1, num_nodes + 2, std::floor(value), std::ceil(value));
+  std::cout << "Branching on variable " << col << std::endl
+            << "(" << num_nodes + 1 << "," << num_nodes + 2
+            << ") left child: " << std::floor(value)
+            << " right child:" << std::ceil(value) << std::endl;
 
   // Branch.
   // Create children and add to node.
@@ -78,17 +73,22 @@ bool Tree::branch(FILE* output, const int message_level, Node& node) {
       std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
 
   // Copy bounds from parent.
+  node.left_child->branch_col = col;
   node.left_child->col_lower_bound = node.col_lower_bound;
   node.left_child->col_upper_bound = node.col_upper_bound;
-  node.left_child->integer_variables = node.integer_variables;
+  node.left_child->col_upper_bound[col] = std::floor(value);
 
+  node.right_child->branch_col = col;
   node.right_child->col_lower_bound = node.col_lower_bound;
   node.right_child->col_upper_bound = node.col_upper_bound;
-  node.right_child->integer_variables = node.integer_variables;
-
-  node.left_child->col_upper_bound[col] = std::floor(value);
   node.right_child->col_lower_bound[col] = std::ceil(value);
 
+  //todo: confirm that's how you did it before and right
+  // Set branching column to be continuous? 
+  node.left_child->integer_variables = node.integer_variables;
+  node.left_child->integer_variables[branch_col] = 0;
+  node.right_child->integer_variables = node.integer_variables;
+  node.right_child->integer_variables[branch_col] = 0;
   // Add to stack.
   std::reference_wrapper<Node> left(*(node.left_child).get());
   std::reference_wrapper<Node> right(*(node.right_child).get());

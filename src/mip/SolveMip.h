@@ -27,13 +27,15 @@ struct Node {
       : id(index), parent_id(parent), level(depth) {
     left_child = nullptr;
     right_child = nullptr;
+    branch_col = -1;
   }
 
   std::vector<int> integer_variables;
   std::vector<double> primal_solution;
   double objective_value;
 
-  // Minimal information about changes. Just bounds for the moment.
+  // Minimal information about changes. Just col and its bounds for the moment.
+  int branch_col;
   std::vector<double> col_lower_bound;
   std::vector<double> col_upper_bound;
 
@@ -47,12 +49,20 @@ constexpr NodeIndex kNodeIndexError = -2;
 
 class Tree {
  public:
-  Tree(Node& node) {
+  Tree() {}
+
+  void pushRootNode(Node& node) {
+    assert(nodes_.size() == 0);
     std::reference_wrapper<Node> ref(node);
     nodes_.push_back(ref);
   }
 
-  bool branch(FILE* output, const int message_level, Node& node);
+  Node& getRootNode() {
+    assert(nodes_.size() > 0);
+    return nodes_[0];
+  }
+
+  bool branch(Node& node);
 
   Node& next() { return nodes_[nodes_.size() - 1]; }
   void pop() { nodes_.erase(nodes_.end() - 1); }
