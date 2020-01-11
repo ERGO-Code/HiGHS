@@ -2846,26 +2846,31 @@ void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
   scaled_solution_params.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
+void choosePriceTechnique(const int price_strategy, const double row_ep_density, bool& use_col_price, bool& use_row_price_w_switch) {
+  // By default switch to column PRICE when pi_p has at least this
+  // density
+  const double density_for_column_price_switch = 0.75;
+  use_col_price =
+    (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) ||
+    (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH &&
+     row_ep_density > density_for_column_price_switch);
+  use_row_price_w_switch =
+    price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH ||
+    price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
+}
+
 void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVector& row_ep, HVector& row_ap) {
   HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const HMatrix* matrix = &highs_model_object.matrix_;
   HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
   
-  const int price_strategy = simplex_info.price_strategy;
   const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
-  // By default switch to column PRICE when pi_p has at least this
-  // density
-  const double density_for_column_price_switch = 0.75;
   const double local_density = 1.0 * row_ep.count / solver_num_row;
-   
-  const bool use_col_price =
-    (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) ||
-    (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH &&
-     local_density > density_for_column_price_switch);
-  const bool use_row_price_w_switch =
-    price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH ||
-    price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
+  bool use_col_price;
+  bool use_row_price_w_switch;
+  choosePriceTechnique(simplex_info.price_strategy, local_density, use_col_price, use_row_price_w_switch);
+
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     if (use_col_price) {
