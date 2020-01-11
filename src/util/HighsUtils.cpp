@@ -296,4 +296,108 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
   printf("Max count is %d / %d\n", maxRowCount, numCol);
 }
 
+bool initialiseValueDistribution(
+				 const double min_value_limit,
+				 const double max_value_limit,
+				 const double base_value_limit,
+				 HighsValueDistribution& value_distribution) {
+  if (min_value_limit <= 0) return false;
+  if (max_value_limit < min_value_limit) return false;
+  int num_count;
+  if (min_value_limit == max_value_limit) {
+    // For counting values below and above a value
+    num_count = 1;
+  } else {
+    if (base_value_limit <= 0) return false;
+    const double log_ratio = log(max_value_limit/min_value_limit);
+    const double log_base_value_limit = log(base_value_limit);
+    //    printf("initialiseValueDistribution: log_ratio = %g; log_base_value_limit = %g; log_ratio/log_base_value_limit = %g\n",
+    //	   log_ratio, log_base_value_limit, log_ratio/log_base_value_limit);
+    num_count = log_ratio/log_base_value_limit + 1;
+  }
+  printf("initialiseValueDistribution: num_count = %d\n", num_count);
+  value_distribution.count_.assign(num_count+1, 0);
+  value_distribution.limit_.assign(num_count, 0);
+  value_distribution.limit_[0] = min_value_limit;
+  //  printf("Interval  0 is [%10.4g, %10.4g)\n", 0.0, value_distribution.limit_[0]);
+  for (int i = 1; i < num_count; i++) {
+    value_distribution.limit_[i] = base_value_limit * value_distribution.limit_[i-1];
+    //    printf("Interval %2d is [%10.4g, %10.4g)\n", i, value_distribution.limit_[i-1], value_distribution.limit_[i]);
+  }
+  //  printf("Interval %2d is [%10.4g, inf)\n", num_count, value_distribution.limit_[num_count-1]);
+  value_distribution.num_count_ = num_count;
+  return true;
+}
+
+bool updateValueDistribution(
+			     const double value,
+			     HighsValueDistribution& value_distribution) {
+  if (value_distribution.num_count_ < 0) return false;
+  const double abs_value = fabs(value);
+  for (int i = 0; i < value_distribution.num_count_; i++) {
+    if (abs_value < value_distribution.limit_[i]) {
+      value_distribution.count_[i]++;
+      return true;
+    }
+  }
+  value_distribution.count_[value_distribution.num_count_]++;
+  return true;
+}
+
+bool printValueDistribution(std::string value_name,
+			    const HighsValueDistribution& value_distribution,
+			    const int mu) {
+  const int num_count = value_distribution.num_count_;
+  if (num_count < 0) return false;
+  int sum_count = 0;
+  double sum_pct = 0;
+  for (int i = 0; i < num_count+1; i++)
+    sum_count += value_distribution.count_[i];
+  if (!sum_count) return false;
+  double pct;
+  int int_pct;
+  int count = value_distribution.count_[0];
+  if (count) {
+    pct = (100.0 * count) / sum_count;
+    sum_pct += pct;
+    int_pct = pct;
+    printf("%10d %svalues (%3d%%) in [%10.4g, %10.4g)",
+	   count, value_name.c_str(), int_pct, 0.0, value_distribution.limit_[0]);
+    if (mu>0) {
+      printf(" corresponding to [%10d, %10d)\n", 0, (int)value_distribution.limit_[0]*mu);
+    } else {
+      printf("\n");
+    }
+  }
+  for (int i = 1; i < num_count; i++) {
+    count = value_distribution.count_[i];
+    if (count) {
+      pct = (100.0 * count) / sum_count;
+      sum_pct += pct;
+      int_pct = pct;
+      printf("%10d %svalues (%3d%%) in [%10.4g, %10.4g)",
+	     count, value_name.c_str(), int_pct, value_distribution.limit_[i-1], value_distribution.limit_[i]);
+      if (mu>0) {
+	printf(" corresponding to [%10d, %10d)\n", (int)value_distribution.limit_[i-1]*mu, (int)value_distribution.limit_[i]*mu);
+      } else {
+	printf("\n");
+      }
+    }
+  }
+  count = value_distribution.count_[num_count];
+  if (count) {
+    pct = (100.0 * count) / sum_count;
+    sum_pct += pct;
+    int_pct = pct;
+    printf("%10d %svalues (%3d%%) in [%10.4g, inf)",
+	   count, value_name.c_str(), int_pct, value_distribution.limit_[num_count-1]);
+    if (mu>0) {
+      printf(" corresponding to [%10d, inf)\n", (int)value_distribution.limit_[num_count-1]*mu);
+    } else {
+      printf("\n");
+    }
+  }
+  printf("%10d %svalues (%3d%%)\n", sum_count, value_name.c_str(), (int)sum_pct);
+  return true;
+}
 #endif

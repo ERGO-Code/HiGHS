@@ -19,6 +19,7 @@
 #include "simplex/SimplexConst.h"
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
+#include "util/HighsUtils.h"
 
 #ifdef HiGHSDEV
   enum ANALYSIS_OPERATION_TYPE {
@@ -208,6 +209,8 @@ class HighsSimplexAnalysis {
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
   int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
+
+  HighsValueDistribution pivot_distribution;
 #endif
 };
 

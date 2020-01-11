@@ -134,6 +134,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterTraceRec* lcAnIter = &AnIterTrace[0];
   lcAnIter->AnIterTraceIter = AnIterIt0;
   lcAnIter->AnIterTraceTime = timer_.getTime();
+
+  initialiseValueDistribution(1e-8, 1e16, 10.0, pivot_distribution);
 #endif
 
 }
@@ -379,6 +381,7 @@ void HighsSimplexAnalysis::iterationRecord() {
     }
   }
   AnIterPrevIt = AnIterCuIt;
+  updateValueDistribution(pivot_value_from_column, pivot_distribution);
 }
 
 void HighsSimplexAnalysis::iterationRecordMajor() {
@@ -555,6 +558,9 @@ void HighsSimplexAnalysis::summaryReport() {
     printf("%12d Minor iterations\n", sum_multi_finished);
     printf("%12d Total rows chosen: performed %3d%% of possible minor iterations\n\n", sum_multi_chosen, pct_minor_iterations_performed);
  }
+
+  printf("\nPivot summary\n");
+  printValueDistribution("", pivot_distribution);
 
   if (AnIterTraceIterDl >= 100) {
     // Possibly (usually) add a temporary record for the final
