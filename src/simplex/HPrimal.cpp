@@ -679,6 +679,11 @@ void HPrimal::primalUpdate() {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
+  //
+  // PRICE
+  //
+  computeTableauRowFromPiP(workHMO, row_ep, row_ap);
+/*
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ap_density);
@@ -695,7 +700,7 @@ void HPrimal::primalUpdate() {
 
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
-
+*/
   timer.start(simplex_info.clock_[UpdateDualClock]);
   //  double
   thetaDual = workDual[columnIn] / alpha;

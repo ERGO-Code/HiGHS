@@ -213,9 +213,11 @@ void HQPrimal::solvePhase2() {
   ph1SorterR.reserve(solver_num_row);
   ph1SorterT.reserve(solver_num_row);
 
-  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
+#ifdef HiGHSDEV
+  printf("HQPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
+  printf("HQPrimal::solvePhase2 - WARNING: Setting analysis->row_ep_density = 0\n");
+#endif
   analysis->col_aq_density = 0;
-  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->row_ep_density = 0\n");
   analysis->row_ep_density = 0;
 
   devexReset();
@@ -723,6 +725,11 @@ void HQPrimal::primalUpdate() {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
+  //
+  // PRICE
+  //
+  computeTableauRowFromPiP(workHMO, row_ep, row_ap);
+  /*
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ap_density);
@@ -739,7 +746,7 @@ void HQPrimal::primalUpdate() {
 
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
-
+  */
   timer.start(simplex_info.clock_[UpdateDualClock]);
   //  double
   thetaDual = workDual[columnIn] / alpha;
