@@ -266,6 +266,7 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
 #endif
   FactorTimer factor_timer;
   timer_.resetHighsTimer();
+  timer_.startRunHighsClock();
   factor_timer.initialiseFactorClocks(timer_, clock_);
 #endif
 }
