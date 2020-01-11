@@ -26,7 +26,7 @@ std::string HighsStatusToString(HighsStatus status);
 // call_status not being HighsStatus::OK
 HighsStatus interpretCallStatus(const HighsStatus call_status,
 				const HighsStatus from_return_status,
-				const std::string message="");
+				const std::string& message="");
 
 // Return the maximum of two HighsStatus
 HighsStatus worseStatus(HighsStatus status0, HighsStatus status1);

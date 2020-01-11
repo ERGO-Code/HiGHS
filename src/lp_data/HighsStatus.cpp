@@ -34,7 +34,7 @@ std::string HighsStatusToString(HighsStatus status) {
 
 HighsStatus interpretCallStatus(const HighsStatus call_status,
 				const HighsStatus from_return_status,
-				const std::string message) {
+				const std::string& message) {
   HighsStatus to_return_status;
   to_return_status = worseStatus(call_status, from_return_status);
 #ifdef HiGHSDEV
