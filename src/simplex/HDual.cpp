@@ -1252,11 +1252,25 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   dualRow.createFreemove(row_ep);
   timer.stop(simplex_info.clock_[Chuzc0Clock]);
 
+  //  const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
+  const double local_density = 1.0 * row_ep->count / solver_num_row;
+  bool use_col_price;
+  bool use_row_price_w_switch;
+  choosePriceTechnique(simplex_info.price_strategy, local_density, use_col_price, use_row_price_w_switch);
+
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
-    int row_ep_count = row_ep->count;
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep_count, analysis->row_ep_density);
-    analysis->num_row_price++;
+    const int row_ep_count = row_ep->count;
+    if (use_col_price) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep_count, 0.0);
+      analysis->num_col_price++;
+    } else if (use_row_price_w_switch) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep_count, analysis->row_ep_density);
+      analysis->num_row_price_with_switch++;
+    } else {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep_count, analysis->row_ep_density);
+      analysis->num_row_price++;
+    }
   }
 #endif
   timer.start(simplex_info.clock_[PriceChuzc1Clock]);
@@ -1272,7 +1286,23 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
 #pragma omp task
     {
       slice_row_ap[i].clear();
-      slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
+
+
+
+      //      slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
+
+      if (use_col_price) {
+	// Perform column-wise PRICE
+	slice_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
+      } else if (use_row_price_w_switch) {
+	// Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap becomes extreme
+	slice_matrix[i].priceByRowSparseResultWithSwitch(slice_row_ap[i], *row_ep, analysis->row_ap_density, 0, slice_matrix[i].hyperPRICE);
+      } else {
+	// Perform hyper-sparse row-wise PRICE
+	slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
+      }
+
+
 
       slice_dualRow[i].clear();
       slice_dualRow[i].workDelta = deltaPrimal;
