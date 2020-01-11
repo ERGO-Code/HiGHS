@@ -108,18 +108,24 @@ class HighsTimer {
    * constructor
    */
   void resetHighsTimer() {
-    start_time = wall_clock::now();
-    start_tick = getWallTick();
-    num_clock = 0;
+    this->start_time = wall_clock::now();
+    this->start_tick = getWallTick();
+    this->num_clock = 0;
+    this->clock_num_call.clear();
+    this->clock_start.clear();
+    this->clock_ticks.clear();
+    this->clock_names.clear();
+    this->clock_ch3_names.clear();
+    this->tick2sec = 3.6e-10;
     int i_clock = clock_def("Run HiGHS", "RnH");
     assert(i_clock == 0);
-    run_highs_clock = i_clock;
-    run_highs_clock_time = 0;
-    run_highs_clock_start_time = initial_clock_start;
+    this->run_highs_clock = i_clock;
+    this->presolve_clock = clock_def("Presolve", "Pre");
+    this->solve_clock = clock_def("Solve", "Slv");
+    this->postsolve_clock = clock_def("Postsolve", "Pst");
 
-    presolve_clock = clock_def("Presolve", "Pre");
-    solve_clock = clock_def("Solve", "Slv");
-    postsolve_clock = clock_def("Postsolve", "Pst");
+    this->run_highs_clock_time = 0;
+    this->run_highs_clock_start_time = initial_clock_start;
   }
 
   /**
@@ -463,18 +469,13 @@ class HighsTimer {
   using wall_clock = std::chrono::high_resolution_clock;
   using time_point = wall_clock::time_point;
 
+  // Dummy positive start ticks for clocks - so they can be checked as
+  // having been stopped
+  const double initial_clock_start = 1.0;
+
   time_point start_time;  //!< Elapsed time when the clocks were reset
   double start_tick;      //!< CPU ticks when the clocks were reset
-  int run_highs_clock;  //!< The index of the RunHighsClock - should always be 0
-  double
-      run_highs_clock_time;  //!< HiGHS run time - used to scale ticks to time
-  double run_highs_clock_start_time;  //!< HiGHS run start time - used to
-                                      //!< compute HiGHS run time
-
-  const double initial_clock_start =
-      1.0;  //!< Dummy positive start ticks for clocks - so they can be
-            //! checked as having been stopped
-  int num_clock;
+  int num_clock = 0;
   std::vector<int> clock_num_call;
   std::vector<double> clock_start;
   std::vector<double> clock_ticks;
@@ -482,11 +483,17 @@ class HighsTimer {
   std::vector<std::string> clock_names;
   std::vector<std::string> clock_ch3_names;
   double tick2sec = 3.6e-10;
-
+  // The index of the RunHighsClock - should always be 0
+  int run_highs_clock;  
   // Fundamental Highs clocks
   int presolve_clock;
   int solve_clock;
   int postsolve_clock;
+  // HiGHS run time - used to scale ticks to time
+  double run_highs_clock_time = 0;
+  // HiGHS run start time - used to compute HiGHS run time
+  double run_highs_clock_start_time = initial_clock_start;
+
 };
 
 #endif /* UTIL_HIGHSTIMER_H_ */

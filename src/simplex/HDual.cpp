@@ -279,7 +279,7 @@ void HDual::options() {
   const HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
 
   interpretDualEdgeWeightStrategy(simplex_info.dual_edge_weight_strategy);
-  interpretPriceStrategy(simplex_info.price_strategy);
+  //  interpretPriceStrategy(simplex_info.price_strategy);
 
   // Copy values of simplex solver options to dual simplex options
   primal_feasibility_tolerance = scaled_solution_params.primal_feasibility_tolerance;
@@ -792,8 +792,6 @@ void HDual::rebuild() {
   timer.start(simplex_info.clock_[ReportRebuildClock]);
   reportRebuild(rebuild_invert_hint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
-  // Indicate that a header must be printed before the next iteration log
-  previous_iteration_report_header_iteration_count = -1;
 
   build_syntheticTick = factor->build_syntheticTick;
   total_syntheticTick = 0;
@@ -824,9 +822,27 @@ void HDual::cleanup() {
   initialise_cost(workHMO);
   initialise_bound(workHMO);
   // Compute the dual values
+#ifdef HiGHSDEV
+  vector<double> original_workDual = simplex_info.workDual_;
+#endif
   timer.start(simplex_info.clock_[ComputeDualClock]);
   compute_dual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
+#ifdef HiGHSDEV
+  double norm_dual_change = 0;
+  int num_dual_sign_change = 0;
+  for (int iCol = 0; iCol < workHMO.simplex_lp_.numCol_; iCol++) {
+    const double max_dual = max(fabs(simplex_info.workDual_[iCol]), fabs(original_workDual[iCol]));
+    if (max_dual > workHMO.scaled_solution_params_.dual_feasibility_tolerance) {
+      if (simplex_info.workDual_[iCol] * original_workDual[iCol] < 0) num_dual_sign_change++;
+    }
+    const double dual_change = fabs(simplex_info.workDual_[iCol]-original_workDual[iCol]);
+    norm_dual_change += dual_change;
+  }
+  printf("grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s) and average dual_change = %g\n",
+	 workHMO.simplex_lp_.model_name_.c_str(),
+	 num_dual_sign_change, norm_dual_change/workHMO.simplex_lp_.numCol_);
+#endif
 
   // Compute the dual infeasibilities
   timer.start(simplex_info.clock_[ComputeDuIfsClock]);
@@ -1052,13 +1068,13 @@ void HDual::chooseRow() {
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations) 
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep, analysis->row_ep_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
 #endif
     // Perform BTRAN
     factor->btran(row_ep, analysis->row_ep_density);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
-      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN, row_ep);
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
     timer.stop(simplex_info.clock_[BtranClock]);
     // Verify DSE weight
@@ -1152,83 +1168,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   //
   // PRICE
   //
-  timer.start(simplex_info.clock_[PriceClock]);
-  row_ap.clear();
-
-#ifdef HiGHSDEV
-  bool anPriceEr = false;
-#endif
-  if (price_mode == PriceMode::COL) {
-    // Column-wise PRICE
-#ifdef HiGHSDEV
-    if (simplex_info.analyse_iterations) {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
-      analysis->num_col_price++;
-    }
-#endif
-    // Perform column-wise PRICE
-    matrix->price_by_col(row_ap, *row_ep);
-  } else {
-    // By default, use row-wise PRICE, but possibly use column-wise
-    // PRICE if the density of row_ep is too high
-    double lc_dsty = (double)(*row_ep).count / solver_num_row;
-    if (allow_price_by_col_switch && (lc_dsty > dstyColPriceSw)) {
-      // Use column-wise PRICE due to density of row_ep
-#ifdef HiGHSDEV
-      if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
-        analysis->num_col_price++;
-      }
-#endif
-      // Perform column-wise PRICE
-      matrix->price_by_col(row_ap, *row_ep);
-      // Zero the components of row_ap corresponding to basic variables
-      // (nonbasicFlag[*]=0)
-      const int* nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
-      for (int col = 0; col < solver_num_col; col++) {
-        row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
-      }
-    } else if (allow_price_by_row_switch) {
-      // Avoid hyper-sparse PRICE on current density of result or
-      // switch if the density of row_ap becomes extreme
-#ifdef HiGHSDEV
-      if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, analysis->row_ap_density);
-        analysis->num_row_price_with_switch++;
-      }
-#endif
-      // Set the value of the density of row_ap at which the switch to
-      // sparse row-wise PRICE should be made
-      const double sw_dsty = matrix->price_by_row_sw_dsty;
-      // Perform hyper-sparse row-wise PRICE with switching
-      matrix->price_by_row_w_sw(row_ap, *row_ep, analysis->row_ap_density, 0, sw_dsty);
-    } else {
-      // No avoiding hyper-sparse PRICE on current density of result
-      // or switch if the density of row_ap becomes extreme
-#ifdef HiGHSDEV
-      if (simplex_info.analyse_iterations) {
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, *row_ep, 0.0);
-        analysis->num_row_price++;
-      }
-#endif
-      // Perform hyper-sparse row-wise PRICE
-      matrix->price_by_row(row_ap, *row_ep);
-    }
-  }
-#ifdef HiGHSDEV
-  // Possibly analyse the error in the result of PRICE
-  if (anPriceEr) {
-    matrix->price_er_ck(row_ap, *row_ep);
-  }
-#endif
-  // Update the record of average row_ap density
-  const double local_row_ap_density = (double)row_ap.count / solver_num_col;
-  analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap);
-#endif
-  timer.stop(simplex_info.clock_[PriceClock]);
+  computeTableauRowFromPiP(workHMO, *row_ep, row_ap);
   //
   // CHUZC
   //
@@ -1312,14 +1252,27 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   dualRow.createFreemove(row_ep);
   timer.stop(simplex_info.clock_[Chuzc0Clock]);
 
+  //  const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
+  const double local_density = 1.0 * row_ep->count / solver_num_row;
+  bool use_col_price;
+  bool use_row_price_w_switch;
+  choosePriceTechnique(simplex_info.price_strategy, local_density, use_col_price, use_row_price_w_switch);
+
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
-    int row_ep_count = row_ep->count;
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE, row_ep_count, analysis->row_ep_density);
-    analysis->num_row_price++;
+    const int row_ep_count = row_ep->count;
+    if (use_col_price) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep_count, 0.0);
+      analysis->num_col_price++;
+    } else if (use_row_price_w_switch) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep_count, analysis->row_ep_density);
+      analysis->num_row_price_with_switch++;
+    } else {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep_count, analysis->row_ep_density);
+      analysis->num_row_price++;
+    }
   }
 #endif
-    // Perform BTRAN
   timer.start(simplex_info.clock_[PriceChuzc1Clock]);
   // Row_ep:         PACK + CC1
 #pragma omp task
@@ -1333,7 +1286,23 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
 #pragma omp task
     {
       slice_row_ap[i].clear();
-      slice_matrix[i].price_by_row(slice_row_ap[i], *row_ep);
+
+
+
+      //      slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
+
+      if (use_col_price) {
+	// Perform column-wise PRICE
+	slice_matrix[i].priceByColumn(slice_row_ap[i], *row_ep);
+      } else if (use_row_price_w_switch) {
+	// Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap becomes extreme
+	slice_matrix[i].priceByRowSparseResultWithSwitch(slice_row_ap[i], *row_ep, analysis->row_ap_density, 0, slice_matrix[i].hyperPRICE);
+      } else {
+	// Perform hyper-sparse row-wise PRICE
+	slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
+      }
+
+
 
       slice_dualRow[i].clear();
       slice_dualRow[i].workDelta = deltaPrimal;
@@ -1348,7 +1317,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   if (simplex_info.analyse_iterations) {
     int row_ap_count = 0;
     for (int i = 0; i < slice_num; i++) row_ap_count += slice_row_ap[i].count;
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE, row_ap_count);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap_count);
   }
 #endif
 
@@ -1699,31 +1668,32 @@ void HDual::interpretDualEdgeWeightStrategy(const int dual_edge_weight_strategy)
   }
 }
 
+/*
 void HDual::interpretPriceStrategy(const int price_strategy) {
-  allow_price_by_col_switch = false;
-  allow_price_by_row_switch = false;
+  allow_priceByColumn_switch = false;
+  allow_priceByRowSparseResult_switch = false;
   if (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
     price_mode = PriceMode::COL;
   } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
     price_mode = PriceMode::ROW;
   } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
     price_mode = PriceMode::ROW;
-    allow_price_by_row_switch = true;
+    allow_priceByRowSparseResult_switch = true;
   } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
     price_mode = PriceMode::ROW;
-    allow_price_by_col_switch = true;
-    allow_price_by_row_switch = true;
+    allow_priceByColumn_switch = true;
+    allow_priceByRowSparseResult_switch = true;
   } else {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
 		      "HDual::interpretPriceStrategy: unrecognised price_strategy = %d - "
 		      "using row Price with switch or colump price switch\n",
         price_strategy);
     price_mode = PriceMode::ROW;
-    allow_price_by_col_switch = true;
-    allow_price_by_row_switch = true;
+    allow_priceByColumn_switch = true;
+    allow_priceByRowSparseResult_switch = true;
   }
 }
-
+*/
 bool HDual::dualInfoOk(const HighsLp& lp) {
   int lp_numCol = lp.numCol_;
   int lp_numRow = lp.numRow_;

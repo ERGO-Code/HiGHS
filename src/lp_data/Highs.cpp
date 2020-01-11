@@ -192,10 +192,8 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   call_status = assessLp(lp_, options_);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
-  // hmos_[0] is the HighsModelObject corresponding to the original LP
   hmos_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
-  //  allow_presolve_ = true;
   return return_status;
 }
 

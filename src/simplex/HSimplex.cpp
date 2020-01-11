@@ -60,7 +60,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.report_simplex_inner_clock = useful_analysis;
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
-  simplex_info.report_HFactor_clock = full_timing;
+  simplex_info.report_HFactor_clock = true;//full_timing;//
   // Options for analysing the LP and simplex iterations
   simplex_info.analyse_lp = false;//useful_analysis;//
   simplex_info.analyse_iterations = useful_analysis;
@@ -1732,24 +1732,61 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   simplex_info.costs_perturbed = 1;
 
   // Perturb the original costs, scale down if is too big
+#ifdef HiGHSDEV
+  printf("grep_DuPtrb: Cost perturbation for %s\n", highs_model_object.simplex_lp_.model_name_.c_str());
+  int num_original_nonzero_cost = 0;
+#endif
   double bigc = 0;
-  for (int i = 0; i < simplex_lp.numCol_; i++)
-    bigc = max(bigc, fabs(simplex_info.workCost_[i]));
-  if (bigc > 100) bigc = sqrt(sqrt(bigc));
+  for (int i = 0; i < simplex_lp.numCol_; i++) {
+    const double abs_cost = fabs(simplex_info.workCost_[i]);
+    bigc = max(bigc, abs_cost);
+#ifdef HiGHSDEV
+    if (abs_cost) num_original_nonzero_cost++;
+#endif
+  }
+#ifdef HiGHSDEV
+  const int pct0 = (100*num_original_nonzero_cost)/simplex_lp.numCol_;
+  double average_cost = 0;
+  if (num_original_nonzero_cost) {
+    average_cost = bigc/num_original_nonzero_cost;
+  } else {
+    printf("grep_DuPtrb:    STRANGE initial workCost has non nonzeros\n");
+  }
+  printf("grep_DuPtrb:    Initially have %d nonzero costs (%3d%%) with bigc = %g and average = %g\n",
+	 num_original_nonzero_cost, pct0, bigc, average_cost);
+#endif
+  if (bigc > 100) {
+    bigc = sqrt(sqrt(bigc));
+#ifdef HiGHSDEV
+    printf("grep_DuPtrb:    Large so set bigc = sqrt(bigc) = %g\n", bigc);
+#endif
+  }
 
-  // If there's few boxed variables, we will just use Simple perturbation
+  // If there's few boxed variables, we will just use simple perturbation
   double boxedRate = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++)
     boxedRate += (simplex_info.workRange_[i] < 1e30);
   boxedRate /= numTot;
-  if (boxedRate < 0.01) bigc = min(bigc, 1.0);
+  if (boxedRate < 0.01) {
+    bigc = min(bigc, 1.0);
+#ifdef HiGHSDEV
+    printf("grep_DuPtrb:    boxedRate = %g so set bigc = min(bigc, 1.0) = %g\n", boxedRate, bigc);
+#endif
+  }
   if (bigc < 1) {
     //        bigc = sqrt(bigc);
   }
 
   // Determine the perturbation base
   double base = 5e-7 * bigc;
+#ifdef HiGHSDEV
+  printf("grep_DuPtrb:    Perturbation base = %g\n", base);
+  double norm_perturbation1 = 0;
+  int num_perturbation1 = 0;
+  int num_new_nonzero_cost = 0;
+  double norm_perturbation2 = 0;
+#endif
 
   // Now do the perturbation
   for (int i = 0; i < simplex_lp.numCol_; i++) {
@@ -1757,6 +1794,9 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
     double upper = simplex_lp.colUpper_[i];
     double xpert = (fabs(simplex_info.workCost_[i]) + 1) * base *
                    (1 + simplex_info.numTotRandomValue_[i]);
+#ifdef HiGHSDEV
+    const double previous_cost = simplex_info.workCost_[i];
+#endif
     if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
       // Free - no perturb
     } else if (upper == HIGHS_CONST_INF) {  // Lower
@@ -1769,12 +1809,30 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
     } else {
       // Fixed - no perturb
     }
+#ifdef HiGHSDEV
+    const double perturbation1 = fabs(simplex_info.workCost_[i]-previous_cost);
+    if (perturbation1) {
+      num_perturbation1++;
+      if (!simplex_info.workCost_[i]) num_new_nonzero_cost++;
+      norm_perturbation1 += perturbation1;
+    }
+#endif
   }
 
   for (int i = simplex_lp.numCol_; i < numTot; i++) {
-    simplex_info.workCost_[i] +=
-        (0.5 - simplex_info.numTotRandomValue_[i]) * 1e-12;
-  }
+    const double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) * 1e-12;
+    simplex_info.workCost_[i] += perturbation2;
+#ifdef HiGHSDEV
+    norm_perturbation2 += fabs(perturbation2);
+#endif
+ }
+#ifdef HiGHSDEV
+  const int pct1 = (100*num_perturbation1)/simplex_lp.numCol_;
+  printf("grep_DuPtrb:    Average initial perturbation of %d costs (%3d%%) is %g\n",
+	 num_perturbation1, pct1, norm_perturbation1/simplex_lp.numCol_);
+  printf("grep_DuPtrb:    Average general perturbation is %g\n", norm_perturbation2/simplex_lp.numCol_);
+#endif
+
 }
 
 int get_nonbasicMove(HighsModelObject& highs_model_object, int var) {
@@ -2788,7 +2846,87 @@ void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
   scaled_solution_params.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
+void choosePriceTechnique(const int price_strategy, const double row_ep_density, bool& use_col_price, bool& use_row_price_w_switch) {
+  // By default switch to column PRICE when pi_p has at least this
+  // density
+  const double density_for_column_price_switch = 0.75;
+  use_col_price =
+    (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) ||
+    (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH &&
+     row_ep_density > density_for_column_price_switch);
+  use_row_price_w_switch =
+    price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH ||
+    price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
+}
+
+void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVector& row_ep, HVector& row_ap) {
+  HighsTimer& timer = highs_model_object.timer_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const HMatrix* matrix = &highs_model_object.matrix_;
+  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
+  
+  const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
+  const double local_density = 1.0 * row_ep.count / solver_num_row;
+  bool use_col_price;
+  bool use_row_price_w_switch;
+  choosePriceTechnique(simplex_info.price_strategy, local_density, use_col_price, use_row_price_w_switch);
+
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations) {
+    if (use_col_price) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, 0.0);
+      analysis->num_col_price++;
+    } else if (use_row_price_w_switch) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ep_density);
+      analysis->num_row_price_with_switch++;
+    } else {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ep_density);
+      analysis->num_row_price++;
+    }
+  }
+#endif
+  timer.start(simplex_info.clock_[PriceClock]);
+  row_ap.clear();
+  if (use_col_price) {
+    // Perform column-wise PRICE
+    matrix->priceByColumn(row_ap, row_ep);
+  } else if (use_row_price_w_switch) {
+    // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap becomes extreme
+    const double switch_density = matrix->hyperPRICE;
+    matrix->priceByRowSparseResultWithSwitch(row_ap, row_ep, analysis->row_ap_density, 0, switch_density);
+  } else {
+    // Perform hyper-sparse row-wise PRICE
+    matrix->priceByRowSparseResult(row_ap, row_ep);
+  }
+
+  const int solver_num_col = highs_model_object.simplex_lp_.numCol_;
+  if (use_col_price) {
+    // Column-wise PRICE computes components of row_ap corresponding
+    // to basic variables, so zero these by exploiting the fact that,
+    // for basic variables, nonbasicFlag[*]=0
+    const int* nonbasicFlag = &highs_model_object.simplex_basis_.nonbasicFlag_[0];
+    for (int col = 0; col < solver_num_col; col++) row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
+  }
+#ifdef HiGHSDEV
+  // Possibly analyse the error in the result of PRICE
+  const bool analyse_price_error = false;
+  if (analyse_price_error) matrix->price_er_ck(row_ap, row_ep);
+#endif
+  // Update the record of average row_ap density
+  const double local_row_ap_density = (double)row_ap.count / solver_num_col;
+  analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
+#endif
+  timer.stop(simplex_info.clock_[PriceClock]);
+}
+
 void compute_dual(HighsModelObject& highs_model_object) {
+  //  HighsTimer& timer = highs_model_object.timer_;
+#ifdef HiGHSDEV
+  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
+#endif
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
@@ -2797,7 +2935,7 @@ void compute_dual(HighsModelObject& highs_model_object) {
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HMatrix& matrix = highs_model_object.matrix_;
   HFactor& factor = highs_model_object.factor_;
-  bool an_compute_dual_norm2 = false;
+  const bool an_compute_dual_norm2 = false;
   double btran_rhs_norm2;
   double btran_sol_norm2;
   double work_dual_norm2;
@@ -2817,9 +2955,16 @@ void compute_dual(HighsModelObject& highs_model_object) {
     btran_rhs_norm2 = buffer.norm2();
     btran_rhs_norm2 = sqrt(btran_rhs_norm2);
   }
-  //  printf("compute_dual: Before BTRAN\n");cout<<flush;
-  factor.btran(buffer, 1);
-  //  printf("compute_dual: After  BTRAN\n");cout<<flush;
+  double btran_full_historical_density = 1;
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer, btran_full_historical_density);
+#endif
+  factor.btran(buffer, btran_full_historical_density);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
+#endif
   if (an_compute_dual_norm2) {
     btran_sol_norm2 = buffer.norm2();
     btran_sol_norm2 = sqrt(btran_sol_norm2);
@@ -2829,7 +2974,17 @@ void compute_dual(HighsModelObject& highs_model_object) {
   HVector bufferLong;
   bufferLong.setup(simplex_lp.numCol_);
   bufferLong.clear();
-  matrix.price_by_col(bufferLong, buffer);
+  double price_full_historical_density = 1;
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong, price_full_historical_density);
+#endif
+  matrix.priceByColumn(bufferLong, buffer);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong);
+  //  const double local_density = 1.0 * bufferLong.count / simplex_lp.numCol_;
+#endif
   for (int i = 0; i < simplex_lp.numCol_; i++) {
     simplex_info.workDual_[i] = simplex_info.workCost_[i] - bufferLong.array[i];
   }

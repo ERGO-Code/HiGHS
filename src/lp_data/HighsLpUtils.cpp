@@ -511,11 +511,6 @@ HighsStatus assessMatrix(const HighsOptions& options,
       }
       bool ok_value = abs_value > small_matrix_value;
       if (!ok_value) {
-#ifdef HiGHSDEV
-        HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-            "Matrix packed vector %d, entry %d, is small value |%g| <= %g", ix,
-            el, abs_value, small_matrix_value);
-#endif
         if (max_small_value < abs_value) max_small_value = abs_value;
         if (min_small_value > abs_value) min_small_value = abs_value;
         num_small_values++;
