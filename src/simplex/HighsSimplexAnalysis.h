@@ -19,6 +19,7 @@
 #include "simplex/SimplexConst.h"
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
+#include "util/HighsUtils.h"
 
 #ifdef HiGHSDEV
   enum ANALYSIS_OPERATION_TYPE {
@@ -186,6 +187,7 @@ class HighsSimplexAnalysis {
     int AnIterOpSuNumHyperOp;
     int AnIterOpSuNumHyperRs;
     std::string AnIterOpName;
+    HighsValueDistribution AnIterOp_density;
   };
   AnIterOpRec AnIterOp[NUM_ANALYSIS_OPERATION_TYPE];
 
@@ -208,6 +210,11 @@ class HighsSimplexAnalysis {
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
   int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
+
+  HighsValueDistribution primal_step_distribution;
+  HighsValueDistribution dual_step_distribution;
+  HighsValueDistribution pivot_distribution;
+  HighsValueDistribution numerical_trouble_distribution;
 #endif
 };
 

@@ -2974,8 +2974,8 @@ void compute_dual(HighsModelObject& highs_model_object) {
   HVector bufferLong;
   bufferLong.setup(simplex_lp.numCol_);
   bufferLong.clear();
-  double price_full_historical_density = 1;
 #ifdef HiGHSDEV
+  double price_full_historical_density = 1;
   if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong, price_full_historical_density);
 #endif
