@@ -211,6 +211,8 @@ class HighsSimplexAnalysis {
   int AnIterNumDuDgnIt;
   int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
 
+  HighsValueDistribution primal_step_distribution;
+  HighsValueDistribution dual_step_distribution;
   HighsValueDistribution pivot_distribution;
   HighsValueDistribution numerical_trouble_distribution;
 #endif

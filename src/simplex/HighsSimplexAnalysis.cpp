@@ -136,6 +136,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   lcAnIter->AnIterTraceIter = AnIterIt0;
   lcAnIter->AnIterTraceTime = timer_.getTime();
 
+  initialiseValueDistribution(1e-16, 1e16, 10.0, primal_step_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, dual_step_distribution);
   initialiseValueDistribution(1e-8, 1e16, 10.0, pivot_distribution);
   initialiseValueDistribution(1e-16, 1.0, 10.0, numerical_trouble_distribution);
 #endif
@@ -383,6 +385,8 @@ void HighsSimplexAnalysis::iterationRecord() {
     }
   }
   AnIterPrevIt = AnIterCuIt;
+  updateValueDistribution(primal_step, primal_step_distribution);
+  updateValueDistribution(dual_step, dual_step_distribution);
   updateValueDistribution(pivot_value_from_column, pivot_distribution);
   updateValueDistribution(numerical_trouble, numerical_trouble_distribution);
 }
@@ -466,7 +470,6 @@ void HighsSimplexAnalysis::summaryReport() {
   if (lc_EdWtNumIter > 0)
     printf("Dan for %12d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
-  printf("\n");
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIterOpRec& AnIter = AnIterOp[k];
     int lcNumCa = AnIter.AnIterOpSuNumCa;
@@ -563,6 +566,12 @@ void HighsSimplexAnalysis::summaryReport() {
     printf("%12d Minor iterations\n", sum_multi_finished);
     printf("%12d Total rows chosen: performed %3d%% of possible minor iterations\n\n", sum_multi_chosen, pct_minor_iterations_performed);
  }
+
+  printf("\nPrimal step summary\n");
+  printValueDistribution("", primal_step_distribution);
+
+  printf("\nDual step summary\n");
+  printValueDistribution("", dual_step_distribution);
 
   printf("\nPivot summary\n");
   printValueDistribution("", pivot_distribution);

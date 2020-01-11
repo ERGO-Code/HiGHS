@@ -376,7 +376,7 @@ bool printValueDistribution(std::string value_name,
     printf("%12d %svalues (%3d%%) in (%10.4g, %10.4g)",
 	   count, value_name.c_str(), int_pct, 0.0, value_distribution.limit_[0]);
     if (mu>0) {
-      printf(" corresponding to (%10d, %10d)\n", 0, (int)value_distribution.limit_[0]*mu);
+      printf(" corresponding to (%10d, %10d)\n", 0, (int)(value_distribution.limit_[0]*mu));
     } else {
       printf("\n");
     }
@@ -390,7 +390,7 @@ bool printValueDistribution(std::string value_name,
       printf("%12d %svalues (%3d%%) in [%10.4g, %10.4g)",
 	     count, value_name.c_str(), int_pct, value_distribution.limit_[i-1], value_distribution.limit_[i]);
       if (mu>0) {
-	printf(" corresponding to [%10d, %10d)\n", (int)value_distribution.limit_[i-1]*mu, (int)value_distribution.limit_[i]*mu);
+	printf(" corresponding to [%10d, %10d)\n", (int)(value_distribution.limit_[i-1]*mu), (int)(value_distribution.limit_[i]*mu));
       } else {
 	printf("\n");
       }
@@ -401,10 +401,10 @@ bool printValueDistribution(std::string value_name,
     pct = (100.0 * count) / sum_count;
     sum_pct += pct;
     int_pct = pct;
-    printf("%12d %svalues (%3d%%) in [%10.4g, inf)",
+    printf("%12d %svalues (%3d%%) in [%10.4g,        inf)",
 	   count, value_name.c_str(), int_pct, value_distribution.limit_[num_count-1]);
     if (mu>0) {
-      printf(" corresponding to [%10d, inf)\n", (int)value_distribution.limit_[num_count-1]*mu);
+      printf(" corresponding to [%10d,        inf)\n", (int)(value_distribution.limit_[num_count-1]*mu));
     } else {
       printf("\n");
     }
