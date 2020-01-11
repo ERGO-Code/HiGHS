@@ -187,6 +187,7 @@ class HighsSimplexAnalysis {
     int AnIterOpSuNumHyperOp;
     int AnIterOpSuNumHyperRs;
     std::string AnIterOpName;
+    HighsValueDistribution AnIterOp_density;
   };
   AnIterOpRec AnIterOp[NUM_ANALYSIS_OPERATION_TYPE];
 
@@ -211,6 +212,7 @@ class HighsSimplexAnalysis {
   int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
 
   HighsValueDistribution pivot_distribution;
+  HighsValueDistribution numerical_trouble_distribution;
 #endif
 };
 

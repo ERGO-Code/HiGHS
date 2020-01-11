@@ -21,6 +21,7 @@
 #ifdef HiGHSDEV
 struct HighsValueDistribution {
   int num_count_;
+  int num_zero_;
   std::vector<double> limit_;
   std::vector<int> count_;
 };

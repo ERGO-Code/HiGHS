@@ -116,6 +116,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     AnIter->AnIterOpSuNumCa = 0;
     AnIter->AnIterOpSuNumHyperOp = 0;
     AnIter->AnIterOpSuNumHyperRs = 0;
+    initialiseValueDistribution(1e-8, 1.0, 10.0, AnIter->AnIterOp_density);
   }
   int last_invert_hint = INVERT_HINT_Count - 1;
   for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
@@ -136,6 +137,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   lcAnIter->AnIterTraceTime = timer_.getTime();
 
   initialiseValueDistribution(1e-8, 1e16, 10.0, pivot_distribution);
+  initialiseValueDistribution(1e-16, 1.0, 10.0, numerical_trouble_distribution);
 #endif
 
 }
@@ -382,6 +384,7 @@ void HighsSimplexAnalysis::iterationRecord() {
   }
   AnIterPrevIt = AnIterCuIt;
   updateValueDistribution(pivot_value_from_column, pivot_distribution);
+  updateValueDistribution(numerical_trouble, numerical_trouble_distribution);
 }
 
 void HighsSimplexAnalysis::iterationRecordMajor() {
@@ -441,6 +444,7 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
     AnIter.AnIterOpName.c_str(), result_density, vectorNorm);
     */
   }
+  updateValueDistribution(result_density, AnIter.AnIterOp_density);
 }
 
 void HighsSimplexAnalysis::summaryReport() {
@@ -484,6 +488,7 @@ void HighsSimplexAnalysis::summaryReport() {
              lcAnIterOpRsDim);
       printf("%12g density of result with max (%d / %d) nonzeros\n",
              lcMxNNzDensity, lcMxNNz, lcAnIterOpRsDim);
+      printValueDistribution("density ", AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
     }
   }
   int NumInvert = 0;
@@ -561,6 +566,9 @@ void HighsSimplexAnalysis::summaryReport() {
 
   printf("\nPivot summary\n");
   printValueDistribution("", pivot_distribution);
+
+  printf("\nNumerical trouble summary\n");
+  printValueDistribution("", numerical_trouble_distribution);
 
   if (AnIterTraceIterDl >= 100) {
     // Possibly (usually) add a temporary record for the final

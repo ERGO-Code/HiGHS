@@ -315,7 +315,7 @@ bool initialiseValueDistribution(
     //	   log_ratio, log_base_value_limit, log_ratio/log_base_value_limit);
     num_count = log_ratio/log_base_value_limit + 1;
   }
-  printf("initialiseValueDistribution: num_count = %d\n", num_count);
+  //  printf("initialiseValueDistribution: num_count = %d\n", num_count);
   value_distribution.count_.assign(num_count+1, 0);
   value_distribution.limit_.assign(num_count, 0);
   value_distribution.limit_[0] = min_value_limit;
@@ -326,6 +326,7 @@ bool initialiseValueDistribution(
   }
   //  printf("Interval %2d is [%10.4g, inf)\n", num_count, value_distribution.limit_[num_count-1]);
   value_distribution.num_count_ = num_count;
+  value_distribution.num_zero_ = 0;
   return true;
 }
 
@@ -334,6 +335,10 @@ bool updateValueDistribution(
 			     HighsValueDistribution& value_distribution) {
   if (value_distribution.num_count_ < 0) return false;
   const double abs_value = fabs(value);
+  if (!abs_value) {
+    value_distribution.num_zero_++;
+    return true;
+  }
   for (int i = 0; i < value_distribution.num_count_; i++) {
     if (abs_value < value_distribution.limit_[i]) {
       value_distribution.count_[i]++;
@@ -349,22 +354,29 @@ bool printValueDistribution(std::string value_name,
 			    const int mu) {
   const int num_count = value_distribution.num_count_;
   if (num_count < 0) return false;
-  int sum_count = 0;
+  int sum_count = value_distribution.num_zero_;
   double sum_pct = 0;
   for (int i = 0; i < num_count+1; i++)
     sum_count += value_distribution.count_[i];
   if (!sum_count) return false;
   double pct;
   int int_pct;
-  int count = value_distribution.count_[0];
+  int count = value_distribution.num_zero_;
   if (count) {
     pct = (100.0 * count) / sum_count;
     sum_pct += pct;
     int_pct = pct;
-    printf("%10d %svalues (%3d%%) in [%10.4g, %10.4g)",
+    printf("%12d %svalues (%3d%%) are %10.4g\n", count, value_name.c_str(), int_pct, 0.0);
+  }
+  count = value_distribution.count_[0];
+  if (count) {
+    pct = (100.0 * count) / sum_count;
+    sum_pct += pct;
+    int_pct = pct;
+    printf("%12d %svalues (%3d%%) in (%10.4g, %10.4g)",
 	   count, value_name.c_str(), int_pct, 0.0, value_distribution.limit_[0]);
     if (mu>0) {
-      printf(" corresponding to [%10d, %10d)\n", 0, (int)value_distribution.limit_[0]*mu);
+      printf(" corresponding to (%10d, %10d)\n", 0, (int)value_distribution.limit_[0]*mu);
     } else {
       printf("\n");
     }
@@ -375,7 +387,7 @@ bool printValueDistribution(std::string value_name,
       pct = (100.0 * count) / sum_count;
       sum_pct += pct;
       int_pct = pct;
-      printf("%10d %svalues (%3d%%) in [%10.4g, %10.4g)",
+      printf("%12d %svalues (%3d%%) in [%10.4g, %10.4g)",
 	     count, value_name.c_str(), int_pct, value_distribution.limit_[i-1], value_distribution.limit_[i]);
       if (mu>0) {
 	printf(" corresponding to [%10d, %10d)\n", (int)value_distribution.limit_[i-1]*mu, (int)value_distribution.limit_[i]*mu);
@@ -389,7 +401,7 @@ bool printValueDistribution(std::string value_name,
     pct = (100.0 * count) / sum_count;
     sum_pct += pct;
     int_pct = pct;
-    printf("%10d %svalues (%3d%%) in [%10.4g, inf)",
+    printf("%12d %svalues (%3d%%) in [%10.4g, inf)",
 	   count, value_name.c_str(), int_pct, value_distribution.limit_[num_count-1]);
     if (mu>0) {
       printf(" corresponding to [%10d, inf)\n", (int)value_distribution.limit_[num_count-1]*mu);
@@ -397,7 +409,7 @@ bool printValueDistribution(std::string value_name,
       printf("\n");
     }
   }
-  printf("%10d %svalues (%3d%%)\n", sum_count, value_name.c_str(), (int)sum_pct);
+  printf("%12d %svalues (%3d%%)\n", sum_count, value_name.c_str(), (int)sum_pct);
   return true;
 }
 #endif
