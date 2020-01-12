@@ -45,7 +45,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.dual_edge_weight_strategy =
       options.simplex_dual_edge_weight_strategy;
   simplex_info.price_strategy = options.simplex_price_strategy;
-  simplex_info.perturb_costs = options.simplex_perturb_costs;
+  simplex_info.dual_simplex_cost_perturbation_multiplier = options.dual_simplex_cost_perturbation_multiplier;
   simplex_info.update_limit = options.simplex_update_limit;
 
   // Set values of internal options
@@ -1729,7 +1729,7 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   initialise_phase2_row_cost(highs_model_object, 0, simplex_lp.numRow_ - 1);
   // See if we want to skip perturbation
   simplex_info.costs_perturbed = 0;
-  if (perturb == 0 || simplex_info.perturb_costs == 0) return;
+  if (perturb == 0 || simplex_info.dual_simplex_cost_perturbation_multiplier == 0) return;
   simplex_info.costs_perturbed = 1;
 
   // Perturb the original costs, scale down if is too big
@@ -1793,8 +1793,9 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   for (int i = 0; i < simplex_lp.numCol_; i++) {
     double lower = simplex_lp.colLower_[i];
     double upper = simplex_lp.colUpper_[i];
-    double xpert = (fabs(simplex_info.workCost_[i]) + 1) * base *
-                   (1 + simplex_info.numTotRandomValue_[i]);
+    double xpert = (fabs(simplex_info.workCost_[i]) + 1) *
+      base * simplex_info.dual_simplex_cost_perturbation_multiplier *
+      (1 + simplex_info.numTotRandomValue_[i]);
 #ifdef HiGHSDEV
     const double previous_cost = simplex_info.workCost_[i];
 #endif
@@ -1821,7 +1822,8 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   }
 
   for (int i = simplex_lp.numCol_; i < numTot; i++) {
-    const double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) * 1e-12;
+    const double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) *
+      simplex_info.dual_simplex_cost_perturbation_multiplier * 1e-12;
     simplex_info.workCost_[i] += perturbation2;
 #ifdef HiGHSDEV
     norm_perturbation2 += fabs(perturbation2);

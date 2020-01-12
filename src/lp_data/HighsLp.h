@@ -216,9 +216,7 @@ struct HighsSimplexInfo {
   int primal_edge_weight_strategy;
   int price_strategy;
 
-  //  double primal_feasibility_tolerance;
-  //  double dual_feasibility_tolerance;
-  bool perturb_costs;
+  double dual_simplex_cost_perturbation_multiplier;
   int update_limit;
   //  int iteration_limit;
   //  double dual_objective_value_upper_bound;
