@@ -461,6 +461,12 @@ class HighsOptions {
 				     OPTION_OFF, OPTION_OFF, OPTION_ON);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("dual_simplex_cleanup_strategy",
+				     "Strategy for cleanup in dual simplex solver: none / HPrimal / HQPrimal (0/1/2)",
+				     advanced, &dual_simplex_cleanup_strategy,
+				     DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN, DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL, DUAL_SIMPLEX_CLEANUP_STRATEGY_MAX);
+    records.push_back(record_int);
+
     record_int = new OptionRecordInt("simplex_price_strategy",
 				     "Strategy for PRICE in simplex",
 				     advanced, &simplex_price_strategy,
@@ -595,6 +601,7 @@ class HighsOptions {
   int allowed_simplex_cost_scale_factor;
   int simplex_dualise_strategy;
   int simplex_permute_strategy;
+  int dual_simplex_cleanup_strategy;
   int simplex_price_strategy;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;

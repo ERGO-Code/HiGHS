@@ -3562,12 +3562,14 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
 	if (get_new_scaled_feasibility_tolerances) {
 	  double multiplier = unscaled_dual_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
+	  /*
 	  double value = simplex_info.workValue_[iVar];
 	  HighsLogMessage(logfile, HighsMessageType::INFO,
 			  "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			  iVar, iCol, iRow, lower, value, upper,
 			  scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
 			  multiplier);
+	  */
 #endif
 	  new_scaled_dual_feasibility_tolerance = min(multiplier, new_scaled_dual_feasibility_tolerance);
 	}
@@ -3607,11 +3609,13 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
       if (get_new_scaled_feasibility_tolerances) {
 	double multiplier = unscaled_primal_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
+	/*
 	 HighsLogMessage(logfile, HighsMessageType::INFO,
 			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			iVar, iCol, iRow, lower, value, upper,
 			scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
 			multiplier);
+	*/
 #endif
 	new_scaled_primal_feasibility_tolerance = min(multiplier, new_scaled_primal_feasibility_tolerance);
       }
