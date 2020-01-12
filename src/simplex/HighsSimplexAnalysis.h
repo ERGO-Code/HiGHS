@@ -111,6 +111,14 @@ class HighsSimplexAnalysis {
   int num_col_price = 0;
   int num_row_price = 0;
   int num_row_price_with_switch = 0;
+
+#ifdef HiGHSDEV
+  HighsValueDistribution before_ftran_upper_sparse_density;
+  HighsValueDistribution ftran_upper_sparse_density;
+  HighsValueDistribution before_ftran_upper_hyper_density;
+  HighsValueDistribution ftran_upper_hyper_density;
+#endif
+
  private:
 
   void iterationReport(const bool header);
