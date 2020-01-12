@@ -1442,11 +1442,11 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperSps]);
-#endif
     if (analysis != NULL) {
       double local_density = (1.0 * rhs.count) / numRow;
       updateValueDistribution(local_density, analysis->ftran_upper_sparse_density);
     }
+#endif
   } else {
 #ifdef HiGHSDEV
     if (analysis != NULL) {
