@@ -217,8 +217,6 @@ class HighsSimplexAnalysis {
   AnIterTraceRec AnIterTrace[1 + AN_ITER_TRACE_MX_NUM_REC + 1];
 
   int AnIterNumInvert[INVERT_HINT_Count];
-  int AnIterNumPrDgnIt;
-  int AnIterNumDuDgnIt;
   int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
 
   HighsValueDistribution primal_step_distribution;

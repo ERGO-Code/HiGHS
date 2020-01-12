@@ -120,8 +120,6 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   }
   int last_invert_hint = INVERT_HINT_Count - 1;
   for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
-  AnIterNumPrDgnIt = 0;
-  AnIterNumDuDgnIt = 0;
   num_col_price = 0;
   num_row_price = 0;
   num_row_price_with_switch = 0;
@@ -543,10 +541,6 @@ void HighsSimplexAnalysis::summaryReport() {
           "simplex\n",
           lcNumInvert, (100 * lcNumInvert) / NumInvert);
   }
-  printf("\n%12d (%3d%%) primal degenerate iterations\n", AnIterNumPrDgnIt,
-         (100 * AnIterNumPrDgnIt) / AnIterNumIter);
-  printf("%12d (%3d%%)   dual degenerate iterations\n", AnIterNumDuDgnIt,
-         (100 * AnIterNumDuDgnIt) / AnIterNumIter);
   int suPrice = num_col_price + num_row_price + num_row_price_with_switch;
   if (suPrice > 0) {
     printf("\n%12d Price operations:\n", suPrice);
