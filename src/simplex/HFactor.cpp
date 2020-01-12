@@ -167,6 +167,7 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
+		    HighsSimplexAnalysis* analysis_,
                     int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
@@ -177,6 +178,7 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   baseIndex = baseIndex_;
   updateMethod = updateMethod_;
 
+  analysis = analysis_;
   // Allocate for working buffer
   iwork.reserve(numRow * 2);
   dwork.assign(numRow, 0);
@@ -1388,6 +1390,9 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
   double curr_dsty = 1.0 * rhs.count / numRow;
   if (curr_dsty > hyperCANCEL || hist_dsty > hyperFTRANU) {
 #ifdef HiGHSDEV
+    if (analysis != NULL) {
+      updateValueDistribution(curr_dsty, analysis->before_ftran_upper_sparse_density);
+    }
     if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperSps]);
 #endif
     // Alias to non constant
@@ -1438,8 +1443,15 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperSps]);
 #endif
+    if (analysis != NULL) {
+      double local_density = (1.0 * rhs.count) / numRow;
+      updateValueDistribution(local_density, analysis->ftran_upper_sparse_density);
+    }
   } else {
 #ifdef HiGHSDEV
+    if (analysis != NULL) {
+      updateValueDistribution(curr_dsty, analysis->before_ftran_upper_hyper_density);
+    }
     if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperHys]);
 #endif
     const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
@@ -1448,6 +1460,10 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperHys]);
+    if (analysis != NULL) {
+      double local_density = (1.0 * rhs.count) / numRow;
+      updateValueDistribution(local_density, analysis->ftran_upper_hyper_density);
+    }
 #endif
   }
 

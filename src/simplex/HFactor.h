@@ -19,6 +19,7 @@
 #include <vector>
 
 //#include "HConfig.h"
+#include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/FactorTimer.h"
 
 using std::max;
@@ -103,6 +104,7 @@ class HFactor {
              const int* Aindex,     //!< Row indices of constraint matrix
              const double* Avalue,  //!< Row values of constraint matrix
              int* baseIndex,        //!< Indices of basic variables
+	     HighsSimplexAnalysis* analysis = NULL,
              int updateMethod =
                  UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
@@ -243,6 +245,7 @@ class HFactor {
   const double* Avalue;
   int* baseIndex;
   int updateMethod;
+  HighsSimplexAnalysis* analysis;
 
   // Working buffer
   int nwork;

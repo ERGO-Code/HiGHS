@@ -140,6 +140,10 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   initialiseValueDistribution(1e-16, 1e16, 10.0, dual_step_distribution);
   initialiseValueDistribution(1e-8, 1e16, 10.0, pivot_distribution);
   initialiseValueDistribution(1e-16, 1.0, 10.0, numerical_trouble_distribution);
+  initialiseValueDistribution(1e-8, 1.0, 10.0, before_ftran_upper_sparse_density);
+  initialiseValueDistribution(1e-8, 1.0, 10.0, before_ftran_upper_hyper_density);
+  initialiseValueDistribution(1e-8, 1.0, 10.0, ftran_upper_sparse_density);
+  initialiseValueDistribution(1e-8, 1.0, 10.0, ftran_upper_hyper_density);
 #endif
 
 }
@@ -566,6 +570,18 @@ void HighsSimplexAnalysis::summaryReport() {
     printf("%12d Minor iterations\n", sum_multi_finished);
     printf("%12d Total rows chosen: performed %3d%% of possible minor iterations\n\n", sum_multi_chosen, pct_minor_iterations_performed);
  }
+
+  printf("\nFTRAN upper sparse summary - before\n");
+  printValueDistribution("", before_ftran_upper_sparse_density);
+
+  printf("\nFTRAN upper sparse summary - after\n");
+  printValueDistribution("", ftran_upper_sparse_density);
+
+  printf("\nFTRAN upper hyper-sparse summary - before\n");
+  printValueDistribution("", before_ftran_upper_hyper_density);
+
+  printf("\nFTRAN upper hyper-sparse summary - after\n");
+  printValueDistribution("", ftran_upper_hyper_density);
 
   printf("\nPrimal step summary\n");
   printValueDistribution("", primal_step_distribution);
