@@ -251,6 +251,8 @@ HighsStatus HDual::solve() {
 
   if (solvePhase == 4) {
     // Use primal to clean up if not out of time
+    initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_primal_step_distribution);
+    initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_dual_step_distribution);
     int it0 = scaled_solution_params.simplex_iteration_count;
     HPrimal hPrimal(workHMO);
     const bool full_logging = false;
@@ -829,7 +831,8 @@ void HDual::cleanup() {
   compute_dual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
 #ifdef HiGHSDEV
-  double norm_dual_change = 0;
+  HighsValueDistribution dual_change_distribution;
+  initialiseValueDistribution(1e-16, 1e16, 10.0, dual_change_distribution);
   int num_dual_sign_change = 0;
   for (int iCol = 0; iCol < workHMO.simplex_lp_.numCol_; iCol++) {
     const double max_dual = max(fabs(simplex_info.workDual_[iCol]), fabs(original_workDual[iCol]));
@@ -837,11 +840,11 @@ void HDual::cleanup() {
       if (simplex_info.workDual_[iCol] * original_workDual[iCol] < 0) num_dual_sign_change++;
     }
     const double dual_change = fabs(simplex_info.workDual_[iCol]-original_workDual[iCol]);
-    norm_dual_change += dual_change;
+    updateValueDistribution(dual_change, dual_change_distribution);
   }
-  printf("grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s) and average dual_change = %g\n",
-	 workHMO.simplex_lp_.model_name_.c_str(),
-	 num_dual_sign_change, norm_dual_change/workHMO.simplex_lp_.numCol_);
+  printf("grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s)\n",
+	 workHMO.simplex_lp_.model_name_.c_str(), num_dual_sign_change);
+  printValueDistribution("dual ", dual_change_distribution);
 #endif
 
   // Compute the dual infeasibilities

@@ -117,6 +117,8 @@ class HighsSimplexAnalysis {
   HighsValueDistribution ftran_upper_sparse_density;
   HighsValueDistribution before_ftran_upper_hyper_density;
   HighsValueDistribution ftran_upper_hyper_density;
+  HighsValueDistribution cleanup_primal_step_distribution;
+  HighsValueDistribution cleanup_dual_step_distribution;
 #endif
 
  private:

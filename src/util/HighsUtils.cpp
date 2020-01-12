@@ -349,32 +349,41 @@ bool updateValueDistribution(
   return true;
 }
 
+double doublePercentage(const int of, const int in) {
+  return ((100.0 * of) / in);
+} 
+
+int integerPercentage(const int of, const int in) {
+  const double double_percentage = ((100.0 * of) / in) + 0.4999;
+  return (int)double_percentage;
+} 
+
 bool printValueDistribution(std::string value_name,
 			    const HighsValueDistribution& value_distribution,
 			    const int mu) {
   const int num_count = value_distribution.num_count_;
   if (num_count < 0) return false;
   int sum_count = value_distribution.num_zero_;
-  double sum_pct = 0;
+  double sum_percentage = 0;
   for (int i = 0; i < num_count+1; i++)
     sum_count += value_distribution.count_[i];
   if (!sum_count) return false;
-  double pct;
-  int int_pct;
+  double percentage;
+  int int_percentage;
   int count = value_distribution.num_zero_;
   if (count) {
-    pct = (100.0 * count) / sum_count;
-    sum_pct += pct;
-    int_pct = pct;
-    printf("%12d %svalues (%3d%%) are %10.4g\n", count, value_name.c_str(), int_pct, 0.0);
+    percentage = doublePercentage(count, sum_count);
+    sum_percentage += percentage;
+    int_percentage = percentage;
+    printf("%12d %svalues (%3d%%) are %10.4g\n", count, value_name.c_str(), int_percentage, 0.0);
   }
   count = value_distribution.count_[0];
   if (count) {
-    pct = (100.0 * count) / sum_count;
-    sum_pct += pct;
-    int_pct = pct;
+    percentage = doublePercentage(count, sum_count);
+    sum_percentage += percentage;
+    int_percentage = percentage;
     printf("%12d %svalues (%3d%%) in (%10.4g, %10.4g)",
-	   count, value_name.c_str(), int_pct, 0.0, value_distribution.limit_[0]);
+	   count, value_name.c_str(), int_percentage, 0.0, value_distribution.limit_[0]);
     if (mu>0) {
       printf(" corresponding to (%10d, %10d)\n", 0, (int)(value_distribution.limit_[0]*mu));
     } else {
@@ -384,11 +393,11 @@ bool printValueDistribution(std::string value_name,
   for (int i = 1; i < num_count; i++) {
     count = value_distribution.count_[i];
     if (count) {
-      pct = (100.0 * count) / sum_count;
-      sum_pct += pct;
-      int_pct = pct;
+      percentage = doublePercentage(count, sum_count);
+      sum_percentage += percentage;
+      int_percentage = percentage;
       printf("%12d %svalues (%3d%%) in [%10.4g, %10.4g)",
-	     count, value_name.c_str(), int_pct, value_distribution.limit_[i-1], value_distribution.limit_[i]);
+	     count, value_name.c_str(), int_percentage, value_distribution.limit_[i-1], value_distribution.limit_[i]);
       if (mu>0) {
 	printf(" corresponding to [%10d, %10d)\n", (int)(value_distribution.limit_[i-1]*mu), (int)(value_distribution.limit_[i]*mu));
       } else {
@@ -398,18 +407,18 @@ bool printValueDistribution(std::string value_name,
   }
   count = value_distribution.count_[num_count];
   if (count) {
-    pct = (100.0 * count) / sum_count;
-    sum_pct += pct;
-    int_pct = pct;
+    percentage = doublePercentage(count, sum_count);
+    sum_percentage += percentage;
+    int_percentage = percentage;
     printf("%12d %svalues (%3d%%) in [%10.4g,        inf)",
-	   count, value_name.c_str(), int_pct, value_distribution.limit_[num_count-1]);
+	   count, value_name.c_str(), int_percentage, value_distribution.limit_[num_count-1]);
     if (mu>0) {
       printf(" corresponding to [%10d,        inf)\n", (int)(value_distribution.limit_[num_count-1]*mu));
     } else {
       printf("\n");
     }
   }
-  printf("%12d %svalues (%3d%%)\n", sum_count, value_name.c_str(), (int)sum_pct);
+  printf("%12d %svalues (%3d%%)\n", sum_count, value_name.c_str(), (int)sum_percentage);
   return true;
 }
 #endif

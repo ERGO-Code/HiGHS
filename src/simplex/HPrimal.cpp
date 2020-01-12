@@ -206,12 +206,11 @@ void HPrimal::solvePhase2() {
   row_ap.setup(solver_num_col);
 
 #ifdef HiGHSDEV
-  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
-  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->row_ep_density = 0\n");
+  printf("HPrimal::solvePhase2 - WARNING: Not setting analysis->col_aq_density = 0\n");
+  printf("HPrimal::solvePhase2 - WARNING: Not setting analysis->row_ep_density = 0\n");
 #endif
-
-  analysis->col_aq_density = 0;
-  analysis->row_ep_density = 0;
+  //  analysis->col_aq_density = 0;
+  //  analysis->row_ep_density = 0;
 
   no_free_columns = true;
   for (int iCol = 0; iCol < solver_num_tot; iCol++) {
