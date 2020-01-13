@@ -261,8 +261,6 @@ HighsStatus HDual::solve() {
     analysePrimalObjectiveValue(workHMO);
     const double objective_before = simplex_info.primal_objective_value;
 #endif  
-    // 
-    printf("Cleanup: what strategy? Currently %d\n", options.dual_simplex_cleanup_strategy);
     if (options.dual_simplex_cleanup_strategy == DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE) {
       // No clean up. Dual simplex was optimal with perturbed costs,
       // so say that the scaled LP has been solved

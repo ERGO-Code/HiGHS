@@ -1897,9 +1897,6 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
       updateValueDistribution(perturbation1, analysis->cost_perturbation1_distribution);
 #endif
   }
-  printf("grep_DuPtrb:    Perturbation base = %g\n", base);
-  
-
   for (int i = simplex_lp.numCol_; i < numTot; i++) {
     double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) *
       simplex_info.dual_simplex_cost_perturbation_multiplier * 1e-12;
