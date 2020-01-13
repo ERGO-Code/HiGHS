@@ -923,6 +923,73 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   simplex_lp_status.has_primal_objective_value = true;
 }
 
+#ifdef HiGHSDEV
+void analysePrimalObjectiveValue(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  simplex_info.primal_objective_value = 0;
+
+  HighsValueDistribution objective_value_term_distribution;
+  HighsValueDistribution basic_value_distribution;
+  HighsValueDistribution basic_cost_distribution;
+  initialiseValueDistribution(1e-16, 1e16, 10.0, objective_value_term_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, basic_value_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, basic_cost_distribution);
+  for (int row = 0; row < simplex_lp.numRow_; row++) {
+    int var = simplex_basis.basicIndex_[row];
+    const double value = simplex_info.baseValue_[row];
+    updateValueDistribution(value, basic_value_distribution);
+    if (var < simplex_lp.numCol_) {
+      const double cost = simplex_lp.colCost_[var];
+      if (cost) {
+	updateValueDistribution(cost, basic_cost_distribution);
+	const double term = value * cost;
+	simplex_info.primal_objective_value += term;
+	const double abs_term = fabs(term);
+	updateValueDistribution(abs_term, objective_value_term_distribution);
+      }
+    }
+  }
+  HighsValueDistribution nonbasic_value_distribution;
+  HighsValueDistribution nonbasic_cost_distribution;
+  initialiseValueDistribution(1e-16, 1e16, 10.0, nonbasic_value_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, nonbasic_cost_distribution);
+  for (int col = 0; col < simplex_lp.numCol_; col++) {
+    if (simplex_basis.nonbasicFlag_[col]) {
+      const double value = simplex_info.workValue_[col];
+      updateValueDistribution(value, nonbasic_value_distribution);
+      const double cost = simplex_lp.colCost_[col];
+      if (cost) {
+	updateValueDistribution(cost, nonbasic_cost_distribution);
+	const double term = value * cost;
+	simplex_info.primal_objective_value += term;
+	const double abs_term = fabs(term);
+	updateValueDistribution(abs_term, objective_value_term_distribution);
+      }
+    }
+  }
+  printf("\nAnalysis of values, costs and objective terms:\n");
+  printf("Nonbasic values:\n");
+  printValueDistribution("", nonbasic_value_distribution);
+  printf("Basic values:\n");
+  printValueDistribution("", basic_value_distribution);
+  printf("Nonzero nonbasic costs:\n");
+  printValueDistribution("", nonbasic_cost_distribution);
+  printf("Nonzero basic costs:\n");
+  printValueDistribution("", basic_cost_distribution);
+  printf("Nonzero objective terms:\n");
+  printValueDistribution("", objective_value_term_distribution);
+
+  simplex_info.primal_objective_value *= highs_model_object.scale_.cost_;
+  simplex_info.primal_objective_value -= simplex_lp.offset_;
+  // Now have primal objective value
+  simplex_lp_status.has_primal_objective_value = true;
+}
+#endif
+
 void initialiseSimplexLpDefinition(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status = highs_model_object.simplex_lp_status_;
   // Ensure that the simplex LP is fully invalidated

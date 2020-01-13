@@ -253,6 +253,9 @@ HighsStatus HDual::solve() {
     printf("What ho! HDual::solve() returning with solvePhase = %d\n", solvePhase);
   }
   if (solvePhase == 4) {
+#ifdef HiGHSDEV
+    analysePrimalObjectiveValue(workHMO);
+#endif  
     // 
     printf("Cleanup: what strategy? Currently %d\n", options.dual_simplex_cleanup_strategy);
     if (options.dual_simplex_cleanup_strategy == DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE) {

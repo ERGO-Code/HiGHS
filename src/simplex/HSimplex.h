@@ -84,6 +84,9 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                int phase = 2);
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
+#ifdef HiGHSDEV
+void analysePrimalObjectiveValue(HighsModelObject& highs_model_object);
+#endif
 
 void initialiseSimplexLpDefinition(HighsModelObject& highs_model);
 void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model);
