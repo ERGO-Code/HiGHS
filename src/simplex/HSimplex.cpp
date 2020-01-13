@@ -924,13 +924,23 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
 }
 
 #ifdef HiGHSDEV
-void analysePrimalObjectiveValue(HighsModelObject& highs_model_object) {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
-  simplex_info.primal_objective_value = 0;
+void getPrimalValue(const HighsModelObject& highs_model_object, vector<double>& primal_value) {
+  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  // Copy all of workValue to get all the nonbasic values
+  primal_value.resize(simplex_lp.numCol_+simplex_lp.numRow_);
+  for (int col = 0; col < simplex_lp.numCol_+simplex_lp.numRow_; col++)
+    primal_value[col] = simplex_info.workValue_[col];
+  // Over-write the value of the nonbasic variables
+  for (int row = 0; row < simplex_lp.numRow_; row++)
+    primal_value[simplex_basis.basicIndex_[row]] = simplex_info.baseValue_[row];
+}
+  
+void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
+  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
   HighsValueDistribution objective_value_term_distribution;
   HighsValueDistribution basic_value_distribution;
@@ -938,6 +948,8 @@ void analysePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   initialiseValueDistribution(1e-16, 1e16, 10.0, objective_value_term_distribution);
   initialiseValueDistribution(1e-16, 1e16, 10.0, basic_value_distribution);
   initialiseValueDistribution(1e-16, 1e16, 10.0, basic_cost_distribution);
+
+  double primal_objective_value = 0;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = simplex_basis.basicIndex_[row];
     const double value = simplex_info.baseValue_[row];
@@ -947,7 +959,7 @@ void analysePrimalObjectiveValue(HighsModelObject& highs_model_object) {
       if (cost) {
 	updateValueDistribution(cost, basic_cost_distribution);
 	const double term = value * cost;
-	simplex_info.primal_objective_value += term;
+	primal_objective_value += term;
 	const double abs_term = fabs(term);
 	updateValueDistribution(abs_term, objective_value_term_distribution);
       }
@@ -965,10 +977,16 @@ void analysePrimalObjectiveValue(HighsModelObject& highs_model_object) {
       if (cost) {
 	updateValueDistribution(cost, nonbasic_cost_distribution);
 	const double term = value * cost;
-	simplex_info.primal_objective_value += term;
+	primal_objective_value += term;
 	const double abs_term = fabs(term);
 	updateValueDistribution(abs_term, objective_value_term_distribution);
       }
+    }
+  }
+  for (int col = simplex_lp.numCol_; col < simplex_lp.numCol_ + simplex_lp.numRow_; col++) {
+    if (simplex_basis.nonbasicFlag_[col]) {
+      const double value = simplex_info.workValue_[col];
+      updateValueDistribution(value, nonbasic_value_distribution);
     }
   }
   printf("\nAnalysis of values, costs and objective terms:\n");
@@ -982,11 +1000,11 @@ void analysePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   printValueDistribution("", basic_cost_distribution);
   printf("Nonzero objective terms:\n");
   printValueDistribution("", objective_value_term_distribution);
-
-  simplex_info.primal_objective_value *= highs_model_object.scale_.cost_;
-  simplex_info.primal_objective_value -= simplex_lp.offset_;
-  // Now have primal objective value
-  simplex_lp_status.has_primal_objective_value = true;
+  printf("Linear objective value: %g\n", primal_objective_value);
+  primal_objective_value *= highs_model_object.scale_.cost_;
+  printf("Scaled objective value: %g\n", primal_objective_value);
+  primal_objective_value -= simplex_lp.offset_;
+  printf("Offset objective value: %g\n", primal_objective_value);
 }
 #endif
 
@@ -1791,6 +1809,9 @@ void initialise_phase2_row_cost(HighsModelObject& highs_model_object,
 void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+#ifdef HiGHSDEV
+  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
+#endif
   // Copy the cost
   initialise_phase2_col_cost(highs_model_object, 0, simplex_lp.numCol_ - 1);
   initialise_phase2_row_cost(highs_model_object, 0, simplex_lp.numRow_ - 1);
@@ -1839,21 +1860,13 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   if (boxedRate < 0.01) {
     bigc = min(bigc, 1.0);
 #ifdef HiGHSDEV
-    printf("grep_DuPtrb:    boxedRate = %g so set bigc = min(bigc, 1.0) = %g\n", boxedRate, bigc);
+    printf("grep_DuPtrb:    small boxedRate (%g) so set bigc = min(bigc, 1.0) = %g\n", boxedRate, bigc);
 #endif
   }
-  if (bigc < 1) {
-    //        bigc = sqrt(bigc);
-  }
-
   // Determine the perturbation base
   double base = 5e-7 * bigc;
 #ifdef HiGHSDEV
   printf("grep_DuPtrb:    Perturbation base = %g\n", base);
-  double norm_perturbation1 = 0;
-  int num_perturbation1 = 0;
-  int num_new_nonzero_cost = 0;
-  double norm_perturbation2 = 0;
 #endif
 
   // Now do the perturbation
@@ -1880,29 +1893,22 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
     }
 #ifdef HiGHSDEV
     const double perturbation1 = fabs(simplex_info.workCost_[i]-previous_cost);
-    if (perturbation1) {
-      num_perturbation1++;
-      if (!simplex_info.workCost_[i]) num_new_nonzero_cost++;
-      norm_perturbation1 += perturbation1;
-    }
+    if (perturbation1)
+      updateValueDistribution(perturbation1, analysis->cost_perturbation1_distribution);
 #endif
   }
+  printf("grep_DuPtrb:    Perturbation base = %g\n", base);
+  
 
   for (int i = simplex_lp.numCol_; i < numTot; i++) {
-    const double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) *
+    double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) *
       simplex_info.dual_simplex_cost_perturbation_multiplier * 1e-12;
     simplex_info.workCost_[i] += perturbation2;
 #ifdef HiGHSDEV
-    norm_perturbation2 += fabs(perturbation2);
+    perturbation2 = fabs(perturbation2);
+    updateValueDistribution(perturbation2, analysis->cost_perturbation2_distribution);
 #endif
- }
-#ifdef HiGHSDEV
-  const int pct1 = (100*num_perturbation1)/simplex_lp.numCol_;
-  printf("grep_DuPtrb:    Average initial perturbation of %d costs (%3d%%) is %g\n",
-	 num_perturbation1, pct1, norm_perturbation1/simplex_lp.numCol_);
-  printf("grep_DuPtrb:    Average general perturbation is %g\n", norm_perturbation2/simplex_lp.numCol_);
-#endif
-
+  }
 }
 
 int get_nonbasicMove(HighsModelObject& highs_model_object, int var) {

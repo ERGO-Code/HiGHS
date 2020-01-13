@@ -85,7 +85,8 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
 #ifdef HiGHSDEV
-void analysePrimalObjectiveValue(HighsModelObject& highs_model_object);
+void getPrimalValue(const HighsModelObject& highs_model_object, vector<double>& primal_value);
+void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object);
 #endif
 
 void initialiseSimplexLpDefinition(HighsModelObject& highs_model);
