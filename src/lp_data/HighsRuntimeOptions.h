@@ -7,6 +7,7 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #ifndef LP_DATA_HIGHSRUNTIMEOPTIONS_H_
 #define LP_DATA_HIGHSRUNTIMEOPTIONS_H_
 
@@ -16,8 +17,7 @@
 #include "io/LoadProblem.h"
 //#include "lp_data/HighsOptions.h"
 #include "util/stringutil.h"
-
-bool loadOptionsFromFile(HighsOptions& options);
+#include "LoadOptions.h"
 
 bool loadOptions(int argc, char** argv, HighsOptions& options) {
   try {
