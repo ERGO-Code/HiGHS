@@ -778,7 +778,7 @@ void HPrimal::iterationAnalysisData() {
   analysis->pivot_value_from_column = alpha;
   analysis->pivot_value_from_row = alpha;//Row;
   analysis->numerical_trouble = numericalTrouble;
-  analysis->objective_value = simplex_info.updated_dual_objective_value;
+  analysis->objective_value = simplex_info.updated_primal_objective_value;
   analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
   analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
   analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
