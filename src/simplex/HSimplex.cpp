@@ -1364,7 +1364,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   const double geomean_original_row_equilibration = exp(sum_original_log_row_equilibration/numRow);
   const double geomean_col_equilibration = exp(sum_log_col_equilibration/numCol);
   const double geomean_row_equilibration = exp(sum_log_row_equilibration/numRow);
-  //#ifdef HiGHSDEV
+#ifdef HiGHSDEV
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		  "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g (cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)",
 		  min_original_col_equilibration,
@@ -1381,7 +1381,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 		  min_row_equilibration,
 		  geomean_row_equilibration,
 		  max_row_equilibration);
-  //#endif
+#endif
   
   // Compute the mean equilibration improvement
   const double geomean_original_col = max(geomean_original_col_equilibration, 1/geomean_original_col_equilibration);
@@ -1415,7 +1415,6 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 		  matrix_min_value, matrix_max_value, matrix_value_ratio, 
 		  original_matrix_min_value, original_matrix_max_value, original_matrix_value_ratio,
 		  matrix_value_ratio_improvement);
-#endif
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		  "Scaling: Improves    mean equilibration by a factor %0.4g",
 		  mean_equilibration_improvement);
@@ -1425,6 +1424,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		  "Scaling: Improves max/min matrix values by a factor %0.4g",
 		  matrix_value_ratio_improvement);
+#endif
   const bool possibly_abandon_scaling = (!hsol_scaling &&
 					 simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED);
   const double improvement_factor =
@@ -1459,9 +1459,9 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     return;
   } else {
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		    "Scaling: Improvement factor is %0.4g >= %0.4g required",
+		    "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP",
 		    improvement_factor, improvement_factor_required);
-    //#ifdef HiGHSDEV
+#ifdef HiGHSDEV
     if (extreme_equilibration_improvement < 1.0) {
       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
 		      "Scaling: Applying scaling with extreme improvement of %0.4g",
@@ -1482,7 +1482,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 		      "Scaling: Applying scaling with improvement factor %0.4g < 10*(%0.4g) improvement",
 		      improvement_factor, improvement_factor_required);
     }
-    //#endif
+#endif
   }
   scale.is_scaled_ = true;
 

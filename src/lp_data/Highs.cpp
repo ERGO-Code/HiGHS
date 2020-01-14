@@ -243,10 +243,6 @@ HighsStatus Highs::run() {
     printf("WARNING: omp_get_max_threads() returns %d\n", omp_max_threads);
   printf("Running with %d OMP thread(s)\n", omp_max_threads);
 #endif
-  if (omp_max_threads < options_.highs_max_threads)
-    HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
-		    "Number of OMP threads available = %d < %d = Max number of HiGHS threads requested: Parallel performance will be less than anticipated",
-		    omp_max_threads, options_.highs_max_threads);
 #endif
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
@@ -492,10 +488,10 @@ HighsStatus Highs::run() {
       hmos_[original_hmo].unscaled_model_status_ = hmos_[solved_hmo].unscaled_model_status_;
     }
   } else {
-    // The problem has been solved before so we ignore presolve/postsolve/ipx.
+    // There is a valid basis for the problem or presolve is off
     solved_hmo = original_hmo;
-    hmos_[solved_hmo].lp_.lp_name_ = "Re-solved LP";
-    call_status = runLpSolver(hmos_[solved_hmo], "Re-solving the LP");
+    hmos_[solved_hmo].lp_.lp_name_ = "LP without presolve or with basis";
+    call_status = runLpSolver(hmos_[solved_hmo], "Solving LP without presolve or with basis");
     return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
     if (return_status == HighsStatus::Error) return return_status;
   }

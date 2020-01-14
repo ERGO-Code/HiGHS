@@ -76,13 +76,14 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsStatus call_status;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsTimer& timer = highs_model_object.timer_;
+  FILE* logfile = highs_model_object.options_.logfile;
 
   // Assumes that the LP has a positive number of rows, since
   // unconstrained LPs should be solved in solveLpSimplex
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
   assert(positive_num_row);
   if (!positive_num_row) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
+    HighsLogMessage(logfile, HighsMessageType::ERROR,
 		    "runSimplexSolver called for LP with non-positive (%d) number of constraints",
 		    highs_model_object.lp_.numRow_);
     return HighsStatus::Error;
@@ -100,6 +101,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   call_status = transition(highs_model_object);
   return_status = interpretCallStatus(call_status, return_status, "transition");
   if (return_status == HighsStatus::Error) return return_status;
+#ifdef HiGHSDEV
+  // reportSimplexLpStatus(simplex_lp_status, "After transition");
+#endif
 
   // Determine whether the solution is optimal
   HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
@@ -134,13 +138,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // Record the min/max minimum number of HiGHS threads in the options
   const int highs_min_threads = highs_model_object.options_.highs_min_threads;
   const int highs_max_threads = highs_model_object.options_.highs_max_threads;
-  if (highs_model_object.options_.parallel == on_string && simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
-    // The parallel strategy is on and the simplex strategy is dual...
-    int omp_max_threads = 0;
+  int omp_max_threads = 0;
 #ifdef OPENMP
-    omp_max_threads = omp_get_max_threads();
+  omp_max_threads = omp_get_max_threads();
 #endif
-    // ... so use PAMI if there are enough OMP threads
+  if (highs_model_object.options_.parallel == on_string && simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
+    // The parallel strategy is on and the simplex strategy is dual so use PAMI if there are enough OMP threads
     if (omp_max_threads >= DUAL_MULTI_MIN_THREADS) simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
   }
   //
@@ -162,20 +165,24 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // Give a warning if the number of threads to be used is fewer than
   // the minimum number of HiGHS threads allowed
   if (simplex_info.num_threads < highs_min_threads) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
 		    "Using %d HiGHS threads for parallel strategy rather than minimum number (%d) specified in options",
 		    simplex_info.num_threads, highs_min_threads);
   }
   // Give a warning if the number of threads to be used is more than
   // the maximum number of HiGHS threads allowed
   if (simplex_info.num_threads > highs_max_threads) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
 		    "Using %d HiGHS threads for parallel strategy rather than maximum number (%d) specified in options",
 		    simplex_info.num_threads, highs_max_threads);
   }
-#ifdef HiGHSDEV
-  // reportSimplexLpStatus(simplex_lp_status, "After transition");
-#endif
+  // Give a warning if the number of threads to be used is fewer than
+  // the number of OMP threads available
+  if (simplex_info.num_threads > omp_max_threads) {
+    HighsLogMessage(logfile, HighsMessageType::WARNING,
+		    "Number of OMP threads available = %d < %d = Number of HiGHS threads to be used: Parallel performance will be less than anticipated",
+		    omp_max_threads, simplex_info.num_threads);
+  }
   if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
     simplex_info.simplex_strategy = simplex_strategy;
     // Official start of solver Start the solve clock - because
@@ -186,7 +193,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #endif
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
-      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+      HighsLogMessage(logfile, HighsMessageType::INFO,
 		      "Using primal simplex solver");
       HQPrimal primal_solver(highs_model_object);
       call_status = primal_solver.solve();
@@ -199,7 +206,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       // Solve, depending on the particular strategy
       if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
         // Parallel - SIP
-	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+	HighsLogMessage(logfile, HighsMessageType::INFO,
 			"Using parallel simplex solver - SIP with %d threads", simplex_info.num_threads);
         // writePivots("tasks");
         call_status = dual_solver.solve();
@@ -207,7 +214,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 	if (return_status == HighsStatus::Error) return return_status;
       } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
         // Parallel - PAMI
-	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+	HighsLogMessage(logfile, HighsMessageType::INFO,
 			"Using parallel simplex solver - PAMI with %d threads", simplex_info.num_threads);
         // writePivots("multi");
         // if (opt.partitionFile.size() > 0)
@@ -217,7 +224,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 	  if (return_status == HighsStatus::Error) return return_status;
       } else {
         // Serial
-	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+	HighsLogMessage(logfile, HighsMessageType::INFO,
 			"Using dual simplex solver - serial");
         call_status = dual_solver.solve();
 	return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
@@ -235,7 +242,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       timer.start(simplex_info.clock_[BasisConditionClock]);
       double basis_condition = computeBasisCondition(highs_model_object);
       timer.stop(simplex_info.clock_[BasisConditionClock]);
-      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+      HighsLogMessage(logfile, HighsMessageType::INFO,
                       "Final basis condition estimate is %g", basis_condition);
     }
 
@@ -248,13 +255,13 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     reportSimplexProfiling(highs_model_object);
 
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
-      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+      HighsLogMessage(logfile, HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d] Total %d",
                       simplex_info.primal_phase1_iteration_count,
                       simplex_info.primal_phase2_iteration_count,
                       scaled_solution_params.simplex_iteration_count);
     } else {
-      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+      HighsLogMessage(logfile, HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d",
                       simplex_info.dual_phase1_iteration_count,
                       simplex_info.dual_phase2_iteration_count,
@@ -289,7 +296,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
     call_status = 
-      analyseHighsBasicSolution(highs_model_object.options_.logfile,
+      analyseHighsBasicSolution(logfile,
 				highs_model_object, "to check simplex basic solution");
     return_status = interpretCallStatus(call_status, return_status, "analyseHighsBasicSolution");
     if (return_status == HighsStatus::Error) return return_status;

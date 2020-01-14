@@ -275,7 +275,7 @@ HighsStatus HDual::solve() {
       initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_dual_step_distribution);
 #endif  
       int it0 = scaled_solution_params.simplex_iteration_count;
-      const bool full_logging = true;
+      const bool full_logging = false;//true;//
       if (full_logging) analysis->messaging(options.logfile, options.output, ML_ALWAYS);
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
       if (options.dual_simplex_cleanup_strategy == DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL) {
