@@ -36,10 +36,8 @@
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
 
-#ifdef HiGHSDEV
 #ifdef OPENMP
 #include "omp.h"
-#endif
 #endif
 
 #ifdef HiGHSDEV
