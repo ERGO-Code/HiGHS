@@ -28,6 +28,7 @@
 #include "lp_data/HighsModelObject.h"
 #include "simplex/HCrash.h"
 #include "simplex/HPrimal.h"
+#include "simplex/HQPrimal.h"
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsTimer.h"
@@ -248,25 +249,68 @@ HighsStatus HDual::solve() {
 	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return HighsStatus::Warning;
   }
-
+  if (solvePhase != 0 && solvePhase != 4) {
+    printf("What ho! HDual::solve() returning with solvePhase = %d\n", solvePhase);
+  }
   if (solvePhase == 4) {
-    // Use primal to clean up if not out of time
-    int it0 = scaled_solution_params.simplex_iteration_count;
-    HPrimal hPrimal(workHMO);
-    const bool full_logging = false;
-    if (full_logging) 
-      analysis->messaging(options.logfile, options.output, ML_ALWAYS);
-    timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-    hPrimal.solvePhase2();
-    timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-    simplex_info.primal_phase2_iteration_count +=
-        (scaled_solution_params.simplex_iteration_count - it0);
+    computePrimalObjectiveValue(workHMO);
+#ifdef HiGHSDEV
+    vector<double> primal_value_before_cleanup;
+    getPrimalValue(workHMO, primal_value_before_cleanup);
+    printf("\nAnalyse primal objective evaluation before cleanup\n");
+    analysePrimalObjectiveValue(workHMO);
+    const double objective_before = simplex_info.primal_objective_value;
+#endif  
+    if (options.dual_simplex_cleanup_strategy == DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE) {
+      // No clean up. Dual simplex was optimal with perturbed costs,
+      // so say that the scaled LP has been solved
+      // optimally. Optimality (unlikely) for the unscaled LP will
+      // still be assessed honestly, so leave it to the user to
+      // deceide whether the solution can be accepted.
+      workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+    } else {
+      // Use primal to clean up
+#ifdef HiGHSDEV
+      initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_primal_step_distribution);
+      initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_dual_step_distribution);
+#endif  
+      int it0 = scaled_solution_params.simplex_iteration_count;
+      const bool full_logging = false;//true;//
+      if (full_logging) analysis->messaging(options.logfile, options.output, ML_ALWAYS);
+      timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+      if (options.dual_simplex_cleanup_strategy == DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL) {
+	// Cleanup with original primal phase 2 code
+	HPrimal hPrimal(workHMO);
+	hPrimal.solvePhase2();
+      } else {
+	// Cleanup with phase 2 for new primal code
+	HQPrimal hPrimal(workHMO);
+	hPrimal.solvePhase2();
+      }
+      timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+#ifdef HiGHSDEV
+    vector<double> primal_value_after_cleanup;
+    getPrimalValue(workHMO, primal_value_after_cleanup);
+    for (int var = 0; var < solver_num_tot; var++) {
+      const double primal_change = fabs(primal_value_after_cleanup[var] - primal_value_before_cleanup[var]);
+      updateValueDistribution(primal_change, analysis->cleanup_primal_change_distribution);
+    }
+      printf("\nAnalyse primal objective evaluation after cleanup\n");
+      analysePrimalObjectiveValue(workHMO);
+      const double objective_after = simplex_info.primal_objective_value;
+      const double abs_objective_change = fabs(objective_before - objective_after);
+      const double rel_objective_change = abs_objective_change / max(1.0, fabs(objective_after));
+      printf("\nDuring cleanup, (abs: rel) primal objective changes is (%10.4g: %10.4g) \nfrom %20.10g\nto   %20.10g\n",
+	     abs_objective_change, rel_objective_change, objective_before, objective_after);
+#endif  
+      simplex_info.primal_phase2_iteration_count +=
+	(scaled_solution_params.simplex_iteration_count - it0);
+    }
   }
   ok = ok_to_solve(workHMO, 1, solvePhase);
-  if (!ok) {
-    printf("NOT OK After Solve???\n");
-    cout << flush;
-  }
+#ifdef HiGHSDEV
+  if (!ok) printf("NOT OK After Solve???\n");
+#endif  
   assert(ok);
   computePrimalObjectiveValue(workHMO);
   return HighsStatus::OK;
@@ -644,14 +688,14 @@ void HDual::solvePhase2() {
     // There is no candidate in CHUZR, even after rebuild so probably optimal
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
 		      "dual-phase-2-optimal\n");
-    //		printf("Rebuild: cleanup()\n");
+    // Remove any cost perturbations and see if basis is still dual feasible
     cleanup();
     if (dualInfeasCount > 0) {
-      // There are dual infeasiblities after cleanup() so switch to primal
-      // simplex
-      solvePhase = 4;  // Do primal
+      // There are dual infeasiblities, so consider performing primal
+      // simplex iterations to get dual feasibility
+      solvePhase = 4;
     } else {
-      // There are no dual infeasiblities after cleanup() so optimal!
+      // There are no dual infeasiblities so optimal!
       solvePhase = 0;
       HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
 			"problem-optimal\n");
@@ -829,7 +873,6 @@ void HDual::cleanup() {
   compute_dual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
 #ifdef HiGHSDEV
-  double norm_dual_change = 0;
   int num_dual_sign_change = 0;
   for (int iCol = 0; iCol < workHMO.simplex_lp_.numCol_; iCol++) {
     const double max_dual = max(fabs(simplex_info.workDual_[iCol]), fabs(original_workDual[iCol]));
@@ -837,11 +880,10 @@ void HDual::cleanup() {
       if (simplex_info.workDual_[iCol] * original_workDual[iCol] < 0) num_dual_sign_change++;
     }
     const double dual_change = fabs(simplex_info.workDual_[iCol]-original_workDual[iCol]);
-    norm_dual_change += dual_change;
+    updateValueDistribution(dual_change, analysis->cleanup_dual_change_distribution);
   }
-  printf("grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s) and average dual_change = %g\n",
-	 workHMO.simplex_lp_.model_name_.c_str(),
-	 num_dual_sign_change, norm_dual_change/workHMO.simplex_lp_.numCol_);
+  printf("grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s)\n",
+	 workHMO.simplex_lp_.model_name_.c_str(), num_dual_sign_change);
 #endif
 
   // Compute the dual infeasibilities

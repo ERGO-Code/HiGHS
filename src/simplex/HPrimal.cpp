@@ -206,12 +206,11 @@ void HPrimal::solvePhase2() {
   row_ap.setup(solver_num_col);
 
 #ifdef HiGHSDEV
-  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
-  printf("HPrimal::solvePhase2 - WARNING: Setting analysis->row_ep_density = 0\n");
+  printf("HPrimal::solvePhase2 - WARNING: Not setting analysis->col_aq_density = 0\n");
+  printf("HPrimal::solvePhase2 - WARNING: Not setting analysis->row_ep_density = 0\n");
 #endif
-
-  analysis->col_aq_density = 0;
-  analysis->row_ep_density = 0;
+  //  analysis->col_aq_density = 0;
+  //  analysis->row_ep_density = 0;
 
   no_free_columns = true;
   for (int iCol = 0; iCol < solver_num_tot; iCol++) {
@@ -779,7 +778,7 @@ void HPrimal::iterationAnalysisData() {
   analysis->pivot_value_from_column = alpha;
   analysis->pivot_value_from_row = alpha;//Row;
   analysis->numerical_trouble = numericalTrouble;
-  analysis->objective_value = simplex_info.updated_dual_objective_value;
+  analysis->objective_value = simplex_info.updated_primal_objective_value;
   analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
   analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
   analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;

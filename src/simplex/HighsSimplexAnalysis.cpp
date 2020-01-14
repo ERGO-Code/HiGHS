@@ -120,15 +120,11 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   }
   int last_invert_hint = INVERT_HINT_Count - 1;
   for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
-  AnIterNumPrDgnIt = 0;
-  AnIterNumDuDgnIt = 0;
   num_col_price = 0;
   num_row_price = 0;
   num_row_price_with_switch = 0;
   int last_dual_edge_weight_mode = (int)DualEdgeWeightMode::STEEPEST_EDGE;
-  for (int k = 0; k <= last_dual_edge_weight_mode; k++) {
-    AnIterNumEdWtIt[k] = 0;
-  }
+  for (int k = 0; k <= last_dual_edge_weight_mode; k++) AnIterNumEdWtIt[k] = 0;
   AnIterNumCostlyDseIt = 0;
   AnIterTraceNumRec = 0;
   AnIterTraceIterDl = 1;
@@ -140,10 +136,16 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   initialiseValueDistribution(1e-16, 1e16, 10.0, dual_step_distribution);
   initialiseValueDistribution(1e-8, 1e16, 10.0, pivot_distribution);
   initialiseValueDistribution(1e-16, 1.0, 10.0, numerical_trouble_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, cost_perturbation1_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, cost_perturbation2_distribution);
   initialiseValueDistribution(1e-8, 1.0, 10.0, before_ftran_upper_sparse_density);
   initialiseValueDistribution(1e-8, 1.0, 10.0, before_ftran_upper_hyper_density);
   initialiseValueDistribution(1e-8, 1.0, 10.0, ftran_upper_sparse_density);
   initialiseValueDistribution(1e-8, 1.0, 10.0, ftran_upper_hyper_density);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, cleanup_dual_change_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, cleanup_primal_step_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, cleanup_dual_step_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, cleanup_primal_change_distribution);
 #endif
 
 }
@@ -182,6 +184,8 @@ void HighsSimplexAnalysis::invertReport() {
     num_invert_report_since_last_header = 0;
   }
   invertReport(false);
+  // Force an iteration report header if this is an INVERT report without an invert_hint
+  if (!invert_hint) num_iteration_report_since_last_header = -1;
 }
 
 void HighsSimplexAnalysis::invertReport(const bool header) {
@@ -349,8 +353,6 @@ void HighsSimplexAnalysis::iterationRecord() {
     lcAnIterOp->AnIterOpLog10RsDensity = 0;
   }
   if (invert_hint > 0) AnIterNumInvert[invert_hint]++;
-  if (dual_step <= 0) AnIterNumDuDgnIt++;
-  if (primal_step <= 0) AnIterNumPrDgnIt++;
   if (AnIterCuIt > AnIterPrevIt)
     AnIterNumEdWtIt[(int)edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
 
@@ -389,6 +391,8 @@ void HighsSimplexAnalysis::iterationRecord() {
     }
   }
   AnIterPrevIt = AnIterCuIt;
+  updateValueDistribution(primal_step, cleanup_primal_step_distribution);
+  updateValueDistribution(dual_step, cleanup_dual_step_distribution);
   updateValueDistribution(primal_step, primal_step_distribution);
   updateValueDistribution(dual_step, dual_step_distribution);
   updateValueDistribution(pivot_value_from_column, pivot_distribution);
@@ -539,10 +543,6 @@ void HighsSimplexAnalysis::summaryReport() {
           "simplex\n",
           lcNumInvert, (100 * lcNumInvert) / NumInvert);
   }
-  printf("\n%12d (%3d%%) primal degenerate iterations\n", AnIterNumPrDgnIt,
-         (100 * AnIterNumPrDgnIt) / AnIterNumIter);
-  printf("%12d (%3d%%)   dual degenerate iterations\n", AnIterNumDuDgnIt,
-         (100 * AnIterNumDuDgnIt) / AnIterNumIter);
   int suPrice = num_col_price + num_row_price + num_row_price_with_switch;
   if (suPrice > 0) {
     printf("\n%12d Price operations:\n", suPrice);
@@ -571,17 +571,21 @@ void HighsSimplexAnalysis::summaryReport() {
     printf("%12d Total rows chosen: performed %3d%% of possible minor iterations\n\n", sum_multi_chosen, pct_minor_iterations_performed);
  }
 
+  printf("\nCost perturbation summary\n");
+  printValueDistribution("1 ", cost_perturbation1_distribution);
+  printValueDistribution("2 ", cost_perturbation2_distribution);
+
   printf("\nFTRAN upper sparse summary - before\n");
-  printValueDistribution("", before_ftran_upper_sparse_density);
+  printValueDistribution("", before_ftran_upper_sparse_density, numRow);
 
   printf("\nFTRAN upper sparse summary - after\n");
-  printValueDistribution("", ftran_upper_sparse_density);
+  printValueDistribution("", ftran_upper_sparse_density, numRow);
 
   printf("\nFTRAN upper hyper-sparse summary - before\n");
-  printValueDistribution("", before_ftran_upper_hyper_density);
+  printValueDistribution("", before_ftran_upper_hyper_density, numRow);
 
   printf("\nFTRAN upper hyper-sparse summary - after\n");
-  printValueDistribution("", ftran_upper_hyper_density);
+  printValueDistribution("", ftran_upper_hyper_density, numRow);
 
   printf("\nPrimal step summary\n");
   printValueDistribution("", primal_step_distribution);
@@ -594,6 +598,18 @@ void HighsSimplexAnalysis::summaryReport() {
 
   printf("\nNumerical trouble summary\n");
   printValueDistribution("", numerical_trouble_distribution);
+
+  printf("\nCleanup dual change summary\n");
+  printValueDistribution("dual ", cleanup_dual_change_distribution);
+
+  printf("\nCleanup primal step summary\n");
+  printValueDistribution("", cleanup_primal_step_distribution);
+
+  printf("\nCleanup dual step summary\n");
+  printValueDistribution("", cleanup_dual_step_distribution);
+
+  printf("\nCleanup primal change summary\n");
+  printValueDistribution("", cleanup_primal_change_distribution);
 
   if (AnIterTraceIterDl >= 100) {
     // Possibly (usually) add a temporary record for the final

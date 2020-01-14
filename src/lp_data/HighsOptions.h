@@ -461,6 +461,12 @@ class HighsOptions {
 				     OPTION_OFF, OPTION_OFF, OPTION_ON);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("dual_simplex_cleanup_strategy",
+				     "Strategy for cleanup in dual simplex solver: none / HPrimal / HQPrimal (0/1/2)",
+				     advanced, &dual_simplex_cleanup_strategy,
+				     DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN, DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL, DUAL_SIMPLEX_CLEANUP_STRATEGY_MAX);
+    records.push_back(record_int);
+
     record_int = new OptionRecordInt("simplex_price_strategy",
 				     "Strategy for PRICE in simplex",
 				     advanced, &simplex_price_strategy,
@@ -487,11 +493,11 @@ class HighsOptions {
 				     1.0, 1e1, HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_bool = new OptionRecordBool("simplex_perturb_costs",
-				     "Perturb costs in dual simplex solver",
-				     advanced, &simplex_perturb_costs,
-				     true);
-    records.push_back(record_bool);
+    record_double = new OptionRecordDouble("dual_simplex_cost_perturbation_multiplier",
+					 "Dual simplex cost perturbation multiplier: 0 => no perturbation",
+					 advanced, &dual_simplex_cost_perturbation_multiplier,
+					 0.0, 1.0, HIGHS_CONST_INF);
+    records.push_back(record_double);
 
     record_bool = new OptionRecordBool("icrash",
 				     "Run iCrash",
@@ -595,11 +601,12 @@ class HighsOptions {
   int allowed_simplex_cost_scale_factor;
   int simplex_dualise_strategy;
   int simplex_permute_strategy;
+  int dual_simplex_cleanup_strategy;
   int simplex_price_strategy;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshhold;
-  bool simplex_perturb_costs;
+  double dual_simplex_cost_perturbation_multiplier;
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
 

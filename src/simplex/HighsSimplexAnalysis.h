@@ -117,6 +117,12 @@ class HighsSimplexAnalysis {
   HighsValueDistribution ftran_upper_sparse_density;
   HighsValueDistribution before_ftran_upper_hyper_density;
   HighsValueDistribution ftran_upper_hyper_density;
+  HighsValueDistribution cost_perturbation1_distribution;
+  HighsValueDistribution cost_perturbation2_distribution;
+  HighsValueDistribution cleanup_dual_change_distribution;
+  HighsValueDistribution cleanup_primal_step_distribution;
+  HighsValueDistribution cleanup_dual_step_distribution;
+  HighsValueDistribution cleanup_primal_change_distribution;
 #endif
 
  private:
@@ -215,8 +221,6 @@ class HighsSimplexAnalysis {
   AnIterTraceRec AnIterTrace[1 + AN_ITER_TRACE_MX_NUM_REC + 1];
 
   int AnIterNumInvert[INVERT_HINT_Count];
-  int AnIterNumPrDgnIt;
-  int AnIterNumDuDgnIt;
   int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
 
   HighsValueDistribution primal_step_distribution;

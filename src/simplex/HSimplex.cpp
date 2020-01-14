@@ -45,7 +45,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.dual_edge_weight_strategy =
       options.simplex_dual_edge_weight_strategy;
   simplex_info.price_strategy = options.simplex_price_strategy;
-  simplex_info.perturb_costs = options.simplex_perturb_costs;
+  simplex_info.dual_simplex_cost_perturbation_multiplier = options.dual_simplex_cost_perturbation_multiplier;
   simplex_info.update_limit = options.simplex_update_limit;
 
   // Set values of internal options
@@ -923,6 +923,91 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   simplex_lp_status.has_primal_objective_value = true;
 }
 
+#ifdef HiGHSDEV
+void getPrimalValue(const HighsModelObject& highs_model_object, vector<double>& primal_value) {
+  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  // Copy all of workValue to get all the nonbasic values
+  primal_value.resize(simplex_lp.numCol_+simplex_lp.numRow_);
+  for (int col = 0; col < simplex_lp.numCol_+simplex_lp.numRow_; col++)
+    primal_value[col] = simplex_info.workValue_[col];
+  // Over-write the value of the nonbasic variables
+  for (int row = 0; row < simplex_lp.numRow_; row++)
+    primal_value[simplex_basis.basicIndex_[row]] = simplex_info.baseValue_[row];
+}
+  
+void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
+  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+
+  HighsValueDistribution objective_value_term_distribution;
+  HighsValueDistribution basic_value_distribution;
+  HighsValueDistribution basic_cost_distribution;
+  initialiseValueDistribution(1e-16, 1e16, 10.0, objective_value_term_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, basic_value_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, basic_cost_distribution);
+
+  double primal_objective_value = 0;
+  for (int row = 0; row < simplex_lp.numRow_; row++) {
+    int var = simplex_basis.basicIndex_[row];
+    const double value = simplex_info.baseValue_[row];
+    updateValueDistribution(value, basic_value_distribution);
+    if (var < simplex_lp.numCol_) {
+      const double cost = simplex_lp.colCost_[var];
+      if (cost) {
+	updateValueDistribution(cost, basic_cost_distribution);
+	const double term = value * cost;
+	primal_objective_value += term;
+	const double abs_term = fabs(term);
+	updateValueDistribution(abs_term, objective_value_term_distribution);
+      }
+    }
+  }
+  HighsValueDistribution nonbasic_value_distribution;
+  HighsValueDistribution nonbasic_cost_distribution;
+  initialiseValueDistribution(1e-16, 1e16, 10.0, nonbasic_value_distribution);
+  initialiseValueDistribution(1e-16, 1e16, 10.0, nonbasic_cost_distribution);
+  for (int col = 0; col < simplex_lp.numCol_; col++) {
+    if (simplex_basis.nonbasicFlag_[col]) {
+      const double value = simplex_info.workValue_[col];
+      updateValueDistribution(value, nonbasic_value_distribution);
+      const double cost = simplex_lp.colCost_[col];
+      if (cost) {
+	updateValueDistribution(cost, nonbasic_cost_distribution);
+	const double term = value * cost;
+	primal_objective_value += term;
+	const double abs_term = fabs(term);
+	updateValueDistribution(abs_term, objective_value_term_distribution);
+      }
+    }
+  }
+  for (int col = simplex_lp.numCol_; col < simplex_lp.numCol_ + simplex_lp.numRow_; col++) {
+    if (simplex_basis.nonbasicFlag_[col]) {
+      const double value = simplex_info.workValue_[col];
+      updateValueDistribution(value, nonbasic_value_distribution);
+    }
+  }
+  printf("\nAnalysis of values, costs and objective terms:\n");
+  printf("Nonbasic values:\n");
+  printValueDistribution("", nonbasic_value_distribution);
+  printf("Basic values:\n");
+  printValueDistribution("", basic_value_distribution);
+  printf("Nonzero nonbasic costs:\n");
+  printValueDistribution("", nonbasic_cost_distribution);
+  printf("Nonzero basic costs:\n");
+  printValueDistribution("", basic_cost_distribution);
+  printf("Nonzero objective terms:\n");
+  printValueDistribution("", objective_value_term_distribution);
+  printf("Linear objective value: %g\n", primal_objective_value);
+  primal_objective_value *= highs_model_object.scale_.cost_;
+  printf("Scaled objective value: %g\n", primal_objective_value);
+  primal_objective_value -= simplex_lp.offset_;
+  printf("Offset objective value: %g\n", primal_objective_value);
+}
+#endif
+
 void initialiseSimplexLpDefinition(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status = highs_model_object.simplex_lp_status_;
   // Ensure that the simplex LP is fully invalidated
@@ -1279,7 +1364,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   const double geomean_original_row_equilibration = exp(sum_original_log_row_equilibration/numRow);
   const double geomean_col_equilibration = exp(sum_log_col_equilibration/numCol);
   const double geomean_row_equilibration = exp(sum_log_row_equilibration/numRow);
-  //#ifdef HiGHSDEV
+#ifdef HiGHSDEV
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		  "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g (cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)",
 		  min_original_col_equilibration,
@@ -1296,7 +1381,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 		  min_row_equilibration,
 		  geomean_row_equilibration,
 		  max_row_equilibration);
-  //#endif
+#endif
   
   // Compute the mean equilibration improvement
   const double geomean_original_col = max(geomean_original_col_equilibration, 1/geomean_original_col_equilibration);
@@ -1330,7 +1415,6 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 		  matrix_min_value, matrix_max_value, matrix_value_ratio, 
 		  original_matrix_min_value, original_matrix_max_value, original_matrix_value_ratio,
 		  matrix_value_ratio_improvement);
-#endif
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		  "Scaling: Improves    mean equilibration by a factor %0.4g",
 		  mean_equilibration_improvement);
@@ -1340,6 +1424,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		  "Scaling: Improves max/min matrix values by a factor %0.4g",
 		  matrix_value_ratio_improvement);
+#endif
   const bool possibly_abandon_scaling = (!hsol_scaling &&
 					 simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED);
   const double improvement_factor =
@@ -1374,9 +1459,9 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     return;
   } else {
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		    "Scaling: Improvement factor is %0.4g >= %0.4g required",
+		    "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP",
 		    improvement_factor, improvement_factor_required);
-    //#ifdef HiGHSDEV
+#ifdef HiGHSDEV
     if (extreme_equilibration_improvement < 1.0) {
       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
 		      "Scaling: Applying scaling with extreme improvement of %0.4g",
@@ -1397,7 +1482,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 		      "Scaling: Applying scaling with improvement factor %0.4g < 10*(%0.4g) improvement",
 		      improvement_factor, improvement_factor_required);
     }
-    //#endif
+#endif
   }
   scale.is_scaled_ = true;
 
@@ -1724,12 +1809,15 @@ void initialise_phase2_row_cost(HighsModelObject& highs_model_object,
 void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+#ifdef HiGHSDEV
+  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
+#endif
   // Copy the cost
   initialise_phase2_col_cost(highs_model_object, 0, simplex_lp.numCol_ - 1);
   initialise_phase2_row_cost(highs_model_object, 0, simplex_lp.numRow_ - 1);
   // See if we want to skip perturbation
   simplex_info.costs_perturbed = 0;
-  if (perturb == 0 || simplex_info.perturb_costs == 0) return;
+  if (perturb == 0 || simplex_info.dual_simplex_cost_perturbation_multiplier == 0) return;
   simplex_info.costs_perturbed = 1;
 
   // Perturb the original costs, scale down if is too big
@@ -1772,29 +1860,22 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
   if (boxedRate < 0.01) {
     bigc = min(bigc, 1.0);
 #ifdef HiGHSDEV
-    printf("grep_DuPtrb:    boxedRate = %g so set bigc = min(bigc, 1.0) = %g\n", boxedRate, bigc);
+    printf("grep_DuPtrb:    small boxedRate (%g) so set bigc = min(bigc, 1.0) = %g\n", boxedRate, bigc);
 #endif
   }
-  if (bigc < 1) {
-    //        bigc = sqrt(bigc);
-  }
-
   // Determine the perturbation base
   double base = 5e-7 * bigc;
 #ifdef HiGHSDEV
   printf("grep_DuPtrb:    Perturbation base = %g\n", base);
-  double norm_perturbation1 = 0;
-  int num_perturbation1 = 0;
-  int num_new_nonzero_cost = 0;
-  double norm_perturbation2 = 0;
 #endif
 
   // Now do the perturbation
   for (int i = 0; i < simplex_lp.numCol_; i++) {
     double lower = simplex_lp.colLower_[i];
     double upper = simplex_lp.colUpper_[i];
-    double xpert = (fabs(simplex_info.workCost_[i]) + 1) * base *
-                   (1 + simplex_info.numTotRandomValue_[i]);
+    double xpert = (fabs(simplex_info.workCost_[i]) + 1) *
+      base * simplex_info.dual_simplex_cost_perturbation_multiplier *
+      (1 + simplex_info.numTotRandomValue_[i]);
 #ifdef HiGHSDEV
     const double previous_cost = simplex_info.workCost_[i];
 #endif
@@ -1812,28 +1893,19 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
     }
 #ifdef HiGHSDEV
     const double perturbation1 = fabs(simplex_info.workCost_[i]-previous_cost);
-    if (perturbation1) {
-      num_perturbation1++;
-      if (!simplex_info.workCost_[i]) num_new_nonzero_cost++;
-      norm_perturbation1 += perturbation1;
-    }
+    if (perturbation1)
+      updateValueDistribution(perturbation1, analysis->cost_perturbation1_distribution);
 #endif
   }
-
   for (int i = simplex_lp.numCol_; i < numTot; i++) {
-    const double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) * 1e-12;
+    double perturbation2 = (0.5 - simplex_info.numTotRandomValue_[i]) *
+      simplex_info.dual_simplex_cost_perturbation_multiplier * 1e-12;
     simplex_info.workCost_[i] += perturbation2;
 #ifdef HiGHSDEV
-    norm_perturbation2 += fabs(perturbation2);
+    perturbation2 = fabs(perturbation2);
+    updateValueDistribution(perturbation2, analysis->cost_perturbation2_distribution);
 #endif
- }
-#ifdef HiGHSDEV
-  const int pct1 = (100*num_perturbation1)/simplex_lp.numCol_;
-  printf("grep_DuPtrb:    Average initial perturbation of %d costs (%3d%%) is %g\n",
-	 num_perturbation1, pct1, norm_perturbation1/simplex_lp.numCol_);
-  printf("grep_DuPtrb:    Average general perturbation is %g\n", norm_perturbation2/simplex_lp.numCol_);
-#endif
-
+  }
 }
 
 int get_nonbasicMove(HighsModelObject& highs_model_object, int var) {
@@ -3562,12 +3634,14 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
 	if (get_new_scaled_feasibility_tolerances) {
 	  double multiplier = unscaled_dual_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
+	  /*
 	  double value = simplex_info.workValue_[iVar];
 	  HighsLogMessage(logfile, HighsMessageType::INFO,
 			  "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			  iVar, iCol, iRow, lower, value, upper,
 			  scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
 			  multiplier);
+	  */
 #endif
 	  new_scaled_dual_feasibility_tolerance = min(multiplier, new_scaled_dual_feasibility_tolerance);
 	}
@@ -3607,11 +3681,13 @@ HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution
       if (get_new_scaled_feasibility_tolerances) {
 	double multiplier = unscaled_primal_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
+	/*
 	 HighsLogMessage(logfile, HighsMessageType::INFO,
 			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			iVar, iCol, iRow, lower, value, upper,
 			scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
 			multiplier);
+	*/
 #endif
 	new_scaled_primal_feasibility_tolerance = min(multiplier, new_scaled_primal_feasibility_tolerance);
       }

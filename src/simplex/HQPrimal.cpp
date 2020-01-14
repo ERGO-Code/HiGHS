@@ -214,11 +214,11 @@ void HQPrimal::solvePhase2() {
   ph1SorterT.reserve(solver_num_row);
 
 #ifdef HiGHSDEV
-  printf("HQPrimal::solvePhase2 - WARNING: Setting analysis->col_aq_density = 0\n");
-  printf("HQPrimal::solvePhase2 - WARNING: Setting analysis->row_ep_density = 0\n");
+  printf("HQPrimal::solvePhase2 - WARNING: Not setting analysis->col_aq_density = 0\n");
+  printf("HQPrimal::solvePhase2 - WARNING: Not setting analysis->row_ep_density = 0\n");
 #endif
-  analysis->col_aq_density = 0;
-  analysis->row_ep_density = 0;
+  //  analysis->col_aq_density = 0;
+  //  analysis->row_ep_density = 0;
 
   devexReset();
 

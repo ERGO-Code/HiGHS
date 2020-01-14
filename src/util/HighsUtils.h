@@ -75,6 +75,9 @@ bool updateValueDistribution(
 			     const double value,
 			     HighsValueDistribution& value_distribution);
 
+int integerPercentage(const int of, const int in);
+double doublePercentage(const int of, const int in);
+
 bool printValueDistribution(std::string value_name,
 			    const HighsValueDistribution& value_distribution,
 			    const int mu=0);
