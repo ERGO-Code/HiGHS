@@ -102,6 +102,16 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   call_status = transition(highs_model_object);
   return_status = interpretCallStatus(call_status, return_status, "transition");
   if (return_status == HighsStatus::Error) return return_status;
+
+  // Determine whether the solution is optimal
+  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
+  if ((scaled_solution_params.num_primal_infeasibilities == 0) &&
+      (scaled_solution_params.num_dual_infeasibilities == 0)) {
+    // Simplex solution is optimal
+    highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+    scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  }
   //
   // Given a simplex basis and solution, use the number of primal and
   // dual infeasibilities to determine whether the simplex solver is
@@ -113,62 +123,51 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // 2. If re-solving choose the strategy appropriate to primal or
   // dual feasibility
   //
-  // Copy the simplex stratgy so that it can be modified:
+  int simplex_strategy = highs_model_object.options_.simplex_strategy;
+  // Determine what dual simplex strategy should be used if there is a choice of dual strategy
+  // Determine the initial choice of simplex strategy 
+  // If the simplex strategy is to choose, then choose dual simplex for now
+  if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) simplex_strategy = SIMPLEX_STRATEGY_DUAL;
   //
-  const int simplex_strategy = highs_model_object.options_.simplex_strategy;
-  const std::string parallel = highs_model_object.options_.parallel;
-  // Set use_simplex_strategy to an illegal value to check that it is set
-  const int illegal_simplex_strategy = SIMPLEX_STRATEGY_MIN-1;
-  int use_simplex_strategy = illegal_simplex_strategy;
-  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
-  if (scaled_solution_params.num_primal_infeasibilities == 0) {
-    // Primal feasible
-    if (scaled_solution_params.num_dual_infeasibilities == 0) {
-      // Dual feasible
-      // Simplex solution is optimal
-      highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
-      scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-      scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    } else {
-      // Only dual infeasible
-      if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) {
-	// Choose to use primal simplex
-        use_simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
-      } else {
-        use_simplex_strategy = simplex_strategy;
-      }
-    }
-  } else {
-    // Not primal feasible
-    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) {
-      // Choose to use serial dual simplex
-      use_simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-    } else {
-      use_simplex_strategy = simplex_strategy;
-    }
+  // Set min/max_threads to correspond to serial code. They will be
+  // set to other values if parallel options are used.
+  simplex_info.min_threads = 1;
+  simplex_info.max_threads = 1;
+  // Record the min/max minimum number of HiGHS threads in the options
+  const int highs_min_threads = highs_model_object.options_.highs_min_threads;
+  const int highs_max_threads = highs_model_object.options_.highs_max_threads;
+  if (highs_model_object.options_.parallel == on_string && simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
+    // The parallel strategy is on and the simplex strategy is dual...
+    int omp_max_threads = 0;
+#ifdef OPENMP
+    omp_max_threads = omp_get_max_threads();
+#endif
+    // ... so use PAMI if there are enough OMP threads
+    if (omp_max_threads >= DUAL_MULTI_MIN_THREADS) simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
   }
-  // Set min/num/max_threads to correspond to serial code. If parallel
-  // stratgies are used, the number of HiGHS threads used will be set
-  // to the maximum of the minimum required and the maximum number of
-  // HiGHS threads allowed in options_
+  //
+  // If parallel stratgies are used, the minimum number of HiGHS threads used
+  // will be set to be at least the minimum required for the strategy
   //
   // All this is independent of the number of OMP threads available,
   // since code with multiple HiGHS threads can be run in serial.
-  const int highs_max_threads = highs_model_object.options_.highs_max_threads;
-  simplex_info.max_threads = 1;
-  if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL && parallel == on_string) {
-  // Check for case where simplex strategy is SIMPLEX_STRATEGY_DUAL
-  // but parallel option is chosen
-    use_simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
-    simplex_info.max_threads = PARALLEL_THREADS_DEFAULT;
-  } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
-    simplex_info.max_threads = max(DUAL_TASKS_MIN_THREADS, highs_max_threads);
-  } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
-    simplex_info.max_threads = max(DUAL_MULTI_MIN_THREADS, highs_max_threads);
+  if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
+    simplex_info.min_threads = max(DUAL_TASKS_MIN_THREADS, highs_min_threads);
+    simplex_info.max_threads = max(simplex_info.min_threads, highs_max_threads);
+  } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+    simplex_info.min_threads = max(DUAL_MULTI_MIN_THREADS, highs_min_threads);
+    simplex_info.max_threads = max(simplex_info.min_threads, highs_max_threads);
   }
   // Set the number of HiGHS threads to be used to be the maximum
   // number to be used
   simplex_info.num_threads = simplex_info.max_threads;
+  // Give a warning if the number of threads to be used is fewer than
+  // the minimum number of HiGHS threads allowed
+  if (simplex_info.num_threads < highs_min_threads) {
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+		    "Using %d HiGHS threads for parallel strategy rather than minimum number (%d) specified in options",
+		    simplex_info.num_threads, highs_min_threads);
+  }
   // Give a warning if the number of threads to be used is more than
   // the maximum number of HiGHS threads allowed
   if (simplex_info.num_threads > highs_max_threads) {
@@ -176,37 +175,18 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 		    "Using %d HiGHS threads for parallel strategy rather than maximum number (%d) specified in options",
 		    simplex_info.num_threads, highs_max_threads);
   }
-  const int highs_min_threads = highs_model_object.options_.highs_min_threads;
-  // Set the minimum number of HiGHS threads to be used to be the
-  // lesser of the number to be used and the minimum number of HiGHS
-  // threads allowed in options_
-  simplex_info.min_threads = min(simplex_info.num_threads, highs_min_threads);
-  // Give a warning if the minimum number of threads to be used is
-  // less than the minimum number of HiGHS threads allowed
-  if (simplex_info.min_threads < highs_min_threads) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
-		    "Using minimum of %d HiGHS threads for parallel strategy rather than minimum number (%d) specified in options",
-		    simplex_info.min_threads, highs_min_threads);
-  }
 #ifdef HiGHSDEV
   // reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
   if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
-    assert(use_simplex_strategy > illegal_simplex_strategy);
-    if (use_simplex_strategy <= illegal_simplex_strategy) {
-#ifdef HiGHSDEV
-      printf("Failed to assign use_simplex_strategy in runSimplexSolver\n");
-#endif
-      return HighsStatus::Error;
-    }
-    simplex_info.simplex_strategy = use_simplex_strategy;
+    simplex_info.simplex_strategy = simplex_strategy;
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
     timer.start(timer.solve_clock);
 #ifdef HiGHSDEV
     timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
-    if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
+    if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 		      "Using primal simplex solver");
@@ -219,7 +199,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       HDual dual_solver(highs_model_object);
       dual_solver.options();
       // Solve, depending on the particular strategy
-      if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
+      if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
         // Parallel - SIP
 	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 			"Using parallel simplex solver - SIP with %d threads", simplex_info.num_threads);
@@ -227,7 +207,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         call_status = dual_solver.solve();
 	return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
 	if (return_status == HighsStatus::Error) return return_status;
-      } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+      } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
         // Parallel - PAMI
 	HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
 			"Using parallel simplex solver - PAMI with %d threads", simplex_info.num_threads);
@@ -269,7 +249,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     timer.stop(simplex_info.clock_[SimplexTotalClock]);
     reportSimplexProfiling(highs_model_object);
 
-    if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
+    if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d] Total %d",
                       simplex_info.primal_phase1_iteration_count,
@@ -285,10 +265,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     }
     int omp_max_threads = 0;
 #ifdef OPENMP
-  omp_max_threads = omp_get_max_threads();
+    omp_max_threads = omp_get_max_threads();
 #endif
-  if (omp_max_threads <= 1 && simplex_info.report_HFactor_clock)
-    highs_model_object.factor_.reportTimer();
+    if (omp_max_threads <= 1 && simplex_info.report_HFactor_clock)
+      highs_model_object.factor_.reportTimer();
 #endif
   }
 
