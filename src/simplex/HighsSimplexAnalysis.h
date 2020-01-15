@@ -73,6 +73,9 @@ class HighsSimplexAnalysis {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double col_BFRT_density;
+  double primal_col_density;
+  double dual_col_density;
   
   int simplex_strategy = 0;
   int min_threads = 0;

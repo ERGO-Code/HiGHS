@@ -32,11 +32,16 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterPrevRpNumCostlyDseIt = 0;
   // Copy messaging parameter from options
   messaging(options.logfile, options.output, options.message_level);
-  // Zero the densities
+  // Initialise the densities
   col_aq_density = 0;
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+  col_BFRT_density = 0;
+  primal_col_density = 0;
+  // Set the row_dual_density to 1 since it's assumed all costs are at
+  // least perturbed from zero, if not initially nonzero
+  dual_col_density = 1;
   // Initialise the measures used to analyse accuracy of steepest edge weights
   // 
   const int dual_edge_weight_strategy = options.simplex_dual_edge_weight_strategy;

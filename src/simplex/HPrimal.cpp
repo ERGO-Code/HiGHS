@@ -96,7 +96,7 @@ HighsStatus HPrimal::solve() {
   // ToDo Determine primal simplex phase from initial primal values
   //
   /*
-  compute_primal(workHMO);
+  computePrimal(workHMO);
   compute_primal_infeasible_in_??(workHMO, &dualInfeasCount);
   solvePhase = ??InfeasCount > 0 ? 1 : 2;
   */
@@ -323,11 +323,11 @@ void HPrimal::primalRebuild() {
     simplex_info.update_count = 0;
   }
   timer.start(simplex_info.clock_[ComputeDualClock]);
-  compute_dual(workHMO);
+  computeDual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
 
   timer.start(simplex_info.clock_[ComputePrimalClock]);
-  compute_primal(workHMO);
+  computePrimal(workHMO);
   timer.stop(simplex_info.clock_[ComputePrimalClock]);
 
   // Primal objective section

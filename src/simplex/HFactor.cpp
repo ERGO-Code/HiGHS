@@ -1389,6 +1389,10 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 
   double curr_dsty = 1.0 * rhs.count / numRow;
   if (curr_dsty > hyperCANCEL || hist_dsty > hyperFTRANU) {
+    if (curr_dsty < hyperCANCEL) {
+      printf("FactorFtranUpperSps: curr_dsty = %10.4g; hist_dsty = %10.4g; rhs.count = %d\n",
+					curr_dsty, hist_dsty, rhs.count);
+    }
 #ifdef HiGHSDEV
     if (analysis != NULL) {
       updateValueDistribution(curr_dsty, analysis->before_ftran_upper_sparse_density);

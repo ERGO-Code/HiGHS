@@ -169,7 +169,7 @@ HighsStatus HDual::solve() {
     simplex_lp_status.has_dual_steepest_edge_weights = true;
   }
   // Compute the dual values
-  compute_dual(workHMO);
+  computeDual(workHMO);
   // Determine the number of dual infeasibilities, and hence the solve phase
   const bool analyse_dual_infeasibilities_with_and_without_flips = false;
   if (analyse_dual_infeasibilities_with_and_without_flips) { 
@@ -776,16 +776,16 @@ void HDual::rebuild() {
 
   // Recompute dual solution
   timer.start(simplex_info.clock_[ComputeDualClock]);
-  compute_dual(workHMO);
+  computeDual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
 
   timer.start(simplex_info.clock_[CorrectDualClock]);
-  correct_dual(workHMO, &dualInfeasCount);
+  correctDual(workHMO, &dualInfeasCount);
   timer.stop(simplex_info.clock_[CorrectDualClock]);
 
   // Recompute primal solution
   timer.start(simplex_info.clock_[ComputePrimalClock]);
-  compute_primal(workHMO);
+  computePrimal(workHMO);
   timer.stop(simplex_info.clock_[ComputePrimalClock]);
 
   // Collect primal infeasible as a list
@@ -870,7 +870,7 @@ void HDual::cleanup() {
   vector<double> original_workDual = simplex_info.workDual_;
 #endif
   timer.start(simplex_info.clock_[ComputeDualClock]);
-  compute_dual(workHMO);
+  computeDual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
 #ifdef HiGHSDEV
   int num_dual_sign_change = 0;
@@ -1440,6 +1440,8 @@ void HDual::updateFtran() {
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
 #endif
+  const double local_col_aq_density = (double)col_aq.count / solver_num_row;
+  analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
   // Save the pivot value computed column-wise - used for numerical checking
   alpha = col_aq.array[rowOut];
   timer.stop(simplex_info.clock_[FtranClock]);
@@ -1467,10 +1469,10 @@ void HDual::updateFtranBFRT() {
   if (col_BFRT.count) {
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT, analysis->col_aq_density);
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT, analysis->col_BFRT_density);
 #endif
     // Perform FTRAN BFRT
-    factor->ftran(col_BFRT, analysis->col_aq_density);
+    factor->ftran(col_BFRT, analysis->col_BFRT_density);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT);
@@ -1479,6 +1481,8 @@ void HDual::updateFtranBFRT() {
   if (time_updateFtranBFRT) {
     timer.stop(simplex_info.clock_[FtranBfrtClock]);
   }
+  const double local_col_BFRT_density = (double)col_BFRT.count / solver_num_row;
+  analysis->updateOperationResultDensity(local_col_BFRT_density, analysis->col_BFRT_density);
 }
 
 void HDual::updateFtranDSE(HVector* DSE_Vector) {
@@ -1501,6 +1505,8 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector);
 #endif
   timer.stop(simplex_info.clock_[FtranDseClock]);
+  const double local_row_DSE_density = (double)DSE_Vector->count / solver_num_row;
+  analysis->updateOperationResultDensity(local_row_DSE_density, analysis->row_DSE_density);
 }
 
 void HDual::updateVerify() {
@@ -1590,12 +1596,15 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   }
   dualRHS.updateInfeasList(&col_aq);
 
+  /*
+  // Move these to where the FTRAN operations are actually performed
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     const double local_row_DSE_density = (double)DSE_Vector->count / solver_num_row;
     analysis->updateOperationResultDensity(local_row_DSE_density, analysis->row_DSE_density);
   }
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
+  */
   // Whether or not dual steepest edge weights are being used, have to
   // add in DSE_Vector->syntheticTick since this contains the
   // contribution from forming row_ep = B^{-T}e_p.
