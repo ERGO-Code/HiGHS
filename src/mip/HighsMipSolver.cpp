@@ -75,11 +75,27 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   return HighsMipStatus::kUnderDevelopment;
 }
 
-HighsMipStatus HighsMipSolver::solveNode(Node& node) {
-  // Apply changes to LP from node. For the moment only column bounds.
-  changeColsBounds(node.branch_col, node.branch_col, &node.col_lower_bound[node.branch_col],
-                   &node.col_upper_bound[node.branch_col]);
-  HighsStatus lp_solve_status = run();
+HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
+  HighsStatus lp_solve_status = HighsStatus::Error;
+  HighsModelStatus model_status = HighsModelStatus::NOTSET;
+
+  if (hotstart) {
+    // Apply changes to LP from node. For the moment only column bounds.
+    changeColsBounds(0, mip_.numCol_ - 1, &node.col_lower_bound[0],
+                    &node.col_upper_bound[0]);
+    lp_solve_status = run();
+    model_status = model_status_;
+  } else {
+    // solve from scratch to test
+    Highs highs;
+    highs.options_.message_level = 0;
+    HighsLp lp_node = mip_;
+    lp_node.colLower_ = node.col_lower_bound;
+    lp_node.colUpper_ = node.col_upper_bound;
+    highs.passModel(lp_node);
+    lp_solve_status = highs.run();
+    model_status = highs.model_status_;
+  }
 
   switch (lp_solve_status) {
     case HighsStatus::Warning:
@@ -89,8 +105,8 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node) {
     default:
       break;
   }
-
-  switch (model_status_) {
+  
+  switch (model_status) {
     case HighsModelStatus::OPTIMAL:
       node.primal_solution = solution_.col_value;
       node.objective_value = info_.objective_function_value;
