@@ -3034,6 +3034,10 @@ void computeDual(HighsModelObject& highs_model_object) {
       dual_col.array[iRow] = value;
     }
   }
+  // Copy the costs in case the basic costs are all zero
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  for (int i = 0; i < numTot; i++) simplex_info.workDual_[i] = simplex_info.workCost_[i];
+  //  if (dual_col.count)
   if (an_compute_dual_norm2) {
     btran_rhs_norm2 = dual_col.norm2();
     btran_rhs_norm2 = sqrt(btran_rhs_norm2);
@@ -3072,7 +3076,6 @@ void computeDual(HighsModelObject& highs_model_object) {
   for (int i = 0; i < simplex_lp.numCol_; i++) {
     simplex_info.workDual_[i] = simplex_info.workCost_[i] - dual_row.array[i];
   }
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = simplex_lp.numCol_; i < numTot; i++) {
     simplex_info.workDual_[i] =
         simplex_info.workCost_[i] - dual_col.array[i - simplex_lp.numCol_];
