@@ -38,7 +38,7 @@ class HighsMipSolver : Highs {
 
  private:
   HighsMipStatus solveRootNode();
-  HighsMipStatus solveNode(Node& node);
+  HighsMipStatus solveNode(Node& node, bool hotstart = true);
   HighsMipStatus solveTree(Node& root);
 
   Tree tree_;
