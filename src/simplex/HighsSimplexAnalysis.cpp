@@ -96,8 +96,6 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIter->AnIterOpName = "FTRAN DSE";
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIter = &AnIterOp[k];
-    AnIter->AnIterOpLog10RsDensity = 0;
-    AnIter->AnIterOpSuLog10RsDensity = 0;
     if ((k == ANALYSIS_OPERATION_TYPE_PRICE_AP) ||
 	(k == ANALYSIS_OPERATION_TYPE_PRICE_FULL)) {
       AnIter->AnIterOpHyperCANCEL = 1.0;
@@ -114,13 +112,11 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
       }
       AnIter->AnIterOpRsDim = numRow;
     }
+    AnIter->AnIterOpRsMxNNZ = 0;
     AnIter->AnIterOpNumCa = 0;
     AnIter->AnIterOpNumHyperOp = 0;
     AnIter->AnIterOpNumHyperRs = 0;
-    AnIter->AnIterOpRsMxNNZ = 0;
-    AnIter->AnIterOpSuNumCa = 0;
-    AnIter->AnIterOpSuNumHyperOp = 0;
-    AnIter->AnIterOpSuNumHyperRs = 0;
+    AnIter->AnIterOpSumLog10RsDensity = 0;
     initialiseValueDistribution(1e-8, 1.0, 10.0, AnIter->AnIterOp_density);
   }
   int last_invert_hint = INVERT_HINT_Count - 1;
@@ -344,19 +340,6 @@ bool HighsSimplexAnalysis::switchToDevex() {
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
-  for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
-    AnIterOpRec* lcAnIterOp = &AnIterOp[k];
-    if (lcAnIterOp->AnIterOpNumCa) {
-      lcAnIterOp->AnIterOpSuNumCa += lcAnIterOp->AnIterOpNumCa;
-      lcAnIterOp->AnIterOpSuNumHyperOp += lcAnIterOp->AnIterOpNumHyperOp;
-      lcAnIterOp->AnIterOpSuNumHyperRs += lcAnIterOp->AnIterOpNumHyperRs;
-      lcAnIterOp->AnIterOpSuLog10RsDensity += lcAnIterOp->AnIterOpLog10RsDensity;
-    }
-    lcAnIterOp->AnIterOpNumCa = 0;
-    lcAnIterOp->AnIterOpNumHyperOp = 0;
-    lcAnIterOp->AnIterOpNumHyperRs = 0;
-    lcAnIterOp->AnIterOpLog10RsDensity = 0;
-  }
   if (invert_hint > 0) AnIterNumInvert[invert_hint]++;
   if (AnIterCuIt > AnIterPrevIt)
     AnIterNumEdWtIt[(int)edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
@@ -446,7 +429,7 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
   if (result_density <= hyperRESULT) AnIter.AnIterOpNumHyperRs++;
   AnIter.AnIterOpRsMxNNZ = max(result_count, AnIter.AnIterOpRsMxNNZ);
   if (result_density > 0) {
-    AnIter.AnIterOpLog10RsDensity += log(result_density) / log(10.0);
+    AnIter.AnIterOpSumLog10RsDensity += log(result_density) / log(10.0);
   } else {
     /*
     // TODO Investigate these zero norms
@@ -485,15 +468,15 @@ void HighsSimplexAnalysis::summaryReport() {
            (100 * lc_EdWtNumIter) / AnIterNumIter);
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIterOpRec& AnIter = AnIterOp[k];
-    int lcNumCa = AnIter.AnIterOpSuNumCa;
+    int lcNumCa = AnIter.AnIterOpNumCa;
     printf("\n%-10s performed %d times\n", AnIter.AnIterOpName.c_str(),
-           AnIter.AnIterOpSuNumCa);
+           AnIter.AnIterOpNumCa);
     if (lcNumCa > 0) {
-      int lcHyperOp = AnIter.AnIterOpSuNumHyperOp;
-      int lcHyperRs = AnIter.AnIterOpSuNumHyperRs;
+      int lcHyperOp = AnIter.AnIterOpNumHyperOp;
+      int lcHyperRs = AnIter.AnIterOpNumHyperRs;
       int pctHyperOp = (100 * lcHyperOp) / lcNumCa;
       int pctHyperRs = (100 * lcHyperRs) / lcNumCa;
-      double lcRsDensity = pow(10.0, AnIter.AnIterOpSuLog10RsDensity / lcNumCa);
+      double lcRsDensity = pow(10.0, AnIter.AnIterOpSumLog10RsDensity / lcNumCa);
       int lcAnIterOpRsDim = AnIter.AnIterOpRsDim;
       int lcNumNNz = lcRsDensity * lcAnIterOpRsDim;
       int lcMxNNz = AnIter.AnIterOpRsMxNNZ;

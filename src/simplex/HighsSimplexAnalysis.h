@@ -191,18 +191,14 @@ class HighsSimplexAnalysis {
   int AnIterPrevIt;
   // Major operation analysis struct
   struct AnIterOpRec {
-    double AnIterOpLog10RsDensity;
-    double AnIterOpSuLog10RsDensity;
     double AnIterOpHyperCANCEL;
     double AnIterOpHyperTRAN;
     int AnIterOpRsDim;
     int AnIterOpNumCa;
     int AnIterOpNumHyperOp;
     int AnIterOpNumHyperRs;
+    double AnIterOpSumLog10RsDensity;
     int AnIterOpRsMxNNZ;
-    int AnIterOpSuNumCa;
-    int AnIterOpSuNumHyperOp;
-    int AnIterOpSuNumHyperRs;
     std::string AnIterOpName;
     HighsValueDistribution AnIterOp_density;
   };

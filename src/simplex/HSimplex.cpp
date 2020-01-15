@@ -3025,12 +3025,15 @@ void computeDual(HighsModelObject& highs_model_object) {
   dual_col.setup(simplex_lp.numRow_);
   dual_col.clear();
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    dual_col.index[iRow] = iRow;
-    dual_col.array[iRow] =
-        simplex_info.workCost_[simplex_basis.basicIndex_[iRow]] +
-        simplex_info.workShift_[simplex_basis.basicIndex_[iRow]];
+    const double value = 
+      simplex_info.workCost_[simplex_basis.basicIndex_[iRow]] +
+      simplex_info.workShift_[simplex_basis.basicIndex_[iRow]];
+    if (value) {
+      dual_col.count++;
+      dual_col.index[iRow] = iRow;
+      dual_col.array[iRow] = value;
+    }
   }
-  dual_col.count = simplex_lp.numRow_;
   if (an_compute_dual_norm2) {
     btran_rhs_norm2 = dual_col.norm2();
     btran_rhs_norm2 = sqrt(btran_rhs_norm2);
