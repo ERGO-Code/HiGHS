@@ -3037,75 +3037,71 @@ void computeDual(HighsModelObject& highs_model_object) {
   // Copy the costs in case the basic costs are all zero
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) simplex_info.workDual_[i] = simplex_info.workCost_[i];
-  //  if (dual_col.count)
-  if (an_compute_dual_norm2) {
-    btran_rhs_norm2 = dual_col.norm2();
-    btran_rhs_norm2 = sqrt(btran_rhs_norm2);
-  }
+  if (dual_col.count) {
+    if (an_compute_dual_norm2) {
+      btran_rhs_norm2 = dual_col.norm2();
+      btran_rhs_norm2 = sqrt(btran_rhs_norm2);
+    }
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col, analysis->dual_col_density);
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col, analysis->dual_col_density);
 #endif
-  factor.btran(dual_col, analysis->dual_col_density);
+    factor.btran(dual_col, analysis->dual_col_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col);
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col);
 #endif
-  const double local_dual_col_density = (double)dual_col.count / simplex_lp.numRow_;
-  analysis->updateOperationResultDensity(local_dual_col_density, analysis->dual_col_density);
-  if (an_compute_dual_norm2) {
-    btran_sol_norm2 = dual_col.norm2();
-    btran_sol_norm2 = sqrt(btran_sol_norm2);
-  }
-
-  // Create a local buffer for the values of reduced costs
-  HVector dual_row;
-  dual_row.setup(simplex_lp.numCol_);
-  dual_row.clear();
+    const double local_dual_col_density = (double)dual_col.count / simplex_lp.numRow_;
+    analysis->updateOperationResultDensity(local_dual_col_density, analysis->dual_col_density);
+    if (an_compute_dual_norm2) {
+      btran_sol_norm2 = dual_col.norm2();
+      btran_sol_norm2 = sqrt(btran_sol_norm2);
+    }
+    
+    // Create a local buffer for the values of reduced costs
+    HVector dual_row;
+    dual_row.setup(simplex_lp.numCol_);
+    dual_row.clear();
 #ifdef HiGHSDEV
-  double price_full_historical_density = 1;
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row, price_full_historical_density);
+    double price_full_historical_density = 1;
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row, price_full_historical_density);
 #endif
-  matrix.priceByColumn(dual_row, dual_col);
+    matrix.priceByColumn(dual_row, dual_col);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row);
-  //  const double local_density = 1.0 * dual_row.count / simplex_lp.numCol_;
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row);
+    //  const double local_density = 1.0 * dual_row.count / simplex_lp.numCol_;
 #endif
-  for (int i = 0; i < simplex_lp.numCol_; i++) {
-    simplex_info.workDual_[i] = simplex_info.workCost_[i] - dual_row.array[i];
-  }
-  for (int i = simplex_lp.numCol_; i < numTot; i++) {
-    simplex_info.workDual_[i] =
-        simplex_info.workCost_[i] - dual_col.array[i - simplex_lp.numCol_];
-  }
-
-  if (an_compute_dual_norm2) {
-    work_dual_norm2 = 0;
-    for (int i = 0; i < numTot; i++)
-      work_dual_norm2 += simplex_info.workDual_[i] * simplex_info.workDual_[i];
-    work_dual_norm2 = sqrt(work_dual_norm2);
-    //  printf("compute_dual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g;
-    //  ||pi^TA-c||=%11.4g\n", btran_rhs_norm2, btran_sol_norm2,
-    //  work_dual_norm2);
-    double current_dual_feasibility_tolerance =
+    for (int i = 0; i < simplex_lp.numCol_; i++)
+      simplex_info.workDual_[i] -= dual_row.array[i];
+    for (int i = simplex_lp.numCol_; i < numTot; i++)
+      simplex_info.workDual_[i] -= dual_col.array[i - simplex_lp.numCol_];
+    if (an_compute_dual_norm2) {
+      work_dual_norm2 = 0;
+      for (int i = 0; i < numTot; i++)
+	work_dual_norm2 += simplex_info.workDual_[i] * simplex_info.workDual_[i];
+      work_dual_norm2 = sqrt(work_dual_norm2);
+      //  printf("compute_dual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g;
+      //  ||pi^TA-c||=%11.4g\n", btran_rhs_norm2, btran_sol_norm2,
+      //  work_dual_norm2);
+      double current_dual_feasibility_tolerance =
         scaled_solution_params.dual_feasibility_tolerance;
-    double new_dual_feasibility_tolerance = work_dual_norm2 / 1e16;
-    if (new_dual_feasibility_tolerance > 1e-1) {
-      printf(
-          "Seriously: do you expect to solve an LP with ||pi^TA-c||=%11.4g?\n",
-          work_dual_norm2);
-    } else if (new_dual_feasibility_tolerance >
-               10 * current_dual_feasibility_tolerance) {
-      printf(
-          "||pi^TA-c|| = %12g so solving with dual_feasibility_tolerance = "
-          "%12g\n",
-          work_dual_norm2, new_dual_feasibility_tolerance);
-      scaled_solution_params.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+      double new_dual_feasibility_tolerance = work_dual_norm2 / 1e16;
+      if (new_dual_feasibility_tolerance > 1e-1) {
+	printf(
+	       "Seriously: do you expect to solve an LP with ||pi^TA-c||=%11.4g?\n",
+	       work_dual_norm2);
+      } else if (new_dual_feasibility_tolerance >
+		 10 * current_dual_feasibility_tolerance) {
+	printf(
+	       "||pi^TA-c|| = %12g so solving with dual_feasibility_tolerance = "
+	       "%12g\n",
+	       work_dual_norm2, new_dual_feasibility_tolerance);
+	scaled_solution_params.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+      }
     }
   }
-
   // Now have nonbasic duals
   simplex_lp_status.has_nonbasic_dual_values = true;
 }

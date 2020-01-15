@@ -112,7 +112,6 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
       }
       AnIter->AnIterOpRsDim = numRow;
     }
-    AnIter->AnIterOpRsMxNNZ = 0;
     AnIter->AnIterOpNumCa = 0;
     AnIter->AnIterOpNumHyperOp = 0;
     AnIter->AnIterOpNumHyperRs = 0;
@@ -427,7 +426,6 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
   AnIterOpRec& AnIter = AnIterOp[operation_type];
   const double result_density = 1.0 * result_count / AnIter.AnIterOpRsDim;
   if (result_density <= hyperRESULT) AnIter.AnIterOpNumHyperRs++;
-  AnIter.AnIterOpRsMxNNZ = max(result_count, AnIter.AnIterOpRsMxNNZ);
   if (result_density > 0) {
     AnIter.AnIterOpSumLog10RsDensity += log(result_density) / log(10.0);
   } else {
@@ -479,14 +477,10 @@ void HighsSimplexAnalysis::summaryReport() {
       double lcRsDensity = pow(10.0, AnIter.AnIterOpSumLog10RsDensity / lcNumCa);
       int lcAnIterOpRsDim = AnIter.AnIterOpRsDim;
       int lcNumNNz = lcRsDensity * lcAnIterOpRsDim;
-      int lcMxNNz = AnIter.AnIterOpRsMxNNZ;
-      double lcMxNNzDensity = (1.0 * lcMxNNz) / AnIter.AnIterOpRsDim;
       printf("%12d hyper-sparse operations (%3d%%)\n", lcHyperOp, pctHyperOp);
       printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("%12g density of result (%d / %d nonzeros)\n", lcRsDensity, lcNumNNz,
              lcAnIterOpRsDim);
-      printf("%12g density of result with max (%d / %d) nonzeros\n",
-             lcMxNNzDensity, lcMxNNz, lcAnIterOpRsDim);
       printValueDistribution("density ", AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
     }
   }
