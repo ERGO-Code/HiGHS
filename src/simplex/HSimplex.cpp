@@ -3004,9 +3004,7 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVecto
 
 void computeDual(HighsModelObject& highs_model_object) {
   //  HighsTimer& timer = highs_model_object.timer_;
-#ifdef HiGHSDEV
   HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
-#endif
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
