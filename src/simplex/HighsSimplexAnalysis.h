@@ -22,18 +22,33 @@
 #include "util/HighsUtils.h"
 
 #ifdef HiGHSDEV
-  enum ANALYSIS_OPERATION_TYPE {
-    ANALYSIS_OPERATION_TYPE_BTRAN_FULL = 0,
-    ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-    ANALYSIS_OPERATION_TYPE_BTRAN_EP,
-    ANALYSIS_OPERATION_TYPE_PRICE_AP,
-    ANALYSIS_OPERATION_TYPE_FTRAN,
-    ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-    ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-    NUM_ANALYSIS_OPERATION_TYPE,
-  };
+enum ANALYSIS_OPERATION_TYPE {
+  ANALYSIS_OPERATION_TYPE_BTRAN_FULL = 0,
+  ANALYSIS_OPERATION_TYPE_PRICE_FULL,
+  ANALYSIS_OPERATION_TYPE_BTRAN_EP,
+  ANALYSIS_OPERATION_TYPE_PRICE_AP,
+  ANALYSIS_OPERATION_TYPE_FTRAN,
+  ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
+  ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
+  NUM_ANALYSIS_OPERATION_TYPE,
+};
 #endif
-  const double running_average_multiplier = 0.05;
+enum TRAN_STAGE {
+  TRAN_STAGE_FTRAN_LOWER = 0,
+  TRAN_STAGE_FTRAN_UOWER_FT,
+  TRAN_STAGE_FTRAN_UPPER,
+  TRAN_STAGE_BTRAN_UPPER,
+  TRAN_STAGE_BTRAN_UPPER_FT,
+  TRAN_STAGE_BTRAN_LOWER,
+  NUM_TRAN_STAGE_TYPE,
+};
+
+struct AnalysisScatterData {
+  std::string name;
+  HighsScatterData rhs_density;
+};
+
+const double running_average_multiplier = 0.05;
 
 /**
  * @brief Analyse simplex iterations, both for run-time control and data gathering
@@ -128,6 +143,7 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_primal_change_distribution;
 #endif
 
+  vector<AnalysisScatterData> tran_stage;
  private:
 
   void iterationReport(const bool header);

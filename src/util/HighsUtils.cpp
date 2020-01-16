@@ -496,3 +496,44 @@ bool printValueDistribution(std::string value_name,
   return true;
 }
 #endif
+
+bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_data) {
+  if (max_num_point < 1) return false;
+  scatter_data.max_num_point_ = max_num_point;
+  scatter_data.num_point_ = 0;
+  scatter_data.last_point_ = -1;
+  scatter_data.value0_.resize(max_num_point);
+  scatter_data.value1_.resize(max_num_point);  
+  return true;
+}
+
+bool updateScatterData(const double value0, const double value1, HighsScatterData& scatter_data) {
+  scatter_data.num_point_++;
+  scatter_data.last_point_++;
+  if (scatter_data.last_point_ == scatter_data.max_num_point_) scatter_data.last_point_ = 0;
+  scatter_data.value0_[scatter_data.last_point_] = value0;
+  scatter_data.value1_[scatter_data.last_point_] = value1;
+  return true;
+}
+
+bool regressScatterData(const double coeff0, const double coeff1, const HighsScatterData& scatter_data) {
+  return true;
+
+}
+
+bool printScatterData(std::string name, const HighsScatterData& scatter_data) {
+  if (!scatter_data.num_point_) return true;
+  int point_num = 0;
+  printf("Scatter data for %s\n", name.c_str());
+  const int to_point = std::min(scatter_data.num_point_, scatter_data.max_num_point_);
+  for (int point = scatter_data.last_point_; point < to_point; point++) {
+    point_num++;
+    printf("%d,%g,%g\n", point_num, scatter_data.value0_[point], scatter_data.value1_[point]);
+  }
+  for (int point = 0; point < scatter_data.last_point_; point++) {
+    point_num++;
+    printf("%d,%g,%g\n", point_num, scatter_data.value0_[point], scatter_data.value1_[point]);
+  }
+  return true;
+}
+

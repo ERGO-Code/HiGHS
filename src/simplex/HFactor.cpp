@@ -1217,9 +1217,6 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranLower]);
 #endif
-  //    const double hyperFTRANL = 0.15;
-  //    const double hyperCANCEL = 0.05;
-
   if (updateMethod == UPDATE_METHOD_APF) {
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranLowerAPF]);
@@ -1234,6 +1231,8 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
   }
 
   double curr_dsty = 1.0 * rhs.count / numRow;
+  //    const double hyperFTRANL = 0.15;
+  //    const double hyperCANCEL = 0.05;
   if (curr_dsty > hyperCANCEL || hist_dsty > hyperFTRANL) {
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranLowerSps]);
@@ -1278,6 +1277,10 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranLowerHys]);
 #endif
+  }
+  if (analysis != NULL) {
+    const double end_density = 1.0 * rhs.count / numRow;
+    updateScatterData(curr_dsty, end_density, analysis->tran_stage[TRAN_STAGE_FTRAN_LOWER].rhs_density);
   }
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranLower]);

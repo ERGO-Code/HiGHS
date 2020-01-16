@@ -29,6 +29,13 @@ struct HighsValueDistribution {
   std::vector<int> count_;
 };
 #endif
+struct HighsScatterData {
+  int max_num_point_;
+  int num_point_;
+  int last_point_;
+  std::vector<double> value0_;
+  std::vector<double> value1_;
+};
 
 double getNorm2(const std::vector<double> values);
 
@@ -85,6 +92,11 @@ bool printValueDistribution(std::string value_name,
 			    const HighsValueDistribution& value_distribution,
 			    const int mu=0);
 
+
+bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_data);
+bool updateScatterData(const double value0, const double value1, HighsScatterData& scatter_data);
+bool regressScatterData(const double coeff0, const double coeff1, const HighsScatterData& scatter_data);
+bool printScatterData(std::string name, const HighsScatterData& scatter_data);
 
 #endif
 #endif  // UTIL_HIGHSUTILS_H_

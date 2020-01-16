@@ -42,6 +42,17 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   // Set the row_dual_density to 1 since it's assumed all costs are at
   // least perturbed from zero, if not initially nonzero
   dual_col_density = 1;
+
+  
+  tran_stage[TRAN_STAGE_FTRAN_LOWER].name =    "FTRAN lower";
+  tran_stage[TRAN_STAGE_FTRAN_UOWER_FT].name = "FTRAN upper FT";
+  tran_stage[TRAN_STAGE_FTRAN_UPPER].name =    "FTRAN upper";
+  tran_stage[TRAN_STAGE_BTRAN_UPPER].name =    "BTRAN upper";
+  tran_stage[TRAN_STAGE_BTRAN_UPPER_FT].name = "BTRAN upper FT";
+  tran_stage[TRAN_STAGE_BTRAN_LOWER].name =    "BTRAN lower";
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) 
+    initialiseScatterData(20, tran_stage[tran_stage_type].rhs_density);
+
   // Initialise the measures used to analyse accuracy of steepest edge weights
   // 
   const int dual_edge_weight_strategy = options.simplex_dual_edge_weight_strategy;
@@ -446,6 +457,11 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
 }
 
 void HighsSimplexAnalysis::summaryReport() {
+
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) 
+    printScatterData(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
+
+
   int AnIterNumIter = simplex_iteration_count - AnIterIt0;
   if (AnIterNumIter<=0) return;
   printf("\nAnalysis of %d iterations (%d to %d)\n", AnIterNumIter,
