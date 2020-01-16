@@ -40,9 +40,19 @@ struct HighsScatterData {
   std::vector<double> value0_;
   std::vector<double> value1_;
   int num_error_comparison;
+  int num_awful_linear;
+  int num_awful_log;
+  int num_bad_linear;
+  int num_bad_log;
+  int num_fair_linear;
+  int num_fair_log;
   int num_better_linear;
   int num_better_log;
 };
+
+const double awful_regression_error = 2.0;
+const double bad_regression_error = 0.2;
+const double fair_regression_error = 0.02;
 
 double getNorm2(const std::vector<double> values);
 

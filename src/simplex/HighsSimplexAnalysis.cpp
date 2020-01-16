@@ -45,7 +45,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   // Set up the data structures for scatter data 
   tran_stage.resize(NUM_TRAN_STAGE_TYPE);
   tran_stage[TRAN_STAGE_FTRAN_LOWER].name =    "FTRAN lower";
-  tran_stage[TRAN_STAGE_FTRAN_UOWER_FT].name = "FTRAN upper FT";
+  tran_stage[TRAN_STAGE_FTRAN_UPPER_FT].name = "FTRAN upper FT";
   tran_stage[TRAN_STAGE_FTRAN_UPPER].name =    "FTRAN upper";
   tran_stage[TRAN_STAGE_BTRAN_UPPER].name =    "BTRAN upper";
   tran_stage[TRAN_STAGE_BTRAN_UPPER_FT].name = "BTRAN upper FT";
@@ -459,7 +459,7 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
 void HighsSimplexAnalysis::summaryReport() {
 
   for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
-    printScatterData(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
+    //    printScatterData(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
     printScatterDataRegressionComparison(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
   }
 

@@ -505,6 +505,12 @@ bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_da
   scatter_data.value0_.resize(max_num_point);
   scatter_data.value1_.resize(max_num_point);
   scatter_data.num_error_comparison = 0;
+  scatter_data.num_awful_linear = 0;
+  scatter_data.num_awful_log = 0;
+  scatter_data.num_bad_linear = 0;
+  scatter_data.num_bad_log = 0;
+  scatter_data.num_fair_linear = 0;
+  scatter_data.num_fair_log = 0;
   scatter_data.num_better_linear = 0;
   scatter_data.num_better_log = 0;
   return true;
@@ -590,6 +596,12 @@ bool regressScatterData(HighsScatterData& scatter_data) {
 			    scatter_data.value1_[point]);
     sum_log_error += log_error;
   }
+  if (sum_linear_error > awful_regression_error) scatter_data.num_awful_linear++;
+  if (sum_log_error > awful_regression_error) scatter_data.num_awful_log++;
+  if (sum_linear_error > bad_regression_error) scatter_data.num_bad_linear++;
+  if (sum_log_error > bad_regression_error) scatter_data.num_bad_log++;
+  if (sum_linear_error > fair_regression_error) scatter_data.num_fair_linear++;
+  if (sum_log_error > fair_regression_error) scatter_data.num_fair_log++;
   if (sum_linear_error < sum_log_error) {
     scatter_data.num_better_linear++;
   } else if (sum_linear_error > sum_log_error) {
@@ -627,8 +639,14 @@ bool printScatterData(std::string name, const HighsScatterData& scatter_data) {
 
 void printScatterDataRegressionComparison(std::string name, const HighsScatterData& scatter_data) {
   if (!scatter_data.num_error_comparison) return;
-  printf("%s scatter data\n", name.c_str());
+  printf("\n%s scatter data regression\n", name.c_str());
   printf("%10d regression error comparisons\n", scatter_data.num_error_comparison);
-  printf("%10d regression better linear\n",  scatter_data.num_better_linear);
+  printf("%10d regression awful  linear (>%10.4g)\n", scatter_data.num_awful_linear, awful_regression_error);
+  printf("%10d regression awful  log    (>%10.4g)\n", scatter_data.num_awful_log, awful_regression_error);
+  printf("%10d regression bad    linear (>%10.4g)\n", scatter_data.num_bad_linear, bad_regression_error);
+  printf("%10d regression bad    log    (>%10.4g)\n", scatter_data.num_bad_log, bad_regression_error);
+  printf("%10d regression fair   linear (>%10.4g)\n", scatter_data.num_fair_linear, fair_regression_error);
+  printf("%10d regression fair   log    (>%10.4g)\n", scatter_data.num_fair_log, fair_regression_error);
+  printf("%10d regression better linear\n", scatter_data.num_better_linear);
   printf("%10d regression better log\n",  scatter_data.num_better_log);
 }
