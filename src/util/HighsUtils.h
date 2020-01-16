@@ -22,6 +22,9 @@
 struct HighsValueDistribution {
   int num_count_;
   int num_zero_;
+  int num_one_;
+  double min_value_;
+  double max_value_;
   std::vector<double> limit_;
   std::vector<int> count_;
 };

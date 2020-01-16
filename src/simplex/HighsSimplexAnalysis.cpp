@@ -32,11 +32,16 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterPrevRpNumCostlyDseIt = 0;
   // Copy messaging parameter from options
   messaging(options.logfile, options.output, options.message_level);
-  // Zero the densities
+  // Initialise the densities
   col_aq_density = 0;
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
+  col_BFRT_density = 0;
+  primal_col_density = 0;
+  // Set the row_dual_density to 1 since it's assumed all costs are at
+  // least perturbed from zero, if not initially nonzero
+  dual_col_density = 1;
   // Initialise the measures used to analyse accuracy of steepest edge weights
   // 
   const int dual_edge_weight_strategy = options.simplex_dual_edge_weight_strategy;
@@ -91,8 +96,6 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIter->AnIterOpName = "FTRAN DSE";
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIter = &AnIterOp[k];
-    AnIter->AnIterOpLog10RsDensity = 0;
-    AnIter->AnIterOpSuLog10RsDensity = 0;
     if ((k == ANALYSIS_OPERATION_TYPE_PRICE_AP) ||
 	(k == ANALYSIS_OPERATION_TYPE_PRICE_FULL)) {
       AnIter->AnIterOpHyperCANCEL = 1.0;
@@ -112,10 +115,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     AnIter->AnIterOpNumCa = 0;
     AnIter->AnIterOpNumHyperOp = 0;
     AnIter->AnIterOpNumHyperRs = 0;
-    AnIter->AnIterOpRsMxNNZ = 0;
-    AnIter->AnIterOpSuNumCa = 0;
-    AnIter->AnIterOpSuNumHyperOp = 0;
-    AnIter->AnIterOpSuNumHyperRs = 0;
+    AnIter->AnIterOpSumLog10RsDensity = 0;
     initialiseValueDistribution(1e-8, 1.0, 10.0, AnIter->AnIterOp_density);
   }
   int last_invert_hint = INVERT_HINT_Count - 1;
@@ -339,19 +339,6 @@ bool HighsSimplexAnalysis::switchToDevex() {
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
-  for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
-    AnIterOpRec* lcAnIterOp = &AnIterOp[k];
-    if (lcAnIterOp->AnIterOpNumCa) {
-      lcAnIterOp->AnIterOpSuNumCa += lcAnIterOp->AnIterOpNumCa;
-      lcAnIterOp->AnIterOpSuNumHyperOp += lcAnIterOp->AnIterOpNumHyperOp;
-      lcAnIterOp->AnIterOpSuNumHyperRs += lcAnIterOp->AnIterOpNumHyperRs;
-      lcAnIterOp->AnIterOpSuLog10RsDensity += lcAnIterOp->AnIterOpLog10RsDensity;
-    }
-    lcAnIterOp->AnIterOpNumCa = 0;
-    lcAnIterOp->AnIterOpNumHyperOp = 0;
-    lcAnIterOp->AnIterOpNumHyperRs = 0;
-    lcAnIterOp->AnIterOpLog10RsDensity = 0;
-  }
   if (invert_hint > 0) AnIterNumInvert[invert_hint]++;
   if (AnIterCuIt > AnIterPrevIt)
     AnIterNumEdWtIt[(int)edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
@@ -439,9 +426,8 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
   AnIterOpRec& AnIter = AnIterOp[operation_type];
   const double result_density = 1.0 * result_count / AnIter.AnIterOpRsDim;
   if (result_density <= hyperRESULT) AnIter.AnIterOpNumHyperRs++;
-  AnIter.AnIterOpRsMxNNZ = max(result_count, AnIter.AnIterOpRsMxNNZ);
   if (result_density > 0) {
-    AnIter.AnIterOpLog10RsDensity += log(result_density) / log(10.0);
+    AnIter.AnIterOpSumLog10RsDensity += log(result_density) / log(10.0);
   } else {
     /*
     // TODO Investigate these zero norms
@@ -480,25 +466,21 @@ void HighsSimplexAnalysis::summaryReport() {
            (100 * lc_EdWtNumIter) / AnIterNumIter);
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIterOpRec& AnIter = AnIterOp[k];
-    int lcNumCa = AnIter.AnIterOpSuNumCa;
+    int lcNumCa = AnIter.AnIterOpNumCa;
     printf("\n%-10s performed %d times\n", AnIter.AnIterOpName.c_str(),
-           AnIter.AnIterOpSuNumCa);
+           AnIter.AnIterOpNumCa);
     if (lcNumCa > 0) {
-      int lcHyperOp = AnIter.AnIterOpSuNumHyperOp;
-      int lcHyperRs = AnIter.AnIterOpSuNumHyperRs;
+      int lcHyperOp = AnIter.AnIterOpNumHyperOp;
+      int lcHyperRs = AnIter.AnIterOpNumHyperRs;
       int pctHyperOp = (100 * lcHyperOp) / lcNumCa;
       int pctHyperRs = (100 * lcHyperRs) / lcNumCa;
-      double lcRsDensity = pow(10.0, AnIter.AnIterOpSuLog10RsDensity / lcNumCa);
+      double lcRsDensity = pow(10.0, AnIter.AnIterOpSumLog10RsDensity / lcNumCa);
       int lcAnIterOpRsDim = AnIter.AnIterOpRsDim;
       int lcNumNNz = lcRsDensity * lcAnIterOpRsDim;
-      int lcMxNNz = AnIter.AnIterOpRsMxNNZ;
-      double lcMxNNzDensity = (1.0 * lcMxNNz) / AnIter.AnIterOpRsDim;
       printf("%12d hyper-sparse operations (%3d%%)\n", lcHyperOp, pctHyperOp);
       printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("%12g density of result (%d / %d nonzeros)\n", lcRsDensity, lcNumNNz,
              lcAnIterOpRsDim);
-      printf("%12g density of result with max (%d / %d) nonzeros\n",
-             lcMxNNzDensity, lcMxNNz, lcAnIterOpRsDim);
       printValueDistribution("density ", AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
     }
   }

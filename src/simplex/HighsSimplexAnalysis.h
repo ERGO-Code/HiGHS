@@ -73,6 +73,9 @@ class HighsSimplexAnalysis {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double col_BFRT_density;
+  double primal_col_density;
+  double dual_col_density;
   
   int simplex_strategy = 0;
   int min_threads = 0;
@@ -188,18 +191,14 @@ class HighsSimplexAnalysis {
   int AnIterPrevIt;
   // Major operation analysis struct
   struct AnIterOpRec {
-    double AnIterOpLog10RsDensity;
-    double AnIterOpSuLog10RsDensity;
     double AnIterOpHyperCANCEL;
     double AnIterOpHyperTRAN;
     int AnIterOpRsDim;
     int AnIterOpNumCa;
     int AnIterOpNumHyperOp;
     int AnIterOpNumHyperRs;
+    double AnIterOpSumLog10RsDensity;
     int AnIterOpRsMxNNZ;
-    int AnIterOpSuNumCa;
-    int AnIterOpSuNumHyperOp;
-    int AnIterOpSuNumHyperRs;
     std::string AnIterOpName;
     HighsValueDistribution AnIterOp_density;
   };

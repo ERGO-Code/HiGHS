@@ -176,7 +176,7 @@ int compute_factor(HighsModelObject& highs_model_object);
 
 // Compute the primal values (in baseValue) and set the lower and upper bounds
 // of basic variables
-void compute_primal(HighsModelObject& highs_model_object);
+void computePrimal(HighsModelObject& highs_model_object);
 
 void computePrimalInfeasible(HighsModelObject& highs_model_object,
                              const bool report = false);
@@ -191,9 +191,9 @@ void choosePriceTechnique(const int price_strategy, const double row_ep_density,
 
 void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVector& row_ep, HVector& row_ap);
 
-void compute_dual(HighsModelObject& highs_model_object);
+void computeDual(HighsModelObject& highs_model_object);
 
-void correct_dual(HighsModelObject& highs_model_object,
+void correctDual(HighsModelObject& highs_model_object,
                   int* free_infeasibility_count);
 
 // Record the shift in the cost of a particular column

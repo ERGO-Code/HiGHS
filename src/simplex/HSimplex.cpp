@@ -516,11 +516,11 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Possibly solve for the basic primal and nonbasic dual values to determine
   // which simplex solver to use, unless it's forced
   //  if (simplex_lp_status.has_basic_primal_values) {
-  compute_primal(highs_model_object);
+  computePrimal(highs_model_object);
   simplex_lp_status.has_basic_primal_values = true;
   //}
   //  if (simplex_lp_status.has_basic_dual_values) {
-  compute_dual(highs_model_object);
+  computeDual(highs_model_object);
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
   computeDualObjectiveValue(highs_model_object);
@@ -2679,7 +2679,7 @@ int compute_factor(HighsModelObject& highs_model_object) {
 
 // Compute the primal values (in baseValue) and set the lower and upper bounds
 // of basic variables
-void compute_primal(HighsModelObject& highs_model_object) {
+void computePrimal(HighsModelObject& highs_model_object) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -2687,30 +2687,37 @@ void compute_primal(HighsModelObject& highs_model_object) {
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HMatrix& matrix = highs_model_object.matrix_;
   HFactor& factor = highs_model_object.factor_;
+  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
   // Setup a local buffer for the values of basic variables
-  HVector buffer;
-  buffer.setup(simplex_lp.numRow_);
-  buffer.clear();
+  HVector primal_col;
+  primal_col.setup(simplex_lp.numRow_);
+  primal_col.clear();
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     //    if (simplex_basis.nonbasicFlag_[i] && simplex_info.workValue_[i] == 0)
     //    printf("\nAfter adding in %12g*a[%2d]\n", simplex_info.workValue_[i],
     //    i);
     if (simplex_basis.nonbasicFlag_[i] && simplex_info.workValue_[i] != 0) {
-      matrix.collect_aj(buffer, i, simplex_info.workValue_[i]);
+      matrix.collect_aj(primal_col, i, simplex_info.workValue_[i]);
       //      printf("\nAfter adding in %12g*a[%2d]\nRow     value\n",
       //      simplex_info.workValue_[i], i); for (int iRow = 0; iRow <
       //      simplex_lp.numRow_; iRow++) printf("%3d %12g\n", iRow,
-      //      buffer.array[iRow]);
+      //      primal_col.array[iRow]);
     }
   }
   //  for (int i = 0; i < simplex_lp.numRow_; i++) printf("Bf FTRAN: Row %2d has
-  //  value %12g\n", i, buffer.array[i]);
-  factor.ftran(buffer, 1);
-
+  //  value %12g\n", i, primal_col.array[i]);
+  // It's possible that the buffer has no nonzeros, so performing
+  // FTRAN is unnecessary. Not much of a saving, but the zero density
+  // looks odd in the analysis!
+  if (primal_col.count) {
+    factor.ftran(primal_col, analysis->primal_col_density);
+    const double local_primal_col_density = (double)primal_col.count / simplex_lp.numRow_;
+    analysis->updateOperationResultDensity(local_primal_col_density, analysis->primal_col_density);
+  }
   for (int i = 0; i < simplex_lp.numRow_; i++) {
     int iCol = simplex_basis.basicIndex_[i];
-    simplex_info.baseValue_[i] = -buffer.array[i];
+    simplex_info.baseValue_[i] = -primal_col.array[i];
     simplex_info.baseLower_[i] = simplex_info.workLower_[iCol];
     simplex_info.baseUpper_[i] = simplex_info.workUpper_[iCol];
   }
@@ -2995,11 +3002,9 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVecto
   timer.stop(simplex_info.clock_[PriceClock]);
 }
 
-void compute_dual(HighsModelObject& highs_model_object) {
+void computeDual(HighsModelObject& highs_model_object) {
   //  HighsTimer& timer = highs_model_object.timer_;
-#ifdef HiGHSDEV
   HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
-#endif
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
@@ -3014,89 +3019,92 @@ void compute_dual(HighsModelObject& highs_model_object) {
   double work_dual_norm2;
 
   // Create a local buffer for the pi vector
-  HVector buffer;
-  buffer.setup(simplex_lp.numRow_);
-  buffer.clear();
+  HVector dual_col;
+  dual_col.setup(simplex_lp.numRow_);
+  dual_col.clear();
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    buffer.index[iRow] = iRow;
-    buffer.array[iRow] =
-        simplex_info.workCost_[simplex_basis.basicIndex_[iRow]] +
-        simplex_info.workShift_[simplex_basis.basicIndex_[iRow]];
-  }
-  buffer.count = simplex_lp.numRow_;
-  if (an_compute_dual_norm2) {
-    btran_rhs_norm2 = buffer.norm2();
-    btran_rhs_norm2 = sqrt(btran_rhs_norm2);
-  }
-  double btran_full_historical_density = 1;
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer, btran_full_historical_density);
-#endif
-  factor.btran(buffer, btran_full_historical_density);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
-#endif
-  if (an_compute_dual_norm2) {
-    btran_sol_norm2 = buffer.norm2();
-    btran_sol_norm2 = sqrt(btran_sol_norm2);
-  }
-
-  // Create a local buffer for the values of reduced costs
-  HVector bufferLong;
-  bufferLong.setup(simplex_lp.numCol_);
-  bufferLong.clear();
-#ifdef HiGHSDEV
-  double price_full_historical_density = 1;
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong, price_full_historical_density);
-#endif
-  matrix.priceByColumn(bufferLong, buffer);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, bufferLong);
-  //  const double local_density = 1.0 * bufferLong.count / simplex_lp.numCol_;
-#endif
-  for (int i = 0; i < simplex_lp.numCol_; i++) {
-    simplex_info.workDual_[i] = simplex_info.workCost_[i] - bufferLong.array[i];
-  }
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  for (int i = simplex_lp.numCol_; i < numTot; i++) {
-    simplex_info.workDual_[i] =
-        simplex_info.workCost_[i] - buffer.array[i - simplex_lp.numCol_];
-  }
-
-  if (an_compute_dual_norm2) {
-    work_dual_norm2 = 0;
-    for (int i = 0; i < numTot; i++)
-      work_dual_norm2 += simplex_info.workDual_[i] * simplex_info.workDual_[i];
-    work_dual_norm2 = sqrt(work_dual_norm2);
-    //  printf("compute_dual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g;
-    //  ||pi^TA-c||=%11.4g\n", btran_rhs_norm2, btran_sol_norm2,
-    //  work_dual_norm2);
-    double current_dual_feasibility_tolerance =
-        scaled_solution_params.dual_feasibility_tolerance;
-    double new_dual_feasibility_tolerance = work_dual_norm2 / 1e16;
-    if (new_dual_feasibility_tolerance > 1e-1) {
-      printf(
-          "Seriously: do you expect to solve an LP with ||pi^TA-c||=%11.4g?\n",
-          work_dual_norm2);
-    } else if (new_dual_feasibility_tolerance >
-               10 * current_dual_feasibility_tolerance) {
-      printf(
-          "||pi^TA-c|| = %12g so solving with dual_feasibility_tolerance = "
-          "%12g\n",
-          work_dual_norm2, new_dual_feasibility_tolerance);
-      scaled_solution_params.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+    const double value = 
+      simplex_info.workCost_[simplex_basis.basicIndex_[iRow]] +
+      simplex_info.workShift_[simplex_basis.basicIndex_[iRow]];
+    if (value) {
+      dual_col.count++;
+      dual_col.index[iRow] = iRow;
+      dual_col.array[iRow] = value;
     }
   }
-
+  // Copy the costs in case the basic costs are all zero
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  for (int i = 0; i < numTot; i++) simplex_info.workDual_[i] = simplex_info.workCost_[i];
+  if (dual_col.count) {
+    if (an_compute_dual_norm2) {
+      btran_rhs_norm2 = dual_col.norm2();
+      btran_rhs_norm2 = sqrt(btran_rhs_norm2);
+    }
+#ifdef HiGHSDEV
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col, analysis->dual_col_density);
+#endif
+    factor.btran(dual_col, analysis->dual_col_density);
+#ifdef HiGHSDEV
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col);
+#endif
+    const double local_dual_col_density = (double)dual_col.count / simplex_lp.numRow_;
+    analysis->updateOperationResultDensity(local_dual_col_density, analysis->dual_col_density);
+    if (an_compute_dual_norm2) {
+      btran_sol_norm2 = dual_col.norm2();
+      btran_sol_norm2 = sqrt(btran_sol_norm2);
+    }
+    
+    // Create a local buffer for the values of reduced costs
+    HVector dual_row;
+    dual_row.setup(simplex_lp.numCol_);
+    dual_row.clear();
+#ifdef HiGHSDEV
+    double price_full_historical_density = 1;
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row, price_full_historical_density);
+#endif
+    matrix.priceByColumn(dual_row, dual_col);
+#ifdef HiGHSDEV
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row);
+    //  const double local_density = 1.0 * dual_row.count / simplex_lp.numCol_;
+#endif
+    for (int i = 0; i < simplex_lp.numCol_; i++)
+      simplex_info.workDual_[i] -= dual_row.array[i];
+    for (int i = simplex_lp.numCol_; i < numTot; i++)
+      simplex_info.workDual_[i] -= dual_col.array[i - simplex_lp.numCol_];
+    if (an_compute_dual_norm2) {
+      work_dual_norm2 = 0;
+      for (int i = 0; i < numTot; i++)
+	work_dual_norm2 += simplex_info.workDual_[i] * simplex_info.workDual_[i];
+      work_dual_norm2 = sqrt(work_dual_norm2);
+      //  printf("compute_dual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g;
+      //  ||pi^TA-c||=%11.4g\n", btran_rhs_norm2, btran_sol_norm2,
+      //  work_dual_norm2);
+      double current_dual_feasibility_tolerance =
+        scaled_solution_params.dual_feasibility_tolerance;
+      double new_dual_feasibility_tolerance = work_dual_norm2 / 1e16;
+      if (new_dual_feasibility_tolerance > 1e-1) {
+	printf(
+	       "Seriously: do you expect to solve an LP with ||pi^TA-c||=%11.4g?\n",
+	       work_dual_norm2);
+      } else if (new_dual_feasibility_tolerance >
+		 10 * current_dual_feasibility_tolerance) {
+	printf(
+	       "||pi^TA-c|| = %12g so solving with dual_feasibility_tolerance = "
+	       "%12g\n",
+	       work_dual_norm2, new_dual_feasibility_tolerance);
+	scaled_solution_params.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+      }
+    }
+  }
   // Now have nonbasic duals
   simplex_lp_status.has_nonbasic_dual_values = true;
 }
 
-void correct_dual(HighsModelObject& highs_model_object,
+void correctDual(HighsModelObject& highs_model_object,
                   int* free_infeasibility_count) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
