@@ -503,7 +503,10 @@ bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_da
   scatter_data.num_point_ = 0;
   scatter_data.last_point_ = -1;
   scatter_data.value0_.resize(max_num_point);
-  scatter_data.value1_.resize(max_num_point);  
+  scatter_data.value1_.resize(max_num_point);
+  scatter_data.num_error_comparison = 0;
+  scatter_data.num_better_linear = 0;
+  scatter_data.num_better_log = 0;
   return true;
 }
 
@@ -516,24 +519,116 @@ bool updateScatterData(const double value0, const double value1, HighsScatterDat
   return true;
 }
 
-bool regressScatterData(const double coeff0, const double coeff1, const HighsScatterData& scatter_data) {
+bool regressScatterData(HighsScatterData& scatter_data) {
+  if (scatter_data.num_point_ < 2) return true;
+  double log_x;
+  double log_y;
+  double sum_log_x = 0;
+  double sum_log_y = 0;
+  double sum_log_xlog_x = 0;
+  double sum_log_xlog_y = 0;
+  double x;
+  double y;
+  double sum_x = 0;
+  double sum_y = 0;
+  double sum_xx = 0;
+  double sum_xy = 0;
+  int point_num = 0;
+  for (int pass = 0; pass < 2; pass++) {
+    int from_point;
+    int to_point;
+    if (pass == 0) {
+      from_point = scatter_data.last_point_;
+      to_point = std::min(scatter_data.num_point_, scatter_data.max_num_point_);
+    } else {
+      from_point = 0;
+      to_point = scatter_data.last_point_;
+    }
+    for (int point = from_point; point < to_point; point++) {
+      point_num++;
+      x = scatter_data.value0_[point];
+      y = scatter_data.value1_[point];
+      sum_x += x;
+      sum_y += y;
+      sum_xx += x*x;
+      sum_xy += x*y;    
+      if (x <= 0) return false;
+      if (y <= 0) return false;
+      log_x = log(x);
+      log_y = log(y);
+      sum_log_x += log_x;
+      sum_log_y += log_y;
+      sum_log_xlog_x += log_x*log_x;
+      sum_log_xlog_y += log_x*log_y;    
+    }
+  }
+  double double_num = 1.0 * point_num;
+  // Linear regression
+  double det = double_num * sum_xx - sum_x*sum_x;
+  if (fabs(det) < 1e-8) return true;
+  scatter_data.linear_coeff0_ = (sum_xx*sum_y - sum_x*sum_xy) / det;
+  scatter_data.linear_coeff1_ = (-sum_x*sum_y + double_num*sum_xy) / det;
+  // Log regression
+  det = double_num * sum_log_xlog_x - sum_log_x*sum_log_x;
+  if (fabs(det) < 1e-8) return true;
+  scatter_data.log_coeff0_ = (sum_log_xlog_x*sum_log_y - sum_log_x*sum_log_xlog_y) / det;
+  scatter_data.log_coeff0_ = exp(scatter_data.log_coeff0_);  
+  scatter_data.log_coeff1_ = (-sum_log_x*sum_log_y + double_num*sum_log_xlog_y) / det;
+  // Look at the errors in the two approaches
+  if (scatter_data.num_point_ < scatter_data.max_num_point_) return true;
+  scatter_data.num_error_comparison++;
+  double sum_linear_error = 0;
+  for (int point = 0; point < scatter_data.max_num_point_; point++) {
+    double linear_error = fabs(scatter_data.linear_coeff0_ +
+			       scatter_data.linear_coeff1_ * scatter_data.value0_[point] -
+			       scatter_data.value1_[point]);
+    sum_linear_error += linear_error;
+  }
+  double sum_log_error = 0;
+  for (int point = 0; point < scatter_data.max_num_point_; point++) {
+    double log_error = fabs(scatter_data.log_coeff0_ * pow(scatter_data.value0_[point], scatter_data.log_coeff1_) - 
+			    scatter_data.value1_[point]);
+    sum_log_error += log_error;
+  }
+  if (sum_linear_error < sum_log_error) {
+    scatter_data.num_better_linear++;
+  } else if (sum_linear_error > sum_log_error) {
+    scatter_data.num_better_log++;
+  }
+  //  printf("Linear regression error = %g\n", sum_linear_error);
+  //  printf("Log    regression error = %g\n", sum_log_error);
   return true;
 
 }
 
 bool printScatterData(std::string name, const HighsScatterData& scatter_data) {
   if (!scatter_data.num_point_) return true;
+  double x;
+  double y;
   int point_num = 0;
-  printf("Scatter data for %s\n", name.c_str());
+  printf("%s scatter data\n", name.c_str());
   const int to_point = std::min(scatter_data.num_point_, scatter_data.max_num_point_);
-  for (int point = scatter_data.last_point_; point < to_point; point++) {
+  for (int point = scatter_data.last_point_+1; point < to_point; point++) {
     point_num++;
-    printf("%d,%g,%g\n", point_num, scatter_data.value0_[point], scatter_data.value1_[point]);
+    x = scatter_data.value0_[point];
+    y = scatter_data.value1_[point];
+    printf("%d,%10.4g,%10.4g,%d\n", point, x, y, point_num);
   }
-  for (int point = 0; point < scatter_data.last_point_; point++) {
+  for (int point = 0; point <= scatter_data.last_point_; point++) {
     point_num++;
-    printf("%d,%g,%g\n", point_num, scatter_data.value0_[point], scatter_data.value1_[point]);
+    x = scatter_data.value0_[point];
+    y = scatter_data.value1_[point];
+    printf("%d,%10.4g,%10.4g,%d\n", point, x, y, point_num);
   }
+  printf("Linear regression coefficients,%10.4g,%10.4g\n", scatter_data.linear_coeff0_, scatter_data.linear_coeff1_);
+  printf("Log    regression coefficients,%10.4g,%10.4g\n", scatter_data.log_coeff0_, scatter_data.log_coeff1_);
   return true;
 }
 
+void printScatterDataRegressionComparison(std::string name, const HighsScatterData& scatter_data) {
+  if (!scatter_data.num_error_comparison) return;
+  printf("%s scatter data\n", name.c_str());
+  printf("%10d regression error comparisons\n", scatter_data.num_error_comparison);
+  printf("%10d regression better linear\n",  scatter_data.num_better_linear);
+  printf("%10d regression better log\n",  scatter_data.num_better_log);
+}

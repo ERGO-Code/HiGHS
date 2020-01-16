@@ -1280,7 +1280,10 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
   }
   if (analysis != NULL) {
     const double end_density = 1.0 * rhs.count / numRow;
+    //    printf("\nupdateScatterData(%g, %g)\n", curr_dsty, end_density);
     updateScatterData(curr_dsty, end_density, analysis->tran_stage[TRAN_STAGE_FTRAN_LOWER].rhs_density);
+    regressScatterData(analysis->tran_stage[TRAN_STAGE_FTRAN_LOWER].rhs_density);
+    //    printScatterData("FactorFtranLower", analysis->tran_stage[TRAN_STAGE_FTRAN_LOWER].rhs_density);
   }
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranLower]);
