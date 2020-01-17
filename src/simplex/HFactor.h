@@ -134,14 +134,14 @@ class HFactor {
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
   void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
-             double hist_dsty  //!< Historical density of the result
+             double historical_density  //!< Historical density of the result
              ); // FactorTimer frig const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
   void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
-             double hist_dsty  //!< Historical density of the result
+             double historical_density  //!< Historical density of the result
              ); // FactorTimer frig const;
 
   /**
@@ -345,10 +345,10 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void btranL(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void ftranU(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void btranU(HVector& vector, double hist_dsty); // FactorTimer frig const;
+  void ftranL(HVector& vector, double historical_density); // FactorTimer frig const;
+  void btranL(HVector& vector, double historical_density); // FactorTimer frig const;
+  void ftranU(HVector& vector, double historical_density); // FactorTimer frig const;
+  void btranU(HVector& vector, double historical_density); // FactorTimer frig const;
 
   void ftranFT(HVector& vector); // FactorTimer frig const;
   void btranFT(HVector& vector); // FactorTimer frig const;

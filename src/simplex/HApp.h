@@ -448,6 +448,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) simplex_analysis.summaryReport();
 #endif
+  simplex_analysis.summaryReportHFactor();
 
   // Deduce the HiGHS basis and solution from the simplex basis and solution
   HighsSimplexInterface simplex_interface(highs_model_object);

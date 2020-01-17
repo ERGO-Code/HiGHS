@@ -63,6 +63,8 @@ class HighsSimplexAnalysis {
   void invertReport(const bool header);
   void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
   bool switchToDevex();
+  void afterTranStage(const int tran_stage_id, const double initial_density, const double final_density, const int hys_tran=0);
+  void summaryReportHFactor();
 
 #ifdef HiGHSDEV
   HighsTimer timer_;

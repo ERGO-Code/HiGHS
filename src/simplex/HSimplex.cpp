@@ -2125,10 +2125,13 @@ double computeBasisCondition(HighsModelObject& highs_model_object) {
   double norm_Binv;
   for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
   row_ep.clear();
-  row_ep.count = solver_num_row;
   for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    row_ep.index[r_n] = r_n;
-    row_ep.array[r_n] = bs_cond_x[r_n];
+    double value = bs_cond_x[r_n];
+    if (value) {
+      row_ep.index[row_ep.count] = r_n;
+      row_ep.array[r_n] = value;
+      row_ep.count++;
+    }
   }
   for (int ps_n = 1; ps_n <= 5; ps_n++) {
     row_ep.packFlag = false;
@@ -2145,10 +2148,13 @@ double computeBasisCondition(HighsModelObject& highs_model_object) {
     }
     // z=A'\zeta;
     row_ep.clear();
-    row_ep.count = solver_num_row;
     for (int r_n = 0; r_n < solver_num_row; r_n++) {
-      row_ep.index[r_n] = r_n;
-      row_ep.array[r_n] = bs_cond_w[r_n];
+      double value = bs_cond_w[r_n];
+      if (value) {
+	row_ep.index[row_ep.count] = r_n;
+	row_ep.array[r_n] = value;
+	row_ep.count++;
+      }
     }
     row_ep.packFlag = false;
     factor.btran(row_ep, NoDensity);

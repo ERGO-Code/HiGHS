@@ -347,6 +347,18 @@ bool HighsSimplexAnalysis::switchToDevex() {
   return switch_to_devex;
 }
 
+void HighsSimplexAnalysis::afterTranStage(const int tran_stage_id, const double initial_density, const double final_density, const int hys_tran) {
+  updateScatterData(initial_density, final_density, tran_stage[tran_stage_id].rhs_density);
+  regressScatterData(tran_stage[tran_stage_id].rhs_density);
+}
+
+void HighsSimplexAnalysis::summaryReportHFactor() {
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
+    //    printScatterData(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
+    printScatterDataRegressionComparison(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
+  }
+}
+
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
@@ -457,12 +469,6 @@ void HighsSimplexAnalysis::operationRecordAfter(const int operation_type, const 
 }
 
 void HighsSimplexAnalysis::summaryReport() {
-
-  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
-    //    printScatterData(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
-    printScatterDataRegressionComparison(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
-  }
-
 
   int AnIterNumIter = simplex_iteration_count - AnIterIt0;
   if (AnIterNumIter<=0) return;

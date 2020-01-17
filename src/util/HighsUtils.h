@@ -33,12 +33,14 @@ struct HighsScatterData {
   int max_num_point_;
   int num_point_;
   int last_point_;
-  double linear_coeff0_;
-  double linear_coeff1_;
-  double log_coeff0_;
-  double log_coeff1_;
   std::vector<double> value0_;
   std::vector<double> value1_;
+  double linear_coeff0_;
+  double linear_coeff1_;
+  double linear_regression_error_;
+  double log_coeff0_;
+  double log_coeff1_;
+  double log_regression_error_;
   int num_error_comparison;
   int num_awful_linear;
   int num_awful_log;
@@ -115,5 +117,6 @@ bool updateScatterData(const double value0, const double value1, HighsScatterDat
 bool regressScatterData(HighsScatterData& scatter_data);
 bool printScatterData(std::string name, const HighsScatterData& scatter_data);
 void printScatterDataRegressionComparison(std::string name, const HighsScatterData& scatter_data);
+bool computeScatterDataRegressionError(HighsScatterData& scatter_data, const bool print=false);
 
 #endif  // UTIL_HIGHSUTILS_H_
