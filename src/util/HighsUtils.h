@@ -108,7 +108,7 @@ double doublePercentage(const int of, const int in);
 bool printValueDistribution(std::string value_name,
 			    const HighsValueDistribution& value_distribution,
 			    const int mu=0);
-
+#endif
 
 bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_data);
 bool updateScatterData(const double value0, const double value1, HighsScatterData& scatter_data);
@@ -116,5 +116,4 @@ bool regressScatterData(HighsScatterData& scatter_data);
 bool printScatterData(std::string name, const HighsScatterData& scatter_data);
 void printScatterDataRegressionComparison(std::string name, const HighsScatterData& scatter_data);
 
-#endif
 #endif  // UTIL_HIGHSUTILS_H_
