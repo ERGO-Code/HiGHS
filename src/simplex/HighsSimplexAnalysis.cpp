@@ -44,14 +44,21 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   dual_col_density = 1;
   // Set up the data structures for scatter data 
   tran_stage.resize(NUM_TRAN_STAGE_TYPE);
-  tran_stage[TRAN_STAGE_FTRAN_LOWER].name =    "FTRAN lower";
-  tran_stage[TRAN_STAGE_FTRAN_UPPER_FT].name = "FTRAN upper FT";
-  tran_stage[TRAN_STAGE_FTRAN_UPPER].name =    "FTRAN upper";
-  tran_stage[TRAN_STAGE_BTRAN_UPPER].name =    "BTRAN upper";
-  tran_stage[TRAN_STAGE_BTRAN_UPPER_FT].name = "BTRAN upper FT";
-  tran_stage[TRAN_STAGE_BTRAN_LOWER].name =    "BTRAN lower";
-  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) 
-    initialiseScatterData(20, tran_stage[tran_stage_type].rhs_density);
+  tran_stage[TRAN_STAGE_FTRAN_LOWER].name_ =    "FTRAN lower";
+  tran_stage[TRAN_STAGE_FTRAN_UPPER_FT].name_ = "FTRAN upper FT";
+  tran_stage[TRAN_STAGE_FTRAN_UPPER].name_ =    "FTRAN upper";
+  tran_stage[TRAN_STAGE_BTRAN_UPPER].name_ =    "BTRAN upper";
+  tran_stage[TRAN_STAGE_BTRAN_UPPER_FT].name_ = "BTRAN upper FT";
+  tran_stage[TRAN_STAGE_BTRAN_LOWER].name_ =    "BTRAN lower";
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
+   TranStageAnalysis& stage = tran_stage[tran_stage_type];
+   initialiseScatterData(20, stage.rhs_density_);
+   stage.num_decision_ = 0;
+   stage.num_wrong_original_sparse_decision_ = 0;
+   stage.num_wrong_original_hyper_decision_ = 0;
+   stage.num_wrong_new_sparse_decision_ = 0;
+   stage.num_wrong_new_hyper_decision_ = 0;
+  } 
 
   // Initialise the measures used to analyse accuracy of steepest edge weights
   // 
@@ -347,15 +354,45 @@ bool HighsSimplexAnalysis::switchToDevex() {
   return switch_to_devex;
 }
 
-void HighsSimplexAnalysis::afterTranStage(const int tran_stage_id, const double initial_density, const double final_density, const int hys_tran) {
-  updateScatterData(initial_density, final_density, tran_stage[tran_stage_id].rhs_density);
-  regressScatterData(tran_stage[tran_stage_id].rhs_density);
+double HighsSimplexAnalysis::predictEndDensity(const int tran_stage_type, const double initial_density) {
+  return predictFromScatterData(tran_stage[tran_stage_type].rhs_density_, initial_density);
+}
+
+void HighsSimplexAnalysis::afterTranStage(const int tran_stage_type, const double initial_density, const double final_density,
+					  const double predicted_end_density, 
+					  const bool use_solve_sparse_original_HFactor_logic,
+					  const bool use_solve_sparse_new_HFactor_logic) {
+  TranStageAnalysis& stage = tran_stage[tran_stage_type];
+  stage.num_decision_++;
+  if (final_density <= 0.1) {
+    // Should have done hyper-sparse TRAN
+    if (use_solve_sparse_original_HFactor_logic) {
+      // Original logic makes wrong decision to use sparse TRAN
+      stage.num_wrong_original_sparse_decision_++;
+    }
+    if (use_solve_sparse_new_HFactor_logic) {
+      // New logic makes wrong decision to use sparse TRAN
+      stage.num_wrong_new_sparse_decision_++;
+    }
+  } else {
+    // Should have done sparse TRAN
+    if (!use_solve_sparse_original_HFactor_logic) {
+      // Original logic makes wrong decision to use hyper TRAN
+      stage.num_wrong_original_hyper_decision_++;
+    }
+    if (!use_solve_sparse_new_HFactor_logic) {
+      // New logic makes wrong decision to use hyper TRAN
+      stage.num_wrong_new_hyper_decision_++;
+    }
+  }
+  updateScatterData(initial_density, final_density, stage.rhs_density_);
+  regressScatterData(stage.rhs_density_);
 }
 
 void HighsSimplexAnalysis::summaryReportHFactor() {
   for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
-    //    printScatterData(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
-    printScatterDataRegressionComparison(tran_stage[tran_stage_type].name, tran_stage[tran_stage_type].rhs_density);
+    //    printScatterData(tran_stage[tran_stage_type].name_, tran_stage[tran_stage_type].rhs_density_);
+    printScatterDataRegressionComparison(tran_stage[tran_stage_type].name_, tran_stage[tran_stage_type].rhs_density_);
   }
 }
 

@@ -621,6 +621,14 @@ bool regressScatterData(HighsScatterData& scatter_data) {
 
 }
 
+double predictFromScatterData(const HighsScatterData& scatter_data, const double value0, const bool log_regression) {
+  if (log_regression) {
+    return scatter_data.log_coeff0_ * pow(value0, scatter_data.log_coeff1_);
+  } else {
+    return scatter_data.linear_coeff0_ + scatter_data.linear_coeff1_ * value0;
+  }
+}
+
 bool computeScatterDataRegressionError(HighsScatterData& scatter_data, const bool print) {
   if (scatter_data.num_point_ < scatter_data.max_num_point_) return false;
   double sum_log_error = 0;
@@ -628,7 +636,7 @@ bool computeScatterDataRegressionError(HighsScatterData& scatter_data, const boo
   for (int point = 0; point < scatter_data.max_num_point_; point++) {
     double value0 = scatter_data.value0_[point];
     double value1 = scatter_data.value1_[point];
-    double predicted_value1 = scatter_data.log_coeff0_ * pow(value0, scatter_data.log_coeff1_);
+    double predicted_value1 = predictFromScatterData(scatter_data, value0, true);
     double error = fabs(predicted_value1 - value1);// / fabs(value1);
     if (
 	//	10*error > awful_regression_error &&
@@ -642,7 +650,7 @@ bool computeScatterDataRegressionError(HighsScatterData& scatter_data, const boo
   for (int point = 0; point < scatter_data.max_num_point_; point++) {
     double value0 = scatter_data.value0_[point];
     double value1 = scatter_data.value1_[point];
-    double predicted_value1 = scatter_data.linear_coeff0_ + scatter_data.linear_coeff1_ * value0;
+    double predicted_value1 = predictFromScatterData(scatter_data, value0);
     double error = fabs(predicted_value1 - value1);//  / fabs(value1);
     if (
 	//	10*error > awful_regression_error &&

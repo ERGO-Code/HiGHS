@@ -499,6 +499,12 @@ class HighsOptions {
 					 0.0, 1.0, HIGHS_CONST_INF);
     records.push_back(record_double);
 
+    record_bool = new OptionRecordBool("use_original_HFactor_logic",
+				       "Use original HFactor logic for sparse vs hyper-sparse TRANs",
+				       advanced, &use_original_HFactor_logic,
+				       true);
+    records.push_back(record_bool);
+
     record_bool = new OptionRecordBool("icrash",
 				     "Run iCrash",
 				     advanced, &icrash,
@@ -609,6 +615,7 @@ class HighsOptions {
   double dual_simplex_cost_perturbation_multiplier;
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
+  bool use_original_HFactor_logic;
 
   // Options for iCrash
   bool icrash;

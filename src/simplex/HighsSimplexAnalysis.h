@@ -43,9 +43,14 @@ enum TRAN_STAGE {
   NUM_TRAN_STAGE_TYPE,
 };
 
-struct AnalysisScatterData {
-  std::string name;
-  HighsScatterData rhs_density;
+struct TranStageAnalysis {
+  std::string name_;
+  HighsScatterData rhs_density_;
+  int num_decision_;
+  int num_wrong_original_sparse_decision_;
+  int num_wrong_original_hyper_decision_;
+  int num_wrong_new_sparse_decision_;
+  int num_wrong_new_hyper_decision_;
 };
 
 const double running_average_multiplier = 0.05;
@@ -63,7 +68,11 @@ class HighsSimplexAnalysis {
   void invertReport(const bool header);
   void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
   bool switchToDevex();
-  void afterTranStage(const int tran_stage_id, const double initial_density, const double final_density, const int hys_tran=0);
+  double predictEndDensity(const int tran_stage_id, const double initial_density);
+  void afterTranStage(const int tran_stage_id, const double initial_density, const double final_density,
+		      const double predicted_end_density, 
+		      const bool use_solve_sparse_original_HFactor_logic,
+		      const bool use_solve_sparse_new_HFactor_logic);
   void summaryReportHFactor();
 
 #ifdef HiGHSDEV
@@ -145,7 +154,7 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_primal_change_distribution;
 #endif
 
-  vector<AnalysisScatterData> tran_stage;
+  vector<TranStageAnalysis> tran_stage;
  private:
 
   void iterationReport(const bool header);

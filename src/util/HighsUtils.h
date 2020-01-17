@@ -115,6 +115,7 @@ bool printValueDistribution(std::string value_name,
 bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_data);
 bool updateScatterData(const double value0, const double value1, HighsScatterData& scatter_data);
 bool regressScatterData(HighsScatterData& scatter_data);
+double predictFromScatterData(const HighsScatterData& scatter_data, const double value0, const bool log_regression=false);
 bool printScatterData(std::string name, const HighsScatterData& scatter_data);
 void printScatterDataRegressionComparison(std::string name, const HighsScatterData& scatter_data);
 bool computeScatterDataRegressionError(HighsScatterData& scatter_data, const bool print=false);

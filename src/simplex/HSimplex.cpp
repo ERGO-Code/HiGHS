@@ -314,6 +314,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     factor.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
                  &simplex_basis.basicIndex_[0],
+		 options.use_original_HFactor_logic,
 		 &highs_model_object.simplex_analysis_);
     simplex_lp_status.has_factor_arrays = true;
   }
