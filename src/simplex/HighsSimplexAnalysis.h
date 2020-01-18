@@ -60,29 +60,55 @@ const double running_average_multiplier = 0.05;
  */
 class HighsSimplexAnalysis {
  public:
-  void setup(const HighsLp& lp, const HighsOptions& options, const int simplex_iteration_count_);
-  void messaging(FILE* logfile_, FILE* output_, const int message_level_);
-  void updateOperationResultDensity(const double local_density, double& density);
+  void setup(const HighsLp& lp,
+	     const HighsOptions& options,
+	     const int simplex_iteration_count_
+	     );
+  void messaging(FILE* logfile_,
+		 FILE* output_,
+		 const int message_level_
+		 );
+  void updateOperationResultDensity(const double local_density,
+				    double& density
+				    );
   void iterationReport();
   void invertReport();
-  void invertReport(const bool header);
-  void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
+  void invertReport(const bool header
+		    );
+  void dualSteepestEdgeWeightError(const double computed_edge_weight,
+				   const double updated_edge_weight
+				   );
   bool switchToDevex();
-  double predictEndDensity(const int tran_stage_id, const double initial_density);
-  void afterTranStage(const int tran_stage_id, const double initial_density, const double final_density,
+  bool predictEndDensity(const int tran_stage_id,
+			 const double initial_density,
+			 double& end_density
+			 );
+  void afterTranStage(const int tran_stage_id,
+		      const double initial_density,
+		      const double final_density,
 		      const double predicted_end_density, 
 		      const bool use_solve_sparse_original_HFactor_logic,
-		      const bool use_solve_sparse_new_HFactor_logic);
+		      const bool use_solve_sparse_new_HFactor_logic
+		      );
   void summaryReportHFactor();
 
 #ifdef HiGHSDEV
   HighsTimer timer_;
   void iterationRecord();
   void iterationRecordMajor();
-  void operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density);
-  void operationRecordBefore(const int operation_type, const int current_count, const double historical_density);
-  void operationRecordAfter(const int operation_type, const HVector& vector);
-  void operationRecordAfter(const int operation_type, const int result_count);
+  void operationRecordBefore(const int operation_type,
+			     const HVector& vector,
+			     const double historical_density
+			     );
+  void operationRecordBefore(const int operation_type,
+			     const int current_count,
+			     const double historical_density
+			     );
+  void operationRecordAfter(const int operation_type,
+			    const HVector& vector
+			    );
+  void operationRecordAfter(const int operation_type,
+			    const int result_count);
   void summaryReport();
 #endif
 

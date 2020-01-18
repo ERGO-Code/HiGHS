@@ -354,14 +354,17 @@ bool HighsSimplexAnalysis::switchToDevex() {
   return switch_to_devex;
 }
 
-double HighsSimplexAnalysis::predictEndDensity(const int tran_stage_type, const double initial_density) {
-  return predictFromScatterData(tran_stage[tran_stage_type].rhs_density_, initial_density);
+bool HighsSimplexAnalysis::predictEndDensity(const int tran_stage_type,
+					     const double initial_density,
+					     double& end_density) {
+  return predictFromScatterData(tran_stage[tran_stage_type].rhs_density_, initial_density, end_density);
 }
 
 void HighsSimplexAnalysis::afterTranStage(const int tran_stage_type, const double initial_density, const double final_density,
 					  const double predicted_end_density, 
 					  const bool use_solve_sparse_original_HFactor_logic,
 					  const bool use_solve_sparse_new_HFactor_logic) {
+  if (initial_density > 0.2) return;
   TranStageAnalysis& stage = tran_stage[tran_stage_type];
   stage.num_decision_++;
   if (final_density <= 0.1) {

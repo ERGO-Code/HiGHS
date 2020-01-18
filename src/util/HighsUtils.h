@@ -35,21 +35,22 @@ struct HighsScatterData {
   int last_point_;
   std::vector<double> value0_;
   std::vector<double> value1_;
+  bool have_regression_coeff_;
   double linear_coeff0_;
   double linear_coeff1_;
   double linear_regression_error_;
   double log_coeff0_;
   double log_coeff1_;
   double log_regression_error_;
-  int num_error_comparison;
-  int num_awful_linear;
-  int num_awful_log;
-  int num_bad_linear;
-  int num_bad_log;
-  int num_fair_linear;
-  int num_fair_log;
-  int num_better_linear;
-  int num_better_log;
+  int num_error_comparison_;
+  int num_awful_linear_;
+  int num_awful_log_;
+  int num_bad_linear_;
+  int num_bad_log_;
+  int num_fair_linear_;
+  int num_fair_log_;
+  int num_better_linear_;
+  int num_better_log_;
 };
 
 const double awful_regression_error = 2.0;
@@ -112,12 +113,21 @@ bool printValueDistribution(std::string value_name,
 			    const int mu=0);
 #endif
 
-bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_data);
-bool updateScatterData(const double value0, const double value1, HighsScatterData& scatter_data);
+bool initialiseScatterData(const int max_num_point,
+			   HighsScatterData& scatter_data);
+bool updateScatterData(const double value0,
+		       const double value1,
+		       HighsScatterData& scatter_data);
 bool regressScatterData(HighsScatterData& scatter_data);
-double predictFromScatterData(const HighsScatterData& scatter_data, const double value0, const bool log_regression=false);
-bool printScatterData(std::string name, const HighsScatterData& scatter_data);
-void printScatterDataRegressionComparison(std::string name, const HighsScatterData& scatter_data);
-bool computeScatterDataRegressionError(HighsScatterData& scatter_data, const bool print=false);
+bool predictFromScatterData(const HighsScatterData& scatter_data,
+			    const double value0,
+			    double& predicted_value1,
+			    const bool log_regression=false);
+bool printScatterData(std::string name,
+		      const HighsScatterData& scatter_data);
+void printScatterDataRegressionComparison(std::string name,
+					  const HighsScatterData& scatter_data);
+bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
+				       const bool print=false);
 
 #endif  // UTIL_HIGHSUTILS_H_
