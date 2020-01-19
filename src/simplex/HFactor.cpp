@@ -1234,7 +1234,8 @@ void HFactor::ftranL(HVector& rhs, double historical_density){ // FactorTimer fr
   }
 
   double current_density = 1.0 * rhs.count / numRow;
-  double predicted_end_density;
+  // Set predicted_end_density to an illegal value to see if it's set
+  double predicted_end_density = -1;
   bool use_solve_sparse;
   bool use_solve_sparse_original_HFactor_logic = current_density > hyperCANCEL || historical_density > hyperFTRANL;
   bool use_solve_sparse_new_HFactor_logic;
@@ -1284,19 +1285,21 @@ void HFactor::ftranL(HVector& rhs, double historical_density){ // FactorTimer fr
 #endif
   } else {
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranLowerHys]);
+    if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranLowerHyper]);
 #endif
     const int* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
     const double* Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranLowerHys]);
+    if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranLowerHyper]);
 #endif
   }
   if (analysis != NULL) {
     const double end_density = 1.0 * rhs.count / numRow;
-    analysis->afterTranStage(TRAN_STAGE_FTRAN_LOWER, current_density, end_density,
+    analysis->afterTranStage(TRAN_STAGE_FTRAN_LOWER,
+			     current_density, end_density,
+			     historical_density,
 			     predicted_end_density, 
 			     use_solve_sparse_original_HFactor_logic,
 			     use_solve_sparse_new_HFactor_logic);
@@ -1347,14 +1350,14 @@ void HFactor::btranL(HVector& rhs, double historical_density){ // FactorTimer fr
 #endif
   } else {
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.start(clock_[FactorBtranLowerHys]);
+    if (omp_max_threads <= 1) timer_.start(clock_[FactorBtranLowerHyper]);
 #endif
     const int* LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
     const double* LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &LRstart[0],
                &LRstart[1], &LRindex[0], &LRvalue[0], &rhs);
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranLowerHys]);
+    if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranLowerHyper]);
 #endif
   }
 
@@ -1483,14 +1486,14 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
     if (analysis != NULL) {
       updateValueDistribution(current_density, analysis->before_ftran_upper_hyper_density);
     }
-    if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperHys]);
+    if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperHyper]);
 #endif
     const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
     const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperHys]);
+    if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperHyper]);
     if (analysis != NULL) {
       double local_density = (1.0 * rhs.count) / numRow;
       updateValueDistribution(local_density, analysis->ftran_upper_hyper_density);
@@ -1590,12 +1593,12 @@ void HFactor::btranU(HVector& rhs, double historical_density){ // FactorTimer fr
 #endif
   } else {
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.start(clock_[FactorBtranUpperHys]);
+    if (omp_max_threads <= 1) timer_.start(clock_[FactorBtranUpperHyper]);
 #endif
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &URstart[0], &URlastp[0], &URindex[0], &URvalue[0], &rhs);
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranUpperHys]);
+    if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranUpperHyper]);
 #endif
   }
 

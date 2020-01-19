@@ -59,6 +59,23 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
    stage.num_wrong_new_sparse_decision_ = 0;
    stage.num_wrong_new_hyper_decision_ = 0;
   } 
+  original_start_density_tolerance.resize(NUM_TRAN_STAGE_TYPE);
+  new_start_density_tolerance.resize(NUM_TRAN_STAGE_TYPE);
+  historical_density_tolerance.resize(NUM_TRAN_STAGE_TYPE);
+  predicted_density_tolerance.resize(NUM_TRAN_STAGE_TYPE);
+
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
+    original_start_density_tolerance[tran_stage_type] = 0.05;
+    new_start_density_tolerance[tran_stage_type] = 0.05;
+  }
+  historical_density_tolerance[TRAN_STAGE_FTRAN_LOWER] = 0.15;
+  historical_density_tolerance[TRAN_STAGE_FTRAN_UPPER] = 0.10;
+  historical_density_tolerance[TRAN_STAGE_BTRAN_UPPER] = 0.10;
+  historical_density_tolerance[TRAN_STAGE_BTRAN_LOWER] = 0.15;
+  predicted_density_tolerance[TRAN_STAGE_FTRAN_LOWER] = 0.10;
+  predicted_density_tolerance[TRAN_STAGE_FTRAN_UPPER] = 0.10;
+  predicted_density_tolerance[TRAN_STAGE_BTRAN_UPPER] = 0.10;
+  predicted_density_tolerance[TRAN_STAGE_BTRAN_LOWER] = 0.10;
 
   // Initialise the measures used to analyse accuracy of steepest edge weights
   // 
@@ -355,47 +372,102 @@ bool HighsSimplexAnalysis::switchToDevex() {
 }
 
 bool HighsSimplexAnalysis::predictEndDensity(const int tran_stage_type,
-					     const double initial_density,
+					     const double start_density,
 					     double& end_density) {
-  return predictFromScatterData(tran_stage[tran_stage_type].rhs_density_, initial_density, end_density);
+  return predictFromScatterData(tran_stage[tran_stage_type].rhs_density_, start_density, end_density);
 }
 
-void HighsSimplexAnalysis::afterTranStage(const int tran_stage_type, const double initial_density, const double final_density,
+void HighsSimplexAnalysis::afterTranStage(const int tran_stage_type,
+					  const double start_density,
+					  const double end_density,
+					  const double historical_density, 
 					  const double predicted_end_density, 
 					  const bool use_solve_sparse_original_HFactor_logic,
 					  const bool use_solve_sparse_new_HFactor_logic) {
-  if (initial_density > 0.2) return;
   TranStageAnalysis& stage = tran_stage[tran_stage_type];
-  stage.num_decision_++;
-  if (final_density <= 0.1) {
-    // Should have done hyper-sparse TRAN
-    if (use_solve_sparse_original_HFactor_logic) {
-      // Original logic makes wrong decision to use sparse TRAN
-      stage.num_wrong_original_sparse_decision_++;
-    }
-    if (use_solve_sparse_new_HFactor_logic) {
-      // New logic makes wrong decision to use sparse TRAN
-      stage.num_wrong_new_sparse_decision_++;
-    }
-  } else {
-    // Should have done sparse TRAN
-    if (!use_solve_sparse_original_HFactor_logic) {
-      // Original logic makes wrong decision to use hyper TRAN
-      stage.num_wrong_original_hyper_decision_++;
-    }
-    if (!use_solve_sparse_new_HFactor_logic) {
-      // New logic makes wrong decision to use hyper TRAN
-      stage.num_wrong_new_hyper_decision_++;
+  if (predicted_end_density > 0) {
+    stage.num_decision_++;
+    if (end_density <= max_hyper_density) {
+      // Should have done hyper-sparse TRAN
+      if (use_solve_sparse_original_HFactor_logic) {
+	// Original logic makes wrong decision to use sparse TRAN
+	printf("Original: Wrong sparse: ");
+	const double start_density_tolerance = original_start_density_tolerance[tran_stage_type];
+	const double this_historical_density_tolerance = historical_density_tolerance[tran_stage_type];
+	if (start_density > start_density_tolerance) {
+	  printf("(start = %10.4g >  %4.2f)  or ", start_density, start_density_tolerance);
+	} else {
+	  printf(" start = %10.4g              ", start_density);
+	}
+	if (historical_density > this_historical_density_tolerance) {
+	  printf("(historical = %10.4g  > %4.2f); ", historical_density, this_historical_density_tolerance);
+	} else {
+	  printf(" historical = %10.4g           ", historical_density);
+	}
+	printf("end = %10.4g", end_density);
+	if (end_density < 0.1*historical_density) printf(" !! OG");
+	printf("\n");
+	stage.num_wrong_original_sparse_decision_++;
+      }
+      if (use_solve_sparse_new_HFactor_logic) {
+	// New logic makes wrong decision to use sparse TRAN
+	printf("New     : Wrong sparse: ");
+	const double start_density_tolerance = original_start_density_tolerance[tran_stage_type];
+	const double end_density_tolerance = predicted_density_tolerance[tran_stage_type];
+	if (start_density > start_density_tolerance) {
+	  printf("(start = %10.4g >  %4.2f)  or ", start_density, start_density_tolerance);
+	} else {
+	  printf(" start = %10.4g                       ", start_density);
+	}
+	if (predicted_end_density > end_density_tolerance) {
+	  printf("( predicted = %10.4g  > %4.2f); ", predicted_end_density, end_density_tolerance);
+	} else {
+	  printf("  predicted = %10.4g           ", predicted_end_density);
+	}
+	printf("end = %10.4g", end_density);
+	if (end_density < 0.1*predicted_end_density) printf(" !! NW");
+	printf("\n");
+	stage.num_wrong_new_sparse_decision_++;
+      }
+    } else {
+      // Should have done sparse TRAN
+      if (!use_solve_sparse_original_HFactor_logic) {
+	// Original logic makes wrong decision to use hyper TRAN
+	printf("Original: Wrong  hyper: (start = %10.4g <= %4.2f) and (historical = %10.4g <= %4.2f); end = %10.4g",
+	       start_density, original_start_density_tolerance[tran_stage_type],
+	       historical_density, historical_density_tolerance[tran_stage_type],
+	       end_density);
+	if (end_density > 10.0*historical_density) printf(" !! OG");
+	printf("\n");
+	stage.num_wrong_original_hyper_decision_++;
+      }
+      if (!use_solve_sparse_new_HFactor_logic) {
+	// New logic makes wrong decision to use hyper TRAN
+	printf("New     : Wrong  hyper: (start = %10.4g <= %4.2f) and ( predicted = %10.4g <= %4.2f); end = %10.4g",
+	       start_density, new_start_density_tolerance[tran_stage_type],
+	       predicted_end_density, predicted_density_tolerance[tran_stage_type],
+	       end_density);
+	if (end_density > 10.0*predicted_end_density) printf(" !! NW");
+	printf("\n");
+	stage.num_wrong_new_hyper_decision_++;
+      }
     }
   }
-  updateScatterData(initial_density, final_density, stage.rhs_density_);
+  updateScatterData(start_density, end_density, stage.rhs_density_);
   regressScatterData(stage.rhs_density_);
 }
 
 void HighsSimplexAnalysis::summaryReportHFactor() {
   for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
-    //    printScatterData(tran_stage[tran_stage_type].name_, tran_stage[tran_stage_type].rhs_density_);
-    printScatterDataRegressionComparison(tran_stage[tran_stage_type].name_, tran_stage[tran_stage_type].rhs_density_);
+  TranStageAnalysis& stage = tran_stage[tran_stage_type];
+    //    printScatterData(stage.name_, stage.rhs_density_);
+    printScatterDataRegressionComparison(stage.name_, stage.rhs_density_);
+    if (!stage.num_decision_) return;
+    printf("Of %10d Sps/Hyper decisions made using regression:\n", stage.num_decision_);
+    printf("   %10d wrong sparseTRAN; %10d wrong hyperTRAN: using original logic\n",
+	   stage.num_wrong_original_sparse_decision_, stage.num_wrong_original_hyper_decision_); 
+    printf("   %10d wrong sparseTRAN; %10d wrong hyperTRAN: using new      logic\n",
+	   stage.num_wrong_new_sparse_decision_, stage.num_wrong_new_hyper_decision_); 
   }
 }
 

@@ -54,6 +54,8 @@ struct TranStageAnalysis {
 };
 
 const double running_average_multiplier = 0.05;
+const double max_regression_density = 0.2;
+const double max_hyper_density = 0.1;
 
 /**
  * @brief Analyse simplex iterations, both for run-time control and data gathering
@@ -80,12 +82,13 @@ class HighsSimplexAnalysis {
 				   );
   bool switchToDevex();
   bool predictEndDensity(const int tran_stage_id,
-			 const double initial_density,
+			 const double start_density,
 			 double& end_density
 			 );
   void afterTranStage(const int tran_stage_id,
-		      const double initial_density,
-		      const double final_density,
+		      const double start_density,
+		      const double end_density,
+		      const double historical_density, 
 		      const double predicted_end_density, 
 		      const bool use_solve_sparse_original_HFactor_logic,
 		      const bool use_solve_sparse_new_HFactor_logic
@@ -180,6 +183,10 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_primal_change_distribution;
 #endif
 
+  vector<double> original_start_density_tolerance;
+  vector<double> new_start_density_tolerance;
+  vector<double> historical_density_tolerance;
+  vector<double> predicted_density_tolerance;
   vector<TranStageAnalysis> tran_stage;
  private:
 

@@ -135,7 +135,6 @@ void reportLpStatsOrError(FILE* output, int message_level,
     if (lp.numInt_)
       HighsPrintMessage(output, message_level, ML_ALWAYS, "Integer  : %d\n",
                         lp.numInt_);
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "\n");
   }
 }
 
@@ -265,9 +264,9 @@ HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
   */
 
   // Write all the options to an options file
-  // highs.writeHighsOptions("Highs.set", false);
+  // highs.writeHighsOptions("HighsOptions.set", false);
   // Write all the options as HTML
-  // highs.writeHighsOptions("Highs.html", false);
+  // highs.writeHighsOptions("HighsOptions.html", false);
   // Possibly report options settings
   highs.writeHighsOptions("");  //, false);
 
