@@ -369,6 +369,7 @@ class HighsOptions : public HighsOptionsStruct {
       deleteRecords();
   }
 
+ private:
   void initRecords() {
     OptionRecordBool* record_bool;
     OptionRecordInt* record_int;
@@ -675,7 +676,8 @@ class HighsOptions : public HighsOptionsStruct {
     for (unsigned int i=0; i<records.size(); i++)
       delete records[i];
   }
-  
+ 
+ public:
   std::vector<OptionRecord*> records;
 };
 
