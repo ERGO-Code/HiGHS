@@ -42,7 +42,7 @@ if (OSI_FOUND AND BUILD_TESTING)
 	target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS} ${HIGHS_SOURCE_DIR}/src/interfaces)
 	target_compile_options(osi_unit_tests PUBLIC ${OSITEST_CFLAGS_OTHER})
     endif (OSITEST_FOUND AND BUILD_TESTING)
-endif (OSI_FOUND)
+endif()
 
 if(FORTRAN_FOUND)
    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
