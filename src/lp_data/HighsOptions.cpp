@@ -386,7 +386,7 @@ OptionStatus setOptionValue(FILE* logfile, OptionRecordString& option, const std
   return OptionStatus::OK;
 }
 
-OptionStatus passOptions(FILE* logfile, const HighsOptions from_options, HighsOptions to_options) {
+OptionStatus passOptions(FILE* logfile, const HighsOptions& from_options, HighsOptions& to_options) {
   // (Attempt to) set option value from the HighsOptions passed in
   OptionStatus return_status;
   int num_options = to_options.records.size();

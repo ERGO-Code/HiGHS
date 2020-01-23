@@ -38,7 +38,7 @@ class InfoRecord {
     this->advanced = Xadvanced;
   }
   
-  ~InfoRecord() {}
+  virtual ~InfoRecord() {}
 };
 
 class InfoRecordInt : public InfoRecord {
@@ -60,7 +60,7 @@ class InfoRecordInt : public InfoRecord {
     *value = default_value;
   }
   
-  ~InfoRecordInt() {}
+  virtual ~InfoRecordInt() {}
 };
 
 class InfoRecordDouble : public InfoRecord {
@@ -81,7 +81,7 @@ class InfoRecordDouble : public InfoRecord {
     *value = default_value;
   }
   
-  ~InfoRecordDouble() {}
+  virtual ~InfoRecordDouble() {}
 };
 
 InfoStatus getInfoIndex(const HighsOptions& options,
@@ -119,9 +119,67 @@ void reportInfo(FILE* file, const InfoRecordDouble& info,
 // are just what has been used to parse info from argv.
 // todo: when creating the new info don't forget underscores for class
 // variables but no underscores for struct
-class HighsInfo {
+struct HighsInfoStruct {
+  int simplex_iteration_count;
+  int ipm_iteration_count;
+  int crossover_iteration_count;
+  int primal_status;
+  int dual_status;
+  double objective_function_value;
+  int num_primal_infeasibilities;
+  double max_primal_infeasibility;
+  double sum_primal_infeasibilities;
+  int num_dual_infeasibilities;
+  double max_dual_infeasibility;
+  double sum_dual_infeasibilities;
+};
+
+class HighsInfo : public HighsInfoStruct {
  public:
   HighsInfo() {
+		initRecords();
+	}
+
+  HighsInfo(const HighsInfo& info) {
+    initRecords();
+    HighsInfoStruct::operator=(info);
+  }
+
+  HighsInfo(HighsInfo&& info) {
+    records = std::move(info.records);
+    HighsInfoStruct::operator=(std::move(info));
+  }
+
+  const HighsInfo& operator=(const HighsInfo& other) {
+    if (&other != this) {
+      if ((int) records.size() == 0)
+        initRecords();
+      HighsInfoStruct::operator=(other);
+    }
+    return *this;
+  }
+
+  const HighsInfo& operator=(HighsInfo&& other) {
+    if (&other != this) {
+      if ((int) records.size() == 0)
+        initRecords();
+      HighsInfoStruct::operator=(other);
+    }
+    return *this;
+  }
+
+  virtual ~HighsInfo() {
+    if (records.size() > 0)
+      deleteRecords();
+  }
+
+ private:
+  void deleteRecords() {
+    for (unsigned int i=0; i<records.size(); i++)
+      delete records[i];
+  }
+
+	void initRecords() {
     InfoRecordInt* record_int;
     InfoRecordDouble* record_double;
     bool advanced;
@@ -200,21 +258,9 @@ class HighsInfo {
     records.push_back(record_double);
     
   }
+
+ public:
   std::vector<InfoRecord*> records;
-
-  int simplex_iteration_count;
-  int ipm_iteration_count;
-  int crossover_iteration_count;
-  int primal_status;
-  int dual_status;
-  double objective_function_value;
-  int num_primal_infeasibilities;
-  double max_primal_infeasibility;
-  double sum_primal_infeasibilities;
-  int num_dual_infeasibilities;
-  double max_dual_infeasibility;
-  double sum_dual_infeasibilities;
 };
-
 
 #endif

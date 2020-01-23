@@ -42,8 +42,7 @@
 
 Highs::Highs() {
   hmos_.clear();
-  HighsModelObject* hmo = new HighsModelObject(lp_, options_, timer_);
-  hmos_.push_back(*hmo);
+  hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 }
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
@@ -205,6 +204,7 @@ HighsStatus Highs::readModel(const std::string filename) {
   this->options_.model_file = filename;
 
   FilereaderRetcode call_code = reader->readModelFromFile(this->options_, model);
+  delete reader;
   if (call_code != FilereaderRetcode::OK) {
     call_status = HighsStatus::Error;
     return_status = interpretCallStatus(call_status, return_status, "readModelFromFile");
@@ -227,6 +227,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
   } else {
     Filereader* writer = Filereader::getFilereader(filename.c_str());
     call_status = writer->writeModelToFile(options_, filename.c_str(), model);
+    delete writer;
     return_status = interpretCallStatus(call_status, return_status, "writeModelToFile");
   }
   return return_status;
