@@ -40,7 +40,7 @@ class OptionRecord {
     this->advanced = Xadvanced;
   }
   
-  ~OptionRecord() {}
+  virtual ~OptionRecord() {}
 };
 
 class OptionRecordBool : public OptionRecord {
@@ -67,7 +67,7 @@ class OptionRecordBool : public OptionRecord {
     *value = Xvalue;
   }
   
-  ~OptionRecordBool() {}
+  virtual ~OptionRecordBool() {}
 };
 
 class OptionRecordInt : public OptionRecord {
@@ -99,7 +99,7 @@ void assignvalue(int Xvalue) {
   *value = Xvalue;
 }
 
-~OptionRecordInt() {}
+virtual ~OptionRecordInt() {}
 };
 
 class OptionRecordDouble : public OptionRecord {
@@ -130,7 +130,7 @@ void assignvalue(double Xvalue) {
   *value = Xvalue;
 }
 
-~OptionRecordDouble() {}
+virtual ~OptionRecordDouble() {}
 };
 
 class OptionRecordString : public OptionRecord {
@@ -156,7 +156,7 @@ void assignvalue(std::string Xvalue) {
   *value = Xvalue;
 }
 
-~OptionRecordString() {}
+virtual ~OptionRecordString() {}
 };
 
 inline const char* bool2string(bool b);
@@ -197,7 +197,7 @@ OptionStatus setOptionValue(FILE* logfile, OptionRecordInt& option, const int va
 OptionStatus setOptionValue(FILE* logfile, OptionRecordDouble& option, const double value);
 OptionStatus setOptionValue(FILE* logfile, OptionRecordString& option, std::string const value);
 
-OptionStatus passOptions(FILE* logfile, const HighsOptions from_options, HighsOptions to_options);
+OptionStatus passOptions(FILE* logfile, const HighsOptions& from_options, HighsOptions& to_options);
 
 OptionStatus getOptionValue(FILE* logfile,
 			    const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
@@ -250,14 +250,126 @@ const string options_file_string = "options_file";
 /** SCIP/HiGHS Objective sense */
 enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 
+
+struct HighsOptionsStruct {
+  // Options read from the command line
+  std::string model_file;
+  std::string presolve;
+  std::string solver;
+  std::string parallel;
+  double time_limit;
+  std::string options_file;
+  
+  // Options read from the file
+  double infinite_cost;
+  double infinite_bound;
+  double small_matrix_value;
+  double large_matrix_value;
+  double primal_feasibility_tolerance;
+  double dual_feasibility_tolerance;
+  double dual_objective_value_upper_bound;
+  int simplex_strategy;
+  int simplex_scale_strategy;
+  int simplex_crash_strategy;
+  int simplex_dual_edge_weight_strategy;
+  int simplex_primal_edge_weight_strategy;
+  int simplex_iteration_limit;
+  int simplex_update_limit;
+  int highs_min_threads;
+  int highs_max_threads;
+  int message_level;
+  std::string solution_file;
+  bool write_solution_to_file;
+  bool write_solution_pretty;
+  
+  // Advanced options
+  bool run_as_hsol;
+  bool mps_parser_type_free;
+  int keep_n_rows;
+  int allowed_simplex_matrix_scale_factor;
+  int allowed_simplex_cost_scale_factor;
+  int simplex_dualise_strategy;
+  int simplex_permute_strategy;
+  int dual_simplex_cleanup_strategy;
+  int simplex_price_strategy;
+  bool simplex_initial_condition_check;
+  double simplex_initial_condition_tolerance;
+  double dual_steepest_edge_weight_log_error_threshhold;
+  double dual_simplex_cost_perturbation_multiplier;
+  bool less_infeasible_DSE_check;
+  bool less_infeasible_DSE_choose_row;
+
+  // Options for iCrash
+  bool icrash;
+  bool icrash_dualize;
+  std::string icrash_strategy;
+  double icrash_starting_weight;
+  int icrash_iterations;
+  int icrash_approximate_minimization_iterations;
+  bool icrash_exact;
+  bool icrash_breakpoints;
+
+  // Switch for MIP solver
+  bool mip;
+  
+  // Options for HighsPrintMessage and HighsLogMessage
+  FILE* logfile = stdout;
+  FILE* output = stdout;
+
+  void (*printmsgcb)(int level, const char* msg,
+                     void* msgcb_data) = NULL;
+  void (*logmsgcb)(HighsMessageType type, const char* msg,
+                   void* msgcb_data) = NULL;
+  void* msgcb_data = NULL;
+
+  virtual ~HighsOptionsStruct() {}
+};
+
 // For now, but later change so HiGHS properties are string based so that new
 // options (for debug and testing too) can be added easily. The options below
 // are just what has been used to parse options from argv.
 // todo: when creating the new options don't forget underscores for class
 // variables but no underscores for struct
-class HighsOptions {
+class HighsOptions : public HighsOptionsStruct {
  public:
   HighsOptions() {
+    initRecords();
+  }
+
+  HighsOptions(const HighsOptions& options) {
+    initRecords();
+    HighsOptionsStruct::operator=(options);
+  }
+
+  HighsOptions(HighsOptions&& options) {
+    records = std::move(options.records);
+    HighsOptionsStruct::operator=(std::move(options));
+  }
+
+  const HighsOptions& operator=(const HighsOptions& other) {
+    if (&other != this) {
+      if ((int) records.size() == 0)
+        initRecords();
+      HighsOptionsStruct::operator=(other);
+    }
+    return *this;
+  }
+
+  const HighsOptions& operator=(HighsOptions&& other) {
+    if (&other != this) {
+      if ((int) records.size() == 0)
+        initRecords();
+      HighsOptionsStruct::operator=(other);
+    }
+    return *this;
+  }
+
+  virtual ~HighsOptions() {
+    if (records.size() > 0)
+      deleteRecords();
+  }
+
+  void initRecords() {
     OptionRecordBool* record_bool;
     OptionRecordInt* record_int;
     OptionRecordDouble* record_double;
@@ -558,80 +670,13 @@ class HighsOptions {
 				     true);
     records.push_back(record_bool);
   }
-
-  ~HighsOptions() {}
+  
+  void deleteRecords() {
+    for (unsigned int i=0; i<records.size(); i++)
+      delete records[i];
+  }
   
   std::vector<OptionRecord*> records;
-
-  // Options read from the command line
-  std::string model_file;
-  std::string presolve;
-  std::string solver;
-  std::string parallel;
-  double time_limit;
-  std::string options_file;
-  
-  // Options read from the file
-  double infinite_cost;
-  double infinite_bound;
-  double small_matrix_value;
-  double large_matrix_value;
-  double primal_feasibility_tolerance;
-  double dual_feasibility_tolerance;
-  double dual_objective_value_upper_bound;
-  int simplex_strategy;
-  int simplex_scale_strategy;
-  int simplex_crash_strategy;
-  int simplex_dual_edge_weight_strategy;
-  int simplex_primal_edge_weight_strategy;
-  int simplex_iteration_limit;
-  int simplex_update_limit;
-  int highs_min_threads;
-  int highs_max_threads;
-  int message_level;
-  std::string solution_file;
-  bool write_solution_to_file;
-  bool write_solution_pretty;
-  
-  // Advanced options
-  bool run_as_hsol;
-  bool mps_parser_type_free;
-  int keep_n_rows;
-  int allowed_simplex_matrix_scale_factor;
-  int allowed_simplex_cost_scale_factor;
-  int simplex_dualise_strategy;
-  int simplex_permute_strategy;
-  int dual_simplex_cleanup_strategy;
-  int simplex_price_strategy;
-  bool simplex_initial_condition_check;
-  double simplex_initial_condition_tolerance;
-  double dual_steepest_edge_weight_log_error_threshhold;
-  double dual_simplex_cost_perturbation_multiplier;
-  bool less_infeasible_DSE_check;
-  bool less_infeasible_DSE_choose_row;
-
-  // Options for iCrash
-  bool icrash;
-  bool icrash_dualize;
-  std::string icrash_strategy;
-  double icrash_starting_weight;
-  int icrash_iterations;
-  int icrash_approximate_minimization_iterations;
-  bool icrash_exact;
-  bool icrash_breakpoints;
-
-  // Switch for MIP solver
-  bool mip;
-  
-  // Options for HighsPrintMessage and HighsLogMessage
-  FILE* logfile = stdout;
-  FILE* output = stdout;
-
-  void (*printmsgcb)(int level, const char* msg,
-                     void* msgcb_data) = NULL;
-  void (*logmsgcb)(HighsMessageType type, const char* msg,
-                   void* msgcb_data) = NULL;
-  void* msgcb_data = NULL;
 };
 
 
