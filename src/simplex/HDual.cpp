@@ -257,8 +257,8 @@ HighsStatus HDual::solve() {
 #ifdef HiGHSDEV
     vector<double> primal_value_before_cleanup;
     getPrimalValue(workHMO, primal_value_before_cleanup);
-    printf("\nAnalyse primal objective evaluation before cleanup\n");
-    analysePrimalObjectiveValue(workHMO);
+    //    printf("\nAnalyse primal objective evaluation before cleanup\n");
+    //    analysePrimalObjectiveValue(workHMO);
     const double objective_before = simplex_info.primal_objective_value;
 #endif  
     if (options.dual_simplex_cleanup_strategy == DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE) {
@@ -295,8 +295,8 @@ HighsStatus HDual::solve() {
       const double primal_change = fabs(primal_value_after_cleanup[var] - primal_value_before_cleanup[var]);
       updateValueDistribution(primal_change, analysis->cleanup_primal_change_distribution);
     }
-      printf("\nAnalyse primal objective evaluation after cleanup\n");
-      analysePrimalObjectiveValue(workHMO);
+    //      printf("\nAnalyse primal objective evaluation after cleanup\n");
+    //      analysePrimalObjectiveValue(workHMO);
       const double objective_after = simplex_info.primal_objective_value;
       const double abs_objective_change = fabs(objective_before - objective_after);
       const double rel_objective_change = abs_objective_change / max(1.0, fabs(objective_after));
