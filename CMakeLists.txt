@@ -13,6 +13,8 @@ set(HIGHS_VERSION_PATCH 0)
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
 
+find_package(PkgConfig)
+
 include(CPack)
 set(CPACK_RESOURCE_FILE_LICENSE "${HIGHS_SOURCE_DIR}/COPYING")
 set(CPACK_PACKAGE_VERSION_MAJOR "${HIGHS_VERSION_MAJOR}")
@@ -70,13 +72,20 @@ if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
     message(STATUS "HiGHS development: " ${HiGHSDEV})
 endif()
 
-option(OSI_ROOT "Osi root folder." "OFF")
-if (NOT (${OSI_ROOT} STREQUAL "OFF"))
+set(OSI_ROOT "" CACHE PATH "Osi root folder.")
+if (NOT "${OSI_ROOT}" STREQUAL "")
     # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
     message(STATUS "OSI root folder set: " ${OSI_ROOT})
     set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
 endif ()
 unset(OSI_ROOT CACHE)
+
+pkg_check_modules(OSI osi)
+if (OSI_FOUND)
+    # need to come before adding any targets (add_executable, add_library)
+    link_directories(${OSI_LIBRARY_DIRS})
+    include_directories(${OSITEST_INCLUDE_DIRS})
+endif (OSI_FOUND)
 
 option(IPN_ON OFF)
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5))
@@ -99,11 +108,6 @@ if(CMAKE_CSharp_COMPILER)
 else()
     set(CSHARP_FOUND OFF)
 endif(CMAKE_CSharp_COMPILER)
-
-find_package(PkgConfig)
-pkg_check_modules(OSI osi)
-# need to come before adding any targets (add_executable, add_library)
-link_directories(${OSI_LIBRARY_DIRS})
 
 option(GAMS_ROOT "GAMS root folder." "OFF")
 if (NOT (${GAMS_ROOT} STREQUAL "OFF"))

@@ -408,8 +408,6 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface& original);
 };
 
-void OsiSolverInterfaceMpsUnitTest(
-    const std::vector<OsiSolverInterface*>& vecSiP, const std::string& mpsDir) {
-}
+void OsiSolverInterfaceMpsUnitTest(const std::vector<OsiSolverInterface*>& vecSiP, const std::string& mpsDir);
 
 #endif

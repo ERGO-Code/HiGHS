@@ -25,7 +25,7 @@ using namespace OsiUnitTest;
 
 int main (int argc, const char *argv[])
 {
-#if !COINSAMPLEFOUND
+#ifndef COINSAMPLEFOUND
   std::cerr << "Path to Data/Sample not known. Cannot run tests without sample MPS files." << std::endl;
   return EXIT_FAILURE;
 #endif
@@ -70,7 +70,7 @@ int main (int argc, const char *argv[])
     OSIUNITTEST_CATCH_ERROR(OsiRowCutDebuggerUnitTest(&highsSi,mpsDir), {}, highsSi, "rowcut debugger unittest");
   }
 
-#if COINNETLIBFOUND
+#ifdef COINNETLIBFOUND
   //  We have run the fast unit tests.
   //  If there were no errors, then also run the Netlib problems.
   outcomes.getCountBySeverity(TestOutcome::ERROR, nerrors, nerrors_expected);

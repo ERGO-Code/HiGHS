@@ -34,7 +34,7 @@ class Highs {
   Highs();
   Highs(HighsOptions& options) { options_ = options; }
 
-  //  virtual ~Highs() { delete &hmos_; }
+  virtual ~Highs() {}
 
   /**
    * Methods for model input

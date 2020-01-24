@@ -1354,3 +1354,7 @@ void OsiHiGHSSolverInterface ::setRowNames(OsiNameVec& srcNames, int srcStart,
 
 void OsiHiGHSSolverInterface ::setColNames(OsiNameVec& srcNames, int srcStart,
                                            int len, int tgtStart) {}
+
+void OsiSolverInterfaceMpsUnitTest(
+    const std::vector<OsiSolverInterface*>& vecSiP, const std::string& mpsDir) {
+}

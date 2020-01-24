@@ -77,7 +77,9 @@ set(sources
     io/FilereaderMps.cpp
     io/HighsIO.cpp
     io/HMPSIO.cpp
+    io/HMpsFF.cpp
     io/HToyIO.cpp
+    io/LoadOptions.cpp
     io/LoadProblem.cpp
     lp_data/Highs.cpp
     lp_data/HighsInfo.cpp
