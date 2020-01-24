@@ -1238,7 +1238,7 @@ void HFactor::ftranL(HVector& rhs, double historical_density){ // FactorTimer fr
   double predicted_end_density = -1;
   bool use_solve_sparse;
   bool use_solve_sparse_original_HFactor_logic = current_density > hyperCANCEL || historical_density > hyperFTRANL;
-  bool use_solve_sparse_new_HFactor_logic;
+  bool use_solve_sparse_new_HFactor_logic = false;
   use_solve_sparse = use_solve_sparse_original_HFactor_logic;
   if (analysis != NULL) {
     if (analysis->predictEndDensity(TRAN_STAGE_FTRAN_LOWER, current_density, predicted_end_density)) {
@@ -1422,7 +1422,17 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
     if (analysis != NULL) {
       updateValueDistribution(current_density, analysis->before_ftran_upper_sparse_density);
     }
-    if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperSps]);
+    int use_clock = -1;
+    if (omp_max_threads <= 1) {
+      if (current_density < 0.1) {
+	use_clock = clock_[FactorFtranUpperSps2];
+      } else if (current_density < 0.5) {
+	use_clock = clock_[FactorFtranUpperSps1];
+      } else {
+	use_clock = clock_[FactorFtranUpperSps0];
+      }
+      timer_.start(use_clock);
+    }
 #endif
     // Alias to non constant
     //        int RHS_Tick = rhs.pseudoTick;
@@ -1470,7 +1480,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
     //        numRow) * 10;
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperSps]);
+    if (omp_max_threads <= 1) timer_.stop(use_clock);
     if (analysis != NULL) {
       double local_density = (1.0 * rhs.count) / numRow;
       updateValueDistribution(local_density, analysis->ftran_upper_sparse_density);
@@ -1486,14 +1496,30 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
     if (analysis != NULL) {
       updateValueDistribution(current_density, analysis->before_ftran_upper_hyper_density);
     }
-    if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperHyper]);
+    int use_clock = -1;
+    if (omp_max_threads <= 1) {
+      if (current_density < 5e-6) {
+	use_clock = clock_[FactorFtranUpperHyper5];
+      } else if (current_density < 1e-5) {
+	use_clock = clock_[FactorFtranUpperHyper4];
+      } else if (current_density < 1e-4) {
+	use_clock = clock_[FactorFtranUpperHyper3];
+      } else if (current_density < 1e-3) {
+	use_clock = clock_[FactorFtranUpperHyper2];
+      } else if (current_density < 1e-2) {
+	use_clock = clock_[FactorFtranUpperHyper1];
+      } else {
+	use_clock = clock_[FactorFtranUpperHyper0];
+      }
+      timer_.start(use_clock);
+    }
 #endif
     const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
     const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
 #ifdef HiGHSDEV
-    if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperHyper]);
+    if (omp_max_threads <= 1) timer_.stop(use_clock);
     if (analysis != NULL) {
       double local_density = (1.0 * rhs.count) / numRow;
       updateValueDistribution(local_density, analysis->ftran_upper_hyper_density);
