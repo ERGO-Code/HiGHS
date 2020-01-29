@@ -271,8 +271,10 @@ HighsStatus HDual::solve() {
     } else {
       // Use primal to clean up
 #ifdef HiGHSDEV
-      initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_primal_step_distribution);
-      initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_dual_step_distribution);
+      initialiseValueDistribution("Cleanup primal step summary", "", 
+				  1e-16, 1e16, 10.0, analysis->cleanup_primal_step_distribution);
+      initialiseValueDistribution("Cleanup dual step summary", "", 
+				  1e-16, 1e16, 10.0, analysis->cleanup_dual_step_distribution);
 #endif  
       int it0 = scaled_solution_params.simplex_iteration_count;
       const bool full_logging = false;//true;//

@@ -168,7 +168,6 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
 		    const bool use_original_HFactor_logic_,
-		    HighsSimplexAnalysis* analysis_,
                     int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
@@ -179,7 +178,6 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   baseIndex = baseIndex_;
   updateMethod = updateMethod_;
 
-  analysis = analysis_;
   use_original_HFactor_logic = use_original_HFactor_logic_;
 
   // Allocate for working buffer
@@ -1234,23 +1232,7 @@ void HFactor::ftranL(HVector& rhs, double historical_density){ // FactorTimer fr
   }
 
   double current_density = 1.0 * rhs.count / numRow;
-  // Set predicted_end_density to an illegal value to see if it's set
-  double predicted_end_density = -1;
-  bool use_solve_sparse;
-  bool use_solve_sparse_original_HFactor_logic = current_density > hyperCANCEL || historical_density > hyperFTRANL;
-  bool use_solve_sparse_new_HFactor_logic = false;
-  use_solve_sparse = use_solve_sparse_original_HFactor_logic;
-  if (analysis != NULL) {
-    if (analysis->predictEndDensity(TRAN_STAGE_FTRAN_LOWER, current_density, predicted_end_density)) {
-      use_solve_sparse_new_HFactor_logic = current_density > hyperCANCEL || predicted_end_density > hyperFTRANU;
-      if (use_original_HFactor_logic) {
-	use_solve_sparse = use_solve_sparse_original_HFactor_logic;
-      } else {
-	use_solve_sparse = use_solve_sparse_new_HFactor_logic;
-      }
-    }
-  }
-  if (use_solve_sparse) {
+  if (current_density > hyperCANCEL || historical_density > hyperFTRANL) {
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranLowerSps]);
 #endif
@@ -1294,15 +1276,6 @@ void HFactor::ftranL(HVector& rhs, double historical_density){ // FactorTimer fr
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranLowerHyper]);
 #endif
-  }
-  if (analysis != NULL) {
-    const double end_density = 1.0 * rhs.count / numRow;
-    analysis->afterTranStage(TRAN_STAGE_FTRAN_LOWER,
-			     current_density, end_density,
-			     historical_density,
-			     predicted_end_density, 
-			     use_solve_sparse_original_HFactor_logic,
-			     use_solve_sparse_new_HFactor_logic);
   }
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranLower]);
@@ -1372,10 +1345,6 @@ void HFactor::btranL(HVector& rhs, double historical_density){ // FactorTimer fr
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranLowerAPF]);
 #endif
   }
-  if (analysis != NULL) {
-    //    const double end_density = 1.0 * rhs.count / numRow;
-    //    analysis->afterTranStage(TRAN_STAGE_BTRAN_LOWER, current_density, end_density);
-  }
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranLower]);
 #endif
@@ -1394,10 +1363,6 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
     ftranFT(rhs);
     rhs.tight();
     rhs.pack();
-    if (analysis != NULL) {
-      //      const double end_density = 1.0 * rhs.count / numRow;
-      //      analysis->afterTranStage(TRAN_STAGE_FTRAN_UPPER_FT, current_density, end_density);
-    }
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperFT]);
 #endif
@@ -1419,9 +1384,6 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
   if (current_density > hyperCANCEL || historical_density > hyperFTRANU) {
     const bool report_ftran_upper_sparse = false;//current_density < hyperCANCEL;
 #ifdef HiGHSDEV
-    if (analysis != NULL) {
-      updateValueDistribution(current_density, analysis->before_ftran_upper_sparse_density);
-    }
     int use_clock = -1;
     if (omp_max_threads <= 1) {
       if (current_density < 0.1) {
@@ -1481,10 +1443,6 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(use_clock);
-    if (analysis != NULL) {
-      double local_density = (1.0 * rhs.count) / numRow;
-      updateValueDistribution(local_density, analysis->ftran_upper_sparse_density);
-    }
 #endif
     if (report_ftran_upper_sparse) {
       const double final_density = 1.0 * rhs.count / numRow;
@@ -1493,9 +1451,6 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
     }
   } else {
 #ifdef HiGHSDEV
-    if (analysis != NULL) {
-      updateValueDistribution(current_density, analysis->before_ftran_upper_hyper_density);
-    }
     int use_clock = -1;
     if (omp_max_threads <= 1) {
       if (current_density < 5e-6) {
@@ -1520,18 +1475,8 @@ void HFactor::ftranU(HVector& rhs, double historical_density){ // FactorTimer fr
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(use_clock);
-    if (analysis != NULL) {
-      double local_density = (1.0 * rhs.count) / numRow;
-      updateValueDistribution(local_density, analysis->ftran_upper_hyper_density);
-    }
 #endif
   }
-
-  if (analysis != NULL) {
-    //    const double end_density = 1.0 * rhs.count / numRow;
-    //    analysis->afterTranStage(TRAN_STAGE_FTRAN_UPPER, current_density, end_density);
-  }
-
   if (updateMethod == UPDATE_METHOD_PF) {
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperPF]);
@@ -1638,10 +1583,6 @@ void HFactor::btranU(HVector& rhs, double historical_density){ // FactorTimer fr
     //    const double current_density = 1.0 * rhs.count / numRow;
     btranFT(rhs);
     rhs.tight();
-    if (analysis != NULL) {
-      //      const double end_density = 1.0 * rhs.count / numRow;
-      //      analysis->afterTranStage(TRAN_STAGE_BTRAN_UPPER_FT, current_density, end_density);
-    }
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranUpperFT]);
 #endif
@@ -1657,10 +1598,6 @@ void HFactor::btranU(HVector& rhs, double historical_density){ // FactorTimer fr
 #ifdef HiGHSDEV
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranUpperMPF]);
 #endif
-  }
-  if (analysis != NULL) {
-    //    const double end_density = 1.0 * rhs.count / numRow;
-    //    analysis->afterTranStage(TRAN_STAGE_BTRAN_UPPER, current_density, end_density);
   }
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.stop(clock_[FactorBtranUpper]);

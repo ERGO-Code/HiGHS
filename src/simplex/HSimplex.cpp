@@ -314,8 +314,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     factor.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
                  &simplex_basis.basicIndex_[0],
-		 options.use_original_HFactor_logic,
-		 &highs_model_object.simplex_analysis_);
+		 options.use_original_HFactor_logic);
     simplex_lp_status.has_factor_arrays = true;
   }
   // Reinvert if there isn't a fresh INVERT. ToDo Override this for MIP hot
@@ -946,9 +945,12 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
   HighsValueDistribution objective_value_term_distribution;
   HighsValueDistribution basic_value_distribution;
   HighsValueDistribution basic_cost_distribution;
-  initialiseValueDistribution(1e-16, 1e16, 10.0, objective_value_term_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, basic_value_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, basic_cost_distribution);
+  initialiseValueDistribution("Nonzero objective terms", "",
+			      1e-16, 1e16, 10.0, objective_value_term_distribution);
+  initialiseValueDistribution("Basic values", "",
+			      1e-16, 1e16, 10.0, basic_value_distribution);
+  initialiseValueDistribution("Nonzero basic costs", "",
+			      1e-16, 1e16, 10.0, basic_cost_distribution);
 
   double primal_objective_value = 0;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
@@ -968,8 +970,10 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
   }
   HighsValueDistribution nonbasic_value_distribution;
   HighsValueDistribution nonbasic_cost_distribution;
-  initialiseValueDistribution(1e-16, 1e16, 10.0, nonbasic_value_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, nonbasic_cost_distribution);
+  initialiseValueDistribution("Nonbasic values", "",
+			      1e-16, 1e16, 10.0, nonbasic_value_distribution);
+  initialiseValueDistribution("Nonzero nonbasic costs", "",
+			      1e-16, 1e16, 10.0, nonbasic_cost_distribution);
   for (int col = 0; col < simplex_lp.numCol_; col++) {
     if (simplex_basis.nonbasicFlag_[col]) {
       const double value = simplex_info.workValue_[col];
@@ -991,16 +995,11 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
     }
   }
   printf("\nAnalysis of values, costs and objective terms:\n");
-  printf("Nonbasic values:\n");
-  printValueDistribution("", nonbasic_value_distribution);
-  printf("Basic values:\n");
-  printValueDistribution("", basic_value_distribution);
-  printf("Nonzero nonbasic costs:\n");
-  printValueDistribution("", nonbasic_cost_distribution);
-  printf("Nonzero basic costs:\n");
-  printValueDistribution("", basic_cost_distribution);
-  printf("Nonzero objective terms:\n");
-  printValueDistribution("", objective_value_term_distribution);
+  printValueDistribution(nonbasic_value_distribution);
+  printValueDistribution(basic_value_distribution);
+  printValueDistribution(nonbasic_cost_distribution);
+  printValueDistribution(basic_cost_distribution);
+  printValueDistribution(objective_value_term_distribution);
   printf("Linear objective value: %g\n", primal_objective_value);
   primal_objective_value *= highs_model_object.scale_.cost_;
   printf("Scaled objective value: %g\n", primal_objective_value);

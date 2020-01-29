@@ -105,7 +105,6 @@ class HFactor {
              const double* Avalue,  //!< Row values of constraint matrix
              int* baseIndex,        //!< Indices of basic variables
 	     const bool use_original_HFactor_logic = true,
-	     HighsSimplexAnalysis* analysis = NULL,
              int updateMethod =
                  UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
@@ -246,7 +245,6 @@ class HFactor {
   const double* Avalue;
   int* baseIndex;
   int updateMethod;
-  HighsSimplexAnalysis* analysis;
   bool use_original_HFactor_logic;
 
   // Working buffer
