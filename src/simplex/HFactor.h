@@ -20,7 +20,9 @@
 
 //#include "HConfig.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#ifdef HiGHSDEV
 #include "simplex/FactorTimer.h"
+#endif
 
 using std::max;
 using std::min;
@@ -216,8 +218,8 @@ class HFactor {
    * Should only be compiled when HiGHSDEV=on
    */
   void checkInvert();
-#endif
   void reportTimer();
+#endif
 
   // Properties of data held in HFactor.h. To "have" them means that
   // they are assigned.
