@@ -51,7 +51,13 @@ void HDual::iterateMulti() {
   }
   // If we failed.
   if (invertHint) {
-    majorUpdate();
+    if (multi_nFinish) {
+      majorUpdate();
+    } else {
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		      "PAMI skipping majorUpdate() due to multi_nFinish = %d; invertHint = %d",
+		      multi_nFinish, invertHint);
+    }
     return;
   }
 
