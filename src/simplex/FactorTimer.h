@@ -60,8 +60,8 @@ class FactorTimer {
  public:
   void initialiseFactorClocks(HighsTimer& timer, std::vector<int>& clock) {
     clock.resize(FactorNumClock);
-    clock[FactorInvert] = timer.clock_def("INVERT", "");
-    clock[FactorInvertSimple] =  timer.clock_def("INVERT Simple", "INV");
+    clock[FactorInvert] = timer.clock_def("INVERT", "INV");
+    clock[FactorInvertSimple] =  timer.clock_def("INVERT Simple", "IVS");
     clock[FactorInvertKernel] =  timer.clock_def("INVERT Kernel", "IVK");
     clock[FactorInvertDeficient] = timer.clock_def("INVERT Deficient", "IVD");
     clock[FactorInvertFinish] =  timer.clock_def("INVERT Finish", "IVF");
