@@ -273,7 +273,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     omp_max_threads = omp_get_max_threads();
 #endif
     if (omp_max_threads <= 1 && simplex_info.report_HFactor_clock)
-      highs_model_object.factor_.reportTimer();
+      highs_model_object.simplex_analysis_.reportFactorTimer();
 #endif
   }
 
@@ -448,7 +448,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) simplex_analysis.summaryReport();
 #endif
-  simplex_analysis.summaryReportHFactor();
+  simplex_analysis.summaryReportFactor();
 
   // Deduce the HiGHS basis and solution from the simplex basis and solution
   HighsSimplexInterface simplex_interface(highs_model_object);

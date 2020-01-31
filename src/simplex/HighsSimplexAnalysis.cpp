@@ -471,7 +471,7 @@ void HighsSimplexAnalysis::afterTranStage(const int tran_stage_type,
   regressScatterData(stage.rhs_density_);
 }
 
-void HighsSimplexAnalysis::summaryReportHFactor() {
+void HighsSimplexAnalysis::summaryReportFactor() {
   for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
   TranStageAnalysis& stage = tran_stage[tran_stage_type];
     //    printScatterData(stage.name_, stage.rhs_density_);
@@ -486,6 +486,16 @@ void HighsSimplexAnalysis::summaryReportHFactor() {
 }
 
 #ifdef HiGHSDEV
+void HighsSimplexAnalysis::reportFactorTimer() {
+  /*
+  FactorTimer factor_timer;
+  factor_timer.reportFactorLevel0Clock(timer_, clock_);
+  factor_timer.reportFactorLevel1Clock(timer_, clock_);
+  factor_timer.reportFactorLevel2Clock(timer_, clock_);
+  */
+}
+
+
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
   if (invert_hint > 0) AnIterNumInvert[invert_hint]++;
