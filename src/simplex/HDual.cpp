@@ -33,6 +33,10 @@
 #include "simplex/SimplexTimer.h"
 #include "util/HighsTimer.h"
 
+#ifdef OPENMP
+#include "omp.h"
+#endif
+
 using std::cout;
 using std::endl;
 using std::fabs;
@@ -271,8 +275,10 @@ HighsStatus HDual::solve() {
     } else {
       // Use primal to clean up
 #ifdef HiGHSDEV
-      initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_primal_step_distribution);
-      initialiseValueDistribution(1e-16, 1e16, 10.0, analysis->cleanup_dual_step_distribution);
+      initialiseValueDistribution("Cleanup primal step summary", "", 
+				  1e-16, 1e16, 10.0, analysis->cleanup_primal_step_distribution);
+      initialiseValueDistribution("Cleanup dual step summary", "", 
+				  1e-16, 1e16, 10.0, analysis->cleanup_dual_step_distribution);
 #endif  
       int it0 = scaled_solution_params.simplex_iteration_count;
       const bool full_logging = false;//true;//
@@ -1317,19 +1323,32 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
 #endif
   timer.start(simplex_info.clock_[PriceChuzc1Clock]);
   // Row_ep:         PACK + CC1
+
+  /*
+  int row_ep_thread_id = 0;
+  vector<int> row_ap_thread_id;
+  row_ap_thread_id.resize(slice_num);
+  */
+
 #pragma omp task
   {
     dualRow.chooseMakepack(row_ep, solver_num_col);
     dualRow.choosePossible();
+#ifdef OPENMP
+    int row_ep_thread_id = omp_get_thread_num();
+    printf("Hello world from Row_ep:         PACK + CC1 thread %d\n", row_ep_thread_id);
+#endif
   }
 
   // Row_ap: PRICE + PACK + CC1
   for (int i = 0; i < slice_num; i++) {
 #pragma omp task
     {
+#ifdef OPENMP
+      int row_ap_thread_id = omp_get_thread_num();
+      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1d] thread %d\n", i, row_ap_thread_id);
+#endif
       slice_row_ap[i].clear();
-
-
 
       //      slice_matrix[i].priceByRowSparseResult(slice_row_ap[i], *row_ep);
 

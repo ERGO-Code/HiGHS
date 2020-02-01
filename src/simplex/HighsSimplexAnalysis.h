@@ -17,7 +17,9 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
+#include "simplex/HFactor.h"
 #include "simplex/HVector.h"
+#include "simplex/FactorTimer.h"
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
 
@@ -31,6 +33,10 @@ enum ANALYSIS_OPERATION_TYPE {
   ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
   ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
   NUM_ANALYSIS_OPERATION_TYPE,
+};
+struct HFactorTiming {
+  HighsTimer& timer_;
+  FactorTimer& HFactorClock_;
 };
 #endif
 enum TRAN_STAGE {
@@ -93,9 +99,10 @@ class HighsSimplexAnalysis {
 		      const bool use_solve_sparse_original_HFactor_logic,
 		      const bool use_solve_sparse_new_HFactor_logic
 		      );
-  void summaryReportHFactor();
+  void summaryReportFactor();
 
 #ifdef HiGHSDEV
+  void reportFactorTimer();
   HighsTimer timer_;
   void iterationRecord();
   void iterationRecordMajor();

@@ -151,7 +151,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     AnIter->AnIterOpNumHyperOp = 0;
     AnIter->AnIterOpNumHyperRs = 0;
     AnIter->AnIterOpSumLog10RsDensity = 0;
-    initialiseValueDistribution(1e-8, 1.0, 10.0, AnIter->AnIterOp_density);
+    initialiseValueDistribution("", "density ", 1e-8, 1.0, 10.0, AnIter->AnIterOp_density);
   }
   int last_invert_hint = INVERT_HINT_Count - 1;
   for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
@@ -167,20 +167,34 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   lcAnIter->AnIterTraceIter = AnIterIt0;
   lcAnIter->AnIterTraceTime = timer_.getTime();
 
-  initialiseValueDistribution(1e-16, 1e16, 10.0, primal_step_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, dual_step_distribution);
-  initialiseValueDistribution(1e-8, 1e16, 10.0, pivot_distribution);
-  initialiseValueDistribution(1e-16, 1.0, 10.0, numerical_trouble_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, cost_perturbation1_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, cost_perturbation2_distribution);
-  initialiseValueDistribution(1e-8, 1.0, 10.0, before_ftran_upper_sparse_density);
-  initialiseValueDistribution(1e-8, 1.0, 10.0, before_ftran_upper_hyper_density);
-  initialiseValueDistribution(1e-8, 1.0, 10.0, ftran_upper_sparse_density);
-  initialiseValueDistribution(1e-8, 1.0, 10.0, ftran_upper_hyper_density);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, cleanup_dual_change_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, cleanup_primal_step_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, cleanup_dual_step_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, cleanup_primal_change_distribution);
+  initialiseValueDistribution("Primal step summary", "",
+			      1e-16, 1e16, 10.0, primal_step_distribution);
+  initialiseValueDistribution("Dual step summary", "",
+			      1e-16, 1e16, 10.0, dual_step_distribution);
+  initialiseValueDistribution("Pivot summary summary", "",
+			      1e-8, 1e16, 10.0, pivot_distribution);
+  initialiseValueDistribution("Numerical trouble summary", "",
+			      1e-16, 1.0, 10.0, numerical_trouble_distribution);
+  initialiseValueDistribution("", "1 ",
+			      1e-16, 1e16, 10.0, cost_perturbation1_distribution);
+  initialiseValueDistribution("", "2 ",
+			      1e-16, 1e16, 10.0, cost_perturbation2_distribution);
+  initialiseValueDistribution("FTRAN upper sparse summary - before", "",
+			      1e-8, 1.0, 10.0, before_ftran_upper_sparse_density);
+  initialiseValueDistribution("FTRAN upper sparse summary - after", "",
+			      1e-8, 1.0, 10.0, before_ftran_upper_hyper_density);
+  initialiseValueDistribution("FTRAN upper hyper-sparse summary - before", "",
+			      1e-8, 1.0, 10.0, ftran_upper_sparse_density);
+  initialiseValueDistribution("FTRAN upper hyper-sparse summary - after", "",
+			      1e-8, 1.0, 10.0, ftran_upper_hyper_density);
+  initialiseValueDistribution("Cleanup dual change summary", "",
+			      1e-16, 1e16, 10.0, cleanup_dual_change_distribution);
+  initialiseValueDistribution("Cleanup primal change summary", "",
+			      1e-16, 1e16, 10.0, cleanup_primal_step_distribution);
+  initialiseValueDistribution("Cleanup primal step summary", "",
+			      1e-16, 1e16, 10.0, cleanup_primal_change_distribution);
+  initialiseValueDistribution("Cleanup dual step summary", "",
+			      1e-16, 1e16, 10.0, cleanup_dual_step_distribution);
 #endif
 
 }
@@ -466,7 +480,7 @@ void HighsSimplexAnalysis::afterTranStage(const int tran_stage_type,
   regressScatterData(stage.rhs_density_);
 }
 
-void HighsSimplexAnalysis::summaryReportHFactor() {
+void HighsSimplexAnalysis::summaryReportFactor() {
   for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE; tran_stage_type++) {
   TranStageAnalysis& stage = tran_stage[tran_stage_type];
     //    printScatterData(stage.name_, stage.rhs_density_);
@@ -481,6 +495,16 @@ void HighsSimplexAnalysis::summaryReportHFactor() {
 }
 
 #ifdef HiGHSDEV
+void HighsSimplexAnalysis::reportFactorTimer() {
+  /*
+  FactorTimer factor_timer;
+  factor_timer.reportFactorLevel0Clock(timer_, clock_);
+  factor_timer.reportFactorLevel1Clock(timer_, clock_);
+  factor_timer.reportFactorLevel2Clock(timer_, clock_);
+  */
+}
+
+
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
   if (invert_hint > 0) AnIterNumInvert[invert_hint]++;
@@ -626,7 +650,7 @@ void HighsSimplexAnalysis::summaryReport() {
       printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("%12g density of result (%d / %d nonzeros)\n", lcRsDensity, lcNumNNz,
              lcAnIterOpRsDim);
-      printValueDistribution("density ", AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
+      printValueDistribution(AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
     }
   }
   int NumInvert = 0;
@@ -699,44 +723,21 @@ void HighsSimplexAnalysis::summaryReport() {
  }
 
   printf("\nCost perturbation summary\n");
-  printValueDistribution("1 ", cost_perturbation1_distribution);
-  printValueDistribution("2 ", cost_perturbation2_distribution);
+  printValueDistribution(cost_perturbation1_distribution);
+  printValueDistribution(cost_perturbation2_distribution);
 
-  printf("\nFTRAN upper sparse summary - before\n");
-  printValueDistribution("", before_ftran_upper_sparse_density, numRow);
-
-  printf("\nFTRAN upper sparse summary - after\n");
-  printValueDistribution("", ftran_upper_sparse_density, numRow);
-
-  printf("\nFTRAN upper hyper-sparse summary - before\n");
-  printValueDistribution("", before_ftran_upper_hyper_density, numRow);
-
-  printf("\nFTRAN upper hyper-sparse summary - after\n");
-  printValueDistribution("", ftran_upper_hyper_density, numRow);
-
-  printf("\nPrimal step summary\n");
-  printValueDistribution("", primal_step_distribution);
-
-  printf("\nDual step summary\n");
-  printValueDistribution("", dual_step_distribution);
-
-  printf("\nPivot summary\n");
-  printValueDistribution("", pivot_distribution);
-
-  printf("\nNumerical trouble summary\n");
-  printValueDistribution("", numerical_trouble_distribution);
-
-  printf("\nCleanup dual change summary\n");
-  printValueDistribution("dual ", cleanup_dual_change_distribution);
-
-  printf("\nCleanup primal step summary\n");
-  printValueDistribution("", cleanup_primal_step_distribution);
-
-  printf("\nCleanup dual step summary\n");
-  printValueDistribution("", cleanup_dual_step_distribution);
-
-  printf("\nCleanup primal change summary\n");
-  printValueDistribution("", cleanup_primal_change_distribution);
+  printValueDistribution(before_ftran_upper_sparse_density, numRow);
+  printValueDistribution(ftran_upper_sparse_density, numRow);
+  printValueDistribution(before_ftran_upper_hyper_density, numRow);
+  printValueDistribution(ftran_upper_hyper_density, numRow);
+  printValueDistribution(primal_step_distribution);
+  printValueDistribution(dual_step_distribution);
+  printValueDistribution(pivot_distribution);
+  printValueDistribution(numerical_trouble_distribution);
+  printValueDistribution(cleanup_dual_change_distribution);
+  printValueDistribution(cleanup_primal_step_distribution);
+  printValueDistribution(cleanup_dual_step_distribution);
+  printValueDistribution(cleanup_primal_change_distribution);
 
   if (AnIterTraceIterDl >= 100) {
     // Possibly (usually) add a temporary record for the final

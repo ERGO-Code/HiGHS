@@ -296,11 +296,14 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
   printf("Max count is %d / %d\n", maxRowCount, numCol);
 }
 
-bool initialiseValueDistribution(
+bool initialiseValueDistribution(const std::string distribution_name,
+				 const std::string value_name,
 				 const double min_value_limit,
 				 const double max_value_limit,
 				 const double base_value_limit,
 				 HighsValueDistribution& value_distribution) {
+  value_distribution.distribution_name_ = distribution_name;
+  value_distribution.value_name_ = value_name;
   if (min_value_limit <= 0) return false;
   if (max_value_limit < min_value_limit) return false;
   int num_count;
@@ -330,6 +333,7 @@ bool initialiseValueDistribution(
   value_distribution.num_one_ = 0;
   value_distribution.min_value_ = HIGHS_CONST_INF;
   value_distribution.max_value_ = 0;
+  value_distribution.sum_count_ = 0;
   return true;
 }
 
@@ -337,6 +341,7 @@ bool updateValueDistribution(
 			     const double value,
 			     HighsValueDistribution& value_distribution) {
   if (value_distribution.num_count_ < 0) return false;
+  value_distribution.sum_count_++;
   const double abs_value = fabs(value);
   value_distribution.min_value_ = std::min(abs_value, value_distribution.min_value_);
   value_distribution.max_value_ = std::max(abs_value, value_distribution.max_value_);
@@ -367,11 +372,14 @@ int integerPercentage(const int of, const int in) {
   return (int)double_percentage;
 } 
 
-bool printValueDistribution(std::string value_name,
-			    const HighsValueDistribution& value_distribution,
+bool printValueDistribution(const HighsValueDistribution& value_distribution,
 			    const int mu) {
+  if (value_distribution.sum_count_ <= 0) return false;
   const int num_count = value_distribution.num_count_;
   if (num_count < 0) return false;
+  if (value_distribution.distribution_name_ != "") 
+    printf("\n%s\n", value_distribution.distribution_name_.c_str());
+  std::string value_name = value_distribution.value_name_;
   bool not_reported_ones = true;
   int sum_count = value_distribution.num_zero_ + value_distribution.num_one_;
   double sum_percentage = 0;

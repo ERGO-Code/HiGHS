@@ -20,6 +20,8 @@
 
 #ifdef HiGHSDEV
 struct HighsValueDistribution {
+  std::string distribution_name_;
+  std::string value_name_;
   int num_count_;
   int num_zero_;
   int num_one_;
@@ -27,8 +29,10 @@ struct HighsValueDistribution {
   double max_value_;
   std::vector<double> limit_;
   std::vector<int> count_;
+  int sum_count_;
 };
 #endif
+
 struct HighsScatterData {
   int max_num_point_;
   int num_point_;
@@ -96,6 +100,8 @@ void analyseMatrixSparsity(
 			   );
 
 bool initialiseValueDistribution(
+				 const std::string distribution_name,
+				 const std::string value_name,
 				 const double min_value_limit,
 				 const double max_value_limit,
 				 const double base_value_limit,
@@ -108,7 +114,7 @@ bool updateValueDistribution(
 int integerPercentage(const int of, const int in);
 double doublePercentage(const int of, const int in);
 
-bool printValueDistribution(std::string value_name,
+bool printValueDistribution(
 			    const HighsValueDistribution& value_distribution,
 			    const int mu=0);
 #endif
