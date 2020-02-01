@@ -17,7 +17,10 @@
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/HFactor.h"
 
-void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options, const int simplex_iteration_count_) {
+void HighsSimplexAnalysis::setup(const HighsLp& lp,
+				 const HighsOptions& options,
+				 const int simplex_iteration_count_,
+				 HighsTimer& timer) {
   // Copy Problem size
   numRow = lp.numRow_;
   numCol = lp.numCol_;
@@ -113,11 +116,10 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
 
 #ifdef HiGHSDEV
   AnIterPrevIt = simplex_iteration_count_;
-  timer_.resetHighsTimer();
-  timer_.startRunHighsClock();
-  FactorTimer factor_timer;
-  factor_timer_clock.timer_ = &timer_;
+  timer_ = &timer;
+  factor_timer_clock.timer_ = timer_;
   factor_timer_clock_pointer = &factor_timer_clock;
+  FactorTimer factor_timer;
   factor_timer.initialiseFactorClocks(factor_timer_clock);
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
@@ -170,7 +172,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterTraceIterDl = 1;
   AnIterTraceRec* lcAnIter = &AnIterTrace[0];
   lcAnIter->AnIterTraceIter = AnIterIt0;
-  lcAnIter->AnIterTraceTime = timer_.getTime();
+  lcAnIter->AnIterTraceTime = timer_->getTime();
 
   initialiseValueDistribution("Primal step summary", "",
 			      1e-16, 1e16, 10.0, primal_step_distribution);
@@ -528,7 +530,7 @@ void HighsSimplexAnalysis::iterationRecord() {
       AnIterTraceNumRec++;
       AnIterTraceRec& lcAnIter = AnIterTrace[AnIterTraceNumRec];
       lcAnIter.AnIterTraceIter = simplex_iteration_count;
-      lcAnIter.AnIterTraceTime = timer_.getTime();
+      lcAnIter.AnIterTraceTime = timer_->getTime();
       if (average_fraction_of_possible_minor_iterations_performed>0) {
 	lcAnIter.AnIterTraceMulti = average_fraction_of_possible_minor_iterations_performed;
       } else {
@@ -753,7 +755,7 @@ void HighsSimplexAnalysis::summaryReport() {
       AnIterTraceNumRec++;
       AnIterTraceRec& lcAnIter = AnIterTrace[AnIterTraceNumRec];
       lcAnIter.AnIterTraceIter = simplex_iteration_count;
-      lcAnIter.AnIterTraceTime = timer_.getTime();
+      lcAnIter.AnIterTraceTime = timer_->getTime();
       if (average_fraction_of_possible_minor_iterations_performed>0) {
 	lcAnIter.AnIterTraceMulti = average_fraction_of_possible_minor_iterations_performed;
       } else {

@@ -18,6 +18,7 @@
 #include "lp_data/HighsAnalysis.h"
 #include "util/HighsTimer.h"
 
+#ifdef HiGHSDEV
 // Clocks for profiling the dual simplex solver
 enum iClockFactor {
   FactorInvert = 0,    //!< INVERT
@@ -148,4 +149,5 @@ class FactorTimer {
   };
   
 };
+#endif
 #endif /* SIMPLEX_FACTORTIMER_H_ */

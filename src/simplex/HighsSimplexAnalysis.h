@@ -67,7 +67,8 @@ class HighsSimplexAnalysis {
  public:
   void setup(const HighsLp& lp,
 	     const HighsOptions& options,
-	     const int simplex_iteration_count_
+	     const int simplex_iteration_count,
+	     HighsTimer& timer
 	     );
   void messaging(FILE* logfile_,
 		 FILE* output_,
@@ -100,7 +101,6 @@ class HighsSimplexAnalysis {
 
 #ifdef HiGHSDEV
   void reportFactorTimer();
-  HighsTimer timer_;
   void iterationRecord();
   void iterationRecordMajor();
   void operationRecordBefore(const int operation_type,
@@ -117,6 +117,10 @@ class HighsSimplexAnalysis {
   void operationRecordAfter(const int operation_type,
 			    const int result_count);
   void summaryReport();
+#endif
+
+#ifdef HiGHSDEV
+  HighsTimer* timer_;
 #endif
 
   int numRow;
