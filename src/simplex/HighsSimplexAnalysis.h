@@ -34,9 +34,9 @@ enum ANALYSIS_OPERATION_TYPE {
   ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
   NUM_ANALYSIS_OPERATION_TYPE,
 };
-struct HFactorTiming {
-  HighsTimer& timer_;
-  FactorTimer& HFactorClock_;
+struct FactorTiming {
+  HighsTimer* timer_;
+  FactorTimer FactorClock_;
 };
 #endif
 enum TRAN_STAGE {
