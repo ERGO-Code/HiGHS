@@ -59,9 +59,9 @@ enum iClockFactor {
 
 class FactorTimer {
  public:
-  void initialiseFactorClocks(HighsTimerClock& timer_clock) {
-    HighsTimer* timer = timer_clock.timer_;
-    std::vector<int>& clock = timer_clock.clock_;
+  void initialiseFactorClocks(HighsTimerClock& factor_timer_clock) {
+    HighsTimer* timer = factor_timer_clock.timer_;
+    std::vector<int>& clock = factor_timer_clock.clock_;
     clock.resize(FactorNumClock);
     clock[FactorInvert] = timer->clock_def("INVERT", "INV");
     clock[FactorInvertSimple] =  timer->clock_def("INVERT Simple", "IVS");
@@ -99,42 +99,38 @@ class FactorTimer {
     clock[FactorBtranUpperMPF] = timer->clock_def("BTRAN Upper MPS", "BUM");
   };
 
-  /*
-  void initialiseFactorClocks(HighsTimerClock& timer_clock) {
-    initialiseFactorClocks(timer_clock.timer_, timer_clock.clock_);
-  }
-  */
-      
   void reportFactorClockList(const char* grepStamp,
-			     HighsTimer& timer, std::vector<int>& clock,
+			     HighsTimerClock& factor_timer_clock,
 			     std::vector<int> factor_clock_list) {
+    HighsTimer* timer = factor_timer_clock.timer_;
+    std::vector<int>& clock = factor_timer_clock.clock_;
     int factor_clock_list_size = factor_clock_list.size();
     std::vector<int> clockList;
     clockList.resize(factor_clock_list_size);
     for (int en = 0; en < factor_clock_list_size; en++) {
       clockList[en] = clock[factor_clock_list[en]];
     }
-    timer.report_tl(grepStamp, clockList, 1e-8);
+    timer->report_tl(grepStamp, clockList, 1e-8);
   };
   
-  void reportFactorLevel0Clock(HighsTimer& timer, std::vector<int>& clock) {
+  void reportFactorLevel0Clock(HighsTimerClock& factor_timer_clock) {
     std::vector<int> factor_clock_list{
       FactorInvert, FactorFtran, FactorBtran
 	};
-    reportFactorClockList("FactorLevel0", timer, clock, factor_clock_list);
+    reportFactorClockList("FactorLevel0", factor_timer_clock, factor_clock_list);
   };
   
-  void reportFactorLevel1Clock(HighsTimer& timer, std::vector<int>& clock) {
+  void reportFactorLevel1Clock(HighsTimerClock& factor_timer_clock) {
     std::vector<int> factor_clock_list{
       FactorInvertSimple, FactorInvertKernel,
 	FactorInvertDeficient, FactorInvertFinish,
 	FactorFtranLower, FactorFtranUpper,
 	FactorBtranLower, FactorBtranUpper
 	};
-    reportFactorClockList("FactorLevel1", timer, clock, factor_clock_list);
+    reportFactorClockList("FactorLevel1", factor_timer_clock, factor_clock_list);
   };
   
-  void reportFactorLevel2Clock(HighsTimer& timer, std::vector<int>& clock) {
+  void reportFactorLevel2Clock(HighsTimerClock& factor_timer_clock) {
     std::vector<int> factor_clock_list{
       FactorInvertSimple, FactorInvertKernel,
 	FactorInvertDeficient, FactorInvertFinish,
@@ -148,7 +144,7 @@ class FactorTimer {
 	FactorBtranUpperPF, FactorBtranUpperSps, FactorBtranUpperHyper,
 	FactorBtranUpperFT, FactorBtranUpperMPF
 	};
-    reportFactorClockList("FactorLevel2", timer, clock, factor_clock_list);
+    reportFactorClockList("FactorLevel2", factor_timer_clock, factor_clock_list);
   };
   
 };
