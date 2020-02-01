@@ -116,7 +116,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   timer_.resetHighsTimer();
   FactorTimer factor_timer;
   factor_timer_clock.timer_ = &timer_;
-  factor_timer.initialiseFactorClocks(timer_, factor_timer_clock.clock_);
+  factor_timer.initialiseFactorClocks(factor_timer_clock);
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
   AnIter->AnIterOpName = "BTRAN e_p";
