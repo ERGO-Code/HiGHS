@@ -114,6 +114,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
 #ifdef HiGHSDEV
   AnIterPrevIt = simplex_iteration_count_;
   timer_.resetHighsTimer();
+  timer_.startRunHighsClock();
   FactorTimer factor_timer;
   factor_timer_clock.timer_ = &timer_;
   factor_timer_clock_pointer = &factor_timer_clock;

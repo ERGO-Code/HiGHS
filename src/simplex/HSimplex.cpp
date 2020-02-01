@@ -321,7 +321,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // start
   bool reinvert = !simplex_lp_status.has_fresh_invert;
   if (reinvert) {
-    int rankDeficiency = compute_factor(highs_model_object);
+    int rankDeficiency = computeFactor(highs_model_object);
     if (rankDeficiency) {
       // ToDo Handle rank deficiency by replacing singular columns with logicals
       throw runtime_error("Transition has singular basis matrix");
@@ -367,7 +367,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
                     "Crash has created a basis with %d/%d structurals",
                     num_basic_structurals, simplex_lp.numRow_);
     // Now reinvert
-    int rankDeficiency = compute_factor(highs_model_object);
+    int rankDeficiency = computeFactor(highs_model_object);
     if (rankDeficiency) {
       // ToDo Handle rank deficiency by replacing singular columns with logicals
       throw runtime_error("Transition has singular basis matrix");
@@ -2593,7 +2593,7 @@ iRow<simplex_lp.numRow_; iRow++)
   return 0;
 }
 */
-int compute_factor(HighsModelObject& highs_model_object) {
+int computeFactor(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;

@@ -315,7 +315,7 @@ void HPrimal::primalRebuild() {
   }
   if (reInvert) {
     timer.start(simplex_info.clock_[InvertClock]);
-    int rankDeficiency = compute_factor(workHMO);
+    int rankDeficiency = computeFactor(workHMO);
     timer.stop(simplex_info.clock_[InvertClock]);
     if (rankDeficiency) {
       throw runtime_error("Primal reInvert: singular-basis-matrix");

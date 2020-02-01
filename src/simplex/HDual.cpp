@@ -767,7 +767,7 @@ void HDual::rebuild() {
     timer.start(simplex_info.clock_[InvertClock]);
 
     // Call computeFactor to perform INVERT
-    int rankDeficiency = compute_factor(workHMO);
+    int rankDeficiency = computeFactor(workHMO);
     timer.stop(simplex_info.clock_[InvertClock]);
 
     if (rankDeficiency)
