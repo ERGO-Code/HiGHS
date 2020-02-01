@@ -16,6 +16,7 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsAnalysis.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/HFactor.h"
 #include "simplex/HVector.h"
@@ -33,10 +34,6 @@ enum ANALYSIS_OPERATION_TYPE {
   ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
   ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
   NUM_ANALYSIS_OPERATION_TYPE,
-};
-struct FactorTiming {
-  HighsTimer* timer_;
-  FactorTimer FactorClock_;
 };
 #endif
 enum TRAN_STAGE {
@@ -256,6 +253,7 @@ class HighsSimplexAnalysis {
   int AnIterIt0 = 0;
 #ifdef HiGHSDEV
   int AnIterPrevIt;
+  HighsTimerClock factor_timer_clock;
   // Major operation analysis struct
   struct AnIterOpRec {
     double AnIterOpHyperCANCEL;
