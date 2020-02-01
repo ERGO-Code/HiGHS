@@ -2606,7 +2606,11 @@ int compute_factor(HighsModelObject& highs_model_object) {
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
-  int rankDeficiency = factor.build();
+  int rankDeficiency = factor.build(
+#ifdef HiGHSDEV
+				    highs_model_object.simplex_analysis_.factor_timer_clock_pointer
+#endif
+				    );
   if (rankDeficiency) {
     //    handle_rank_deficiency();
     //    highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;

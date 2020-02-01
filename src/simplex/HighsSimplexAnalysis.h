@@ -185,6 +185,7 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_primal_step_distribution;
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
+  HighsTimerClock* factor_timer_clock_pointer;
 #endif
 
   vector<double> original_start_density_tolerance;

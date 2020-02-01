@@ -116,6 +116,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   timer_.resetHighsTimer();
   FactorTimer factor_timer;
   factor_timer_clock.timer_ = &timer_;
+  factor_timer_clock_pointer = &factor_timer_clock;
   factor_timer.initialiseFactorClocks(factor_timer_clock);
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
@@ -499,12 +500,10 @@ void HighsSimplexAnalysis::summaryReportFactor() {
 
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::reportFactorTimer() {
-  /*
   FactorTimer factor_timer;
-  factor_timer.reportFactorLevel0Clock(timer_, clock_);
-  factor_timer.reportFactorLevel1Clock(timer_, clock_);
-  factor_timer.reportFactorLevel2Clock(timer_, clock_);
-  */
+  factor_timer.reportFactorLevel0Clock(factor_timer_clock);
+  factor_timer.reportFactorLevel1Clock(factor_timer_clock);
+  factor_timer.reportFactorLevel2Clock(factor_timer_clock);
 }
 
 

@@ -19,6 +19,9 @@
 #include <vector>
 
 #include "HConfig.h"
+#ifdef HiGHSDEV
+#include "lp_data/HighsAnalysis.h"
+#endif
 
 using std::max;
 using std::min;
@@ -126,20 +129,30 @@ class HFactor {
    * @return 0 if successful, otherwise rankDeficiency>0
    *
    */
-  int build();
+  int build(
+#ifdef HiGHSDEV
+	    HighsTimerClock* factor_timer_clock_pointer=NULL
+#endif
+	    );
 
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
   void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
              double historical_density  //!< Historical density of the result
-             ) const;
+#ifdef HiGHSDEV
+	     , HighsTimerClock* factor_timer_clock_pointer=NULL
+#endif
+           ) const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
   void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
              double historical_density  //!< Historical density of the result
+#ifdef HiGHSDEV
+	     , HighsTimerClock* factor_timer_clock_pointer=NULL
+#endif
              ) const;
 
   /**
@@ -322,10 +335,6 @@ class HFactor {
   vector<int> PFindex;
   vector<double> PFvalue;
 
-  // Record of maximum number of OMP threads. If OMP is available then
-  // it's set to the correct positive number in HFactor::setup()
-  int omp_max_threads = 0; 
-
   // Implementation
   void buildSimple();
   //    void buildKernel();
@@ -335,10 +344,26 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector& vector, double historical_density) const;
-  void btranL(HVector& vector, double historical_density) const;
-  void ftranU(HVector& vector, double historical_density) const;
-  void btranU(HVector& vector, double historical_density) const;
+  void ftranL(HVector& vector, double historical_density
+#ifdef HiGHSDEV
+	     , HighsTimerClock* factor_timer_clock_pointer=NULL
+#endif
+	      ) const;
+  void btranL(HVector& vector, double historical_density
+#ifdef HiGHSDEV
+	     , HighsTimerClock* factor_timer_clock_pointer=NULL
+#endif
+	      ) const;
+  void ftranU(HVector& vector, double historical_density
+#ifdef HiGHSDEV
+	     , HighsTimerClock* factor_timer_clock_pointer=NULL
+#endif
+	      ) const;
+  void btranU(HVector& vector, double historical_density
+#ifdef HiGHSDEV
+	     , HighsTimerClock* factor_timer_clock_pointer=NULL
+#endif
+	      ) const;
 
   void ftranFT(HVector& vector) const;
   void btranFT(HVector& vector) const;
