@@ -25,7 +25,7 @@
 class HighsModelObject {
  public:
   HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer)
-      : lp_(lp), options_(options), timer_(timer) {}
+      : lp_(lp), options_(options), timer_(timer), simplex_analysis_(timer) {}
 
   HighsLp& lp_;
   HighsOptions& options_;

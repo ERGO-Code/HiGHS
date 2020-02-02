@@ -20,7 +20,9 @@
 
 #ifdef HiGHSDEV
   struct HighsTimerClock {
-    HighsTimer* timer_;
+    HighsTimerClock(HighsTimer& timer) : timer_(timer) {}
+
+    HighsTimer& timer_;
     std::vector<int> clock_;
   };
 #endif

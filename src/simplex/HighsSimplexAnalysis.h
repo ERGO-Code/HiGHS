@@ -65,11 +65,10 @@ const double max_hyper_density = 0.1;
  */
 class HighsSimplexAnalysis {
  public:
+  HighsSimplexAnalysis(HighsTimer& timer) : timer_(&timer), factor_timer_clock(timer) {}
   void setup(const HighsLp& lp,
 	     const HighsOptions& options,
-	     const int simplex_iteration_count,
-	     HighsTimer& timer
-	     );
+	     const int simplex_iteration_count);
   void messaging(FILE* logfile_,
 		 FILE* output_,
 		 const int message_level_
@@ -100,6 +99,8 @@ class HighsSimplexAnalysis {
   void summaryReportFactor();
 
 #ifdef HiGHSDEV
+  HighsTimerClock& getFactorTimerClock() { return factor_timer_clock; }
+
   void reportFactorTimer();
   void iterationRecord();
   void iterationRecordMajor();
@@ -189,7 +190,6 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_primal_step_distribution;
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
-  HighsTimerClock* factor_timer_clock_pointer;
 #endif
 
   vector<double> original_start_density_tolerance;

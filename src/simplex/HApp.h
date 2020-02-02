@@ -397,8 +397,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
   simplex_analysis.setup(highs_model_object.lp_,
 			 highs_model_object.options_,
-			 highs_model_object.scaled_solution_params_.simplex_iteration_count,
-			 highs_model_object.timer_);
+			 highs_model_object.scaled_solution_params_.simplex_iteration_count);
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(highs_model_object);

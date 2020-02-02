@@ -19,8 +19,7 @@
 
 void HighsSimplexAnalysis::setup(const HighsLp& lp,
 				 const HighsOptions& options,
-				 const int simplex_iteration_count_,
-				 HighsTimer& timer) {
+				 const int simplex_iteration_count_) {
   // Copy Problem size
   numRow = lp.numRow_;
   numCol = lp.numCol_;
@@ -116,9 +115,6 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp,
 
 #ifdef HiGHSDEV
   AnIterPrevIt = simplex_iteration_count_;
-  timer_ = &timer;
-  factor_timer_clock.timer_ = timer_;
-  factor_timer_clock_pointer = &factor_timer_clock;
   FactorTimer factor_timer;
   factor_timer.initialiseFactorClocks(factor_timer_clock);
   AnIterOpRec* AnIter;

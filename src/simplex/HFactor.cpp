@@ -276,8 +276,10 @@ int HFactor::build(
 		   ) {
 #ifdef HiGHSDEV
   HighsTimer* timer;
+  int* clock;
   if (factor_timer_clock_pointer != NULL) {
-    timer = factor_timer_clock_pointer->timer_;
+    timer = &factor_timer_clock_pointer->timer_;
+    clock = &factor_timer_clock_pointer->clock_[0];
     timer->start(factor_timer_clock_pointer->clock_[FactorInvert]);
   }
 #endif
