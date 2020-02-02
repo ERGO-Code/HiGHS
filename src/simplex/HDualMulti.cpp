@@ -421,7 +421,11 @@ void HDual::minorUpdatePivots() {
   update_matrix(workHMO, columnIn, columnOut);
   finish->columnIn = columnIn;
   finish->alphaRow = alphaRow;
-  // Move this to Simplex class once it's created
+  // numericalTrouble is not set in minor iterations, only in
+  // majorUpdate, so set it to an illegal value so that its
+  // distribution is not updated
+  numericalTrouble = -1;
+  // Move thisTo Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
   workHMO.scaled_solution_params_.simplex_iteration_count++;
 }
@@ -919,6 +923,8 @@ void HDual::iterationAnalysisMinorData() {
 
 void HDual::iterationAnalysisMinor() {
   // Possibly report on the iteration
+  // PAMI uses alphaRow but serial solver uses alpha
+  alpha = alphaRow;
   iterationAnalysisData();
   iterationAnalysisMinorData();
   analysis->iterationReport();
@@ -929,6 +935,7 @@ void HDual::iterationAnalysisMinor() {
 
 void HDual::iterationAnalysisMajorData() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  analysis->numerical_trouble = numericalTrouble;
   analysis->min_threads = simplex_info.min_threads;
   analysis->num_threads = simplex_info.num_threads;
   analysis->max_threads = simplex_info.max_threads;
