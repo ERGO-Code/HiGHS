@@ -556,7 +556,11 @@ void HighsSimplexAnalysis::iterationRecord() {
   updateValueDistribution(primal_step, primal_step_distribution);
   updateValueDistribution(dual_step, dual_step_distribution);
   updateValueDistribution(pivot_value_from_column, pivot_distribution);
-  updateValueDistribution(numerical_trouble, numerical_trouble_distribution);
+  // Only update the distribution of legal values for
+  // numerical_trouble. Illegal values are set in PAMI since it's not
+  // known in minor iterations
+  if (numerical_trouble>=0)
+    updateValueDistribution(numerical_trouble, numerical_trouble_distribution);
 }
 
 void HighsSimplexAnalysis::iterationRecordMajor() {
