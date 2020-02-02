@@ -80,7 +80,7 @@ void HDual::majorChooseRow() {
    * Major loop:
    *     repeat 1-5, until we found a good sets of choices
    */
-  int* choiceIndex = new int[multi_num];
+  std::vector<int> choiceIndex(multi_num, 0);
   for (;;) {
     // 1. Multiple CHUZR
     int initialCount = 0;
@@ -145,7 +145,6 @@ void HDual::majorChooseRow() {
       break;
     }
   }
-  delete[] choiceIndex;
 
   // 6. Take other info associated with choices
   multi_chosen = 0;
