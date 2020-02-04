@@ -18,13 +18,13 @@
 #include "HConfig.h"
 #include "util/HighsTimer.h"
 
-#ifdef HiGHSDEV
+//#ifdef HiGHSDEV
   struct HighsTimerClock {
     HighsTimerClock(HighsTimer& timer) : timer_(timer) {}
 
     HighsTimer& timer_;
     std::vector<int> clock_;
   };
-#endif
+//#endif
 
 #endif /* LP_DATA_HIGHS_ANALYSIS_H_ */
