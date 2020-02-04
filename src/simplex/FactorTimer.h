@@ -111,7 +111,8 @@ class FactorTimer {
     for (int en = 0; en < factor_clock_list_size; en++) {
       clockList[en] = clock[factor_clock_list[en]];
     }
-    timer.report_tl(grepStamp, clockList, 1e-8);
+    const double ideal_sum_time = timer.read(timer.solve_clock);
+    timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
   
   void reportFactorLevel0Clock(HighsTimerClock& factor_timer_clock) {
