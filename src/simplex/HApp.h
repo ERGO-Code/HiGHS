@@ -187,7 +187,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_info.simplex_strategy = simplex_strategy;
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
-    timer.start(timer.solve_clock);
 #ifdef HiGHSDEV
     timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
@@ -247,7 +246,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     }
 
     // Official finish of solver
-    timer.stop(timer.solve_clock);
 
     scaled_solution_params.objective_function_value = simplex_info.primal_objective_value;
 #ifdef HiGHSDEV
