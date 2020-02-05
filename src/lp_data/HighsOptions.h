@@ -460,7 +460,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("simplex_scale_strategy",
 				     "Strategy for scaling before simplex solver: off / on (0/1)",
 				     advanced, &simplex_scale_strategy,
-				     SIMPLEX_SCALE_STRATEGY_MIN, SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
+				     SIMPLEX_SCALE_STRATEGY_MIN, SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED, SIMPLEX_SCALE_STRATEGY_MAX);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("simplex_crash_strategy",
