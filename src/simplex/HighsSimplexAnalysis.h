@@ -65,7 +65,16 @@ const double max_hyper_density = 0.1;
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis(HighsTimer& timer) : timer_(&timer), factor_timer_clock(timer) {}
+  HighsSimplexAnalysis(HighsTimer& timer) {
+#ifdef HiGHSDEV
+    timer_ = &timer;
+    // todo: change 8 to num_threads
+    for (int i=0; i<8; i++) {
+      HighsTimerClock clock(timer);
+      thread_clocks.push_back(clock);
+    }
+#endif
+}
   void setup(const HighsLp& lp,
 	     const HighsOptions& options,
 	     const int simplex_iteration_count);
@@ -99,7 +108,11 @@ class HighsSimplexAnalysis {
   void summaryReportFactor();
 
 #ifdef HiGHSDEV
-  HighsTimerClock& getFactorTimerClock() { return factor_timer_clock; }
+  const std::vector<HighsTimerClock>& getThreadTimerClocks() { return thread_clocks; }
+  HighsTimerClock* getThreadTimerClockPtr(int i) { 
+    assert(i >= 0 && i < (int) thread_clocks.size());
+    return &thread_clocks[i];
+  }
 
   void reportFactorTimer();
   void iterationRecord();
@@ -258,7 +271,7 @@ class HighsSimplexAnalysis {
   int AnIterIt0 = 0;
 #ifdef HiGHSDEV
   int AnIterPrevIt;
-  HighsTimerClock factor_timer_clock;
+  std::vector<HighsTimerClock> thread_clocks;
   // Major operation analysis struct
   struct AnIterOpRec {
     double AnIterOpHyperCANCEL;

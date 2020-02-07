@@ -2608,7 +2608,8 @@ int computeFactor(HighsModelObject& highs_model_object) {
   // different ways ends up equivalent.
   int rankDeficiency = factor.build(
 #ifdef HiGHSDEV
-				    &highs_model_object.simplex_analysis_.getFactorTimerClock()
+            // todo: replace 0 with the thread number
+				    highs_model_object.simplex_analysis_.getThreadTimerClockPtr(0)
 #endif
 				    );
   if (rankDeficiency) {
