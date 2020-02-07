@@ -1212,9 +1212,9 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
       simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS ||
       simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
     if (equilibration_scaling) {
-      scaled_matrix = equilibrationScaleSimplexLp(highs_model_object);
+      scaled_matrix = equilibrationScaleMatrix(highs_model_object);
     } else {
-      scaled_matrix = maxValueScaleSimplexLp(highs_model_object);
+      scaled_matrix = maxValueScaleMatrix(highs_model_object);
     }
     scale.is_scaled_ = scaled_matrix;
     if (scaled_matrix) {
@@ -1240,7 +1240,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   if (scale.is_scaled_) updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::SCALE);
 }
 
-bool equilibrationScaleSimplexLp(HighsModelObject& highs_model_object) {
+bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
   int numCol = highs_model_object.simplex_lp_.numCol_;
   int numRow = highs_model_object.simplex_lp_.numRow_;
   double* colScale = &highs_model_object.scale_.col_[0];
@@ -1524,7 +1524,7 @@ bool equilibrationScaleSimplexLp(HighsModelObject& highs_model_object) {
   return true;
 }
 
-bool maxValueScaleSimplexLp(HighsModelObject& highs_model_object) {
+bool maxValueScaleMatrix(HighsModelObject& highs_model_object) {
   int numCol = highs_model_object.simplex_lp_.numCol_;
   int numRow = highs_model_object.simplex_lp_.numRow_;
   vector<double>& colScale = highs_model_object.scale_.col_;
@@ -1532,7 +1532,6 @@ bool maxValueScaleSimplexLp(HighsModelObject& highs_model_object) {
   vector<int>& Astart = highs_model_object.simplex_lp_.Astart_;
   vector<int>& Aindex = highs_model_object.simplex_lp_.Aindex_;
   vector<double>& Avalue = highs_model_object.simplex_lp_.Avalue_;
-  vector<double>& colCost = highs_model_object.simplex_lp_.colCost_;
 
   int simplex_scale_strategy = highs_model_object.options_.simplex_scale_strategy;
   if (simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_015 &&
@@ -1541,6 +1540,7 @@ bool maxValueScaleSimplexLp(HighsModelObject& highs_model_object) {
     return false;
   }
 
+  const double log2 = log(2.0);
   const double max_allow_scale =
     pow(2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);
   const double min_allow_scale = 1 / max_allow_scale;
@@ -1550,26 +1550,78 @@ bool maxValueScaleSimplexLp(HighsModelObject& highs_model_object) {
   const double min_allow_row_scale = min_allow_scale;
   const double max_allow_row_scale = max_allow_scale;
 
+  double min_row_scale = HIGHS_CONST_INF;
+  double max_row_scale = 0;
   double original_matrix_min_value = HIGHS_CONST_INF;
   double original_matrix_max_value = 0;
-  const double log2 = log(2.0);
+  // Determine the row scaling. Also determine the max/min row scaling
+  // factors, and max/min original matrix values
+  vector<double> row_max_value(numRow, 0);
   for (int iCol = 0; iCol < numCol; iCol++) {
-    double col_max_value = 0;
     for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
-      double value = fabs(Avalue[k]);
-      col_max_value = max(col_max_value, value);
+      const int iRow = Aindex[k];
+      const double value = fabs(Avalue[k]);
+      row_max_value[iRow] = max(row_max_value[iRow], value);
       original_matrix_min_value = min(original_matrix_min_value, value);
       original_matrix_max_value = max(original_matrix_max_value, value);
     }
-    double col_scale_value = 1;
-    if (col_max_value) {
-      col_scale_value = 1 / col_max_value;
-      col_scale_value = pow(2.0, floor(log(col_scale_value) / log2 + 0.5));
-      for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
-	Avalue[k] *= col_scale_value;
+  }
+  for (int iRow = 0; iRow < numRow; iRow++) {
+    if (row_max_value[iRow]) {
+      double row_scale_value = 1 / row_max_value[iRow];
+      // Convert the row scale factor to the nearest power of two, and
+      // ensure that it is not excessively large or small
+      row_scale_value = pow(2.0, floor(log(row_scale_value) / log2 + 0.5));     
+      row_scale_value = min(max(min_allow_row_scale, row_scale_value), max_allow_row_scale);
+      min_row_scale = min(row_scale_value, min_row_scale);
+      max_row_scale = max(row_scale_value, max_row_scale);
+      rowScale[iRow] = row_scale_value;
     }
   }
-
+  // Determine the column scaling, whilst applying the row scaling
+  // Also determine the max/min column scaling factors, and max/min
+  // matrix values
+  double min_col_scale = HIGHS_CONST_INF;
+  double max_col_scale = 0;
+  double matrix_min_value = HIGHS_CONST_INF;
+  double matrix_max_value = 0;
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    double col_max_value = 0;
+    for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+      const int iRow = Aindex[k];
+      Avalue[k] *= rowScale[iRow];
+      const double value = fabs(Avalue[k]);
+      col_max_value = max(col_max_value, value);
+    }
+    if (col_max_value) {
+      double col_scale_value = 1 / col_max_value;
+      // Convert the col scale factor to the nearest power of two, and
+      // ensure that it is not excessively large or small
+      col_scale_value = pow(2.0, floor(log(col_scale_value) / log2 + 0.5));
+      col_scale_value = min(max(min_allow_col_scale, col_scale_value), max_allow_col_scale);
+      min_col_scale = min(col_scale_value, min_col_scale);
+      max_col_scale = max(col_scale_value, max_col_scale);
+      colScale[iCol] = col_scale_value;
+      for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+	Avalue[k] *= colScale[iCol];
+	const double value = fabs(Avalue[k]);
+	matrix_min_value = min(matrix_min_value, value);
+	matrix_max_value = max(matrix_max_value, value);
+      }
+    }
+  }
+  const double matrix_value_ratio = matrix_max_value/matrix_min_value;
+  const double original_matrix_value_ratio = original_matrix_max_value/original_matrix_min_value;
+  const double matrix_value_ratio_improvement = original_matrix_value_ratio/matrix_value_ratio;
+  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Scaling: Factors are in [%0.4g, %0.4g] for columns and in [%0.4g, %0.4g] for rows",
+		  min_col_scale, max_col_scale,
+		  min_row_scale, max_row_scale);
+ HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		  "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, %0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g",
+		  matrix_min_value, matrix_max_value, matrix_value_ratio, 
+		  original_matrix_min_value, original_matrix_max_value, original_matrix_value_ratio,
+		  matrix_value_ratio_improvement);
   return true;
 }
 

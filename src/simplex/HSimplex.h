@@ -103,8 +103,8 @@ void scaleFactorRanges(HighsModelObject& highs_model_object,
                        double& min_row_scale, double& max_row_scale);
 
 void scaleSimplexLp(HighsModelObject& highs_model);
-bool equilibrationScaleSimplexLp(HighsModelObject& highs_model);
-bool maxValueScaleSimplexLp(HighsModelObject& highs_model);
+bool equilibrationScaleMatrix(HighsModelObject& highs_model);
+bool maxValueScaleMatrix(HighsModelObject& highs_model);
 
 // PERMUTE:
 
