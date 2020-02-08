@@ -107,12 +107,17 @@ class HighsSimplexAnalysis {
 		      );
   void summaryReportFactor();
 
+<<<<<<< HEAD
 #ifdef HiGHSDEV
   const std::vector<HighsTimerClock>& getThreadTimerClocks() { return thread_clocks; }
   HighsTimerClock* getThreadTimerClockPtr(int i) { 
     assert(i >= 0 && i < (int) thread_clocks.size());
     return &thread_clocks[i];
   }
+=======
+  HighsTimerClock& getFactorTimerClock() { return factor_timer_clock; }
+#ifdef HiGHSDEV
+>>>>>>> c43cbb9add906f06efc34a3115c819849416bbfc
 
   void reportFactorTimer();
   void iterationRecord();
@@ -133,9 +138,10 @@ class HighsSimplexAnalysis {
   void summaryReport();
 #endif
 
-#ifdef HiGHSDEV
+//#ifdef HiGHSDEV
   HighsTimer* timer_;
-#endif
+  HighsTimerClock factor_timer_clock;
+//#endif
 
   int numRow;
   int numCol;
@@ -271,7 +277,10 @@ class HighsSimplexAnalysis {
   int AnIterIt0 = 0;
 #ifdef HiGHSDEV
   int AnIterPrevIt;
+<<<<<<< HEAD
   std::vector<HighsTimerClock> thread_clocks;
+=======
+>>>>>>> c43cbb9add906f06efc34a3115c819849416bbfc
   // Major operation analysis struct
   struct AnIterOpRec {
     double AnIterOpHyperCANCEL;

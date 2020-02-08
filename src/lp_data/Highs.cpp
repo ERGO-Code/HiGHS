@@ -317,6 +317,11 @@ HighsStatus Highs::run() {
   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
 		    "Solving %s", lp_.model_name_.c_str());
 
+  double this_presolve_time = -1;
+  double this_solve_presolved_lp_time = -1;
+  double this_postsolve_time = -1;
+  double this_solve_original_lp_time = -1;
+
   // Running as LP solver: start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
   if (!run_highs_clock_already_running) timer_.startRunHighsClock();
@@ -338,25 +343,35 @@ HighsStatus Highs::run() {
     hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::NOTSET;
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
+    
+    this_presolve_time = -timer_.read(timer_.presolve_clock);
     timer_.start(timer_.presolve_clock);
     PresolveInfo presolve_info(options_.presolve, lp_);
     HighsPresolveStatus presolve_status = runPresolve(presolve_info);
     timer_.stop(timer_.presolve_clock);
+    this_presolve_time += timer_.read(timer_.presolve_clock);
     //    printf("\nHighs::run() 2: presolve status = %d\n",
     //    (int)presolve_status);fflush(stdout);
-
     // Run solver.
     switch (presolve_status) {
       case HighsPresolveStatus::NotPresolved: {
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
+	this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
+	timer_.start(timer_.solve_clock);
         call_status = runLpSolver(hmos_[solved_hmo], "Not presolved: solving the LP");
+	timer_.stop(timer_.solve_clock);
+	this_solve_original_lp_time += timer_.read(timer_.solve_clock);
 	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
 	if (return_status == HighsStatus::Error) return return_status;
         break;
       }
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
+	this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
+	timer_.start(timer_.solve_clock);
         call_status = runLpSolver(hmos_[solved_hmo], "Problem not reduced by presolve: solving the LP");
+	timer_.stop(timer_.solve_clock);
+	this_solve_original_lp_time += timer_.read(timer_.solve_clock);
 	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
 	if (return_status == HighsStatus::Error) return return_status;
         break;
@@ -376,7 +391,11 @@ HighsStatus Highs::run() {
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
+	this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
+	timer_.start(timer_.solve_clock);
 	call_status = runLpSolver(hmos_[solved_hmo], "Solving the presolved LP");
+	timer_.stop(timer_.solve_clock);
+	this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
 	return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
 	if (return_status == HighsStatus::Error) return return_status;
         break;
@@ -434,9 +453,11 @@ HighsStatus Highs::run() {
             hmos_[solved_hmo].basis_.col_status,
             hmos_[solved_hmo].basis_.row_status);
         // Run postsolve
+	this_postsolve_time = -timer_.read(timer_.postsolve_clock);
         timer_.start(timer_.postsolve_clock);
         HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
         timer_.stop(timer_.postsolve_clock);
+	this_postsolve_time += -timer_.read(timer_.postsolve_clock);
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
           HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
 			    "Postsolve finished.");
@@ -474,7 +495,11 @@ HighsStatus Highs::run() {
 	  options.highs_max_threads = 1;
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
 	  int iteration_count0 = hmos_[solved_hmo].unscaled_solution_params_.simplex_iteration_count;
+	  this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
+	  timer_.start(timer_.solve_clock);
 	  call_status = runLpSolver(hmos_[solved_hmo], "Solving the original LP from the solution after postsolve");
+	  timer_.stop(timer_.solve_clock);
+	  this_solve_original_lp_time += timer_.read(timer_.solve_clock);
 	  return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
           // Recover the options
           options = save_options;
@@ -492,7 +517,11 @@ HighsStatus Highs::run() {
     // There is a valid basis for the problem or presolve is off
     solved_hmo = original_hmo;
     hmos_[solved_hmo].lp_.lp_name_ = "LP without presolve or with basis";
+    this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
+    timer_.start(timer_.solve_clock);
     call_status = runLpSolver(hmos_[solved_hmo], "Solving LP without presolve or with basis");
+    timer_.stop(timer_.solve_clock);
+    this_solve_original_lp_time += timer_.read(timer_.solve_clock);
     return_status = interpretCallStatus(call_status, return_status, "runLpSolver");
     if (return_status == HighsStatus::Error) return return_status;
   }
@@ -521,10 +550,46 @@ HighsStatus Highs::run() {
   if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
   double lp_solve_final_time = timer_.readRunHighsClock();
+  double this_solve_time = lp_solve_final_time - initial_time;
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
 		    "Postsolve  : %d\n", postsolve_iteration_count);
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-		    "Time       : %0.3g\n", lp_solve_final_time - initial_time);
+		    "Time       : %0.3g\n", this_solve_time);
+  if (this_solve_time>0) {
+    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+		      "For LP %16s", hmos_[original_hmo].lp_.model_name_.c_str());
+    double sum_time = 0;
+    if (this_presolve_time>0) {
+      sum_time += this_presolve_time;
+      int pct = (100 * this_presolve_time)/this_solve_time;
+      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+			": Presolve %0.3g (%3d%%)", this_presolve_time, pct);
+    }
+    if (this_solve_presolved_lp_time>0) {
+      sum_time += this_solve_presolved_lp_time;
+      int pct = (100 * this_solve_presolved_lp_time)/this_solve_time;
+      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+			": Solve presolved LP %0.3g (%3d%%)", this_solve_presolved_lp_time, pct);
+    }
+    if (this_postsolve_time>0) {
+      sum_time += this_postsolve_time;
+      int pct = (100 * this_postsolve_time)/this_solve_time;
+      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+			": Postsolve %0.3g (%3d%%)", this_postsolve_time, pct);
+    }
+    if (this_solve_original_lp_time>0) {
+      sum_time += this_solve_original_lp_time;
+      int pct = (100 * this_solve_original_lp_time)/this_solve_time;
+      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+			": Solve original LP %0.3g (%3d%%)", this_solve_original_lp_time, pct);
+    }
+    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL, "\n");
+    double rlv_time_difference = fabs(sum_time-this_solve_time)/this_solve_time;
+    if (rlv_time_difference > 0.1)
+      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+			"Strange: Solve time = %g; Sum times = %g: relative difference = %g\n",
+			this_solve_time, sum_time, rlv_time_difference);
+  }
 
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier

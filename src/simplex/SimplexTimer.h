@@ -200,7 +200,9 @@ class SimplexTimer {
     for (int en = 0; en < simplex_clock_list_size; en++) {
       clockList[en] = simplex_info.clock_[simplex_clock_list[en]];
     }
-    timer.report_tl(grepStamp, clockList, 1e-8);
+    const double ideal_sum_time = timer.read(timer.solve_clock);
+    printf("report_simplex_clock_list: ideal_sum_time = %g\n", ideal_sum_time);
+    timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
 
   void reportSimplexTotalClock(HighsModelObject& model_object) {
