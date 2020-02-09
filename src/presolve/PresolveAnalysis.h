@@ -61,7 +61,6 @@ struct PresolveRuleInfo {
   std::string rule_name;
   std::string rule_name_ch3;
 
-  int attempts = 0;
   int count_applied = 0;
   int rows_removed = 0;
   int cols_removed = 0;
@@ -76,16 +75,48 @@ class PresolveTimer {
  public:
   PresolveTimer(HighsTimer& timer) : timer_(timer) {
     initializePresolveRuleInfo(rules_);
-    for (PresolveRuleInfo rule : rules_) {
+    for (PresolveRuleInfo& rule : rules_) {
       int clock_id =
           timer_.clock_def(rule.rule_name.c_str(), rule.rule_name_ch3.c_str());
       rule.clock_id = clock_id;
     }
   }
 
-  void recordStart(PresolveRule rule) { timer_.start(rules_[rule].clock_id); }
+  void recordStart(PresolveRule rule) {
+    assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
+    assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
+    timer_.start(rules_[rule].clock_id);
+  }
 
-  void recordFinish(PresolveRule rule) { timer_.stop(rules_[rule].clock_id); }
+  void recordFinish(PresolveRule rule) {
+    assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
+    assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
+    timer_.stop(rules_[rule].clock_id);
+  }
+
+  void addChange(PresolveRule rule) {
+    assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
+    assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
+    rules_[rule].count_applied++;
+  }
+
+  void increaseCount(bool row_count, PresolveRule rule) {
+    assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
+    assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
+    if (row_count)
+      rules_[rule].rows_removed++;
+    else
+      rules_[rule].cols_removed++;
+  }
+
+  void reportClocks() {
+    std::vector<int> clocks(PRESOLVE_RULES_COUNT);
+    for (PresolveRuleInfo& rule : rules_)
+      clocks[rule.rule_id] = rule.clock_id;
+    timer_.report("grep-Presolve", clocks);
+  }
+
+  void updateInfo();
 
  private:
   HighsTimer& timer_;

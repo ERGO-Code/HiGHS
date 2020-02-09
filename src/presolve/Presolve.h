@@ -206,14 +206,15 @@ class Presolve : public HPreData {
   // void updateRowsByNZ();
   void testAnAR(int post);
 
-  vector<int> countRemovedRows;
-  vector<int> countRemovedCols;
+  void countRemovedRows(PresolveRule rule);
+  void countRemovedCols(PresolveRule rule);
+
   double tol;
 
   // postsolve
   bool noPostSolve;
 
-  void addChange(int type, int row, int col);
+  void addChange(PresolveRule type, int row, int col);
   void fillStackRowBounds(int col);
   void setKKTcheckerData();
 
