@@ -2613,7 +2613,7 @@ int computeFactor(HighsModelObject& highs_model_object) {
   int thread_id = 0;
 #ifdef OPENMP
   thread_id = omp_get_thread_num();
-  printf("Hello world from computeFactor: thread %d\n", thread_id);
+  //  printf("Hello world from computeFactor: thread %d\n", thread_id);
 #endif
 #ifdef HiGHSDEV
   HighsTimerClock* timer_clock_pointer = highs_model_object.simplex_analysis_.getThreadTimerClockPtr(thread_id);

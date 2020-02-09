@@ -111,9 +111,10 @@ class PresolveTimer {
 
   void reportClocks() {
     std::vector<int> clocks(PRESOLVE_RULES_COUNT);
+    double presolve_time = timer_.read(timer_.presolve_clock);
     for (PresolveRuleInfo& rule : rules_)
       clocks[rule.rule_id] = rule.clock_id;
-    timer_.report("grep-Presolve", clocks);
+    timer_.report("grep-Presolve", clocks, presolve_time);
   }
 
   void updateInfo();
