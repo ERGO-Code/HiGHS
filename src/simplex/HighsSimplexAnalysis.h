@@ -107,17 +107,12 @@ class HighsSimplexAnalysis {
 		      );
   void summaryReportFactor();
 
-<<<<<<< HEAD
 #ifdef HiGHSDEV
   const std::vector<HighsTimerClock>& getThreadTimerClocks() { return thread_clocks; }
   HighsTimerClock* getThreadTimerClockPtr(int i) { 
     assert(i >= 0 && i < (int) thread_clocks.size());
     return &thread_clocks[i];
   }
-=======
-  HighsTimerClock& getFactorTimerClock() { return factor_timer_clock; }
-#ifdef HiGHSDEV
->>>>>>> c43cbb9add906f06efc34a3115c819849416bbfc
 
   void reportFactorTimer();
   void iterationRecord();
