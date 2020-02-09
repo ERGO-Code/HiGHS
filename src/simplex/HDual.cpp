@@ -1336,7 +1336,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     dualRow.choosePossible();
 #ifdef OPENMP
     int row_ep_thread_id = omp_get_thread_num();
-    printf("Hello world from Row_ep:         PACK + CC1 thread %d\n", row_ep_thread_id);
+    //    printf("Hello world from Row_ep:         PACK + CC1 thread %d\n", row_ep_thread_id);
 #endif
   }
 
@@ -1346,7 +1346,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     {
 #ifdef OPENMP
       int row_ap_thread_id = omp_get_thread_num();
-      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1d] thread %d\n", i, row_ap_thread_id);
+      //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1d] thread %d\n", i, row_ap_thread_id);
 #endif
       slice_row_ap[i].clear();
 

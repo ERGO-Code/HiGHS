@@ -30,6 +30,10 @@ using std::runtime_error;
 #include <cassert>
 #include <vector>
 
+#ifdef OPENMP
+#include "omp.h"
+#endif
+
 void setSimplexOptions(HighsModelObject& highs_model_object) {
   const HighsOptions& options = highs_model_object.options_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -2606,10 +2610,17 @@ int computeFactor(HighsModelObject& highs_model_object) {
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
+  int thread_id = 0;
+#ifdef OPENMP
+  thread_id = omp_get_thread_num();
+  printf("Hello world from computeFactor: thread %d\n", thread_id);
+#endif
+#ifdef HiGHSDEV
+  HighsTimerClock* timer_clock_pointer = highs_model_object.simplex_analysis_.getThreadTimerClockPtr(thread_id);
+#endif
   int rankDeficiency = factor.build(
 #ifdef HiGHSDEV
-            // todo: replace 0 with the thread number
-				    highs_model_object.simplex_analysis_.getThreadTimerClockPtr(0)
+				    timer_clock_pointer
 #endif
 				    );
   if (rankDeficiency) {

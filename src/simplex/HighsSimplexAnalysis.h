@@ -24,6 +24,10 @@
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
 
+#ifdef OPENMP
+#include "omp.h"
+#endif
+
 #ifdef HiGHSDEV
 enum ANALYSIS_OPERATION_TYPE {
   ANALYSIS_OPERATION_TYPE_BTRAN_FULL = 0,
@@ -68,8 +72,11 @@ class HighsSimplexAnalysis {
   HighsSimplexAnalysis(HighsTimer& timer) {
     timer_ = &timer;
 #ifdef HiGHSDEV
-    // todo: change 8 to num_threads
-    for (int i=0; i<8; i++) {
+    int omp_max_threads = 1;
+#ifdef OPENMP
+    omp_max_threads = omp_get_max_threads();
+#endif
+    for (int i=0; i<omp_max_threads; i++) {
       HighsTimerClock clock(timer);
       thread_clocks.push_back(clock);
     }
