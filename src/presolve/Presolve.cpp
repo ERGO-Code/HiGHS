@@ -107,8 +107,8 @@ int Presolve::presolve(int print) {
   // chk.print = 1;
 
   // counter for the different types of reductions
-  countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
-  countRemovedRows.resize(HTICK_ITEMS_COUNT_PRE, 0);
+  countRemovedCols.resize(PRESOLVE_RULES_COUNT, 0);
+  countRemovedRows.resize(PRESOLVE_RULES_COUNT, 0);
 
   if (iPrint > 0) {
     cout << "Presolve started ..." << endl;
@@ -160,9 +160,9 @@ int Presolve::presolve(int print) {
 
   checkForChanges(iter);
 
-  if (countsFile.length() > 0) {
-    recordCounts(countsFile);
-  }
+  // if (countsFile.length() > 0) {
+  //   recordCounts(countsFile);
+  // }
   return status;
 }
 
@@ -774,16 +774,6 @@ void Presolve::initializeVectors() {
   colCostAtEl = colCost;
   rowLowerAtEl = rowLower;
   rowUpperAtEl = rowUpper;
-}
-
-Presolve::Presolve() {
-  tol = 0.0000001;
-  noPostSolve = false;
-  objShift = 0;
-  hasChange = true;
-  iKKTcheck = 0;
-  iPrint = 0;
-  countsFile = "";
 }
 
 void Presolve::removeIfFixed(int j) {
@@ -1970,89 +1960,89 @@ void Presolve::checkForChanges(int iteration) {
   status = stat::Reduced;
 }
 
-void Presolve::reportTimes() {
-  int reportList[] = {EMPTY_ROW,
-                      FIXED_COL,
-                      SING_ROW,
-                      DOUBLETON_EQUATION,
-                      FORCING_ROW,
-                      REDUNDANT_ROW,
-                      FREE_SING_COL,
-                      SING_COL_DOUBLETON_INEQ,
-                      IMPLIED_FREE_SING_COL,
-                      DOMINATED_COLS,
-                      WEAKLY_DOMINATED_COLS};
-  int reportCount = sizeof(reportList) / sizeof(int);
+// void Presolve::reportTimes() {
+//   int reportList[] = {EMPTY_ROW,
+//                       FIXED_COL,
+//                       SING_ROW,
+//                       DOUBLETON_EQUATION,
+//                       FORCING_ROW,
+//                       REDUNDANT_ROW,
+//                       FREE_SING_COL,
+//                       SING_COL_DOUBLETON_INEQ,
+//                       IMPLIED_FREE_SING_COL,
+//                       DOMINATED_COLS,
+//                       WEAKLY_DOMINATED_COLS};
+//   int reportCount = sizeof(reportList) / sizeof(int);
 
-  printf("Presolve rules ");
-  for (int i = 0; i < reportCount; ++i) {
-    printf(" %s", timer.itemNames[reportList[i]].c_str());
-    cout << flush;
-  }
+//   printf("Presolve rules ");
+//   for (int i = 0; i < reportCount; ++i) {
+//     printf(" %s", timer.itemNames[reportList[i]].c_str());
+//     cout << flush;
+//   }
 
-  printf("\n");
-  cout << "Time spent     " << flush;
-  for (int i = 0; i < reportCount; ++i) {
-    float f = (float)timer.itemTicks[reportList[i]];
-    if (f < 0.01)
-      cout << setw(4) << " <.01 ";
-    else
-      printf(" %3.2f ", f);
-  }
-  printf("\n");
-}
+//   printf("\n");
+//   cout << "Time spent     " << flush;
+//   for (int i = 0; i < reportCount; ++i) {
+//     float f = (float)timer.itemTicks[reportList[i]];
+//     if (f < 0.01)
+//       cout << setw(4) << " <.01 ";
+//     else
+//       printf(" %3.2f ", f);
+//   }
+//   printf("\n");
+// }
 
-void Presolve::recordCounts(const string fileName) {
-  ofstream myfile;
-  myfile.open(fileName.c_str(), ios::app);
-  int reportList[] = {EMPTY_ROW,
-                      FIXED_COL,
-                      SING_ROW,
-                      DOUBLETON_EQUATION,
-                      FORCING_ROW,
-                      REDUNDANT_ROW,
-                      FREE_SING_COL,
-                      SING_COL_DOUBLETON_INEQ,
-                      IMPLIED_FREE_SING_COL,
-                      DOMINATED_COLS,
-                      WEAKLY_DOMINATED_COLS,
-                      EMPTY_COL};
-  int reportCount = sizeof(reportList) / sizeof(int);
+// void Presolve::recordCounts(const string fileName) {
+//   ofstream myfile;
+//   myfile.open(fileName.c_str(), ios::app);
+//   int reportList[] = {EMPTY_ROW,
+//                       FIXED_COL,
+//                       SING_ROW,
+//                       DOUBLETON_EQUATION,
+//                       FORCING_ROW,
+//                       REDUNDANT_ROW,
+//                       FREE_SING_COL,
+//                       SING_COL_DOUBLETON_INEQ,
+//                       IMPLIED_FREE_SING_COL,
+//                       DOMINATED_COLS,
+//                       WEAKLY_DOMINATED_COLS,
+//                       EMPTY_COL};
+//   int reportCount = sizeof(reportList) / sizeof(int);
 
-  myfile << "Problem " << modelName << ":\n";
-  myfile << "Rule   , removed rows , removed cols , time  \n";
+//   myfile << "Problem " << modelName << ":\n";
+//   myfile << "Rule   , removed rows , removed cols , time  \n";
 
-  int cRows = 0, cCols = 0;
-  for (int i = 0; i < reportCount; ++i) {
-    float f = (float)timer.itemTicks[reportList[i]];
+//   int cRows = 0, cCols = 0;
+//   for (int i = 0; i < reportCount; ++i) {
+//     float f = (float)timer.itemTicks[reportList[i]];
 
-    myfile << setw(7) << timer.itemNames[reportList[i]].c_str() << ", "
-           << setw(7) << countRemovedRows[reportList[i]] << ", " << setw(7)
-           << countRemovedCols[reportList[i]] << ", ";
-    if (f < 0.001)
-      myfile << setw(7) << " <.001 ";
-    else
-      myfile << setw(7) << setprecision(3) << f;
-    myfile << endl;
+//     myfile << setw(7) << timer.itemNames[reportList[i]].c_str() << ", "
+//            << setw(7) << countRemovedRows[reportList[i]] << ", " << setw(7)
+//            << countRemovedCols[reportList[i]] << ", ";
+//     if (f < 0.001)
+//       myfile << setw(7) << " <.001 ";
+//     else
+//       myfile << setw(7) << setprecision(3) << f;
+//     myfile << endl;
 
-    cRows += countRemovedRows[reportList[i]];
-    cCols += countRemovedCols[reportList[i]];
-  }
+//     cRows += countRemovedRows[reportList[i]];
+//     cCols += countRemovedCols[reportList[i]];
+//   }
 
-  if (!noPostSolve) {
-    if (cRows != numRowOriginal - numRow) cout << "Wrong row reduction count\n";
-    if (cCols != numColOriginal - numCol) cout << "Wrong col reduction count\n";
+//   if (!noPostSolve) {
+//     if (cRows != numRowOriginal - numRow) cout << "Wrong row reduction count\n";
+//     if (cCols != numColOriginal - numCol) cout << "Wrong col reduction count\n";
 
-    myfile << setw(7) << "Total "
-           << ", " << setw(7) << numRowOriginal - numRow << ", " << setw(7)
-           << numColOriginal - numCol;
-  } else {
-    myfile << setw(7) << "Total "
-           << ", " << setw(7) << 0 << ", " << setw(7) << 0;
-  }
-  myfile << endl << " \\\\ " << endl;
-  myfile.close();
-}
+//     myfile << setw(7) << "Total "
+//            << ", " << setw(7) << numRowOriginal - numRow << ", " << setw(7)
+//            << numColOriginal - numCol;
+//   } else {
+//     myfile << setw(7) << "Total "
+//            << ", " << setw(7) << 0 << ", " << setw(7) << 0;
+//   }
+//   myfile << endl << " \\\\ " << endl;
+//   myfile.close();
+// }
 
 void Presolve::resizeImpliedBounds() {
   // implied bounds for crashes

@@ -23,7 +23,7 @@
 
 #include "lp_data/HighsLp.h"
 #include "presolve/HPreData.h"
-#include "simplex/HTimerPre.h"
+#include "presolve/PresolveAnalysis.h"
 
 using std::list;
 using std::string;
@@ -50,7 +50,16 @@ enum class HighsPresolveStatus {
 
 class Presolve : public HPreData {
  public:
-  Presolve();
+  Presolve(HighsTimer& timer_ref) : timer(timer_ref) {
+    tol = 0.0000001;
+    noPostSolve = false;
+    objShift = 0;
+    hasChange = true;
+    iKKTcheck = 0;
+    iPrint = 0;
+    countsFile = "";
+  }
+
   HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
                                  HighsSolution& recovered_solution);
@@ -94,7 +103,7 @@ class Presolve : public HPreData {
   vector<double> implRowValueLower;
   vector<double> implRowValueUpper;
 
-  HTimerPre timer;  // holds enum for main presolve rules
+  PresolveTimer timer;  // holds enum for main presolve rules
 
   enum stat {
     Unset = 0,
@@ -242,10 +251,10 @@ class PresolveInfo {
  public:
   PresolveInfo() {}
   // option_presolve : off_string means don't presolve.
-  PresolveInfo(std::string option_presolve, const HighsLp& lp) {
+  PresolveInfo(std::string option_presolve, const HighsLp& lp, HighsTimer& timer) {
     if (option_presolve != off_string) {
       lp_ = &lp;
-      presolve_.push_back(Presolve());
+      presolve_.push_back(Presolve(timer));
     }
   }
 
