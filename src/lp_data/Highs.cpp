@@ -346,7 +346,7 @@ HighsStatus Highs::run() {
     
     this_presolve_time = -timer_.read(timer_.presolve_clock);
     timer_.start(timer_.presolve_clock);
-    PresolveInfo presolve_info(options_.presolve, lp_);
+    PresolveInfo presolve_info(options_.presolve, lp_, timer_);
     HighsPresolveStatus presolve_status = runPresolve(presolve_info);
     timer_.stop(timer_.presolve_clock);
     this_presolve_time += timer_.read(timer_.presolve_clock);
