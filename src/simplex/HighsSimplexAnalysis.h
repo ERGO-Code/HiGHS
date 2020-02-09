@@ -66,8 +66,8 @@ const double max_hyper_density = 0.1;
 class HighsSimplexAnalysis {
  public:
   HighsSimplexAnalysis(HighsTimer& timer) {
-#ifdef HiGHSDEV
     timer_ = &timer;
+#ifdef HiGHSDEV
     // todo: change 8 to num_threads
     for (int i=0; i<8; i++) {
       HighsTimerClock clock(timer);
@@ -135,7 +135,7 @@ class HighsSimplexAnalysis {
 
 //#ifdef HiGHSDEV
   HighsTimer* timer_;
-  HighsTimerClock factor_timer_clock;
+  std::vector<HighsTimerClock> thread_clocks;
 //#endif
 
   int numRow;
@@ -272,10 +272,7 @@ class HighsSimplexAnalysis {
   int AnIterIt0 = 0;
 #ifdef HiGHSDEV
   int AnIterPrevIt;
-<<<<<<< HEAD
-  std::vector<HighsTimerClock> thread_clocks;
-=======
->>>>>>> c43cbb9add906f06efc34a3115c819849416bbfc
+
   // Major operation analysis struct
   struct AnIterOpRec {
     double AnIterOpHyperCANCEL;
