@@ -2707,7 +2707,8 @@ void computePrimal(HighsModelObject& highs_model_object) {
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!
   if (primal_col.count) {
-    factor.ftran(primal_col, analysis->primal_col_density, analysis->pointer_serial_factor_clocks);
+    HighsTimerClock* pointer = analysis->pointer_serial_factor_clocks;
+    factor.ftran(primal_col, analysis->primal_col_density, pointer);//analysis->pointer_serial_factor_clocks);
     const double local_primal_col_density = (double)primal_col.count / simplex_lp.numRow_;
     analysis->updateOperationResultDensity(local_primal_col_density, analysis->primal_col_density);
   }

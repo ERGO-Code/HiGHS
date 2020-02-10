@@ -81,6 +81,8 @@ class HighsSimplexAnalysis {
       thread_factor_clocks.push_back(clock);
     }
     pointer_serial_factor_clocks = &thread_factor_clocks[0];
+#else
+    pointer_serial_factor_clocks = NULL;
 #endif
 }
   void setup(const HighsLp& lp,
