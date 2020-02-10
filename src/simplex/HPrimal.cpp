@@ -133,13 +133,17 @@ HighsStatus HPrimal::solve() {
     switch (solvePhase) {
       case 1:
         timer.start(simplex_info.clock_[SimplexPrimalPhase1Clock]);
+	analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
         solvePhase1();
         timer.stop(simplex_info.clock_[SimplexPrimalPhase1Clock]);
+	analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
         simplex_info.primal_phase1_iteration_count +=
     (scaled_solution_params.simplex_iteration_count - it0); break; case 2:
         timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+	analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
         solvePhase2();
         timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+	analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
         simplex_info.primal_phase2_iteration_count +=
     (scaled_solution_params.simplex_iteration_count - it0); break; case 4: break; default:
         solvePhase = 0;
@@ -157,8 +161,10 @@ HighsStatus HPrimal::solve() {
       int it0 = scaled_solution_params.simplex_iteration_count;
 
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+      analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
       solvePhase2();
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+      analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
 
       simplex_info.primal_phase2_iteration_count +=
           (scaled_solution_params.simplex_iteration_count - it0);
@@ -237,8 +243,10 @@ void HPrimal::solvePhase2() {
   // Main solving structure
   for (;;) {
     timer.start(simplex_info.clock_[IteratePrimalRebuildClock]);
+    analysis->simplexTimerStart(IteratePrimalRebuildClock);
     primalRebuild();
     timer.stop(simplex_info.clock_[IteratePrimalRebuildClock]);
+    analysis->simplexTimerStop(IteratePrimalRebuildClock);
 
     for (;;) {
       primalChooseColumn();
@@ -315,25 +323,33 @@ void HPrimal::primalRebuild() {
   }
   if (reInvert) {
     timer.start(simplex_info.clock_[InvertClock]);
+    analysis->simplexTimerStart(InvertClock);
     int rankDeficiency = computeFactor(workHMO);
     timer.stop(simplex_info.clock_[InvertClock]);
+    analysis->simplexTimerStop(InvertClock);
     if (rankDeficiency) {
       throw runtime_error("Primal reInvert: singular-basis-matrix");
     }
     simplex_info.update_count = 0;
   }
   timer.start(simplex_info.clock_[ComputeDualClock]);
+  analysis->simplexTimerStart(ComputeDualClock);
   computeDual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
+  analysis->simplexTimerStop(ComputeDualClock);
 
   timer.start(simplex_info.clock_[ComputePrimalClock]);
+  analysis->simplexTimerStart(ComputePrimalClock);
   computePrimal(workHMO);
   timer.stop(simplex_info.clock_[ComputePrimalClock]);
+  analysis->simplexTimerStop(ComputePrimalClock);
 
   // Primal objective section
   timer.start(simplex_info.clock_[ComputePrObjClock]);
+  analysis->simplexTimerStart(ComputePrObjClock);
   computePrimalObjectiveValue(workHMO);
   timer.stop(simplex_info.clock_[ComputePrObjClock]);
+  analysis->simplexTimerStop(ComputePrObjClock);
 
   double primal_objective_value = simplex_info.primal_objective_value;
 #ifdef HiGHSDEV
@@ -356,16 +372,22 @@ void HPrimal::primalRebuild() {
   simplex_info.updated_primal_objective_value = primal_objective_value;
 
   timer.start(simplex_info.clock_[ComputePrIfsClock]);
+  analysis->simplexTimerStart(ComputePrIfsClock);
   computePrimalInfeasible(workHMO);
   timer.stop(simplex_info.clock_[ComputePrIfsClock]);
+  analysis->simplexTimerStop(ComputePrIfsClock);
 
   timer.start(simplex_info.clock_[ComputeDuIfsClock]);
+  analysis->simplexTimerStart(ComputeDuIfsClock);
   computeDualInfeasible(workHMO);
   timer.stop(simplex_info.clock_[ComputeDuIfsClock]);
+  analysis->simplexTimerStop(ComputeDuIfsClock);
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
+  analysis->simplexTimerStart(ReportRebuildClock);
   reportRebuild(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
+  analysis->simplexTimerStop(ReportRebuildClock);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
@@ -396,6 +418,7 @@ void HPrimal::primalChooseColumn() {
   const double dualTolerance = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
 
   timer.start(simplex_info.clock_[ChuzcPrimalClock]);
+  analysis->simplexTimerStart(ChuzcPrimalClock);
   columnIn = -1;
   double bestInfeas = 0;
   if (no_free_columns) {
@@ -454,6 +477,7 @@ void HPrimal::primalChooseColumn() {
     }
   }
   timer.stop(simplex_info.clock_[ChuzcPrimalClock]);
+  analysis->simplexTimerStop(ChuzcPrimalClock);
 }
 
 void HPrimal::primalChooseRow() {
@@ -467,6 +491,7 @@ void HPrimal::primalChooseRow() {
 
   // Compute pivot column
   timer.start(simplex_info.clock_[FtranClock]);
+  analysis->simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
@@ -476,6 +501,7 @@ void HPrimal::primalChooseRow() {
 #endif
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
   timer.stop(simplex_info.clock_[FtranClock]);
+  analysis->simplexTimerStop(FtranClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
@@ -508,6 +534,7 @@ void HPrimal::primalChooseRow() {
   }
 
   timer.start(simplex_info.clock_[Chuzr1Clock]);
+  analysis->simplexTimerStart(Chuzr1Clock);
   // Initialize
   rowOut = -1;
 
@@ -536,8 +563,10 @@ void HPrimal::primalChooseRow() {
     }
   }
   timer.stop(simplex_info.clock_[Chuzr1Clock]);
+  analysis->simplexTimerStop(Chuzr1Clock);
 
   timer.start(simplex_info.clock_[Chuzr2Clock]);
+  analysis->simplexTimerStart(Chuzr2Clock);
   double bestAlpha = 0;
   for (int i = 0; i < col_aq.count; i++) {
     int index = col_aq.index[i];
@@ -563,6 +592,7 @@ void HPrimal::primalChooseRow() {
     }
   }
   timer.stop(simplex_info.clock_[Chuzr2Clock]);
+  analysis->simplexTimerStop(Chuzr2Clock);
 }
 
 void HPrimal::primalUpdate() {
@@ -619,11 +649,13 @@ void HPrimal::primalUpdate() {
   }
 
   timer.start(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStart(UpdatePrimalClock);
   for (int i = 0; i < col_aq.count; i++) {
     int index = col_aq.index[i];
     baseValue[index] -= thetaPrimal * col_aq.array[index];
   }
   timer.stop(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStop(UpdatePrimalClock);
 
   simplex_info.updated_primal_objective_value +=
       workDual[columnIn] * thetaPrimal;
@@ -643,12 +675,15 @@ void HPrimal::primalUpdate() {
   // Pivot in
   int sourceOut = alpha * moveIn > 0 ? -1 : 1;
   timer.start(simplex_info.clock_[IteratePivotsClock]);
+  analysis->simplexTimerStart(IteratePivotsClock);
   update_pivots(workHMO, columnIn, rowOut, sourceOut);
   timer.stop(simplex_info.clock_[IteratePivotsClock]);
+  analysis->simplexTimerStop(IteratePivotsClock);
 
   baseValue[rowOut] = valueIn;
 
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
+  analysis->simplexTimerStart(CollectPrIfsClock);
   // Check for any possible infeasible
   for (int iRow = 0; iRow < solver_num_row; iRow++) {
     if (baseValue[iRow] < baseLower[iRow] - primalTolerance) {
@@ -658,10 +693,12 @@ void HPrimal::primalUpdate() {
     }
   }
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
+  analysis->simplexTimerStop(CollectPrIfsClock);
 
   // 2. Now we can update the dual
 
   timer.start(simplex_info.clock_[BtranClock]);
+  analysis->simplexTimerStart(BtranClock);
   row_ep.clear();
   row_ap.clear();
   row_ep.count = 1;
@@ -678,6 +715,7 @@ void HPrimal::primalUpdate() {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
   timer.stop(simplex_info.clock_[BtranClock]);
+  analysis->simplexTimerStop(BtranClock);
   //
   // PRICE
   //
@@ -685,22 +723,25 @@ void HPrimal::primalUpdate() {
 /*
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ap_density);
+  analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ap_density);
     analysis->num_row_price++;
   }
 #endif
   timer.start(simplex_info.clock_[PriceClock]);
+  analysis->simplexTimerStart(PriceClock);
   workHMO.matrix_.priceByRowSparseResult(row_ap, row_ep);
   timer.stop(simplex_info.clock_[PriceClock]);
+  analysis->simplexTimerStop(PriceClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
+  analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
 #endif
 
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
 */
   timer.start(simplex_info.clock_[UpdateDualClock]);
+  analysis->simplexTimerStart(UpdateDualClock);
   //  double
   thetaDual = workDual[columnIn] / alpha;
   for (int i = 0; i < row_ap.count; i++) {
@@ -713,6 +754,7 @@ void HPrimal::primalUpdate() {
     workDual[iCol] -= thetaDual * row_ep.array[iGet];
   }
   timer.stop(simplex_info.clock_[UpdateDualClock]);
+  analysis->simplexTimerStop(UpdateDualClock);
 
   // After dual update in primal simplex the dual objective value is not known
   workHMO.simplex_lp_status_.has_dual_objective_value = false;

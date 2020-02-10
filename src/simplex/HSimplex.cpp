@@ -110,6 +110,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HFactor& factor = highs_model_object.factor_;
   HMatrix& matrix = highs_model_object.matrix_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   // First determine whether the HiGHS solution space has been
   // allocated, a necessary condition for its values to be used later
   bool have_highs_solution =
@@ -218,8 +219,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       if (options.simplex_crash_strategy != SIMPLEX_CRASH_STRATEGY_OFF) {
         HCrash crash(highs_model_object);
         timer.start(simplex_info.clock_[CrashClock]);
+	analysis.simplexTimerStart(CrashClock);
         crash.crash(options.simplex_crash_strategy);
         timer.stop(simplex_info.clock_[CrashClock]);
+	analysis.simplexTimerStop(CrashClock);
         int num_basic_structurals = 0;
         for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
           if (simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_FALSE)
@@ -294,9 +297,11 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   bool scale_lp = options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF &&
                   !simplex_lp_status.scaling_tried;
   if (scale_lp) {
-    timer.start(simplex_info.clock_[ScaleClock]);    
+    timer.start(simplex_info.clock_[ScaleClock]);
+    analysis.simplexTimerStart(ScaleClock);
     scaleSimplexLp(highs_model_object);
-    timer.stop(simplex_info.clock_[ScaleClock]);    
+    timer.stop(simplex_info.clock_[ScaleClock]);
+    analysis.simplexTimerStop(ScaleClock);
 #ifdef HiGHSDEV
     // Analyse the scaled LP
     if (simplex_info.analyse_lp) {
@@ -344,8 +349,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   if (!basis_condition_ok) {
     HCrash crash(highs_model_object);
     timer.start(simplex_info.clock_[CrashClock]);
+    analysis.simplexTimerStart(CrashClock);
     crash.crash(SIMPLEX_CRASH_STRATEGY_BASIC);
     timer.stop(simplex_info.clock_[CrashClock]);
+    analysis.simplexTimerStop(CrashClock);
      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                     "Performed crash to prioritise previously basic variables "
                     "in well-conditioned basis");
@@ -566,10 +573,13 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 bool basisConditionOk(HighsModelObject& highs_model_object, const std::string message) {
   HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   bool basis_condition_ok;
   timer.start(simplex_info.clock_[BasisConditionClock]);
+  analysis.simplexTimerStart(BasisConditionClock);
   double basis_condition = computeBasisCondition(highs_model_object);
   timer.stop(simplex_info.clock_[BasisConditionClock]);
+  analysis.simplexTimerStop(BasisConditionClock);
   double basis_condition_tolerance =
     highs_model_object.options_.simplex_initial_condition_tolerance;
   basis_condition_ok = basis_condition < basis_condition_tolerance;
@@ -2605,6 +2615,7 @@ int computeFactor(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   HFactor& factor = highs_model_object.factor_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 #ifdef HiGHSDEV
   HighsTimer& timer = highs_model_object.timer_;
   double tt0 = 0;
@@ -2691,8 +2702,10 @@ int computeFactor(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_condition) {
     timer.start(simplex_info.clock_[BasisConditionClock]);
+    analysis.simplexTimerStart(BasisConditionClock);
     simplex_info.invert_condition = computeBasisCondition(highs_model_object);
     timer.stop(simplex_info.clock_[BasisConditionClock]);
+    analysis.simplexTimerStop(BasisConditionClock);
   }    
 #endif
  
@@ -2965,7 +2978,7 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVecto
   HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const HMatrix* matrix = &highs_model_object.matrix_;
-  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   
   const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
   const double local_density = 1.0 * row_ep.count / solver_num_row;
@@ -2976,18 +2989,19 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVecto
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     if (use_col_price) {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, 0.0);
-      analysis->num_col_price++;
+      analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, 0.0);
+      analysis.num_col_price++;
     } else if (use_row_price_w_switch) {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ep_density);
-      analysis->num_row_price_with_switch++;
+      analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis.row_ep_density);
+      analysis.num_row_price_with_switch++;
     } else {
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ep_density);
-      analysis->num_row_price++;
+      analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis.row_ep_density);
+      analysis.num_row_price++;
     }
   }
 #endif
   timer.start(simplex_info.clock_[PriceClock]);
+  analysis.simplexTimerStart(PriceClock);
   row_ap.clear();
   if (use_col_price) {
     // Perform column-wise PRICE
@@ -2995,7 +3009,7 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVecto
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap becomes extreme
     const double switch_density = matrix->hyperPRICE;
-    matrix->priceByRowSparseResultWithSwitch(row_ap, row_ep, analysis->row_ap_density, 0, switch_density);
+    matrix->priceByRowSparseResultWithSwitch(row_ap, row_ep, analysis.row_ap_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
     matrix->priceByRowSparseResult(row_ap, row_ep);
@@ -3016,17 +3030,18 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVecto
 #endif
   // Update the record of average row_ap density
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
-  analysis->updateOperationResultDensity(local_row_ap_density, analysis->row_ap_density);
+  analysis.updateOperationResultDensity(local_row_ap_density, analysis.row_ap_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
+    analysis.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
+  analysis.simplexTimerStop(PriceClock);
 }
 
 void computeDual(HighsModelObject& highs_model_object) {
   //  HighsTimer& timer = highs_model_object.timer_;
-  HighsSimplexAnalysis* analysis = &highs_model_object.simplex_analysis_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
@@ -3064,15 +3079,15 @@ void computeDual(HighsModelObject& highs_model_object) {
     }
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col, analysis->dual_col_density);
+      analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col, analysis.dual_col_density);
 #endif
-    factor.btran(dual_col, analysis->dual_col_density);
+    factor.btran(dual_col, analysis.dual_col_density);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
-      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col);
+      analysis.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col);
 #endif
     const double local_dual_col_density = (double)dual_col.count / simplex_lp.numRow_;
-    analysis->updateOperationResultDensity(local_dual_col_density, analysis->dual_col_density);
+    analysis.updateOperationResultDensity(local_dual_col_density, analysis.dual_col_density);
     if (an_compute_dual_norm2) {
       btran_sol_norm2 = dual_col.norm2();
       btran_sol_norm2 = sqrt(btran_sol_norm2);
@@ -3085,12 +3100,12 @@ void computeDual(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     double price_full_historical_density = 1;
     if (simplex_info.analyse_iterations)
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row, price_full_historical_density);
+      analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row, price_full_historical_density);
 #endif
     matrix.priceByColumn(dual_row, dual_col);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
-      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row);
+      analysis.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row);
     //  const double local_density = 1.0 * dual_row.count / simplex_lp.numCol_;
 #endif
     for (int i = 0; i < simplex_lp.numCol_; i++)
@@ -3196,14 +3211,17 @@ void update_factor(HighsModelObject& highs_model_object, HVector* column,
       highs_model_object.simplex_lp_status_;
   HFactor& factor = highs_model_object.factor_;
   HighsTimer& timer = highs_model_object.timer_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   timer.start(simplex_info.clock_[UpdateFactorClock]);
+  analysis.simplexTimerStart(UpdateFactorClock);
   factor.update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
   simplex_lp_status.has_invert = true;
   if (simplex_info.update_count >= simplex_info.update_limit)
     *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   timer.stop(simplex_info.clock_[UpdateFactorClock]);
+  analysis.simplexTimerStop(UpdateFactorClock);
 }
 
 void update_pivots(HighsModelObject& highs_model_object, int columnIn,
@@ -3214,8 +3232,10 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
       highs_model_object.simplex_lp_status_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HighsTimer& timer = highs_model_object.timer_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   timer.start(simplex_info.clock_[UpdatePivotsClock]);
+  analysis.simplexTimerStart(UpdatePivotsClock);
   int columnOut = simplex_basis.basicIndex_[rowOut];
 
   // Incoming variable
@@ -3268,6 +3288,7 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
   // Data are no longer fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = false;
   timer.stop(simplex_info.clock_[UpdatePivotsClock]);
+  analysis.simplexTimerStop(UpdatePivotsClock);
 }
 
 void update_matrix(HighsModelObject& highs_model_object, int columnIn,
@@ -3275,10 +3296,13 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HMatrix& matrix = highs_model_object.matrix_;
   HighsTimer& timer = highs_model_object.timer_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   timer.start(simplex_info.clock_[UpdateMatrixClock]);
+  analysis.simplexTimerStart(UpdateMatrixClock);
   matrix.update(columnIn, columnOut);
   timer.stop(simplex_info.clock_[UpdateMatrixClock]);
+  analysis.simplexTimerStop(UpdateMatrixClock);
 }
 
 bool reinvertOnNumericalTrouble(const std::string method_name,

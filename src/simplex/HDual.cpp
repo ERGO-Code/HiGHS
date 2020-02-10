@@ -138,7 +138,9 @@ HighsStatus HDual::solve() {
 #ifdef HiGHSDEV
         printf("Compute exact DSE weights\n");
         timer.start(simplex_info.clock_[SimplexIzDseWtClock]);
+	analysis->simplexTimerStart(SimplexIzDseWtClock);
         timer.start(simplex_info.clock_[DseIzClock]);
+	analysis->simplexTimerStart(DseIzClock);
 #endif
         for (int i = 0; i < solver_num_row; i++) {
           row_ep.clear();
@@ -153,7 +155,9 @@ HighsStatus HDual::solve() {
         }
 #ifdef HiGHSDEV
         timer.stop(simplex_info.clock_[SimplexIzDseWtClock]);
+	analysis->simplexTimerStop(SimplexIzDseWtClock);
         timer.stop(simplex_info.clock_[DseIzClock]);
+	analysis->simplexTimerStop(DseIzClock);
         double IzDseWtTT = timer.read(SimplexIzDseWtClock);
         HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
                           "Computed %d initial DSE weights in %gs\n",
@@ -224,15 +228,19 @@ HighsStatus HDual::solve() {
     switch (solvePhase) {
       case 1:
         timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
+	analysis->simplexTimerStart(SimplexDualPhase1Clock);
         solvePhase1();
         timer.stop(simplex_info.clock_[SimplexDualPhase1Clock]);
+	analysis->simplexTimerStop(SimplexDualPhase1Clock);
         simplex_info.dual_phase1_iteration_count +=
             (scaled_solution_params.simplex_iteration_count - it0);
         break;
       case 2:
         timer.start(simplex_info.clock_[SimplexDualPhase2Clock]);
+	analysis->simplexTimerStart(SimplexDualPhase2Clock);
         solvePhase2();
         timer.stop(simplex_info.clock_[SimplexDualPhase2Clock]);
+	analysis->simplexTimerStop(SimplexDualPhase2Clock);
         simplex_info.dual_phase2_iteration_count +=
             (scaled_solution_params.simplex_iteration_count - it0);
         break;
@@ -284,6 +292,7 @@ HighsStatus HDual::solve() {
       const bool full_logging = false;//true;//
       if (full_logging) analysis->messaging(options.logfile, options.output, ML_ALWAYS);
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+      analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
       if (options.dual_simplex_cleanup_strategy == DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL) {
 	// Cleanup with original primal phase 2 code
 	HPrimal hPrimal(workHMO);
@@ -294,6 +303,7 @@ HighsStatus HDual::solve() {
 	hPrimal.solvePhase2();
       }
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+      analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
 #ifdef HiGHSDEV
     vector<double> primal_value_after_cleanup;
     getPrimalValue(workHMO, primal_value_after_cleanup);
@@ -499,10 +509,13 @@ void HDual::solvePhase1() {
   initialise_value(workHMO);
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
+  analysis->simplexTimerStart(IterateClock);
   for (;;) {
     timer.start(simplex_info.clock_[IterateDualRebuildClock]);
+    analysis->simplexTimerStart(IterateDualRebuildClock);
     rebuild();
     timer.stop(simplex_info.clock_[IterateDualRebuildClock]);
+    analysis->simplexTimerStop(IterateDualRebuildClock);
     for (;;) {
       switch (simplex_info.simplex_strategy) {
         default:
@@ -546,6 +559,7 @@ void HDual::solvePhase1() {
   }
 
   timer.stop(simplex_info.clock_[IterateClock]);
+  analysis->simplexTimerStop(IterateClock);
   if (solve_bailout) {
     assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
 	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
@@ -623,12 +637,15 @@ void HDual::solvePhase2() {
   dualRow.createFreelist();
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
+  analysis->simplexTimerStart(IterateClock);
   for (;;) {
     // Outer loop of solvePhase2()
     // Rebuild all values, reinverting B if updates have been performed
     timer.start(simplex_info.clock_[IterateDualRebuildClock]);
+    analysis->simplexTimerStart(IterateDualRebuildClock);
     rebuild();
     timer.stop(simplex_info.clock_[IterateDualRebuildClock]);
+    analysis->simplexTimerStop(IterateDualRebuildClock);
     if (dualInfeasCount > 0) break;
     for (;;) {
       // Inner loop of solvePhase2()
@@ -679,6 +696,7 @@ void HDual::solvePhase2() {
     if (simplex_lp_status.has_fresh_rebuild) break;
   }
   timer.stop(simplex_info.clock_[IterateClock]);
+  analysis->simplexTimerStop(IterateClock);
 
   if (solve_bailout) {
     assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
@@ -760,58 +778,78 @@ void HDual::rebuild() {
 
     // permutation of baseIndex
     timer.start(simplex_info.clock_[PermWtClock]);
+    analysis->simplexTimerStart(PermWtClock);
     for (int i = 0; i < solver_num_row; i++)
       dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
     timer.stop(simplex_info.clock_[PermWtClock]);
+    analysis->simplexTimerStop(PermWtClock);
 
     timer.start(simplex_info.clock_[InvertClock]);
+    analysis->simplexTimerStart(InvertClock);
 
     // Call computeFactor to perform INVERT
     int rankDeficiency = computeFactor(workHMO);
     timer.stop(simplex_info.clock_[InvertClock]);
+    analysis->simplexTimerStop(InvertClock);
 
     if (rankDeficiency)
       throw runtime_error("Dual reInvert: singular-basis-matrix");
     // Gather the edge weights according to the
     // permutation of baseIndex after INVERT
     timer.start(simplex_info.clock_[PermWtClock]);
+    analysis->simplexTimerStart(PermWtClock);
     for (int i = 0; i < solver_num_row; i++)
       dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
     timer.stop(simplex_info.clock_[PermWtClock]);
+    analysis->simplexTimerStop(PermWtClock);
   }
 
   // Recompute dual solution
   timer.start(simplex_info.clock_[ComputeDualClock]);
+  analysis->simplexTimerStart(ComputeDualClock);
   computeDual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
+  analysis->simplexTimerStop(ComputeDualClock);
 
   timer.start(simplex_info.clock_[CorrectDualClock]);
+  analysis->simplexTimerStart(CorrectDualClock);
   correctDual(workHMO, &dualInfeasCount);
   timer.stop(simplex_info.clock_[CorrectDualClock]);
+  analysis->simplexTimerStop(CorrectDualClock);
 
   // Recompute primal solution
   timer.start(simplex_info.clock_[ComputePrimalClock]);
+  analysis->simplexTimerStart(ComputePrimalClock);
   computePrimal(workHMO);
   timer.stop(simplex_info.clock_[ComputePrimalClock]);
+  analysis->simplexTimerStop(ComputePrimalClock);
 
   // Collect primal infeasible as a list
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
+  analysis->simplexTimerStart(CollectPrIfsClock);
   dualRHS.createArrayOfPrimalInfeasibilities();
   dualRHS.createInfeasList(analysis->col_aq_density);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
+  analysis->simplexTimerStop(CollectPrIfsClock);
 
   timer.start(simplex_info.clock_[ComputePrIfsClock]);
+  analysis->simplexTimerStart(ComputePrIfsClock);
   computePrimalInfeasible(workHMO);
   timer.stop(simplex_info.clock_[ComputePrIfsClock]);
+  analysis->simplexTimerStop(ComputePrIfsClock);
 
   timer.start(simplex_info.clock_[ComputeDuIfsClock]);
+  analysis->simplexTimerStart(ComputeDuIfsClock);
   computeDualInfeasible(workHMO);
   timer.stop(simplex_info.clock_[ComputeDuIfsClock]);
+  analysis->simplexTimerStop(ComputeDuIfsClock);
 
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuObjClock]);
+  analysis->simplexTimerStart(ComputeDuObjClock);
   computeDualObjectiveValue(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuObjClock]);
+  analysis->simplexTimerStop(ComputeDuObjClock);
 
   double dual_objective_value = simplex_info.dual_objective_value;
 #ifdef HiGHSDEV
@@ -840,8 +878,10 @@ void HDual::rebuild() {
 #endif
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
+  analysis->simplexTimerStart(ReportRebuildClock);
   reportRebuild(rebuild_invert_hint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
+  analysis->simplexTimerStop(ReportRebuildClock);
 
   build_syntheticTick = factor->build_syntheticTick;
   total_syntheticTick = 0;
@@ -876,8 +916,10 @@ void HDual::cleanup() {
   vector<double> original_workDual = simplex_info.workDual_;
 #endif
   timer.start(simplex_info.clock_[ComputeDualClock]);
+  analysis->simplexTimerStart(ComputeDualClock);
   computeDual(workHMO);
   timer.stop(simplex_info.clock_[ComputeDualClock]);
+  analysis->simplexTimerStop(ComputeDualClock);
 #ifdef HiGHSDEV
   int num_dual_sign_change = 0;
   for (int iCol = 0; iCol < workHMO.simplex_lp_.numCol_; iCol++) {
@@ -894,17 +936,23 @@ void HDual::cleanup() {
 
   // Compute the dual infeasibilities
   timer.start(simplex_info.clock_[ComputeDuIfsClock]);
+  analysis->simplexTimerStart(ComputeDuIfsClock);
   computeDualInfeasible(workHMO);
   timer.stop(simplex_info.clock_[ComputeDuIfsClock]);
+  analysis->simplexTimerStop(ComputeDuIfsClock);
 
   // Compute the dual objective value
   timer.start(simplex_info.clock_[ComputeDuObjClock]);
+  analysis->simplexTimerStart(ComputeDuObjClock);
   computeDualObjectiveValue(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuObjClock]);
+  analysis->simplexTimerStop(ComputeDuObjClock);
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
+  analysis->simplexTimerStart(ReportRebuildClock);
   reportRebuild();
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
+  analysis->simplexTimerStop(ReportRebuildClock);
 
   computeDualInfeasible(workHMO);
   dualInfeasCount = workHMO.scaled_solution_params_.num_dual_infeasibilities;
@@ -922,12 +970,16 @@ void HDual::iterate() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[IterateChuzrClock]);
+  analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   timer.stop(simplex_info.clock_[IterateChuzrClock]);
+  analysis->simplexTimerStop(IterateChuzrClock);
 
   timer.start(simplex_info.clock_[IterateChuzcClock]);
+  analysis->simplexTimerStart(IterateChuzcClock);
   chooseColumn(&row_ep);
   timer.stop(simplex_info.clock_[IterateChuzcClock]);
+  analysis->simplexTimerStop(IterateChuzcClock);
 
 #ifdef HiGHSDEV
   if (rp_iter_da && rowOut>=0) {
@@ -939,6 +991,7 @@ void HDual::iterate() {
 #endif  
 
   timer.start(simplex_info.clock_[IterateFtranClock]);
+  analysis->simplexTimerStart(IterateFtranClock);
   updateFtranBFRT();
 
   // updateFtran(); computes the pivotal column in the data structure "column"
@@ -948,35 +1001,46 @@ void HDual::iterate() {
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE)
     updateFtranDSE(&row_ep);
   timer.stop(simplex_info.clock_[IterateFtranClock]);
+  analysis->simplexTimerStop(IterateFtranClock);
 
   // updateVerify() Checks row-wise pivot against column-wise pivot for
   // numerical trouble
   timer.start(simplex_info.clock_[IterateVerifyClock]);
+  analysis->simplexTimerStart(IterateVerifyClock);
   updateVerify();
   timer.stop(simplex_info.clock_[IterateVerifyClock]);
+  analysis->simplexTimerStop(IterateVerifyClock);
 
   // updateDual() Updates the dual values
   timer.start(simplex_info.clock_[IterateDualClock]);
+  analysis->simplexTimerStart(IterateDualClock);
   updateDual();
   timer.stop(simplex_info.clock_[IterateDualClock]);
+  analysis->simplexTimerStop(IterateDualClock);
 
   // updatePrimal(&row_ep); Updates the primal values and the edge weights
   timer.start(simplex_info.clock_[IteratePrimalClock]);
+  analysis->simplexTimerStart(IteratePrimalClock);
   updatePrimal(&row_ep);
   timer.stop(simplex_info.clock_[IteratePrimalClock]);
+  analysis->simplexTimerStop(IteratePrimalClock);
   // After primal update in dual simplex the primal objective value is not known
   workHMO.simplex_lp_status_.has_primal_objective_value = false;
 
   // Update the basis representation
   timer.start(simplex_info.clock_[IteratePivotsClock]);
+  analysis->simplexTimerStart(IteratePivotsClock);
   updatePivots();
   timer.stop(simplex_info.clock_[IteratePivotsClock]);
+  analysis->simplexTimerStop(IteratePivotsClock);
 
   if (new_devex_framework) {
     // Initialise new Devex framework
     timer.start(simplex_info.clock_[IterateDevexIzClock]);
+    analysis->simplexTimerStart(IterateDevexIzClock);
     initialiseDevexFramework();
     timer.stop(simplex_info.clock_[IterateDevexIzClock]);
+    analysis->simplexTimerStop(IterateDevexIzClock);
   }
 
   // Analyse the iteration: possibly report; possibly switch strategy
@@ -996,6 +1060,7 @@ void HDual::iterateTasks() {
   if (1.0 * row_ep.count / solver_num_row < 0.01) slice_PRICE = 0;
 
   timer.start(simplex_info.clock_[Group1Clock]);
+  analysis->simplexTimerStart(Group1Clock);
 #pragma omp parallel
 #pragma omp single
   {
@@ -1018,6 +1083,7 @@ void HDual::iterateTasks() {
     }
   }
   timer.stop(simplex_info.clock_[Group1Clock]);
+  analysis->simplexTimerStop(Group1Clock);
 
   updateVerify();
   updateDual();
@@ -1108,6 +1174,7 @@ void HDual::chooseRow() {
     }
     // Compute pi_p = B^{-T}e_p in row_ep
     timer.start(simplex_info.clock_[BtranClock]);
+    analysis->simplexTimerStart(BtranClock);
     // Set up RHS for BTRAN
     row_ep.clear();
     row_ep.count = 1;
@@ -1125,6 +1192,7 @@ void HDual::chooseRow() {
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
     timer.stop(simplex_info.clock_[BtranClock]);
+    analysis->simplexTimerStop(BtranClock);
     // Verify DSE weight
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // For DSE, see how accurate the updated weight is
@@ -1224,14 +1292,17 @@ void HDual::chooseColumn(HVector* row_ep) {
   // nonbasicMove for all free columns to prevent their dual values
   // from being changed.
   timer.start(simplex_info.clock_[Chuzc0Clock]);
+  analysis->simplexTimerStart(Chuzc0Clock);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.createFreemove(row_ep);
   timer.stop(simplex_info.clock_[Chuzc0Clock]);
+  analysis->simplexTimerStop(Chuzc0Clock);
   //
   // Section 1: Pack row_ap and row_ep, then determine the possible
   // variables - candidates for CHUZC
   timer.start(simplex_info.clock_[Chuzc1Clock]);
+  analysis->simplexTimerStart(Chuzc1Clock);
   // Pack row_ap into the packIndex/Value of HDualRow
   dualRow.chooseMakepack(&row_ap, 0);  
   // Pack row_ep into the packIndex/Value of HDualRow
@@ -1239,6 +1310,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   // Determine the possible variables - candidates for CHUZC
   dualRow.choosePossible();  
   timer.stop(simplex_info.clock_[Chuzc1Clock]);
+  analysis->simplexTimerStop(Chuzc1Clock);
   //
   // Take action if the step to an expanded bound is not positive, or
   // there are no candidates for CHUZC
@@ -1258,8 +1330,10 @@ void HDual::chooseColumn(HVector* row_ep) {
   //
   // Section 4: Reset the nonbasicMove values for free columns
   timer.start(simplex_info.clock_[Chuzc4Clock]);
+  analysis->simplexTimerStart(Chuzc4Clock);
   dualRow.deleteFreemove();
   timer.stop(simplex_info.clock_[Chuzc4Clock]);
+  analysis->simplexTimerStop(Chuzc4Clock);
   // Record values for basis change, checking for numerical problems and update
   // of dual variables
   columnIn = dualRow.workPivot;   // Index of the column entering the basis
@@ -1276,11 +1350,13 @@ void HDual::chooseColumn(HVector* row_ep) {
     // times in minor iterations and the new framework is set up in
     // majorUpdate.
     timer.start(simplex_info.clock_[DevexWtClock]);
+    analysis->simplexTimerStart(DevexWtClock);
     // Determine the exact Devex weight
     dualRow.computeDevexWeight();
     computed_edge_weight = dualRow.computed_edge_weight;
     computed_edge_weight = max(1.0, computed_edge_weight);
     timer.stop(simplex_info.clock_[DevexWtClock]);
+    analysis->simplexTimerStop(DevexWtClock);
   }
   return;
 }
@@ -1295,10 +1371,12 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   if (invertHint) return;
 
   timer.start(simplex_info.clock_[Chuzc0Clock]);
+  analysis->simplexTimerStart(Chuzc0Clock);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.createFreemove(row_ep);
   timer.stop(simplex_info.clock_[Chuzc0Clock]);
+  analysis->simplexTimerStop(Chuzc0Clock);
 
   //  const int solver_num_row = highs_model_object.simplex_lp_.numRow_;
   const double local_density = 1.0 * row_ep->count / solver_num_row;
@@ -1322,6 +1400,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   }
 #endif
   timer.start(simplex_info.clock_[PriceChuzc1Clock]);
+  analysis->simplexTimerStart(PriceChuzc1Clock);
   // Row_ep:         PACK + CC1
 
   /*
@@ -1388,6 +1467,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   }
 
   timer.stop(simplex_info.clock_[PriceChuzc1Clock]);
+  analysis->simplexTimerStop(PriceChuzc1Clock);
 
   // Infeasible we created before
   columnIn = -1;
@@ -1404,8 +1484,10 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   }
 
   timer.start(simplex_info.clock_[Chuzc4Clock]);
+  analysis->simplexTimerStart(Chuzc4Clock);
   dualRow.deleteFreemove();
   timer.stop(simplex_info.clock_[Chuzc4Clock]);
+  analysis->simplexTimerStop(Chuzc4Clock);
 
   columnIn = dualRow.workPivot;
   alphaRow = dualRow.workAlpha;
@@ -1420,6 +1502,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     // times in minor iterations and the new framework is set up in
     // majorUpdate.
     timer.start(simplex_info.clock_[DevexWtClock]);
+    analysis->simplexTimerStart(DevexWtClock);
     // Determine the partial sums of the exact Devex weight
     // First the partial sum for row_ep
     dualRow.computeDevexWeight();
@@ -1432,6 +1515,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     for (int i = 0; i < slice_num; i++) computed_edge_weight += slice_dualRow[i].computed_edge_weight;
     computed_edge_weight = max(1.0, computed_edge_weight);
     timer.stop(simplex_info.clock_[DevexWtClock]);
+    analysis->simplexTimerStop(DevexWtClock);
   }
 }
 
@@ -1443,6 +1527,7 @@ void HDual::updateFtran() {
   // If reinversion is needed then skip this method
   if (invertHint) return;
   timer.start(simplex_info.clock_[FtranClock]);
+  analysis->simplexTimerStart(FtranClock);
   // Clear the picotal column and indicate that its values should be packed
   col_aq.clear();
   col_aq.packFlag = true;
@@ -1464,6 +1549,7 @@ void HDual::updateFtran() {
   // Save the pivot value computed column-wise - used for numerical checking
   alpha = col_aq.array[rowOut];
   timer.stop(simplex_info.clock_[FtranClock]);
+  analysis->simplexTimerStop(FtranClock);
 }
 
 void HDual::updateFtranBFRT() {
@@ -1481,6 +1567,7 @@ void HDual::updateFtranBFRT() {
 
   if (time_updateFtranBFRT) {
     timer.start(simplex_info.clock_[FtranBfrtClock]);
+    analysis->simplexTimerStart(FtranBfrtClock);
   }
 
   dualRow.updateFlip(&col_BFRT);
@@ -1499,6 +1586,7 @@ void HDual::updateFtranBFRT() {
   }
   if (time_updateFtranBFRT) {
     timer.stop(simplex_info.clock_[FtranBfrtClock]);
+    analysis->simplexTimerStop(FtranBfrtClock);
   }
   const double local_col_BFRT_density = (double)col_BFRT.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_BFRT_density, analysis->col_BFRT_density);
@@ -1513,6 +1601,7 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
   // If reinversion is needed then skip this method
   if (invertHint) return;
   timer.start(simplex_info.clock_[FtranDseClock]);
+  analysis->simplexTimerStart(FtranDseClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector, analysis->row_DSE_density);
@@ -1524,6 +1613,7 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector);
 #endif
   timer.stop(simplex_info.clock_[FtranDseClock]);
+  analysis->simplexTimerStop(FtranDseClock);
   const double local_row_DSE_density = (double)DSE_Vector->count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_DSE_density, analysis->row_DSE_density);
 }
@@ -1681,6 +1771,7 @@ void HDual::initialiseDevexFramework(const bool parallel) {
   // Initialise the Devex framework: reference set is all basic
   // variables
   timer.start(simplex_info.clock_[DevexIzClock]);
+  analysis->simplexTimerStart(DevexIzClock);
   const vector<int>& nonbasicFlag = workHMO.simplex_basis_.nonbasicFlag_;
   // Initialise the devex framework. The devex reference set is
   // initialise to be the current set of basic variables - and never
@@ -1703,6 +1794,7 @@ void HDual::initialiseDevexFramework(const bool parallel) {
   new_devex_framework = false;
   minor_new_devex_framework = false;
   timer.stop(simplex_info.clock_[DevexIzClock]);
+  analysis->simplexTimerStop(DevexIzClock);
 }
 
 void HDual::interpretDualEdgeWeightStrategy(const int dual_edge_weight_strategy) {
