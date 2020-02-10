@@ -78,7 +78,7 @@ class HighsSimplexAnalysis {
 #endif
     for (int i=0; i<omp_max_threads; i++) {
       HighsTimerClock clock(timer);
-      thread_clocks.push_back(clock);
+      thread_factor_clocks.push_back(clock);
     }
 #endif
 }
@@ -115,10 +115,10 @@ class HighsSimplexAnalysis {
   void summaryReportFactor();
 
 #ifdef HiGHSDEV
-  const std::vector<HighsTimerClock>& getThreadTimerClocks() { return thread_clocks; }
-  HighsTimerClock* getThreadTimerClockPtr(int i) { 
-    assert(i >= 0 && i < (int) thread_clocks.size());
-    return &thread_clocks[i];
+  const std::vector<HighsTimerClock>& getThreadFactorTimerClocks() { return thread_factor_clocks; }
+  HighsTimerClock* getThreadFactorTimerClockPtr(int i) { 
+    assert(i >= 0 && i < (int) thread_factor_clocks.size());
+    return &thread_factor_clocks[i];
   }
 
   void reportFactorTimer();
@@ -142,7 +142,7 @@ class HighsSimplexAnalysis {
 
 //#ifdef HiGHSDEV
   HighsTimer* timer_;
-  std::vector<HighsTimerClock> thread_clocks;
+  std::vector<HighsTimerClock> thread_factor_clocks;
 //#endif
 
   int numRow;

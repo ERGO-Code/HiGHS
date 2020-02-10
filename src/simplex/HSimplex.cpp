@@ -2608,21 +2608,18 @@ int computeFactor(HighsModelObject& highs_model_object) {
   int iClock = simplex_info.clock_[InvertClock];
   if (simplex_info.analyse_invert_time) tt0 = timer.clock_time[iClock];
 #endif
+  HighsTimerClock* factor_timer_clock_pointer = NULL;
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
+#ifdef HiGHSDEV
   int thread_id = 0;
 #ifdef OPENMP
   thread_id = omp_get_thread_num();
   //  printf("Hello world from computeFactor: thread %d\n", thread_id);
 #endif
-#ifdef HiGHSDEV
-  HighsTimerClock* timer_clock_pointer = highs_model_object.simplex_analysis_.getThreadTimerClockPtr(thread_id);
+  factor_timer_clock_pointer = highs_model_object.simplex_analysis_.getThreadFactorTimerClockPtr(thread_id);
 #endif
-  int rankDeficiency = factor.build(
-#ifdef HiGHSDEV
-				    timer_clock_pointer
-#endif
-				    );
+  int rankDeficiency = factor.build(factor_timer_clock_pointer);
   if (rankDeficiency) {
     //    handle_rank_deficiency();
     //    highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;

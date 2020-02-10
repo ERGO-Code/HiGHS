@@ -19,9 +19,7 @@
 #include <vector>
 
 #include "HConfig.h"
-#ifdef HiGHSDEV
 #include "lp_data/HighsAnalysis.h"
-#endif
 
 using std::max;
 using std::min;
@@ -129,11 +127,7 @@ class HFactor {
    * @return 0 if successful, otherwise rankDeficiency>0
    *
    */
-  int build(
-#ifdef HiGHSDEV
-	    HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
-	    );
+  int build(HighsTimerClock* factor_timer_clock_pointer=NULL);
 
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)

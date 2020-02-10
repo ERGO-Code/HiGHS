@@ -116,7 +116,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp,
 #ifdef HiGHSDEV
   AnIterPrevIt = simplex_iteration_count_;
   FactorTimer factor_timer;
-  for (HighsTimerClock& clock : thread_clocks)
+  for (HighsTimerClock& clock : thread_factor_clocks)
     factor_timer.initialiseFactorClocks(clock);
 
   AnIterOpRec* AnIter;
@@ -502,7 +502,7 @@ void HighsSimplexAnalysis::summaryReportFactor() {
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::reportFactorTimer() {
   FactorTimer factor_timer;
-  for (HighsTimerClock clock : thread_clocks) {
+  for (HighsTimerClock clock : thread_factor_clocks) {
     factor_timer.reportFactorLevel0Clock(clock);
     factor_timer.reportFactorLevel1Clock(clock);
     factor_timer.reportFactorLevel2Clock(clock);

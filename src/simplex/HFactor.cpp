@@ -269,17 +269,11 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
 void HFactor::change(int updateMethod_) { updateMethod = updateMethod_; }
 #endif
 
-int HFactor::build(
+int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
 #ifdef HiGHSDEV
-	    HighsTimerClock* factor_timer_clock_pointer
-#endif
-		   ) {
-#ifdef HiGHSDEV
-  HighsTimer* timer;
-  int* clock;
+  HighsTimer* timer = NULL;
   if (factor_timer_clock_pointer != NULL) {
     timer = &factor_timer_clock_pointer->timer_;
-    clock = &factor_timer_clock_pointer->clock_[0];
     timer->start(factor_timer_clock_pointer->clock_[FactorInvert]);
   }
 #endif
