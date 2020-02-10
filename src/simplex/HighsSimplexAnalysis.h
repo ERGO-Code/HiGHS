@@ -118,6 +118,8 @@ class HighsSimplexAnalysis {
 void simplexTimerStart(const int simplex_clock, const int thread_id=0);
 void simplexTimerStop(const int simplex_clock, const int thread_id=0);
 bool simplexTimerRunning(const int simplex_clock, const int thread_id=0);
+int simplexTimerNumCall(const int simplex_clock, const int thread_id=0);
+double simplexTimerRead(const int simplex_clock, const int thread_id=0);
 
 #ifdef HiGHSDEV
   const std::vector<HighsTimerClock>& getThreadSimplexTimerClocks() { return thread_simplex_clocks; }

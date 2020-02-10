@@ -207,9 +207,6 @@ struct HighsSimplexInfo {
 
   std::vector<int> devex_index_;
 
-  // Values of iClock for simplex timing clocks
-  std::vector<int> clock_;
-  //
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;
   int dual_edge_weight_strategy;

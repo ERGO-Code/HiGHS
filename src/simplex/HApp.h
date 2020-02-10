@@ -185,7 +185,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
 #ifdef HiGHSDEV
-    timer.start(simplex_info.clock_[SimplexTotalClock]);
+    HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
+    analysis.simplexTimerStart(SimplexTotalClock);
 #endif
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
@@ -247,7 +248,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 
     scaled_solution_params.objective_function_value = simplex_info.primal_objective_value;
 #ifdef HiGHSDEV
-    timer.stop(simplex_info.clock_[SimplexTotalClock]);
+    analysis.simplexTimerStop(SimplexTotalClock);
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       HighsLogMessage(logfile, HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d] Total %d",
@@ -398,8 +399,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   simplex_analysis.setup(highs_model_object.lp_,
 			 highs_model_object.options_,
 			 highs_model_object.scaled_solution_params_.simplex_iteration_count);
-  SimplexTimer simplex_timer;
-  simplex_timer.initialiseSimplexClocks(highs_model_object);
+  //  SimplexTimer simplex_timer;
+  //  simplex_timer.initialiseSimplexClocks(highs_model_object);
   // (Try to) solve the scaled LP
   call_status = runSimplexSolver(highs_model_object);
   return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");

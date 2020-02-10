@@ -2020,17 +2020,15 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
 
   if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportSimplexInnerClock(highs_model_object);
+      simplex_timer.reportSimplexInnerClock(simplex_analysis.thread_simplex_clocks[0]);
     }
   } else if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
     if (simplex_info.report_simplex_inner_clock) {
-      printf("reportSimplexProfiling: Calling reportSimplexInnerClock(HighsClock)\n");
       simplex_timer.reportSimplexInnerClock(simplex_analysis.thread_simplex_clocks[0]);
-      simplex_timer.reportSimplexInnerClock(highs_model_object);
     }
     if (simplex_info.report_simplex_outer_clock) {
-      simplex_timer.reportDualSimplexIterateClock(highs_model_object);
-      simplex_timer.reportDualSimplexOuterClock(highs_model_object);
+      simplex_timer.reportDualSimplexIterateClock(simplex_analysis.thread_simplex_clocks[0]);
+      simplex_timer.reportDualSimplexOuterClock(simplex_analysis.thread_simplex_clocks[0]);
     }
   }
 
@@ -2048,7 +2046,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
 
   if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
     if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportSimplexMultiInnerClock(highs_model_object);
+      simplex_timer.reportSimplexMultiInnerClock(simplex_analysis.thread_simplex_clocks[0]);
     }
     //    int reportList[] = {
     //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
@@ -2066,10 +2064,11 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   }
 
   if (simplex_info.report_simplex_phases_clock) {
-    simplex_timer.reportSimplexTotalClock(highs_model_object);
-    simplex_timer.reportSimplexPhasesClock(highs_model_object);
+    simplex_timer.reportSimplexTotalClock(simplex_analysis.thread_simplex_clocks[0]);
+    simplex_timer.reportSimplexPhasesClock(simplex_analysis.thread_simplex_clocks[0]);
   }
 
+  /*
   if (simplex_info.analyse_invert_time) {
     double current_run_highs_time = timer.readRunHighsClock();
     int iClock = simplex_info.clock_[InvertClock];
@@ -2106,6 +2105,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
       printf("\n");
     }
   }
+  */
 }
 #endif
 
@@ -2611,8 +2611,7 @@ int computeFactor(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
   HighsTimer& timer = highs_model_object.timer_;
   double tt0 = 0;
-  int iClock = simplex_info.clock_[InvertClock];
-  if (simplex_info.analyse_invert_time) tt0 = timer.clock_time[iClock];
+  if (simplex_info.analyse_invert_time) tt0 = analysis.simplexTimerRead(InvertClock);
 #endif
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   // TODO Understand why handling noPvC and noPvR in what seem to be
@@ -2673,16 +2672,15 @@ int computeFactor(HighsModelObject& highs_model_object) {
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_time) {
-    int iClock = simplex_info.clock_[InvertClock];
-    simplex_info.total_inverts = timer.clock_num_call[iClock];
-    simplex_info.total_invert_time = timer.clock_time[iClock];
-    double invertTime = simplex_info.total_invert_time - tt0;
+    simplex_info.total_inverts = analysis.simplexTimerNumCall(InvertClock);
+    simplex_info.total_invert_time = analysis.simplexTimerRead(InvertClock);
+    const double invert_time = simplex_info.total_invert_time - tt0;
     printf(
         "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
         "Total INVERT  time = %11.4g\n",
         simplex_info.total_inverts,
 	highs_model_object.scaled_solution_params_.simplex_iteration_count,
-	invertTime,
+	invert_time,
         simplex_info.total_invert_time);
   }
 #endif

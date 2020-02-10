@@ -848,15 +848,14 @@ void HDual::rebuild() {
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
-    int iClock = simplex_info.clock_[IterateDualRebuildClock];
-    int totalRebuilds = timer.clock_num_call[iClock];
-    double totalRebuildTime = timer.read(iClock);
+    int total_rebuilds = analysis->simplexTimerNumCall(IterateDualRebuildClock);
+    double total_rebuild_time = analysis->simplexTimerRead(IterateDualRebuildClock);
     printf(
         "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
         "%11.4g\n",
-        solvePhase, totalRebuilds, rebuild_invert_hint,
+        solvePhase, total_rebuilds, rebuild_invert_hint,
 	workHMO.scaled_solution_params_.simplex_iteration_count,
-        totalRebuildTime);
+        total_rebuild_time);
   }
 #endif
   // Data are fresh from rebuild

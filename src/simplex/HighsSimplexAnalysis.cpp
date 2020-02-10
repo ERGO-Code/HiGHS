@@ -521,7 +521,26 @@ void HighsSimplexAnalysis::simplexTimerStop(const int simplex_clock, const int t
 bool HighsSimplexAnalysis::simplexTimerRunning(const int simplex_clock, const int thread_id) {
   bool argument = false;
 #ifdef HiGHSDEV
-  argument = thread_simplex_clocks[thread_id].timer_.clock_start[thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
+  argument =
+    thread_simplex_clocks[thread_id].timer_.clock_start[thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
+#endif
+  return argument;
+}
+
+int HighsSimplexAnalysis::simplexTimerNumCall(const int simplex_clock, const int thread_id) {
+  int argument = 0;
+#ifdef HiGHSDEV
+  argument =
+    thread_simplex_clocks[thread_id].timer_.clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
+#endif
+  return argument;
+}
+
+double HighsSimplexAnalysis::simplexTimerRead(const int simplex_clock, const int thread_id) {
+  double argument = 0;
+#ifdef HiGHSDEV
+  argument =
+    thread_simplex_clocks[thread_id].timer_.read(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
 #endif
   return argument;
 }

@@ -177,7 +177,7 @@ void HDual::majorChooseRow() {
 void HDual::majorChooseRowBtran() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[BtranClock]);
+  analysis->simplexTimerStart(BtranClock);
 
   // 4.1. Prepare BTRAN buffer
   int multi_ntasks = 0;
@@ -226,7 +226,7 @@ void HDual::majorChooseRowBtran() {
   for (int i = 0; i < multi_ntasks; i++)
     multi_choice[multi_iwhich[i]].infeasEdWt = multi_EdWt[i];
 
-  timer.stop(simplex_info.clock_[BtranClock]);
+  analysis->simplexTimerStop(BtranClock);
 }
 
 void HDual::minorChooseRow() {
@@ -439,7 +439,7 @@ void HDual::minorUpdatePivots() {
 void HDual::minorUpdateRows() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[UpdateRowClock]);
+  analysis->simplexTimerStart(UpdateRowClock);
   const HVector* Row = multi_finish[multi_nFinish].row_ep;
   int updateRows_inDense =
       (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
@@ -500,7 +500,7 @@ void HDual::minorUpdateRows() {
       }
     }
   }
-  timer.stop(simplex_info.clock_[UpdateRowClock]);
+  analysis->simplexTimerStop(UpdateRowClock);
 }
 
 void HDual::minorInitialiseDevexFramework() {
@@ -591,7 +591,7 @@ void HDual::majorUpdateFtranPrepare() {
 void HDual::majorUpdateFtranParallel() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[FtranMixParClock]);
+  analysis->simplexTimerStop(FtranMixParClock);
 
   // Prepare buffers
   int multi_ntasks = 0;
@@ -663,13 +663,13 @@ void HDual::majorUpdateFtranParallel() {
 #endif
     }
   }
-  timer.stop(simplex_info.clock_[FtranMixParClock]);
+  analysis->simplexTimerStop(FtranMixParClock);
 }
 
 void HDual::majorUpdateFtranFinal() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[FtranMixFinalClock]);
+  analysis->simplexTimerStart(FtranMixFinalClock);
   int updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -727,7 +727,7 @@ void HDual::majorUpdateFtranFinal() {
       }
     }
   }
-  timer.stop(simplex_info.clock_[FtranMixFinalClock]);
+  analysis->simplexTimerStop(FtranMixFinalClock);
 }
 
 void HDual::majorUpdatePrimal() {

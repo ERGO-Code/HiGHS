@@ -369,14 +369,13 @@ void HPrimal::primalRebuild() {
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
-    int iClock = simplex_info.clock_[IteratePrimalRebuildClock];
-    int totalRebuilds = timer.clock_num_call[iClock];
-    double totalRebuildTime = timer.read(iClock);
+    int total_rebuilds = analysis->simplexTimerNumCall(IteratePrimalRebuildClock);
+    double total_rebuild_time = analysis->simplexTimerRead(IteratePrimalRebuildClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
-        totalRebuilds, sv_invertHint,
+        total_rebuilds, sv_invertHint,
 	workHMO.scaled_solution_params_.simplex_iteration_count,
-        totalRebuildTime);
+        total_rebuild_time);
   }
 #endif
   num_flip_since_rebuild = 0;
