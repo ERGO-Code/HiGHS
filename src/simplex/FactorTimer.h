@@ -18,7 +18,6 @@
 #include "lp_data/HighsAnalysis.h"
 #include "util/HighsTimer.h"
 
-#ifdef HiGHSDEV
 // Clocks for profiling the dual simplex solver
 enum iClockFactor {
   FactorInvert = 0,    //!< INVERT
@@ -60,6 +59,16 @@ enum iClockFactor {
 
 class FactorTimer {
  public:
+  void start(const int factor_clock, HighsTimerClock* factor_timer_clock_pointer) {
+    if (factor_timer_clock_pointer != NULL)
+      factor_timer_clock_pointer->timer_.start(factor_timer_clock_pointer->clock_[factor_clock]);
+  };
+  
+  void stop(const int factor_clock, HighsTimerClock* factor_timer_clock_pointer) {
+    if (factor_timer_clock_pointer != NULL)
+      factor_timer_clock_pointer->timer_.stop(factor_timer_clock_pointer->clock_[factor_clock]);
+  };
+#ifdef HiGHSDEV
   void initialiseFactorClocks(HighsTimerClock& factor_timer_clock) {
     HighsTimer& timer = factor_timer_clock.timer_;
     std::vector<int>& clock = factor_timer_clock.clock_;
@@ -148,7 +157,7 @@ class FactorTimer {
 	};
     reportFactorClockList("FactorLevel2", factor_timer_clock, factor_clock_list);
   };
+#endif
   
 };
-#endif
 #endif /* SIMPLEX_FACTORTIMER_H_ */

@@ -133,20 +133,16 @@ class HFactor {
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
   void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
-             double historical_density  //!< Historical density of the result
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
+             double historical_density,  //!< Historical density of the result
+	     HighsTimerClock* factor_timer_clock_pointer=NULL
            ) const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
   void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
-             double historical_density  //!< Historical density of the result
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
+             double historical_density,  //!< Historical density of the result
+	     HighsTimerClock* factor_timer_clock_pointer=NULL
              ) const;
 
   /**
@@ -338,25 +334,17 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
+  void ftranL(HVector& vector, double historical_density,
+	      HighsTimerClock* factor_timer_clock_pointer=NULL
 	      ) const;
-  void btranL(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
+  void btranL(HVector& vector, double historical_density,
+	      HighsTimerClock* factor_timer_clock_pointer=NULL
 	      ) const;
-  void ftranU(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
+  void ftranU(HVector& vector, double historical_density,
+	      HighsTimerClock* factor_timer_clock_pointer=NULL
 	      ) const;
-  void btranU(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
+  void btranU(HVector& vector, double historical_density,
+	      HighsTimerClock* factor_timer_clock_pointer=NULL
 	      ) const;
 
   void ftranFT(HVector& vector) const;
