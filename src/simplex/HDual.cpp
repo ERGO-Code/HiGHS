@@ -145,7 +145,7 @@ HighsStatus HDual::solve() {
           row_ep.index[0] = i;
           row_ep.array[i] = 1;
           row_ep.packFlag = false;
-          factor->btran(row_ep, analysis->row_ep_density);
+          factor->btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
           dualRHS.workEdWt[i] = row_ep.norm2();
 	  const double local_row_ep_density = (double)row_ep.count / solver_num_row;
 	  analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
@@ -1110,7 +1110,7 @@ void HDual::chooseRow() {
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
 #endif
     // Perform BTRAN
-    factor->btran(row_ep, analysis->row_ep_density);
+    factor->btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
@@ -1441,7 +1441,7 @@ void HDual::updateFtran() {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
 #endif
   // Perform FTRAN
-  factor->ftran(col_aq, analysis->col_aq_density);
+  factor->ftran(col_aq, analysis->col_aq_density, analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
@@ -1477,7 +1477,7 @@ void HDual::updateFtranBFRT() {
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT, analysis->col_BFRT_density);
 #endif
     // Perform FTRAN BFRT
-    factor->ftran(col_BFRT, analysis->col_BFRT_density);
+    factor->ftran(col_BFRT, analysis->col_BFRT_density, analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT);
@@ -1503,7 +1503,7 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector, analysis->row_DSE_density);
 #endif
   // Perform FTRAN DSE
-  factor->ftran(*DSE_Vector, analysis->row_DSE_density);
+  factor->ftran(*DSE_Vector, analysis->row_DSE_density, analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector);

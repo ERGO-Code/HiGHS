@@ -80,7 +80,7 @@ class HighsSimplexAnalysis {
       thread_simplex_clocks.push_back(clock);
       thread_factor_clocks.push_back(clock);
     }
-    pointer_serial_simplex_clocks = &thread_simplex_clocks[0];
+    pointer_serial_factor_clocks = &thread_factor_clocks[0];
 #endif
 }
   void setup(const HighsLp& lp,
@@ -115,11 +115,13 @@ class HighsSimplexAnalysis {
 		      );
   void summaryReportFactor();
 
-void simplexTimerStart(const int simplex_clock, const int thread_id=0);
-void simplexTimerStop(const int simplex_clock, const int thread_id=0);
-bool simplexTimerRunning(const int simplex_clock, const int thread_id=0);
-int simplexTimerNumCall(const int simplex_clock, const int thread_id=0);
-double simplexTimerRead(const int simplex_clock, const int thread_id=0);
+  void simplexTimerStart(const int simplex_clock, const int thread_id=0);
+  void simplexTimerStop(const int simplex_clock, const int thread_id=0);
+  bool simplexTimerRunning(const int simplex_clock, const int thread_id=0);
+  int simplexTimerNumCall(const int simplex_clock, const int thread_id=0);
+  double simplexTimerRead(const int simplex_clock, const int thread_id=0);
+
+  HighsTimerClock* getThreadFactorTimerClockPointer();
 
 #ifdef HiGHSDEV
   const std::vector<HighsTimerClock>& getThreadSimplexTimerClocks() { return thread_simplex_clocks; }
@@ -158,7 +160,7 @@ double simplexTimerRead(const int simplex_clock, const int thread_id=0);
   std::vector<HighsTimerClock> thread_simplex_clocks;
   std::vector<HighsTimerClock> thread_factor_clocks;
 #endif
-  HighsTimerClock* pointer_serial_simplex_clocks;
+  HighsTimerClock* pointer_serial_factor_clocks;
 
   int numRow;
   int numCol;

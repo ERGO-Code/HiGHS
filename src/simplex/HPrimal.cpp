@@ -468,7 +468,7 @@ void HPrimal::primalChooseRow() {
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
 #endif
-  workHMO.factor_.ftran(col_aq, analysis->col_aq_density);
+  workHMO.factor_.ftran(col_aq, analysis->col_aq_density, analysis->pointer_serial_factor_clocks);
   analysis->simplexTimerStop(FtranClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) 
@@ -665,7 +665,7 @@ void HPrimal::primalUpdate() {
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
 #endif
-  workHMO.factor_.btran(row_ep, analysis->row_ep_density);
+  workHMO.factor_.btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);

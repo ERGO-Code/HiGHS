@@ -2707,7 +2707,7 @@ void computePrimal(HighsModelObject& highs_model_object) {
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!
   if (primal_col.count) {
-    factor.ftran(primal_col, analysis->primal_col_density);
+    factor.ftran(primal_col, analysis->primal_col_density, analysis->pointer_serial_factor_clocks);
     const double local_primal_col_density = (double)primal_col.count / simplex_lp.numRow_;
     analysis->updateOperationResultDensity(local_primal_col_density, analysis->primal_col_density);
   }
@@ -3038,7 +3038,7 @@ void computeDual(HighsModelObject& highs_model_object) {
     if (simplex_info.analyse_iterations)
       analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col, analysis.dual_col_density);
 #endif
-    factor.btran(dual_col, analysis.dual_col_density);
+    factor.btran(dual_col, analysis.dual_col_density, analysis.pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, dual_col);

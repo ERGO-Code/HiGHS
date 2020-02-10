@@ -316,8 +316,8 @@ void HFactor::ftran(HVector& vector, double historical_density,
 		    HighsTimerClock* factor_timer_clock_pointer) const{
   FactorTimer factor_timer;
   factor_timer.start(FactorFtran, factor_timer_clock_pointer);
-  ftranL(vector, historical_density);
-  ftranU(vector, historical_density);
+  ftranL(vector, historical_density, factor_timer_clock_pointer);
+  ftranU(vector, historical_density, factor_timer_clock_pointer);
   factor_timer.stop(FactorFtran, factor_timer_clock_pointer);
 }
 
@@ -325,8 +325,8 @@ void HFactor::btran(HVector& vector, double historical_density,
 		    HighsTimerClock* factor_timer_clock_pointer) const{
   FactorTimer factor_timer;
   factor_timer.start(FactorBtran, factor_timer_clock_pointer);
-  btranU(vector, historical_density);
-  btranL(vector, historical_density);
+  btranU(vector, historical_density, factor_timer_clock_pointer);
+  btranL(vector, historical_density, factor_timer_clock_pointer);
   factor_timer.stop(FactorBtran, factor_timer_clock_pointer);
 }
 
@@ -1302,11 +1302,14 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
   const double current_density = 1.0 * rhs.count / numRow;
   if (current_density > hyperCANCEL || historical_density > hyperFTRANU) {
     const bool report_ftran_upper_sparse = false;//current_density < hyperCANCEL;
-    int use_clock = -1;
-    if (current_density < 0.1) use_clock = FactorFtranUpperSps2;
-    else if (current_density < 0.5) use_clock = FactorFtranUpperSps1;
-    else use_clock = FactorFtranUpperSps0;
-    factor_timer.stop(use_clock, factor_timer_clock_pointer);
+    int use_clock;
+    if (current_density < 0.1)
+      use_clock = FactorFtranUpperSps2;
+    else if (current_density < 0.5)
+      use_clock = FactorFtranUpperSps1;
+    else
+      use_clock = FactorFtranUpperSps0;
+    factor_timer.start(use_clock, factor_timer_clock_pointer);
     // Alias to non constant
     //        int RHS_Tick = rhs.pseudoTick;
     double RHS_syntheticTick = 0;
@@ -1360,12 +1363,18 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
     }
   } else {
     int use_clock = -1;
-    if (current_density < 5e-6) use_clock = FactorFtranUpperHyper5;
-    else if (current_density < 1e-5) use_clock = FactorFtranUpperHyper4;
-    else if (current_density < 1e-4) use_clock = FactorFtranUpperHyper3;
-    else if (current_density < 1e-3) use_clock = FactorFtranUpperHyper2;
-    else if (current_density < 1e-2) use_clock = FactorFtranUpperHyper1;
-    else use_clock = FactorFtranUpperHyper0;
+    if (current_density < 5e-6)
+      use_clock = FactorFtranUpperHyper5;
+    else if (current_density < 1e-5)
+      use_clock = FactorFtranUpperHyper4;
+    else if (current_density < 1e-4)
+      use_clock = FactorFtranUpperHyper3;
+    else if (current_density < 1e-3)
+      use_clock = FactorFtranUpperHyper2;
+    else if (current_density < 1e-2)
+      use_clock = FactorFtranUpperHyper1;
+    else
+      use_clock = FactorFtranUpperHyper0;
     factor_timer.start(use_clock, factor_timer_clock_pointer);
     const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
     const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;

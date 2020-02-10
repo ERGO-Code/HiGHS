@@ -545,6 +545,18 @@ double HighsSimplexAnalysis::simplexTimerRead(const int simplex_clock, const int
   return argument;
 }
 
+HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {
+  HighsTimerClock* factor_timer_clock_pointer = NULL;
+#ifdef HiGHSDEV
+  int thread_id = 0;
+#ifdef OPENMP
+  thread_id = omp_get_thread_num();
+#endif
+  factor_timer_clock_pointer = &thread_factor_clocks[thread_id];
+#endif
+  return factor_timer_clock_pointer;
+}
+
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::reportFactorTimer() {
   FactorTimer factor_timer;

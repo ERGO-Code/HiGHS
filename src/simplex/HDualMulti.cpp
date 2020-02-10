@@ -206,7 +206,8 @@ void HDual::majorChooseRowBtran() {
     work_ep->index[0] = iRow;
     work_ep->array[iRow] = 1;
     work_ep->packFlag = true;
-    factor->btran(*work_ep, analysis->row_ep_density);
+    HighsTimerClock* factor_timer_clock_pointer = analysis->getThreadFactorTimerClockPointer();
+    factor->btran(*work_ep, analysis->row_ep_density, factor_timer_clock_pointer);
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // For Dual steepest edge we know the exact weight as the 2-norm of work_ep
       multi_EdWt[i] = work_ep->norm2();
@@ -624,7 +625,8 @@ void HDual::majorUpdateFtranParallel() {
   for (int i = 0; i < multi_ntasks; i++) {
     HVector_ptr rhs = multi_vector[i];
     double density = multi_density[i];
-    factor->ftran(*rhs, density);
+    HighsTimerClock* factor_timer_clock_pointer = analysis->getThreadFactorTimerClockPointer();
+    factor->ftran(*rhs, density, factor_timer_clock_pointer);
   }
 
   // Update ticks

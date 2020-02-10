@@ -335,17 +335,13 @@ class HFactor {
   void buildFinish();
 
   void ftranL(HVector& vector, double historical_density,
-	      HighsTimerClock* factor_timer_clock_pointer=NULL
-	      ) const;
+	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
   void btranL(HVector& vector, double historical_density,
-	      HighsTimerClock* factor_timer_clock_pointer=NULL
-	      ) const;
+	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
   void ftranU(HVector& vector, double historical_density,
-	      HighsTimerClock* factor_timer_clock_pointer=NULL
-	      ) const;
+	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
   void btranU(HVector& vector, double historical_density,
-	      HighsTimerClock* factor_timer_clock_pointer=NULL
-	      ) const;
+	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
 
   void ftranFT(HVector& vector) const;
   void btranFT(HVector& vector) const;
