@@ -75,7 +75,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  HighsTimer& timer = highs_model_object.timer_;
   FILE* logfile = highs_model_object.options_.logfile;
 
   // Assumes that the LP has a positive number of rows, since

@@ -66,7 +66,6 @@ HighsStatus HDual::solve() {
     return HighsStatus::Error;
   }
 
-  HighsTimer& timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
 
   // Set solve_bailout to be true if control is to be returned immediately to
@@ -154,7 +153,7 @@ HighsStatus HDual::solve() {
 #ifdef HiGHSDEV
 	analysis->simplexTimerStop(SimplexIzDseWtClock);
 	analysis->simplexTimerStop(DseIzClock);
-        double IzDseWtTT = timer.read(SimplexIzDseWtClock);
+        double IzDseWtTT = analysis->simplexTimerRead(SimplexIzDseWtClock);
         HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
                           "Computed %d initial DSE weights in %gs\n",
                           solver_num_row, IzDseWtTT);
@@ -734,7 +733,6 @@ void HDual::solvePhase2() {
 }
 
 void HDual::rebuild() {
-  HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   // Save history information
@@ -865,13 +863,12 @@ void HDual::rebuild() {
 void HDual::cleanup() {
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
 		    "dual-cleanup-shift\n");
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Remove perturbation
   initialise_cost(workHMO);
   initialise_bound(workHMO);
   // Compute the dual values
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   vector<double> original_workDual = simplex_info.workDual_;
 #endif
   analysis->simplexTimerStart(ComputeDualClock);
@@ -918,8 +915,6 @@ void HDual::iterate() {
 
   // Reporting:
   // Row-wise matrix after update in updateMatrix(columnIn, columnOut);
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
@@ -984,8 +979,6 @@ void HDual::iterate() {
 }
 
 void HDual::iterateTasks() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   slice_PRICE = 1;
 
   // Group 1
@@ -1087,8 +1080,6 @@ void HDual::reportRebuild(const int rebuild_invert_hint) {
 }
 
 void HDual::chooseRow() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Choose the index of a row to leave the basis (CHUZR)
   //
   // If reinversion is needed then skip this method
@@ -1114,6 +1105,7 @@ void HDual::chooseRow() {
     row_ep.array[rowOut] = 1;
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
+    HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
     if (simplex_info.analyse_iterations) 
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
 #endif
@@ -1205,8 +1197,6 @@ bool HDual::newDevexFramework(const double updated_edge_weight) {
 }
 
 void HDual::chooseColumn(HVector* row_ep) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Compute pivot row (PRICE) and choose the index of a column to enter the
   // basis (CHUZC)
   //
@@ -1285,8 +1275,6 @@ void HDual::chooseColumn(HVector* row_ep) {
 }
 
 void HDual::chooseColumnSlice(HVector* row_ep) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Choose the index of a column to enter the basis (CHUZC) by
   // exploiting slices of the pivotal row - for SIP and PAMI
   //
@@ -1303,6 +1291,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   const double local_density = 1.0 * row_ep->count / solver_num_row;
   bool use_col_price;
   bool use_row_price_w_switch;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   choosePriceTechnique(simplex_info.price_strategy, local_density, use_col_price, use_row_price_w_switch);
 
 #ifdef HiGHSDEV
@@ -1334,7 +1323,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     dualRow.chooseMakepack(row_ep, solver_num_col);
     dualRow.choosePossible();
 #ifdef OPENMP
-    int row_ep_thread_id = omp_get_thread_num();
+    //    int row_ep_thread_id = omp_get_thread_num();
     //    printf("Hello world from Row_ep:         PACK + CC1 thread %d\n", row_ep_thread_id);
 #endif
   }
@@ -1344,7 +1333,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
 #pragma omp task
     {
 #ifdef OPENMP
-      int row_ap_thread_id = omp_get_thread_num();
+      //      int row_ap_thread_id = omp_get_thread_num();
       //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1d] thread %d\n", i, row_ap_thread_id);
 #endif
       slice_row_ap[i].clear();
@@ -1435,8 +1424,6 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
 }
 
 void HDual::updateFtran() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Compute the pivotal column (FTRAN)
   //
   // If reinversion is needed then skip this method
@@ -1449,6 +1436,7 @@ void HDual::updateFtran() {
   // with unit multiplier
   matrix->collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
 #endif
@@ -1466,8 +1454,6 @@ void HDual::updateFtran() {
 }
 
 void HDual::updateFtranBFRT() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Compute the RHS changes corresponding to the BFRT (FTRAN-BFRT)
   //
   // If reinversion is needed then skip this method
@@ -1486,6 +1472,7 @@ void HDual::updateFtranBFRT() {
 
   if (col_BFRT.count) {
 #ifdef HiGHSDEV
+    HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
     if (simplex_info.analyse_iterations)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT, col_BFRT, analysis->col_BFRT_density);
 #endif
@@ -1504,8 +1491,6 @@ void HDual::updateFtranBFRT() {
 }
 
 void HDual::updateFtranDSE(HVector* DSE_Vector) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Compute the vector required to update DSE weights - being FTRAN
   // applied to the pivotal column (FTRAN-DSE)
   //
@@ -1513,6 +1498,7 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
   if (invertHint) return;
   analysis->simplexTimerStart(FtranDseClock);
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE, *DSE_Vector, analysis->row_DSE_density);
 #endif
@@ -1675,7 +1661,6 @@ void HDual::updatePivots() {
 }
 
 void HDual::initialiseDevexFramework(const bool parallel) {
-  HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Initialise the Devex framework: reference set is all basic
   // variables

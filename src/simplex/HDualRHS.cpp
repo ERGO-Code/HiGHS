@@ -42,8 +42,6 @@ void HDualRHS::setup() {
 }
 
 void HDualRHS::chooseNormal(int* chIndex) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Moved the following to the top to avoid starting the clock for a trivial
   // call. NB Must still call int to maintain sequence of random numbers
   // for code reproducibility!! Never mind if we're not timing the random number
@@ -136,8 +134,6 @@ void HDualRHS::chooseNormal(int* chIndex) {
 }
 
 void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(ChuzrDualClock);
 
   for (int i = 0; i < chLimit; i++) chIndex[i] = -1;
@@ -236,8 +232,6 @@ void HDualRHS::chooseMultiHyperGraphAuto(int* chIndex, int* chCount, int chLimit
 }
 
 void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount, int chLimit) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(ChuzrDualClock);
 
   // Force to use partition method, unless doesn't exist
@@ -320,8 +314,6 @@ void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount, int chLimit
 }
 
 void HDualRHS::updatePrimal(HVector* column, double theta) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(UpdatePrimalClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
@@ -371,8 +363,6 @@ void HDualRHS::updatePrimal(HVector* column, double theta) {
 // Update the DSE weights
 void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pivotal_edge_weight,
 					    double Kai, double* dseArray) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(DseUpdateWeightClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
@@ -399,8 +389,6 @@ void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pi
 }
 // Update the Devex weights
 void HDualRHS::updateWeightDevex(HVector* column, const double new_pivotal_edge_weight) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(DevexUpdateWeightClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
@@ -447,8 +435,6 @@ void HDualRHS::updatePivots(int iRow, double value) {
 }
 
 void HDualRHS::updateInfeasList(HVector* column) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   const int columnCount = column->count;
   const int* columnIndex = &column->index[0];
 

@@ -175,8 +175,6 @@ void HDual::majorChooseRow() {
 }
 
 void HDual::majorChooseRowBtran() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(BtranClock);
 
   // 4.1. Prepare BTRAN buffer
@@ -437,8 +435,6 @@ void HDual::minorUpdatePivots() {
 }
 
 void HDual::minorUpdateRows() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(UpdateRowClock);
   const HVector* Row = multi_finish[multi_nFinish].row_ep;
   int updateRows_inDense =
@@ -589,8 +585,6 @@ void HDual::majorUpdateFtranPrepare() {
 }
 
 void HDual::majorUpdateFtranParallel() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStop(FtranMixParClock);
 
   // Prepare buffers
@@ -667,8 +661,6 @@ void HDual::majorUpdateFtranParallel() {
 }
 
 void HDual::majorUpdateFtranFinal() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplexTimerStart(FtranMixFinalClock);
   int updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {

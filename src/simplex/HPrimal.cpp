@@ -41,7 +41,6 @@ HighsStatus HPrimal::solve() {
     return HighsStatus::Error;
   }
 
-  HighsTimer& timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
 
   // Setup aspects of the model data which are needed for solve() but better
@@ -174,9 +173,9 @@ HighsStatus HPrimal::solve() {
 }
 
 void HPrimal::solvePhase2() {
+  HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  HighsTimer& timer = workHMO.timer_;
 
   // When starting a new phase the (updated) primal objective function
   // value isn't known. Indicate this so that when the value
@@ -296,7 +295,6 @@ void HPrimal::solvePhase2() {
 void HPrimal::primalRebuild() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  HighsTimer& timer = workHMO.timer_;
   // Move this to Simplex class once it's created
   //  simplex_method.record_pivots(-1, -1, 0);  // Indicate REINVERT
 
@@ -385,8 +383,6 @@ void HPrimal::primalRebuild() {
 
 void HPrimal::primalChooseColumn() {
   HighsRandom& random = workHMO.random_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
   const int* jFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   const int* jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   double* workDual = &workHMO.simplex_info_.workDual_[0];
@@ -456,8 +452,6 @@ void HPrimal::primalChooseColumn() {
 }
 
 void HPrimal::primalChooseRow() {
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
@@ -470,6 +464,7 @@ void HPrimal::primalChooseRow() {
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
 #endif
@@ -565,7 +560,6 @@ void HPrimal::primalChooseRow() {
 }
 
 void HPrimal::primalUpdate() {
-  HighsTimer& timer = workHMO.timer_;
   int* jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   double* workDual = &workHMO.simplex_info_.workDual_[0];
   const double* workLower = &workHMO.simplex_info_.workLower_[0];

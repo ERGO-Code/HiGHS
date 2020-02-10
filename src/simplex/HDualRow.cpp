@@ -120,8 +120,6 @@ void HDualRow::chooseJoinpack(const HDualRow* otherRow) {
 }
 
 bool HDualRow::chooseFinal() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   /**
    * Chooses the entering variable via BFRT and EXPAND
    *
@@ -331,8 +329,6 @@ void HDualRow::updateFlip(HVector* bfrtColumn) {
 }
 
 void HDualRow::updateDual(double theta) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   //  &workHMO.>checkDualObjectiveValue("Before update_dual");
   analysis->simplexTimerStart(UpdateDualClock);
   double* workDual = &workHMO.simplex_info_.workDual_[0];

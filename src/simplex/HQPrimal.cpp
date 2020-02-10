@@ -41,7 +41,6 @@ HighsStatus HQPrimal::solve() {
 		    workHMO.simplex_lp_.numRow_);
     return HighsStatus::Error;
   }
-  HighsTimer& timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
 
   // Setup aspects of the model data which are needed for solve() but better
@@ -339,7 +338,6 @@ void HQPrimal::solvePhase2() {
 void HQPrimal::primalRebuild() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  HighsTimer& timer = workHMO.timer_;
   // Move this to Simplex class once it's created
   //  simplex_method.record_pivots(-1, -1, 0);  // Indicate REINVERT
 
@@ -435,8 +433,6 @@ void HQPrimal::primalRebuild() {
 
 void HQPrimal::primalChooseColumn() {
   HighsRandom& random = workHMO.random_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
   const int* jFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   const int* jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   double* workDual = &workHMO.simplex_info_.workDual_[0];
@@ -506,8 +502,6 @@ void HQPrimal::primalChooseColumn() {
 }
 
 void HQPrimal::primalChooseRow() {
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
@@ -520,6 +514,7 @@ void HQPrimal::primalChooseRow() {
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
 #endif
@@ -615,7 +610,6 @@ void HQPrimal::primalChooseRow() {
 }
 
 void HQPrimal::primalUpdate() {
-  HighsTimer& timer = workHMO.timer_;
   int* jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   double* workDual = &workHMO.simplex_info_.workDual_[0];
   const double* workLower = &workHMO.simplex_info_.workLower_[0];
@@ -821,8 +815,6 @@ void HQPrimal::phase1ComputeDual() {
   const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   const double *baseValue = &workHMO.simplex_info_.baseValue_[0];
 
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
   analysis->simplexTimerStart(BtranClock);
   /* Setup artificial cost and compute pi with BTran */
   HVector buffer;
@@ -839,6 +831,7 @@ void HQPrimal::phase1ComputeDual() {
     }
   }
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, buffer, analysis->row_ep_density);
 #endif
@@ -891,8 +884,6 @@ void HQPrimal::phase1ChooseColumn() {
   const int* nbMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   const double* workDual = &workHMO.simplex_info_.workDual_[0];
   const double dDualTol = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
   analysis->simplexTimerStart(ChuzcPrimalClock);
   double dBestScore = 0;
   columnIn = -1;
@@ -916,13 +907,12 @@ void HQPrimal::phase1ChooseRow() {
   const double* baseValue = &workHMO.simplex_info_.baseValue_[0];
 
   /* Compute the transformed pivot column and update its density */
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
   analysis->simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
 #endif
@@ -1078,8 +1068,6 @@ void HQPrimal::phase1Update() {
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const int iMoveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
   const double dFeasTol = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
 
   /* Compute the primal theta and see if we should have do bound flip instead */
   alpha = col_aq.array[rowOut];
@@ -1135,6 +1123,7 @@ void HQPrimal::phase1Update() {
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations) 
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
 #endif
@@ -1218,8 +1207,6 @@ void HQPrimal::devexReset() {
 
 void HQPrimal::devexUpdate() {
   /* Compute the pivot weight from the reference set */
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  HighsTimer& timer = workHMO.timer_;
   analysis->simplexTimerStart(DevexUpdateWeightClock);
   double dPivotWeight = 0.0;
   for (int i = 0; i < col_aq.count; i++) {

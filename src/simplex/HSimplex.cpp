@@ -99,7 +99,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   //
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  HighsTimer& timer = highs_model_object.timer_;
   const HighsOptions& options = highs_model_object.options_;
   const HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
@@ -565,8 +564,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 }
 
 bool basisConditionOk(HighsModelObject& highs_model_object, const std::string message) {
-  HighsTimer& timer = highs_model_object.timer_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   bool basis_condition_ok;
   analysis.simplexTimerStart(BasisConditionClock);
@@ -2013,50 +2010,29 @@ void setup_num_basic_logicals(HighsModelObject& highs_model_object) {
 
 #ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object) {
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
-  SimplexTimer simplex_timer;
   HighsTimer& timer = highs_model_object.timer_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
+  SimplexTimer simplex_timer;
 
   if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportSimplexInnerClock(simplex_analysis.thread_simplex_clocks[0]);
+      simplex_timer.reportSimplexInnerClock(analysis.thread_simplex_clocks[0]);
     }
   } else if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
     if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportSimplexInnerClock(simplex_analysis.thread_simplex_clocks[0]);
+      simplex_timer.reportSimplexInnerClock(analysis.thread_simplex_clocks[0]);
     }
     if (simplex_info.report_simplex_outer_clock) {
-      simplex_timer.reportDualSimplexIterateClock(simplex_analysis.thread_simplex_clocks[0]);
-      simplex_timer.reportDualSimplexOuterClock(simplex_analysis.thread_simplex_clocks[0]);
+      simplex_timer.reportDualSimplexIterateClock(analysis.thread_simplex_clocks[0]);
+      simplex_timer.reportDualSimplexOuterClock(analysis.thread_simplex_clocks[0]);
     }
   }
 
-  //  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
-  //    int reportList[] = {
-  //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
-  //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
-  //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
-  //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
-  //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
-  //        HTICK_GROUP1};
-  //    int reportCount = sizeof(reportList) / sizeof(int);
-  //    timer.report(reportCount, reportList, 0.0);
-  //  }
-
   if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
     if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportSimplexMultiInnerClock(simplex_analysis.thread_simplex_clocks[0]);
+      simplex_timer.reportSimplexMultiInnerClock(analysis.thread_simplex_clocks[0]);
     }
-    //    int reportList[] = {
-    //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
-    //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
-    //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
-    //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
-    //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
-    //        HTICK_UPDATE_ROW_EP};
-    //    int reportCount = sizeof(reportList) / sizeof(int);
-    //    timer.report(reportCount, reportList, 0.0);
     printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
            highs_model_object.lp_.model_name_.c_str(), simplex_info.pami_cutoff,
 	   highs_model_object.scaled_solution_params_.simplex_iteration_count /
@@ -2064,17 +2040,14 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   }
 
   if (simplex_info.report_simplex_phases_clock) {
-    simplex_timer.reportSimplexTotalClock(simplex_analysis.thread_simplex_clocks[0]);
-    simplex_timer.reportSimplexPhasesClock(simplex_analysis.thread_simplex_clocks[0]);
+    simplex_timer.reportSimplexTotalClock(analysis.thread_simplex_clocks[0]);
+    simplex_timer.reportSimplexPhasesClock(analysis.thread_simplex_clocks[0]);
   }
 
-  /*
   if (simplex_info.analyse_invert_time) {
     double current_run_highs_time = timer.readRunHighsClock();
-    int iClock = simplex_info.clock_[InvertClock];
-    simplex_info.total_inverts = timer.clock_num_call[iClock];
-    simplex_info.total_invert_time = timer.clock_time[iClock];
-
+    simplex_info.total_inverts = analysis.simplexTimerNumCall(InvertClock);
+    simplex_info.total_invert_time = analysis.simplexTimerRead(InvertClock);
     printf(
         "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time "
         "= %11.4g",
@@ -2087,6 +2060,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
       printf("\n");
     }
   }
+  /*
   if (simplex_info.analyse_rebuild_time) {
     double current_run_highs_time = timer.readRunHighsClock();
     HighsClockRecord totalRebuildClock;
@@ -2607,9 +2581,8 @@ int computeFactor(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   HFactor& factor = highs_model_object.factor_;
-  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 #ifdef HiGHSDEV
-  HighsTimer& timer = highs_model_object.timer_;
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   double tt0 = 0;
   if (simplex_info.analyse_invert_time) tt0 = analysis.simplexTimerRead(InvertClock);
 #endif
@@ -2963,7 +2936,6 @@ void choosePriceTechnique(const int price_strategy, const double row_ep_density,
 }
 
 void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVector& row_ep, HVector& row_ap) {
-  HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const HMatrix* matrix = &highs_model_object.matrix_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
@@ -3026,7 +2998,6 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVecto
 }
 
 void computeDual(HighsModelObject& highs_model_object) {
-  //  HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -3196,7 +3167,6 @@ void update_factor(HighsModelObject& highs_model_object, HVector* column,
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   HFactor& factor = highs_model_object.factor_;
-  HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   analysis.simplexTimerStart(UpdateFactorClock);
@@ -3215,7 +3185,6 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   analysis.simplexTimerStart(UpdatePivotsClock);
@@ -3275,9 +3244,7 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
 
 void update_matrix(HighsModelObject& highs_model_object, int columnIn,
                    int columnOut) {
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HMatrix& matrix = highs_model_object.matrix_;
-  HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   analysis.simplexTimerStart(UpdateMatrixClock);
