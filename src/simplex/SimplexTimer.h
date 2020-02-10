@@ -198,20 +198,27 @@ class SimplexTimer {
   };
 
   void reportSimplexClockList(const char* grepStamp,
-                                 std::vector<int> simplex_clock_list,
-                                 HighsModelObject& model_object) {
-    HighsTimer& timer = model_object.timer_;
-    HighsSimplexInfo& simplex_info = model_object.simplex_info_;
+			      std::vector<int> simplex_clock_list,
+			      HighsTimer& timer,
+			      const std::vector<int>& clock) {
     int simplex_clock_list_size = simplex_clock_list.size();
     std::vector<int> clockList;
     clockList.resize(simplex_clock_list_size);
     for (int en = 0; en < simplex_clock_list_size; en++) {
-      clockList[en] = simplex_info.clock_[simplex_clock_list[en]];
+      clockList[en] = clock[simplex_clock_list[en]];
     }
     const double ideal_sum_time = timer.read(timer.solve_clock);
     printf("reportSimplexClockList: ideal_sum_time = %g\n", ideal_sum_time);
     timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
+
+  void reportSimplexClockList(const char* grepStamp,
+			      std::vector<int> simplex_clock_list,
+			      HighsModelObject& model_object) {
+    HighsTimer& timer = model_object.timer_;
+    std::vector<int>& clock = model_object.simplex_info_.clock_;
+    reportSimplexClockList(grepStamp, simplex_clock_list, timer, clock);
+  }
 
   void reportSimplexTotalClock(HighsModelObject& model_object) {
     std::vector<int> simplex_clock_list{SimplexTotalClock};
@@ -240,7 +247,7 @@ class SimplexTimer {
     reportSimplexClockList("SimplexOuter", simplex_clock_list, model_object);
   };
 
-  void reportSimplexInnerClock(HighsModelObject& model_object) {
+  void reportSimplexInnerClock(HighsTimer& timer, const std::vector<int>& clock) {
     std::vector<int> simplex_clock_list{
         ScaleClock,
         CrashClock,        BasisConditionClock, DseIzClock,
@@ -256,8 +263,21 @@ class SimplexTimer {
         UpdatePrimalClock, DevexUpdateWeightClock,   DseUpdateWeightClock,   
         DevexIzClock,      UpdatePivotsClock,   UpdateFactorClock,
         UpdateMatrixClock};
-    reportSimplexClockList("SimplexInner", simplex_clock_list, model_object);
+    reportSimplexClockList("SimplexInner", simplex_clock_list, timer, clock);
   };
+
+  void reportSimplexInnerClock(HighsTimerClock& simplex_timer_clock) {
+    HighsTimer& timer = simplex_timer_clock.timer_;
+    std::vector<int>& clock = simplex_timer_clock.clock_;
+    reportSimplexInnerClock(timer, clock);
+
+  }
+
+  void reportSimplexInnerClock(HighsModelObject& model_object) {
+    HighsTimer& timer = model_object.timer_;
+    std::vector<int>& clock = model_object.simplex_info_.clock_;
+    reportSimplexInnerClock(timer, clock);
+  }
 
   void reportSimplexMultiInnerClock(HighsModelObject& model_object) {
     std::vector<int> simplex_clock_list{

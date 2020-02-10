@@ -2012,6 +2012,7 @@ void setup_num_basic_logicals(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
   SimplexTimer simplex_timer;
   HighsTimer& timer = highs_model_object.timer_;
 
@@ -2021,6 +2022,8 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
     }
   } else if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
     if (simplex_info.report_simplex_inner_clock) {
+      printf("reportSimplexProfiling: Calling reportSimplexInnerClock(HighsClock)\n");
+      simplex_timer.reportSimplexInnerClock(simplex_analysis.thread_simplex_clocks[0]);
       simplex_timer.reportSimplexInnerClock(highs_model_object);
     }
     if (simplex_info.report_simplex_outer_clock) {

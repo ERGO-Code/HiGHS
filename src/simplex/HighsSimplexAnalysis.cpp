@@ -506,6 +506,18 @@ void HighsSimplexAnalysis::summaryReportFactor() {
   }
 }
 
+void HighsSimplexAnalysis::simplexTimerStart(const int simplex_clock, const int thread_id) {
+#ifdef HiGHSDEV
+  thread_simplex_clocks[thread_id].timer_.start(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+#endif
+}
+
+void HighsSimplexAnalysis::simplexTimerStop(const int simplex_clock, const int thread_id) {
+#ifdef HiGHSDEV
+  thread_simplex_clocks[thread_id].timer_.stop(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+#endif
+}
+
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::reportFactorTimer() {
   FactorTimer factor_timer;
@@ -515,7 +527,6 @@ void HighsSimplexAnalysis::reportFactorTimer() {
     factor_timer.reportFactorLevel2Clock(clock);
   }
 }
-
 
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
