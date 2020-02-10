@@ -111,10 +111,12 @@ class PresolveTimer {
 
   void reportClocks() {
     std::vector<int> clocks(PRESOLVE_RULES_COUNT);
+    // Call readRunHighsClock() to calibrate tick2sec;
+    timer_.readRunHighsClock();
     double presolve_time = timer_.read(timer_.presolve_clock);
     for (PresolveRuleInfo& rule : rules_)
       clocks[rule.rule_id] = rule.clock_id;
-    timer_.report("grep-Presolve", clocks, presolve_time);
+    timer_.report_tl("grep-Presolve", clocks, presolve_time, 0.01);
   }
 
   void updateInfo();
