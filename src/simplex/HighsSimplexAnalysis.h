@@ -20,7 +20,6 @@
 #include "simplex/SimplexConst.h"
 #include "simplex/HFactor.h"
 #include "simplex/HVector.h"
-#include "simplex/FactorTimer.h"
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
 
@@ -78,8 +77,10 @@ class HighsSimplexAnalysis {
 #endif
     for (int i=0; i<omp_max_threads; i++) {
       HighsTimerClock clock(timer);
+      thread_simplex_clocks.push_back(clock);
       thread_factor_clocks.push_back(clock);
     }
+    pointer_serial_simplex_clocks = &thread_simplex_clocks[0];
 #endif
 }
   void setup(const HighsLp& lp,
@@ -115,12 +116,19 @@ class HighsSimplexAnalysis {
   void summaryReportFactor();
 
 #ifdef HiGHSDEV
+  const std::vector<HighsTimerClock>& getThreadSimplexTimerClocks() { return thread_simplex_clocks; }
+  HighsTimerClock* getThreadSimplexTimerClockPtr(int i) { 
+    assert(i >= 0 && i < (int) thread_simplex_clocks.size());
+    return &thread_simplex_clocks[i];
+  }
+
   const std::vector<HighsTimerClock>& getThreadFactorTimerClocks() { return thread_factor_clocks; }
   HighsTimerClock* getThreadFactorTimerClockPtr(int i) { 
     assert(i >= 0 && i < (int) thread_factor_clocks.size());
     return &thread_factor_clocks[i];
   }
 
+  void reportSimplexTimer();
   void reportFactorTimer();
   void iterationRecord();
   void iterationRecordMajor();
@@ -140,10 +148,12 @@ class HighsSimplexAnalysis {
   void summaryReport();
 #endif
 
-//#ifdef HiGHSDEV
   HighsTimer* timer_;
+#ifdef HiGHSDEV
+  std::vector<HighsTimerClock> thread_simplex_clocks;
   std::vector<HighsTimerClock> thread_factor_clocks;
-//#endif
+  HighsTimerClock* pointer_serial_simplex_clocks;
+#endif
 
   int numRow;
   int numCol;

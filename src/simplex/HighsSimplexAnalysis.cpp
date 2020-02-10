@@ -15,6 +15,8 @@
 //#include <cstdio>
 #include "HConfig.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "simplex/FactorTimer.h"
+#include "simplex/SimplexTimer.h"
 #include "simplex/HFactor.h"
 
 void HighsSimplexAnalysis::setup(const HighsLp& lp,
@@ -115,6 +117,11 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp,
 
 #ifdef HiGHSDEV
   AnIterPrevIt = simplex_iteration_count_;
+
+  SimplexTimer simplex_timer;
+  for (HighsTimerClock& clock : thread_simplex_clocks)
+    simplex_timer.initialiseSimplexClocks(clock);
+
   FactorTimer factor_timer;
   for (HighsTimerClock& clock : thread_factor_clocks)
     factor_timer.initialiseFactorClocks(clock);
