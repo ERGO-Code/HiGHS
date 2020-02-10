@@ -137,7 +137,6 @@ bool HDualRow::chooseFinal() {
   //   rp_Choose_final = true;
 #endif
   // 1. Reduce by large step BFRT
-  timer.start(simplex_info.clock_[Chuzc2Clock]);
   analysis->simplexTimerStart(Chuzc2Clock);
   int fullCount = workCount;
   workCount = 0;
@@ -157,14 +156,12 @@ bool HDualRow::chooseFinal() {
     selectTheta *= 10;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
-  timer.stop(simplex_info.clock_[Chuzc2Clock]);
   analysis->simplexTimerStop(Chuzc2Clock);
 
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 1\n");
 #endif
   // 2. Choose by small step BFRT
-  timer.start(simplex_info.clock_[Chuzc3Clock]);
   analysis->simplexTimerStart(Chuzc3Clock);
   const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   fullCount = workCount;
@@ -300,7 +297,6 @@ bool HDualRow::chooseFinal() {
   }
   if (workTheta == 0) workCount = 0;
   sort(workData.begin(), workData.begin() + workCount);
-  timer.stop(simplex_info.clock_[Chuzc3Clock]);
   analysis->simplexTimerStop(Chuzc3Clock);
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 4\n");
@@ -338,7 +334,6 @@ void HDualRow::updateDual(double theta) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   //  &workHMO.>checkDualObjectiveValue("Before update_dual");
-  timer.start(simplex_info.clock_[UpdateDualClock]);
   analysis->simplexTimerStart(UpdateDualClock);
   double* workDual = &workHMO.simplex_info_.workDual_[0];
   for (int i = 0; i < packCount; i++) {
@@ -352,7 +347,6 @@ void HDualRow::updateDual(double theta) {
     dlDuObj *= workHMO.scale_.cost_;
     workHMO.simplex_info_.updated_dual_objective_value += dlDuObj;
   }
-  timer.stop(simplex_info.clock_[UpdateDualClock]);
   analysis->simplexTimerStop(UpdateDualClock);
 }
 

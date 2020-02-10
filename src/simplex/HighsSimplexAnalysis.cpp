@@ -518,6 +518,14 @@ void HighsSimplexAnalysis::simplexTimerStop(const int simplex_clock, const int t
 #endif
 }
 
+bool HighsSimplexAnalysis::simplexTimerRunning(const int simplex_clock, const int thread_id) {
+  bool argument = false;
+#ifdef HiGHSDEV
+  argument = thread_simplex_clocks[thread_id].timer_.clock_start[thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
+#endif
+  return argument;
+}
+
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::reportFactorTimer() {
   FactorTimer factor_timer;

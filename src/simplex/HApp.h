@@ -235,9 +235,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       printf("Iteration total error \n");
 
     if (highs_model_object.options_.simplex_initial_condition_check) {
-      timer.start(simplex_info.clock_[BasisConditionClock]);
+      HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
+      analysis.simplexTimerStart(BasisConditionClock);
       double basis_condition = computeBasisCondition(highs_model_object);
-      timer.stop(simplex_info.clock_[BasisConditionClock]);
+      analysis.simplexTimerStop(BasisConditionClock);
       HighsLogMessage(logfile, HighsMessageType::INFO,
                       "Final basis condition estimate is %g", basis_condition);
     }
