@@ -18,7 +18,6 @@
 #include "lp_data/HighsAnalysis.h"
 #include "util/HighsTimer.h"
 
-#ifdef HiGHSDEV
 // Clocks for profiling the dual simplex solver
 enum iClockFactor {
   FactorInvert = 0,    //!< INVERT
@@ -60,6 +59,23 @@ enum iClockFactor {
 
 class FactorTimer {
  public:
+  void start(const int factor_clock, HighsTimerClock* factor_timer_clock_pointer) {
+    if (factor_timer_clock_pointer != NULL)
+      factor_timer_clock_pointer->timer_.start(factor_timer_clock_pointer->clock_[factor_clock]);
+  };
+  
+  void stop(const int factor_clock, HighsTimerClock* factor_timer_clock_pointer) {
+    if (factor_timer_clock_pointer != NULL)
+      factor_timer_clock_pointer->timer_.stop(factor_timer_clock_pointer->clock_[factor_clock]);
+  };
+  
+  double read(const int factor_clock, HighsTimerClock* factor_timer_clock_pointer) {
+    double argument = 0;
+    if (factor_timer_clock_pointer != NULL)
+      argument = factor_timer_clock_pointer->timer_.read(factor_timer_clock_pointer->clock_[factor_clock]);
+    return argument;
+  };
+#ifdef HiGHSDEV
   void initialiseFactorClocks(HighsTimerClock& factor_timer_clock) {
     HighsTimer& timer = factor_timer_clock.timer_;
     std::vector<int>& clock = factor_timer_clock.clock_;
@@ -111,7 +127,10 @@ class FactorTimer {
     for (int en = 0; en < factor_clock_list_size; en++) {
       clockList[en] = clock[factor_clock_list[en]];
     }
-    const double ideal_sum_time = timer.read(timer.solve_clock);
+    double ideal_sum_time = 0;
+    ideal_sum_time += timer.read(clock[FactorInvert]);
+    ideal_sum_time += timer.read(clock[FactorFtran]);
+    ideal_sum_time += timer.read(clock[FactorBtran]);
     timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
   
@@ -148,7 +167,7 @@ class FactorTimer {
 	};
     reportFactorClockList("FactorLevel2", factor_timer_clock, factor_clock_list);
   };
+#endif
   
 };
-#endif
 #endif /* SIMPLEX_FACTORTIMER_H_ */

@@ -19,9 +19,7 @@
 #include <vector>
 
 #include "HConfig.h"
-#ifdef HiGHSDEV
 #include "lp_data/HighsAnalysis.h"
-#endif
 
 using std::max;
 using std::min;
@@ -129,30 +127,22 @@ class HFactor {
    * @return 0 if successful, otherwise rankDeficiency>0
    *
    */
-  int build(
-#ifdef HiGHSDEV
-	    HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
-	    );
+  int build(HighsTimerClock* factor_timer_clock_pointer=NULL);
 
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
   void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
-             double historical_density  //!< Historical density of the result
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
+             double historical_density,  //!< Historical density of the result
+	     HighsTimerClock* factor_timer_clock_pointer=NULL
            ) const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
   void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
-             double historical_density  //!< Historical density of the result
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
+             double historical_density,  //!< Historical density of the result
+	     HighsTimerClock* factor_timer_clock_pointer=NULL
              ) const;
 
   /**
@@ -344,26 +334,14 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
-	      ) const;
-  void btranL(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
-	      ) const;
-  void ftranU(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
-	      ) const;
-  void btranU(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-	     , HighsTimerClock* factor_timer_clock_pointer=NULL
-#endif
-	      ) const;
+  void ftranL(HVector& vector, double historical_density,
+	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
+  void btranL(HVector& vector, double historical_density,
+	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
+  void ftranU(HVector& vector, double historical_density,
+	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
+  void btranU(HVector& vector, double historical_density,
+	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
 
   void ftranFT(HVector& vector) const;
   void btranFT(HVector& vector) const;

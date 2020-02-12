@@ -389,9 +389,9 @@ class HighsTimer {
     }
 
     // Report one line per clock, the time, number of calls and time per call
-    printf("%s-time  Operation         :    Time       Total", grep_stamp);
-    if (ideal_sum_time>0) printf("   Ideal");
-    printf("   Local :    Calls  Time/Call\n");
+    printf("%s-time  Operation         :    Time     ( Total", grep_stamp);
+    if (ideal_sum_time>0) printf(";  Ideal");
+    printf(";  Local):    Calls  Time/Call\n");
     // Convert approximate seconds
     double sum_tick = 0;
     double sum_time = 0;
@@ -407,13 +407,13 @@ class HighsTimer {
         if (percent_sum_clock_ticks >= tl_per_cent_report) {
           printf("%s-time  %-18s: %11.4e (%5.1f%%",
                  grep_stamp, clock_names[i_clock].c_str(), time,
-                 percent_sum_clock_ticks);
+                 percent_run_highs);
 	  if (ideal_sum_time>0) {
 	    double percent_ideal = 100.0 * time / ideal_sum_time;
 	    printf("; %5.1f%%", percent_ideal);
 	  }
           printf("; %5.1f%%):%9d %11.4e\n",
-                 percent_run_highs,
+                 percent_sum_clock_ticks,
                  clock_num_call[i_clock], time_per_call);
         }
       }
@@ -423,12 +423,12 @@ class HighsTimer {
     double percent_sum_clock_ticks = 100.0;
     double percent_run_highs = 100.0 * sum_tick / current_run_highs_tick;
     printf("%s-time  SUM               : %11.4e (%5.1f%%", grep_stamp,
-           sum_time, percent_sum_clock_ticks);
+           sum_time, percent_run_highs);
     if (ideal_sum_time>0) {
       double percent_ideal = 100.0 * sum_time / ideal_sum_time;
       printf("; %5.1f%%", percent_ideal);
     }
-    printf("; %5.1f%%)\n", percent_run_highs);
+    printf("; %5.1f%%)\n", percent_sum_clock_ticks);
     printf("%s-time  TOTAL             : %11.4e\n", grep_stamp,
            tick2sec * current_run_highs_tick);
   }

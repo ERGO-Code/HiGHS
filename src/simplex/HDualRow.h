@@ -152,6 +152,7 @@ class HDualRow {
       workData;  //!< Index-Value pairs for ratio test
   std::vector<int>
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
+  HighsSimplexAnalysis* analysis;
 };
 
 #endif /* SIMPLEX_HDUALROW_H_ */

@@ -15,6 +15,8 @@
 //#include <cstdio>
 #include "HConfig.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "simplex/FactorTimer.h"
+#include "simplex/SimplexTimer.h"
 #include "simplex/HFactor.h"
 
 void HighsSimplexAnalysis::setup(const HighsLp& lp,
@@ -115,8 +117,15 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp,
 
 #ifdef HiGHSDEV
   AnIterPrevIt = simplex_iteration_count_;
+
+  SimplexTimer simplex_timer;
+  for (HighsTimerClock& clock : thread_simplex_clocks)
+    simplex_timer.initialiseSimplexClocks(clock);
+
   FactorTimer factor_timer;
-  factor_timer.initialiseFactorClocks(factor_timer_clock);
+  for (HighsTimerClock& clock : thread_factor_clocks)
+    factor_timer.initialiseFactorClocks(clock);
+
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
   AnIter->AnIterOpName = "BTRAN e_p";
@@ -497,14 +506,66 @@ void HighsSimplexAnalysis::summaryReportFactor() {
   }
 }
 
+void HighsSimplexAnalysis::simplexTimerStart(const int simplex_clock, const int thread_id) {
+#ifdef HiGHSDEV
+  thread_simplex_clocks[thread_id].timer_.start(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+#endif
+}
+
+void HighsSimplexAnalysis::simplexTimerStop(const int simplex_clock, const int thread_id) {
+#ifdef HiGHSDEV
+  thread_simplex_clocks[thread_id].timer_.stop(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+#endif
+}
+
+bool HighsSimplexAnalysis::simplexTimerRunning(const int simplex_clock, const int thread_id) {
+  bool argument = false;
+#ifdef HiGHSDEV
+  argument =
+    thread_simplex_clocks[thread_id].timer_.clock_start[thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
+#endif
+  return argument;
+}
+
+int HighsSimplexAnalysis::simplexTimerNumCall(const int simplex_clock, const int thread_id) {
+  int argument = 0;
+#ifdef HiGHSDEV
+  argument =
+    thread_simplex_clocks[thread_id].timer_.clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
+#endif
+  return argument;
+}
+
+double HighsSimplexAnalysis::simplexTimerRead(const int simplex_clock, const int thread_id) {
+  double argument = 0;
+#ifdef HiGHSDEV
+  argument =
+    thread_simplex_clocks[thread_id].timer_.read(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+#endif
+  return argument;
+}
+
+HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {
+  HighsTimerClock* factor_timer_clock_pointer = NULL;
+#ifdef HiGHSDEV
+  int thread_id = 0;
+#ifdef OPENMP
+  thread_id = omp_get_thread_num();
+#endif
+  factor_timer_clock_pointer = &thread_factor_clocks[thread_id];
+#endif
+  return factor_timer_clock_pointer;
+}
+
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::reportFactorTimer() {
   FactorTimer factor_timer;
-  factor_timer.reportFactorLevel0Clock(factor_timer_clock);
-  factor_timer.reportFactorLevel1Clock(factor_timer_clock);
-  factor_timer.reportFactorLevel2Clock(factor_timer_clock);
+  for (HighsTimerClock clock : thread_factor_clocks) {
+    factor_timer.reportFactorLevel0Clock(clock);
+    factor_timer.reportFactorLevel1Clock(clock);
+    factor_timer.reportFactorLevel2Clock(clock);
+  }
 }
-
 
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;

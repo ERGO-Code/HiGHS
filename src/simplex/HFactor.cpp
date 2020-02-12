@@ -12,9 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HFactor.h"
-#ifdef HiGHSDEV
 #include "simplex/FactorTimer.h"
-#endif
 #include "lp_data/HConst.h"
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
@@ -269,65 +267,34 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
 void HFactor::change(int updateMethod_) { updateMethod = updateMethod_; }
 #endif
 
-int HFactor::build(
-#ifdef HiGHSDEV
-	    HighsTimerClock* factor_timer_clock_pointer
-#endif
-		   ) {
-#ifdef HiGHSDEV
-  HighsTimer* timer;
-  int* clock;
-  if (factor_timer_clock_pointer != NULL) {
-    timer = &factor_timer_clock_pointer->timer_;
-    clock = &factor_timer_clock_pointer->clock_[0];
-    timer->start(factor_timer_clock_pointer->clock_[FactorInvert]);
-  }
-#endif
-  HighsTimer build_timer;
-  build_timer.resetHighsTimer();
+int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
+  FactorTimer factor_timer;
+  factor_timer.start(FactorInvert, factor_timer_clock_pointer);
   build_syntheticTick = 0;
-  build_realTick = build_timer.getTick();
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorInvertSimple]);
-#endif
+  factor_timer.start(FactorInvertSimple, factor_timer_clock_pointer);
   // Build the L, U factor
   // printf("Before buildSimple(): Model has %d basic indices: ", numRow);
   // for (int i=0; i<numRow; i++){printf(" %d", baseIndex[i]);} printf("\n");
   buildSimple();
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorInvertSimple]);
-#endif
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorInvertKernel]);
-#endif
+  factor_timer.stop(FactorInvertSimple, factor_timer_clock_pointer);
+  factor_timer.start(FactorInvertKernel, factor_timer_clock_pointer);
   rankDeficiency = buildKernel();
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorInvertKernel]);
-#endif
+  factor_timer.stop(FactorInvertKernel, factor_timer_clock_pointer);
   if (rankDeficiency > 0) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorInvertDeficient]);
-#endif
+    factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
     printf("buildKernel() returns rankDeficiency = %d\n", rankDeficiency);
     // Singular matrix B: reorder the basic variables so that the
     // singular columns are in the position corresponding to the
     // logical which replaces them
     buildHandleRankDeficiency();
     buildRpRankDeficiency();
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorInvertDeficient]);
-#endif
+    factor_timer.stop(FactorInvertDeficient, factor_timer_clock_pointer);
     //      buildMarkSingC();
   }
   // Complete INVERT
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorInvertFinish]);
-#endif
+  factor_timer.start(FactorInvertFinish, factor_timer_clock_pointer);
   buildFinish();
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorInvertFinish]);
-#endif
-  build_realTick = build_timer.getTick() - build_realTick;
+  factor_timer.stop(FactorInvertFinish, factor_timer_clock_pointer);
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow-1] + numRow;
   
@@ -341,43 +308,26 @@ int HFactor::build(
 	   kernel_num_el,
 	   nwork);
   }
-#ifdef HiGHSDEV
-  if (factor_timer_clock_pointer != NULL) {
-    timer->stop(factor_timer_clock_pointer->clock_[FactorInvert]);
-    //    timer->stop(clock[FactorInvert]);
-  }
-#endif
+  factor_timer.stop(FactorInvert, factor_timer_clock_pointer);
   return rankDeficiency;
 }
 
-void HFactor::ftran(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-		    , HighsTimerClock* factor_timer_clock_pointer
-#endif
-		    ) const{
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtran]);
-#endif
-  ftranL(vector, historical_density);
-  ftranU(vector, historical_density);
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtran]);
-#endif
+void HFactor::ftran(HVector& vector, double historical_density,
+		    HighsTimerClock* factor_timer_clock_pointer) const{
+  FactorTimer factor_timer;
+  factor_timer.start(FactorFtran, factor_timer_clock_pointer);
+  ftranL(vector, historical_density, factor_timer_clock_pointer);
+  ftranU(vector, historical_density, factor_timer_clock_pointer);
+  factor_timer.stop(FactorFtran, factor_timer_clock_pointer);
 }
 
-void HFactor::btran(HVector& vector, double historical_density
-#ifdef HiGHSDEV
-		     , HighsTimerClock* factor_timer_clock_pointer
-#endif
-	      ) const{
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtran]);
-#endif
-  btranU(vector, historical_density);
-  btranL(vector, historical_density);
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtran]);
-#endif
+void HFactor::btran(HVector& vector, double historical_density,
+		    HighsTimerClock* factor_timer_clock_pointer) const{
+  FactorTimer factor_timer;
+  factor_timer.start(FactorBtran, factor_timer_clock_pointer);
+  btranU(vector, historical_density, factor_timer_clock_pointer);
+  btranL(vector, historical_density, factor_timer_clock_pointer);
+  factor_timer.stop(FactorBtran, factor_timer_clock_pointer);
 }
 
 void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
@@ -1219,32 +1169,22 @@ void HFactor::buildFinish() {
   build_syntheticTick += numRow * 80 + (LcountX + UcountX) * 60;
 }
 
-void HFactor::ftranL(HVector& rhs, double historical_density
-#ifdef HiGHSDEV
-		     , HighsTimerClock* factor_timer_clock_pointer
-#endif
-	      ) const{
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtranLower]);
-#endif
+void HFactor::ftranL(HVector& rhs, double historical_density,
+		     HighsTimerClock* factor_timer_clock_pointer) const{
+  FactorTimer factor_timer;
+  factor_timer.start(FactorFtranLower, factor_timer_clock_pointer);
   if (updateMethod == UPDATE_METHOD_APF) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtranLowerAPF]);
-#endif
+    factor_timer.start(FactorFtranLowerAPF, factor_timer_clock_pointer);
     rhs.tight();
     rhs.pack();
     ftranAPF(rhs);
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtranLowerAPF]);
-#endif
+    factor_timer.stop(FactorFtranLowerAPF, factor_timer_clock_pointer);
     rhs.tight();
   }
 
   double current_density = 1.0 * rhs.count / numRow;
   if (current_density > hyperCANCEL || historical_density > hyperFTRANL) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtranLowerSps]);
-#endif
+    factor_timer.start(FactorFtranLowerSps, factor_timer_clock_pointer);
     // Alias to RHS
     int RHScount = 0;
     int* RHSindex = &rhs.index[0];
@@ -1271,40 +1211,26 @@ void HFactor::ftranL(HVector& rhs, double historical_density
 
     // Save the count
     rhs.count = RHScount;
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtranLowerSps]);
-#endif
+    factor_timer.stop(FactorFtranLowerSps, factor_timer_clock_pointer);
   } else {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtranLowerHyper]);
-#endif
+    factor_timer.start(FactorFtranLowerHyper, factor_timer_clock_pointer);
     const int* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
     const double* Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtranLowerHyper]);
-#endif
+    factor_timer.stop(FactorFtranLowerHyper, factor_timer_clock_pointer);
   }
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtranLower]);
-#endif
+  factor_timer.stop(FactorFtranLower, factor_timer_clock_pointer);
 }
 
-void HFactor::btranL(HVector& rhs, double historical_density
-#ifdef HiGHSDEV
-		     , HighsTimerClock* factor_timer_clock_pointer
-#endif
-	      ) const{
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranLower]);
-#endif
+void HFactor::btranL(HVector& rhs, double historical_density,
+		     HighsTimerClock* factor_timer_clock_pointer) const{
+  FactorTimer factor_timer;
+  factor_timer.start(FactorBtranLower, factor_timer_clock_pointer);
   double current_density = 1.0 * rhs.count / numRow;
   if (current_density > hyperCANCEL || historical_density > hyperBTRANL) {
     // Alias to RHS
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranLowerSps]);
-#endif
+    factor_timer.start(FactorBtranLowerSps, factor_timer_clock_pointer);
     int RHScount = 0;
     int* RHSindex = &rhs.index[0];
     double* RHSarray = &rhs.array[0];
@@ -1331,90 +1257,59 @@ void HFactor::btranL(HVector& rhs, double historical_density
 
     // Save the count
     rhs.count = RHScount;
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranLowerSps]);
-#endif
+    factor_timer.stop(FactorBtranLowerSps, factor_timer_clock_pointer);
   } else {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranLowerHyper]);
-#endif
+    factor_timer.start(FactorBtranLowerHyper, factor_timer_clock_pointer);
     const int* LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
     const double* LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &LRstart[0],
                &LRstart[1], &LRindex[0], &LRvalue[0], &rhs);
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranLowerHyper]);
-#endif
+    factor_timer.stop(FactorBtranLowerHyper, factor_timer_clock_pointer);
   }
 
   if (updateMethod == UPDATE_METHOD_APF) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranLowerAPF]);
-#endif
+    factor_timer.start(FactorBtranLowerAPF, factor_timer_clock_pointer);
     btranAPF(rhs);
     rhs.tight();
     rhs.pack();
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranLowerAPF]);
-#endif
+    factor_timer.stop(FactorBtranLowerAPF, factor_timer_clock_pointer);
   }
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranLower]);
-#endif
+  factor_timer.stop(FactorBtranLower, factor_timer_clock_pointer);
 }
 
-void HFactor::ftranU(HVector& rhs, double historical_density
-#ifdef HiGHSDEV
-		     , HighsTimerClock* factor_timer_clock_pointer
-#endif
-	      ) const{
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtranUpper]);
-#endif
+void HFactor::ftranU(HVector& rhs, double historical_density,
+		     HighsTimerClock* factor_timer_clock_pointer) const{
+  FactorTimer factor_timer;
+  factor_timer.start(FactorFtranUpper, factor_timer_clock_pointer);
   // The update part
   if (updateMethod == UPDATE_METHOD_FT) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtranUpperFT]);
-#endif
+    factor_timer.start(FactorFtranUpperFT, factor_timer_clock_pointer);
     //    const double current_density = 1.0 * rhs.count / numRow;
     ftranFT(rhs);
     rhs.tight();
     rhs.pack();
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtranUpperFT]);
-#endif
+    factor_timer.stop(FactorFtranUpperFT, factor_timer_clock_pointer);
   }
   if (updateMethod == UPDATE_METHOD_MPF) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtranUpperMPF]);
-#endif
+    factor_timer.start(FactorFtranUpperMPF, factor_timer_clock_pointer);
     ftranMPF(rhs);
     rhs.tight();
     rhs.pack();
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtranUpperMPF]);
-#endif
+    factor_timer.stop(FactorFtranUpperMPF, factor_timer_clock_pointer);
   }
 
   // The regular part
   const double current_density = 1.0 * rhs.count / numRow;
   if (current_density > hyperCANCEL || historical_density > hyperFTRANU) {
     const bool report_ftran_upper_sparse = false;//current_density < hyperCANCEL;
-#ifdef HiGHSDEV
-  /*
-    int use_clock = -1;
-    if (factor_timer_clock_pointer != NULL) {
-      if (current_density < 0.1) {
-	use_clock = clock_[FactorFtranUpperSps2];
-      } else if (current_density < 0.5) {
-	use_clock = clock_[FactorFtranUpperSps1];
-      } else {
-	use_clock = clock_[FactorFtranUpperSps0];
-      }
-      timer_.start(use_clock);
-    }
-  */
-#endif
+    int use_clock;
+    if (current_density < 0.1)
+      use_clock = FactorFtranUpperSps2;
+    else if (current_density < 0.5)
+      use_clock = FactorFtranUpperSps1;
+    else
+      use_clock = FactorFtranUpperSps0;
+    factor_timer.start(use_clock, factor_timer_clock_pointer);
     // Alias to non constant
     //        int RHS_Tick = rhs.pseudoTick;
     double RHS_syntheticTick = 0;
@@ -1460,84 +1355,57 @@ void HFactor::ftranU(HVector& rhs, double historical_density
     //        rhs.fakeTick += (RHS_Tick - RHS_TickStart) * 15 + (UpivotCount -
     //        numRow) * 10;
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(use_clock);
-#endif
+    factor_timer.stop(use_clock, factor_timer_clock_pointer);
     if (report_ftran_upper_sparse) {
       const double final_density = 1.0 * rhs.count / numRow;
       printf("FactorFtranUpperSps: historical_density = %10.4g; current_density = %10.4g; final_density = %10.4g\n",
 	     historical_density, current_density, final_density);
     }
   } else {
-#ifdef HiGHSDEV
-  /*
-  int use_clock = -1;
-  if (factor_timer_clock_pointer != NULL) {
-    if (current_density < 5e-6) {
-      use_clock = clock_[FactorFtranUpperHyper5];
-    } else if (current_density < 1e-5) {
-      use_clock = clock_[FactorFtranUpperHyper4];
-    } else if (current_density < 1e-4) {
-      use_clock = clock_[FactorFtranUpperHyper3];
-    } else if (current_density < 1e-3) {
-      use_clock = clock_[FactorFtranUpperHyper2];
-    } else if (current_density < 1e-2) {
-      use_clock = clock_[FactorFtranUpperHyper1];
-    } else {
-      use_clock = clock_[FactorFtranUpperHyper0];
-    }
-    timer_.start(use_clock);
-  }
-  */
-#endif
+    int use_clock = -1;
+    if (current_density < 5e-6)
+      use_clock = FactorFtranUpperHyper5;
+    else if (current_density < 1e-5)
+      use_clock = FactorFtranUpperHyper4;
+    else if (current_density < 1e-4)
+      use_clock = FactorFtranUpperHyper3;
+    else if (current_density < 1e-3)
+      use_clock = FactorFtranUpperHyper2;
+    else if (current_density < 1e-2)
+      use_clock = FactorFtranUpperHyper1;
+    else
+      use_clock = FactorFtranUpperHyper0;
+    factor_timer.start(use_clock, factor_timer_clock_pointer);
     const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
     const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(use_clock);
-#endif
+    factor_timer.stop(use_clock, factor_timer_clock_pointer);
   }
   if (updateMethod == UPDATE_METHOD_PF) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorFtranUpperPF]);
-#endif
+    factor_timer.start(FactorFtranUpperPF, factor_timer_clock_pointer);
     ftranPF(rhs);
     rhs.tight();
     rhs.pack();
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtranUpperPF]);
-#endif
+    factor_timer.stop(FactorFtranUpperPF, factor_timer_clock_pointer);
   }
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorFtranUpper]);
-#endif
+  factor_timer.stop(FactorFtranUpper, factor_timer_clock_pointer);
 }
 
-void HFactor::btranU(HVector& rhs, double historical_density
-#ifdef HiGHSDEV
-		     , HighsTimerClock* factor_timer_clock_pointer
-#endif
-	      ) const{
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranUpper]);
-#endif
+void HFactor::btranU(HVector& rhs, double historical_density,
+		     HighsTimerClock* factor_timer_clock_pointer) const{
+  FactorTimer factor_timer;
+  factor_timer.start(FactorBtranUpper, factor_timer_clock_pointer);
   if (updateMethod == UPDATE_METHOD_PF) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranUpperPF]);
-#endif
+    factor_timer.start(FactorBtranUpperPF, factor_timer_clock_pointer);
     btranPF(rhs);
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranUpperPF]);
-#endif
+    factor_timer.stop(FactorBtranUpperPF, factor_timer_clock_pointer);
   }
 
   // The regular part
   double current_density = 1.0 * rhs.count / numRow;
   if (current_density > hyperCANCEL || historical_density > hyperBTRANU) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranUpperSps]);
-#endif
+    factor_timer.start(FactorBtranUpperSps, factor_timer_clock_pointer);
     // Alias to non constant
     //        int RHS_Tick = rhs.pseudoTick;
     double RHS_syntheticTick = 0;
@@ -1584,49 +1452,33 @@ void HFactor::btranU(HVector& rhs, double historical_density
     //        rhs.fakeTick += (RHS_Tick - RHS_TickStart) * 15 + (UpivotCount -
     //        numRow) * 10;
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranUpperSps]);
-#endif
+    factor_timer.stop(FactorBtranUpperSps, factor_timer_clock_pointer);
   } else {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranUpperHyper]);
-#endif
+    factor_timer.start(FactorBtranUpperHyper, factor_timer_clock_pointer);
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &URstart[0], &URlastp[0], &URindex[0], &URvalue[0], &rhs);
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranUpperHyper]);
-#endif
+    factor_timer.stop(FactorBtranUpperHyper, factor_timer_clock_pointer);
   }
 
   // The update part
   if (updateMethod == UPDATE_METHOD_FT) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranUpperFT]);
-#endif
+    factor_timer.start(FactorBtranUpperFT, factor_timer_clock_pointer);
     rhs.tight();
     rhs.pack();
     //    const double current_density = 1.0 * rhs.count / numRow;
     btranFT(rhs);
     rhs.tight();
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranUpperFT]);
-#endif
+    factor_timer.stop(FactorBtranUpperFT, factor_timer_clock_pointer);
   }
   if (updateMethod == UPDATE_METHOD_MPF) {
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.start(clock_[FactorBtranUpperMPF]);
-#endif
+    factor_timer.start(FactorBtranUpperMPF, factor_timer_clock_pointer);
     rhs.tight();
     rhs.pack();
     btranMPF(rhs);
     rhs.tight();
-#ifdef HiGHSDEV
-    //    if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranUpperMPF]);
-#endif
+    factor_timer.stop(FactorBtranUpperMPF, factor_timer_clock_pointer);
   }
-#ifdef HiGHSDEV
-  //  if (factor_timer_clock_pointer != NULL) timer_.stop(clock_[FactorBtranUpper]);
-#endif
+  factor_timer.stop(FactorBtranUpper, factor_timer_clock_pointer);
 }
 
 void HFactor::ftranFT(HVector& vector) const{

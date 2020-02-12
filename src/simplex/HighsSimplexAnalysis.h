@@ -20,9 +20,12 @@
 #include "simplex/SimplexConst.h"
 #include "simplex/HFactor.h"
 #include "simplex/HVector.h"
-#include "simplex/FactorTimer.h"
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
+
+#ifdef OPENMP
+#include "omp.h"
+#endif
 
 #ifdef HiGHSDEV
 enum ANALYSIS_OPERATION_TYPE {
@@ -65,7 +68,23 @@ const double max_hyper_density = 0.1;
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis(HighsTimer& timer) : timer_(&timer), factor_timer_clock(timer) {}
+  HighsSimplexAnalysis(HighsTimer& timer) {
+    timer_ = &timer;
+#ifdef HiGHSDEV
+    int omp_max_threads = 1;
+#ifdef OPENMP
+    omp_max_threads = omp_get_max_threads();
+#endif
+    for (int i=0; i<omp_max_threads; i++) {
+      HighsTimerClock clock(timer);
+      thread_simplex_clocks.push_back(clock);
+      thread_factor_clocks.push_back(clock);
+    }
+    pointer_serial_factor_clocks = &thread_factor_clocks[0];
+#else
+    pointer_serial_factor_clocks = NULL;
+#endif
+}
   void setup(const HighsLp& lp,
 	     const HighsOptions& options,
 	     const int simplex_iteration_count);
@@ -98,8 +117,26 @@ class HighsSimplexAnalysis {
 		      );
   void summaryReportFactor();
 
-  HighsTimerClock& getFactorTimerClock() { return factor_timer_clock; }
+  void simplexTimerStart(const int simplex_clock, const int thread_id=0);
+  void simplexTimerStop(const int simplex_clock, const int thread_id=0);
+  bool simplexTimerRunning(const int simplex_clock, const int thread_id=0);
+  int simplexTimerNumCall(const int simplex_clock, const int thread_id=0);
+  double simplexTimerRead(const int simplex_clock, const int thread_id=0);
+
+  HighsTimerClock* getThreadFactorTimerClockPointer();
+
 #ifdef HiGHSDEV
+  const std::vector<HighsTimerClock>& getThreadSimplexTimerClocks() { return thread_simplex_clocks; }
+  HighsTimerClock* getThreadSimplexTimerClockPtr(int i) { 
+    assert(i >= 0 && i < (int) thread_simplex_clocks.size());
+    return &thread_simplex_clocks[i];
+  }
+
+  const std::vector<HighsTimerClock>& getThreadFactorTimerClocks() { return thread_factor_clocks; }
+  HighsTimerClock* getThreadFactorTimerClockPtr(int i) { 
+    assert(i >= 0 && i < (int) thread_factor_clocks.size());
+    return &thread_factor_clocks[i];
+  }
 
   void reportFactorTimer();
   void iterationRecord();
@@ -120,10 +157,12 @@ class HighsSimplexAnalysis {
   void summaryReport();
 #endif
 
-//#ifdef HiGHSDEV
   HighsTimer* timer_;
-  HighsTimerClock factor_timer_clock;
-//#endif
+#ifdef HiGHSDEV
+  std::vector<HighsTimerClock> thread_simplex_clocks;
+  std::vector<HighsTimerClock> thread_factor_clocks;
+#endif
+  HighsTimerClock* pointer_serial_factor_clocks;
 
   int numRow;
   int numCol;
@@ -259,6 +298,7 @@ class HighsSimplexAnalysis {
   int AnIterIt0 = 0;
 #ifdef HiGHSDEV
   int AnIterPrevIt;
+
   // Major operation analysis struct
   struct AnIterOpRec {
     double AnIterOpHyperCANCEL;
