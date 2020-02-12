@@ -586,7 +586,7 @@ void HDual::majorUpdateFtranPrepare() {
 }
 
 void HDual::majorUpdateFtranParallel() {
-  analysis->simplexTimerStop(FtranMixParClock);
+  analysis->simplexTimerStart(FtranMixParClock);
 
   // Prepare buffers
   int multi_ntasks = 0;

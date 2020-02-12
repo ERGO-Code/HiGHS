@@ -508,21 +508,23 @@ void HighsSimplexAnalysis::summaryReportFactor() {
 
 void HighsSimplexAnalysis::simplexTimerStart(const int simplex_clock, const int thread_id) {
 #ifdef HiGHSDEV
-  thread_simplex_clocks[thread_id].timer_.start(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+  thread_simplex_clocks[thread_id].
+    timer_.start(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
 #endif
 }
 
 void HighsSimplexAnalysis::simplexTimerStop(const int simplex_clock, const int thread_id) {
 #ifdef HiGHSDEV
-  thread_simplex_clocks[thread_id].timer_.stop(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+  thread_simplex_clocks[thread_id].
+    timer_.stop(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
 #endif
 }
 
 bool HighsSimplexAnalysis::simplexTimerRunning(const int simplex_clock, const int thread_id) {
   bool argument = false;
 #ifdef HiGHSDEV
-  argument =
-    thread_simplex_clocks[thread_id].timer_.clock_start[thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
+  argument = thread_simplex_clocks[thread_id].
+    timer_.clock_start[thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
 #endif
   return argument;
 }
@@ -530,8 +532,8 @@ bool HighsSimplexAnalysis::simplexTimerRunning(const int simplex_clock, const in
 int HighsSimplexAnalysis::simplexTimerNumCall(const int simplex_clock, const int thread_id) {
   int argument = 0;
 #ifdef HiGHSDEV
-  argument =
-    thread_simplex_clocks[thread_id].timer_.clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
+  argument = thread_simplex_clocks[thread_id].
+    timer_.clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
 #endif
   return argument;
 }
@@ -539,8 +541,8 @@ int HighsSimplexAnalysis::simplexTimerNumCall(const int simplex_clock, const int
 double HighsSimplexAnalysis::simplexTimerRead(const int simplex_clock, const int thread_id) {
   double argument = 0;
 #ifdef HiGHSDEV
-  argument =
-    thread_simplex_clocks[thread_id].timer_.read(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+  argument = thread_simplex_clocks[thread_id].
+    timer_.read(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
 #endif
   return argument;
 }
@@ -560,11 +562,35 @@ HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {
 #ifdef HiGHSDEV
 void HighsSimplexAnalysis::reportFactorTimer() {
   FactorTimer factor_timer;
-  for (HighsTimerClock clock : thread_factor_clocks) {
-    factor_timer.reportFactorLevel0Clock(clock);
-    factor_timer.reportFactorLevel1Clock(clock);
-    factor_timer.reportFactorLevel2Clock(clock);
+  int omp_max_threads = 1;
+#ifdef OPENMP
+  omp_max_threads = omp_get_max_threads();
+#endif
+  printf("reportFactorTimer: omp_max_threads = %d; HiGHS threads %1d|%1d|%1d\n",
+	 omp_max_threads, min_threads, num_threads, max_threads);
+  int report_num_threads = max(1, min(omp_max_threads, num_threads));
+  for (int i=0; i<report_num_threads; i++) {
+    //  for (HighsTimerClock clock : thread_factor_clocks) {
+    printf("reportFactorTimer: HFactor clocks for OMP thread %d / %d\n", i, report_num_threads-1);
+    factor_timer.reportFactorClock(thread_factor_clocks[i]);
   }
+  if (report_num_threads>1) {
+    HighsTimer& timer = thread_factor_clocks[0].timer_;
+    HighsTimerClock all_factor_clocks(timer);
+    vector<int>& clock = all_factor_clocks.clock_;
+    factor_timer.initialiseFactorClocks(all_factor_clocks);
+    for (int i=0; i<report_num_threads; i++) {
+      vector<int>& thread_clock = thread_factor_clocks[i].clock_;
+      for (int clock_id=0; clock_id < FactorNumClock; clock_id++) {
+	int all_factor_iClock = clock[clock_id];
+	int thread_factor_iClock = thread_clock[clock_id];
+	timer.clock_num_call[all_factor_iClock] += timer.clock_num_call[thread_factor_iClock];
+	timer.clock_ticks[all_factor_iClock] += timer.clock_ticks[thread_factor_iClock];
+      }
+    }
+    printf("reportFactorTimer: HFactor clocks for all %d threads\n", report_num_threads);
+    factor_timer.reportFactorClock(all_factor_clocks);
+  }   
 }
 
 void HighsSimplexAnalysis::iterationRecord() {

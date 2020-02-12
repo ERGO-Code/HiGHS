@@ -167,6 +167,13 @@ class FactorTimer {
 	};
     reportFactorClockList("FactorLevel2", factor_timer_clock, factor_clock_list);
   };
+
+  void reportFactorClock(HighsTimerClock& factor_timer_clock) {
+    reportFactorLevel0Clock(factor_timer_clock);
+    reportFactorLevel1Clock(factor_timer_clock);
+    reportFactorLevel2Clock(factor_timer_clock);
+  }
+
 #endif
   
 };
