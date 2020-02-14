@@ -566,20 +566,17 @@ void HighsSimplexAnalysis::reportFactorTimer() {
 #ifdef OPENMP
   omp_max_threads = omp_get_max_threads();
 #endif
-  printf("reportFactorTimer: omp_max_threads = %d; HiGHS threads %1d|%1d|%1d\n",
-	 omp_max_threads, min_threads, num_threads, max_threads);
-  int report_num_threads = max(1, min(omp_max_threads, num_threads));
-  for (int i=0; i<report_num_threads; i++) {
+  for (int i=0; i<omp_max_threads; i++) {
     //  for (HighsTimerClock clock : thread_factor_clocks) {
-    printf("reportFactorTimer: HFactor clocks for OMP thread %d / %d\n", i, report_num_threads-1);
+    printf("reportFactorTimer: HFactor clocks for OMP thread %d / %d\n", i, omp_max_threads-1);
     factor_timer.reportFactorClock(thread_factor_clocks[i]);
   }
-  if (report_num_threads>1) {
+  if (omp_max_threads>1) {
     HighsTimer& timer = thread_factor_clocks[0].timer_;
     HighsTimerClock all_factor_clocks(timer);
     vector<int>& clock = all_factor_clocks.clock_;
     factor_timer.initialiseFactorClocks(all_factor_clocks);
-    for (int i=0; i<report_num_threads; i++) {
+    for (int i=0; i<omp_max_threads; i++) {
       vector<int>& thread_clock = thread_factor_clocks[i].clock_;
       for (int clock_id=0; clock_id < FactorNumClock; clock_id++) {
 	int all_factor_iClock = clock[clock_id];
@@ -588,7 +585,7 @@ void HighsSimplexAnalysis::reportFactorTimer() {
 	timer.clock_ticks[all_factor_iClock] += timer.clock_ticks[thread_factor_iClock];
       }
     }
-    printf("reportFactorTimer: HFactor clocks for all %d threads\n", report_num_threads);
+    printf("reportFactorTimer: HFactor clocks for all %d threads\n", omp_max_threads);
     factor_timer.reportFactorClock(all_factor_clocks);
   }   
 }
