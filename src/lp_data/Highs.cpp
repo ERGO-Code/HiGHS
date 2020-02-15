@@ -112,6 +112,8 @@ HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
   return HighsStatus::Error;
 }
 
+const HighsOptions& Highs::getHighsOptions() { return options_; }
+
 HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
   if (getOptionValue(options_.logfile, option, options_.records, value) ==
       OptionStatus::OK)

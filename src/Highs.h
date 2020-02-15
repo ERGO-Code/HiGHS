@@ -117,6 +117,8 @@ class Highs {
 			       const HighsOptions& options  //!< The options
 			       );
 
+  const HighsOptions& getHighsOptions();
+
    /**
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
