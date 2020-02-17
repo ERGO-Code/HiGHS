@@ -24,14 +24,14 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   
   // Load root node lp in highs and turn printing off.
   passModel(mip_);
-  //  printf("Writing out the MIP as MPS\n"); writeModel("mip.mps");
+  printf("Writing out the MIP as MPS\n"); writeModel("mip.mps");
   options_.message_level = 0;
   HighsMipStatus root_solve = solveRootNode();
   if (root_solve != HighsMipStatus::kNodeOptimal) return root_solve;
 
   // Start tree by making root node.
   // Highs ignores integrality constraints.
-  Node root(-1, 0, 0);
+  Node root(-1, 0.0, 0, 0);
   root.col_lower_bound = lp_.colLower_;
   root.col_upper_bound = lp_.colUpper_;
   root.integer_variables = lp_.integrality_;
@@ -252,8 +252,14 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
   //   Branch.
   while (!tree_.empty()) {
     Node& node = tree_.next();
-    //    printf(": Solving node %9d with parent objective = %10.4g\n", node.id, node.objective_value);
+    //    printf(": Solving node %9d with parent (ID objective) = (%9d, %10.4g)\n", node.id, node.parent_id, node.parent_objective);
+    if (node.parent_objective >= tree_.getBestObjective()) {
+      // Don't solve if we can't better the best IFS
+      tree_.pop();
+      continue;
+    }
     HighsMipStatus node_solve_status = solveNode(node);
+    double best_objective;
     switch (node_solve_status)
     {
     case HighsMipStatus::kNodeOptimal:
@@ -263,6 +269,12 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
                 << " solved to optimality." << std::endl;
       */
       tree_.pop();
+      // Don't branch if we can't better the best IFS
+      best_objective = tree_.getBestObjective();
+      if (node.objective_value >= best_objective) {
+	printf("Don't branch since no better than best IFS of %10.4g\n", best_objective);
+	break;
+      }
       tree_.branch(node);
       //      if (node.branch_col > 47) writeSolutionForIntegerVariables(node);
 

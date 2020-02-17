@@ -24,12 +24,8 @@ struct Node {
   int level;
 
   Node();
-Node(int parent,
-     //     double objective,
-     int index, int depth)
-: id(index), parent_id(parent),
-  //    parent_objective(objective),
-    level(depth) {
+Node(int parent, double objective, int index, int depth)
+: id(index), parent_id(parent), parent_objective(objective), level(depth) {
     left_child = nullptr;
     right_child = nullptr;
     branch_col = -1;

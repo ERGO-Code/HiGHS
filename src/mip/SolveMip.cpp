@@ -50,7 +50,7 @@ bool Tree::branch(Node& node) {
     // is better. Assuming minimization.
     printf("Integer");
     if (node.objective_value < best_objective_) {
-      printf(": Updating best\n");
+      printf(": !! Updating best !!\n");
       /*
       std::cout << "Updating best solution at node " << node.id
                 << ". Objective: " << node.objective_value << std::endl;
@@ -78,10 +78,10 @@ bool Tree::branch(Node& node) {
   // Create children and add to node.
   num_nodes++;
   node.left_child =
-      std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
+    std::unique_ptr<Node>(new Node(node.id, node.objective_value, num_nodes, node.level + 1));
   num_nodes++;
   node.right_child =
-      std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
+      std::unique_ptr<Node>(new Node(node.id, node.objective_value, num_nodes, node.level + 1));
 
   // Copy bounds from parent and set integer variables.
   node.left_child->branch_col = col;
