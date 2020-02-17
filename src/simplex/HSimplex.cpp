@@ -293,6 +293,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // is not already scaled
   bool scale_lp = options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF &&
                   !simplex_lp_status.scaling_tried;
+  scale_lp=false;
   if (scale_lp) {
     analysis.simplexTimerStart(ScaleClock);
     scaleSimplexLp(highs_model_object);

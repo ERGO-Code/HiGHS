@@ -15,13 +15,24 @@
 
 // For the moment just return first violated.
 NodeIndex Tree::chooseBranchingVariable(const Node& node) {
+  const double fractional_tolerance = 1e-7;
   assert(node.integer_variables.size() == node.primal_solution.size());
 
   for (int col = 0; col < (int)node.integer_variables.size(); col++) {
     if (!node.integer_variables[col]) continue;
 
     double value = node.primal_solution[col];
-    if (std::fabs(value - std::floor(value)) > 0.0000001) {
+    const double value_ceil = std::ceil(value);
+    const double value_floor = std::floor(value);
+    const double fraction_below = std::fabs(value - value_ceil);
+    const double fraction_above = std::fabs(value - value_floor);
+    if (fraction_above > fractional_tolerance && fraction_below > fractional_tolerance) {
+      if (fraction_above < 10*fractional_tolerance)
+	printf("chooseBranchingVariable %d: %g = Fraction_above < 10*fractional_tolerance = %g\n",
+	       col, fraction_above, 10*fractional_tolerance);
+      if (fraction_below < 10*fractional_tolerance)
+	printf("chooseBranchingVariable %d: %g = Fraction_below < 10*fractional_tolerance = %g\n",
+	       col, fraction_below, 10*fractional_tolerance);
       // This one is violated.
       return NodeIndex(col);
     }
@@ -37,12 +48,17 @@ bool Tree::branch(Node& node) {
   if (branch_col == kNoNodeIndex) {
     // All integer variables are feasible. Update best solution if node solution
     // is better. Assuming minimization.
-
+    printf("Integer");
     if (node.objective_value < best_objective_) {
+      printf(": Updating best\n");
+      /*
       std::cout << "Updating best solution at node " << node.id
                 << ". Objective: " << node.objective_value << std::endl;
+      */
       best_objective_ = node.objective_value;
       best_solution_ = node.primal_solution;
+    } else {
+      printf("\n");
     }
     return false;
   }
@@ -50,11 +66,14 @@ bool Tree::branch(Node& node) {
   int col = static_cast<int>(branch_col);
   double value = node.primal_solution[col];
 
+  /*
   std::cout << "Branching on variable " << col << std::endl
             << "(" << num_nodes + 1 << "," << num_nodes + 2
             << ") left child ub: " << std::floor(value)
             << " right child lb: " << std::ceil(value) << std::endl;
-
+  */
+  printf("Branch on %2d (%9d, %9d) left UB: %4d; right LB: %4d\n",
+	 col, num_nodes + 1, num_nodes + 2, (int)std::floor(value), (int)std::ceil(value));
   // Branch.
   // Create children and add to node.
   num_nodes++;

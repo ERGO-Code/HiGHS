@@ -37,6 +37,7 @@ class HighsMipSolver : Highs {
   HighsMipStatus runMipSolver();
 
  private:
+  void writeSolutionForIntegerVariables(Node& node);
   HighsMipStatus solveRootNode();
   HighsMipStatus solveNode(Node& node, bool hotstart = true);
   HighsMipStatus solveTree(Node& root);
