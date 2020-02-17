@@ -670,6 +670,13 @@ class HighsOptions : public HighsOptionsStruct {
 				     advanced, &less_infeasible_DSE_choose_row,
 				     true);
     records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("mip",
+				     "Use mip solver.",
+				     advanced, &mip,
+				     false);
+    records.push_back(record_bool);
+    
   }
   
   void deleteRecords() {

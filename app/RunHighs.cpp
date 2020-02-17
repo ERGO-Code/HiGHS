@@ -61,15 +61,7 @@ int main(int argc, char** argv) {
 
   // Run LP or MIP solver.
   HighsStatus run_status = HighsStatus::Error;
-  // If no integrality constraints shrink member.
-  bool mip = false;
-  for  (unsigned int i=0; i < lp.integrality_.size(); i++) {
-    if (lp.integrality_[i]) {
-      mip = true;
-      break;
-    }
-  }
-  if (!mip) {
+  if (!options.mip) {
     run_status = callLpSolver(options, lp, output, message_level, run_quiet);
   } else {
     run_status = callMipSolver(options, lp, output, message_level, run_quiet);
