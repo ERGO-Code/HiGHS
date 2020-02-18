@@ -24,7 +24,10 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   
   // Load root node lp in highs and turn printing off.
   passModel(mip_);
-  //printf("Writing out the MIP as MPS\n"); writeModel("mip.mps");
+  printf("Writing out the MIP as MPS\n"); writeModel("mip.mps");
+  //  options_.message_level=7; printf("Writing out the MIP on stdout\n"); writeModel(""); options_.message_level=4;
+  return HighsMipStatus::kUnderDevelopment;
+
   options_.message_level = 0;
   HighsMipStatus root_solve = solveRootNode();
   if (root_solve != HighsMipStatus::kNodeOptimal) return root_solve;
