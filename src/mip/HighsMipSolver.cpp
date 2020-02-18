@@ -24,7 +24,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   
   // Load root node lp in highs and turn printing off.
   passModel(mip_);
-  printf("Writing out the MIP as MPS\n"); writeModel("mip.mps");
+  //printf("Writing out the MIP as MPS\n"); writeModel("mip.mps");
   options_.message_level = 0;
   HighsMipStatus root_solve = solveRootNode();
   if (root_solve != HighsMipStatus::kNodeOptimal) return root_solve;
@@ -81,8 +81,10 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
 void HighsMipSolver::writeSolutionForIntegerVariables(Node& node) {
   for (int iCol=0; iCol<lp_.numCol_; iCol++) {
     if (!lp_.integrality_[iCol]) continue;
+#ifdef HiGHSDEV    
     printf("%2d [%10.4g, %10.4g, %10.4g]\n",
 	   iCol, node.col_lower_bound[iCol], node.primal_solution[iCol], node.col_upper_bound[iCol]);
+#endif
   }
 }
 
@@ -226,7 +228,18 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
 HighsMipStatus HighsMipSolver::solveRootNode() {
   // presolve off for the moment.
   options_.presolve = off_string;
+  bool no_highs_log = true;
+  int save_message_level = options_.message_level;
+  FILE* save_logfile = options_.logfile;
+  if (no_highs_log) {
+    options_.message_level = 0;
+    options_.logfile = NULL;
+  }
   HighsStatus root_lp_solve_status = run();
+  if (no_highs_log) {
+    options_.message_level = save_message_level;
+    options_.logfile = save_logfile;
+  }
 
   switch (root_lp_solve_status) {
     case HighsStatus::Warning:
@@ -256,7 +269,6 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
   //   Branch.
   while (!tree_.empty()) {
     Node& node = tree_.next();
-    //    printf(": Solving node %9d with parent (ID objective) = (%9d, %10.4g)\n", node.id, node.parent_id, node.parent_objective);
     if (node.parent_objective >= tree_.getBestObjective()) {
       // Don't solve if we can't better the best IFS
       tree_.pop();
@@ -267,7 +279,9 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
     switch (node_solve_status)
     {
     case HighsMipStatus::kNodeOptimal:
+#ifdef HiGHSDEV    
       printf("Node %9d (branch on %2d) optimal objective %10.4g: ", node.id, node.branch_col, node.objective_value);
+#endif
       /*
       std::cout << "Node " << node.id
                 << " solved to optimality." << std::endl;
@@ -276,7 +290,9 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
       // Don't branch if we can't better the best IFS
       best_objective = tree_.getBestObjective();
       if (node.objective_value >= best_objective) {
+#ifdef HiGHSDEV    
 	printf("Don't branch since no better than best IFS of %10.4g\n", best_objective);
+#endif
 	break;
       }
       tree_.branch(node);
@@ -286,11 +302,13 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
     case HighsMipStatus::kNodeUnbounded:
       return HighsMipStatus::kNodeUnbounded;
     case HighsMipStatus::kNodeInfeasible:
+#ifdef HiGHSDEV    
       printf("Node %9d (branch on %2d) infeasible\n", node.id, node.branch_col);
       /*
       std::cout << "Node " << node.id
                 << " infeasible." << std::endl;
       */
+#endif
       tree_.pop();
       break;
     default:
