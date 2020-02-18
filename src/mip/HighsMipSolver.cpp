@@ -24,10 +24,14 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   
   // Load root node lp in highs and turn printing off.
   passModel(mip_);
-  printf("Writing out the MIP as MPS\n"); writeModel("mip.mps");
-  //  options_.message_level=7; printf("Writing out the MIP on stdout\n"); writeModel(""); options_.message_level=4;
-  return HighsMipStatus::kUnderDevelopment;
-
+#ifdef HiGHSDEV
+  const bool only_write_as_mps = false;
+  if (only_write_as_mps) {
+    printf("Only writing out the MIP as MPS\n"); writeModel("mip.mps");
+    options_.message_level=7; printf("Writing out the MIP on stdout\n"); writeModel(""); options_.message_level=4;
+    return HighsMipStatus::kUnderDevelopment;
+  }
+#endif
   options_.message_level = 0;
   HighsMipStatus root_solve = solveRootNode();
   if (root_solve != HighsMipStatus::kNodeOptimal) return root_solve;
@@ -92,9 +96,6 @@ void HighsMipSolver::writeSolutionForIntegerVariables(Node& node) {
 }
 
 HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
-  HighsStatus lp_solve_status = HighsStatus::Error;
-  HighsModelStatus model_status = HighsModelStatus::NOTSET;
-
   // Force calls within run() to be silent by setting the HiGHS
   // logfile to NULL and the HiGHS message_level to zero.
   bool no_highs_log = true;
@@ -103,6 +104,8 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   int save_message_level;
   FILE* save_logfile;
 
+  HighsStatus lp_solve_status = HighsStatus::Error;
+  HighsModelStatus model_status = HighsModelStatus::NOTSET;
 #ifdef HiGHSDEV
   // When full_highs_log is true, run() is verbose - for debugging
   bool full_highs_log = false;
@@ -112,7 +115,7 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   
 #ifdef HiGHSDEV
   //  printf("SolveNode: Id = %d; ParentId = %d; BranchCol = %d\n", node.id, node.parent_id, node.branch_col);
-  if (node.id == check_node_id) 
+  if (node.id == check_node_id) {
     // Switch on full logging for this node - {} used so VScode can
     // stop on this line
     full_highs_log = true;
@@ -121,35 +124,30 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   if (hotstart) {
     // Apply changes to LP from node. For the moment only column bounds.
     // Get the original message_level and logfile in case they are set to something different for run() 
-    getHighsOptionValue("message_level", save_message_level);
+    save_message_level = options_.message_level;
     save_logfile = options_.logfile;
 #ifdef HiGHSDEV
     if (full_highs_log) {
       // Using full logging, so prevent "no logging"
       no_highs_log = false;
-      setHighsOptionValue("message_level", 7);
-      setHighsLogfile(stdout);
+      options_.message_level = 7;
+      options_.logfile = stdout;
     }
 #endif
     if (no_highs_log) {
       // Using no logging, so prevent it
-      setHighsOptionValue("message_level", 0);
-      setHighsLogfile(NULL);
+      options_.message_level = 0;
+      options_.logfile = NULL;
     }
       
     changeColsBounds(0, mip_.numCol_ - 1, &node.col_lower_bound[0],
                     &node.col_upper_bound[0]);
     lp_solve_status = run();
     model_status = model_status_;
-    if (no_highs_log
-#ifdef HiGHSDEV
-	|| full_highs_log
-#endif
-	) {
-      // Reset the values of message_level and logfile 
-      setHighsOptionValue("message_level", save_message_level);
-      setHighsLogfile(save_logfile);
-    }
+    
+    // Reset the values of message_level and logfile 
+    options_.message_level = save_message_level;
+    options_.logfile = save_logfile;
 #ifdef HiGHSDEV
     const bool check_hotstart = false;
     if (check_hotstart) {
