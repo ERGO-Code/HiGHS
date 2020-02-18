@@ -90,59 +90,62 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   HighsStatus lp_solve_status = HighsStatus::Error;
   HighsModelStatus model_status = HighsModelStatus::NOTSET;
 
+  // Force calls within run() to be silent by setting the HiGHS
+  // logfile to NULL and the HiGHS message_level to zero.
   bool no_highs_log = true;
-  bool full_highs_log = false;
+  // Use save_message_level and save_logfile to keep the original
+  // message_level and logfile in case they are changed
   int save_message_level;
-  const int check_parent_id = HIGHS_CONST_I_INF;//517;
-  const int check_var = 49;
+  FILE* save_logfile;
 
-  double check_var_value_before;
-  double check_var_lower_before;
-  double check_var_upper_before;
-  double check_var_value_after;
-  double check_var_lower_after;
-  double check_var_upper_after;
-
+#ifdef HiGHSDEV
+  // When full_highs_log is true, run() is verbose - for debugging
+  bool full_highs_log = false;
+  // Setting check_node_id forces full logging for a particular node
+  const int check_node_id = HIGHS_CONST_I_INF;//517;//
+#endif
+  
+#ifdef HiGHSDEV
   //  printf("SolveNode: Id = %d; ParentId = %d; BranchCol = %d\n", node.id, node.parent_id, node.branch_col);
-  if (node.parent_id >= check_parent_id) {
+  if (node.id == check_node_id) 
+    // Switch on full logging for this node - {} used so VScode can
+    // stop on this line
     full_highs_log = true;
   }
+#endif
   if (hotstart) {
     // Apply changes to LP from node. For the moment only column bounds.
+    // Get the original message_level and logfile in case they are set to something different for run() 
+    getHighsOptionValue("message_level", save_message_level);
+    save_logfile = options_.logfile;
+#ifdef HiGHSDEV
     if (full_highs_log) {
+      // Using full logging, so prevent "no logging"
       no_highs_log = false;
-      setHighsLogfile(stdout);
-      getHighsOptionValue("message_level", save_message_level);
       setHighsOptionValue("message_level", 7);
-      check_var_value_before = getSolution().col_value[check_var];
-      check_var_lower_before = getLp().colLower_[check_var];
-      check_var_upper_before = getLp().colUpper_[check_var];
+      setHighsLogfile(stdout);
     }
-    if (no_highs_log) setHighsLogfile(NULL);
+#endif
+    if (no_highs_log) {
+      // Using no logging, so prevent it
+      setHighsOptionValue("message_level", 0);
+      setHighsLogfile(NULL);
+    }
       
     changeColsBounds(0, mip_.numCol_ - 1, &node.col_lower_bound[0],
                     &node.col_upper_bound[0]);
     lp_solve_status = run();
     model_status = model_status_;
-
-    if (full_highs_log) {
-      check_var_value_after = getSolution().col_value[check_var];
-      check_var_lower_after = getLp().colLower_[check_var];
-      check_var_upper_after = getLp().colUpper_[check_var];
+    if (no_highs_log
+#ifdef HiGHSDEV
+	|| full_highs_log
+#endif
+	) {
+      // Reset the values of message_level and logfile 
       setHighsOptionValue("message_level", save_message_level);
+      setHighsLogfile(save_logfile);
     }
-    getHighsOptionValue("message_level", save_message_level);
-
-    if (full_highs_log) {
-      printf("Variable %d:\n Before [%0.4g, %0.4g, %0.4g] Residuals [%0.4g, %0.4g]\n After  [%0.4g, %0.4g, %0.4g] Residuals [%0.4g, %0.4g]\n",
-	     check_var,
-	     check_var_lower_before, check_var_value_before, check_var_upper_before,
-	     fabs(check_var_lower_before-check_var_value_before), fabs(check_var_upper_before-check_var_value_before),
-	     check_var_lower_after, check_var_value_after, check_var_upper_after,
-	     fabs(check_var_lower_after-check_var_value_after), fabs(check_var_upper_after-check_var_value_after));   
-
-    }
-    
+#ifdef HiGHSDEV
     const bool check_hotstart = false;
     if (check_hotstart) {
       HighsModelStatus hotstart_model_status = model_status;
@@ -182,6 +185,7 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
 	}
       }
     }
+#endif
   } else {
     // solve from scratch to test
     Highs highs;
