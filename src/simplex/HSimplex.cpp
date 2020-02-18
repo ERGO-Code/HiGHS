@@ -293,7 +293,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // is not already scaled
   bool scale_lp = options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF &&
                   !simplex_lp_status.scaling_tried;
-  const bool force_no_scaling = true;
+  const bool force_no_scaling = false;
   if (force_no_scaling) {
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
 		    "Forcing no scaling");
