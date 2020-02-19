@@ -1722,7 +1722,6 @@ void Presolve::removeForcingConstraints(int mainIter) {
 
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
-      timer.recordStart(FORCING_ROW);
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
         countRemovedRows(EMPTY_ROW);
@@ -1732,6 +1731,7 @@ void Presolve::removeForcingConstraints(int mainIter) {
       // removeRowSingletons will handle just after removeForcingConstraints
       if (nzRow.at(i) == 1) continue;
 
+      timer.recordStart(FORCING_ROW);
       implBounds = getImpliedRowBounds(i);
 
       g = implBounds.first;
@@ -1741,6 +1741,7 @@ void Presolve::removeForcingConstraints(int mainIter) {
       if (g > rowUpper.at(i) || h < rowLower.at(i)) {
         if (iPrint > 0) cout << "PR: Problem infeasible." << endl;
         status = Infeasible;
+        timer.recordStart(FORCING_ROW);
         return;
       }
       // Forcing row
