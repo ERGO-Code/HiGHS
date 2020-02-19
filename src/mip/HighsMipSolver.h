@@ -25,6 +25,7 @@ enum class HighsMipStatus {
   kNodeError,
   kRootNodeNotOptimal,
   kRootNodeError,
+  kMaxNodeReached,
   kUnderDevelopment,
   kTreeExhausted
 };
@@ -37,14 +38,20 @@ class HighsMipSolver : Highs {
   HighsMipStatus runMipSolver();
 
  private:
+#ifdef HiGHSDEV    
   void writeSolutionForIntegerVariables(Node& node);
+#endif
   HighsMipStatus solveRootNode();
   HighsMipStatus solveNode(Node& node, bool hotstart = true);
   HighsMipStatus solveTree(Node& root);
+  void reportMipSolverProgress(const bool root = false);
 
   Tree tree_;
   const HighsOptions options_mip_;
   const HighsLp mip_;
+
+  int num_nodes_solved = 0;
+
 };
 
 #endif

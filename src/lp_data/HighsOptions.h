@@ -309,6 +309,10 @@ struct HighsOptionsStruct {
   bool icrash_exact;
   bool icrash_breakpoints;
 
+  // Options for MIP solver
+  int mip_max_nodes;
+  int mip_report_level;
+
   // Switch for MIP solver
   bool mip;
   
@@ -533,6 +537,18 @@ class HighsOptions : public HighsOptionsStruct {
 				       false);
     records.push_back(record_bool);
 
+    record_int = new OptionRecordInt("mip_max_nodes",
+				     "MIP solver max number of nodes",
+				     advanced, &mip_max_nodes,
+				     0, 1000000, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("mip_report_level",
+				     "MIP solver reporting level",
+				     advanced, &mip_report_level,
+				     0, 1, 2);
+    records.push_back(record_int);
+    
     // Advanced options
     advanced = true;
     record_bool = new OptionRecordBool("run_as_hsol",

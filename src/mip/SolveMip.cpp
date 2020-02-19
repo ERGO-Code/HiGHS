@@ -27,18 +27,18 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
     const double fraction_below = std::fabs(value - value_ceil);
     const double fraction_above = std::fabs(value - value_floor);
     if (fraction_above > fractional_tolerance && fraction_below > fractional_tolerance) {
-#ifdef HiGHSDEV
-      if (fraction_above < 10 * fractional_tolerance)
-        printf(
-            "chooseBranchingVariable %d: %g = Fraction_above < "
-            "10*fractional_tolerance = %g\n",
-            col, fraction_above, 10 * fractional_tolerance);
-      if (fraction_below < 10 * fractional_tolerance)
-        printf(
-            "chooseBranchingVariable %d: %g = Fraction_below < "
-            "10*fractional_tolerance = %g\n",
-            col, fraction_below, 10 * fractional_tolerance);
-#endif
+      if (mip_report_level > 1) {
+	if (fraction_above < 10 * fractional_tolerance)
+	  printf(
+		 "chooseBranchingVariable %d: %g = Fraction_above < "
+		 "10*fractional_tolerance = %g\n",
+		 col, fraction_above, 10 * fractional_tolerance);
+	if (fraction_below < 10 * fractional_tolerance)
+	  printf(
+		 "chooseBranchingVariable %d: %g = Fraction_below < "
+		 "10*fractional_tolerance = %g\n",
+		 col, fraction_below, 10 * fractional_tolerance);
+      }
       // This one is violated.
       return NodeIndex(col);
     }
@@ -59,18 +59,18 @@ bool Tree::branch(Node& node) {
       best_objective_ = node.objective_value;
       best_solution_ = node.primal_solution;
     }
-#ifdef HiGHSDEV
-    printf("Integer");
-    if (better_integer_solution) {
-      printf(": !! Updating best !!\n");
-      /*
-      std::cout << "Updating best solution at node " << node.id
-                << ". Objective: " << node.objective_value << std::endl;
-      */
-    } else {
-      printf("\n");
+    if (mip_report_level > 1) {
+      printf("Integer");
+      if (better_integer_solution) {
+	printf(": !! Updating best !!\n");
+	/*
+	  std::cout << "Updating best solution at node " << node.id
+	  << ". Objective: " << node.objective_value << std::endl;
+	*/
+      } else {
+	printf("\n");
+      }
     }
-#endif
     return false;
   }
 
@@ -79,17 +79,17 @@ bool Tree::branch(Node& node) {
   const double value_ceil = std::ceil(value);
   const double value_floor = std::floor(value);
 
-#ifdef HiGHSDEV
-  /*
-    std::cout << "Branching on variable " << col << std::endl
-              << "(" << num_nodes + 1 << "," << num_nodes + 2
-              << ") left child ub: " << value_floor
-              << " right child lb: " << value_ceil << std::endl;
+  if (mip_report_level > 1) {
+    /*
+      std::cout << "Branching on variable " << col << std::endl
+      << "(" << num_nodes + 1 << "," << num_nodes + 2
+      << ") left child ub: " << value_floor
+      << " right child lb: " << value_ceil << std::endl;
     */
-  printf("Branch on %2d (%9d, %9d) left UB: %4d; right LB: %4d\n", col,
-         num_nodes + 1, num_nodes + 2, (int)value_floor,
-         (int)value_ceil);
-#endif
+    printf("Branch on %2d (%9d, %9d) left UB: %4d; right LB: %4d\n", col,
+	   num_nodes + 1, num_nodes + 2, (int)value_floor,
+	   (int)value_ceil);
+  }
   // Branch.
   // Create children and add to node.
   num_nodes++;

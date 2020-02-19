@@ -85,7 +85,7 @@ void printHighsVersionCopyright(FILE* output, const int message_level,
                     HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR,
                     HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   HighsPrintMessage(output, message_level, ML_ALWAYS,
-                    "Copyright (c) 2019 ERGO-Code under MIT licence terms\n\n");
+                    "Copyright (c) 2020 ERGO-Code under MIT licence terms\n\n");
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   if (message != nullptr) {
@@ -249,6 +249,8 @@ HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
 
   /*
   HighsStatus write_status;
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+		    "Writing model as MPS\n");
   write_status = highs.writeModel("write.mps");
   if (write_status != HighsStatus::OK) {
     if (write_status == HighsStatus::Warning) {
@@ -287,6 +289,7 @@ HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
 
 HighsStatus callMipSolver(const HighsOptions& options, const HighsLp& lp,
                           FILE* output, int message_level, bool run_quiet) {
+  printf("callMipSolver: Max nodes = %d; Reporting level = %d\n", options.mip_max_nodes, options.mip_report_level);
   HighsMipSolver solver(options, lp);
   HighsMipStatus status = solver.runMipSolver();
   switch (status) {

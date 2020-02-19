@@ -517,7 +517,9 @@ HighsStatus writeMPS(FILE* logfile,
       have_bounds = true;
       break;
     }
-    if (!highs_isInfinity(colUpper[c_n]) || integerColumn[c_n]) {
+    bool discrete = false;
+    if (numInt) discrete = integerColumn[c_n];
+    if (!highs_isInfinity(colUpper[c_n]) || discrete) {
       // If the upper bound is finite, or the variable is integer then there is
       // a BOUNDS section. Integer variables with infinite upper bound are
       // indicated as LI
@@ -633,7 +635,8 @@ HighsStatus writeMPS(FILE* logfile,
     for (int c_n = 0; c_n < numCol; c_n++) {
       double lb = colLower[c_n];
       double ub = colUpper[c_n];
-      bool discrete = integerColumn[c_n];
+      bool discrete = false;
+      if (numInt) discrete = integerColumn[c_n];
       if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {

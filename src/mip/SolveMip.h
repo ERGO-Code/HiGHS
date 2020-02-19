@@ -72,6 +72,8 @@ class Tree {
   const std::vector<double>& getBestSolution() const { return best_solution_; }
 
   double getBestObjective() { return best_objective_; }
+  int getNumNodes() { return num_nodes; }
+  void setMipReportLevel(const int mip_report_level_) { mip_report_level = mip_report_level_; }
 
  private:
   std::vector<std::reference_wrapper<Node> > nodes_;
@@ -81,6 +83,7 @@ class Tree {
   NodeIndex chooseBranchingVariable(const Node& node);
 
   int num_nodes = 0;
+  int mip_report_level = 0;
 };
 
 #endif
