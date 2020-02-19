@@ -40,9 +40,6 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   HighsMipStatus root_solve = solveRootNode();
   if (root_solve != HighsMipStatus::kNodeOptimal) return root_solve;
 
-  num_nodes_solved++;
-  reportMipSolverProgress(true);
-
   // Start tree by making root node.
   // Highs ignores integrality constraints.
   Node root(-1, 0.0, 0, 0);
@@ -117,13 +114,14 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   // When full_highs_log is true, run() is verbose - for debugging
   bool full_highs_log = false;
   // Setting check_node_id forces full logging for a particular node
-  const int check_node_id = HIGHS_CONST_I_INF;//517;//
+  const int check_node_id = 231;//HIGHS_CONST_I_INF;//
 
-  //  printf("SolveNode: Id = %d; ParentId = %d; BranchCol = %d\n", node.id, node.parent_id, node.branch_col);
+   printf("SolveNode: Id = %d; ParentId = %d; BranchCol = %d\n", node.id, node.parent_id, node.branch_col);
   if (node.id == check_node_id) {
     // Switch on full logging for this node - {} used so VScode can
     // stop on this line
     full_highs_log = true;
+    writeModel("node231.mps");
   }
   if (hotstart) {
     // Apply changes to LP from node. For the moment only column bounds.
@@ -202,7 +200,7 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   }
 
   num_nodes_solved++;
-  reportMipSolverProgress();
+  reportMipSolverProgress(HighsMipReportStatus::SOLVED_NODE);
 
   switch (lp_solve_status) {
     case HighsStatus::Warning:
@@ -270,6 +268,8 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
   tree_.setMipReportLevel(options_.mip_report_level);
 
   tree_.branch(root);
+  num_nodes_solved++;
+  reportMipSolverProgress(HighsMipReportStatus::SOLVED_ROOT);
 
   // While stack not empty.
   //   Solve node.
@@ -303,7 +303,7 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
       }
       tree_.branch(node);
       if (tree_.getNumNodes() > options_.mip_max_nodes) {
-	printf("Exceeding the node limit of %d\n", options_.mip_max_nodes);
+	reportMipSolverProgress(HighsMipReportStatus::MAX_NODE_REACHED);
 	return HighsMipStatus::kMaxNodeReached;
       }
       break;
@@ -325,11 +325,11 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
       break;
     }
   }
-
+  reportMipSolverProgress(HighsMipReportStatus::FORCE_REPORT);
   return HighsMipStatus::kTreeExhausted;
 }
 
-void HighsMipSolver::reportMipSolverProgress(const bool root) {
+void HighsMipSolver::reportMipSolverProgress(const HighsMipReportStatus status) {
   if (options_.mip_report_level == 1) {
     int report_frequency = 100;
     if (num_nodes_solved<1000) {
@@ -341,17 +341,37 @@ void HighsMipSolver::reportMipSolverProgress(const bool root) {
     } else {
       report_frequency = 100000;
     }
-    if (root)
-      printf("  Time |      Node |      Left |   LP iter | LP it/n | dualbound   | primalbound  |  gap \n");
-    if (root | (num_nodes_solved % report_frequency == 0)) {
+    if (status == HighsMipReportStatus::HEADER ||
+	status == HighsMipReportStatus::SOLVED_ROOT)
+      printf("  Time |      Node |      Left |   LP iter | LP it/n |   dualbound | primalbound |    gap \n");
+    bool report =
+      status == HighsMipReportStatus::SOLVED_ROOT ||
+      status == HighsMipReportStatus::FORCE_REPORT ||
+      status == HighsMipReportStatus::MAX_NODE_REACHED ||
+      (num_nodes_solved % report_frequency == 0);
+    if (report) {
       double average_simplex_iterations = info_.simplex_iteration_count;
       average_simplex_iterations /= num_nodes_solved;
       double time = timer_.readRunHighsClock();
       int left = max(tree_.getNumNodes() - num_nodes_solved, 0);
       double best_objective = tree_.getBestObjective();
-      printf("%6.1f | %9d | %9d | %9d | %7.2f | %10.4g \n", time, num_nodes_solved, left,
+      int best_node;
+      double best_bound = tree_.getBestBound(best_node);
+      printf("%6.1f | %9d | %9d | %9d | %7.2f | %11.5e ", time, num_nodes_solved, left,
 	     info_.simplex_iteration_count, average_simplex_iterations,
-	     best_objective);
+	     best_bound);
+      if (best_objective < HIGHS_CONST_INF) {
+	// There is an integer solution
+	double gap = 100*(best_objective-best_bound)/max(1.0, fabs(best_objective));
+	printf("| %11.5e | %6.2f%%", best_objective, gap);
+      } else {
+	printf("|      --     |    Inf ");
+      }
+      if (status == HighsMipReportStatus::MAX_NODE_REACHED) {
+	printf("Exceeding node limit of %d\n", options_.mip_max_nodes);
+      } else {
+	printf("\n");
+      }
     }
   } else if (options_.mip_report_level > 1) {
       printf("Nodes solved = %d; Simplex iterations = %d\n", num_nodes_solved, info_.simplex_iteration_count);

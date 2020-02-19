@@ -293,7 +293,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // is not already scaled
   bool scale_lp = options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF &&
                   !simplex_lp_status.scaling_tried;
-  const bool force_no_scaling = true;
+  const bool force_no_scaling = false;//true;//
   if (force_no_scaling) {
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
 		    "Forcing no scaling");
@@ -348,6 +348,20 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // work and base arrays are re-populated
   //  assert(basis_condition_ok);
   if (!basis_condition_ok) {
+    // Basis crash really doesn't work, so use logical basis
+    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
+      simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+    for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+      int iVar = simplex_lp.numCol_ + iRow;
+      simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+      simplex_basis.basicIndex_[iRow] = iVar;
+    }
+    simplex_info.num_basic_logicals = simplex_lp.numRow_;
+    computeFactor(highs_model_object);
+   
+
+    /*
     HCrash crash(highs_model_object);
     analysis.simplexTimerStart(CrashClock);
     crash.crash(SIMPLEX_CRASH_STRATEGY_BASIC);
@@ -382,6 +396,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       // ToDo Handle rank deficiency by replacing singular columns with logicals
       throw runtime_error("Transition has singular basis matrix");
     }
+    */
+    updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
     simplex_lp_status.has_fresh_invert = true;
 
     // Check the condition after the basis crash

@@ -30,6 +30,14 @@ enum class HighsMipStatus {
   kTreeExhausted
 };
 
+enum class HighsMipReportStatus {
+  HEADER,
+  SOLVED_ROOT,
+  SOLVED_NODE,
+  MAX_NODE_REACHED,
+  FORCE_REPORT
+};
+
 class HighsMipSolver : Highs {
  public:
   HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
@@ -44,7 +52,7 @@ class HighsMipSolver : Highs {
   HighsMipStatus solveRootNode();
   HighsMipStatus solveNode(Node& node, bool hotstart = true);
   HighsMipStatus solveTree(Node& root);
-  void reportMipSolverProgress(const bool root = false);
+  void reportMipSolverProgress(const HighsMipReportStatus status);
 
   Tree tree_;
   const HighsOptions options_mip_;

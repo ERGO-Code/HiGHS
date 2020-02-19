@@ -289,7 +289,6 @@ HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
 
 HighsStatus callMipSolver(const HighsOptions& options, const HighsLp& lp,
                           FILE* output, int message_level, bool run_quiet) {
-  printf("callMipSolver: Max nodes = %d; Reporting level = %d\n", options.mip_max_nodes, options.mip_report_level);
   HighsMipSolver solver(options, lp);
   HighsMipStatus status = solver.runMipSolver();
   switch (status) {

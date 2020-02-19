@@ -72,6 +72,7 @@ class Tree {
   const std::vector<double>& getBestSolution() const { return best_solution_; }
 
   double getBestObjective() { return best_objective_; }
+  double getBestBound(int& best_node);
   int getNumNodes() { return num_nodes; }
   void setMipReportLevel(const int mip_report_level_) { mip_report_level = mip_report_level_; }
 

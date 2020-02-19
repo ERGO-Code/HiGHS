@@ -540,7 +540,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("mip_max_nodes",
 				     "MIP solver max number of nodes",
 				     advanced, &mip_max_nodes,
-				     0, 1000000, HIGHS_CONST_I_INF);
+				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("mip_report_level",
