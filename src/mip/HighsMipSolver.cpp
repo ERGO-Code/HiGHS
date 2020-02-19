@@ -114,14 +114,15 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   // When full_highs_log is true, run() is verbose - for debugging
   bool full_highs_log = false;
   // Setting check_node_id forces full logging for a particular node
-  const int check_node_id = 231;//HIGHS_CONST_I_INF;//
+  const int check_node_id = HIGHS_CONST_I_INF;//231;//
 
-   printf("SolveNode: Id = %d; ParentId = %d; BranchCol = %d\n", node.id, node.parent_id, node.branch_col);
+  //     printf("SolveNode: Id = %d; ParentId = %d; BranchCol = %d\n", node.id, node.parent_id, node.branch_col);
   if (node.id == check_node_id) {
     // Switch on full logging for this node - {} used so VScode can
     // stop on this line
     full_highs_log = true;
-    writeModel("node231.mps");
+    printf("node%d: %d; %d\n", check_node_id, lp_.numCol_, lp_.numRow_);
+    //    writeModel("node231.mps");
   }
   if (hotstart) {
     // Apply changes to LP from node. For the moment only column bounds.
@@ -229,7 +230,7 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
 
 HighsMipStatus HighsMipSolver::solveRootNode() {
   // presolve off for the moment.
-  options_.presolve = off_string;
+  //  options_.presolve = off_string;
   bool no_highs_log = true;
   int save_message_level = options_.message_level;
   FILE* save_logfile = options_.logfile;
