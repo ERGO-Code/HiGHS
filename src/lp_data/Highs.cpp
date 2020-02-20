@@ -356,7 +356,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
     timer_.start(timer_.presolve_clock);
-    PresolveInfo presolve_info(options_.presolve, lp_);
+    PresolveInfo presolve_info(options_.presolve, lp_, timer_);
     HighsPresolveStatus presolve_status = runPresolve(presolve_info);
     timer_.stop(timer_.presolve_clock);
     //    printf("\nHighs::run() 2: presolve status = %d\n",
