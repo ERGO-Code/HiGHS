@@ -14,6 +14,7 @@
 #ifndef PRESOLVE_PRESOLVE_ANALYSIS_H_
 #define PRESOLVE_PRESOLVE_ANALYSIS_H_
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -123,7 +124,9 @@ class PresolveTimer {
       assert(rules_[id].rule_id == id);
       clocks[id] = rules_[id].clock_id;
     }
+    std::cout << std::endl;
     timer_.report("grep-Presolve", clocks);
+    std::cout << std::endl;
   }
 
   void updateInfo();
