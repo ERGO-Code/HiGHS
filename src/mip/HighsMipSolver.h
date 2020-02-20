@@ -38,6 +38,9 @@ enum class HighsMipReportStatus {
   FORCE_REPORT
 };
 
+const double unscaled_primal_feasibility_tolerance = 1e-4;
+const double unscaled_dual_feasibility_tolerance = 1e-4;
+
 class HighsMipSolver : Highs {
  public:
   HighsMipSolver(const HighsOptions& options, const HighsLp& lp)

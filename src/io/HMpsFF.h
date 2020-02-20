@@ -71,6 +71,12 @@ class HMpsFF {
 
   std::vector<int> col_integrality;
 
+  // Keep track of columns that are binary by default, being columns
+  // that are defined as integer by markers in the column section, or
+  // as binary by having a BV flag in the BOUNDS section, and without
+  // any LI or UI flags in the BOUNDS section
+  std::vector<bool> col_binary;
+
   /// load LP from MPS file as transposed triplet matrix
   int parseFile(std::string filename);
   int fillMatrix();

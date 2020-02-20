@@ -334,7 +334,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
     return HighsStatus::Error;
 #endif
   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-                    "Solving %s", lp_.model_name_.c_str());
+                    "Solving %s\n", lp_.model_name_.c_str());
 
   double this_presolve_time = -1;
   double this_solve_presolved_lp_time = -1;
@@ -362,7 +362,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
     hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::NOTSET;
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
-    
+
+    //    printf("Writing before_presolve.mps\n"); writeModel("before_presolve.mps");
+
     this_presolve_time = -timer_.read(timer_.presolve_clock);
     timer_.start(timer_.presolve_clock);
     PresolveInfo presolve_info(options_.presolve, lp_, timer_);

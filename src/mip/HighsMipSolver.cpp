@@ -31,7 +31,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   writeHighsOptions("");
   options_.message_level = 0;
 
-  const bool only_write_as_mps = false;
+  const bool only_write_as_mps = false;//true;//
   if (only_write_as_mps) {
     printf("Only writing out the MIP as MPS\n"); writeModel("mip.mps");
     //    options_.message_level=7; printf("Writing out the MIP on stdout\n"); writeModel(""); options_.message_level=4;
@@ -109,12 +109,12 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   FILE* save_logfile;
 
   HighsStatus lp_solve_status = HighsStatus::Error;
-  HighsModelStatus model_status = HighsModelStatus::NOTSET;
+  HighsModelStatus use_model_status = HighsModelStatus::NOTSET;
 
   // When full_highs_log is true, run() is verbose - for debugging
   bool full_highs_log = false;
   // Setting check_node_id forces full logging for a particular node
-  const int check_node_id = HIGHS_CONST_I_INF;//231;//
+  const int check_node_id = 1186;//2000;//HIGHS_CONST_I_INF;//
 
   //     printf("SolveNode: Id = %d; ParentId = %d; BranchCol = %d\n", node.id, node.parent_id, node.branch_col);
   if (node.id == check_node_id) {
@@ -122,7 +122,6 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
     // stop on this line
     full_highs_log = true;
     printf("node%d: %d; %d\n", check_node_id, lp_.numCol_, lp_.numRow_);
-    //    writeModel("node231.mps");
   }
   if (hotstart) {
     // Apply changes to LP from node. For the moment only column bounds.
@@ -143,15 +142,55 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
       
     changeColsBounds(0, mip_.numCol_ - 1, &node.col_lower_bound[0],
                     &node.col_upper_bound[0]);
+
+    //        if (node.id == check_node_id) writeModel("node1186.mps");
+    if (node.id == check_node_id) {
+      //      printf("Writing node1186.mps\n"); writeModel("node1186.mps");
+      options_.presolve = on_string;
+    }
+
     lp_solve_status = run();
-    model_status = model_status_;
+      options_.presolve = off_string;
+
+    // Handle the case where the status of the unscaled model is not set
+    if (model_status_ == HighsModelStatus::NOTSET) {
+      const bool rerun_from_logical_basis = true;
+      const double report = true;
+      if (rerun_from_logical_basis) {
+	basis_.valid_ = false;
+	lp_solve_status = run();
+	printf("Unscaled model status is NOTSET: after running from logical basis it is %s\n", highsModelStatusToString(model_status_).c_str());
+      } else {
+	if (report) printf("Unscaled model status is NOTSET: scaled model status = %s\n", highsModelStatusToString(scaled_model_status_).c_str());
+      }
+      if (scaled_model_status_ == HighsModelStatus::OPTIMAL) {
+	double max_primal_infeasibility = info_.max_primal_infeasibility;
+	double max_dual_infeasibility = info_.max_dual_infeasibility;
+	if (report) printf("Scaled model status is OPTIMAL: max unscaled (primal / dual) infeasibilities are (%g / %g)\n",
+	       max_primal_infeasibility, max_dual_infeasibility);
+	if (
+	    (max_primal_infeasibility < unscaled_primal_feasibility_tolerance) &&
+	    (max_dual_infeasibility < unscaled_dual_feasibility_tolerance)) {
+	  if (report) printf("Set unscaled model status to OPTIMAL since unscaled infeasibilities are tolerable\n");
+	  use_model_status = HighsModelStatus::OPTIMAL;
+	} else {
+	  printf("Use model status of NOTSET since max unscaled (primal / dual) infeasibilities are (%g / %g)\n",
+	       max_primal_infeasibility, max_dual_infeasibility);
+	  use_model_status = model_status_;
+	}
+      } else {
+	use_model_status = model_status_;
+      }
+    } else {
+      use_model_status = model_status_;
+    }
     
     // Reset the values of message_level and logfile 
     options_.message_level = save_message_level;
     options_.logfile = save_logfile;
     const bool check_hotstart = false;
     if (check_hotstart) {
-      HighsModelStatus hotstart_model_status = model_status;
+      HighsModelStatus hotstart_model_status = model_status_;
       double hotstart_objective;
       getHighsInfoValue("objective_function_value", hotstart_objective);
       
@@ -197,7 +236,7 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
     lp_node.colUpper_ = node.col_upper_bound;
     highs.passModel(lp_node);
     lp_solve_status = highs.run();
-    model_status = highs.model_status_;
+    use_model_status = highs.model_status_;
   }
 
   num_nodes_solved++;
@@ -212,7 +251,7 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
       break;
   }
   
-  switch (model_status) {
+  switch (use_model_status) {
     case HighsModelStatus::OPTIMAL:
       node.primal_solution = solution_.col_value;
       node.objective_value = info_.objective_function_value;
@@ -221,6 +260,8 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
       return HighsMipStatus::kNodeInfeasible;
     case HighsModelStatus::PRIMAL_UNBOUNDED:
       return HighsMipStatus::kNodeUnbounded;
+    case HighsModelStatus::NOTSET:
+      return HighsMipStatus::kNodeError;
     default:
       break;
   }
@@ -229,7 +270,8 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
 }
 
 HighsMipStatus HighsMipSolver::solveRootNode() {
-  // presolve off for the moment.
+  HighsStatus lp_solve_status = HighsStatus::Error;
+  HighsModelStatus use_model_status = HighsModelStatus::NOTSET;
   //  options_.presolve = off_string;
   bool no_highs_log = true;
   int save_message_level = options_.message_level;
@@ -238,13 +280,14 @@ HighsMipStatus HighsMipSolver::solveRootNode() {
     options_.message_level = 0;
     options_.logfile = NULL;
   }
-  HighsStatus root_lp_solve_status = run();
+  lp_solve_status = run();
   if (no_highs_log) {
     options_.message_level = save_message_level;
     options_.logfile = save_logfile;
   }
+  use_model_status = model_status_;
 
-  switch (root_lp_solve_status) {
+  switch (lp_solve_status) {
     case HighsStatus::Warning:
       return HighsMipStatus::kRootNodeNotOptimal;
     case HighsStatus::Error:
@@ -253,7 +296,7 @@ HighsMipStatus HighsMipSolver::solveRootNode() {
       break;
   }
 
-  if (model_status_ != HighsModelStatus::OPTIMAL)
+  if (use_model_status != HighsModelStatus::OPTIMAL)
     return HighsMipStatus::kRootNodeNotOptimal;
 
   return HighsMipStatus::kNodeOptimal;
