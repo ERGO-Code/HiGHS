@@ -96,6 +96,7 @@ set(sources
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
+    presolve/PresolveAnalysis.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
@@ -163,8 +164,8 @@ set(headers
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/Presolve.h
+    presolve/PresolveAnalysis.h
     presolve/HPreData.h
-    simplex/HTimerPre.h
     simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
