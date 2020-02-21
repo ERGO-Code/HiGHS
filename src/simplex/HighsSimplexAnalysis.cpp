@@ -422,7 +422,7 @@ void HighsSimplexAnalysis::iterationRecord() {
   // Only update the distribution of legal values for
   // numerical_trouble. Illegal values are set in PAMI since it's not
   // known in minor iterations
-  if (numerical_trouble>=0)
+  if (numerical_trouble >= 0)
     updateValueDistribution(numerical_trouble, numerical_trouble_distribution);
 }
 
