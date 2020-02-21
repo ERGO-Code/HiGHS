@@ -19,28 +19,28 @@ namespace ipx {
 // (1,1) block of the KKT matrix is the identity matrix.
 
 class KKTSolverDiag : public KKTSolver {
- public:
-  KKTSolverDiag(const Control& control, const Model& model);
+public:
+    KKTSolverDiag(const Control& control, const Model& model);
 
-  Int maxiter() const { return maxiter_; }
-  void maxiter(Int new_maxiter) { maxiter_ = new_maxiter; }
+    Int maxiter() const { return maxiter_; }
+    void maxiter(Int new_maxiter) { maxiter_ = new_maxiter; }
 
- private:
-  void _Factorize(Iterate* iterate, Info* info) override;
-  void _Solve(const Vector& a, const Vector& b, double tol, Vector& x,
-              Vector& y, Info* info) override;
-  Int _iter() const override { return iter_; };
+private:
+    void _Factorize(Iterate* iterate, Info* info) override;
+    void _Solve(const Vector& a, const Vector& b, double tol,
+                Vector& x, Vector& y, Info* info) override;
+    Int _iter() const override { return iter_; };
 
-  const Control& control_;
-  const Model& model_;
-  NormalMatrix normal_matrix_;
-  DiagonalPrecond precond_;
+    const Control& control_;
+    const Model& model_;
+    NormalMatrix normal_matrix_;
+    DiagonalPrecond precond_;
 
-  Vector W_;                // diagonal matrix in AI*W*AI'
-  Vector resscale_;         // residual scaling factors for CR termination test
-  bool factorized_{false};  // KKT matrix factorized?
-  Int maxiter_{-1};
-  Int iter_{0};  // # CR iterations since last Factorize()
+    Vector W_;               // diagonal matrix in AI*W*AI'
+    Vector resscale_;        // residual scaling factors for CR termination test
+    bool factorized_{false}; // KKT matrix factorized?
+    Int maxiter_{-1};
+    Int iter_{0};               // # CR iterations since last Factorize()
 };
 
 }  // namespace ipx

@@ -173,43 +173,33 @@ and control, on terms that prohibit them from making any copies of
 your copyrighted material outside their relationship with you.
 
   Conveying under any other circumstances is permitted solely under
-the conditions stated below.  Sublicensing is not allowed;
-                    section 10 makes it unnecessary.
+the conditions stated below.  Sublicensing is not allowed; section 10
+makes it unnecessary.
 
-                        3. Protecting Users' Legal Rights From Anti-Circumvention Law.
+  3. Protecting Users' Legal Rights From Anti-Circumvention Law.
 
-                        No covered work shall be deemed part of an effective
-                            technological measure under any applicable law
-                                fulfilling obligations under article 11 of the
-                                    WIPO copyright treaty adopted
-                                        on 20 December 1996,
-                        or similar laws prohibiting or
-                            restricting circumvention of such measures.
+  No covered work shall be deemed part of an effective technological
+measure under any applicable law fulfilling obligations under article
+11 of the WIPO copyright treaty adopted on 20 December 1996, or
+similar laws prohibiting or restricting circumvention of such
+measures.
 
-                            When you convey a covered work,
-                        you waive any legal power to forbid circumvention of
-                            technological measures to the extent such
-                                circumvention is effected by exercising rights
-                                    under this License with respect to the
-                                        covered work,
-                        and you disclaim any intention to limit operation or
-                            modification of the work as a means of enforcing,
-                        against the work 's users, your or third parties' legal
-                            rights to forbid circumvention of technological
-                                measures
-                                    .
+  When you convey a covered work, you waive any legal power to forbid
+circumvention of technological measures to the extent such circumvention
+is effected by exercising rights under this License with respect to
+the covered work, and you disclaim any intention to limit operation or
+modification of the work as a means of enforcing, against the work's
+users, your or third parties' legal rights to forbid circumvention of
+technological measures.
 
-                        4. Conveying Verbatim Copies.
+  4. Conveying Verbatim Copies.
 
-                        You may convey verbatim copies of the
-                            Program's source code as you receive it, in any medium, provided that
-                                you conspicuously and appropriately publish on
-                                    each copy an appropriate copyright notice;
-                    keep intact all notices stating that this License and any
-                            non -
-                        permissive terms added in accord with section 7 apply to
-                            the code;
-                    keep intact all notices of the absence of any warranty; and give all
+  You may convey verbatim copies of the Program's source code as you
+receive it, in any medium, provided that you conspicuously and
+appropriately publish on each copy an appropriate copyright notice;
+keep intact all notices stating that this License and any
+non-permissive terms added in accord with section 7 apply to the code;
+keep intact all notices of the absence of any warranty; and give all
 recipients a copy of this License along with the Program.
 
   You may charge any price or no price for each copy that you convey,
@@ -638,21 +628,18 @@ free software which everyone can redistribute and change under these terms.
 
   To do so, attach the following notices to the program.  It is safest
 to attach them to the start of each source file to most effectively
-state the exclusion of warranty;
-and each file should have at least the
-        "copyright" line and a pointer to where the full notice is found.
+state the exclusion of warranty; and each file should have at least
+the "copyright" line and a pointer to where the full notice is found.
 
-        <one line to give the
-             program's name and a brief idea of what it does.> Copyright(C) < year> < name of
-                 author>
+    <one line to give the program's name and a brief idea of what it does.>
+    Copyright (C) <year>  <name of author>
 
-        This program is free software : you can redistribute it and /
-    or modify it under the terms of the GNU General Public License
-           as published by the Free Software Foundation,
-    either version 3 of the License,
-    or (at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-        This program is distributed in the hope that it will be useful,
+    This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
@@ -666,14 +653,13 @@ Also add information on how to contact you by electronic and paper mail.
 notice like this when it starts in an interactive mode:
 
     <program>  Copyright (C) <year>  <name of author>
-    This program comes with ABSOLUTELY NO WARRANTY; for
-  details type `show
-      w'. This is free software, and you are welcome to redistribute it under certain conditions;
-type `show c' for details.
+    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions; type `show c' for details.
 
-    The hypothetical commands `show w ' and `show c' should show the appropriate
-        parts of the General Public License.Of course,
-    your program's commands might be different; for a GUI interface, you would use an "about box".
+The hypothetical commands `show w' and `show c' should show the appropriate
+parts of the General Public License.  Of course, your program's commands
+might be different; for a GUI interface, you would use an "about box".
 
   You should also get your employer (if you work as a programmer) or school,
 if any, to sign a "copyright disclaimer" for the program, if necessary.

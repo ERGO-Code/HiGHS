@@ -4,20 +4,26 @@
 
 namespace ipx {
 
-Timer::Timer() { Reset(); }
+Timer::Timer() {
+    Reset();
+}
 
-double Timer::Elapsed() const { return toc(t0_); }
+double Timer::Elapsed() const {
+    return toc(t0_);
+}
 
-void Timer::Reset() { t0_ = tic(); }
+void Timer::Reset() {
+    t0_ = tic();
+}
 
 Timer::TimePoint Timer::tic() {
-  return std::chrono::high_resolution_clock::now();
+    return std::chrono::high_resolution_clock::now();
 }
 
 double Timer::toc(TimePoint start) {
-  TimePoint end = tic();
-  std::chrono::duration<double> diff = end - start;
-  return diff.count();
+    TimePoint end = tic();
+    std::chrono::duration<double> diff = end-start;
+    return diff.count();
 }
 
 }  // namespace ipx

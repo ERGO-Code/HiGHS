@@ -1,4 +1,9 @@
-lu_int basiclu_initialize(lu_int m, lu_int istore[], double xstore[]);
+lu_int basiclu_initialize
+(
+    lu_int m,
+    lu_int istore[],
+    double xstore[]
+);
 
 /*
 Purpose:

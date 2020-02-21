@@ -4,7 +4,6 @@
 #define IPX_SYMBOLIC_INVERT_H_
 
 #include <vector>
-
 #include "ipx_internal.h"
 #include "model.h"
 

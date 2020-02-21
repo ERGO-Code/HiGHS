@@ -1,5 +1,10 @@
-lu_int basiclu_obj_solve_dense(struct basiclu_object* obj, const double rhs[],
-                               double lhs[], char trans);
+lu_int basiclu_obj_solve_dense
+(
+    struct basiclu_object *obj,
+    const double rhs[],
+    double lhs[],
+    char trans
+);
 
 /*
 Purpose:

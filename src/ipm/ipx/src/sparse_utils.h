@@ -57,4 +57,4 @@ bool AugmentingPath(Int jstart, const Int* Ap, const Int* Ai, Int* jmatch,
 
 }  // namespace ipx
 
-#endif  // IPX_SPARSE_UTILS_H_
+#endif // IPX_SPARSE_UTILS_H_

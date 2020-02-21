@@ -24,17 +24,25 @@
  * in time proportional to arithmetic operations", (1988).
  */
 
-lu_int lu_solve_symbolic(const lu_int m, const lu_int* begin, const lu_int* end,
-                         const lu_int* index, const lu_int nrhs,
-                         const lu_int* irhs, lu_int* ilhs,
-                         lu_int* pstack, /* size m workspace */
-                         lu_int* marked, /* marked[i] != M on entry */
-                         const lu_int M) {
-  lu_int i, n, top = m;
+lu_int lu_solve_symbolic
+(
+    const lu_int m,
+    const lu_int *begin,
+    const lu_int *end,
+    const lu_int *index,
+    const lu_int nrhs,
+    const lu_int *irhs,
+    lu_int *ilhs,
+    lu_int *pstack,             /* size m workspace */
+    lu_int *marked,             /* marked[i] != M on entry */
+    const lu_int M
+)
+{
+    lu_int i, n, top = m;
 
-  for (n = 0; n < nrhs; n++)
-    if (marked[i = irhs[n]] != M)
-      top = lu_dfs(i, begin, end, index, top, ilhs, pstack, marked, M);
+    for (n = 0; n < nrhs; n++)
+        if (marked[i = irhs[n]] != M)
+            top = lu_dfs(i, begin, end, index, top, ilhs, pstack, marked, M);
 
-  return top;
+    return top;
 }

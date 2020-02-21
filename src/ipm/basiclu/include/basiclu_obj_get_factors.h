@@ -1,8 +1,15 @@
-lu_int basiclu_obj_get_factors(struct basiclu_object* obj, lu_int rowperm[],
-                               lu_int colperm[], lu_int Lcolptr[],
-                               lu_int Lrowidx[], double Lvalue[],
-                               lu_int Ucolptr[], lu_int Urowidx[],
-                               double Uvalue[]);
+lu_int basiclu_obj_get_factors
+(
+    struct basiclu_object *obj,
+    lu_int rowperm[],
+    lu_int colperm[],
+    lu_int Lcolptr[],
+    lu_int Lrowidx[],
+    double Lvalue[],
+    lu_int Ucolptr[],
+    lu_int Urowidx[],
+    double Uvalue[]
+);
 
 /*
 Purpose:

@@ -1,6 +1,15 @@
-lu_int basiclu_update(lu_int istore[], double xstore[], lu_int Li[],
-                      double Lx[], lu_int Ui[], double Ux[], lu_int Wi[],
-                      double Wx[], double xtbl);
+lu_int basiclu_update
+(
+    lu_int istore[],
+    double xstore[],
+    lu_int Li[],
+    double Lx[],
+    lu_int Ui[],
+    double Ux[],
+    lu_int Wi[],
+    double Wx[],
+    double xtbl
+);
 
 /*
 Purpose:

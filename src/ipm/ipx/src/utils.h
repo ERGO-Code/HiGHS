@@ -4,7 +4,6 @@
 #define IPX_UTILS_H_
 
 #include <vector>
-
 #include "ipx_internal.h"
 
 namespace ipx {

@@ -1,6 +1,12 @@
-lu_int basiclu_obj_solve_for_update(struct basiclu_object* obj, lu_int nzrhs,
-                                    const lu_int irhs[], const double xrhs[],
-                                    char trans, lu_int want_solution);
+lu_int basiclu_obj_solve_for_update
+(
+    struct basiclu_object *obj,
+    lu_int nzrhs,
+    const lu_int irhs[],
+    const double xrhs[],
+    char trans,
+    lu_int want_solution
+);
 
 /*
 Purpose:

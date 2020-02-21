@@ -4,4 +4,4 @@
 #include <stdint.h>
 typedef int64_t ipxint;
 
-#endif /* IPX_CONFIG_H_ */
+#endif  /* IPX_CONFIG_H_ */

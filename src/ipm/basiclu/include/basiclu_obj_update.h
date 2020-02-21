@@ -1,4 +1,8 @@
-lu_int basiclu_obj_update(struct basiclu_object* obj, double xtbl);
+lu_int basiclu_obj_update
+(
+    struct basiclu_object *obj,
+    double xtbl
+);
 
 /*
 Purpose:
