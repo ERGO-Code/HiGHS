@@ -1,13 +1,12 @@
-struct basiclu_object
-{
-    lu_int *istore;
-    double *xstore;
-    lu_int *Li, *Ui, *Wi;
-    double *Lx, *Ux, *Wx;
-    double *lhs;
-    lu_int *ilhs;
-    lu_int nzlhs;
-    double realloc_factor;
+struct basiclu_object {
+  lu_int* istore;
+  double* xstore;
+  lu_int *Li, *Ui, *Wi;
+  double *Lx, *Ux, *Wx;
+  double* lhs;
+  lu_int* ilhs;
+  lu_int nzlhs;
+  double realloc_factor;
 };
 
 /*

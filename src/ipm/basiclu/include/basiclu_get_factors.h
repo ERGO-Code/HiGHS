@@ -1,22 +1,8 @@
-lu_int basiclu_get_factors
-(
-    lu_int istore[],
-    double xstore[],
-    lu_int Li[],
-    double Lx[],
-    lu_int Ui[],
-    double Ux[],
-    lu_int Wi[],
-    double Wx[],
-    lu_int rowperm[],
-    lu_int colperm[],
-    lu_int Lcolptr[],
-    lu_int Lrowidx[],
-    double Lvalue[],
-    lu_int Ucolptr[],
-    lu_int Urowidx[],
-    double Uvalue[]
-);
+lu_int basiclu_get_factors(lu_int istore[], double xstore[], lu_int Li[],
+                           double Lx[], lu_int Ui[], double Ux[], lu_int Wi[],
+                           double Wx[], lu_int rowperm[], lu_int colperm[],
+                           lu_int Lcolptr[], lu_int Lrowidx[], double Lvalue[],
+                           lu_int Ucolptr[], lu_int Urowidx[], double Uvalue[]);
 
 /*
 Purpose:

@@ -1,17 +1,7 @@
-lu_int basiclu_solve_dense
-(
-    lu_int istore[],
-    double xstore[],
-    lu_int Li[],
-    double Lx[],
-    lu_int Ui[],
-    double Ux[],
-    lu_int Wi[],
-    double Wx[],
-    const double rhs[],
-    double lhs[],
-    char trans
-);
+lu_int basiclu_solve_dense(lu_int istore[], double xstore[], lu_int Li[],
+                           double Lx[], lu_int Ui[], double Ux[], lu_int Wi[],
+                           double Wx[], const double rhs[], double lhs[],
+                           char trans);
 
 /*
 Purpose:

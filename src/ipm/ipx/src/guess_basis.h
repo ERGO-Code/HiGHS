@@ -20,4 +20,4 @@ std::vector<Int> GuessBasis(const Control& control, const Model& model,
 
 }  // namespace ipx
 
-#endif // IPX_GUESS_BASIS_H_
+#endif  // IPX_GUESS_BASIS_H_

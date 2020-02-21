@@ -7,7 +7,6 @@
 
 #include "lu_internal.h"
 
-
 /**
  * lu_solve_triangular() - substitution with triangular matrix
  *
@@ -32,109 +31,82 @@
  * When end is NULL, then each column must be terminated by a negative index.
  *
  */
-lu_int lu_solve_triangular
-(
-    const lu_int nz_symb,
-    const lu_int *pattern_symb,
-    const lu_int *begin,
-    const lu_int *end,
-    const lu_int *index,
-    const double *value,
-    const double *pivot,
-    const double droptol,
-    double *lhs,                /* solution overwrites RHS */
-    lu_int *pattern,
-    lu_int *flops               /* add flop count */
-)
-{
-    lu_int i, ipivot, pos, n, nz = 0, flop_count = 0;
-    double x;
+lu_int lu_solve_triangular(const lu_int nz_symb, const lu_int* pattern_symb,
+                           const lu_int* begin, const lu_int* end,
+                           const lu_int* index, const double* value,
+                           const double* pivot, const double droptol,
+                           double* lhs, /* solution overwrites RHS */
+                           lu_int* pattern, lu_int* flops /* add flop count */
+) {
+  lu_int i, ipivot, pos, n, nz = 0, flop_count = 0;
+  double x;
 
-    if (pivot && end)
-    {
-        for (n = 0; n < nz_symb; n++)
-        {
-            ipivot = pattern_symb[n];
-            if (lhs[ipivot])
-            {
-                x = lhs[ipivot] /= pivot[ipivot];
-                flop_count++;
-                for (pos = begin[ipivot]; pos < end[ipivot]; pos++)
-                {
-                    i = index[pos];
-                    lhs[i] -= x * value[pos];
-                    flop_count++;
-                }
-                if (fabs(x) > droptol)
-                    pattern[nz++] = ipivot;
-                else
-                    lhs[ipivot] = 0.0;
-            }
+  if (pivot && end) {
+    for (n = 0; n < nz_symb; n++) {
+      ipivot = pattern_symb[n];
+      if (lhs[ipivot]) {
+        x = lhs[ipivot] /= pivot[ipivot];
+        flop_count++;
+        for (pos = begin[ipivot]; pos < end[ipivot]; pos++) {
+          i = index[pos];
+          lhs[i] -= x * value[pos];
+          flop_count++;
         }
+        if (fabs(x) > droptol)
+          pattern[nz++] = ipivot;
+        else
+          lhs[ipivot] = 0.0;
+      }
     }
-    else if (pivot)
-    {
-        for (n = 0; n < nz_symb; n++)
-        {
-            ipivot = pattern_symb[n];
-            if (lhs[ipivot])
-            {
-                x = lhs[ipivot] /= pivot[ipivot];
-                flop_count++;
-                for (pos = begin[ipivot]; (i = index[pos]) >= 0; pos++)
-                {
-                    lhs[i] -= x * value[pos];
-                    flop_count++;
-                }
-                if (fabs(x) > droptol)
-                    pattern[nz++] = ipivot;
-                else
-                    lhs[ipivot] = 0.0;
-            }
+  } else if (pivot) {
+    for (n = 0; n < nz_symb; n++) {
+      ipivot = pattern_symb[n];
+      if (lhs[ipivot]) {
+        x = lhs[ipivot] /= pivot[ipivot];
+        flop_count++;
+        for (pos = begin[ipivot]; (i = index[pos]) >= 0; pos++) {
+          lhs[i] -= x * value[pos];
+          flop_count++;
         }
+        if (fabs(x) > droptol)
+          pattern[nz++] = ipivot;
+        else
+          lhs[ipivot] = 0.0;
+      }
     }
-    else if (end)
-    {
-        for (n = 0; n < nz_symb; n++)
-        {
-            ipivot = pattern_symb[n];
-            if (lhs[ipivot])
-            {
-                x = lhs[ipivot];
-                for (pos = begin[ipivot]; pos < end[ipivot]; pos++)
-                {
-                    i = index[pos];
-                    lhs[i] -= x * value[pos];
-                    flop_count++;
-                }
-                if (fabs(x) > droptol)
-                    pattern[nz++] = ipivot;
-                else
-                    lhs[ipivot] = 0.0;
-            }
+  } else if (end) {
+    for (n = 0; n < nz_symb; n++) {
+      ipivot = pattern_symb[n];
+      if (lhs[ipivot]) {
+        x = lhs[ipivot];
+        for (pos = begin[ipivot]; pos < end[ipivot]; pos++) {
+          i = index[pos];
+          lhs[i] -= x * value[pos];
+          flop_count++;
         }
+        if (fabs(x) > droptol)
+          pattern[nz++] = ipivot;
+        else
+          lhs[ipivot] = 0.0;
+      }
     }
-    else
-    {
-        for (n = 0; n < nz_symb; n++)
-        {
-            ipivot = pattern_symb[n];
-            if (lhs[ipivot])
-            {
-                x = lhs[ipivot];
-                for (pos = begin[ipivot]; (i = index[pos]) >= 0; pos++)
-                {
-                    lhs[i] -= x * value[pos];
-                    flop_count++;
-                }
-                if (fabs(x) > droptol)
-                    pattern[nz++] = ipivot;
-                else
-                    lhs[ipivot] = 0.0;
-            }
+  } else {
+    for (n = 0; n < nz_symb; n++) {
+      ipivot = pattern_symb[n];
+      if (lhs[ipivot]) {
+        x = lhs[ipivot];
+        for (pos = begin[ipivot]; (i = index[pos]) >= 0; pos++) {
+          lhs[i] -= x * value[pos];
+          flop_count++;
         }
+        if (fabs(x) > droptol)
+          pattern[nz++] = ipivot;
+        else
+          lhs[ipivot] = 0.0;
+      }
     }
+  }
 
-    *flops += flop_count;
-    return nz;
+  *flops += flop_count;
+  return nz;
 }

@@ -3,11 +3,12 @@
 #ifndef IPX_INTERNAL_H_
 #define IPX_INTERNAL_H_
 
+#include <valarray>
+
 #include "ipx_config.h"
 #include "ipx_info.h"
 #include "ipx_parameters.h"
 #include "ipx_status.h"
-#include <valarray>
 
 namespace ipx {
 
@@ -38,4 +39,4 @@ static constexpr double kFtDiagErrorTol = 1e-8;
 
 }  // namespace ipx
 
-#endif // IPX_INTERNAL_H_
+#endif  // IPX_INTERNAL_H_

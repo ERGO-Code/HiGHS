@@ -1,8 +1,10 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "lu_factorization.h"
+
 #include <algorithm>
 #include <cassert>
+
 #include "utils.h"
 
 namespace ipx {
@@ -15,24 +17,23 @@ static SparseMatrix PermutedMatrix(const Int* Bbegin, const Int* Bend,
                                    const std::vector<Int>& rowperm,
                                    const std::vector<Int>& colperm,
                                    const std::vector<Int>& dependent_cols) {
-    Int dim = rowperm.size();
-    std::vector<Int> permuted_row = InversePerm(rowperm);
-    std::vector<bool> dependent(dim, false);
-    for (Int k : dependent_cols)
-        dependent[k] = true;
+  Int dim = rowperm.size();
+  std::vector<Int> permuted_row = InversePerm(rowperm);
+  std::vector<bool> dependent(dim, false);
+  for (Int k : dependent_cols) dependent[k] = true;
 
-    SparseMatrix B(dim, 0);
-    for (Int k = 0; k < dim; k++) {
-        if (dependent[k]) {
-            B.push_back(k, 1.0);
-        } else {
-            Int j = colperm[k];
-            for (Int p = Bbegin[j]; p < Bend[j]; p++)
-                B.push_back(permuted_row[Bi[p]], Bx[p]);
-        }
-        B.add_column();
+  SparseMatrix B(dim, 0);
+  for (Int k = 0; k < dim; k++) {
+    if (dependent[k]) {
+      B.push_back(k, 1.0);
+    } else {
+      Int j = colperm[k];
+      for (Int p = Bbegin[j]; p < Bend[j]; p++)
+        B.push_back(permuted_row[Bi[p]], Bx[p]);
     }
-    return B;
+    B.add_column();
+  }
+  return B;
 }
 
 // Given a strict lower triangular matrix L and an upper triangular matrix U,
@@ -40,14 +41,14 @@ static SparseMatrix PermutedMatrix(const Int* Bbegin, const Int* Bend,
 // lhs = U\(L+I)\rhs.
 static void SolveForward(const SparseMatrix& L, const SparseMatrix& U,
                          Vector& rhs, Vector& lhs) {
-    Int dim = rhs.size();
-    lhs = 0.0;
-    for (Int i = 0; i < dim; i++) {
-        rhs[i] = lhs[i] >= 0.0 ? 1.0 : -1.0;
-        lhs[i] += rhs[i];
-        ScatterColumn(L, i, -lhs[i], lhs);
-    }
-    TriangularSolve(U, lhs, 'n', "upper", 0);
+  Int dim = rhs.size();
+  lhs = 0.0;
+  for (Int i = 0; i < dim; i++) {
+    rhs[i] = lhs[i] >= 0.0 ? 1.0 : -1.0;
+    lhs[i] += rhs[i];
+    ScatterColumn(L, i, -lhs[i], lhs);
+  }
+  TriangularSolve(U, lhs, 'n', "upper", 0);
 }
 
 // Given a strict lower triangular matrix L and an upper triangular matrix U,
@@ -55,17 +56,17 @@ static void SolveForward(const SparseMatrix& L, const SparseMatrix& U,
 // lhs = (L+I)'\U'\rhs.
 static void SolveBackward(const SparseMatrix& L, const SparseMatrix& U,
                           Vector& rhs, Vector& lhs) {
-    Int dim = rhs.size();
-    lhs = 0.0;
-    for (Int j = 0; j < dim; j++) {
-        lhs[j] -= DotColumn(U, j, lhs);
-        rhs[j] = lhs[j] >= 0.0 ? 1.0 : -1.0;
-        lhs[j] += rhs[j];
-        Int p = U.end(j)-1;
-        assert(U.index(p) == j);
-        lhs[j] /= U.value(p);
-    }
-    TriangularSolve(L, lhs, 't', "lower", 1);
+  Int dim = rhs.size();
+  lhs = 0.0;
+  for (Int j = 0; j < dim; j++) {
+    lhs[j] -= DotColumn(U, j, lhs);
+    rhs[j] = lhs[j] >= 0.0 ? 1.0 : -1.0;
+    lhs[j] += rhs[j];
+    Int p = U.end(j) - 1;
+    assert(U.index(p) == j);
+    lhs[j] /= U.value(p);
+  }
+  TriangularSolve(L, lhs, 't', "lower", 1);
 }
 
 // Returns a stability measure for the factorization L*U=B. Considering a linear
@@ -90,27 +91,27 @@ static double StabilityEstimate(const Int* Bbegin, const Int* Bend,
                                 const std::vector<Int>& rowperm,
                                 const std::vector<Int>& colperm,
                                 const std::vector<Int>& dependent_cols) {
-    Int dim = rowperm.size();
-    Vector rhs(dim), lhs(dim);
+  Int dim = rowperm.size();
+  Vector rhs(dim), lhs(dim);
 
-    // Compute 1-norm and infinity-norm of B.
-    SparseMatrix B = PermutedMatrix(Bbegin, Bend, Bi, Bx, rowperm, colperm,
-                                    dependent_cols);
-    double onenorm = Onenorm(B);
-    double infnorm = Infnorm(B);
+  // Compute 1-norm and infinity-norm of B.
+  SparseMatrix B =
+      PermutedMatrix(Bbegin, Bend, Bi, Bx, rowperm, colperm, dependent_cols);
+  double onenorm = Onenorm(B);
+  double infnorm = Infnorm(B);
 
-    SolveForward(L, U, rhs, lhs); // builds some rhs and computes lhs = B\rhs
-    double norm_ftran = Onenorm(lhs);
-    MultiplyAdd(B, lhs, -1.0, rhs, 'N'); // overwrites rhs by residual
-    double norm_ftran_res = Onenorm(rhs);
+  SolveForward(L, U, rhs, lhs);  // builds some rhs and computes lhs = B\rhs
+  double norm_ftran = Onenorm(lhs);
+  MultiplyAdd(B, lhs, -1.0, rhs, 'N');  // overwrites rhs by residual
+  double norm_ftran_res = Onenorm(rhs);
 
-    SolveBackward(L, U, rhs, lhs); // builds some rhs and computes lhs = B'\rhs
-    double norm_btran = Onenorm(lhs);
-    MultiplyAdd(B, lhs, -1.0, rhs, 'T'); // overwrites rhs by residual
-    double norm_btran_res = Onenorm(rhs);
+  SolveBackward(L, U, rhs, lhs);  // builds some rhs and computes lhs = B'\rhs
+  double norm_btran = Onenorm(lhs);
+  MultiplyAdd(B, lhs, -1.0, rhs, 'T');  // overwrites rhs by residual
+  double norm_btran_res = Onenorm(rhs);
 
-    return std::max(norm_ftran_res / (dim + onenorm*norm_ftran),
-                    norm_btran_res / (dim + infnorm*norm_btran));
+  return std::max(norm_ftran_res / (dim + onenorm * norm_ftran),
+                  norm_btran_res / (dim + infnorm * norm_btran));
 }
 
 void LuFactorization::Factorize(Int dim, const Int* Bbegin, const Int* Bend,
@@ -120,14 +121,12 @@ void LuFactorization::Factorize(Int dim, const Int* Bbegin, const Int* Bend,
                                 std::vector<Int>* rowperm,
                                 std::vector<Int>* colperm,
                                 std::vector<Int>* dependent_cols) {
-    _Factorize(dim, Bbegin, Bend, Bi, Bx, pivottol, strict_abs_pivottol,
-               L, U, rowperm, colperm, dependent_cols);
-    stability_ = StabilityEstimate(Bbegin, Bend, Bi, Bx, *L, *U, *rowperm,
-                                   *colperm, *dependent_cols);
+  _Factorize(dim, Bbegin, Bend, Bi, Bx, pivottol, strict_abs_pivottol, L, U,
+             rowperm, colperm, dependent_cols);
+  stability_ = StabilityEstimate(Bbegin, Bend, Bi, Bx, *L, *U, *rowperm,
+                                 *colperm, *dependent_cols);
 }
 
-double LuFactorization::stability() const {
-    return stability_;
-}
+double LuFactorization::stability() const { return stability_; }
 
 }  // namespace ipx

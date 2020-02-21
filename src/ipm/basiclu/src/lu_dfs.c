@@ -9,14 +9,13 @@
 
 #include "lu_internal.h"
 
-static lu_int dfs_end(
-    lu_int i, const lu_int *begin, const lu_int *end, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M);
+static lu_int dfs_end(lu_int i, const lu_int* begin, const lu_int* end,
+                      const lu_int* index, lu_int top, lu_int* xi,
+                      lu_int* pstack, lu_int* marked, const lu_int M);
 
-static lu_int dfs(
-    lu_int i, const lu_int *begin, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M);
-
+static lu_int dfs(lu_int i, const lu_int* begin, const lu_int* index,
+                  lu_int top, lu_int* xi, lu_int* pstack, lu_int* marked,
+                  const lu_int M);
 
 /*
  * lu_dfs() - compute reach(i) in a graph by depth first search
@@ -39,18 +38,14 @@ static lu_int dfs(
  *
  */
 
-lu_int lu_dfs(
-    lu_int i, const lu_int *begin, const lu_int *end, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M)
-{
-    if (marked[i] == M)
-        return top;
+lu_int lu_dfs(lu_int i, const lu_int* begin, const lu_int* end,
+              const lu_int* index, lu_int top, lu_int* xi, lu_int* pstack,
+              lu_int* marked, const lu_int M) {
+  if (marked[i] == M) return top;
 
-    return end ?
-        dfs_end(i, begin, end, index, top, xi, pstack, marked, M) :
-        dfs(i, begin, index, top, xi, pstack, marked, M);
+  return end ? dfs_end(i, begin, end, index, top, xi, pstack, marked, M)
+             : dfs(i, begin, index, top, xi, pstack, marked, M);
 }
-
 
 /* ==========================================================================
  * dfs_end
@@ -58,44 +53,39 @@ lu_int lu_dfs(
  * adapted from T. Davis, CSPARSE
  * ========================================================================== */
 
-static lu_int dfs_end(
-    lu_int i, const lu_int *begin, const lu_int *end, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M)
-{
-    lu_int inext, done, p, head = 0;
-    assert(marked[i] != M);
+static lu_int dfs_end(lu_int i, const lu_int* begin, const lu_int* end,
+                      const lu_int* index, lu_int top, lu_int* xi,
+                      lu_int* pstack, lu_int* marked, const lu_int M) {
+  lu_int inext, done, p, head = 0;
+  assert(marked[i] != M);
 
-    xi[0] = i;
-    while (head >= 0)
+  xi[0] = i;
+  while (head >= 0) {
+    i = xi[head];
+    if (marked[i] != M) /* node i has not been visited */
     {
-        i = xi[head];
-        if (marked[i] != M)     /* node i has not been visited */
-        {
-            marked[i] = M;
-            pstack[head] = begin[i];
-        }
-        done = 1;
-        /* continue dfs at node i */
-        for (p = pstack[head]; p < end[i]; p++)
-        {
-            inext = index[p];
-            if (marked[inext] == M)
-                continue;       /* skip visited node */
-            pstack[head] = p+1;
-            xi[++head] = inext; /* start dfs at node inext */
-            done = 0;
-            break;
-        }
-        if (done)               /* node i has no unvisited neighbours */
-        {
-            head--;
-            xi[--top] = i;
-        }
+      marked[i] = M;
+      pstack[head] = begin[i];
     }
+    done = 1;
+    /* continue dfs at node i */
+    for (p = pstack[head]; p < end[i]; p++) {
+      inext = index[p];
+      if (marked[inext] == M) continue; /* skip visited node */
+      pstack[head] = p + 1;
+      xi[++head] = inext; /* start dfs at node inext */
+      done = 0;
+      break;
+    }
+    if (done) /* node i has no unvisited neighbours */
+    {
+      head--;
+      xi[--top] = i;
+    }
+  }
 
-    return top;
+  return top;
 }
-
 
 /* ==========================================================================
  * dfs
@@ -103,39 +93,35 @@ static lu_int dfs_end(
  * adapted from T. Davis, CSPARSE
  * ========================================================================== */
 
-static lu_int dfs(
-    lu_int i, const lu_int *begin, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M)
-{
-    lu_int inext, done, p, head = 0;
-    assert(marked[i] != M);
+static lu_int dfs(lu_int i, const lu_int* begin, const lu_int* index,
+                  lu_int top, lu_int* xi, lu_int* pstack, lu_int* marked,
+                  const lu_int M) {
+  lu_int inext, done, p, head = 0;
+  assert(marked[i] != M);
 
-    xi[0] = i;
-    while (head >= 0)
+  xi[0] = i;
+  while (head >= 0) {
+    i = xi[head];
+    if (marked[i] != M) /* node i has not been visited */
     {
-        i = xi[head];
-        if (marked[i] != M)     /* node i has not been visited */
-        {
-            marked[i] = M;
-            pstack[head] = begin[i];
-        }
-        done = 1;
-        /* continue dfs at node i */
-        for (p = pstack[head]; (inext = index[p]) >= 0; p++)
-        {
-            if (marked[inext] == M)
-                continue;       /* skip visited node */
-            pstack[head] = p+1;
-            xi[++head] = inext; /* start dfs at node inext */
-            done = 0;
-            break;
-        }
-        if (done)               /* node i has no unvisited neighbours */
-        {
-            head--;
-            xi[--top] = i;
-        }
+      marked[i] = M;
+      pstack[head] = begin[i];
     }
+    done = 1;
+    /* continue dfs at node i */
+    for (p = pstack[head]; (inext = index[p]) >= 0; p++) {
+      if (marked[inext] == M) continue; /* skip visited node */
+      pstack[head] = p + 1;
+      xi[++head] = inext; /* start dfs at node inext */
+      done = 0;
+      break;
+    }
+    if (done) /* node i has no unvisited neighbours */
+    {
+      head--;
+      xi[--top] = i;
+    }
+  }
 
-    return top;
+  return top;
 }

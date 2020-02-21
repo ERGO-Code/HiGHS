@@ -1,7 +1,4 @@
-void basiclu_obj_free
-(
-    struct basiclu_object *obj
-);
+void basiclu_obj_free(struct basiclu_object* obj);
 
 /*
 Purpose:
