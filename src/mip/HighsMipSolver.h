@@ -35,6 +35,7 @@ enum class HighsMipReportStatus {
   SOLVED_ROOT,
   SOLVED_NODE,
   MAX_NODE_REACHED,
+  TIMEOUT,
   FORCE_REPORT
 };
 
@@ -56,6 +57,7 @@ class HighsMipSolver : Highs {
   HighsMipStatus solveNode(Node& node, bool hotstart = true);
   HighsMipStatus solveTree(Node& root);
   void reportMipSolverProgress(const HighsMipReportStatus status);
+  std::string highsMipStatusToString(const HighsMipStatus mip_status);
 
   Tree tree_;
   const HighsOptions options_mip_;

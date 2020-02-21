@@ -21,11 +21,19 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
   for (int col = 0; col < (int)node.integer_variables.size(); col++) {
     if (!node.integer_variables[col]) continue;
 
-    double value = node.primal_solution[col];
+    // Get the value, lower and upper bounds for the column. NB Expensive to store all this on the node
+    const double value = node.primal_solution[col];
+    const double lower = node.col_lower_bound[col];
+    const double upper = node.col_upper_bound[col];
+    // Don't branch on variables that are at bounds or (mildly) infeasible. 
+    if (value <= lower + fractional_tolerance) continue;
+    if (value >= upper - fractional_tolerance) continue;
     const double value_ceil = std::ceil(value);
     const double value_floor = std::floor(value);
-    const double fraction_below = std::fabs(value - value_ceil);
-    const double fraction_above = std::fabs(value - value_floor);
+    const double fraction_below = value_ceil - value;
+    assert(fraction_below >= 0);
+    const double fraction_above = value - value_floor;
+    assert(fraction_above >= 0);
     if (fraction_above > fractional_tolerance && fraction_below > fractional_tolerance) {
       if (mip_report_level > 1) {
 	if (fraction_above < 10 * fractional_tolerance)

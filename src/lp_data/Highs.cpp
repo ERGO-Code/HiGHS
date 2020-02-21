@@ -347,10 +347,12 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // Record the initial time and zero the overall iteration count
   double initial_time = timer_.readRunHighsClock();
   int postsolve_iteration_count = 0;
-  // Define identifiers to refer to the HMO of the original LP
-  // (0) and the HMO created when using presolve (1)
+  // Define identifiers to refer to the HMO of the original LP (0) and
+  // the HMO created when using presolve. The index of this HMO is 1
+  // when solving a one-off LP, but greater than one if presolve has
+  // been called multiple times. It's equal to the size of HMO
   const int original_hmo = 0;
-  const int presolve_hmo = 1;
+  const int presolve_hmo = hmos_.size();
   // Keep track of the hmo that is the most recently solved. By default it's the
   // original LP
   int solved_hmo = original_hmo;
@@ -489,7 +491,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
 	this_postsolve_time += -timer_.read(timer_.postsolve_clock);
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
           HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-                            "Postsolve finished.");
+                            "Postsolve finished\n");
           //
           // Now hot-start the simplex solver for the original_hmo:
           //
@@ -1472,6 +1474,71 @@ HighsStatus Highs::openWriteFile(const string filename,
     if (dot && dot != filename) html = strcmp(dot + 1, "html") == 0;
   }
   return HighsStatus::OK;
+}
+
+HighsStatus Highs::getUseModelStatus(HighsModelStatus& use_model_status,
+				     const double unscaled_primal_feasibility_tolerance,
+				     const double unscaled_dual_feasibility_tolerance,
+				     const bool rerun_from_logical_basis) {
+  if (model_status_ != HighsModelStatus::NOTSET) {
+    use_model_status = model_status_;
+  } else {
+    // Handle the case where the status of the unscaled model is not set
+    HighsStatus return_status = HighsStatus::OK;
+    HighsStatus call_status;
+    const double report = false;//true;//
+    if (unscaledOptimal(unscaled_primal_feasibility_tolerance,
+			unscaled_dual_feasibility_tolerance,
+			report)) {
+      use_model_status = HighsModelStatus::OPTIMAL;
+    } else if (rerun_from_logical_basis) {
+      std::string save_presolve = options_.presolve;
+      basis_.valid_ = false;
+      options_.presolve = on_string;
+      call_status = run();
+      return_status =
+	interpretCallStatus(call_status, return_status, "run()");
+      options_.presolve = save_presolve;
+      if (return_status == HighsStatus::Error) return return_status;
+      
+      if (report)
+	printf("Unscaled model status was NOTSET: after running from logical basis it is %s\n",
+	       highsModelStatusToString(model_status_).c_str());
+
+      if (model_status_ != HighsModelStatus::NOTSET) {
+	use_model_status = model_status_;
+      } else if (unscaledOptimal(unscaled_primal_feasibility_tolerance,
+				 unscaled_dual_feasibility_tolerance,
+				 report)) {
+	use_model_status = HighsModelStatus::OPTIMAL;
+      }
+    } else {
+      // Nothing to be done: use original unscaled model status
+      use_model_status = model_status_;
+    }
+  }
+  return HighsStatus::OK;
+}
+
+bool Highs::unscaledOptimal(const double unscaled_primal_feasibility_tolerance,
+			    const double unscaled_dual_feasibility_tolerance,
+			    const bool report) {
+  if (scaled_model_status_ == HighsModelStatus::OPTIMAL) {
+    const double max_primal_infeasibility = info_.max_primal_infeasibility;
+    const double max_dual_infeasibility = info_.max_dual_infeasibility;
+    if (report)
+      printf("Scaled model status is OPTIMAL: max unscaled (primal / dual) infeasibilities are (%g / %g)\n",
+	     max_primal_infeasibility, max_dual_infeasibility);
+    if ((max_primal_infeasibility > unscaled_primal_feasibility_tolerance) ||
+	(max_dual_infeasibility > unscaled_dual_feasibility_tolerance)) {
+      printf("Use model status of NOTSET since max unscaled (primal / dual) infeasibilities are (%g / %g)\n",
+	     max_primal_infeasibility, max_dual_infeasibility);
+    } else {
+      if (report) printf("Set unscaled model status to OPTIMAL since unscaled infeasibilities are tolerable\n");
+      return true;
+    }
+  }
+  return false;
 }
 
 bool Highs::haveHmo(const string method_name) {
