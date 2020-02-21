@@ -244,6 +244,8 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
   }
 
   num_nodes_solved++;
+  reportMipSolverProgress(HighsMipReportStatus::SOLVED_NODE);
+
   switch (return_status) {
     case HighsStatus::Warning:
       if (use_model_status == HighsModelStatus::REACHED_TIME_LIMIT) {
