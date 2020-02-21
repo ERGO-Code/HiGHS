@@ -59,7 +59,7 @@ class HMatrix {
    */
   void priceByColumn(HVector& row_ap,       //!< Vector \f$ \mathbf{y}\f$
                      const HVector& row_ep  //!< Vector \f$ \mathbf{x}\f$
-                     ) const;
+                     );
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise, maintaining indices of nonzeros in result
@@ -67,7 +67,7 @@ class HMatrix {
   void priceByRowSparseResult(
       HVector& row_ap,       //!< Vector \f$ \mathbf{y}\f$
       const HVector& row_ep  //!< Vector \f$ \mathbf{x}\f$
-      ) const;
+      );
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise from a given row, maintaining indices of nonzeros in
@@ -83,7 +83,7 @@ class HMatrix {
       int from_i,                 //!< Index of row to work from
       double switch_density  //!< Density for switch to not maintaining indices
                              //!< of nonzeros
-      ) const;
+      );
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise from a given row, not maintaining indices of nonzeros in
@@ -93,14 +93,14 @@ class HMatrix {
       HVector& row_ap,        //!< Vector \f$ \mathbf{y}\f$
       const HVector& row_ep,  //!< Vector \f$ \mathbf{x}\f$
       int from_i              //!< Index of row to work from
-      ) const;
+      );
   /**
    * @brief Remove indices of zeros from vector \f$ \mathbf{y}\f$ created by
    * cancellation in PRICE
    */
   void priceByRowSparseResultRemoveCancellation(
       HVector& row_ap  //!< Vector \f$ \mathbf{y} \f$
-      ) const;
+      );
   /**
    * @brief Update the partitioned row-wise representation according
    * to columns coming in and out of the set of indices of basic
@@ -116,7 +116,7 @@ class HMatrix {
    */
   double compute_dot(HVector& vector,  //!< Vector \f$ \mathbf{x} \f$
                      int iCol          //!< Index  \f$ i\f$ of column
-                     ) const;
+                     );
   /**
    * @brief Add into a vector, a multiple of a particular column of
    * the constraint matrix \f$ \mathbf{x} := \mathbf{x} + \mu \mathbf{a}_i \f$
@@ -124,7 +124,7 @@ class HMatrix {
   void collect_aj(HVector& vector,   //!< Vector \f$ \mathbf{x} \f$
                   int iCol,          //!< Index  \f$ i\f$ of column
                   double multiplier  //!< Multiplier \f$ \mu \f$
-                  ) const;
+                  );
 
   /**
    * @brief Get the pointer to the starts of the column-wise matrix
