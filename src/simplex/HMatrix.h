@@ -32,39 +32,41 @@ class HMatrix {
    * solver
    */
   void setup(
-	     int numCol,              //!< Number of columns in the source matrix
-	     int numRow,              //!< Number of rows in the source matrix
-	     const int* Astart,       //!< Pointer to the starts of the source matrix
-	     const int* Aindex,       //!< Pointer to the indices of the source matrix
-	     const double* Avalue,    //!< Pointer to the values of the source matrix
-	     const int* nonbasicFlag  //!< Pointer to the flags indicating which columns are basic and nonbasic
-	     );
+      int numCol,              //!< Number of columns in the source matrix
+      int numRow,              //!< Number of rows in the source matrix
+      const int* Astart,       //!< Pointer to the starts of the source matrix
+      const int* Aindex,       //!< Pointer to the indices of the source matrix
+      const double* Avalue,    //!< Pointer to the values of the source matrix
+      const int* nonbasicFlag  //!< Pointer to the flags indicating which
+                               //!< columns are basic and nonbasic
+  );
   /**
    * @brief For a logical basis, sets up the column-wise and
    * partitioned row-wise representation of the constraint matrix for
    * the simplex solver
    */
   void setup_lgBs(
-		  int numCol,           //!< Number of columns in the source matrix
-		  int numRow,           //!< Number of rows in the source matrix
-		  const int* Astart,    //!< Pointer to the starts of the source matrix
-		  const int* Aindex,    //!< Pointer to the indices of the source matrix
-		  const double* Avalue  //!< Pointer to the values of the source matrix
-		  );
+      int numCol,           //!< Number of columns in the source matrix
+      int numRow,           //!< Number of rows in the source matrix
+      const int* Astart,    //!< Pointer to the starts of the source matrix
+      const int* Aindex,    //!< Pointer to the indices of the source matrix
+      const double* Avalue  //!< Pointer to the values of the source matrix
+  );
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T A \f$
    * column-wise, maintaining indices of nonzeros in the result
    */
-  void priceByColumn(HVector& row_ap,      //!< Vector \f$ \mathbf{y}\f$
-		     const HVector& row_ep //!< Vector \f$ \mathbf{x}\f$
-		     ) const;
+  void priceByColumn(HVector& row_ap,       //!< Vector \f$ \mathbf{y}\f$
+                     const HVector& row_ep  //!< Vector \f$ \mathbf{x}\f$
+                     ) const;
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise, maintaining indices of nonzeros in result
    */
-  void priceByRowSparseResult(HVector& row_ap,      //!< Vector \f$ \mathbf{y}\f$
-			      const HVector& row_ep //!< Vector \f$ \mathbf{x}\f$
-			      ) const;
+  void priceByRowSparseResult(
+      HVector& row_ap,       //!< Vector \f$ \mathbf{y}\f$
+      const HVector& row_ep  //!< Vector \f$ \mathbf{x}\f$
+      ) const;
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise from a given row, maintaining indices of nonzeros in
@@ -73,37 +75,40 @@ class HMatrix {
    * during PRICE if there is too much fill-in
    */
   void priceByRowSparseResultWithSwitch(
-					HVector& row_ap,           //!< Vector \f$ \mathbf{y}\f$
-					const HVector& row_ep,     //!< Vector \f$ \mathbf{x}\f$
-					double historical_density, //!< Historical density of PRICE results to be used
-					int from_i,                //!< Index of row to work from
-					double switch_density      //!< Density for switch to not maintaining indices of nonzeros
-					) const;
+      HVector& row_ap,            //!< Vector \f$ \mathbf{y}\f$
+      const HVector& row_ep,      //!< Vector \f$ \mathbf{x}\f$
+      double historical_density,  //!< Historical density of PRICE results to be
+                                  //!< used
+      int from_i,                 //!< Index of row to work from
+      double switch_density  //!< Density for switch to not maintaining indices
+                             //!< of nonzeros
+      ) const;
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise from a given row, not maintaining indices of nonzeros in
    * result
    */
-  void priceByRowDenseResult(HVector& row_ap,       //!< Vector \f$ \mathbf{y}\f$
-                             const HVector& row_ep, //!< Vector \f$ \mathbf{x}\f$
-                             int from_i             //!< Index of row to work from
-                             ) const;
+  void priceByRowDenseResult(
+      HVector& row_ap,        //!< Vector \f$ \mathbf{y}\f$
+      const HVector& row_ep,  //!< Vector \f$ \mathbf{x}\f$
+      int from_i              //!< Index of row to work from
+      ) const;
   /**
    * @brief Remove indices of zeros from vector \f$ \mathbf{y}\f$ created by
    * cancellation in PRICE
    */
   void priceByRowSparseResultRemoveCancellation(
-						HVector& row_ap  //!< Vector \f$ \mathbf{y} \f$
-						) const;
+      HVector& row_ap  //!< Vector \f$ \mathbf{y} \f$
+      ) const;
   /**
    * @brief Update the partitioned row-wise representation according
    * to columns coming in and out of the set of indices of basic
    * variables
    */
   void update(
-	      int columnIn,  //!< Column entering the set of indices of basic variables
-	      int columnOut  //!< Column leaving the set of indices of basic variables
-	      );
+      int columnIn,  //!< Column entering the set of indices of basic variables
+      int columnOut  //!< Column leaving the set of indices of basic variables
+  );
   /**
    * @brief Compute the dot product between a vector and particular
    * column of the constraint matrix: \f$ \mathbf{x}^T\mathbf{a}_i \f$

@@ -1,11 +1,6 @@
-lu_int basiclu_obj_factorize
-(
-    struct basiclu_object *obj,
-    const lu_int *Bbegin,
-    const lu_int *Bend,
-    const lu_int *Bi,
-    const double *Bx
-);
+lu_int basiclu_obj_factorize(struct basiclu_object* obj, const lu_int* Bbegin,
+                             const lu_int* Bend, const lu_int* Bi,
+                             const double* Bx);
 
 /*
 Purpose:

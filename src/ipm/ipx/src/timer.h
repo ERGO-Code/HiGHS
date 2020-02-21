@@ -8,17 +8,16 @@
 namespace ipx {
 
 class Timer {
-public:
-    Timer();
-    double Elapsed() const;
-    void Reset();
+ public:
+  Timer();
+  double Elapsed() const;
+  void Reset();
 
-private:
-    typedef std::chrono::time_point<std::chrono::high_resolution_clock>
-        TimePoint;
-    static TimePoint tic();
-    static double toc(TimePoint start);
-    TimePoint t0_;
+ private:
+  typedef std::chrono::time_point<std::chrono::high_resolution_clock> TimePoint;
+  static TimePoint tic();
+  static double toc(TimePoint start);
+  TimePoint t0_;
 };
 
 }  // namespace ipx

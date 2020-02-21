@@ -32,7 +32,6 @@ void HVector::setup(int size_) {
   packCount = 0;
   packIndex.resize(size);
   packValue.resize(size);
-
 }
 
 void HVector::clear() {
@@ -73,7 +72,6 @@ void HVector::clear() {
 
   // Initialise the next value
   next = 0;
-
 }
 
 void HVector::tight() {

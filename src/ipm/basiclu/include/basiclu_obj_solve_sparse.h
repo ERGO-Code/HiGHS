@@ -1,11 +1,6 @@
-lu_int basiclu_obj_solve_sparse
-(
-    struct basiclu_object *obj,
-    lu_int nzrhs,
-    const lu_int irhs[],
-    const double xrhs[],
-    char trans
-);
+lu_int basiclu_obj_solve_sparse(struct basiclu_object* obj, lu_int nzrhs,
+                                const lu_int irhs[], const double xrhs[],
+                                char trans);
 
 /*
 Purpose:

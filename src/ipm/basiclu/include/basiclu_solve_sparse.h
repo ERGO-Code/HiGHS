@@ -1,21 +1,8 @@
-lu_int basiclu_solve_sparse
-(
-    lu_int istore[],
-    double xstore[],
-    lu_int Li[],
-    double Lx[],
-    lu_int Ui[],
-    double Ux[],
-    lu_int Wi[],
-    double Wx [],
-    lu_int nzrhs,
-    const lu_int irhs[],
-    const double xrhs[],
-    lu_int *p_nzlhs,
-    lu_int ilhs[],
-    double lhs[],
-    char trans
-);
+lu_int basiclu_solve_sparse(lu_int istore[], double xstore[], lu_int Li[],
+                            double Lx[], lu_int Ui[], double Ux[], lu_int Wi[],
+                            double Wx[], lu_int nzrhs, const lu_int irhs[],
+                            const double xrhs[], lu_int* p_nzlhs, lu_int ilhs[],
+                            double lhs[], char trans);
 
 /*
 Purpose:

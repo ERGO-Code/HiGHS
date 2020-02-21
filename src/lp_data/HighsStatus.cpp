@@ -33,19 +33,18 @@ std::string HighsStatusToString(HighsStatus status) {
 }
 
 HighsStatus interpretCallStatus(const HighsStatus call_status,
-				const HighsStatus from_return_status,
-				const std::string& message) {
+                                const HighsStatus from_return_status,
+                                const std::string& message) {
   HighsStatus to_return_status;
   to_return_status = worseStatus(call_status, from_return_status);
 #ifdef HiGHSDEV
   if (call_status != HighsStatus::OK) {
     if (message != "") {
       printf("HighsStatus::%s return from %s\n",
-	     HighsStatusToString(call_status).c_str(),
-	     message.c_str());
+             HighsStatusToString(call_status).c_str(), message.c_str());
     } else {
       printf("HighsStatus::%s return\n",
-	     HighsStatusToString(call_status).c_str());
+             HighsStatusToString(call_status).c_str());
     }
   }
 #endif

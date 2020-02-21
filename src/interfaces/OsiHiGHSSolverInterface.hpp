@@ -211,13 +211,11 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   virtual void setColUpper(int elementIndex, double elementValue);
 
   /// Set a single column lower and upper bound
-  virtual void setColBounds(int elementIndex,
-  double lower, double upper);
+  virtual void setColBounds(int elementIndex, double lower, double upper);
 
   /// Set the bounds on a number of columns simultaneously
-  virtual void setColSetBounds(const int *indexFirst,
-   const int *indexLast,
-   const double *boundList);
+  virtual void setColSetBounds(const int* indexFirst, const int* indexLast,
+                               const double* boundList);
 
   /// Set a single row lower bound
   virtual void setRowLower(int elementIndex, double elementValue);
@@ -229,9 +227,8 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   virtual void setRowBounds(int elementIndex, double lower, double upper);
 
   /// Set the bounds on a number of rows simultaneously
-  virtual void setRowSetBounds(const int *indexFirst,
-    const int *indexLast,
-   const double *boundList);
+  virtual void setRowSetBounds(const int* indexFirst, const int* indexLast,
+                               const double* boundList);
 
   /// Set the type of a single row
   virtual void setRowType(int index, char sense, double rightHandSide,
@@ -349,12 +346,12 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   ///@{
 
   /// Pass in a message handler
-  virtual void passInMessageHandler(CoinMessageHandler *handler);
+  virtual void passInMessageHandler(CoinMessageHandler* handler);
 
   ///@}
 
-   ///@name Constructors and destructor
-   ///@{
+  ///@name Constructors and destructor
+  ///@{
 
   /// Default Constructor
   OsiHiGHSSolverInterface();
@@ -377,7 +374,7 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   ///@}
   /***************************************************************************/
 
-  void getBasisStatus(int *cstat, int *rstat) const;
+  void getBasisStatus(int* cstat, int* rstat) const;
 
  protected:
   /// Apply a row cut.
@@ -402,12 +399,13 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   mutable CoinPackedMatrix* matrixByRow = NULL;
 
   mutable HighsSolution* dummy_solution;
-  
+
   double objOffset = 0.0;
 
   OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface& original);
 };
 
-void OsiSolverInterfaceMpsUnitTest(const std::vector<OsiSolverInterface*>& vecSiP, const std::string& mpsDir);
+void OsiSolverInterfaceMpsUnitTest(
+    const std::vector<OsiSolverInterface*>& vecSiP, const std::string& mpsDir);
 
 #endif

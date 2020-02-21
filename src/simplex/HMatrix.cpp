@@ -14,10 +14,10 @@
 #include "simplex/HMatrix.h"
 #include "HConfig.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdio>
-#include <algorithm>
 
 #include "lp_data/HConst.h"
 #include "simplex/HVector.h"
@@ -208,20 +208,24 @@ void HMatrix::priceByColumn(HVector& row_ap, const HVector& row_ep) const {
   row_ap.count = ap_count;
 }
 
-void HMatrix::priceByRowSparseResult(HVector& row_ap, const HVector& row_ep) const {
+void HMatrix::priceByRowSparseResult(HVector& row_ap,
+                                     const HVector& row_ep) const {
   // Vanilla hyper-sparse row-wise PRICE
-  // Set up parameters so that priceByRowSparseResultWithSwitch runs as vanilla hyper-sparse
-  // PRICE
+  // Set up parameters so that priceByRowSparseResultWithSwitch runs as vanilla
+  // hyper-sparse PRICE
   const double historical_density =
       -0.1;      // Historical density always forces hyper-sparse PRICE
   int fm_i = 0;  // Always start from first index of row_ep
   const double switch_density = 1.1;  // Never switch to standard row-wise PRICE
-  priceByRowSparseResultWithSwitch(row_ap, row_ep, historical_density, fm_i, switch_density);
+  priceByRowSparseResultWithSwitch(row_ap, row_ep, historical_density, fm_i,
+                                   switch_density);
 }
 
-void HMatrix::priceByRowSparseResultWithSwitch(HVector& row_ap, const HVector& row_ep,
-					       double historical_density, int from_i,
-					       double switch_density) const {
+void HMatrix::priceByRowSparseResultWithSwitch(HVector& row_ap,
+                                               const HVector& row_ep,
+                                               double historical_density,
+                                               int from_i,
+                                               double switch_density) const {
   // (Continue) hyper-sparse row-wise PRICE with possible switches to
   // standard row-wise PRICE either immediately based on historical
   // density or during hyper-sparse PRICE if there is too much fill-in
@@ -242,7 +246,8 @@ void HMatrix::priceByRowSparseResultWithSwitch(HVector& row_ap, const HVector& r
       // Possibly switch to standard row-wise price
       int iRowNNz = AR_Nend[iRow] - ARstart[iRow];
       double lc_dsty = (1.0 * ap_count) / numCol;
-      bool price_by_row_sw = ap_count + iRowNNz >= numCol || lc_dsty > switch_density;
+      bool price_by_row_sw =
+          ap_count + iRowNNz >= numCol || lc_dsty > switch_density;
       if (price_by_row_sw) break;
       double multiplier = ep_array[iRow];
       for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {

@@ -338,7 +338,8 @@ void KktCheck::checkBFS() {
   for (int j = 0; j < numCol; j++) {
     if (col_status[j] == HighsBasisStatus::BASIC && colDual[j] != 0) {
       if (print == 1)
-        std::cout << "Col " << cIndexRev[j] << " is basic but has nonzero dual." << std::endl;
+        std::cout << "Col " << cIndexRev[j] << " is basic but has nonzero dual."
+                  << std::endl;
     }
   }
 
@@ -348,7 +349,8 @@ void KktCheck::checkBFS() {
   for (int i = 0; i < numRow; i++) {
     if (row_status[i] == HighsBasisStatus::BASIC && rowDual[i] != 0) {
       if (print == 1)
-        std::cout << "Row " << rIndexRev[i] << " is basic but has nonzero dual." << std::endl;
+        std::cout << "Row " << rIndexRev[i] << " is basic but has nonzero dual."
+                  << std::endl;
     }
   }
 }

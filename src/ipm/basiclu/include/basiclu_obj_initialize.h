@@ -1,8 +1,4 @@
-lu_int basiclu_obj_initialize
-(
-    struct basiclu_object *obj,
-    lu_int m
-);
+lu_int basiclu_obj_initialize(struct basiclu_object* obj, lu_int m);
 
 /*
 Purpose:
