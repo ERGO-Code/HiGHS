@@ -131,7 +131,7 @@ bool Tree::branch(Node& node) {
 
 double Tree::getBestBound(int& best_node) {
   int stack_size = nodes_.size();
-  double best_bound = best_objective_;
+  double best_bound = HIGHS_CONST_INF;
   for (int entry = 0; entry < stack_size; entry++) {
     Node& node = nodes_[entry];
     if (node.parent_objective < best_bound) {

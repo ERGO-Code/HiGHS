@@ -23,20 +23,12 @@ enum class HighsMipStatus {
   kNodeUnbounded,
   kNodeNotOptimal,
   kNodeError,
+  kRootNodeOptimal,
   kRootNodeNotOptimal,
   kRootNodeError,
   kMaxNodeReached,
   kUnderDevelopment,
   kTreeExhausted
-};
-
-enum class HighsMipReportStatus {
-  HEADER,
-  SOLVED_ROOT,
-  SOLVED_NODE,
-  MAX_NODE_REACHED,
-  TIMEOUT,
-  FORCE_REPORT
 };
 
 const double unscaled_primal_feasibility_tolerance = 1e-4;
@@ -56,7 +48,8 @@ class HighsMipSolver : Highs {
   HighsMipStatus solveRootNode();
   HighsMipStatus solveNode(Node& node, bool hotstart = true);
   HighsMipStatus solveTree(Node& root);
-  void reportMipSolverProgress(const HighsMipReportStatus status);
+  void reportMipSolverProgress(const HighsMipStatus mip_status);
+  void reportMipSolverProgressLine(std::string message, const bool header = false);
   std::string highsMipStatusToString(const HighsMipStatus mip_status);
 
   Tree tree_;
@@ -64,6 +57,7 @@ class HighsMipSolver : Highs {
   const HighsLp mip_;
 
   int num_nodes_solved = 0;
+  double root_objective_ = HIGHS_CONST_INF;
 
 };
 
