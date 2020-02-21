@@ -10,8 +10,8 @@
 
 #include <fstream>
 
-#include "util/stringutil.h"
 #include "lp_data/HighsOptions.h"
+#include "util/stringutil.h"
 
 // For extended options to be parsed from a file. Assuming options file is
 // specified.
@@ -37,11 +37,13 @@ bool loadOptionsFromFile(HighsOptions& options) {
       value = line.substr(equals + 1, line.size() - equals);
       trim(option);
       trim(value);
-      if (setOptionValue(options.logfile, option, options.records, value) != OptionStatus::OK) return false;
+      if (setOptionValue(options.logfile, option, options.records, value) !=
+          OptionStatus::OK)
+        return false;
     }
   } else {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Options file not found.");
+                    "Options file not found.");
     return false;
   }
 

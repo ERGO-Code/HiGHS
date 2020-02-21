@@ -28,20 +28,20 @@ const char* const HighsMessageTypeTag[] = {"INFO", "WARNING", "ERROR"};
  * @brief Used to direct printed output to FILE* output, according
  * to whether the level bit is set in messageLevel
  */
-void HighsPrintMessage(FILE* pass_output,
-		       const int message_level,
-		       const int level,  //!< The message level: Use | operator to display at
-		       //!< level NONE, VERBOSE, DETAILED, MINIMAL
-		       const char* format,  //!< Printing format: must contain exactly one "\n" at
-		       //!< end of format
-		       ...);
+void HighsPrintMessage(
+    FILE* pass_output, const int message_level,
+    const int level,  //!< The message level: Use | operator to display at
+    //!< level NONE, VERBOSE, DETAILED, MINIMAL
+    const char* format,  //!< Printing format: must contain exactly one "\n" at
+    //!< end of format
+    ...);
 
 /**
  * @brief Used to direct _single-line_ logging output to FILE* logfile,
  * with timestamp and message type notification
  */
 void HighsLogMessage(FILE* pass_logfile,
-		     const HighsMessageType type,  //!< The message type
+                     const HighsMessageType type,  //!< The message type
                      const char* format,  //!< Printing format: must not contain
                                           //!< "\n", even at the end of format
                      ...);
@@ -62,9 +62,9 @@ void HighsSetOutput(FILE* output  //!< The output file: default stdout
  * @brief sets the level used for HighsPrintMessage
  */
 void HighsSetMessagelevel(
-			  int level  //!< The message level: Use | operator to display at level NONE,
-			  //!< VERBOSE, DETAILED, MINIMAL. default NONE
-			  );
+    int level  //!< The message level: Use | operator to display at level NONE,
+               //!< VERBOSE, DETAILED, MINIMAL. default NONE
+);
 
 /*
  * @brief sets the callbacks used to print output and and log
