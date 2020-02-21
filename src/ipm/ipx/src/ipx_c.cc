@@ -1,4 +1,5 @@
 #include "ipx_c.h"
+
 #include "ipx_internal.h"
 #include "lp_solver.h"
 

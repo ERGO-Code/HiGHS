@@ -12,13 +12,14 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
+#include "lp_data/HighsModelUtils.h"
+
 #include <algorithm>
 #include <vector>
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-#include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 
 #ifdef HiGHSDEV

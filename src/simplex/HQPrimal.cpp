@@ -12,16 +12,17 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HQPrimal.h"
+
+#include <cassert>
+#include <cstdio>
+#include <iostream>
+
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
-
-#include <cassert>
-#include <cstdio>
-#include <iostream>
 
 using std::runtime_error;
 

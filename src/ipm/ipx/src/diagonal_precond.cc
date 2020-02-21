@@ -1,9 +1,11 @@
 // Copyright (c) 2018-2019 ERGO-Code. See license.txt for license.
 
 #include "diagonal_precond.h"
+
 #include <cassert>
 #include <cmath>
 #include <vector>
+
 #include "timer.h"
 
 namespace ipx {

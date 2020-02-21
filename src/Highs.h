@@ -14,6 +14,8 @@
 #ifndef HIGHS_H_
 #define HIGHS_H_
 
+#include <sstream>
+
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelObject.h"
@@ -22,8 +24,6 @@
 #include "presolve/ICrash.h"
 #include "presolve/Presolve.h"
 #include "util/HighsTimer.h"
-
-#include <sstream>
 
 /**
  * @brief Class to set parameters and run HiGHS

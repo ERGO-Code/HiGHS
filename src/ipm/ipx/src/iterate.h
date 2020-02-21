@@ -4,6 +4,7 @@
 #define IPX_ITERATE_H_
 
 #include <vector>
+
 #include "model.h"
 
 namespace ipx {

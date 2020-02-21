@@ -598,11 +598,11 @@ struct HighsModel colcost collower colupper rowlower rowupper astart aindex
                                                       //!< first column to get
                                                       //!< from the model
                                        const int
-                                           to_col,  //!< One more than the last
-                                                    //!< column to get from the
-                                                    //!< model
-                                       int*num_col,   //!< Number of columns got
-                                                      //!< from the model
+                                           to_col,   //!< One more than the last
+                                                     //!< column to get from the
+                                                     //!< model
+                                       int*num_col,  //!< Number of columns got
+                                                     //!< from the model
                                        double*costs,  //!< Array of size num_col
                                                       //!< with costs
                                        double*lower,  //!< Array of size num_col
@@ -615,10 +615,10 @@ struct HighsModel colcost collower colupper rowlower rowupper astart aindex
                                                           //!< num_col with
                                                           //!< start indices of
                                                           //!< the columns
-                                       int*matrix_index,    //!< Array of size
-                                                            //!< num_nz with row
-                                                            //!< indices for the
-                                                            //!< columns
+                                       int*matrix_index,  //!< Array of size
+                                                          //!< num_nz with row
+                                                          //!< indices for the
+                                                          //!< columns
                                        double*matrix_value  //!< Array of size
                                                             //!< num_nz with row
                                                             //!< values for the

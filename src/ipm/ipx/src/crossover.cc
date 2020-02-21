@@ -1,10 +1,12 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "crossover.h"
+
 #include <algorithm>
 #include <cassert>
 #include <stdexcept>
 #include <valarray>
+
 #include "time.h"
 #include "utils.h"
 

@@ -12,7 +12,6 @@
 #define LP_DATA_HIGHSRUNTIMEOPTIONS_H_
 
 #include "../external/cxxopts.hpp"
-
 #include "io/HighsIO.h"
 #include "io/LoadProblem.h"
 //#include "lp_data/HighsOptions.h"

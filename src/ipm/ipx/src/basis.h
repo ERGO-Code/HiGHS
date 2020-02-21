@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <vector>
+
 #include "control.h"
 #include "indexed_vector.h"
 #include "lu_update.h"

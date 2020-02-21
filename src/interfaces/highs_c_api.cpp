@@ -8,6 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "highs_c_api.h"
+
 #include "Highs.h"
 
 int Highs_call(int numcol, int numrow, int numnz, double* colcost,

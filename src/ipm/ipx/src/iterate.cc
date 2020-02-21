@@ -1,8 +1,10 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "iterate.h"
+
 #include <cassert>
 #include <cmath>
+
 #include "utils.h"
 
 namespace ipx {

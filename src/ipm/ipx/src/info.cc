@@ -1,9 +1,11 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "info.h"
+
 #include <cstring>  // for memset
 #include <map>
 #include <string>
+
 #include "control.h"
 
 ipx_info::ipx_info() { memset(this, 0, sizeof(ipx_info)); }

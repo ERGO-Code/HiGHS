@@ -12,7 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "util/HighsSort.h"
+
 #include <cstddef>
+
 #include "lp_data/HConst.h"
 
 void maxheapsort(int* heap_v, int n) {

@@ -4,6 +4,7 @@
 #define IPX_LP_SOLVER_H_
 
 #include <memory>
+
 #include "basis.h"
 #include "control.h"
 #include "ipm.h"

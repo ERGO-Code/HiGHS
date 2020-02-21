@@ -1,9 +1,11 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "basiclu_kernel.h"
+
 #include <cassert>
 #include <new>  // bad_alloc
 #include <stdexcept>
+
 #include "basiclu.h"
 
 namespace ipx {

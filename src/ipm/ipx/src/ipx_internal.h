@@ -4,6 +4,7 @@
 #define IPX_INTERNAL_H_
 
 #include <valarray>
+
 #include "ipx_config.h"
 #include "ipx_info.h"
 #include "ipx_parameters.h"

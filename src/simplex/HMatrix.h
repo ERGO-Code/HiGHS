@@ -16,6 +16,7 @@
 #define SIMPLEX_HMATRIX_H_
 
 #include <vector>
+
 #include "HConfig.h"
 
 class HVector;

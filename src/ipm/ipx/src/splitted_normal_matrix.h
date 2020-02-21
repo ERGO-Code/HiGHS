@@ -4,6 +4,7 @@
 #define IPX_SPLITTED_NORMAL_MATRIX_H_
 
 #include <vector>
+
 #include "basis.h"
 #include "linear_operator.h"
 #include "model.h"

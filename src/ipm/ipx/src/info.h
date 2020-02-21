@@ -5,6 +5,7 @@
 
 #include <ostream>
 #include <string>
+
 #include "ipx_internal.h"
 
 namespace ipx {

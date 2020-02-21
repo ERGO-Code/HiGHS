@@ -4,6 +4,7 @@
 #define IPX_SPARSE_MATRIX_H_
 
 #include <vector>
+
 #include "ipx_internal.h"
 
 namespace ipx {

@@ -1,9 +1,11 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "basis.h"
+
 #include <algorithm>
 #include <cmath>
 #include <tuple>
+
 #include "basiclu_kernel.h"
 #include "basiclu_wrapper.h"
 #include "forrest_tomlin.h"

@@ -11,18 +11,18 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "io/HighsIO.h"
-#include "lp_data/HConst.h"
-#include "simplex/HDual.h"
-#include "simplex/HPrimal.h"
-#include "simplex/SimplexTimer.h"
-
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <iostream>
 #include <set>
 #include <stdexcept>
+
+#include "io/HighsIO.h"
+#include "lp_data/HConst.h"
+#include "simplex/HDual.h"
+#include "simplex/HPrimal.h"
+#include "simplex/SimplexTimer.h"
 
 using std::cout;
 using std::endl;

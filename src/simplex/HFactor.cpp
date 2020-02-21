@@ -15,14 +15,14 @@
 #ifdef HiGHSDEV
 #include "simplex/FactorTimer.h"
 #endif
-#include "lp_data/HConst.h"
-#include "simplex/HVector.h"
-#include "util/HighsTimer.h"
-
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+
+#include "lp_data/HConst.h"
+#include "simplex/HVector.h"
+#include "util/HighsTimer.h"
 
 #ifdef HiGHSDEV
 #ifdef OPENMP

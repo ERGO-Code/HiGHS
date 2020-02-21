@@ -4,6 +4,7 @@
 #define IPX_LU_UPDATE_H_
 
 #include <vector>
+
 #include "indexed_vector.h"
 #include "sparse_matrix.h"
 

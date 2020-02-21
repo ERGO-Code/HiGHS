@@ -34,6 +34,7 @@
 // jn.
 
 #include <vector>
+
 #include "basis.h"
 #include "control.h"
 #include "indexed_vector.h"

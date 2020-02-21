@@ -1,8 +1,10 @@
 // Copyright (c) 2018-2019 ERGO-Code. See license.txt for license.
 
 #include "kkt_solver_diag.h"
+
 #include <cassert>
 #include <cmath>
+
 #include "conjugate_residuals.h"
 
 namespace ipx {

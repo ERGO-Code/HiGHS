@@ -4,6 +4,7 @@
 #define IPX_MODEL_H_
 
 #include <vector>
+
 #include "control.h"
 #include "sparse_matrix.h"
 

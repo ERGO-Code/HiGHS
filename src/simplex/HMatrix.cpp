@@ -12,13 +12,13 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HMatrix.h"
-#include "HConfig.h"
 
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 
+#include "HConfig.h"
 #include "lp_data/HConst.h"
 #include "simplex/HVector.h"
 

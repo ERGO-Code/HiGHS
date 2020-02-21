@@ -1,0 +1,18 @@
+#!/bin/bash
+
+clang-format -style=file -i src/lp_data/* 
+clang-format -style=file -i src/interfaces/*
+clang-format -style=file -i src/ipm/*
+clang-format -style=file -i src/ipm/basiclu/*
+clang-format -style=file -i src/ipm/basiclu/include/*
+clang-format -style=file -i src/ipm/basiclu/src/*
+clang-format -style=file -i src/ipm/ipx/include/*
+clang-format -style=file -i src/ipm/ipx/src/*
+clang-format -style=file -i src/lp_data/*
+clang-format -style=file -i src/mip/*
+clang-format -style=file -i src/presolve/*
+clang-format -style=file -i src/simplex/*
+clang-format -style=file -i src/test/*
+clang-format -style=file -i src/util/*
+clang-format -style=file -i app/*
+

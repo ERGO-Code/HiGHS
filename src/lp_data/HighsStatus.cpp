@@ -8,6 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "lp_data/HighsStatus.h"
+
 #include "io/HighsIO.h"
 
 // Return a string representation of HighsStatus.

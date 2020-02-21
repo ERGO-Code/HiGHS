@@ -12,14 +12,15 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HCrash.h"
-#include "lp_data/HConst.h"
-#include "simplex/HSimplex.h"
-#include "util/HighsSort.h"
 
 #include <cassert>
 #include <set>
 #include <string>
 #include <vector>
+
+#include "lp_data/HConst.h"
+#include "simplex/HSimplex.h"
+#include "util/HighsSort.h"
 
 using std::abs;
 using std::cout;

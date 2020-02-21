@@ -7,6 +7,7 @@
 
 #define _POSIX_C_SOURCE 199309L
 #include "lu_timer.h"
+
 #include <time.h>
 
 void lu_tic(double tic[2]) {

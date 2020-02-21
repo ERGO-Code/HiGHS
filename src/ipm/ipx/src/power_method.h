@@ -4,6 +4,7 @@
 #define IPX_POWER_METHOD_H_
 
 #include <cmath>
+
 #include "ipx_internal.h"
 #include "utils.h"
 

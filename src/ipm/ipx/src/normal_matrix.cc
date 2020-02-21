@@ -1,7 +1,9 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "normal_matrix.h"
+
 #include <cassert>
+
 #include "timer.h"
 #include "utils.h"
 

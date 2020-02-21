@@ -4,6 +4,7 @@
 #define IPX_LU_FACTORIZATION_H_
 
 #include <vector>
+
 #include "ipx_internal.h"
 #include "sparse_matrix.h"
 

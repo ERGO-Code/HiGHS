@@ -1,9 +1,11 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "maxvolume.h"
+
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
 #include "timer.h"
 #include "utils.h"
 

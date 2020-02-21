@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HighsSimplexInterface.h"
+
 #include "HConfig.h"
 #include "io/HMPSIO.h"
 #include "io/HighsIO.h"

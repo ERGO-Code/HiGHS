@@ -1,8 +1,10 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
 #include "kkt_solver_basis.h"
+
 #include <cassert>
 #include <cmath>
+
 #include "conjugate_residuals.h"
 #include "maxvolume.h"
 #include "starting_basis.h"

@@ -15,6 +15,7 @@
 
 #include <cmath>
 
+#include "CoinWarmStartBasis.hpp"
 #include "Highs.h"
 #include "HighsLp.h"
 #include "HighsOptions.h"
@@ -22,8 +23,6 @@
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-
-#include "CoinWarmStartBasis.hpp"
 
 static void printtomessagehandler(int level, const char* msg,
                                   void* msgcb_data) {

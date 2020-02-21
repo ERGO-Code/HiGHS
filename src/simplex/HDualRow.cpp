@@ -12,12 +12,12 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HDualRow.h"
-#include "lp_data/HighsModelObject.h"
 
 #include <cassert>
 #include <iostream>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HighsModelObject.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HVector.h"
 #include "simplex/SimplexTimer.h"

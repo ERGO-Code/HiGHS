@@ -16,6 +16,7 @@
 
 #include <string>
 #include <vector>
+
 #include "HConfig.h"
 
 #ifdef HiGHSDEV
@@ -52,7 +53,7 @@ void analyseVectorValues(
     int vecDim,                      //!< Dimension of vector
     const std::vector<double>& vec,  //!< Vector of values
     bool analyseValueList = false,   //!< Possibly analyse the distribution of
-                                    //!< different values in the vector
+                                     //!< different values in the vector
     std::string model_name =
         "Unknown"  //!< Model name to report if analysing distribution of
                    //!< different values in the vector
