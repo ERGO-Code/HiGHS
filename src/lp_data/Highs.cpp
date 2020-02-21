@@ -397,6 +397,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         call_status =
             runLpSolver(hmos_[solved_hmo],
                         "Problem not reduced by presolve: solving the LP");
+	timer_.stop(timer_.solve_clock);
 	this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
