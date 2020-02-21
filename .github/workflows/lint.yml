@@ -1,8 +1,0 @@
-name: c-linter
-
-on: [push]
-jobs:
-  c-linter:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: ArtificialAmateur/clang-tidy-action@master
