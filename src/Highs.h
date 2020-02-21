@@ -63,9 +63,9 @@ class Highs {
    * @brief writes the current solution to a file
    */
   HighsStatus writeSolution(
-      const std::string filename,  //!< the filename
-      const bool pretty = false    //!< Write in pretty (human-readable) format
-  );
+      const std::string filename,        //!< the filename
+      const bool pretty = false) const;  //!< Write (human-readable) format
+
   /**
    * Methods for HiGHS option input/output
    */
@@ -135,7 +135,7 @@ class Highs {
       std::string& value          //!< The option value
   );
 
-  const HighsOptions& getHighsOptions();
+  const HighsOptions& getHighsOptions() const;
 
   HighsStatus writeHighsOptions(
       const std::string filename,  //!< The filename
@@ -146,15 +146,14 @@ class Highs {
    * type.
    */
 
-  const HighsInfo& getHighsInfo();
+  const HighsInfo& getHighsInfo() const;
 
   HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
                                 int& value                //!< The info value
   );
 
   HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
-                                double& value             //!< The info value
-  );
+                                double& value) const;     //!< The info value
 
   HighsStatus writeHighsInfo(const std::string filename  //!< The filename
   );
