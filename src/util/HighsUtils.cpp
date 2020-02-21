@@ -381,14 +381,13 @@ bool printValueDistribution(std::string value_name,
   bool not_reported_ones = true;
   int sum_count = value_distribution.num_zero_ + value_distribution.num_one_;
   double sum_percentage = 0;
+  const double min_value = value_distribution.min_value_;
   for (int i = 0; i < num_count + 1; i++)
     sum_count += value_distribution.count_[i];
   if (!sum_count) return false;
-  printf("     Minimum %svalue is %10.4g", value_name.c_str(),
-         value_distribution.min_value_);
+  printf("     Minimum %svalue is %10.4g", value_name.c_str(), min_value);
   if (mu > 0) {
-    printf("  corresponding to  %10d / %10d\n",
-           (int)(value_distribution.min_value_ * mu), mu);
+    printf("  corresponding to  %10d / %10d\n", (int)(min_value * mu), mu);
   } else {
     printf("\n");
   }
