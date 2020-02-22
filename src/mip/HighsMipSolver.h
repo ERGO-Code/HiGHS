@@ -57,6 +57,7 @@ class HighsMipSolver : Highs {
   const HighsLp mip_;
 
   int num_nodes_solved = 0;
+  int num_nodes_pruned = 0;
   double root_objective_ = HIGHS_CONST_INF;
 
 };

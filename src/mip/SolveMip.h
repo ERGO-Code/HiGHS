@@ -73,7 +73,8 @@ class Tree {
 
   double getBestObjective() { return best_objective_; }
   double getBestBound(int& best_node);
-  int getNumNodesFormed() { return num_nodes; }
+  int getNumIntegerSolutions() { return num_integer_solutions; }
+  int getNumNodesFormed() { return 1+num_nodes; } // Root node plus nodes formed by branching
   int getNumNodesLeft() { return (int)nodes_.size(); }
   void setMipReportLevel(const int mip_report_level_) { mip_report_level = mip_report_level_; }
 
@@ -85,6 +86,7 @@ class Tree {
   NodeIndex chooseBranchingVariable(const Node& node);
 
   int num_nodes = 0;
+  int num_integer_solutions = 0;
   int mip_report_level = 0;
 };
 

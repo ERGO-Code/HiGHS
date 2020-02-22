@@ -63,6 +63,7 @@ bool Tree::branch(Node& node) {
     // All integer variables are feasible. Update best solution if node solution
     // is better. Assuming minimization.
     const bool better_integer_solution = node.objective_value < best_objective_;
+    num_integer_solutions++;
     if (better_integer_solution) {
       best_objective_ = node.objective_value;
       best_solution_ = node.primal_solution;

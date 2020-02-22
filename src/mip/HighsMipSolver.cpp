@@ -60,7 +60,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   reportMipSolverProgress(tree_solve_status);
 
   if (tree_solve_status != HighsMipStatus::kTreeExhausted) {
-    std::cout << "Warning: tree not covered entirely." << std::endl;
+    std::cout << "Warning: tree not explored entirely." << std::endl;
     return tree_solve_status;
   }
 
@@ -68,7 +68,27 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   timer_.stopRunHighsClock();
   double mip_solve_final_time = timer_.readRunHighsClock();
 
+  int num_nodes_formed = tree_.getNumNodesFormed();
+  int num_integer_solutions = tree_.getNumIntegerSolutions();
+  int num_nodes_unsolved = num_nodes_formed - num_nodes_solved - num_nodes_pruned;
+  HighsPrintMessage(options_mip_.output, options_mip_.message_level,
+		    ML_MINIMAL, "\nMIP solver summary\n");
+  HighsPrintMessage(options_mip_.output, options_mip_.message_level,
+		    ML_MINIMAL, "Number of nodes formed   = %9d\n", num_nodes_formed);
+  HighsPrintMessage(options_mip_.output, options_mip_.message_level,
+		    ML_MINIMAL, "Number of nodes solved   = %9d\n", num_nodes_solved);
+  HighsPrintMessage(options_mip_.output, options_mip_.message_level,
+		    ML_MINIMAL, "Number of nodes pruned   = %9d\n", num_nodes_pruned);
+  HighsPrintMessage(options_mip_.output, options_mip_.message_level,
+		    ML_MINIMAL, "Number of nodes unsolved = %9d\n", num_nodes_unsolved);
+  
+  HighsPrintMessage(options_mip_.output, options_mip_.message_level,
+		    ML_MINIMAL, "Number of IFS found      = %9d\n", num_integer_solutions);
+
   if (tree_.getBestSolution().size() > 0) {
+    if (num_nodes_unsolved) 
+      HighsPrintMessage(options_mip_.output, options_mip_.message_level,
+			ML_MINIMAL, "ERROR: number of nodes unsolved = %9d\n", num_nodes_unsolved);
     hmos_[0].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
     std::stringstream message;
     message << std::endl;
@@ -335,15 +355,19 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
     if (tree_.getNumNodesFormed() > options_.mip_max_nodes)
       return HighsMipStatus::kMaxNodeReached;
     Node& node = tree_.next();
-    if (node.parent_objective >= tree_.getBestObjective()) {
+    double best_objective;
+    best_objective = tree_.getBestObjective();
+    if (node.parent_objective >= best_objective) {
       // Don't solve if we can't better the best IFS
+      if (options_.mip_report_level > 1) 
+	printf("Don't solve since no better than best IFS of %10.4g\n", best_objective);
+      num_nodes_pruned++;
       tree_.pop();
       continue;
     }
     HighsMipStatus node_solve_status = solveNode(node);
     num_nodes_solved++;
     
-    double best_objective;
     switch (node_solve_status)
       {
       case HighsMipStatus::kNodeOptimal:
@@ -357,6 +381,7 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
 	}
 	tree_.pop();
 	// Don't branch if we can't better the best IFS
+	double best_objective;
 	best_objective = tree_.getBestObjective();
 	if (node.objective_value >= best_objective) {
 	  if (options_.mip_report_level > 1) 
