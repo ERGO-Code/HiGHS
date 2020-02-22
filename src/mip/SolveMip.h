@@ -73,7 +73,8 @@ class Tree {
 
   double getBestObjective() { return best_objective_; }
   double getBestBound(int& best_node);
-  int getNumNodes() { return num_nodes; }
+  int getNumNodesFormed() { return num_nodes; }
+  int getNumNodesLeft() { return (int)nodes_.size(); }
   void setMipReportLevel(const int mip_report_level_) { mip_report_level = mip_report_level_; }
 
  private:

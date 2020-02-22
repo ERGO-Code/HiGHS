@@ -40,6 +40,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   HighsMipStatus root_solve_status = solveRootNode();
   num_nodes_solved++;
   root_objective_ = info_.objective_function_value;
+  reportMipSolverProgressLine("", true);
   reportMipSolverProgress(root_solve_status);  
   if (root_solve_status != HighsMipStatus::kRootNodeOptimal) return root_solve_status;
 
@@ -331,7 +332,7 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
   while (!tree_.empty()) {
     if (timer_.readRunHighsClock() > options_.time_limit) 
       return HighsMipStatus::kTimeout;
-    if (tree_.getNumNodes() > options_.mip_max_nodes)
+    if (tree_.getNumNodesFormed() > options_.mip_max_nodes)
       return HighsMipStatus::kMaxNodeReached;
     Node& node = tree_.next();
     if (node.parent_objective >= tree_.getBestObjective()) {
@@ -412,49 +413,49 @@ void HighsMipSolver::reportMipSolverProgress(const HighsMipStatus mip_status) {
     }
     switch (mip_status) {
     case HighsMipStatus::kOptimal:
-    reportMipSolverProgressLine("");
-    break;
+      reportMipSolverProgressLine("");
+      break;
     case HighsMipStatus::kTimeout:
-    reportMipSolverProgressLine("Timeout");
-    break;
+      reportMipSolverProgressLine("Timeout");
+      break;
     case HighsMipStatus::kError:
-    reportMipSolverProgressLine("Error");
-    break;
+      reportMipSolverProgressLine("Error");
+      break;
     case HighsMipStatus::kNodeOptimal:
-    if (num_nodes_solved % report_frequency == 0)
-      reportMipSolverProgressLine("");
-    break;
+      if (num_nodes_solved % report_frequency == 0)
+	reportMipSolverProgressLine("");
+      break;
     case HighsMipStatus::kNodeInfeasible:
-    if (num_nodes_solved % report_frequency == 0)
-      reportMipSolverProgressLine("");
-    break;
+      if (num_nodes_solved % report_frequency == 0)
+	reportMipSolverProgressLine("");
+      break;
     case HighsMipStatus::kNodeUnbounded:
-    reportMipSolverProgressLine("Unbounded");
-    break;
+      reportMipSolverProgressLine("Unbounded");
+      break;
     case HighsMipStatus::kNodeNotOptimal:
-    reportMipSolverProgressLine("Not optimal");    
-    break;
+      reportMipSolverProgressLine("Not optimal");    
+      break;
     case HighsMipStatus::kNodeError:
-    reportMipSolverProgressLine("Node error");    
-    break;
+      reportMipSolverProgressLine("Node error");    
+      break;
     case HighsMipStatus::kRootNodeOptimal:
-    reportMipSolverProgressLine("");
-    break;
+      reportMipSolverProgressLine("");
+      break;
     case HighsMipStatus::kRootNodeNotOptimal:
-    reportMipSolverProgressLine("Root node not optimal");
-    break;
+      reportMipSolverProgressLine("Root node not optimal");
+      break;
     case HighsMipStatus::kRootNodeError:
-    reportMipSolverProgressLine("Root node error");
-    break;
+      reportMipSolverProgressLine("Root node error");
+      break;
     case HighsMipStatus::kMaxNodeReached:
-    reportMipSolverProgressLine("Max node reached");
-    break;
+      reportMipSolverProgressLine("Max node reached");
+      break;
     case HighsMipStatus::kUnderDevelopment:
-    reportMipSolverProgressLine("Under development");
-    break;
+      reportMipSolverProgressLine("Under development");
+      break;
     case HighsMipStatus::kTreeExhausted:
-    reportMipSolverProgressLine("Tree exhausted");
-    break;
+      reportMipSolverProgressLine("Tree exhausted");
+      break;
     default:
       reportMipSolverProgressLine("Unknown");
       break;
@@ -463,44 +464,42 @@ void HighsMipSolver::reportMipSolverProgress(const HighsMipStatus mip_status) {
     printf("Nodes solved = %d; Simplex iterations = %d\n", num_nodes_solved, info_.simplex_iteration_count);
   }
 }
-  
+
 void HighsMipSolver::reportMipSolverProgressLine(std::string message, const bool header) {
   if (header) {
-    printf("  Time |      Node |      Left |   LP iter | LP it/n |   dualbound | primalbound |    gap \n");
+    printf("  Time |      Node |      Left |   LP iter | LP it/n |    dualbound |  primalbound |    gap \n");
   } else {
     double average_simplex_iterations = info_.simplex_iteration_count;
     average_simplex_iterations /= num_nodes_solved;
     double time = timer_.readRunHighsClock();
-    int num_nodes_formed = tree_.getNumNodes();
+    int num_nodes_left = tree_.getNumNodesLeft();
     double best_bound;
     double best_objective = tree_.getBestObjective();
-    int left = num_nodes_formed - num_nodes_solved;
-    if (left>0) {
+    if (num_nodes_left>0) {
       int best_node;
       best_bound = tree_.getBestBound(best_node);
     } else if (num_nodes_solved == 1) {
       // No nodes formed, so have just solved the root node
       best_bound = root_objective_;
-      num_nodes_formed = 3;
-      left = 2;
+      num_nodes_left = 2;
     } else {
       // No nodes left
       best_bound = best_objective;
-      left = 0;
+      num_nodes_left = 0;
     }
-    printf("%6.1f | %9d | %9d | %9d | %7.2f ", time, num_nodes_solved, left,
+    printf("%6.1f | %9d | %9d | %9d | %7.2f ", time, num_nodes_solved, num_nodes_left,
 	   info_.simplex_iteration_count, average_simplex_iterations);
     if (best_bound < HIGHS_CONST_INF) {
-      printf("| %11.5e ", best_bound);
+      printf("| %12.5e ", best_bound);
     } else {
-      printf("|      --     ");
+      printf("|      --      ");
     }
     if (best_objective < HIGHS_CONST_INF) {
       // There is an integer solution
       double gap = 100*(best_objective-best_bound)/max(1.0, fabs(best_objective));
-      printf("| %11.5e | %6.2f%%", best_objective, gap);
+      printf("| %12.5e | %6.2f%%", best_objective, gap);
     } else {
-      printf("|      --     |    Inf ");
+      printf("|      --      |    Inf ");
     }
     printf(" %s\n", message.c_str());
   }
@@ -535,7 +534,7 @@ std::string HighsMipSolver::highsMipStatusToString(const HighsMipStatus mip_stat
     return "Node error";
     break;
   case HighsMipStatus::kRootNodeNotOptimal:
-    return "Root node not optima";
+    return "Root node not optimal";
     break;
   case HighsMipStatus::kRootNodeError:
     return "Root node error";
