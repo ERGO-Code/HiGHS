@@ -59,13 +59,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   HighsMipStatus tree_solve_status = solveTree(root);
   reportMipSolverProgress(tree_solve_status);
 
-  if (tree_solve_status != HighsMipStatus::kTreeExhausted) {
-    std::cout << "Warning: tree not explored entirely." << std::endl;
-    return tree_solve_status;
-  }
-
   // Stop and read the HiGHS clock, then work out time for this call
-  timer_.stopRunHighsClock();
   double mip_solve_final_time = timer_.readRunHighsClock();
 
   int num_nodes_formed = tree_.getNumNodesFormed();
@@ -92,10 +86,8 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
     hmos_[0].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
     std::stringstream message;
     message << std::endl;
-    message << "Optimal solution found.";
-    message << std::endl;
     message << "Run status : "
-            << highsModelStatusToString(hmos_[0].unscaled_model_status_)
+            << highsMipStatusToString(tree_solve_status)
             << std::endl;
     message << "Objective  : " << std::scientific << tree_.getBestObjective()
             << std::endl;
@@ -110,6 +102,11 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
     HighsPrintMessage(options_mip_.output, options_mip_.message_level,
                       ML_MINIMAL, "No feasible solution found.");
     // todo: handle infeasible vs timeout case once you have a timeout.
+  }
+
+  if (tree_solve_status != HighsMipStatus::kTreeExhausted) {
+    std::cout << "Warning: tree not explored entirely." << std::endl;
+    return tree_solve_status;
   }
 
   return HighsMipStatus::kUnderDevelopment;
