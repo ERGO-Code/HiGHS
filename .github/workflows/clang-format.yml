@@ -10,6 +10,7 @@ jobs:
     - uses: actions/checkout@v1
     - uses: DoozyX/clang-format-lint-action@v0.5
       with:
-        source: './src/lp_data ./src/io ./src/mip ./src/simplex ./src/presolve ./src/test ./src/util ./interfaces'
+        source: './src/lp_data ./src/mip ./src/simplex ./src/presolve ./src/util'
+        #./src/test ./interfaces'
         extensions: 'h,cpp,c'
         clangFormatVersion: 9
