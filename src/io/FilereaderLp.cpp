@@ -13,7 +13,9 @@
  */
 
 #include "io/FilereaderLp.h"
+
 #include <cstdarg>
+
 #include "lp_data/HConst.h"
 #include "util/stringutil.h"
 
@@ -75,9 +77,9 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
   if (this->status != LP_FILEREADER_STATUS::ERROR)
     this->handleSemiSection(model);
   if (this->status != LP_FILEREADER_STATUS::ERROR) {
-    FilereaderRetcode filereader_return_code = 
-      this->handleSosSection(model);
-    if (filereader_return_code != FilereaderRetcode::OK) return FilereaderRetcode::PARSERERROR;
+    FilereaderRetcode filereader_return_code = this->handleSosSection(model);
+    if (filereader_return_code != FilereaderRetcode::OK)
+      return FilereaderRetcode::PARSERERROR;
   }
   assert(this->tokenQueue.size() == 0);
 
@@ -107,17 +109,18 @@ void FilereaderLp::handleBinarySection(HighsModelBuilder& model) {
 
     HighsVar* variable;
     model.HighsGetOrCreateVarByName(((LpTokenVarIdentifier*)token)->value,
-                                      &variable);
+                                    &variable);
     // update bounds if necessary
-    if(variable->lowerBound == 0.0 && variable->upperBound == HIGHS_CONST_INF) {
+    if (variable->lowerBound == 0.0 &&
+        variable->upperBound == HIGHS_CONST_INF) {
       variable->upperBound = 1.0;
     }
     variable->type = HighsVarType::BIN;
-    
+
     this->binSection.pop_front();
     delete token;
   }
-  
+
   assert(this->binSection.size() == 0);
 }
 
@@ -139,9 +142,9 @@ void FilereaderLp::handleGeneralSection(HighsModelBuilder& model) {
 
     HighsVar* variable;
     model.HighsGetOrCreateVarByName(((LpTokenVarIdentifier*)token)->value,
-                                      &variable);
+                                    &variable);
     variable->type = HighsVarType::GEN;
-    
+
     this->generalSection.pop_front();
     delete token;
   }
@@ -167,9 +170,9 @@ void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
 
     HighsVar* variable;
     model.HighsGetOrCreateVarByName(((LpTokenVarIdentifier*)token)->value,
-                                      &variable);
+                                    &variable);
     variable->type = HighsVarType::SEMI;
-    
+
     this->semiSection.pop_front();
     delete token;
   }
@@ -178,7 +181,6 @@ void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
 }
 
 FilereaderRetcode FilereaderLp::handleSosSection(HighsModelBuilder& model) {
-  
 #ifdef HiGHSDEV
   printf("SoS section is not currenlty supported by the .lp filereader.\n");
 #endif
@@ -669,7 +671,7 @@ bool FilereaderLp::readNextToken() {
         this->tokenQueue.pop_back();
         delete previousToken;
         HighsLogMessage(stdout, HighsMessageType::ERROR,
-			"Error when parsing file.\n");
+                        "Error when parsing file.\n");
         this->status = LP_FILEREADER_STATUS::ERROR;
       }
       this->tokenQueue.push_back(newToken);
@@ -843,8 +845,7 @@ bool FilereaderLp::readNextToken() {
           return true;
         }
       default:
-        HighsLogMessage(stdout, HighsMessageType::ERROR,
-			"Unknown symbol\n");
+        HighsLogMessage(stdout, HighsMessageType::ERROR, "Unknown symbol\n");
         return false;
     }
   }
@@ -950,8 +951,8 @@ void FilereaderLp::writeToFileLineend() {
 }
 
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
-					   const char* filename,
-					   HighsLp& model) {
+                                           const char* filename,
+                                           HighsLp& model) {
   this->file = fopen(filename, "w");
 
   // write comment at the start of the file

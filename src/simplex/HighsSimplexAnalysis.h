@@ -8,7 +8,8 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HighsSimplexAnalysis.h
- * @brief Analyse simplex iterations, both for run-time control and data gathering
+ * @brief Analyse simplex iterations, both for run-time control and data
+ * gathering
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
@@ -16,45 +17,51 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-#include "simplex/SimplexConst.h"
 #include "simplex/HVector.h"
+#include "simplex/SimplexConst.h"
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
 
 #ifdef HiGHSDEV
-  enum ANALYSIS_OPERATION_TYPE {
-    ANALYSIS_OPERATION_TYPE_BTRAN_FULL = 0,
-    ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-    ANALYSIS_OPERATION_TYPE_BTRAN_EP,
-    ANALYSIS_OPERATION_TYPE_PRICE_AP,
-    ANALYSIS_OPERATION_TYPE_FTRAN,
-    ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-    ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-    NUM_ANALYSIS_OPERATION_TYPE,
-  };
+enum ANALYSIS_OPERATION_TYPE {
+  ANALYSIS_OPERATION_TYPE_BTRAN_FULL = 0,
+  ANALYSIS_OPERATION_TYPE_PRICE_FULL,
+  ANALYSIS_OPERATION_TYPE_BTRAN_EP,
+  ANALYSIS_OPERATION_TYPE_PRICE_AP,
+  ANALYSIS_OPERATION_TYPE_FTRAN,
+  ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
+  ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
+  NUM_ANALYSIS_OPERATION_TYPE,
+};
 #endif
-  const double running_average_multiplier = 0.05;
+const double running_average_multiplier = 0.05;
 
 /**
- * @brief Analyse simplex iterations, both for run-time control and data gathering
+ * @brief Analyse simplex iterations, both for run-time control and data
+ * gathering
  */
 class HighsSimplexAnalysis {
  public:
-  void setup(const HighsLp& lp, const HighsOptions& options, const int simplex_iteration_count_);
+  void setup(const HighsLp& lp, const HighsOptions& options,
+             const int simplex_iteration_count_);
   void messaging(FILE* logfile_, FILE* output_, const int message_level_);
-  void updateOperationResultDensity(const double local_density, double& density);
+  void updateOperationResultDensity(const double local_density,
+                                    double& density);
   void iterationReport();
   void invertReport();
   void invertReport(const bool header);
-  void dualSteepestEdgeWeightError(const double computed_edge_weight, const double updated_edge_weight);
+  void dualSteepestEdgeWeightError(const double computed_edge_weight,
+                                   const double updated_edge_weight);
   bool switchToDevex();
 
 #ifdef HiGHSDEV
   HighsTimer timer_;
   void iterationRecord();
   void iterationRecordMajor();
-  void operationRecordBefore(const int operation_type, const HVector& vector, const double historical_density);
-  void operationRecordBefore(const int operation_type, const int current_count, const double historical_density);
+  void operationRecordBefore(const int operation_type, const HVector& vector,
+                             const double historical_density);
+  void operationRecordBefore(const int operation_type, const int current_count,
+                             const double historical_density);
   void operationRecordAfter(const int operation_type, const HVector& vector);
   void operationRecordAfter(const int operation_type, const int result_count);
   void summaryReport();
@@ -76,7 +83,7 @@ class HighsSimplexAnalysis {
   double col_BFRT_density;
   double primal_col_density;
   double dual_col_density;
-  
+
   int simplex_strategy = 0;
   int min_threads = 0;
   int num_threads = 0;
@@ -129,9 +136,9 @@ class HighsSimplexAnalysis {
 #endif
 
  private:
-
   void iterationReport(const bool header);
-  void reportAlgorithmPhaseIterationObjective(const bool header, const int this_message_level);
+  void reportAlgorithmPhaseIterationObjective(const bool header,
+                                              const int this_message_level);
   void reportInfeasibility(const bool header, const int this_message_level);
 #ifdef HiGHSDEV
   void reportThreads(const bool header, const int this_message_level);
@@ -156,7 +163,6 @@ class HighsSimplexAnalysis {
   double AnIterCostlyDseMeasure;
   int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
                                    //!< previously reported
-
 
   const double accept_weight_threshhold = 0.25;
   const double weight_error_threshhold = 4.0;

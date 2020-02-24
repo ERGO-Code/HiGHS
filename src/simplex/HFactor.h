@@ -19,8 +19,8 @@
 #include <vector>
 
 //#include "HConfig.h"
-#include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/FactorTimer.h"
+#include "simplex/HighsSimplexAnalysis.h"
 
 using std::max;
 using std::min;
@@ -104,7 +104,7 @@ class HFactor {
              const int* Aindex,     //!< Row indices of constraint matrix
              const double* Avalue,  //!< Row values of constraint matrix
              int* baseIndex,        //!< Indices of basic variables
-	     HighsSimplexAnalysis* analysis = NULL,
+             HighsSimplexAnalysis* analysis = NULL,
              int updateMethod =
                  UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
@@ -135,14 +135,14 @@ class HFactor {
    */
   void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
              double hist_dsty  //!< Historical density of the result
-             ); // FactorTimer frig const;
+  );                           // FactorTimer frig const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
   void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
              double hist_dsty  //!< Historical density of the result
-             ); // FactorTimer frig const;
+  );                           // FactorTimer frig const;
 
   /**
    * @brief Update according to
@@ -239,6 +239,7 @@ class HFactor {
   // Problem size, coefficient matrix and update method
   int numRow;
   int numCol;
+
  private:
   const int* Astart;
   const int* Aindex;
@@ -327,7 +328,7 @@ class HFactor {
 
   // Record of maximum number of OMP threads. If OMP is available then
   // it's set to the correct positive number in HFactor::setup()
-  int omp_max_threads = 0; 
+  int omp_max_threads = 0;
 
 #ifdef HiGHSDEV
   // Timer
@@ -345,25 +346,25 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void btranL(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void ftranU(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void btranU(HVector& vector, double hist_dsty); // FactorTimer frig const;
+  void ftranL(HVector& vector, double hist_dsty);  // FactorTimer frig const;
+  void btranL(HVector& vector, double hist_dsty);  // FactorTimer frig const;
+  void ftranU(HVector& vector, double hist_dsty);  // FactorTimer frig const;
+  void btranU(HVector& vector, double hist_dsty);  // FactorTimer frig const;
 
-  void ftranFT(HVector& vector); // FactorTimer frig const;
-  void btranFT(HVector& vector); // FactorTimer frig const;
-  void ftranPF(HVector& vector); // FactorTimer frig const;
-  void btranPF(HVector& vector); // FactorTimer frig const;
-  void ftranMPF(HVector& vector); // FactorTimer frig const;
-  void btranMPF(HVector& vector); // FactorTimer frig const;
-  void ftranAPF(HVector& vector); // FactorTimer frig const;
-  void btranAPF(HVector& vector); // FactorTimer frig const;
+  void ftranFT(HVector& vector);   // FactorTimer frig const;
+  void btranFT(HVector& vector);   // FactorTimer frig const;
+  void ftranPF(HVector& vector);   // FactorTimer frig const;
+  void btranPF(HVector& vector);   // FactorTimer frig const;
+  void ftranMPF(HVector& vector);  // FactorTimer frig const;
+  void btranMPF(HVector& vector);  // FactorTimer frig const;
+  void ftranAPF(HVector& vector);  // FactorTimer frig const;
+  void btranAPF(HVector& vector);  // FactorTimer frig const;
 
-  void updateCFT(HVector* aq, HVector* ep, int* iRow);//, int* hint);
-  void updateFT(HVector* aq, HVector* ep, int iRow);//, int* hint);
+  void updateCFT(HVector* aq, HVector* ep, int* iRow);  //, int* hint);
+  void updateFT(HVector* aq, HVector* ep, int iRow);    //, int* hint);
   void updatePF(HVector* aq, int iRow, int* hint);
   void updateMPF(HVector* aq, HVector* ep, int iRow, int* hint);
-  void updateAPF(HVector* aq, HVector* ep, int iRow);//, int* hint);
+  void updateAPF(HVector* aq, HVector* ep, int iRow);  //, int* hint);
 
   /**
    * Local in-line functions

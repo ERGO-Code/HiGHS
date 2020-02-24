@@ -11,10 +11,11 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "io/LoadProblem.h"
+
 #include <sys/stat.h>
 
 #include "io/Filereader.h"
-#include "io/LoadProblem.h"
 #include "lp_data/HighsLpUtils.h"
 
 HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {

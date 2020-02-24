@@ -12,7 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "util/HighsSort.h"
+
 #include <cstddef>
+
 #include "lp_data/HConst.h"
 
 void maxheapsort(int* heap_v, int n) {
@@ -152,14 +154,14 @@ void max_heapify(double* heap_v, int* heap_i, int i, int n) {
 
 bool increasing_set_ok(const int* set, const int set_num_entries,
                        const int set_entry_lower, const int set_entry_upper,
-		       bool strict) {
+                       bool strict) {
   if (set_num_entries < 0) return false;
   if (set == NULL) return false;
   bool check_bounds = set_entry_lower <= set_entry_upper;
   int previous_entry;
   if (check_bounds) {
     if (strict) {
-      previous_entry = set_entry_lower-1;
+      previous_entry = set_entry_lower - 1;
     } else {
       previous_entry = set_entry_lower;
     }
@@ -181,20 +183,19 @@ bool increasing_set_ok(const int* set, const int set_num_entries,
 
 bool increasing_set_ok(const double* set, const int set_num_entries,
                        const double set_entry_lower,
-                       const double set_entry_upper,
-		       bool strict) {
+                       const double set_entry_upper, bool strict) {
   if (set_num_entries < 0) return false;
   if (set == NULL) return false;
   bool check_bounds = set_entry_lower <= set_entry_upper;
   double previous_entry;
   if (check_bounds) {
     if (strict) {
-      if (set_entry_lower<0) {
-	previous_entry = (1+HIGHS_CONST_TINY)*set_entry_lower;
-      } else if (set_entry_lower>0) {
-	previous_entry = (1-HIGHS_CONST_TINY)*set_entry_lower;
+      if (set_entry_lower < 0) {
+        previous_entry = (1 + HIGHS_CONST_TINY) * set_entry_lower;
+      } else if (set_entry_lower > 0) {
+        previous_entry = (1 - HIGHS_CONST_TINY) * set_entry_lower;
       } else {
-	previous_entry = -HIGHS_CONST_TINY;
+        previous_entry = -HIGHS_CONST_TINY;
       }
     } else {
       previous_entry = set_entry_lower;
@@ -215,28 +216,22 @@ bool increasing_set_ok(const double* set, const int set_num_entries,
   return true;
 }
 
-void sortSetData(const int num_entries,
-		 const int* set, 
-		 const double* data0,
-		 const double* data1,
-		 const double* data2,
-		 int* sorted_set, 
-		 double* sorted_data0,
-		 double* sorted_data1,
-		 double* sorted_data2) {
-  
-  int* sort_set = (int*)malloc(sizeof(int) * (1+num_entries));
-  int* perm = (int*)malloc(sizeof(int) * (1+num_entries));
+void sortSetData(const int num_entries, const int* set, const double* data0,
+                 const double* data1, const double* data2, int* sorted_set,
+                 double* sorted_data0, double* sorted_data1,
+                 double* sorted_data2) {
+  int* sort_set = (int*)malloc(sizeof(int) * (1 + num_entries));
+  int* perm = (int*)malloc(sizeof(int) * (1 + num_entries));
   for (int ix = 0; ix < num_entries; ix++) {
-    sort_set[1+ix] = set[ix];
-    perm[1+ix] = ix;
+    sort_set[1 + ix] = set[ix];
+    perm[1 + ix] = ix;
   }
   maxheapsort(sort_set, perm, num_entries);
   for (int ix = 0; ix < num_entries; ix++) {
-    sorted_set[ix] = set[perm[1+ix]];
-    if (data0 != NULL) sorted_data0[ix] = data0[perm[1+ix]];
-    if (data1 != NULL) sorted_data1[ix] = data1[perm[1+ix]];
-    if (data2 != NULL) sorted_data2[ix] = data2[perm[1+ix]];
+    sorted_set[ix] = set[perm[1 + ix]];
+    if (data0 != NULL) sorted_data0[ix] = data0[perm[1 + ix]];
+    if (data1 != NULL) sorted_data1[ix] = data1[perm[1 + ix]];
+    if (data2 != NULL) sorted_data2[ix] = data2[perm[1 + ix]];
   }
   free(sort_set);
   free(perm);

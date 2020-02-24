@@ -120,7 +120,8 @@ class HighsSimplexInterface {
                                 bool set, int num_set_entries,
                                 const int* row_set, bool mask, int* row_mask);
 
-  HighsStatus changeCoefficient(const int Xrow, const int Xcol, const double XnewValue);
+  HighsStatus changeCoefficient(const int Xrow, const int Xcol,
+                                const double XnewValue);
 
   // Shift the objective
   void shiftObjectiveValue(double Xshift);
@@ -187,13 +188,9 @@ class HighsSimplexInterface {
                                      const double* usr_row_lower,
                                      const double* usr_row_upper);
 
-  HighsStatus basisSolve(
-			 const vector<double>& rhs,
-			 double* solution,
-			 int* solution_num_nz,
-			 int* solution_nz_indices,
-			 bool transpose=false
-			 );
+  HighsStatus basisSolve(const vector<double>& rhs, double* solution,
+                         int* solution_num_nz, int* solution_nz_indices,
+                         bool transpose = false);
 
 #ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
@@ -237,7 +234,6 @@ class HighsSimplexInterface {
    */
   int get_basic_indices(int* bind  //!> Indices of basic variables
   );
-
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXINTERFACE_H_ */
