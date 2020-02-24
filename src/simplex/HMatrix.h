@@ -57,17 +57,16 @@ class HMatrix {
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T A \f$
    * column-wise, maintaining indices of nonzeros in the result
    */
-  void priceByColumn(HVector& row_ap,       //!< Vector \f$ \mathbf{y}\f$
-                     const HVector& row_ep  //!< Vector \f$ \mathbf{x}\f$
-                     ) const;
+  void priceByColumn(
+      HVector& row_ap,               //!< Vector \f$ \mathbf{y}\f$
+      const HVector& row_ep) const;  //!< Vector \f$ \mathbf{x}\f$
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise, maintaining indices of nonzeros in result
    */
   void priceByRowSparseResult(
-      HVector& row_ap,       //!< Vector \f$ \mathbf{y}\f$
-      const HVector& row_ep  //!< Vector \f$ \mathbf{x}\f$
-      ) const;
+      HVector& row_ap,               //!< Vector \f$ \mathbf{y}\f$
+      const HVector& row_ep) const;  //!< Vector \f$ \mathbf{x}\f$
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise from a given row, maintaining indices of nonzeros in
@@ -81,9 +80,8 @@ class HMatrix {
       double historical_density,  //!< Historical density of PRICE results to be
                                   //!< used
       int from_i,                 //!< Index of row to work from
-      double switch_density  //!< Density for switch to not maintaining indices
-                             //!< of nonzeros
-      ) const;
+      double switch_density) const;  //!< Density for switch to not maintaining
+                                     //!< indices of nonzeros
   /**
    * @brief PRICE: Compute \f$ \mathbf{y}^T = \mathbf{x}^T N \f$
    * row-wise from a given row, not maintaining indices of nonzeros in
@@ -92,15 +90,13 @@ class HMatrix {
   void priceByRowDenseResult(
       HVector& row_ap,        //!< Vector \f$ \mathbf{y}\f$
       const HVector& row_ep,  //!< Vector \f$ \mathbf{x}\f$
-      int from_i              //!< Index of row to work from
-      ) const;
+      int from_i) const;      //!< Index of row to work from
   /**
    * @brief Remove indices of zeros from vector \f$ \mathbf{y}\f$ created by
    * cancellation in PRICE
    */
   void priceByRowSparseResultRemoveCancellation(
-      HVector& row_ap  //!< Vector \f$ \mathbf{y} \f$
-      ) const;
+      HVector& row_ap) const;  //!< Vector \f$ \mathbf{y} \f$
   /**
    * @brief Update the partitioned row-wise representation according
    * to columns coming in and out of the set of indices of basic
@@ -115,16 +111,14 @@ class HMatrix {
    * column of the constraint matrix: \f$ \mathbf{x}^T\mathbf{a}_i \f$
    */
   double compute_dot(HVector& vector,  //!< Vector \f$ \mathbf{x} \f$
-                     int iCol          //!< Index  \f$ i\f$ of column
-                     ) const;
+                     int iCol) const;  //!< Index  \f$ i\f$ of column
   /**
    * @brief Add into a vector, a multiple of a particular column of
    * the constraint matrix \f$ \mathbf{x} := \mathbf{x} + \mu \mathbf{a}_i \f$
    */
-  void collect_aj(HVector& vector,   //!< Vector \f$ \mathbf{x} \f$
-                  int iCol,          //!< Index  \f$ i\f$ of column
-                  double multiplier  //!< Multiplier \f$ \mu \f$
-                  ) const;
+  void collect_aj(HVector& vector,           //!< Vector \f$ \mathbf{x} \f$
+                  int iCol,                  //!< Index  \f$ i\f$ of column
+                  double multiplier) const;  //!< Multiplier \f$ \mu \f$
 
   /**
    * @brief Get the pointer to the starts of the column-wise matrix
