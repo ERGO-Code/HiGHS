@@ -15,14 +15,14 @@
 #ifdef HiGHSDEV
 #include "simplex/FactorTimer.h"
 #endif
-#include "lp_data/HConst.h"
-#include "simplex/HVector.h"
-#include "util/HighsTimer.h"
-
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+
+#include "lp_data/HConst.h"
+#include "simplex/HVector.h"
+#include "util/HighsTimer.h"
 
 #ifdef HiGHSDEV
 #ifdef OPENMP
@@ -167,8 +167,7 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
-		    HighsSimplexAnalysis* analysis_,
-                    int updateMethod_) {
+                    HighsSimplexAnalysis* analysis_, int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -327,17 +326,15 @@ int HFactor::build() {
 #endif
   build_realTick = build_timer.getTick() - build_realTick;
   // Record the number of entries in the INVERT
-  invert_num_el = Lstart[numRow] + Ulastp[numRow-1] + numRow;
-  
+  invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
+
   if (rankDeficiency) {
     kernel_dim -= rankDeficiency;
-    printf("Rank deficiency %1d: basis_matrix (%d el); INVERT (%d el); kernel (%d dim; %d el): nwork = %d\n",
-	   rankDeficiency,
-	   basis_matrix_num_el,
-	   invert_num_el,
-	   kernel_dim,
-	   kernel_num_el,
-	   nwork);
+    printf(
+        "Rank deficiency %1d: basis_matrix (%d el); INVERT (%d el); kernel (%d "
+        "dim; %d el): nwork = %d\n",
+        rankDeficiency, basis_matrix_num_el, invert_num_el, kernel_dim,
+        kernel_num_el, nwork);
   }
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.stop(clock_[FactorInvert]);
@@ -345,7 +342,8 @@ int HFactor::build() {
   return rankDeficiency;
 }
 
-void HFactor::ftran(HVector& vector, double hist_dsty){ // FactorTimer frig const{
+void HFactor::ftran(HVector& vector,
+                    double hist_dsty) {  // FactorTimer frig const{
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.start(clock_[FactorFtran]);
 #endif
@@ -356,7 +354,8 @@ void HFactor::ftran(HVector& vector, double hist_dsty){ // FactorTimer frig cons
 #endif
 }
 
-void HFactor::btran(HVector& vector, double hist_dsty){ // FactorTimer frig const{
+void HFactor::btran(HVector& vector,
+                    double hist_dsty) {  // FactorTimer frig const{
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.start(clock_[FactorBtran]);
 #endif
@@ -370,14 +369,14 @@ void HFactor::btran(HVector& vector, double hist_dsty){ // FactorTimer frig cons
 void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
   // Special case
   if (aq->next) {
-    updateCFT(aq, ep, iRow);//, hint);
+    updateCFT(aq, ep, iRow);  //, hint);
     return;
   }
 
-  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow);//, hint);
+  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow);  //, hint);
   if (updateMethod == UPDATE_METHOD_PF) updatePF(aq, *iRow, hint);
   if (updateMethod == UPDATE_METHOD_MPF) updateMPF(aq, ep, *iRow, hint);
-  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);//, hint);
+  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);  //, hint);
 }
 
 #ifdef HiGHSDEV
@@ -514,7 +513,7 @@ void HFactor::buildSimple() {
 #endif
   // Record the number of elements in the basis matrix
   basis_matrix_num_el = numRow - nwork + BcountX;
-  
+
   // count1 = 0;
   // Comments: for pds-20, dfl001: 60 / 80
   // Comments: when system is large: enlarge
@@ -630,11 +629,11 @@ void HFactor::buildSimple() {
       MRspace[iRow] = count * 2;
       MRcountX += count * 2;
       rlinkAdd(iRow, count);
-      kernel_num_el += count+1;
+      kernel_num_el += count + 1;
     }
   }
   MRindex.resize(MRcountX);
-  
+
   // 3.2 Prepare column links, kernel matrix
   clinkFirst.assign(numRow + 1, -1);
   MCindex.clear();
@@ -1084,7 +1083,7 @@ void HFactor::buildRpRankDeficiency() {
     }
     printf("\n");
   }
-  free (ASM);
+  free(ASM);
 }
 
 void HFactor::buildMarkSingC() {
@@ -1213,7 +1212,8 @@ void HFactor::buildFinish() {
   build_syntheticTick += numRow * 80 + (LcountX + UcountX) * 60;
 }
 
-void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
+void HFactor::ftranL(HVector& rhs,
+                     double hist_dsty) {  // FactorTimer frig const{
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranLower]);
 #endif
@@ -1284,7 +1284,8 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 #endif
 }
 
-void HFactor::btranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
+void HFactor::btranL(HVector& rhs,
+                     double hist_dsty) {  // FactorTimer frig const{
   //    const double hyperBTRANL = 0.10;
   //    const double hyperCANCEL = 0.05;
 
@@ -1355,7 +1356,8 @@ void HFactor::btranL(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 #endif
 }
 
-void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
+void HFactor::ftranU(HVector& rhs,
+                     double hist_dsty) {  // FactorTimer frig const{
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpper]);
 #endif
@@ -1389,10 +1391,11 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 
   const double curr_dsty = 1.0 * rhs.count / numRow;
   if (curr_dsty > hyperCANCEL || hist_dsty > hyperFTRANU) {
-    const bool report_ftran_upper_sparse = false;//curr_dsty < hyperCANCEL;
+    const bool report_ftran_upper_sparse = false;  // curr_dsty < hyperCANCEL;
 #ifdef HiGHSDEV
     if (analysis != NULL) {
-      updateValueDistribution(curr_dsty, analysis->before_ftran_upper_sparse_density);
+      updateValueDistribution(curr_dsty,
+                              analysis->before_ftran_upper_sparse_density);
     }
     if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperSps]);
 #endif
@@ -1445,18 +1448,22 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperSps]);
     if (analysis != NULL) {
       double local_density = (1.0 * rhs.count) / numRow;
-      updateValueDistribution(local_density, analysis->ftran_upper_sparse_density);
+      updateValueDistribution(local_density,
+                              analysis->ftran_upper_sparse_density);
     }
 #endif
     if (report_ftran_upper_sparse) {
       const double final_density = 1.0 * rhs.count / numRow;
-      printf("FactorFtranUpperSps: hist_dsty = %10.4g; curr_dsty = %10.4g; final_density = %10.4g\n",
-	     hist_dsty, curr_dsty, final_density);
+      printf(
+          "FactorFtranUpperSps: hist_dsty = %10.4g; curr_dsty = %10.4g; "
+          "final_density = %10.4g\n",
+          hist_dsty, curr_dsty, final_density);
     }
   } else {
 #ifdef HiGHSDEV
     if (analysis != NULL) {
-      updateValueDistribution(curr_dsty, analysis->before_ftran_upper_hyper_density);
+      updateValueDistribution(curr_dsty,
+                              analysis->before_ftran_upper_hyper_density);
     }
     if (omp_max_threads <= 1) timer_.start(clock_[FactorFtranUpperHys]);
 #endif
@@ -1468,7 +1475,8 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
     if (omp_max_threads <= 1) timer_.stop(clock_[FactorFtranUpperHys]);
     if (analysis != NULL) {
       double local_density = (1.0 * rhs.count) / numRow;
-      updateValueDistribution(local_density, analysis->ftran_upper_hyper_density);
+      updateValueDistribution(local_density,
+                              analysis->ftran_upper_hyper_density);
     }
 #endif
   }
@@ -1489,7 +1497,8 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 #endif
 }
 
-void HFactor::btranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
+void HFactor::btranU(HVector& rhs,
+                     double hist_dsty) {  // FactorTimer frig const{
 #ifdef HiGHSDEV
   if (omp_max_threads <= 1) timer_.start(clock_[FactorBtranUpper]);
 #endif
@@ -1602,7 +1611,7 @@ void HFactor::btranU(HVector& rhs, double hist_dsty){ // FactorTimer frig const{
 #endif
 }
 
-void HFactor::ftranFT(HVector& vector){ // FactorTimer frig const{
+void HFactor::ftranFT(HVector& vector) {  // FactorTimer frig const{
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   int* PFpivotIndex = NULL;
@@ -1649,7 +1658,7 @@ void HFactor::ftranFT(HVector& vector){ // FactorTimer frig const{
   }
 }
 
-void HFactor::btranFT(HVector& vector){ // FactorTimer frig const{
+void HFactor::btranFT(HVector& vector) {  // FactorTimer frig const{
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex =
@@ -1695,7 +1704,7 @@ void HFactor::btranFT(HVector& vector){ // FactorTimer frig const{
   vector.count = RHScount;
 }
 
-void HFactor::ftranPF(HVector& vector){ // FactorTimer frig const{
+void HFactor::ftranPF(HVector& vector) {  // FactorTimer frig const{
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex = &this->PFpivotIndex[0];
@@ -1731,7 +1740,7 @@ void HFactor::ftranPF(HVector& vector){ // FactorTimer frig const{
   vector.count = RHScount;
 }
 
-void HFactor::btranPF(HVector& vector){ // FactorTimer frig const{
+void HFactor::btranPF(HVector& vector) {  // FactorTimer frig const{
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex = &this->PFpivotIndex[0];
@@ -1761,7 +1770,7 @@ void HFactor::btranPF(HVector& vector){ // FactorTimer frig const{
   vector.count = RHScount;
 }
 
-void HFactor::ftranMPF(HVector& vector){ // FactorTimer frig const{
+void HFactor::ftranMPF(HVector& vector) {  // FactorTimer frig const{
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1779,7 +1788,7 @@ void HFactor::ftranMPF(HVector& vector){ // FactorTimer frig const{
   vector.count = RHScount;
 }
 
-void HFactor::btranMPF(HVector& vector){ // FactorTimer frig const{
+void HFactor::btranMPF(HVector& vector) {  // FactorTimer frig const{
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1796,7 +1805,7 @@ void HFactor::btranMPF(HVector& vector){ // FactorTimer frig const{
   vector.count = RHScount;
 }
 
-void HFactor::ftranAPF(HVector& vector){ // FactorTimer frig const{
+void HFactor::ftranAPF(HVector& vector) {  // FactorTimer frig const{
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1814,7 +1823,7 @@ void HFactor::ftranAPF(HVector& vector){ // FactorTimer frig const{
   vector.count = RHScount;
 }
 
-void HFactor::btranAPF(HVector& vector){ // FactorTimer frig const{
+void HFactor::btranAPF(HVector& vector) {  // FactorTimer frig const{
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1831,8 +1840,8 @@ void HFactor::btranAPF(HVector& vector){ // FactorTimer frig const{
 }
 
 void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
-			//, int* hint
-			) {
+                        //, int* hint
+) {
   /*
    * In the major update loop, the prefix
    *
@@ -2093,8 +2102,8 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
 }
 
 void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
-		       //, int* hint
-		       ) {
+                       //, int* hint
+) {
   // Store pivot
   int pLogic = UpivotLookup[iRow];
   double pivot = UpivotValue[pLogic];
@@ -2289,8 +2298,8 @@ void HFactor::updateMPF(HVector* aq, HVector* ep, int iRow, int* hint) {
 }
 
 void HFactor::updateAPF(HVector* aq, HVector* ep, int iRow
-			//, int* hint
-			) {
+                        //, int* hint
+) {
 #ifdef HiGHSDEV
   int PFcountX0 = PFindex.size();
 #endif

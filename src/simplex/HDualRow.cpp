@@ -12,12 +12,12 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HDualRow.h"
-#include "lp_data/HighsModelObject.h"
 
 #include <cassert>
 #include <iostream>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HighsModelObject.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HVector.h"
 #include "simplex/SimplexTimer.h"
@@ -442,14 +442,16 @@ void HDualRow::computeDevexWeight(const int slice) {
       //      printf("Basic variable %d in packIndex is skipped\n", vr_n);
       continue;
     }
-    double pv = work_devex_index[vr_n] * packValue[el_n];    
+    double pv = work_devex_index[vr_n] * packValue[el_n];
     if (pv) {
       computed_edge_weight += pv * pv;
     }
   }
   if (rp_computed_edge_weight) {
     if (slice >= 0)
-      printf("HDualRow::computeDevexWeight: Slice %1d; computed_edge_weight = %11.4g\n",
-	   slice, computed_edge_weight);
+      printf(
+          "HDualRow::computeDevexWeight: Slice %1d; computed_edge_weight = "
+          "%11.4g\n",
+          slice, computed_edge_weight);
   }
 }
