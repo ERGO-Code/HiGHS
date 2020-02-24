@@ -14,6 +14,7 @@
 #ifndef PRESOLVE_PRESOLVE_ANALYSIS_H_
 #define PRESOLVE_PRESOLVE_ANALYSIS_H_
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,11 @@ enum PresolveRule {
   // HTICK_PRE_DUPLICATE_ROWS,
   // HTICK_PRE_DUPLICATE_COLUMNS,
 
+  // For timing.
+  MATRIX_COPY,
+  RESIZE_MATRIX,
+
+  TOTAL_PRESOLVE_TIME,
   // Number of presolve rules.
   PRESOLVE_RULES_COUNT,
 
@@ -92,6 +98,9 @@ class PresolveTimer {
     assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
     assert((int)rules_.size() == (int)PRESOLVE_RULES_COUNT);
     timer_.stop(rules_[rule].clock_id);
+
+    if (rule == TOTAL_PRESOLVE_TIME)
+      total_time_ = timer_.read(rules_[rule].clock_id);
   }
 
   void addChange(PresolveRule rule) {
@@ -110,20 +119,24 @@ class PresolveTimer {
   }
 
   void reportClocks() {
-    std::vector<int> clocks(PRESOLVE_RULES_COUNT);
-    // Call readRunHighsClock() to calibrate tick2sec;
-    timer_.readRunHighsClock();
-    double presolve_time = timer_.read(timer_.presolve_clock);
-    for (PresolveRuleInfo& rule : rules_)
-      clocks[rule.rule_id] = rule.clock_id;
-    timer_.report_tl("grep-Presolve", clocks, presolve_time, 0.01);
+    std::vector<int> clocks(PRESOLVE_RULES_COUNT - 1);
+    for (int id = 0; id < PRESOLVE_RULES_COUNT - 1; id++) {
+      assert(rules_[id].rule_id == id);
+      clocks[id] = rules_[id].clock_id;
+    }
+    std::cout << std::endl;
+    timer_.report("grep-Presolve", clocks);
+    std::cout << std::endl;
   }
 
   void updateInfo();
+  double getTotalTime() { return total_time_; }
 
  private:
   HighsTimer& timer_;
   std::vector<PresolveRuleInfo> rules_;
+
+  double total_time_ = 0.0;
 };
 
 #endif
