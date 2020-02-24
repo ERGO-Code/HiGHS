@@ -11,7 +11,7 @@
 #include "io/HMpsFF.h"
 
 FreeFormatParserReturnCode HMpsFF::loadProblem(FILE* logfile,
-					       const std::string filename,
+                                               const std::string filename,
                                                HighsLp& lp) {
   FreeFormatParserReturnCode result = parse(logfile, filename);
   if (result != FreeFormatParserReturnCode::SUCCESS) return result;
@@ -85,7 +85,8 @@ int HMpsFF::fillMatrix() {
   return 0;
 }
 
-FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile, const std::string& filename) {
+FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile,
+                                         const std::string& filename) {
   std::ifstream f;
   f.open(filename.c_str(), std::ios::in);
   if (f.is_open()) {
@@ -204,8 +205,8 @@ HMpsFF::parsekey HMpsFF::parseRows(FILE* logfile, std::ifstream& file) {
     if (key != HMpsFF::parsekey::NONE) {
       numRow = int(nrows);
       if (!hasobj) {
-      HighsLogMessage(logfile, HighsMessageType::WARNING,
-		      "No objective row found");
+        HighsLogMessage(logfile, HighsMessageType::WARNING,
+                        "No objective row found");
         rowname2idx.emplace("artificial_empty_objective", -1);
       };
       return key;
@@ -276,7 +277,8 @@ HMpsFF::parsekey HMpsFF::parseRows(FILE* logfile, std::ifstream& file) {
   return HMpsFF::parsekey::FAIL;
 }
 
-typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile, std::ifstream& file) {
+typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
+                                            std::ifstream& file) {
   std::string colname = "";
   std::string strline, word;
   int rowidx, start, end;
@@ -398,8 +400,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile, std::ifstream& file) 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
       HighsLogMessage(logfile, HighsMessageType::WARNING,
-		      "COLUMNS section contains row %s not in ROWS section",
-		      marker.c_str());
+                      "COLUMNS section contains row %s not in ROWS section",
+                      marker.c_str());
     } else {
       parsename(marker);  // rowidx set
       double value = atof(word.c_str());
@@ -426,9 +428,10 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile, std::ifstream& file) 
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        HighsLogMessage(logfile, HighsMessageType::WARNING,
-			"COLUMNS section contains row %s not in ROWS section: ignored",
-			marker.c_str());
+        HighsLogMessage(
+            logfile, HighsMessageType::WARNING,
+            "COLUMNS section contains row %s not in ROWS section: ignored",
+            marker.c_str());
         continue;
       };
 
@@ -504,16 +507,17 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      HighsLogMessage(logfile, HighsMessageType::ERROR, "No bound given for row %s",
-                      marker.c_str());
+      HighsLogMessage(logfile, HighsMessageType::ERROR,
+                      "No bound given for row %s", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      HighsLogMessage(logfile, HighsMessageType::WARNING,
-		      "RHS section contains row %s not in ROWS section: ignored",
-		      marker.c_str());
+      HighsLogMessage(
+          logfile, HighsMessageType::WARNING,
+          "RHS section contains row %s not in ROWS section: ignored",
+          marker.c_str());
     } else {
       parsename(marker, rowidx);
       double value = atof(word.c_str());
@@ -541,9 +545,10 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        HighsLogMessage(logfile, HighsMessageType::WARNING,
-			"RHS section contains row %s not in ROWS section: ignored",
-			marker.c_str());
+        HighsLogMessage(
+            logfile, HighsMessageType::WARNING,
+            "RHS section contains row %s not in ROWS section: ignored",
+            marker.c_str());
         continue;
       };
 
@@ -596,11 +601,16 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
 
     // start of new section?
     if (key != parsekey::NONE) {
-      if (num_mi) printf("Number of MI entries in BOUNDS section is %d\n", num_mi);
-      if (num_pl) printf("Number of PL entries in BOUNDS section is %d\n", num_pl);
-      if (num_bv) printf("Number of BV entries in BOUNDS section is %d\n", num_bv);
-      if (num_li) printf("Number of LI entries in BOUNDS section is %d\n", num_li);
-      if (num_ui) printf("Number of UI entries in BOUNDS section is %d\n", num_ui);
+      if (num_mi)
+        printf("Number of MI entries in BOUNDS section is %d\n", num_mi);
+      if (num_pl)
+        printf("Number of PL entries in BOUNDS section is %d\n", num_pl);
+      if (num_bv)
+        printf("Number of BV entries in BOUNDS section is %d\n", num_bv);
+      if (num_li)
+        printf("Number of LI entries in BOUNDS section is %d\n", num_li);
+      if (num_ui)
+        printf("Number of UI entries in BOUNDS section is %d\n", num_ui);
       return key;
     }
     bool islb = false;
@@ -659,9 +669,10 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
 
     auto mit = colname2idx.find(marker);
     if (mit == colname2idx.end()) {
-      HighsLogMessage(logfile, HighsMessageType::WARNING,
-		      "BOUNDS section contains col %s not in COLS section: ignored",
-		      marker.c_str());
+      HighsLogMessage(
+          logfile, HighsMessageType::WARNING,
+          "BOUNDS section contains col %s not in COLS section: ignored",
+          marker.c_str());
       continue;
     };
 
@@ -684,13 +695,13 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
     if (isdefaultbound) {
       // MI, PL, BV or FR
       if (isintegral)
-	// binary: BV
+      // binary: BV
       {
         if (islb) colLower[colidx] = 0.0;
         if (isub) colUpper[colidx] = 1.0;
         col_integrality[colidx] = true;
       } else {
-	// continuous: MI, PL or FR
+        // continuous: MI, PL or FR
         if (islb) colLower[colidx] = -HIGHS_CONST_INF;
         if (isub) colUpper[colidx] = HIGHS_CONST_INF;
       }
@@ -703,8 +714,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      HighsLogMessage(logfile, HighsMessageType::ERROR, "No bound given for row %s",
-                      marker.c_str());
+      HighsLogMessage(logfile, HighsMessageType::ERROR,
+                      "No bound given for row %s", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
     double value = atof(word.c_str());
@@ -720,8 +731,11 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
       //
       // Also, value should be integer
       int i_value = static_cast<int>(value);
-      double dl = value-i_value;
-      if (dl) HighsLogMessage(logfile, HighsMessageType::ERROR, "Bound for for LI/UI row %s is %g: not integer", marker.c_str(), value);
+      double dl = value - i_value;
+      if (dl)
+        HighsLogMessage(logfile, HighsMessageType::ERROR,
+                        "Bound for for LI/UI row %s is %g: not integer",
+                        marker.c_str(), value);
     }
     if (islb) colLower[colidx] = value;
     if (isub) colUpper[colidx] = value;
@@ -788,16 +802,17 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      HighsLogMessage(logfile, HighsMessageType::ERROR, "No range given for row %s",
-                      marker.c_str());
+      HighsLogMessage(logfile, HighsMessageType::ERROR,
+                      "No range given for row %s", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      HighsLogMessage(logfile, HighsMessageType::WARNING,
-		      "RANGES section contains row %s not in ROWS    section: ignored",
-		      marker.c_str());
+      HighsLogMessage(
+          logfile, HighsMessageType::WARNING,
+          "RANGES section contains row %s not in ROWS    section: ignored",
+          marker.c_str());
       continue;
     } else {
       parsename(marker, rowidx);
@@ -815,16 +830,17 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
       end = first_word_end(strline, end_marker);
 
       if (word == "") {
-        HighsLogMessage(logfile, HighsMessageType::ERROR, "No range given for row %s",
-                        marker.c_str());
+        HighsLogMessage(logfile, HighsMessageType::ERROR,
+                        "No range given for row %s", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        HighsLogMessage(logfile, HighsMessageType::WARNING,
-			"RANGES section contains row %s not in ROWS    section: ignored",
-			marker.c_str());
+        HighsLogMessage(
+            logfile, HighsMessageType::WARNING,
+            "RANGES section contains row %s not in ROWS    section: ignored",
+            marker.c_str());
         continue;
       };
 

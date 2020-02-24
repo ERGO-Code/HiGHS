@@ -8,10 +8,11 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include <cstring> // For strrchr
+#include "io/Filereader.h"
+
+#include <cstring>  // For strrchr
 #include <stdexcept>
 
-#include "io/Filereader.h"
 #include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
