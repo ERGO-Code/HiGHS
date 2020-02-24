@@ -12,12 +12,11 @@
 #define LP_DATA_HIGHSRUNTIMEOPTIONS_H_
 
 #include "../external/cxxopts.hpp"
-
 #include "io/HighsIO.h"
 #include "io/LoadProblem.h"
 //#include "lp_data/HighsOptions.h"
-#include "util/stringutil.h"
 #include "LoadOptions.h"
+#include "util/stringutil.h"
 
 bool loadOptions(int argc, char** argv, HighsOptions& options) {
   try {
@@ -26,20 +25,22 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
 
     std::string presolve, solver, parallel;
 
-    cxx_options.add_options()
-      (model_file_string, "File of model to solve.",
-       cxxopts::value<std::vector<std::string>>())
-      (presolve_string, "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
-       cxxopts::value<std::string>(presolve))
-      (solver_string, "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are alternatives.",
-       cxxopts::value<std::string>(solver))
-      (parallel_string, "Parallel solve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
-       cxxopts::value<std::string>(parallel))
-      (time_limit_string, "Run time limit (double).",
-       cxxopts::value<double>())
-      (options_file_string, "File containing HiGHS options.",
-       cxxopts::value<std::vector<std::string>>())
-      ("h, help", "Print help.");
+    cxx_options.add_options()(model_file_string, "File of model to solve.",
+                              cxxopts::value<std::vector<std::string>>())(
+        presolve_string,
+        "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
+        cxxopts::value<std::string>(presolve))(
+        solver_string,
+        "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are alternatives.",
+        cxxopts::value<std::string>(solver))(
+        parallel_string,
+        "Parallel solve: \"choose\" by default - \"on\"/\"off\" are "
+        "alternatives.",
+        cxxopts::value<std::string>(parallel))(time_limit_string,
+                                               "Run time limit (double).",
+                                               cxxopts::value<double>())(
+        options_file_string, "File containing HiGHS options.",
+        cxxopts::value<std::vector<std::string>>())("h, help", "Print help.");
     cxx_options.parse_positional("model_file");
 
     auto result = cxx_options.parse(argc, argv);
@@ -57,7 +58,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
           std::string arg = v[i];
           if (trim(arg).size() > 0) {
             nonEmpty++;
-	    options.model_file = arg;
+            options.model_file = arg;
           }
         }
         if (nonEmpty > 1) {
@@ -71,26 +72,30 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
 
     if (result.count(presolve_string)) {
       std::string value = result[presolve_string].as<std::string>();
-      if (setOptionValue(options.logfile,
-			 presolve_string, options.records, value) != OptionStatus::OK) return false;
+      if (setOptionValue(options.logfile, presolve_string, options.records,
+                         value) != OptionStatus::OK)
+        return false;
     }
 
     if (result.count(solver_string)) {
       std::string value = result[solver_string].as<std::string>();
-      if (setOptionValue(options.logfile,
-			 solver_string, options.records, value) != OptionStatus::OK) return false;
+      if (setOptionValue(options.logfile, solver_string, options.records,
+                         value) != OptionStatus::OK)
+        return false;
     }
 
     if (result.count(parallel_string)) {
       std::string value = result[parallel_string].as<std::string>();
-      if (setOptionValue(options.logfile,
-			 parallel_string, options.records, value) != OptionStatus::OK) return false;
+      if (setOptionValue(options.logfile, parallel_string, options.records,
+                         value) != OptionStatus::OK)
+        return false;
     }
 
     if (result.count(time_limit_string)) {
       double value = result[time_limit_string].as<double>();
-      if (setOptionValue(options.logfile,
-			 time_limit_string, options.records, value) != OptionStatus::OK) return false;
+      if (setOptionValue(options.logfile, time_limit_string, options.records,
+                         value) != OptionStatus::OK)
+        return false;
     }
 
     if (result.count(options_file_string)) {
@@ -104,9 +109,8 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     }
 
   } catch (const cxxopts::OptionException& e) {
-    HighsLogMessage(options.logfile,
-		    HighsMessageType::ERROR, "Error parsing options: %s",
-                    e.what());
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Error parsing options: %s", e.what());
     return false;
   }
 

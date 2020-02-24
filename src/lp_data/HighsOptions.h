@@ -14,7 +14,7 @@
 #ifndef LP_DATA_HIGHS_OPTIONS_H_
 #define LP_DATA_HIGHS_OPTIONS_H_
 
-#include <cstring> // For strrchr
+#include <cstring>  // For strrchr
 #include <vector>
 
 #include "io/HighsIO.h"
@@ -32,14 +32,15 @@ class OptionRecord {
   std::string name;
   std::string description;
   bool advanced;
-  
-  OptionRecord(HighsOptionType Xtype, std::string Xname, std::string Xdescription, bool Xadvanced) {
+
+  OptionRecord(HighsOptionType Xtype, std::string Xname,
+               std::string Xdescription, bool Xadvanced) {
     this->type = Xtype;
     this->name = Xname;
     this->description = Xdescription;
     this->advanced = Xadvanced;
   }
-  
+
   virtual ~OptionRecord() {}
 };
 
@@ -47,26 +48,17 @@ class OptionRecordBool : public OptionRecord {
  public:
   bool* value;
   bool default_value;
- OptionRecordBool(
-		 std::string Xname,
-		 std::string Xdescription,
-		 bool Xadvanced,
-		 bool* Xvalue_pointer,
-		 bool Xdefault_value) : OptionRecord(
-						    HighsOptionType::BOOL,
-						    Xname,
-						    Xdescription,
-						    Xadvanced)  {
+  OptionRecordBool(std::string Xname, std::string Xdescription, bool Xadvanced,
+                   bool* Xvalue_pointer, bool Xdefault_value)
+      : OptionRecord(HighsOptionType::BOOL, Xname, Xdescription, Xadvanced) {
     advanced = Xadvanced;
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
   }
-  
-  void assignvalue(bool Xvalue) {
-    *value = Xvalue;
-  }
-  
+
+  void assignvalue(bool Xvalue) { *value = Xvalue; }
+
   virtual ~OptionRecordBool() {}
 };
 
@@ -76,18 +68,10 @@ class OptionRecordInt : public OptionRecord {
   int lower_bound;
   int default_value;
   int upper_bound;
- OptionRecordInt(
-		std::string Xname,
-		std::string Xdescription,
-		bool Xadvanced,
-		int* Xvalue_pointer,
-		int Xlower_bound,
-		int Xdefault_value,
-		int Xupper_bound) : OptionRecord(
-						  HighsOptionType::INT,
-						  Xname,
-						  Xdescription,
-						  Xadvanced) {
+  OptionRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
+                  int* Xvalue_pointer, int Xlower_bound, int Xdefault_value,
+                  int Xupper_bound)
+      : OptionRecord(HighsOptionType::INT, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
     default_value = Xdefault_value;
@@ -95,11 +79,9 @@ class OptionRecordInt : public OptionRecord {
     *value = default_value;
   }
 
-void assignvalue(int Xvalue) {
-  *value = Xvalue;
-}
+  void assignvalue(int Xvalue) { *value = Xvalue; }
 
-virtual ~OptionRecordInt() {}
+  virtual ~OptionRecordInt() {}
 };
 
 class OptionRecordDouble : public OptionRecord {
@@ -108,17 +90,11 @@ class OptionRecordDouble : public OptionRecord {
   double lower_bound;
   double upper_bound;
   double default_value;
-  OptionRecordDouble(std::string Xname,
-		    std::string Xdescription,
-		    bool Xadvanced,
-		    double* Xvalue_pointer,
-		    double Xlower_bound,
-		    double Xdefault_value,
-		    double Xupper_bound) : OptionRecord(
-							 HighsOptionType::DOUBLE,
-							 Xname,
-							 Xdescription,
-							 Xadvanced)  {
+  OptionRecordDouble(std::string Xname, std::string Xdescription,
+                     bool Xadvanced, double* Xvalue_pointer,
+                     double Xlower_bound, double Xdefault_value,
+                     double Xupper_bound)
+      : OptionRecord(HighsOptionType::DOUBLE, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
     default_value = Xdefault_value;
@@ -126,37 +102,27 @@ class OptionRecordDouble : public OptionRecord {
     *value = default_value;
   }
 
-void assignvalue(double Xvalue) {
-  *value = Xvalue;
-}
+  void assignvalue(double Xvalue) { *value = Xvalue; }
 
-virtual ~OptionRecordDouble() {}
+  virtual ~OptionRecordDouble() {}
 };
 
 class OptionRecordString : public OptionRecord {
  public:
   std::string* value;
   std::string default_value;
-  OptionRecordString(
-		    std::string Xname,
-		    std::string Xdescription,
-		    bool Xadvanced,
-		    std::string* Xvalue_pointer,
-		    std::string Xdefault_value) : OptionRecord(
-							      HighsOptionType::STRING,
-							      Xname,
-							      Xdescription,
-							      Xadvanced)  {
+  OptionRecordString(std::string Xname, std::string Xdescription,
+                     bool Xadvanced, std::string* Xvalue_pointer,
+                     std::string Xdefault_value)
+      : OptionRecord(HighsOptionType::STRING, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
   }
 
-void assignvalue(std::string Xvalue) {
-  *value = Xvalue;
-}
+  void assignvalue(std::string Xvalue) { *value = Xvalue; }
 
-virtual ~OptionRecordString() {}
+  virtual ~OptionRecordString() {}
 };
 
 inline const char* bool2string(bool b);
@@ -166,72 +132,80 @@ bool commandLineSolverOk(FILE* logfile, const string& value);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(FILE* logfile,
-			    const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
+OptionStatus getOptionIndex(FILE* logfile, const std::string& name,
+                            const std::vector<OptionRecord*>& option_records,
+                            int& index);
 
 OptionStatus checkOptions(FILE* logfile,
-			  const std::vector<OptionRecord*>& option_records);
+                          const std::vector<OptionRecord*>& option_records);
 OptionStatus checkOption(FILE* logfile, const OptionRecordInt& option);
 OptionStatus checkOption(FILE* logfile, const OptionRecordDouble& option);
 
 OptionStatus checkOptionValue(FILE* logfile,
-			      std::vector<OptionRecord*>& option_records, const int value);
+                              std::vector<OptionRecord*>& option_records,
+                              const int value);
 OptionStatus checkOptionValue(FILE* logfile,
-			      std::vector<OptionRecord*>& option_records, const double value);
+                              std::vector<OptionRecord*>& option_records,
+                              const double value);
 OptionStatus checkOptionValue(FILE* logfile,
-			      std::vector<OptionRecord*>& option_records, const std::string value);
+                              std::vector<OptionRecord*>& option_records,
+                              const std::string value);
 
-OptionStatus setOptionValue(FILE* logfile,
-			    const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
-OptionStatus setOptionValue(FILE* logfile,
-			    const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
-OptionStatus setOptionValue(FILE* logfile,
-			    const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
-OptionStatus setOptionValue(FILE* logfile,
-			    const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
-OptionStatus setOptionValue(FILE* logfile,
-			    const std::string& name, std::vector<OptionRecord*>& option_records, const char* value);
+OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+                            std::vector<OptionRecord*>& option_records,
+                            const bool value);
+OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+                            std::vector<OptionRecord*>& option_records,
+                            const int value);
+OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+                            std::vector<OptionRecord*>& option_records,
+                            const double value);
+OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+                            std::vector<OptionRecord*>& option_records,
+                            const std::string value);
+OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+                            std::vector<OptionRecord*>& option_records,
+                            const char* value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordInt& option, const int value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordDouble& option, const double value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordString& option, std::string const value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordInt& option,
+                            const int value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordDouble& option,
+                            const double value);
+OptionStatus setOptionValue(FILE* logfile, OptionRecordString& option,
+                            std::string const value);
 
-OptionStatus passOptions(FILE* logfile, const HighsOptions& from_options, HighsOptions& to_options);
+OptionStatus passOptions(FILE* logfile, const HighsOptions& from_options,
+                         HighsOptions& to_options);
 
-OptionStatus getOptionValue(FILE* logfile,
-			    const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
-OptionStatus getOptionValue(FILE* logfile,
-			    const std::string& name, const std::vector<OptionRecord*>& option_records, int& value);
-OptionStatus getOptionValue(FILE* logfile,
-			    const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
-OptionStatus getOptionValue(FILE* logfile,
-			    const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
+OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+                            const std::vector<OptionRecord*>& option_records,
+                            bool& value);
+OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+                            const std::vector<OptionRecord*>& option_records,
+                            int& value);
+OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+                            const std::vector<OptionRecord*>& option_records,
+                            double& value);
+OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+                            const std::vector<OptionRecord*>& option_records,
+                            std::string& value);
 
 HighsStatus writeOptionsToFile(FILE* file,
-			       const std::vector<OptionRecord*>& option_records,
-			       const bool report_only_non_default_values=true,
-			       const bool html=false);
-void reportOptions(FILE* file,
-		   const std::vector<OptionRecord*>& option_records,
-		   const bool report_only_non_default_values=true,
-		   const bool html=false);
-void reportOption(FILE* file,
-		  const OptionRecordBool& option,
-		  const bool report_only_non_default_values,
-		  const bool html);
-void reportOption(FILE* file,
-		  const OptionRecordInt& option,
-		  const bool report_only_non_default_values,
-		  const bool html);
-void reportOption(FILE* file,
-		  const OptionRecordDouble& option,
-		  const bool report_only_non_default_values,
-		  const bool html);
-void reportOption(FILE* file,
-		  const OptionRecordString& option,
-		  const bool report_only_non_default_values,
-		  const bool html);
+                               const std::vector<OptionRecord*>& option_records,
+                               const bool report_only_non_default_values = true,
+                               const bool html = false);
+void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
+                   const bool report_only_non_default_values = true,
+                   const bool html = false);
+void reportOption(FILE* file, const OptionRecordBool& option,
+                  const bool report_only_non_default_values, const bool html);
+void reportOption(FILE* file, const OptionRecordInt& option,
+                  const bool report_only_non_default_values, const bool html);
+void reportOption(FILE* file, const OptionRecordDouble& option,
+                  const bool report_only_non_default_values, const bool html);
+void reportOption(FILE* file, const OptionRecordString& option,
+                  const bool report_only_non_default_values, const bool html);
 
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";
@@ -250,7 +224,6 @@ const string options_file_string = "options_file";
 /** SCIP/HiGHS Objective sense */
 enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 
-
 struct HighsOptionsStruct {
   // Options read from the command line
   std::string model_file;
@@ -259,7 +232,7 @@ struct HighsOptionsStruct {
   std::string parallel;
   double time_limit;
   std::string options_file;
-  
+
   // Options read from the file
   double infinite_cost;
   double infinite_bound;
@@ -281,7 +254,7 @@ struct HighsOptionsStruct {
   std::string solution_file;
   bool write_solution_to_file;
   bool write_solution_pretty;
-  
+
   // Advanced options
   bool run_as_hsol;
   bool mps_parser_type_free;
@@ -311,13 +284,12 @@ struct HighsOptionsStruct {
 
   // Switch for MIP solver
   bool mip;
-  
+
   // Options for HighsPrintMessage and HighsLogMessage
   FILE* logfile = stdout;
   FILE* output = stdout;
 
-  void (*printmsgcb)(int level, const char* msg,
-                     void* msgcb_data) = NULL;
+  void (*printmsgcb)(int level, const char* msg, void* msgcb_data) = NULL;
   void (*logmsgcb)(HighsMessageType type, const char* msg,
                    void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
@@ -332,9 +304,7 @@ struct HighsOptionsStruct {
 // variables but no underscores for struct
 class HighsOptions : public HighsOptionsStruct {
  public:
-  HighsOptions() {
-    initRecords();
-  }
+  HighsOptions() { initRecords(); }
 
   HighsOptions(const HighsOptions& options) {
     initRecords();
@@ -348,8 +318,7 @@ class HighsOptions : public HighsOptionsStruct {
 
   const HighsOptions& operator=(const HighsOptions& other) {
     if (&other != this) {
-      if ((int) records.size() == 0)
-        initRecords();
+      if ((int)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
     }
     return *this;
@@ -357,16 +326,14 @@ class HighsOptions : public HighsOptionsStruct {
 
   const HighsOptions& operator=(HighsOptions&& other) {
     if (&other != this) {
-      if ((int) records.size() == 0)
-        initRecords();
+      if ((int)records.size() == 0) initRecords();
       HighsOptionsStruct::operator=(other);
     }
     return *this;
   }
 
   virtual ~HighsOptions() {
-    if (records.size() > 0)
-      deleteRecords();
+    if (records.size() > 0) deleteRecords();
   }
 
  private:
@@ -378,316 +345,309 @@ class HighsOptions : public HighsOptionsStruct {
     bool advanced;
     advanced = false;
     // Options read from the command line
-    record_string = new OptionRecordString(model_file_string,
-					   "Model file",
-					   advanced, &model_file,
-					   FILENAME_DEFAULT);
+    record_string =
+        new OptionRecordString(model_file_string, "Model file", advanced,
+                               &model_file, FILENAME_DEFAULT);
     records.push_back(record_string);
-    record_string = new OptionRecordString(presolve_string,
-					   "Presolve option: \"off\", \"choose\" or \"on\"",
-					   advanced, &presolve,
-					   choose_string);
+    record_string = new OptionRecordString(
+        presolve_string, "Presolve option: \"off\", \"choose\" or \"on\"",
+        advanced, &presolve, choose_string);
     records.push_back(record_string);
-    record_string = new OptionRecordString(solver_string,
-					   "Solver option: \"simplex\", \"choose\" or \"ipm\"",
-					   advanced, &solver,
-					   choose_string);
+    record_string = new OptionRecordString(
+        solver_string, "Solver option: \"simplex\", \"choose\" or \"ipm\"",
+        advanced, &solver, choose_string);
     records.push_back(record_string);
-    record_string = new OptionRecordString(parallel_string,
-					   "Parallel option: \"off\", \"choose\" or \"on\"",
-					   advanced, &parallel,
-					   choose_string);
+    record_string = new OptionRecordString(
+        parallel_string, "Parallel option: \"off\", \"choose\" or \"on\"",
+        advanced, &parallel, choose_string);
     records.push_back(record_string);
-    record_double = new OptionRecordDouble(time_limit_string,
-					   "Time limit",
-					   advanced, &time_limit,
-					   0, HIGHS_CONST_INF, HIGHS_CONST_INF);
+    record_double = new OptionRecordDouble(time_limit_string, "Time limit",
+                                           advanced, &time_limit, 0,
+                                           HIGHS_CONST_INF, HIGHS_CONST_INF);
     records.push_back(record_double);
-    record_string = new OptionRecordString(options_file_string,
-					   "Options file",
-					   advanced, &options_file,
-					   FILENAME_DEFAULT);
+    record_string =
+        new OptionRecordString(options_file_string, "Options file", advanced,
+                               &options_file, FILENAME_DEFAULT);
     records.push_back(record_string);
     // Options read from the file
-    record_double = new OptionRecordDouble("infinite_cost",
-					   "Limit on cost coefficient: values larger than this will be treated as infinite",
-					   advanced, &infinite_cost,
-					   1e15, 1e20, 1e25);
-    records.push_back(record_double);
-    
-    record_double = new OptionRecordDouble("infinite_bound",
-					   "Limit on |constraint bound|: values larger than this will be treated as infinite",
-					   advanced, &infinite_bound,
-					   1e15 , 1e20, 1e25);
+    record_double =
+        new OptionRecordDouble("infinite_cost",
+                               "Limit on cost coefficient: values larger than "
+                               "this will be treated as infinite",
+                               advanced, &infinite_cost, 1e15, 1e20, 1e25);
     records.push_back(record_double);
 
-    record_double = new OptionRecordDouble("small_matrix_value",
-					   "Lower limit on |matrix entries|: values smaller than this will be treated as zero",
-					   advanced, &small_matrix_value,
-					   1e-12, 1e-9, HIGHS_CONST_INF);
+    record_double =
+        new OptionRecordDouble("infinite_bound",
+                               "Limit on |constraint bound|: values larger "
+                               "than this will be treated as infinite",
+                               advanced, &infinite_bound, 1e15, 1e20, 1e25);
     records.push_back(record_double);
 
-    record_double = new OptionRecordDouble("large_matrix_value",
-				     "Upper limit on |matrix entries|: values larger than this will be treated as infinite",
-				     advanced, &large_matrix_value,
-				     1e0, 1e15, 1e20);
+    record_double = new OptionRecordDouble(
+        "small_matrix_value",
+        "Lower limit on |matrix entries|: values smaller than this will be "
+        "treated as zero",
+        advanced, &small_matrix_value, 1e-12, 1e-9, HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_double = new OptionRecordDouble("primal_feasibility_tolerance",
-				     "Primal feasibility tolerance",
-				     advanced, &primal_feasibility_tolerance,
-				     1e-10, 1e-7, HIGHS_CONST_INF);
+    record_double =
+        new OptionRecordDouble("large_matrix_value",
+                               "Upper limit on |matrix entries|: values larger "
+                               "than this will be treated as infinite",
+                               advanced, &large_matrix_value, 1e0, 1e15, 1e20);
     records.push_back(record_double);
 
-    record_double = new OptionRecordDouble("dual_feasibility_tolerance",
-				     "Dual feasibility tolerance",
-				     advanced, &dual_feasibility_tolerance,
-				     1e-10, 1e-7, HIGHS_CONST_INF);
+    record_double = new OptionRecordDouble(
+        "primal_feasibility_tolerance", "Primal feasibility tolerance",
+        advanced, &primal_feasibility_tolerance, 1e-10, 1e-7, HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_double = new OptionRecordDouble("dual_objective_value_upper_bound",
-				     "Upper bound on objective value for dual simplex: algorithm terminates if reached",
-				     advanced, &dual_objective_value_upper_bound,
-				     -HIGHS_CONST_INF, HIGHS_CONST_INF, HIGHS_CONST_INF);
+    record_double = new OptionRecordDouble(
+        "dual_feasibility_tolerance", "Dual feasibility tolerance", advanced,
+        &dual_feasibility_tolerance, 1e-10, 1e-7, HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt("simplex_strategy",
-				     "Strategy for simplex solver",
-				     advanced, &simplex_strategy,
-				     SIMPLEX_STRATEGY_MIN, SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
+    record_double = new OptionRecordDouble(
+        "dual_objective_value_upper_bound",
+        "Upper bound on objective value for dual simplex: algorithm terminates "
+        "if reached",
+        advanced, &dual_objective_value_upper_bound, -HIGHS_CONST_INF,
+        HIGHS_CONST_INF, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_int =
+        new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",
+                            advanced, &simplex_strategy, SIMPLEX_STRATEGY_MIN,
+                            SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_scale_strategy",
-				     "Strategy for scaling before simplex solver: off / on (0/1)",
-				     advanced, &simplex_scale_strategy,
-				     SIMPLEX_SCALE_STRATEGY_MIN, SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
+    record_int = new OptionRecordInt(
+        "simplex_scale_strategy",
+        "Strategy for scaling before simplex solver: off / on (0/1)", advanced,
+        &simplex_scale_strategy, SIMPLEX_SCALE_STRATEGY_MIN,
+        SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_crash_strategy",
-				     "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)",
-				     advanced, &simplex_crash_strategy,
-				     SIMPLEX_CRASH_STRATEGY_MIN, SIMPLEX_CRASH_STRATEGY_OFF, SIMPLEX_CRASH_STRATEGY_MAX);
+    record_int = new OptionRecordInt(
+        "simplex_crash_strategy",
+        "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)", advanced,
+        &simplex_crash_strategy, SIMPLEX_CRASH_STRATEGY_MIN,
+        SIMPLEX_CRASH_STRATEGY_OFF, SIMPLEX_CRASH_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_dual_edge_weight_strategy",
-				     "Strategy for simplex dual edge weights: Dantzig / Devex / Steepest Edge (0/1/2)",
-				     advanced, &simplex_dual_edge_weight_strategy,
-				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
-				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
-				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
+    record_int = new OptionRecordInt(
+        "simplex_dual_edge_weight_strategy",
+        "Strategy for simplex dual edge weights: Dantzig / Devex / Steepest "
+        "Edge (0/1/2)",
+        advanced, &simplex_dual_edge_weight_strategy,
+        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
+        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
+        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_primal_edge_weight_strategy",
-				     "Strategy for simplex primal edge weights: Dantzig / Devex (0/1)",
-				     advanced, &simplex_primal_edge_weight_strategy,
-				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
-				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
-				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
+    record_int = new OptionRecordInt(
+        "simplex_primal_edge_weight_strategy",
+        "Strategy for simplex primal edge weights: Dantzig / Devex (0/1)",
+        advanced, &simplex_primal_edge_weight_strategy,
+        SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
+        SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
+        SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("simplex_iteration_limit",
-				     "Iteration limit for simplex solver",
-				     advanced, &simplex_iteration_limit,
-				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
-    records.push_back(record_int);
-    
-    record_int = new OptionRecordInt("simplex_update_limit",
-				     "Limit on the number of simplex UPDATE operations",
-				     advanced, &simplex_update_limit,
-				     0, 5000, HIGHS_CONST_I_INF);
+                                     "Iteration limit for simplex solver",
+                                     advanced, &simplex_iteration_limit, 0,
+                                     HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("highs_min_threads",
-				     "Minimum number of threads in parallel execution",
-				     advanced, &highs_min_threads,
-				     1, 1, HIGHS_THREAD_LIMIT);
+    record_int = new OptionRecordInt(
+        "simplex_update_limit",
+        "Limit on the number of simplex UPDATE operations", advanced,
+        &simplex_update_limit, 0, 5000, HIGHS_CONST_I_INF);
     records.push_back(record_int);
-    
-    record_int = new OptionRecordInt("highs_max_threads",
-				     "Maximum number of threads in parallel execution",
-				     advanced, &highs_max_threads,
-				     1, HIGHS_THREAD_LIMIT, HIGHS_THREAD_LIMIT);
+
+    record_int = new OptionRecordInt(
+        "highs_min_threads", "Minimum number of threads in parallel execution",
+        advanced, &highs_min_threads, 1, 1, HIGHS_THREAD_LIMIT);
     records.push_back(record_int);
-    
+
+    record_int = new OptionRecordInt(
+        "highs_max_threads", "Maximum number of threads in parallel execution",
+        advanced, &highs_max_threads, 1, HIGHS_THREAD_LIMIT,
+        HIGHS_THREAD_LIMIT);
+    records.push_back(record_int);
+
     record_int = new OptionRecordInt("message_level",
-				     "HiGHS message level: bit-mask 1 => VERBOSE; 2 => DETAILED 4 => MINIMAL",
-				     advanced, &message_level,
-				     ML_MIN, ML_MINIMAL, ML_MAX);
+                                     "HiGHS message level: bit-mask 1 => "
+                                     "VERBOSE; 2 => DETAILED 4 => MINIMAL",
+                                     advanced, &message_level, ML_MIN,
+                                     ML_MINIMAL, ML_MAX);
     records.push_back(record_int);
 
-    record_string = new OptionRecordString("solution_file",
-					   "Solution file",
-					   advanced, &solution_file,
-					   FILENAME_DEFAULT);
+    record_string =
+        new OptionRecordString("solution_file", "Solution file", advanced,
+                               &solution_file, FILENAME_DEFAULT);
     records.push_back(record_string);
 
-    record_bool = new OptionRecordBool("write_solution_to_file",
-				       "Write the primal and dual solution to a file",
-				       advanced, &write_solution_to_file,
-				       false);
+    record_bool =
+        new OptionRecordBool("write_solution_to_file",
+                             "Write the primal and dual solution to a file",
+                             advanced, &write_solution_to_file, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("write_solution_pretty",
-				       "Write the primal and dual solution in a pretty (human-readable) format",
-				       advanced, &write_solution_pretty,
-				       false);
+                                       "Write the primal and dual solution in "
+                                       "a pretty (human-readable) format",
+                                       advanced, &write_solution_pretty, false);
     records.push_back(record_bool);
 
     // Advanced options
     advanced = true;
-    record_bool = new OptionRecordBool("run_as_hsol",
-				       "Run HiGHS simplex solver as if it were hsol",
-				       advanced, &run_as_hsol,
-				       false);
+    record_bool = new OptionRecordBool(
+        "run_as_hsol", "Run HiGHS simplex solver as if it were hsol", advanced,
+        &run_as_hsol, false);
     records.push_back(record_bool);
     record_bool = new OptionRecordBool("mps_parser_type_free",
-				       "Use the free format MPS file reader",
-				       advanced, &mps_parser_type_free,
-				       true);
+                                       "Use the free format MPS file reader",
+                                       advanced, &mps_parser_type_free, true);
     records.push_back(record_bool);
-    record_int = new OptionRecordInt("keep_n_rows",
-				     "For multiple N-rows in MPS files: delete rows / delete entries / keep rows (-1/0/1)",
-				     advanced, &keep_n_rows,
-				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS);
+    record_int =
+        new OptionRecordInt("keep_n_rows",
+                            "For multiple N-rows in MPS files: delete rows / "
+                            "delete entries / keep rows (-1/0/1)",
+                            advanced, &keep_n_rows, KEEP_N_ROWS_DELETE_ROWS,
+                            KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS);
     records.push_back(record_int);
-    record_int = new OptionRecordInt("allowed_simplex_matrix_scale_factor",
-				     "Largest power-of-two factor permitted when scaling the constraint matrix for the simplex solver",
-				     advanced, &allowed_simplex_matrix_scale_factor,
-				     0, 10, 20);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt("allowed_simplex_cost_scale_factor",
-				     "Largest power-of-two factor permitted when scaling the costs for the simplex solver",
-				     advanced, &allowed_simplex_cost_scale_factor,
-				     0, 0, 20);
+    record_int = new OptionRecordInt(
+        "allowed_simplex_matrix_scale_factor",
+        "Largest power-of-two factor permitted when scaling the constraint "
+        "matrix for the simplex solver",
+        advanced, &allowed_simplex_matrix_scale_factor, 0, 10, 20);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_dualise_strategy",
-				     "Strategy for dualising before simplex",
-				     advanced, &simplex_dualise_strategy,
-				     OPTION_OFF, OPTION_OFF, OPTION_ON);
+    record_int = new OptionRecordInt(
+        "allowed_simplex_cost_scale_factor",
+        "Largest power-of-two factor permitted when scaling the costs for the "
+        "simplex solver",
+        advanced, &allowed_simplex_cost_scale_factor, 0, 0, 20);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_permute_strategy",
-				     "Strategy for permuting before simplex",
-				     advanced, &simplex_permute_strategy,
-				     OPTION_OFF, OPTION_OFF, OPTION_ON);
+    record_int = new OptionRecordInt(
+        "simplex_dualise_strategy", "Strategy for dualising before simplex",
+        advanced, &simplex_dualise_strategy, OPTION_OFF, OPTION_OFF, OPTION_ON);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("dual_simplex_cleanup_strategy",
-				     "Strategy for cleanup in dual simplex solver: none / HPrimal / HQPrimal (0/1/2)",
-				     advanced, &dual_simplex_cleanup_strategy,
-				     DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN, DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL, DUAL_SIMPLEX_CLEANUP_STRATEGY_MAX);
+    record_int = new OptionRecordInt(
+        "simplex_permute_strategy", "Strategy for permuting before simplex",
+        advanced, &simplex_permute_strategy, OPTION_OFF, OPTION_OFF, OPTION_ON);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_price_strategy",
-				     "Strategy for PRICE in simplex",
-				     advanced, &simplex_price_strategy,
-				     SIMPLEX_PRICE_STRATEGY_MIN,
-				     SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
-				     SIMPLEX_PRICE_STRATEGY_MAX);
+    record_int =
+        new OptionRecordInt("dual_simplex_cleanup_strategy",
+                            "Strategy for cleanup in dual simplex solver: none "
+                            "/ HPrimal / HQPrimal (0/1/2)",
+                            advanced, &dual_simplex_cleanup_strategy,
+                            DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN,
+                            DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL,
+                            DUAL_SIMPLEX_CLEANUP_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("simplex_initial_condition_check",
-				     "Perform initial basis condition check in simplex",
-				     advanced, &simplex_initial_condition_check,
-				     true);
+    record_int = new OptionRecordInt(
+        "simplex_price_strategy", "Strategy for PRICE in simplex", advanced,
+        &simplex_price_strategy, SIMPLEX_PRICE_STRATEGY_MIN,
+        SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
+        SIMPLEX_PRICE_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_bool =
+        new OptionRecordBool("simplex_initial_condition_check",
+                             "Perform initial basis condition check in simplex",
+                             advanced, &simplex_initial_condition_check, true);
     records.push_back(record_bool);
 
-    record_double = new OptionRecordDouble("simplex_initial_condition_tolerance",
-				     "Tolerance on initial basis condition in simplex",
-				     advanced, &simplex_initial_condition_tolerance,
-				     1.0, 1e14, HIGHS_CONST_INF);
+    record_double = new OptionRecordDouble(
+        "simplex_initial_condition_tolerance",
+        "Tolerance on initial basis condition in simplex", advanced,
+        &simplex_initial_condition_tolerance, 1.0, 1e14, HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_double = new OptionRecordDouble("dual_steepest_edge_weight_log_error_threshhold",
-				     "Threshhold on dual steepest edge weight errors for Devex switch",
-				     advanced, &dual_steepest_edge_weight_log_error_threshhold,
-				     1.0, 1e1, HIGHS_CONST_INF);
+    record_double = new OptionRecordDouble(
+        "dual_steepest_edge_weight_log_error_threshhold",
+        "Threshhold on dual steepest edge weight errors for Devex switch",
+        advanced, &dual_steepest_edge_weight_log_error_threshhold, 1.0, 1e1,
+        HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_double = new OptionRecordDouble("dual_simplex_cost_perturbation_multiplier",
-					 "Dual simplex cost perturbation multiplier: 0 => no perturbation",
-					 advanced, &dual_simplex_cost_perturbation_multiplier,
-					 0.0, 1.0, HIGHS_CONST_INF);
+    record_double = new OptionRecordDouble(
+        "dual_simplex_cost_perturbation_multiplier",
+        "Dual simplex cost perturbation multiplier: 0 => no perturbation",
+        advanced, &dual_simplex_cost_perturbation_multiplier, 0.0, 1.0,
+        HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_bool = new OptionRecordBool("icrash",
-				     "Run iCrash",
-				     advanced, &icrash,
-				     false);
+    record_bool =
+        new OptionRecordBool("icrash", "Run iCrash", advanced, &icrash, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("icrash_dualize",
-				     "Dualise strategy for iCrash",
-				     advanced, &icrash_dualize,
-				     false);
+    record_bool =
+        new OptionRecordBool("icrash_dualize", "Dualise strategy for iCrash",
+                             advanced, &icrash_dualize, false);
     records.push_back(record_bool);
 
-    record_string = new OptionRecordString("icrash_strategy",
-				     "Strategy for iCrash",
-				     advanced, &icrash_strategy, "ICA");
+    record_string =
+        new OptionRecordString("icrash_strategy", "Strategy for iCrash",
+                               advanced, &icrash_strategy, "ICA");
     records.push_back(record_string);
 
-    record_double = new OptionRecordDouble("icrash_starting_weight",
-				     "iCrash starting weight",
-				     advanced, &icrash_starting_weight,
-				     1e-10, 1e-3, 1e50);
+    record_double = new OptionRecordDouble(
+        "icrash_starting_weight", "iCrash starting weight", advanced,
+        &icrash_starting_weight, 1e-10, 1e-3, 1e50);
     records.push_back(record_double);
 
-    record_int = new OptionRecordInt("icrash_iterations",
-				     "iCrash iterations",
-				     advanced, &icrash_iterations,
-				     0, 30, 200);
+    record_int = new OptionRecordInt("icrash_iterations", "iCrash iterations",
+                                     advanced, &icrash_iterations, 0, 30, 200);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("icrash_exact",
-				     "Exact subproblem solution for iCrash",
-				     advanced, &icrash_exact,
-				     false);
-    records.push_back(record_bool);
-    
-    record_bool = new OptionRecordBool("icrash_breakpoints",
-				     "Exact subproblem solution for iCrash",
-				     advanced, &icrash_breakpoints,
-				     false);
+                                       "Exact subproblem solution for iCrash",
+                                       advanced, &icrash_exact, false);
     records.push_back(record_bool);
 
-    record_int = new OptionRecordInt("icrash_approximate_minimization_iterations",
-				     "iCrash approximate minimization iterations",
-				     advanced, &icrash_approximate_minimization_iterations,
-				     0, 50, 100);
+    record_bool = new OptionRecordBool("icrash_breakpoints",
+                                       "Exact subproblem solution for iCrash",
+                                       advanced, &icrash_breakpoints, false);
+    records.push_back(record_bool);
+
+    record_int = new OptionRecordInt(
+        "icrash_approximate_minimization_iterations",
+        "iCrash approximate minimization iterations", advanced,
+        &icrash_approximate_minimization_iterations, 0, 50, 100);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("less_infeasible_DSE_check",
-				     "Check whether LP is candidate for LiDSE",
-				     advanced, &less_infeasible_DSE_check,
-				     true);
+    record_bool = new OptionRecordBool(
+        "less_infeasible_DSE_check", "Check whether LP is candidate for LiDSE",
+        advanced, &less_infeasible_DSE_check, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("less_infeasible_DSE_choose_row",
-				     "Use LiDSE if LP has right properties",
-				     advanced, &less_infeasible_DSE_choose_row,
-				     true);
+    record_bool =
+        new OptionRecordBool("less_infeasible_DSE_choose_row",
+                             "Use LiDSE if LP has right properties", advanced,
+                             &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("mip",
-				     "Use mip solver.",
-				     advanced, &mip,
-				     false);
+    record_bool =
+        new OptionRecordBool("mip", "Use mip solver.", advanced, &mip, false);
     records.push_back(record_bool);
-    
   }
-  
+
   void deleteRecords() {
-    for (unsigned int i=0; i<records.size(); i++)
-      delete records[i];
+    for (unsigned int i = 0; i < records.size(); i++) delete records[i];
   }
- 
+
  public:
   std::vector<OptionRecord*> records;
 };
-
 
 void setHsolOptions(HighsOptions& options);
 

@@ -39,19 +39,19 @@ enum class LpAction {
 
 enum class HighsModelStatus {
   NOTSET = 0,
-    LOAD_ERROR,
-    MODEL_ERROR,
-    MODEL_EMPTY,
-    PRESOLVE_ERROR,
-    SOLVE_ERROR,
-    POSTSOLVE_ERROR,
-    PRIMAL_INFEASIBLE,
-    PRIMAL_UNBOUNDED,
-    OPTIMAL,
-    REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
-    REACHED_TIME_LIMIT,
-    REACHED_ITERATION_LIMIT
-    };
+  LOAD_ERROR,
+  MODEL_ERROR,
+  MODEL_EMPTY,
+  PRESOLVE_ERROR,
+  SOLVE_ERROR,
+  POSTSOLVE_ERROR,
+  PRIMAL_INFEASIBLE,
+  PRIMAL_UNBOUNDED,
+  OPTIMAL,
+  REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
+  REACHED_TIME_LIMIT,
+  REACHED_ITERATION_LIMIT
+};
 
 class HighsLp {
  public:
@@ -102,7 +102,6 @@ class HighsLp {
 
     return true;
   }
-
 };
 
 // Cost, column and row scaling factors
@@ -130,7 +129,7 @@ struct HighsSimplexLpStatus {
   bool is_dualised = false;
   bool is_permuted = false;
   bool scaling_tried = false;
-  bool has_basis = false;  // The simplex LP has a valid simplex basis
+  bool has_basis = false;            // The simplex LP has a valid simplex basis
   bool has_matrix_col_wise = false;  // The HMatrix column-wise matrix is valid
   bool has_matrix_row_wise = false;  // The HMatrix row-wise matrix is valid
   bool has_factor_arrays =
@@ -225,8 +224,8 @@ struct HighsSimplexInfo {
   bool store_squared_primal_infeasibility = false;
   bool allow_primal_flips_for_dual_feasibility = true;
 #ifndef HiGHSDEV
-  bool analyse_lp_solution = false; //true;// 
-#else  
+  bool analyse_lp_solution = false;  // true;//
+#else
   bool analyse_lp_solution = true;
   // Options for reporting timing
   bool report_simplex_inner_clock = false;
@@ -253,7 +252,7 @@ struct HighsSimplexInfo {
   int min_threads = 1;
   int num_threads = 1;
   int max_threads = HIGHS_THREAD_LIMIT;
-  
+
   // Cutoff for PAMI
   double pami_cutoff = 0.95;
 
