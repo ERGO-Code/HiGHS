@@ -3373,8 +3373,8 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
   //  if (fabs(nwValue))
   //    printf("update_pivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g],
   //    nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
-  //			   columnOut, simplex_basis.nonbasicMove_[columnOut], vrLb,
-  //vrV, vrUb, nwValue, vrDual, dl_dual_objective_value);
+  //			   columnOut, simplex_basis.nonbasicMove_[columnOut],
+  // vrLb, vrV, vrUb, nwValue, vrDual, dl_dual_objective_value);
   simplex_info.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info.update_count++;
   // Update the number of basic logicals
