@@ -10,12 +10,13 @@
 #ifndef MIP_SOLVEMIP_H_
 #define MIP_SOLVEMIP_H_
 
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <stack>
+#include <vector>
 
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsStatus.h"
+#include "lp_data/HConst.h"
 
 struct Node {
   int id;
