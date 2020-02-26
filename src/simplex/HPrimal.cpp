@@ -133,14 +133,14 @@ HighsStatus HPrimal::solve() {
     int it0 = scaled_solution_params.simplex_iteration_count;
     switch (solvePhase) {
       case 1:
-	analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
+        analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
         solvePhase1();
-	analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
+        analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
         simplex_info.primal_phase1_iteration_count +=
     (scaled_solution_params.simplex_iteration_count - it0); break; case 2:
-	analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
+        analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
         solvePhase2();
-	analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
+        analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
         simplex_info.primal_phase2_iteration_count +=
     (scaled_solution_params.simplex_iteration_count - it0); break; case 4:
     break; default: solvePhase = 0; break;
@@ -372,12 +372,14 @@ void HPrimal::primalRebuild() {
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
-    int total_rebuilds = analysis->simplexTimerNumCall(IteratePrimalRebuildClock);
-    double total_rebuild_time = analysis->simplexTimerRead(IteratePrimalRebuildClock);
+    int total_rebuilds =
+        analysis->simplexTimerNumCall(IteratePrimalRebuildClock);
+    double total_rebuild_time =
+        analysis->simplexTimerRead(IteratePrimalRebuildClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
         total_rebuilds, sv_invertHint,
-	workHMO.scaled_solution_params_.simplex_iteration_count,
+        workHMO.scaled_solution_params_.simplex_iteration_count,
         total_rebuild_time);
   }
 #endif
@@ -471,10 +473,12 @@ void HPrimal::primalChooseRow() {
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (simplex_info.analyse_iterations) 
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
+                                    analysis->col_aq_density);
 #endif
-  workHMO.factor_.ftran(col_aq, analysis->col_aq_density, analysis->pointer_serial_factor_clocks);
+  workHMO.factor_.ftran(col_aq, analysis->col_aq_density,
+                        analysis->pointer_serial_factor_clocks);
   analysis->simplexTimerStop(FtranClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
@@ -673,7 +677,8 @@ void HPrimal::primalUpdate() {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                     analysis->row_ep_density);
 #endif
-  workHMO.factor_.btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
+  workHMO.factor_.btran(row_ep, analysis->row_ep_density,
+                        analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
@@ -683,24 +688,25 @@ void HPrimal::primalUpdate() {
   // PRICE
   //
   computeTableauRowFromPiP(workHMO, row_ep, row_ap);
-/*
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations) {
-  analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ap_density);
-    analysis->num_row_price++;
-  }
-#endif
-  analysis->simplexTimerStart(PriceClock);
-  workHMO.matrix_.priceByRowSparseResult(row_ap, row_ep);
-  analysis->simplexTimerStop(PriceClock);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-  analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
-#endif
+  /*
+  #ifdef HiGHSDEV
+    if (simplex_info.analyse_iterations) {
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
+  analysis->row_ap_density); analysis->num_row_price++;
+    }
+  #endif
+    analysis->simplexTimerStart(PriceClock);
+    workHMO.matrix_.priceByRowSparseResult(row_ap, row_ep);
+    analysis->simplexTimerStop(PriceClock);
+  #ifdef HiGHSDEV
+    if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
+  #endif
 
-  const double local_row_ep_density = (double)row_ep.count / solver_num_row;
-  analysis->updateOperationResultDensity(local_row_ep_density, analysis->row_ep_density);
-*/
+    const double local_row_ep_density = (double)row_ep.count / solver_num_row;
+    analysis->updateOperationResultDensity(local_row_ep_density,
+  analysis->row_ep_density);
+  */
   analysis->simplexTimerStart(UpdateDualClock);
   //  double
   thetaDual = workDual[columnIn] / alpha;

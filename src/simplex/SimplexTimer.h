@@ -95,63 +95,43 @@ class SimplexTimer {
     HighsTimer& timer = simplex_timer_clock.timer_;
     std::vector<int>& clock = simplex_timer_clock.clock_;
     clock.resize(SimplexNumClock);
-    clock[SimplexTotalClock] =
-        timer.clock_def("Simplex total", "STT");
-    clock[SimplexIzDseWtClock] =
-        timer.clock_def("Iz DSE Wt", "IWT");
-    clock[SimplexDualPhase1Clock] =
-        timer.clock_def("Dual Phase 1", "DP1");
-    clock[SimplexDualPhase2Clock] =
-        timer.clock_def("Dual Phase 2", "DP2");
-    clock[SimplexPrimalPhase1Clock] =
-        timer.clock_def("Primal Phase 1", "PP1");
-    clock[SimplexPrimalPhase2Clock] =
-        timer.clock_def("Primal Phase 2", "PP2");
+    clock[SimplexTotalClock] = timer.clock_def("Simplex total", "STT");
+    clock[SimplexIzDseWtClock] = timer.clock_def("Iz DSE Wt", "IWT");
+    clock[SimplexDualPhase1Clock] = timer.clock_def("Dual Phase 1", "DP1");
+    clock[SimplexDualPhase2Clock] = timer.clock_def("Dual Phase 2", "DP2");
+    clock[SimplexPrimalPhase1Clock] = timer.clock_def("Primal Phase 1", "PP1");
+    clock[SimplexPrimalPhase2Clock] = timer.clock_def("Primal Phase 2", "PP2");
     clock[Group1Clock] = timer.clock_def("GROUP1", "GP1");
     clock[IterateClock] = timer.clock_def("ITERATE", "ITR");
-    clock[IterateDualRebuildClock] =
-        timer.clock_def("DUAL REBUILD", "DRB");
-    clock[IteratePrimalRebuildClock] =
-        timer.clock_def("PRIMAL REBUILD", "PRB");
+    clock[IterateDualRebuildClock] = timer.clock_def("DUAL REBUILD", "DRB");
+    clock[IteratePrimalRebuildClock] = timer.clock_def("PRIMAL REBUILD", "PRB");
     clock[IterateChuzrClock] = timer.clock_def("CHUZR", "CZR");
     clock[IterateChuzcClock] = timer.clock_def("CHUZC", "CZC");
     clock[IterateFtranClock] = timer.clock_def("FTRAN", "FTR");
     clock[IterateVerifyClock] = timer.clock_def("VERIFY", "VRF");
     clock[IterateDualClock] = timer.clock_def("DUAL", "UDU");
     clock[IteratePrimalClock] = timer.clock_def("PRIMAL", "UPR");
-    clock[IterateDevexIzClock] =
-        timer.clock_def("DEVEX_IZ", "DVI");
+    clock[IterateDevexIzClock] = timer.clock_def("DEVEX_IZ", "DVI");
     clock[IteratePivotsClock] = timer.clock_def("PIVOTS", "PIV");
     clock[ScaleClock] = timer.clock_def("SCALE", "SCL");
     clock[CrashClock] = timer.clock_def("CRASH", "CSH");
-    clock[BasisConditionClock] =
-        timer.clock_def("BASIS_CONDITION", "CON");
+    clock[BasisConditionClock] = timer.clock_def("BASIS_CONDITION", "CON");
     clock[DseIzClock] = timer.clock_def("DSE_IZ", "DEI");
     clock[InvertClock] = timer.clock_def("INVERT", "INV");
     clock[PermWtClock] = timer.clock_def("PERM_WT", "PWT");
-    clock[ComputeDualClock] =
-        timer.clock_def("COMPUTE_DUAL", "CPD");
-    clock[CorrectDualClock] =
-        timer.clock_def("CORRECT_DUAL", "CRD");
-    clock[ComputePrimalClock] =
-        timer.clock_def("COMPUTE_PRIMAL", "CPP");
-    clock[CollectPrIfsClock] =
-        timer.clock_def("COLLECT_PR_IFS", "IFS");
-    clock[ComputePrIfsClock] =
-        timer.clock_def("COMPUTE_PR_IFS", "PIF");
-    clock[ComputeDuIfsClock] =
-        timer.clock_def("COMPUTE_DU_IFS", "DIF");
-    clock[ComputeDuObjClock] =
-        timer.clock_def("COMPUTE_DUOBJ", "DOB");
-    clock[ComputePrObjClock] =
-        timer.clock_def("COMPUTE_PROBJ", "POB");
-    clock[ReportRebuildClock] =
-        timer.clock_def("REPORT_REBUILD", "RPR");
+    clock[ComputeDualClock] = timer.clock_def("COMPUTE_DUAL", "CPD");
+    clock[CorrectDualClock] = timer.clock_def("CORRECT_DUAL", "CRD");
+    clock[ComputePrimalClock] = timer.clock_def("COMPUTE_PRIMAL", "CPP");
+    clock[CollectPrIfsClock] = timer.clock_def("COLLECT_PR_IFS", "IFS");
+    clock[ComputePrIfsClock] = timer.clock_def("COMPUTE_PR_IFS", "PIF");
+    clock[ComputeDuIfsClock] = timer.clock_def("COMPUTE_DU_IFS", "DIF");
+    clock[ComputeDuObjClock] = timer.clock_def("COMPUTE_DUOBJ", "DOB");
+    clock[ComputePrObjClock] = timer.clock_def("COMPUTE_PROBJ", "POB");
+    clock[ReportRebuildClock] = timer.clock_def("REPORT_REBUILD", "RPR");
     clock[ChuzrDualClock] = timer.clock_def("CHUZR_DUAL", "CRD");
     clock[Chuzr1Clock] = timer.clock_def("CHUZR1", "CR1");
     clock[Chuzr2Clock] = timer.clock_def("CHUZR2", "CR2");
-    clock[ChuzcPrimalClock] =
-        timer.clock_def("CHUZC_PRIMAL", "CCP");
+    clock[ChuzcPrimalClock] = timer.clock_def("CHUZC_PRIMAL", "CCP");
     clock[Chuzc0Clock] = timer.clock_def("CHUZC0", "CC0");
     clock[PriceChuzc1Clock] = timer.clock_def("PRICE_CHUZC1", "PC1");
     clock[Chuzc1Clock] = timer.clock_def("CHUZC1", "CC1");
@@ -166,30 +146,21 @@ class SimplexTimer {
     clock[FtranMixParClock] = timer.clock_def("FTRAN_MIX_PAR", "FMP");
     clock[FtranMixFinalClock] = timer.clock_def("FTRAN_MIX_FINAL", "FMF");
     clock[FtranBfrtClock] = timer.clock_def("FTRAN_BFRT", "BFR");
-    clock[UpdateRowClock] =
-        timer.clock_def("UPDATE_ROW", "UPR");
-    clock[UpdateDualClock] =
-        timer.clock_def("UPDATE_DUAL", "UPD");
-    clock[UpdatePrimalClock] =
-        timer.clock_def("UPDATE_PRIMAL", "UPP");
+    clock[UpdateRowClock] = timer.clock_def("UPDATE_ROW", "UPR");
+    clock[UpdateDualClock] = timer.clock_def("UPDATE_DUAL", "UPD");
+    clock[UpdatePrimalClock] = timer.clock_def("UPDATE_PRIMAL", "UPP");
     clock[DevexIzClock] = timer.clock_def("DEVEX_IZ", "DIZ");
-    clock[DevexUpdateWeightClock] =
-        timer.clock_def("DVX_UPDATE_WEIGHT", "UWS");
-    clock[DseUpdateWeightClock] =
-        timer.clock_def("DSE_UPDATE_WEIGHT", "UWD");
-    clock[UpdatePivotsClock] =
-        timer.clock_def("UPDATE_PIVOTS", "UPP");
-    clock[UpdateFactorClock] =
-        timer.clock_def("UPDATE_FACTOR", "UPF");
-    clock[UpdateMatrixClock] =
-        timer.clock_def("UPDATE_MATRIX", "UPM");
-    clock[UpdateRowEpClock] =
-        timer.clock_def("UPDATE_ROW_EP", "UPR");
+    clock[DevexUpdateWeightClock] = timer.clock_def("DVX_UPDATE_WEIGHT", "UWS");
+    clock[DseUpdateWeightClock] = timer.clock_def("DSE_UPDATE_WEIGHT", "UWD");
+    clock[UpdatePivotsClock] = timer.clock_def("UPDATE_PIVOTS", "UPP");
+    clock[UpdateFactorClock] = timer.clock_def("UPDATE_FACTOR", "UPF");
+    clock[UpdateMatrixClock] = timer.clock_def("UPDATE_MATRIX", "UPM");
+    clock[UpdateRowEpClock] = timer.clock_def("UPDATE_ROW_EP", "UPR");
   }
 
   void reportSimplexClockList(const char* grepStamp,
-			      std::vector<int> simplex_clock_list,
-			      HighsTimerClock& simplex_timer_clock) {
+                              std::vector<int> simplex_clock_list,
+                              HighsTimerClock& simplex_timer_clock) {
     HighsTimer& timer = simplex_timer_clock.timer_;
     std::vector<int>& clock = simplex_timer_clock.clock_;
     int simplex_clock_list_size = simplex_clock_list.size();
@@ -205,7 +176,8 @@ class SimplexTimer {
 
   void reportSimplexTotalClock(HighsTimerClock& simplex_timer_clock) {
     std::vector<int> simplex_clock_list{SimplexTotalClock};
-    reportSimplexClockList("SimplexTotal", simplex_clock_list, simplex_timer_clock);
+    reportSimplexClockList("SimplexTotal", simplex_clock_list,
+                           simplex_timer_clock);
   };
 
   void reportSimplexPhasesClock(HighsTimerClock& simplex_timer_clock) {
@@ -213,13 +185,13 @@ class SimplexTimer {
         SimplexIzDseWtClock, SimplexDualPhase1Clock, SimplexDualPhase2Clock,
         SimplexPrimalPhase2Clock};
     reportSimplexClockList("SimplexPhases", simplex_clock_list,
-                              simplex_timer_clock);
+                           simplex_timer_clock);
   };
 
   void reportDualSimplexIterateClock(HighsTimerClock& simplex_timer_clock) {
     std::vector<int> simplex_clock_list{IterateClock};
     reportSimplexClockList("SimplexIterate", simplex_clock_list,
-                              simplex_timer_clock);
+                           simplex_timer_clock);
   };
 
   void reportDualSimplexOuterClock(HighsTimerClock& simplex_timer_clock) {
@@ -227,47 +199,74 @@ class SimplexTimer {
         IterateDualRebuildClock, IterateChuzrClock,   IterateChuzcClock,
         IterateFtranClock,       IterateVerifyClock,  IterateDualClock,
         IteratePrimalClock,      IterateDevexIzClock, IteratePivotsClock};
-    reportSimplexClockList("SimplexOuter", simplex_clock_list, simplex_timer_clock);
+    reportSimplexClockList("SimplexOuter", simplex_clock_list,
+                           simplex_timer_clock);
   };
 
   void reportSimplexInnerClock(HighsTimerClock& simplex_timer_clock) {
     std::vector<int> simplex_clock_list{
-        ScaleClock,
-        CrashClock,        BasisConditionClock, DseIzClock,
-        InvertClock,       PermWtClock,         ComputeDualClock,
-        CorrectDualClock,  ComputePrimalClock,  CollectPrIfsClock,
-        ComputePrIfsClock, ComputeDuIfsClock,   ComputeDuObjClock,
-        ComputePrObjClock, ReportRebuildClock,  ChuzrDualClock,
-        Chuzr1Clock,       Chuzr2Clock,         BtranClock,
-        PriceClock,        ChuzcPrimalClock,    Chuzc0Clock,
-        Chuzc1Clock,       Chuzc2Clock,         Chuzc3Clock,
-        Chuzc4Clock,       DevexWtClock,        FtranClock,
-        FtranBfrtClock,    FtranDseClock,       UpdateDualClock,
-        UpdatePrimalClock, DevexUpdateWeightClock,   DseUpdateWeightClock,   
-        DevexIzClock,      UpdatePivotsClock,   UpdateFactorClock,
-        UpdateMatrixClock};
-    reportSimplexClockList("SimplexInner", simplex_clock_list, simplex_timer_clock);
+        ScaleClock,           CrashClock,        BasisConditionClock,
+        DseIzClock,           InvertClock,       PermWtClock,
+        ComputeDualClock,     CorrectDualClock,  ComputePrimalClock,
+        CollectPrIfsClock,    ComputePrIfsClock, ComputeDuIfsClock,
+        ComputeDuObjClock,    ComputePrObjClock, ReportRebuildClock,
+        ChuzrDualClock,       Chuzr1Clock,       Chuzr2Clock,
+        BtranClock,           PriceClock,        ChuzcPrimalClock,
+        Chuzc0Clock,          Chuzc1Clock,       Chuzc2Clock,
+        Chuzc3Clock,          Chuzc4Clock,       DevexWtClock,
+        FtranClock,           FtranBfrtClock,    FtranDseClock,
+        UpdateDualClock,      UpdatePrimalClock, DevexUpdateWeightClock,
+        DseUpdateWeightClock, DevexIzClock,      UpdatePivotsClock,
+        UpdateFactorClock,    UpdateMatrixClock};
+    reportSimplexClockList("SimplexInner", simplex_clock_list,
+                           simplex_timer_clock);
   };
 
   void reportSimplexMultiInnerClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{
-        ScaleClock,
-        CrashClock,        BasisConditionClock, DseIzClock,
-        InvertClock,       PermWtClock,         ComputeDualClock,
-        CorrectDualClock,  ComputePrimalClock,  CollectPrIfsClock,
-        ComputePrIfsClock, ComputeDuIfsClock,   ComputeDuObjClock,
-        ComputePrObjClock, ReportRebuildClock,  ChuzrDualClock,
-        Chuzr1Clock,       Chuzr2Clock,         BtranClock,
-        PriceClock,        ChuzcPrimalClock,    Chuzc0Clock,
-        PriceChuzc1Clock,
-        Chuzc1Clock,       Chuzc2Clock,         Chuzc3Clock,
-        Chuzc4Clock,       DevexWtClock,        FtranClock,
-        FtranBfrtClock,    FtranDseClock,       FtranMixParClock,
-	FtranMixFinalClock,UpdateRowClock,      UpdateDualClock,
-        UpdatePrimalClock, DevexUpdateWeightClock,   DseUpdateWeightClock,
-        DevexIzClock,      UpdatePivotsClock, UpdateFactorClock,
-	UpdateMatrixClock};
-    reportSimplexClockList("SimplexMultiInner", simplex_clock_list, simplex_timer_clock);
+    std::vector<int> simplex_clock_list{ScaleClock,
+                                        CrashClock,
+                                        BasisConditionClock,
+                                        DseIzClock,
+                                        InvertClock,
+                                        PermWtClock,
+                                        ComputeDualClock,
+                                        CorrectDualClock,
+                                        ComputePrimalClock,
+                                        CollectPrIfsClock,
+                                        ComputePrIfsClock,
+                                        ComputeDuIfsClock,
+                                        ComputeDuObjClock,
+                                        ComputePrObjClock,
+                                        ReportRebuildClock,
+                                        ChuzrDualClock,
+                                        Chuzr1Clock,
+                                        Chuzr2Clock,
+                                        BtranClock,
+                                        PriceClock,
+                                        ChuzcPrimalClock,
+                                        Chuzc0Clock,
+                                        PriceChuzc1Clock,
+                                        Chuzc1Clock,
+                                        Chuzc2Clock,
+                                        Chuzc3Clock,
+                                        Chuzc4Clock,
+                                        DevexWtClock,
+                                        FtranClock,
+                                        FtranBfrtClock,
+                                        FtranDseClock,
+                                        FtranMixParClock,
+                                        FtranMixFinalClock,
+                                        UpdateRowClock,
+                                        UpdateDualClock,
+                                        UpdatePrimalClock,
+                                        DevexUpdateWeightClock,
+                                        DseUpdateWeightClock,
+                                        DevexIzClock,
+                                        UpdatePivotsClock,
+                                        UpdateFactorClock,
+                                        UpdateMatrixClock};
+    reportSimplexClockList("SimplexMultiInner", simplex_clock_list,
+                           simplex_timer_clock);
   };
 };
 #endif /* SIMPLEX_SIMPLEXTIMER_H_ */

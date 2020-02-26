@@ -426,10 +426,11 @@ class HighsOptions : public HighsOptionsStruct {
                             SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_scale_strategy",
-				     "Strategy for scaling before simplex solver: off / on (0/1)",
-				     advanced, &simplex_scale_strategy,
-				     SIMPLEX_SCALE_STRATEGY_MIN, SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED, SIMPLEX_SCALE_STRATEGY_MAX);
+    record_int = new OptionRecordInt(
+        "simplex_scale_strategy",
+        "Strategy for scaling before simplex solver: off / on (0/1)", advanced,
+        &simplex_scale_strategy, SIMPLEX_SCALE_STRATEGY_MIN,
+        SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED, SIMPLEX_SCALE_STRATEGY_MAX);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -505,18 +506,16 @@ class HighsOptions : public HighsOptionsStruct {
                                        advanced, &write_solution_pretty, false);
     records.push_back(record_bool);
 
-    record_int = new OptionRecordInt("mip_max_nodes",
-				     "MIP solver max number of nodes",
-				     advanced, &mip_max_nodes,
-				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    record_int = new OptionRecordInt(
+        "mip_max_nodes", "MIP solver max number of nodes", advanced,
+        &mip_max_nodes, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("mip_report_level",
-				     "MIP solver reporting level",
-				     advanced, &mip_report_level,
-				     0, 1, 2);
+    record_int =
+        new OptionRecordInt("mip_report_level", "MIP solver reporting level",
+                            advanced, &mip_report_level, 0, 1, 2);
     records.push_back(record_int);
-    
+
     // Advanced options
     advanced = true;
     record_bool = new OptionRecordBool(
@@ -601,16 +600,14 @@ class HighsOptions : public HighsOptionsStruct {
         HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_bool = new OptionRecordBool("use_original_HFactor_logic",
-				       "Use original HFactor logic for sparse vs hyper-sparse TRANs",
-				       advanced, &use_original_HFactor_logic,
-				       true);
+    record_bool = new OptionRecordBool(
+        "use_original_HFactor_logic",
+        "Use original HFactor logic for sparse vs hyper-sparse TRANs", advanced,
+        &use_original_HFactor_logic, true);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("icrash",
-				     "Run iCrash",
-				     advanced, &icrash,
-				     false);
+    record_bool =
+        new OptionRecordBool("icrash", "Run iCrash", advanced, &icrash, false);
     records.push_back(record_bool);
 
     record_bool =

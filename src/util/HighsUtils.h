@@ -98,13 +98,12 @@ void analyseMatrixSparsity(
     const std::vector<int>& Aindex   //!< Matrix row indices
 );
 
-bool initialiseValueDistribution(
-				 const std::string distribution_name,
-				 const std::string value_name,
-				 const double min_value_limit,
-				 const double max_value_limit,
-				 const double base_value_limit,
-				 HighsValueDistribution& value_distribution);
+bool initialiseValueDistribution(const std::string distribution_name,
+                                 const std::string value_name,
+                                 const double min_value_limit,
+                                 const double max_value_limit,
+                                 const double base_value_limit,
+                                 HighsValueDistribution& value_distribution);
 
 bool updateValueDistribution(const double value,
                              HighsValueDistribution& value_distribution);
@@ -112,26 +111,22 @@ bool updateValueDistribution(const double value,
 int integerPercentage(const int of, const int in);
 double doublePercentage(const int of, const int in);
 
-bool printValueDistribution(
-			    const HighsValueDistribution& value_distribution,
-			    const int mu=0);
+bool printValueDistribution(const HighsValueDistribution& value_distribution,
+                            const int mu = 0);
 #endif
 
 bool initialiseScatterData(const int max_num_point,
-			   HighsScatterData& scatter_data);
-bool updateScatterData(const double value0,
-		       const double value1,
-		       HighsScatterData& scatter_data);
+                           HighsScatterData& scatter_data);
+bool updateScatterData(const double value0, const double value1,
+                       HighsScatterData& scatter_data);
 bool regressScatterData(HighsScatterData& scatter_data);
 bool predictFromScatterData(const HighsScatterData& scatter_data,
-			    const double value0,
-			    double& predicted_value1,
-			    const bool log_regression=false);
-bool printScatterData(std::string name,
-		      const HighsScatterData& scatter_data);
+                            const double value0, double& predicted_value1,
+                            const bool log_regression = false);
+bool printScatterData(std::string name, const HighsScatterData& scatter_data);
 void printScatterDataRegressionComparison(std::string name,
-					  const HighsScatterData& scatter_data);
+                                          const HighsScatterData& scatter_data);
 bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
-				       const bool print=false);
+                                       const bool print = false);
 
 #endif  // UTIL_HIGHSUTILS_H_

@@ -54,7 +54,7 @@ void HCrash::crash(const int pass_crash_strategy) {
     // test singularity crashes
     crsh_f_vr_ty = crsh_vr_ty_non_bc;
     crsh_l_vr_ty = crsh_vr_ty_bc;
-    crsh_num_vr_ty = crsh_vr_ty_bc+1;
+    crsh_num_vr_ty = crsh_vr_ty_bc + 1;
     crsh_mn_pri_v = crsh_vr_ty_non_bc;
     crsh_mx_pri_v = crsh_vr_ty_bc;
     crsh_no_act_pri_v = crsh_mn_pri_v;
@@ -63,7 +63,7 @@ void HCrash::crash(const int pass_crash_strategy) {
     // crashes
     crsh_f_vr_ty = crsh_vr_ty_fx;
     crsh_l_vr_ty = crsh_vr_ty_fr;
-    crsh_num_vr_ty = crsh_vr_ty_fr+1;
+    crsh_num_vr_ty = crsh_vr_ty_fr + 1;
     crsh_mn_pri_v = crsh_vr_ty_fx;
     crsh_mx_pri_v = crsh_vr_ty_fr;
     crsh_no_act_pri_v = crsh_mn_pri_v;

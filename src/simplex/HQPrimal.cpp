@@ -138,14 +138,14 @@ HighsStatus HQPrimal::solve() {
     int it0 = scaled_solution_params.simplex_iteration_count;
     switch (solvePhase) {
       case 1:
-	analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
+        analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
         solvePhase1();
-	analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
+        analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
         simplex_info.primal_phase1_iteration_count +=
     (scaled_solution_params.simplex_iteration_count - it0); break; case 2:
-	analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
+        analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
         solvePhase2();
-	analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
+        analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
         simplex_info.primal_phase2_iteration_count +=
     (scaled_solution_params.simplex_iteration_count - it0); break; case 4:
     break; default: solvePhase = 0; break;
@@ -422,12 +422,14 @@ void HQPrimal::primalRebuild() {
   analysis->simplexTimerStop(ReportRebuildClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
-    int total_rebuilds = analysis->simplexTimerNumCall(IteratePrimalRebuildClock);
-    double total_rebuild_time = analysis->simplexTimerRead(IteratePrimalRebuildClock);
+    int total_rebuilds =
+        analysis->simplexTimerNumCall(IteratePrimalRebuildClock);
+    double total_rebuild_time =
+        analysis->simplexTimerRead(IteratePrimalRebuildClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
         total_rebuilds, sv_invertHint,
-	workHMO.scaled_solution_params_.simplex_iteration_count,
+        workHMO.scaled_solution_params_.simplex_iteration_count,
         total_rebuild_time);
   }
 #endif
@@ -521,10 +523,12 @@ void HQPrimal::primalChooseRow() {
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (simplex_info.analyse_iterations) 
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
+                                    analysis->col_aq_density);
 #endif
-  workHMO.factor_.ftran(col_aq, analysis->col_aq_density, analysis->pointer_serial_factor_clocks);
+  workHMO.factor_.ftran(col_aq, analysis->col_aq_density,
+                        analysis->pointer_serial_factor_clocks);
   analysis->simplexTimerStop(FtranClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
@@ -721,7 +725,8 @@ void HQPrimal::primalUpdate() {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                     analysis->row_ep_density);
 #endif
-  workHMO.factor_.btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
+  workHMO.factor_.btran(row_ep, analysis->row_ep_density,
+                        analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
@@ -734,8 +739,8 @@ void HQPrimal::primalUpdate() {
   /*
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
-  analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep, analysis->row_ap_density);
-    analysis->num_row_price++;
+  analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
+analysis->row_ap_density); analysis->num_row_price++;
   }
 #endif
   analysis->simplexTimerStart(PriceClock);
@@ -842,8 +847,9 @@ void HQPrimal::phase1ComputeDual() {
   }
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (simplex_info.analyse_iterations) 
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, buffer, analysis->row_ep_density);
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, buffer,
+                                    analysis->row_ep_density);
 #endif
   workHMO.factor_.btran(buffer, 1, analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
@@ -892,7 +898,8 @@ void HQPrimal::phase1ChooseColumn() {
   const int nSeq = workHMO.lp_.numCol_ + workHMO.lp_.numRow_;
   const int* nbMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   const double* workDual = &workHMO.simplex_info_.workDual_[0];
-  const double dDualTol = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
+  const double dDualTol =
+      workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   analysis->simplexTimerStart(ChuzcPrimalClock);
   double dBestScore = 0;
   columnIn = -1;
@@ -923,10 +930,12 @@ void HQPrimal::phase1ChooseRow() {
   workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (simplex_info.analyse_iterations) 
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq, analysis->col_aq_density);
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
+                                    analysis->col_aq_density);
 #endif
-  workHMO.factor_.ftran(col_aq, analysis->col_aq_density, analysis->pointer_serial_factor_clocks);
+  workHMO.factor_.ftran(col_aq, analysis->col_aq_density,
+                        analysis->pointer_serial_factor_clocks);
   analysis->simplexTimerStop(FtranClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
@@ -1091,7 +1100,8 @@ void HQPrimal::phase1Update() {
   double* workValue = &workHMO.simplex_info_.workValue_[0];
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const int iMoveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
-  const double dFeasTol = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
+  const double dFeasTol =
+      workHMO.scaled_solution_params_.primal_feasibility_tolerance;
 
   /* Compute the primal theta and see if we should have do bound flip instead */
   alpha = col_aq.array[rowOut];
@@ -1129,9 +1139,9 @@ void HQPrimal::phase1Update() {
       computePrimalInfeasible(workHMO);
       if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
-	analysis->simplexTimerStart(ComputeDualClock);
+        analysis->simplexTimerStart(ComputeDualClock);
         phase1ComputeDual();
-	analysis->simplexTimerStop(ComputeDualClock);
+        analysis->simplexTimerStop(ComputeDualClock);
       } else {
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
@@ -1148,10 +1158,12 @@ void HQPrimal::phase1Update() {
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (simplex_info.analyse_iterations) 
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
+                                    analysis->row_ep_density);
 #endif
-  workHMO.factor_.btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
+  workHMO.factor_.btran(row_ep, analysis->row_ep_density,
+                        analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);

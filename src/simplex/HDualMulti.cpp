@@ -55,8 +55,9 @@ void HDual::iterateMulti() {
       majorUpdate();
     } else {
       HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		      "PAMI skipping majorUpdate() due to multi_nFinish = %d; invertHint = %d",
-		      multi_nFinish, invertHint);
+                      "PAMI skipping majorUpdate() due to multi_nFinish = %d; "
+                      "invertHint = %d",
+                      multi_nFinish, invertHint);
     }
     return;
   }
@@ -216,8 +217,10 @@ void HDual::majorChooseRowBtran() {
     work_ep->index[0] = iRow;
     work_ep->array[iRow] = 1;
     work_ep->packFlag = true;
-    HighsTimerClock* factor_timer_clock_pointer = analysis->getThreadFactorTimerClockPointer();
-    factor->btran(*work_ep, analysis->row_ep_density, factor_timer_clock_pointer);
+    HighsTimerClock* factor_timer_clock_pointer =
+        analysis->getThreadFactorTimerClockPointer();
+    factor->btran(*work_ep, analysis->row_ep_density,
+                  factor_timer_clock_pointer);
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // For Dual steepest edge we know the exact weight as the 2-norm of
       // work_ep
@@ -646,7 +649,8 @@ void HDual::majorUpdateFtranParallel() {
   for (int i = 0; i < multi_ntasks; i++) {
     HVector_ptr rhs = multi_vector[i];
     double density = multi_density[i];
-    HighsTimerClock* factor_timer_clock_pointer = analysis->getThreadFactorTimerClockPointer();
+    HighsTimerClock* factor_timer_clock_pointer =
+        analysis->getThreadFactorTimerClockPointer();
     factor->ftran(*rhs, density, factor_timer_clock_pointer);
   }
 

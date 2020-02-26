@@ -15,16 +15,17 @@
 #define LP_DATA_HIGHS_ANALYSIS_H_
 
 #include <vector>
+
 #include "HConfig.h"
 #include "util/HighsTimer.h"
 
 //#ifdef HiGHSDEV
-  struct HighsTimerClock {
-    HighsTimerClock(HighsTimer& timer) : timer_(timer) {}
+struct HighsTimerClock {
+  HighsTimerClock(HighsTimer& timer) : timer_(timer) {}
 
-    HighsTimer& timer_;
-    std::vector<int> clock_;
-  };
+  HighsTimer& timer_;
+  std::vector<int> clock_;
+};
 //#endif
 
 #endif /* LP_DATA_HIGHS_ANALYSIS_H_ */

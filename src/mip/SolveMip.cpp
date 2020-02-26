@@ -21,11 +21,12 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
   for (int col = 0; col < (int)node.integer_variables.size(); col++) {
     if (!node.integer_variables[col]) continue;
 
-    // Get the value, lower and upper bounds for the column. NB Expensive to store all this on the node
+    // Get the value, lower and upper bounds for the column. NB Expensive to
+    // store all this on the node
     const double value = node.primal_solution[col];
     const double lower = node.col_lower_bound[col];
     const double upper = node.col_upper_bound[col];
-    // Don't branch on variables that are at bounds or (mildly) infeasible. 
+    // Don't branch on variables that are at bounds or (mildly) infeasible.
     if (value <= lower + fractional_tolerance) continue;
     if (value >= upper - fractional_tolerance) continue;
     const double value_ceil = std::ceil(value);
@@ -34,18 +35,19 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
     assert(fraction_below >= 0);
     const double fraction_above = value - value_floor;
     assert(fraction_above >= 0);
-    if (fraction_above > fractional_tolerance && fraction_below > fractional_tolerance) {
+    if (fraction_above > fractional_tolerance &&
+        fraction_below > fractional_tolerance) {
       if (mip_report_level > 1) {
-	if (fraction_above < 10 * fractional_tolerance)
-	  printf(
-		 "chooseBranchingVariable %d: %g = Fraction_above < "
-		 "10*fractional_tolerance = %g\n",
-		 col, fraction_above, 10 * fractional_tolerance);
-	if (fraction_below < 10 * fractional_tolerance)
-	  printf(
-		 "chooseBranchingVariable %d: %g = Fraction_below < "
-		 "10*fractional_tolerance = %g\n",
-		 col, fraction_below, 10 * fractional_tolerance);
+        if (fraction_above < 10 * fractional_tolerance)
+          printf(
+              "chooseBranchingVariable %d: %g = Fraction_above < "
+              "10*fractional_tolerance = %g\n",
+              col, fraction_above, 10 * fractional_tolerance);
+        if (fraction_below < 10 * fractional_tolerance)
+          printf(
+              "chooseBranchingVariable %d: %g = Fraction_below < "
+              "10*fractional_tolerance = %g\n",
+              col, fraction_below, 10 * fractional_tolerance);
       }
       // This one is violated.
       return NodeIndex(col);
@@ -71,13 +73,13 @@ bool Tree::branch(Node& node) {
     if (mip_report_level > 1) {
       printf("Integer");
       if (better_integer_solution) {
-	printf(": !! Updating best !!\n");
-	/*
-	  std::cout << "Updating best solution at node " << node.id
-	  << ". Objective: " << node.objective_value << std::endl;
-	*/
+        printf(": !! Updating best !!\n");
+        /*
+          std::cout << "Updating best solution at node " << node.id
+          << ". Objective: " << node.objective_value << std::endl;
+        */
       } else {
-	printf("\n");
+        printf("\n");
       }
     }
     return false;
@@ -96,17 +98,16 @@ bool Tree::branch(Node& node) {
       << " right child lb: " << value_ceil << std::endl;
     */
     printf("Branch on %2d (%9d, %9d) left UB: %4d; right LB: %4d\n", col,
-	   num_nodes + 1, num_nodes + 2, (int)value_floor,
-	   (int)value_ceil);
+           num_nodes + 1, num_nodes + 2, (int)value_floor, (int)value_ceil);
   }
   // Branch.
   // Create children and add to node.
   num_nodes++;
-  node.left_child =
-    std::unique_ptr<Node>(new Node(node.id, node.objective_value, num_nodes, node.level + 1));
+  node.left_child = std::unique_ptr<Node>(
+      new Node(node.id, node.objective_value, num_nodes, node.level + 1));
   num_nodes++;
-  node.right_child =
-      std::unique_ptr<Node>(new Node(node.id, node.objective_value, num_nodes, node.level + 1));
+  node.right_child = std::unique_ptr<Node>(
+      new Node(node.id, node.objective_value, num_nodes, node.level + 1));
 
   // Copy bounds from parent and set integer variables.
   node.left_child->branch_col = col;

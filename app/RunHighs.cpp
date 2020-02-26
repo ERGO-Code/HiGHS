@@ -242,7 +242,7 @@ HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
   /*
   HighsStatus write_status;
   HighsPrintMessage(output, message_level, ML_ALWAYS,
-		    "Writing model as MPS\n");
+                    "Writing model as MPS\n");
   write_status = highs.writeModel("write.mps");
   if (write_status != HighsStatus::OK) {
     if (write_status == HighsStatus::Warning) {

@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HFactor.h"
+
 #include "simplex/FactorTimer.h"
 //#include "lp_data/HConst.h"
 //#include "simplex/HVector.h"
@@ -168,8 +169,7 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
-		    const bool use_original_HFactor_logic_,
-                    int updateMethod_) {
+                    const bool use_original_HFactor_logic_, int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -263,7 +263,6 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   PFstart.reserve(2000 + 1);
   PFindex.reserve(BlimitX * 4);
   PFvalue.reserve(BlimitX * 4);
-
 }
 
 #ifdef HiGHSDEV
@@ -314,7 +313,7 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
 }
 
 void HFactor::ftran(HVector& vector, double historical_density,
-		    HighsTimerClock* factor_timer_clock_pointer) const{
+                    HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtran, factor_timer_clock_pointer);
   ftranL(vector, historical_density, factor_timer_clock_pointer);
@@ -323,7 +322,7 @@ void HFactor::ftran(HVector& vector, double historical_density,
 }
 
 void HFactor::btran(HVector& vector, double historical_density,
-		    HighsTimerClock* factor_timer_clock_pointer) const{
+                    HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorBtran, factor_timer_clock_pointer);
   btranU(vector, historical_density, factor_timer_clock_pointer);
@@ -1171,7 +1170,7 @@ void HFactor::buildFinish() {
 }
 
 void HFactor::ftranL(HVector& rhs, double historical_density,
-		     HighsTimerClock* factor_timer_clock_pointer) const{
+                     HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtranLower, factor_timer_clock_pointer);
   if (updateMethod == UPDATE_METHOD_APF) {
@@ -1225,7 +1224,7 @@ void HFactor::ftranL(HVector& rhs, double historical_density,
 }
 
 void HFactor::btranL(HVector& rhs, double historical_density,
-		     HighsTimerClock* factor_timer_clock_pointer) const{
+                     HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorBtranLower, factor_timer_clock_pointer);
   double current_density = 1.0 * rhs.count / numRow;
@@ -1279,7 +1278,7 @@ void HFactor::btranL(HVector& rhs, double historical_density,
 }
 
 void HFactor::ftranU(HVector& rhs, double historical_density,
-		     HighsTimerClock* factor_timer_clock_pointer) const{
+                     HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorFtranUpper, factor_timer_clock_pointer);
   // The update part
@@ -1302,7 +1301,8 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
   // The regular part
   const double current_density = 1.0 * rhs.count / numRow;
   if (current_density > hyperCANCEL || historical_density > hyperFTRANU) {
-    const bool report_ftran_upper_sparse = false;//current_density < hyperCANCEL;
+    const bool report_ftran_upper_sparse =
+        false;  // current_density < hyperCANCEL;
     int use_clock;
     if (current_density < 0.1)
       use_clock = FactorFtranUpperSps2;
@@ -1359,8 +1359,10 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
     factor_timer.stop(use_clock, factor_timer_clock_pointer);
     if (report_ftran_upper_sparse) {
       const double final_density = 1.0 * rhs.count / numRow;
-      printf("FactorFtranUpperSps: historical_density = %10.4g; current_density = %10.4g; final_density = %10.4g\n",
-	     historical_density, current_density, final_density);
+      printf(
+          "FactorFtranUpperSps: historical_density = %10.4g; current_density = "
+          "%10.4g; final_density = %10.4g\n",
+          historical_density, current_density, final_density);
     }
   } else {
     int use_clock = -1;
@@ -1394,7 +1396,7 @@ void HFactor::ftranU(HVector& rhs, double historical_density,
 }
 
 void HFactor::btranU(HVector& rhs, double historical_density,
-		     HighsTimerClock* factor_timer_clock_pointer) const{
+                     HighsTimerClock* factor_timer_clock_pointer) const {
   FactorTimer factor_timer;
   factor_timer.start(FactorBtranUpper, factor_timer_clock_pointer);
   if (updateMethod == UPDATE_METHOD_PF) {
@@ -1482,7 +1484,7 @@ void HFactor::btranU(HVector& rhs, double historical_density,
   factor_timer.stop(FactorBtranUpper, factor_timer_clock_pointer);
 }
 
-void HFactor::ftranFT(HVector& vector) const{
+void HFactor::ftranFT(HVector& vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   int* PFpivotIndex = NULL;
@@ -1529,7 +1531,7 @@ void HFactor::ftranFT(HVector& vector) const{
   }
 }
 
-void HFactor::btranFT(HVector& vector) const{
+void HFactor::btranFT(HVector& vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex =
@@ -1575,7 +1577,7 @@ void HFactor::btranFT(HVector& vector) const{
   vector.count = RHScount;
 }
 
-void HFactor::ftranPF(HVector& vector) const{
+void HFactor::ftranPF(HVector& vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex = &this->PFpivotIndex[0];
@@ -1611,7 +1613,7 @@ void HFactor::ftranPF(HVector& vector) const{
   vector.count = RHScount;
 }
 
-void HFactor::btranPF(HVector& vector) const{
+void HFactor::btranPF(HVector& vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   const int* PFpivotIndex = &this->PFpivotIndex[0];
@@ -1641,7 +1643,7 @@ void HFactor::btranPF(HVector& vector) const{
   vector.count = RHScount;
 }
 
-void HFactor::ftranMPF(HVector& vector) const{
+void HFactor::ftranMPF(HVector& vector) const {
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1659,7 +1661,7 @@ void HFactor::ftranMPF(HVector& vector) const{
   vector.count = RHScount;
 }
 
-void HFactor::btranMPF(HVector& vector) const{
+void HFactor::btranMPF(HVector& vector) const {
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1676,7 +1678,7 @@ void HFactor::btranMPF(HVector& vector) const{
   vector.count = RHScount;
 }
 
-void HFactor::ftranAPF(HVector& vector) const{
+void HFactor::ftranAPF(HVector& vector) const {
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];
@@ -1694,7 +1696,7 @@ void HFactor::ftranAPF(HVector& vector) const{
   vector.count = RHScount;
 }
 
-void HFactor::btranAPF(HVector& vector) const{
+void HFactor::btranAPF(HVector& vector) const {
   // Alias to non constant
   int RHScount = vector.count;
   int* RHSindex = &vector.index[0];

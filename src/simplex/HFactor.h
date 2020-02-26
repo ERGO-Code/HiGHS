@@ -103,7 +103,7 @@ class HFactor {
              const int* Aindex,     //!< Row indices of constraint matrix
              const double* Avalue,  //!< Row values of constraint matrix
              int* baseIndex,        //!< Indices of basic variables
-	     const bool use_original_HFactor_logic = true,
+             const bool use_original_HFactor_logic = true,
              int updateMethod =
                  UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
@@ -127,23 +127,21 @@ class HFactor {
    * @return 0 if successful, otherwise rankDeficiency>0
    *
    */
-  int build(HighsTimerClock* factor_timer_clock_pointer=NULL);
+  int build(HighsTimerClock* factor_timer_clock_pointer = NULL);
 
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
-  void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
+  void ftran(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
              double historical_density,  //!< Historical density of the result
-	     HighsTimerClock* factor_timer_clock_pointer=NULL
-           ) const;
+             HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
-  void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
+  void btran(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
              double historical_density,  //!< Historical density of the result
-	     HighsTimerClock* factor_timer_clock_pointer=NULL
-             ) const;
+             HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   /**
    * @brief Update according to
@@ -336,13 +334,13 @@ class HFactor {
   void buildFinish();
 
   void ftranL(HVector& vector, double historical_density,
-	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
+              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void btranL(HVector& vector, double historical_density,
-	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
+              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void ftranU(HVector& vector, double historical_density,
-	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
+              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
   void btranU(HVector& vector, double historical_density,
-	      HighsTimerClock* factor_timer_clock_pointer=NULL) const;
+              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   void ftranFT(HVector& vector) const;
   void btranFT(HVector& vector) const;
@@ -353,8 +351,8 @@ class HFactor {
   void ftranAPF(HVector& vector) const;
   void btranAPF(HVector& vector) const;
 
-  void updateCFT(HVector* aq, HVector* ep, int* iRow);//, int* hint);
-  void updateFT(HVector* aq, HVector* ep, int iRow);//, int* hint);
+  void updateCFT(HVector* aq, HVector* ep, int* iRow);  //, int* hint);
+  void updateFT(HVector* aq, HVector* ep, int iRow);    //, int* hint);
   void updatePF(HVector* aq, int iRow, int* hint);
   void updateMPF(HVector* aq, HVector* ep, int iRow, int* hint);
   void updateAPF(HVector* aq, HVector* ep, int iRow);  //, int* hint);

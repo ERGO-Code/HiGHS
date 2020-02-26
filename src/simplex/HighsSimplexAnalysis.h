@@ -78,7 +78,7 @@ class HighsSimplexAnalysis {
 #ifdef OPENMP
     omp_max_threads = omp_get_max_threads();
 #endif
-    for (int i=0; i<omp_max_threads; i++) {
+    for (int i = 0; i < omp_max_threads; i++) {
       HighsTimerClock clock(timer);
       thread_simplex_clocks.push_back(clock);
       thread_factor_clocks.push_back(clock);
@@ -87,76 +87,61 @@ class HighsSimplexAnalysis {
 #else
     pointer_serial_factor_clocks = NULL;
 #endif
-}
-  void setup(const HighsLp& lp,
-	     const HighsOptions& options,
-	     const int simplex_iteration_count);
-  void messaging(FILE* logfile_,
-		 FILE* output_,
-		 const int message_level_
-		 );
+  }
+  void setup(const HighsLp& lp, const HighsOptions& options,
+             const int simplex_iteration_count);
+  void messaging(FILE* logfile_, FILE* output_, const int message_level_);
   void updateOperationResultDensity(const double local_density,
-				    double& density
-				    );
+                                    double& density);
   void iterationReport();
   void invertReport();
-  void invertReport(const bool header
-		    );
+  void invertReport(const bool header);
   void dualSteepestEdgeWeightError(const double computed_edge_weight,
-				   const double updated_edge_weight
-				   );
+                                   const double updated_edge_weight);
   bool switchToDevex();
-  bool predictEndDensity(const int tran_stage_id,
-			 const double start_density,
-			 double& end_density
-			 );
-  void afterTranStage(const int tran_stage_id,
-		      const double start_density,
-		      const double end_density,
-		      const double historical_density, 
-		      const double predicted_end_density, 
-		      const bool use_solve_sparse_original_HFactor_logic,
-		      const bool use_solve_sparse_new_HFactor_logic
-		      );
+  bool predictEndDensity(const int tran_stage_id, const double start_density,
+                         double& end_density);
+  void afterTranStage(const int tran_stage_id, const double start_density,
+                      const double end_density, const double historical_density,
+                      const double predicted_end_density,
+                      const bool use_solve_sparse_original_HFactor_logic,
+                      const bool use_solve_sparse_new_HFactor_logic);
   void summaryReportFactor();
 
-  void simplexTimerStart(const int simplex_clock, const int thread_id=0);
-  void simplexTimerStop(const int simplex_clock, const int thread_id=0);
-  bool simplexTimerRunning(const int simplex_clock, const int thread_id=0);
-  int simplexTimerNumCall(const int simplex_clock, const int thread_id=0);
-  double simplexTimerRead(const int simplex_clock, const int thread_id=0);
+  void simplexTimerStart(const int simplex_clock, const int thread_id = 0);
+  void simplexTimerStop(const int simplex_clock, const int thread_id = 0);
+  bool simplexTimerRunning(const int simplex_clock, const int thread_id = 0);
+  int simplexTimerNumCall(const int simplex_clock, const int thread_id = 0);
+  double simplexTimerRead(const int simplex_clock, const int thread_id = 0);
 
   HighsTimerClock* getThreadFactorTimerClockPointer();
 
 #ifdef HiGHSDEV
-  const std::vector<HighsTimerClock>& getThreadSimplexTimerClocks() { return thread_simplex_clocks; }
-  HighsTimerClock* getThreadSimplexTimerClockPtr(int i) { 
-    assert(i >= 0 && i < (int) thread_simplex_clocks.size());
+  const std::vector<HighsTimerClock>& getThreadSimplexTimerClocks() {
+    return thread_simplex_clocks;
+  }
+  HighsTimerClock* getThreadSimplexTimerClockPtr(int i) {
+    assert(i >= 0 && i < (int)thread_simplex_clocks.size());
     return &thread_simplex_clocks[i];
   }
 
-  const std::vector<HighsTimerClock>& getThreadFactorTimerClocks() { return thread_factor_clocks; }
-  HighsTimerClock* getThreadFactorTimerClockPtr(int i) { 
-    assert(i >= 0 && i < (int) thread_factor_clocks.size());
+  const std::vector<HighsTimerClock>& getThreadFactorTimerClocks() {
+    return thread_factor_clocks;
+  }
+  HighsTimerClock* getThreadFactorTimerClockPtr(int i) {
+    assert(i >= 0 && i < (int)thread_factor_clocks.size());
     return &thread_factor_clocks[i];
   }
 
   void reportFactorTimer();
   void iterationRecord();
   void iterationRecordMajor();
-  void operationRecordBefore(const int operation_type,
-			     const HVector& vector,
-			     const double historical_density
-			     );
-  void operationRecordBefore(const int operation_type,
-			     const int current_count,
-			     const double historical_density
-			     );
-  void operationRecordAfter(const int operation_type,
-			    const HVector& vector
-			    );
-  void operationRecordAfter(const int operation_type,
-			    const int result_count);
+  void operationRecordBefore(const int operation_type, const HVector& vector,
+                             const double historical_density);
+  void operationRecordBefore(const int operation_type, const int current_count,
+                             const double historical_density);
+  void operationRecordAfter(const int operation_type, const HVector& vector);
+  void operationRecordAfter(const int operation_type, const int result_count);
   void summaryReport();
 #endif
 
@@ -240,6 +225,7 @@ class HighsSimplexAnalysis {
   vector<double> historical_density_tolerance;
   vector<double> predicted_density_tolerance;
   vector<TranStageAnalysis> tran_stage;
+
  private:
   void iterationReport(const bool header);
   void reportAlgorithmPhaseIterationObjective(const bool header,

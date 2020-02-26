@@ -298,11 +298,11 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
 }
 
 bool initialiseValueDistribution(const std::string distribution_name,
-				 const std::string value_name,
-				 const double min_value_limit,
-				 const double max_value_limit,
-				 const double base_value_limit,
-				 HighsValueDistribution& value_distribution) {
+                                 const std::string value_name,
+                                 const double min_value_limit,
+                                 const double max_value_limit,
+                                 const double base_value_limit,
+                                 HighsValueDistribution& value_distribution) {
   value_distribution.distribution_name_ = distribution_name;
   value_distribution.value_name_ = value_name;
   if (min_value_limit <= 0) return false;
@@ -380,11 +380,11 @@ int integerPercentage(const int of, const int in) {
 }
 
 bool printValueDistribution(const HighsValueDistribution& value_distribution,
-			    const int mu) {
+                            const int mu) {
   if (value_distribution.sum_count_ <= 0) return false;
   const int num_count = value_distribution.num_count_;
   if (num_count < 0) return false;
-  if (value_distribution.distribution_name_ != "") 
+  if (value_distribution.distribution_name_ != "")
     printf("\n%s\n", value_distribution.distribution_name_.c_str());
   std::string value_name = value_distribution.value_name_;
   bool not_reported_ones = true;
@@ -530,7 +530,8 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
 }
 #endif
 
-bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_data) {
+bool initialiseScatterData(const int max_num_point,
+                           HighsScatterData& scatter_data) {
   if (max_num_point < 1) return false;
   scatter_data.max_num_point_ = max_num_point;
   scatter_data.num_point_ = 0;
@@ -550,11 +551,13 @@ bool initialiseScatterData(const int max_num_point, HighsScatterData& scatter_da
   return true;
 }
 
-bool updateScatterData(const double value0, const double value1, HighsScatterData& scatter_data) {
+bool updateScatterData(const double value0, const double value1,
+                       HighsScatterData& scatter_data) {
   if (value0 <= 0 || value0 <= 0) return false;
   scatter_data.num_point_++;
   scatter_data.last_point_++;
-  if (scatter_data.last_point_ == scatter_data.max_num_point_) scatter_data.last_point_ = 0;
+  if (scatter_data.last_point_ == scatter_data.max_num_point_)
+    scatter_data.last_point_ = 0;
   scatter_data.value0_[scatter_data.last_point_] = value0;
   scatter_data.value1_[scatter_data.last_point_] = value1;
   return true;
@@ -591,28 +594,30 @@ bool regressScatterData(HighsScatterData& scatter_data) {
       y = scatter_data.value1_[point];
       sum_x += x;
       sum_y += y;
-      sum_xx += x*x;
-      sum_xy += x*y;    
+      sum_xx += x * x;
+      sum_xy += x * y;
       log_x = log(x);
       log_y = log(y);
       sum_log_x += log_x;
       sum_log_y += log_y;
-      sum_log_xlog_x += log_x*log_x;
-      sum_log_xlog_y += log_x*log_y;    
+      sum_log_xlog_x += log_x * log_x;
+      sum_log_xlog_y += log_x * log_y;
     }
   }
   double double_num = 1.0 * point_num;
   // Linear regression
-  double det = double_num * sum_xx - sum_x*sum_x;
+  double det = double_num * sum_xx - sum_x * sum_x;
   if (fabs(det) < 1e-8) return true;
-  scatter_data.linear_coeff0_ = (sum_xx*sum_y - sum_x*sum_xy) / det;
-  scatter_data.linear_coeff1_ = (-sum_x*sum_y + double_num*sum_xy) / det;
+  scatter_data.linear_coeff0_ = (sum_xx * sum_y - sum_x * sum_xy) / det;
+  scatter_data.linear_coeff1_ = (-sum_x * sum_y + double_num * sum_xy) / det;
   // Log regression
-  det = double_num * sum_log_xlog_x - sum_log_x*sum_log_x;
+  det = double_num * sum_log_xlog_x - sum_log_x * sum_log_x;
   if (fabs(det) < 1e-8) return true;
-  scatter_data.log_coeff0_ = (sum_log_xlog_x*sum_log_y - sum_log_x*sum_log_xlog_y) / det;
-  scatter_data.log_coeff0_ = exp(scatter_data.log_coeff0_);  
-  scatter_data.log_coeff1_ = (-sum_log_x*sum_log_y + double_num*sum_log_xlog_y) / det;
+  scatter_data.log_coeff0_ =
+      (sum_log_xlog_x * sum_log_y - sum_log_x * sum_log_xlog_y) / det;
+  scatter_data.log_coeff0_ = exp(scatter_data.log_coeff0_);
+  scatter_data.log_coeff1_ =
+      (-sum_log_x * sum_log_y + double_num * sum_log_xlog_y) / det;
   // Look at the errors in the two approaches
   scatter_data.have_regression_coeff_ = true;
   if (scatter_data.num_point_ < scatter_data.max_num_point_) return true;
@@ -623,16 +628,17 @@ bool regressScatterData(HighsScatterData& scatter_data) {
   const double log_error = scatter_data.log_regression_error_;
 
   const bool report_awful_error = false;
-  if (linear_error > awful_regression_error || log_error > awful_regression_error) {
+  if (linear_error > awful_regression_error ||
+      log_error > awful_regression_error) {
     if (linear_error > awful_regression_error) {
       scatter_data.num_awful_linear_++;
       if (report_awful_error)
-	printf("Awful linear regression error = %g\n", linear_error);
+        printf("Awful linear regression error = %g\n", linear_error);
     }
     if (log_error > awful_regression_error) {
       scatter_data.num_awful_log_++;
       if (report_awful_error)
-	printf("Awful log regression error = %g\n", log_error);
+        printf("Awful log regression error = %g\n", log_error);
     }
     if (report_awful_error)
       computeScatterDataRegressionError(scatter_data, true);
@@ -649,55 +655,68 @@ bool regressScatterData(HighsScatterData& scatter_data) {
   //  printf("Linear regression error = %g\n", linear_error);
   //  printf("Log    regression error = %g\n", log_error);
   return true;
-
 }
 
-bool predictFromScatterData(const HighsScatterData& scatter_data, const double value0, double& predicted_value1, const bool log_regression) {
+bool predictFromScatterData(const HighsScatterData& scatter_data,
+                            const double value0, double& predicted_value1,
+                            const bool log_regression) {
   if (!scatter_data.have_regression_coeff_) return false;
   if (log_regression) {
-    predicted_value1 = scatter_data.log_coeff0_ * pow(value0, scatter_data.log_coeff1_);
+    predicted_value1 =
+        scatter_data.log_coeff0_ * pow(value0, scatter_data.log_coeff1_);
     return true;
   } else {
-    predicted_value1 = scatter_data.linear_coeff0_ + scatter_data.linear_coeff1_ * value0;
+    predicted_value1 =
+        scatter_data.linear_coeff0_ + scatter_data.linear_coeff1_ * value0;
     return true;
   }
 }
 
-bool computeScatterDataRegressionError(HighsScatterData& scatter_data, const bool print) {
+bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
+                                       const bool print) {
   if (!scatter_data.have_regression_coeff_) return false;
   if (scatter_data.num_point_ < scatter_data.max_num_point_) return false;
   double sum_log_error = 0;
-  if (print) printf("Log regression\nPoint     Value0     Value1 PredValue1      Error\n");
+  if (print)
+    printf(
+        "Log regression\nPoint     Value0     Value1 PredValue1      Error\n");
   for (int point = 0; point < scatter_data.max_num_point_; point++) {
     double value0 = scatter_data.value0_[point];
     double value1 = scatter_data.value1_[point];
     double predicted_value1;
     if (predictFromScatterData(scatter_data, value0, predicted_value1, true)) {
-      double error = fabs(predicted_value1 - value1);// / fabs(value1);
+      double error = fabs(predicted_value1 - value1);  // / fabs(value1);
       if (
-	  //	10*error > awful_regression_error &&
-	  print)
-	printf("%5d %10.4g %10.4g %10.4g %10.4g\n", point, value0, value1, predicted_value1, error);
+          //	10*error > awful_regression_error &&
+          print)
+        printf("%5d %10.4g %10.4g %10.4g %10.4g\n", point, value0, value1,
+               predicted_value1, error);
       sum_log_error += error;
     }
   }
-  if (print) printf("                                       %10.4g\n", sum_log_error);
+  if (print)
+    printf("                                       %10.4g\n", sum_log_error);
   double sum_linear_error = 0;
-  if (print) printf("Linear regression\nPoint     Value0     Value1 PredValue1      Error\n");
+  if (print)
+    printf(
+        "Linear regression\nPoint     Value0     Value1 PredValue1      "
+        "Error\n");
   for (int point = 0; point < scatter_data.max_num_point_; point++) {
     double value0 = scatter_data.value0_[point];
     double value1 = scatter_data.value1_[point];
     double predicted_value1;
     if (predictFromScatterData(scatter_data, value0, predicted_value1)) {
-      double error = fabs(predicted_value1 - value1);//  / fabs(value1);
+      double error = fabs(predicted_value1 - value1);  //  / fabs(value1);
       if (
-	  //	10*error > awful_regression_error &&
-	  print)
-	printf("%5d %10.4g %10.4g %10.4g %10.4g\n", point, value0, value1, predicted_value1, error);
+          //	10*error > awful_regression_error &&
+          print)
+        printf("%5d %10.4g %10.4g %10.4g %10.4g\n", point, value0, value1,
+               predicted_value1, error);
       sum_linear_error += error;
     }
   }
-  if (print) printf("                                       %10.4g\n", sum_linear_error);
+  if (print)
+    printf("                                       %10.4g\n", sum_linear_error);
   scatter_data.log_regression_error_ = sum_log_error;
   scatter_data.linear_regression_error_ = sum_linear_error;
   return true;
@@ -709,8 +728,9 @@ bool printScatterData(std::string name, const HighsScatterData& scatter_data) {
   double y;
   int point_num = 0;
   printf("%s scatter data\n", name.c_str());
-  const int to_point = std::min(scatter_data.num_point_, scatter_data.max_num_point_);
-  for (int point = scatter_data.last_point_+1; point < to_point; point++) {
+  const int to_point =
+      std::min(scatter_data.num_point_, scatter_data.max_num_point_);
+  for (int point = scatter_data.last_point_ + 1; point < to_point; point++) {
     point_num++;
     x = scatter_data.value0_[point];
     y = scatter_data.value1_[point];
@@ -722,21 +742,31 @@ bool printScatterData(std::string name, const HighsScatterData& scatter_data) {
     y = scatter_data.value1_[point];
     printf("%d,%10.4g,%10.4g,%d\n", point, x, y, point_num);
   }
-  printf("Linear regression coefficients,%10.4g,%10.4g\n", scatter_data.linear_coeff0_, scatter_data.linear_coeff1_);
-  printf("Log    regression coefficients,%10.4g,%10.4g\n", scatter_data.log_coeff0_, scatter_data.log_coeff1_);
+  printf("Linear regression coefficients,%10.4g,%10.4g\n",
+         scatter_data.linear_coeff0_, scatter_data.linear_coeff1_);
+  printf("Log    regression coefficients,%10.4g,%10.4g\n",
+         scatter_data.log_coeff0_, scatter_data.log_coeff1_);
   return true;
 }
 
-void printScatterDataRegressionComparison(std::string name, const HighsScatterData& scatter_data) {
+void printScatterDataRegressionComparison(
+    std::string name, const HighsScatterData& scatter_data) {
   if (!scatter_data.num_error_comparison_) return;
   printf("\n%s scatter data regression\n", name.c_str());
-  printf("%10d regression error comparisons\n", scatter_data.num_error_comparison_);
-  printf("%10d regression awful  linear (>%10.4g)\n", scatter_data.num_awful_linear_, awful_regression_error);
-  printf("%10d regression awful  log    (>%10.4g)\n", scatter_data.num_awful_log_, awful_regression_error);
-  printf("%10d regression bad    linear (>%10.4g)\n", scatter_data.num_bad_linear_, bad_regression_error);
-  printf("%10d regression bad    log    (>%10.4g)\n", scatter_data.num_bad_log_, bad_regression_error);
-  printf("%10d regression fair   linear (>%10.4g)\n", scatter_data.num_fair_linear_, fair_regression_error);
-  printf("%10d regression fair   log    (>%10.4g)\n", scatter_data.num_fair_log_, fair_regression_error);
+  printf("%10d regression error comparisons\n",
+         scatter_data.num_error_comparison_);
+  printf("%10d regression awful  linear (>%10.4g)\n",
+         scatter_data.num_awful_linear_, awful_regression_error);
+  printf("%10d regression awful  log    (>%10.4g)\n",
+         scatter_data.num_awful_log_, awful_regression_error);
+  printf("%10d regression bad    linear (>%10.4g)\n",
+         scatter_data.num_bad_linear_, bad_regression_error);
+  printf("%10d regression bad    log    (>%10.4g)\n", scatter_data.num_bad_log_,
+         bad_regression_error);
+  printf("%10d regression fair   linear (>%10.4g)\n",
+         scatter_data.num_fair_linear_, fair_regression_error);
+  printf("%10d regression fair   log    (>%10.4g)\n",
+         scatter_data.num_fair_log_, fair_regression_error);
   printf("%10d regression better linear\n", scatter_data.num_better_linear_);
-  printf("%10d regression better log\n",  scatter_data.num_better_log_);
+  printf("%10d regression better log\n", scatter_data.num_better_log_);
 }

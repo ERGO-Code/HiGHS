@@ -365,7 +365,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
 
-    //    printf("Writing before_presolve.mps\n"); writeModel("before_presolve.mps");
+    //    printf("Writing before_presolve.mps\n");
+    //    writeModel("before_presolve.mps");
 
     this_presolve_time = -timer_.read(timer_.presolve_clock);
     timer_.start(timer_.presolve_clock);
@@ -379,12 +380,12 @@ basis_.valid_, hmos_[0].basis_.valid_);
     switch (presolve_status) {
       case HighsPresolveStatus::NotPresolved: {
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
-	this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-	timer_.start(timer_.solve_clock);
+        this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
+        timer_.start(timer_.solve_clock);
         call_status =
             runLpSolver(hmos_[solved_hmo], "Not presolved: solving the LP");
-	timer_.stop(timer_.solve_clock);
-	this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        timer_.stop(timer_.solve_clock);
+        this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) return return_status;
@@ -392,13 +393,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
       }
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
-	this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-	timer_.start(timer_.solve_clock);
+        this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
+        timer_.start(timer_.solve_clock);
         call_status =
             runLpSolver(hmos_[solved_hmo],
                         "Problem not reduced by presolve: solving the LP");
-	timer_.stop(timer_.solve_clock);
-	this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+        timer_.stop(timer_.solve_clock);
+        this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) return return_status;
@@ -418,12 +419,12 @@ basis_.valid_, hmos_[0].basis_.valid_);
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
-	this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
-	timer_.start(timer_.solve_clock);
+        this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
+        timer_.start(timer_.solve_clock);
         call_status =
             runLpSolver(hmos_[solved_hmo], "Solving the presolved LP");
-	timer_.stop(timer_.solve_clock);
-	this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
+        timer_.stop(timer_.solve_clock);
+        this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) return return_status;
@@ -485,11 +486,11 @@ basis_.valid_, hmos_[0].basis_.valid_);
             hmos_[solved_hmo].basis_.col_status,
             hmos_[solved_hmo].basis_.row_status);
         // Run postsolve
-	this_postsolve_time = -timer_.read(timer_.postsolve_clock);
+        this_postsolve_time = -timer_.read(timer_.postsolve_clock);
         timer_.start(timer_.postsolve_clock);
         HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
         timer_.stop(timer_.postsolve_clock);
-	this_postsolve_time += -timer_.read(timer_.postsolve_clock);
+        this_postsolve_time += -timer_.read(timer_.postsolve_clock);
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
           HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
                             "Postsolve finished\n");
@@ -529,13 +530,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
           int iteration_count0 =
               hmos_[solved_hmo]
                   .unscaled_solution_params_.simplex_iteration_count;
-	  this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
-	  timer_.start(timer_.solve_clock);
+          this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
+          timer_.start(timer_.solve_clock);
           call_status = runLpSolver(
               hmos_[solved_hmo],
               "Solving the original LP from the solution after postsolve");
-	  timer_.stop(timer_.solve_clock);
-	  this_solve_original_lp_time += timer_.read(timer_.solve_clock);
+          timer_.stop(timer_.solve_clock);
+          this_solve_original_lp_time += timer_.read(timer_.solve_clock);
           return_status =
               interpretCallStatus(call_status, return_status, "runLpSolver");
           // Recover the options
@@ -597,45 +598,47 @@ basis_.valid_, hmos_[0].basis_.valid_);
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
                     "Postsolve  : %d\n", postsolve_iteration_count);
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-		    "Time       : %0.3g\n", this_solve_time);
-  if (this_solve_time>0) {
+                    "Time       : %0.3g\n", this_solve_time);
+  if (this_solve_time > 0) {
     HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-		      "For LP %16s", hmos_[original_hmo].lp_.model_name_.c_str());
+                      "For LP %16s",
+                      hmos_[original_hmo].lp_.model_name_.c_str());
     double sum_time = 0;
-    if (this_presolve_time>0) {
+    if (this_presolve_time > 0) {
       sum_time += this_presolve_time;
-      int pct = (100 * this_presolve_time)/this_solve_time;
+      int pct = (100 * this_presolve_time) / this_solve_time;
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-			": Presolve %0.3g (%3d%%)",
-			this_presolve_time, pct);
+                        ": Presolve %0.3g (%3d%%)", this_presolve_time, pct);
     }
-    if (this_solve_presolved_lp_time>0) {
+    if (this_solve_presolved_lp_time > 0) {
       sum_time += this_solve_presolved_lp_time;
-      int pct = (100 * this_solve_presolved_lp_time)/this_solve_time;
+      int pct = (100 * this_solve_presolved_lp_time) / this_solve_time;
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-			": Solve presolved LP %0.3g (%3d%%)",
-			this_solve_presolved_lp_time, pct);
+                        ": Solve presolved LP %0.3g (%3d%%)",
+                        this_solve_presolved_lp_time, pct);
     }
-    if (this_postsolve_time>0) {
+    if (this_postsolve_time > 0) {
       sum_time += this_postsolve_time;
-      int pct = (100 * this_postsolve_time)/this_solve_time;
+      int pct = (100 * this_postsolve_time) / this_solve_time;
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-			": Postsolve %0.3g (%3d%%)",
-			this_postsolve_time, pct);
+                        ": Postsolve %0.3g (%3d%%)", this_postsolve_time, pct);
     }
-    if (this_solve_original_lp_time>0) {
+    if (this_solve_original_lp_time > 0) {
       sum_time += this_solve_original_lp_time;
-      int pct = (100 * this_solve_original_lp_time)/this_solve_time;
+      int pct = (100 * this_solve_original_lp_time) / this_solve_time;
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-			": Solve original LP %0.3g (%3d%%)",
-			this_solve_original_lp_time, pct);
+                        ": Solve original LP %0.3g (%3d%%)",
+                        this_solve_original_lp_time, pct);
     }
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL, "\n");
-    double rlv_time_difference = fabs(sum_time-this_solve_time)/this_solve_time;
+    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+                      "\n");
+    double rlv_time_difference =
+        fabs(sum_time - this_solve_time) / this_solve_time;
     if (rlv_time_difference > 0.1)
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-			"Strange: Solve time = %g; Sum times = %g: relative difference = %g\n",
-			this_solve_time, sum_time, rlv_time_difference);
+                        "Strange: Solve time = %g; Sum times = %g: relative "
+                        "difference = %g\n",
+                        this_solve_time, sum_time, rlv_time_difference);
   }
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
@@ -1477,41 +1480,41 @@ HighsStatus Highs::openWriteFile(const string filename,
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getUseModelStatus(HighsModelStatus& use_model_status,
-				     const double unscaled_primal_feasibility_tolerance,
-				     const double unscaled_dual_feasibility_tolerance,
-				     const bool rerun_from_logical_basis) {
+HighsStatus Highs::getUseModelStatus(
+    HighsModelStatus& use_model_status,
+    const double unscaled_primal_feasibility_tolerance,
+    const double unscaled_dual_feasibility_tolerance,
+    const bool rerun_from_logical_basis) {
   if (model_status_ != HighsModelStatus::NOTSET) {
     use_model_status = model_status_;
   } else {
     // Handle the case where the status of the unscaled model is not set
     HighsStatus return_status = HighsStatus::OK;
     HighsStatus call_status;
-    const double report = false;//true;//
+    const double report = false;  // true;//
     if (unscaledOptimal(unscaled_primal_feasibility_tolerance,
-			unscaled_dual_feasibility_tolerance,
-			report)) {
+                        unscaled_dual_feasibility_tolerance, report)) {
       use_model_status = HighsModelStatus::OPTIMAL;
     } else if (rerun_from_logical_basis) {
       std::string save_presolve = options_.presolve;
       basis_.valid_ = false;
       options_.presolve = on_string;
       call_status = run();
-      return_status =
-	interpretCallStatus(call_status, return_status, "run()");
+      return_status = interpretCallStatus(call_status, return_status, "run()");
       options_.presolve = save_presolve;
       if (return_status == HighsStatus::Error) return return_status;
-      
+
       if (report)
-	printf("Unscaled model status was NOTSET: after running from logical basis it is %s\n",
-	       highsModelStatusToString(model_status_).c_str());
+        printf(
+            "Unscaled model status was NOTSET: after running from logical "
+            "basis it is %s\n",
+            highsModelStatusToString(model_status_).c_str());
 
       if (model_status_ != HighsModelStatus::NOTSET) {
-	use_model_status = model_status_;
+        use_model_status = model_status_;
       } else if (unscaledOptimal(unscaled_primal_feasibility_tolerance,
-				 unscaled_dual_feasibility_tolerance,
-				 report)) {
-	use_model_status = HighsModelStatus::OPTIMAL;
+                                 unscaled_dual_feasibility_tolerance, report)) {
+        use_model_status = HighsModelStatus::OPTIMAL;
       }
     } else {
       // Nothing to be done: use original unscaled model status
@@ -1522,20 +1525,27 @@ HighsStatus Highs::getUseModelStatus(HighsModelStatus& use_model_status,
 }
 
 bool Highs::unscaledOptimal(const double unscaled_primal_feasibility_tolerance,
-			    const double unscaled_dual_feasibility_tolerance,
-			    const bool report) {
+                            const double unscaled_dual_feasibility_tolerance,
+                            const bool report) {
   if (scaled_model_status_ == HighsModelStatus::OPTIMAL) {
     const double max_primal_infeasibility = info_.max_primal_infeasibility;
     const double max_dual_infeasibility = info_.max_dual_infeasibility;
     if (report)
-      printf("Scaled model status is OPTIMAL: max unscaled (primal / dual) infeasibilities are (%g / %g)\n",
-	     max_primal_infeasibility, max_dual_infeasibility);
+      printf(
+          "Scaled model status is OPTIMAL: max unscaled (primal / dual) "
+          "infeasibilities are (%g / %g)\n",
+          max_primal_infeasibility, max_dual_infeasibility);
     if ((max_primal_infeasibility > unscaled_primal_feasibility_tolerance) ||
-	(max_dual_infeasibility > unscaled_dual_feasibility_tolerance)) {
-      printf("Use model status of NOTSET since max unscaled (primal / dual) infeasibilities are (%g / %g)\n",
-	     max_primal_infeasibility, max_dual_infeasibility);
+        (max_dual_infeasibility > unscaled_dual_feasibility_tolerance)) {
+      printf(
+          "Use model status of NOTSET since max unscaled (primal / dual) "
+          "infeasibilities are (%g / %g)\n",
+          max_primal_infeasibility, max_dual_infeasibility);
     } else {
-      if (report) printf("Set unscaled model status to OPTIMAL since unscaled infeasibilities are tolerable\n");
+      if (report)
+        printf(
+            "Set unscaled model status to OPTIMAL since unscaled "
+            "infeasibilities are tolerable\n");
       return true;
     }
   }

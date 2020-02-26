@@ -681,9 +681,9 @@ HighsStatus writeMPS(
             if (!highs_isInfinity(-lb)) {
               // Finite lower bound. No need to state this if LB is
               // zero unless UB is infinte
-	      if (lb || highs_isInfinity(ub)) 
-		fprintf(file, " LI BOUND     %-8s  %.15g\n",
-			col_names[c_n].c_str(), lb);
+              if (lb || highs_isInfinity(ub))
+                fprintf(file, " LI BOUND     %-8s  %.15g\n",
+                        col_names[c_n].c_str(), lb);
             }
             if (!highs_isInfinity(ub)) {
               // Finite upper bound

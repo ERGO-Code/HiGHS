@@ -55,7 +55,7 @@ void HDualRHS::chooseNormal(int* chIndex) {
   // Since chooseNormal calls itself, only start the clock if it's not
   // currently running
   bool keep_timer_running = analysis->simplexTimerRunning(ChuzrDualClock);
-    //      timer.clock_start[simplex_info.clock_[ChuzrDualClock]] < 0;
+  //      timer.clock_start[simplex_info.clock_[ChuzrDualClock]] < 0;
   if (!keep_timer_running) {
     analysis->simplexTimerStart(ChuzrDualClock);
   }
@@ -232,7 +232,8 @@ void HDualRHS::chooseMultiHyperGraphAuto(int* chIndex, int* chCount,
     chooseMultiGlobal(chIndex, chCount, chLimit);
 }
 
-void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount, int chLimit) {
+void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount,
+                                         int chLimit) {
   analysis->simplexTimerStart(ChuzrDualClock);
 
   // Force to use partition method, unless doesn't exist
@@ -362,8 +363,9 @@ void HDualRHS::updatePrimal(HVector* column, double theta) {
 }
 
 // Update the DSE weights
-void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pivotal_edge_weight,
-					    double Kai, double* dseArray) {
+void HDualRHS::updateWeightDualSteepestEdge(
+    HVector* column, const double new_pivotal_edge_weight, double Kai,
+    double* dseArray) {
   analysis->simplexTimerStart(DseUpdateWeightClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
@@ -393,7 +395,8 @@ void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pi
   analysis->simplexTimerStop(DseUpdateWeightClock);
 }
 // Update the Devex weights
-void HDualRHS::updateWeightDevex(HVector* column, const double new_pivotal_edge_weight) {
+void HDualRHS::updateWeightDevex(HVector* column,
+                                 const double new_pivotal_edge_weight) {
   analysis->simplexTimerStart(DevexUpdateWeightClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;

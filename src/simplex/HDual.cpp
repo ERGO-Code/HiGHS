@@ -138,8 +138,8 @@ HighsStatus HDual::solve() {
         // Basis is not logical and DSE weights are to be initialised
 #ifdef HiGHSDEV
         printf("Compute exact DSE weights\n");
-	analysis->simplexTimerStart(SimplexIzDseWtClock);
-	analysis->simplexTimerStart(DseIzClock);
+        analysis->simplexTimerStart(SimplexIzDseWtClock);
+        analysis->simplexTimerStart(DseIzClock);
 #endif
         for (int i = 0; i < solver_num_row; i++) {
           row_ep.clear();
@@ -147,7 +147,8 @@ HighsStatus HDual::solve() {
           row_ep.index[0] = i;
           row_ep.array[i] = 1;
           row_ep.packFlag = false;
-          factor->btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
+          factor->btran(row_ep, analysis->row_ep_density,
+                        analysis->pointer_serial_factor_clocks);
           dualRHS.workEdWt[i] = row_ep.norm2();
           const double local_row_ep_density =
               (double)row_ep.count / solver_num_row;
@@ -155,8 +156,8 @@ HighsStatus HDual::solve() {
                                                  analysis->row_ep_density);
         }
 #ifdef HiGHSDEV
-	analysis->simplexTimerStop(SimplexIzDseWtClock);
-	analysis->simplexTimerStop(DseIzClock);
+        analysis->simplexTimerStop(SimplexIzDseWtClock);
+        analysis->simplexTimerStop(DseIzClock);
         double IzDseWtTT = analysis->simplexTimerRead(SimplexIzDseWtClock);
         HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
                           "Computed %d initial DSE weights in %gs\n",
@@ -231,16 +232,16 @@ HighsStatus HDual::solve() {
     simplex_lp_status.has_dual_objective_value = false;
     switch (solvePhase) {
       case 1:
-	analysis->simplexTimerStart(SimplexDualPhase1Clock);
+        analysis->simplexTimerStart(SimplexDualPhase1Clock);
         solvePhase1();
-	analysis->simplexTimerStop(SimplexDualPhase1Clock);
+        analysis->simplexTimerStop(SimplexDualPhase1Clock);
         simplex_info.dual_phase1_iteration_count +=
             (scaled_solution_params.simplex_iteration_count - it0);
         break;
       case 2:
-	analysis->simplexTimerStart(SimplexDualPhase2Clock);
+        analysis->simplexTimerStart(SimplexDualPhase2Clock);
         solvePhase2();
-	analysis->simplexTimerStop(SimplexDualPhase2Clock);
+        analysis->simplexTimerStop(SimplexDualPhase2Clock);
         simplex_info.dual_phase2_iteration_count +=
             (scaled_solution_params.simplex_iteration_count - it0);
         break;
@@ -287,19 +288,23 @@ HighsStatus HDual::solve() {
     } else {
       // Use primal to clean up
 #ifdef HiGHSDEV
-      initialiseValueDistribution("Cleanup primal step summary", "", 
-				  1e-16, 1e16, 10.0, analysis->cleanup_primal_step_distribution);
-      initialiseValueDistribution("Cleanup dual step summary", "", 
-				  1e-16, 1e16, 10.0, analysis->cleanup_dual_step_distribution);
-#endif  
+      initialiseValueDistribution("Cleanup primal step summary", "", 1e-16,
+                                  1e16, 10.0,
+                                  analysis->cleanup_primal_step_distribution);
+      initialiseValueDistribution("Cleanup dual step summary", "", 1e-16, 1e16,
+                                  10.0,
+                                  analysis->cleanup_dual_step_distribution);
+#endif
       int it0 = scaled_solution_params.simplex_iteration_count;
-      const bool full_logging = false;//true;//
-      if (full_logging) analysis->messaging(options.logfile, options.output, ML_ALWAYS);
+      const bool full_logging = false;  // true;//
+      if (full_logging)
+        analysis->messaging(options.logfile, options.output, ML_ALWAYS);
       analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
-      if (options.dual_simplex_cleanup_strategy == DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL) {
-	// Cleanup with original primal phase 2 code
-	HPrimal hPrimal(workHMO);
-	hPrimal.solvePhase2();
+      if (options.dual_simplex_cleanup_strategy ==
+          DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL) {
+        // Cleanup with original primal phase 2 code
+        HPrimal hPrimal(workHMO);
+        hPrimal.solvePhase2();
       } else {
         // Cleanup with phase 2 for new primal code
         HQPrimal hPrimal(workHMO);
@@ -307,14 +312,16 @@ HighsStatus HDual::solve() {
       }
       analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
 #ifdef HiGHSDEV
-    vector<double> primal_value_after_cleanup;
-    getPrimalValue(workHMO, primal_value_after_cleanup);
-    for (int var = 0; var < solver_num_tot; var++) {
-      const double primal_change = fabs(primal_value_after_cleanup[var] - primal_value_before_cleanup[var]);
-      updateValueDistribution(primal_change, analysis->cleanup_primal_change_distribution);
-    }
-    //      printf("\nAnalyse primal objective evaluation after cleanup\n");
-    //      analysePrimalObjectiveValue(workHMO);
+      vector<double> primal_value_after_cleanup;
+      getPrimalValue(workHMO, primal_value_after_cleanup);
+      for (int var = 0; var < solver_num_tot; var++) {
+        const double primal_change = fabs(primal_value_after_cleanup[var] -
+                                          primal_value_before_cleanup[var]);
+        updateValueDistribution(primal_change,
+                                analysis->cleanup_primal_change_distribution);
+      }
+      //      printf("\nAnalyse primal objective evaluation after cleanup\n");
+      //      analysePrimalObjectiveValue(workHMO);
       const double objective_after = simplex_info.primal_objective_value;
       const double abs_objective_change =
           fabs(objective_before - objective_after);
@@ -877,12 +884,13 @@ void HDual::rebuild() {
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
     int total_rebuilds = analysis->simplexTimerNumCall(IterateDualRebuildClock);
-    double total_rebuild_time = analysis->simplexTimerRead(IterateDualRebuildClock);
+    double total_rebuild_time =
+        analysis->simplexTimerRead(IterateDualRebuildClock);
     printf(
         "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
         "%11.4g\n",
         solvePhase, total_rebuilds, rebuild_invert_hint,
-	workHMO.scaled_solution_params_.simplex_iteration_count,
+        workHMO.scaled_solution_params_.simplex_iteration_count,
         total_rebuild_time);
   }
 #endif
@@ -891,8 +899,8 @@ void HDual::rebuild() {
 }
 
 void HDual::cleanup() {
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
-		    "dual-cleanup-shift\n");
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                    ML_DETAILED, "dual-cleanup-shift\n");
   // Remove perturbation
   initialise_cost(workHMO);
   initialise_bound(workHMO);
@@ -1150,11 +1158,13 @@ void HDual::chooseRow() {
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
     HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-    if (simplex_info.analyse_iterations) 
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
+    if (simplex_info.analyse_iterations)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
+                                      analysis->row_ep_density);
 #endif
     // Perform BTRAN
-    factor->btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
+    factor->btran(row_ep, analysis->row_ep_density,
+                  analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
@@ -1274,7 +1284,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   // Pack row_ep into the packIndex/Value of HDualRow
   dualRow.chooseMakepack(row_ep, solver_num_col);
   // Determine the possible variables - candidates for CHUZC
-  dualRow.choosePossible();  
+  dualRow.choosePossible();
   analysis->simplexTimerStop(Chuzc1Clock);
   //
   // Take action if the step to an expanded bound is not positive, or
@@ -1341,7 +1351,8 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   bool use_col_price;
   bool use_row_price_w_switch;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  choosePriceTechnique(simplex_info.price_strategy, local_density, use_col_price, use_row_price_w_switch);
+  choosePriceTechnique(simplex_info.price_strategy, local_density,
+                       use_col_price, use_row_price_w_switch);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
@@ -1376,7 +1387,8 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     dualRow.choosePossible();
 #ifdef OPENMP
     //    int row_ep_thread_id = omp_get_thread_num();
-    //    printf("Hello world from Row_ep:         PACK + CC1 thread %d\n", row_ep_thread_id);
+    //    printf("Hello world from Row_ep:         PACK + CC1 thread %d\n",
+    //    row_ep_thread_id);
 #endif
   }
 
@@ -1386,7 +1398,8 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
     {
 #ifdef OPENMP
       //      int row_ap_thread_id = omp_get_thread_num();
-      //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1d] thread %d\n", i, row_ap_thread_id);
+      //      printf("Hello world from omp Row_ap: PRICE + PACK + CC1 [%1d]
+      //      thread %d\n", i, row_ap_thread_id);
 #endif
       slice_row_ap[i].clear();
 
@@ -1498,7 +1511,8 @@ void HDual::updateFtran() {
                                     analysis->col_aq_density);
 #endif
   // Perform FTRAN
-  factor->ftran(col_aq, analysis->col_aq_density, analysis->pointer_serial_factor_clocks);
+  factor->ftran(col_aq, analysis->col_aq_density,
+                analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
@@ -1536,7 +1550,8 @@ void HDual::updateFtranBFRT() {
                                       col_BFRT, analysis->col_BFRT_density);
 #endif
     // Perform FTRAN BFRT
-    factor->ftran(col_BFRT, analysis->col_BFRT_density, analysis->pointer_serial_factor_clocks);
+    factor->ftran(col_BFRT, analysis->col_BFRT_density,
+                  analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
@@ -1565,15 +1580,18 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
                                     *DSE_Vector, analysis->row_DSE_density);
 #endif
   // Perform FTRAN DSE
-  factor->ftran(*DSE_Vector, analysis->row_DSE_density, analysis->pointer_serial_factor_clocks);
+  factor->ftran(*DSE_Vector, analysis->row_DSE_density,
+                analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
                                    *DSE_Vector);
 #endif
   analysis->simplexTimerStop(FtranDseClock);
-  const double local_row_DSE_density = (double)DSE_Vector->count / solver_num_row;
-  analysis->updateOperationResultDensity(local_row_DSE_density, analysis->row_DSE_density);
+  const double local_row_DSE_density =
+      (double)DSE_Vector->count / solver_num_row;
+  analysis->updateOperationResultDensity(local_row_DSE_density,
+                                         analysis->row_DSE_density);
 }
 
 void HDual::updateVerify() {

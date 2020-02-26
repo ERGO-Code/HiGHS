@@ -42,14 +42,15 @@ class HighsMipSolver : Highs {
   HighsMipStatus runMipSolver();
 
  private:
-#ifdef HiGHSDEV    
+#ifdef HiGHSDEV
   void writeSolutionForIntegerVariables(Node& node);
 #endif
   HighsMipStatus solveRootNode();
   HighsMipStatus solveNode(Node& node, bool hotstart = true);
   HighsMipStatus solveTree(Node& root);
   void reportMipSolverProgress(const HighsMipStatus mip_status);
-  void reportMipSolverProgressLine(std::string message, const bool header = false);
+  void reportMipSolverProgressLine(std::string message,
+                                   const bool header = false);
   std::string highsMipStatusToString(const HighsMipStatus mip_status);
 
   Tree tree_;
@@ -59,7 +60,6 @@ class HighsMipSolver : Highs {
   int num_nodes_solved = 0;
   int num_nodes_pruned = 0;
   double root_objective_ = HIGHS_CONST_INF;
-
 };
 
 #endif

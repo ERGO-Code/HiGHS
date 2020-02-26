@@ -599,17 +599,22 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
 
     // start of new section?
     if (key != parsekey::NONE) {
-      if (num_mi) printf("Number of MI entries in BOUNDS section is %d\n", num_mi);
-      if (num_pl) printf("Number of PL entries in BOUNDS section is %d\n", num_pl);
-      if (num_bv) printf("Number of BV entries in BOUNDS section is %d\n", num_bv);
-      if (num_li) printf("Number of LI entries in BOUNDS section is %d\n", num_li);
-      if (num_ui) printf("Number of UI entries in BOUNDS section is %d\n", num_ui);
+      if (num_mi)
+        printf("Number of MI entries in BOUNDS section is %d\n", num_mi);
+      if (num_pl)
+        printf("Number of PL entries in BOUNDS section is %d\n", num_pl);
+      if (num_bv)
+        printf("Number of BV entries in BOUNDS section is %d\n", num_bv);
+      if (num_li)
+        printf("Number of LI entries in BOUNDS section is %d\n", num_li);
+      if (num_ui)
+        printf("Number of UI entries in BOUNDS section is %d\n", num_ui);
       // Assign bounds to columns that remain binary by default
       for (int colidx = 0; colidx < numCol; colidx++) {
-	if (col_binary[colidx]) {
-	  colLower[colidx] = 0.0;
-	  colUpper[colidx] = 1.0;
-	}
+        if (col_binary[colidx]) {
+          colLower[colidx] = 0.0;
+          colUpper[colidx] = 1.0;
+        }
       }
       return key;
     }
@@ -699,13 +704,14 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
       if (isintegral)
       // binary: BV
       {
-	if (!islb || !isub) {
-	  HighsLogMessage(logfile, HighsMessageType::ERROR, "BV row %s but [islb, isub] = [%1d, %1d]",
-			  marker.c_str(), islb, isub);
-	  assert(islb && isub);
-	  return HMpsFF::parsekey::FAIL;
-	}
-	// Mark the column as integer and binary
+        if (!islb || !isub) {
+          HighsLogMessage(logfile, HighsMessageType::ERROR,
+                          "BV row %s but [islb, isub] = [%1d, %1d]",
+                          marker.c_str(), islb, isub);
+          assert(islb && isub);
+          return HMpsFF::parsekey::FAIL;
+        }
+        // Mark the column as integer and binary
         col_integrality[colidx] = true;
         col_binary[colidx] = true;
       } else {
@@ -730,9 +736,11 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
     if (isintegral) {
       // Must be LI or UI, and value should be integer
       int i_value = static_cast<int>(value);
-      double dl = value-i_value;
-      if (dl) HighsLogMessage(logfile, HighsMessageType::ERROR,
-			      "Bound for LI/UI row %s is %g: not integer", marker.c_str(), value);
+      double dl = value - i_value;
+      if (dl)
+        HighsLogMessage(logfile, HighsMessageType::ERROR,
+                        "Bound for LI/UI row %s is %g: not integer",
+                        marker.c_str(), value);
       // Bound marker LI or UI defines the column as integer
       col_integrality[colidx] = true;
     }

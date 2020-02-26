@@ -424,13 +424,14 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(highs_model_object);
-    return_status = interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
+    return_status =
+        interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
     return return_status;
   }
   HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
-  simplex_analysis.setup(highs_model_object.lp_,
-			 highs_model_object.options_,
-			 highs_model_object.scaled_solution_params_.simplex_iteration_count);
+  simplex_analysis.setup(
+      highs_model_object.lp_, highs_model_object.options_,
+      highs_model_object.scaled_solution_params_.simplex_iteration_count);
   //  SimplexTimer simplex_timer;
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
   // (Try to) solve the scaled LP
