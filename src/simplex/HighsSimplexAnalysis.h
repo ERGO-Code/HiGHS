@@ -8,7 +8,8 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HighsSimplexAnalysis.h
- * @brief Analyse simplex iterations, both for run-time control and data gathering
+ * @brief Analyse simplex iterations, both for run-time control and data
+ * gathering
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
@@ -16,10 +17,11 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-#include "lp_data/HighsAnalysis.h"
-#include "simplex/SimplexConst.h"
-#include "simplex/HFactor.h"
+//#include "lp_data/HighsAnalysis.h"
+//#include "simplex/SimplexConst.h"
+//#include "simplex/HFactor.h"
 #include "simplex/HVector.h"
+#include "simplex/SimplexConst.h"
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
 
@@ -64,7 +66,8 @@ const double max_regression_density = 0.2;
 const double max_hyper_density = 0.1;
 
 /**
- * @brief Analyse simplex iterations, both for run-time control and data gathering
+ * @brief Analyse simplex iterations, both for run-time control and data
+ * gathering
  */
 class HighsSimplexAnalysis {
  public:
@@ -180,7 +183,7 @@ class HighsSimplexAnalysis {
   double col_BFRT_density;
   double primal_col_density;
   double dual_col_density;
-  
+
   int simplex_strategy = 0;
   int min_threads = 0;
   int num_threads = 0;
@@ -238,9 +241,9 @@ class HighsSimplexAnalysis {
   vector<double> predicted_density_tolerance;
   vector<TranStageAnalysis> tran_stage;
  private:
-
   void iterationReport(const bool header);
-  void reportAlgorithmPhaseIterationObjective(const bool header, const int this_message_level);
+  void reportAlgorithmPhaseIterationObjective(const bool header,
+                                              const int this_message_level);
   void reportInfeasibility(const bool header, const int this_message_level);
 #ifdef HiGHSDEV
   void reportThreads(const bool header, const int this_message_level);
@@ -265,7 +268,6 @@ class HighsSimplexAnalysis {
   double AnIterCostlyDseMeasure;
   int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
                                    //!< previously reported
-
 
   const double accept_weight_threshhold = 0.25;
   const double weight_error_threshhold = 4.0;

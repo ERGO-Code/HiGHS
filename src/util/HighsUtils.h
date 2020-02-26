@@ -14,8 +14,9 @@
 #ifndef UTIL_HIGHSUTILS_H_
 #define UTIL_HIGHSUTILS_H_
 
-#include <vector>
 #include <string>
+#include <vector>
+
 #include "HConfig.h"
 
 #ifdef HiGHSDEV
@@ -67,14 +68,11 @@ double getNorm2(const std::vector<double> values);
  * @brief Logical check of double being +Infinity
  */
 bool highs_isInfinity(double val  //!< Value being tested against +Infinity
-		      );
+);
 /**
  * @brief Returns the relative difference of two doubles
  */
-double highs_relative_difference(
-				 const double v0,
-				 const double v1
-				 );
+double highs_relative_difference(const double v0, const double v1);
 #ifdef HiGHSDEV
 /**
  * @brief Analyse the values of a vector, assessing how many are in
@@ -82,22 +80,23 @@ double highs_relative_difference(
  * different values
  */
 void analyseVectorValues(
-			 const char* message,               //!< Message to be printed
-			 int vecDim,                        //!< Dimension of vector
-			 const std::vector<double>& vec,    //!< Vector of values
-			 bool analyseValueList = false,     //!< Possibly analyse the distribution of different
-			                                    //!< values in the vector
-			 std::string model_name = "Unknown" //!< Model name to report if analysing distribution of different
-                                                            //!< values in the vector
-			 );
+    const char* message,             //!< Message to be printed
+    int vecDim,                      //!< Dimension of vector
+    const std::vector<double>& vec,  //!< Vector of values
+    bool analyseValueList = false,   //!< Possibly analyse the distribution of
+                                     //!< different values in the vector
+    std::string model_name =
+        "Unknown"  //!< Model name to report if analysing distribution of
+                   //!< different values in the vector
+);
 
 void analyseMatrixSparsity(
-			   const char* message,             //!< Message to be printed
-			   int numCol,                      //!< Number of columns
-			   int numRow,                      //!< Number of rows
-			   const std::vector<int>& Astart,  //!< Matrix column starts
-			   const std::vector<int>& Aindex   //!< Matrix row indices
-			   );
+    const char* message,             //!< Message to be printed
+    int numCol,                      //!< Number of columns
+    int numRow,                      //!< Number of rows
+    const std::vector<int>& Astart,  //!< Matrix column starts
+    const std::vector<int>& Aindex   //!< Matrix row indices
+);
 
 bool initialiseValueDistribution(
 				 const std::string distribution_name,
@@ -107,9 +106,8 @@ bool initialiseValueDistribution(
 				 const double base_value_limit,
 				 HighsValueDistribution& value_distribution);
 
-bool updateValueDistribution(
-			     const double value,
-			     HighsValueDistribution& value_distribution);
+bool updateValueDistribution(const double value,
+                             HighsValueDistribution& value_distribution);
 
 int integerPercentage(const int of, const int in);
 double doublePercentage(const int of, const int in);

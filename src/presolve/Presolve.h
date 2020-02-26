@@ -252,7 +252,8 @@ class PresolveInfo {
  public:
   PresolveInfo() {}
   // option_presolve : off_string means don't presolve.
-  PresolveInfo(std::string option_presolve, const HighsLp& lp, HighsTimer& timer) {
+  PresolveInfo(std::string option_presolve, const HighsLp& lp,
+               HighsTimer& timer) {
     if (option_presolve != off_string) {
       lp_ = &lp;
       presolve_.push_back(Presolve(timer));

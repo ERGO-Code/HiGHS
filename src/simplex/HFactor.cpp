@@ -13,14 +13,17 @@
  */
 #include "simplex/HFactor.h"
 #include "simplex/FactorTimer.h"
-#include "lp_data/HConst.h"
-#include "simplex/HVector.h"
-#include "util/HighsTimer.h"
-
+//#include "lp_data/HConst.h"
+//#include "simplex/HVector.h"
+//#include "util/HighsTimer.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+
+#include "lp_data/HConst.h"
+#include "simplex/HVector.h"
+#include "util/HighsTimer.h"
 
 #ifdef HiGHSDEV
 #ifdef OPENMP
@@ -296,17 +299,15 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   buildFinish();
   factor_timer.stop(FactorInvertFinish, factor_timer_clock_pointer);
   // Record the number of entries in the INVERT
-  invert_num_el = Lstart[numRow] + Ulastp[numRow-1] + numRow;
-  
+  invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
+
   if (rankDeficiency) {
     kernel_dim -= rankDeficiency;
-    printf("Rank deficiency %1d: basis_matrix (%d el); INVERT (%d el); kernel (%d dim; %d el): nwork = %d\n",
-	   rankDeficiency,
-	   basis_matrix_num_el,
-	   invert_num_el,
-	   kernel_dim,
-	   kernel_num_el,
-	   nwork);
+    printf(
+        "Rank deficiency %1d: basis_matrix (%d el); INVERT (%d el); kernel (%d "
+        "dim; %d el): nwork = %d\n",
+        rankDeficiency, basis_matrix_num_el, invert_num_el, kernel_dim,
+        kernel_num_el, nwork);
   }
   factor_timer.stop(FactorInvert, factor_timer_clock_pointer);
   return rankDeficiency;
@@ -333,14 +334,14 @@ void HFactor::btran(HVector& vector, double historical_density,
 void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
   // Special case
   if (aq->next) {
-    updateCFT(aq, ep, iRow);//, hint);
+    updateCFT(aq, ep, iRow);  //, hint);
     return;
   }
 
-  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow);//, hint);
+  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow);  //, hint);
   if (updateMethod == UPDATE_METHOD_PF) updatePF(aq, *iRow, hint);
   if (updateMethod == UPDATE_METHOD_MPF) updateMPF(aq, ep, *iRow, hint);
-  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);//, hint);
+  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);  //, hint);
 }
 
 #ifdef HiGHSDEV
@@ -470,7 +471,7 @@ void HFactor::buildSimple() {
 #endif
   // Record the number of elements in the basis matrix
   basis_matrix_num_el = numRow - nwork + BcountX;
-  
+
   // count1 = 0;
   // Comments: for pds-20, dfl001: 60 / 80
   // Comments: when system is large: enlarge
@@ -586,11 +587,11 @@ void HFactor::buildSimple() {
       MRspace[iRow] = count * 2;
       MRcountX += count * 2;
       rlinkAdd(iRow, count);
-      kernel_num_el += count+1;
+      kernel_num_el += count + 1;
     }
   }
   MRindex.resize(MRcountX);
-  
+
   // 3.2 Prepare column links, kernel matrix
   clinkFirst.assign(numRow + 1, -1);
   MCindex.clear();
@@ -1040,7 +1041,7 @@ void HFactor::buildRpRankDeficiency() {
     }
     printf("\n");
   }
-  free (ASM);
+  free(ASM);
 }
 
 void HFactor::buildMarkSingC() {
@@ -1710,8 +1711,8 @@ void HFactor::btranAPF(HVector& vector) const{
 }
 
 void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
-			//, int* hint
-			) {
+                        //, int* hint
+) {
   /*
    * In the major update loop, the prefix
    *
@@ -1972,8 +1973,8 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
 }
 
 void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
-		       //, int* hint
-		       ) {
+                       //, int* hint
+) {
   // Store pivot
   int pLogic = UpivotLookup[iRow];
   double pivot = UpivotValue[pLogic];
@@ -2168,8 +2169,8 @@ void HFactor::updateMPF(HVector* aq, HVector* ep, int iRow, int* hint) {
 }
 
 void HFactor::updateAPF(HVector* aq, HVector* ep, int iRow
-			//, int* hint
-			) {
+                        //, int* hint
+) {
 #ifdef HiGHSDEV
   int PFcountX0 = PFindex.size();
 #endif

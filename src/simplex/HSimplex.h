@@ -20,15 +20,15 @@
 #include "lp_data/HighsStatus.h"
 
 void setSimplexOptions(
-	     HighsModelObject& highs_model_object  //!< Model object in which simplex
-	                                           //!< options are to be set
-	     );
+    HighsModelObject& highs_model_object  //!< Model object in which simplex
+                                          //!< options are to be set
+);
 
-HighsStatus transition(
-		       HighsModelObject& highs_model_object  //!< Model object
-		       );
+HighsStatus transition(HighsModelObject& highs_model_object  //!< Model object
+);
 
-bool basisConditionOk(HighsModelObject& highs_model_object, const std::string message);
+bool basisConditionOk(HighsModelObject& highs_model_object,
+                      const std::string message);
 
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
@@ -36,16 +36,20 @@ bool dual_infeasible(const double value, const double lower, const double upper,
 
 // Methods not requiring HighsModelObject
 
-void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewCol);
-void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNewCol);
+void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
+                                   int XnumNewCol);
+void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis,
+                                   int XnumNewCol);
 
 void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
-void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow);
+void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
+                                int XnumNewRow);
 
 bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis);
 bool basisOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis);
 
-bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis);
+bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
+                    SimplexBasis& simplex_basis);
 
 #ifdef HiGHSDEV
 void report_basis(HighsLp& lp, HighsBasis& basis);
@@ -85,7 +89,8 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
 #ifdef HiGHSDEV
-void getPrimalValue(const HighsModelObject& highs_model_object, vector<double>& primal_value);
+void getPrimalValue(const HighsModelObject& highs_model_object,
+                    vector<double>& primal_value);
 void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object);
 #endif
 
@@ -187,16 +192,18 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
                            const bool report = false);
 
 void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
-				    const bool report = false);
+                                    const bool report = false);
 
-void choosePriceTechnique(const int price_strategy, const double row_ep_density, bool& use_col_price, bool& use_row_price_w_switch);
+void choosePriceTechnique(const int price_strategy, const double row_ep_density,
+                          bool& use_col_price, bool& use_row_price_w_switch);
 
-void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVector& row_ep, HVector& row_ap);
+void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
+                              const HVector& row_ep, HVector& row_ap);
 
 void computeDual(HighsModelObject& highs_model_object);
 
 void correctDual(HighsModelObject& highs_model_object,
-                  int* free_infeasibility_count);
+                 int* free_infeasibility_count);
 
 // Record the shift in the cost of a particular column
 void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount);
@@ -217,81 +224,87 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
                    int columnOut);
 
 bool reinvertOnNumericalTrouble(const std::string method_name,
-				const HighsModelObject& highs_model_object,
-				double& numerical_trouble_measure,
-				const double alpha_from_col,
-				const double alpha_from_row,
-				const double numerical_trouble_tolerance);
+                                const HighsModelObject& highs_model_object,
+                                double& numerical_trouble_measure,
+                                const double alpha_from_col,
+                                const double alpha_from_row,
+                                const double numerical_trouble_tolerance);
 
 // Wrapper for analyseSimplexBasicSolution when
 // not used to get suggested feasibility tolerances
-HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object,
-					const bool report=false);
+HighsStatus analyseSimplexBasicSolution(
+    const HighsModelObject& highs_model_object, const bool report = false);
 
-HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object, 
-					const HighsSolutionParams& scaled_solution_params,
-					const bool report=false);
+HighsStatus analyseSimplexBasicSolution(
+    const HighsModelObject& highs_model_object,
+    const HighsSolutionParams& scaled_solution_params,
+    const bool report = false);
 
-HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object, 
-					const HighsSolutionParams& unscaled_solution_params,
-					const HighsSolutionParams& scaled_solution_params,
-					const bool report=false);
+HighsStatus analyseSimplexBasicSolution(
+    const HighsModelObject& highs_model_object,
+    const HighsSolutionParams& unscaled_solution_params,
+    const HighsSolutionParams& scaled_solution_params,
+    const bool report = false);
 
-HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-								       HighsSolutionParams& scaled_solution_params);
+HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(
+    const HighsModelObject& highs_model_object,
+    HighsSolutionParams& scaled_solution_params);
 
-HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-									 HighsSolutionParams& unscaled_solution_params);
+HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(
+    const HighsModelObject& highs_model_object,
+    HighsSolutionParams& unscaled_solution_params);
 
-HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-								 HighsSolutionParams& unscaled_solution_params,
-								 HighsSolutionParams& scaled_solution_params);
+HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(
+    const HighsModelObject& highs_model_object,
+    HighsSolutionParams& unscaled_solution_params,
+    HighsSolutionParams& scaled_solution_params);
 
 // Analyse the unscaled solution from a Simplex basic solution to get
 // suggested feasibility tolerances for resolving the scaled LP
 // This sets highs_model_object.unscaled_solution_params_
-HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-									    HighsSolutionParams& get_unscaled_solution_params,
-									    double& new_scaled_primal_feasibility_tolerance,
-									    double& new_scaled_dual_feasibility_tolerance);
+HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(
+    const HighsModelObject& highs_model_object,
+    HighsSolutionParams& get_unscaled_solution_params,
+    double& new_scaled_primal_feasibility_tolerance,
+    double& new_scaled_dual_feasibility_tolerance);
 
-HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(FILE* logfile,
-										 const HighsLp& lp,
-										 const HighsScale& scale,
-										 const SimplexBasis& basis,
-										 const HighsSimplexInfo& simplex_info,
-										 const HighsModelStatus scaled_model_status,
-										 const HighsSolutionParams& unscaled_solution_params,
-										 const HighsSolutionParams& scaled_solution_params,
-										 HighsSolutionParams& get_unscaled_solution_params,
-										 HighsSolutionParams& get_scaled_solution_params,
-										 double& new_scaled_primal_feasibility_tolerance,
-										 double& new_scaled_dual_feasibility_tolerance);
+HighsStatus
+getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
+    FILE* logfile, const HighsLp& lp, const HighsScale& scale,
+    const SimplexBasis& basis, const HighsSimplexInfo& simplex_info,
+    const HighsModelStatus scaled_model_status,
+    const HighsSolutionParams& unscaled_solution_params,
+    const HighsSolutionParams& scaled_solution_params,
+    HighsSolutionParams& get_unscaled_solution_params,
+    HighsSolutionParams& get_scaled_solution_params,
+    double& new_scaled_primal_feasibility_tolerance,
+    double& new_scaled_dual_feasibility_tolerance);
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase);
 
 void reportSimplexLpStatus(
-			   HighsSimplexLpStatus&    
-			   simplex_lp_status,       // !< Status of simplex LP to be reported
-			   const char* message = "" // !< Message to be written in report
-			   );
-
-void invalidateSimplexLpBasis(
-			      HighsSimplexLpStatus&
-			      simplex_lp_status  // !< Status of simplex LP whose basis is to be invalidated
-			      );
-
-void invalidateSimplexLp(
-			 HighsSimplexLpStatus&
-			 simplex_lp_status  // !< Status of simplex LP to be invalidated
-			 );
-
-void updateSimplexLpStatus(
-			   HighsSimplexLpStatus&
-			   simplex_lp_status, // !< Status of simplex LP to be updated
-			   LpAction action    // !< Action prompting update
+    HighsSimplexLpStatus&
+        simplex_lp_status,    // !< Status of simplex LP to be reported
+    const char* message = ""  // !< Message to be written in report
 );
 
-bool simplexInfoOk(const HighsLp& lp, const HighsLp& simplex_lp, const HighsSimplexInfo& simplex_info);
+void invalidateSimplexLpBasis(
+    HighsSimplexLpStatus& simplex_lp_status  // !< Status of simplex LP whose
+                                             // basis is to be invalidated
+);
+
+void invalidateSimplexLp(
+    HighsSimplexLpStatus&
+        simplex_lp_status  // !< Status of simplex LP to be invalidated
+);
+
+void updateSimplexLpStatus(
+    HighsSimplexLpStatus&
+        simplex_lp_status,  // !< Status of simplex LP to be updated
+    LpAction action         // !< Action prompting update
+);
+
+bool simplexInfoOk(const HighsLp& lp, const HighsLp& simplex_lp,
+                   const HighsSimplexInfo& simplex_info);
 #endif  // SIMPLEX_HSIMPLEX_H_

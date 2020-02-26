@@ -239,6 +239,7 @@ class HFactor {
   // Problem size, coefficient matrix and update method
   int numRow;
   int numCol;
+
  private:
   const int* Astart;
   const int* Aindex;
@@ -356,7 +357,7 @@ class HFactor {
   void updateFT(HVector* aq, HVector* ep, int iRow);//, int* hint);
   void updatePF(HVector* aq, int iRow, int* hint);
   void updateMPF(HVector* aq, HVector* ep, int iRow, int* hint);
-  void updateAPF(HVector* aq, HVector* ep, int iRow);//, int* hint);
+  void updateAPF(HVector* aq, HVector* ep, int iRow);  //, int* hint);
 
   /**
    * Local in-line functions

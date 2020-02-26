@@ -46,7 +46,7 @@ class HMpsFF {
  public:
   HMpsFF() {}
   FreeFormatParserReturnCode loadProblem(FILE* logfile,
-					 const std::string filename,
+                                         const std::string filename,
                                          HighsLp& lp);
 
  private:

@@ -47,7 +47,7 @@ class HPrimal {
 
   void iterationAnalysisData();
   void iterationAnalysis();
-  void reportRebuild(const int rebuild_invert_hint=-1);
+  void reportRebuild(const int rebuild_invert_hint = -1);
 
   // Model pointer
   HighsModelObject& workHMO;

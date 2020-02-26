@@ -16,6 +16,7 @@
 
 #include <cassert>
 #include <iostream>
+
 #include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"

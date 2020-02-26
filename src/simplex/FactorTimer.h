@@ -84,9 +84,9 @@ class FactorTimer {
     clock[FactorInvertSimple] =  timer.clock_def("INVERT Simple", "IVS");
     clock[FactorInvertKernel] =  timer.clock_def("INVERT Kernel", "IVK");
     clock[FactorInvertDeficient] = timer.clock_def("INVERT Deficient", "IVD");
-    clock[FactorInvertFinish] =  timer.clock_def("INVERT Finish", "IVF");
-    clock[FactorFtran] =         timer.clock_def("FTRAN", "FTR");
-    clock[FactorFtranLower] =    timer.clock_def("FTRAN Lower", "FTL");
+    clock[FactorInvertFinish] = timer.clock_def("INVERT Finish", "IVF");
+    clock[FactorFtran] = timer.clock_def("FTRAN", "FTR");
+    clock[FactorFtranLower] = timer.clock_def("FTRAN Lower", "FTL");
     clock[FactorFtranLowerAPF] = timer.clock_def("FTRAN Lower APF", "FLA");
     clock[FactorFtranLowerSps] = timer.clock_def("FTRAN Lower Sps", "FLS");
     clock[FactorFtranLowerHyper] = timer.clock_def("FTRAN Lower Hyper", "FLH");

@@ -54,34 +54,34 @@ enum iClockSimplex {
   ComputeDuObjClock,  //!< Computation of dual objective value in dual rebuild()
   ComputePrObjClock,  //!< Computation of primalal objective value in primal
                       //!< rebuild()
-  ReportRebuildClock,  //!< Reporting of log line in dual rebuild()
-  ChuzrDualClock,      //!< CHUZR - Dual
-  Chuzr1Clock,         //!< CHUZR - Primal stage 1
-  Chuzr2Clock,         //!< CHUZR - Primal stage 2
-  ChuzcPrimalClock,    //!< CHUZC - Primal
-  Chuzc0Clock,         //!< CHUZC - Dual stage 0
-  PriceChuzc1Clock,    //!< PRICE + CHUZC - Dual stage 1: parallel
-  Chuzc1Clock,         //!< CHUZC - Dual stage 1
-  Chuzc2Clock,         //!< CHUZC - Dual stage 2
-  Chuzc3Clock,         //!< CHUZC - Dual stage 3
-  Chuzc4Clock,         //!< CHUZC - Dual stage 4
-  DevexWtClock,        //!< Calculation of Devex weight of entering variable
-  FtranClock,          //!< FTRAN - pivotal column
-  BtranClock,          //!< BTRAN
-  PriceClock,          //!< PRICE
-  FtranDseClock,       //!< FTRAN for DSE weights
-  FtranMixParClock,    //!< FTRAN for PAMI - parallel
-  FtranMixFinalClock,  //!< FTRAN for PAMI - final
-  FtranBfrtClock,      //!< FTRAN for BFRT
-  UpdateRowClock,     //!< Update of dual values
-  UpdateDualClock,     //!< Update of dual values
-  UpdatePrimalClock,   //!< Update of primal values
-  DevexIzClock,        //!< Initialisation of new Devex framework
-  DevexUpdateWeightClock, //!< Update Devex weights
-  DseUpdateWeightClock,   //!< Update DSE weights
-  UpdatePivotsClock,   //!< Update indices of basic and nonbasic after basis
-                       //!< change
-  UpdateFactorClock,   //!< Update the representation of \f$B^{-1}\f$
+  ReportRebuildClock,      //!< Reporting of log line in dual rebuild()
+  ChuzrDualClock,          //!< CHUZR - Dual
+  Chuzr1Clock,             //!< CHUZR - Primal stage 1
+  Chuzr2Clock,             //!< CHUZR - Primal stage 2
+  ChuzcPrimalClock,        //!< CHUZC - Primal
+  Chuzc0Clock,             //!< CHUZC - Dual stage 0
+  PriceChuzc1Clock,        //!< PRICE + CHUZC - Dual stage 1: parallel
+  Chuzc1Clock,             //!< CHUZC - Dual stage 1
+  Chuzc2Clock,             //!< CHUZC - Dual stage 2
+  Chuzc3Clock,             //!< CHUZC - Dual stage 3
+  Chuzc4Clock,             //!< CHUZC - Dual stage 4
+  DevexWtClock,            //!< Calculation of Devex weight of entering variable
+  FtranClock,              //!< FTRAN - pivotal column
+  BtranClock,              //!< BTRAN
+  PriceClock,              //!< PRICE
+  FtranDseClock,           //!< FTRAN for DSE weights
+  FtranMixParClock,        //!< FTRAN for PAMI - parallel
+  FtranMixFinalClock,      //!< FTRAN for PAMI - final
+  FtranBfrtClock,          //!< FTRAN for BFRT
+  UpdateRowClock,          //!< Update of dual values
+  UpdateDualClock,         //!< Update of dual values
+  UpdatePrimalClock,       //!< Update of primal values
+  DevexIzClock,            //!< Initialisation of new Devex framework
+  DevexUpdateWeightClock,  //!< Update Devex weights
+  DseUpdateWeightClock,    //!< Update DSE weights
+  UpdatePivotsClock,       //!< Update indices of basic and nonbasic after basis
+                           //!< change
+  UpdateFactorClock,       //!< Update the representation of \f$B^{-1}\f$
   UpdateMatrixClock,  //!< Update the row-wise copy of the constraint matrix for
                       //!< nonbasic columns
   UpdateRowEpClock,   //!< Update the tableau rows in PAMI

@@ -14,16 +14,16 @@
 #ifndef HIGHS_H_
 #define HIGHS_H_
 
+#include <sstream>
+
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
-#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/ICrash.h"
 #include "presolve/Presolve.h"
 #include "util/HighsTimer.h"
-
-#include <sstream>
 
 /**
  * @brief Class to set parameters and run HiGHS
@@ -45,15 +45,13 @@ class Highs {
    * HighsModelObject for this LP and makes it the first of the vector
    * of HighsModelObjects
    */
-  HighsStatus passModel(
-      const HighsLp& lp  //!< The HighsLp instance for this LP
+  HighsStatus passModel(const HighsLp& lp  //!< The HighsLp instance for this LP
   );
 
   /**
    * @brief reads in a model and initializes the HighsModelObject
    */
-  HighsStatus readModel(
-			const std::string filename  //!< the filename
+  HighsStatus readModel(const std::string filename  //!< the filename
   );
 
   /**
@@ -64,10 +62,10 @@ class Highs {
   /**
    * @brief writes the current solution to a file
    */
-  HighsStatus writeSolution(
-			    const std::string filename,  //!< the filename
-			    const bool pretty=false      //!< Write in pretty (human-readable) format
-			    ) const;
+  HighsStatus writeSolution(const std::string filename,  //!< the filename
+                            const bool pretty = false)
+      const;  //!< Write in pretty (human-readable) format
+
   /**
    * Methods for HiGHS option input/output
    */
@@ -77,45 +75,41 @@ class Highs {
    * legal and, for bool/int/double, only if it's of the correct type
    */
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const bool value           //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const bool value            //!< The option value
+  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const int value            //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const int value             //!< The option value
+  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const double value         //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const double value          //!< The option value
+  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const std::string value    //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const std::string value     //!< The option value
+  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const char* value          //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const char* value           //!< The option value
+  );
 
-  HighsStatus setHighsLogfile(
-			      FILE* logfile                  //!< The log file
-			      );
+  HighsStatus setHighsLogfile(FILE* logfile  //!< The log file
+  );
 
-  HighsStatus setHighsOutput(
-			     FILE* output                  //!< The log file
-			     );
+  HighsStatus setHighsOutput(FILE* output  //!< The log file
+  );
 
-  HighsStatus readHighsOptions(
-			       const std::string filename  //!< The filename
-			       );
+  HighsStatus readHighsOptions(const std::string filename  //!< The filename
+  );
 
-  HighsStatus passHighsOptions(
-			       const HighsOptions& options  //!< The options
-			       );
+  HighsStatus passHighsOptions(const HighsOptions& options  //!< The options
+  );
 
   const HighsOptions& getHighsOptions();
 
@@ -124,51 +118,47 @@ class Highs {
    * bool/int/double, only if it's of the correct type.
    */
   HighsStatus getHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  bool& value                //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      bool& value                 //!< The option value
+  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  int& value                 //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      int& value                  //!< The option value
+  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  double& value              //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      double& value               //!< The option value
+  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  std::string& value         //!< The option value
-				  );
-  
+      const std::string& option,  //!< The option name
+      std::string& value          //!< The option value
+  );
+
   const HighsOptions& getHighsOptions() const;
-  
+
   HighsStatus writeHighsOptions(
-				const std::string filename,  //!< The filename
-				const bool report_only_non_default_values=true
-				);
-  
-   /**
-   * @brief Gets an option value as int/double, and only if it's of the correct type.
+      const std::string filename,  //!< The filename
+      const bool report_only_non_default_values = true);
+
+  /**
+   * @brief Gets an option value as int/double, and only if it's of the correct
+   * type.
    */
 
   const HighsInfo& getHighsInfo() const;
 
-  HighsStatus getHighsInfoValue(
-				const std::string& info, //!< The info name
-				int& value               //!< The info value
-				);
-  
-  HighsStatus getHighsInfoValue(
-				const std::string& info, //!< The info name
-				double& value            //!< The info value
-				) const;
-  
-  HighsStatus writeHighsInfo(
-			     const std::string filename  //!< The filename
-			     );
+  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
+                                int& value                //!< The info value
+  );
+
+  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
+                                double& value) const;     //!< The info value
+
+  HighsStatus writeHighsInfo(const std::string filename  //!< The filename
+  );
   /**
    * Methods for model output
    */
@@ -180,23 +170,21 @@ class Highs {
   const HighsLp& getLp() const;
 
   /**
-   * @brief Returns the HighsSolution 
+   * @brief Returns the HighsSolution
    */
   const HighsSolution& getSolution() const;
 
   const ICrashInfo& getICrashInfo() const;
 
   /**
-   * @brief Returns the HighsBasis 
+   * @brief Returns the HighsBasis
    */
   const HighsBasis& getBasis() const;
 
   /**
    * @brief Returns the current model status
    */
-  const HighsModelStatus& getModelStatus(
-					 const bool scaled_model=false
-					 ) const;
+  const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
 
   // todo: getRangingInformation(..)
 
@@ -212,70 +200,68 @@ class Highs {
    * required by SCIP, non-negative entries are indices of columns,
    * and negative entries are -(row_index+1).
    */
-  HighsStatus getBasicVariables(
-				int* basic_variables  //!< Basic variables
-				);
+  HighsStatus getBasicVariables(int* basic_variables  //!< Basic variables
+  );
   /**
    * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
   HighsStatus getBasisInverseRow(
-				 const int row,          //!< Index of row required
-				 double* row_vector,     //!< Row required
-				 int* row_num_nz = NULL, //!< Number of nonzeros
-				 int* row_indices = NULL //!< Indices of nonzeros
-				 );  
+      const int row,           //!< Index of row required
+      double* row_vector,      //!< Row required
+      int* row_num_nz = NULL,  //!< Number of nonzeros
+      int* row_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
    * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
   HighsStatus getBasisInverseCol(
-				 const int col,          //!< Index of column required
-				 double* col_vector,     //!< Column required
-				 int* col_num_nz = NULL, //!< Number of nonzeros
-				 int* col_indices = NULL //!< Indices of nonzeros
-);
+      const int col,           //!< Index of column required
+      double* col_vector,      //!< Column required
+      int* col_num_nz = NULL,  //!< Number of nonzeros
+      int* col_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
-   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
+   * \f$\mathbf{b}\f$
    */
   HighsStatus getBasisSolve(
-			    const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
-			    double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$
-			    int* solution_num_nz = NULL, //!< Number of nonzeros
-			    int* solution_indices = NULL //!< Indices of nonzeros
-			    );
+      const double* rhs,            //!< RHS \f$\mathbf{b}\f$
+      double* solution_vector,      //!< Solution  \f$\mathbf{x}\f$
+      int* solution_num_nz = NULL,  //!< Number of nonzeros
+      int* solution_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
-   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
+   * \f$\mathbf{b}\f$
    */
   HighsStatus getBasisTransposeSolve(
-				     const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
-				     double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$ 
-				     int* solution_nz = NULL,     //!< Number of nonzeros
-				     int* solution_indices = NULL //!< Indices of nonzeros
-				     );
+      const double* rhs,            //!< RHS \f$\mathbf{b}\f$
+      double* solution_vector,      //!< Solution  \f$\mathbf{x}\f$
+      int* solution_nz = NULL,      //!< Number of nonzeros
+      int* solution_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
    * @brief Forms a row of \f$B^{-1}A\f$
    */
-  HighsStatus getReducedRow(
-			       const int row,          //!< Index of row required
-			       double* row_vector,     //!< Row required
-			       int* row_num_nz = NULL, //!< Number of nonzeros
-			       int* row_indices = NULL //!< Indices of nonzeros
-			       );
+  HighsStatus getReducedRow(const int row,           //!< Index of row required
+                            double* row_vector,      //!< Row required
+                            int* row_num_nz = NULL,  //!< Number of nonzeros
+                            int* row_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
    * @brief Forms a column of \f$B^{-1}A\f$
    */
-  HighsStatus getReducedColumn(
-			       const int col,          //!< Index of column required
-			       double* col_vector,     //!< Column required
-			       int* col_num_nz = NULL, //!< Number of nonzeros
-			       int* col_indices = NULL //!< Indices of nonzeros
-			       );
+  HighsStatus getReducedColumn(const int col,  //!< Index of column required
+                               double* col_vector,      //!< Column required
+                               int* col_num_nz = NULL,  //!< Number of nonzeros
+                               int* col_indices = NULL  //!< Indices of nonzeros
+  );
 
-  
   /**
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject
@@ -292,7 +278,10 @@ class Highs {
    * @brief Get the number of entries in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumEntries() { if (lp_.numCol_) return lp_.Astart_[lp_.numCol_]; return 0; }
+  int getNumEntries() {
+    if (lp_.numCol_) return lp_.Astart_[lp_.numCol_];
+    return 0;
+  }
 
   /**
    * @brief Get multiple columns from the model given by an interval
@@ -405,17 +394,15 @@ class Highs {
   /**
    * @brief Get a matrix coefficient
    */
-  bool getCoeff(
-		const int row, //!< Row of coefficient to be got
-		const int col, //!< Column of coefficient to be got
-		double& value   //!< Coefficient
-		);
+  bool getCoeff(const int row,  //!< Row of coefficient to be got
+                const int col,  //!< Column of coefficient to be got
+                double& value   //!< Coefficient
+  );
 
   /**
    * @brief writes out current model
    */
-  HighsStatus writeModel(
-			 const std::string filename  //!< the filename
+  HighsStatus writeModel(const std::string filename  //!< the filename
   );
 
   /**
@@ -533,11 +520,10 @@ class Highs {
   /**
    * @brief Change a matrix coefficient
    */
-  bool changeCoeff(
-		   const int row,     //!< Row of coefficient to be changed
-		   const int col,     //!< Column of coefficient to be changed
-		   const double value //!< Coefficient
-		   );
+  bool changeCoeff(const int row,      //!< Row of coefficient to be changed
+                   const int col,      //!< Column of coefficient to be changed
+                   const double value  //!< Coefficient
+  );
   /**
    * @brief Adds a row to the model
    */
@@ -594,7 +580,6 @@ class Highs {
           values  //!< Array of size num_new_nz with row values for all columns
   );
 
-
   /**
    * @brief Delete multiple columns from the model given by an interval
    */
@@ -608,17 +593,19 @@ class Highs {
    * @brief Delete multiple columns from the model given by a set
    */
   bool deleteCols(
-		  const int num_set_entries,  //!< The number of indides in the set
-		  const int* set              //!< Array of size num_set_entries with indices of columns
-                                              //!< to delete
-		  );
+      const int num_set_entries,  //!< The number of indides in the set
+      const int* set  //!< Array of size num_set_entries with indices of columns
+                      //!< to delete
+  );
 
   /**
    * @brief Delete multiple columns from the model given by a mask
    */
-  bool deleteCols(int* mask  //!< Full length array with 1 => delete; !0 => not. The new index of any column
-			     //!not deleted is returned in place of the value 0.
-		  );
+  bool deleteCols(
+      int* mask  //!< Full length array with 1 => delete; !0 => not. The new
+                 //!< index of any column
+                 //! not deleted is returned in place of the value 0.
+  );
 
   /**
    * @brief Delete multiple rows from the model given by an interval
@@ -633,18 +620,18 @@ class Highs {
    * @brief Delete multiple rows from the model given by a set
    */
   bool deleteRows(
-		  const int num_set_entries, //!< The number of indides in the set
-		  const int* set             //!< Array of size num_set_entries with indices of columns
-                                             //!< to delete
-		  );
+      const int num_set_entries,  //!< The number of indides in the set
+      const int* set  //!< Array of size num_set_entries with indices of columns
+                      //!< to delete
+  );
 
   /**
    * @brief Delete multiple rows from the model given by a mask
    */
-  bool deleteRows(
-		  int* mask  //!< Full length array with 1 => delete; 0 => not. The new index of any row
-			     //!< not deleted is returned in place of the value 0.
-		  );
+  bool deleteRows(int* mask  //!< Full length array with 1 => delete; 0 => not.
+                             //!< The new index of any row not deleted is
+                             //!< returned in place of the value 0.
+  );
 
   /**
    * Other methods for specialist applications
@@ -663,39 +650,41 @@ class Highs {
   // col_value, col_dual and row_dual set. If any of them are not set the
   // solution in Highs does not get updated.
   HighsStatus setSolution(
-			  const HighsSolution& solution //!< Solution to be used
-			  );
+      const HighsSolution& solution  //!< Solution to be used
+  );
 
   /**
    * @brief Uses the HighsBasis passed to set the basis for the
    * LP of the (first?) HighsModelObject
    */
-  HighsStatus setBasis(
-		       const HighsBasis& basis //!< Basis to be used
-		       );
+  HighsStatus setBasis(const HighsBasis& basis  //!< Basis to be used
+  );
 
   // todo: getRangingInformation(..)
 
   /**
-   * @brief Clear data associated with solving the model: basis, solution and internal data etc
+   * @brief Clear data associated with solving the model: basis, solution and
+   * internal data etc
    */
   HighsStatus clearSolver();
 
 #ifdef HiGHSDEV
   /**
-   * @brief Report the model status, solution and basis vector sizes and basis validity
+   * @brief Report the model status, solution and basis vector sizes and basis
+   * validity
    */
   void reportModelStatusSolutionBasis(const std::string message,
-				      const HighsModelStatus model_status,
-				      const HighsLp &lp,
-				      const HighsSolution &solution,
-				      const HighsBasis &basis);
+                                      const HighsModelStatus model_status,
+                                      const HighsLp& lp,
+                                      const HighsSolution& solution,
+                                      const HighsBasis& basis);
 #endif
 
-  std::string highsModelStatusToString(const HighsModelStatus model_status) const;
-  
+  std::string highsModelStatusToString(
+      const HighsModelStatus model_status) const;
+
   std::string highsPrimalDualStatusToString(const int primal_dual_status);
-  
+
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
 #endif
@@ -732,9 +721,8 @@ class Highs {
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
 
-  HighsStatus openWriteFile(const string filename,
-			    const string method_name,
-			    FILE*& file, bool& html) const;
+  HighsStatus openWriteFile(const string filename, const string method_name,
+                            FILE*& file, bool& html) const;
 
   HighsStatus getUseModelStatus(HighsModelStatus& use_model_status,
 				const double unscaled_primal_feasibility_tolerance,
@@ -752,7 +740,7 @@ class Highs {
 
   void underDevelopmentLogMessage(const string method_name);
 
-  friend class HighsMipSolver; 
+  friend class HighsMipSolver;
 };
 
 #endif

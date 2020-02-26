@@ -479,7 +479,7 @@ class HighsTimer {
   std::vector<std::string> clock_ch3_names;
   double tick2sec = 3.6e-10;
   // The index of the RunHighsClock - should always be 0
-  int run_highs_clock;  
+  int run_highs_clock;
   // Fundamental Highs clocks
   int presolve_clock;
   int solve_clock;
@@ -488,7 +488,6 @@ class HighsTimer {
   double run_highs_clock_time = 0;
   // HiGHS run start time - used to compute HiGHS run time
   double run_highs_clock_start_time = initial_clock_start;
-
 };
 
 #endif /* UTIL_HIGHSTIMER_H_ */

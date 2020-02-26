@@ -26,8 +26,8 @@ void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void HighsPrintMessage(FILE* pass_output,
-		       const int pass_message_level, const int level, const char* format, ...) {
+void HighsPrintMessage(FILE* pass_output, const int pass_message_level,
+                       const int level, const char* format, ...) {
   if (pass_output == NULL) {
     return;
   }
@@ -50,11 +50,12 @@ void HighsPrintMessage(FILE* pass_output,
   }
 }
 
-void HighsLogMessage(FILE* pass_logfile, HighsMessageType type, const char* format, ...) {
+void HighsLogMessage(FILE* pass_logfile, HighsMessageType type,
+                     const char* format, ...) {
   if (pass_logfile == NULL) {
     return;
   }
-  
+
   time_t rawtime;
   struct tm* timeinfo;
 

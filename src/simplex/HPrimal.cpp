@@ -12,16 +12,17 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HPrimal.h"
+
+#include <cassert>
+#include <cstdio>
+#include <iostream>
+
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
-
-#include <cassert>
-#include <cstdio>
-#include <iostream>
 
 using std::runtime_error;
 
@@ -36,8 +37,9 @@ HighsStatus HPrimal::solve() {
   assert(positive_num_row);
   if (!positive_num_row) {
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
-		    "HPrimal::solve called for LP with non-positive (%d) number of constraints",
-		    workHMO.simplex_lp_.numRow_);
+                    "HPrimal::solve called for LP with non-positive (%d) "
+                    "number of constraints",
+                    workHMO.simplex_lp_.numRow_);
     return HighsStatus::Error;
   }
 
@@ -74,7 +76,7 @@ HighsStatus HPrimal::solve() {
   //  printf("simplex_lp_status.has_dual_steepest_edge_weights 2 = %d;
   //  dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE = %d\n",
   //	 simplex_lp_status.has_dual_steepest_edge_weights,
-  //dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
+  // dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
   //  printf("Edge weights known? %d\n",
   //  !simplex_lp_status.has_dual_steepest_edge_weights);cout<<flush;
 #endif
@@ -140,9 +142,8 @@ HighsStatus HPrimal::solve() {
         solvePhase2();
 	analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
         simplex_info.primal_phase2_iteration_count +=
-    (scaled_solution_params.simplex_iteration_count - it0); break; case 4: break; default:
-        solvePhase = 0;
-        break;
+    (scaled_solution_params.simplex_iteration_count - it0); break; case 4:
+    break; default: solvePhase = 0; break;
     }
     // Jump for primal
     if (solvePhase == 4) break;
@@ -205,8 +206,12 @@ void HPrimal::solvePhase2() {
   row_ap.setup(solver_num_col);
 
 #ifdef HiGHSDEV
-  printf("HPrimal::solvePhase2 - WARNING: Not setting analysis->col_aq_density = 0\n");
-  printf("HPrimal::solvePhase2 - WARNING: Not setting analysis->row_ep_density = 0\n");
+  printf(
+      "HPrimal::solvePhase2 - WARNING: Not setting analysis->col_aq_density = "
+      "0\n");
+  printf(
+      "HPrimal::solvePhase2 - WARNING: Not setting analysis->row_ep_density = "
+      "0\n");
 #endif
   //  analysis->col_aq_density = 0;
   //  analysis->row_ep_density = 0;
@@ -231,8 +236,8 @@ void HPrimal::solvePhase2() {
 
   // Setup other buffers
 
-  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
-		    "primal-phase2-start\n");
+  HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                    ML_DETAILED, "primal-phase2-start\n");
   // Main solving structure
   for (;;) {
     analysis->simplexTimerStart(IteratePrimalRebuildClock);
@@ -279,14 +284,14 @@ void HPrimal::solvePhase2() {
   }
 
   if (columnIn == -1) {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
-		      "primal-optimal\n");
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_DETAILED,
-		      "problem-optimal\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                      ML_DETAILED, "primal-optimal\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                      ML_DETAILED, "problem-optimal\n");
     workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
   } else {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
-		      "primal-unbounded\n");
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                      ML_MINIMAL, "primal-unbounded\n");
     workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
   }
   computeDualObjectiveValue(workHMO);
@@ -388,7 +393,8 @@ void HPrimal::primalChooseColumn() {
   double* workDual = &workHMO.simplex_info_.workDual_[0];
   const double* workLower = &workHMO.simplex_info_.workLower_[0];
   const double* workUpper = &workHMO.simplex_info_.workUpper_[0];
-  const double dualTolerance = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
+  const double dualTolerance =
+      workHMO.scaled_solution_params_.dual_feasibility_tolerance;
 
   analysis->simplexTimerStart(ChuzcPrimalClock);
   columnIn = -1;
@@ -471,12 +477,13 @@ void HPrimal::primalChooseRow() {
   workHMO.factor_.ftran(col_aq, analysis->col_aq_density, analysis->pointer_serial_factor_clocks);
   analysis->simplexTimerStop(FtranClock);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations) 
+  if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
 #endif
 
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
-  analysis->updateOperationResultDensity(local_col_aq_density, analysis->col_aq_density);
+  analysis->updateOperationResultDensity(local_col_aq_density,
+                                         analysis->col_aq_density);
 
   const bool check_dual = false;
   if (check_dual) {
@@ -662,12 +669,13 @@ void HPrimal::primalUpdate() {
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations) 
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep, analysis->row_ep_density);
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
+                                    analysis->row_ep_density);
 #endif
   workHMO.factor_.btran(row_ep, analysis->row_ep_density, analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations) 
+  if (simplex_info.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
   analysis->simplexTimerStop(BtranClock);
@@ -755,7 +763,8 @@ void HPrimal::iterationAnalysisData() {
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
   analysis->edge_weight_mode = DualEdgeWeightMode::DANTZIG;
   analysis->solve_phase = solvePhase;
-  analysis->simplex_iteration_count = scaled_solution_params.simplex_iteration_count;
+  analysis->simplex_iteration_count =
+      scaled_solution_params.simplex_iteration_count;
   analysis->devex_iteration_count = 0;
   analysis->pivotal_row_index = rowOut;
   analysis->leaving_variable = columnOut;
@@ -769,13 +778,17 @@ void HPrimal::iterationAnalysisData() {
   analysis->primal_step = thetaPrimal;
   analysis->dual_step = thetaDual;
   analysis->pivot_value_from_column = alpha;
-  analysis->pivot_value_from_row = alpha;//Row;
+  analysis->pivot_value_from_row = alpha;  // Row;
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_primal_objective_value;
-  analysis->num_primal_infeasibilities = scaled_solution_params.num_primal_infeasibilities;
-  analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
-  analysis->sum_primal_infeasibilities = scaled_solution_params.sum_primal_infeasibilities;
-  analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
+  analysis->num_primal_infeasibilities =
+      scaled_solution_params.num_primal_infeasibilities;
+  analysis->num_dual_infeasibilities =
+      scaled_solution_params.num_dual_infeasibilities;
+  analysis->sum_primal_infeasibilities =
+      scaled_solution_params.sum_primal_infeasibilities;
+  analysis->sum_dual_infeasibilities =
+      scaled_solution_params.sum_dual_infeasibilities;
 #ifdef HiGHSDEV
   analysis->basis_condition = simplex_info.invert_condition;
 #endif

@@ -51,26 +51,28 @@ class HDualRHS {
    * (Multiple CHUZR)
    */
   void chooseMultiGlobal(int* chIndex,  //!< Set of indices of chosen rows
-			 int* chCount,  //!< Number of chosen rows
-			 int chLimit    //!< Limit on number of of chosen rows
+                         int* chCount,  //!< Number of chosen rows
+                         int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void chooseMultiHyperGraphAuto(int* chIndex,  //!< Set of indices of chosen rows
-				 int* chCount,  //!< Number of chosen rows
-				 int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiHyperGraphAuto(
+      int* chIndex,  //!< Set of indices of chosen rows
+      int* chCount,  //!< Number of chosen rows
+      int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void chooseMultiHyperGraphPart(int* chIndex,  //!< Set of indices of chosen rows
-				 int* chCount,  //!< Number of chosen rows
-				 int chLimit    //!< Limit on number of of chosen rows
+  void chooseMultiHyperGraphPart(
+      int* chIndex,  //!< Set of indices of chosen rows
+      int* chCount,  //!< Number of chosen rows
+      int chLimit    //!< Limit on number of of chosen rows
   );
 
   /**
@@ -85,24 +87,24 @@ class HDualRHS {
    * @brief Update the DSE weights
    */
   void updateWeightDualSteepestEdge(
-				    HVector* column,           //!< Pivotal column
-				    const double rowOutWeight, //!< (Edge weight of leaving row)/alpha^2
-				    double Kai,                //!< -2/alpha
-				    double* dse                //!< DSE std::vector
+      HVector* column,            //!< Pivotal column
+      const double rowOutWeight,  //!< (Edge weight of leaving row)/alpha^2
+      double Kai,                 //!< -2/alpha
+      double* dse                 //!< DSE std::vector
   );
   /**
    * @brief Update the Devex weights
    */
-  void updateWeightDevex(
-			 HVector* column,          //!< Pivotal column
-			 const double rowOutWeight //!< max(1, (Edge weight of leaving row)/alpha^2)
+  void updateWeightDevex(HVector* column,           //!< Pivotal column
+                         const double rowOutWeight  //!< max(1, (Edge weight of
+                                                    //!< leaving row)/alpha^2)
   );
   /**
    * @brief Update the primal value for the row where the basis change has
    * occurred
    */
   void updatePivots(int iRow,     //!< row where the basis change has occurred
-		    double value  //!< New primal value in this row
+                    double value  //!< New primal value in this row
   );
 
   /**
@@ -133,7 +135,8 @@ class HDualRHS {
                                //!< greatest primal infeasibilities
   std::vector<int>
       workIndex;  //!< List of rows with greatest primal infeasibilities
-  std::vector<double> work_infeasibility; //!< Vector of all primal infeasiblities
+  std::vector<double>
+      work_infeasibility;            //!< Vector of all primal infeasiblities
   std::vector<double> workEdWt;      //!< DSE or Dvx weight
   std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights
                                      //!< are scattered during INVERT

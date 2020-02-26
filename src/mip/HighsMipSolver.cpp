@@ -21,7 +21,7 @@ HighsMipStatus HighsMipSolver::runMipSolver() {
   // Start timer.
   timer_.startRunHighsClock();
   double mip_solve_initial_time = timer_.readRunHighsClock();
-  
+
   // Load root node lp in highs and turn printing off.
   passModel(mip_);
   // Set the options for this Highs instance according to the options for the MIP solver 
