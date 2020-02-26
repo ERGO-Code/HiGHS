@@ -113,7 +113,7 @@ class Highs {
 
   const HighsOptions& getHighsOptions();
 
-   /**
+  /**
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
    */
@@ -724,14 +724,15 @@ class Highs {
   HighsStatus openWriteFile(const string filename, const string method_name,
                             FILE*& file, bool& html) const;
 
-  HighsStatus getUseModelStatus(HighsModelStatus& use_model_status,
-				const double unscaled_primal_feasibility_tolerance,
-				const double unscaled_dual_feasibility_tolerance,
-				const bool rerun_from_logical_basis = false);
+  HighsStatus getUseModelStatus(
+      HighsModelStatus& use_model_status,
+      const double unscaled_primal_feasibility_tolerance,
+      const double unscaled_dual_feasibility_tolerance,
+      const bool rerun_from_logical_basis = false);
 
   bool unscaledOptimal(const double unscaled_primal_feasibility_tolerance,
-		       const double unscaled_dual_feasibility_tolerance,
-		       const bool report = false);
+                       const double unscaled_dual_feasibility_tolerance,
+                       const bool report = false);
 
   bool haveHmo(const string method_name);
 
