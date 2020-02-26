@@ -7,10 +7,10 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#include "io/LoadOptions.h"
 
 #include <fstream>
 
-#include "lp_data/HighsOptions.h"
 #include "util/stringutil.h"
 
 // For extended options to be parsed from a file. Assuming options file is
