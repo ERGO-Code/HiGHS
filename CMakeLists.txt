@@ -78,8 +78,8 @@ if (HIGHS_COVERAGE)
 endif ()
 
 if (HIGHS_COVERAGE)
-  if ((CMAKE_BUILD_TYPE STREQUAL "DEBUG") OR (CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO"))
-    message(STATUS "Warning: to enable coverage, you must compile in DEBUG ou RELWITHDEBINFO mode")
+  if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    message(FATAL_ERROR "Warning: to enable coverage, you must compile in DEBUG mode")
   endif ()
 endif ()
 
