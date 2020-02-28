@@ -271,7 +271,7 @@ struct HighsOptionsStruct {
   double dual_simplex_cost_perturbation_multiplier;
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
-
+  bool use_original_HFactor_logic;
   // Options for iCrash
   bool icrash;
   bool icrash_dualize;
@@ -281,6 +281,10 @@ struct HighsOptionsStruct {
   int icrash_approximate_minimization_iterations;
   bool icrash_exact;
   bool icrash_breakpoints;
+
+  // Options for MIP solver
+  int mip_max_nodes;
+  int mip_report_level;
 
   // Switch for MIP solver
   bool mip;
@@ -426,7 +430,7 @@ class HighsOptions : public HighsOptionsStruct {
         "simplex_scale_strategy",
         "Strategy for scaling before simplex solver: off / on (0/1)", advanced,
         &simplex_scale_strategy, SIMPLEX_SCALE_STRATEGY_MIN,
-        SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
+        SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED, SIMPLEX_SCALE_STRATEGY_MAX);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -501,6 +505,16 @@ class HighsOptions : public HighsOptionsStruct {
                                        "a pretty (human-readable) format",
                                        advanced, &write_solution_pretty, false);
     records.push_back(record_bool);
+
+    record_int = new OptionRecordInt(
+        "mip_max_nodes", "MIP solver max number of nodes", advanced,
+        &mip_max_nodes, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("mip_report_level", "MIP solver reporting level",
+                            advanced, &mip_report_level, 0, 1, 2);
+    records.push_back(record_int);
 
     // Advanced options
     advanced = true;
@@ -585,6 +599,12 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &dual_simplex_cost_perturbation_multiplier, 0.0, 1.0,
         HIGHS_CONST_INF);
     records.push_back(record_double);
+
+    record_bool = new OptionRecordBool(
+        "use_original_HFactor_logic",
+        "Use original HFactor logic for sparse vs hyper-sparse TRANs", advanced,
+        &use_original_HFactor_logic, true);
+    records.push_back(record_bool);
 
     record_bool =
         new OptionRecordBool("icrash", "Run iCrash", advanced, &icrash, false);

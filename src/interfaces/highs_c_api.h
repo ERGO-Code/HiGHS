@@ -94,9 +94,9 @@ int Highs_passLp(
 /*
  * @brief
  */
-int Highs_setOptionValue(void* highs,         //!< HiGHS object reference
-                         const char* option,  //!< name of the option
-                         const char* value    //!< new value of option
+int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              const char* value    //!< new value of option
 );
 
 /*

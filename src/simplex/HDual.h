@@ -405,8 +405,7 @@ class HDual {
   int solver_num_tot;
 
   const HMatrix* matrix;
-  //  const HFactor* factor; //FactorTimer frig const
-  HFactor* factor;
+  const HFactor* factor;
   HighsSimplexAnalysis* analysis;
 
   const int* jMove;

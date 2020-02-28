@@ -530,7 +530,12 @@ HighsStatus writeMPS(
       have_bounds = true;
       break;
     }
-    if (!highs_isInfinity(colUpper[c_n])) {
+    bool discrete = false;
+    if (numInt) discrete = integerColumn[c_n];
+    if (!highs_isInfinity(colUpper[c_n]) || discrete) {
+      // If the upper bound is finite, or the variable is integer then there is
+      // a BOUNDS section. Integer variables with infinite upper bound are
+      // indicated as LI
       have_bounds = true;
       break;
     }
@@ -646,6 +651,8 @@ HighsStatus writeMPS(
     for (int c_n = 0; c_n < numCol; c_n++) {
       double lb = colLower[c_n];
       double ub = colUpper[c_n];
+      bool discrete = false;
+      if (numInt) discrete = integerColumn[c_n];
       if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {
@@ -659,23 +666,47 @@ HighsStatus writeMPS(
         if (write_zero_no_cost_columns) continue;
       }
       if (lb == ub) {
+        // Equal lower and upper bounds: Fixed
         fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
                 lb);
+      } else if (highs_isInfinity(-lb) && highs_isInfinity(ub)) {
+        // Infinite lower and upper bounds: Free
+        fprintf(file, " FR BOUND     %-8s\n", col_names[c_n].c_str());
       } else {
-        if (!highs_isInfinity(ub)) {
-          // Upper bounded variable
-          fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                  ub);
-        }
-        if (!highs_isInfinity(-lb)) {
-          // Lower bounded variable - default is 0
-          if (lb) {
-            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    lb);
+        if (discrete) {
+          if (lb == 0 && ub == 1) {
+            // Binary
+            fprintf(file, " BV BOUND     %-8s\n", col_names[c_n].c_str());
+          } else {
+            if (!highs_isInfinity(-lb)) {
+              // Finite lower bound. No need to state this if LB is
+              // zero unless UB is infinte
+              if (lb || highs_isInfinity(ub))
+                fprintf(file, " LI BOUND     %-8s  %.15g\n",
+                        col_names[c_n].c_str(), lb);
+            }
+            if (!highs_isInfinity(ub)) {
+              // Finite upper bound
+              fprintf(file, " UI BOUND     %-8s  %.15g\n",
+                      col_names[c_n].c_str(), ub);
+            }
           }
         } else {
-          // Infinite lower bound
-          fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
+          if (!highs_isInfinity(-lb)) {
+            // Lower bounded variable - default is 0
+            if (lb) {
+              fprintf(file, " LO BOUND     %-8s  %.15g\n",
+                      col_names[c_n].c_str(), lb);
+            }
+          } else {
+            // Infinite lower bound
+            fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
+          }
+          if (!highs_isInfinity(ub)) {
+            // Upper bounded variable
+            fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
+                    ub);
+          }
         }
       }
     }

@@ -161,6 +161,7 @@ class HCrash {
   // int crsh_mode;
   int crsh_f_vr_ty;
   int crsh_l_vr_ty;
+  int crsh_num_vr_ty;
 
   int crsh_mn_pri_v;      // = 0;
   int crsh_mx_pri_v;      // = 3;

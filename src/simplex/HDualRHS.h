@@ -147,8 +147,8 @@ class HDualRHS {
   int partNumCut;
   int partSwitch;
   std::vector<int> workPartition;
-
   const double min_dual_steepest_edge_weight = 1e-4;
+  HighsSimplexAnalysis* analysis;
 };
 
 #endif /* SIMPLEX_HDUALRHS_H_ */

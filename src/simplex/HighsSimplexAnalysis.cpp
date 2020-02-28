@@ -14,8 +14,10 @@
 #include <cmath>
 //#include <cstdio>
 #include "HConfig.h"
+#include "simplex/FactorTimer.h"
 #include "simplex/HFactor.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "simplex/SimplexTimer.h"
 
 void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
                                  const int simplex_iteration_count_) {
@@ -45,6 +47,43 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   // Set the row_dual_density to 1 since it's assumed all costs are at
   // least perturbed from zero, if not initially nonzero
   dual_col_density = 1;
+  // Set up the data structures for scatter data
+  tran_stage.resize(NUM_TRAN_STAGE_TYPE);
+  tran_stage[TRAN_STAGE_FTRAN_LOWER].name_ = "FTRAN lower";
+  tran_stage[TRAN_STAGE_FTRAN_UPPER_FT].name_ = "FTRAN upper FT";
+  tran_stage[TRAN_STAGE_FTRAN_UPPER].name_ = "FTRAN upper";
+  tran_stage[TRAN_STAGE_BTRAN_UPPER].name_ = "BTRAN upper";
+  tran_stage[TRAN_STAGE_BTRAN_UPPER_FT].name_ = "BTRAN upper FT";
+  tran_stage[TRAN_STAGE_BTRAN_LOWER].name_ = "BTRAN lower";
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE;
+       tran_stage_type++) {
+    TranStageAnalysis& stage = tran_stage[tran_stage_type];
+    initialiseScatterData(20, stage.rhs_density_);
+    stage.num_decision_ = 0;
+    stage.num_wrong_original_sparse_decision_ = 0;
+    stage.num_wrong_original_hyper_decision_ = 0;
+    stage.num_wrong_new_sparse_decision_ = 0;
+    stage.num_wrong_new_hyper_decision_ = 0;
+  }
+  original_start_density_tolerance.resize(NUM_TRAN_STAGE_TYPE);
+  new_start_density_tolerance.resize(NUM_TRAN_STAGE_TYPE);
+  historical_density_tolerance.resize(NUM_TRAN_STAGE_TYPE);
+  predicted_density_tolerance.resize(NUM_TRAN_STAGE_TYPE);
+
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE;
+       tran_stage_type++) {
+    original_start_density_tolerance[tran_stage_type] = 0.05;
+    new_start_density_tolerance[tran_stage_type] = 0.05;
+  }
+  historical_density_tolerance[TRAN_STAGE_FTRAN_LOWER] = 0.15;
+  historical_density_tolerance[TRAN_STAGE_FTRAN_UPPER] = 0.10;
+  historical_density_tolerance[TRAN_STAGE_BTRAN_UPPER] = 0.10;
+  historical_density_tolerance[TRAN_STAGE_BTRAN_LOWER] = 0.15;
+  predicted_density_tolerance[TRAN_STAGE_FTRAN_LOWER] = 0.10;
+  predicted_density_tolerance[TRAN_STAGE_FTRAN_UPPER] = 0.10;
+  predicted_density_tolerance[TRAN_STAGE_BTRAN_UPPER] = 0.10;
+  predicted_density_tolerance[TRAN_STAGE_BTRAN_LOWER] = 0.10;
+
   // Initialise the measures used to analyse accuracy of steepest edge weights
   //
   const int dual_edge_weight_strategy =
@@ -85,7 +124,15 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
 
 #ifdef HiGHSDEV
   AnIterPrevIt = simplex_iteration_count_;
-  timer_.resetHighsTimer();
+
+  SimplexTimer simplex_timer;
+  for (HighsTimerClock& clock : thread_simplex_clocks)
+    simplex_timer.initialiseSimplexClocks(clock);
+
+  FactorTimer factor_timer;
+  for (HighsTimerClock& clock : thread_factor_clocks)
+    factor_timer.initialiseFactorClocks(clock);
+
   AnIterOpRec* AnIter;
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
   AnIter->AnIterOpName = "BTRAN e_p";
@@ -123,7 +170,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     AnIter->AnIterOpNumHyperOp = 0;
     AnIter->AnIterOpNumHyperRs = 0;
     AnIter->AnIterOpSumLog10RsDensity = 0;
-    initialiseValueDistribution(1e-8, 1.0, 10.0, AnIter->AnIterOp_density);
+    initialiseValueDistribution("", "density ", 1e-8, 1.0, 10.0,
+                                AnIter->AnIterOp_density);
   }
   int last_invert_hint = INVERT_HINT_Count - 1;
   for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
@@ -137,30 +185,36 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterTraceIterDl = 1;
   AnIterTraceRec* lcAnIter = &AnIterTrace[0];
   lcAnIter->AnIterTraceIter = AnIterIt0;
-  lcAnIter->AnIterTraceTime = timer_.getTime();
+  lcAnIter->AnIterTraceTime = timer_->getTime();
 
-  initialiseValueDistribution(1e-16, 1e16, 10.0, primal_step_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0, dual_step_distribution);
-  initialiseValueDistribution(1e-8, 1e16, 10.0, pivot_distribution);
-  initialiseValueDistribution(1e-16, 1.0, 10.0, numerical_trouble_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0,
+  initialiseValueDistribution("Primal step summary", "", 1e-16, 1e16, 10.0,
+                              primal_step_distribution);
+  initialiseValueDistribution("Dual step summary", "", 1e-16, 1e16, 10.0,
+                              dual_step_distribution);
+  initialiseValueDistribution("Pivot summary summary", "", 1e-8, 1e16, 10.0,
+                              pivot_distribution);
+  initialiseValueDistribution("Numerical trouble summary", "", 1e-16, 1.0, 10.0,
+                              numerical_trouble_distribution);
+  initialiseValueDistribution("", "1 ", 1e-16, 1e16, 10.0,
                               cost_perturbation1_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0,
+  initialiseValueDistribution("", "2 ", 1e-16, 1e16, 10.0,
                               cost_perturbation2_distribution);
-  initialiseValueDistribution(1e-8, 1.0, 10.0,
-                              before_ftran_upper_sparse_density);
-  initialiseValueDistribution(1e-8, 1.0, 10.0,
-                              before_ftran_upper_hyper_density);
-  initialiseValueDistribution(1e-8, 1.0, 10.0, ftran_upper_sparse_density);
-  initialiseValueDistribution(1e-8, 1.0, 10.0, ftran_upper_hyper_density);
-  initialiseValueDistribution(1e-16, 1e16, 10.0,
-                              cleanup_dual_change_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0,
-                              cleanup_primal_step_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0,
-                              cleanup_dual_step_distribution);
-  initialiseValueDistribution(1e-16, 1e16, 10.0,
-                              cleanup_primal_change_distribution);
+  initialiseValueDistribution("FTRAN upper sparse summary - before", "", 1e-8,
+                              1.0, 10.0, before_ftran_upper_sparse_density);
+  initialiseValueDistribution("FTRAN upper sparse summary - after", "", 1e-8,
+                              1.0, 10.0, before_ftran_upper_hyper_density);
+  initialiseValueDistribution("FTRAN upper hyper-sparse summary - before", "",
+                              1e-8, 1.0, 10.0, ftran_upper_sparse_density);
+  initialiseValueDistribution("FTRAN upper hyper-sparse summary - after", "",
+                              1e-8, 1.0, 10.0, ftran_upper_hyper_density);
+  initialiseValueDistribution("Cleanup dual change summary", "", 1e-16, 1e16,
+                              10.0, cleanup_dual_change_distribution);
+  initialiseValueDistribution("Cleanup primal change summary", "", 1e-16, 1e16,
+                              10.0, cleanup_primal_step_distribution);
+  initialiseValueDistribution("Cleanup primal step summary", "", 1e-16, 1e16,
+                              10.0, cleanup_primal_change_distribution);
+  initialiseValueDistribution("Cleanup dual step summary", "", 1e-16, 1e16,
+                              10.0, cleanup_dual_step_distribution);
 #endif
 }
 
@@ -367,7 +421,231 @@ bool HighsSimplexAnalysis::switchToDevex() {
   return switch_to_devex;
 }
 
+bool HighsSimplexAnalysis::predictEndDensity(const int tran_stage_type,
+                                             const double start_density,
+                                             double& end_density) {
+  return predictFromScatterData(tran_stage[tran_stage_type].rhs_density_,
+                                start_density, end_density);
+}
+
+void HighsSimplexAnalysis::afterTranStage(
+    const int tran_stage_type, const double start_density,
+    const double end_density, const double historical_density,
+    const double predicted_end_density,
+    const bool use_solve_sparse_original_HFactor_logic,
+    const bool use_solve_sparse_new_HFactor_logic) {
+  TranStageAnalysis& stage = tran_stage[tran_stage_type];
+  const double rp = false;
+  if (predicted_end_density > 0) {
+    stage.num_decision_++;
+    if (end_density <= max_hyper_density) {
+      // Should have done hyper-sparse TRAN
+      if (use_solve_sparse_original_HFactor_logic) {
+        // Original logic makes wrong decision to use sparse TRAN
+        if (rp) {
+          printf("Original: Wrong sparse: ");
+          const double start_density_tolerance =
+              original_start_density_tolerance[tran_stage_type];
+          const double this_historical_density_tolerance =
+              historical_density_tolerance[tran_stage_type];
+          if (start_density > start_density_tolerance) {
+            printf("(start = %10.4g >  %4.2f)  or ", start_density,
+                   start_density_tolerance);
+          } else {
+            printf(" start = %10.4g              ", start_density);
+          }
+          if (historical_density > this_historical_density_tolerance) {
+            printf("(historical = %10.4g  > %4.2f); ", historical_density,
+                   this_historical_density_tolerance);
+          } else {
+            printf(" historical = %10.4g           ", historical_density);
+          }
+          printf("end = %10.4g", end_density);
+          if (end_density < 0.1 * historical_density) printf(" !! OG");
+          printf("\n");
+        }
+        stage.num_wrong_original_sparse_decision_++;
+      }
+      if (use_solve_sparse_new_HFactor_logic) {
+        // New logic makes wrong decision to use sparse TRAN
+        if (rp) {
+          printf("New     : Wrong sparse: ");
+          const double start_density_tolerance =
+              original_start_density_tolerance[tran_stage_type];
+          const double end_density_tolerance =
+              predicted_density_tolerance[tran_stage_type];
+          if (start_density > start_density_tolerance) {
+            printf("(start = %10.4g >  %4.2f)  or ", start_density,
+                   start_density_tolerance);
+          } else {
+            printf(" start = %10.4g                       ", start_density);
+          }
+          if (predicted_end_density > end_density_tolerance) {
+            printf("( predicted = %10.4g  > %4.2f); ", predicted_end_density,
+                   end_density_tolerance);
+          } else {
+            printf("  predicted = %10.4g           ", predicted_end_density);
+          }
+          printf("end = %10.4g", end_density);
+          if (end_density < 0.1 * predicted_end_density) printf(" !! NW");
+          printf("\n");
+        }
+        stage.num_wrong_new_sparse_decision_++;
+      }
+    } else {
+      // Should have done sparse TRAN
+      if (!use_solve_sparse_original_HFactor_logic) {
+        // Original logic makes wrong decision to use hyper TRAN
+        if (rp) {
+          printf(
+              "Original: Wrong  hyper: (start = %10.4g <= %4.2f) and "
+              "(historical = %10.4g <= %4.2f); end = %10.4g",
+              start_density, original_start_density_tolerance[tran_stage_type],
+              historical_density, historical_density_tolerance[tran_stage_type],
+              end_density);
+          if (end_density > 10.0 * historical_density) printf(" !! OG");
+          printf("\n");
+        }
+        stage.num_wrong_original_hyper_decision_++;
+      }
+      if (!use_solve_sparse_new_HFactor_logic) {
+        // New logic makes wrong decision to use hyper TRAN
+        if (rp) {
+          printf(
+              "New     : Wrong  hyper: (start = %10.4g <= %4.2f) and ( "
+              "predicted = %10.4g <= %4.2f); end = %10.4g",
+              start_density, new_start_density_tolerance[tran_stage_type],
+              predicted_end_density,
+              predicted_density_tolerance[tran_stage_type], end_density);
+          if (end_density > 10.0 * predicted_end_density) printf(" !! NW");
+          printf("\n");
+        }
+        stage.num_wrong_new_hyper_decision_++;
+      }
+    }
+  }
+  updateScatterData(start_density, end_density, stage.rhs_density_);
+  regressScatterData(stage.rhs_density_);
+}
+
+void HighsSimplexAnalysis::summaryReportFactor() {
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE;
+       tran_stage_type++) {
+    TranStageAnalysis& stage = tran_stage[tran_stage_type];
+    //    printScatterData(stage.name_, stage.rhs_density_);
+    printScatterDataRegressionComparison(stage.name_, stage.rhs_density_);
+    if (!stage.num_decision_) return;
+    printf("Of %10d Sps/Hyper decisions made using regression:\n",
+           stage.num_decision_);
+    printf(
+        "   %10d wrong sparseTRAN; %10d wrong hyperTRAN: using original "
+        "logic\n",
+        stage.num_wrong_original_sparse_decision_,
+        stage.num_wrong_original_hyper_decision_);
+    printf(
+        "   %10d wrong sparseTRAN; %10d wrong hyperTRAN: using new      "
+        "logic\n",
+        stage.num_wrong_new_sparse_decision_,
+        stage.num_wrong_new_hyper_decision_);
+  }
+}
+
+void HighsSimplexAnalysis::simplexTimerStart(const int simplex_clock,
+                                             const int thread_id) {
 #ifdef HiGHSDEV
+  thread_simplex_clocks[thread_id].timer_.start(
+      thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+#endif
+}
+
+void HighsSimplexAnalysis::simplexTimerStop(const int simplex_clock,
+                                            const int thread_id) {
+#ifdef HiGHSDEV
+  thread_simplex_clocks[thread_id].timer_.stop(
+      thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+#endif
+}
+
+bool HighsSimplexAnalysis::simplexTimerRunning(const int simplex_clock,
+                                               const int thread_id) {
+  bool argument = false;
+#ifdef HiGHSDEV
+  argument =
+      thread_simplex_clocks[thread_id]
+          .timer_
+          .clock_start[thread_simplex_clocks[thread_id].clock_[simplex_clock]] <
+      0;
+#endif
+  return argument;
+}
+
+int HighsSimplexAnalysis::simplexTimerNumCall(const int simplex_clock,
+                                              const int thread_id) {
+  int argument = 0;
+#ifdef HiGHSDEV
+  argument = thread_simplex_clocks[thread_id].timer_.clock_num_call
+                 [thread_simplex_clocks[thread_id].clock_[simplex_clock]];
+#endif
+  return argument;
+}
+
+double HighsSimplexAnalysis::simplexTimerRead(const int simplex_clock,
+                                              const int thread_id) {
+  double argument = 0;
+#ifdef HiGHSDEV
+  argument = thread_simplex_clocks[thread_id].timer_.read(
+      thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+#endif
+  return argument;
+}
+
+HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {
+  HighsTimerClock* factor_timer_clock_pointer = NULL;
+#ifdef HiGHSDEV
+  int thread_id = 0;
+#ifdef OPENMP
+  thread_id = omp_get_thread_num();
+#endif
+  factor_timer_clock_pointer = &thread_factor_clocks[thread_id];
+#endif
+  return factor_timer_clock_pointer;
+}
+
+#ifdef HiGHSDEV
+void HighsSimplexAnalysis::reportFactorTimer() {
+  FactorTimer factor_timer;
+  int omp_max_threads = 1;
+#ifdef OPENMP
+  omp_max_threads = omp_get_max_threads();
+#endif
+  for (int i = 0; i < omp_max_threads; i++) {
+    //  for (HighsTimerClock clock : thread_factor_clocks) {
+    printf("reportFactorTimer: HFactor clocks for OMP thread %d / %d\n", i,
+           omp_max_threads - 1);
+    factor_timer.reportFactorClock(thread_factor_clocks[i]);
+  }
+  if (omp_max_threads > 1) {
+    HighsTimer& timer = thread_factor_clocks[0].timer_;
+    HighsTimerClock all_factor_clocks(timer);
+    vector<int>& clock = all_factor_clocks.clock_;
+    factor_timer.initialiseFactorClocks(all_factor_clocks);
+    for (int i = 0; i < omp_max_threads; i++) {
+      vector<int>& thread_clock = thread_factor_clocks[i].clock_;
+      for (int clock_id = 0; clock_id < FactorNumClock; clock_id++) {
+        int all_factor_iClock = clock[clock_id];
+        int thread_factor_iClock = thread_clock[clock_id];
+        timer.clock_num_call[all_factor_iClock] +=
+            timer.clock_num_call[thread_factor_iClock];
+        timer.clock_ticks[all_factor_iClock] +=
+            timer.clock_ticks[thread_factor_iClock];
+      }
+    }
+    printf("reportFactorTimer: HFactor clocks for all %d threads\n",
+           omp_max_threads);
+    factor_timer.reportFactorClock(all_factor_clocks);
+  }
+}
+
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
   if (invert_hint > 0) AnIterNumInvert[invert_hint]++;
@@ -387,7 +665,7 @@ void HighsSimplexAnalysis::iterationRecord() {
       AnIterTraceNumRec++;
       AnIterTraceRec& lcAnIter = AnIterTrace[AnIterTraceNumRec];
       lcAnIter.AnIterTraceIter = simplex_iteration_count;
-      lcAnIter.AnIterTraceTime = timer_.getTime();
+      lcAnIter.AnIterTraceTime = timer_->getTime();
       if (average_fraction_of_possible_minor_iterations_performed > 0) {
         lcAnIter.AnIterTraceMulti =
             average_fraction_of_possible_minor_iterations_performed;
@@ -534,8 +812,7 @@ void HighsSimplexAnalysis::summaryReport() {
       printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("%12g density of result (%d / %d nonzeros)\n", lcRsDensity,
              lcNumNNz, lcAnIterOpRsDim);
-      printValueDistribution("density ", AnIter.AnIterOp_density,
-                             AnIter.AnIterOpRsDim);
+      printValueDistribution(AnIter.AnIterOp_density, AnIter.AnIterOpRsDim);
     }
   }
   int NumInvert = 0;
@@ -615,44 +892,21 @@ void HighsSimplexAnalysis::summaryReport() {
   }
 
   printf("\nCost perturbation summary\n");
-  printValueDistribution("1 ", cost_perturbation1_distribution);
-  printValueDistribution("2 ", cost_perturbation2_distribution);
+  printValueDistribution(cost_perturbation1_distribution);
+  printValueDistribution(cost_perturbation2_distribution);
 
-  printf("\nFTRAN upper sparse summary - before\n");
-  printValueDistribution("", before_ftran_upper_sparse_density, numRow);
-
-  printf("\nFTRAN upper sparse summary - after\n");
-  printValueDistribution("", ftran_upper_sparse_density, numRow);
-
-  printf("\nFTRAN upper hyper-sparse summary - before\n");
-  printValueDistribution("", before_ftran_upper_hyper_density, numRow);
-
-  printf("\nFTRAN upper hyper-sparse summary - after\n");
-  printValueDistribution("", ftran_upper_hyper_density, numRow);
-
-  printf("\nPrimal step summary\n");
-  printValueDistribution("", primal_step_distribution);
-
-  printf("\nDual step summary\n");
-  printValueDistribution("", dual_step_distribution);
-
-  printf("\nPivot summary\n");
-  printValueDistribution("", pivot_distribution);
-
-  printf("\nNumerical trouble summary\n");
-  printValueDistribution("", numerical_trouble_distribution);
-
-  printf("\nCleanup dual change summary\n");
-  printValueDistribution("dual ", cleanup_dual_change_distribution);
-
-  printf("\nCleanup primal step summary\n");
-  printValueDistribution("", cleanup_primal_step_distribution);
-
-  printf("\nCleanup dual step summary\n");
-  printValueDistribution("", cleanup_dual_step_distribution);
-
-  printf("\nCleanup primal change summary\n");
-  printValueDistribution("", cleanup_primal_change_distribution);
+  printValueDistribution(before_ftran_upper_sparse_density, numRow);
+  printValueDistribution(ftran_upper_sparse_density, numRow);
+  printValueDistribution(before_ftran_upper_hyper_density, numRow);
+  printValueDistribution(ftran_upper_hyper_density, numRow);
+  printValueDistribution(primal_step_distribution);
+  printValueDistribution(dual_step_distribution);
+  printValueDistribution(pivot_distribution);
+  printValueDistribution(numerical_trouble_distribution);
+  printValueDistribution(cleanup_dual_change_distribution);
+  printValueDistribution(cleanup_primal_step_distribution);
+  printValueDistribution(cleanup_dual_step_distribution);
+  printValueDistribution(cleanup_primal_change_distribution);
 
   if (AnIterTraceIterDl >= 100) {
     // Possibly (usually) add a temporary record for the final
@@ -667,7 +921,7 @@ void HighsSimplexAnalysis::summaryReport() {
       AnIterTraceNumRec++;
       AnIterTraceRec& lcAnIter = AnIterTrace[AnIterTraceNumRec];
       lcAnIter.AnIterTraceIter = simplex_iteration_count;
-      lcAnIter.AnIterTraceTime = timer_.getTime();
+      lcAnIter.AnIterTraceTime = timer_->getTime();
       if (average_fraction_of_possible_minor_iterations_performed > 0) {
         lcAnIter.AnIterTraceMulti =
             average_fraction_of_possible_minor_iterations_performed;

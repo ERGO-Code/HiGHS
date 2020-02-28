@@ -7,27 +7,25 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file ipm/IpxSolution.h
+/**@file lp_data/HighsAnalysis.h
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef IPM_IPX_SOLUTION_H_
-#define IPM_IPX_SOLUTION_H_
-
-#include <stdint.h>
+#ifndef LP_DATA_HIGHS_ANALYSIS_H_
+#define LP_DATA_HIGHS_ANALYSIS_H_
 
 #include <vector>
-typedef int64_t ipxint;
 
-struct IpxSolution {
-  ipxint num_col;
-  ipxint num_row;
-  std::vector<double> ipx_col_value;
-  std::vector<double> ipx_row_value;
-  std::vector<double> ipx_col_dual;
-  std::vector<double> ipx_row_dual;
-  std::vector<ipxint> ipx_col_status;
-  std::vector<ipxint> ipx_row_status;
+#include "HConfig.h"
+#include "util/HighsTimer.h"
+
+//#ifdef HiGHSDEV
+struct HighsTimerClock {
+  HighsTimerClock(HighsTimer& timer) : timer_(timer) {}
+
+  HighsTimer& timer_;
+  std::vector<int> clock_;
 };
+//#endif
 
-#endif
+#endif /* LP_DATA_HIGHS_ANALYSIS_H_ */

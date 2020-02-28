@@ -108,6 +108,8 @@ void scaleFactorRanges(HighsModelObject& highs_model_object,
                        double& min_row_scale, double& max_row_scale);
 
 void scaleSimplexLp(HighsModelObject& highs_model);
+bool equilibrationScaleMatrix(HighsModelObject& highs_model);
+bool maxValueScaleMatrix(HighsModelObject& highs_model);
 
 // PERMUTE:
 
@@ -177,7 +179,7 @@ bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase);
 
 void flip_bound(HighsModelObject& highs_model_object, int iCol);
 
-int compute_factor(HighsModelObject& highs_model_object);
+int computeFactor(HighsModelObject& highs_model_object);
 
 // Compute the primal values (in baseValue) and set the lower and upper bounds
 // of basic variables
