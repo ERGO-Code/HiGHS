@@ -948,7 +948,7 @@ void HFactor::buildHandleRankDeficiency() {
       lc_rankDeficiency++;
     }
   }
-  assert(lc_rankDeficiency==rankDeficiency);
+  assert(lc_rankDeficiency == rankDeficiency);
   lc_rankDeficiency = 0;
   for (int i = 0; i < numRow; i++) {
     if (iwork[i] < 0) {
@@ -960,7 +960,7 @@ void HFactor::buildHandleRankDeficiency() {
       lc_rankDeficiency++;
     }
   }
-  assert(lc_rankDeficiency==rankDeficiency);
+  assert(lc_rankDeficiency == rankDeficiency);
   rp = true;
   if (rp) rp = rankDeficiency < 100;
   if (rp) {
