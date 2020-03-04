@@ -199,8 +199,7 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   Bvalue.resize(BlimitX);
 
   // Allocate space for pivot records
-  //    permute.resize(numRow);
-  permute.assign(numRow, -1);
+  permute.resize(numRow);
 
   // Allocate space for Markowitz matrices
   MCstart.resize(numRow);
@@ -407,6 +406,10 @@ void HFactor::buildSimple() {
   Uindex.clear();
   Uvalue.clear();
 
+  // Set all values of permute to -1 so that unpermuted (rank
+  // deficient) columns canm be identified
+  permute.assign(numRow, -1);
+  
   /**
    * 1. Prepare basis matrix and deal with unit columns
    */
@@ -945,6 +948,7 @@ void HFactor::buildHandleRankDeficiency() {
       lc_rankDeficiency++;
     }
   }
+  assert(lc_rankDeficiency==rankDeficiency);
   lc_rankDeficiency = 0;
   for (int i = 0; i < numRow; i++) {
     if (iwork[i] < 0) {
@@ -956,6 +960,7 @@ void HFactor::buildHandleRankDeficiency() {
       lc_rankDeficiency++;
     }
   }
+  assert(lc_rankDeficiency==rankDeficiency);
   rp = true;
   if (rp) rp = rankDeficiency < 100;
   if (rp) {
