@@ -409,7 +409,7 @@ void HFactor::buildSimple() {
   // Set all values of permute to -1 so that unpermuted (rank
   // deficient) columns canm be identified
   permute.assign(numRow, -1);
-  
+
   /**
    * 1. Prepare basis matrix and deal with unit columns
    */
