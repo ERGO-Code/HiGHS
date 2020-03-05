@@ -163,7 +163,7 @@ int Presolve::presolve(int print) {
 
   timer.updateInfo();
   //  if ((std::string)CMAKE_BUILD_TYPE == "debug")
-    timer.reportClocks();
+  timer.reportClocks();
 
   return status;
 }

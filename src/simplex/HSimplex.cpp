@@ -62,13 +62,13 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
     simplex_info.allow_primal_flips_for_dual_feasibility = true;
     // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = false;//true;  // 
+  bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
-  simplex_info.report_HFactor_clock =  useful_analysis;  // full_timing;//
+  simplex_info.report_HFactor_clock = useful_analysis;  // full_timing;//
   // Options for analysing the LP and simplex iterations
   simplex_info.analyse_lp = false;  // useful_analysis;//
   simplex_info.analyse_iterations = useful_analysis;
