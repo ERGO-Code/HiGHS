@@ -266,17 +266,10 @@ void HPrimal::solvePhase2() {
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
     }
-    // If the data are fresh from rebuild(), break out of
-    // the outer loop to see what's ocurred
-    // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_lp_status.has_fresh_rebuild) {
-#ifdef HiGHSDEV
-      if (num_flip_since_rebuild)
-        printf("Consider doing a primal rebuild if flips have occurred\n");
-#endif
-      //      if (num_flip_since_rebuild == 0)
+    // If the data are fresh from rebuild() and no flips have occurred, break
+    // out of the outer loop to see what's ocurred
+    if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
-    }
   }
 
   if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) {
