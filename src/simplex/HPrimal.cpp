@@ -272,7 +272,8 @@ void HPrimal::solvePhase2() {
     if (simplex_lp_status.has_fresh_rebuild) {
 #ifdef HiGHSDEV
       if (num_flip_since_rebuild)
-        printf("Consider doing a primal rebuild if flips have occurred\n");
+        printf("Consider doing a primal rebuild since no iterations but %d flips have occurred since the last rebuild\n",
+	       num_flip_since_rebuild);
 #endif
       //      if (num_flip_since_rebuild == 0)
       break;
