@@ -11,6 +11,7 @@
 #define STRINGUTIL_H
 
 #include <ctype.h>
+
 #include <cstring>
 #include <string>
 

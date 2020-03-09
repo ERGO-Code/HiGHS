@@ -12,12 +12,11 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "presolve/Presolve.h"
+
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 
 //#include "simplex/HFactor.h"
-#include "test/KktChStep.h"
-
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -26,6 +25,8 @@
 #include <iterator>
 #include <queue>
 #include <sstream>
+
+#include "test/KktChStep.h"
 
 using std::cout;
 using std::endl;
@@ -161,7 +162,8 @@ int Presolve::presolve(int print) {
   timer.recordFinish(RESIZE_MATRIX);
 
   timer.updateInfo();
-  if ((std::string)CMAKE_BUILD_TYPE == "debug") timer.reportClocks();
+  //  if ((std::string)CMAKE_BUILD_TYPE == "debug")
+  timer.reportClocks();
 
   return status;
 }

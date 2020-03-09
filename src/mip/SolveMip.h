@@ -10,21 +10,26 @@
 #ifndef MIP_SOLVEMIP_H_
 #define MIP_SOLVEMIP_H_
 
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <stack>
+#include <vector>
 
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsStatus.h"
+#include "lp_data/HConst.h"
 
 struct Node {
   int id;
   int parent_id;
+  double parent_objective;
   int level;
 
   Node();
-  Node(int parent, int index, int depth)
-      : id(index), parent_id(parent), level(depth) {
+  Node(int parent, double objective, int index, int depth)
+      : id(index),
+        parent_id(parent),
+        parent_objective(objective),
+        level(depth) {
     left_child = nullptr;
     right_child = nullptr;
     branch_col = -1;
@@ -71,6 +76,15 @@ class Tree {
   const std::vector<double>& getBestSolution() const { return best_solution_; }
 
   double getBestObjective() { return best_objective_; }
+  double getBestBound(int& best_node);
+  int getNumIntegerSolutions() { return num_integer_solutions; }
+  int getNumNodesFormed() {
+    return 1 + num_nodes;
+  }  // Root node plus nodes formed by branching
+  int getNumNodesLeft() { return (int)nodes_.size(); }
+  void setMipReportLevel(const int mip_report_level_) {
+    mip_report_level = mip_report_level_;
+  }
 
  private:
   std::vector<std::reference_wrapper<Node> > nodes_;
@@ -80,6 +94,8 @@ class Tree {
   NodeIndex chooseBranchingVariable(const Node& node);
 
   int num_nodes = 0;
+  int num_integer_solutions = 0;
+  int mip_report_level = 0;
 };
 
 #endif

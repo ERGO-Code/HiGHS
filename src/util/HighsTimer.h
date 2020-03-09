@@ -299,20 +299,22 @@ class HighsTimer {
    */
   void report(const char* grep_stamp,  //!< Character string used to extract
                                        //!< output using grep
-              std::vector<int>& clock_list  //!< List of indices to report
+              std::vector<int>& clock_list,  //!< List of indices to report
+              double ideal_sum_time = 0  //!< Ideal value for times to sum to
   ) {
     double tl_per_cent_report = 1.0;
-    report_tl(grep_stamp, clock_list, tl_per_cent_report);
+    report_tl(grep_stamp, clock_list, ideal_sum_time, tl_per_cent_report);
   }
 
   void report_tl(
       const char*
           grep_stamp,  //!< Character string used to extract output using grep
       std::vector<int>& clock_list,  //!< List of indices to report
-      double tl_per_cent_report  //!< Lower bound on percentage of total time
-                                 //!< before an individual clock is reported
+      double ideal_sum_time = 0,     //!< Ideal value for times to sum to
+      double tl_per_cent_report =
+          0  //!< Lower bound on percentage of total time
+             //!< before an individual clock is reported
   ) {
-    const bool report_for_excel = false;
     int num_clock_list_entries = clock_list.size();
 
     // Check validity of the clock list and check no clocks are still running
@@ -348,11 +350,16 @@ class HighsTimer {
     // clocks
     double current_run_highs_time = readRunHighsClock();
     double current_run_highs_tick = current_run_highs_time / tick2sec;
+    double ideal_sum_clock_ticks = ideal_sum_time / tick2sec;
     double sum_clock_ticks = 0;
-    for (int passNum = 0; passNum < 2; passNum++) {
+    for (int passNum = 0; passNum < 3; passNum++) {
+      // Don't write out if there's no ideal time
+      if (passNum == 1 && ideal_sum_time <= 0) continue;
       double suPerMille = 0;
       if (passNum == 0) {
         printf("%s-total ", grep_stamp);
+      } else if (passNum == 1) {
+        printf("%s-ideal ", grep_stamp);
       } else {
         printf("%s-local ", grep_stamp);
       }
@@ -361,6 +368,8 @@ class HighsTimer {
         double perMille;
         if (passNum == 0) {
           perMille = 1000.0 * clock_ticks[i_clock] / current_run_highs_tick;
+        } else if (passNum == 1) {
+          perMille = 1000.0 * clock_ticks[i_clock] / ideal_sum_clock_ticks;
         } else {
           perMille = 1000.0 * clock_ticks[i_clock] / sum_clock_ticks;
         }
@@ -381,10 +390,9 @@ class HighsTimer {
     }
 
     // Report one line per clock, the time, number of calls and time per call
-    printf(
-        "%s-time  Operation         :    Time                     :    Calls   "
-        "Time/Call\n",
-        grep_stamp);
+    printf("%s-time  Operation         :    Time     ( Total", grep_stamp);
+    if (ideal_sum_time > 0) printf(";  Ideal");
+    printf(";  Local):    Calls  Time/Call\n");
     // Convert approximate seconds
     double sum_tick = 0;
     double sum_time = 0;
@@ -398,44 +406,30 @@ class HighsTimer {
       if (clock_num_call[i_clock] > 0) {
         time_per_call = time / clock_num_call[i_clock];
         if (percent_sum_clock_ticks >= tl_per_cent_report) {
-          printf("%s-time  %-18s: %11.4e (%5.1f%%; %5.1f%%):%9d %11.4e\n",
-                 grep_stamp, clock_names[i_clock].c_str(), time,
-                 percent_sum_clock_ticks, percent_run_highs,
+          printf("%s-time  %-18s: %11.4e (%5.1f%%", grep_stamp,
+                 clock_names[i_clock].c_str(), time, percent_run_highs);
+          if (ideal_sum_time > 0) {
+            double percent_ideal = 100.0 * time / ideal_sum_time;
+            printf("; %5.1f%%", percent_ideal);
+          }
+          printf("; %5.1f%%):%9d %11.4e\n", percent_sum_clock_ticks,
                  clock_num_call[i_clock], time_per_call);
         }
       }
       sum_time += time;
       sum_tick += tick;
     }
-    double percent_run_highs = 100.0 * sum_tick / current_run_highs_tick;
     double percent_sum_clock_ticks = 100.0;
-    printf("%s-time  SUM               : %11.4e (%5.1f%%; %5.1f%%)\n", grep_stamp,
-           sum_time, percent_sum_clock_ticks, percent_run_highs);
+    double percent_run_highs = 100.0 * sum_tick / current_run_highs_tick;
+    printf("%s-time  SUM               : %11.4e (%5.1f%%", grep_stamp, sum_time,
+           percent_run_highs);
+    if (ideal_sum_time > 0) {
+      double percent_ideal = 100.0 * sum_time / ideal_sum_time;
+      printf("; %5.1f%%", percent_ideal);
+    }
+    printf("; %5.1f%%)\n", percent_sum_clock_ticks);
     printf("%s-time  TOTAL             : %11.4e\n", grep_stamp,
            tick2sec * current_run_highs_tick);
-    if (report_for_excel) {
-      // Repeat reporting for Excel
-      printf("grep_excel-profile-name");
-      for (int i = 0; i < num_clock_list_entries; i++) {
-        int i_clock = clock_list[i];
-        printf(",%s", clock_names[i_clock].c_str());
-      }
-      printf(",SumTime");
-      printf(",TotalTime\n");
-      printf("grep_excel-profile-time");
-      for (int i = 0; i < num_clock_list_entries; i++) {
-        int i_clock = clock_list[i];
-        printf(",%e", tick2sec * clock_ticks[i_clock]);
-      }
-      printf(",%e", sum_time);
-      printf(",%e\n", tick2sec * current_run_highs_tick);
-      printf("grep_excel-profile-calls");
-      for (int i = 0; i < num_clock_list_entries; i++) {
-        int i_clock = clock_list[i];
-        printf(",%d", clock_num_call[i_clock]);
-      }
-      printf("\n");
-    }
   }
 
   /**
@@ -484,7 +478,7 @@ class HighsTimer {
   std::vector<std::string> clock_ch3_names;
   double tick2sec = 3.6e-10;
   // The index of the RunHighsClock - should always be 0
-  int run_highs_clock;  
+  int run_highs_clock;
   // Fundamental Highs clocks
   int presolve_clock;
   int solve_clock;
@@ -493,7 +487,6 @@ class HighsTimer {
   double run_highs_clock_time = 0;
   // HiGHS run start time - used to compute HiGHS run time
   double run_highs_clock_start_time = initial_clock_start;
-
 };
 
 #endif /* UTIL_HIGHSTIMER_H_ */

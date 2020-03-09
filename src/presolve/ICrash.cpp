@@ -214,13 +214,12 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       }
       break;
     }
-    case ICrashStrategy::kUpdatePenalty:{
+    case ICrashStrategy::kUpdatePenalty: {
       // Update mu every third iteration, otherwise do nothing.
-      if (iteration % 3 == 0)
-        idata.mu = 0.1 * idata.mu;
+      if (iteration % 3 == 0) idata.mu = 0.1 * idata.mu;
       break;
     }
-    case ICrashStrategy::kUpdateAdmm:{
+    case ICrashStrategy::kUpdateAdmm: {
       // Update mu every third iteration, otherwise update lambda.
       if (iteration % 3 == 0) {
         idata.mu = 0.1 * idata.mu;
@@ -234,8 +233,7 @@ void updateParameters(Quadratic& idata, const ICrashOptions& options,
       break;
     }
   }
-                      }               
-    
+}
 
 void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
   bool minor_iteration_details = false;

@@ -41,7 +41,7 @@ if (OSI_FOUND AND BUILD_TESTING)
 	target_link_libraries(osi_unit_tests OsiHighs Catch ${OSITEST_LIBRARIES} CoinUtils)
 	target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS} ${HIGHS_SOURCE_DIR}/src/interfaces)
 	target_compile_options(osi_unit_tests PUBLIC ${OSITEST_CFLAGS_OTHER})
-    endif (OSITEST_FOUND AND BUILD_TESTING)
+    endif (OSITEST_FOUND)
 endif()
 
 if(FORTRAN_FOUND)

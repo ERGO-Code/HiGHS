@@ -34,7 +34,7 @@ enum class FilereaderRetcode {
   OK = 0,
   FILENOTFOUND = 1,
   PARSERERROR = 2,
-    NOT_IMPLEMENTED = 3
+  NOT_IMPLEMENTED = 3
 };
 
 class Filereader {
@@ -44,8 +44,8 @@ class Filereader {
   virtual FilereaderRetcode readModelFromFile(const char* filename,
                                               HighsModelBuilder& model) = 0;
   virtual HighsStatus writeModelToFile(const HighsOptions& options,
-				       const char* filename,
-				       HighsLp& model) = 0;
+                                       const char* filename,
+                                       HighsLp& model) = 0;
   static Filereader* getFilereader(const char* filename);
 
   virtual ~Filereader(){};

@@ -38,11 +38,10 @@ void HDualRHS::setup() {
   workEdWtFull.resize(numTot);
   partNum = 0;
   partSwitch = 0;
+  analysis = &workHMO.simplex_analysis_;
 }
 
 void HDualRHS::chooseNormal(int* chIndex) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Moved the following to the top to avoid starting the clock for a trivial
   // call. NB Must still call int to maintain sequence of random numbers
   // for code reproducibility!! Never mind if we're not timing the random number
@@ -55,10 +54,10 @@ void HDualRHS::chooseNormal(int* chIndex) {
 
   // Since chooseNormal calls itself, only start the clock if it's not
   // currently running
-  bool keepTimerRunning =
-      timer.clock_start[simplex_info.clock_[ChuzrDualClock]] < 0;
-  if (!keepTimerRunning) {
-    timer.start(simplex_info.clock_[ChuzrDualClock]);
+  bool keep_timer_running = analysis->simplexTimerRunning(ChuzrDualClock);
+  //      timer.clock_start[simplex_info.clock_[ChuzrDualClock]] < 0;
+  if (!keep_timer_running) {
+    analysis->simplexTimerStart(ChuzrDualClock);
   }
 
   if (workCount < 0) {
@@ -74,7 +73,7 @@ void HDualRHS::chooseNormal(int* chIndex) {
         if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
-	  //	  printf("Dense: Row %4d weight = %g\n", iRow, myWeight);
+          //	  printf("Dense: Row %4d weight = %g\n", iRow, myWeight);
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;
@@ -104,11 +103,11 @@ void HDualRHS::chooseNormal(int* chIndex) {
         if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
           const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
-	  /*
-	  const double myMerit = myInfeas / myWeight;
-	  printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit = %11.4g\n",
-		 iRow, myInfeas, myWeight, myMerit);
-	  */
+          /*
+          const double myMerit = myInfeas / myWeight;
+          printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit =
+          %11.4g\n", iRow, myInfeas, myWeight, myMerit);
+          */
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
             bestIndex = iRow;
@@ -131,15 +130,11 @@ void HDualRHS::chooseNormal(int* chIndex) {
   }
   // Since chooseNormal calls itself, only stop the clock if it's not currently
   // running
-  if (!keepTimerRunning) {
-    timer.stop(simplex_info.clock_[ChuzrDualClock]);
-  }
+  if (!keep_timer_running) analysis->simplexTimerStop(ChuzrDualClock);
 }
 
 void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[ChuzrDualClock]);
+  analysis->simplexTimerStart(ChuzrDualClock);
 
   for (int i = 0; i < chLimit; i++) chIndex[i] = -1;
 
@@ -154,28 +149,28 @@ void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
     const int numRow = -workCount;
     int randomStart = random % numRow;
     double cutoffMerit = 0;
-    // Now 
+    // Now
     for (int section = 0; section < 2; section++) {
       const int start = (section == 0) ? randomStart : 0;
       const int end = (section == 0) ? numRow : randomStart;
       for (int iRow = start; iRow < end; iRow++) {
-	// Was
-	//    for (int iRow = 0; iRow < numRow; iRow++) {
-	// Continue
-	if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
-	  const double myInfeas = work_infeasibility[iRow];
-	  const double myWeight = workEdWt[iRow];
-	  if (cutoffMerit * myWeight < myInfeas) {
-	    // Save
-	    setP.push_back(make_pair(-myInfeas / myWeight, iRow));
-	    // Shrink
-	    if (setP.size() >= chooseCHECK) {
-	      sort(setP.begin(), setP.end());
-	      setP.resize(chLimit);
-	      cutoffMerit = -setP.back().first;
-	    }
-	  }
-	}
+        // Was
+        //    for (int iRow = 0; iRow < numRow; iRow++) {
+        // Continue
+        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+          const double myInfeas = work_infeasibility[iRow];
+          const double myWeight = workEdWt[iRow];
+          if (cutoffMerit * myWeight < myInfeas) {
+            // Save
+            setP.push_back(make_pair(-myInfeas / myWeight, iRow));
+            // Shrink
+            if (setP.size() >= chooseCHECK) {
+              sort(setP.begin(), setP.end());
+              setP.resize(chLimit);
+              cutoffMerit = -setP.back().first;
+            }
+          }
+        }
       }
     }
   } else {
@@ -188,33 +183,33 @@ void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
       randomStart = 0;
     }
     double cutoffMerit = 0;
-    // Now 
+    // Now
     for (int section = 0; section < 2; section++) {
       const int start = (section == 0) ? randomStart : 0;
       const int end = (section == 0) ? workCount : randomStart;
       for (int i = start; i < end; i++) {
-	// Was
-	//    for (int i = 0; i < workCount; i++) {
-	// Continue
-	int iRow = workIndex[i];
-	if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
-	  const double myInfeas = work_infeasibility[iRow];
-	  const double myWeight = workEdWt[iRow];
-	  /*
-	  const double myMerit = myInfeas / myWeight;
-	  printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit = %11.4g\n",
-		 iRow, myInfeas, myWeight, myMerit);
-	  */	  
-	  if (cutoffMerit * myWeight < myInfeas) {
-	    // Save
-	    setP.push_back(make_pair(-myInfeas / myWeight, iRow));
-	    // Shrink
-	    if (setP.size() >= chooseCHECK) {
-	      sort(setP.begin(), setP.end());
-	      setP.resize(chLimit);
-	      cutoffMerit = -setP.back().first;
-	    }
-	  }
+        // Was
+        //    for (int i = 0; i < workCount; i++) {
+        // Continue
+        int iRow = workIndex[i];
+        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+          const double myInfeas = work_infeasibility[iRow];
+          const double myWeight = workEdWt[iRow];
+          /*
+          const double myMerit = myInfeas / myWeight;
+          printf("CHUZR: iRow = %6d; Infeas = %11.4g; Weight = %11.4g; Merit =
+          %11.4g\n", iRow, myInfeas, myWeight, myMerit);
+          */
+          if (cutoffMerit * myWeight < myInfeas) {
+            // Save
+            setP.push_back(make_pair(-myInfeas / myWeight, iRow));
+            // Shrink
+            if (setP.size() >= chooseCHECK) {
+              sort(setP.begin(), setP.end());
+              setP.resize(chLimit);
+              cutoffMerit = -setP.back().first;
+            }
+          }
         }
       }
     }
@@ -225,10 +220,11 @@ void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
   if ((int)(setP.size()) > chLimit) setP.resize(chLimit);
   *chCount = setP.size();
   for (unsigned i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;
-  timer.stop(simplex_info.clock_[ChuzrDualClock]);
+  analysis->simplexTimerStop(ChuzrDualClock);
 }
 
-void HDualRHS::chooseMultiHyperGraphAuto(int* chIndex, int* chCount, int chLimit) {
+void HDualRHS::chooseMultiHyperGraphAuto(int* chIndex, int* chCount,
+                                         int chLimit) {
   // Automatically decide to use partition or not
   if (partSwitch)
     chooseMultiHyperGraphPart(chIndex, chCount, chLimit);
@@ -236,16 +232,15 @@ void HDualRHS::chooseMultiHyperGraphAuto(int* chIndex, int* chCount, int chLimit
     chooseMultiGlobal(chIndex, chCount, chLimit);
 }
 
-void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount, int chLimit) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[ChuzrDualClock]);
+void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount,
+                                         int chLimit) {
+  analysis->simplexTimerStart(ChuzrDualClock);
 
   // Force to use partition method, unless doesn't exist
   if (partNum != chLimit) {
     chooseMultiGlobal(chIndex, chCount, chLimit);
     partSwitch = 0;
-    timer.stop(simplex_info.clock_[ChuzrDualClock]);
+    analysis->simplexTimerStop(ChuzrDualClock);
     return;
   }
 
@@ -285,7 +280,7 @@ void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount, int chLimit
   } else {
     // SPARSE mode
     if (workCount == 0) {
-      timer.stop(simplex_info.clock_[ChuzrDualClock]);
+      analysis->simplexTimerStop(ChuzrDualClock);
       return;
     }
 
@@ -317,13 +312,11 @@ void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount, int chLimit
     *chCount = count;
   }
 
-  timer.stop(simplex_info.clock_[ChuzrDualClock]);
+  analysis->simplexTimerStop(ChuzrDualClock);
 }
 
 void HDualRHS::updatePrimal(HVector* column, double theta) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStart(UpdatePrimalClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
@@ -332,7 +325,8 @@ void HDualRHS::updatePrimal(HVector* column, double theta) {
 
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
-  const double Tp = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
+  const double Tp =
+      workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
 
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
@@ -345,11 +339,10 @@ void HDualRHS::updatePrimal(HVector* column, double theta) {
       const double more = value - baseUpper[iRow];
       double infeas = less > Tp ? less : (more > Tp ? more : 0);
       //    work_infeasibility[iRow] = infeas * infeas;
-      if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
-	work_infeasibility[iRow] = infeas * infeas;
+      if (workHMO.simplex_info_.store_squared_primal_infeasibility)
+        work_infeasibility[iRow] = infeas * infeas;
       else
-	work_infeasibility[iRow] = fabs(infeas);
-	
+        work_infeasibility[iRow] = fabs(infeas);
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
@@ -359,22 +352,21 @@ void HDualRHS::updatePrimal(HVector* column, double theta) {
       const double less = baseLower[iRow] - value;
       const double more = value - baseUpper[iRow];
       double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
-	work_infeasibility[iRow] = infeas * infeas;
+      if (workHMO.simplex_info_.store_squared_primal_infeasibility)
+        work_infeasibility[iRow] = infeas * infeas;
       else
-	work_infeasibility[iRow] = fabs(infeas);
+        work_infeasibility[iRow] = fabs(infeas);
     }
   }
 
-  timer.stop(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
 // Update the DSE weights
-void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pivotal_edge_weight,
-					    double Kai, double* dseArray) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[DseUpdateWeightClock]);
+void HDualRHS::updateWeightDualSteepestEdge(
+    HVector* column, const double new_pivotal_edge_weight, double Kai,
+    double* dseArray) {
+  analysis->simplexTimerStart(DseUpdateWeightClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
@@ -385,24 +377,27 @@ void HDualRHS::updateWeightDualSteepestEdge(HVector* column, const double new_pi
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       const double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
-      if (workEdWt[iRow] < min_dual_steepest_edge_weight) workEdWt[iRow] = min_dual_steepest_edge_weight;
+      workEdWt[iRow] +=
+          aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
+      if (workEdWt[iRow] < min_dual_steepest_edge_weight)
+        workEdWt[iRow] = min_dual_steepest_edge_weight;
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       const int iRow = columnIndex[i];
       const double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] += aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
-      if (workEdWt[iRow] < min_dual_steepest_edge_weight) workEdWt[iRow] = min_dual_steepest_edge_weight;
+      workEdWt[iRow] +=
+          aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
+      if (workEdWt[iRow] < min_dual_steepest_edge_weight)
+        workEdWt[iRow] = min_dual_steepest_edge_weight;
     }
   }
-  timer.stop(simplex_info.clock_[DseUpdateWeightClock]);
+  analysis->simplexTimerStop(DseUpdateWeightClock);
 }
 // Update the Devex weights
-void HDualRHS::updateWeightDevex(HVector* column, const double new_pivotal_edge_weight) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[DevexUpdateWeightClock]);
+void HDualRHS::updateWeightDevex(HVector* column,
+                                 const double new_pivotal_edge_weight) {
+  analysis->simplexTimerStart(DevexUpdateWeightClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
@@ -413,16 +408,18 @@ void HDualRHS::updateWeightDevex(HVector* column, const double new_pivotal_edge_
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] = max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
+      workEdWt[iRow] =
+          max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       int iRow = columnIndex[i];
       double aa_iRow = columnArray[iRow];
-      workEdWt[iRow] = max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
+      workEdWt[iRow] =
+          max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
     }
   }
-  timer.stop(simplex_info.clock_[DevexUpdateWeightClock]);
+  analysis->simplexTimerStop(DevexUpdateWeightClock);
 }
 
 void HDualRHS::updatePivots(int iRow, double value) {
@@ -432,7 +429,8 @@ void HDualRHS::updatePivots(int iRow, double value) {
   //
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
-  const double Tp = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
+  const double Tp =
+      workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   baseValue[iRow] = value;
   double pivotInfeas = 0;
@@ -441,22 +439,20 @@ void HDualRHS::updatePivots(int iRow, double value) {
   if (baseValue[iRow] > baseUpper[iRow] + Tp)
     pivotInfeas = baseValue[iRow] - baseUpper[iRow];
   // work_infeasibility[iRow] = pivotInfeas * pivotInfeas;
-  if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
+  if (workHMO.simplex_info_.store_squared_primal_infeasibility)
     work_infeasibility[iRow] = pivotInfeas * pivotInfeas;
   else
     work_infeasibility[iRow] = fabs(pivotInfeas);
 }
 
 void HDualRHS::updateInfeasList(HVector* column) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   const int columnCount = column->count;
   const int* columnIndex = &column->index[0];
 
   // DENSE mode: disabled
   if (workCount < 0) return;
 
-  timer.start(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStart(UpdatePrimalClock);
 
   if (workCutoff <= 0) {
     // The regular sparse way
@@ -482,7 +478,7 @@ void HDualRHS::updateInfeasList(HVector* column) {
     }
   }
 
-  timer.stop(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
 void HDualRHS::createArrayOfPrimalInfeasibilities() {
@@ -490,14 +486,15 @@ void HDualRHS::createArrayOfPrimalInfeasibilities() {
   const double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
-  const double Tp = workHMO.scaled_solution_params_.primal_feasibility_tolerance;
+  const double Tp =
+      workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   for (int i = 0; i < numRow; i++) {
     const double value = baseValue[i];
     const double less = baseLower[i] - value;
     const double more = value - baseUpper[i];
     double infeas = less > Tp ? less : (more > Tp ? more : 0);
     //    work_infeasibility[i] = infeas * infeas;
-    if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
+    if (workHMO.simplex_info_.store_squared_primal_infeasibility)
       work_infeasibility[i] = infeas * infeas;
     else
       work_infeasibility[i] = fabs(infeas);

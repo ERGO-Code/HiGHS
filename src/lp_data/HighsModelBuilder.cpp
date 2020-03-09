@@ -10,6 +10,7 @@
 #include "HighsModelBuilder.h"
 
 #include <math.h>
+
 #include "lp_data/HConst.h"
 
 HighsModelBuilder::~HighsModelBuilder() {

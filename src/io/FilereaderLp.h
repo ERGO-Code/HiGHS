@@ -99,8 +99,8 @@ class LpToken {
  public:
   LpTokenType type;
   virtual void print() {
-    HighsLogMessage(stdout, HighsMessageType::INFO,
-		    "%s ", LpTokenTypeString[type]);
+    HighsLogMessage(stdout, HighsMessageType::INFO, "%s ",
+                    LpTokenTypeString[type]);
   }
 
   virtual ~LpToken() { ; }
@@ -232,7 +232,7 @@ class FilereaderLp : public Filereader {
   FilereaderRetcode readModelFromFile(const char* filename,
                                       HighsModelBuilder& model);
   HighsStatus writeModelToFile(const HighsOptions& options,
-			       const char* filename, HighsLp& model);
+                               const char* filename, HighsLp& model);
   FilereaderLp();
   ~FilereaderLp();
 

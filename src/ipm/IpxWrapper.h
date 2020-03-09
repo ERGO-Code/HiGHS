@@ -16,8 +16,8 @@
 
 #include <algorithm>
 
-#include "ipm/IpxStatus.h"
 #include "ipm/IpxSolution.h"
+#include "ipm/IpxStatus.h"
 #include "ipm/ipx/include/ipx_status.h"
 #include "ipm/ipx/src/lp_solver.h"
 #include "lp_data/HConst.h"
@@ -119,11 +119,12 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   // Set starting points of original and newly introduced columns.
   Ap[0] = 0;
   for (int col = 0; col < lp.numCol_; col++) {
-    Ap[col+1] = Ap[col] + sizes[col];
-    //    printf("Struc Ap[%2d] = %2d; Al[%2d] = %2d\n", col, (int)Ap[col], col, (int)sizes[col]);
+    Ap[col + 1] = Ap[col] + sizes[col];
+    //    printf("Struc Ap[%2d] = %2d; Al[%2d] = %2d\n", col, (int)Ap[col], col,
+    //    (int)sizes[col]);
   }
   for (int col = lp.numCol_; col < (int)num_col; col++) {
-    Ap[col+1] = Ap[col] + 1;
+    Ap[col + 1] = Ap[col] + 1;
     //    printf("Slack Ap[%2d] = %2d\n", col, (int)Ap[col]);
   }
   //  printf("Fictn Ap[%2d] = %2d\n", (int)num_col, (int)Ap[num_col]);
@@ -164,16 +165,17 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   obj = lp.colCost_;
   obj.insert(obj.end(), num_slack, 0);
 #ifdef HiGHSDEV
-  printf("IPX model has %d columns, %d rows and %d nonzeros\n", (int)num_col, (int)num_row, (int)Ap[num_col]);
-#endif  
+  printf("IPX model has %d columns, %d rows and %d nonzeros\n", (int)num_col,
+         (int)num_row, (int)Ap[num_col]);
+#endif
   /*
   for (int col = 0; col < num_col; col++)
-    printf("Col %2d: [%11.4g, %11.4g] Cost = %11.4g; Start = %d\n", col, col_lb[col], col_ub[col], obj[col], (int)Ap[col]);
-  for (int row = 0; row < num_row; row++) 
-    printf("Row %2d: RHS = %11.4g; Type = %d\n", row, rhs[row], constraint_type[row]);
-  for (int col = 0; col < num_col; col++) {
-    for (int el = Ap[col]; el < Ap[col+1]; el++) {
-      printf("El %2d: [%2d, %11.4g]\n", el, (int)Ai[el], Ax[el]);
+    printf("Col %2d: [%11.4g, %11.4g] Cost = %11.4g; Start = %d\n", col,
+  col_lb[col], col_ub[col], obj[col], (int)Ap[col]); for (int row = 0; row <
+  num_row; row++) printf("Row %2d: RHS = %11.4g; Type = %d\n", row, rhs[row],
+  constraint_type[row]); for (int col = 0; col < num_col; col++) { for (int el =
+  Ap[col]; el < Ap[col+1]; el++) { printf("El %2d: [%2d, %11.4g]\n", el,
+  (int)Ai[el], Ax[el]);
     }
   }
   */
@@ -182,11 +184,12 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 }
 
 HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
-		       HighsBasis& highs_basis, HighsSolution& highs_solution,
-		       HighsModelStatus& unscaled_model_status,
-		       HighsSolutionParams& unscaled_solution_params) {
+                       HighsBasis& highs_basis, HighsSolution& highs_solution,
+                       HighsModelStatus& unscaled_model_status,
+                       HighsSolutionParams& unscaled_solution_params) {
   int debug = 0;
-  resetModelStatusAndSolutionParams(unscaled_model_status, unscaled_solution_params, options);
+  resetModelStatusAndSolutionParams(unscaled_model_status,
+                                    unscaled_solution_params, options);
 #ifdef CMAKE_BUILD_TYPE
   debug = 1;
 #endif
@@ -203,8 +206,10 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
   // Set IPX parameters from options
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
-  parameters.ipm_feasibility_tol = unscaled_solution_params.primal_feasibility_tolerance;
-  parameters.ipm_optimality_tol = unscaled_solution_params.dual_feasibility_tolerance;
+  parameters.ipm_feasibility_tol =
+      unscaled_solution_params.primal_feasibility_tolerance;
+  parameters.ipm_optimality_tol =
+      unscaled_solution_params.dual_feasibility_tolerance;
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
 
@@ -238,7 +243,8 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
   // Struct ipx_info defined in ipx/include/ipx_info.h
 #ifdef HiGHSDEV
   int int_status_ipm = ipx_info.status_ipm;
-  if (ipx_info.status_ipm != 1) printf("IPX Solve: status_ipm = %d\n", int_status_ipm);
+  if (ipx_info.status_ipm != 1)
+    printf("IPX Solve: status_ipm = %d\n", int_status_ipm);
 #endif
 
   // Get the interior solution (available if IPM was started).
@@ -257,15 +263,17 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
                           &zu[0]);
 
 #ifdef HiGHSDEV
-    int int_status_crossover = ipx_info.status_crossover;
-    if (int_status_crossover != 1)
-      printf("IPX GetInteriorSolution: status_crossover = %d\n", int_status_crossover);
+  int int_status_crossover = ipx_info.status_crossover;
+  if (int_status_crossover != 1)
+    printf("IPX GetInteriorSolution: status_crossover = %d\n",
+           int_status_crossover);
 #endif
 
   if (ipx_info.status_crossover == IPX_STATUS_optimal ||
       ipx_info.status_crossover == IPX_STATUS_imprecise) {
     if (ipx_info.status_crossover == IPX_STATUS_imprecise) {
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING, 
+      HighsLogMessage(
+          options.logfile, HighsMessageType::WARNING,
           "Ipx Crossover status imprecise: at least one of primal and dual "
           "infeasibilities of basic solution is not within parameters pfeastol "
           "and dfeastol. Simplex clean up will be required");
@@ -286,33 +294,32 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
     ipx_solution.ipx_row_status.resize(num_row);
     ipx_solution.ipx_col_status.resize(num_col);
 
-    lps.GetBasicSolution(&ipx_solution.ipx_col_value[0],
-			 &ipx_solution.ipx_row_value[0],
-			 &ipx_solution.ipx_row_dual[0],
-			 &ipx_solution.ipx_col_dual[0],
-			 &ipx_solution.ipx_row_status[0],
-			 &ipx_solution.ipx_col_status[0]);
-    
+    lps.GetBasicSolution(
+        &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
+        &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
+        &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
+
 #ifdef HiGHSDEV
     int int_status_crossover = ipx_info.status_crossover;
     if (int_status_crossover != 1)
-      printf("IPX GetBasicSolution: status_crossover = %d\n", int_status_crossover);
+      printf("IPX GetBasicSolution: status_crossover = %d\n",
+             int_status_crossover);
 #endif
 
     // Convert the IPX basic solution to a HiGHS basic solution
-    ipxToHighsBasicSolution(options.logfile,
-			    lp, rhs, constraint_type, ipx_solution, highs_basis, highs_solution);
+    ipxToHighsBasicSolution(options.logfile, lp, rhs, constraint_type,
+                            ipx_solution, highs_basis, highs_solution);
 
-    
-    // Set optimal 
+    // Set optimal
 #ifdef HiGHSDEV
-    printf("IPX: May be setting unscaled model status erroneously to OPTIMAL\n");
+    printf(
+        "IPX: May be setting unscaled model status erroneously to OPTIMAL\n");
 #endif
     unscaled_model_status = HighsModelStatus::OPTIMAL;
     unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
     unscaled_solution_params.objective_function_value = ipx_info.objval;
-    getPrimalDualInfeasibilitiesFromHighsBasicSolution(lp, highs_basis, highs_solution,
-						       unscaled_solution_params);
+    getPrimalDualInfeasibilitiesFromHighsBasicSolution(
+        lp, highs_basis, highs_solution, unscaled_solution_params);
   }
   //  return IpxStatus::OK;
   return HighsStatus::OK;

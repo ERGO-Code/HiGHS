@@ -12,10 +12,11 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HVector.h"
-#include "lp_data/HConst.h"
 
 #include <cassert>
 #include <cmath>
+
+#include "lp_data/HConst.h"
 #include "stdio.h"  //Just for temporary printf
 
 void HVector::setup(int size_) {
@@ -32,7 +33,6 @@ void HVector::setup(int size_) {
   packCount = 0;
   packIndex.resize(size);
   packValue.resize(size);
-
 }
 
 void HVector::clear() {
@@ -73,7 +73,6 @@ void HVector::clear() {
 
   // Initialise the next value
   next = 0;
-
 }
 
 void HVector::tight() {

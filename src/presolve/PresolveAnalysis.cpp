@@ -37,7 +37,8 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
   rules.push_back(PresolveRuleInfo(EMPTY_COL, "Empty col", "EMC"));
   rules.push_back(PresolveRuleInfo(MATRIX_COPY, "Initialize matrix", "INM"));
   rules.push_back(PresolveRuleInfo(RESIZE_MATRIX, "Resize matrix", "RSM"));
-  rules.push_back(PresolveRuleInfo(TOTAL_PRESOLVE_TIME, "Total presolve time", "TPT"));
+  rules.push_back(
+      PresolveRuleInfo(TOTAL_PRESOLVE_TIME, "Total presolve time", "TPT"));
 
   // Plus one for the total resize time.
   assert((int)rules.size() == PRESOLVE_RULES_COUNT);

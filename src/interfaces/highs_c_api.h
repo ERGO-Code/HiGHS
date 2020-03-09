@@ -61,15 +61,15 @@ int Highs_run(void* highs  //!< HiGHS object reference
 /*
  * @brief
  */
-  int Highs_readModel(void* highs,          //!< HiGHS object reference
-		      const char* filename  //!< filename
+int Highs_readModel(void* highs,          //!< HiGHS object reference
+                    const char* filename  //!< filename
 );
 
 /*
  * @brief
  */
 int Highs_writeModel(void* highs,          //!< HiGHS object reference
-		     const char* filename  //!< filename
+                     const char* filename  //!< filename
 );
 
 /*
@@ -94,9 +94,9 @@ int Highs_passLp(
 /*
  * @brief
  */
-int Highs_setOptionValue(void* highs,         //!< HiGHS object reference
-                         const char* option,  //!< name of the option
-                         const char* value    //!< new value of option
+int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              const char* value    //!< new value of option
 );
 
 /*
@@ -123,18 +123,18 @@ void Highs_getBasis(
 /*
  * @brief
  */
-  int Highs_getIntHighsInfoValue(void* highs,    //!< HiGHS object reference
-			       const char* info, //!< The info name
-			       int* value        //!< The info value
-			       );
+int Highs_getIntHighsInfoValue(void* highs,       //!< HiGHS object reference
+                               const char* info,  //!< The info name
+                               int* value         //!< The info value
+);
 
 /*
  * @brief
  */
-  int Highs_getDoubleHighsInfoValue(void* highs,      //!< HiGHS object reference
-				    const char* info, //!< The info name
-				    double* value     //!< The info value
-				    );
+int Highs_getDoubleHighsInfoValue(void* highs,       //!< HiGHS object reference
+                                  const char* info,  //!< The info name
+                                  double* value      //!< The info value
+);
 
 /**
  * @brief Adds a row to the model
@@ -511,8 +511,9 @@ int Highs_getNumNz(void* highs  //!< HiGHS object reference
 /**
  * @brief Returns the status of the (scaled) model
  */
-int Highs_getModelStatus(void* highs,           //!< HiGHS object reference
-			 const int scaled_model //!< 0 (nonzero) for status of (scaled) model
+int Highs_getModelStatus(
+    void* highs,            //!< HiGHS object reference
+    const int scaled_model  //!< 0 (nonzero) for status of (scaled) model
 );
 
 /**

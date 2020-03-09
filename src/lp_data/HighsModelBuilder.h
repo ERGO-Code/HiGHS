@@ -11,6 +11,7 @@
 #define HIGHS_MODELBUILDER_H
 
 #include <string.h>
+
 #include <list>
 #include <map>
 

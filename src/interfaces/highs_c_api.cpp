@@ -8,6 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "highs_c_api.h"
+
 #include "Highs.h"
 
 int Highs_call(int numcol, int numrow, int numnz, double* colcost,
@@ -19,8 +20,8 @@ int Highs_call(int numcol, int numrow, int numnz, double* colcost,
   Highs highs;
 
   int status =
-      Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower,
-                      colupper, rowlower, rowupper, astart, aindex, avalue);
+      Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower, colupper,
+                   rowlower, rowupper, astart, aindex, avalue);
   if (status != 0) {
     return status;
   }
@@ -71,9 +72,9 @@ int Highs_writeSolution(void* highs, const char* filename) {
 }
 
 int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
-                    double* colcost, double* collower, double* colupper,
-                    double* rowlower, double* rowupper, int* astart,
-                    int* aindex, double* avalue) {
+                 double* colcost, double* collower, double* colupper,
+                 double* rowlower, double* rowupper, int* astart, int* aindex,
+                 double* avalue) {
   HighsLp lp;
   lp.numCol_ = numcol;
   lp.numRow_ = numrow;
@@ -145,7 +146,8 @@ int Highs_getIntHighsInfoValue(void* highs, const char* info, int& value) {
   return (int)((Highs*)highs)->getHighsInfoValue(info, value);
 }
 
-int Highs_getDoubleHighsInfoValue(void* highs, const char* info, double& value) {
+int Highs_getDoubleHighsInfoValue(void* highs, const char* info,
+                                  double& value) {
   return (int)((Highs*)highs)->getHighsInfoValue(info, value);
 }
 

@@ -77,7 +77,7 @@ void printHighsVersionCopyright(FILE* output, const int message_level,
                     HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR,
                     HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   HighsPrintMessage(output, message_level, ML_ALWAYS,
-                    "Copyright (c) 2019 ERGO-Code under MIT licence terms\n\n");
+                    "Copyright (c) 2020 ERGO-Code under MIT licence terms\n\n");
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   if (message != nullptr) {
@@ -127,7 +127,6 @@ void reportLpStatsOrError(FILE* output, int message_level,
     if (lp.numInt_)
       HighsPrintMessage(output, message_level, ML_ALWAYS, "Integer  : %d\n",
                         lp.numInt_);
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "\n");
   }
 }
 
@@ -242,6 +241,8 @@ HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
 
   /*
   HighsStatus write_status;
+  HighsPrintMessage(output, message_level, ML_ALWAYS,
+                    "Writing model as MPS\n");
   write_status = highs.writeModel("write.mps");
   if (write_status != HighsStatus::OK) {
     if (write_status == HighsStatus::Warning) {
@@ -257,9 +258,9 @@ HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
   */
 
   // Write all the options to an options file
-  // highs.writeHighsOptions("Highs.set", false);
+  // highs.writeHighsOptions("HighsOptions.set", false);
   // Write all the options as HTML
-  // highs.writeHighsOptions("Highs.html", false);
+  // highs.writeHighsOptions("HighsOptions.html", false);
   // Possibly report options settings
   highs.writeHighsOptions("");  //, false);
 

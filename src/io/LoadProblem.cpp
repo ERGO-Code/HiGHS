@@ -11,10 +11,11 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "io/LoadProblem.h"
+
 #include <sys/stat.h>
 
 #include "io/Filereader.h"
-#include "io/LoadProblem.h"
 #include "lp_data/HighsLpUtils.h"
 
 HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
@@ -62,6 +63,7 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   if (found < name.size()) name.erase(found, name.size() - found);
   lp.model_name_ = name;
 
+  lp.numInt_ = 0;
   for (unsigned int i = 0; i < lp.integrality_.size(); i++)
     if (lp.integrality_[i]) lp.numInt_++;
 
