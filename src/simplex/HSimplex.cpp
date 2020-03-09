@@ -3430,12 +3430,22 @@ void correctDual(HighsModelObject& highs_model_object,
             simplex_info.workUpper_[i] != inf) {
           // Boxed variable = flip
           flip_bound(highs_model_object, i);
-        } else {
+        } else if (simplex_info.costs_perturbed) {
           // Other variable = shift
+          //
+          // Before 07/07/20, these shifts were always done, but doing
+          // it after cost perturbation has been removed can lead to
+          // cycling when primal infeasibility has been detecteed in
+          // Phase 2, since the shift below removes dual
+          // infeasibilities, which are then reinstated after the dual
+          // values are recomputed.
+          //
+          // ToDo: Not shifting leads to dual infeasibilities when an
+          // LP is declared to be (primal) infeasible. Should go to
+          // phase 1 primal simplex to "prove" infeasibility.
           simplex_info.costs_perturbed = 1;
           if (simplex_basis.nonbasicMove_[i] == 1) {
-            double random_v = random.fraction();
-            double dual = (1 + random_v) * tau_d;
+            double dual = (1 + random.fraction()) * tau_d;
             double shift = dual - simplex_info.workDual_[i];
             simplex_info.workDual_[i] = dual;
             simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
