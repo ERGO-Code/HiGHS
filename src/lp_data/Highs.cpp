@@ -558,6 +558,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
     // There is a valid basis for the problem or presolve is off
     solved_hmo = original_hmo;
     hmos_[solved_hmo].lp_.lp_name_ = "LP without presolve or with basis";
+    // There is a valid HiGHS basis, so use it to initialise the basis
+    // in the HMO to be solved
+    if (basis_.valid_)
+      hmos_[solved_hmo].basis_ = basis_;
     this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
     timer_.start(timer_.solve_clock);
     call_status = runLpSolver(hmos_[solved_hmo],
