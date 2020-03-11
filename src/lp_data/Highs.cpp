@@ -1376,8 +1376,11 @@ HighsStatus Highs::writeSolution(const std::string filename,
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::Error) return return_status;
 
-  writeSolutionToFile(file, lp, basis, solution, pretty);
-  return HighsStatus::OK;
+  std::cout << "warning: Feature under development" << std::endl;
+  return HighsStatus::Warning;
+
+  // writeSolutionToFile(file, lp, basis, solution, pretty);
+  // return HighsStatus::OK;
 }
 
 bool Highs::updateHighsSolutionBasis() {

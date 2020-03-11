@@ -20,10 +20,10 @@
 #include "lp_data/HighsStatus.h"
 
 class HighsLp;
-class HighsBasis;
-class HighsSolution;
+struct HighsBasis;
+struct HighsSolution;
 class HighsOptions;
-class SimplexBasis;
+struct SimplexBasis;
 
 using std::vector;
 
