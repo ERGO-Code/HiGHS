@@ -431,6 +431,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
+        hmos_[0].scaled_model_status_ = HighsModelStatus::OPTIMAL;
         hmos_[0].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
         // Proceed to postsolve.
         break;

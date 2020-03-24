@@ -635,7 +635,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("icrash_breakpoints",
-                                       "Exact subproblem solution for iCrash",
+                                       "Use breakpoints solution for iCrash",
                                        advanced, &icrash_breakpoints, false);
     records.push_back(record_bool);
 
