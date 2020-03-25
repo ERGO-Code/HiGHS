@@ -58,8 +58,6 @@ int main(int argc, char** argv) {
   HighsStatus read_status = loadLpFromFile(options, lp);
   reportLpStatsOrError(output, message_level, read_status, lp);
   if (read_status == HighsStatus::Error) return (int)HighsStatus::Error;
-  //  lp.sense_ = -1;
-  options.presolve = "off";
 
   // Run LP or MIP solver.
   HighsStatus run_status = HighsStatus::Error;
