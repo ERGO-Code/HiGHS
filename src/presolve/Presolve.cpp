@@ -50,7 +50,13 @@ void Presolve::load(const HighsLp& lp) {
   Astart = lp.Astart_;
   Aindex = lp.Aindex_;
   Avalue = lp.Avalue_;
+
   colCost = lp.colCost_;
+  if (lp.sense_ == -1) {
+    for (unsigned int col = 0; col < lp.colCost_.size(); col++)
+      colCost[col] = -colCost[col];
+  }
+
   colLower = lp.colLower_;
   colUpper = lp.colUpper_;
   rowLower = lp.rowLower_;
@@ -58,6 +64,11 @@ void Presolve::load(const HighsLp& lp) {
 
   modelName = lp.model_name_;
   timer.recordFinish(MATRIX_COPY);
+}
+
+void PresolveInfo::negateReducedCosts() {
+  for (unsigned int col = 0; col <= reduced_lp_.colCost_.size(); col++)
+    reduced_lp_.colCost_[col] = -reduced_lp_.colCost_[col];
 }
 
 HighsLp& PresolveInfo::getReducedProblem() {

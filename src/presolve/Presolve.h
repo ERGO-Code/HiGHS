@@ -260,6 +260,7 @@ class PresolveInfo {
     }
   }
 
+  void negateReducedCosts();
   HighsLp& getReducedProblem();
   HighsPresolveStatus presolve_status_;
   HighsPostsolveStatus postsolve_status_;
