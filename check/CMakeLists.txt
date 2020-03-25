@@ -15,7 +15,6 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 set(TEST_SOURCES
     TestMain.cpp
     TestOptions.cpp
-    TestPresolve.cpp
     TestIO.cpp
     TestSort.cpp
     TestSetup.cpp
