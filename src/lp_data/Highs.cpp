@@ -1308,7 +1308,7 @@ HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
   // Initialize a new presolve class instance for the LP given in presolve info
   HighsPresolveStatus presolve_return_status = info.presolve_[0].presolve();
 
-  if (presolve_return_status == HighsPresolveStatus::Reduced && info.lp_.sense_ == -1) 
+  if (presolve_return_status == HighsPresolveStatus::Reduced && info.lp_->sense_ == -1) 
     info.negateReducedCosts();
 
   return presolve_return_status;
