@@ -304,6 +304,9 @@ double vectorProduct(const std::vector<double>& v1,
 void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
                            const HighsLp& presolve_lp);
 
+void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
+                           const bool presolve_to_empty);
+
 bool isLessInfeasibleDSECandidate(const HighsOptions& options,
                                   const HighsLp& lp);
 
