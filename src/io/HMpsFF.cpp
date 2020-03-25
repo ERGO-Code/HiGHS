@@ -201,18 +201,18 @@ HMpsFF::parsekey HMpsFF::parseObjsense(FILE* logfile, std::ifstream& file) {
 
   while (getline(file, strline)) {
     if (is_empty(strline) || strline[0] == '*') continue;
-    
+
     int start = 0;
     int end = 0;
 
     HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
     // Interpret key being MAX or MIN
-    if (key ==  HMpsFF::parsekey::MAX) {
+    if (key == HMpsFF::parsekey::MAX) {
       objSense = OBJSENSE_MAXIMIZE;
       continue;
     }
-    if (key ==  HMpsFF::parsekey::MIN) {
+    if (key == HMpsFF::parsekey::MIN) {
       objSense = OBJSENSE_MINIMIZE;
       continue;
     }
@@ -220,8 +220,7 @@ HMpsFF::parsekey HMpsFF::parseObjsense(FILE* logfile, std::ifstream& file) {
     if (key != HMpsFF::parsekey::NONE) {
       return key;
     }
-    
-  }    
+  }
   return HMpsFF::parsekey::FAIL;
 }
 

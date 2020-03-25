@@ -221,7 +221,7 @@ const string parallel_string = "parallel";
 const string time_limit_string = "time_limit";
 const string options_file_string = "options_file";
 
-//enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
+// enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 
 struct HighsOptionsStruct {
   // Options read from the command line

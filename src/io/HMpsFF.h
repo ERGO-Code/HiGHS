@@ -30,8 +30,8 @@
 #include <utility>
 #include <vector>
 
-#include "lp_data/HighsLp.h" // for OBJSENSE_MINIMIZE and OBJSENSE_MAXIMIZE
 #include "io/HighsIO.h"
+#include "lp_data/HighsLp.h"  // for OBJSENSE_MINIMIZE and OBJSENSE_MAXIMIZE
 #include "util/stringutil.h"
 
 using Triplet = std::tuple<int, int, double>;
@@ -55,7 +55,7 @@ class HMpsFF {
   int numCol;
   int nnz;
 
-  int objSense = OBJSENSE_MINIMIZE; //Minimization by default
+  int objSense = OBJSENSE_MINIMIZE;  // Minimization by default
   double objOffset = 0;
 
   std::vector<int> Astart;
