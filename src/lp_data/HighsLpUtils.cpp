@@ -2440,8 +2440,7 @@ void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
                   "elements %d(-%d) %s",
                   num_col_to, (num_col_from - num_col_to), num_row_to,
                   (num_row_from - num_row_to), num_els_to,
-                  (num_els_from - num_els_to),
-		  message.c_str());
+                  (num_els_from - num_els_to), message.c_str());
 }
 
 bool isLessInfeasibleDSECandidate(const HighsOptions& options,

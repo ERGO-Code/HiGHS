@@ -1002,6 +1002,14 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
   assert(ipx_row == ipx_solution.num_row);
   assert(ipx_slack == ipx_solution.num_col);
 
+  // Flip dual according to lp.sense_
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    highs_solution.col_dual[iCol] *= lp.sense_;
+  }
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    highs_solution.row_dual[iRow] *= lp.sense_;
+  }
+
 #ifdef HiGHSDEV
   if (num_boxed_rows)
     printf("Of %d boxed rows: %d are basic and %d have basic slacks\n",
