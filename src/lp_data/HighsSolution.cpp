@@ -335,6 +335,8 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
     HighsBasisStatus status = basis.col_status[iCol];
     primal_objective_value += lp.colCost_[iCol] * value;
     if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
+    // Flip dual according to lp.sense_
+    dual *= lp.sense_;
     bool report = false;
     bool query = analyseVarBasicSolution(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -440,6 +442,8 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
     double dual = -solution.row_dual[iRow];
     HighsBasisStatus status = basis.row_status[iRow];
     if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
+    // Flip dual according to lp.sense_
+    dual *= lp.sense_;
     bool report = false;
     bool query = analyseVarBasicSolution(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
