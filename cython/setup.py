@@ -9,6 +9,8 @@ from datetime import datetime
 import pathlib
 import sysconfig
 
+import numpy as np
+
 # Create HConfig.h: this is usually created by cmake,
 # but we just need an empty file and we'll do the
 # pound defines here in setup.py
@@ -160,9 +162,22 @@ extensions = [
     ),
 
     # Cython wrapper for Highs_call
-    #Extension(
-
-    #),
+    Extension(
+        'linprog',
+        ['src/linprog.pyx'],
+        include_dirs=[
+            'src/',
+            str(pathlib.Path('../src/interfaces/').resolve()),
+            np.get_include(),
+        ],
+        language='c++',
+        library_dirs=LIBRARY_DIRS,
+        libraries=['highs' + SO_SUFFIX],
+        runtime_library_dirs=LIBRARY_DIRS,
+        define_macros=DEFINE_MACROS,
+        undef_macros=UNDEF_MACROS,
+        extra_compile_args=EXTRA_COMPILE_ARGS,
+    ),
 ]
 
 setup(
