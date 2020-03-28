@@ -1,70 +1,33 @@
 # distutils: language=c++
 # cython: language_level=3
 
+from libc.stdio cimport FILE
+
 from libcpp cimport bool
 from libcpp.memory cimport unique_ptr, allocator, make_unique
 from libcpp.string cimport string
-from libcpp.vector cimport vector
-from libc.stdio cimport FILE
 
-cdef extern from "HConst.h" nogil:
-    cdef enum HighsPrintMessageLevel:
-        ML_MIN = 0
-        ML_NONE = ML_MIN
-        ML_VERBOSE = 1
-        ML_DETAILED = 2
-        ML_MINIMAL = 4
-        ML_ALWAYS = ML_VERBOSE | ML_DETAILED | ML_MINIMAL
-        ML_MAX = ML_ALWAYS
-
-cdef extern from "HighsOptions.h" nogil:
-    cdef cppclass HighsOptions:
-        FILE * output
-        int message_level
-        bool mip
-        string solution_file
-        bool write_solution_to_file
-        bool write_solution_pretty
-
-cdef extern from "HighsRuntimeOptions.h" nogil:
-    bool loadOptions(int argc, char** argv, HighsOptions& options)
-
-cdef extern from "HighsIO.h" nogil:
-    void HighsPrintMessage(FILE* pass_output, const int message_level, const int level, const char* format, ...)
-
-cdef extern from "HighsLp.h" nogil:
-    cdef cppclass HighsLp:
-        int numCol_
-        int numRow_
-        int numInt_
-        vector[double] Avalue_
-        string model_name_
-
-    cdef enum HighsModelStatus:
-        HighsModelStatusNOTSET "HighsModelStatus::NOTSET"
-        HighsModelStatusLOAD_ERROR "HighsModelStatus::LOAD_ERROR"
-        HighsModelStatusMODEL_ERROR "HighsModelStatus::MODEL_ERROR"
-        HighsModelStatusMODEL_EMPTY "HighsModelStatus::MODEL_EMPTY"
-        HighsModelStatusPRESOLVE_ERROR "HighsModelStatus::PRESOLVE_ERROR"
-        HighsModelStatusSOLVE_ERROR "HighsModelStatus::SOLVE_ERROR"
-        HighsModelStatusPOSTSOLVE_ERROR "HighsModelStatus::POSTSOLVE_ERROR"
-        HighsModelStatusPRIMAL_INFEASIBLE "HighsModelStatus::PRIMAL_INFEASIBLE"
-        HighsModelStatusPRIMAL_UNBOUNDED "HighsModelStatus::PRIMAL_UNBOUNDED"
-        HighsModelStatusOPTIMAL "HighsModelStatus::OPTIMAL"
-        HighsModelStatusREACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND "HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND"
-        HighsModelStatusREACHED_TIME_LIMIT "HighsModelStatus::REACHED_TIME_LIMIT"
-        HighsModelStatusREACHED_ITERATION_LIMIT "HighsModelStatus::REACHED_ITERATION_LIMIT"
-
-cdef extern from "HighsStatus.h" nogil:
-    cdef enum HighsStatus:
-        HighsStatusOK "HighsStatus::OK"
-        HighsStatusWarning "HighsStatus::Warning"
-        HighsStatusError "HighsStatus::Error"
-
-    string HighsStatusToString(HighsStatus status)
-
-cdef extern from "LoadProblem.h" nogil:
-    HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp)
+from HConst cimport ML_ALWAYS
+from HighsOptions cimport HighsOptions
+from HighsRuntimeOptions cimport loadOptions
+from HighsIO cimport HighsPrintMessage
+from HighsLp cimport (
+    HighsLp,
+    HighsModelStatus,
+    HighsModelStatusOPTIMAL)
+from HighsStatus cimport (
+    HighsStatus,
+    HighsStatusToString,
+    HighsStatusOK,
+    HighsStatusWarning,
+    HighsStatusError)
+from LoadProblem cimport loadLpFromFile
+from HighsInfo cimport HighsInfo
+from Highs cimport Highs
+from HighsMipSolver cimport (
+    HighsMipStatus,
+    HighsMipStatuskOptimal,
+    HighsMipSolver)
 
 cdef void reportLpStatsOrError(FILE* output, int message_level, const HighsStatus read_status, const HighsLp& lp):
     if read_status == HighsStatusError:
@@ -76,46 +39,6 @@ cdef void reportLpStatsOrError(FILE* output, int message_level, const HighsStatu
         HighsPrintMessage(output, message_level, ML_ALWAYS, "Nonzeros : %d\n", lp.Avalue_.size())
         if lp.numInt_:
             HighsPrintMessage(output, message_level, ML_ALWAYS, "Integer  : %d\n", lp.numInt_)
-
-cdef extern from "HighsInfo.h" nogil:
-    cdef cppclass HighsInfo:
-        int simplex_iteration_count
-        int ipm_iteration_count
-        int crossover_iteration_count
-        int primal_status
-        int dual_status
-        double objective_function_value
-        int num_primal_infeasibilities
-        double max_primal_infeasibility
-        double sum_primal_infeasibilities
-        int num_dual_infeasibilities
-        double max_dual_infeasibility
-        double sum_dual_infeasibilities
-
-cdef extern from "Highs.h":
-    cdef cppclass Highs:
-        HighsStatus passHighsOptions(const HighsOptions& options)
-        HighsStatus passModel(const HighsLp& lp)
-        HighsStatus run()
-        HighsStatus setHighsLogfile(FILE* logfile)
-        HighsStatus setHighsOutput(FILE* output)
-        HighsStatus writeHighsOptions(const string filename, const bool report_only_non_default_values = true)
-
-        # split up for cython below
-        #const HighsModelStatus& getModelStatus(const bool scaled_model = False) const
-        const HighsModelStatus & getModelStatus() const
-        const HighsModelStatus & getModelStatus(const bool scaled_model) const
-
-        const HighsInfo& getHighsInfo() const
-        string highsModelStatusToString(const HighsModelStatus model_status) const
-        #HighsStatus getHighsInfoValue(const string& info, int& value)
-        HighsStatus getHighsInfoValue(const string& info, double& value) const
-        const HighsOptions& getHighsOptions() const
-
-        # split up for cython
-        #HighsStatus writeSolution(const string filename, const bool pretty = false) const
-        HighsStatus writeSolution(const string filename) const
-        HighsStatus writeSolution(const string filename, const bool pretty) const
 
 cdef void reportSolvedLpStats(FILE* output, int message_level, const HighsStatus run_status, const Highs& highs):
     cdef string statusname
@@ -166,7 +89,6 @@ cdef void reportSolvedLpStats(FILE* output, int message_level, const HighsStatus
         if options.write_solution_to_file:
             highs.writeSolution(options.solution_file, options.write_solution_pretty)
 
-
 cdef HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp, FILE* output, int message_level, bool run_quiet):
     # Solve LP case.
     cdef Highs highs
@@ -204,27 +126,6 @@ cdef HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp, FI
     reportSolvedLpStats(output, message_level, run_status, highs)
     return run_status
 
-cdef extern from "HighsMipSolver.h" nogil:
-    cdef enum HighsMipStatus:
-        HighsMipStatuskOptimal "HighsMipStatus::kOptimal"
-        HighsMipStatuskTimeout "HighsMipStatus::kTimeout"
-        HighsMipStatuskError "HighsMipStatus::kError"
-        HighsMipStatuskNodeOptimal "HighsMipStatus::kNodeOptimal"
-        HighsMipStatuskNodeInfeasible "HighsMipStatus::kNodeInfeasible"
-        HighsMipStatuskNodeUnbounded "HighsMipStatus::kNodeUnbounded"
-        HighsMipStatuskNodeNotOptimal "HighsMipStatus::kNodeNotOptimal"
-        HighsMipStatuskNodeError "HighsMipStatus::kNodeError"
-        HighsMipStatuskRootNodeOptimal "HighsMipStatus::kRootNodeOptimal"
-        HighsMipStatuskRootNodeNotOptimal "HighsMipStatus::kRootNodeNotOptimal"
-        HighsMipStatuskRootNodeError "HighsMipStatus::kRootNodeError"
-        HighsMipStatuskMaxNodeReached "HighsMipStatus::kMaxNodeReached"
-        HighsMipStatuskUnderDevelopment "HighsMipStatus::kUnderDevelopment"
-        HighsMipStatuskTreeExhausted "HighsMipStatus::kTreeExhausted"
-
-    cdef cppclass HighsMipSolver:
-        HighsMipSolver(const HighsOptions& options, const HighsLp& lp) except +
-        HighsMipStatus runMipSolver()
-
 cdef HighsStatus callMipSolver(const HighsOptions& options, const HighsLp& lp, FILE* output, int message_level, bool run_quiet):
     #cdef HighsMipSolver solver(options, lp)
     cdef unique_ptr[HighsMipSolver] solver = make_unique[HighsMipSolver](options, lp)
@@ -233,12 +134,43 @@ cdef HighsStatus callMipSolver(const HighsOptions& options, const HighsLp& lp, F
         return HighsStatusOK
     return HighsStatusError
 
-def linprog(model_file, solver, bool run_quiet=True):
+def linprog_mps(model_file, presolve=None, solver=None, bool run_quiet=True):
+    '''Solve linear program described in an MPS model file.
+
+    Parameters
+    ----------
+    model_file : str
+        Filename of uncompressed .MPS file.
+    presolve : bool or None, optional
+        Whether to run presolve or not. Values correspond to the HiGHS
+        options:
+
+            - `True`: `'on'`
+            - `False`: `'off'`
+            - `None` : `'choose'`
+
+    solver : str or None {'simplex', 'ipm', None}, optional
+        Method used to solve the LP. `solver=None` corresponds to the
+        HiGHS option of `'choose'`.
+    run_quiet : bool, optional
+        Diplay lots of info or just some info.
+    '''
+
+    # Map some of the inputs to the correct HiGHS options; everything
+    # should be a string after this.
+    presolve = {
+        True: 'on',
+        False: 'off',
+        None: 'choose',
+    }[presolve]
+    if solver is None:
+        solver = 'choose'
 
     # Parse the inputs and put into char**
     args = {
         b'--model_file': model_file.encode(),
         b'--solver': solver.encode(),
+        b'--presolve': presolve.encode(),
     }
     cdef allocator[char *] ptr_al
     cdef unique_ptr[char *] argv
