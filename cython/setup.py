@@ -80,6 +80,9 @@ if SO_SUFFIX is None:
     # https://bugs.python.org/issue19555
     SO_SUFFIX = str(pathlib.Path(sysconfig.get_config_var('SO')).with_suffix(''))
 
+# We use some modern C++, as you should. HiGHS uses C++11, no penalty for going to C++14
+EXTRA_COMPILE_ARGS = ['-std=c++14']
+
 extensions = [
     # BASICLU
     Extension(
@@ -110,6 +113,7 @@ extensions = [
         runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
+        extra_compile_args=EXTRA_COMPILE_ARGS,
     ),
 
     # HiGHS
@@ -131,7 +135,7 @@ extensions = [
 
         # Should only be here if using openMP.
         # For Microsoft Visual C++ compiler, use '/openmp' instead of '-fopenmp'.
-        extra_compile_args=['-fopenmp'],
+        extra_compile_args=EXTRA_COMPILE_ARGS + ['-fopenmp'],
         extra_link_args=['-fopenmp'],
     ),
 
@@ -153,6 +157,7 @@ extensions = [
         runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
+        extra_compile_args=EXTRA_COMPILE_ARGS,
     ),
 ]
 
