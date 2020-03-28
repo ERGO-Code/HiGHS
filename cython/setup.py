@@ -138,10 +138,10 @@ extensions = [
         extra_link_args=['-fopenmp'],
     ),
 
-    # Cython wrapper
+    # Cython wrapper around RunHighs (for solving MPS files)
     Extension(
-        'pyhighs',
-        ['src/pyhighs.pyx'],
+        'linprog_mps',
+        ['src/linprog_mps.pyx'],
         include_dirs=[
             'src/',
             str(pathlib.Path('../src/').resolve()),
@@ -158,6 +158,11 @@ extensions = [
         undef_macros=UNDEF_MACROS,
         extra_compile_args=EXTRA_COMPILE_ARGS,
     ),
+
+    # Cython wrapper for Highs_call
+    #Extension(
+
+    #),
 ]
 
 setup(

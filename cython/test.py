@@ -1,4 +1,4 @@
-from pyhighs import linprog_mps
+from linprog_mps import linprog_mps
 
 if __name__ == '__main__':
 
