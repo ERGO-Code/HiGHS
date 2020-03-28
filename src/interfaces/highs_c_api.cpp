@@ -95,7 +95,7 @@ int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
   lp.colUpper_.assign(colupper, colupper + numcol);
 
   lp.rowLower_.assign(rowlower, rowlower + numrow);
-  lp.rowUpper_.assign(rowupper, rowupper + numcol);
+  lp.rowUpper_.assign(rowupper, rowupper + numrow);
   lp.Astart_.assign(astart, astart + numcol + 1);
   lp.Aindex_.assign(aindex, aindex + numnz);
   lp.Avalue_.assign(avalue, avalue + numnz);
