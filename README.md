@@ -1,3 +1,13 @@
+# Cython Additions
+
+In the cython directory exists a setup.py file that can be used to build the project without relying on the cmake build system.  I've been building it like this:
+
+    python setup.py build_ext --inplace
+
+The name of the shared libraries is currently platform dependent and I couldn't find a way to customize them without subclassing some distutil stuff, so I'm leaving that for later.
+
+The file cython/test.py shows how to call Cython wrapper around the CLI application RunHighs from app/RunHighs.cpp.
+
 # HiGHS - Linear optimization software
 
 [![Build Status](https://travis-ci.org/ERGO-Code/HiGHS.svg?branch=master)](https://travis-ci.org/ERGO-Code/HiGHS)
@@ -11,7 +21,7 @@ It is written in C++ with OpenMP directives, and has been developed and tested o
 
 HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier.
 
-Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com. 
+Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
 Reference
 ---------
@@ -47,7 +57,7 @@ Then compile the code using
 
     make
 
-This installs the executable `bin/highs`. 
+This installs the executable `bin/highs`.
 
 Testing
 -------
