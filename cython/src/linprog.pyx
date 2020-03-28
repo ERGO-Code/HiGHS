@@ -1,6 +1,9 @@
 # distutils: language=c++
 # cython: language_level=3
 
+from libc.stdio cimport FILE, tmpfile
+
+from libcpp cimport bool
 from libcpp.memory cimport unique_ptr, make_unique
 
 cimport numpy as np
@@ -9,7 +12,11 @@ from scipy.sparse import csc_matrix
 from scipy.optimize import OptimizeResult
 
 from Highs cimport Highs
-from HighsLp cimport HighsSolution, HighsBasis
+from HighsLp cimport (
+    HighsSolution,
+    HighsBasis,
+    HighsModelStatus)
+from HighsInfo cimport HighsInfo
 from highs_c_api cimport Highs_passLp
 
 cdef int Highs_call(int numcol, int numrow, int numnz, double* colcost,
@@ -17,8 +24,8 @@ cdef int Highs_call(int numcol, int numrow, int numnz, double* colcost,
                     double* rowupper, int* astart, int* aindex, double* avalue,
                     double* colvalue, double* coldual, double* rowvalue,
                     double* rowdual, int* colbasisstatus, int* rowbasisstatus,
-                    int* modelstatus, int sense):
-    cdef Highs highs
+                    int* modelstatus, int sense, Highs & highs):
+    # cdef Highs highs
     cdef int status = Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower, colupper,
                                    rowlower, rowupper, astart, aindex, avalue)
 
@@ -50,7 +57,7 @@ cdef int Highs_call(int numcol, int numrow, int numnz, double* colcost,
     return status
 
 
-def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1):
+def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1, bool disp=False):
     '''Solve linear programs.
 
     Assume the form:
@@ -74,6 +81,8 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1):
     sense : int {1, -1}, optional
         `sense=1` corresponds to the MIN problem, `sense=-1`
         corresponds to the MAX problem.
+    disp : bool, optional
+        Write information about solver to stdio.
 
     Returns
     -------
@@ -136,6 +145,14 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1):
     cdef int[::1] rowbasisstatus = np.empty(numrow, dtype=np.int32)
     cdef int modelstatus = 0
 
+    cdef Highs highs
+    cdef FILE * f
+    if not disp:
+        # set output to tmp to remove stdio spam
+        f = tmpfile()
+        highs.setHighsOutput(f)
+
+    # Call the solver
     cdef int ret = Highs_call(
         numcol, numrow, numnz,
         colcost, collower, colupper,
@@ -143,15 +160,31 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1):
         &astart[0], &aindex[0], &avalue[0],
         &colvalue[0], &coldual[0], &rowvalue[0], &rowdual[0],
         &colbasisstatus[0], &rowbasisstatus[0], &modelstatus,
-        sense)
+        sense, highs)
 
+    # Pull info out of out of highs
+    cdef HighsInfo info = highs.getHighsInfo()
     return OptimizeResult({
-        'fun': np.sum(c*np.array(colvalue)), # There's a way to get this, just haven't found it yet
+        # From HighsInfo
+        'fun': info.objective_function_value,
+        'simplex_nit': info.simplex_iteration_count,
+        'ipm_nit': info.ipm_iteration_count,
+        'crossover_nit': info.crossover_iteration_count,
+        'primal_status': info.primal_status,
+        'dual_status': info.dual_status,
+        'num_primal_infeasibilities': info.num_primal_infeasibilities,
+        'max_primal_infeasibility': info.max_primal_infeasibility,
+        'sum_primal_infeasibilities': info.sum_primal_infeasibilities,
+        'num_dual_infeasibilities': info.num_dual_infeasibilities,
+        'max_dual_infeasibility': info.max_dual_infeasibility,
+        'sum_dual_infeasibilities': info.sum_dual_infeasibilities,
+
+        # From C API
         'x': np.array(colvalue),
         'slack': np.array(coldual),
-        'rowvalue': np.array(rowvalue),
-        'rowdual': np.array(rowdual),
-        'colbasisstatus': np.array(colbasisstatus),
-        'rowbasisstatus': np.array(rowbasisstatus),
-        'modelstatus': modelstatus,
+        'row_value': np.array(rowvalue),
+        'row_dual': np.array(rowdual),
+        'col_basis_status': np.array(colbasisstatus),
+        'row_basis_status': np.array(rowbasisstatus),
+        'model_status': highs.highsModelStatusToString(<HighsModelStatus>modelstatus).decode(),
     })
