@@ -75,7 +75,10 @@ UNDEF_MACROS = [
 
 # Naming conventions of shared libraries differ platform to platform:
 SO_PREFIX = str(pathlib.Path(new_compiler().library_filename('', lib_type='shared')).with_suffix(''))
-SO_SUFFIX = str(pathlib.Path(sysconfig.get_config_var('SO')).with_suffix(''))
+SO_SUFFIX = str(pathlib.Path(sysconfig.get_config_var('EXT_SUFFIX')).with_suffix(''))
+if SO_SUFFIX is None:
+    # https://bugs.python.org/issue19555
+    SO_SUFFIX = str(pathlib.Path(sysconfig.get_config_var('SO')).with_suffix(''))
 
 extensions = [
     # BASICLU
@@ -121,7 +124,6 @@ extensions = [
         ],
         language="c++",
         library_dirs=LIBRARY_DIRS,
-        #libraries=['ipx.cpython-36m-x86_64-linux-gnu'],
         libraries=['ipx' + SO_SUFFIX],
         runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
@@ -147,7 +149,6 @@ extensions = [
         ],
         language="c++",
         library_dirs=LIBRARY_DIRS,
-        #libraries=['highs.cpython-36m-x86_64-linux-gnu'],
         libraries=['highs' + SO_SUFFIX],
         runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
