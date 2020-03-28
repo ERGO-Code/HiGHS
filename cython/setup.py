@@ -167,7 +167,9 @@ extensions = [
         ['src/linprog.pyx'],
         include_dirs=[
             'src/',
+            str(pathlib.Path('../src/').resolve()),
             str(pathlib.Path('../src/interfaces/').resolve()),
+            str(pathlib.Path('../src/lp_data/').resolve()),
             np.get_include(),
         ],
         language='c++',

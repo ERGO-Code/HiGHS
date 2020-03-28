@@ -1,12 +1,15 @@
 # distutils: language=c++
 # cython: language_level=3
 
+from libcpp.string cimport string
 from libcpp.memory cimport unique_ptr, allocator
 
 from cython.operator cimport dereference
 
 cimport numpy as np
 import numpy as np
+from scipy.sparse import csc_matrix
+from scipy.optimize import OptimizeResult
 
 cdef extern from "highs_c_api.h" nogil:
     int Highs_call(
@@ -29,24 +32,50 @@ cdef extern from "highs_c_api.h" nogil:
         int* rowbasisstatus,
         int* modelstatus)
 
-def linprog(double[::1] c, A, double[::1] b):
-    '''Solve linear programs using dense matrices.'''
+def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None):
+    '''Solve linear programs.
 
+    Assume the form:
+
+        min c.T @ x
+        s.t. lhs <= A @ x  <= b
+
+    Still working on bounds on x, currently assumed to be (0, inf).
+
+    Parameters
+    ----------
+    c : 1-D array, (n,)
+        Array of objective value coefficients.
+    A : 2-D array, (m, n)
+        Sparse (or dense) matrix of constraint coefficients.
+    b : 1-D array, (m,)
+        Array of right hand side values of the inequality constraints.
+    lhs : 1-D array (or None), (m,)
+        Array of left hand side values of the inequality constraints.
+        If `lhs=None`, then an array of `-inf` is assumed.
+
+    Returns
+    -------
+    res : OptimizeResult
+
+        - x : 1-D array, (n,)
+        - fun : double
+        - slack : 1-D array, (n,)
+        - rowvalue : 1-D array, (m,)
+        - rowdual : 1-D array, (m,)
+        - colbasisstatus : 1-D array, (n,)
+        - rowbasisstatus : 1-D array, (m,)
+        - modelstatus : int
+    '''
+
+    # Try to cast, it'll raise a type error if it don't work
+    if not isinstance(A, csc_matrix):
+        A = csc_matrix(A)
+
+    # Get dimensions of problem
     cdef int numrow = A.shape[0]
     cdef int numcol = A.shape[1]
     cdef int numnz = A.nnz
-
-    # Allocate pointers to hold results;
-    # smart pointers will manage their own memory.
-    cdef allocator[double] double_al
-    cdef unique_ptr[double] colvalue
-    cdef unique_ptr[double] coldual
-    cdef unique_ptr[double] rowvalue
-    cdef unique_ptr[double] rowdual
-    colvalue.reset(double_al.allocate(numcol))
-    coldual.reset(double_al.allocate(numcol))
-    rowvalue.reset(double_al.allocate(numrow))
-    rowdual.reset(double_al.allocate(numrow))
 
     # Objective function coefficients
     cdef double * colcost = &c[0]
@@ -58,35 +87,44 @@ def linprog(double[::1] c, A, double[::1] b):
     cdef double * colupper = &colupper_memview[0]
 
     # LHS/RHS constraints
-    cdef double[::1] rowlower_memview = -1e20*np.ones(numrow, dtype='double')
-    cdef double * rowlower = &rowlower_memview[0]
+    cdef double * rowlower
+    if lhs is None:
+        # Default to no LHS (all -Inf)
+        lhs = -1e20*np.ones(numrow, dtype='double')
+    rowlower = &lhs[0]
     cdef double * rowupper = &b[0]
 
-    # Contents of constraint matrices
-    cdef int[::1] astart_memview = A.indptr
-    cdef int[::1] aindex_memview = A.indices
-    cdef double[::1] avalue_memview = A.data
-    cdef int * astart = &astart_memview[0]
-    cdef int * aindex = &aindex_memview[0]
-    cdef double * avalue = &avalue_memview[0]
+    # Contents of constraint matrices as memoryviews
+    cdef int[::1] astart = A.indptr
+    cdef int[::1] aindex = A.indices
+    cdef double[::1] avalue = A.data
+
+    # Allocate memoryviews to hold results
+    cdef double[::1] colvalue = np.empty(numcol, dtype='double')
+    cdef double[::1] coldual = np.empty(numcol, dtype='double')
+    cdef double[::1] rowvalue = np.empty(numcol, dtype='double')
+    cdef double[::1] rowdual = np.empty(numcol, dtype='double')
 
     # Result status flags
-    cdef allocator[int] int_al
-    cdef unique_ptr[int] colbasisstatus
-    cdef unique_ptr[int] rowbasisstatus
-    colbasisstatus.reset(int_al.allocate(numcol))
-    rowbasisstatus.reset(int_al.allocate(numrow))
+    cdef int[::1] colbasisstatus = np.empty(numcol, dtype=np.int32)
+    cdef int[::1] rowbasisstatus = np.empty(numrow, dtype=np.int32)
     cdef int modelstatus = 0
 
     cdef int ret = Highs_call(
         numcol, numrow, numnz,
         colcost, collower, colupper,
-        rowlower, rowupper,
-        astart, aindex, avalue,
-        colvalue.get(), coldual.get(), rowvalue.get(), rowdual.get(),
-        colbasisstatus.get(), rowbasisstatus.get(), &modelstatus)
+        &rowlower[0], rowupper,
+        &astart[0], &aindex[0], &avalue[0],
+        &colvalue[0], &coldual[0], &rowvalue[0], &rowdual[0],
+        &colbasisstatus[0], &rowbasisstatus[0], &modelstatus)
 
-    print([colvalue.get()[ii] for ii in range(numcol)])
-    print([coldual.get()[ii] for ii in range(numcol)])
-    print([rowvalue.get()[ii] for ii in range(numrow)])
-    print([rowdual.get()[ii] for ii in range(numrow)])
+    return OptimizeResult({
+        'fun': np.sum(c*np.array(colvalue)), # There's a way to get this, just haven't found it yet
+        'x': np.array(colvalue),
+        'slack': np.array(coldual),
+        'rowvalue': np.array(rowvalue),
+        'rowdual': np.array(rowdual),
+        'colbasisstatus': np.array(colbasisstatus),
+        'rowbasisstatus': np.array(rowbasisstatus),
+        'modelstatus': modelstatus,
+    })
