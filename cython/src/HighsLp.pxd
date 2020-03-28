@@ -1,8 +1,11 @@
 # distutils: language=c++
 # cython: language_level=3
 
+from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+
+from HConst cimport HighsBasisStatus
 
 cdef extern from "HighsLp.h" nogil:
     cdef cppclass HighsLp:
@@ -26,3 +29,14 @@ cdef extern from "HighsLp.h" nogil:
         HighsModelStatusREACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND "HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND"
         HighsModelStatusREACHED_TIME_LIMIT "HighsModelStatus::REACHED_TIME_LIMIT"
         HighsModelStatusREACHED_ITERATION_LIMIT "HighsModelStatus::REACHED_ITERATION_LIMIT"
+
+    cdef cppclass HighsSolution:
+        vector[double] col_value
+        vector[double] col_dual
+        vector[double] row_value
+        vector[double] row_dual
+
+    cdef cppclass HighsBasis:
+        bool valid_
+        vector[HighsBasisStatus] col_status
+        vector[HighsBasisStatus] row_status

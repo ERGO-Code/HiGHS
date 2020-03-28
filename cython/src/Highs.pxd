@@ -10,6 +10,7 @@ from HighsStatus cimport HighsStatus
 from HighsOptions cimport HighsOptions
 from HighsLp cimport HighsLp, HighsModelStatus
 from HighsInfo cimport HighsInfo
+from HighsLp cimport HighsSolution, HighsBasis
 
 cdef extern from "Highs.h":
     cdef cppclass Highs:
@@ -35,3 +36,8 @@ cdef extern from "Highs.h":
         #HighsStatus writeSolution(const string filename, const bool pretty = false) const
         HighsStatus writeSolution(const string filename) const
         HighsStatus writeSolution(const string filename, const bool pretty) const
+
+        const HighsSolution& getSolution() const
+        const HighsBasis& getBasis() const
+
+        bool changeObjectiveSense(const int sense)

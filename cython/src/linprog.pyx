@@ -1,38 +1,56 @@
 # distutils: language=c++
 # cython: language_level=3
 
-from libcpp.string cimport string
-from libcpp.memory cimport unique_ptr, allocator
-
-from cython.operator cimport dereference
+from libcpp.memory cimport unique_ptr, make_unique
 
 cimport numpy as np
 import numpy as np
 from scipy.sparse import csc_matrix
 from scipy.optimize import OptimizeResult
 
-cdef extern from "highs_c_api.h" nogil:
-    int Highs_call(
-        int numcol,
-        int numrow,
-        int numnz,
-        double* colcost,
-        double* collower,
-        double* colupper,
-        double* rowlower,
-        double* rowupper,
-        int* astart,
-        int* aindex,
-        double* avalue,
-        double* colvalue,
-        double* coldual,
-        double* rowvalue,
-        double* rowdual,
-        int* colbasisstatus,
-        int* rowbasisstatus,
-        int* modelstatus)
+from Highs cimport Highs
+from HighsLp cimport HighsSolution, HighsBasis
+from highs_c_api cimport Highs_passLp
 
-def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None):
+cdef int Highs_call(int numcol, int numrow, int numnz, double* colcost,
+                    double* collower, double* colupper, double* rowlower,
+                    double* rowupper, int* astart, int* aindex, double* avalue,
+                    double* colvalue, double* coldual, double* rowvalue,
+                    double* rowdual, int* colbasisstatus, int* rowbasisstatus,
+                    int* modelstatus, int sense):
+    cdef Highs highs
+    cdef int status = Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower, colupper,
+                                   rowlower, rowupper, astart, aindex, avalue)
+
+    # Customize sense : MIN or MAX
+    # This API is not currently working, do it manually in caller
+    # highs.changeObjectiveSense(sense)
+
+    if (status != 0):
+        return status
+    status = <int>highs.run()
+
+    cdef unique_ptr[HighsSolution] solution
+    cdef HighsBasis basis
+    if (status == 0):
+        solution = make_unique[HighsSolution](highs.getSolution())
+        basis = highs.getBasis()
+        modelstatus[0] = <int>highs.getModelStatus()
+
+        for ii in range(numcol):
+            colvalue[ii] = solution.get().col_value[ii]
+            coldual[ii] = solution.get().col_dual[ii]
+            colbasisstatus[ii] = <int>basis.col_status[ii]
+
+        for ii in range(numrow):
+            rowvalue[ii] = solution.get().row_value[ii]
+            rowdual[ii] = solution.get().row_dual[ii]
+            rowbasisstatus[ii] = <int>basis.row_status[ii]
+
+    return status
+
+
+def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1):
     '''Solve linear programs.
 
     Assume the form:
@@ -53,6 +71,9 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None):
     lhs : 1-D array (or None), (m,)
         Array of left hand side values of the inequality constraints.
         If `lhs=None`, then an array of `-inf` is assumed.
+    sense : int {1, -1}, optional
+        `sense=1` corresponds to the MIN problem, `sense=-1`
+        corresponds to the MAX problem.
 
     Returns
     -------
@@ -78,7 +99,12 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None):
     cdef int numnz = A.nnz
 
     # Objective function coefficients
-    cdef double * colcost = &c[0]
+    # Do MIN/MAX conversion here because API not working for HiGHS
+    cdef double[::1] cc = c.copy()
+    if sense == -1:
+        for ii in range(numcol):
+            cc[ii] *= -1
+    cdef double * colcost = &cc[0]
 
     # Bounds on variables
     cdef double[::1] collower_memview = np.zeros(numcol, dtype='double')
@@ -116,7 +142,8 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None):
         &rowlower[0], rowupper,
         &astart[0], &aindex[0], &avalue[0],
         &colvalue[0], &coldual[0], &rowvalue[0], &rowdual[0],
-        &colbasisstatus[0], &rowbasisstatus[0], &modelstatus)
+        &colbasisstatus[0], &rowbasisstatus[0], &modelstatus,
+        sense)
 
     return OptimizeResult({
         'fun': np.sum(c*np.array(colvalue)), # There's a way to get this, just haven't found it yet
