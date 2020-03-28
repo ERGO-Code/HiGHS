@@ -2,10 +2,12 @@
 
 from distutils.core import setup
 from distutils.extension import Extension
+from distutils.ccompiler import new_compiler
 from Cython.Build import cythonize
 
 from datetime import datetime
 import pathlib
+import sysconfig
 
 # Create HConfig.h: this is usually created by cmake,
 # but we just need an empty file and we'll do the
@@ -26,7 +28,7 @@ def get_sources(CMakeLists, start_token, end_token):
         sources = [s.strip() for s in sources if s[0] != '#']
 
     # Make relative to setup.py
-    sources = ['../src/' + s for s in sources]
+    sources = [str(pathlib.Path('../src/' + s).resolve()) for s in sources]
     return sources
 
 # Preprocess the highs.pyx.in to pull info from the cmake files.
@@ -71,23 +73,27 @@ UNDEF_MACROS = [
     'OSI_FOUND',
 ]
 
+# Naming conventions of shared libraries differ platform to platform:
+SO_PREFIX = str(pathlib.Path(new_compiler().library_filename('', lib_type='shared')).with_suffix(''))
+SO_SUFFIX = str(pathlib.Path(sysconfig.get_config_var('SO')).with_suffix(''))
+
 extensions = [
     # BASICLU
     Extension(
-        'libbasiclu',
+        SO_PREFIX + 'basiclu',
         basiclu_sources,
         include_dirs=[
-            '../src/',
-            '../src/ipm/basiclu/include/',
+            str(pathlib.Path('../src/').resolve()),
+            str(pathlib.Path('../src/ipm/basiclu/include/').resolve()),
         ],
-        language="c++",
+        language="c",
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
     ),
 
     # IPX
     Extension(
-        'libipx',
+        SO_PREFIX + 'ipx',
         ipx_sources,
         include_dirs=[
             '../src/',
@@ -96,7 +102,8 @@ extensions = [
         ],
         language="c++",
         library_dirs=LIBRARY_DIRS,
-        libraries=['basiclu.cpython-36m-x86_64-linux-gnu'],
+        #libraries=['basiclu.cpython-36m-x86_64-linux-gnu'],
+        libraries=['basiclu' + SO_SUFFIX],
         runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
@@ -114,7 +121,8 @@ extensions = [
         ],
         language="c++",
         library_dirs=LIBRARY_DIRS,
-        libraries=['ipx.cpython-36m-x86_64-linux-gnu'],
+        #libraries=['ipx.cpython-36m-x86_64-linux-gnu'],
+        libraries=['ipx' + SO_SUFFIX],
         runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
@@ -139,7 +147,8 @@ extensions = [
         ],
         language="c++",
         library_dirs=LIBRARY_DIRS,
-        libraries=['highs.cpython-36m-x86_64-linux-gnu'],
+        #libraries=['highs.cpython-36m-x86_64-linux-gnu'],
+        libraries=['highs' + SO_SUFFIX],
         runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
