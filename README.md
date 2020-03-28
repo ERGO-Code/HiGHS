@@ -4,8 +4,6 @@ In the cython directory exists a setup.py file that can be used to build the pro
 
     python setup.py build_ext --inplace
 
-The name of the shared libraries is currently platform dependent and I couldn't find a way to customize them without subclassing some distutil stuff, so I'm leaving that for later.
-
 The file cython/test.py shows how to call Cython wrapper around the CLI application RunHighs from app/RunHighs.cpp.
 
 # HiGHS - Linear optimization software
