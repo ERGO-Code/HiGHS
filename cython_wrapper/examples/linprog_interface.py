@@ -1,7 +1,8 @@
+'''Solve LP given numpy matrices.'''
+
 from linprog import highs_wrapper
 
 import numpy as np
-from scipy.sparse import csc_matrix
 
 if __name__ == '__main__':
 
@@ -19,7 +20,7 @@ if __name__ == '__main__':
         'parallel': True,
         'time_limit': 1,
         'message_level': 1,
-        'write_solution_to_file': True,
+        'write_solution_to_file': False,
         'solution_file': 'test.sol',
         'write_solution_pretty': True,
     }

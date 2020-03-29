@@ -30,31 +30,33 @@ def get_sources(CMakeLists, start_token, end_token):
         sources = [s.strip() for s in sources if s[0] != '#']
 
     # Make relative to setup.py
-    sources = [str(pathlib.Path('../src/' + s).resolve()) for s in sources]
+    sources = [str(pathlib.Path('src/' + s).resolve()) for s in sources]
     return sources
 
 # Preprocess the highs.pyx.in to pull info from the cmake files.
 # This step produces src/highs.pyx.
-sources = get_sources('../src/CMakeLists.txt', 'set(sources\n', ')')
-basiclu_sources = get_sources('../src/CMakeLists.txt', 'set(basiclu_sources\n', ')')
-ipx_sources = get_sources('../src/CMakeLists.txt', 'set(ipx_sources\n', ')')
+sources = get_sources('src/CMakeLists.txt', 'set(sources\n', ')')
+basiclu_sources = get_sources('src/CMakeLists.txt', 'set(basiclu_sources\n', ')')
+ipx_sources = get_sources('src/CMakeLists.txt', 'set(ipx_sources\n', ')')
 
 # Grab some more info about HiGHS from root CMakeLists
 def get_version(CMakeLists, start_token, end_token=')'):
-    with open('../CMakeLists.txt', 'r') as f:
+    with open('CMakeLists.txt', 'r') as f:
         s = f.read()
         start_idx = s.find(start_token) + len(start_token) + 1
         end_idx = s[start_idx:].find(end_token) + len(s[:start_idx])
     return s[start_idx:end_idx].strip()
-HIGHS_VERSION_MAJOR = get_version('../CMakeLists.txt', 'HIGHS_VERSION_MAJOR')
-HIGHS_VERSION_MINOR = get_version('../CMakeLists.txt', 'HIGHS_VERSION_MINOR')
-HIGHS_VERSION_PATCH = get_version('../CMakeLists.txt', 'HIGHS_VERSION_PATCH')
+HIGHS_VERSION_MAJOR = get_version('CMakeLists.txt', 'HIGHS_VERSION_MAJOR')
+HIGHS_VERSION_MINOR = get_version('CMakeLists.txt', 'HIGHS_VERSION_MINOR')
+HIGHS_VERSION_PATCH = get_version('CMakeLists.txt', 'HIGHS_VERSION_PATCH')
 
-# Here are the pound defines that HConfig.h would usually provide:
-CYTHON_DIR = pathlib.Path(__file__).resolve().parent
+# Get path to shared libraries
+CYTHON_DIR = pathlib.Path(__file__).resolve().parent / 'cython_wrapper'
 HIGHS_DIR = str(CYTHON_DIR.parent)
 CYTHON_DIR = str(CYTHON_DIR)
 LIBRARY_DIRS = [CYTHON_DIR]
+
+# Here are the pound defines that HConfig.h would usually provide:
 TODAY_DATE = datetime.today().strftime('%Y-%m-%d')
 DEFINE_MACROS = [
     ('OPENMP', None),
@@ -88,11 +90,11 @@ EXTRA_COMPILE_ARGS = ['-std=c++14']
 extensions = [
     # BASICLU
     Extension(
-        SO_PREFIX + 'basiclu',
+        'cython_wrapper.' + SO_PREFIX + 'basiclu',
         basiclu_sources,
         include_dirs=[
-            str(pathlib.Path('../src/').resolve()),
-            str(pathlib.Path('../src/ipm/basiclu/include/').resolve()),
+            str(pathlib.Path('src/').resolve()),
+            str(pathlib.Path('src/ipm/basiclu/include/').resolve()),
         ],
         language="c",
         define_macros=DEFINE_MACROS,
@@ -101,12 +103,12 @@ extensions = [
 
     # IPX
     Extension(
-        SO_PREFIX + 'ipx',
+        'cython_wrapper.' + SO_PREFIX + 'ipx',
         ipx_sources,
         include_dirs=[
-            '../src/',
-            '../src/ipm/ipx/include/',
-            '../src/ipm/basiclu/include/',
+            str(pathlib.Path('src/').resolve()),
+            str(pathlib.Path('src/ipm/ipx/include/').resolve()),
+            str(pathlib.Path('src/ipm/basiclu/include/').resolve()),
         ],
         language="c++",
         library_dirs=LIBRARY_DIRS,
@@ -119,13 +121,13 @@ extensions = [
 
     # HiGHS
     Extension(
-        'libhighs',
+        'cython_wrapper.libhighs',
         sources,
         include_dirs=[
-            'src/',
-            str(pathlib.Path('../src/').resolve()),
-            str(pathlib.Path('../src/ipm/ipx/include/').resolve()),
-            str(pathlib.Path('../src/lp_data/').resolve()),
+            str(pathlib.Path('cython_wrapper/src/').resolve()),
+            str(pathlib.Path('src/').resolve()),
+            str(pathlib.Path('src/ipm/ipx/include/').resolve()),
+            str(pathlib.Path('src/lp_data/').resolve()),
         ],
         language="c++",
         library_dirs=LIBRARY_DIRS,
@@ -142,15 +144,15 @@ extensions = [
 
     # Cython wrapper around RunHighs (for solving MPS files)
     Extension(
-        'linprog_mps',
-        ['src/linprog_mps.pyx'],
+        'cython_wrapper.linprog_mps',
+        [str(pathlib.Path('cython_wrapper/src/linprog_mps.pyx').resolve())],
         include_dirs=[
-            'src/',
-            str(pathlib.Path('../src/').resolve()),
-            str(pathlib.Path('../src/ipm/ipx/include/').resolve()),
-            str(pathlib.Path('../src/lp_data/').resolve()),
-            str(pathlib.Path('../src/io/').resolve()),
-            str(pathlib.Path('../src/mip/').resolve()),
+            str(pathlib.Path('cython_wrapper/src/').resolve()),
+            str(pathlib.Path('src/').resolve()),
+            str(pathlib.Path('src/ipm/ipx/include/').resolve()),
+            str(pathlib.Path('src/lp_data/').resolve()),
+            str(pathlib.Path('src/io/').resolve()),
+            str(pathlib.Path('src/mip/').resolve()),
         ],
         language="c++",
         library_dirs=LIBRARY_DIRS,
@@ -163,13 +165,13 @@ extensions = [
 
     # Cython wrapper for Highs_call
     Extension(
-        'linprog',
-        ['src/linprog.pyx'],
+        'cython_wrapper.linprog',
+        [str(pathlib.Path('cython_wrapper/src/linprog.pyx').resolve())],
         include_dirs=[
-            'src/',
-            str(pathlib.Path('../src/').resolve()),
-            str(pathlib.Path('../src/interfaces/').resolve()),
-            str(pathlib.Path('../src/lp_data/').resolve()),
+            str(pathlib.Path('cython_wrapper/src/').resolve()),
+            str(pathlib.Path('src/').resolve()),
+            str(pathlib.Path('src/interfaces/').resolve()),
+            str(pathlib.Path('src/lp_data/').resolve()),
             np.get_include(),
         ],
         language='c++',
@@ -184,4 +186,5 @@ extensions = [
 
 setup(
     ext_modules=cythonize(extensions),
+    options={'build_ext': {'inplace': True}},
 )
