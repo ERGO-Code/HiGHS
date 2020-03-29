@@ -135,7 +135,7 @@ def highs_wrapper(
         double[::1] lb=None,
         double[::1] ub=None,
         dict options=None):
-    '''Solve linear programs using HiGHS.
+    '''Solve linear programs using HiGHS [1]_.
 
     Assume problems of the form:
 
@@ -256,6 +256,15 @@ def highs_wrapper(
                 and `parallel=True` then PAMI will be used.
             - time_limit : double
                 Max number of seconds to run the solver for.
+            - solution_file : str
+                Solution file
+            - write_solution_to_file : bool
+                Write the primal and dual solution to a file
+            - write_solution_pretty : bool
+                Write the primal and dual solution in a pretty
+                (human-readable) format
+
+        See [2]_ for a list of all options.
 
     Returns
     -------
@@ -300,6 +309,17 @@ def highs_wrapper(
             Number of iterations taken by the simplex solver.
         - sum_dual_infeasibilities : double
         - sum_primal_infeasibilities : double
+
+    Notes
+    -----
+    If `options['write_solution_to_file']` is `True` but
+    `options['solution_file']` is unset or `''`, then the solution
+    will be printed to `stdout`.
+
+    References
+    ----------
+    .. [1] https://www.maths.ed.ac.uk/hall/HiGHS
+    .. [2] https://www.maths.ed.ac.uk/hall/HiGHS/HighsOptions.html
     '''
 
     # Try to cast, it'll raise a type error if it don't work
@@ -369,6 +389,13 @@ def highs_wrapper(
         &colvalue[0], &coldual[0], &rowvalue[0], &rowdual[0],
         &colbasisstatus[0], &rowbasisstatus[0], &modelstatus,
         highs)
+
+    # Maybe write to file
+    if options.get('write_solution_to_file', None):
+        outfile = options.get('solution_file', '')
+        outpretty = options.get('write_solution_pretty', False)
+        highs.writeSolution(outfile.encode(), outpretty)
+
 
     # Decode HighsBasisStatus:
     HighsBasisStatusToStr = {

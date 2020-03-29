@@ -15,10 +15,13 @@ if __name__ == '__main__':
     options = {
         'presolve': False,
         'sense': -1,
-        'solver': None,
+        'solver': 'ipm',
         'parallel': True,
         'time_limit': 1,
-        'message_level': 0,
+        'message_level': 1,
+        'write_solution_to_file': True,
+        'solution_file': 'test.sol',
+        'write_solution_pretty': True,
     }
     res = highs_wrapper(c, A, b, options=options)
     print(res)
