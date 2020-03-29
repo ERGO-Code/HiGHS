@@ -1,10 +1,13 @@
 # Cython Additions
 
-In the cython directory exists a setup.py file that can be used to build the project without relying on the cmake build system.  I've been building it like this:
+In the cython directory exists a setup.py file that can be used to build the project without relying on the cmake build system.  I've been building it like this from the root directory:
 
-    python setup.py build_ext --inplace
+    python setup.py build_ext
 
-The file cython/test.py shows how to call Cython wrapper around the CLI application RunHighs from app/RunHighs.cpp.
+You can run the examples like this (again from the root directory):
+
+    python -m cython_wrapper.examples.linprog_interface
+    python -m cython_wrapper.examples.solve_mps
 
 # HiGHS - Linear optimization software
 
