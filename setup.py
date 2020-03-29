@@ -173,6 +173,7 @@ extensions = [
         [str(pathlib.Path(CYTHON_DIRNAME + '/src/linprog_mps.pyx').resolve())],
         include_dirs=[
             str(pathlib.Path(CYTHON_DIRNAME + '/src/').resolve()),
+            str(pathlib.Path('external/').resolve()),
             str(pathlib.Path('src/').resolve()),
             str(pathlib.Path('src/ipm/ipx/include/').resolve()),
             str(pathlib.Path('src/lp_data/').resolve()),
@@ -194,6 +195,7 @@ extensions = [
         [str(pathlib.Path(CYTHON_DIRNAME + '/src/linprog.pyx').resolve())],
         include_dirs=[
             str(pathlib.Path(CYTHON_DIRNAME + '/src/').resolve()),
+            str(pathlib.Path('external/').resolve()),
             str(pathlib.Path('src/').resolve()),
             str(pathlib.Path('src/interfaces/').resolve()),
             str(pathlib.Path('src/lp_data/').resolve()),
@@ -211,7 +213,7 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.3',
+    version='0.0.4',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
