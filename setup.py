@@ -1,15 +1,27 @@
 '''Create shared library for use within scipy.'''
 
+#from setuptools import dist
+#dist.Distribution().fetch_build_eggs(['Cython>=0.29.16', 'numpy>=1.18.2'])
+
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.ccompiler import new_compiler
+from setuptools import setup, Extension, find_packages
+from setuptools.command.build_ext import build_ext as _build_ext
 from Cython.Build import cythonize
 
 from datetime import datetime
 import pathlib
 import sysconfig
 
-import numpy as np
+class build_ext(_build_ext):
+    '''Subclass build_ext to bootstrap numpy.'''
+    def finalize_options(self):
+        _build_ext.finalize_options(self)
+
+        # Prevent numpy from thinking it's still in its setup process
+        import numpy as np
+        self.include_dirs.append(np.get_include())
 
 # Create HConfig.h: this is usually created by cmake,
 # but we just need an empty file and we'll do the
@@ -51,10 +63,12 @@ HIGHS_VERSION_MINOR = get_version('CMakeLists.txt', 'HIGHS_VERSION_MINOR')
 HIGHS_VERSION_PATCH = get_version('CMakeLists.txt', 'HIGHS_VERSION_PATCH')
 
 # Get path to shared libraries
-CYTHON_DIR = pathlib.Path(__file__).resolve().parent / 'cython_wrapper'
+CYTHON_DIRNAME = 'pyHiGHS'
+CYTHON_DIR = pathlib.Path(__file__).resolve().parent / CYTHON_DIRNAME
 HIGHS_DIR = str(CYTHON_DIR.parent)
-CYTHON_DIR = str(CYTHON_DIR)
-LIBRARY_DIRS = [CYTHON_DIR]
+#CYTHON_DIR = str(CYTHON_DIR)
+#LIBRARY_DIRS = [CYTHON_DIR]
+LIBRARY_DIRS = [str(CYTHON_DIR.parent / 'build/lib.linux-x86_64-3.6/pyHiGHS/')]
 
 # Here are the pound defines that HConfig.h would usually provide:
 TODAY_DATE = datetime.today().strftime('%Y-%m-%d')
@@ -90,7 +104,7 @@ EXTRA_COMPILE_ARGS = ['-std=c++14']
 extensions = [
     # BASICLU
     Extension(
-        'cython_wrapper.' + SO_PREFIX + 'basiclu',
+        CYTHON_DIRNAME + '.' + SO_PREFIX + 'basiclu',
         basiclu_sources,
         include_dirs=[
             str(pathlib.Path('src/').resolve()),
@@ -103,7 +117,7 @@ extensions = [
 
     # IPX
     Extension(
-        'cython_wrapper.' + SO_PREFIX + 'ipx',
+        CYTHON_DIRNAME + '.' + SO_PREFIX + 'ipx',
         ipx_sources,
         include_dirs=[
             str(pathlib.Path('src/').resolve()),
@@ -121,10 +135,10 @@ extensions = [
 
     # HiGHS
     Extension(
-        'cython_wrapper.libhighs',
+        CYTHON_DIRNAME + '.libhighs',
         sources,
         include_dirs=[
-            str(pathlib.Path('cython_wrapper/src/').resolve()),
+            str(pathlib.Path(CYTHON_DIRNAME + '/src/').resolve()),
             str(pathlib.Path('src/').resolve()),
             str(pathlib.Path('src/ipm/ipx/include/').resolve()),
             str(pathlib.Path('src/lp_data/').resolve()),
@@ -144,10 +158,10 @@ extensions = [
 
     # Cython wrapper around RunHighs (for solving MPS files)
     Extension(
-        'cython_wrapper.linprog_mps',
-        [str(pathlib.Path('cython_wrapper/src/linprog_mps.pyx').resolve())],
+        CYTHON_DIRNAME + '.linprog_mps',
+        [str(pathlib.Path(CYTHON_DIRNAME + '/src/linprog_mps.pyx').resolve())],
         include_dirs=[
-            str(pathlib.Path('cython_wrapper/src/').resolve()),
+            str(pathlib.Path(CYTHON_DIRNAME + '/src/').resolve()),
             str(pathlib.Path('src/').resolve()),
             str(pathlib.Path('src/ipm/ipx/include/').resolve()),
             str(pathlib.Path('src/lp_data/').resolve()),
@@ -165,14 +179,14 @@ extensions = [
 
     # Cython wrapper for Highs_call
     Extension(
-        'cython_wrapper.linprog',
-        [str(pathlib.Path('cython_wrapper/src/linprog.pyx').resolve())],
+        CYTHON_DIRNAME + '.linprog',
+        [str(pathlib.Path(CYTHON_DIRNAME + '/src/linprog.pyx').resolve())],
         include_dirs=[
-            str(pathlib.Path('cython_wrapper/src/').resolve()),
+            str(pathlib.Path(CYTHON_DIRNAME + '/src/').resolve()),
             str(pathlib.Path('src/').resolve()),
             str(pathlib.Path('src/interfaces/').resolve()),
             str(pathlib.Path('src/lp_data/').resolve()),
-            np.get_include(),
+            #np.get_include(),
         ],
         language='c++',
         library_dirs=LIBRARY_DIRS,
@@ -185,6 +199,23 @@ extensions = [
 ]
 
 setup(
+    name='scikit-highs',
+    version='0.0.0',
+    author='Nicholas McKibben',
+    author_email='nicholas.bgp@gmail.com',
+    packages=find_packages(),
+    scripts=[],
+    url='https://github.com/mckib2/HiGHS',
+    description='Cython interface to HiGHS.',
+    install_requires=[
+        "numpy>=1.18.2",
+        "scipy>=1.4.1",
+        "Cython>=0.29.16",
+    ],
+    cmdclass={'build_ext': build_ext},
+    setup_requires=['numpy', 'Cython'],
+    python_requires='>=3',
+
     ext_modules=cythonize(extensions),
-    options={'build_ext': {'inplace': True}},
+    #options={'build_ext': {'inplace': True}},
 )

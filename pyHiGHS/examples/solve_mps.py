@@ -2,7 +2,7 @@
 
 import pathlib
 
-from linprog_mps import linprog_mps
+from pyHiGHS.linprog_mps import linprog_mps
 
 if __name__ == '__main__':
 
