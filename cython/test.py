@@ -17,5 +17,5 @@ if __name__ == '__main__':
         [3, 4, 2],
     ]).astype('double')
     b = np.array([5, 11, 8]).astype('double')
-    res = linprog(c, A, b, sense=-1)
+    res = linprog(c, A, b, presolve=False, sense=-1)
     print(res)

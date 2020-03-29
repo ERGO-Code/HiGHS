@@ -11,6 +11,21 @@ import numpy as np
 from scipy.sparse import csc_matrix
 from scipy.optimize import OptimizeResult
 
+from HConst cimport (
+    # Verbosity levels
+    ML_DETAILED,
+    ML_NONE,
+    ML_VERBOSE,
+    ML_MINIMAL,
+
+    # HighsBasisStatus
+    HighsBasisStatus,
+    LOWER,
+    BASIC,
+    UPPER,
+    ZERO,
+    NONBASIC,
+    SUPER)
 from Highs cimport Highs
 from HighsLp cimport (
     HighsSolution,
@@ -57,7 +72,7 @@ cdef int Highs_call(int numcol, int numrow, int numnz, double* colcost,
     return status
 
 
-def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1, bool disp=False):
+def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, presolve=None, int sense=1, int disp=0):
     '''Solve linear programs.
 
     Assume the form:
@@ -78,11 +93,18 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1, 
     lhs : 1-D array (or None), (m,)
         Array of left hand side values of the inequality constraints.
         If `lhs=None`, then an array of `-inf` is assumed.
+    presolve : bool or None,
+        Run the presolve or not (or if `None`, then choose).
     sense : int {1, -1}, optional
         `sense=1` corresponds to the MIN problem, `sense=-1`
         corresponds to the MAX problem.
-    disp : bool, optional
-        Write information about solver to stdio.
+    disp : {0, 1, 2, 4}, optional
+        Verbosity level, corresponds to:
+
+            - `0`: ML_NONE
+            - `1`: ML_VERBOSE
+            - `2`: ML_DETAILED
+            - `4`: ML_MINIMAL
 
     Returns
     -------
@@ -101,6 +123,10 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1, 
     # Try to cast, it'll raise a type error if it don't work
     if not isinstance(A, csc_matrix):
         A = csc_matrix(A)
+
+    # Make sure we have a good verbosity level
+    if disp not in [ML_NONE, ML_VERBOSE, ML_DETAILED, ML_MINIMAL]:
+        raise ValueError('disp level not one of {0, 1, 2, 4}!')
 
     # Get dimensions of problem
     cdef int numrow = A.shape[0]
@@ -148,9 +174,19 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1, 
     cdef Highs highs
     cdef FILE * f
     if not disp:
-        # set output to tmp to remove stdio spam
-        f = tmpfile()
-        highs.setHighsOutput(f)
+        # Set verbosity level for logging
+        highs.setHighsOptionValue('message_level'.encode(), disp)
+
+        # Send logging to dummy file to get rid of output from stdout
+        if disp == ML_NONE:
+            f = tmpfile()
+            highs.setHighsLogfile(f)
+
+    # Set the presolve option
+    if presolve is None:
+        highs.setHighsOptionValueStr('presolve'.encode(), 'choose'.encode())
+    elif not presolve:
+        highs.setHighsOptionValueStr('presolve'.encode(), 'off'.encode())
 
     # Call the solver
     cdef int ret = Highs_call(
@@ -162,6 +198,16 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1, 
         &colbasisstatus[0], &rowbasisstatus[0], &modelstatus,
         sense, highs)
 
+    # Decode HighsBasisStatus:
+    HighsBasisStatusToStr = {
+        <int>LOWER: 'LOWER: (slack) variable is at its lower bound [including fixed variables]',
+        <int>BASIC: 'BASIC: (slack) variable is basic',
+        <int>UPPER: 'UPPER: (slack) variable is at its upper bound',
+        <int>ZERO: 'ZERO: free variable is non-basic and set to zero',
+        <int>NONBASIC: 'NONBASIC: nonbasic with no specific bound information - useful for users and postsolve',
+        <int>SUPER: 'SUPER: Super-basic variable: non-basic and either free and nonzero or not at a bound. No SCIP equivalent',
+    }
+
     # Pull info out of out of highs
     cdef HighsInfo info = highs.getHighsInfo()
     return OptimizeResult({
@@ -170,8 +216,14 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1, 
         'simplex_nit': info.simplex_iteration_count,
         'ipm_nit': info.ipm_iteration_count,
         'crossover_nit': info.crossover_iteration_count,
-        'primal_status': info.primal_status,
-        'dual_status': info.dual_status,
+        'primal_status': {
+            'status': info.primal_status,
+            'message': highs.highsPrimalDualStatusToString(info.primal_status).decode(),
+        },
+        'dual_status': {
+            'status': info.dual_status,
+            'message': highs.highsPrimalDualStatusToString(info.dual_status).decode(),
+        },
         'num_primal_infeasibilities': info.num_primal_infeasibilities,
         'max_primal_infeasibility': info.max_primal_infeasibility,
         'sum_primal_infeasibilities': info.sum_primal_infeasibilities,
@@ -184,7 +236,16 @@ def linprog(double[::1] c, A, double[::1] b, double[::1] lhs=None, int sense=1, 
         'slack': np.array(coldual),
         'row_value': np.array(rowvalue),
         'row_dual': np.array(rowdual),
-        'col_basis_status': np.array(colbasisstatus),
-        'row_basis_status': np.array(rowbasisstatus),
-        'model_status': highs.highsModelStatusToString(<HighsModelStatus>modelstatus).decode(),
+        'col_basis_status': {
+            'statuses': [colbasisstatus[ii] for ii in range(numcol)],
+            'messages': [HighsBasisStatusToStr[colbasisstatus[ii]] for ii in range(numcol)],
+        },
+        'row_basis_status': {
+            'statuses': [rowbasisstatus[ii] for ii in range(numrow)],
+            'messages': [HighsBasisStatusToStr[rowbasisstatus[ii]] for ii in range(numrow)],
+        },
+        'model_status': {
+            'status': modelstatus,
+            'message': highs.highsModelStatusToString(<HighsModelStatus>modelstatus).decode(),
+        },
     })

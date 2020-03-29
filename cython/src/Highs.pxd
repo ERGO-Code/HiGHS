@@ -41,3 +41,8 @@ cdef extern from "Highs.h":
         const HighsBasis& getBasis() const
 
         bool changeObjectiveSense(const int sense)
+
+        HighsStatus setHighsOptionValue(const string & option, const int value)
+        HighsStatus setHighsOptionValueStr "setHighsOptionValue" (const string & option, const string & value)
+
+        string highsPrimalDualStatusToString(const int primal_dual_status)
