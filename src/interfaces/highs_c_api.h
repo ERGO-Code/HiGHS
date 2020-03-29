@@ -55,12 +55,6 @@ void Highs_destroy(void* highs  //!< HiGHS object reference
 /*
  * @brief
  */
-int Highs_run(void* highs  //!< HiGHS object reference
-);
-
-/*
- * @brief
- */
 int Highs_readModel(void* highs,          //!< HiGHS object reference
                     const char* filename  //!< filename
 );
@@ -70,6 +64,19 @@ int Highs_readModel(void* highs,          //!< HiGHS object reference
  */
 int Highs_writeModel(void* highs,          //!< HiGHS object reference
                      const char* filename  //!< filename
+);
+
+/*
+ * @brief Runs HiGHS
+ */
+int Highs_run(void* highs  //!< HiGHS object reference
+);
+
+/*
+ * @brief Reports the solution and basis status
+ */
+int Highs_writeSolution(void* highs,         //!< HiGHS object reference
+                        const char* filename //!< filename
 );
 
 /*
@@ -94,11 +101,66 @@ int Highs_passLp(
 /*
  * @brief
  */
+int Highs_setHighsIntOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              const int value    //!< new value of option
+);
+
+/*
+ * @brief
+ */
+int Highs_setHighsDoubleOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              const double value    //!< new value of option
+);
+
+/*
+ * @brief
+ */
+int Highs_setHighsStringOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              const char* value    //!< new value of option
+);
+
+/*
+ * @brief
+ */
 int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
                               const char* option,  //!< name of the option
                               const char* value    //!< new value of option
 );
 
+/*
+ * @brief
+ */
+int Highs_getHighsIntOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              int* value    //!< value of option
+);
+
+/*
+ * @brief
+ */
+int Highs_getHighsDoubleOptionValue(void* highs,         //!< HiGHS object reference
+                              const char* option,  //!< name of the option
+                              double* value    //!< value of option
+);
+
+/*
+ * @brief
+ */
+int Highs_getIntHighsInfoValue(void* highs,       //!< HiGHS object reference
+                               const char* info,  //!< The info name
+                               int* value         //!< The info value
+);
+
+/*
+ * @brief
+ */
+int Highs_getDoubleHighsInfoValue(void* highs,       //!< HiGHS object reference
+                                  const char* info,  //!< The info name
+                                  double* value      //!< The info value
+);
 /*
  * @brief
  */
@@ -118,22 +180,6 @@ void Highs_getBasis(
     int* colstatus,  //!< array of length [numcol], filled with column basis
                      //!< stati
     int* rowstatus   //!< array of length [numrow], filled with row basis stati
-);
-
-/*
- * @brief
- */
-int Highs_getIntHighsInfoValue(void* highs,       //!< HiGHS object reference
-                               const char* info,  //!< The info name
-                               int* value         //!< The info value
-);
-
-/*
- * @brief
- */
-int Highs_getDoubleHighsInfoValue(void* highs,       //!< HiGHS object reference
-                                  const char* info,  //!< The info name
-                                  double* value      //!< The info value
 );
 
 /**
@@ -628,12 +674,6 @@ int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
 //  * LP of the (first?) HighsModelObject
 //  */
 // HighsStatus setBasis(const HighsBasis &basis);
-
-// /**
-//  * @brief Reports the solution and basis status for the LP of the
-//  * (first?) HighsModelObject
-//  */
-// void writeSolution(const std::string filename);
 
 #ifdef __cplusplus
 }

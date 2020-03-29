@@ -9,9 +9,9 @@
 void minimal_api() {
   // Form and solve the LP
   // Min    f  = 2x_0 + 3x_1
-  // s.t.   8 <= 2x_0 +  x_1
-  //                    2x_1 <= 6
+  // s.t.                x_1 <= 6
   //       10 <=  x_0 + 2x_1 <= 14
+  //        8 <= 2x_0 +  x_1
   // 0 <= x_0 <= 3; 1 <= x_1
 
   int numcol = 2;
@@ -24,12 +24,12 @@ void minimal_api() {
   double cl[2] = {0.0, 1.0};
   double cu[2] = {3.0, 1.0e30};
   // Define the row lower bounds and upper bounds
-  double rl[3] = {8.0, -1.0e30, 10.0};
-  double ru[3] = {1.0e30, 6.0, 14.0};
+  double rl[3] = {-1.0e30, 10.0, 8.0};
+  double ru[3] = {6.0, 14.0, 1.0e30};
   // Define the constraint matrix column-wise
   int astart[3] = {0, 2, 5};
-  int aindex[5] = {0, 2, 0, 1, 2};
-  double avalue[5] = {2.0, 1.0, 1.0, 1.0, 2.0};
+  int aindex[5] = {1, 2, 0, 1, 2};
+  double avalue[5] = {1.0, 2.0, 1.0, 2.0, 1.0};
 
   double* cv = (double*)malloc(sizeof(double) * numcol);
   double* cd = (double*)malloc(sizeof(double) * numcol);
@@ -69,9 +69,9 @@ void minimal_api() {
 void full_api() {
   // Form and solve the LP
   // Min    f  = 2x_0 + 3x_1
-  // s.t.   8 <= 2x_0 +  x_1
-  //                    2x_1 <= 6
+  // s.t.                x_1 <= 6
   //       10 <=  x_0 + 2x_1 <= 14
+  //        8 <= 2x_0 +  x_1
   // 0 <= x_0 <= 3; 1 <= x_1
 
   void* highs;
@@ -88,13 +88,13 @@ void full_api() {
   double cl[2] = {0.0, 1.0};
   double cu[2] = {3.0, 1.0e30};
   // Define the row lower bounds and upper bounds
-  double rl[3] = {8.0, -1.0e30, 10.0};
-  double ru[3] = {1.0e30, 6.0, 14.0};
+  double rl[3] = {-1.0e30, 10.0, 8.0};
+  double ru[3] = {6.0, 14.0, 1.0e30};
   // Define the constraint matrix row-wise, as it is added to the LP
   // with the rows
-  int arstart[4] = {0, 2, 3, 5};
-  int arindex[5] = {0, 1, 1, 0, 1};
-  double arvalue[5] = {2.0, 1.0, 1.0, 1.0, 2.0};
+  int arstart[4] = {0, 1, 3, 5};
+  int arindex[5] = {1, 0, 1, 0, 1};
+  double arvalue[5] = {1.0, 1.0, 2.0, 2.0, 1.0};
 
   double* cv = (double*)malloc(sizeof(double) * numcol);
   double* cd = (double*)malloc(sizeof(double) * numcol);

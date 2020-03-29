@@ -20,7 +20,7 @@ int Highs_call(int numcol, int numrow, int numnz, double* colcost,
   Highs highs;
 
   int status =
-      Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower, colupper,
+    Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower, colupper,
                    rowlower, rowupper, astart, aindex, avalue);
   if (status != 0) {
     return status;
@@ -103,10 +103,49 @@ int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
   return (int)((Highs*)highs)->passModel(lp);
 }
 
+int Highs_setHighsIntOptionValue(void* highs, const char* option,
+                              const int value) {
+  return (int)((Highs*)highs)
+      ->setHighsOptionValue(std::string(option), value);
+}
+
+int Highs_setHighsDoubleOptionValue(void* highs, const char* option,
+				    const double value) {
+  return (int)((Highs*)highs)
+      ->setHighsOptionValue(std::string(option), value);
+}
+
+int Highs_setHighsStringOptionValue(void* highs, const char* option,
+                              const char* value) {
+  return (int)((Highs*)highs)
+      ->setHighsOptionValue(std::string(option), std::string(value));
+}
+
 int Highs_setHighsOptionValue(void* highs, const char* option,
                               const char* value) {
   return (int)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), std::string(value));
+}
+
+int Highs_getHighsIntOptionValue(void* highs, const char* option,
+                              int* value) {
+  return (int)((Highs*)highs)
+      ->getHighsOptionValue(std::string(option), *value);
+}
+
+int Highs_getHighsDoubleOptionValue(void* highs, const char* option,
+				    double* value) {
+  return (int)((Highs*)highs)
+      ->getHighsOptionValue(std::string(option), *value);
+}
+
+int Highs_getIntHighsInfoValue(void* highs, const char* info, int* value) {
+  return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
+}
+
+int Highs_getDoubleHighsInfoValue(void* highs, const char* info,
+                                  double* value) {
+  return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
 }
 
 void Highs_getSolution(void* highs, double* colvalue, double* coldual,
@@ -140,15 +179,6 @@ void Highs_getBasis(void* highs, int* colstatus, int* rowstatus) {
   for (int i = 0; i < (int)basis.row_status.size(); i++) {
     rowstatus[i] = (int)basis.row_status[i];
   }
-}
-
-int Highs_getIntHighsInfoValue(void* highs, const char* info, int& value) {
-  return (int)((Highs*)highs)->getHighsInfoValue(info, value);
-}
-
-int Highs_getDoubleHighsInfoValue(void* highs, const char* info,
-                                  double& value) {
-  return (int)((Highs*)highs)->getHighsInfoValue(info, value);
 }
 
 int Highs_addRow(void* highs, const double lower, const double upper,
