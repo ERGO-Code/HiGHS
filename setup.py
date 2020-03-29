@@ -215,7 +215,7 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.0',
+    version='0.0.1',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
