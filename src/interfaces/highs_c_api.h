@@ -75,8 +75,8 @@ int Highs_run(void* highs  //!< HiGHS object reference
 /*
  * @brief Reports the solution and basis status
  */
-int Highs_writeSolution(void* highs,         //!< HiGHS object reference
-                        const char* filename //!< filename
+int Highs_writeSolution(void* highs,          //!< HiGHS object reference
+                        const char* filename  //!< filename
 );
 
 /*
@@ -101,25 +101,25 @@ int Highs_passLp(
 /*
  * @brief
  */
-int Highs_setHighsIntOptionValue(void* highs,         //!< HiGHS object reference
-                              const char* option,  //!< name of the option
-                              const int value    //!< new value of option
+int Highs_setHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+                                 const char* option,  //!< name of the option
+                                 const int value      //!< new value of option
 );
 
 /*
  * @brief
  */
-int Highs_setHighsDoubleOptionValue(void* highs,         //!< HiGHS object reference
-                              const char* option,  //!< name of the option
-                              const double value    //!< new value of option
+int Highs_setHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    const double value  //!< new value of option
 );
 
 /*
  * @brief
  */
-int Highs_setHighsStringOptionValue(void* highs,         //!< HiGHS object reference
-                              const char* option,  //!< name of the option
-                              const char* value    //!< new value of option
+int Highs_setHighsStringOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    const char* value  //!< new value of option
 );
 
 /*
@@ -133,23 +133,23 @@ int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
 /*
  * @brief
  */
-int Highs_getHighsIntOptionValue(void* highs,         //!< HiGHS object reference
-                              const char* option,  //!< name of the option
-                              int* value    //!< value of option
+int Highs_getHighsIntOptionValue(void* highs,  //!< HiGHS object reference
+                                 const char* option,  //!< name of the option
+                                 int* value           //!< value of option
 );
 
 /*
  * @brief
  */
-int Highs_getHighsDoubleOptionValue(void* highs,         //!< HiGHS object reference
-                              const char* option,  //!< name of the option
-                              double* value    //!< value of option
+int Highs_getHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
+                                    const char* option,  //!< name of the option
+                                    double* value        //!< value of option
 );
 
 /*
  * @brief
  */
-int Highs_getIntHighsInfoValue(void* highs,       //!< HiGHS object reference
+int Highs_getHighsIntInfoValue(void* highs,       //!< HiGHS object reference
                                const char* info,  //!< The info name
                                int* value         //!< The info value
 );
@@ -157,7 +157,7 @@ int Highs_getIntHighsInfoValue(void* highs,       //!< HiGHS object reference
 /*
  * @brief
  */
-int Highs_getDoubleHighsInfoValue(void* highs,       //!< HiGHS object reference
+int Highs_getHighsDoubleInfoValue(void* highs,       //!< HiGHS object reference
                                   const char* info,  //!< The info name
                                   double* value      //!< The info value
 );
@@ -180,6 +180,88 @@ void Highs_getBasis(
     int* colstatus,  //!< array of length [numcol], filled with column basis
                      //!< stati
     int* rowstatus   //!< array of length [numrow], filled with row basis stati
+);
+
+/**
+ * @brief Returns the status of the (scaled) model
+ */
+int Highs_getModelStatus(
+    void* highs,            //!< HiGHS object reference
+    const int scaled_model  //!< 0 (nonzero) for status of (scaled) model
+);
+
+/**
+ * @brief Gets the basic variables in the order corresponding to
+ * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
+ * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
+ * required by SCIP, non-negative entries are indices of columns,
+ * and negative entries are -(row_index+1).
+ */
+int Highs_getBasicVariables(void* highs,          //!< HiGHS object reference,
+                            int* basic_variables  //!< Basic variables
+);
+
+/**
+ * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
+ */
+int Highs_getBasisInverseRow(void* highs,         //!< HiGHS object reference
+                             const int row,       //!< Index of row required
+                             double* row_vector,  //!< Row required
+                             int* row_num_nz,     //!< Number of nonzeros
+                             int* row_indices     //!< Indices of nonzeros
+);
+
+/**
+ * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
+ */
+int Highs_getBasisInverseCol(void* highs,         //!< HiGHS object reference
+                             const int col,       //!< Index of column required
+                             double* col_vector,  //!< Column required
+                             int* col_num_nz,     //!< Number of nonzeros
+                             int* col_indices     //!< Indices of nonzeros
+);
+
+/**
+ * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
+ * \f$\mathbf{b}\f$
+ */
+int Highs_getBasisSolve(void* highs,              //!< HiGHS object reference
+                        const double* rhs,        //!< RHS \f$\mathbf{b}\f$
+                        double* solution_vector,  //!< Solution \f$\mathbf{x}\f$
+                        int* solution_num_nz,     //!< Number of nonzeros
+                        int* solution_indices     //!< Indices of nonzeros
+);
+
+/**
+ * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
+ * \f$\mathbf{b}\f$
+ */
+int Highs_getBasisTransposeSolve(
+    void* highs,              //!< HiGHS object reference
+    const double* rhs,        //!< RHS \f$\mathbf{b}\f$
+    double* solution_vector,  //!< Solution  \f$\mathbf{x}\f$
+    int* solution_nz,         //!< Number of nonzeros
+    int* solution_indices     //!< Indices of nonzeros
+);
+
+/**
+ * @brief Forms a row of \f$B^{-1}A\f$
+ */
+int Highs_getReducedRow(void* highs,         //!< HiGHS object reference
+                        const int row,       //!< Index of row required
+                        double* row_vector,  //!< Row required
+                        int* row_num_nz,     //!< Number of nonzeros
+                        int* row_indices     //!< Indices of nonzeros
+);
+
+/**
+ * @brief Forms a column of \f$B^{-1}A\f$
+ */
+int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
+                           const int col,       //!< Index of column required
+                           double* col_vector,  //!< Column required
+                           int* col_num_nz,     //!< Number of nonzeros
+                           int* col_indices     //!< Indices of nonzeros
 );
 
 /**
@@ -552,88 +634,6 @@ int Highs_getNumRows(void* highs  //!< HiGHS object reference
  * @brief Returns the number of nonzeroes of the current model
  */
 int Highs_getNumNz(void* highs  //!< HiGHS object reference
-);
-
-/**
- * @brief Returns the status of the (scaled) model
- */
-int Highs_getModelStatus(
-    void* highs,            //!< HiGHS object reference
-    const int scaled_model  //!< 0 (nonzero) for status of (scaled) model
-);
-
-/**
- * @brief Gets the basic variables in the order corresponding to
- * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
- * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
- * required by SCIP, non-negative entries are indices of columns,
- * and negative entries are -(row_index+1).
- */
-int Highs_getBasicVariables(void* highs,          //!< HiGHS object reference,
-                            int* basic_variables  //!< Basic variables
-);
-
-/**
- * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
- */
-int Highs_getBasisInverseRow(void* highs,         //!< HiGHS object reference
-                             const int row,       //!< Index of row required
-                             double* row_vector,  //!< Row required
-                             int* row_num_nz,     //!< Number of nonzeros
-                             int* row_indices     //!< Indices of nonzeros
-);
-
-/**
- * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
- */
-int Highs_getBasisInverseCol(void* highs,         //!< HiGHS object reference
-                             const int col,       //!< Index of column required
-                             double* col_vector,  //!< Column required
-                             int* col_num_nz,     //!< Number of nonzeros
-                             int* col_indices     //!< Indices of nonzeros
-);
-
-/**
- * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
- * \f$\mathbf{b}\f$
- */
-int Highs_getBasisSolve(void* highs,              //!< HiGHS object reference
-                        const double* rhs,        //!< RHS \f$\mathbf{b}\f$
-                        double* solution_vector,  //!< Solution \f$\mathbf{x}\f$
-                        int* solution_num_nz,     //!< Number of nonzeros
-                        int* solution_indices     //!< Indices of nonzeros
-);
-
-/**
- * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
- * \f$\mathbf{b}\f$
- */
-int Highs_getBasisTransposeSolve(
-    void* highs,              //!< HiGHS object reference
-    const double* rhs,        //!< RHS \f$\mathbf{b}\f$
-    double* solution_vector,  //!< Solution  \f$\mathbf{x}\f$
-    int* solution_nz,         //!< Number of nonzeros
-    int* solution_indices     //!< Indices of nonzeros
-);
-
-/**
- * @brief Forms a row of \f$B^{-1}A\f$
- */
-int Highs_getReducedRow(void* highs,         //!< HiGHS object reference
-                        const int row,       //!< Index of row required
-                        double* row_vector,  //!< Row required
-                        int* row_num_nz,     //!< Number of nonzeros
-                        int* row_indices     //!< Indices of nonzeros
-);
-
-/**
- * @brief Forms a column of \f$B^{-1}A\f$
- */
-int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
-                           const int col,       //!< Index of column required
-                           double* col_vector,  //!< Column required
-                           int* col_num_nz,     //!< Number of nonzeros
-                           int* col_indices     //!< Indices of nonzeros
 );
 
 // /**

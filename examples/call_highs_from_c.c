@@ -46,16 +46,17 @@ void minimal_api() {
             
   assert(status == 0);
 
-  printf("Status: %d\nModelstatus:%d\n", status, modelstatus);
+  printf("Run status = %d; Model status = %d\n", status, modelstatus);
 
-  // Report the column primal and dual values, and basis status
-  for (i = 0; i < numcol; i++) {
-    printf("Col%d = %lf; dual = %lf; status = %d; \n", i, cv[i], cd[i], cbs[i]);
-  }
-
-  // Report the row primal and dual values, and basis status
-  for (i = 0; i < numrow; i++) {
-    printf("Row%d = %lf; dual = %lf; status = %d; \n", i, rv[i], rd[i], rbs[i]);
+  if (modelstatus == 9) {
+    // Report the column primal and dual values, and basis status
+    for (i = 0; i < numcol; i++) {
+      printf("Col%d = %lf; dual = %lf; status = %d; \n", i, cv[i], cd[i], cbs[i]);
+    }
+    // Report the row primal and dual values, and basis status
+    for (i = 0; i < numrow; i++) {
+      printf("Row%d = %lf; dual = %lf; status = %d; \n", i, rv[i], rd[i], rbs[i]);
+    }
   }
 
   free(cv);
@@ -104,29 +105,49 @@ void full_api() {
   int* cbs = (int*)malloc(sizeof(int) * numcol);
   int* rbs = (int*)malloc(sizeof(int) * numrow);
 
-  int modelstatus; 
-
   // Add two columns to the empty LP
   assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) );
   // Add three rows to the 2-column LP
   assert( Highs_addRows(highs, 3, rl, ru,  5, arstart, arindex, arvalue) );
 
-  Highs_run(highs);
-  // Get the primal and dual solution 
-  Highs_getSolution(highs, cv, cd, rv, rd);
-  // Get the basis
-  Highs_getBasis(highs, cbs, rbs);
-  
-  //  printf("Status: %d\nModelstatus:%d\n", status, modelstatus);
+  int simplex_scale_strategy;
+  Highs_getHighsIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
+  printf("simplex_scale_strategy = %d: setting it to 3\n", simplex_scale_strategy);
+  simplex_scale_strategy = 3;
+  Highs_setHighsIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
 
-  // Report the column primal and dual values, and basis status
-  for (i = 0; i < numcol; i++) {
-    printf("Col%d = %lf; dual = %lf; status = %d; \n", i, cv[i], cd[i], cbs[i]);
-  }
+  double primal_feasibility_tolerance;
+  Highs_getHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
+  printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
+  primal_feasibility_tolerance = 1e-6;
+  Highs_setHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
 
-  // Report the row primal and dual values, and basis status
-  for (i = 0; i < numrow; i++) {
-    printf("Row%d = %lf; dual = %lf; status = %d; \n", i, rv[i], rd[i], rbs[i]);
+  int status = Highs_run(highs);
+  // Get the model status
+  const int scaled_model = 0;
+  int modelstatus = Highs_getModelStatus(highs, scaled_model);
+
+  printf("Run status = %d; Model status = %d\n", status, modelstatus);
+
+  double objective_function_value;
+  Highs_getHighsDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
+  int simplex_iteration_count = 0;
+  Highs_getHighsIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+
+  printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
+  if (modelstatus == 9) {
+    // Get the primal and dual solution 
+    Highs_getSolution(highs, cv, cd, rv, rd);
+    // Get the basis
+    Highs_getBasis(highs, cbs, rbs);
+    // Report the column primal and dual values, and basis status
+    for (i = 0; i < numcol; i++) {
+      printf("Col%d = %lf; dual = %lf; status = %d; \n", i, cv[i], cd[i], cbs[i]);
+    }
+    // Report the row primal and dual values, and basis status
+    for (i = 0; i < numrow; i++) {
+      printf("Row%d = %lf; dual = %lf; status = %d; \n", i, rv[i], rd[i], rbs[i]);
+    }
   }
 
   free(cv);
