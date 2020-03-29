@@ -1,5 +1,5 @@
 from linprog_mps import linprog_mps
-from linprog import linprog
+from linprog import highs_wrapper
 
 import numpy as np
 from scipy.sparse import csc_matrix
@@ -17,5 +17,13 @@ if __name__ == '__main__':
         [3, 4, 2],
     ]).astype('double')
     b = np.array([5, 11, 8]).astype('double')
-    res = linprog(c, A, b, presolve=False, sense=-1)
+    options = {
+        'presolve': False,
+        'sense': -1,
+        'solver': None,
+        'parallel': True,
+        'time_limit': 1,
+        'disp': 1,
+    }
+    res = highs_wrapper(c, A, b, options=options)
     print(res)
