@@ -1,18 +1,32 @@
 '''Create shared library for use within scipy.'''
 
-#from setuptools import dist
-#dist.Distribution().fetch_build_eggs(['Cython>=0.29.16', 'numpy>=1.18.2'])
+# Dependencies
+CYTHON_VERSION = '0.29.16'
+NUMPY_VERSION = '1.18.2'
+SCIPY_VERSION = '1.4.1'
+
+# Make sure we have Cython and numpy
+from setuptools import dist
+dist.Distribution().fetch_build_eggs(['Cython>=' + CYTHON_VERSION, 'numpy>=' + NUMPY_VERSION])
 
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.ccompiler import new_compiler
+from distutils.util import get_platform
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext as _build_ext
 from Cython.Build import cythonize
 
+import os
+import sys
 from datetime import datetime
 import pathlib
 import sysconfig
+
+# see https://stackoverflow.com/questions/14320220/testing-python-c-libraries-get-build-path
+def get_distutils_lib_path():
+    PLAT_SPEC = "%s-%d.%d" % (get_platform(), *sys.version_info[:2])
+    return os.path.join("build", "lib.%s" % PLAT_SPEC)
 
 class build_ext(_build_ext):
     '''Subclass build_ext to bootstrap numpy.'''
@@ -68,7 +82,8 @@ CYTHON_DIR = pathlib.Path(__file__).resolve().parent / CYTHON_DIRNAME
 HIGHS_DIR = str(CYTHON_DIR.parent)
 #CYTHON_DIR = str(CYTHON_DIR)
 #LIBRARY_DIRS = [CYTHON_DIR]
-LIBRARY_DIRS = [str(CYTHON_DIR.parent / 'build/lib.linux-x86_64-3.6/pyHiGHS/')]
+#LIBRARY_DIRS = [str(CYTHON_DIR.parent / 'build' / 'lib.linux-x86_64-3.6/' / CYTHON_DIRNAME)]
+LIBRARY_DIRS = [str(CYTHON_DIR.parent / get_distutils_lib_path() / CYTHON_DIRNAME)]
 
 # Here are the pound defines that HConfig.h would usually provide:
 TODAY_DATE = datetime.today().strftime('%Y-%m-%d')
@@ -208,14 +223,13 @@ setup(
     url='https://github.com/mckib2/HiGHS',
     description='Cython interface to HiGHS.',
     install_requires=[
-        "numpy>=1.18.2",
-        "scipy>=1.4.1",
-        "Cython>=0.29.16",
+        "numpy>=" + NUMPY_VERSION,
+        "scipy>=" + SCIPY_VERSION,
+        "Cython>=" + CYTHON_VERSION,
     ],
     cmdclass={'build_ext': build_ext},
     setup_requires=['numpy', 'Cython'],
     python_requires='>=3',
 
     ext_modules=cythonize(extensions),
-    #options={'build_ext': {'inplace': True}},
 )
