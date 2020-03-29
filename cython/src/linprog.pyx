@@ -75,52 +75,57 @@ cdef int Highs_call(int numcol, int numrow, int numnz, double* colcost,
 cdef apply_options(dict options, Highs & highs):
     '''Take options from dictionary and apply to HiGHS object.'''
 
-    # Make sure we have a good verbosity level
-    disp = options.get('disp', ML_NONE)
-    if disp not in [ML_NONE, ML_VERBOSE, ML_DETAILED, ML_MINIMAL]:
-        warn('disp level not one of {0, 1, 2, 4}! Choosing disp=0.')
-        disp = ML_NONE
-
-    # Set verbosity level for logging
-    highs.setHighsOptionValue(b'message_level', disp)
-
     # Send logging to dummy file to get rid of output from stdout
     cdef FILE * f
-    if disp == ML_NONE:
+    if options.get('message_level', None) == ML_NONE:
         f = tmpfile()
         highs.setHighsLogfile(f)
 
-    # Set the presolve option
-    presolve = options.get('presolve', None)
-    if presolve is None:
-        highs.setHighsOptionValueStr(b'presolve', b'choose')
-    elif not presolve:
-        highs.setHighsOptionValueStr(b'presolve', b'off')
+    # Do all the ints
+    for opt in [
+            'max_threads',
+            'message_level',
+            'min_threads',
+            'simplex_crash_strategy',
+            'simplex_dual_edge_weight_strategy',
+            'simplex_iteration_limit',
+            'simplex_primal_edge_weight_strategy',
+            'simplex_strategy',
+            'simplex_update_limit',
+            'small_matrix_value']:
+        val = options.get(opt, None)
+        if val is not None:
+            highs.setHighsOptionValueInt(opt.encode(), val)
 
-    # Set the solver to use
-    solver = options.get('solver', None)
-    if solver is None:
-        highs.setHighsOptionValueStr(b'solver', b'choose')
-    elif solver == 'simplex':
-        highs.setHighsOptionValueStr(b'solver', b'simplex')
-    elif solver == 'ipm':
-        highs.setHighsOptionValueStr(b'solver', b'ipm')
-    else:
-        warn('%s is not a recognized solver. Using default.' % solver)
+    # Do all the doubles
+    for opt in [
+            'dual_feasibility_tolerance',
+            'dual_objective_value_upper_bound',
+            'infinite_bound',
+            'infinite_cost',
+            'large_matrix_value',
+            'primal_feasibility_tolerance',
+            'small_matrix_value',
+            'time_limit']:
+        val = options.get(opt, None)
+        if val is not None:
+            highs.setHighsOptionValueDbl(opt.encode(), val)
 
-    # Choose parallel or serial
-    parallel = options.get('parallel', None)
-    if parallel is None:
-        highs.setHighsOptionValueStr(b'parallel', b'choose')
-    elif parallel:
-        highs.setHighsOptionValueStr(b'parallel', b'on')
-    else:
-        highs.setHighsOptionValueStr(b'parallel', b'off')
+    # Do all the strings
+    for opt in ['solver']:
+        val = options.get(opt, None)
+        if val is not None:
+            highs.setHighsOptionValueStr(opt.encode(), val.encode())
 
-    # Set a time limit
-    time_limit = options.get('time_limit', None)
-    if time_limit is not None:
-        highs.setHighsOptionValueDbl(b'time_limit', time_limit)
+    # Do all the bool to strings
+    for opt in ['parallel', 'presolve']:
+        val = options.get(opt, None)
+        if val is not None:
+            if val:
+                val0 = b'on'
+            else:
+                val0 = b'off'
+            highs.setHighsOptionValueStr(opt.encode(), val0)
 
 def highs_wrapper(
         double[::1] c,
@@ -160,14 +165,6 @@ def highs_wrapper(
     options : dict
         A dictionary of solver options with the following fields:
 
-            - disp : int {0, 1, 2, 4}
-                Verbosity level, corresponds to:
-
-                    - `0`: ML_NONE
-                    - `1`: ML_VERBOSE
-                    - `2`: ML_DETAILED
-                    - `4`: ML_MINIMAL
-
             - dual_feasibility_tolerance : double
                 Dual feasibility tolerance
             - dual_objective_value_upper_bound : double
@@ -184,6 +181,14 @@ def highs_wrapper(
                 this will be treated as infinite
             - max_threads : int
                 Maximum number of threads in parallel execution.
+            - message_level : int {0, 1, 2, 4}
+                Verbosity level, corresponds to:
+
+                    - `0`: ML_NONE
+                    - `1`: ML_VERBOSE
+                    - `2`: ML_DETAILED
+                    - `4`: ML_MINIMAL
+
             - min_threads : int
                 Minimum number of threads in parallel execution.
             - parallel : bool
@@ -299,7 +304,7 @@ def highs_wrapper(
 
     # Try to cast, it'll raise a type error if it don't work
     if not isinstance(A, csc_matrix):
-        A = csc_matrix(A)
+        A = csc_matrix(A).astype('double')
 
     # Get dimensions of problem
     cdef int numrow = A.shape[0]
