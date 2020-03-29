@@ -1,5 +1,8 @@
 include CMakeLists.txt
 global-include *.pxd *.pyx
 graft src/
-graft pyHiGHS/examples/
-exclude *.~ __pycache__
+graft external/
+
+include pyHiGHS/examples/linprog_interface.py
+include pyHiGHS/examples/solve_mps.py
+include pyHiGHS/examples/25fv47

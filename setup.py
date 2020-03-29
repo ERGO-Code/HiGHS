@@ -5,10 +5,6 @@ CYTHON_VERSION = '0.29.16'
 NUMPY_VERSION = '1.18.2'
 SCIPY_VERSION = '1.4.1'
 
-# Make sure we have Cython and numpy
-from setuptools import dist
-dist.Distribution().fetch_build_eggs(['Cython>=' + CYTHON_VERSION, 'numpy>=' + NUMPY_VERSION])
-
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.ccompiler import new_compiler
@@ -215,7 +211,7 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.2',
+    version='0.0.3',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
