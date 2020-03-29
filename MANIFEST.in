@@ -1,3 +1,5 @@
+include CMakeLists.txt
 global-include *.pxd *.pyx
 graft src/
 graft pyHiGHS/examples/
+exclude *.~ __pycache__
