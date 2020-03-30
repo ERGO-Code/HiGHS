@@ -162,8 +162,6 @@ int Presolve::presolve(int print) {
   timer.recordFinish(RESIZE_MATRIX);
 
   timer.updateInfo();
-  //  if ((std::string)CMAKE_BUILD_TYPE == "debug")
-  timer.reportClocks();
 
   return status;
 }
