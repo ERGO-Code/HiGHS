@@ -157,7 +157,7 @@ extensions = [
         language="c++",
         library_dirs=LIBRARY_DIRS,
         libraries=['ipx' + SO_SUFFIX],
-        runtime_library_dirs=LIBRARY_DIRS,
+        #runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
 
@@ -183,7 +183,7 @@ extensions = [
         language="c++",
         library_dirs=LIBRARY_DIRS,
         libraries=['highs' + SO_SUFFIX],
-        runtime_library_dirs=LIBRARY_DIRS,
+        #runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
         extra_compile_args=EXTRA_COMPILE_ARGS,
@@ -204,7 +204,7 @@ extensions = [
         language='c++',
         library_dirs=LIBRARY_DIRS,
         libraries=['highs' + SO_SUFFIX],
-        runtime_library_dirs=LIBRARY_DIRS,
+        #runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
         extra_compile_args=EXTRA_COMPILE_ARGS,
@@ -213,7 +213,7 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.6',
+    version='0.0.7',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
