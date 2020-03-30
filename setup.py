@@ -122,13 +122,15 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.12',
+    version='0.0.13',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
     scripts=[],
     url='https://github.com/mckib2/HiGHS',
+    license='MIT',
     description='Cython interface to HiGHS.',
+    long_description=open('PYREADME.rst', encoding='utf-8').read(),
     install_requires=[
         "numpy>=" + NUMPY_VERSION,
         "scipy>=" + SCIPY_VERSION,
