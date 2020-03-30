@@ -12,6 +12,7 @@ import numpy as np
 
 # Define some things for the module
 MODULE_NAME = 'pyHiGHS'
+VERSION = '0.0.16'
 
 # Dependencies
 CYTHON_VERSION = '0.29.16'
@@ -122,7 +123,7 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.15',
+    version=VERSION,
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
