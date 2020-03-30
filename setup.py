@@ -78,8 +78,8 @@ CYTHON_DIR = pathlib.Path(__file__).resolve().parent / CYTHON_DIRNAME
 HIGHS_DIR = str(CYTHON_DIR.parent)
 #CYTHON_DIR = str(CYTHON_DIR)
 #LIBRARY_DIRS = [CYTHON_DIR]
-#LIBRARY_DIRS = [str(CYTHON_DIR.parent / 'build' / 'lib.linux-x86_64-3.6/' / CYTHON_DIRNAME)]
 LIBRARY_DIRS = [str(CYTHON_DIR.parent / get_distutils_lib_path() / CYTHON_DIRNAME)]
+print(LIBRARY_DIRS)
 
 # Here are the pound defines that HConfig.h would usually provide:
 TODAY_DATE = datetime.today().strftime('%Y-%m-%d')
@@ -138,7 +138,7 @@ extensions = [
         language="c++",
         library_dirs=LIBRARY_DIRS,
         libraries=['basiclu' + SO_SUFFIX],
-        runtime_library_dirs=LIBRARY_DIRS,
+        #runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
         extra_compile_args=EXTRA_COMPILE_ARGS,
@@ -157,7 +157,7 @@ extensions = [
         language="c++",
         library_dirs=LIBRARY_DIRS,
         libraries=['ipx' + SO_SUFFIX],
-        runtime_library_dirs=LIBRARY_DIRS,
+        #runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
 
@@ -183,7 +183,7 @@ extensions = [
         language="c++",
         library_dirs=LIBRARY_DIRS,
         libraries=['highs' + SO_SUFFIX],
-        runtime_library_dirs=LIBRARY_DIRS,
+        #runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
         extra_compile_args=EXTRA_COMPILE_ARGS,
@@ -204,7 +204,7 @@ extensions = [
         language='c++',
         library_dirs=LIBRARY_DIRS,
         libraries=['highs' + SO_SUFFIX],
-        runtime_library_dirs=LIBRARY_DIRS,
+        #runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
         extra_compile_args=EXTRA_COMPILE_ARGS,
@@ -213,7 +213,7 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.4',
+    version='0.0.5',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
