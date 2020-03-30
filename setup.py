@@ -122,7 +122,7 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.13',
+    version='0.0.15',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),

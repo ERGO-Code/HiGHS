@@ -1,4 +1,5 @@
 include CMakeLists.txt
+include PYREADME.rst
 global-include *.pxd *.pyx
 graft src/
 graft external/
