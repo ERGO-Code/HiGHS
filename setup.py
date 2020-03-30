@@ -74,7 +74,7 @@ HIGHS_VERSION_PATCH = get_version('CMakeLists.txt', 'HIGHS_VERSION_PATCH')
 
 # Get path to shared libraries
 CYTHON_DIRNAME = 'pyHiGHS'
-CYTHON_DIR = pathlib.Path(__file__).resolve().parent / CYTHON_DIRNAME
+CYTHON_DIR = pathlib.Path(__file__).parent / CYTHON_DIRNAME
 HIGHS_DIR = str(CYTHON_DIR.parent)
 #CYTHON_DIR = str(CYTHON_DIR)
 #LIBRARY_DIRS = [CYTHON_DIR]
@@ -157,7 +157,7 @@ extensions = [
         language="c++",
         library_dirs=LIBRARY_DIRS,
         libraries=['ipx' + SO_SUFFIX],
-        #runtime_library_dirs=LIBRARY_DIRS,
+        runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
 
@@ -183,7 +183,7 @@ extensions = [
         language="c++",
         library_dirs=LIBRARY_DIRS,
         libraries=['highs' + SO_SUFFIX],
-        #runtime_library_dirs=LIBRARY_DIRS,
+        runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
         extra_compile_args=EXTRA_COMPILE_ARGS,
@@ -204,7 +204,7 @@ extensions = [
         language='c++',
         library_dirs=LIBRARY_DIRS,
         libraries=['highs' + SO_SUFFIX],
-        #runtime_library_dirs=LIBRARY_DIRS,
+        runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
         extra_compile_args=EXTRA_COMPILE_ARGS,
@@ -213,7 +213,7 @@ extensions = [
 
 setup(
     name='scikit-highs',
-    version='0.0.5',
+    version='0.0.6',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
