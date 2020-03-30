@@ -390,12 +390,15 @@ def highs_wrapper(
         &colbasisstatus[0], &rowbasisstatus[0], &modelstatus,
         highs)
 
+    # If the model is unset, it means we've encountered an error during optimization -- quit out now!
+    if modelstatus == 0:
+        raise RuntimeError("Model failed during optimization! Try `presolve=False` and/or `method='simplex'`")
+
     # Maybe write to file
     if options.get('write_solution_to_file', None):
         outfile = options.get('solution_file', '')
         outpretty = options.get('write_solution_pretty', False)
         highs.writeSolution(outfile.encode(), outpretty)
-
 
     # Decode HighsBasisStatus:
     HighsBasisStatusToStr = {
