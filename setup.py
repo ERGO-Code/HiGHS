@@ -1,28 +1,22 @@
 '''Create shared library for use within scipy.'''
 
+#from distutils.core import setup
+#from distutils.extension import Extension
+from Cython.Build import cythonize
+from setuptools import setup, Extension, find_packages
+from setuptools.command.build_ext import build_ext as _build_ext
+
+import pathlib
+from datetime import datetime
+import numpy as np
+
+# Define some things for the module
+MODULE_NAME = 'pyHiGHS'
+
 # Dependencies
 CYTHON_VERSION = '0.29.16'
 NUMPY_VERSION = '1.18.2'
 SCIPY_VERSION = '1.4.1'
-
-from distutils.core import setup
-from distutils.extension import Extension
-from distutils.ccompiler import new_compiler
-from distutils.util import get_platform
-from setuptools import setup, Extension, find_packages
-from setuptools.command.build_ext import build_ext as _build_ext
-from Cython.Build import cythonize
-
-import os
-import sys
-from datetime import datetime
-import pathlib
-import sysconfig
-
-# see https://stackoverflow.com/questions/14320220/testing-python-c-libraries-get-build-path
-def get_distutils_lib_path():
-    PLAT_SPEC = "%s-%d.%d" % (get_platform(), *sys.version_info[:2])
-    return os.path.join("build", "lib.%s" % PLAT_SPEC)
 
 class build_ext(_build_ext):
     '''Subclass build_ext to bootstrap numpy.'''
@@ -52,7 +46,7 @@ def get_sources(CMakeLists, start_token, end_token):
         sources = [s.strip() for s in sources if s[0] != '#']
 
     # Make relative to setup.py
-    sources = [str(pathlib.Path('src/' + s).resolve()) for s in sources]
+    sources = [str(pathlib.Path('src/' + s)) for s in sources]
     return sources
 
 # Preprocess the highs.pyx.in to pull info from the cmake files.
@@ -72,14 +66,9 @@ HIGHS_VERSION_MAJOR = get_version('CMakeLists.txt', 'HIGHS_VERSION_MAJOR')
 HIGHS_VERSION_MINOR = get_version('CMakeLists.txt', 'HIGHS_VERSION_MINOR')
 HIGHS_VERSION_PATCH = get_version('CMakeLists.txt', 'HIGHS_VERSION_PATCH')
 
-# Get path to shared libraries
-CYTHON_DIRNAME = 'pyHiGHS'
-CYTHON_DIR = pathlib.Path(__file__).parent / CYTHON_DIRNAME
-HIGHS_DIR = str(CYTHON_DIR.parent)
-#CYTHON_DIR = str(CYTHON_DIR)
-#LIBRARY_DIRS = [CYTHON_DIR]
-LIBRARY_DIRS = [str(CYTHON_DIR.parent / get_distutils_lib_path() / CYTHON_DIRNAME)]
-print(LIBRARY_DIRS)
+# Get some directory paths
+CYTHON_DIR = pathlib.Path(__file__).parent / MODULE_NAME
+HIGHS_DIR = str(CYTHON_DIR.parent.resolve())
 
 # Here are the pound defines that HConfig.h would usually provide:
 TODAY_DATE = datetime.today().strftime('%Y-%m-%d')
@@ -102,118 +91,38 @@ UNDEF_MACROS = [
     'OSI_FOUND',
 ]
 
-# Naming conventions of shared libraries differ platform to platform:
-SO_PREFIX = str(pathlib.Path(new_compiler().library_filename('', lib_type='shared')).with_suffix(''))
-SO_SUFFIX = str(pathlib.Path(sysconfig.get_config_var('EXT_SUFFIX')).with_suffix(''))
-if SO_SUFFIX is None:
-    # https://bugs.python.org/issue19555
-    SO_SUFFIX = str(pathlib.Path(sysconfig.get_config_var('SO')).with_suffix(''))
-
 # We use some modern C++, as you should. HiGHS uses C++11, no penalty for going to C++14
 EXTRA_COMPILE_ARGS = ['-std=c++14']
 
 extensions = [
-    # BASICLU
     Extension(
-        CYTHON_DIRNAME + '.' + SO_PREFIX + 'basiclu',
-        basiclu_sources,
+        MODULE_NAME + '.linprog',
+        [
+            str(pathlib.Path(MODULE_NAME + '/src/linprog.pyx'))
+        ] + basiclu_sources + ipx_sources + sources,
         include_dirs=[
-            str(pathlib.Path('src/').resolve()),
-            str(pathlib.Path('src/ipm/basiclu/include/').resolve()),
-        ],
-        language="c",
-        define_macros=DEFINE_MACROS,
-        undef_macros=UNDEF_MACROS,
-    ),
-
-    # IPX
-    Extension(
-        CYTHON_DIRNAME + '.' + SO_PREFIX + 'ipx',
-        ipx_sources,
-        include_dirs=[
-            str(pathlib.Path('src/').resolve()),
-            str(pathlib.Path('src/ipm/ipx/include/').resolve()),
-            str(pathlib.Path('src/ipm/basiclu/include/').resolve()),
+            str(pathlib.Path(MODULE_NAME+ '/src/')),
+            str(pathlib.Path('src/ipm/basiclu/include/')),
+            str(pathlib.Path('external/')),
+            str(pathlib.Path('src/')),
+            str(pathlib.Path('src/ipm/ipx/include/')),
+            str(pathlib.Path('src/lp_data/')),
+            str(pathlib.Path('src/io/')),
+            str(pathlib.Path('src/mip/')),
+            str(pathlib.Path('src/interfaces/')),
         ],
         language="c++",
-        library_dirs=LIBRARY_DIRS,
-        libraries=['basiclu' + SO_SUFFIX],
-        #runtime_library_dirs=LIBRARY_DIRS,
         define_macros=DEFINE_MACROS,
         undef_macros=UNDEF_MACROS,
-        extra_compile_args=EXTRA_COMPILE_ARGS,
-    ),
-
-    # HiGHS
-    Extension(
-        CYTHON_DIRNAME + '.libhighs',
-        sources,
-        include_dirs=[
-            str(pathlib.Path(CYTHON_DIRNAME + '/src/').resolve()),
-            str(pathlib.Path('src/').resolve()),
-            str(pathlib.Path('src/ipm/ipx/include/').resolve()),
-            str(pathlib.Path('src/lp_data/').resolve()),
-        ],
-        language="c++",
-        library_dirs=LIBRARY_DIRS,
-        libraries=['ipx' + SO_SUFFIX],
-        #runtime_library_dirs=LIBRARY_DIRS,
-        define_macros=DEFINE_MACROS,
-        undef_macros=UNDEF_MACROS,
-
-        # Should only be here if using openMP.
-        # For Microsoft Visual C++ compiler, use '/openmp' instead of '-fopenmp'.
         extra_compile_args=EXTRA_COMPILE_ARGS + ['-fopenmp'],
         extra_link_args=['-fopenmp'],
     ),
-
-    # Cython wrapper around RunHighs (for solving MPS files)
-    Extension(
-        CYTHON_DIRNAME + '.linprog_mps',
-        [str(pathlib.Path(CYTHON_DIRNAME + '/src/linprog_mps.pyx').resolve())],
-        include_dirs=[
-            str(pathlib.Path(CYTHON_DIRNAME + '/src/').resolve()),
-            str(pathlib.Path('external/').resolve()),
-            str(pathlib.Path('src/').resolve()),
-            str(pathlib.Path('src/ipm/ipx/include/').resolve()),
-            str(pathlib.Path('src/lp_data/').resolve()),
-            str(pathlib.Path('src/io/').resolve()),
-            str(pathlib.Path('src/mip/').resolve()),
-        ],
-        language="c++",
-        library_dirs=LIBRARY_DIRS,
-        libraries=['highs' + SO_SUFFIX],
-        #runtime_library_dirs=LIBRARY_DIRS,
-        define_macros=DEFINE_MACROS,
-        undef_macros=UNDEF_MACROS,
-        extra_compile_args=EXTRA_COMPILE_ARGS,
-    ),
-
-    # Cython wrapper for Highs_call
-    Extension(
-        CYTHON_DIRNAME + '.linprog',
-        [str(pathlib.Path(CYTHON_DIRNAME + '/src/linprog.pyx').resolve())],
-        include_dirs=[
-            str(pathlib.Path(CYTHON_DIRNAME + '/src/').resolve()),
-            str(pathlib.Path('external/').resolve()),
-            str(pathlib.Path('src/').resolve()),
-            str(pathlib.Path('src/interfaces/').resolve()),
-            str(pathlib.Path('src/lp_data/').resolve()),
-            #np.get_include(),
-        ],
-        language='c++',
-        library_dirs=LIBRARY_DIRS,
-        libraries=['highs' + SO_SUFFIX],
-        #runtime_library_dirs=LIBRARY_DIRS,
-        define_macros=DEFINE_MACROS,
-        undef_macros=UNDEF_MACROS,
-        extra_compile_args=EXTRA_COMPILE_ARGS,
-    ),
 ]
+
 
 setup(
     name='scikit-highs',
-    version='0.0.7',
+    version='0.0.12',
     author='Nicholas McKibben',
     author_email='nicholas.bgp@gmail.com',
     packages=find_packages(),
@@ -228,6 +137,7 @@ setup(
     cmdclass={'build_ext': build_ext},
     setup_requires=['numpy', 'Cython'],
     python_requires='>=3',
+    include_package_data=True, # include example .mps file
 
     ext_modules=cythonize(extensions),
 )

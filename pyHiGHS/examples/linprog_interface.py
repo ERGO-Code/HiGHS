@@ -1,6 +1,6 @@
 '''Solve LP given numpy matrices.'''
 
-from pyHiGHS.linprog import highs_wrapper
+from pyHiGHS import highs_wrapper
 
 import numpy as np
 

@@ -1,2 +1,1 @@
-from .linprog import highs_wrapper
-from .linprog_mps import linprog_mps
+from pyHiGHS.linprog import highs_wrapper, linprog_mps

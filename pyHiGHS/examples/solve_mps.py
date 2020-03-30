@@ -2,9 +2,9 @@
 
 import pathlib
 
-from pyHiGHS.linprog_mps import linprog_mps
+from pyHiGHS import linprog_mps
 
 if __name__ == '__main__':
 
-    mpsfile = str(pathlib.Path(__file__).parent / '25fv47')
+    mpsfile = str(pathlib.Path(__file__).parent / '25fv47.mps')
     linprog_mps(mpsfile)
