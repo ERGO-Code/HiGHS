@@ -14,12 +14,12 @@ if __name__ == '__main__':
     ]).astype('double')
     b = np.array([5, 11, 8]).astype('double')
     options = {
-        'presolve': False,
+        'presolve': True,
         'sense': -1,
-        'solver': 'ipm',
+        'solver': 'simplex',
         'parallel': True,
         'time_limit': 1,
-        'message_level': 1,
+        'message_level': 0,
         'write_solution_to_file': False,
         'solution_file': 'test.sol',
         'write_solution_pretty': True,
