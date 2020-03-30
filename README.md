@@ -11,7 +11,7 @@ It is written in C++ with OpenMP directives, and has been developed and tested o
 
 HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier.
 
-Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com. 
+Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
 Reference
 ---------
@@ -36,8 +36,9 @@ The rest of this file gives brief documentation for HiGHS. Comprehensive documen
 Compilation
 -----------
 
-HiGHS uses CMake as build system. First setup
-a build folder and call CMake as follows
+HiGHS uses CMake as build system.
+
+The process is simple for Linux build.  First setup a build folder and call CMake as follows
 
     mkdir build
     cd build
@@ -47,7 +48,24 @@ Then compile the code using
 
     make
 
-This installs the executable `bin/highs`. 
+This installs the executable `bin/highs`.
+
+For Windows 10 build, you must first install [MSYS2](https://www.msys2.org/) (usually the 64-bit variant) and run the following to install build utilities:
+
+    # For 64-bit:
+    pacman -S --needed base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake git
+
+    # For 32-bit:
+    pacman -S --needed base-devel mingw-w64-i686-toolchain mingw-w64-i686-cmake git
+
+Also make sure you have [build tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2017) installed from Microsoft.  Close and restart MSYS2 and navigate to the root directory cloned HiGHS project and run the following to build:
+
+    mkdir build
+    cd build
+    cmake -DOPENMP=OFF .. # OPENMP not supported on Windows
+    cmake --build . --config Release
+
+MSYS2 must be used, not the command line or MINGW terminal.  Again, this installs executables in `bin/highs`.
 
 Testing
 -------
