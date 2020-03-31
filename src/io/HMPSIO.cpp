@@ -67,12 +67,31 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
   int num_alien_entries = 0;
   int integerCol = 0;
 
-  // Load NAME and ROWS
-  load_mpsLine(file, integerCol, lmax, line, flag, data);
+  // Load NAME
   load_mpsLine(file, integerCol, lmax, line, flag, data);
 #ifdef HiGHSDEV
   printf("readMPS: Read NAME    OK\n");
 #endif
+  // Load OBJSENSE or ROWS
+  load_mpsLine(file, integerCol, lmax, line, flag, data);
+  if (flag[0] == 'O') {
+    // Found OBJSENSE
+    load_mpsLine(file, integerCol, lmax, line, flag, data);
+    std::string sense(&line[2], &line[2] + 3);
+    // the sense must be "MAX" or "MIN"
+    if (sense.compare("MAX") == 0) {
+      objSense = OBJSENSE_MAXIMIZE;
+    } else if (sense.compare("MIN") == 0) {
+      objSense = OBJSENSE_MINIMIZE;
+    } else {
+      return FilereaderRetcode::PARSERERROR;
+    }
+#ifdef HiGHSDEV
+    printf("readMPS: Read OBJSENSE OK\n");
+#endif
+    // Load ROWS
+    load_mpsLine(file, integerCol, lmax, line, flag, data);
+  }
 
   row_names.clear();
   col_names.clear();

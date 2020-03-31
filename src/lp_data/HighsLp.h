@@ -53,6 +53,9 @@ enum class HighsModelStatus {
   REACHED_ITERATION_LIMIT
 };
 
+/** SCIP/HiGHS Objective sense */
+enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
+
 class HighsLp {
  public:
   // Model data

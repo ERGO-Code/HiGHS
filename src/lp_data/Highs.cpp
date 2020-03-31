@@ -368,6 +368,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
       }
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
+        // Log the presolve reductions
+        logPresolveReductions(hmos_[original_hmo].options_,
+                              hmos_[original_hmo].lp_, false);
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
         call_status =
@@ -406,7 +409,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
-        hmos_[0].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
+        logPresolveReductions(hmos_[original_hmo].options_,
+                              hmos_[original_hmo].lp_, true);
+        hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::OPTIMAL;
+        hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
         // Proceed to postsolve.
         break;
       }
@@ -415,9 +421,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
       case HighsPresolveStatus::Infeasible:
       case HighsPresolveStatus::Unbounded: {
         if (presolve_status == HighsPresolveStatus::Infeasible) {
+          hmos_[original_hmo].scaled_model_status_ =
+              HighsModelStatus::PRIMAL_INFEASIBLE;
           hmos_[original_hmo].unscaled_model_status_ =
               HighsModelStatus::PRIMAL_INFEASIBLE;
         } else {
+          hmos_[original_hmo].scaled_model_status_ =
+              HighsModelStatus::PRIMAL_UNBOUNDED;
           hmos_[original_hmo].unscaled_model_status_ =
               HighsModelStatus::PRIMAL_UNBOUNDED;
         }
@@ -1279,11 +1289,20 @@ HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
   info.presolve_[0].load(*(info.lp_));
 
   // Initialize a new presolve class instance for the LP given in presolve info
-  return info.presolve_[0].presolve();
+  HighsPresolveStatus presolve_return_status = info.presolve_[0].presolve();
+
+  if (presolve_return_status == HighsPresolveStatus::Reduced &&
+      info.lp_->sense_ == -1)
+    info.negateReducedCosts();
+
+  return presolve_return_status;
 }
 
 HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
   if (info.presolve_.size() != 0) {
+    // Handle max case.
+    if (info.lp_->sense_ == -1) info.negateColDuals(true);
+
     bool solution_ok =
         isSolutionConsistent(info.getReducedProblem(), info.reduced_solution_);
     if (!solution_ok)
@@ -1292,6 +1311,8 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
     // todo: error handling + see todo in run()
     info.presolve_[0].postsolve(info.reduced_solution_,
                                 info.recovered_solution_);
+
+    if (info.lp_->sense_ == -1) info.negateColDuals(false);
 
     return HighsPostsolveStatus::SolutionRecovered;
   } else {

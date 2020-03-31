@@ -2415,6 +2415,34 @@ void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
                   (num_els_from - num_els_to));
 }
 
+void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
+                           const bool presolve_to_empty) {
+  int num_col_from = lp.numCol_;
+  int num_row_from = lp.numRow_;
+  int num_els_from = lp.Astart_[num_col_from];
+  int num_col_to;
+  int num_row_to;
+  int num_els_to;
+  std::string message;
+  if (presolve_to_empty) {
+    num_col_to = 0;
+    num_row_to = 0;
+    num_els_to = 0;
+    message = "- Reduced to empty";
+  } else {
+    num_col_to = num_col_from;
+    num_row_to = num_row_from;
+    num_els_to = num_els_from;
+    message = "- Not reduced";
+  }
+  HighsLogMessage(options.logfile, HighsMessageType::INFO,
+                  "Presolve reductions: columns %d(-%d); rows %d(-%d) "
+                  "elements %d(-%d) %s",
+                  num_col_to, (num_col_from - num_col_to), num_row_to,
+                  (num_row_from - num_row_to), num_els_to,
+                  (num_els_from - num_els_to), message.c_str());
+}
+
 bool isLessInfeasibleDSECandidate(const HighsOptions& options,
                                   const HighsLp& lp) {
   int max_col_num_en = -1;

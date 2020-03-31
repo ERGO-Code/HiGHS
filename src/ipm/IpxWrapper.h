@@ -162,7 +162,10 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
     col_ub[lp.numCol_ + slack] = lp.rowUpper_[row];
   }
 
-  obj = lp.colCost_;
+  obj.resize(num_col);
+  for (int col = 0; col < lp.numCol_; col++) {
+    obj[col] = lp.sense_ * lp.colCost_[col];
+  }
   obj.insert(obj.end(), num_slack, 0);
 #ifdef HiGHSDEV
   printf("IPX model has %d columns, %d rows and %d nonzeros\n", (int)num_col,
@@ -312,8 +315,8 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
 
     // Set optimal
 #ifdef HiGHSDEV
-    printf(
-        "IPX: May be setting unscaled model status erroneously to OPTIMAL\n");
+    if (ipx_info.status_crossover != IPX_STATUS_optimal)
+      printf("IPX: Setting unscaled model status erroneously to OPTIMAL\n");
 #endif
     unscaled_model_status = HighsModelStatus::OPTIMAL;
     unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
