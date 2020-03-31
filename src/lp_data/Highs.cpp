@@ -1316,11 +1316,20 @@ HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
   info.presolve_[0].load(*(info.lp_));
 
   // Initialize a new presolve class instance for the LP given in presolve info
-  return info.presolve_[0].presolve();
+  HighsPresolveStatus presolve_return_status = info.presolve_[0].presolve();
+
+  if (presolve_return_status == HighsPresolveStatus::Reduced &&
+      info.lp_->sense_ == -1)
+    info.negateReducedCosts();
+
+  return presolve_return_status;
 }
 
 HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
   if (info.presolve_.size() != 0) {
+    // Handle max case.
+    if (info.lp_->sense_ == -1) info.negateColDuals(true);
+
     bool solution_ok =
         isSolutionConsistent(info.getReducedProblem(), info.reduced_solution_);
     if (!solution_ok)
@@ -1329,6 +1338,8 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
     // todo: error handling + see todo in run()
     info.presolve_[0].postsolve(info.reduced_solution_,
                                 info.recovered_solution_);
+
+    if (info.lp_->sense_ == -1) info.negateColDuals(false);
 
     return HighsPostsolveStatus::SolutionRecovered;
   } else {
