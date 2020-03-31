@@ -13,11 +13,18 @@ from scipy.optimize import OptimizeResult
 from warnings import warn
 
 from HConst cimport (
+    # Constants
+    HIGHS_CONST_I_INF as _HIGHS_CONST_I_INF,
+    HIGHS_CONST_INF as _HIGHS_CONST_INF,
+    HIGHS_CONST_TINY as _HIGHS_CONST_TINY,
+    HIGHS_CONST_ZERO as _HIGHS_CONST_ZERO,
+    HIGHS_THREAD_LIMIT as _HIGHS_THREAD_LIMIT,
+
     # Verbosity levels
-    ML_DETAILED,
-    ML_NONE,
-    ML_VERBOSE,
-    ML_MINIMAL,
+    ML_DETAILED as _ML_DETAILED,
+    ML_NONE as _ML_NONE,
+    ML_VERBOSE as _ML_VERBOSE,
+    ML_MINIMAL as _ML_MINIMAL,
 
     # HighsBasisStatus
     HighsBasisStatus,
@@ -26,7 +33,12 @@ from HConst cimport (
     UPPER,
     ZERO,
     NONBASIC,
-    SUPER)
+    SUPER,
+
+    # Solvers
+    SOLVER_OPTION_SIMPLEX as _SOLVER_OPTION_SIMPLEX,
+    SOLVER_OPTION_CHOOSE as _SOLVER_OPTION_CHOOSE,
+    SOLVER_OPTION_IPM as  _SOLVER_OPTION_IPM)
 from Highs cimport Highs
 from HighsLp cimport (
     HighsSolution,
@@ -34,6 +46,20 @@ from HighsLp cimport (
     HighsModelStatus)
 from HighsInfo cimport HighsInfo
 from highs_c_api cimport Highs_passLp
+
+# Export some constants to Python
+HIGHS_CONST_I_INF = _HIGHS_CONST_I_INF
+HIGHS_CONST_INF = _HIGHS_CONST_INF
+HIGHS_CONST_TINY = _HIGHS_CONST_TINY
+HIGHS_CONST_ZERO = _HIGHS_CONST_ZERO
+HIGHS_THREAD_LIMIT = _HIGHS_THREAD_LIMIT
+ML_NONE = _ML_NONE
+ML_VERBOSE = _ML_VERBOSE
+ML_DETAILED = _ML_DETAILED
+ML_MINIMAL = _ML_MINIMAL
+SOLVER_OPTION_CHOOSE = _SOLVER_OPTION_CHOOSE
+SOLVER_OPTION_SIMPLEX = _SOLVER_OPTION_SIMPLEX
+SOLVER_OPTION_IPM = _SOLVER_OPTION_IPM
 
 cdef int Highs_call(int numcol, int numrow, int numnz, double* colcost,
                     double* collower, double* colupper, double* rowlower,
@@ -333,7 +359,7 @@ def highs_wrapper(
 
     # Objective function coefficients
     # Do MIN/MAX conversion here because API not working for HiGHS
-    cdef double[::1] cc = c.copy()
+    cdef double[::1] cc = c.copy() # doing a copy here -- prefer to have HiGHS do this
     if options.get('sense', 1) == -1:
         for ii in range(numcol):
             cc[ii] *= -1
@@ -347,7 +373,7 @@ def highs_wrapper(
         lb = np.zeros(numcol, dtype='double')
     if ub is None:
         # Default is upper bound of inf
-        ub = 1e20*np.ones(numcol, dtype='double')
+        ub = HIGHS_CONST_INF*np.ones(numcol, dtype='double')
     collower = &lb[0]
     colupper = &ub[0]
 
@@ -355,7 +381,7 @@ def highs_wrapper(
     cdef double * rowlower
     if lhs is None:
         # Default to no LHS (all -Inf)
-        lhs = -1e20*np.ones(numrow, dtype='double')
+        lhs = HIGHS_CONST_TINY*np.ones(numrow, dtype='double')
     rowlower = &lhs[0]
     cdef double * rowupper = &rhs[0]
 

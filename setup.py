@@ -12,7 +12,11 @@ import numpy as np
 
 # Define some things for the module
 MODULE_NAME = 'pyHiGHS'
-VERSION = '0.0.16'
+VERSION = '0.0.17'
+
+# The current shortened git hash is written by make_release.sh
+with open('GITHASH', 'r') as f:
+    GITHASH = f.read().strip()
 
 # Dependencies
 CYTHON_VERSION = '0.29.16'
@@ -78,7 +82,7 @@ DEFINE_MACROS = [
     ('CMAKE_BUILD_TYPE', '"Release"'),
     ('HiGHSRELEASE', None),
     ('IPX_ON', None),
-    ('HIGHS_GITHASH', '"b83a87d9"'),
+    ('HIGHS_GITHASH', '"%s"' % GITHASH),
     ('HIGHS_COMPILATION_DATE', '"' + TODAY_DATE +'"'),
     ('HIGHS_VERSION_MAJOR', HIGHS_VERSION_MAJOR),
     ('HIGHS_VERSION_MINOR', HIGHS_VERSION_MINOR),
