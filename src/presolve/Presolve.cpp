@@ -71,8 +71,7 @@ void PresolveInfo::negateColDuals(bool reduced) {
     for (unsigned int col = 0; col < reduced_solution_.col_dual.size(); col++)
       reduced_solution_.col_dual[col] = reduced_solution_.col_dual[col];
   else
-    for (unsigned int col = 0; col < recovered_solution_.col_dual.size();
-         col++)
+    for (unsigned int col = 0; col < recovered_solution_.col_dual.size(); col++)
       recovered_solution_.col_dual[col] = recovered_solution_.col_dual[col];
   return;
 }
