@@ -68,17 +68,17 @@ void Presolve::load(const HighsLp& lp) {
 
 void PresolveInfo::negateColDuals(bool reduced) {
   if (reduced)
-    for (unsigned int col = 0; col <= reduced_solution_.col_dual.size(); col++)
+    for (unsigned int col = 0; col < reduced_solution_.col_dual.size(); col++)
       reduced_solution_.col_dual[col] = reduced_solution_.col_dual[col];
   else
-    for (unsigned int col = 0; col <= recovered_solution_.col_dual.size();
+    for (unsigned int col = 0; col < recovered_solution_.col_dual.size();
          col++)
       recovered_solution_.col_dual[col] = recovered_solution_.col_dual[col];
   return;
 }
 
 void PresolveInfo::negateReducedCosts() {
-  for (unsigned int col = 0; col <= reduced_lp_.colCost_.size(); col++)
+  for (unsigned int col = 0; col < reduced_lp_.colCost_.size(); col++)
     reduced_lp_.colCost_[col] = -reduced_lp_.colCost_[col];
 }
 
