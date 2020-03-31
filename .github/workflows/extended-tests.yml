@@ -1,0 +1,32 @@
+name: extended-tests
+
+on: ["push", "pull_request"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Get lcov
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y lcov
+
+      - name: Create Build Dir
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake and build
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=DEBUG -DCI=ON -DHIGHS_COVERAGE=ON
+          make -j
+          make ci_cov
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{runner.workspace}}/build/coverage.info

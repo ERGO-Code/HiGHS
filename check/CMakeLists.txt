@@ -15,7 +15,6 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 set(TEST_SOURCES
     TestMain.cpp
     TestOptions.cpp
-    TestPresolve.cpp
     TestIO.cpp
     TestSort.cpp
     TestSetup.cpp
@@ -135,7 +134,6 @@ set(successInstances
     "afiro\;21\;-4.647531\;"
     "etamacro\;507\;-7.557152\;"
     "greenbea\;5249\;-7.255525\;"
-    "pilot87\;9919\; 3.017103\;"
     "shell\;624\; 1.208825\;"
     "stair\;555\;-2.512670\;"
     "standata\;74\; 1.257699\;"
