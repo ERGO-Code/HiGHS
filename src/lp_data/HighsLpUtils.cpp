@@ -1841,7 +1841,8 @@ void analyseLp(const HighsLp& lp, const char* message) {
 }
 #endif
 
-// void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+// void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis&
+// basis,
 //                          const HighsSolution& solution, const bool pretty) {
 //   if (pretty) {
 //     reportModelBoundSol(file, true, lp.numCol_, lp.colLower_, lp.colUpper_,
@@ -1852,9 +1853,8 @@ void analyseLp(const HighsLp& lp, const char* message) {
 //                         basis.row_status);
 //   } else {
 //     fprintf(file,
-//             "%d %d : Number of columns and rows for primal and dual solution "
-//             "and basis\n",
-//             lp.numCol_, lp.numRow_);
+//             "%d %d : Number of columns and rows for primal and dual solution
+//             " "and basis\n", lp.numCol_, lp.numRow_);
 //     const bool with_basis = basis.valid_;
 //     if (with_basis) {
 //       fprintf(file, "T\n");
@@ -1862,14 +1862,14 @@ void analyseLp(const HighsLp& lp, const char* message) {
 //       fprintf(file, "F\n");
 //     }
 //     for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-//       fprintf(file, "%g %g", solution.col_value[iCol], solution.col_dual[iCol]);
-//       if (with_basis) fprintf(file, " %d", (int)basis.col_status[iCol]);
-//       fprintf(file, " \n");
+//       fprintf(file, "%g %g", solution.col_value[iCol],
+//       solution.col_dual[iCol]); if (with_basis) fprintf(file, " %d",
+//       (int)basis.col_status[iCol]); fprintf(file, " \n");
 //     }
 //     for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-//       fprintf(file, "%g %g", solution.row_value[iRow], solution.row_dual[iRow]);
-//       if (with_basis) fprintf(file, " %d", (int)basis.row_status[iRow]);
-//       fprintf(file, " \n");
+//       fprintf(file, "%g %g", solution.row_value[iRow],
+//       solution.row_dual[iRow]); if (with_basis) fprintf(file, " %d",
+//       (int)basis.row_status[iRow]); fprintf(file, " \n");
 //     }
 //   }
 // }

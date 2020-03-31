@@ -3,7 +3,7 @@ name: build-windows
 on: ["push", "pull_request"]
 
 jobs:
-  windows_release: 
+  windows_release:
     runs-on: windows-latest
 
     steps:
@@ -32,7 +32,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: cmake --build . --config RELEASE
-   
+
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
