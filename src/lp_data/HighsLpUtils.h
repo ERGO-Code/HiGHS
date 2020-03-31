@@ -20,10 +20,10 @@
 #include "lp_data/HighsStatus.h"
 
 class HighsLp;
-class HighsBasis;
-class HighsSolution;
+struct HighsBasis;
+struct HighsSolution;
 class HighsOptions;
-class SimplexBasis;
+struct SimplexBasis;
 
 using std::vector;
 
@@ -260,8 +260,9 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int row,
 void analyseLp(const HighsLp& lp, const char* message);
 #endif
 
-void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const bool pretty);
+// void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis&
+// basis,
+//                          const HighsSolution& solution, const bool pretty);
 
 HighsBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis);
 

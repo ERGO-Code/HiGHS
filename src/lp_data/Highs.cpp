@@ -296,31 +296,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
   if (return_status == HighsStatus::Error) return return_status;
 #endif
 
-  if (options_.icrash) {
-    ICrashStrategy strategy = ICrashStrategy::kICA;
-    bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
-    if (!strategy_ok) {
-      HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
-                        "ICrash error: unknown strategy.\n");
-      return HighsStatus::Error;
-    }
-    ICrashOptions icrash_options{
-        options_.icrash_dualize,
-        strategy,
-        options_.icrash_starting_weight,
-        options_.icrash_iterations,
-        options_.icrash_approximate_minimization_iterations,
-        options_.icrash_exact,
-        options_.icrash_breakpoints,
-        options_.logfile,
-        options_.output,
-        options_.message_level};
-
-    // todo: timing. some strange compile issue.
-    HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
-    return icrash_status;
-  }
-
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) {
     hmos_[0].unscaled_model_status_ = HighsModelStatus::MODEL_EMPTY;
@@ -663,8 +638,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
 const HighsLp& Highs::getLp() const { return lp_; }
 
 const HighsSolution& Highs::getSolution() const { return solution_; }
-
-const ICrashInfo& Highs::getICrashInfo() const { return icrash_info_; }
 
 const HighsBasis& Highs::getBasis() const { return basis_; }
 
@@ -1424,8 +1397,11 @@ HighsStatus Highs::writeSolution(const std::string filename,
       interpretCallStatus(call_status, return_status, "openWriteFile");
   if (return_status == HighsStatus::Error) return return_status;
 
-  writeSolutionToFile(file, lp, basis, solution, pretty);
-  return HighsStatus::OK;
+  std::cout << "warning: Feature under development" << std::endl;
+  return HighsStatus::Warning;
+
+  // writeSolutionToFile(file, lp, basis, solution, pretty);
+  // return HighsStatus::OK;
 }
 
 bool Highs::updateHighsSolutionBasis() {

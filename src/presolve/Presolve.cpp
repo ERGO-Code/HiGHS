@@ -214,10 +214,6 @@ HighsPresolveStatus Presolve::presolve() {
       break;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
-  if ((std::string)CMAKE_BUILD_TYPE == "debug")
-    std::cout << "TOTAL_PRESOLVE_TIME = " << std::scientific
-              << timer.getTotalTime() << std::endl
-              << std::endl;
 
   return presolve_status;
 }

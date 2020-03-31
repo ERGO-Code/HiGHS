@@ -62,6 +62,9 @@ if(OPENMP)
 endif()
 message(STATUS "OpenMP: " ${OPENMP})
 
+# For the moment keep above coverage part in case we are testing at CI.
+option(CI "CI extended tests" ON)
+
 # Coverage part
 # 'make coverage' to start the coverage process
 option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
@@ -105,19 +108,30 @@ if (HIGHS_COVERAGE)
   endif ()
   
   # Capturing lcov counters and generating report
-  add_custom_target(coverage
+  if (NOT CI)
+    add_custom_target(coverage
                     COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
                     COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
                     COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
                     COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
-                    COMMAND ${LCOV_PATH} --remove ${CMAKE_BINARY_DIR}/coverage.info "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+                    COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
                     COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info.cleaned
-                    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info ${CMAKE_BINARY_DIR}/coverage.info.cleaned
-		    VERBATIM
+                    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+            VERBATIM
                     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                     COMMENT "Resetting code coverage counters to zero.
-Processing code coverage counters and generating report.
-You can zip the directory ${CMAKE_BINARY_DIR}/coverage and upload the content to a web server.")
+    Processing code coverage counters and generating report.
+    You can zip the directory ${CMAKE_BINARY_DIR}/coverage and upload the content to a web server.")
+  else()
+    add_custom_target(ci_cov
+                    COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
+                    COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
+                    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
+                    COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+		    VERBATIM
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    COMMENT "Resetting code coverage counters to zero.")
+  endif()
 endif ()
 
 option(SCIP_DEV "SCIP  development" OFF)
