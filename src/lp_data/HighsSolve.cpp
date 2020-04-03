@@ -144,5 +144,7 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
       unscaled_solution_params.dual_status = STATUS_FEASIBLE_POINT;
     }
   }
+  highs_model_object.scaled_model_status_ =
+      highs_model_object.unscaled_model_status_;
   return HighsStatus::OK;
 }
