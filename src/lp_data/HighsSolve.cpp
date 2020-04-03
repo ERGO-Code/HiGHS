@@ -145,6 +145,6 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
     }
   }
   highs_model_object.scaled_model_status_ =
-    highs_model_object.unscaled_model_status_;
+      highs_model_object.unscaled_model_status_;
   return HighsStatus::OK;
 }
