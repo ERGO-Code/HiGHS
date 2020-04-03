@@ -11,6 +11,7 @@
  * @brief HiGHS main
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "HConfig.h"
 #include "Highs.h"
 #include "HighsIO.h"
 #include "HighsMipSolver.h"
