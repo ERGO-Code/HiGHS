@@ -371,8 +371,8 @@ OptionStatus setOptionValue(FILE* logfile, const std::string& name,
                           value_bool);
   } else if (type == HighsOptionType::INT) {
 
-    int scanned_num_char;
     int value_int;
+    int scanned_num_char;
     const char* value_char = value.c_str();
     sscanf(value_char, "%d%n", &value_int, &scanned_num_char);
     const int value_num_char = strlen(value_char);
