@@ -55,7 +55,7 @@ class HMpsFF {
   int numCol;
   int nnz;
 
-  ObjSense objSense = ObjSense::MINIMIZE; // Minimization by default
+  ObjSense objSense = ObjSense::MINIMIZE;  // Minimization by default
   double objOffset = 0;
 
   std::vector<int> Astart;

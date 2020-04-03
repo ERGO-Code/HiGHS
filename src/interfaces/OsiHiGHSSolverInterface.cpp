@@ -542,8 +542,7 @@ void OsiHiGHSSolverInterface::setObjSense(double s) {
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjSense()\n");
   ObjSense pass_sense = ObjSense::MINIMIZE;
-  if (s == (double)ObjSense::MAXIMIZE)
-    pass_sense = ObjSense::MAXIMIZE;
+  if (s == (double)ObjSense::MAXIMIZE) pass_sense = ObjSense::MAXIMIZE;
   this->highs->changeObjectiveSense(pass_sense);
 }
 

@@ -2025,7 +2025,8 @@ void initialise_phase2_col_cost(HighsModelObject& highs_model_object,
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   for (int col = firstcol; col <= lastcol; col++) {
     int var = col;
-    simplex_info.workCost_[var] = (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
+    simplex_info.workCost_[var] =
+        (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
     simplex_info.workShift_[var] = 0.;
   }
 }

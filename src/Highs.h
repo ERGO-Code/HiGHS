@@ -283,8 +283,7 @@ class Highs {
   /**
    * @brief Get the objective sense of the model
    */
-  bool getObjectiveSense(ObjSense& sense
-  );
+  bool getObjectiveSense(ObjSense& sense);
 
   /**
    * @brief Get multiple columns from the model given by an interval

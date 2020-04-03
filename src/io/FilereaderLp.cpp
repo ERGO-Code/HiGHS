@@ -960,8 +960,9 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend();
 
   // write objective
-  this->writeToFile(
-      "%s", model.sense_ == ObjSense::MINIMIZE ? LP_KEYWORD_MIN[0] : LP_KEYWORD_MAX[0]);
+  this->writeToFile("%s", model.sense_ == ObjSense::MINIMIZE
+                              ? LP_KEYWORD_MIN[0]
+                              : LP_KEYWORD_MAX[0]);
   this->writeToFileLineend();
   this->writeToFile(" obj: ");
   for (int i = 0; i < model.numCol_; i++) {

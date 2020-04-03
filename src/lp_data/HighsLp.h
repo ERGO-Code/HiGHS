@@ -54,10 +54,7 @@ enum class HighsModelStatus {
 };
 
 /** SCIP/HiGHS Objective sense */
-enum class ObjSense {
-  MINIMIZE = 1,
-  MAXIMIZE = -1
-};
+enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
 
 class HighsLp {
  public:

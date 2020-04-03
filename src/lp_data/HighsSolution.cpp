@@ -623,7 +623,8 @@ void analyseSimplexAndHighsSolutionDifferences(
     if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
       // Consider this nonbasic column
       double local_col_value = simplex_info.workValue_[iVar] * scale.col_[iCol];
-      double local_col_dual = (int)simplex_lp.sense_ * simplex_info.workDual_[iVar] /
+      double local_col_dual = (int)simplex_lp.sense_ *
+                              simplex_info.workDual_[iVar] /
                               (scale.col_[iCol] / scale.cost_);
       double value_difference =
           fabs(local_col_value - solution.col_value[iCol]);
@@ -659,7 +660,8 @@ void analyseSimplexAndHighsSolutionDifferences(
       // Consider this nonbasic row
       double local_row_value =
           -simplex_info.workValue_[iVar] / scale.row_[iRow];
-      double local_row_dual = (int)simplex_lp.sense_ * simplex_info.workDual_[iVar] *
+      double local_row_dual = (int)simplex_lp.sense_ *
+                              simplex_info.workDual_[iVar] *
                               (scale.row_[iRow] * scale.cost_);
       double value_difference =
           fabs(local_row_value - solution.row_value[iRow]);

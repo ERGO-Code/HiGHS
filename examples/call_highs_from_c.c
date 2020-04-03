@@ -110,6 +110,9 @@ void full_api() {
   // Add three rows to the 2-column LP
   assert( Highs_addRows(highs, 3, rl, ru,  5, arstart, arindex, arvalue) );
 
+  Highs_getObjectiveSense(highs, sense);
+  printf("LP problem has objective sense = %d\n", sense);
+
   int simplex_scale_strategy;
   Highs_getHighsIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
   printf("simplex_scale_strategy = %d: setting it to 3\n", simplex_scale_strategy);

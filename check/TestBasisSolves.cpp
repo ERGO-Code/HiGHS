@@ -56,8 +56,8 @@ double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables,
           int row = lp.Aindex_[el];
           residual += lp.Avalue_[el] * solution[row];
           //	  printf("k=%1d; col=%1d; el=%1d; row=%1d;
-          //lp.Avalue_[col]=%11.4g; solution[row]=%11.4g; residual=%1.4g\n", k,
-          //col, el, row, lp.Avalue_[col], solution[row], residual);
+          // lp.Avalue_[col]=%11.4g; solution[row]=%11.4g; residual=%1.4g\n", k,
+          // col, el, row, lp.Avalue_[col], solution[row], residual);
         }
         residual = fabs(rhs[k] - residual);
         if (residual > residual_tolerance)

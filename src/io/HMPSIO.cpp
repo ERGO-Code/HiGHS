@@ -29,13 +29,13 @@ using std::map;
 //
 FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
                           int mxNumCol, int& numRow, int& numCol, int& numInt,
-                          ObjSense& objSense, double& objOffset, vector<int>& Astart,
-                          vector<int>& Aindex, vector<double>& Avalue,
-                          vector<double>& colCost, vector<double>& colLower,
-                          vector<double>& colUpper, vector<double>& rowLower,
-                          vector<double>& rowUpper, vector<int>& integerColumn,
-                          vector<string>& col_names, vector<string>& row_names,
-                          const int keep_n_rows) {
+                          ObjSense& objSense, double& objOffset,
+                          vector<int>& Astart, vector<int>& Aindex,
+                          vector<double>& Avalue, vector<double>& colCost,
+                          vector<double>& colLower, vector<double>& colUpper,
+                          vector<double>& rowLower, vector<double>& rowUpper,
+                          vector<int>& integerColumn, vector<string>& col_names,
+                          vector<string>& row_names, const int keep_n_rows) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;

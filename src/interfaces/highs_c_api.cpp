@@ -253,8 +253,7 @@ int Highs_addCols(void* highs, const int num_new_col, const double* costs,
 
 int Highs_changeObjectiveSense(void* highs, const int sense) {
   ObjSense pass_sense = ObjSense::MINIMIZE;
-  if (sense == (int)ObjSense::MAXIMIZE)
-    pass_sense = ObjSense::MAXIMIZE;
+  if (sense == (int)ObjSense::MAXIMIZE) pass_sense = ObjSense::MAXIMIZE;
   return ((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
