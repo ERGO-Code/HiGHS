@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "HConfig.h"
 #include "Highs.h"
 #include "HighsRandom.h"
 #include "catch.hpp"
