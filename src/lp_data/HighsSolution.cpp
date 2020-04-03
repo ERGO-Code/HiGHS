@@ -823,6 +823,7 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
   const ipx::Int ipx_basic = 0;
   const ipx::Int ipx_nonbasic_at_lb = -1;
   const ipx::Int ipx_nonbasic_at_ub = -2;
+  const ipx::Int ipx_superbasic = -3;
   // Row activities are needed to set activity values of free rows -
   // which are ignored by IPX
   vector<double> row_activity;
@@ -848,6 +849,11 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
     } else if (ipx_col_status[col] == ipx_nonbasic_at_ub) {
       // Column is nonbasic at upper bound
       highs_basis.col_status[col] = HighsBasisStatus::UPPER;
+      highs_solution.col_value[col] = ipx_col_value[col];
+      highs_solution.col_dual[col] = ipx_col_dual[col];
+    } else if (ipx_col_status[col] == ipx_superbasic) {
+      // Column is superbasic
+      highs_basis.col_status[col] = HighsBasisStatus::ZERO;
       highs_solution.col_value[col] = ipx_col_value[col];
       highs_solution.col_dual[col] = ipx_col_dual[col];
     } else {
