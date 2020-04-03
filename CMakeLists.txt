@@ -159,7 +159,7 @@ if (OSI_FOUND)
     include_directories(${OSITEST_INCLUDE_DIRS})
 endif (OSI_FOUND)
 
-option(IPN_ON OFF)
+option(IPX_ON OFF)
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5))
     set(IPX_ON ON)
 endif()
