@@ -380,7 +380,7 @@ OptionStatus setOptionValue(FILE* logfile, const std::string& name,
       value_int = atoi(value_char);
       double value_double = atof(value_char);
       double value_int_double = value_int;
-      const bool converted_ok = value_double == value_int_double;
+      converted_ok = value_double == value_int_double;
     */
     if (!converted_ok) {
       HighsLogMessage(
