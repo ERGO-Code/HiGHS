@@ -269,6 +269,8 @@ void HighsModelBuilder::HighsBuildTechnicalModel(HighsLp* lp) {
   lp->numCol_ = this->variables.size();
   lp->numRow_ = this->linearConstraints.size();
 
+  lp->sense_ = this->objSense;
+
   // determine order of variables
   HighsVar** variables = new HighsVar*[lp->numCol_];
   for (int i = 0; i < lp->numCol_; i++) {
@@ -276,7 +278,7 @@ void HighsModelBuilder::HighsBuildTechnicalModel(HighsLp* lp) {
     this->variables.pop_front();
     this->variables.push_back(front);
     variables[i] = front;
-    lp->colCost_.push_back(this->objSense * front->obj);
+    lp->colCost_.push_back(front->obj);
     lp->colLower_.push_back(front->lowerBound);
     lp->colUpper_.push_back(front->upperBound);
   }
