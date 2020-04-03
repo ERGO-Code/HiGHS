@@ -164,7 +164,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
   obj.resize(num_col);
   for (int col = 0; col < lp.numCol_; col++) {
-    obj[col] = lp.sense_ * lp.colCost_[col];
+    obj[col] = (int)lp.sense_ * lp.colCost_[col];
   }
   obj.insert(obj.end(), num_slack, 0);
 #ifdef HiGHSDEV

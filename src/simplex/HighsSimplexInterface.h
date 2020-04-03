@@ -124,11 +124,11 @@ class HighsSimplexInterface {
                                 const double XnewValue);
 
   // Shift the objective
-  void shiftObjectiveValue(double Xshift);
+  void shiftObjectiveValue(const double Xshift);
 
   // Utilities to get/change costs and bounds
   // Change the objective sense
-  HighsStatus changeObjectiveSense(int Xsense);
+  HighsStatus changeObjectiveSense(const ObjSense Xsense);
 
   // Change the costs for an interval of columns
   HighsStatus changeCosts(int from_col, int to_col, const double* usr_col_cost);

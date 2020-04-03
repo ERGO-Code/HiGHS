@@ -1658,10 +1658,10 @@ void reportLpDimensions(const HighsOptions& options, const HighsLp& lp) {
 
 // Report the LP objective sense
 void reportLpObjSense(const HighsOptions& options, const HighsLp& lp) {
-  if (lp.sense_ == OBJSENSE_MINIMIZE)
+  if (lp.sense_ == ObjSense::MINIMIZE)
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                       "Objective sense is minimize\n");
-  else if (lp.sense_ == OBJSENSE_MAXIMIZE)
+  else if (lp.sense_ == ObjSense::MAXIMIZE)
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                       "Objective sense is maximize\n");
   else
@@ -2296,7 +2296,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
 //        y free, zl >=0, zu >= 0
 HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
   std::vector<double> colCost = lp.colCost_;
-  if (lp.sense_ != OBJSENSE_MINIMIZE) {
+  if (lp.sense_ != ObjSense::MINIMIZE) {
     for (int col = 0; col < lp.numCol_; col++) colCost[col] = -colCost[col];
   }
 
@@ -2380,7 +2380,7 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
     }
   }
 
-  dual.sense_ = OBJSENSE_MINIMIZE;
+  dual.sense_ = ObjSense::MINIMIZE;
   for (int col = 0; col < dual.numCol_; col++) {
     dual.colCost_[col] = -dual.colCost_[col];
   }
@@ -2521,7 +2521,7 @@ bool isLessInfeasibleDSECandidate(const HighsOptions& options,
 }
 
 void convertToMinimization(HighsLp& lp) {
-  if (lp.sense_ != OBJSENSE_MINIMIZE) {
+  if (lp.sense_ != ObjSense::MINIMIZE) {
     for (int col = 0; col < lp.numCol_; col++)
       lp.colCost_[col] = -lp.colCost_[col];
   }

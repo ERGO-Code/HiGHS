@@ -534,14 +534,17 @@ double OsiHiGHSSolverInterface::getObjSense() const {
   HighsOptions& options = this->highs->options_;
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjSense()\n");
-  return this->highs->lp_.sense_;
+  return (double)this->highs->lp_.sense_;
 }
 
 void OsiHiGHSSolverInterface::setObjSense(double s) {
   HighsOptions& options = this->highs->options_;
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjSense()\n");
-  this->highs->changeObjectiveSense((int)s);
+  ObjSense pass_sense = ObjSense::MINIMIZE;
+  if (s == (double)ObjSense::MAXIMIZE)
+    pass_sense = ObjSense::MAXIMIZE;
+  this->highs->changeObjectiveSense(pass_sense);
 }
 
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase& vec,

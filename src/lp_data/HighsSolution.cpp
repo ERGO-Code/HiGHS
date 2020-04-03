@@ -336,7 +336,7 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
     primal_objective_value += lp.colCost_[iCol] * value;
     if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
     // Flip dual according to lp.sense_
-    dual *= lp.sense_;
+    dual *= (int)lp.sense_;
     bool report = false;
     bool query = analyseVarBasicSolution(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -443,7 +443,7 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
     HighsBasisStatus status = basis.row_status[iRow];
     if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
     // Flip dual according to lp.sense_
-    dual *= lp.sense_;
+    dual *= (int)lp.sense_;
     bool report = false;
     bool query = analyseVarBasicSolution(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -623,7 +623,7 @@ void analyseSimplexAndHighsSolutionDifferences(
     if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
       // Consider this nonbasic column
       double local_col_value = simplex_info.workValue_[iVar] * scale.col_[iCol];
-      double local_col_dual = simplex_lp.sense_ * simplex_info.workDual_[iVar] /
+      double local_col_dual = (int)simplex_lp.sense_ * simplex_info.workDual_[iVar] /
                               (scale.col_[iCol] / scale.cost_);
       double value_difference =
           fabs(local_col_value - solution.col_value[iCol]);
@@ -659,7 +659,7 @@ void analyseSimplexAndHighsSolutionDifferences(
       // Consider this nonbasic row
       double local_row_value =
           -simplex_info.workValue_[iVar] / scale.row_[iRow];
-      double local_row_dual = simplex_lp.sense_ * simplex_info.workDual_[iVar] *
+      double local_row_dual = (int)simplex_lp.sense_ * simplex_info.workDual_[iVar] *
                               (scale.row_[iRow] * scale.cost_);
       double value_difference =
           fabs(local_row_value - solution.row_value[iRow]);
@@ -1004,10 +1004,10 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
 
   // Flip dual according to lp.sense_
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    highs_solution.col_dual[iCol] *= lp.sense_;
+    highs_solution.col_dual[iCol] *= (int)lp.sense_;
   }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    highs_solution.row_dual[iRow] *= lp.sense_;
+    highs_solution.row_dual[iRow] *= (int)lp.sense_;
   }
 
 #ifdef HiGHSDEV

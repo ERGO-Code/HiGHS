@@ -793,7 +793,7 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
   return HighsStatus::OK;
 }
 
-void HighsSimplexInterface::shiftObjectiveValue(double Xshift) {
+void HighsSimplexInterface::shiftObjectiveValue(const double Xshift) {
   printf(
       "Where is shiftObjectiveValue required - so I can interpret what's "
       "required\n");
@@ -807,9 +807,9 @@ void HighsSimplexInterface::shiftObjectiveValue(double Xshift) {
   }
 }
 
-HighsStatus HighsSimplexInterface::changeObjectiveSense(int Xsense) {
+HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
   HighsLp& lp = highs_model_object.lp_;
-  if ((Xsense == OBJSENSE_MINIMIZE) != (lp.sense_ == OBJSENSE_MINIMIZE)) {
+  if ((Xsense == ObjSense::MINIMIZE) != (lp.sense_ == ObjSense::MINIMIZE)) {
     // Flip the LP objective sense
     lp.sense_ = Xsense;
   }
@@ -817,8 +817,8 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(int Xsense) {
       highs_model_object.simplex_lp_status_;
   if (simplex_lp_status.valid) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-    if ((Xsense == OBJSENSE_MINIMIZE) !=
-        (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
+    if ((Xsense == ObjSense::MINIMIZE) !=
+        (simplex_lp.sense_ == ObjSense::MINIMIZE)) {
       // Flip the objective sense
       simplex_lp.sense_ = Xsense;
       highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -1690,20 +1690,20 @@ void HighsSimplexInterface::convertSimplexToHighsSolution() {
     for (int i = 0; i < simplex_lp.numCol_; i++) {
       int iCol = numColPermutation[i];
       solution.col_value[iCol] = value[i];
-      solution.col_dual[iCol] = simplex_lp.sense_ * dual[i];
+      solution.col_dual[iCol] = (int)simplex_lp.sense_ * dual[i];
     }
   } else {
     for (int i = 0; i < simplex_lp.numCol_; i++) {
       int iCol = i;
       solution.col_value[iCol] = value[i];
-      solution.col_dual[iCol] = simplex_lp.sense_ * dual[i];
+      solution.col_dual[iCol] = (int)simplex_lp.sense_ * dual[i];
     }
   }
   int row_dual_sign = 1;  //-1;
   for (int i = 0; i < simplex_lp.numRow_; i++) {
     solution.row_value[i] = -value[i + simplex_lp.numCol_];
     solution.row_dual[i] =
-        row_dual_sign * simplex_lp.sense_ * dual[i + simplex_lp.numCol_];
+      row_dual_sign * (int)simplex_lp.sense_ * dual[i + simplex_lp.numCol_];
   }
 }
 

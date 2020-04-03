@@ -395,7 +395,7 @@ void FilereaderLp::handleObjectiveSection(HighsModelBuilder& model) {
       LpObjectiveSectionKeywordType::MIN) {
     assert(((LpTokenObjectiveSectionKeyword*)token)->objectiveType ==
            LpObjectiveSectionKeywordType::MAX);
-    model.objSense = -1;
+    model.objSense = ObjSense::MAXIMIZE;
   }
   delete token;
 
@@ -961,7 +961,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
 
   // write objective
   this->writeToFile(
-      "%s", model.sense_ == 1.0 ? LP_KEYWORD_MIN[0] : LP_KEYWORD_MAX[0]);
+      "%s", model.sense_ == ObjSense::MINIMIZE ? LP_KEYWORD_MIN[0] : LP_KEYWORD_MAX[0]);
   this->writeToFileLineend();
   this->writeToFile(" obj: ");
   for (int i = 0; i < model.numCol_; i++) {

@@ -209,11 +209,11 @@ HMpsFF::parsekey HMpsFF::parseObjsense(FILE* logfile, std::ifstream& file) {
 
     // Interpret key being MAX or MIN
     if (key == HMpsFF::parsekey::MAX) {
-      objSense = OBJSENSE_MAXIMIZE;
+      objSense = ObjSense::MAXIMIZE;
       continue;
     }
     if (key == HMpsFF::parsekey::MIN) {
-      objSense = OBJSENSE_MINIMIZE;
+      objSense = ObjSense::MINIMIZE;
       continue;
     }
     // start of new section?

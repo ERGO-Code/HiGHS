@@ -29,7 +29,7 @@ using std::map;
 //
 FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
                           int mxNumCol, int& numRow, int& numCol, int& numInt,
-                          int& objSense, double& objOffset, vector<int>& Astart,
+                          ObjSense& objSense, double& objOffset, vector<int>& Astart,
                           vector<int>& Aindex, vector<double>& Avalue,
                           vector<double>& colCost, vector<double>& colLower,
                           vector<double>& colUpper, vector<double>& rowLower,
@@ -40,7 +40,7 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
   numRow = 0;
   numCol = 0;
   objOffset = 0;
-  objSense = OBJSENSE_MINIMIZE;
+  objSense = ObjSense::MINIMIZE;
 
   // Astart.clear() added since setting Astart.push_back(0) in
   // setup_clearModel() messes up the MPS read
@@ -80,9 +80,9 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
     std::string sense(&line[2], &line[2] + 3);
     // the sense must be "MAX" or "MIN"
     if (sense.compare("MAX") == 0) {
-      objSense = OBJSENSE_MAXIMIZE;
+      objSense = ObjSense::MAXIMIZE;
     } else if (sense.compare("MIN") == 0) {
-      objSense = OBJSENSE_MINIMIZE;
+      objSense = ObjSense::MINIMIZE;
     } else {
       return FilereaderRetcode::PARSERERROR;
     }
@@ -465,7 +465,7 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
 
 HighsStatus writeMPS(
     FILE* logfile, const char* filename, const int& numRow, const int& numCol,
-    const int& numInt, const int& objSense, const double& objOffset,
+    const int& numInt, const ObjSense& objSense, const double& objOffset,
     const vector<int>& Astart, const vector<int>& Aindex,
     const vector<double>& Avalue, const vector<double>& colCost,
     const vector<double>& colLower, const vector<double>& colUpper,
@@ -631,7 +631,7 @@ HighsStatus writeMPS(
       }
     }
     if (colCost[c_n] != 0) {
-      double v = objSense * colCost[c_n];
+      double v = (int)objSense * colCost[c_n];
       fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
     }
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
@@ -646,7 +646,7 @@ HighsStatus writeMPS(
     fprintf(file, "RHS\n");
     if (objOffset) {
       // Handle the objective offset as a RHS entry for the cost row
-      double v = objSense * objOffset;
+      double v = (int)objSense * objOffset;
       fprintf(file, "    RHS_V     COST      %.15g\n", v);
     }
     for (int r_n = 0; r_n < numRow; r_n++) {

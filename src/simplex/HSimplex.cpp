@@ -2025,7 +2025,7 @@ void initialise_phase2_col_cost(HighsModelObject& highs_model_object,
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   for (int col = firstcol; col <= lastcol; col++) {
     int var = col;
-    simplex_info.workCost_[var] = simplex_lp.sense_ * simplex_lp.colCost_[col];
+    simplex_info.workCost_[var] = (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
     simplex_info.workShift_[var] = 0.;
   }
 }
@@ -2496,7 +2496,7 @@ bool work_arrays_ok(HighsModelObject& highs_model_object, int phase) {
     for (int col = 0; col < simplex_lp.numCol_; ++col) {
       int var = col;
       ok = simplex_info.workCost_[var] ==
-           simplex_lp.sense_ * simplex_lp.colCost_[col];
+           (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
       if (!ok) {
         printf("For col %d, simplex_info.workLower_ should be %g but is %g\n",
                col, simplex_lp.colLower_[col], simplex_info.workCost_[var]);

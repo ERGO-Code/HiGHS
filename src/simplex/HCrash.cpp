@@ -36,15 +36,6 @@ void HCrash::crash(const int pass_crash_strategy) {
   numRow = simplex_lp.numRow_;
   numCol = simplex_lp.numCol_;
   numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-#ifdef HiGHSDEV
-  const int objSense = simplex_lp.sense_;
-  if (std::abs(objSense) != 1) {
-    printf("HCrash::crash: objSense = %d has not been set\n", objSense);
-    cout << flush;
-  }
-#endif
-  assert(std::abs(simplex_lp.sense_) == 1);
-
   if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC
 #ifdef HiGHSDEV
       || crash_strategy == SIMPLEX_CRASH_STRATEGY_TEST_SING
@@ -257,7 +248,7 @@ bool HCrash::bixby_iz_da() {
   HighsLp& simplex_lp = workHMO.simplex_lp_;
   const int* Astart = &simplex_lp.Astart_[0];
   const double* Avalue = &simplex_lp.Avalue_[0];
-  const int objSense = simplex_lp.sense_;
+  const int objSense = (int)simplex_lp.sense_;
   const double* colCost = &simplex_lp.colCost_[0];
   const double* colLower = &simplex_lp.colLower_[0];
   const double* colUpper = &simplex_lp.colUpper_[0];
@@ -437,7 +428,7 @@ bool HCrash::bixby_iz_da() {
 
 void HCrash::bixby_rp_mrt() {
   HighsLp& simplex_lp = workHMO.simplex_lp_;
-  const int objSense = simplex_lp.sense_;
+  const int objSense = (int)simplex_lp.sense_;
   const double* colCost = &simplex_lp.colCost_[0];
   const double* colLower = &simplex_lp.colLower_[0];
   const double* colUpper = &simplex_lp.colUpper_[0];
@@ -1125,7 +1116,7 @@ void HCrash::ltssf_cz_r() {
 
 void HCrash::ltssf_cz_c() {
   HighsLp& simplex_lp = workHMO.simplex_lp_;
-  const int objSense = simplex_lp.sense_;
+  const int objSense = (int)simplex_lp.sense_;
   const double* colCost = &simplex_lp.colCost_[0];
 
   cz_c_n = no_ix;
@@ -1403,7 +1394,7 @@ void HCrash::crsh_iz_vr_ty() {
 #ifdef HiGHSDEV
 void HCrash::crsh_an_c_co() {
   HighsLp& simplex_lp = workHMO.simplex_lp_;
-  const int objSense = simplex_lp.sense_;
+  const int objSense = (int)simplex_lp.sense_;
   const double* colCost = &simplex_lp.colCost_[0];
   const double* colLower = &simplex_lp.colLower_[0];
   const double* colUpper = &simplex_lp.colUpper_[0];

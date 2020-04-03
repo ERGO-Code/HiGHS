@@ -928,7 +928,7 @@ bool Highs::addCols(const int num_new_col, const double* costs,
   return return_status != HighsStatus::Error;
 }
 
-bool Highs::changeObjectiveSense(const int sense) {
+bool Highs::changeObjectiveSense(const ObjSense sense) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("changeObjectiveSense");
@@ -1063,6 +1063,13 @@ bool Highs::changeCoeff(const int row, const int col, const double value) {
       interpretCallStatus(call_status, return_status, "changeCoefficient");
   if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
+}
+
+bool Highs::getObjectiveSense(ObjSense& sense) {
+  underDevelopmentLogMessage("getObjectiveSense");
+  if (!haveHmo("getObjectiveSense")) return false;
+  sense = hmos_[0].lp_.sense_;
+  return true;
 }
 
 bool Highs::getCols(const int from_col, const int to_col, int& num_col,
@@ -1292,7 +1299,7 @@ HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
   HighsPresolveStatus presolve_return_status = info.presolve_[0].presolve();
 
   if (presolve_return_status == HighsPresolveStatus::Reduced &&
-      info.lp_->sense_ == -1)
+      info.lp_->sense_ == ObjSense::MAXIMIZE)
     info.negateReducedCosts();
 
   return presolve_return_status;
@@ -1301,7 +1308,7 @@ HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
 HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
   if (info.presolve_.size() != 0) {
     // Handle max case.
-    if (info.lp_->sense_ == -1) info.negateColDuals(true);
+    if (info.lp_->sense_ == ObjSense::MAXIMIZE) info.negateColDuals(true);
 
     bool solution_ok =
         isSolutionConsistent(info.getReducedProblem(), info.reduced_solution_);
@@ -1312,7 +1319,7 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
     info.presolve_[0].postsolve(info.reduced_solution_,
                                 info.recovered_solution_);
 
-    if (info.lp_->sense_ == -1) info.negateColDuals(false);
+    if (info.lp_->sense_ == ObjSense::MAXIMIZE) info.negateColDuals(false);
 
     return HighsPostsolveStatus::SolutionRecovered;
   } else {
