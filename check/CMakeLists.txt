@@ -25,7 +25,7 @@ set(TEST_SOURCES
     TestLpModification.cpp
     Avgas.cpp)
 
-if (IPX_ON) 
+if (IPX_ON)
     set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 endif()
 
@@ -55,6 +55,7 @@ if(FORTRAN_FOUND)
 # check the C API
 add_executable(capi_unit_tests TestCAPI.c)
 target_link_libraries(capi_unit_tests libhighs)
+add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
@@ -82,7 +83,7 @@ add_test(NAME osi-unit-test-build
                  --build ${HIGHS_BINARY_DIR}
                  --target osi_unit_tests
          )
-         
+
 # Avoid that several build jobs try to concurretly build.
 set_tests_properties(osi-unit-test-build
 PROPERTIES
