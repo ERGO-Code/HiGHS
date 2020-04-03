@@ -54,7 +54,7 @@ enum class HighsModelStatus {
 };
 
 /** SCIP/HiGHS Objective sense */
-enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
+enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
 
 class HighsLp {
  public:
@@ -73,8 +73,7 @@ class HighsLp {
   std::vector<double> rowLower_;
   std::vector<double> rowUpper_;
 
-  // sense 1 = minimize, -1 = maximize
-  int sense_ = 1;
+  ObjSense sense_ = ObjSense::MINIMIZE;
   double offset_ = 0;
 
   std::string model_name_ = "";

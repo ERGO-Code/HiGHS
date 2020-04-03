@@ -252,7 +252,9 @@ int Highs_addCols(void* highs, const int num_new_col, const double* costs,
 }
 
 int Highs_changeObjectiveSense(void* highs, const int sense) {
-  return ((Highs*)highs)->changeObjectiveSense(sense);
+  ObjSense pass_sense = ObjSense::MINIMIZE;
+  if (sense == (int)ObjSense::MAXIMIZE) pass_sense = ObjSense::MAXIMIZE;
+  return ((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
 int Highs_changeColCost(void* highs, const int col, const double cost) {
@@ -305,6 +307,13 @@ int Highs_changeRowsBoundsBySet(void* highs, const int num_set_entries,
 int Highs_changeRowsBoundsByMask(void* highs, const int* mask,
                                  const double* lower, const double* upper) {
   return ((Highs*)highs)->changeRowsBounds(mask, lower, upper);
+}
+
+int Highs_getObjectiveSense(void* highs, int* sense) {
+  ObjSense get_sense;
+  int status = ((Highs*)highs)->getObjectiveSense(get_sense);
+  *sense = (int)get_sense;
+  return status;
 }
 
 int Highs_getColsByRange(void* highs, const int from_col, const int to_col,

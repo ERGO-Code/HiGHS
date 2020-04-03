@@ -443,6 +443,10 @@ int Highs_changeRowsBoundsByMask(
 );
 
 /**
+ * @brief Get the objective sense
+ */
+int Highs_getObjectiveSense(void* highs, int* sense);
+/**
  * @brief Get multiple columns from the model given by an interval
  */
 int Highs_getColsByRange(

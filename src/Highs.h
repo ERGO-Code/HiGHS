@@ -281,6 +281,11 @@ class Highs {
   }
 
   /**
+   * @brief Get the objective sense of the model
+   */
+  bool getObjectiveSense(ObjSense& sense);
+
+  /**
    * @brief Get multiple columns from the model given by an interval
    */
   bool getCols(const int from_col,  //!< The index of the first column to get
@@ -409,7 +414,7 @@ class Highs {
   /**
    * @brief Change the objective sense of the model
    */
-  bool changeObjectiveSense(const int sense  //!< New objective sense
+  bool changeObjectiveSense(const ObjSense sense  //!< New objective sense
   );
 
   /**

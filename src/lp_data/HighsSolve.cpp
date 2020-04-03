@@ -58,7 +58,7 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   unscaled_solution_params.num_dual_infeasibilities = 0;
 
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    double cost = lp.sense_ * lp.colCost_[iCol];
+    double cost = (int)lp.sense_ * lp.colCost_[iCol];
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
     double value;
