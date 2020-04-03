@@ -21,25 +21,14 @@
  */
 class Avgas {
  public:
-  void row(int row,
-	   int &num_row,
-	   int &num_row_nz,
-	   std::vector<double> &rowLower,
-	   std::vector<double> &rowUpper, 
-	   std::vector<int> &ARstart,
-	   std::vector<int> &ARindex,
-	   std::vector<double> &ARvalue);
-  
-  void col(
-	   int col,
-	   int &num_col,
-	   int &num_col_nz,
-	   std::vector<double> &colCost,
-	   std::vector<double> &colLower,
-	   std::vector<double> &colUpper, 
-	   std::vector<int> &Astart,
-	   std::vector<int> &Aindex,
-	   std::vector<double> &Avalue
-	   );
+  void row(int row, int& num_row, int& num_row_nz,
+           std::vector<double>& rowLower, std::vector<double>& rowUpper,
+           std::vector<int>& ARstart, std::vector<int>& ARindex,
+           std::vector<double>& ARvalue);
+
+  void col(int col, int& num_col, int& num_col_nz, std::vector<double>& colCost,
+           std::vector<double>& colLower, std::vector<double>& colUpper,
+           std::vector<int>& Astart, std::vector<int>& Aindex,
+           std::vector<double>& Avalue);
 };
 #endif /* SIMPLEX_AVGAS_H_ */

@@ -356,10 +356,10 @@ OptionStatus setOptionValue(FILE* logfile, const std::string& name,
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type == HighsOptionType::BOOL) {
-    bool bool_value;
-    bool return_status = boolFromString(value, bool_value);
+    bool value_bool;
+    bool return_status = boolFromString(value, value_bool);
     //    printf("boolFromString for \"%s\" returns %d from \"%s\" with status
-    //    %d\n", name.c_str(), bool_value, value.c_str(), return_status);
+    //    %d\n", name.c_str(), value_bool, value.c_str(), return_status);
     if (!return_status) {
       HighsLogMessage(
           logfile, HighsMessageType::ERROR,
@@ -368,16 +368,32 @@ OptionStatus setOptionValue(FILE* logfile, const std::string& name,
       return OptionStatus::ILLEGAL_VALUE;
     }
     return setOptionValue(((OptionRecordBool*)option_records[index])[0],
-                          bool_value);
+                          value_bool);
   } else if (type == HighsOptionType::INT) {
-    int value_int = atoi(value.c_str());
-    double value_double = atof(value.c_str());
-    double value_int_double = value_int;
-    if (value_double != value_int_double) {
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
-                      "setOptionValue: Value = \"%s\" converts via atoi as %d "
-                      "so is %g as double, but as %g via atof",
-                      value.c_str(), value_int, value_int_double, value_double);
+    int value_int;
+    int scanned_num_char;
+    const char* value_char = value.c_str();
+    sscanf(value_char, "%d%n", &value_int, &scanned_num_char);
+    const int value_num_char = strlen(value_char);
+    const bool converted_ok = scanned_num_char == value_num_char;
+    /*
+      value_int = atoi(value_char);
+      double value_double = atof(value_char);
+      double value_int_double = value_int;
+      converted_ok = value_double == value_int_double;
+    */
+    if (!converted_ok) {
+      HighsLogMessage(
+          logfile, HighsMessageType::ERROR,
+          "setOptionValue: Value = \"%s\" converts via sscanf as %d "
+          "by scanning %d of %d characters",
+          value.c_str(), value_int, scanned_num_char, value_num_char);
+      /*
+        HighsLogMessage(logfile, HighsMessageType::ERROR,
+                        "setOptionValue: Value = \"%s\" converts via atoi as %d
+        " "so is %g as double, but as %g via atof", value.c_str(), value_int,
+        value_int_double, value_double);
+      */
       return OptionStatus::ILLEGAL_VALUE;
     }
     return setOptionValue(logfile, ((OptionRecordInt*)option_records[index])[0],
