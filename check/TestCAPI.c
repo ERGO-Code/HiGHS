@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+// Force asserts to be checked always.
+#undef NDEBUG
 #include <assert.h>
 
 void minimal_api() {
@@ -66,8 +68,25 @@ void full_api() {
   Highs_destroy(highs);
 }
 
-int main() { 
+void options() {
+  void* highs = Highs_create();
+
+  int simplex_scale_strategy;
+  Highs_setHighsIntOptionValue(highs, "simplex_scale_strategy", 0);
+  Highs_getHighsIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
+  assert( simplex_scale_strategy == 0 );
+
+  double primal_feasibility_tolerance;
+  Highs_setHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", 2.0);
+  Highs_getHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
+  assert( primal_feasibility_tolerance == 2.0 );
+
+  Highs_destroy(highs);
+}
+
+int main() {
   minimal_api();
   full_api();
-  return 0; 
+  options();
+  return 0;
 }
