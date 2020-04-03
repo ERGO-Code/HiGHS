@@ -1,6 +1,7 @@
 #include <cstdio>
 
 #include "Highs.h"
+#include "catch.hpp"
 #include "io/FilereaderEms.h"
 #include "io/HMPSIO.h"
 #include "io/HMpsFF.h"
@@ -8,7 +9,6 @@
 #include "io/LoadProblem.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
-#include "catch.hpp"
 
 TEST_CASE("free-format-parser", "[highs_filereader]") {
   std::cout << std::string(HIGHS_DIR) << std::endl;
@@ -21,19 +21,19 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   bool are_the_same = false;
 
   std::vector<int> integerColumn;
-  FilereaderRetcode status = readMPS(stdout,
-				     filename.c_str(), -1, -1, lp_fixed_format.numRow_,
-				     lp_fixed_format.numCol_, lp_fixed_format.numInt_, lp_fixed_format.sense_,
-				     lp_fixed_format.offset_, lp_fixed_format.Astart_,
-				     lp_fixed_format.Aindex_, lp_fixed_format.Avalue_,
-				     lp_fixed_format.colCost_, lp_fixed_format.colLower_,
-				     lp_fixed_format.colUpper_, lp_fixed_format.rowLower_,
-				     lp_fixed_format.rowUpper_, integerColumn,
-				     lp_fixed_format.col_names_, lp_fixed_format.row_names_);
+  FilereaderRetcode status = readMPS(
+      stdout, filename.c_str(), -1, -1, lp_fixed_format.numRow_,
+      lp_fixed_format.numCol_, lp_fixed_format.numInt_, lp_fixed_format.sense_,
+      lp_fixed_format.offset_, lp_fixed_format.Astart_, lp_fixed_format.Aindex_,
+      lp_fixed_format.Avalue_, lp_fixed_format.colCost_,
+      lp_fixed_format.colLower_, lp_fixed_format.colUpper_,
+      lp_fixed_format.rowLower_, lp_fixed_format.rowUpper_, integerColumn,
+      lp_fixed_format.col_names_, lp_fixed_format.row_names_);
   lp_fixed_format.nnz_ = lp_fixed_format.Avalue_.size();
   if (status == FilereaderRetcode::OK) {
     HMpsFF parser{};
-    FreeFormatParserReturnCode result = parser.loadProblem(stdout, filename, lp_free_format);
+    FreeFormatParserReturnCode result =
+        parser.loadProblem(stdout, filename, lp_free_format);
     if (result != FreeFormatParserReturnCode::SUCCESS)
       status = FilereaderRetcode::PARSERERROR;
     if (status == FilereaderRetcode::OK)
@@ -66,7 +66,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   ems.writeModelToFile(options, "adlittle.ems", lp_mps);
 
   // Read ems and compare.
-  options.model_file = "adlittle.ems"; // todo: check how to specify path
+  options.model_file = "adlittle.ems";  // todo: check how to specify path
 
   HighsLp lp_ems;
   HighsStatus ems_read_status = loadLpFromFile(options, lp_ems);
@@ -79,7 +79,8 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 }
 
 TEST_CASE("integrality-constraints", "[highs_filereader]") {
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
 
   HighsOptions options;
   options.model_file = filename;
@@ -106,7 +107,8 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 }
 
 TEST_CASE("dualize", "[highs_data]") {
-  std::string filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   // Read mps.
   HighsOptions options;
   options.model_file = filename;
