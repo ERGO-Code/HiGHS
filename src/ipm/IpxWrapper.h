@@ -187,61 +187,59 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 }
 
 HighsStatus reportIpxSolveStatus(const HighsOptions& options,
-				 const ipx::Int solve_status,
-				 const ipx::Int error_flag) {
+                                 const ipx::Int solve_status,
+                                 const ipx::Int error_flag) {
   if (solve_status == IPX_STATUS_solved) {
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
-		    "Ipx: Solved");
+    HighsLogMessage(options.logfile, HighsMessageType::INFO, "Ipx: Solved");
     return HighsStatus::OK;
   } else if (solve_status == IPX_STATUS_stopped) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Ipx: Stopped");
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING, "Ipx: Stopped");
     return HighsStatus::Warning;
   } else if (solve_status == IPX_STATUS_invalid_input) {
     if (error_flag == IPX_ERROR_argument_null) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "Ipx: Invalid input - argument_null");
+                      "Ipx: Invalid input - argument_null");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_dimension) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "Ipx: Invalid input - invalid dimension");
+                      "Ipx: Invalid input - invalid dimension");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_matrix) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "Ipx: Invalid input - invalid matrix");
+                      "Ipx: Invalid input - invalid matrix");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_vector) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "Ipx: Invalid input - invalid vector");
+                      "Ipx: Invalid input - invalid vector");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_basis) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "Ipx: Invalid input - invalid basis");
+                      "Ipx: Invalid input - invalid basis");
       return HighsStatus::Error;
     } else {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "Ipx: Invalid input - unrecognised error");
+                      "Ipx: Invalid input - unrecognised error");
       return HighsStatus::Error;
     }
   } else if (solve_status == IPX_STATUS_out_of_memory) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Ipx: Out of memory");
+                    "Ipx: Out of memory");
     return HighsStatus::Error;
   } else if (solve_status == IPX_STATUS_internal_error) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Ipx: Internal error %d", (int)error_flag);
+                    "Ipx: Internal error %d", (int)error_flag);
     return HighsStatus::Error;
   } else {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Ipx: unrecognised solve status = %d", (int)solve_status);
+                    "Ipx: unrecognised solve status = %d", (int)solve_status);
     return HighsStatus::Error;
   }
   return HighsStatus::Error;
 }
 
 HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
-				 const ipx::Int status,
-				 const bool ipm_status) {
+                                        const ipx::Int status,
+                                        const bool ipm_status) {
   std::string method_name;
   if (ipm_status)
     method_name = "IPM      ";
@@ -249,55 +247,55 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
     method_name = "Crossover";
   if (status == IPX_STATUS_not_run) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Ipx: %s not run", method_name.c_str());
+                    "Ipx: %s not run", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_optimal) {
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
-		    "Ipx: %s optimal", method_name.c_str());
+    HighsLogMessage(options.logfile, HighsMessageType::INFO, "Ipx: %s optimal",
+                    method_name.c_str());
     return HighsStatus::OK;
   } else if (status == IPX_STATUS_imprecise) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Ipx: %s imprecise", method_name.c_str());
+                    "Ipx: %s imprecise", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_primal_infeas) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Ipx: %s primal infeasible", method_name.c_str());
+                    "Ipx: %s primal infeasible", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_dual_infeas) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Ipx: %s dual infeasible", method_name.c_str());
+                    "Ipx: %s dual infeasible", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_time_limit) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Ipx: %s reached time limit", method_name.c_str());
+                    "Ipx: %s reached time limit", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_iter_limit) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Ipx: %s reached iteration limit", method_name.c_str());
+                    "Ipx: %s reached iteration limit", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_no_progress) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Ipx: %s no progress", method_name.c_str());
+                    "Ipx: %s no progress", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_failed) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Ipx: %s failed", method_name.c_str());
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s failed",
+                    method_name.c_str());
     return HighsStatus::Error;
   } else if (status == IPX_STATUS_debug) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Ipx: %s debug", method_name.c_str());
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s debug",
+                    method_name.c_str());
     return HighsStatus::Error;
   } else {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Ipx: %s unrecognised status", method_name.c_str());
+                    "Ipx: %s unrecognised status", method_name.c_str());
     return HighsStatus::Error;
   }
   return HighsStatus::Error;
 }
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-		       const HighsLp& lp, 
-                       HighsBasis& highs_basis, HighsSolution& highs_solution,
+                       const HighsLp& lp, HighsBasis& highs_basis,
+                       HighsSolution& highs_solution,
                        HighsModelStatus& unscaled_model_status,
                        HighsSolutionParams& unscaled_solution_params) {
   int debug = 0;
@@ -348,23 +346,27 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
-    const HighsStatus solve_return_status = reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
+    const HighsStatus solve_return_status =
+        reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
     if (solve_return_status == HighsStatus::Error) {
       unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
     }
   }
   bool ipm_status = true;
-  const HighsStatus ipm_return_status = reportIpxIpmCrossoverStatus(options, ipx_info.status_ipm, ipm_status);
+  const HighsStatus ipm_return_status =
+      reportIpxIpmCrossoverStatus(options, ipx_info.status_ipm, ipm_status);
   ipm_status = false;
-  const HighsStatus crossover_return_status = reportIpxIpmCrossoverStatus(options, ipx_info.status_crossover, ipm_status);
+  const HighsStatus crossover_return_status = reportIpxIpmCrossoverStatus(
+      options, ipx_info.status_crossover, ipm_status);
   if (ipm_return_status == HighsStatus::Error ||
       crossover_return_status == HighsStatus::Error) {
     unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
     return HighsStatus::Error;
   }
   // Reach here if Solve() returned IPX_STATUS_solved or IPX_STATUS_stopped
-  assert(solve_status == IPX_STATUS_solved || solve_status == IPX_STATUS_stopped);
+  assert(solve_status == IPX_STATUS_solved ||
+         solve_status == IPX_STATUS_stopped);
   // Reach here unless one of ipm_return_status and crossover_return_status is
   // IPX_STATUS_failed or IPX_STATUS_debug
 
@@ -374,48 +376,47 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     printf("Why stopped???\n");
     // Look at the reason why IPX stopped
     // Cannot be stopped with primal or dual infeasibility?
-    assert (ipx_info.status_ipm != IPX_STATUS_primal_infeas);
-    assert (ipx_info.status_ipm != IPX_STATUS_dual_infeas);
-    assert (ipx_info.status_crossover != IPX_STATUS_primal_infeas);
-    assert (ipx_info.status_crossover != IPX_STATUS_dual_infeas);
+    assert(ipx_info.status_ipm != IPX_STATUS_primal_infeas);
+    assert(ipx_info.status_ipm != IPX_STATUS_dual_infeas);
+    assert(ipx_info.status_crossover != IPX_STATUS_primal_infeas);
+    assert(ipx_info.status_crossover != IPX_STATUS_dual_infeas);
     if (ipx_info.status_ipm == IPX_STATUS_time_limit ||
-	ipx_info.status_crossover == IPX_STATUS_time_limit) {
+        ipx_info.status_crossover == IPX_STATUS_time_limit) {
       // Reached time limit
       unscaled_model_status = HighsModelStatus::REACHED_TIME_LIMIT;
       return HighsStatus::Warning;
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit ||
-	       ipx_info.status_crossover == IPX_STATUS_iter_limit) {
+               ipx_info.status_crossover == IPX_STATUS_iter_limit) {
       // Reached iteration limit
       // Crossover appears not to have an iteration limit
-      assert (ipx_info.status_crossover != IPX_STATUS_iter_limit);
+      assert(ipx_info.status_crossover != IPX_STATUS_iter_limit);
       unscaled_model_status = HighsModelStatus::REACHED_ITERATION_LIMIT;
       return HighsStatus::Warning;
     }
   }
   // Reach here if Solve() returned IPX_STATUS_solved
-  assert (solve_status == IPX_STATUS_solved);
+  assert(solve_status == IPX_STATUS_solved);
   // Cannot be solved and reached time limit or iteration limit
   assert(ipx_info.status_ipm != IPX_STATUS_iter_limit &&
-	 ipx_info.status_crossover != IPX_STATUS_iter_limit); 
+         ipx_info.status_crossover != IPX_STATUS_iter_limit);
   assert(ipx_info.status_ipm != IPX_STATUS_time_limit &&
-	 ipx_info.status_crossover != IPX_STATUS_time_limit); 
+         ipx_info.status_crossover != IPX_STATUS_time_limit);
 
   if (ipx_info.status_ipm == IPX_STATUS_primal_infeas ||
       ipx_info.status_crossover == IPX_STATUS_primal_infeas) {
     // Identified primal infeasibility
     // Crossover does not (currently) identify primal infeasibility
-    assert (ipx_info.status_crossover != IPX_STATUS_primal_infeas);
+    assert(ipx_info.status_crossover != IPX_STATUS_primal_infeas);
     unscaled_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
     return HighsStatus::OK;
   } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas ||
-	     ipx_info.status_crossover == IPX_STATUS_dual_infeas) {
+             ipx_info.status_crossover == IPX_STATUS_dual_infeas) {
     // Identified dual infeasibility
     // Crossover does not (currently) identify dual infeasibility
-    assert (ipx_info.status_crossover != IPX_STATUS_dual_infeas);
+    assert(ipx_info.status_crossover != IPX_STATUS_dual_infeas);
     unscaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
     return HighsStatus::OK;
-  }  
-
+  }
 
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the

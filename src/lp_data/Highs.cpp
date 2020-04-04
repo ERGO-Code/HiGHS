@@ -1355,9 +1355,8 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
 #ifdef IPX_ON
     HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
                       "Starting IPX...\n");
-    call_status = solveLpIpx(options_, timer_, model.lp_, 
-			     model.basis_, model.solution_,
-                             model.unscaled_model_status_,
+    call_status = solveLpIpx(options_, timer_, model.lp_, model.basis_,
+                             model.solution_, model.unscaled_model_status_,
                              model.unscaled_solution_params_);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");

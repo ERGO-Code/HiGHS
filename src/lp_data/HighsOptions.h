@@ -462,10 +462,9 @@ class HighsOptions : public HighsOptionsStruct {
         &simplex_update_limit, 0, 5000, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("ipm_iteration_limit",
-                                     "Iteration limit for IPM solver",
-                                     advanced, &ipm_iteration_limit, 0,
-                                     HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    record_int = new OptionRecordInt(
+        "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
+        &ipm_iteration_limit, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
