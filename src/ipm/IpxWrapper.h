@@ -186,6 +186,115 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   return IpxStatus::OK;
 }
 
+HighsStatus reportIpxSolveStatus(const HighsOptions& options,
+				 const ipx::Int solve_status,
+				 const ipx::Int error_flag) {
+  if (solve_status == IPX_STATUS_solved) {
+    HighsLogMessage(options.logfile, HighsMessageType::INFO,
+		    "Ipx: Solved");
+    return HighsStatus::OK;
+  } else if (solve_status == IPX_STATUS_stopped) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Ipx: Stopped");
+    return HighsStatus::Warning;
+  } else if (solve_status == IPX_STATUS_invalid_input) {
+    if (error_flag == IPX_ERROR_argument_null) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "Ipx: Invalid input - argument_null");
+      return HighsStatus::Error;
+    } else if (error_flag == IPX_ERROR_invalid_dimension) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "Ipx: Invalid input - invalid dimension");
+      return HighsStatus::Error;
+    } else if (error_flag == IPX_ERROR_invalid_matrix) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "Ipx: Invalid input - invalid matrix");
+      return HighsStatus::Error;
+    } else if (error_flag == IPX_ERROR_invalid_vector) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "Ipx: Invalid input - invalid vector");
+      return HighsStatus::Error;
+    } else if (error_flag == IPX_ERROR_invalid_basis) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "Ipx: Invalid input - invalid basis");
+      return HighsStatus::Error;
+    } else {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "Ipx: Invalid input - unrecognised error");
+      return HighsStatus::Error;
+    }
+  } else if (solve_status == IPX_STATUS_out_of_memory) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Ipx: Out of memory");
+    return HighsStatus::Error;
+  } else if (solve_status == IPX_STATUS_internal_error) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Ipx: Internal error %d", (int)error_flag);
+    return HighsStatus::Error;
+  } else {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Ipx: unrecognised solve status = %d", (int)solve_status);
+    return HighsStatus::Error;
+  }
+  return HighsStatus::Error;
+}
+
+HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
+				 const ipx::Int status,
+				 const bool ipm_status) {
+  std::string method_name;
+  if (ipm_status)
+    method_name = "IPM      ";
+  else
+    method_name = "Crossover";
+  if (status == IPX_STATUS_not_run) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Ipx: %s not run", method_name.c_str());
+    return HighsStatus::Warning;
+  } else if (status == IPX_STATUS_optimal) {
+    HighsLogMessage(options.logfile, HighsMessageType::INFO,
+		    "Ipx: %s optimal", method_name.c_str());
+    return HighsStatus::OK;
+  } else if (status == IPX_STATUS_imprecise) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Ipx: %s imprecise", method_name.c_str());
+    return HighsStatus::Warning;
+  } else if (status == IPX_STATUS_primal_infeas) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Ipx: %s primal infeasible", method_name.c_str());
+    return HighsStatus::Warning;
+  } else if (status == IPX_STATUS_dual_infeas) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Ipx: %s dual infeasible", method_name.c_str());
+    return HighsStatus::Warning;
+  } else if (status == IPX_STATUS_time_limit) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Ipx: %s reached time limit", method_name.c_str());
+    return HighsStatus::Warning;
+  } else if (status == IPX_STATUS_iter_limit) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Ipx: %s reached iteration limit", method_name.c_str());
+    return HighsStatus::Warning;
+  } else if (status == IPX_STATUS_no_progress) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Ipx: %s no progress", method_name.c_str());
+    return HighsStatus::Warning;
+  } else if (status == IPX_STATUS_failed) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Ipx: %s failed", method_name.c_str());
+    return HighsStatus::Error;
+  } else if (status == IPX_STATUS_debug) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Ipx: %s debug", method_name.c_str());
+    return HighsStatus::Error;
+  } else {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Ipx: %s unrecognised status", method_name.c_str());
+    return HighsStatus::Error;
+  }
+  return HighsStatus::Error;
+}
+
 HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
                        HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsModelStatus& unscaled_model_status,
@@ -224,32 +333,33 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
                                    num_row, Ap, Ai, Av, rhs, constraint_type);
   if (result != IpxStatus::OK) return HighsStatus::Error;
 
-  ipx::Int status =
+  ipx::Int solve_status =
       lps.Solve(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
                 &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
 
-#ifdef HiGHSDEV
-  int int_status = status;
-  if (status != 1000) printf("IPX Solve: status = %d\n", int_status);
-#endif
-  if (status != IPX_STATUS_solved) {
+  // Get solver and solution information.
+  // Struct ipx_info defined in ipx/include/ipx_info.h
+  ipx::Info ipx_info = lps.GetInfo();
+
+  // If not solved...
+  if (solve_status != IPX_STATUS_solved) {
+    const HighsStatus solve_return_status = reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
+    if (solve_return_status == HighsStatus::Error) {
+      unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
+      return HighsStatus::Error;
+    }
+    printf("Why stopped???\n");
+  }
+  bool ipm_status = true;
+  const HighsStatus ipm_return_status = reportIpxIpmCrossoverStatus(options, ipx_info.status_ipm, ipm_status);
+  ipm_status = false;
+  const HighsStatus crossover_return_status = reportIpxIpmCrossoverStatus(options, ipx_info.status_crossover, ipm_status);
+  if (ipm_return_status == HighsStatus::Error ||
+      crossover_return_status == HighsStatus::Error) {
     unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
-    // fatal error (invalid input, out of memory, etc.)
-    std::cout << " status: " << status << ','
-              << " errflag: " << lps.GetInfo().errflag << '\n';
-    // return IpxStatus::ErrorOrNotOptimal;
     return HighsStatus::Error;
   }
-
-  // Get solver and solution information.
-  ipx::Info ipx_info = lps.GetInfo();
-  // Struct ipx_info defined in ipx/include/ipx_info.h
-#ifdef HiGHSDEV
-  int int_status_ipm = ipx_info.status_ipm;
-  if (ipx_info.status_ipm != 1)
-    printf("IPX Solve: status_ipm = %d\n", int_status_ipm);
-#endif
-
+  
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
   // IPM terminated successfully or not. (Only in case of out-of-memory no
@@ -264,13 +374,6 @@ HighsStatus solveLpIpx(const HighsLp& lp, const HighsOptions& options,
 
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
-
-#ifdef HiGHSDEV
-  int int_status_crossover = ipx_info.status_crossover;
-  if (int_status_crossover != 1)
-    printf("IPX GetInteriorSolution: status_crossover = %d\n",
-           int_status_crossover);
-#endif
 
   if (ipx_info.status_crossover == IPX_STATUS_optimal ||
       ipx_info.status_crossover == IPX_STATUS_imprecise) {
