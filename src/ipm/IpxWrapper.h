@@ -293,6 +293,198 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
   return HighsStatus::Error;
 }
 
+bool ipxStatusError(const bool status_error, const HighsOptions& options,
+                    std::string message, const int value = -1) {
+  if (status_error) {
+    if (value < 0) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s",
+                      message.c_str());
+    } else {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s %d",
+                      message.c_str(), value);
+    }
+    fflush(NULL);
+  }
+  assert(!status_error);
+  return status_error;
+}
+
+bool illegalIpxSolvedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
+  bool found_illegal_status = false;
+  //========
+  // For IPX
+  //========
+  // Can solve and be optimal
+  // Can solve and be imprecise
+  // Can solve and be primal_infeas
+  // Can solve and be dual_infeas
+  // Cannot solve and reach time limit
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_time_limit, options,
+                     "solved  status_ipm should not be IPX_STATUS_time_limit");
+  // Cannot solve and reach iteration limit
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_iter_limit, options,
+                     "solved  status_ipm should not be IPX_STATUS_iter_limit");
+  // Cannot solve and make no progress
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_no_progress, options,
+                     "solved  status_ipm should not be IPX_STATUS_no_progress");
+  // Cannot solve and failed
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_failed, options,
+                     "solved  status_ipm should not be IPX_STATUS_failed");
+  // Cannot solve and debug
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_debug, options,
+                     "solved  status_ipm should not be IPX_STATUS_debug");
+  //==============
+  // For crossover
+  //==============
+  // Can solve and be optimal
+  // Can solve and be imprecise
+  // Cannot solve with primal infeasibility
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_primal_infeas, options,
+          "solved  status_crossover should not be IPX_STATUS_primal_infeas");
+  // Cannot solve with dual infeasibility
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_dual_infeas, options,
+          "solved  status_crossover should not be IPX_STATUS_dual_infeas");
+  // Cannot solve and reach time limit
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_time_limit, options,
+          "solved  status_crossover should not be IPX_STATUS_time_limit");
+  // Cannot solve and reach time limit
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_iter_limit, options,
+          "solved  status_crossover should not be IPX_STATUS_iter_limit");
+  // Cannot solve and make no progress
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_no_progress, options,
+          "solved  status_crossover should not be IPX_STATUS_no_progress");
+  // Cannot solve and failed
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_failed, options,
+          "solved  status_crossover should not be IPX_STATUS_failed");
+  // Cannot solve and debug
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_crossover == IPX_STATUS_debug, options,
+                     "solved  status_crossover should not be IPX_STATUS_debug");
+  return found_illegal_status;
+}
+
+bool illegalIpxStoppedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
+  bool found_illegal_status = false;
+  //========
+  // For IPX
+  //========
+  // Cannot stop and be optimal
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_optimal, options,
+                     "stopped status_ipm should not be IPX_STATUS_optimal");
+  // Cannot stop and be imprecise
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_imprecise, options,
+                     "stopped status_ipm should not be IPX_STATUS_imprecise");
+  // Cannot stop with primal infeasibility
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_ipm == IPX_STATUS_primal_infeas, options,
+          "stopped status_ipm should not be IPX_STATUS_primal_infeas");
+  // Cannot stop with dual infeasibility
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_dual_infeas, options,
+                     "stopped status_ipm should not be IPX_STATUS_dual_infeas");
+  // Can stop with time_limit
+  // Can stop with iter_limit
+  // Can stop with no_progress
+  // Cannot stop and failed - should be error return earlier
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_failed, options,
+                     "stopped status_ipm should not be IPX_STATUS_failed");
+  // Cannot stop and debug - should be error return earlier
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_ipm == IPX_STATUS_debug, options,
+                     "stopped status_ipm should not be IPX_STATUS_debug");
+  //==============
+  // For crossover
+  //==============
+  // Cannot stop and be optimal
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_optimal, options,
+          "stopped status_crossover should not be IPX_STATUS_optimal");
+  // Cannot stop and be imprecise
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_imprecise, options,
+          "stopped status_crossover should not be IPX_STATUS_imprecise");
+  // Cannot stop with primal infeasibility
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_primal_infeas, options,
+          "stopped status_crossover should not be IPX_STATUS_primal_infeas");
+  // Cannot stop with dual infeasibility
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_dual_infeas, options,
+          "stopped status_crossover should not be IPX_STATUS_dual_infeas");
+  // Cannot stop and reach iteration limit
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_iter_limit, options,
+          "stopped status_crossover should not be IPX_STATUS_iter_limit");
+  // Can stop and reach time limit
+  // Cannot stop with no_progress
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_no_progress, options,
+          "stopped status_crossover should not be IPX_STATUS_no_progress");
+  // Cannot stop and failed - should be error return earlier
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(
+          ipx_info.status_crossover == IPX_STATUS_failed, options,
+          "stopped status_crossover should not be IPX_STATUS_failed");
+  // Cannot stop and debug - should be error return earlier
+  found_illegal_status =
+      found_illegal_status ||
+      ipxStatusError(ipx_info.status_crossover == IPX_STATUS_debug, options,
+                     "stopped status_crossover should not be IPX_STATUS_debug");
+  return found_illegal_status;
+}
+
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        const HighsLp& lp, HighsBasis& highs_basis,
                        HighsSolution& highs_solution,
@@ -348,6 +540,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (solve_status != IPX_STATUS_solved) {
     const HighsStatus solve_return_status =
         reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
+    // Return error if IPX solve error has occurred
     if (solve_return_status == HighsStatus::Error) {
       unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
@@ -359,27 +552,30 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   ipm_status = false;
   const HighsStatus crossover_return_status = reportIpxIpmCrossoverStatus(
       options, ipx_info.status_crossover, ipm_status);
+  // Return error if IPX IPM or crossover error has occurred
   if (ipm_return_status == HighsStatus::Error ||
       crossover_return_status == HighsStatus::Error) {
     unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
     return HighsStatus::Error;
   }
-  // Reach here if Solve() returned IPX_STATUS_solved or IPX_STATUS_stopped
-  assert(solve_status == IPX_STATUS_solved ||
-         solve_status == IPX_STATUS_stopped);
-  // Reach here unless one of ipm_return_status and crossover_return_status is
-  // IPX_STATUS_failed or IPX_STATUS_debug
+  // Should only reach here if Solve() returned IPX_STATUS_solved or
+  // IPX_STATUS_stopped
+  if (ipxStatusError(
+          solve_status != IPX_STATUS_solved &&
+              solve_status != IPX_STATUS_stopped,
+          options, "solve_status should be solved or stopped here but value is",
+          (int)solve_status))
+    return HighsStatus::Error;
 
   unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
 
   if (solve_status == IPX_STATUS_stopped) {
-    printf("Why stopped???\n");
     // Look at the reason why IPX stopped
-    // Cannot be stopped with primal or dual infeasibility?
-    assert(ipx_info.status_ipm != IPX_STATUS_primal_infeas);
-    assert(ipx_info.status_ipm != IPX_STATUS_dual_infeas);
-    assert(ipx_info.status_crossover != IPX_STATUS_primal_infeas);
-    assert(ipx_info.status_crossover != IPX_STATUS_dual_infeas);
+    //
+    // Return error if stopped status settings occur that JAJH doesn't
+    // think should happen
+    if (illegalIpxStoppedStatus(ipx_info, options)) return HighsStatus::Error;
+    printf("Why stopped???\n");
     if (ipx_info.status_ipm == IPX_STATUS_time_limit ||
         ipx_info.status_crossover == IPX_STATUS_time_limit) {
       // Reached time limit
@@ -394,13 +590,14 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       return HighsStatus::Warning;
     }
   }
-  // Reach here if Solve() returned IPX_STATUS_solved
-  assert(solve_status == IPX_STATUS_solved);
-  // Cannot be solved and reached time limit or iteration limit
-  assert(ipx_info.status_ipm != IPX_STATUS_iter_limit &&
-         ipx_info.status_crossover != IPX_STATUS_iter_limit);
-  assert(ipx_info.status_ipm != IPX_STATUS_time_limit &&
-         ipx_info.status_crossover != IPX_STATUS_time_limit);
+  // Should only reach here if Solve() returned IPX_STATUS_solved
+  if (ipxStatusError(solve_status != IPX_STATUS_solved, options,
+                     "solve_status should be solved here but value is",
+                     (int)solve_status))
+    return HighsStatus::Error;
+  // Return error if solved status settings occur that JAJH doesn't
+  // think should happen
+  if (illegalIpxSolvedStatus(ipx_info, options)) return HighsStatus::Error;
 
   if (ipx_info.status_ipm == IPX_STATUS_primal_infeas ||
       ipx_info.status_crossover == IPX_STATUS_primal_infeas) {
