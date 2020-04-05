@@ -167,10 +167,6 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
     obj[col] = (int)lp.sense_ * lp.colCost_[col];
   }
   obj.insert(obj.end(), num_slack, 0);
-#ifdef HiGHSDEV
-  printf("IPX model has %d columns, %d rows and %d nonzeros\n", (int)num_col,
-         (int)num_row, (int)Ap[num_col]);
-#endif
   /*
   for (int col = 0; col < num_col; col++)
     printf("Col %2d: [%11.4g, %11.4g] Cost = %11.4g; Start = %d\n", col,
@@ -418,9 +414,9 @@ bool illegalIpxStoppedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
       found_illegal_status ||
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_dual_infeas, options,
                      "stopped status_ipm should not be IPX_STATUS_dual_infeas");
-  // Can stop with time_limit
-  // Can stop with iter_limit
-  // Can stop with no_progress
+  // Can stop with time limit
+  // Can stop with iter limit
+  // Can stop with no progress
   // Cannot stop and failed - should be error return earlier
   found_illegal_status =
       found_illegal_status ||
@@ -485,9 +481,44 @@ bool illegalIpxStoppedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
   return found_illegal_status;
 }
 
+void reportIpmNoProgress(const HighsOptions& options,
+                         const ipx::Info& ipx_info) {
+  HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                  "No progress: primal objective value       = %11.4g",
+                  ipx_info.pobjval);
+  HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                  "No progress: max absolute primal residual = %11.4g",
+                  ipx_info.abs_presidual);
+  HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                  "No progress: max absolute   dual residual = %11.4g",
+                  ipx_info.abs_dresidual);
+}
+
+HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
+                                 const ipx::Parameters& parameters,
+                                 HighsModelStatus& unscaled_model_status) {
+  if (ipx_info.abs_presidual > parameters.ipm_feasibility_tol) {
+    // Looks like the LP is infeasible
+    unscaled_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    return HighsStatus::OK;
+  } else if (ipx_info.abs_dresidual > parameters.ipm_optimality_tol) {
+    // Looks like the LP is unbounded
+    unscaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    return HighsStatus::OK;
+  } else if (ipx_info.pobjval < -HIGHS_CONST_INF) {
+    // Looks like the LP is unbounded
+    unscaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    return HighsStatus::OK;
+  } else {
+    // Don't know
+    unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
+    return HighsStatus::Error;
+  }
+  return HighsStatus::Warning;
+}
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, HighsBasis& highs_basis,
-                       HighsSolution& highs_solution,
+                       const HighsLp& lp, bool& imprecise_solution,
+                       HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsModelStatus& unscaled_model_status,
                        HighsSolutionParams& unscaled_solution_params) {
   int debug = 0;
@@ -505,7 +536,12 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // private, so create instance of parameters
   ipx::Parameters parameters;
   // parameters.crossover = 1; by default
-  if (debug) parameters.debug = 1;
+  parameters.display = 0;
+  parameters.debug = 0;
+  if (debug) {
+    parameters.display = 1;
+    parameters.debug = 1;
+  }
   // Set IPX parameters from options
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
@@ -527,6 +563,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   IpxStatus result = fillInIpxData(lp, num_col, objective, col_lb, col_ub,
                                    num_row, Ap, Ai, Av, rhs, constraint_type);
   if (result != IpxStatus::OK) return HighsStatus::Error;
+  HighsLogMessage(options.logfile, HighsMessageType::INFO,
+                  "IPX model has %d rows, %d columns and %d nonzeros",
+                  (int)num_row, (int)num_col, (int)Ap[num_col]);
 
   ipx::Int solve_status =
       lps.Solve(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
@@ -570,24 +609,35 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
 
   if (solve_status == IPX_STATUS_stopped) {
-    // Look at the reason why IPX stopped
+    // Look at the reason why IPM or crossover stopped
     //
     // Return error if stopped status settings occur that JAJH doesn't
     // think should happen
     if (illegalIpxStoppedStatus(ipx_info, options)) return HighsStatus::Error;
-    printf("Why stopped???\n");
-    if (ipx_info.status_ipm == IPX_STATUS_time_limit ||
-        ipx_info.status_crossover == IPX_STATUS_time_limit) {
-      // Reached time limit
+    //==============
+    // For crossover
+    //==============
+    // Can stop and reach time limit
+    if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
       unscaled_model_status = HighsModelStatus::REACHED_TIME_LIMIT;
       return HighsStatus::Warning;
-    } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit ||
-               ipx_info.status_crossover == IPX_STATUS_iter_limit) {
-      // Reached iteration limit
-      // Crossover appears not to have an iteration limit
-      assert(ipx_info.status_crossover != IPX_STATUS_iter_limit);
+    }
+    //========
+    // For IPX
+    //========
+    // Can stop with time limit
+    // Can stop with iter limit
+    // Can stop with no progress
+    if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
+      unscaled_model_status = HighsModelStatus::REACHED_TIME_LIMIT;
+      return HighsStatus::Warning;
+    } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
       unscaled_model_status = HighsModelStatus::REACHED_ITERATION_LIMIT;
       return HighsStatus::Warning;
+    } else if (ipx_info.status_ipm == IPX_STATUS_no_progress) {
+      reportIpmNoProgress(options, ipx_info);
+      return analyseIpmNoProgress(ipx_info, lps.GetParameters(),
+                                  unscaled_model_status);
     }
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved
@@ -598,22 +648,34 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Return error if solved status settings occur that JAJH doesn't
   // think should happen
   if (illegalIpxSolvedStatus(ipx_info, options)) return HighsStatus::Error;
-
-  if (ipx_info.status_ipm == IPX_STATUS_primal_infeas ||
-      ipx_info.status_crossover == IPX_STATUS_primal_infeas) {
-    // Identified primal infeasibility
-    // Crossover does not (currently) identify primal infeasibility
-    assert(ipx_info.status_crossover != IPX_STATUS_primal_infeas);
+  //==============
+  // For crossover
+  //==============
+  // Can solve and be optimal
+  // Can solve and be imprecise
+  //========
+  // For IPX
+  //========
+  // Can solve and be optimal
+  // Can solve and be imprecise
+  // Can solve and be primal_infeas
+  // Can solve and be dual_infeas
+  if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
     unscaled_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
     return HighsStatus::OK;
-  } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas ||
-             ipx_info.status_crossover == IPX_STATUS_dual_infeas) {
-    // Identified dual infeasibility
-    // Crossover does not (currently) identify dual infeasibility
-    assert(ipx_info.status_crossover != IPX_STATUS_dual_infeas);
+  } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
     unscaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
     return HighsStatus::OK;
   }
+
+  // Should only reach here if crossover is optimal or imprecise
+  if (ipxStatusError(
+          ipx_info.status_crossover != IPX_STATUS_optimal &&
+              ipx_info.status_crossover != IPX_STATUS_imprecise,
+          options,
+          "crossover status should be optimal or imprecise but value is",
+          (int)ipx_info.status_crossover))
+    return HighsStatus::Error;
 
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the

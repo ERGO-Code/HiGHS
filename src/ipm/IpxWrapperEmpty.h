@@ -19,8 +19,8 @@
 #include "lp_data/HighsLp.h"
 
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
-                       const HighsLp& lp, HighsBasis& highs_basis,
-                       HighsSolution& highs_solution,
+                       const HighsLp& lp, bool& imprecise_solution,
+                       HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsModelStatus& unscaled_model_status,
                        HighsSolutionParams& unscaled_solution_params) {
   unscaled_model_status = HighsModelStatus::NOTSET;

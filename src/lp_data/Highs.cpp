@@ -1353,11 +1353,11 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
   } else if (options_.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
-    HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
-                      "Starting IPX...\n");
-    call_status = solveLpIpx(options_, timer_, model.lp_, model.basis_,
-                             model.solution_, model.unscaled_model_status_,
-                             model.unscaled_solution_params_);
+    bool imprecise_solution;
+    call_status =
+        solveLpIpx(options_, timer_, model.lp_, imprecise_solution,
+                   model.basis_, model.solution_, model.unscaled_model_status_,
+                   model.unscaled_solution_params_);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
     if (return_status == HighsStatus::Error) return return_status;
