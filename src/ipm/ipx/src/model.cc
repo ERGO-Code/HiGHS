@@ -743,7 +743,8 @@ void Model::FindDenseColumns() {
     std::sort(colcount.begin(), colcount.end());
 
     for (Int j = 1; j < num_cols_; j++) {
-        if (colcount[j] > std::max(40l, 10l*colcount[j-1])) {
+        // TODO: Magic numbers 401, 101 here:
+        if (colcount[j] > std::max((Int)401, (Int)(101*colcount[j-1]))) {
             // j is the first dense column
             num_dense_cols_ = num_cols_ - j;
             nz_dense_ = colcount[j];
@@ -762,10 +763,10 @@ void Model::PrintCoefficientRange(const Control& control) const {
     double amax = 0.0;
     for (Int j = 0; j < A_.cols(); j++) {
         for (Int p = A_.begin(j); p < A_.end(j); p++) {
-            double x = A_.value(p);
+            double x = std::abs(A_.value(p));
             if (x != 0.0) {
-                amin = std::min(amin, std::abs(x));
-                amax = std::max(amax, std::abs(x));
+                amin = std::min(amin, x);
+                amax = std::max(amax, x);
             }
         }
     }

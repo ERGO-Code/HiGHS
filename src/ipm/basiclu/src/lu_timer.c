@@ -1,12 +1,24 @@
 /*
  * lu_timer.c
  *
- * Wall clock timer copied from T. Davis, SuiteSparse.
+ * If Unix, use wall clock timer copied from T. Davis, SuiteSparse.
+ * If Windows, use Windows polyfill.
  *
  */
 
-#define _POSIX_C_SOURCE 199309L
 #include <time.h>
+
+#ifdef _MSC_VER
+
+// Include implementation of clock_gettime(CLOCK_MONOTONIC_RAW, ...) for Windows
+#include "basiclu_clock_gettime_polyfill.h"
+
+#else
+
+#define _POSIX_C_SOURCE 199309L
+
+#endif
+
 #include "lu_timer.h"
 
 void lu_tic (double tic[2])
