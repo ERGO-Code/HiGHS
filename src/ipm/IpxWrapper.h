@@ -521,9 +521,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsModelStatus& unscaled_model_status,
                        HighsSolutionParams& unscaled_solution_params) {
-  int debug = 0;
+  imprecise_solution = false;
   resetModelStatusAndSolutionParams(unscaled_model_status,
                                     unscaled_solution_params, options);
+  int debug = 0;
 #ifdef CMAKE_BUILD_TYPE
   debug = 1;
 #endif
@@ -551,7 +552,6 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       unscaled_solution_params.dual_feasibility_tolerance;
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
-  //  parameters.time_limit = 3;
   parameters.ipm_maxiter = options.ipm_iteration_limit;
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
@@ -692,50 +692,38 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
 
-  if (ipx_info.status_crossover == IPX_STATUS_optimal ||
-      ipx_info.status_crossover == IPX_STATUS_imprecise) {
-    if (ipx_info.status_crossover == IPX_STATUS_imprecise) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::WARNING,
-          "Ipx Crossover status imprecise: at least one of primal and dual "
-          "infeasibilities of basic solution is not within parameters pfeastol "
-          "and dfeastol. Simplex clean up will be required");
-      // const double abs_presidual = ipx_info.abs_presidual;
-      // const double abs_dresidual = ipx_info.abs_dresidual;
-      // const double rel_presidual = ipx_info.rel_presidual;
-      // const double rel_dresidual = ipx_info.rel_dresidual;
-      // const double rel_objgap = ipx_info.rel_objgap;
-    }
+  IpxSolution ipx_solution;
+  ipx_solution.num_col = num_col;
+  ipx_solution.num_row = num_row;
+  ipx_solution.ipx_col_value.resize(num_col);
+  ipx_solution.ipx_row_value.resize(num_row);
+  ipx_solution.ipx_col_dual.resize(num_col);
+  ipx_solution.ipx_row_dual.resize(num_row);
+  ipx_solution.ipx_row_status.resize(num_row);
+  ipx_solution.ipx_col_status.resize(num_col);
 
-    IpxSolution ipx_solution;
-    ipx_solution.num_col = num_col;
-    ipx_solution.num_row = num_row;
-    ipx_solution.ipx_col_value.resize(num_col);
-    ipx_solution.ipx_row_value.resize(num_row);
-    ipx_solution.ipx_col_dual.resize(num_col);
-    ipx_solution.ipx_row_dual.resize(num_row);
-    ipx_solution.ipx_row_status.resize(num_row);
-    ipx_solution.ipx_col_status.resize(num_col);
+  lps.GetBasicSolution(
+		       &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
+		       &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
+		       &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
 
-    lps.GetBasicSolution(
-        &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
-        &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
-        &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
+  // Convert the IPX basic solution to a HiGHS basic solution
+  ipxToHighsBasicSolution(options.logfile, lp, rhs, constraint_type,
+			  ipx_solution, highs_basis, highs_solution);
 
-    // Convert the IPX basic solution to a HiGHS basic solution
-    ipxToHighsBasicSolution(options.logfile, lp, rhs, constraint_type,
-                            ipx_solution, highs_basis, highs_solution);
+  imprecise_solution = ipx_info.status_crossover == IPX_STATUS_imprecise;
 
-    // Set optimal
-#ifdef HiGHSDEV
-    if (ipx_info.status_crossover != IPX_STATUS_optimal)
-      printf("IPX: Setting unscaled model status erroneously to OPTIMAL\n");
-#endif
+  HighsStatus return_status;
+  if (imprecise_solution) {
+    unscaled_model_status = HighsModelStatus::NOTSET;
+    return_status = HighsStatus::Warning;
+  } else {
     unscaled_model_status = HighsModelStatus::OPTIMAL;
-    unscaled_solution_params.objective_function_value = ipx_info.objval;
-    getPrimalDualInfeasibilitiesFromHighsBasicSolution(
-        lp, highs_basis, highs_solution, unscaled_solution_params);
+    return_status = HighsStatus::OK;
   }
-  return HighsStatus::OK;
+  unscaled_solution_params.objective_function_value = ipx_info.objval;
+  getPrimalDualInfeasibilitiesFromHighsBasicSolution(
+						     lp, highs_basis, highs_solution, unscaled_solution_params);
+  return return_status;
 }
 #endif

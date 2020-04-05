@@ -1361,9 +1361,23 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
     if (return_status == HighsStatus::Error) return return_status;
-    // Set the scaled model status and solution params for completeness
-    model.scaled_model_status_ = model.unscaled_model_status_;
-    model.scaled_solution_params_ = model.unscaled_solution_params_;
+    if (imprecise_solution) {
+      // IPX+crossover has not obtained a solution satisfying the tolerances. Use the simplex method to clean up
+      call_status = solveLpSimplex(model);
+      return_status =
+        interpretCallStatus(call_status, return_status, "solveLpSimplex");
+      if (return_status == HighsStatus::Error) return return_status;
+
+      if (!isSolutionConsistent(model.lp_, model.solution_)) {
+	HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+			"Inconsistent solution returned from solver");
+	return HighsStatus::Error;
+      }
+    } else {
+      // Set the scaled model status and solution params for completeness
+      model.scaled_model_status_ = model.unscaled_model_status_;
+      model.scaled_solution_params_ = model.unscaled_solution_params_;
+    }
 #else
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "Model cannot be solved with IPM");
@@ -1373,7 +1387,7 @@ HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
     // Use Simplex
     call_status = solveLpSimplex(model);
     return_status =
-        interpretCallStatus(call_status, return_status, "solveLpSimplex");
+      interpretCallStatus(call_status, return_status, "solveLpSimplex");
     if (return_status == HighsStatus::Error) return return_status;
 
     if (!isSolutionConsistent(model.lp_, model.solution_)) {
