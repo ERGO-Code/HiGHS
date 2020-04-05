@@ -103,6 +103,11 @@ int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
   return (int)((Highs*)highs)->passModel(lp);
 }
 
+int Highs_setHighsBoolOptionValue(void* highs, const char* option,
+                                 const int value) {
+  return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), (bool)value);
+}
+
 int Highs_setHighsIntOptionValue(void* highs, const char* option,
                                  const int value) {
   return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), value);
@@ -125,6 +130,13 @@ int Highs_setHighsOptionValue(void* highs, const char* option,
       ->setHighsOptionValue(std::string(option), std::string(value));
 }
 
+int Highs_getHighsBoolOptionValue(void* highs, const char* option, int* value) {
+  bool v;
+  int retcode = (int)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
+  *value = (int)v;
+  return retcode;
+}
+
 int Highs_getHighsIntOptionValue(void* highs, const char* option, int* value) {
   return (int)((Highs*)highs)->getHighsOptionValue(std::string(option), *value);
 }
@@ -133,6 +145,15 @@ int Highs_getHighsDoubleOptionValue(void* highs, const char* option,
                                     double* value) {
   return (int)((Highs*)highs)->getHighsOptionValue(std::string(option), *value);
 }
+
+int Highs_getHighsStringOptionValue(void* highs, const char* option,
+                                    char* value) {
+  std::string v;
+  int retcode = (int)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
+  strcpy(value, v.c_str());
+  return retcode;
+}
+
 
 int Highs_getHighsIntInfoValue(void* highs, const char* info, int* value) {
   return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
