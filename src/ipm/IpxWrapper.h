@@ -703,13 +703,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   ipx_solution.ipx_col_status.resize(num_col);
 
   lps.GetBasicSolution(
-		       &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
-		       &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
-		       &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
+      &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
+      &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
+      &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
 
   // Convert the IPX basic solution to a HiGHS basic solution
   ipxToHighsBasicSolution(options.logfile, lp, rhs, constraint_type,
-			  ipx_solution, highs_basis, highs_solution);
+                          ipx_solution, highs_basis, highs_solution);
 
   imprecise_solution = ipx_info.status_crossover == IPX_STATUS_imprecise;
 
@@ -723,7 +723,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   unscaled_solution_params.objective_function_value = ipx_info.objval;
   getPrimalDualInfeasibilitiesFromHighsBasicSolution(
-						     lp, highs_basis, highs_solution, unscaled_solution_params);
+      lp, highs_basis, highs_solution, unscaled_solution_params);
   return return_status;
 }
 #endif

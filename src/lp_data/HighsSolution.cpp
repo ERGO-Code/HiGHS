@@ -889,7 +889,8 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
         row_activity[row] += highs_solution.col_value[col] * lp.Avalue_[el];
       }
     }
-    if (highs_basis.col_status[col] == HighsBasisStatus::BASIC) num_basic_variables++;
+    if (highs_basis.col_status[col] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
   }
   int ipx_row = 0;
   int ipx_slack = lp.numCol_;
@@ -1008,7 +1009,8 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
                       "Unrecognised ipx_row_status value from IPX");
       return HighsStatus::Error;
     }
-    if (highs_basis.row_status[row] == HighsBasisStatus::BASIC) num_basic_variables++;
+    if (highs_basis.row_status[row] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
   }
   assert(num_basic_variables == lp.numRow_);
   highs_basis.valid_ = true;
