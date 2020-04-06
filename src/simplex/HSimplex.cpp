@@ -3928,7 +3928,8 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
   // The scaled infeasibility parameters are not known if the time (or
   // iteration?) limit has been reached
   const bool check_scaled_solution_params =
-      scaled_model_status != HighsModelStatus::REACHED_TIME_LIMIT;
+      scaled_model_status != HighsModelStatus::REACHED_TIME_LIMIT &&
+      scaled_model_status != HighsModelStatus::REACHED_ITERATION_LIMIT;
 
   const double scaled_primal_feasibility_tolerance =
       scaled_solution_params.primal_feasibility_tolerance;

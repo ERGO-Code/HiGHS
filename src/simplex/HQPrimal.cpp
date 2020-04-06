@@ -309,7 +309,7 @@ void HQPrimal::solvePhase2() {
     if (currentRunHighsTime > workHMO.options_.time_limit) {
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
-    } else if (scaled_solution_params.simplex_iteration_count >
+    } else if (workHMO.scaled_solution_params_.simplex_iteration_count >
 	workHMO.options_.simplex_iteration_limit) {
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
       break;

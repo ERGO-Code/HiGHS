@@ -570,7 +570,7 @@ void HDual::solvePhase1() {
       solve_bailout = true;
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
-    } else if (scaled_solution_params.simplex_iteration_count >
+    } else if (workHMO.scaled_solution_params_.simplex_iteration_count >
 	workHMO.options_.simplex_iteration_limit) {
       solve_bailout = true;
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
@@ -714,7 +714,7 @@ void HDual::solvePhase2() {
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       solve_bailout = true;
       break;
-    } else if (scaled_solution_params.simplex_iteration_count >
+    } else if (workHMO.scaled_solution_params_.simplex_iteration_count >
 	workHMO.options_.simplex_iteration_limit) {
       solve_bailout = true;
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
