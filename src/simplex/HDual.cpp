@@ -1807,31 +1807,32 @@ bool HDual::dualInfoOk(const HighsLp& lp) {
 
 bool HDual::bailout() {
   if (solve_bailout) {
-    // Bailout has already been decided: check that it's for one of these reasons
+    // Bailout has already been decided: check that it's for one of these
+    // reasons
     assert(workHMO.scaled_model_status_ ==
-	   HighsModelStatus::REACHED_TIME_LIMIT ||
+               HighsModelStatus::REACHED_TIME_LIMIT ||
            workHMO.scaled_model_status_ ==
-	   HighsModelStatus::REACHED_ITERATION_LIMIT ||
+               HighsModelStatus::REACHED_ITERATION_LIMIT ||
            workHMO.scaled_model_status_ ==
-	   HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+               HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
   } else if (workHMO.timer_.readRunHighsClock() > workHMO.options_.time_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
   } else if (workHMO.scaled_solution_params_.simplex_iteration_count >=
-	     workHMO.options_.simplex_iteration_limit) {
+             workHMO.options_.simplex_iteration_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
   } else if (solvePhase == 2 &&
-	     (workHMO.simplex_info_.updated_dual_objective_value >
-	      workHMO.options_.dual_objective_value_upper_bound)) {
+             (workHMO.simplex_info_.updated_dual_objective_value >
+              workHMO.options_.dual_objective_value_upper_bound)) {
 #ifdef SCIP_DEV
     printf("HDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
-	   workHMO.simplex_info_.updated_dual_objective_value,
-	   workHMO.options_.dual_objective_value_upper_bound);
+           workHMO.simplex_info_.updated_dual_objective_value,
+           workHMO.options_.dual_objective_value_upper_bound);
 #endif
     solve_bailout = true;
     workHMO.scaled_model_status_ =
-      HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+        HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
   }
   return solve_bailout;
 }

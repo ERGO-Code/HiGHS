@@ -158,16 +158,18 @@ HighsStatus HQPrimal::solve() {
   }
   solvePhase = 2;
   assert(workHMO.scaled_model_status_ != HighsModelStatus::REACHED_TIME_LIMIT &&
-	 workHMO.scaled_model_status_ != HighsModelStatus::REACHED_ITERATION_LIMIT);
+         workHMO.scaled_model_status_ !=
+             HighsModelStatus::REACHED_ITERATION_LIMIT);
+  analysis = &workHMO.simplex_analysis_;
   if (solvePhase == 2) {
     int it0 = scaled_solution_params.simplex_iteration_count;
-    
+
     analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
     solvePhase2();
     analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-    
+
     simplex_info.primal_phase2_iteration_count +=
-      (scaled_solution_params.simplex_iteration_count - it0);
+        (scaled_solution_params.simplex_iteration_count - it0);
     if (bailout()) return HighsStatus::Warning;
   }
   /*
@@ -277,7 +279,7 @@ void HQPrimal::solvePhase2() {
         if (invertHint) {
           break;
         }
-	if (bailout()) break;
+        if (bailout()) break;
       }
       if (bailout()) break;
       /* Go to the next rebuild */
@@ -1341,19 +1343,19 @@ void HQPrimal::reportRebuild(const int rebuild_invert_hint) {
 
 bool HQPrimal::bailout() {
   if (solve_bailout) {
-    // Bailout has already been decided: check that it's for one of these reasons
+    // Bailout has already been decided: check that it's for one of these
+    // reasons
     assert(workHMO.scaled_model_status_ ==
-	   HighsModelStatus::REACHED_TIME_LIMIT ||
+               HighsModelStatus::REACHED_TIME_LIMIT ||
            workHMO.scaled_model_status_ ==
-	   HighsModelStatus::REACHED_ITERATION_LIMIT);
+               HighsModelStatus::REACHED_ITERATION_LIMIT);
   } else if (workHMO.timer_.readRunHighsClock() > workHMO.options_.time_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
   } else if (workHMO.scaled_solution_params_.simplex_iteration_count >=
-	     workHMO.options_.simplex_iteration_limit) {
+             workHMO.options_.simplex_iteration_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
-  } 
+  }
   return solve_bailout;
 }
-
