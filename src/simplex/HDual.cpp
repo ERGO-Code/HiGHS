@@ -251,21 +251,14 @@ HighsStatus HDual::solve() {
         solvePhase = 0;
         break;
     }
+    // Possibly bail out
+    if (bailout()) return HighsStatus::Warning;
     // Jump for primal
     if (solvePhase == 4) break;
-    // Possibly bail out
-    if (solve_bailout) break;
   }
+  // If bailing out, should have returned already
+  assert(!solve_bailout);
 
-  if (solve_bailout) {
-    assert(workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_TIME_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_ITERATION_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
-    return HighsStatus::Warning;
-  }
   if (solvePhase != 0 && solvePhase != 4) {
     printf("What ho! HDual::solve() returning with solvePhase = %d\n",
            solvePhase);
@@ -510,7 +503,6 @@ void HDual::initSlice(const int initial_num_slice) {
 }
 
 void HDual::solvePhase1() {
-  HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   // When starting a new phase the (updated) dual objective function
@@ -547,35 +539,10 @@ void HDual::solvePhase1() {
           iterateMulti();
           break;
       }
+      if (bailout()) break;
       if (invertHint) break;
-      // printf("HDual::solvePhase1: Iter = %d; Objective = %g\n",
-      // scaled_solution_params.simplex_iteration_count,
-      // simplex_info.dual_objective_value);
-      double current_dual_objective_value =
-          simplex_info.updated_dual_objective_value;
-      if (current_dual_objective_value >
-          workHMO.options_.dual_objective_value_upper_bound) {
-#ifdef SCIP_DEV
-        printf("HDual::solvePhase1: %12g = Objective > ObjectiveUB\n",
-               current_dual_objective_value,
-               workHMO.options_.dual_objective_value_upper_bound);
-#endif
-        workHMO.scaled_model_status_ =
-            HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
-        break;
-      }
     }
-    double current_run_highs_time = timer.readRunHighsClock();
-    if (current_run_highs_time > workHMO.options_.time_limit) {
-      solve_bailout = true;
-      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
-      break;
-    } else if (workHMO.scaled_solution_params_.simplex_iteration_count >
-	workHMO.options_.simplex_iteration_limit) {
-      solve_bailout = true;
-      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
-      break;
-    }
+    if (bailout()) break;
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
@@ -583,16 +550,12 @@ void HDual::solvePhase1() {
   }
 
   analysis->simplexTimerStop(IterateClock);
-  if (solve_bailout) {
-    assert(workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_TIME_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_ITERATION_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
-    return;
-  }
+  // Possibly return due to bailing out, having now stopped
+  // IterateClock
+  if (bailout()) return;
 
+  // If bailing out, should have done so already
+  assert(!solve_bailout);
   if (rowOut == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_DETAILED, "dual-phase-1-optimal\n");
@@ -646,7 +609,6 @@ void HDual::solvePhase1() {
 }
 
 void HDual::solvePhase2() {
-  HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   // When starting a new phase the (updated) dual objective function
@@ -687,55 +649,22 @@ void HDual::solvePhase2() {
           iterateMulti();
           break;
       }
-      // invertHint can be true for various reasons see SimplexConst.h
+      if (bailout()) break;
       if (invertHint) break;
-      double current_dual_objective_value =
-          simplex_info.updated_dual_objective_value;
-      if (current_dual_objective_value >
-          workHMO.options_.dual_objective_value_upper_bound) {
-#ifdef SCIP_DEV
-        printf("HDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
-               current_dual_objective_value,
-               workHMO.options_.dual_objective_value_upper_bound);
-#endif
-        workHMO.scaled_model_status_ =
-            HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
-        solve_bailout = true;
-        break;
-      }
     }
-    if (workHMO.scaled_model_status_ ==
-        HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
-      solve_bailout = true;
-      break;
-    }
-    double current_run_highs_time = timer.readRunHighsClock();
-    if (current_run_highs_time > workHMO.options_.time_limit) {
-      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
-      solve_bailout = true;
-      break;
-    } else if (workHMO.scaled_solution_params_.simplex_iteration_count >
-	workHMO.options_.simplex_iteration_limit) {
-      solve_bailout = true;
-      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
-      break;
-    }
+    if (bailout()) break;
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
     if (simplex_lp_status.has_fresh_rebuild) break;
   }
   analysis->simplexTimerStop(IterateClock);
+  // Possibly return due to bailing out, having now stopped
+  // IterateClock
+  if (bailout()) return;
 
-  if (solve_bailout) {
-    assert(workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_TIME_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_ITERATION_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
-    return;
-  }
+  // If bailing out, should have done so already
+  assert(!solve_bailout);
   if (dualInfeasCount > 0) {
     // There are dual infeasiblities so switch to Phase 1 and return
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
@@ -1874,6 +1803,37 @@ bool HDual::dualInfoOk(const HighsLp& lp) {
     return false;
   }
   return true;
+}
+
+bool HDual::bailout() {
+  if (solve_bailout) {
+    // Bailout has already been decided: check that it's for one of these reasons
+    assert(workHMO.scaled_model_status_ ==
+	   HighsModelStatus::REACHED_TIME_LIMIT ||
+           workHMO.scaled_model_status_ ==
+	   HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           workHMO.scaled_model_status_ ==
+	   HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+  } else if (workHMO.timer_.readRunHighsClock() > workHMO.options_.time_limit) {
+    solve_bailout = true;
+    workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+  } else if (workHMO.scaled_solution_params_.simplex_iteration_count >=
+	     workHMO.options_.simplex_iteration_limit) {
+    solve_bailout = true;
+    workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+  } else if (solvePhase == 2 &&
+	     (workHMO.simplex_info_.updated_dual_objective_value >
+	      workHMO.options_.dual_objective_value_upper_bound)) {
+#ifdef SCIP_DEV
+    printf("HDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
+	   workHMO.simplex_info_.updated_dual_objective_value,
+	   workHMO.options_.dual_objective_value_upper_bound);
+#endif
+    solve_bailout = true;
+    workHMO.scaled_model_status_ =
+      HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+  }
+  return solve_bailout;
 }
 
 #ifdef HiGHSDEV
