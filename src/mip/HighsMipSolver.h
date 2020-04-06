@@ -17,6 +17,7 @@
 enum class HighsMipStatus {
   kOptimal,
   kTimeout,
+  kReachedSimplexIterationLimit,
   kError,
   kNodeOptimal,
   kNodeInfeasible,

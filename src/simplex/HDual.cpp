@@ -261,6 +261,8 @@ HighsStatus HDual::solve() {
     assert(workHMO.scaled_model_status_ ==
                HighsModelStatus::REACHED_TIME_LIMIT ||
            workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           workHMO.scaled_model_status_ ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return HighsStatus::Warning;
   }
@@ -568,6 +570,11 @@ void HDual::solvePhase1() {
       solve_bailout = true;
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
+    } else if (scaled_solution_params.simplex_iteration_count >
+	workHMO.options_.simplex_iteration_limit) {
+      solve_bailout = true;
+      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+      break;
     }
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
@@ -579,6 +586,8 @@ void HDual::solvePhase1() {
   if (solve_bailout) {
     assert(workHMO.scaled_model_status_ ==
                HighsModelStatus::REACHED_TIME_LIMIT ||
+           workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_ITERATION_LIMIT ||
            workHMO.scaled_model_status_ ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
@@ -705,6 +714,11 @@ void HDual::solvePhase2() {
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       solve_bailout = true;
       break;
+    } else if (scaled_solution_params.simplex_iteration_count >
+	workHMO.options_.simplex_iteration_limit) {
+      solve_bailout = true;
+      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+      break;
     }
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
@@ -716,6 +730,8 @@ void HDual::solvePhase2() {
   if (solve_bailout) {
     assert(workHMO.scaled_model_status_ ==
                HighsModelStatus::REACHED_TIME_LIMIT ||
+           workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_ITERATION_LIMIT ||
            workHMO.scaled_model_status_ ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;

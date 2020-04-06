@@ -157,7 +157,8 @@ HighsStatus HQPrimal::solve() {
     */
   }
   solvePhase = 2;
-  if (workHMO.scaled_model_status_ != HighsModelStatus::REACHED_TIME_LIMIT) {
+  if (workHMO.scaled_model_status_ != HighsModelStatus::REACHED_TIME_LIMIT &&
+      workHMO.scaled_model_status_ != HighsModelStatus::REACHED_ITERATION_LIMIT) {
     if (solvePhase == 2) {
       int it0 = scaled_solution_params.simplex_iteration_count;
 
@@ -308,6 +309,10 @@ void HQPrimal::solvePhase2() {
     if (currentRunHighsTime > workHMO.options_.time_limit) {
       workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
+    } else if (scaled_solution_params.simplex_iteration_count >
+	workHMO.options_.simplex_iteration_limit) {
+      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+      break;
     }
     // If the data are fresh from rebuild() and no flips have occurred, break
     // out of the outer loop to see what's ocurred
@@ -315,7 +320,8 @@ void HQPrimal::solvePhase2() {
       break;
   }
 
-  if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) {
+  if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+      workHMO.scaled_model_status_ == HighsModelStatus::REACHED_ITERATION_LIMIT) {
     return;
   }
 
