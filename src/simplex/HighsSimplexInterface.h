@@ -234,6 +234,11 @@ class HighsSimplexInterface {
    */
   int get_basic_indices(int* bind  //!> Indices of basic variables
   );
+
+  /**
+   * @brief Clear the simplex basis
+   */
+  void clearBasis();
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXINTERFACE_H_ */

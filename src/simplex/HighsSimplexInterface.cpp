@@ -1719,3 +1719,7 @@ int HighsSimplexInterface::get_basic_indices(int* bind) {
   }
   return 0;
 }
+
+void HighsSimplexInterface::clearBasis() {
+  highs_model_object.simplex_lp_status_.has_basis = false;
+}

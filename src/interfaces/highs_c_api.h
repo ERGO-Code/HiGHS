@@ -290,6 +290,20 @@ int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
 );
 
 /**
+ * @brief Passes a basis to HiGHS
+ */
+int Highs_setBasis(void* highs,           //!< HiGHS object reference
+                   const int* colstatus,  //!< Column status
+                   const int* rowstatus   //!< Row status
+);
+
+/**
+ * @brief Sets up a logical basis in HiGHS
+ */
+int Highs_setLogicalBasis(void* highs  //!< HiGHS object reference
+);
+
+/**
  * @brief Adds a row to the model
  */
 int Highs_addRow(

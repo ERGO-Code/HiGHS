@@ -876,6 +876,15 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
   return HighsStatus::OK;
 }
 
+HighsStatus Highs::setBasis() {
+  underDevelopmentLogMessage("setBasis");
+  basis_.valid_ = false;
+  if (!haveHmo("setBasis")) return HighsStatus::OK;
+  HighsSimplexInterface interface(hmos_[0]);
+  interface.clearBasis();
+  return HighsStatus::OK;
+}
+
 bool Highs::addRow(const double lower_bound, const double upper_bound,
                    const int num_new_nz, const int* indices,
                    const double* values) {

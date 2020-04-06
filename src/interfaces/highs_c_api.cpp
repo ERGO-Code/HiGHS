@@ -189,7 +189,6 @@ void Highs_getSolution(void* highs, double* colvalue, double* coldual,
 
 void Highs_getBasis(void* highs, int* colstatus, int* rowstatus) {
   HighsBasis basis = ((Highs*)highs)->getBasis();
-
   for (int i = 0; i < (int)basis.col_status.size(); i++) {
     colstatus[i] = (int)basis.col_status[i];
   }
@@ -243,6 +242,53 @@ int Highs_getReducedColumn(void* highs, const int col, double* col_vector,
                            int* col_num_nz, int* col_indices) {
   return (int)((Highs*)highs)
       ->getReducedColumn(col, col_vector, col_num_nz, col_indices);
+}
+
+int Highs_setBasis(void* highs, const int* colstatus, const int* rowstatus) {
+  HighsBasis basis;
+  const int num_col = Highs_getNumCols(highs);
+  basis.col_status.resize(num_col);
+  for (int i = 0; i < num_col; i++) {
+    if (colstatus[i] == (int)HighsBasisStatus::LOWER) {
+      basis.col_status[i] = HighsBasisStatus::LOWER;
+    } else if (colstatus[i] == (int)HighsBasisStatus::BASIC) {
+      basis.col_status[i] = HighsBasisStatus::BASIC;
+    } else if (colstatus[i] == (int)HighsBasisStatus::UPPER) {
+      basis.col_status[i] = HighsBasisStatus::UPPER;
+    } else if (colstatus[i] == (int)HighsBasisStatus::ZERO) {
+      basis.col_status[i] = HighsBasisStatus::ZERO;
+    } else if (colstatus[i] == (int)HighsBasisStatus::NONBASIC) {
+      basis.col_status[i] = HighsBasisStatus::NONBASIC;
+    } else if (colstatus[i] == (int)HighsBasisStatus::SUPER) {
+      basis.col_status[i] = HighsBasisStatus::SUPER;
+    } else {
+      return (int)HighsStatus::Error;
+    }
+  }
+  const int num_row = Highs_getNumRows(highs);
+  basis.row_status.resize(num_row);
+  for (int i = 0; i < num_row; i++) {
+    if (rowstatus[i] == (int)HighsBasisStatus::LOWER) {
+      basis.row_status[i] = HighsBasisStatus::LOWER;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::BASIC) {
+      basis.row_status[i] = HighsBasisStatus::BASIC;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::UPPER) {
+      basis.row_status[i] = HighsBasisStatus::UPPER;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::ZERO) {
+      basis.row_status[i] = HighsBasisStatus::ZERO;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::NONBASIC) {
+      basis.row_status[i] = HighsBasisStatus::NONBASIC;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::SUPER) {
+      basis.row_status[i] = HighsBasisStatus::SUPER;
+    } else {
+      return (int)HighsStatus::Error;
+    }
+  }
+  return (int)((Highs*)highs)->setBasis(basis);
+}
+
+int Highs_setLogicalBasis(void* highs) {
+  return (int)((Highs*)highs)->setBasis();
 }
 
 int Highs_addRow(void* highs, const double lower, const double upper,

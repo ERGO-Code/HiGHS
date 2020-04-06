@@ -662,6 +662,11 @@ class Highs {
   HighsStatus setBasis(const HighsBasis& basis  //!< Basis to be used
   );
 
+  /**
+   * @brief Clears the HighsBasis for the LP of the HighsModelObject
+   */
+  HighsStatus setBasis();
+
   // todo: getRangingInformation(..)
 
   /**
