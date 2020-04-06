@@ -77,6 +77,12 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
     return_status =
         interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
+    if ((int)lp.Aindex_.size() > lp_num_nz || (int)lp.Avalue_.size() > lp_num_nz) {
+      // Entries have been removed from the matrix so resize the index
+      // and value vectors to prevent bug in presolve
+      if ((int)lp.Aindex_.size() > lp_num_nz) lp.Aindex_.resize(lp_num_nz);
+      if ((int)lp.Avalue_.size() > lp_num_nz) lp.Avalue_.resize(lp_num_nz);
+    }
     lp.Astart_[lp.numCol_] = lp_num_nz;
   }
   if (return_status == HighsStatus::Error)
