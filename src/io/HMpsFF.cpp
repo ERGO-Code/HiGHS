@@ -441,9 +441,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
                       "COLUMNS section contains row %s not in ROWS section",
                       marker.c_str());
     } else {
-      parsename(marker);  // rowidx set
       double value = atof(word.c_str());
-      addtuple(value);
+      if (value) {
+        parsename(marker);  // rowidx set and nnz incremented
+        addtuple(value);
+      }
     }
 
     if (!is_end(strline, end)) {
@@ -472,10 +474,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
             marker.c_str());
         continue;
       };
-
       double value = atof(word.c_str());
-      parsename(marker);  // rowidx set
-      addtuple(value);
+      if (value) {
+        parsename(marker);  // rowidx set and nnz incremented
+        addtuple(value);
+      }
     }
   }
 
