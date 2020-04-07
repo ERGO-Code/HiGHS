@@ -102,8 +102,8 @@ int Highs_passLp(
  * @brief
  */
 int Highs_setHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
-                                 const char* option,  //!< name of the option
-                                 const int value      //!< new value of option
+                                  const char* option,  //!< name of the option
+                                  const int value      //!< new value of option
 );
 
 /*
@@ -142,8 +142,8 @@ int Highs_setHighsOptionValue(void* highs,         //!< HiGHS object reference
  * @brief
  */
 int Highs_getHighsBoolOptionValue(void* highs,  //!< HiGHS object reference
-                                 const char* option,  //!< name of the option
-                                 int* value           //!< value of option
+                                  const char* option,  //!< name of the option
+                                  int* value           //!< value of option
 );
 
 /*
@@ -165,9 +165,10 @@ int Highs_getHighsDoubleOptionValue(void* highs,  //!< HiGHS object reference
 /*
  * @brief
  */
-int Highs_getHighsStringOptionValue(void* highs,  //!< HiGHS object reference
-                                    const char* option,  //!< name of the option
-                                    char* value          //!< pointer to allocated memory to store value of option
+int Highs_getHighsStringOptionValue(
+    void* highs,         //!< HiGHS object reference
+    const char* option,  //!< name of the option
+    char* value  //!< pointer to allocated memory to store value of option
 );
 
 /*

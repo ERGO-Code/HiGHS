@@ -280,6 +280,8 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
     case HighsStatus::Warning:
       if (use_model_status == HighsModelStatus::REACHED_TIME_LIMIT)
         return HighsMipStatus::kTimeout;
+      if (use_model_status == HighsModelStatus::REACHED_ITERATION_LIMIT)
+        return HighsMipStatus::kReachedSimplexIterationLimit;
       return HighsMipStatus::kNodeNotOptimal;
     case HighsStatus::Error:
       return HighsMipStatus::kNodeError;
@@ -298,6 +300,8 @@ HighsMipStatus HighsMipSolver::solveNode(Node& node, bool hotstart) {
       return HighsMipStatus::kNodeUnbounded;
     case HighsModelStatus::REACHED_TIME_LIMIT:
       return HighsMipStatus::kTimeout;
+    case HighsModelStatus::REACHED_ITERATION_LIMIT:
+      return HighsMipStatus::kReachedSimplexIterationLimit;
     case HighsModelStatus::NOTSET:
       return HighsMipStatus::kNodeError;
     default:
@@ -414,6 +418,8 @@ HighsMipStatus HighsMipSolver::solveTree(Node& root) {
         break;
       case HighsMipStatus::kTimeout:
         return HighsMipStatus::kTimeout;
+      case HighsMipStatus::kReachedSimplexIterationLimit:
+        return HighsMipStatus::kReachedSimplexIterationLimit;
       case HighsMipStatus::kNodeUnbounded:
         return HighsMipStatus::kNodeUnbounded;
       default:
@@ -459,6 +465,9 @@ void HighsMipSolver::reportMipSolverProgress(const HighsMipStatus mip_status) {
         break;
       case HighsMipStatus::kTimeout:
         reportMipSolverProgressLine("Timeout");
+        break;
+      case HighsMipStatus::kReachedSimplexIterationLimit:
+        reportMipSolverProgressLine("Reached simplex iteration limit");
         break;
       case HighsMipStatus::kError:
         reportMipSolverProgressLine("Error");
@@ -561,6 +570,9 @@ std::string HighsMipSolver::highsMipStatusToString(
       break;
     case HighsMipStatus::kTimeout:
       return "Timeout";
+      break;
+    case HighsMipStatus::kReachedSimplexIterationLimit:
+      return "Reached simplex iteration limit";
       break;
     case HighsMipStatus::kError:
       return "Error";

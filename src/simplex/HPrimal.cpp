@@ -102,7 +102,7 @@ HighsStatus HPrimal::solve() {
   solvePhase = ??InfeasCount > 0 ? 1 : 2;
   */
   solvePhase = 0;  // Frig to skip while (solvePhase) {*}
-
+  solve_bailout = false;
   // Check that the model is OK to solve:
   //
   // Level 0 just checks the flags
@@ -152,17 +152,20 @@ HighsStatus HPrimal::solve() {
     */
   }
   solvePhase = 2;
-  if (workHMO.scaled_model_status_ != HighsModelStatus::REACHED_TIME_LIMIT) {
-    if (solvePhase == 2) {
-      int it0 = scaled_solution_params.simplex_iteration_count;
+  assert(workHMO.scaled_model_status_ != HighsModelStatus::REACHED_TIME_LIMIT &&
+         workHMO.scaled_model_status_ !=
+             HighsModelStatus::REACHED_ITERATION_LIMIT);
+  analysis = &workHMO.simplex_analysis_;
+  if (solvePhase == 2) {
+    int it0 = scaled_solution_params.simplex_iteration_count;
 
-      analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
-      solvePhase2();
-      analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
+    analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
+    solvePhase2();
+    analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
 
-      simplex_info.primal_phase2_iteration_count +=
-          (scaled_solution_params.simplex_iteration_count - it0);
-    }
+    simplex_info.primal_phase2_iteration_count +=
+        (scaled_solution_params.simplex_iteration_count - it0);
+    if (bailout()) return HighsStatus::Warning;
   }
   /*
   // ToDo Adapt ok_to_solve to be used by primal
@@ -174,7 +177,6 @@ HighsStatus HPrimal::solve() {
 }
 
 void HPrimal::solvePhase2() {
-  HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
 
@@ -187,6 +189,7 @@ void HPrimal::solvePhase2() {
   invertHint = INVERT_HINT_NO;
   // Set solvePhase=2 so it's set if solvePhase2() is called directly
   solvePhase = 2;
+  solve_bailout = false;
   // Set up local copies of model dimensions
   solver_num_col = workHMO.simplex_lp_.numCol_;
   solver_num_row = workHMO.simplex_lp_.numRow_;
@@ -256,25 +259,19 @@ void HPrimal::solvePhase2() {
         break;
       }
       primalUpdate();
+      if (bailout()) return;
       if (invertHint) {
         break;
       }
     }
-
-    double currentRunHighsTime = timer.readRunHighsClock();
-    if (currentRunHighsTime > workHMO.options_.time_limit) {
-      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
-      break;
-    }
+    if (bailout()) return;
     // If the data are fresh from rebuild() and no flips have occurred, break
     // out of the outer loop to see what's ocurred
     if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
   }
-
-  if (workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) {
-    return;
-  }
+  // If bailing out, should have returned already
+  assert(!solve_bailout);
 
   if (columnIn == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
@@ -807,4 +804,23 @@ void HPrimal::reportRebuild(const int rebuild_invert_hint) {
   iterationAnalysisData();
   analysis->invert_hint = rebuild_invert_hint;
   analysis->invertReport();
+}
+
+bool HPrimal::bailout() {
+  if (solve_bailout) {
+    // Bailout has already been decided: check that it's for one of these
+    // reasons
+    assert(workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_TIME_LIMIT ||
+           workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_ITERATION_LIMIT);
+  } else if (workHMO.timer_.readRunHighsClock() > workHMO.options_.time_limit) {
+    solve_bailout = true;
+    workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+  } else if (workHMO.scaled_solution_params_.simplex_iteration_count >=
+             workHMO.options_.simplex_iteration_limit) {
+    solve_bailout = true;
+    workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+  }
+  return solve_bailout;
 }

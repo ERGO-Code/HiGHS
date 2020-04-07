@@ -48,6 +48,9 @@ class HPrimal {
   void iterationAnalysisData();
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint = -1);
+  bool bailout();
+  bool solve_bailout;  //!< Set true if control is to be returned immediately to
+                       //!< calling function
 
   // Model pointer
   HighsModelObject& workHMO;
