@@ -834,6 +834,7 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
   get_row_activities = get_row_activities || ipx_solution.num_col > lp.numCol_;
 #endif
   if (get_row_activities) row_activity.assign(lp.numRow_, 0);
+  int num_basic_variables = 0;
   for (int col = 0; col < lp.numCol_; col++) {
     bool unrecognised = false;
     if (ipx_col_status[col] == ipx_basic) {
@@ -888,6 +889,8 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
         row_activity[row] += highs_solution.col_value[col] * lp.Avalue_[el];
       }
     }
+    if (highs_basis.col_status[col] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
   }
   int ipx_row = 0;
   int ipx_slack = lp.numCol_;
@@ -1006,7 +1009,11 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
                       "Unrecognised ipx_row_status value from IPX");
       return HighsStatus::Error;
     }
+    if (highs_basis.row_status[row] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
   }
+  assert(num_basic_variables == lp.numRow_);
+  highs_basis.valid_ = true;
   assert(ipx_row == ipx_solution.num_row);
   assert(ipx_slack == ipx_solution.num_col);
 

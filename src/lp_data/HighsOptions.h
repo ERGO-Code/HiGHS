@@ -247,6 +247,7 @@ struct HighsOptionsStruct {
   int simplex_primal_edge_weight_strategy;
   int simplex_iteration_limit;
   int simplex_update_limit;
+  int ipm_iteration_limit;
   int highs_min_threads;
   int highs_max_threads;
   int message_level;
@@ -459,6 +460,11 @@ class HighsOptions : public HighsOptionsStruct {
         "simplex_update_limit",
         "Limit on the number of simplex UPDATE operations", advanced,
         &simplex_update_limit, 0, 5000, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
+        &ipm_iteration_limit, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
