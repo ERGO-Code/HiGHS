@@ -24,7 +24,8 @@
 #include "io/LoadOptions.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
-#include "simplex/HApp.h"
+#include "lp_data/HighsSolve.h"
+#include "lp_data/HighsSolution.h"
 #include "simplex/HighsSimplexInterface.h"
 
 #ifdef OPENMP
@@ -33,12 +34,6 @@
 
 // until add_row_.. functions are moved to HighsLpUtils.h
 #include "simplex/HSimplex.h"
-
-#ifdef IPX_ON
-#include "ipm/IpxWrapper.h"
-#else
-#include "ipm/IpxWrapperEmpty.h"
-#endif
 
 Highs::Highs() {
   hmos_.clear();
@@ -1338,81 +1333,17 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
   }
 }
 
-// The method below runs simplex or ipx solver on the lp.
+// The method below runs calls solveLp to solve the LP associated with
+// a particular model, integrating the iteration counts into the
+// overall values in HighsInfo
 HighsStatus Highs::runLpSolver(HighsModelObject& model, const string message) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  // Reset unscaled and scaled model status and solution params - except for
-  // iteration counts
-  resetModelStatusAndSolutionParams(model);
-  HighsLogMessage(options_.logfile, HighsMessageType::INFO, message.c_str());
-#ifdef HIGHSDEV
-  // Shouldn't have to check validity of the LP since this is done when it is
-  // loaded or modified
-  //  bool normalise = true;
-  call_status = assessLp(lp_, options_);
-  assert(call_status == HighsStatus::OK);
-  return_status = interpretCallStatus(call_status, return_status, "assessLp");
+
+  call_status = solveLp(model, message);
+  return_status = interpretCallStatus(call_status, return_status, "solveLp");
   if (return_status == HighsStatus::Error) return return_status;
-#endif
-  if (!model.lp_.numRow_) {
-    // Unconstrained LP so solve directly
-    call_status = solveUnconstrainedLp(model);
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
-    if (return_status == HighsStatus::Error) return return_status;
-  } else if (options_.solver == ipm_string) {
-    // Use IPM
-#ifdef IPX_ON
-    bool imprecise_solution;
-    call_status =
-        solveLpIpx(options_, timer_, model.lp_, imprecise_solution,
-                   model.basis_, model.solution_, model.unscaled_model_status_,
-                   model.unscaled_solution_params_);
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveLpIpx");
-    if (return_status == HighsStatus::Error) return return_status;
-    if (imprecise_solution) {
-      // IPX+crossover has not obtained a solution satisfying the tolerances.
-      // Use the simplex method to clean up
-      call_status = solveLpSimplex(model);
-      return_status =
-          interpretCallStatus(call_status, return_status, "solveLpSimplex");
-      if (return_status == HighsStatus::Error) return return_status;
 
-      if (!isSolutionConsistent(model.lp_, model.solution_)) {
-        HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                        "Inconsistent solution returned from solver");
-        return HighsStatus::Error;
-      }
-    } else {
-      // Set the scaled model status and solution params for completeness
-      model.scaled_model_status_ = model.unscaled_model_status_;
-      model.scaled_solution_params_ = model.unscaled_solution_params_;
-    }
-#else
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Model cannot be solved with IPM");
-    return HighsStatus::Error;
-#endif
-  } else {
-    // Use Simplex
-    call_status = solveLpSimplex(model);
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveLpSimplex");
-    if (return_status == HighsStatus::Error) return return_status;
-
-    if (!isSolutionConsistent(model.lp_, model.solution_)) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Inconsistent solution returned from solver");
-      return HighsStatus::Error;
-    }
-  }
-  call_status = analyseHighsBasicSolution(
-      options_.logfile, model.lp_, model.basis_, model.solution_,
-      model.unscaled_model_status_, model.unscaled_solution_params_, message);
-  return_status = interpretCallStatus(call_status, return_status,
-                                      "analyseHighsBasicSolution");
   return return_status;
 }
 

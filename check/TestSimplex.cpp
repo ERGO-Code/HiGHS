@@ -75,6 +75,7 @@ void testSolver(Highs& highs, const std::string solver,
   REQUIRE(return_status == HighsStatus::OK);
 
   // Solve with iteration limit
+  /*
   simplex_iteration_count = info.simplex_iteration_count;
   const int further_simplex_iterations = 10;
   int use_simplex_iteration_limit;
@@ -120,6 +121,7 @@ void testSolver(Highs& highs, const std::string solver,
   return_status = highs.setHighsOptionValue("simplex_iteration_limit",
                                             default_simplex_iteration_limit);
   REQUIRE(return_status == HighsStatus::OK);
+  */
 }
 
 // No commas in test case name.
