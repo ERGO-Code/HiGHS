@@ -5,28 +5,46 @@
 //#include "lp_data/HighsLpUtils.h"
 
 void testSolver(Highs& highs, const std::string solver,
-                const int simplex_strategy, int& simplex_iteration_count) {
+                const int simplex_strategy = 0) {
   const int adlittle_default_simplex_iteration_count = 86;
+  const int adlittle_default_ipm_iteration_count = 14;
+  const int adlittle_default_crossover_iteration_count = 0;
   double default_time_limit;
   int default_simplex_iteration_limit;
+  int default_ipm_iteration_limit;
+  int simplex_iteration_count;
+  int ipm_iteration_count;
+  int crossover_iteration_count;
   HighsModelStatus model_status;
   HighsStatus return_status;
+  const bool use_simplex = solver == "simplex";
 
   const HighsInfo& info = highs.getHighsInfo();
 
   return_status = highs.setHighsOptionValue("solver", solver);
   REQUIRE(return_status == HighsStatus::OK);
 
-  return_status =
-      highs.setHighsOptionValue("simplex_strategy", simplex_strategy);
-  REQUIRE(return_status == HighsStatus::OK);
+  if (use_simplex) {
+    return_status =
+        highs.setHighsOptionValue("simplex_strategy", simplex_strategy);
+    REQUIRE(return_status == HighsStatus::OK);
+  }
 
   return_status = highs.getHighsOptionValue("time_limit", default_time_limit);
   REQUIRE(return_status == HighsStatus::OK);
 
-  return_status = highs.getHighsOptionValue("simplex_iteration_limit",
-                                            default_simplex_iteration_limit);
-  REQUIRE(return_status == HighsStatus::OK);
+  if (use_simplex) {
+    simplex_iteration_count = info.simplex_iteration_count;
+    return_status = highs.getHighsOptionValue("simplex_iteration_limit",
+                                              default_simplex_iteration_limit);
+    REQUIRE(return_status == HighsStatus::OK);
+  } else {
+    ipm_iteration_count = info.ipm_iteration_count;
+    return_status = highs.getHighsOptionValue("ipm_iteration_limit",
+                                              default_ipm_iteration_limit);
+    REQUIRE(return_status == HighsStatus::OK);
+    crossover_iteration_count = info.crossover_iteration_count;
+  }
 
   // Vanilla solve: get solution time to calibrate time limit test
   double run_time = highs.getHighsRunTime();
@@ -34,8 +52,17 @@ void testSolver(Highs& highs, const std::string solver,
   REQUIRE(return_status == HighsStatus::OK);
   const double single_solve_run_time = highs.getHighsRunTime() - run_time;
 
-  simplex_iteration_count += adlittle_default_simplex_iteration_count;
-  REQUIRE(info.simplex_iteration_count == simplex_iteration_count);
+  if (use_simplex) {
+    simplex_iteration_count += adlittle_default_simplex_iteration_count;
+    REQUIRE(info.simplex_iteration_count == simplex_iteration_count);
+  } else {
+    printf("IPM: %d; Crossover: %d\n", info.ipm_iteration_count,
+           info.crossover_iteration_count);
+    ipm_iteration_count += adlittle_default_ipm_iteration_count;
+    REQUIRE(info.ipm_iteration_count == ipm_iteration_count);
+    crossover_iteration_count += adlittle_default_crossover_iteration_count;
+    REQUIRE(info.crossover_iteration_count == crossover_iteration_count);
+  }
 
   // Only perform the time limit test if the solve time is large enough
   const double min_run_time_for_test = 0.001;
@@ -73,6 +100,9 @@ void testSolver(Highs& highs, const std::string solver,
   }
   return_status = highs.setHighsOptionValue("time_limit", default_time_limit);
   REQUIRE(return_status == HighsStatus::OK);
+  if (!use_simplex)
+    printf("IPM: %d; Crossover: %d\n", info.ipm_iteration_count,
+           info.crossover_iteration_count);
 
   // Solve with iteration limit
   /*
@@ -131,7 +161,6 @@ TEST_CASE("LP-simplex", "[highs_simplex]") {
   std::string model = "adlittle";
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  int simplex_iteration_count = 0;
 
   HighsOptions options;
   options.model_file = filename;
@@ -145,6 +174,10 @@ TEST_CASE("LP-simplex", "[highs_simplex]") {
   HighsStatus return_status = highs.passModel(lp);
   REQUIRE(return_status == HighsStatus::OK);
 
+  testSolver(highs, "simplex");
+  //  testSolver(highs, "ipm");
+
+  /*
   std::string solver = "simplex";
   int from_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_MIN;
   int to_i = 1 + from_i;  // (int)SimplexStrategy::SIMPLEX_STRATEGY_MAX;
@@ -153,6 +186,7 @@ TEST_CASE("LP-simplex", "[highs_simplex]") {
     printf("Simplex strategy %d\n", (int)simplex_strategy);
     testSolver(highs, solver, simplex_strategy, simplex_iteration_count);
   }
+  */
   /*
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   options.model_file = filename;

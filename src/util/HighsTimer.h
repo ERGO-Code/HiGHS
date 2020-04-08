@@ -37,7 +37,7 @@ struct HighsClockRecord {
   std::string name;
   std::string ch3_name;
 };
-
+const double min_time_for_tick2sec_recalibration = 0.01;
 /**
  * @brief Class for profiling facility for computational components in HiGHS
  */
@@ -206,7 +206,7 @@ class HighsTimer {
     if (clock_start[i_clock] < 0) {
       // The clock's been started, so find the current time
       double wall_tick = getWallTick();
-      double read_tick = wall_tick + clock_start[i_clock];
+      double read_tick = clock_ticks[i_clock] + wall_tick + clock_start[i_clock];
       read_time = read_tick * tick2sec;
     } else {
       // The clock is currently stopped, so read the current time
@@ -225,11 +225,6 @@ class HighsTimer {
     // Set the clock start to be the negation of WallTime to check that the
     // clock's been started when it's next stopped
     run_highs_clock_start_time = -wall_time;
-    //    printf("Set run_highs_clock_start_time = %g\n",
-    //    run_highs_clock_start_time); printf("startRunHighsClock() clock_ticks
-    //    = %g; clock_start = %g, run_highs_clock_start_time = %g\n",
-    //	   clock_ticks[run_highs_clock], clock_start[run_highs_clock],
-    // run_highs_clock_start_time);
   }
 
   /**
@@ -240,19 +235,11 @@ class HighsTimer {
     // Get the wall time to update tick2sec
     double wall_time = getWallTime();
     run_highs_clock_time += (wall_time + run_highs_clock_start_time);
-    if (run_highs_clock_time > 1e-2) {
-      double NWtick2sec = run_highs_clock_time / clock_ticks[run_highs_clock];
-      //      printf("Updating tick2sec = %12g to %12g\n", tick2sec,
-      //      NWtick2sec);
-      tick2sec = NWtick2sec;
-    }
+    if (run_highs_clock_time > min_time_for_tick2sec_recalibration)
+      tick2sec = run_highs_clock_time / clock_ticks[run_highs_clock];
     // Set the clock start to be the WallTime to check that the clock's been
     // stopped when it's next started
     run_highs_clock_start_time = wall_time;
-    //    printf("stopRunHighsClock() clock_ticks = %g; clock_start = %g,
-    //    run_highs_clock_start_time = %g\n",
-    //	   clock_ticks[run_highs_clock], clock_start[run_highs_clock],
-    // run_highs_clock_start_time);
   }
 
   /**
@@ -265,27 +252,19 @@ class HighsTimer {
     if (clock_start[i_clock] < 0) {
       // The clock's been started, so find the current time
       wall_tick = getWallTick();
-      read_tick = wall_tick + clock_start[i_clock];
+      read_tick = clock_ticks[i_clock] + wall_tick + clock_start[i_clock];
 
       // Get the wall time to update tick2sec
       double wall_time = getWallTime();
       double current_run_clock_time =
           run_highs_clock_time + (wall_time + run_highs_clock_start_time);
-      if (current_run_clock_time > 1e-2) {
-        double nw_tick2sec = current_run_clock_time / read_tick;
-        //	printf("Updating tick2sec = %12g to %12g/%12g = %12g\n",
-        // tick2sec, current_run_clock_time, read_tick, nw_tick2sec);
-        tick2sec = nw_tick2sec;
-      }
+      if (current_run_clock_time > min_time_for_tick2sec_recalibration)
+        tick2sec = current_run_clock_time / read_tick;
     } else {
       // The clock is currently stopped, so read the current time
       read_tick = clock_ticks[i_clock];
     }
     double read_time = read_tick * tick2sec;
-    //    printf("readRunHighsClock() clock_ticks = %g; clock_start = %g,
-    //    run_highs_clock_start_time = %g\n",
-    //	   clock_ticks[run_highs_clock], clock_start[run_highs_clock],
-    // run_highs_clock_start_time);
     return read_time;
   }
 

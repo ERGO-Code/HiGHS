@@ -24,8 +24,8 @@
 #include "io/LoadOptions.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolve.h"
 #include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolve.h"
 #include "simplex/HighsSimplexInterface.h"
 
 #ifdef OPENMP
@@ -276,6 +276,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
   // Initialise the HiGHS model status values
+  assert((int)hmos_.size() == 1);
   hmos_[0].scaled_model_status_ = HighsModelStatus::NOTSET;
   hmos_[0].unscaled_model_status_ = HighsModelStatus::NOTSET;
   model_status_ = hmos_[0].scaled_model_status_;
@@ -338,12 +339,18 @@ basis_.valid_, hmos_[0].basis_.valid_);
     //    printf("Writing before_presolve.mps\n");
     //    writeModel("before_presolve.mps");
 
-    this_presolve_time = -timer_.read(timer_.presolve_clock);
+    const double from_presolve_time = timer_.read(timer_.presolve_clock);
+    this_presolve_time = -from_presolve_time;
     timer_.start(timer_.presolve_clock);
     PresolveInfo presolve_info(options_.presolve, lp_, timer_);
     HighsPresolveStatus presolve_status = runPresolve(presolve_info);
     timer_.stop(timer_.presolve_clock);
-    this_presolve_time += timer_.read(timer_.presolve_clock);
+    const double to_presolve_time = timer_.read(timer_.presolve_clock);
+    this_presolve_time += to_presolve_time;
+    printf("!!PRESOLVE TIME : From %g; To %g; This = %11.4g\n", from_presolve_time, to_presolve_time, this_presolve_time);
+
+    
+
     //    printf("\nHighs::run() 2: presolve status = %d\n",
     //    (int)presolve_status);fflush(stdout);
     // Run solver.
@@ -352,8 +359,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
-        call_status =
-            runLpSolver(solved_hmo, "Not presolved: solving the LP");
+        call_status = runLpSolver(solved_hmo, "Not presolved: solving the LP");
         timer_.stop(timer_.solve_clock);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
@@ -368,9 +374,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
                               hmos_[original_hmo].lp_, false);
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
-        call_status =
-            runLpSolver(solved_hmo,
-                        "Problem not reduced by presolve: solving the LP");
+        call_status = runLpSolver(
+            solved_hmo, "Problem not reduced by presolve: solving the LP");
         timer_.stop(timer_.solve_clock);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
@@ -394,8 +399,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
         this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
-        call_status =
-            runLpSolver(solved_hmo, "Solving the presolved LP");
+        call_status = runLpSolver(solved_hmo, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
         return_status =
@@ -465,6 +469,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         presolve_info.presolve_[0].setBasisInfo(
             hmos_[solved_hmo].basis_.col_status,
             hmos_[solved_hmo].basis_.row_status);
+	// Remove the HMO created for the presolved LP
+        hmos_.pop_back();
         // Run postsolve
         this_postsolve_time = -timer_.read(timer_.postsolve_clock);
         timer_.start(timer_.postsolve_clock);
@@ -507,12 +513,11 @@ basis_.valid_, hmos_[0].basis_.valid_);
           options.highs_min_threads = 1;
           options.highs_max_threads = 1;
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
-          int iteration_count0 =
-              hmos_[solved_hmo]
-                  .unscaled_solution_params_.simplex_iteration_count;
+          int iteration_count0 = info_.simplex_iteration_count;
           this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
           timer_.start(timer_.solve_clock);
-          call_status = runLpSolver(solved_hmo,
+          call_status = runLpSolver(
+              solved_hmo,
               "Solving the original LP from the solution after postsolve");
           timer_.stop(timer_.solve_clock);
           this_solve_original_lp_time += timer_.read(timer_.solve_clock);
@@ -521,9 +526,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
           // Recover the options
           options = save_options;
           if (return_status == HighsStatus::Error) return return_status;
-          int iteration_count1 =
-              hmos_[solved_hmo]
-                  .unscaled_solution_params_.simplex_iteration_count;
+          int iteration_count1 = info_.simplex_iteration_count;
           postsolve_iteration_count = iteration_count1 - iteration_count0;
         }
       }
@@ -542,8 +545,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
     if (basis_.valid_) hmos_[solved_hmo].basis_ = basis_;
     this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
     timer_.start(timer_.solve_clock);
-    call_status = runLpSolver(solved_hmo,
-                              "Solving LP without presolve or with basis");
+    call_status =
+        runLpSolver(solved_hmo, "Solving LP without presolve or with basis");
     timer_.stop(timer_.solve_clock);
     this_solve_original_lp_time += timer_.read(timer_.solve_clock);
     return_status =
@@ -1339,14 +1342,33 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
 
+  // Check that the model index is OK
   bool model_index_ok = model_index >= 0 && model_index < (int)hmos_.size();
-  assert (model_index_ok);
+  assert(model_index_ok);
   if (!model_index_ok) return HighsStatus::Error;
 
   HighsModelObject& model = hmos_[model_index];
+
+  // Transfer the LP solver iteration counts to this model
+  model.unscaled_solution_params_.simplex_iteration_count =
+      info_.simplex_iteration_count;
+  model.unscaled_solution_params_.ipm_iteration_count =
+      info_.ipm_iteration_count;
+  model.unscaled_solution_params_.crossover_iteration_count =
+      info_.crossover_iteration_count;
+
+  // Solve the LP
   call_status = solveLp(model, message);
   return_status = interpretCallStatus(call_status, return_status, "solveLp");
   if (return_status == HighsStatus::Error) return return_status;
+
+  // Transfer this model's LP solver iteration counts to HiGHS
+  info_.simplex_iteration_count =
+      model.unscaled_solution_params_.simplex_iteration_count;
+  info_.ipm_iteration_count =
+      model.unscaled_solution_params_.ipm_iteration_count;
+  info_.crossover_iteration_count =
+      model.unscaled_solution_params_.crossover_iteration_count;
 
   return return_status;
 }
@@ -1402,19 +1424,6 @@ bool Highs::getHighsModelStatusAndInfo(const int solved_hmo) {
   HighsSolutionParams& solution_params =
       hmos_[solved_hmo].unscaled_solution_params_;
 
-  // Get the total simplex IPM and crossover iteration counts over all HMO
-  info_.simplex_iteration_count = 0;
-  info_.ipm_iteration_count = 0;
-  info_.crossover_iteration_count = 0;
-  int hmos_size = hmos_.size();
-  for (int k = 0; k < hmos_size; k++) {
-    info_.simplex_iteration_count +=
-        hmos_[k].unscaled_solution_params_.simplex_iteration_count;
-    info_.ipm_iteration_count +=
-        hmos_[k].unscaled_solution_params_.ipm_iteration_count;
-    info_.crossover_iteration_count +=
-        hmos_[k].unscaled_solution_params_.crossover_iteration_count;
-  }
   info_.primal_status = solution_params.primal_status;
   info_.dual_status = solution_params.dual_status;
   info_.objective_function_value = solution_params.objective_function_value;

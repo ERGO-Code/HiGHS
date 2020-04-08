@@ -15,9 +15,8 @@
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsSolution.h"
-#include "util/HighsUtils.h"
-
 #include "simplex/HApp.h"
+#include "util/HighsUtils.h"
 #ifdef IPX_ON
 #include "ipm/IpxWrapper.h"
 #else
@@ -234,4 +233,3 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
                                       "analyseHighsBasicSolution");
   return return_status;
 }
-

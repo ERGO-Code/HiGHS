@@ -136,6 +136,10 @@ bool equalSolutionInfeasibilityParams(
     const HighsSolutionParams& solution_params0,
     const HighsSolutionParams& solution_params1);
 
+void copySolutionIterationCountParams(
+    const HighsSolutionParams& from_solution_params,
+    HighsSolutionParams& to_solution_params);
+
 void copySolutionIterationCountAndObjectiveParams(
     const HighsSolutionParams& from_solution_params,
     HighsSolutionParams& to_solution_params);

@@ -1085,6 +1085,9 @@ void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
   resetModelStatusAndSolutionParams(highs_model_object.scaled_model_status_,
                                     highs_model_object.scaled_solution_params_,
                                     highs_model_object.options_);
+  // Copy the iteration counts from the unscaled model to the scaled model
+  copySolutionIterationCountParams(highs_model_object.unscaled_solution_params_,
+                                   highs_model_object.scaled_solution_params_);
 }
 
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
@@ -1314,14 +1317,20 @@ bool equalSolutionInfeasibilityParams(
 void copySolutionIterationCountAndObjectiveParams(
     const HighsSolutionParams& from_solution_params,
     HighsSolutionParams& to_solution_params) {
+  copySolutionIterationCountParams(from_solution_params, to_solution_params);
+  to_solution_params.objective_function_value =
+      from_solution_params.objective_function_value;
+}
+
+void copySolutionIterationCountParams(
+    const HighsSolutionParams& from_solution_params,
+    HighsSolutionParams& to_solution_params) {
   to_solution_params.simplex_iteration_count =
       from_solution_params.simplex_iteration_count;
   to_solution_params.ipm_iteration_count =
       from_solution_params.ipm_iteration_count;
   to_solution_params.crossover_iteration_count =
       from_solution_params.crossover_iteration_count;
-  to_solution_params.objective_function_value =
-      from_solution_params.objective_function_value;
 }
 
 void copyFromSolutionParams(HighsInfo& highs_info,
