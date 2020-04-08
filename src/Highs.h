@@ -726,7 +726,7 @@ class Highs {
   // it's set to the correct positive number in Highs::run()
   int omp_max_threads = 0;
 
-  HighsStatus runLpSolver(HighsModelObject& model, const string message);
+  HighsStatus runLpSolver(const int model_index, const string message);
 
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
