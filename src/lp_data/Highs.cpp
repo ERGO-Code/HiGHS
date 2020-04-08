@@ -1262,6 +1262,8 @@ bool Highs::deleteRows(int* mask) {
   return return_status != HighsStatus::Error;
 }
 
+double Highs::getHighsRunTime() { return timer_.readRunHighsClock(); }
+
 HighsStatus Highs::clearSolver() {
   underDevelopmentLogMessage("clearSolver");
   basis_.valid_ = false;

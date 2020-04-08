@@ -670,6 +670,10 @@ class Highs {
   // todo: getRangingInformation(..)
 
   /**
+   * @brief Gets the run time of HiGHS
+   */
+  double getHighsRunTime();
+  /**
    * @brief Clear data associated with solving the model: basis, solution and
    * internal data etc
    */
