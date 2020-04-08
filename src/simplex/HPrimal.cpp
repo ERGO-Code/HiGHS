@@ -103,6 +103,8 @@ HighsStatus HPrimal::solve() {
   */
   solvePhase = 0;  // Frig to skip while (solvePhase) {*}
   solve_bailout = false;
+  // Possibly bail out immediately if iteration limit is current value
+  if (bailout()) return HighsStatus::Warning;
   // Check that the model is OK to solve:
   //
   // Level 0 just checks the flags
@@ -190,6 +192,8 @@ void HPrimal::solvePhase2() {
   // Set solvePhase=2 so it's set if solvePhase2() is called directly
   solvePhase = 2;
   solve_bailout = false;
+  // Possibly bail out immediately if iteration limit is current value
+  if (bailout()) return;
   // Set up local copies of model dimensions
   solver_num_col = workHMO.simplex_lp_.numCol_;
   solver_num_row = workHMO.simplex_lp_.numRow_;

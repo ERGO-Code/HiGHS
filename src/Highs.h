@@ -750,6 +750,7 @@ class Highs {
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
   void underDevelopmentLogMessage(const string method_name);
+  void beforeReturnFromRun();
 
   friend class HighsMipSolver;
 };

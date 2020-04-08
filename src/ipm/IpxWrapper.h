@@ -388,11 +388,8 @@ bool illegalIpxSolvedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
   return found_illegal_status;
 }
 
-bool illegalIpxStoppedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
+bool illegalIpxStoppedIpmStatus(ipx::Info& ipx_info, const HighsOptions& options) {
   bool found_illegal_status = false;
-  //========
-  // For IPX
-  //========
   // Cannot stop and be optimal
   found_illegal_status =
       found_illegal_status ||
@@ -427,9 +424,11 @@ bool illegalIpxStoppedStatus(ipx::Info& ipx_info, const HighsOptions& options) {
       found_illegal_status ||
       ipxStatusError(ipx_info.status_ipm == IPX_STATUS_debug, options,
                      "stopped status_ipm should not be IPX_STATUS_debug");
-  //==============
-  // For crossover
-  //==============
+  return found_illegal_status;
+}
+
+bool illegalIpxStoppedCrossoverStatus(ipx::Info& ipx_info, const HighsOptions& options) {
+  bool found_illegal_status = false;
   // Cannot stop and be optimal
   found_illegal_status =
       found_illegal_status ||
@@ -552,7 +551,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       unscaled_solution_params.dual_feasibility_tolerance;
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
-  parameters.ipm_maxiter = options.ipm_iteration_limit;
+  printf("!!IPX: unscaled_solution_params.ipm_iteration_count = %d\n", unscaled_solution_params.ipm_iteration_count);
+  printf("!!IPX: options.ipm_iteration_limit = %d\n", options.ipm_iteration_limit);
+  parameters.ipm_maxiter = options.ipm_iteration_limit - unscaled_solution_params.ipm_iteration_count;
+  printf("!!IPX: Setting parameters.ipm_maxiter = %d = %d - %d\n",
+	 (int)parameters.ipm_maxiter,
+	 options.ipm_iteration_limit,
+	 unscaled_solution_params.ipm_iteration_count);
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
 
@@ -574,6 +579,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
   ipx::Info ipx_info = lps.GetInfo();
+  unscaled_solution_params.ipm_iteration_count += (int)ipx_info.iter;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
@@ -606,25 +612,30 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
           (int)solve_status))
     return HighsStatus::Error;
 
-  unscaled_solution_params.ipm_iteration_count = (int)ipx_info.iter;
-
   if (solve_status == IPX_STATUS_stopped) {
-    // Look at the reason why IPM or crossover stopped
+    //
+    // Look at the reason why IPX stopped 
     //
     // Return error if stopped status settings occur that JAJH doesn't
     // think should happen
-    if (illegalIpxStoppedStatus(ipx_info, options)) return HighsStatus::Error;
+    //
     //==============
     // For crossover
     //==============
+    if (illegalIpxStoppedCrossoverStatus(ipx_info, options)) return HighsStatus::Error;
     // Can stop and reach time limit
     if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
       unscaled_model_status = HighsModelStatus::REACHED_TIME_LIMIT;
       return HighsStatus::Warning;
     }
     //========
-    // For IPX
+    // For IPM
     //========
+    //
+    // Note that IPX can stop with IPM optimal, imprecise,
+    // primal_infeas or dual_infeas, due to crossover stopping with
+    // time limit, and this is why crossover returns are tested first
+    if (illegalIpxStoppedIpmStatus(ipx_info, options)) return HighsStatus::Error;
     // Can stop with time limit
     // Can stop with iter limit
     // Can stop with no progress

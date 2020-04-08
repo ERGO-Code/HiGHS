@@ -73,6 +73,8 @@ HighsStatus HDual::solve() {
   // Set solve_bailout to be true if control is to be returned immediately to
   // calling function
   solve_bailout = false;
+  // Possibly bail out immediately if iteration limit is current value
+  if (bailout()) return HighsStatus::Warning;
 
   // Initialise working environment. Does LOTS, including
   // initialisation of edge weights to 1s. Should only be called if

@@ -289,20 +289,26 @@ basis_.valid_, hmos_[0].basis_.valid_);
   call_status = assessLp(lp_, options_);  //, normalise);
   assert(call_status == HighsStatus::OK);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
-  if (return_status == HighsStatus::Error) return return_status;
+  if (return_status == HighsStatus::Error) {
+    beforeReturnFromRun();
+    return return_status;
+  }
 #endif
 
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) {
     hmos_[0].unscaled_model_status_ = HighsModelStatus::MODEL_EMPTY;
     model_status_ = hmos_[0].unscaled_model_status_;
+    beforeReturnFromRun();
     return highsStatusFromHighsModelStatus(hmos_[0].unscaled_model_status_);
   }
 
   HighsSetIO(options_);
 #ifdef HiGHSDEV
-  if (checkOptions(options_.logfile, options_.records) != OptionStatus::OK)
+  if (checkOptions(options_.logfile, options_.records) != OptionStatus::OK) {
+    beforeReturnFromRun();
     return HighsStatus::Error;
+  }
 #endif
   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
                     "Solving %s\n", lp_.model_name_.c_str());
@@ -347,10 +353,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
     timer_.stop(timer_.presolve_clock);
     const double to_presolve_time = timer_.read(timer_.presolve_clock);
     this_presolve_time += to_presolve_time;
-    printf("!!PRESOLVE TIME : From %g; To %g; This = %11.4g\n", from_presolve_time, to_presolve_time, this_presolve_time);
-
-    
-
     //    printf("\nHighs::run() 2: presolve status = %d\n",
     //    (int)presolve_status);fflush(stdout);
     // Run solver.
@@ -364,7 +366,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
-        if (return_status == HighsStatus::Error) return return_status;
+        if (return_status == HighsStatus::Error) {
+	  beforeReturnFromRun();
+	  return return_status;
+	}
         break;
       }
       case HighsPresolveStatus::NotReduced: {
@@ -380,7 +385,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
-        if (return_status == HighsStatus::Error) return return_status;
+        if (return_status == HighsStatus::Error) {
+	  beforeReturnFromRun();
+	  return return_status;
+	}
         break;
       }
       case HighsPresolveStatus::Reduced: {
@@ -404,7 +412,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
-        if (return_status == HighsStatus::Error) return return_status;
+        if (return_status == HighsStatus::Error) {
+	  beforeReturnFromRun();
+	  return return_status;
+	}
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
@@ -443,7 +454,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
         model_status_ = hmos_[original_hmo].unscaled_model_status_;
-        return HighsStatus::OK;
+	beforeReturnFromRun();
+	return HighsStatus::OK;
       }
       default: {
         // case HighsPresolveStatus::Error
@@ -453,7 +465,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         hmos_[original_hmo].unscaled_model_status_ =
             HighsModelStatus::PRESOLVE_ERROR;
         model_status_ = hmos_[original_hmo].unscaled_model_status_;
-        return HighsStatus::Error;
+	beforeReturnFromRun();
+	return HighsStatus::Error;
       }
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
@@ -469,8 +482,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
         presolve_info.presolve_[0].setBasisInfo(
             hmos_[solved_hmo].basis_.col_status,
             hmos_[solved_hmo].basis_.row_status);
-	// Remove the HMO created for the presolved LP
-        hmos_.pop_back();
         // Run postsolve
         this_postsolve_time = -timer_.read(timer_.postsolve_clock);
         timer_.start(timer_.postsolve_clock);
@@ -525,7 +536,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
               interpretCallStatus(call_status, return_status, "runLpSolver");
           // Recover the options
           options = save_options;
-          if (return_status == HighsStatus::Error) return return_status;
+          if (return_status == HighsStatus::Error) {
+	    beforeReturnFromRun();
+	    return return_status;
+	  }
           int iteration_count1 = info_.simplex_iteration_count;
           postsolve_iteration_count = iteration_count1 - iteration_count0;
         }
@@ -551,7 +565,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
     this_solve_original_lp_time += timer_.read(timer_.solve_clock);
     return_status =
         interpretCallStatus(call_status, return_status, "runLpSolver");
-    if (return_status == HighsStatus::Error) return return_status;
+    if (return_status == HighsStatus::Error) {
+      beforeReturnFromRun();
+      return return_status;
+    }
   }
   // else if (reduced problem failed to solve) {
   //   todo: handle case when presolved problem failed to solve. Try to solve
@@ -562,7 +579,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // solved_hmo will be original_hmo unless the presolved LP is found to be
   // infeasible or unbounded
 
-  if (!getHighsModelStatusAndInfo(solved_hmo)) return HighsStatus::Error;
+  if (!getHighsModelStatusAndInfo(solved_hmo)) {
+    beforeReturnFromRun();
+    return HighsStatus::Error;
+  }
 
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and
   // basis_ The HiGHS solution and basis have to come from the original_hmo for
@@ -629,6 +649,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // something worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
   return_status = interpretCallStatus(call_status, return_status);
+  beforeReturnFromRun();
   return return_status;
 }
 
@@ -1539,6 +1560,15 @@ bool Highs::haveHmo(const string method_name) {
                     method_name.c_str());
 #endif
   return have_hmo;
+}
+
+void Highs::beforeReturnFromRun() {
+  if ((int)hmos_.size() > 1) {
+    // Remove the HMO created for the presolved LP
+    hmos_.pop_back();
+    // Make sure that there is only one entry in hmos_
+    assert((int)hmos_.size() == 1);
+  }
 }
 
 void Highs::underDevelopmentLogMessage(const string method_name) {
