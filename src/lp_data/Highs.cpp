@@ -367,9 +367,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) {
-	  beforeReturnFromRun();
-	  return return_status;
-	}
+          beforeReturnFromRun();
+          return return_status;
+        }
         break;
       }
       case HighsPresolveStatus::NotReduced: {
@@ -386,9 +386,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) {
-	  beforeReturnFromRun();
-	  return return_status;
-	}
+          beforeReturnFromRun();
+          return return_status;
+        }
         break;
       }
       case HighsPresolveStatus::Reduced: {
@@ -413,9 +413,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) {
-	  beforeReturnFromRun();
-	  return return_status;
-	}
+          beforeReturnFromRun();
+          return return_status;
+        }
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
@@ -454,8 +454,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
         model_status_ = hmos_[original_hmo].unscaled_model_status_;
-	beforeReturnFromRun();
-	return HighsStatus::OK;
+        beforeReturnFromRun();
+        return HighsStatus::OK;
       }
       default: {
         // case HighsPresolveStatus::Error
@@ -465,8 +465,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         hmos_[original_hmo].unscaled_model_status_ =
             HighsModelStatus::PRESOLVE_ERROR;
         model_status_ = hmos_[original_hmo].unscaled_model_status_;
-	beforeReturnFromRun();
-	return HighsStatus::Error;
+        beforeReturnFromRun();
+        return HighsStatus::Error;
       }
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
@@ -537,9 +537,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
           // Recover the options
           options = save_options;
           if (return_status == HighsStatus::Error) {
-	    beforeReturnFromRun();
-	    return return_status;
-	  }
+            beforeReturnFromRun();
+            return return_status;
+          }
           int iteration_count1 = info_.simplex_iteration_count;
           postsolve_iteration_count = iteration_count1 - iteration_count0;
         }

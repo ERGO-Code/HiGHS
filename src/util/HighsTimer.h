@@ -206,7 +206,8 @@ class HighsTimer {
     if (clock_start[i_clock] < 0) {
       // The clock's been started, so find the current time
       double wall_tick = getWallTick();
-      double read_tick = clock_ticks[i_clock] + wall_tick + clock_start[i_clock];
+      double read_tick =
+          clock_ticks[i_clock] + wall_tick + clock_start[i_clock];
       read_time = read_tick * tick2sec;
     } else {
       // The clock is currently stopped, so read the current time

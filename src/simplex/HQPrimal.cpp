@@ -105,28 +105,28 @@ HighsStatus HQPrimal::solve() {
   solve_bailout = false;
   // Possibly bail out immediately if iteration limit is current value
   if (bailout()) return HighsStatus::Warning;
-  // Check that the model is OK to solve:
-  //
-  // Level 0 just checks the flags
-  //
-  // Level 1 also checks that the basis is OK and that the necessary
-  // data in work* is populated.
-  //
-  // Level 2 (will) checks things like the nonbasic duals and basic
-  // primal values
-  //
-  // Level 3 (will) checks expensive things like the INVERT and
-  // steepeest edge weights
-  //
-  // ToDo Write primal simplex equivalent
-  /*
-  bool ok = ok_to_solve(workHMO, 1, solvePhase);
-  if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
-  assert(ok);
-  */
+    // Check that the model is OK to solve:
+    //
+    // Level 0 just checks the flags
+    //
+    // Level 1 also checks that the basis is OK and that the necessary
+    // data in work* is populated.
+    //
+    // Level 2 (will) checks things like the nonbasic duals and basic
+    // primal values
+    //
+    // Level 3 (will) checks expensive things like the INVERT and
+    // steepeest edge weights
+    //
+    // ToDo Write primal simplex equivalent
+    /*
+    bool ok = ok_to_solve(workHMO, 1, solvePhase);
+    if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
+    assert(ok);
+    */
 #ifdef HiGHSDEV
-  //  reportSimplexLpStatus(simplex_lp_status, "Before HQPrimal major solving
-  //  loop");
+    //  reportSimplexLpStatus(simplex_lp_status, "Before HQPrimal major solving
+    //  loop");
 #endif
   // The major solving loop
 

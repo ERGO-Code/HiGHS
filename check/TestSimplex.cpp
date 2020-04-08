@@ -11,7 +11,7 @@ struct IterationCount {
 };
 
 void testSolver(Highs& highs, const std::string solver,
-		IterationCount& default_iteration_count,
+                IterationCount& default_iteration_count,
                 const int int_simplex_strategy = 0) {
   double default_time_limit;
   int default_simplex_iteration_limit;
@@ -23,7 +23,7 @@ void testSolver(Highs& highs, const std::string solver,
   int crossover_iteration_count;
   HighsModelStatus model_status;
   HighsStatus return_status;
-  const bool perform_timeout_test = true;//false;//
+  const bool perform_timeout_test = true;  // false;//
   const bool use_simplex = solver == "simplex";
 
   const HighsInfo& info = highs.getHighsInfo();
@@ -32,8 +32,10 @@ void testSolver(Highs& highs, const std::string solver,
   REQUIRE(return_status == HighsStatus::OK);
 
   if (use_simplex) {
-    SimplexStrategy simplex_strategy = static_cast<SimplexStrategy>(int_simplex_strategy);
-    if (simplex_strategy == SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS) return;
+    SimplexStrategy simplex_strategy =
+        static_cast<SimplexStrategy>(int_simplex_strategy);
+    if (simplex_strategy == SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS)
+      return;
     printf("Simplex strategy %d\n", int_simplex_strategy);
     return_status =
         highs.setHighsOptionValue("simplex_strategy", simplex_strategy);
@@ -91,7 +93,7 @@ void testSolver(Highs& highs, const std::string solver,
     const int max_num_solve = 10 * ideal_num_solve;
     int num_solve;
     for (num_solve = 0; num_solve < max_num_solve; num_solve++) {
-     if (use_simplex) return_status = highs.setBasis();
+      if (use_simplex) return_status = highs.setBasis();
       return_status = highs.run();
       if (highs.getModelStatus() == HighsModelStatus::REACHED_TIME_LIMIT) break;
     }
@@ -120,19 +122,19 @@ void testSolver(Highs& highs, const std::string solver,
   if (use_simplex) {
     simplex_iteration_count = info.simplex_iteration_count;
     use_simplex_iteration_limit = simplex_iteration_count;
-    
+
     return_status = highs.setHighsOptionValue("simplex_iteration_limit",
-					      use_simplex_iteration_limit);
+                                              use_simplex_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
-    
+
     return_status = highs.setBasis();
     REQUIRE(return_status == HighsStatus::OK);
   } else {
     ipm_iteration_count = info.ipm_iteration_count;
     use_ipm_iteration_limit = ipm_iteration_count;
-    
+
     return_status = highs.setHighsOptionValue("ipm_iteration_limit",
-					      use_ipm_iteration_limit);
+                                              use_ipm_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
   }
 
@@ -142,7 +144,7 @@ void testSolver(Highs& highs, const std::string solver,
          highs.highsModelStatusToString(model_status).c_str());
   REQUIRE(return_status == HighsStatus::Warning);
   REQUIRE(model_status == HighsModelStatus::REACHED_ITERATION_LIMIT);
-  
+
   if (use_simplex) {
     REQUIRE(simplex_iteration_count == info.simplex_iteration_count);
     simplex_iteration_count = info.simplex_iteration_count;
@@ -155,20 +157,20 @@ void testSolver(Highs& highs, const std::string solver,
   if (use_simplex) {
     const int further_simplex_iterations = 10;
     use_simplex_iteration_limit =
-      simplex_iteration_count + further_simplex_iterations;
-    printf("Setting simplex_iteration_limit = %d\n", use_simplex_iteration_limit);
+        simplex_iteration_count + further_simplex_iterations;
+    printf("Setting simplex_iteration_limit = %d\n",
+           use_simplex_iteration_limit);
     return_status = highs.setHighsOptionValue("simplex_iteration_limit",
-					      use_simplex_iteration_limit);
+                                              use_simplex_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
     return_status = highs.setBasis();
     REQUIRE(return_status == HighsStatus::OK);
   } else {
     const int further_ipm_iterations = 5;
-    use_ipm_iteration_limit =
-      ipm_iteration_count + further_ipm_iterations;
+    use_ipm_iteration_limit = ipm_iteration_count + further_ipm_iterations;
     printf("Setting ipm_iteration_limit = %d\n", use_ipm_iteration_limit);
     return_status = highs.setHighsOptionValue("ipm_iteration_limit",
-					      use_ipm_iteration_limit);
+                                              use_ipm_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
   }
 
@@ -181,14 +183,14 @@ void testSolver(Highs& highs, const std::string solver,
     REQUIRE(simplex_iteration_count == info.simplex_iteration_count);
     simplex_iteration_count = info.simplex_iteration_count;
     return_status = highs.setHighsOptionValue("simplex_iteration_limit",
-					      default_simplex_iteration_limit);
+                                              default_simplex_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
   } else {
     ipm_iteration_count = use_ipm_iteration_limit;
     REQUIRE(ipm_iteration_count == info.ipm_iteration_count);
     ipm_iteration_count = info.ipm_iteration_count;
     return_status = highs.setHighsOptionValue("ipm_iteration_limit",
-					      default_ipm_iteration_limit);
+                                              default_ipm_iteration_limit);
     REQUIRE(return_status == HighsStatus::OK);
   }
 }
