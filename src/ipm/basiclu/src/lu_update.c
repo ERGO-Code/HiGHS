@@ -887,8 +887,6 @@ lu_int lu_update(struct lu *this, double xtbl)
         assert(nz == Unz);
     }
 
-    this->time_update += elapsed;
-    this->time_update_total += elapsed;
     this->pivot_error = piverr / (1.0 + fabs(newpiv));
     this->Unz = Unz;
     this->btran_for_update = -1;
