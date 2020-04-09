@@ -91,7 +91,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     return HighsStatus::Error;
   }
 #ifdef HiGHSDEV
-  const int iteration_count0 = scaled_solution_params.simplex_iteration_count;
+  const int iteration_count0 =
+      highs_model_object.scaled_solution_params_.simplex_iteration_count;
   const int dual_phase1_iteration_count0 =
       simplex_info.dual_phase1_iteration_count;
   const int dual_phase2_iteration_count0 =
@@ -293,7 +294,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
              delta_dual_phase1_iteration_count,
              delta_dual_phase2_iteration_count,
              delta_primal_phase1_iteration_count,
-             delta_primal_phase2_iteration_count, delta_iteration_count)
+             delta_primal_phase2_iteration_count, delta_iteration_count);
     }
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       HighsLogMessage(logfile, HighsMessageType::INFO,
