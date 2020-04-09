@@ -23,7 +23,7 @@ void testSolver(Highs& highs, const std::string solver,
   int crossover_iteration_count;
   HighsModelStatus model_status;
   HighsStatus return_status;
-  const bool perform_timeout_test = true;  // false;//
+  const bool perform_timeout_test = false;  // true;  //
   const bool use_simplex = solver == "simplex";
 
   const HighsInfo& info = highs.getHighsInfo();
@@ -49,6 +49,10 @@ void testSolver(Highs& highs, const std::string solver,
     simplex_iteration_count = info.simplex_iteration_count;
     return_status = highs.getHighsOptionValue("simplex_iteration_limit",
                                               default_simplex_iteration_limit);
+    REQUIRE(return_status == HighsStatus::OK);
+    // Force HiGHS to start from a logical basis - if this is the
+    // second or subsequent call to testSolver
+    return_status = highs.setBasis();
     REQUIRE(return_status == HighsStatus::OK);
   } else {
     ipm_iteration_count = info.ipm_iteration_count;
@@ -202,10 +206,22 @@ TEST_CASE("LP-simplex", "[highs_simplex]") {
   std::string model = "adlittle";
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  IterationCount model_default_iteration_count;
-  model_default_iteration_count.simplex = 86;
-  model_default_iteration_count.ipm = 14;
-  model_default_iteration_count.crossover = 0;
+  vector<int> simplex_strategy_iteration_count;
+  simplex_strategy_iteration_count.resize(
+      (int)SimplexStrategy::SIMPLEX_STRATEGY_NUM);
+  simplex_strategy_iteration_count[(
+      int)SimplexStrategy::SIMPLEX_STRATEGY_CHOOSE] = 86;
+  simplex_strategy_iteration_count[(
+      int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_PLAIN] = 86;
+  simplex_strategy_iteration_count[(
+      int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS] = 86;
+  simplex_strategy_iteration_count[(
+      int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI] = 89;
+  simplex_strategy_iteration_count[(
+      int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL] = 101;
+  IterationCount model_iteration_count;
+  model_iteration_count.ipm = 14;
+  model_iteration_count.crossover = 0;
 
   HighsOptions options;
   options.model_file = filename;
@@ -220,11 +236,20 @@ TEST_CASE("LP-simplex", "[highs_simplex]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   std::string solver = "simplex";
+
+  /*
+  int i = (int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL;
+  model_iteration_count.simplex = simplex_strategy_iteration_count[i];
+  testSolver(highs, solver, model_iteration_count, i);
+  */
+
   int from_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_MIN;
-  int to_i = 1 + from_i;  // (int)SimplexStrategy::SIMPLEX_STRATEGY_MAX;
-  for (int i = from_i; i < to_i; i++)
-    testSolver(highs, solver, model_default_iteration_count, i);
-  testSolver(highs, "ipm", model_default_iteration_count);
+  int to_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_NUM;
+  for (int i = from_i; i < to_i; i++) {
+    model_iteration_count.simplex = simplex_strategy_iteration_count[i];
+    testSolver(highs, solver, model_iteration_count, i);
+  }
+  testSolver(highs, "ipm", model_iteration_count);
 
   /*
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";

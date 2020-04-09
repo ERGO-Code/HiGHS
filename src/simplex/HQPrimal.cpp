@@ -283,9 +283,8 @@ void HQPrimal::solvePhase2() {
         if (invertHint) {
           break;
         }
-        if (bailout()) break;
+        if (bailout()) return;
       }
-      if (bailout()) break;
       /* Go to the next rebuild */
       if (invertHint) {
         /* Stop when the invert is new */
@@ -295,8 +294,6 @@ void HQPrimal::solvePhase2() {
         continue;
       }
     }
-    if (bailout()) return;
-
     for (;;) {
       primalChooseColumn();
       if (columnIn == -1) {
@@ -314,7 +311,6 @@ void HQPrimal::solvePhase2() {
         break;
       }
     }
-    if (bailout()) return;
     // If the data are fresh from rebuild() and no flips have occurred, break
     // out of the outer loop to see what's ocurred
     if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
