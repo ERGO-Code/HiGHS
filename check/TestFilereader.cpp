@@ -11,99 +11,103 @@
 #include "lp_data/HighsLpUtils.h"
 
 TEST_CASE("free-format-parser", "[highs_filereader]") {
-  std::cout << std::string(HIGHS_DIR) << std::endl;
-
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
 
-  // Read mps.
-  HighsLp lp_free_format, lp_fixed_format;
-  bool are_the_same = false;
+  HighsStatus status;
 
-  std::vector<int> integerColumn;
-  FilereaderRetcode status = readMPS(
-      stdout, filename.c_str(), -1, -1, lp_fixed_format.numRow_,
-      lp_fixed_format.numCol_, lp_fixed_format.numInt_, lp_fixed_format.sense_,
-      lp_fixed_format.offset_, lp_fixed_format.Astart_, lp_fixed_format.Aindex_,
-      lp_fixed_format.Avalue_, lp_fixed_format.colCost_,
-      lp_fixed_format.colLower_, lp_fixed_format.colUpper_,
-      lp_fixed_format.rowLower_, lp_fixed_format.rowUpper_, integerColumn,
-      lp_fixed_format.col_names_, lp_fixed_format.row_names_);
-  lp_fixed_format.nnz_ = lp_fixed_format.Avalue_.size();
-  if (status == FilereaderRetcode::OK) {
-    HMpsFF parser{};
-    FreeFormatParserReturnCode result =
-        parser.loadProblem(stdout, filename, lp_free_format);
-    if (result != FreeFormatParserReturnCode::SUCCESS)
-      status = FilereaderRetcode::PARSERERROR;
-    if (status == FilereaderRetcode::OK)
-      are_the_same = lp_free_format == lp_fixed_format;
-  }
+  // Read mps
+  HighsOptions options;
 
-  // In case you want to compare.
-  // FilereaderEms ems;
-  // ems.writeModelToFile(options, "fixed.ems", lp_fixed_format);
-  // ems.writeModelToFile(options, "free.ems", lp_free_format);
+  Highs highs(options);
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::OK);
 
+  HighsLp lp_free = highs.getLp();
+
+  status = highs.setHighsOptionValue("mps_parser_type_free", false);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::OK);
+
+  HighsLp lp_fixed = highs.getLp();
+
+  bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
 }
 
 // No commas in test case name.
 TEST_CASE("read-mps-ems", "[highs_filereader]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+
+  HighsStatus status;
+
+  // Read mps
   HighsOptions options;
 
-  std::cout << std::string(HIGHS_DIR) << std::endl;
-
-  options.model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-
-  // Read mps.
-  HighsLp lp_mps;
-  HighsStatus read_status = loadLpFromFile(options, lp_mps);
-  REQUIRE(read_status == HighsStatus::OK);
+  Highs highs(options);
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::OK);
+  HighsLp lp_mps = highs.getLp();
 
   // Write ems.
-  FilereaderEms ems;
-  ems.writeModelToFile(options, "adlittle.ems", lp_mps);
+  filename = "adlittle.ems";
+  status = highs.writeModel(filename);
+  REQUIRE(status == HighsStatus::OK);
 
   // Read ems and compare.
   options.model_file = "adlittle.ems";  // todo: check how to specify path
 
-  HighsLp lp_ems;
-  HighsStatus ems_read_status = loadLpFromFile(options, lp_ems);
-  REQUIRE(ems_read_status == HighsStatus::OK);
+  status = highs.setHighsOptionValue("model_file", filename);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::OK);
+
+  HighsLp lp_ems = highs.getLp();
 
   bool are_the_same = lp_mps == lp_ems;
   REQUIRE(are_the_same);
 
-  std::remove(options.model_file.c_str());
+  std::remove("adlittle.ems");
 }
 
 TEST_CASE("integrality-constraints", "[highs_filereader]") {
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
 
-  HighsOptions options;
-  options.model_file = filename;
   // integer variables are COL03,COL04 so x[2], x[3].
   const std::vector<int> kIntegers{0, 0, 1, 1, 0, 0, 0, 0};
 
-  // Read mps with fixed format parser.
-  HighsLp lp_fixed;
-  options.mps_parser_type_free = false;
+  HighsStatus status;
+  HighsOptions options;
 
-  HighsStatus read_status = loadLpFromFile(options, lp_fixed);
-  REQUIRE(read_status == HighsStatus::OK);
+  Highs highs(options);
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::OK);
+
+  HighsLp lp_free = highs.getLp();
+
+  REQUIRE(lp_free.integrality_.size() == lp_free.numCol_);
+  REQUIRE(lp_free.integrality_ == kIntegers);
+
+  // Read mps with fixed format parser.
+  status = highs.setHighsOptionValue("mps_parser_type_free", false);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.readModel(filename);
+  REQUIRE(status == HighsStatus::OK);
+
+  HighsLp lp_fixed = highs.getLp();
+
   REQUIRE(lp_fixed.integrality_.size() == lp_fixed.numCol_);
   REQUIRE(lp_fixed.integrality_ == kIntegers);
 
-  // Read mps with free format parser.
-  HighsLp lp_free;
-  options.mps_parser_type_free = true;
+  bool are_the_same = lp_free == lp_fixed;
+  REQUIRE(are_the_same);
 
-  read_status = loadLpFromFile(options, lp_free);
-  REQUIRE(read_status == HighsStatus::OK);
-  REQUIRE(lp_free.integrality_.size() == lp_free.numCol_);
-  REQUIRE(lp_free.integrality_ == kIntegers);
 }
 
 TEST_CASE("dualize", "[highs_data]") {
