@@ -45,7 +45,7 @@ const int field_6_start = 49;
 const int field_6_width = 12;
 
 FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
-                          int mxNumCol, int& numRow, int& numCol, int& numInt,
+                          int mxNumCol, int& numRow, int& numCol,
                           ObjSense& objSense, double& objOffset,
                           vector<int>& Astart, vector<int>& Aindex,
                           vector<double>& Avalue, vector<double>& colCost,
@@ -58,7 +58,7 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
 
 HighsStatus writeMPS(
     FILE* logfile, const char* filename, const int& numRow, const int& numCol,
-    const int& numInt, const ObjSense& objSense, const double& objOffset,
+    const ObjSense& objSense, const double& objOffset,
     const vector<int>& Astart, const vector<int>& Aindex,
     const vector<double>& Avalue, const vector<double>& colCost,
     const vector<double>& colLower, const vector<double>& colUpper,

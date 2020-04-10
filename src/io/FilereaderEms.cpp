@@ -29,7 +29,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
   f.open(filename, std::ios::in);
   if (f.is_open()) {
     std::string line;
-    int numCol, numRow, AcountX;
+    int numCol, numRow, AcountX, num_int;
     bool indices_from_one = false;
 
     // counts
@@ -150,11 +150,11 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     while (trim(line) == "" && f) std::getline(f, line);
 
     if (trim(line) == "integer_columns") {
-      f >> model.numInt_;
-      if (model.numInt_) {
+      f >> num_int;
+      if (num_int) {
         model.integrality_.resize(model.numCol_, 0);
         int iCol;
-        for (i = 0; i < model.numInt_; i++) {
+        for (i = 0; i < num_int; i++) {
           f >> iCol;
           if (indices_from_one) iCol--;
           model.integrality_[iCol] = 1;

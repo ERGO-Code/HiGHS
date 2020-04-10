@@ -239,6 +239,9 @@ void reportMatrix(const HighsOptions& options, const char* message,
                   const int num_col, const int num_nz, const int* start,
                   const int* index, const double* value);
 
+// Get the number of integer-valued columns in the LP
+int getNumInt(const HighsLp& lp);
+
 // Get the costs for a contiguous set of columns
 HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
                        double* XcolCost);

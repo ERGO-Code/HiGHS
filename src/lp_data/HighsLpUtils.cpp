@@ -1512,6 +1512,15 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
   return HighsStatus::OK;
 }
 
+int getNumInt(const HighsLp& lp) {
+  int num_int = 0;
+  if (lp.integrality_.size()) {
+    for (int iCol = 0; iCol < lp.numCol_; iCol++)
+      if (lp.integrality_[iCol]) num_int++;
+  }
+  return num_int;
+}
+
 HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
                        double* XcolCost) {
   if (from_col < 0 || to_col >= lp.numCol_) return HighsStatus::Error;
@@ -1612,7 +1621,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options, const char* filename,
     }
   }
   HighsStatus write_status = writeMPS(
-      options.logfile, filename, lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
+      options.logfile, filename, lp.numRow_, lp.numCol_, lp.sense_,
       lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
       local_col_names, local_row_names, use_free_format);
@@ -1650,13 +1659,14 @@ void reportLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     lp_num_nz = lp.Astart_[lp.numCol_];
   HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                     "LP has %d columns, %d rows", lp.numCol_, lp.numRow_);
-  if (lp.numInt_) {
+  int num_int = getNumInt(lp);
+  if (num_int) {
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                       ", %d nonzeros and %d integer columns\n", lp_num_nz,
-                      lp.numInt_);
+                      num_int);
   } else {
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      " and %d nonzeros\n", lp_num_nz, lp.numInt_);
+                      " and %d nonzeros\n", lp_num_nz, num_int);
   }
 }
 
@@ -1700,7 +1710,7 @@ void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
   if (lp.numCol_ <= 0) return;
   std::string type;
   int count;
-  bool have_integer_columns = lp.numInt_;
+  bool have_integer_columns = getNumInt(lp);
   bool have_col_names = lp.col_names_.size();
 
   HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,

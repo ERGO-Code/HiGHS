@@ -28,7 +28,7 @@ using std::map;
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
 FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
-                          int mxNumCol, int& numRow, int& numCol, int& numInt,
+                          int mxNumCol, int& numRow, int& numCol,
                           ObjSense& objSense, double& objOffset,
                           vector<int>& Astart, vector<int>& Aindex,
                           vector<double>& Avalue, vector<double>& colCost,
@@ -370,10 +370,10 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
   }
   // Determine the number of integer variables and set bounds of [0,1]
   // for integer variables without bounds
-  numInt = 0;
+  int num_int = 0;
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol]) {
-      numInt++;
+      num_int++;
       if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
@@ -386,7 +386,7 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
   printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow,
-         numCol, numInt);
+         numCol, num_int);
 #endif
   // Load ENDATA and close file
   fclose(file);
@@ -465,7 +465,7 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
 
 HighsStatus writeMPS(
     FILE* logfile, const char* filename, const int& numRow, const int& numCol,
-    const int& numInt, const ObjSense& objSense, const double& objOffset,
+    const ObjSense& objSense, const double& objOffset,
     const vector<int>& Astart, const vector<int>& Aindex,
     const vector<double>& Avalue, const vector<double>& colCost,
     const vector<double>& colLower, const vector<double>& colUpper,
@@ -502,6 +502,7 @@ HighsStatus writeMPS(
   bool have_rhs = false;
   bool have_ranges = false;
   bool have_bounds = false;
+  bool have_int = false;
   r_ty.resize(numRow);
   rhs.assign(numRow, 0);
   ranges.assign(numRow, 0);
@@ -545,12 +546,18 @@ HighsStatus writeMPS(
     }
   }
   for (int c_n = 0; c_n < numCol; c_n++) {
+    if (integerColumn[c_n]) {
+      have_int = true;
+      break;
+    }
+  }
+  for (int c_n = 0; c_n < numCol; c_n++) {
     if (colLower[c_n]) {
       have_bounds = true;
       break;
     }
     bool discrete = false;
-    if (numInt) discrete = integerColumn[c_n];
+    if (have_int) discrete = integerColumn[c_n];
     if (!highs_isInfinity(colUpper[c_n]) || discrete) {
       // If the upper bound is finite, or the variable is integer then there is
       // a BOUNDS section. Integer variables with infinite upper bound are
@@ -615,7 +622,7 @@ HighsStatus writeMPS(
       }
       continue;
     }
-    if (numInt) {
+    if (have_int) {
       if (integerColumn[c_n] && !integerFg) {
         // Start an integer section
         fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n",
@@ -671,7 +678,7 @@ HighsStatus writeMPS(
       double lb = colLower[c_n];
       double ub = colUpper[c_n];
       bool discrete = false;
-      if (numInt) discrete = integerColumn[c_n];
+      if (have_int) discrete = integerColumn[c_n];
       if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {
