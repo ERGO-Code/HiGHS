@@ -216,6 +216,12 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
+  if (!supportedFilenameExtension(filename.c_str())) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+		    "Model file %s not supported", filename.c_str());
+    return HighsStatus::Error;
+  }
+
   Filereader* reader = Filereader::getFilereader(filename.c_str());
   HighsLp model;
   this->options_.model_file = filename;
@@ -223,6 +229,22 @@ HighsStatus Highs::readModel(const std::string filename) {
   FilereaderRetcode call_code =
       reader->readModelFromFile(this->options_, model);
   delete reader;
+  switch (call_code) {
+    case FilereaderRetcode::OK:
+      break;
+    case FilereaderRetcode::FILENOTFOUND:
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                      "File %s not found", filename.c_str());
+      break;
+    case FilereaderRetcode::PARSERERROR:
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                      "Parser error reading %s", filename.c_str());
+      break;
+    case FilereaderRetcode::NOT_IMPLEMENTED:
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                      "Parser not implemented for %s", filename.c_str());
+      break;
+  }
   if (call_code != FilereaderRetcode::OK) {
     call_status = HighsStatus::Error;
     return_status =
@@ -244,6 +266,11 @@ HighsStatus Highs::writeModel(const std::string filename) {
     reportLp(options_, model, 2);
     return_status = HighsStatus::OK;
   } else {
+    if (!supportedFilenameExtension(filename.c_str())) {
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+		      "Model file %s not supported", filename.c_str());
+      return HighsStatus::Error;
+    }
     Filereader* writer = Filereader::getFilereader(filename.c_str());
     call_status = writer->writeModelToFile(options_, filename.c_str(), model);
     delete writer;
@@ -282,8 +309,33 @@ basis_.valid_, hmos_[0].basis_.valid_);
   */
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
-  // Initialise the HiGHS model status values
+  // Determine whether a model has been loaded.
+  assert((int)hmos_.size() <= 1);
+  if ((int)hmos_.size() == 0) {
+    // No Highs model object, so load model according to value of
+    // model_file
+    if (options_.model_file.compare(FILENAME_DEFAULT) == 0) {
+      // model_file is still default value, so return with error
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                      "No model can be loaded in run()");
+      return_status = HighsStatus::Error;
+      beforeReturnFromRun();
+      return return_status;
+    } else {
+      std::string model_file = options_.model_file;
+      call_status = readModel(model_file);
+      return_status =
+          interpretCallStatus(call_status, return_status, "readModel");
+      if (return_status == HighsStatus::Error) {
+        beforeReturnFromRun();
+        return return_status;
+      }
+    }
+  }
+  // Ensure that there is exactly one Highs model object
   assert((int)hmos_.size() == 1);
+
+  // Initialise the HiGHS model status values
   hmos_[0].scaled_model_status_ = HighsModelStatus::NOTSET;
   hmos_[0].unscaled_model_status_ = HighsModelStatus::NOTSET;
   model_status_ = hmos_[0].scaled_model_status_;

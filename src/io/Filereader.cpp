@@ -39,7 +39,17 @@ Filereader* Filereader::getFilereader(const char* filename) {
   return reader;
 }
 
-// Return a string representation of ParseStatus.}
+bool supportedFilenameExtension(const char* filename) {
+  const char* extension = getFilenameExt(filename);
+  if (strcmp(extension, "mps") == 0 ||
+      strcmp(extension, "ems") == 0 ||
+      strcmp(extension, "lp") == 0 ||
+      strcmp(extension, "") == 0) {
+    return true;
+  }
+  return false; 
+}
+
 std::string HighsInputStatusToString(HighsInputStatus status) {
   switch (status) {
     case HighsInputStatus::OK:

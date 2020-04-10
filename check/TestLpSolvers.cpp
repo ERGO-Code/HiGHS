@@ -1,7 +1,7 @@
-#include "Avgas.h"
 #include "Highs.h"
 #include "catch.hpp"
 #include "io/LoadProblem.h"
+#include "io/Filereader.h"
 //#include "lp_data/HighsLpUtils.h"
 
 struct IterationCount {
@@ -199,14 +199,32 @@ void testSolver(Highs& highs, const std::string solver,
   }
 }
 
+void testSolversSetup(const std::string model,
+                      IterationCount& model_iteration_count,
+                      vector<int>& simplex_strategy_iteration_count) {
+  if (model.compare("adlittle") == 0) {
+    simplex_strategy_iteration_count[(
+        int)SimplexStrategy::SIMPLEX_STRATEGY_CHOOSE] = 86;
+    simplex_strategy_iteration_count[(
+        int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_PLAIN] = 86;
+    simplex_strategy_iteration_count[(
+        int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS] = 86;
+    simplex_strategy_iteration_count[(
+        int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI] = 89;
+    simplex_strategy_iteration_count[(
+        int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL] = 101;
+    model_iteration_count.ipm = 14;
+    model_iteration_count.crossover = 0;
+  }
+}
+
 void testSolvers(Highs& highs, IterationCount& model_iteration_count,
                  const vector<int>& simplex_strategy_iteration_count) {
-  /*
   int i = (int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL;
   model_iteration_count.simplex = simplex_strategy_iteration_count[i];
-  testSolver(highs, solver, model_iteration_count, i);
-  */
+  testSolver(highs, "simplex", model_iteration_count, i);
 
+  /*
   int from_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_MIN;
   int to_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_NUM;
   for (int i = from_i; i < to_i; i++) {
@@ -214,50 +232,75 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
     testSolver(highs, "simplex", model_iteration_count, i);
   }
   testSolver(highs, "ipm", model_iteration_count);
+  */
 }
 
 // No commas in test case name.
 TEST_CASE("LP-solver", "[highs_lp_solver]") {
   std::cout << std::string(HIGHS_DIR) << std::endl;
 
-  std::string model;
-  std::string filename;
+  std::string model = "";
+  std::string model_file;
+  IterationCount model_iteration_count;
   vector<int> simplex_strategy_iteration_count;
   simplex_strategy_iteration_count.resize(
       (int)SimplexStrategy::SIMPLEX_STRATEGY_NUM);
 
-  model = "adlittle";
-  simplex_strategy_iteration_count[(
-      int)SimplexStrategy::SIMPLEX_STRATEGY_CHOOSE] = 86;
-  simplex_strategy_iteration_count[(
-      int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_PLAIN] = 86;
-  simplex_strategy_iteration_count[(
-      int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS] = 86;
-  simplex_strategy_iteration_count[(
-      int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI] = 89;
-  simplex_strategy_iteration_count[(
-      int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL] = 101;
-  IterationCount model_iteration_count;
-  model_iteration_count.ipm = 14;
-  model_iteration_count.crossover = 0;
-
   HighsOptions options;
-  filename = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  options.model_file = filename;
-
-  // Read mps.
   HighsLp lp;
-  HighsStatus read_status = loadLpFromFile(options, lp);
-  REQUIRE(read_status == HighsStatus::OK);
+  HighsStatus run_status;
+  HighsStatus return_status;
+  HighsStatus read_status;
 
   Highs highs(options);
-  HighsStatus return_status = highs.passModel(lp);
+
+  // Try to run HiGHS with default options. No model loaded so fails
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::Error);
+
+  // Set model_file to non-existent file and try to run HiGHS
+  model = "";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::Error);
+
+  // Set model_file to non-supported file type and try to run HiGHS
+  model = "model.abc";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  bool supported_extension = supportedFilenameExtension(model_file.c_str());
+  if (supported_extension) {
+    printf("Supported file extension: %s\n", model_file.c_str());
+  } else {
+    printf("Unsupported file extension: %s\n", model_file.c_str());
+  }
+
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::Error);
+
+  model = "adlittle";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  testSolversSetup(model, model_iteration_count,
+                   simplex_strategy_iteration_count);
+
+  
+
+  // Read mps.
+  read_status = loadLpFromFile(options, lp);
+  REQUIRE(read_status == HighsStatus::OK);
+
+  return_status = highs.passModel(lp);
   REQUIRE(return_status == HighsStatus::OK);
 
   testSolvers(highs, model_iteration_count, simplex_strategy_iteration_count);
   /*
-  filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  options.model_file = filename;
+  model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  options.model_file = model_file;
   read_status = loadLpFromFile(options, lp);
   REQUIRE(read_status == HighsStatus::OK);
 

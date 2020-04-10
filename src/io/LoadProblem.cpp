@@ -36,7 +36,13 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
     return HighsStatus::Error;
   }
 
-  Filereader* reader = Filereader::getFilereader(options.model_file.c_str());
+  if (!supportedFilenameExtension(pathname)) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Model file %s not supported", pathname);
+    return HighsStatus::Error;
+  }
+
+  Filereader* reader = Filereader::getFilereader(pathname);
   FilereaderRetcode success = reader->readModelFromFile(options, lp);
   delete reader;
 

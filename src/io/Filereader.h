@@ -51,6 +51,8 @@ class Filereader {
   virtual ~Filereader(){};
 };
 
+// Indicate whether the file name extension is supported
+bool supportedFilenameExtension(const char* filename);
 // Return a string representation of ParseStatus.
 std::string HighsInputStatusToString(HighsInputStatus status);
 
