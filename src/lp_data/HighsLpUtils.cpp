@@ -1621,8 +1621,8 @@ HighsStatus writeLpAsMPS(const HighsOptions& options, const char* filename,
     }
   }
   HighsStatus write_status = writeMPS(
-      options.logfile, filename, lp.numRow_, lp.numCol_, lp.sense_,
-      lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
+      options.logfile, filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
+      lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
       local_col_names, local_row_names, use_free_format);
   if (write_status == HighsStatus::OK && warning_found)

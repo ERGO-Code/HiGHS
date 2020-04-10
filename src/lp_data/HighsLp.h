@@ -83,9 +83,8 @@ class HighsLp {
   std::vector<int> integrality_;
 
   bool operator==(const HighsLp& lp) {
-    if (numCol_ != lp.numCol_ || numRow_ != lp.numRow_ ||
-        sense_ != lp.sense_ || offset_ != lp.offset_ ||
-        model_name_ != lp.model_name_)
+    if (numCol_ != lp.numCol_ || numRow_ != lp.numRow_ || sense_ != lp.sense_ ||
+        offset_ != lp.offset_ || model_name_ != lp.model_name_)
       return false;
 
     if (row_names_ != lp.row_names_ || col_names_ != lp.col_names_)

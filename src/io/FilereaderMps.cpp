@@ -45,12 +45,12 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
   }
 
   // else use fixed format parser
-  FilereaderRetcode return_code = readMPS(
-      options.logfile, filename, -1, -1, model.numRow_, model.numCol_,
-      model.sense_, model.offset_, model.Astart_, model.Aindex_,
-      model.Avalue_, model.colCost_, model.colLower_, model.colUpper_,
-      model.rowLower_, model.rowUpper_, model.integrality_, model.col_names_,
-      model.row_names_, options.keep_n_rows);
+  FilereaderRetcode return_code =
+      readMPS(options.logfile, filename, -1, -1, model.numRow_, model.numCol_,
+              model.sense_, model.offset_, model.Astart_, model.Aindex_,
+              model.Avalue_, model.colCost_, model.colLower_, model.colUpper_,
+              model.rowLower_, model.rowUpper_, model.integrality_,
+              model.col_names_, model.row_names_, options.keep_n_rows);
   if (namesWithSpaces(model.numCol_, model.col_names_)) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
                     "Model has column names with spaces");

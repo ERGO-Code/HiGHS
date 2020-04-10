@@ -44,17 +44,14 @@ const int field_5_width = 8;
 const int field_6_start = 49;
 const int field_6_width = 12;
 
-FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
-                          int mxNumCol, int& numRow, int& numCol,
-                          ObjSense& objSense, double& objOffset,
-                          vector<int>& Astart, vector<int>& Aindex,
-                          vector<double>& Avalue, vector<double>& colCost,
-                          vector<double>& colLower, vector<double>& colUpper,
-                          vector<double>& rowLower, vector<double>& rowUpper,
-                          vector<int>& integerColumn,
-                          vector<std::string>& col_names,
-                          vector<std::string>& row_names,
-                          const int keep_n_rows = 0);
+FilereaderRetcode readMPS(
+    FILE* logfile, const char* filename, int mxNumRow, int mxNumCol,
+    int& numRow, int& numCol, ObjSense& objSense, double& objOffset,
+    vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
+    vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
+    vector<double>& rowLower, vector<double>& rowUpper,
+    vector<int>& integerColumn, vector<std::string>& col_names,
+    vector<std::string>& row_names, const int keep_n_rows = 0);
 
 HighsStatus writeMPS(
     FILE* logfile, const char* filename, const int& numRow, const int& numCol,
