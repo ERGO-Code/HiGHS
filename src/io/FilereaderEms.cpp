@@ -65,7 +65,6 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
 
     model.numCol_ = numCol;
     model.numRow_ = numRow;
-    model.nnz_ = AcountX;
 
     // matrix
     std::getline(f, line);
@@ -218,6 +217,7 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
                                             HighsLp& model) {
   std::ofstream f;
   f.open(filename, std::ios::out);
+  int num_nz = model.Astart_[model.numCol_];
 
   // counts
   f << "n_rows" << std::endl;
@@ -225,18 +225,18 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
   f << "n_columns" << std::endl;
   f << model.numCol_ << std::endl;
   f << "n_matrix_elements" << std::endl;
-  f << model.nnz_ << std::endl;
+  f << num_nz << std::endl;
 
   // matrix
   f << "matrix" << std::endl;
   for (int i = 0; i < model.numCol_ + 1; i++) f << model.Astart_[i] << " ";
   f << std::endl;
 
-  for (int i = 0; i < model.nnz_; i++) f << model.Aindex_[i] << " ";
+  for (int i = 0; i < num_nz; i++) f << model.Aindex_[i] << " ";
   f << std::endl;
 
   f << std::setprecision(9);
-  for (int i = 0; i < model.nnz_; i++) f << model.Avalue_[i] << " ";
+  for (int i = 0; i < num_nz; i++) f << model.Avalue_[i] << " ";
   f << std::endl;
 
   // cost and bounds

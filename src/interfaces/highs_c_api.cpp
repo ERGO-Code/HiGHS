@@ -78,7 +78,6 @@ int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
   HighsLp lp;
   lp.numCol_ = numcol;
   lp.numRow_ = numrow;
-  lp.nnz_ = numnz;
 
   lp.colCost_.resize(numcol);
   lp.colLower_.resize(numcol);

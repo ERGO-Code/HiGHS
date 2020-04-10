@@ -109,8 +109,6 @@ HighsLp& PresolveInfo::getReducedProblem() {
       reduced_lp_.offset_ = 0;
       reduced_lp_.model_name_ =
           std::move(presolve_[0].modelName);  //"Presolved model";
-
-      reduced_lp_.nnz_ = reduced_lp_.Avalue_.size();
     }
   }
   return reduced_lp_;
