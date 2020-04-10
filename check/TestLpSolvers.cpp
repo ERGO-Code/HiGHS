@@ -1,8 +1,5 @@
 #include "Highs.h"
 #include "catch.hpp"
-#include "io/LoadProblem.h"
-#include "io/Filereader.h"
-//#include "lp_data/HighsLpUtils.h"
 
 struct IterationCount {
   int simplex;
