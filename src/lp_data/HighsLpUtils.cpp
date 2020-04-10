@@ -1578,8 +1578,9 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
   return HighsStatus::OK;
 }
 
-HighsStatus writeLpAsMPS(const HighsOptions& options, const char* filename,
-                         const HighsLp& lp, const bool free_format) {
+HighsStatus writeLpAsMPS(const HighsOptions& options,
+                         const std::string filename, const HighsLp& lp,
+                         const bool free_format) {
   bool warning_found = false;
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
@@ -1799,12 +1800,12 @@ void reportLpColMatrix(const HighsOptions& options, const HighsLp& lp) {
   }
 }
 
-void reportMatrix(const HighsOptions& options, const char* message,
+void reportMatrix(const HighsOptions& options, const std::string message,
                   const int num_col, const int num_nz, const int* start,
                   const int* index, const double* value) {
   if (num_col <= 0) return;
   HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                    "%6s Index              Value\n", message);
+                    "%6s Index              Value\n", message.c_str());
   for (int col = 0; col < num_col; col++) {
     HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
                       "    %8d Start   %10d\n", col, start[col]);
@@ -1818,7 +1819,7 @@ void reportMatrix(const HighsOptions& options, const char* message,
 }
 
 #ifdef HiGHSDEV
-void analyseLp(const HighsLp& lp, const char* message) {
+void analyseLp(const HighsLp& lp, const std::string message) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
   vector<double> colRange;

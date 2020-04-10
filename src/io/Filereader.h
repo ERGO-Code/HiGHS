@@ -34,12 +34,12 @@ class Filereader {
  public:
   virtual FilereaderRetcode readModelFromFile(const HighsOptions& options,
                                               HighsLp& model) = 0;
-  virtual FilereaderRetcode readModelFromFile(const char* filename,
+  virtual FilereaderRetcode readModelFromFile(const std::string filename,
                                               HighsModelBuilder& model) = 0;
   virtual HighsStatus writeModelToFile(const HighsOptions& options,
-                                       const char* filename,
+                                       const std::string filename,
                                        HighsLp& model) = 0;
-  static Filereader* getFilereader(const char* filename);
+  static Filereader* getFilereader(const std::string filename);
 
   virtual ~Filereader(){};
 };

@@ -17,20 +17,29 @@
 #include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
 
-static const char* getFilenameExt(const char* filename) {
-  const char* dot = strrchr(filename, '.');
-  if (!dot || dot == filename) return "";
-  return dot + 1;
+static const std::string getFilenameExt(const std::string filename) {
+  // Extract file name extension
+  std::string name = filename;
+  std::size_t found = name.find_last_of(".");
+  if (found < name.size()) {
+    name = name.substr(found + 1);
+  } else {
+    name = "";
+  }
+  //  const char* dot = strrchr(filename, '.');
+  //  if (!dot || dot == filename) return "";
+  //  return dot + 1;
+  return name;
 }
 
-Filereader* Filereader::getFilereader(const char* filename) {
+Filereader* Filereader::getFilereader(const std::string filename) {
   Filereader* reader;
-  const char* extension = getFilenameExt(filename);
-  if (strcmp(extension, "mps") == 0) {
+  const std::string extension = getFilenameExt(filename);
+  if (extension.compare("mps") == 0) {
     reader = new FilereaderMps();
-  } else if (strcmp(extension, "lp") == 0) {
+  } else if (extension.compare("lp") == 0) {
     reader = new FilereaderLp();
-  } else if (strcmp(extension, "ems") == 0) {
+  } else if (extension.compare("ems") == 0) {
     reader = new FilereaderEms();
   } else {
     reader = NULL;
@@ -59,7 +68,7 @@ void interpretFilereaderRetcode(FILE* logfile, const std::string filename,
 }
 
 std::string extractModelName(const std::string filename) {
-  // Extract model name.
+  // Extract model name
   std::string name = filename;
   std::size_t found = name.find_last_of("/\\");
   if (found < name.size()) name = name.substr(found + 1);

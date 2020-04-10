@@ -77,7 +77,6 @@ set(sources
     io/HighsIO.cpp
     io/HMPSIO.cpp
     io/HMpsFF.cpp
-    io/HToyIO.cpp
     io/LoadOptions.cpp
     lp_data/Highs.cpp
     lp_data/HighsInfo.cpp
@@ -123,8 +122,6 @@ set(headers
     io/FilereaderMps.h
     io/HMpsFF.h
     io/HMPSIO.h
-    io/HToyIO_C.h
-    io/HToyIO.h
     io/HighsIO.h
     io/LoadOptions.h
     lp_data/HConst.h

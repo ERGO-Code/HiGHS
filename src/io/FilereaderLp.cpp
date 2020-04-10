@@ -49,15 +49,15 @@ FilereaderLp::~FilereaderLp() {
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   HighsLp& model) {
   HighsModelBuilder m;
-  const char* filename = options.model_file.c_str();
+  const std::string filename = options.model_file;
   this->readModelFromFile(filename, m);
   m.HighsBuildTechnicalModel(&model);
   return FilereaderRetcode::OK;
 }
 
-FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
+FilereaderRetcode FilereaderLp::readModelFromFile(const std::string filename,
                                                   HighsModelBuilder& model) {
-  this->file = fopen(filename, "r");
+  this->file = fopen(filename.c_str(), "r");
   if (file == NULL) {
     return FilereaderRetcode::FILENOTFOUND;
   }
@@ -951,9 +951,9 @@ void FilereaderLp::writeToFileLineend() {
 }
 
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
-                                           const char* filename,
+                                           const std::string filename,
                                            HighsLp& model) {
-  this->file = fopen(filename, "w");
+  this->file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
   this->writeToFile("\\ %s", LP_COMMENT_FILESTART);

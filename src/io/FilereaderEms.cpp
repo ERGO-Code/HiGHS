@@ -25,7 +25,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
   std::ifstream f;
   int i;
 
-  const char* filename = options.model_file.c_str();
+  const std::string filename = options.model_file;
   f.open(filename, std::ios::in);
   if (f.is_open()) {
     std::string line;
@@ -213,7 +213,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
 }
 
 HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
-                                            const char* filename,
+                                            const std::string filename,
                                             HighsLp& model) {
   std::ofstream f;
   f.open(filename, std::ios::out);
@@ -283,9 +283,9 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
   return HighsStatus::OK;
 }
 
-FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
+FilereaderRetcode FilereaderEms::readModelFromFile(const std::string filename,
                                                    HighsModelBuilder& model) {
-  if (filename) {
+  if (filename.c_str()) {
   }  // surpress warning.
   if (model.getNumberOfVariables() > 0) {
   }  // surpress warning.

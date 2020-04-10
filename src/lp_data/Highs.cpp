@@ -216,7 +216,7 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  Filereader* reader = Filereader::getFilereader(filename.c_str());
+  Filereader* reader = Filereader::getFilereader(filename);
   if (reader == NULL) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "Model file %s not supported", filename.c_str());
@@ -253,13 +253,13 @@ HighsStatus Highs::writeModel(const std::string filename) {
     reportLp(options_, model, 2);
     return_status = HighsStatus::OK;
   } else {
-    Filereader* writer = Filereader::getFilereader(filename.c_str());
+    Filereader* writer = Filereader::getFilereader(filename);
     if (writer == NULL) {
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                       "Model file %s not supported", filename.c_str());
       return HighsStatus::Error;
     }
-    call_status = writer->writeModelToFile(options_, filename.c_str(), model);
+    call_status = writer->writeModelToFile(options_, filename, model);
     delete writer;
     return_status =
         interpretCallStatus(call_status, return_status, "writeModelToFile");

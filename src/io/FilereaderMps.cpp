@@ -21,7 +21,7 @@
 
 FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
                                                    HighsLp& model) {
-  const char* filename = options.model_file.c_str();
+  const std::string filename = options.model_file;
 
   // if free format parser
   // Parse file and return status.
@@ -69,14 +69,14 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 }
 
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
-                                            const char* filename,
+                                            const std::string filename,
                                             HighsLp& model) {
   return writeLpAsMPS(options, filename, model);
 }
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
+FilereaderRetcode FilereaderMps::readModelFromFile(const std::string filename,
                                                    HighsModelBuilder& model) {
-  if (filename) {
+  if (filename.c_str()) {
   }  // surpress warning.
   if (model.getNumberOfVariables() > 0) {
   }  // surpress warning.

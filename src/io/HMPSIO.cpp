@@ -27,8 +27,8 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
-                          int mxNumCol, int& numRow, int& numCol,
+FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
+                          int mxNumRow, int mxNumCol, int& numRow, int& numCol,
                           ObjSense& objSense, double& objOffset,
                           vector<int>& Astart, vector<int>& Aindex,
                           vector<double>& Avalue, vector<double>& colCost,
@@ -48,7 +48,7 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
 #ifdef HiGHSDEV
   printf("readMPS: Trying to open file %s\n", filename);
 #endif
-  FILE* file = fopen(filename, "r");
+  FILE* file = fopen(filename.c_str(), "r");
   if (file == 0) {
 #ifdef HiGHSDEV
     printf("readMPS: Not opened file OK\n");
@@ -464,8 +464,8 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
 }
 
 HighsStatus writeMPS(
-    FILE* logfile, const char* filename, const int& numRow, const int& numCol,
-    const ObjSense& objSense, const double& objOffset,
+    FILE* logfile, const std::string filename, const int& numRow,
+    const int& numCol, const ObjSense& objSense, const double& objOffset,
     const vector<int>& Astart, const vector<int>& Aindex,
     const vector<double>& Avalue, const vector<double>& colCost,
     const vector<double>& colLower, const vector<double>& colUpper,
@@ -478,7 +478,7 @@ HighsStatus writeMPS(
 #ifdef HiGHSDEV
   printf("writeMPS: Trying to open file %s\n", filename);
 #endif
-  FILE* file = fopen(filename, "w");
+  FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
     HighsLogMessage(logfile, HighsMessageType::ERROR, "Cannot open file %s",
                     filename);
@@ -568,8 +568,8 @@ HighsStatus writeMPS(
   }
 #ifdef HiGHSDEV
   printf("Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
-         BoolToString(have_rhs), BoolToString(have_ranges),
-         BoolToString(have_bounds));
+         BoolToCharStar(have_rhs), BoolToCharStar(have_ranges),
+         BoolToCharStar(have_bounds));
 #endif
 
   // Field:    1           2          3         4         5         6
@@ -755,4 +755,4 @@ HighsStatus writeMPS(
   return HighsStatus::OK;
 }
 
-inline const char* BoolToString(bool b) { return b ? "True" : "False"; }
+inline const char* BoolToCharStar(bool b) { return b ? "True" : "False"; }
