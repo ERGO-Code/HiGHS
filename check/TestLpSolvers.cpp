@@ -245,46 +245,26 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
 
   HighsOptions options;
   HighsLp lp;
-  HighsStatus run_status;
+  //  HighsStatus run_status;
   HighsStatus return_status;
   HighsStatus read_status;
 
   Highs highs(options);
 
-  // Try to run HiGHS with default options. No model loaded so fails
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::Error);
-
-  // Set model_file to non-existent file and try to run HiGHS
-  model = "";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  return_status = highs.setHighsOptionValue("model_file", model_file);
-  REQUIRE(return_status == HighsStatus::OK);
-
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::Error);
-
-  // Set model_file to non-supported file type and try to run HiGHS
-  model = "model";
-  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
-  return_status = highs.setHighsOptionValue("model_file", model_file);
-  REQUIRE(return_status == HighsStatus::OK);
-
-  run_status = highs.run();
-  REQUIRE(run_status == HighsStatus::Error);
-
+  // Read mps
   model = "adlittle";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   testSolversSetup(model, model_iteration_count,
                    simplex_strategy_iteration_count);
 
-  // Read mps.
   return_status = highs.setHighsOptionValue("model_file", model_file);
   REQUIRE(return_status == HighsStatus::OK);
 
-  options.model_file = model_file;
   read_status = highs.readModel(model_file);
   REQUIRE(read_status == HighsStatus::OK);
+
+  return_status = highs.setBasis();
+  REQUIRE(return_status == HighsStatus::OK);
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
@@ -293,7 +273,6 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   //  simplex_strategy_iteration_count);
   /*
   model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  options.model_file = model_file;
   read_status = loadLpFromFile(options, lp);
   REQUIRE(read_status == HighsStatus::OK);
 

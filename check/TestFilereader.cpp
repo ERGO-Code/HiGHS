@@ -9,6 +9,87 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
+TEST_CASE("filereader_edge-cases", "[highs_filereader]") {
+  std::string model = "";
+  std::string model_file;
+  HighsStatus run_status;
+  HighsStatus return_status;
+  HighsStatus read_status;
+  HighsOptions options;
+
+  Highs highs(options);
+  const HighsInfo& info = highs.getHighsInfo();
+
+  // Try to run HiGHS with default options. No model loaded so fails
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::Error);
+
+  // Set model_file to non-existent file and try to run HiGHS
+  model = "";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::Error);
+
+  // Set model_file to non-supported file type and try to run HiGHS
+  model = "model";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  run_status = highs.run();
+  REQUIRE(run_status == HighsStatus::Error);
+
+  model = "simple_lp";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::OK);
+
+  return_status = highs.setBasis();
+  REQUIRE(return_status == HighsStatus::OK);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(info.simplex_iteration_count == 2);
+
+  /*
+  model = "garbage";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::Error);
+
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".ems";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::Error);
+
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".lp";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::Error);
+  */
+  model = "adlittle";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::OK);
+  //  REQUIRE(info.simplex_iteration_count == 86);
+}
 TEST_CASE("free-format-parser", "[highs_filereader]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";

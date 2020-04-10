@@ -1,4 +1,3 @@
-\Optimal objective value 125.2083333
 Maximize
  obj: x1 + 2 x2 + 3 x3 + x4
 Subject To
@@ -9,3 +8,4 @@ Bounds
  0 <= x1 <= 40
  2 <= x4 <= 3
 End
+\Optimal objective value 125.2083333

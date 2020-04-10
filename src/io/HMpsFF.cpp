@@ -160,7 +160,10 @@ HMpsFF::parsekey HMpsFF::checkFirstWord(std::string& strline, int& start,
 
   word = strline.substr(start, end - start);
 
-  if (word == "OBJSENSE")
+  if (word.front() == 'N')
+    // NAME
+    return HMpsFF::parsekey::NONE;
+  else if (word.front() == 'O')
     return HMpsFF::parsekey::OBJSENSE;
   else if (word.front() == 'M') {
     if (word == "MAX")
