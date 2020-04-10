@@ -553,15 +553,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       unscaled_solution_params.dual_feasibility_tolerance;
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
-  printf("!!IPX: unscaled_solution_params.ipm_iteration_count = %d\n",
-         unscaled_solution_params.ipm_iteration_count);
-  printf("!!IPX: options.ipm_iteration_limit = %d\n",
-         options.ipm_iteration_limit);
   parameters.ipm_maxiter = options.ipm_iteration_limit -
                            unscaled_solution_params.ipm_iteration_count;
-  printf("!!IPX: Setting parameters.ipm_maxiter = %d = %d - %d\n",
-         (int)parameters.ipm_maxiter, options.ipm_iteration_limit,
-         unscaled_solution_params.ipm_iteration_count);
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
 

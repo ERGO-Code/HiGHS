@@ -23,7 +23,7 @@ set(TEST_SOURCES
     TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
-    TestSimplex.cpp
+    TestLpSolvers.cpp
     Avgas.cpp)
 
 if (IPX_ON)
