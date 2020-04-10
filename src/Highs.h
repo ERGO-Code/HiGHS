@@ -749,6 +749,10 @@ class Highs {
   bool updateHighsSolutionBasis();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
+  void clearSolution();
+  void clearBasis();
+  void clearInfo();
+
   void underDevelopmentLogMessage(const string method_name);
   void beforeReturnFromRun();
 

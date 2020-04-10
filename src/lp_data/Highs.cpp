@@ -201,7 +201,14 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   call_status = assessLp(lp_, options_);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
+  // Clear all solver information in HiGHS about (any) previous model
+  call_status = clearSolver();
+  return_status =
+      interpretCallStatus(call_status, return_status, "clearSolver");
+  if (return_status == HighsStatus::Error) return return_status;
+  // Clear any HiGHS model object
   hmos_.clear();
+  // Create a HiGHS model object for this LP
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   return return_status;
 }
@@ -1283,8 +1290,9 @@ bool Highs::deleteRows(int* mask) {
 double Highs::getHighsRunTime() { return timer_.readRunHighsClock(); }
 
 HighsStatus Highs::clearSolver() {
-  underDevelopmentLogMessage("clearSolver");
-  basis_.valid_ = false;
+  clearSolution();
+  clearBasis();
+  clearInfo();
   return HighsStatus::OK;
 }
 
@@ -1561,6 +1569,27 @@ bool Highs::haveHmo(const string method_name) {
 #endif
   return have_hmo;
 }
+
+void Highs::clearSolution() {
+  model_status_ = HighsModelStatus::NOTSET;
+  scaled_model_status_ = HighsModelStatus::NOTSET;
+  info_.primal_status = (int)PrimalDualStatus::STATUS_NOTSET;
+  info_.dual_status = (int)PrimalDualStatus::STATUS_NOTSET;
+  solution_.col_value.resize(0);
+  solution_.col_dual.resize(0);
+  solution_.row_value.resize(0);
+  solution_.row_dual.resize(0);
+}
+
+void Highs::clearBasis() {
+  model_status_ = HighsModelStatus::NOTSET;
+  scaled_model_status_ = HighsModelStatus::NOTSET;
+  basis_.valid_ = false;
+  basis_.col_status.resize(0);
+  basis_.row_status.resize(0);
+}
+
+void Highs::clearInfo() { info_.clear(); }
 
 void Highs::beforeReturnFromRun() {
   if ((int)hmos_.size() > 1) {
