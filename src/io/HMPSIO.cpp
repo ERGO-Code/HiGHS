@@ -46,7 +46,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
   // setup_clearModel() messes up the MPS read
   Astart.clear();
 #ifdef HiGHSDEV
-  printf("readMPS: Trying to open file %s\n", filename);
+  printf("readMPS: Trying to open file %s\n", filename.c_str());
 #endif
   FILE* file = fopen(filename.c_str(), "r");
   if (file == 0) {
@@ -476,7 +476,7 @@ HighsStatus writeMPS(
   int num_zero_no_cost_columns = 0;
   int num_zero_no_cost_columns_in_bounds_section = 0;
 #ifdef HiGHSDEV
-  printf("writeMPS: Trying to open file %s\n", filename);
+  printf("writeMPS: Trying to open file %s\n", filename.c_str());
 #endif
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
