@@ -278,7 +278,6 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   testSolversSetup(model, model_iteration_count,
                    simplex_strategy_iteration_count);
 
-
   // Read mps.
   return_status = highs.setHighsOptionValue("model_file", model_file);
   REQUIRE(return_status == HighsStatus::OK);
@@ -290,7 +289,8 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
 
-  //  testSolvers(highs, model_iteration_count, simplex_strategy_iteration_count);
+  //  testSolvers(highs, model_iteration_count,
+  //  simplex_strategy_iteration_count);
   /*
   model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   options.model_file = model_file;

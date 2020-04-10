@@ -9,13 +9,13 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "io/Filereader.h"
-#include "io/HighsIO.h"
 
 #include <cstring>  // For strrchr
 
 #include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
+#include "io/HighsIO.h"
 
 static const char* getFilenameExt(const char* filename) {
   const char* dot = strrchr(filename, '.');
@@ -38,15 +38,14 @@ Filereader* Filereader::getFilereader(const char* filename) {
   return reader;
 }
 
-void interpretFilereaderRetcode(FILE* logfile, 
-				const std:: string filename,
-				const FilereaderRetcode code) {
+void interpretFilereaderRetcode(FILE* logfile, const std::string filename,
+                                const FilereaderRetcode code) {
   switch (code) {
     case FilereaderRetcode::OK:
       break;
     case FilereaderRetcode::FILENOTFOUND:
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
-                      "File %s not found", filename.c_str());
+      HighsLogMessage(logfile, HighsMessageType::ERROR, "File %s not found",
+                      filename.c_str());
       break;
     case FilereaderRetcode::PARSERERROR:
       HighsLogMessage(logfile, HighsMessageType::ERROR,
@@ -59,7 +58,7 @@ void interpretFilereaderRetcode(FILE* logfile,
   }
 }
 
-std:: string extractModelName(const std:: string filename) {
+std::string extractModelName(const std::string filename) {
   // Extract model name.
   std::string name = filename;
   std::size_t found = name.find_last_of("/\\");

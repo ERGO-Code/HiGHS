@@ -6,7 +6,6 @@
 #include "io/HMPSIO.h"
 #include "io/HMpsFF.h"
 #include "io/HighsIO.h"
-#include "io/LoadProblem.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
@@ -107,7 +106,6 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 
   bool are_the_same = lp_free == lp_fixed;
   REQUIRE(are_the_same);
-
 }
 
 TEST_CASE("dualize", "[highs_data]") {

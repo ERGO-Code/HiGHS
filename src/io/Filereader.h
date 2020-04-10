@@ -14,10 +14,10 @@
 #ifndef IO_FILEREADER_H_
 #define IO_FILEREADER_H_
 
+#include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelBuilder.h"
 #include "lp_data/HighsOptions.h"
-#include "io/HighsIO.h"
 
 enum class FilereaderRetcode {
   OK = 0,
@@ -26,10 +26,9 @@ enum class FilereaderRetcode {
   NOT_IMPLEMENTED = 3
 };
 
-void interpretFilereaderRetcode(FILE* logfile,
-				const std:: string filename,
-				const FilereaderRetcode code);
-std:: string extractModelName(const std:: string filename);
+void interpretFilereaderRetcode(FILE* logfile, const std::string filename,
+                                const FilereaderRetcode code);
+std::string extractModelName(const std::string filename);
 
 class Filereader {
  public:

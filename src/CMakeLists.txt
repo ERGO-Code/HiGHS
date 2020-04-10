@@ -79,7 +79,6 @@ set(sources
     io/HMpsFF.cpp
     io/HToyIO.cpp
     io/LoadOptions.cpp
-    io/LoadProblem.cpp
     lp_data/Highs.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsLp.cpp
@@ -127,7 +126,6 @@ set(headers
     io/HToyIO_C.h
     io/HToyIO.h
     io/HighsIO.h
-    io/LoadProblem.h
     io/LoadOptions.h
     lp_data/HConst.h
     lp_data/HighsAnalysis.h

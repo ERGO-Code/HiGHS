@@ -18,7 +18,6 @@
 #include "HighsOptions.h"
 #include "HighsRuntimeOptions.h"
 #include "HighsTimer.h"
-//#include "LoadProblem.h"
 
 void printHighsVersionCopyright(FILE* output, const int message_level,
                                 const char* message = nullptr);
@@ -36,7 +35,6 @@ int main(int argc, char** argv) {
   HighsOptions options;
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
-
 
   // Run LP or MIP solver.
   HighsStatus run_status = HighsStatus::Error;

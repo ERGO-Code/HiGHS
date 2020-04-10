@@ -219,7 +219,7 @@ HighsStatus Highs::readModel(const std::string filename) {
   Filereader* reader = Filereader::getFilereader(filename.c_str());
   if (reader == NULL) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-		    "Model file %s not supported", filename.c_str());
+                    "Model file %s not supported", filename.c_str());
     return HighsStatus::Error;
   }
 
@@ -230,7 +230,8 @@ HighsStatus Highs::readModel(const std::string filename) {
       reader->readModelFromFile(this->options_, model);
   delete reader;
   if (call_code != FilereaderRetcode::OK) {
-    interpretFilereaderRetcode(this->options_.logfile, filename.c_str(), call_code);
+    interpretFilereaderRetcode(this->options_.logfile, filename.c_str(),
+                               call_code);
     call_status = HighsStatus::Error;
     return_status =
         interpretCallStatus(call_status, return_status, "readModelFromFile");
@@ -255,7 +256,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
     Filereader* writer = Filereader::getFilereader(filename.c_str());
     if (writer == NULL) {
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-		      "Model file %s not supported", filename.c_str());
+                      "Model file %s not supported", filename.c_str());
       return HighsStatus::Error;
     }
     call_status = writer->writeModelToFile(options_, filename.c_str(), model);
