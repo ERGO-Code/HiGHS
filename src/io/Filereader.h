@@ -17,18 +17,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelBuilder.h"
 #include "lp_data/HighsOptions.h"
-
-enum class HighsInputStatus {
-  OK,
-  FileNotFound,
-  ErrorMatrixDimensions,
-  ErrorMatrixIndices,
-  ErrorMatrixStart,
-  ErrorMatrixValue,
-  ErrorColBounds,
-  ErrorRowBounds,
-  ErrorObjective
-};
+#include "io/HighsIO.h"
 
 enum class FilereaderRetcode {
   OK = 0,
@@ -36,6 +25,11 @@ enum class FilereaderRetcode {
   PARSERERROR = 2,
   NOT_IMPLEMENTED = 3
 };
+
+void interpretFilereaderRetcode(FILE* logfile,
+				const std:: string filename,
+				const FilereaderRetcode code);
+std:: string extractModelName(const std:: string filename);
 
 class Filereader {
  public:
@@ -50,10 +44,4 @@ class Filereader {
 
   virtual ~Filereader(){};
 };
-
-// Indicate whether the file name extension is supported
-bool supportedFilenameExtension(const char* filename);
-// Return a string representation of ParseStatus.
-std::string HighsInputStatusToString(HighsInputStatus status);
-
 #endif

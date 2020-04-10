@@ -268,17 +268,10 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(run_status == HighsStatus::Error);
 
   // Set model_file to non-supported file type and try to run HiGHS
-  model = "model.abc";
+  model = "model";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
   return_status = highs.setHighsOptionValue("model_file", model_file);
   REQUIRE(return_status == HighsStatus::OK);
-
-  bool supported_extension = supportedFilenameExtension(model_file.c_str());
-  if (supported_extension) {
-    printf("Supported file extension: %s\n", model_file.c_str());
-  } else {
-    printf("Unsupported file extension: %s\n", model_file.c_str());
-  }
 
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::Error);
@@ -288,16 +281,19 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   testSolversSetup(model, model_iteration_count,
                    simplex_strategy_iteration_count);
 
-  
 
   // Read mps.
-  read_status = loadLpFromFile(options, lp);
-  REQUIRE(read_status == HighsStatus::OK);
-
-  return_status = highs.passModel(lp);
+  return_status = highs.setHighsOptionValue("model_file", model_file);
   REQUIRE(return_status == HighsStatus::OK);
 
-  testSolvers(highs, model_iteration_count, simplex_strategy_iteration_count);
+  options.model_file = model_file;
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::OK);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::OK);
+
+  //  testSolvers(highs, model_iteration_count, simplex_strategy_iteration_count);
   /*
   model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   options.model_file = model_file;

@@ -216,41 +216,27 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  if (!supportedFilenameExtension(filename.c_str())) {
+  Filereader* reader = Filereader::getFilereader(filename.c_str());
+  if (reader == NULL) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
 		    "Model file %s not supported", filename.c_str());
     return HighsStatus::Error;
   }
 
-  Filereader* reader = Filereader::getFilereader(filename.c_str());
   HighsLp model;
   this->options_.model_file = filename;
 
   FilereaderRetcode call_code =
       reader->readModelFromFile(this->options_, model);
   delete reader;
-  switch (call_code) {
-    case FilereaderRetcode::OK:
-      break;
-    case FilereaderRetcode::FILENOTFOUND:
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "File %s not found", filename.c_str());
-      break;
-    case FilereaderRetcode::PARSERERROR:
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Parser error reading %s", filename.c_str());
-      break;
-    case FilereaderRetcode::NOT_IMPLEMENTED:
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Parser not implemented for %s", filename.c_str());
-      break;
-  }
   if (call_code != FilereaderRetcode::OK) {
+    interpretFilereaderRetcode(this->options_.logfile, filename.c_str(), call_code);
     call_status = HighsStatus::Error;
     return_status =
         interpretCallStatus(call_status, return_status, "readModelFromFile");
     if (return_status == HighsStatus::Error) return return_status;
   }
+  model.model_name_ = extractModelName(filename.c_str());
   call_status = this->passModel(model);
   return_status = interpretCallStatus(call_status, return_status, "passModel");
   return return_status;
@@ -266,12 +252,12 @@ HighsStatus Highs::writeModel(const std::string filename) {
     reportLp(options_, model, 2);
     return_status = HighsStatus::OK;
   } else {
-    if (!supportedFilenameExtension(filename.c_str())) {
+    Filereader* writer = Filereader::getFilereader(filename.c_str());
+    if (writer == NULL) {
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
 		      "Model file %s not supported", filename.c_str());
       return HighsStatus::Error;
     }
-    Filereader* writer = Filereader::getFilereader(filename.c_str());
     call_status = writer->writeModelToFile(options_, filename.c_str(), model);
     delete writer;
     return_status =

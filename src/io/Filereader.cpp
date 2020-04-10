@@ -9,9 +9,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "io/Filereader.h"
+#include "io/HighsIO.h"
 
 #include <cstring>  // For strrchr
-#include <stdexcept>
 
 #include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
@@ -33,52 +33,38 @@ Filereader* Filereader::getFilereader(const char* filename) {
   } else if (strcmp(extension, "ems") == 0) {
     reader = new FilereaderEms();
   } else {
-    // use .mps filereader by default
-    reader = new FilereaderMps();
+    reader = NULL;
   }
   return reader;
 }
 
-bool supportedFilenameExtension(const char* filename) {
-  const char* extension = getFilenameExt(filename);
-  if (strcmp(extension, "mps") == 0 ||
-      strcmp(extension, "ems") == 0 ||
-      strcmp(extension, "lp") == 0 ||
-      strcmp(extension, "") == 0) {
-    return true;
+void interpretFilereaderRetcode(FILE* logfile, 
+				const std:: string filename,
+				const FilereaderRetcode code) {
+  switch (code) {
+    case FilereaderRetcode::OK:
+      break;
+    case FilereaderRetcode::FILENOTFOUND:
+      HighsLogMessage(logfile, HighsMessageType::ERROR,
+                      "File %s not found", filename.c_str());
+      break;
+    case FilereaderRetcode::PARSERERROR:
+      HighsLogMessage(logfile, HighsMessageType::ERROR,
+                      "Parser error reading %s", filename.c_str());
+      break;
+    case FilereaderRetcode::NOT_IMPLEMENTED:
+      HighsLogMessage(logfile, HighsMessageType::ERROR,
+                      "Parser not implemented for %s", filename.c_str());
+      break;
   }
-  return false; 
 }
 
-std::string HighsInputStatusToString(HighsInputStatus status) {
-  switch (status) {
-    case HighsInputStatus::OK:
-      return "OK";
-      break;
-    case HighsInputStatus::FileNotFound:
-      return "Error: File not found";
-      break;
-    case HighsInputStatus::ErrorMatrixDimensions:
-      return "Error Matrix Dimensions";
-      break;
-    case HighsInputStatus::ErrorMatrixIndices:
-      return "Error Matrix Indices";
-      break;
-    case HighsInputStatus::ErrorMatrixStart:
-      return "Error Matrix Start";
-      break;
-    case HighsInputStatus::ErrorMatrixValue:
-      return "Error Matrix Value";
-      break;
-    case HighsInputStatus::ErrorColBounds:
-      return "Error Col Bound";
-      break;
-    case HighsInputStatus::ErrorRowBounds:
-      return "Error Row Bounds";
-      break;
-    case HighsInputStatus::ErrorObjective:
-      return "Error Objective";
-      break;
-  }
-  return "";
+std:: string extractModelName(const std:: string filename) {
+  // Extract model name.
+  std::string name = filename;
+  std::size_t found = name.find_last_of("/\\");
+  if (found < name.size()) name = name.substr(found + 1);
+  found = name.find_last_of(".");
+  if (found < name.size()) name.erase(found, name.size() - found);
+  return name;
 }
