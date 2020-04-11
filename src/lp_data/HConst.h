@@ -25,8 +25,6 @@ const std::string choose_string = "choose";
 const std::string on_string = "on";
 const int HIGHS_THREAD_LIMIT = 8;  // 32;
 
-constexpr double kBoundTolerance = 1e-8;
-
 enum HighsPrintMessageLevel {
   ML_MIN = 0,
   ML_NONE = ML_MIN,

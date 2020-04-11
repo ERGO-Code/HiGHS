@@ -82,23 +82,28 @@ class HighsLp {
 
   std::vector<int> integrality_;
 
+  bool equalButForNames(const HighsLp& lp) {
+    if (this->numCol_ != lp.numCol_ || this->numRow_ != lp.numRow_ ||
+        this->sense_ != lp.sense_ || this->offset_ != lp.offset_ ||
+        this->model_name_ != lp.model_name_)
+      return false;
+
+    if (this->colCost_ != lp.colCost_) return false;
+
+    if (this->colUpper_ != lp.colUpper_ || this->colLower_ != lp.colLower_ ||
+        this->rowUpper_ != lp.rowUpper_ || this->rowLower_ != lp.rowLower_)
+      return false;
+
+    if (this->Astart_ != lp.Astart_ || this->Aindex_ != lp.Aindex_ ||
+        this->Avalue_ != lp.Avalue_)
+      return false;
+
+    return true;
+  }
   bool operator==(const HighsLp& lp) {
-    if (numCol_ != lp.numCol_ || numRow_ != lp.numRow_ || sense_ != lp.sense_ ||
-        offset_ != lp.offset_ || model_name_ != lp.model_name_)
+    if (!equalButForNames(lp)) return false;
+    if (this->row_names_ != lp.row_names_ || this->col_names_ != lp.col_names_)
       return false;
-
-    if (row_names_ != lp.row_names_ || col_names_ != lp.col_names_)
-      return false;
-
-    if (colCost_ != lp.colCost_) return false;
-
-    if (colUpper_ != lp.colUpper_ || colLower_ != lp.colLower_ ||
-        rowUpper_ != lp.rowUpper_ || rowLower_ != lp.rowLower_)
-      return false;
-
-    if (Astart_ != lp.Astart_ || Aindex_ != lp.Aindex_ || Avalue_ != lp.Avalue_)
-      return false;
-
     return true;
   }
 };

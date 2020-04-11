@@ -988,8 +988,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFile("= %+g", model.rowLower_[row]);
       this->writeToFileLineend();
     } else {
-      if (model.rowLower_[row] >= -10E10) {
-        // has a lower bounds
+      if (model.rowLower_[row] > -HIGHS_CONST_INF) {
+        // has a lower bound
         this->writeToFile(" con%dlo: ", row + 1);
         for (int var = 0; var < model.numCol_; var++) {
           for (int idx = model.Astart_[var]; idx < model.Astart_[var + 1];
@@ -1001,8 +1001,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         }
         this->writeToFile(">= %+g", model.rowLower_[row]);
         this->writeToFileLineend();
-      } else if (model.rowUpper_[row] <= 10E10) {
-        // has an upper bounds
+      } else if (model.rowUpper_[row] < HIGHS_CONST_INF) {
+        // has an upper bound
         this->writeToFile(" con%dup: ", row + 1);
         for (int var = 0; var < model.numCol_; var++) {
           for (int idx = model.Astart_[var]; idx < model.Astart_[var + 1];
@@ -1012,7 +1012,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
             }
           }
         }
-        this->writeToFile("<= %+g", model.rowLower_[row]);
+        this->writeToFile("<= %+g", model.rowUpper_[row]);
         this->writeToFileLineend();
       } else {
         // constraint has infinite lower & upper bounds so not a proper

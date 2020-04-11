@@ -160,7 +160,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   //  HighsLp lp_lp = highs.getLp();
 
   std::cout << "Compare LP from .lp and .mps" << std::endl;
-  are_the_same = lp_mps == highs.getLp();
+  are_the_same = lp_mps.equalButForNames(highs.getLp());
   REQUIRE(are_the_same);
 
   //  std::remove(filename_lp.c_str());
