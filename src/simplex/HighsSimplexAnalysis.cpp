@@ -636,8 +636,8 @@ void HighsSimplexAnalysis::reportFactorTimer() {
         int thread_factor_iClock = thread_clock[clock_id];
         timer.clock_num_call[all_factor_iClock] +=
             timer.clock_num_call[thread_factor_iClock];
-        timer.clock_ticks[all_factor_iClock] +=
-            timer.clock_ticks[thread_factor_iClock];
+        timer.clock_time[all_factor_iClock] +=
+            timer.clock_time[thread_factor_iClock];
       }
     }
     printf("reportFactorTimer: HFactor clocks for all %d threads\n",
