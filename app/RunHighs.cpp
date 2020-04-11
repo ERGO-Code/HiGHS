@@ -184,6 +184,7 @@ void reportSolvedLpStats(FILE* output, int message_level,
 }
 
 HighsStatus callLpSolver(HighsOptions& use_options, const bool run_quiet) {
+  const bool write_lp = false;//true;//
   FILE* output = use_options.output;
   const int message_level = use_options.message_level;
 
@@ -196,23 +197,23 @@ HighsStatus callLpSolver(HighsOptions& use_options, const bool run_quiet) {
   reportLpStatsOrError(output, message_level, read_status, highs.getLp());
   if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
-  /*
-  HighsStatus write_status;
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
-                    "Writing model as MPS\n");
-  write_status = highs.writeModel("write.mps");
-  if (write_status != HighsStatus::OK) {
-    if (write_status == HighsStatus::Warning) {
+  if (write_lp) {
+    HighsStatus write_status;
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+		      "Writing model as EMS\n");
+    write_status = highs.writeModel("write.ems");
+    if (write_status != HighsStatus::OK) {
+      if (write_status == HighsStatus::Warning) {
 #ifdef HiGHSDEV
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "HighsStatus::Warning return from highs.writeModel\n");
+	HighsPrintMessage(output, message_level, ML_ALWAYS,
+			  "HighsStatus::Warning return from highs.writeModel\n");
 #endif
-    } else {
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "Error return from highs.writeModel\n");
+      } else {
+	HighsPrintMessage(output, message_level, ML_ALWAYS,
+			  "Error return from highs.writeModel\n");
+      }
     }
   }
-  */
 
   // Write all the options to an options file
   // highs.writeHighsOptions("HighsOptions.set", false);
