@@ -481,7 +481,7 @@ HighsStatus writeMPS(
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
     HighsLogMessage(logfile, HighsMessageType::ERROR, "Cannot open file %s",
-                    filename);
+                    filename.c_str());
     return HighsStatus::Error;
   }
 #ifdef HiGHSDEV
