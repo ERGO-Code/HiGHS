@@ -75,31 +75,31 @@ class HighsTimer {
   /**
    * @brief Zero an external clock record
    */
-/*
-  void clockInit(HighsClockRecord& x_clock  //!< Record for the external clock
-  ) {
-    x_clock.calls = 0;
-    x_clock.start = 0;
-    x_clock.time = 0;
-    x_clock.name = "";
-    x_clock.ch3_name = "";
-  }
-  */
+  /*
+    void clockInit(HighsClockRecord& x_clock  //!< Record for the external clock
+    ) {
+      x_clock.calls = 0;
+      x_clock.start = 0;
+      x_clock.time = 0;
+      x_clock.name = "";
+      x_clock.ch3_name = "";
+    }
+    */
 
   /**
    * @brief Add to an external clock record
    */
-/*
-  void clockAdd(HighsClockRecord x_clock,  //!< Record for the external clock
-                int i_clock                //!< Clock of record to be added
-  ) {
-    assert(i_clock >= 0);
-    assert(i_clock < num_clock);
-    x_clock.calls += clock_num_call[i_clock];
-    x_clock.start = initial_clock_start;
-    x_clock.time += clock_time[i_clock];
-  }
-  */
+  /*
+    void clockAdd(HighsClockRecord x_clock,  //!< Record for the external clock
+                  int i_clock                //!< Clock of record to be added
+    ) {
+      assert(i_clock >= 0);
+      assert(i_clock < num_clock);
+      x_clock.calls += clock_num_call[i_clock];
+      x_clock.start = initial_clock_start;
+      x_clock.time += clock_time[i_clock];
+    }
+    */
 
   /**
    * @brief Reset a HighsTimer instance to its state after the
@@ -143,10 +143,9 @@ class HighsTimer {
     // getWallTime() >= 0 (or initialised to initial_clock_start > 0)
 #ifdef HiGHSDEV
     if (clock_start[i_clock] <= 0) {
-      printf(
-          "recordStart [%2d] (%s) is %11.4g: _num_call = %d\n",
-          i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
-          clock_num_call[i_clock]);
+      printf("recordStart [%2d] (%s) is %11.4g: _num_call = %d\n", i_clock,
+             clock_names[i_clock].c_str(), clock_start[i_clock],
+             clock_num_call[i_clock]);
       fflush(stdout);
     }
 #endif
@@ -167,10 +166,9 @@ class HighsTimer {
     // -getWallTime() <= 0
 #ifdef HiGHSDEV
     if (clock_start[i_clock] > 0) {
-      printf(
-          "recordFinish[%2d] (%s) is %11.4g: _num_call = %d\n",
-          i_clock, clock_names[i_clock].c_str(), clock_start[i_clock],
-          clock_num_call[i_clock]);
+      printf("recordFinish[%2d] (%s) is %11.4g: _num_call = %d\n", i_clock,
+             clock_names[i_clock].c_str(), clock_start[i_clock],
+             clock_num_call[i_clock]);
       fflush(stdout);
     }
 #endif
@@ -195,8 +193,7 @@ class HighsTimer {
     if (clock_start[i_clock] < 0) {
       // The clock's been started, so find the current time
       double wall_time = getWallTime();
-      read_time =
-          clock_time[i_clock] + wall_time + clock_start[i_clock];
+      read_time = clock_time[i_clock] + wall_time + clock_start[i_clock];
     } else {
       // The clock is currently stopped, so read the current time
       read_time = clock_time[i_clock];
@@ -362,7 +359,8 @@ class HighsTimer {
    */
   double getWallTime() {
     using namespace std::chrono;
-    return duration_cast<duration<double> >(wall_clock::now().time_since_epoch())
+    return duration_cast<duration<double> >(
+               wall_clock::now().time_since_epoch())
         .count();
   }
 
