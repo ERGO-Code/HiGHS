@@ -29,6 +29,7 @@
 /**
  * @brief Clock record structure
  */
+/*
 struct HighsClockRecord {
   int calls;
   double start;
@@ -36,6 +37,7 @@ struct HighsClockRecord {
   std::string name;
   std::string ch3_name;
 };
+*/
 /**
  * @brief Class for profiling facility for computational components in HiGHS
  */
@@ -47,8 +49,6 @@ class HighsTimer {
     int i_clock = clock_def("Run HiGHS", "RnH");
     assert(i_clock == 0);
     run_highs_clock = i_clock;
-    run_highs_clock_time = 0;
-    run_highs_clock_start_time = initial_clock_start;
 
     presolve_clock = clock_def("Presolve", "Pre");
     solve_clock = clock_def("Solve", "Slv");
@@ -75,6 +75,7 @@ class HighsTimer {
   /**
    * @brief Zero an external clock record
    */
+/*
   void clockInit(HighsClockRecord& x_clock  //!< Record for the external clock
   ) {
     x_clock.calls = 0;
@@ -83,10 +84,12 @@ class HighsTimer {
     x_clock.name = "";
     x_clock.ch3_name = "";
   }
+  */
 
   /**
    * @brief Add to an external clock record
    */
+/*
   void clockAdd(HighsClockRecord x_clock,  //!< Record for the external clock
                 int i_clock                //!< Clock of record to be added
   ) {
@@ -96,6 +99,7 @@ class HighsTimer {
     x_clock.start = initial_clock_start;
     x_clock.time += clock_time[i_clock];
   }
+  */
 
   /**
    * @brief Reset a HighsTimer instance to its state after the
@@ -114,9 +118,6 @@ class HighsTimer {
     this->presolve_clock = clock_def("Presolve", "Pre");
     this->solve_clock = clock_def("Solve", "Slv");
     this->postsolve_clock = clock_def("Postsolve", "Pst");
-
-    this->run_highs_clock_time = 0;
-    this->run_highs_clock_start_time = initial_clock_start;
   }
 
   /**
@@ -206,45 +207,17 @@ class HighsTimer {
   /**
    * @brief Start the RunHighs clock
    */
-  void startRunHighsClock() {
-    start(run_highs_clock);
-    assert(run_highs_clock_start_time > 0);
-    double wall_time = getWallTime();
-    // Set the clock start to be the negation of WallTime to check that the
-    // clock's been started when it's next stopped
-    run_highs_clock_start_time = -wall_time;
-  }
+  void startRunHighsClock() { start(run_highs_clock); }
 
   /**
    * @brief Stop the RunHighs clock
    */
-  void stopRunHighsClock() {
-    stop(run_highs_clock);
-    // Get the wall time to update tick2sec
-    double wall_time = getWallTime();
-    run_highs_clock_time += (wall_time + run_highs_clock_start_time);
-    // Set the clock start to be the WallTime to check that the clock's been
-    // stopped when it's next started
-    run_highs_clock_start_time = wall_time;
-  }
+  void stopRunHighsClock() { stop(run_highs_clock); }
 
   /**
    * @brief Read the RunHighs clock
    */
-  double readRunHighsClock() {
-    int i_clock = run_highs_clock;
-    double read_time;
-    double wall_time;
-    if (clock_start[i_clock] < 0) {
-      // The clock's been started, so find the current time
-      wall_time = getWallTime();
-      read_time = clock_time[i_clock] + wall_time + clock_start[i_clock];
-    } else {
-      // The clock is currently stopped, so read the current time
-      read_time = clock_time[i_clock];
-    }
-    return read_time;
-  }
+  double readRunHighsClock() { return read(run_highs_clock); }
 
   /**
    * @brief Test whether the RunHighs clock is running
@@ -414,10 +387,6 @@ class HighsTimer {
   int presolve_clock;
   int solve_clock;
   int postsolve_clock;
-  // HiGHS run time
-  double run_highs_clock_time = 0;
-  // HiGHS run start time - used to compute HiGHS run time
-  double run_highs_clock_start_time = initial_clock_start;
 };
 
 #endif /* UTIL_HIGHSTIMER_H_ */
