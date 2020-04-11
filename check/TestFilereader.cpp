@@ -84,7 +84,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
     read_status = highs.readModel(model_file);
     REQUIRE(read_status == HighsStatus::Error);
   }
-
 }
 TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   std::string filename;
@@ -150,7 +149,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   are_the_same = lp_mps == highs.getLp();
   REQUIRE(are_the_same);
 
-  //  std::remove(filename_ems.c_str());
+  std::remove(filename_ems.c_str());
 
   // Read lp and compare with mps
   std::cout << "Reading " << filename_lp << std::endl;
@@ -163,7 +162,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   are_the_same = lp_mps.equalButForNames(highs.getLp());
   REQUIRE(are_the_same);
 
-  //  std::remove(filename_lp.c_str());
+  std::remove(filename_lp.c_str());
 }
 
 TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
