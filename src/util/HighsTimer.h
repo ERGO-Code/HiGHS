@@ -385,14 +385,6 @@ class HighsTimer {
   }
 
   /**
-   * @brief Return the wall-clock time since the clocks were reset
-   */
-  double getTime() {
-    using namespace std::chrono;
-    return duration_cast<duration<double> >(wall_clock::now() - start_time)
-        .count();
-  }
-  /**
    * @brief Return the current wall-clock time
    */
   double getWallTime() {
