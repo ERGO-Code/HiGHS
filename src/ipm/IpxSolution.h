@@ -19,7 +19,7 @@
 #include <vector>
 typedef int64_t ipxint;
 
-struct IpxSolution {
+class IpxSolution {
   ipxint num_col;
   ipxint num_row;
   std::vector<double> ipx_col_value;
