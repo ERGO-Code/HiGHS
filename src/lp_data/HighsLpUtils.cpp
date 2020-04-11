@@ -1837,7 +1837,7 @@ void analyseLp(const HighsLp& lp, const std::string message) {
   for (int row = 0; row < lp.numRow_; row++)
     rowRange[row] = lp.rowUpper_[row] - lp.rowLower_[row];
 
-  printf("\n%s model data: Analysis\n", message);
+  printf("\n%s model data: Analysis\n", message.c_str());
   analyseVectorValues("Column costs", lp.numCol_, lp.colCost_);
   analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_);
   analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_);
