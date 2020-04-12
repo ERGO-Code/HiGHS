@@ -269,20 +269,44 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
 
-  //  testSolvers(highs, model_iteration_count,
-  //  simplex_strategy_iteration_count);
-  /*
-  model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  read_status = loadLpFromFile(options, lp);
-  REQUIRE(read_status == HighsStatus::OK);
-
-  return_status = highs.passModel(lp);
+  testSolvers(highs, model_iteration_count, simplex_strategy_iteration_count);
+  
+  model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
+  return_status = highs.setHighsOptionValue("model_file", model_file);
   REQUIRE(return_status == HighsStatus::OK);
 
-  */
-  /*
+
+  return_status = highs.setHighsOptionValue("solver", "simplex");
+  REQUIRE(return_status == HighsStatus::OK);
+
+  return_status =
+    highs.setHighsOptionValue("simplex_strategy", 0);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  read_status = highs.readModel(model_file);
+  REQUIRE(read_status == HighsStatus::OK);
+
+  return_status = highs.setBasis();
+  REQUIRE(return_status == HighsStatus::OK);
+
+  int simplex_iteration_count;
   return_status = highs.getHighsInfoValue("simplex_iteration_count",
-  simplex_iteration_count); REQUIRE(return_status == HighsStatus::OK);
-  REQUIRE(simplex_iteration_count == 86);
-  */
+					  simplex_iteration_count);
+  REQUIRE(return_status == HighsStatus::OK);
+
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::OK);
+
+  const HighsInfo& info = highs.getHighsInfo();
+  REQUIRE(info.num_dual_infeasibilities == 1);
+
+  simplex_iteration_count += 458;
+  REQUIRE(simplex_iteration_count == info.simplex_iteration_count);
+
+  HighsModelStatus model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::NOTSET);
+
+  model_status = highs.getModelStatus(true);
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+
 }

@@ -65,8 +65,9 @@ void HighsLogMessage(FILE* pass_logfile, HighsMessageType type,
   va_start(argptr, format);
 
   if (logmsgcb == NULL) {
-    fprintf(pass_logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour,
-            timeinfo->tm_min, timeinfo->tm_sec, HighsMessageTypeTag[(int)type]);
+    //    fprintf(pass_logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour,
+    //            timeinfo->tm_min, timeinfo->tm_sec, HighsMessageTypeTag[(int)type]);
+    fprintf(pass_logfile, "%-7s: ", HighsMessageTypeTag[(int)type]);
     vfprintf(pass_logfile, format, argptr);
     fprintf(pass_logfile, "\n");
   } else {
