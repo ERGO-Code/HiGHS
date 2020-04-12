@@ -589,6 +589,25 @@ OptionStatus getOptionValue(FILE* logfile, const std::string& name,
   return OptionStatus::OK;
 }
 
+void resetOptions() {
+  for (int index = 0; index < num_options; index++) {
+    HighsOptionType type = option_records[index]->type;
+    if (type == HighsOptionType::BOOL) {
+      (OptionRecordBool*)option_records[index]->value = (OptionRecordBool*)option_records[index]-default_value;
+      /*
+    } else if (type == HighsOptionType::INT) {
+      reportOption(file, ((OptionRecordInt*)option_records[index])[0],
+                   report_only_non_default_values, html);
+    } else if (type == HighsOptionType::DOUBLE) {
+      reportOption(file, ((OptionRecordDouble*)option_records[index])[0],
+                   report_only_non_default_values, html);
+    } else {
+      reportOption(file, ((OptionRecordString*)option_records[index])[0],
+                   report_only_non_default_values, html);
+      */
+    }
+}
+
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
                                const bool report_only_non_default_values,

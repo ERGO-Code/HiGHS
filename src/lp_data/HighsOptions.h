@@ -191,6 +191,8 @@ OptionStatus getOptionValue(FILE* logfile, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
+void resetOptions();
+
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
                                const bool report_only_non_default_values = true,
