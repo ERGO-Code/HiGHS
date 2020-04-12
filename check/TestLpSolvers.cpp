@@ -20,7 +20,7 @@ void testSolver(Highs& highs, const std::string solver,
   int crossover_iteration_count;
   HighsModelStatus model_status;
   HighsStatus return_status;
-  const bool perform_timeout_test = true;  // false;  //
+  const bool perform_timeout_test = false; // true;  // 
   const bool use_simplex = solver == "simplex";
 
   const HighsInfo& info = highs.getHighsInfo();
