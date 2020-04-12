@@ -20,12 +20,6 @@
 #include <cstdlib>
 #include <string>
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
-
 /**
  * @brief Clock record structure
  */
