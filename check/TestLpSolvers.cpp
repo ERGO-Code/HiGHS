@@ -20,7 +20,7 @@ void testSolver(Highs& highs, const std::string solver,
   int crossover_iteration_count;
   HighsModelStatus model_status;
   HighsStatus return_status;
-  const bool perform_timeout_test = false;  // true;  //
+  const bool perform_timeout_test = true;  // false;  //
   const bool use_simplex = solver == "simplex";
 
   const HighsInfo& info = highs.getHighsInfo();
@@ -217,11 +217,12 @@ void testSolversSetup(const std::string model,
 
 void testSolvers(Highs& highs, IterationCount& model_iteration_count,
                  const vector<int>& simplex_strategy_iteration_count) {
+  /*
   int i = (int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL;
   model_iteration_count.simplex = simplex_strategy_iteration_count[i];
   testSolver(highs, "simplex", model_iteration_count, i);
+  */
 
-  /*
   int from_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_MIN;
   int to_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_NUM;
   for (int i = from_i; i < to_i; i++) {
@@ -229,7 +230,6 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
     testSolver(highs, "simplex", model_iteration_count, i);
   }
   testSolver(highs, "ipm", model_iteration_count);
-  */
 }
 
 // No commas in test case name.
@@ -270,17 +270,14 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   testSolvers(highs, model_iteration_count, simplex_strategy_iteration_count);
-  
+
+  // Now check that we can change model within the same Highs instance
+  // First reset all the options to their default values
+  return_status = highs.resetHighsOptions();
+  REQUIRE(return_status == HighsStatus::OK);
+
   model_file = std::string(HIGHS_DIR) + "/check/instances/etamacro.mps";
   return_status = highs.setHighsOptionValue("model_file", model_file);
-  REQUIRE(return_status == HighsStatus::OK);
-
-
-  return_status = highs.setHighsOptionValue("solver", "simplex");
-  REQUIRE(return_status == HighsStatus::OK);
-
-  return_status =
-    highs.setHighsOptionValue("simplex_strategy", 0);
   REQUIRE(return_status == HighsStatus::OK);
 
   read_status = highs.readModel(model_file);
@@ -291,7 +288,7 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
 
   int simplex_iteration_count;
   return_status = highs.getHighsInfoValue("simplex_iteration_count",
-					  simplex_iteration_count);
+                                          simplex_iteration_count);
   REQUIRE(return_status == HighsStatus::OK);
 
   return_status = highs.run();
@@ -308,5 +305,4 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
 
   model_status = highs.getModelStatus(true);
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
-
 }

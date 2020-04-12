@@ -191,7 +191,7 @@ OptionStatus getOptionValue(FILE* logfile, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
-void resetOptions();
+void resetOptions(std::vector<OptionRecord*>& option_records);
 
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,

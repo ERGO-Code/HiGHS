@@ -139,6 +139,11 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
+HighsStatus Highs::resetHighsOptions() {
+  resetOptions(options_.records);
+  return HighsStatus::OK;
+}
+
 HighsStatus Highs::writeHighsOptions(
     const std::string filename, const bool report_only_non_default_values) {
   HighsStatus return_status = HighsStatus::OK;

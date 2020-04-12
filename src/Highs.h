@@ -138,6 +138,8 @@ class Highs {
 
   const HighsOptions& getHighsOptions() const;
 
+  HighsStatus resetHighsOptions();
+
   HighsStatus writeHighsOptions(
       const std::string filename,  //!< The filename
       const bool report_only_non_default_values = true);
