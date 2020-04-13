@@ -452,7 +452,31 @@ void Reader::processboundssec() {
          var->lowerbound = -std::numeric_limits<double>::infinity(); 
          var->upperbound = std::numeric_limits<double>::infinity();
          i += 2;
+		 continue;
       }
+
+	  // CONST COMP VAR COMP CONST
+	  if (sectiontokens[LpSectionKeyword::BOUNDS].size() - i >= 5
+		  && sectiontokens[LpSectionKeyword::BOUNDS][i]->type == ProcessedTokenType::CONST
+		  && sectiontokens[LpSectionKeyword::BOUNDS][i + 1]->type == ProcessedTokenType::COMP
+		  && sectiontokens[LpSectionKeyword::BOUNDS][i + 2]->type == ProcessedTokenType::VARID
+		  && sectiontokens[LpSectionKeyword::BOUNDS][i + 3]->type == ProcessedTokenType::COMP
+		  && sectiontokens[LpSectionKeyword::BOUNDS][i + 4]->type == ProcessedTokenType::CONST) {
+		  lpassert(((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::BOUNDS][i + 1].get())->dir == LpComparisonType::LEQ);
+		  lpassert(((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::BOUNDS][i + 3].get())->dir == LpComparisonType::LEQ);
+
+		  double lb = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::BOUNDS][i].get())->value;
+		  double ub = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::BOUNDS][i + 4].get())->value;
+
+		  std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BOUNDS][i + 2].get())->name;
+		  std::shared_ptr<Variable> var = builder.getvarbyname(name);
+
+		  var->lowerbound = lb;
+		  var->upperbound = ub;
+
+		  i += 5;
+		  continue;
+	  }
 
       // CONST COMP VAR
       if (sectiontokens[LpSectionKeyword::BOUNDS].size() - i >= 3
@@ -512,28 +536,7 @@ void Reader::processboundssec() {
          continue;
       }
       
-      // CONST COMP VAR COMP CONST
-      if (sectiontokens[LpSectionKeyword::BOUNDS].size() -i >= 5
-      && sectiontokens[LpSectionKeyword::BOUNDS][i]->type == ProcessedTokenType::CONST
-      && sectiontokens[LpSectionKeyword::BOUNDS][i+1]->type == ProcessedTokenType::COMP
-      && sectiontokens[LpSectionKeyword::BOUNDS][i+2]->type == ProcessedTokenType::VARID
-      && sectiontokens[LpSectionKeyword::BOUNDS][i+3]->type == ProcessedTokenType::COMP
-      && sectiontokens[LpSectionKeyword::BOUNDS][i+4]->type == ProcessedTokenType::CONST) {
-         lpassert(((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::BOUNDS][i+1].get())->dir == LpComparisonType::LEQ);
-         lpassert(((ProcessedComparisonToken*)sectiontokens[LpSectionKeyword::BOUNDS][i+3].get())->dir == LpComparisonType::LEQ);
-
-         double lb = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::BOUNDS][i].get())->value;
-         double ub = ((ProcessedConstantToken*)sectiontokens[LpSectionKeyword::BOUNDS][i+4].get())->value;
-         
-         std::string name = ((ProcessedVarIdToken*)sectiontokens[LpSectionKeyword::BOUNDS][i+2].get())->name;
-         std::shared_ptr<Variable> var = builder.getvarbyname(name);
-
-         var->lowerbound = lb;
-         var->upperbound = ub;
-
-         i += 5;
-         continue;
-      }
+	  lpassert(false);
    }
 }
 
