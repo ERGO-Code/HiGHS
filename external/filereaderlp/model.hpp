@@ -41,7 +41,7 @@ struct QuadTerm {
 struct Expression {
    std::vector<std::shared_ptr<LinTerm>> linterms;
    std::vector<std::shared_ptr<QuadTerm>> quadterms; 
-   double offset;
+   double offset = 0;
    std::string name = "";
 };
 

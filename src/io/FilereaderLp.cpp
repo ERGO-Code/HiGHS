@@ -108,16 +108,14 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   HighsLp& model) {
   try {
     Model m = readinstance(options.model_file);
-    // transform Model to HighsLp
-
+    
     // build variable index and gather variable information
-    std::map<std::shared_ptr<Variable>, unsigned int> varindex;
-
+    std::map<std::string, unsigned int> varindex;
 
     model.numCol_ = m.variables.size();
     model.numRow_ = m.constraints.size();
-    for (int i=0; i<m.variables.size(); i++) {
-      varindex[m.variables[i]] = i;
+    for (unsigned int i=0; i<m.variables.size(); i++) {
+      varindex[m.variables[i]->name] = i;
       model.colLower_.push_back(m.variables[i]->lowerbound);
       model.colUpper_.push_back(m.variables[i]->upperbound);
       model.col_names_.push_back(m.variables[i]->name);
@@ -125,17 +123,18 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 
     // get objective
     model.offset_ = m.objective->offset;
-    for (int i=0; i<m.objective->linterms.size(); i++) {
+    model.colCost_.resize(model.numCol_, 0.0);
+    for (unsigned int i=0; i<m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
-      model.colCost_[varindex[lt->var]] = lt->coef;
+      model.colCost_[varindex[lt->var->name]] = lt->coef;
     }
 
     //handle constraints
     std::map<std::shared_ptr<Variable>, std::vector<unsigned int>> consofvarmap_index;
     std::map<std::shared_ptr<Variable>, std::vector<double>> consofvarmap_value;
-    for(int i=0; i<m.constraints.size(); i++) {
+    for (unsigned int i=0; i<m.constraints.size(); i++) {
       std::shared_ptr<Constraint> con = m.constraints[i];
-      for(int j=0; j<con->expr->linterms.size(); j++) {
+      for (unsigned int j=0; j<con->expr->linterms.size(); j++) {
         std::shared_ptr<LinTerm> lt = con->expr->linterms[j];
         if (consofvarmap_index.count(lt->var) == 0) {
            consofvarmap_index[lt->var] = std::vector<unsigned int>();
@@ -145,22 +144,23 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
         consofvarmap_value[lt->var].push_back(lt->coef);
       }
 
-      model.rowLower_[i] = con->lowerbound;
-      model.rowUpper_[i] = con->upperbound;
+      model.rowLower_.push_back(con->lowerbound);
+      model.rowUpper_.push_back(con->upperbound);
     }
 
     int nz = 0;
     for(int i=0; i<model.numCol_; i++) {
       std::shared_ptr<Variable> var = m.variables[i];
       model.Astart_.push_back(nz);
-      for(int j=0; j<consofvarmap_index[var].size(); j++) {
-        model.Aindex_[nz] = consofvarmap_index[var][j];
-        model.Avalue_[nz] = consofvarmap_value[var][j];
+      for(unsigned int j=0; j<consofvarmap_index[var].size(); j++) {
+        model.Aindex_.push_back(consofvarmap_index[var][j]);
+        model.Avalue_.push_back(consofvarmap_value[var][j]);
         nz++;
       }
     }
+    model.nnz_ = nz;
     model.Astart_.push_back(nz);
-    
+    model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::MINIMIZE : ObjSense::MAXIMIZE;
   } catch(std::invalid_argument ex) {
      return FilereaderRetcode::PARSERERROR;
   }
