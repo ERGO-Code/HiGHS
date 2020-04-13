@@ -3,6 +3,7 @@
 #include "builder.hpp"
 
 #include <cstdio>
+#include <stdexcept>
 #include <limits>
 #include <map>
 #include <memory>
