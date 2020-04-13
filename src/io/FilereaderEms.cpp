@@ -282,12 +282,3 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
   f.close();
   return HighsStatus::OK;
 }
-
-FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
-                                                   HighsModelBuilder& model) {
-  if (filename) {
-  }  // surpress warning.
-  if (model.getNumberOfVariables() > 0) {
-  }  // surpress warning.
-  return FilereaderRetcode::NOT_IMPLEMENTED;
-}

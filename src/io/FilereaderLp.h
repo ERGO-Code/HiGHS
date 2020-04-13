@@ -229,58 +229,18 @@ class FilereaderLp : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const HighsOptions& options,
                                       HighsLp& model);
-  FilereaderRetcode readModelFromFile(const char* filename,
-                                      HighsModelBuilder& model);
   HighsStatus writeModelToFile(const HighsOptions& options,
                                const char* filename, HighsLp& model);
   FilereaderLp();
   ~FilereaderLp();
 
  private:
-  // list of all tokens after initial scan of file
-  std::list<LpToken*> tokenQueue;
 
-  // tokens split according to their section
-  std::list<LpToken*> objectiveSection;
-  std::list<LpToken*> constraintSection;
-  std::list<LpToken*> boundsSection;
-  std::list<LpToken*> binSection;
-  std::list<LpToken*> generalSection;
-  std::list<LpToken*> sosSection;
-  std::list<LpToken*> semiSection;
-
-  FILE* file;
-  char fileBuffer[BUFFERSIZE];
-  char stringBuffer[BUFFERSIZE];
-  char* readingPosition;
-  bool isFileBufferFullyRead;
-  double constantBuffer;
-
-  // functions to read files
-  bool isKeyword(const char* str, const char* const* keywords,
-                 const int nkeywords);
-  LpSectionKeyword tryParseLongSectionKeyword(const char* str, int* characters);
-  LpSectionKeyword tryParseSectionKeyword(const char* str);
-  LpObjectiveSectionKeywordType parseObjectiveSectionKeyword(const char* str);
-
-  FilereaderRetcode tokenizeInput();
-  bool readNextToken();
-  void splitTokens();
-
-  void handleObjectiveSection(HighsModelBuilder& model);
-  void handleConstraintSection(HighsModelBuilder& model);
-  void handleBoundsSection(HighsModelBuilder& model);
-  void handleBinarySection(HighsModelBuilder& model);
-  void handleGeneralSection(HighsModelBuilder& model);
-  void handleSemiSection(HighsModelBuilder& model);
-  FilereaderRetcode handleSosSection(HighsModelBuilder& model);
-
-  LP_FILEREADER_STATUS status;
 
   // functions to write files
   int linelength;
-  void writeToFile(const char* format, ...);
-  void writeToFileLineend();
+  void writeToFile(FILE* file, const char* format, ...);
+  void writeToFileLineend(FILE* file);
 };
 
 #endif
