@@ -72,6 +72,9 @@ HighsStatus HDual::solve() {
 
   // Set solve_bailout to be true if control is to be returned immediately to
   // calling function
+  solvePhase = -1;  // So that test on solvePhase is well defined in bailout()
+  assert(simplex_lp_status.has_dual_objective_value);
+  simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
   solve_bailout = false;
   // Possibly bail out immediately if iteration limit is current value
   if (bailout()) return HighsStatus::Warning;
@@ -511,11 +514,15 @@ void HDual::solvePhase1() {
   // value isn't known. Indicate this so that when the value computed
   // from scratch in build() isn't checked against the the updated
   // value
-  simplex_lp_status.has_dual_objective_value = 0;
+  simplex_lp_status.has_primal_objective_value = false;
+  simplex_lp_status.has_dual_objective_value = false;
   // Set invertHint so that it's assigned when first tested
   invertHint = INVERT_HINT_NO;
   // Set solvePhase=1 so it's set if solvePhase1() is called directly
   solvePhase = 1;
+  solve_bailout = false;
+  // Possibly bail out immediately if iteration limit is current value
+  if (bailout()) return;
   // Report the phase start
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                     ML_DETAILED, "dual-phase-1-start\n");
@@ -617,11 +624,15 @@ void HDual::solvePhase2() {
   // value isn't known. Indicate this so that when the value computed
   // from scratch in build() isn't checked against the the updated
   // value
-  simplex_lp_status.has_dual_objective_value = 0;
+  simplex_lp_status.has_primal_objective_value = false;
+  simplex_lp_status.has_dual_objective_value = false;
   // Set invertHint so that it's assigned when first tested
   invertHint = INVERT_HINT_NO;
   // Set solvePhase=2 so it's set if solvePhase2() is called directly
   solvePhase = 2;
+  solve_bailout = false;
+  // Possibly bail out immediately if iteration limit is current value
+  if (bailout()) return;
   // Report the phase start
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                     ML_DETAILED, "dual-phase-2-start\n");
@@ -789,37 +800,23 @@ void HDual::rebuild() {
   computeDualInfeasible(workHMO);
   analysis->simplexTimerStop(ComputeDuIfsClock);
 
-  // Compute the objective value
+  // Dual objective section
+  //
+  // Record whether the update objective value should be tested. If
+  // the objective value is known, then the updated objective value
+  // should be correct.  Note that computePrimalObjectiveValue sets
+  // has_primal_objective_value
+  const bool check_updated_objective_value =
+    simplex_lp_status.has_dual_objective_value;
+  
   analysis->simplexTimerStart(ComputeDuObjClock);
   computeDualObjectiveValue(workHMO, solvePhase);
   analysis->simplexTimerStop(ComputeDuObjClock);
 
-  double dual_objective_value = simplex_info.dual_objective_value;
-#ifdef HiGHSDEV
-  // Check the objective value maintained by updating against the
-  // value when computed exactly - so long as there is a value to
-  // check against
-  /*
-  if (simplex_lp_status.has_dual_objective_value) {
-    double absDualObjectiveError =
-        fabs(simplex_info.updated_dual_objective_value - dual_objective_value);
-    double rlvDualObjectiveError =
-        absDualObjectiveError / max(1.0, fabs(dual_objective_value));
-    // TODO Investigate these Dual objective value errors
-    if (rlvDualObjectiveError >= 1e-8) {
-      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-    "Dual objective value error |rel| = %12g (%12g)", absDualObjectiveError,
-  rlvDualObjectiveError);
-    }
-  }
-  */
-#endif
-  simplex_info.updated_dual_objective_value = dual_objective_value;
-
-#ifdef HiGHSDEV
-  //  checkDualObjectiveValue("After computing dual objective value");
-  //  printf("Checking INVERT in rebuild()\n"); workHMO.factor_.checkInvert();
-#endif
+  const bool primal = false;
+  if (check_updated_objective_value)
+    checkUpdatedObjectiveValue(workHMO, primal);
+  simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
   analysis->simplexTimerStart(ReportRebuildClock);
   reportRebuild(rebuild_invert_hint);

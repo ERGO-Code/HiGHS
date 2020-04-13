@@ -3925,9 +3925,11 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
   // feasibility tolerances for the scaled LP
   const bool get_new_scaled_feasibility_tolerances =
       scaled_model_status == HighsModelStatus::OPTIMAL;
-  // The scaled infeasibility parameters are not known if the time (or
-  // iteration?) limit has been reached
+  // The scaled infeasibility parameters are not known if the dual
+  // objective upper bound has been reached, the time limit has been
+  // reached, or the iteration limit has been reached,
   const bool check_scaled_solution_params =
+      scaled_model_status != HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND &&
       scaled_model_status != HighsModelStatus::REACHED_TIME_LIMIT &&
       scaled_model_status != HighsModelStatus::REACHED_ITERATION_LIMIT;
 
@@ -4080,6 +4082,38 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     }
   }
   return HighsStatus::OK;
+}
+
+void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
+				const bool primal) {
+  
+#ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status = highs_model_object.simplex_lp_status_;
+  std::string algorithm = "Dual";
+  if (primal) algorithm = "Primal";
+  double exact_objective;
+  double updated_objective;
+  if (primal) {
+    assert(simplex_lp_status.has_primal_objective_value);
+    exact_objective = simplex_info.primal_objective_value;
+    updated_objective = simplex_info.updated_primal_objective_value;
+  } else {
+    assert(simplex_lp_status.has_dual_objective_value);
+    exact_objective = simplex_info.dual_objective_value;
+    updated_objective = simplex_info.updated_dual_objective_value;
+  }
+  double absolute_objective_error = fabs(updated_objective - exact_objective);
+  //  printf("CheckObj: absolute_objective_error = %g\n", absolute_objective_error);
+  //  printf("CheckObj: exact_objective = %g\n", exact_objective);
+  double relative_objective_error =
+    absolute_objective_error / max(1.0, fabs(exact_objective));
+  //  printf("CheckObj: relative_objective_error = %g\n", relative_objective_error);
+  if (relative_objective_error >= 1e-8)
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
+		    "%s objective value error |rel| = %12g (%12g)", algorithm.c_str(),
+		    absolute_objective_error, relative_objective_error);
+#endif
 }
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,

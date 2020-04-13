@@ -210,7 +210,7 @@ void testSolversSetup(const std::string model,
         int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI] = 89;
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL] = 101;
-    model_iteration_count.ipm = 14;
+    model_iteration_count.ipm = 13;//14;
     model_iteration_count.crossover = 0;
   }
 }
@@ -306,3 +306,72 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   model_status = highs.getModelStatus(true);
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 }
+
+/*
+TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
+  std::string filename;
+  HighsStatus status;
+  HighsOptions options;
+  Highs highs(options);
+  const HighsInfo& info = highs.getHighsInfo();
+
+  status = highs.setHighsOptionValue("message_level", 7);
+  REQUIRE(status == HighsStatus::OK);
+
+  const double optimal_objective_function_value = 31.2;
+  double optimal_objective_function_value_error;
+  // Test with the primal (minimization) LP
+  filename = std::string(HIGHS_DIR) + "/check/instances/primal.mps";
+  status = highs.setHighsOptionValue("model_file", filename);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.setBasis();
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+
+  optimal_objective_function_value_error =
+      fabs((info.objective_function_value - optimal_objective_function_value) /
+           optimal_objective_function_value);
+  printf("Optimal objective value error = %g\n",
+         optimal_objective_function_value_error);
+  REQUIRE(optimal_objective_function_value_error < 1e-14);
+
+  status = highs.setHighsOptionValue("dual_objective_value_upper_bound", 31.0);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.setBasis();
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+
+  // Test with the dual (maximization) LP
+  filename = std::string(HIGHS_DIR) + "/check/instances/dual.mps";
+  status = highs.setHighsOptionValue("model_file", filename);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.setBasis();
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+
+  optimal_objective_function_value_error =
+      fabs((info.objective_function_value - optimal_objective_function_value) /
+           optimal_objective_function_value);
+  printf("Optimal objective value error = %g\n",
+         optimal_objective_function_value_error);
+  REQUIRE(optimal_objective_function_value_error < 1e-14);
+
+  status = highs.setHighsOptionValue("dual_objective_value_upper_bound", -31.0);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.setBasis();
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+}
+*/

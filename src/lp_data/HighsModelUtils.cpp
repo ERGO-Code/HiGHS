@@ -295,9 +295,6 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
     case HighsModelStatus::MODEL_ERROR:
       return "Model error";
       break;
-    case HighsModelStatus::MODEL_EMPTY:
-      return "Model empty";
-      break;
     case HighsModelStatus::PRESOLVE_ERROR:
       return "Presolve error";
       break;
@@ -306,6 +303,9 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
       break;
     case HighsModelStatus::POSTSOLVE_ERROR:
       return "Postsolve error";
+      break;
+    case HighsModelStatus::MODEL_EMPTY:
+      return "Model empty";
       break;
     case HighsModelStatus::PRIMAL_INFEASIBLE:
       return "Infeasible";  //"Primal infeasible";
@@ -344,14 +344,14 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
       return HighsStatus::Error;
     case HighsModelStatus::MODEL_ERROR:
       return HighsStatus::Error;
-    case HighsModelStatus::MODEL_EMPTY:
-      return HighsStatus::OK;
     case HighsModelStatus::PRESOLVE_ERROR:
       return HighsStatus::Error;
     case HighsModelStatus::SOLVE_ERROR:
       return HighsStatus::Error;
     case HighsModelStatus::POSTSOLVE_ERROR:
       return HighsStatus::Error;
+    case HighsModelStatus::MODEL_EMPTY:
+      return HighsStatus::OK;
     case HighsModelStatus::PRIMAL_INFEASIBLE:
       return HighsStatus::OK;
     case HighsModelStatus::PRIMAL_UNBOUNDED:

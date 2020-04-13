@@ -41,10 +41,10 @@ enum class HighsModelStatus {
   NOTSET = 0,
   LOAD_ERROR,
   MODEL_ERROR,
-  MODEL_EMPTY,
   PRESOLVE_ERROR,
   SOLVE_ERROR,
   POSTSOLVE_ERROR,
+  MODEL_EMPTY,
   PRIMAL_INFEASIBLE,
   PRIMAL_UNBOUNDED,
   OPTIMAL,
@@ -110,7 +110,7 @@ class HighsLp {
 
 // Cost, column and row scaling factors
 struct HighsScale {
-  bool is_scaled_;
+  bool is_scaled_ = false;
   double cost_;
   std::vector<double> col_;
   std::vector<double> row_;

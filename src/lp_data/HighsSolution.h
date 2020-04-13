@@ -19,7 +19,7 @@
 
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
-#include "lp_data/HighsSolution.h"
+//#include "lp_data/HighsSolution.h"
 #include "lp_data/HighsStatus.h"
 
 class HighsLp;

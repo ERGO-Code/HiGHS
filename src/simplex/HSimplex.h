@@ -280,7 +280,12 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     double& new_scaled_primal_feasibility_tolerance,
     double& new_scaled_dual_feasibility_tolerance);
 
-void logRebuild(HighsModelObject& highs_model_object, const bool primal,
+void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
+				const bool primal
+);
+
+void logRebuild(HighsModelObject& highs_model_object,
+		const bool primal,
                 const int solve_phase);
 
 void reportSimplexLpStatus(

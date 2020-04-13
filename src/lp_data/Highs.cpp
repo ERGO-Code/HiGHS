@@ -206,7 +206,8 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   call_status = assessLp(lp_, options_);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
-  // Clear all solver information in HiGHS about (any) previous model
+  // Clear the status, solution, basis and info associated with any previous
+  // model
   call_status = clearSolver();
   return_status =
       interpretCallStatus(call_status, return_status, "clearSolver");
@@ -303,7 +304,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
   if (options_.run_as_hsol) setHsolOptions(options_);
   // Determine whether a model has been loaded.
   assert((int)hmos_.size() <= 1);
-  if ((int)hmos_.size() == 0) {
+  if (hmos_.size() == 0) {
     // No Highs model object, so load model according to value of
     // model_file
     if (options_.model_file.compare(FILENAME_DEFAULT) == 0) {
@@ -311,7 +312,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                       "No model can be loaded in run()");
       return_status = HighsStatus::Error;
-      beforeReturnFromRun();
+      beforeReturnFromRun(return_status);
       return return_status;
     } else {
       std::string model_file = options_.model_file;
@@ -319,7 +320,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
       return_status =
           interpretCallStatus(call_status, return_status, "readModel");
       if (return_status == HighsStatus::Error) {
-        beforeReturnFromRun();
+        beforeReturnFromRun(return_status);
         return return_status;
       }
     }
@@ -341,24 +342,28 @@ basis_.valid_, hmos_[0].basis_.valid_);
   assert(call_status == HighsStatus::OK);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) {
-    beforeReturnFromRun();
+    beforeReturnFromRun(return_status);
     return return_status;
   }
 #endif
 
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) {
-    hmos_[0].unscaled_model_status_ = HighsModelStatus::MODEL_EMPTY;
-    model_status_ = hmos_[0].unscaled_model_status_;
-    beforeReturnFromRun();
-    return highsStatusFromHighsModelStatus(hmos_[0].unscaled_model_status_);
+    model_status_ = HighsModelStatus::MODEL_EMPTY;
+    scaled_model_status_ = model_status_;
+    hmos_[0].unscaled_model_status_ = model_status_;
+    hmos_[0].scaled_model_status_ = model_status_;
+    return_status = highsStatusFromHighsModelStatus(model_status_);
+    beforeReturnFromRun(return_status);
+    return return_status;
   }
 
   HighsSetIO(options_);
 #ifdef HiGHSDEV
   if (checkOptions(options_.logfile, options_.records) != OptionStatus::OK) {
-    beforeReturnFromRun();
-    return HighsStatus::Error;
+    return_status = HighsStatus::Error;
+    beforeReturnFromRun(return_status);
+    return return_status;
   }
 #endif
   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
@@ -418,7 +423,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) {
-          beforeReturnFromRun();
+          beforeReturnFromRun(return_status);
           return return_status;
         }
         break;
@@ -437,7 +442,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) {
-          beforeReturnFromRun();
+          beforeReturnFromRun(return_status);
           return return_status;
         }
         break;
@@ -468,7 +473,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) {
-          beforeReturnFromRun();
+          beforeReturnFromRun(return_status);
           return return_status;
         }
         break;
@@ -476,8 +481,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
       case HighsPresolveStatus::ReducedToEmpty: {
         logPresolveReductions(hmos_[original_hmo].options_,
                               hmos_[original_hmo].lp_, true);
-        hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::OPTIMAL;
         hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
+        hmos_[original_hmo].scaled_model_status_ =
+	  hmos_[original_hmo].unscaled_model_status_;
         // Proceed to postsolve.
         break;
       }
@@ -486,21 +492,14 @@ basis_.valid_, hmos_[0].basis_.valid_);
       case HighsPresolveStatus::Infeasible:
       case HighsPresolveStatus::Unbounded: {
         if (presolve_status == HighsPresolveStatus::Infeasible) {
-          hmos_[original_hmo].scaled_model_status_ =
-              HighsModelStatus::PRIMAL_INFEASIBLE;
-          hmos_[original_hmo].unscaled_model_status_ =
-              HighsModelStatus::PRIMAL_INFEASIBLE;
+          model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
         } else {
-          hmos_[original_hmo].scaled_model_status_ =
-              HighsModelStatus::PRIMAL_UNBOUNDED;
-          hmos_[original_hmo].unscaled_model_status_ =
-              HighsModelStatus::PRIMAL_UNBOUNDED;
+          model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
         }
         HighsLogMessage(
             options_.logfile, HighsMessageType::INFO,
             "Problem status detected on presolve: %s",
-            highsModelStatusToString(hmos_[original_hmo].unscaled_model_status_)
-                .c_str());
+            highsModelStatusToString(model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a
@@ -508,20 +507,27 @@ basis_.valid_, hmos_[0].basis_.valid_);
         // read the HiGHS clock, then work out time for this call
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
-        model_status_ = hmos_[original_hmo].unscaled_model_status_;
-        beforeReturnFromRun();
-        return HighsStatus::OK;
+	// Transfer the model status to the scaled model status and orriginal HMO statuses;
+	scaled_model_status_ = model_status_;
+	hmos_[original_hmo].unscaled_model_status_ = model_status_;
+        hmos_[original_hmo].scaled_model_status_ = model_status_;
+	return_status = HighsStatus::OK;
+        beforeReturnFromRun(return_status);
+        return return_status;
       }
       default: {
         // case HighsPresolveStatus::Error
+	model_status_ = HighsModelStatus::PRESOLVE_ERROR;
         HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
-                          "Presolve failed.");
+                          "Presolve failed");
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-        hmos_[original_hmo].unscaled_model_status_ =
-            HighsModelStatus::PRESOLVE_ERROR;
-        model_status_ = hmos_[original_hmo].unscaled_model_status_;
-        beforeReturnFromRun();
-        return HighsStatus::Error;
+	// Transfer the model status to the scaled model status and orriginal HMO statuses;
+	scaled_model_status_ = model_status_;
+	hmos_[original_hmo].unscaled_model_status_ = model_status_;
+        hmos_[original_hmo].scaled_model_status_ = model_status_;
+	return_status = HighsStatus::Error;
+        beforeReturnFromRun(return_status);
+        return return_status;
       }
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
@@ -592,7 +598,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
           // Recover the options
           options = save_options;
           if (return_status == HighsStatus::Error) {
-            beforeReturnFromRun();
+            beforeReturnFromRun(return_status);
             return return_status;
           }
           int iteration_count1 = info_.simplex_iteration_count;
@@ -604,6 +610,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
       // The original model inherits the solved model's status
       hmos_[original_hmo].unscaled_model_status_ =
           hmos_[solved_hmo].unscaled_model_status_;
+      hmos_[original_hmo].scaled_model_status_ =
+          hmos_[solved_hmo].scaled_model_status_;
     }
   } else {
     // There is a valid basis for the problem or presolve is off
@@ -621,7 +629,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
     return_status =
         interpretCallStatus(call_status, return_status, "runLpSolver");
     if (return_status == HighsStatus::Error) {
-      beforeReturnFromRun();
+      beforeReturnFromRun(return_status);
       return return_status;
     }
   }
@@ -635,8 +643,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // infeasible or unbounded
 
   if (!getHighsModelStatusAndInfo(solved_hmo)) {
-    beforeReturnFromRun();
-    return HighsStatus::Error;
+    return_status = HighsStatus::Error;
+    beforeReturnFromRun(return_status);
+    return return_status;
   }
 
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and
@@ -704,7 +713,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // something worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
   return_status = interpretCallStatus(call_status, return_status);
-  beforeReturnFromRun();
+  beforeReturnFromRun(return_status);
   return return_status;
 }
 
@@ -951,10 +960,14 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
 
 HighsStatus Highs::setBasis() {
   underDevelopmentLogMessage("setBasis");
+  // Invalidate the basis for HiGHS
   basis_.valid_ = false;
-  if (!haveHmo("setBasis")) return HighsStatus::OK;
-  HighsSimplexInterface interface(hmos_[0]);
-  interface.clearBasis();
+  if (hmos_.size() > 0) {
+    // Invalidate the Highs basis and any simplex basis for the model
+    hmos_[0].basis_.valid_ = false;
+    HighsSimplexInterface interface(hmos_[0]);
+    interface.clearBasis();
+  }
   return HighsStatus::OK;
 }
 
@@ -1338,6 +1351,7 @@ bool Highs::deleteRows(int* mask) {
 double Highs::getHighsRunTime() { return timer_.readRunHighsClock(); }
 
 HighsStatus Highs::clearSolver() {
+  clearModelStatus();
   clearSolution();
   clearBasis();
   clearInfo();
@@ -1345,19 +1359,30 @@ HighsStatus Highs::clearSolver() {
 }
 
 #ifdef HiGHSDEV
-void Highs::reportModelStatusSolutionBasis(const std::string message,
-                                           const HighsModelStatus model_status,
-                                           const HighsLp& lp,
-                                           const HighsSolution& solution,
-                                           const HighsBasis& basis) {
+void Highs::reportModelStatusSolutionBasis(const std::string message, const int hmo_ix) {
+  HighsModelStatus& model_status = model_status_;
+  HighsModelStatus& scaled_model_status = scaled_model_status_;
+  HighsSolution& solution = solution_;
+  HighsBasis& basis = basis_;
+  HighsLp& lp = lp_;
+  if (hmo_ix >= 0) {
+    assert(hmo_ix < (int)hmos_.size());
+    model_status = hmos_[hmo_ix].unscaled_model_status_;
+    scaled_model_status = hmos_[hmo_ix].scaled_model_status_;
+    solution = hmos_[hmo_ix].solution_;
+    basis = hmos_[hmo_ix].basis_;
+    lp = hmos_[hmo_ix].lp_;
+  }
   printf(
-      "\n%s\nModelStatus = %s; LP(%d, %d); solution (%d, %d; %d, %d); basis %d "
-      "(%d, %d)\n\n",
-      message.c_str(), utilHighsModelStatusToString(model_status).c_str(),
-      lp.numCol_, lp.numRow_, (int)solution.col_value.size(),
-      (int)solution.row_value.size(), (int)solution.col_dual.size(),
-      (int)solution.row_dual.size(), basis.valid_, (int)basis.col_status.size(),
-      (int)basis.row_status.size());
+	 "\n%s\nModel status = %s; Scaled model status = %s; LP(%d, %d); solution (%d, %d; %d, %d); basis %d "
+	 "(%d, %d)\n\n",
+	 message.c_str(),
+	 utilHighsModelStatusToString(model_status).c_str(),
+	 utilHighsModelStatusToString(scaled_model_status).c_str(),
+	 lp.numCol_, lp.numRow_, (int)solution.col_value.size(),
+	 (int)solution.row_value.size(), (int)solution.col_dual.size(),
+	 (int)solution.row_dual.size(), basis.valid_, (int)basis.col_status.size(),
+	 (int)basis.row_status.size());
 }
 #endif
 
@@ -1618,9 +1643,12 @@ bool Highs::haveHmo(const string method_name) {
   return have_hmo;
 }
 
-void Highs::clearSolution() {
+void Highs::clearModelStatus() {
   model_status_ = HighsModelStatus::NOTSET;
   scaled_model_status_ = HighsModelStatus::NOTSET;
+}
+
+void Highs::clearSolution() {
   info_.primal_status = (int)PrimalDualStatus::STATUS_NOTSET;
   info_.dual_status = (int)PrimalDualStatus::STATUS_NOTSET;
   solution_.col_value.resize(0);
@@ -1630,8 +1658,6 @@ void Highs::clearSolution() {
 }
 
 void Highs::clearBasis() {
-  model_status_ = HighsModelStatus::NOTSET;
-  scaled_model_status_ = HighsModelStatus::NOTSET;
   basis_.valid_ = false;
   basis_.col_status.resize(0);
   basis_.row_status.resize(0);
@@ -1639,12 +1665,81 @@ void Highs::clearBasis() {
 
 void Highs::clearInfo() { info_.clear(); }
 
-void Highs::beforeReturnFromRun() {
-  if ((int)hmos_.size() > 1) {
-    // Remove the HMO created for the presolved LP
-    hmos_.pop_back();
-    // Make sure that there is only one entry in hmos_
+void Highs::beforeReturnFromRun(HighsStatus& return_status) {
+  if (hmos_.size() == 0) {
+    // No model has been loaded: ensure that the status, solution,
+    // basis and info associated with any previous model are cleared
+    clearSolver();
+  } else {
+    // A model has been loaded: remove any additional HMO created when solving
+    if (hmos_.size() > 1) hmos_.pop_back();
+    // There should be only one entry in hmos_
     assert((int)hmos_.size() == 1);
+    // Make sure that the unscaled status, solution, basis and info
+    // are consistent with the scaled status
+    reportModelStatusSolutionBasis("beforeReturnFromRun(HiGHS)");
+    reportModelStatusSolutionBasis("beforeReturnFromRun(HMO_0)", 0);
+    switch (scaled_model_status_) {
+      // First consider the error returns
+      case HighsModelStatus::NOTSET:
+      case HighsModelStatus::LOAD_ERROR:
+      case HighsModelStatus::MODEL_ERROR:
+      case HighsModelStatus::PRESOLVE_ERROR:
+      case HighsModelStatus::SOLVE_ERROR:
+      case HighsModelStatus::POSTSOLVE_ERROR:
+        clearSolver();
+	assert(return_status == HighsStatus::Error);
+        break;
+
+      // Then consider the OK returns
+      case HighsModelStatus::MODEL_EMPTY:
+        clearSolution();
+        clearBasis();
+	//        clearInfo(); Reinstate later onece iteration counts removed from HSP
+        assert(model_status_ == scaled_model_status_);
+	assert(return_status == HighsStatus::OK);
+        break;
+
+      case HighsModelStatus::PRIMAL_INFEASIBLE:
+        clearSolution();
+        assert(model_status_ == scaled_model_status_);
+	assert(return_status == HighsStatus::OK);
+        break;
+
+      case HighsModelStatus::PRIMAL_UNBOUNDED:
+        clearSolution();
+	//        clearInfo(); Reinstate later onece iteration counts removed from HSP
+        assert(model_status_ == scaled_model_status_);
+	assert(return_status == HighsStatus::OK);
+        break;
+
+      case HighsModelStatus::OPTIMAL:
+	assert(info_.primal_status = (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+	assert(info_.dual_status = (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        assert(model_status_ == HighsModelStatus::NOTSET ||
+	       model_status_ == HighsModelStatus::OPTIMAL);
+	assert(return_status == HighsStatus::OK);
+        break;
+
+      case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+        clearSolution();
+        clearBasis();
+	//        clearInfo(); Reinstate later onece iteration counts removed from HSP
+        assert(model_status_ == scaled_model_status_);
+	assert(return_status == HighsStatus::OK);
+        break;
+
+      // Finally consider the warning returns
+      case HighsModelStatus::REACHED_TIME_LIMIT:
+      case HighsModelStatus::REACHED_ITERATION_LIMIT:
+        clearSolution();
+        clearBasis();
+	//        clearInfo(); Reinstate later onece iteration counts removed from HSP
+        assert(model_status_ == scaled_model_status_);
+	assert(return_status == HighsStatus::Warning);
+        break;
+
+    }
   }
 }
 

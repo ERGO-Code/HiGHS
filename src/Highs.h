@@ -686,11 +686,7 @@ class Highs {
    * @brief Report the model status, solution and basis vector sizes and basis
    * validity
    */
-  void reportModelStatusSolutionBasis(const std::string message,
-                                      const HighsModelStatus model_status,
-                                      const HighsLp& lp,
-                                      const HighsSolution& solution,
-                                      const HighsBasis& basis);
+  void reportModelStatusSolutionBasis(const std::string message, const int hmo_ix=-1);
 #endif
 
   std::string highsModelStatusToString(
@@ -751,12 +747,13 @@ class Highs {
   bool updateHighsSolutionBasis();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
+  void clearModelStatus();
   void clearSolution();
   void clearBasis();
   void clearInfo();
 
   void underDevelopmentLogMessage(const string method_name);
-  void beforeReturnFromRun();
+  void beforeReturnFromRun(HighsStatus& return_status);
 
   friend class HighsMipSolver;
 };

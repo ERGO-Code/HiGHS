@@ -102,6 +102,8 @@ HighsStatus HQPrimal::solve() {
   solvePhase = ??InfeasCount > 0 ? 1 : 2;
   */
   solvePhase = 0;  // Frig to skip while (solvePhase) {*}
+  assert(simplex_lp_status.has_primal_objective_value);
+  simplex_info.updated_primal_objective_value = simplex_info.primal_objective_value;
   solve_bailout = false;
   // Possibly bail out immediately if iteration limit is current value
   if (bailout()) return HighsStatus::Warning;
@@ -159,9 +161,7 @@ HighsStatus HQPrimal::solve() {
     */
   }
   solvePhase = 2;
-  assert(workHMO.scaled_model_status_ != HighsModelStatus::REACHED_TIME_LIMIT &&
-         workHMO.scaled_model_status_ !=
-             HighsModelStatus::REACHED_ITERATION_LIMIT);
+  assert(solve_bailout == false);
   analysis = &workHMO.simplex_analysis_;
   if (solvePhase == 2) {
     int it0 = scaled_solution_params.simplex_iteration_count;
@@ -191,7 +191,8 @@ void HQPrimal::solvePhase2() {
   // value isn't known. Indicate this so that when the value
   // computed from scratch in build() isn't checked against the the
   // updated value
-  simplex_lp_status.has_primal_objective_value = 0;
+  simplex_lp_status.has_primal_objective_value = false;
+  simplex_lp_status.has_dual_objective_value = false;
   // Set invertHint so that it's assigned when first tested
   invertHint = INVERT_HINT_NO;
   // Set solvePhase=2 so it's set if solvePhase2() is called directly
@@ -370,29 +371,22 @@ void HQPrimal::primalRebuild() {
   analysis->simplexTimerStop(ComputePrimalClock);
 
   // Primal objective section
+  //
+  // Record whether the update objective value should be tested. If
+  // the objective value is known, then the updated objective value
+  // should be correct.  Note that computePrimalObjectiveValue sets
+  // has_primal_objective_value
+  const bool check_updated_objective_value =
+    simplex_lp_status.has_primal_objective_value;
+
   analysis->simplexTimerStart(ComputePrObjClock);
   computePrimalObjectiveValue(workHMO);
   analysis->simplexTimerStop(ComputePrObjClock);
 
-  double primal_objective_value = simplex_info.primal_objective_value;
-#ifdef HiGHSDEV
-  // Check the objective value maintained by updating against the
-  // value when computed exactly - so long as there is a value to
-  // check against
-  if (simplex_lp_status.has_primal_objective_value) {
-    double absPrimalObjectiveError = fabs(
-        simplex_info.updated_primal_objective_value - primal_objective_value);
-    double rlvPrimalObjectiveError =
-        absPrimalObjectiveError / max(1.0, fabs(primal_objective_value));
-    // TODO Investigate these Primal objective value errors
-    if (rlvPrimalObjectiveError >= 1e-8) {
-      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-                      "Primal objective value error |rel| = %12g (%12g)",
-                      absPrimalObjectiveError, rlvPrimalObjectiveError);
-    }
-  }
-#endif
-  simplex_info.updated_primal_objective_value = primal_objective_value;
+  const bool primal = true;
+  if (check_updated_objective_value)
+    checkUpdatedObjectiveValue(workHMO, primal);
+  simplex_info.updated_primal_objective_value = simplex_info.primal_objective_value;
 
   analysis->simplexTimerStart(ComputePrIfsClock);
   computePrimalInfeasible(workHMO);
