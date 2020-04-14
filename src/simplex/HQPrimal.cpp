@@ -103,7 +103,8 @@ HighsStatus HQPrimal::solve() {
   */
   solvePhase = 0;  // Frig to skip while (solvePhase) {*}
   assert(simplex_lp_status.has_primal_objective_value);
-  simplex_info.updated_primal_objective_value = simplex_info.primal_objective_value;
+  simplex_info.updated_primal_objective_value =
+      simplex_info.primal_objective_value;
   solve_bailout = false;
   // Possibly bail out immediately if iteration limit is current value
   if (bailout()) return HighsStatus::Warning;
@@ -377,7 +378,7 @@ void HQPrimal::primalRebuild() {
   // should be correct.  Note that computePrimalObjectiveValue sets
   // has_primal_objective_value
   const bool check_updated_objective_value =
-    simplex_lp_status.has_primal_objective_value;
+      simplex_lp_status.has_primal_objective_value;
 
   analysis->simplexTimerStart(ComputePrObjClock);
   computePrimalObjectiveValue(workHMO);
@@ -386,7 +387,8 @@ void HQPrimal::primalRebuild() {
   const bool primal = true;
   if (check_updated_objective_value)
     checkUpdatedObjectiveValue(workHMO, primal);
-  simplex_info.updated_primal_objective_value = simplex_info.primal_objective_value;
+  simplex_info.updated_primal_objective_value =
+      simplex_info.primal_objective_value;
 
   analysis->simplexTimerStart(ComputePrIfsClock);
   computePrimalInfeasible(workHMO);

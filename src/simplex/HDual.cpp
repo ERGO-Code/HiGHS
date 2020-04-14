@@ -807,8 +807,8 @@ void HDual::rebuild() {
   // should be correct.  Note that computePrimalObjectiveValue sets
   // has_primal_objective_value
   const bool check_updated_objective_value =
-    simplex_lp_status.has_dual_objective_value;
-  
+      simplex_lp_status.has_dual_objective_value;
+
   analysis->simplexTimerStart(ComputeDuObjClock);
   computeDualObjectiveValue(workHMO, solvePhase);
   analysis->simplexTimerStop(ComputeDuObjClock);

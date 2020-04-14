@@ -686,7 +686,8 @@ class Highs {
    * @brief Report the model status, solution and basis vector sizes and basis
    * validity
    */
-  void reportModelStatusSolutionBasis(const std::string message, const int hmo_ix=-1);
+  void reportModelStatusSolutionBasis(const std::string message,
+                                      const int hmo_ix = -1);
 #endif
 
   std::string highsModelStatusToString(
