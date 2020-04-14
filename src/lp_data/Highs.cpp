@@ -1679,8 +1679,10 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
     assert((int)hmos_.size() == 1);
     // Make sure that the unscaled status, solution, basis and info
     // are consistent with the scaled status
+#ifdef HiGHSDEV
     reportModelStatusSolutionBasis("beforeReturnFromRun(HiGHS)");
     reportModelStatusSolutionBasis("beforeReturnFromRun(HMO_0)", 0);
+#endif
     switch (scaled_model_status_) {
       // First consider the error returns
       case HighsModelStatus::NOTSET:
