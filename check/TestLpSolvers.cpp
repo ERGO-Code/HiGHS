@@ -217,6 +217,10 @@ void testSolversSetup(const std::string model,
 
 void testSolvers(Highs& highs, IterationCount& model_iteration_count,
                  const vector<int>& simplex_strategy_iteration_count) {
+  bool have_omp = false;
+#ifdef OPENMP
+  have_omp = true;
+#endif
   /*
   int i = (int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL;
   model_iteration_count.simplex = simplex_strategy_iteration_count[i];
@@ -226,6 +230,10 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
   int from_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_MIN;
   int to_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_NUM;
   for (int i = from_i; i < to_i; i++) {
+    if (!have_omp) {
+      if (i == (int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS) continue;
+      if (i == (int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI) continue;
+    }
     model_iteration_count.simplex = simplex_strategy_iteration_count[i];
     testSolver(highs, "simplex", model_iteration_count, i);
   }
