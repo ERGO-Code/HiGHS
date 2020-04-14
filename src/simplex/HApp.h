@@ -169,6 +169,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   //
   // All this is independent of the number of OMP threads available,
   // since code with multiple HiGHS threads can be run in serial.
+#ifdef OPENMP
   if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
     simplex_info.min_threads = max(DUAL_TASKS_MIN_THREADS, highs_min_threads);
     simplex_info.max_threads = max(simplex_info.min_threads, highs_max_threads);
@@ -176,6 +177,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_info.min_threads = max(DUAL_MULTI_MIN_THREADS, highs_min_threads);
     simplex_info.max_threads = max(simplex_info.min_threads, highs_max_threads);
   }
+#endif
   // Set the number of HiGHS threads to be used to be the maximum
   // number to be used
   simplex_info.num_threads = simplex_info.max_threads;
