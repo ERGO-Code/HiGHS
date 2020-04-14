@@ -328,6 +328,16 @@ struct HighsSolutionParams {
   double max_dual_infeasibility;
 };
 
+struct HighsInterationCounts {
+  int simplex;
+  int simplex_primal_phase1;
+  int simplex_primal_phase2;
+  int simplex_dual_phase1;
+  int simplex_dual_phase2;
+  int ipx_ipm;
+  int ipx_crossover;
+};
+
 struct HighsSolution {
   std::vector<double> col_value;
   std::vector<double> col_dual;
