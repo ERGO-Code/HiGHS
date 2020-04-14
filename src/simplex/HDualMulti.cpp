@@ -69,7 +69,7 @@ void HDual::iterateMulti() {
     printf(
         "Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = "
         "%11.4g; alpha = %11.4g; Dvx = %d\n",
-        workHMO.scaled_solution_params_.simplex_iteration_count, rowOut,
+        workHMO.iteration_counts_.simplex, rowOut,
         columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow,
         num_devex_iterations);
   }
@@ -311,7 +311,7 @@ void HDual::minorUpdate() {
   if (minor_new_devex_framework) {
     /*
     printf("Iter %7d (Major %7d): Minor new Devex framework\n",
-           workHMO.scaled_solution_params_.simplex_iteration_count,
+           workHMO.iteration_counts_.simplex,
            multi_iteration);
     */
     minorInitialiseDevexFramework();
@@ -449,6 +449,7 @@ void HDual::minorUpdatePivots() {
   numericalTrouble = -1;
   // Move thisTo Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
+  workHMO.iteration_counts_.simplex++;
   workHMO.scaled_solution_params_.simplex_iteration_count++;
 }
 
@@ -561,7 +562,7 @@ void HDual::majorUpdate() {
   majorUpdateFactor();
   if (new_devex_framework) {
     //    printf("Iter %7d: New Devex framework\n",
-    //    workHMO.scaled_solution_params_.simplex_iteration_count);
+    //    workHMO.iteration_counts_.simplex);
     const bool parallel = true;
     initialiseDevexFramework(parallel);
   }
@@ -942,6 +943,7 @@ void HDual::majorRollback() {
     workHMO.simplex_info_.workShift_[finish->columnOut] = finish->shiftOut;
 
     // 5. The iteration count
+    workHMO.iteration_counts_.simplex--;
     workHMO.scaled_solution_params_.simplex_iteration_count--;
   }
 }

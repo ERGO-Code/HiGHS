@@ -377,9 +377,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // Running as LP solver: start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
   if (!run_highs_clock_already_running) timer_.startRunHighsClock();
-  // Record the initial time and zero the overall iteration count
+  // Record the initial time and set the postsolve iteration count to
+  // -1 to identify whether it's not required
   double initial_time = timer_.readRunHighsClock();
-  int postsolve_iteration_count = 0;
+  int postsolve_iteration_count = -1;
   // Define identifiers to refer to the HMO of the original LP (0) and
   // the HMO created when using presolve. The index of this HMO is 1
   // when solving a one-off LP, but greater than one if presolve has
@@ -602,8 +603,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
             beforeReturnFromRun(return_status);
             return return_status;
           }
-          int iteration_count1 = info_.simplex_iteration_count;
-          postsolve_iteration_count = iteration_count1 - iteration_count0;
+          postsolve_iteration_count = info_.simplex_iteration_count - iteration_count0;
         }
       }
     } else {
@@ -665,8 +665,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Postsolve  : %d\n", postsolve_iteration_count);
+  if (postsolve_iteration_count<0) {
+    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+		      "Postsolve  : 0 (Not required)\n");
+  } else {
+    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+		      "Postsolve  : %d\n", postsolve_iteration_count);
+  }
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
                     "Time       : %0.3g\n", this_solve_time);
   if (this_solve_time > 0) {
@@ -1460,6 +1465,8 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
       info_.ipm_iteration_count;
   model.unscaled_solution_params_.crossover_iteration_count =
       info_.crossover_iteration_count;
+  HighsIterationCounts& iteration_counts = hmos_[model_index].iteration_counts_;
+  copyHighsIterationCounts(info_, iteration_counts);
 
   // Solve the LP
   call_status = solveLp(model, message);
@@ -1473,6 +1480,7 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
       model.unscaled_solution_params_.ipm_iteration_count;
   info_.crossover_iteration_count =
       model.unscaled_solution_params_.crossover_iteration_count;
+  copyHighsIterationCounts(iteration_counts, info_);
 
   return return_status;
 }
@@ -1679,8 +1687,10 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
     assert((int)hmos_.size() == 1);
     // Make sure that the unscaled status, solution, basis and info
     // are consistent with the scaled status
+#ifdef HiGHSDEV
     reportModelStatusSolutionBasis("beforeReturnFromRun(HiGHS)");
     reportModelStatusSolutionBasis("beforeReturnFromRun(HMO_0)", 0);
+#endif
     switch (scaled_model_status_) {
       // First consider the error returns
       case HighsModelStatus::NOTSET:

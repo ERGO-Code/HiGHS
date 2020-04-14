@@ -156,10 +156,10 @@ struct HighsSimplexLpStatus {
 
 struct HighsSimplexInfo {
   bool initialised = false;
-  // Simplex information regarding primal and dual solution, objective
-  // and iteration counts for this Highs Model Object. This is
-  // information which should be retained from one run to the next in
-  // order to provide hot starts.
+  // Simplex information regarding primal solution, dual solution and
+  // objective for this Highs Model Object. This is information which
+  // should be retained from one run to the next in order to provide
+  // hot starts.
   //
   // Part of working model which are assigned and populated as much as
   // possible when a model is being defined
@@ -218,8 +218,6 @@ struct HighsSimplexInfo {
 
   double dual_simplex_cost_perturbation_multiplier;
   int update_limit;
-  //  int iteration_limit;
-  //  double dual_objective_value_upper_bound;
 
   // Internal options - can't be changed externally
   bool store_squared_primal_infeasibility = false;
@@ -328,14 +326,10 @@ struct HighsSolutionParams {
   double max_dual_infeasibility;
 };
 
-struct HighsInterationCounts {
-  int simplex;
-  int simplex_primal_phase1;
-  int simplex_primal_phase2;
-  int simplex_dual_phase1;
-  int simplex_dual_phase2;
-  int ipx_ipm;
-  int ipx_crossover;
+struct HighsIterationCounts {
+  int simplex = 0;
+  int ipm = 0;
+  int crossover = 0;
 };
 
 struct HighsSolution {

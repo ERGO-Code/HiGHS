@@ -16,9 +16,6 @@
 #include "lp_data/HighsOptions.h"
 
 void HighsInfo::clear() {
-  simplex_iteration_count = 0;
-  ipm_iteration_count = 0;
-  crossover_iteration_count = 0;
   primal_status = (int)PrimalDualStatus::STATUS_NOTSET;
   dual_status = (int)PrimalDualStatus::STATUS_NOTSET;
   objective_function_value = 0;

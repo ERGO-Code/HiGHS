@@ -110,6 +110,7 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
 #endif
 
 std::string iterationsToString(const HighsSolutionParams& solution_params);
+std::string iterationsToString(const HighsIterationCounts& iterations_counts);
 
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,

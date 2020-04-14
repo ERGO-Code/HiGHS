@@ -140,19 +140,19 @@ HighsStatus HQPrimal::solve() {
 
   while (solvePhase) {
     /*
-    int it0 = scaled_solution_params.simplex_iteration_count;
+    int it0 = workHMO.iteration_counts_.simplex;
     switch (solvePhase) {
       case 1:
         analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
         solvePhase1();
         analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
         simplex_info.primal_phase1_iteration_count +=
-    (scaled_solution_params.simplex_iteration_count - it0); break; case 2:
+    (workHMO.iteration_counts_.simplex - it0); break; case 2:
         analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
         solvePhase2();
         analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
         simplex_info.primal_phase2_iteration_count +=
-    (scaled_solution_params.simplex_iteration_count - it0); break; case 4:
+    (workHMO.iteration_counts_.simplex - it0); break; case 4:
     break; default: solvePhase = 0; break;
     }
     // Jump for primal
@@ -165,14 +165,14 @@ HighsStatus HQPrimal::solve() {
   assert(solve_bailout == false);
   analysis = &workHMO.simplex_analysis_;
   if (solvePhase == 2) {
-    int it0 = scaled_solution_params.simplex_iteration_count;
+    int it0 = workHMO.iteration_counts_.simplex;
 
     analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
     solvePhase2();
     analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
 
     simplex_info.primal_phase2_iteration_count +=
-        (scaled_solution_params.simplex_iteration_count - it0);
+        (workHMO.iteration_counts_.simplex - it0);
     if (bailout()) return HighsStatus::Warning;
   }
   /*
@@ -418,7 +418,7 @@ void HQPrimal::primalRebuild() {
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
         total_rebuilds, sv_invertHint,
-        workHMO.scaled_solution_params_.simplex_iteration_count,
+        workHMO.iteration_counts_.simplex,
         total_rebuild_time);
   }
 #endif
@@ -797,6 +797,7 @@ analysis->row_ep_density);
   }
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  workHMO.iteration_counts_.simplex++;
   workHMO.scaled_solution_params_.simplex_iteration_count++;
 
   /* Reset the devex when there are too many errors */
@@ -1216,6 +1217,7 @@ void HQPrimal::phase1Update() {
 
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  workHMO.iteration_counts_.simplex++;
   workHMO.scaled_solution_params_.simplex_iteration_count++;
 }
 
@@ -1338,6 +1340,8 @@ void HQPrimal::reportRebuild(const int rebuild_invert_hint) {
 }
 
 bool HQPrimal::bailout() {
+  int simplex_iteration_count = workHMO.iteration_counts_.simplex;
+  assert(simplex_iteration_count == workHMO.scaled_solution_params_.simplex_iteration_count);
   if (solve_bailout) {
     // Bailout has already been decided: check that it's for one of these
     // reasons

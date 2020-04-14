@@ -222,13 +222,12 @@ HighsStatus analyseHighsBasicSolution(
                   utilHighsModelStatusToString(model_status).c_str());
 
 #ifdef HiGHSDEV
+  
   printf(
-      "grep_AnBsSol,%s,%s,%d,%d,%d,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%"
+      "grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%"
       "g,%g,%d,%g,%g,%d,%g,%g\n",
       lp.model_name_.c_str(), message.c_str(),
-      solution_params.simplex_iteration_count,
-      solution_params.ipm_iteration_count,
-      solution_params.crossover_iteration_count, primal_objective_value,
+      primal_objective_value,
       utilHighsModelStatusToString(model_status).c_str(),
       num_nonzero_basic_duals, num_large_nonzero_basic_duals,
       max_nonzero_basic_dual, sum_nonzero_basic_duals, num_off_bound_nonbasic,
@@ -1035,12 +1034,20 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
 #endif
 
 std::string iterationsToString(const HighsSolutionParams& solution_params) {
+  HighsIterationCounts iterations_counts;
+  iterations_counts.simplex = solution_params.simplex_iteration_count;
+  iterations_counts.ipm = solution_params.ipm_iteration_count;
+  iterations_counts.crossover = solution_params.crossover_iteration_count;
+  return iterationsToString(iterations_counts);
+}
+
+std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
   std::string iteration_statement = "";
   bool not_first = false;
   int num_positive_count = 0;
-  if (solution_params.simplex_iteration_count) num_positive_count++;
-  if (solution_params.ipm_iteration_count) num_positive_count++;
-  if (solution_params.crossover_iteration_count) num_positive_count++;
+  if (iterations_counts.simplex) num_positive_count++;
+  if (iterations_counts.ipm) num_positive_count++;
+  if (iterations_counts.crossover) num_positive_count++;
   if (num_positive_count == 0) {
     iteration_statement += "0 iterations; ";
     return iteration_statement;
@@ -1048,21 +1055,21 @@ std::string iterationsToString(const HighsSolutionParams& solution_params) {
   if (num_positive_count > 1) iteration_statement += "(";
   int count;
   std::string count_str;
-  count = solution_params.simplex_iteration_count;
+  count = iterations_counts.simplex;
   if (count) {
     count_str = std::to_string(count);
     if (not_first) iteration_statement += "; ";
     iteration_statement += count_str + " " + "Simplex";
     not_first = true;
   }
-  count = solution_params.ipm_iteration_count;
+  count = iterations_counts.ipm;
   if (count) {
     count_str = std::to_string(count);
     if (not_first) iteration_statement += "; ";
     iteration_statement += count_str + " " + "IPM";
     not_first = true;
   }
-  count = solution_params.crossover_iteration_count;
+  count = iterations_counts.crossover;
   if (count) {
     count_str = std::to_string(count);
     if (not_first) iteration_statement += "; ";

@@ -91,8 +91,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     return HighsStatus::Error;
   }
 #ifdef HiGHSDEV
-  const int iteration_count0 =
+  const int iteration_count00 =
       highs_model_object.scaled_solution_params_.simplex_iteration_count;
+  const int iteration_count0 =
+      highs_model_object.iteration_counts_.simplex;
   const int dual_phase1_iteration_count0 =
       simplex_info.dual_phase1_iteration_count;
   const int dual_phase2_iteration_count0 =
@@ -275,8 +277,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         simplex_info.primal_objective_value;
 #ifdef HiGHSDEV
     analysis.simplexTimerStop(SimplexTotalClock);
+    const int delta_iteration_count0 =
+        scaled_solution_params.simplex_iteration_count - iteration_count00;
     const int delta_iteration_count =
-        scaled_solution_params.simplex_iteration_count - iteration_count0;
+      highs_model_object.iteration_counts_.simplex - iteration_count0;
     const int delta_dual_phase1_iteration_count =
         simplex_info.dual_phase1_iteration_count - dual_phase1_iteration_count0;
     const int delta_dual_phase2_iteration_count =

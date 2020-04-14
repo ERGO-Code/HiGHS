@@ -46,6 +46,7 @@ using std::runtime_error;
 HighsStatus HDual::solve() {
   HighsOptions& options = workHMO.options_;
   HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
+  HighsIterationCounts& iteration_counts = workHMO.iteration_counts_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -229,7 +230,8 @@ HighsStatus HDual::solve() {
   // The major solving loop
   //
   while (solvePhase) {
-    int it0 = scaled_solution_params.simplex_iteration_count;
+    int it0 = iteration_counts.simplex;
+    int it00 = scaled_solution_params.simplex_iteration_count;
     // When starting a new phase the (updated) dual objective function
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
@@ -241,14 +243,14 @@ HighsStatus HDual::solve() {
         solvePhase1();
         analysis->simplexTimerStop(SimplexDualPhase1Clock);
         simplex_info.dual_phase1_iteration_count +=
-            (scaled_solution_params.simplex_iteration_count - it0);
+            (scaled_solution_params.simplex_iteration_count - it00);
         break;
       case 2:
         analysis->simplexTimerStart(SimplexDualPhase2Clock);
         solvePhase2();
         analysis->simplexTimerStop(SimplexDualPhase2Clock);
         simplex_info.dual_phase2_iteration_count +=
-            (scaled_solution_params.simplex_iteration_count - it0);
+            (scaled_solution_params.simplex_iteration_count - it00);
         break;
       case 4:
         break;
@@ -295,7 +297,8 @@ HighsStatus HDual::solve() {
                                   10.0,
                                   analysis->cleanup_dual_step_distribution);
 #endif
-      int it0 = scaled_solution_params.simplex_iteration_count;
+      int it0 = iteration_counts.simplex;
+      int it00 = scaled_solution_params.simplex_iteration_count;
       const bool full_logging = false;  // true;//
       if (full_logging)
         analysis->messaging(options.logfile, options.output, ML_ALWAYS);
@@ -334,7 +337,7 @@ HighsStatus HDual::solve() {
           objective_after);
 #endif
       simplex_info.primal_phase2_iteration_count +=
-          (scaled_solution_params.simplex_iteration_count - it0);
+          (scaled_solution_params.simplex_iteration_count - it00);
     }
   }
   ok = ok_to_solve(workHMO, 1, solvePhase);
@@ -834,7 +837,7 @@ void HDual::rebuild() {
         "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
         "%11.4g\n",
         solvePhase, total_rebuilds, rebuild_invert_hint,
-        workHMO.scaled_solution_params_.simplex_iteration_count,
+        workHMO.iteration_counts_.simplex,
         total_rebuild_time);
   }
 #endif
@@ -917,7 +920,7 @@ void HDual::iterate() {
     printf(
         "Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = "
         "%11.4g; alpha = %11.4g; Dvx = %d\n",
-        workHMO.scaled_solution_params_.simplex_iteration_count, rowOut,
+        workHMO.iteration_counts_.simplex, rowOut,
         columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow,
         num_devex_iterations);
   }
@@ -1190,7 +1193,7 @@ bool HDual::newDevexFramework(const double updated_edge_weight) {
   if (return_new_devex_framework) {
     printf("New Devex framework: (Iter %d) updated weight = %11.4g; computed
   weight = %11.4g; Devex ratio = %11.4g\n",
-           workHMO.scaled_solution_params_.simplex_iteration_count,
+           workHMO.iteration_counts_.simplex,
            updated_edge_weight, computed_edge_weight, devex_ratio);
     return true;
   }
@@ -1660,6 +1663,7 @@ void HDual::updatePivots() {
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
   workHMO.scaled_solution_params_.simplex_iteration_count++;
+  workHMO.iteration_counts_.simplex++;
   //
   // Update the invertible representation of the basis matrix
   update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
@@ -1805,6 +1809,8 @@ bool HDual::dualInfoOk(const HighsLp& lp) {
 }
 
 bool HDual::bailout() {
+  int simplex_iteration_count = workHMO.iteration_counts_.simplex;
+  assert(simplex_iteration_count == workHMO.scaled_solution_params_.simplex_iteration_count);
   if (solve_bailout) {
     // Bailout has already been decided: check that it's for one of these
     // reasons

@@ -185,7 +185,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     bool imprecise_solution;
     call_status =
         solveLpIpx(options, model.timer_, model.lp_, imprecise_solution,
-                   model.basis_, model.solution_, model.unscaled_model_status_,
+                   model.basis_, model.solution_, model.iteration_counts_,
+		   model.unscaled_model_status_,
                    model.unscaled_solution_params_);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
