@@ -1664,6 +1664,8 @@ void Highs::clearBasis() {
 void Highs::clearInfo() { info_.clear(); }
 
 void Highs::beforeReturnFromRun(HighsStatus& return_status) {
+  bool have_solution = false;
+  bool have_basis = false;
   if (hmos_.size() == 0) {
     // No model has been loaded: ensure that the status, solution,
     // basis and info associated with any previous model are cleared
@@ -1695,32 +1697,39 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
       case HighsModelStatus::MODEL_EMPTY:
         clearSolution();
         clearBasis();
-        //        clearInfo(); Reinstate later onece iteration counts removed
-        //        from HSP
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
 
       case HighsModelStatus::PRIMAL_INFEASIBLE:
         clearSolution();
+	// May have a basis, according to whether infeasibility was
+	// detected in presolve or solve
+	have_basis = basis_.valid_;
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
 
       case HighsModelStatus::PRIMAL_UNBOUNDED:
         clearSolution();
-        //        clearInfo(); Reinstate later onece iteration counts removed
-        //        from HSP
+	// May have a basis, according to whether infeasibility was
+	// detected in presolve or solve
+	have_basis = basis_.valid_;
+	clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
 
       case HighsModelStatus::OPTIMAL:
-        assert(info_.primal_status =
-                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
-        assert(info_.dual_status =
-                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
-        assert(model_status_ == HighsModelStatus::NOTSET ||
+	have_solution = true;
+	have_basis = true;
+	// The following is an aspiration
+	//        assert(info_.primal_status ==
+	//                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+	//        assert(info_.dual_status ==
+	//                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+	assert(model_status_ == HighsModelStatus::NOTSET ||
                model_status_ == HighsModelStatus::OPTIMAL);
         assert(return_status == HighsStatus::OK);
         break;
@@ -1728,8 +1737,7 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
       case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
         clearSolution();
         clearBasis();
-        //        clearInfo(); Reinstate later onece iteration counts removed
-        //        from HSP
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
@@ -1739,12 +1747,19 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
       case HighsModelStatus::REACHED_ITERATION_LIMIT:
         clearSolution();
         clearBasis();
-        //        clearInfo(); Reinstate later onece iteration counts removed
-        //        from HSP
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::Warning);
         break;
     }
+  }
+  if (have_solution) assert(isSolutionConsistent(lp_, solution_));
+  if (have_basis) {
+    if (!isBasisConsistent(lp_, basis_)) {
+      printf("Basis not consistent when it should be\n");
+    }
+    assert(isBasisConsistent(lp_, basis_));
+    assert(basis_.valid_);
   }
 }
 
