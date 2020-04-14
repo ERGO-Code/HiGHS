@@ -18,91 +18,7 @@
 #include <exception>
 #include <map>
 
-// #include "lp_data/HConst.h"
-// #include "util/stringutil.h"
-
 #include "../external/filereaderlp/reader.hpp"
-
-FilereaderLp::FilereaderLp() {
-}
-
-void emptyTokenQueue(std::list<LpToken*>& list) {
-  while (list.size() > 0) {
-    LpToken* token = list.front();
-    list.pop_front();
-    delete token;
-  }
-}
-
-FilereaderLp::~FilereaderLp() {
-}
-
-//   lp->numCol_ = this->variables.size();
-//   lp->numRow_ = this->linearConstraints.size();
-
-//   lp->sense_ = this->objSense;
-
-//   // determine order of variables
-//   HighsVar** variables = new HighsVar*[lp->numCol_];
-//   for (int i = 0; i < lp->numCol_; i++) {
-//     HighsVar* front = this->variables.front();
-//     this->variables.pop_front();
-//     this->variables.push_back(front);
-//     variables[i] = front;
-//     lp->colCost_.push_back(front->obj);
-//     lp->colLower_.push_back(front->lowerBound);
-//     lp->colUpper_.push_back(front->upperBound);
-//   }
-
-//   // determine order of constraints
-//   HighsLinearCons** constraints = new HighsLinearCons*[lp->numRow_];
-//   for (int i = 0; i < lp->numRow_; i++) {
-//     HighsLinearCons* front = this->linearConstraints.front();
-//     this->linearConstraints.pop_front();
-//     this->linearConstraints.push_back(front);
-//     constraints[i] = front;
-//     lp->rowLower_.push_back(front->lowerBound);
-//     lp->rowUpper_.push_back(front->upperBound);
-//   }
-
-//   // handle constraints
-//   lp->Astart_.clear();
-//   lp->Astart_.push_back(0);
-//   for (int var = 0; var < lp->numCol_; var++) {
-//     VarConsCoefsMap::iterator iter =
-//         this->variableConstraintCoefficientMap.find(variables[var]);
-//     if (iter != this->variableConstraintCoefficientMap.end()) {
-//       std::list<HighsLinearConsCoef*>* coefs = iter->second;
-//       int numberOfCoefficients = coefs->size();
-
-//       lp->Astart_.push_back(lp->Astart_[var] + numberOfCoefficients);
-
-//       for (int coef = 0; coef < numberOfCoefficients; coef++) {
-//         HighsLinearConsCoef* front = coefs->front();
-//         coefs->pop_front();
-//         coefs->push_back(front);
-//         lp->Avalue_.push_back(front->coef);
-//         CoefConsMap::iterator it = this->coefficientConstraintMap.find(front);
-//         if (it != this->coefficientConstraintMap.end()) {
-//           // find index of constraint
-//           HighsCons* currentCons = it->second;
-//           for (int cons = 0; cons < lp->numRow_; cons++) {
-//             if (constraints[cons] == currentCons) {
-//               lp->Aindex_.push_back(cons);
-//               break;
-//             }
-//           }
-//         } else {
-//           // ERROR
-//         }
-//       }
-//     }
-//   }
-
-//   delete[] variables;
-//   delete[] constraints;
-
-
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   HighsLp& model) {
@@ -198,8 +114,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
 
   // write objective
   this->writeToFile(file, "%s", model.sense_ == ObjSense::MINIMIZE
-                              ? LP_KEYWORD_MIN[0]
-                              : LP_KEYWORD_MAX[0]);
+                              ? "min"
+                              : "max");
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
   for (int i = 0; i < model.numCol_; i++) {
@@ -208,7 +124,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
 
   // write constraint section, lower & upper bounds are one constraint each
-  this->writeToFile(file, "%s", LP_KEYWORD_ST[2]);
+  this->writeToFile(file, "st");
   this->writeToFileLineend(file);
   for (int row = 0; row < model.numRow_; row++) {
     if (model.rowLower_[row] == model.rowUpper_[row]) {
@@ -259,7 +175,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   }
 
   // write bounds section
-  this->writeToFile(file, "%s", LP_KEYWORD_BOUNDS[0]);
+  this->writeToFile(file, "bounds");
   this->writeToFileLineend(file);
   for (int i = 0; i < model.numCol_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free
@@ -278,25 +194,25 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFile(file, " %+g <= x%d <= +inf", model.colLower_[i], i + 1);
       this->writeToFileLineend(file);
     } else {
-      this->writeToFile(file, " x%d %s", i + 1, LP_KEYWORD_FREE[0]);
+      this->writeToFile(file, " x%d free", i + 1);
       this->writeToFileLineend(file);
     }
   }
 
   // write binary section
-  this->writeToFile(file, "%s", LP_KEYWORD_BIN[0]);
+  this->writeToFile(file, "bin");
   this->writeToFileLineend(file);
 
   // write general section
-  this->writeToFile(file, "%s", LP_KEYWORD_GEN[0]);
+  this->writeToFile(file, "gen");
   this->writeToFileLineend(file);
 
   // write semi section
-  this->writeToFile(file, "%s", LP_KEYWORD_SEMI[1]);
+  this->writeToFile(file, "semi");
   this->writeToFileLineend(file);
 
   // write end
-  this->writeToFile(file, "%s", LP_KEYWORD_END[0]);
+  this->writeToFile(file, "end");
   this->writeToFileLineend(file);
 
   fclose(file);
