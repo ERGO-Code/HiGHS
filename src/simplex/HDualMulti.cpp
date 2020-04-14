@@ -450,7 +450,6 @@ void HDual::minorUpdatePivots() {
   // Move thisTo Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
   workHMO.iteration_counts_.simplex++;
-  workHMO.scaled_solution_params_.simplex_iteration_count++;
 }
 
 void HDual::minorUpdateRows() {
@@ -944,7 +943,6 @@ void HDual::majorRollback() {
 
     // 5. The iteration count
     workHMO.iteration_counts_.simplex--;
-    workHMO.scaled_solution_params_.simplex_iteration_count--;
   }
 }
 

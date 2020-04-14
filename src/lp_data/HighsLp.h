@@ -311,9 +311,6 @@ struct HighsSolutionParams {
   // Input to solution analysis method
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
-  int simplex_iteration_count = 0;
-  int ipm_iteration_count = 0;
-  int crossover_iteration_count = 0;
   int primal_status = PrimalDualStatus::STATUS_NOTSET;
   int dual_status = PrimalDualStatus::STATUS_NOTSET;
   // Output from solution analysis method

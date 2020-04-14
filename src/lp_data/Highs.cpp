@@ -1459,12 +1459,6 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
   HighsModelObject& model = hmos_[model_index];
 
   // Transfer the LP solver iteration counts to this model
-  model.unscaled_solution_params_.simplex_iteration_count =
-      info_.simplex_iteration_count;
-  model.unscaled_solution_params_.ipm_iteration_count =
-      info_.ipm_iteration_count;
-  model.unscaled_solution_params_.crossover_iteration_count =
-      info_.crossover_iteration_count;
   HighsIterationCounts& iteration_counts = hmos_[model_index].iteration_counts_;
   copyHighsIterationCounts(info_, iteration_counts);
 
@@ -1474,12 +1468,6 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
   if (return_status == HighsStatus::Error) return return_status;
 
   // Transfer this model's LP solver iteration counts to HiGHS
-  info_.simplex_iteration_count =
-      model.unscaled_solution_params_.simplex_iteration_count;
-  info_.ipm_iteration_count =
-      model.unscaled_solution_params_.ipm_iteration_count;
-  info_.crossover_iteration_count =
-      model.unscaled_solution_params_.crossover_iteration_count;
   copyHighsIterationCounts(iteration_counts, info_);
 
   return return_status;

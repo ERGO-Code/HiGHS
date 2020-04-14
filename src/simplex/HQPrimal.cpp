@@ -28,7 +28,6 @@ using std::runtime_error;
 
 HighsStatus HQPrimal::solve() {
   HighsOptions& options = workHMO.options_;
-  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -798,7 +797,6 @@ analysis->row_ep_density);
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
   workHMO.iteration_counts_.simplex++;
-  workHMO.scaled_solution_params_.simplex_iteration_count++;
 
   /* Reset the devex when there are too many errors */
   if (num_bad_devex_weight > 3) {
@@ -1218,7 +1216,6 @@ void HQPrimal::phase1Update() {
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
   workHMO.iteration_counts_.simplex++;
-  workHMO.scaled_solution_params_.simplex_iteration_count++;
 }
 
 /* Reset the devex weight */
@@ -1289,8 +1286,7 @@ void HQPrimal::iterationAnalysisData() {
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
   analysis->edge_weight_mode = DualEdgeWeightMode::DEVEX;
   analysis->solve_phase = solvePhase;
-  analysis->simplex_iteration_count =
-      scaled_solution_params.simplex_iteration_count;
+  analysis->simplex_iteration_count = workHMO.iteration_counts_.simplex;
   analysis->devex_iteration_count = num_devex_iterations;
   analysis->pivotal_row_index = rowOut;
   analysis->leaving_variable = columnOut;
@@ -1340,8 +1336,6 @@ void HQPrimal::reportRebuild(const int rebuild_invert_hint) {
 }
 
 bool HQPrimal::bailout() {
-  int simplex_iteration_count = workHMO.iteration_counts_.simplex;
-  assert(simplex_iteration_count == workHMO.scaled_solution_params_.simplex_iteration_count);
   if (solve_bailout) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
@@ -1352,7 +1346,7 @@ bool HQPrimal::bailout() {
   } else if (workHMO.timer_.readRunHighsClock() > workHMO.options_.time_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
-  } else if (workHMO.scaled_solution_params_.simplex_iteration_count >=
+  } else if (workHMO.iteration_counts_.simplex >=
              workHMO.options_.simplex_iteration_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;

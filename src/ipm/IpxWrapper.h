@@ -554,8 +554,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       unscaled_solution_params.dual_feasibility_tolerance;
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
-  parameters.ipm_maxiter = options.ipm_iteration_limit -
-                           unscaled_solution_params.ipm_iteration_count;
+  parameters.ipm_maxiter = options.ipm_iteration_limit - iteration_counts.ipm;
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
 
@@ -577,7 +576,6 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
   ipx::Info ipx_info = lps.GetInfo();
-  unscaled_solution_params.ipm_iteration_count += (int)ipx_info.iter;
   iteration_counts.ipm += (int)ipx_info.iter;
   //  iteration_counts.crossover += (int)ipx_info.updates_crossover;
 

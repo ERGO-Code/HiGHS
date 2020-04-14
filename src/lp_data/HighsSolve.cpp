@@ -228,8 +228,14 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     }
   }
   call_status = analyseHighsBasicSolution(
-      options.logfile, model.lp_, model.basis_, model.solution_,
-      model.unscaled_model_status_, model.unscaled_solution_params_, message);
+      options.logfile, 
+      model.lp_,
+      model.basis_,
+      model.solution_,
+      model.iteration_counts_,
+      model.unscaled_model_status_,
+      model.unscaled_solution_params_,
+      message);
   return_status = interpretCallStatus(call_status, return_status,
                                       "analyseHighsBasicSolution");
   return return_status;

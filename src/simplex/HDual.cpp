@@ -231,7 +231,6 @@ HighsStatus HDual::solve() {
   //
   while (solvePhase) {
     int it0 = iteration_counts.simplex;
-    int it00 = scaled_solution_params.simplex_iteration_count;
     // When starting a new phase the (updated) dual objective function
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
@@ -242,15 +241,13 @@ HighsStatus HDual::solve() {
         analysis->simplexTimerStart(SimplexDualPhase1Clock);
         solvePhase1();
         analysis->simplexTimerStop(SimplexDualPhase1Clock);
-        simplex_info.dual_phase1_iteration_count +=
-            (scaled_solution_params.simplex_iteration_count - it00);
+        simplex_info.dual_phase1_iteration_count += (iteration_counts.simplex - it0);
         break;
       case 2:
         analysis->simplexTimerStart(SimplexDualPhase2Clock);
         solvePhase2();
         analysis->simplexTimerStop(SimplexDualPhase2Clock);
-        simplex_info.dual_phase2_iteration_count +=
-            (scaled_solution_params.simplex_iteration_count - it00);
+        simplex_info.dual_phase2_iteration_count +=  (iteration_counts.simplex - it0);
         break;
       case 4:
         break;
@@ -298,7 +295,6 @@ HighsStatus HDual::solve() {
                                   analysis->cleanup_dual_step_distribution);
 #endif
       int it0 = iteration_counts.simplex;
-      int it00 = scaled_solution_params.simplex_iteration_count;
       const bool full_logging = false;  // true;//
       if (full_logging)
         analysis->messaging(options.logfile, options.output, ML_ALWAYS);
@@ -336,8 +332,7 @@ HighsStatus HDual::solve() {
           abs_objective_change, rel_objective_change, objective_before,
           objective_after);
 #endif
-      simplex_info.primal_phase2_iteration_count +=
-          (scaled_solution_params.simplex_iteration_count - it00);
+      simplex_info.primal_phase2_iteration_count += (iteration_counts.simplex - it0);
     }
   }
   ok = ok_to_solve(workHMO, 1, solvePhase);
@@ -1016,8 +1011,7 @@ void HDual::iterationAnalysisData() {
   analysis->simplex_strategy = simplex_info.simplex_strategy;
   analysis->edge_weight_mode = dual_edge_weight_mode;
   analysis->solve_phase = solvePhase;
-  analysis->simplex_iteration_count =
-      scaled_solution_params.simplex_iteration_count;
+  analysis->simplex_iteration_count = workHMO.iteration_counts_.simplex;
   analysis->devex_iteration_count = num_devex_iterations;
   analysis->pivotal_row_index = rowOut;
   analysis->leaving_variable = columnOut;
@@ -1662,7 +1656,6 @@ void HDual::updatePivots() {
   // is defined
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
-  workHMO.scaled_solution_params_.simplex_iteration_count++;
   workHMO.iteration_counts_.simplex++;
   //
   // Update the invertible representation of the basis matrix
@@ -1809,8 +1802,6 @@ bool HDual::dualInfoOk(const HighsLp& lp) {
 }
 
 bool HDual::bailout() {
-  int simplex_iteration_count = workHMO.iteration_counts_.simplex;
-  assert(simplex_iteration_count == workHMO.scaled_solution_params_.simplex_iteration_count);
   if (solve_bailout) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
@@ -1823,7 +1814,7 @@ bool HDual::bailout() {
   } else if (workHMO.timer_.readRunHighsClock() > workHMO.options_.time_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
-  } else if (workHMO.scaled_solution_params_.simplex_iteration_count >=
+  } else if (workHMO.iteration_counts_.simplex >=
              workHMO.options_.simplex_iteration_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
