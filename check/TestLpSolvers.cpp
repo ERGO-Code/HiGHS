@@ -315,71 +315,87 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 }
 
-/*
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   std::string filename;
   HighsStatus status;
+  bool bool_status;
+  const double min_objective_function_value = 225494.96316238;
+  const double max_objective_function_value = 225494.96316238;
+  const double use_dual_objective_value_upper_bound = 31.0;
+  double save_dual_objective_value_upper_bound;
   HighsOptions options;
   Highs highs(options);
   const HighsInfo& info = highs.getHighsInfo();
 
-  status = highs.setHighsOptionValue("message_level", 7);
-  REQUIRE(status == HighsStatus::OK);
+    status = highs.setHighsOptionValue("message_level", 7);REQUIRE(status == HighsStatus::OK);
 
-  const double optimal_objective_function_value = 31.2;
-  double optimal_objective_function_value_error;
-  // Test with the primal (minimization) LP
-  filename = std::string(HIGHS_DIR) + "/check/instances/primal.mps";
+  double error;
+  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   status = highs.setHighsOptionValue("model_file", filename);
   REQUIRE(status == HighsStatus::OK);
 
+  printf("!!!!HACKED IN TO FORCE INITIAL MAXIMIZATION\n");
+  highs.readModel(filename);
+  bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
+  REQUIRE(bool_status);
+  status = highs.setHighsOptionValue("presolve", "off");
+
+  // Solve vanilla
+  printf("\nSolving vanilla LP\n");
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+
+  error = fabs((info.objective_function_value - min_objective_function_value) /
+           min_objective_function_value);
+  printf("\nOptimal objective value error = %g\n", error);
+  REQUIRE(error < 1e-14);
+
+  // Set dual objective value upper bound after saving the default value
+  status = highs.getHighsOptionValue("dual_objective_value_upper_bound",
+				     save_dual_objective_value_upper_bound);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.setHighsOptionValue("dual_objective_value_upper_bound",
+				     use_dual_objective_value_upper_bound);
+  REQUIRE(status == HighsStatus::OK);
+
+  // Solve again 
+  printf("\nSolving LP with presolve and dual objective value upper bound of %g\n",
+	 use_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
 
-  optimal_objective_function_value_error =
-      fabs((info.objective_function_value - optimal_objective_function_value) /
-           optimal_objective_function_value);
-  printf("Optimal objective value error = %g\n",
-         optimal_objective_function_value_error);
-  REQUIRE(optimal_objective_function_value_error < 1e-14);
-
-  status = highs.setHighsOptionValue("dual_objective_value_upper_bound", 31.0);
+  // Switch off presolve
+  status = highs.setHighsOptionValue("presolve", "off");
   REQUIRE(status == HighsStatus::OK);
 
+  // Solve again 
+  printf("\nSolving LP without presolve and dual objective value upper bound of %g\n",
+	 use_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
 
-  // Test with the dual (maximization) LP
-  filename = std::string(HIGHS_DIR) + "/check/instances/dual.mps";
-  status = highs.setHighsOptionValue("model_file", filename);
-  REQUIRE(status == HighsStatus::OK);
+  bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
+  REQUIRE(bool_status);
 
+  // Solve again 
+  printf("\nSolving LP as maximization without presolve and dual objective value upper bound of %g\n",
+	 use_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
 
-  optimal_objective_function_value_error =
-      fabs((info.objective_function_value - optimal_objective_function_value) /
-           optimal_objective_function_value);
-  printf("Optimal objective value error = %g\n",
-         optimal_objective_function_value_error);
-  REQUIRE(optimal_objective_function_value_error < 1e-14);
+  error = fabs((info.objective_function_value - max_objective_function_value) /
+           max_objective_function_value);
+  printf("\nOptimal objective value error = %g\n", error);
+  REQUIRE(error < 1e-14);
 
-  status = highs.setHighsOptionValue("dual_objective_value_upper_bound", -31.0);
-  REQUIRE(status == HighsStatus::OK);
-
-  status = highs.setBasis();
-  REQUIRE(status == HighsStatus::OK);
-
-  status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
 }
-*/

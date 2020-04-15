@@ -570,15 +570,21 @@ void HDual::solvePhase1() {
   if (rowOut == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_DETAILED, "dual-phase-1-optimal\n");
-    // Go to phase 2
+    // Optimal in phase 1
     if (simplex_info.dual_objective_value == 0) {
+      // Zero phase 1 objective so go to phase 2
       solvePhase = 2;
     } else {
       // We still have dual infeasible
       if (workHMO.simplex_info_.costs_perturbed) {
-        // Clean up perturbation and go on
+        // Clean up perturbation
         cleanup();
-        if (dualInfeasCount == 0) solvePhase = 2;
+        if (dualInfeasCount == 0 && 
+	    simplex_info.dual_objective_value == 0) {
+	  // No dual infeasibilities and zero phase 1 objective so go
+	  // to phase 2
+	  solvePhase = 2;
+	}
       } else {
         // Report dual infeasible
         solvePhase = -1;
@@ -600,9 +606,13 @@ void HDual::solvePhase1() {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_MINIMAL, "dual-phase-1-unbounded\n");
     if (workHMO.simplex_info_.costs_perturbed) {
-      // Clean up perturbation and go on
+      // Clean up perturbation
       cleanup();
-      if (dualInfeasCount == 0) solvePhase = 2;
+      if (dualInfeasCount == 0) {
+	// No dual infeasibilities and (since unbounded) at least zero
+	// phase 1 objective so go to phase 2
+	solvePhase = 2;
+      }
     } else {
       // Report strange issues
       solvePhase = -1;

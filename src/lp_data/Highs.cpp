@@ -466,11 +466,19 @@ basis_.valid_, hmos_[0].basis_.valid_);
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
+	// Don't try dual cut-off when solving the presolved LP, as the
+	// objective values aren't correct
+	const double save_dual_objective_value_upper_bound =
+	  options_.dual_objective_value_upper_bound;
+	options_.dual_objective_value_upper_bound = HIGHS_CONST_INF;
         this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
         call_status = runLpSolver(solved_hmo, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
+	// Restore the dual objective cut-off
+	options_.dual_objective_value_upper_bound =
+	  save_dual_objective_value_upper_bound;
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error) {
