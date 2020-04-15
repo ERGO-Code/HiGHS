@@ -115,7 +115,7 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
       }
     }
     solution.col_value[iCol] = value;
-    solution.col_dual[iCol] = cost;
+    solution.col_dual[iCol] = (int)lp.sense_ * cost;
     basis.col_status[iCol] = status;
     objective += value * cost;
     unscaled_solution_params.sum_primal_infeasibilities += primal_infeasibility;
@@ -146,5 +146,7 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   }
   highs_model_object.scaled_model_status_ =
       highs_model_object.unscaled_model_status_;
+  highs_model_object.scaled_solution_params_ =
+      highs_model_object.unscaled_solution_params_;
   return HighsStatus::OK;
 }
