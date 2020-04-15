@@ -183,10 +183,10 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // Use IPM
 #ifdef IPX_ON
     bool imprecise_solution;
-    call_status =
-        solveLpIpx(options, model.timer_, model.lp_, imprecise_solution,
-                   model.basis_, model.solution_, model.unscaled_model_status_,
-                   model.unscaled_solution_params_);
+    call_status = solveLpIpx(
+        options, model.timer_, model.lp_, imprecise_solution, model.basis_,
+        model.solution_, model.iteration_counts_, model.unscaled_model_status_,
+        model.unscaled_solution_params_);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
     if (return_status == HighsStatus::Error) return return_status;
@@ -228,7 +228,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   }
   call_status = analyseHighsBasicSolution(
       options.logfile, model.lp_, model.basis_, model.solution_,
-      model.unscaled_model_status_, model.unscaled_solution_params_, message);
+      model.iteration_counts_, model.unscaled_model_status_,
+      model.unscaled_solution_params_, message);
   return_status = interpretCallStatus(call_status, return_status,
                                       "analyseHighsBasicSolution");
   return return_status;

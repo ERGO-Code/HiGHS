@@ -377,9 +377,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // Running as LP solver: start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
   if (!run_highs_clock_already_running) timer_.startRunHighsClock();
-  // Record the initial time and zero the overall iteration count
+  // Record the initial time and set the postsolve iteration count to
+  // -1 to identify whether it's not required
   double initial_time = timer_.readRunHighsClock();
-  int postsolve_iteration_count = 0;
+  int postsolve_iteration_count = -1;
   // Define identifiers to refer to the HMO of the original LP (0) and
   // the HMO created when using presolve. The index of this HMO is 1
   // when solving a one-off LP, but greater than one if presolve has
@@ -540,6 +541,15 @@ basis_.valid_, hmos_[0].basis_.valid_);
         // the solution and basis for postsolve to use to generate a
         // solution(?) and basis that is, hopefully, optimal. This is
         // confirmed or corrected by hot-starting the simplex solver
+        if (presolve_status == HighsPresolveStatus::ReducedToEmpty) {
+          // Have to resize the solution to correspond to an empty
+          // problem because runPostsolve checks this. Size of basis
+          // seems unimportant
+          hmos_[solved_hmo].solution_.col_value.resize(0);
+          hmos_[solved_hmo].solution_.row_value.resize(0);
+          hmos_[solved_hmo].solution_.col_dual.resize(0);
+          hmos_[solved_hmo].solution_.row_dual.resize(0);
+        }
         presolve_info.reduced_solution_ = hmos_[solved_hmo].solution_;
         presolve_info.presolve_[0].setBasisInfo(
             hmos_[solved_hmo].basis_.col_status,
@@ -602,8 +612,19 @@ basis_.valid_, hmos_[0].basis_.valid_);
             beforeReturnFromRun(return_status);
             return return_status;
           }
-          int iteration_count1 = info_.simplex_iteration_count;
-          postsolve_iteration_count = iteration_count1 - iteration_count0;
+          postsolve_iteration_count =
+              info_.simplex_iteration_count - iteration_count0;
+        } else {
+          HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                          "Postsolve return status is %d\n",
+                          (int)postsolve_status);
+          model_status_ = HighsModelStatus::POSTSOLVE_ERROR;
+          scaled_model_status_ = model_status_;
+          hmos_[0].unscaled_model_status_ = model_status_;
+          hmos_[0].scaled_model_status_ = model_status_;
+          return_status = HighsStatus::Error;
+          beforeReturnFromRun(return_status);
+          return return_status;
         }
       }
     } else {
@@ -665,8 +686,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Postsolve  : %d\n", postsolve_iteration_count);
+  if (postsolve_iteration_count < 0) {
+    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+                      "Postsolve  : 0 (Not required)\n");
+  } else {
+    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+                      "Postsolve  : %d\n", postsolve_iteration_count);
+  }
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
                     "Time       : %0.3g\n", this_solve_time);
   if (this_solve_time > 0) {
@@ -1454,12 +1480,8 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
   HighsModelObject& model = hmos_[model_index];
 
   // Transfer the LP solver iteration counts to this model
-  model.unscaled_solution_params_.simplex_iteration_count =
-      info_.simplex_iteration_count;
-  model.unscaled_solution_params_.ipm_iteration_count =
-      info_.ipm_iteration_count;
-  model.unscaled_solution_params_.crossover_iteration_count =
-      info_.crossover_iteration_count;
+  HighsIterationCounts& iteration_counts = hmos_[model_index].iteration_counts_;
+  copyHighsIterationCounts(info_, iteration_counts);
 
   // Solve the LP
   call_status = solveLp(model, message);
@@ -1467,12 +1489,7 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
   if (return_status == HighsStatus::Error) return return_status;
 
   // Transfer this model's LP solver iteration counts to HiGHS
-  info_.simplex_iteration_count =
-      model.unscaled_solution_params_.simplex_iteration_count;
-  info_.ipm_iteration_count =
-      model.unscaled_solution_params_.ipm_iteration_count;
-  info_.crossover_iteration_count =
-      model.unscaled_solution_params_.crossover_iteration_count;
+  copyHighsIterationCounts(iteration_counts, info_);
 
   return return_status;
 }
@@ -1668,6 +1685,8 @@ void Highs::clearBasis() {
 void Highs::clearInfo() { info_.clear(); }
 
 void Highs::beforeReturnFromRun(HighsStatus& return_status) {
+  bool have_solution = false;
+  bool have_basis = false;
   if (hmos_.size() == 0) {
     // No model has been loaded: ensure that the status, solution,
     // basis and info associated with any previous model are cleared
@@ -1699,31 +1718,38 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
       case HighsModelStatus::MODEL_EMPTY:
         clearSolution();
         clearBasis();
-        //        clearInfo(); Reinstate later onece iteration counts removed
-        //        from HSP
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
 
       case HighsModelStatus::PRIMAL_INFEASIBLE:
         clearSolution();
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
+        have_basis = basis_.valid_;
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
 
       case HighsModelStatus::PRIMAL_UNBOUNDED:
         clearSolution();
-        //        clearInfo(); Reinstate later onece iteration counts removed
-        //        from HSP
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
+        have_basis = basis_.valid_;
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
 
       case HighsModelStatus::OPTIMAL:
-        assert(info_.primal_status =
-                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
-        assert(info_.dual_status =
-                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        have_solution = true;
+        have_basis = true;
+        // The following is an aspiration
+        //        assert(info_.primal_status ==
+        //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        //        assert(info_.dual_status ==
+        //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
         assert(model_status_ == HighsModelStatus::NOTSET ||
                model_status_ == HighsModelStatus::OPTIMAL);
         assert(return_status == HighsStatus::OK);
@@ -1732,8 +1758,7 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
       case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
         clearSolution();
         clearBasis();
-        //        clearInfo(); Reinstate later onece iteration counts removed
-        //        from HSP
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
@@ -1743,12 +1768,19 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
       case HighsModelStatus::REACHED_ITERATION_LIMIT:
         clearSolution();
         clearBasis();
-        //        clearInfo(); Reinstate later onece iteration counts removed
-        //        from HSP
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::Warning);
         break;
     }
+  }
+  if (have_solution) assert(isSolutionConsistent(lp_, solution_));
+  if (have_basis) {
+    if (!isBasisConsistent(lp_, basis_)) {
+      printf("Basis not consistent when it should be\n");
+    }
+    assert(isBasisConsistent(lp_, basis_));
+    assert(basis_.valid_);
   }
 }
 

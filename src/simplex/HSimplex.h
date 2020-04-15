@@ -61,7 +61,7 @@ void report_basis(HighsLp& lp, SimplexBasis& simplex_basis);
 // debugging NLA
 void record_pivots(int columnIn, int columnOut, double alpha) {
   // NB This is where the iteration count is updated!
-  if (columnIn >= 0) scaled_solution_params.simplex_iteration_count++;
+  if (columnIn >= 0) iteration_counts_.simplex++;
 #ifdef HiGHSDEV
   historyColumnIn.push_back(columnIn);
   historyColumnOut.push_back(columnOut);

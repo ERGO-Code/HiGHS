@@ -156,10 +156,10 @@ struct HighsSimplexLpStatus {
 
 struct HighsSimplexInfo {
   bool initialised = false;
-  // Simplex information regarding primal and dual solution, objective
-  // and iteration counts for this Highs Model Object. This is
-  // information which should be retained from one run to the next in
-  // order to provide hot starts.
+  // Simplex information regarding primal solution, dual solution and
+  // objective for this Highs Model Object. This is information which
+  // should be retained from one run to the next in order to provide
+  // hot starts.
   //
   // Part of working model which are assigned and populated as much as
   // possible when a model is being defined
@@ -218,8 +218,6 @@ struct HighsSimplexInfo {
 
   double dual_simplex_cost_perturbation_multiplier;
   int update_limit;
-  //  int iteration_limit;
-  //  double dual_objective_value_upper_bound;
 
   // Internal options - can't be changed externally
   bool store_squared_primal_infeasibility = false;
@@ -313,9 +311,6 @@ struct HighsSolutionParams {
   // Input to solution analysis method
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
-  int simplex_iteration_count = 0;
-  int ipm_iteration_count = 0;
-  int crossover_iteration_count = 0;
   int primal_status = PrimalDualStatus::STATUS_NOTSET;
   int dual_status = PrimalDualStatus::STATUS_NOTSET;
   // Output from solution analysis method
@@ -326,6 +321,12 @@ struct HighsSolutionParams {
   int num_dual_infeasibilities;
   double sum_dual_infeasibilities;
   double max_dual_infeasibility;
+};
+
+struct HighsIterationCounts {
+  int simplex = 0;
+  int ipm = 0;
+  int crossover = 0;
 };
 
 struct HighsSolution {
@@ -362,8 +363,10 @@ struct HighsRanging {
   std::vector<int> rowBoundRangeDnOutCol_;
 };
 
-// Make sure the dimensions of solution are the same as numRow_ and numCol_.
+// Make sure the dimensions of solution and basis are the same as
+// numRow_ and numCol_
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
+bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.

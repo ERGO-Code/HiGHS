@@ -335,6 +335,20 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
   return "";
 }
 
+void copyHighsIterationCounts(const HighsIterationCounts& iteration_counts,
+                              HighsInfo& info) {
+  info.simplex_iteration_count = iteration_counts.simplex;
+  info.ipm_iteration_count = iteration_counts.ipm;
+  info.crossover_iteration_count = iteration_counts.crossover;
+}
+
+void copyHighsIterationCounts(const HighsInfo& info,
+                              HighsIterationCounts& iteration_counts) {
+  iteration_counts.simplex = info.simplex_iteration_count;
+  iteration_counts.ipm = info.ipm_iteration_count;
+  iteration_counts.crossover = info.crossover_iteration_count;
+}
+
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {

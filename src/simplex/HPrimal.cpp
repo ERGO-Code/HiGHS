@@ -27,7 +27,6 @@
 using std::runtime_error;
 
 HighsStatus HPrimal::solve() {
-  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -135,19 +134,19 @@ HighsStatus HPrimal::solve() {
 
   while (solvePhase) {
     /*
-    int it0 = scaled_solution_params.simplex_iteration_count;
+    int it0 = iteration_counts_.simplex;
     switch (solvePhase) {
       case 1:
         analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
         solvePhase1();
         analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
         simplex_info.primal_phase1_iteration_count +=
-    (scaled_solution_params.simplex_iteration_count - it0); break; case 2:
+    (iteration_counts_.simplex - it0); break; case 2:
         analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
         solvePhase2();
         analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
         simplex_info.primal_phase2_iteration_count +=
-    (scaled_solution_params.simplex_iteration_count - it0); break; case 4:
+    (iteration_counts_.simplex - it0); break; case 4:
     break; default: solvePhase = 0; break;
     }
     // Jump for primal
@@ -162,14 +161,14 @@ HighsStatus HPrimal::solve() {
              HighsModelStatus::REACHED_ITERATION_LIMIT);
   analysis = &workHMO.simplex_analysis_;
   if (solvePhase == 2) {
-    int it0 = scaled_solution_params.simplex_iteration_count;
+    int it0 = workHMO.iteration_counts_.simplex;
 
     analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
     solvePhase2();
     analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
 
     simplex_info.primal_phase2_iteration_count +=
-        (scaled_solution_params.simplex_iteration_count - it0);
+        (workHMO.iteration_counts_.simplex - it0);
     if (bailout()) return HighsStatus::Warning;
   }
   /*
@@ -369,8 +368,7 @@ void HPrimal::primalRebuild() {
         analysis->simplexTimerRead(IteratePrimalRebuildClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
-        total_rebuilds, sv_invertHint,
-        workHMO.scaled_solution_params_.simplex_iteration_count,
+        total_rebuilds, sv_invertHint, workHMO.iteration_counts_.simplex,
         total_rebuild_time);
   }
 #endif
@@ -748,7 +746,7 @@ void HPrimal::primalUpdate() {
   }
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
-  workHMO.scaled_solution_params_.simplex_iteration_count++;
+  workHMO.iteration_counts_.simplex++;
 
   // Report on the iteration
   iterationAnalysis();
@@ -760,8 +758,7 @@ void HPrimal::iterationAnalysisData() {
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
   analysis->edge_weight_mode = DualEdgeWeightMode::DANTZIG;
   analysis->solve_phase = solvePhase;
-  analysis->simplex_iteration_count =
-      scaled_solution_params.simplex_iteration_count;
+  analysis->simplex_iteration_count = workHMO.iteration_counts_.simplex;
   analysis->devex_iteration_count = 0;
   analysis->pivotal_row_index = rowOut;
   analysis->leaving_variable = columnOut;
@@ -818,7 +815,7 @@ bool HPrimal::bailout() {
   } else if (workHMO.timer_.readRunHighsClock() > workHMO.options_.time_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
-  } else if (workHMO.scaled_solution_params_.simplex_iteration_count >=
+  } else if (workHMO.iteration_counts_.simplex >=
              workHMO.options_.simplex_iteration_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
