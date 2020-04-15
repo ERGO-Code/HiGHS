@@ -156,6 +156,10 @@ int Highs_getHighsStringOptionValue(void* highs, const char* option,
   return retcode;
 }
 
+int Highs_resetHighsOptions(void* highs) {
+  return (int)((Highs*)highs)->resetHighsOptions();
+}
+
 int Highs_getHighsIntInfoValue(void* highs, const char* info, int* value) {
   return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
 }

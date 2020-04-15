@@ -174,6 +174,12 @@ int Highs_getHighsStringOptionValue(
 /*
  * @brief
  */
+int Highs_resetHighsOptions(void* highs       //!< HiGHS object reference
+);   
+
+/*
+ * @brief
+ */
 int Highs_getHighsIntInfoValue(void* highs,       //!< HiGHS object reference
                                const char* info,  //!< The info name
                                int* value         //!< The info value
