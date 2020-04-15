@@ -123,9 +123,6 @@ class HighsSimplexInterface {
   HighsStatus changeCoefficient(const int Xrow, const int Xcol,
                                 const double XnewValue);
 
-  // Shift the objective
-  void shiftObjectiveValue(const double Xshift);
-
   // Utilities to get/change costs and bounds
   // Change the objective sense
   HighsStatus changeObjectiveSense(const ObjSense Xsense);

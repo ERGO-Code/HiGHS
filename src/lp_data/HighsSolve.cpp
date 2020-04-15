@@ -56,6 +56,8 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   double dual_feasibility_tolerance =
       unscaled_solution_params.dual_feasibility_tolerance;
 
+  // Initialise the objective value calculation. Done using
+  // HighsSolution so offset is vanilla
   double objective = lp.offset_;
   bool infeasible = false;
   bool unbounded = false;

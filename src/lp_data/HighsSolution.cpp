@@ -323,7 +323,8 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
   max_dual_residual = 0;
   sum_dual_residual = 0;
 
-  // Initialise the objective value calculations
+  // Initialise the objective value calculations. Done using
+  // HighsSolution so offset is vanilla
   primal_objective_value = lp.offset_;
   dual_objective_value = lp.offset_;
 

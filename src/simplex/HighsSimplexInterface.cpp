@@ -793,20 +793,6 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
   return HighsStatus::OK;
 }
 
-void HighsSimplexInterface::shiftObjectiveValue(const double Xshift) {
-  printf(
-      "Where is shiftObjectiveValue required - so I can interpret what's "
-      "required\n");
-  // Update the LP objective value with the shift
-  highs_model_object.simplex_info_.dual_objective_value += Xshift;
-  // Update the LP offset with the shift
-  highs_model_object.lp_.offset_ += Xshift;
-  if (highs_model_object.simplex_lp_status_.valid) {
-    // Update the simplex LP offset with the shift
-    highs_model_object.simplex_lp_.offset_ += Xshift;
-  }
-}
-
 HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
   HighsLp& lp = highs_model_object.lp_;
   if ((Xsense == ObjSense::MINIMIZE) != (lp.sense_ == ObjSense::MINIMIZE)) {

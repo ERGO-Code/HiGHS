@@ -942,7 +942,9 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
   }
   if (phase != 1) {
     simplex_info.dual_objective_value *= highs_model_object.scale_.cost_;
-    simplex_info.dual_objective_value -= simplex_lp.offset_;
+    // If minimizing the shift is added. If maximizing, workCost (and
+    // hence workDual) are negated, so the shift is subtracted
+    simplex_info.dual_objective_value += ((int)simplex_lp.sense_) * simplex_lp.offset_;
   }
   // Now have dual objective value
   simplex_lp_status.has_dual_objective_value = true;
@@ -967,7 +969,9 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
           simplex_info.workValue_[col] * simplex_lp.colCost_[col];
   }
   simplex_info.primal_objective_value *= highs_model_object.scale_.cost_;
-  simplex_info.primal_objective_value -= simplex_lp.offset_;
+  // Objective value calculation is done using primal values and
+  // original costs so offset is vanilla
+  simplex_info.primal_objective_value += simplex_lp.offset_;
   // Now have primal objective value
   simplex_lp_status.has_primal_objective_value = true;
 }
@@ -1054,6 +1058,8 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
   printf("Linear objective value: %g\n", primal_objective_value);
   primal_objective_value *= highs_model_object.scale_.cost_;
   printf("Scaled objective value: %g\n", primal_objective_value);
+  // Objective value calculation is done using primal values and
+  // original costs so offset is vanilla
   primal_objective_value -= simplex_lp.offset_;
   printf("Offset objective value: %g\n", primal_objective_value);
 }
