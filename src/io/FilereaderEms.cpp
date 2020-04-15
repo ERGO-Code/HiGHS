@@ -258,7 +258,8 @@ HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
   f << std::endl;
 
   f << "column_costs" << std::endl;
-  for (int i = 0; i < model.numCol_; i++) f << (int)model.sense_ * model.colCost_[i] << " ";
+  for (int i = 0; i < model.numCol_; i++)
+    f << (int)model.sense_ * model.colCost_[i] << " ";
   f << std::endl;
 
   if (model.row_names_.size() > 0 && model.col_names_.size() > 0) {

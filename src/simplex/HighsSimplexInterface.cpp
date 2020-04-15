@@ -800,7 +800,7 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
     lp.sense_ = Xsense;
     highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
     highs_model_object.unscaled_model_status_ =
-      highs_model_object.scaled_model_status_;
+        highs_model_object.scaled_model_status_;
   }
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;

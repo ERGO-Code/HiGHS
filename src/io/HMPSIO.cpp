@@ -231,7 +231,8 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
       // reported objective values for problems (eg e226)
 #ifdef HiGHSDEV
       printf(
-          "Using RHS value of %g for N-row in MPS file as negated objective offset\n",
+          "Using RHS value of %g for N-row in MPS file as negated objective "
+          "offset\n",
           data[0]);
 #endif
       objOffset = -data[0];  // Objective offset

@@ -388,7 +388,9 @@ class HDual {
 
   bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);
-  bool bailout();
+  bool bailoutReturn();
+  bool bailoutOnTimeIterations();
+  bool bailoutOnDualObjective();
 
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
                        //!< calling function
