@@ -226,15 +226,15 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
                         name.c_str(), line);
       }
     } else {
-      // Treat a RHS entry for the N row as an objective offset. Not
-      // all MPS readers do this, so give different reported objective
-      // values for problems (eg e226)
+      // Treat negation of a RHS entry for the N row as an objective
+      // offset. Not all MPS readers do this, so give different
+      // reported objective values for problems (eg e226)
 #ifdef HiGHSDEV
       printf(
-          "Using RHS value of %g for N-row in MPS file as objective offset\n",
+          "Using RHS value of %g for N-row in MPS file as negated objective offset\n",
           data[0]);
 #endif
-      objOffset = data[0];  // Objective offset
+      objOffset = -data[0];  // Objective offset
     }
     save_flag1 = flag[1];
   }
@@ -652,7 +652,7 @@ HighsStatus writeMPS(
     fprintf(file, "RHS\n");
     if (objOffset) {
       // Handle the objective offset as a RHS entry for the cost row
-      double v = (int)objSense * objOffset;
+      double v = -(int)objSense * objOffset;
       fprintf(file, "    RHS_V     COST      %.15g\n", v);
     }
     for (int r_n = 0; r_n < numRow; r_n++) {

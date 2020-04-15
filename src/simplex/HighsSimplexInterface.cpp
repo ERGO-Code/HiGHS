@@ -798,6 +798,9 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
   if ((Xsense == ObjSense::MINIMIZE) != (lp.sense_ == ObjSense::MINIMIZE)) {
     // Flip the LP objective sense
     lp.sense_ = Xsense;
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ =
+      highs_model_object.scaled_model_status_;
   }
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
@@ -807,9 +810,6 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
         (simplex_lp.sense_ == ObjSense::MINIMIZE)) {
       // Flip the objective sense
       simplex_lp.sense_ = Xsense;
-      highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
-      highs_model_object.unscaled_model_status_ =
-          highs_model_object.scaled_model_status_;
     }
   }
   return HighsStatus::OK;

@@ -514,7 +514,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
       }
     } else if (rowidx == -1) {
       // objective shift
-      objOffset = val;
+      objOffset = -val;
     }
   };
 

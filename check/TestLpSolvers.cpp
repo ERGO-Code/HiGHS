@@ -319,26 +319,36 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   std::string filename;
   HighsStatus status;
   bool bool_status;
-  const double min_objective_function_value = 225494.96316238;
-  const double max_objective_function_value = 225494.96316238;
+  const double min_objective_function_value = 97.4249606893146;
+  const double max_objective_function_value = 97.4249606893146;
   const double use_dual_objective_value_upper_bound = 31.0;
   double save_dual_objective_value_upper_bound;
   HighsOptions options;
   Highs highs(options);
   const HighsInfo& info = highs.getHighsInfo();
 
-    status = highs.setHighsOptionValue("message_level", 7);REQUIRE(status == HighsStatus::OK);
+  status = highs.setHighsOptionValue("message_level", 7);REQUIRE(status == HighsStatus::OK);
 
   double error;
-  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/e226.mps";
   status = highs.setHighsOptionValue("model_file", filename);
   REQUIRE(status == HighsStatus::OK);
 
+  /*
   printf("!!!!HACKED IN TO FORCE INITIAL MAXIMIZATION\n");
   highs.readModel(filename);
   bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
   REQUIRE(bool_status);
   status = highs.setHighsOptionValue("presolve", "off");
+
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+
+  bool_status = highs.changeObjectiveSense(ObjSense::MINIMIZE);
+  status = highs.setBasis();
+  REQUIRE(status == HighsStatus::OK);
+
+  */
 
   // Solve vanilla
   printf("\nSolving vanilla LP\n");
