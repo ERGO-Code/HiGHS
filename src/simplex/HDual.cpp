@@ -241,13 +241,15 @@ HighsStatus HDual::solve() {
         analysis->simplexTimerStart(SimplexDualPhase1Clock);
         solvePhase1();
         analysis->simplexTimerStop(SimplexDualPhase1Clock);
-        simplex_info.dual_phase1_iteration_count += (iteration_counts.simplex - it0);
+        simplex_info.dual_phase1_iteration_count +=
+            (iteration_counts.simplex - it0);
         break;
       case 2:
         analysis->simplexTimerStart(SimplexDualPhase2Clock);
         solvePhase2();
         analysis->simplexTimerStop(SimplexDualPhase2Clock);
-        simplex_info.dual_phase2_iteration_count +=  (iteration_counts.simplex - it0);
+        simplex_info.dual_phase2_iteration_count +=
+            (iteration_counts.simplex - it0);
         break;
       case 4:
         break;
@@ -332,7 +334,8 @@ HighsStatus HDual::solve() {
           abs_objective_change, rel_objective_change, objective_before,
           objective_after);
 #endif
-      simplex_info.primal_phase2_iteration_count += (iteration_counts.simplex - it0);
+      simplex_info.primal_phase2_iteration_count +=
+          (iteration_counts.simplex - it0);
     }
   }
   ok = ok_to_solve(workHMO, 1, solvePhase);
@@ -832,8 +835,7 @@ void HDual::rebuild() {
         "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
         "%11.4g\n",
         solvePhase, total_rebuilds, rebuild_invert_hint,
-        workHMO.iteration_counts_.simplex,
-        total_rebuild_time);
+        workHMO.iteration_counts_.simplex, total_rebuild_time);
   }
 #endif
   // Data are fresh from rebuild
@@ -915,9 +917,8 @@ void HDual::iterate() {
     printf(
         "Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = "
         "%11.4g; alpha = %11.4g; Dvx = %d\n",
-        workHMO.iteration_counts_.simplex, rowOut,
-        columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow,
-        num_devex_iterations);
+        workHMO.iteration_counts_.simplex, rowOut, columnOut, columnIn,
+        computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
   }
 #endif
 

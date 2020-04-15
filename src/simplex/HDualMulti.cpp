@@ -69,9 +69,8 @@ void HDual::iterateMulti() {
     printf(
         "Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = "
         "%11.4g; alpha = %11.4g; Dvx = %d\n",
-        workHMO.iteration_counts_.simplex, rowOut,
-        columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow,
-        num_devex_iterations);
+        workHMO.iteration_counts_.simplex, rowOut, columnOut, columnIn,
+        computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
   }
 #endif
 

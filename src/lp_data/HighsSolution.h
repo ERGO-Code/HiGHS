@@ -65,25 +65,17 @@ HighsStatus analyseHighsBasicSolution(
 // it is checked as much as possible. Inconsistencies are reported,
 // but not corrected.
 HighsStatus analyseHighsBasicSolution(
-    FILE* logfile,
-    const HighsLp& lp,
-    const HighsBasis& basis,
-    const HighsSolution& solution,
-    const HighsIterationCounts& iteration_counts,
+    FILE* logfile, const HighsLp& lp, const HighsBasis& basis,
+    const HighsSolution& solution, const HighsIterationCounts& iteration_counts,
     const HighsModelStatus model_status,
-    const HighsSolutionParams& solution_params,
-    const string message);
+    const HighsSolutionParams& solution_params, const string message);
 
 // As above, but with report_level
 HighsStatus analyseHighsBasicSolution(
-    FILE* logfile,
-    const HighsLp& lp,
-    const HighsBasis& basis,
-    const HighsSolution& solution,
-    const HighsIterationCounts& iteration_counts,
+    FILE* logfile, const HighsLp& lp, const HighsBasis& basis,
+    const HighsSolution& solution, const HighsIterationCounts& iteration_counts,
     const HighsModelStatus model_status,
-    const HighsSolutionParams& solution_params,
-    const string message,
+    const HighsSolutionParams& solution_params, const string message,
     const int report_level);
 
 void getPrimalDualInfeasibilitiesFromHighsBasicSolution(
@@ -135,9 +127,8 @@ void invalidateSolutionInfeasibilityParams(
 
 bool equalSolutionParams(const HighsSolutionParams& solution_params0,
                          const HighsSolutionParams& solution_params1);
-bool equalSolutionObjectiveParams(
-    const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1);
+bool equalSolutionObjectiveParams(const HighsSolutionParams& solution_params0,
+                                  const HighsSolutionParams& solution_params1);
 bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
                                const HighsSolutionParams& solution_params1);
 bool equalSolutionInfeasibilityParams(

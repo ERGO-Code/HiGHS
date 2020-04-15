@@ -45,12 +45,10 @@ HighsStatus analyseHighsBasicSolution(
       primal_dual_errors, primal_objective_value, dual_objective_value);
 
   return analyseHighsBasicSolution(
-      logfile, highs_model_object.lp_,
-      highs_model_object.basis_,
-      highs_model_object.solution_, 
-      highs_model_object.iteration_counts_,
-      highs_model_object.unscaled_model_status_,
-      get_unscaled_solution_params, message);
+      logfile, highs_model_object.lp_, highs_model_object.basis_,
+      highs_model_object.solution_, highs_model_object.iteration_counts_,
+      highs_model_object.unscaled_model_status_, get_unscaled_solution_params,
+      message);
   return HighsStatus::OK;
 }
 
@@ -61,26 +59,18 @@ HighsStatus analyseHighsBasicSolution(
     FILE* logfile, const HighsModelObject& highs_model_object,
     const HighsSolutionParams& unscaled_solution_params, const string message) {
   return analyseHighsBasicSolution(
-      logfile,
-      highs_model_object.lp_,
-      highs_model_object.basis_,
-      highs_model_object.solution_,
-      highs_model_object.iteration_counts_,
-      highs_model_object.unscaled_model_status_,
-      unscaled_solution_params,
+      logfile, highs_model_object.lp_, highs_model_object.basis_,
+      highs_model_object.solution_, highs_model_object.iteration_counts_,
+      highs_model_object.unscaled_model_status_, unscaled_solution_params,
       message);
 }
 
 // Calls analyseHighsBasicSolution, adding report_level
 HighsStatus analyseHighsBasicSolution(
-    FILE* logfile,
-    const HighsLp& lp,
-    const HighsBasis& basis,
-    const HighsSolution& solution,
-    const HighsIterationCounts& iteration_counts,
+    FILE* logfile, const HighsLp& lp, const HighsBasis& basis,
+    const HighsSolution& solution, const HighsIterationCounts& iteration_counts,
     const HighsModelStatus model_status,
-    const HighsSolutionParams& solution_params,
-    const string message) {
+    const HighsSolutionParams& solution_params, const string message) {
   // Analyse and report on the (unscaled) HiGHS basic solution. Acts
   // as a check that the unscaled model status and unscaled solution
   // parameters have been set correctly.
@@ -90,14 +80,9 @@ HighsStatus analyseHighsBasicSolution(
 #ifdef HiGHSDEV
   report_level = 1;
 #endif
-  return analyseHighsBasicSolution(logfile,
-				   lp,
-				   basis,
-				   solution, 
-                                   iteration_counts,
-				   model_status,
-				   solution_params,
-				   message, report_level);
+  return analyseHighsBasicSolution(logfile, lp, basis, solution,
+                                   iteration_counts, model_status,
+                                   solution_params, message, report_level);
 }
 
 // Analyse the HiGHS basic solution of the given LP. Currently only
@@ -107,14 +92,10 @@ HighsStatus analyseHighsBasicSolution(
 // about the solution. The overall model status is returned in the
 // argument.
 HighsStatus analyseHighsBasicSolution(
-    FILE* logfile,
-    const HighsLp& lp,
-    const HighsBasis& basis,
-    const HighsSolution& solution,
-    const HighsIterationCounts& iteration_counts,
+    FILE* logfile, const HighsLp& lp, const HighsBasis& basis,
+    const HighsSolution& solution, const HighsIterationCounts& iteration_counts,
     const HighsModelStatus model_status,
-    const HighsSolutionParams& solution_params,
-    const string message,
+    const HighsSolutionParams& solution_params, const string message,
     const int report_level) {
   HighsLogMessage(logfile, HighsMessageType::INFO,
                   "HiGHS basic solution: Analysis - %s", message.c_str());
@@ -247,12 +228,11 @@ HighsStatus analyseHighsBasicSolution(
                   utilHighsModelStatusToString(model_status).c_str());
 
 #ifdef HiGHSDEV
-  
+
   printf(
       "grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%"
       "g,%g,%d,%g,%g,%d,%g,%g\n",
-      lp.model_name_.c_str(), message.c_str(),
-      primal_objective_value,
+      lp.model_name_.c_str(), message.c_str(), primal_objective_value,
       utilHighsModelStatusToString(model_status).c_str(),
       num_nonzero_basic_duals, num_large_nonzero_basic_duals,
       max_nonzero_basic_dual, sum_nonzero_basic_duals, num_off_bound_nonbasic,
@@ -1175,9 +1155,8 @@ bool equalSolutionParams(const HighsSolutionParams& solution_params0,
   return equal;
 }
 
-bool equalSolutionObjectiveParams(
-    const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1) {
+bool equalSolutionObjectiveParams(const HighsSolutionParams& solution_params0,
+                                  const HighsSolutionParams& solution_params1) {
   bool equal = true;
   double delta =
       highs_relative_difference(solution_params0.objective_function_value,

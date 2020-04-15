@@ -91,8 +91,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     return HighsStatus::Error;
   }
 #ifdef HiGHSDEV
-  const int iteration_count0 =
-      highs_model_object.iteration_counts_.simplex;
+  const int iteration_count0 = highs_model_object.iteration_counts_.simplex;
   const int dual_phase1_iteration_count0 =
       simplex_info.dual_phase1_iteration_count;
   const int dual_phase2_iteration_count0 =
@@ -276,7 +275,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     analysis.simplexTimerStop(SimplexTotalClock);
     const int delta_iteration_count =
-      highs_model_object.iteration_counts_.simplex - iteration_count0;
+        highs_model_object.iteration_counts_.simplex - iteration_count0;
     const int delta_dual_phase1_iteration_count =
         simplex_info.dual_phase1_iteration_count - dual_phase1_iteration_count0;
     const int delta_dual_phase2_iteration_count =
@@ -457,9 +456,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
     return return_status;
   }
   HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
-  simplex_analysis.setup(
-      highs_model_object.lp_, highs_model_object.options_,
-      highs_model_object.iteration_counts_.simplex);
+  simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
+                         highs_model_object.iteration_counts_.simplex);
   //  SimplexTimer simplex_timer;
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
   // (Try to) solve the scaled LP
@@ -526,9 +524,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
 
-  copySolutionObjectiveParams(
-      highs_model_object.scaled_solution_params_,
-      highs_model_object.unscaled_solution_params_);
+  copySolutionObjectiveParams(highs_model_object.scaled_solution_params_,
+                              highs_model_object.unscaled_solution_params_);
 
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier

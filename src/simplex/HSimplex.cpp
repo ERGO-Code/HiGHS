@@ -2920,8 +2920,8 @@ int computeFactor(HighsModelObject& highs_model_object) {
         "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
         "Total INVERT  time = %11.4g\n",
         simplex_info.total_inverts,
-        highs_model_object.iteration_counts_.simplex,
-        invert_time, simplex_info.total_invert_time);
+        highs_model_object.iteration_counts_.simplex, invert_time,
+        simplex_info.total_invert_time);
   }
 #endif
 
@@ -3746,10 +3746,11 @@ HighsStatus analyseSimplexBasicSolution(
   */
 
   if (report) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-                    "Simplex basic solution: %sObjective = %0.15g",
-                    iterationsToString(highs_model_object.iteration_counts_).c_str(),
-                    scaled_solution_params.objective_function_value);
+    HighsLogMessage(
+        highs_model_object.options_.logfile, HighsMessageType::INFO,
+        "Simplex basic solution: %sObjective = %0.15g",
+        iterationsToString(highs_model_object.iteration_counts_).c_str(),
+        scaled_solution_params.objective_function_value);
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                     "Infeasibilities -   scaled - Pr %d(Max %0.4g, Sum %0.4g); "
                     "Du %d(Max %0.4g, Sum %0.4g); Status: %s",

@@ -416,8 +416,7 @@ void HQPrimal::primalRebuild() {
         analysis->simplexTimerRead(IteratePrimalRebuildClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
-        total_rebuilds, sv_invertHint,
-        workHMO.iteration_counts_.simplex,
+        total_rebuilds, sv_invertHint, workHMO.iteration_counts_.simplex,
         total_rebuild_time);
   }
 #endif

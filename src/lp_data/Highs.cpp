@@ -541,6 +541,15 @@ basis_.valid_, hmos_[0].basis_.valid_);
         // the solution and basis for postsolve to use to generate a
         // solution(?) and basis that is, hopefully, optimal. This is
         // confirmed or corrected by hot-starting the simplex solver
+        if (presolve_status == HighsPresolveStatus::ReducedToEmpty) {
+          // Have to resize the solution to correspond to an empty
+          // problem because runPostsolve checks this. Size of basis
+          // seems unimportant
+          hmos_[solved_hmo].solution_.col_value.resize(0);
+          hmos_[solved_hmo].solution_.row_value.resize(0);
+          hmos_[solved_hmo].solution_.col_dual.resize(0);
+          hmos_[solved_hmo].solution_.row_dual.resize(0);
+        }
         presolve_info.reduced_solution_ = hmos_[solved_hmo].solution_;
         presolve_info.presolve_[0].setBasisInfo(
             hmos_[solved_hmo].basis_.col_status,
@@ -603,7 +612,19 @@ basis_.valid_, hmos_[0].basis_.valid_);
             beforeReturnFromRun(return_status);
             return return_status;
           }
-          postsolve_iteration_count = info_.simplex_iteration_count - iteration_count0;
+          postsolve_iteration_count =
+              info_.simplex_iteration_count - iteration_count0;
+        } else {
+          HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                          "Postsolve return status is %d\n",
+                          (int)postsolve_status);
+          model_status_ = HighsModelStatus::POSTSOLVE_ERROR;
+          scaled_model_status_ = model_status_;
+          hmos_[0].unscaled_model_status_ = model_status_;
+          hmos_[0].scaled_model_status_ = model_status_;
+          return_status = HighsStatus::Error;
+          beforeReturnFromRun(return_status);
+          return return_status;
         }
       }
     } else {
@@ -665,12 +686,12 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
-  if (postsolve_iteration_count<0) {
+  if (postsolve_iteration_count < 0) {
     HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-		      "Postsolve  : 0 (Not required)\n");
+                      "Postsolve  : 0 (Not required)\n");
   } else {
     HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-		      "Postsolve  : %d\n", postsolve_iteration_count);
+                      "Postsolve  : %d\n", postsolve_iteration_count);
   }
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
                     "Time       : %0.3g\n", this_solve_time);
@@ -1704,32 +1725,32 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
 
       case HighsModelStatus::PRIMAL_INFEASIBLE:
         clearSolution();
-	// May have a basis, according to whether infeasibility was
-	// detected in presolve or solve
-	have_basis = basis_.valid_;
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
+        have_basis = basis_.valid_;
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
 
       case HighsModelStatus::PRIMAL_UNBOUNDED:
         clearSolution();
-	// May have a basis, according to whether infeasibility was
-	// detected in presolve or solve
-	have_basis = basis_.valid_;
-	clearInfo();
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
+        have_basis = basis_.valid_;
+        clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
 
       case HighsModelStatus::OPTIMAL:
-	have_solution = true;
-	have_basis = true;
-	// The following is an aspiration
-	//        assert(info_.primal_status ==
-	//                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
-	//        assert(info_.dual_status ==
-	//                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
-	assert(model_status_ == HighsModelStatus::NOTSET ||
+        have_solution = true;
+        have_basis = true;
+        // The following is an aspiration
+        //        assert(info_.primal_status ==
+        //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        //        assert(info_.dual_status ==
+        //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
+        assert(model_status_ == HighsModelStatus::NOTSET ||
                model_status_ == HighsModelStatus::OPTIMAL);
         assert(return_status == HighsStatus::OK);
         break;
