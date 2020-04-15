@@ -295,6 +295,8 @@ class HDual {
 #ifdef HiGHSDEV
   double checkDualObjectiveValue(const char* message, int phase = 2);
 #endif
+  bool reachedExactDualObjectiveValueUpperBound();
+  double computeExactDualObjectiveValue();
 
   /**
    * @brief PAMI: Choose the indices of a good set of rows to leave the

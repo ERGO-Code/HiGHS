@@ -2353,7 +2353,7 @@ double computeBasisCondition(HighsModelObject& highs_model_object) {
   const int* Astart = &highs_model_object.simplex_lp_.Astart_[0];
   const double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
   // Compute the Hager condition number estimate for the basis matrix
-  double NoDensity = 1;
+  const double NoDensity = 1;
   bs_cond_x.resize(solver_num_row);
   bs_cond_y.resize(solver_num_row);
   bs_cond_z.resize(solver_num_row);

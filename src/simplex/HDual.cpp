@@ -536,6 +536,7 @@ void HDual::solvePhase1() {
     analysis->simplexTimerStart(IterateDualRebuildClock);
     rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
+    if (bailout()) break;
     for (;;) {
       switch (simplex_info.simplex_strategy) {
         default:
@@ -647,6 +648,7 @@ void HDual::solvePhase2() {
     analysis->simplexTimerStart(IterateDualRebuildClock);
     rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
+    if (bailout()) break;
     if (dualInfeasCount > 0) break;
     for (;;) {
       // Inner loop of solvePhase2()
@@ -1824,19 +1826,118 @@ bool HDual::bailout() {
              workHMO.options_.simplex_iteration_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
-  } else if (solvePhase == 2 &&
+  } else if ((workHMO.lp_.sense_ == ObjSense::MINIMIZE && solvePhase == 2) &&
              (workHMO.simplex_info_.updated_dual_objective_value >
               workHMO.options_.dual_objective_value_upper_bound)) {
-#ifdef SCIP_DEV
-    printf("HDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
-           workHMO.simplex_info_.updated_dual_objective_value,
-           workHMO.options_.dual_objective_value_upper_bound);
-#endif
-    solve_bailout = true;
-    workHMO.scaled_model_status_ =
-        HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+    solve_bailout = reachedExactDualObjectiveValueUpperBound();
   }
   return solve_bailout;
+}
+
+bool HDual::reachedExactDualObjectiveValueUpperBound() {
+  // Solving a minimization in dual simplex phase 2, and dual
+  // objective exceeds the prescribed upper bound. However, costs
+  // will be perturbed, so need to check whether exact dual
+  // objective value exceeds the prescribed upper bound. This can be
+  // a relatively expensive calculation, so determine whether to do
+  // it according to the sparsity of the pivotal row
+  bool reached_exact_dual_objective_value_upper_bound = false;
+  double use_row_ap_density = std::min(std::max(analysis->row_ap_density, 0.01), 1.0);
+  int check_frequency = 1.0/use_row_ap_density;
+  assert(check_frequency>0);
+  
+  bool check_exact_dual_objective_value = workHMO.simplex_info_.update_count % check_frequency == 0;
+  
+  if (check_exact_dual_objective_value) {
+    const double dual_objective_value_upper_bound = workHMO.options_.dual_objective_value_upper_bound;
+    const double perturbed_dual_objective_value = workHMO.simplex_info_.updated_dual_objective_value;
+    const double perturbed_value_residual = perturbed_dual_objective_value - dual_objective_value_upper_bound;
+    const double exact_dual_objective_value = 
+      computeExactDualObjectiveValue();
+    //      const double delta_dual_objective_value = exact_dual_objective_value - perturbed_dual_objective_value;
+    const double exact_value_residual = exact_dual_objective_value - dual_objective_value_upper_bound;
+    std::string action;
+    if (exact_dual_objective_value >
+	dual_objective_value_upper_bound) {
+#ifdef SCIP_DEV
+      printf("HDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
+	     workHMO.simplex_info_.updated_dual_objective_value,
+	     dual_objective_value_upper_bound);
+#endif
+      action = "Have DualUB bailout";
+      reached_exact_dual_objective_value_upper_bound = true;
+      workHMO.scaled_model_status_ =
+	HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+    } else {
+      action = "No   DualUB bailout";
+    }
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
+		    "%s on iteration %d: Density %11.4g; Frequency %d: Residual(Perturbed = %g; Exact = %g)",
+		    action.c_str(), workHMO.iteration_counts_.simplex,
+		    use_row_ap_density, check_frequency,
+		    perturbed_value_residual, exact_value_residual);
+  }
+  return reached_exact_dual_objective_value_upper_bound;
+}
+
+double HDual::computeExactDualObjectiveValue() {
+  const HighsLp& simplex_lp = workHMO.simplex_lp_;
+  const SimplexBasis& simplex_basis = workHMO.simplex_basis_;
+  const HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HMatrix& matrix = workHMO.matrix_;
+  HFactor& factor = workHMO.factor_;
+  // Create a local buffer for the pi vector
+  HVector dual_col;
+  dual_col.setup(simplex_lp.numRow_);
+  dual_col.clear();
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+    const double value = simplex_lp.colCost_[simplex_basis.basicIndex_[iRow]];
+    if (value) {
+      dual_col.count++;
+      dual_col.index[iRow] = iRow;
+      dual_col.array[iRow] = value;
+    }
+  }
+  // Create a local buffer for the dual vector
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  HVector dual_row;
+  dual_row.setup(simplex_lp.numCol_);
+  dual_row.clear();
+  if (dual_col.count) {
+    const double NoDensity = 1;
+    factor.btran(dual_col, NoDensity);
+    matrix.priceByColumn(dual_row, dual_col);
+  }
+  double dual_objective = simplex_lp.offset_;
+  double norm_dual = 0;
+  double norm_delta_dual = 0;
+  for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+    if (!simplex_basis.nonbasicFlag_[iCol]) continue;
+    double exact_dual = simplex_lp.colCost_[iCol] - dual_row.array[iCol];
+    double residual = fabs(exact_dual - simplex_info.workDual_[iCol]);
+    norm_dual += fabs(exact_dual);
+    norm_delta_dual += residual;
+    //    printf("Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
+    //	   iCol, exact_dual, simplex_info.workDual_[iCol], residual);
+    dual_objective += simplex_info.workValue_[iCol] * exact_dual;
+  }
+  for (int iVar = simplex_lp.numCol_; iVar < numTot; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+    int iRow = iVar - simplex_lp.numCol_;
+    double exact_dual = -dual_col.array[iRow];
+    double residual = fabs(exact_dual - simplex_info.workDual_[iVar]);
+    norm_dual += fabs(exact_dual);
+    norm_delta_dual += residual;
+    //    printf("Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
+    //	   iRow, exact_dual, simplex_info.workDual_[iVar], residual);
+    dual_objective += simplex_info.workValue_[iVar] * exact_dual;
+  }
+  double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
+  if (relative_delta > 1e-4)
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                    "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g",
+		    norm_dual, norm_delta_dual, relative_delta);
+  return dual_objective;
 }
 
 #ifdef HiGHSDEV
