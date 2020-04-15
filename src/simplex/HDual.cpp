@@ -1029,6 +1029,11 @@ void HDual::iterationAnalysisData() {
   analysis->pivot_value_from_row = alphaRow;
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_dual_objective_value;
+  // Since maximization is achieved by minimizing the LP with negated
+  // costs, in phase 2 the dual objective value is negated, so flip
+  // its sign according to the LP sense
+  if (solvePhase == 2)
+    analysis->objective_value *= (int)workHMO.lp_.sense_;
   analysis->num_primal_infeasibilities =
       scaled_solution_params.num_primal_infeasibilities;
   analysis->num_dual_infeasibilities =
