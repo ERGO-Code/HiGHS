@@ -944,7 +944,8 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
     simplex_info.dual_objective_value *= highs_model_object.scale_.cost_;
     // If minimizing the shift is added. If maximizing, workCost (and
     // hence workDual) are negated, so the shift is subtracted
-    simplex_info.dual_objective_value += ((int)simplex_lp.sense_) * simplex_lp.offset_;
+    simplex_info.dual_objective_value +=
+        ((int)simplex_lp.sense_) * simplex_lp.offset_;
   }
   // Now have dual objective value
   simplex_lp_status.has_dual_objective_value = true;

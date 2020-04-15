@@ -174,8 +174,8 @@ int Highs_getHighsStringOptionValue(
 /*
  * @brief
  */
-int Highs_resetHighsOptions(void* highs       //!< HiGHS object reference
-);   
+int Highs_resetHighsOptions(void* highs  //!< HiGHS object reference
+);
 
 /*
  * @brief
