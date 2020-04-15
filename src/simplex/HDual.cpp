@@ -73,9 +73,11 @@ HighsStatus HDual::solve() {
 
   // Set solve_bailout to be true if control is to be returned immediately to
   // calling function
-  solvePhase = -1;  // So that test on solvePhase is well defined in bailout()
-  assert(simplex_lp_status.has_dual_objective_value);
-  simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
+  //  assert(simplex_lp_status.has_dual_objective_value);
+  //  simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
+  //
+  // Set solvePhase=-1 so no bailout on dual objective
+  solvePhase = -1;
   solve_bailout = false;
   // Possibly bail out immediately if iteration limit is current value
   if (bailout()) return HighsStatus::Warning;
@@ -257,8 +259,7 @@ HighsStatus HDual::solve() {
         solvePhase = 0;
         break;
     }
-    // Possibly bail out
-    if (bailout()) return HighsStatus::Warning;
+    if (solve_bailout) return HighsStatus::Warning;
     // Jump for primal
     if (solvePhase == 4) break;
   }
@@ -519,11 +520,13 @@ void HDual::solvePhase1() {
   simplex_lp_status.has_dual_objective_value = false;
   // Set invertHint so that it's assigned when first tested
   invertHint = INVERT_HINT_NO;
-  // Set solvePhase=1 so it's set if solvePhase1() is called directly
-  solvePhase = 1;
+  // Set solvePhase=-1 so no bailout on dual objective
+  solvePhase = -1;
   solve_bailout = false;
   // Possibly bail out immediately if iteration limit is current value
   if (bailout()) return;
+  // Set solvePhase=1 so it's set if solvePhase1() is called directly
+  solvePhase = 1;
   // Report the phase start
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                     ML_DETAILED, "dual-phase-1-start\n");
@@ -575,7 +578,7 @@ void HDual::solvePhase1() {
       // Zero phase 1 objective so go to phase 2
       solvePhase = 2;
     } else {
-      // We still have dual infeasible
+      // We still have dual infeasibilities
       if (workHMO.simplex_info_.costs_perturbed) {
         // Clean up perturbation
         cleanup();
@@ -640,11 +643,13 @@ void HDual::solvePhase2() {
   simplex_lp_status.has_dual_objective_value = false;
   // Set invertHint so that it's assigned when first tested
   invertHint = INVERT_HINT_NO;
-  // Set solvePhase=2 so it's set if solvePhase2() is called directly
-  solvePhase = 2;
+  // Set solvePhase=-1 so no bailout on dual objective
+  solvePhase = -1;
   solve_bailout = false;
   // Possibly bail out immediately if iteration limit is current value
   if (bailout()) return;
+  // Set solvePhase=2 so it's set if solvePhase2() is called directly
+  solvePhase = 2;
   // Report the phase start
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                     ML_DETAILED, "dual-phase-2-start\n");
@@ -1835,10 +1840,10 @@ bool HDual::bailout() {
              workHMO.options_.simplex_iteration_limit) {
     solve_bailout = true;
     workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
-  } else if ((workHMO.lp_.sense_ == ObjSense::MINIMIZE && solvePhase == 2) &&
-             (workHMO.simplex_info_.updated_dual_objective_value >
-              workHMO.options_.dual_objective_value_upper_bound)) {
-    solve_bailout = reachedExactDualObjectiveValueUpperBound();
+  } else if (workHMO.lp_.sense_ == ObjSense::MINIMIZE && solvePhase == 2) {
+    if (workHMO.simplex_info_.updated_dual_objective_value >
+	workHMO.options_.dual_objective_value_upper_bound) 
+      solve_bailout = reachedExactDualObjectiveValueUpperBound();
   }
   return solve_bailout;
 }
@@ -1906,11 +1911,14 @@ double HDual::computeExactDualObjectiveValue() {
   dual_col.setup(simplex_lp.numRow_);
   dual_col.clear();
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    const double value = simplex_lp.colCost_[simplex_basis.basicIndex_[iRow]];
-    if (value) {
-      dual_col.count++;
-      dual_col.index[iRow] = iRow;
-      dual_col.array[iRow] = value;
+    int iVar = simplex_basis.basicIndex_[iRow];
+    if (iVar < simplex_lp.numCol_) {
+      const double value = simplex_lp.colCost_[iVar];
+      if (value) {
+	dual_col.count++;
+	dual_col.index[iRow] = iRow;
+	dual_col.array[iRow] = value;
+      }
     }
   }
   // Create a local buffer for the dual vector
@@ -1932,9 +1940,9 @@ double HDual::computeExactDualObjectiveValue() {
     double residual = fabs(exact_dual - simplex_info.workDual_[iCol]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
-    //    printf("Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual =
-    //    %11.4g\n",
-    //	   iCol, exact_dual, simplex_info.workDual_[iCol], residual);
+    if (residual>1e10)
+        printf("Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
+    	   iCol, exact_dual, simplex_info.workDual_[iCol], residual);
     dual_objective += simplex_info.workValue_[iCol] * exact_dual;
   }
   for (int iVar = simplex_lp.numCol_; iVar < numTot; iVar++) {
@@ -1944,13 +1952,13 @@ double HDual::computeExactDualObjectiveValue() {
     double residual = fabs(exact_dual - simplex_info.workDual_[iVar]);
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
-    //    printf("Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual =
-    //    %11.4g\n",
-    //	   iRow, exact_dual, simplex_info.workDual_[iVar], residual);
+    if (residual>1e10)
+        printf("Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
+    	   iRow, exact_dual, simplex_info.workDual_[iVar], residual);
     dual_objective += simplex_info.workValue_[iVar] * exact_dual;
   }
   double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
-  if (relative_delta > 1e-4)
+  if (relative_delta > 1e-3)
     HighsLogMessage(
         workHMO.options_.logfile, HighsMessageType::WARNING,
         "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g",

@@ -973,7 +973,6 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   // Objective value calculation is done using primal values and
   // original costs so offset is vanilla
   simplex_info.primal_objective_value += simplex_lp.offset_;
-  printf("\n\n!!!! Computing Primal Objective with shift %g!!!!\n\n\n", simplex_lp.offset_);
   // Now have primal objective value
   simplex_lp_status.has_primal_objective_value = true;
 }

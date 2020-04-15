@@ -319,9 +319,10 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   std::string filename;
   HighsStatus status;
   bool bool_status;
-  const double min_objective_function_value = 97.4249606893146;
-  const double max_objective_function_value = 97.4249606893146;
-  const double use_dual_objective_value_upper_bound = 31.0;
+  const double min_objective_function_value = -11.6389290663705;
+  const double max_objective_function_value = 111.650960689315;
+  const double use_min_dual_objective_value_upper_bound = -45.876;
+  const double use_max_dual_objective_value_upper_bound = 150.0;
   double save_dual_objective_value_upper_bound;
   HighsOptions options;
   Highs highs(options);
@@ -333,22 +334,6 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/e226.mps";
   status = highs.setHighsOptionValue("model_file", filename);
   REQUIRE(status == HighsStatus::OK);
-
-  /*
-  printf("!!!!HACKED IN TO FORCE INITIAL MAXIMIZATION\n");
-  highs.readModel(filename);
-  bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
-  REQUIRE(bool_status);
-  status = highs.setHighsOptionValue("presolve", "off");
-
-  status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
-
-  bool_status = highs.changeObjectiveSense(ObjSense::MINIMIZE);
-  status = highs.setBasis();
-  REQUIRE(status == HighsStatus::OK);
-
-  */
 
   // Solve vanilla
   printf("\nSolving vanilla LP\n");
@@ -366,12 +351,12 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::OK);
 
   status = highs.setHighsOptionValue("dual_objective_value_upper_bound",
-				     use_dual_objective_value_upper_bound);
+				     use_min_dual_objective_value_upper_bound);
   REQUIRE(status == HighsStatus::OK);
 
   // Solve again 
   printf("\nSolving LP with presolve and dual objective value upper bound of %g\n",
-	 use_dual_objective_value_upper_bound);
+	 use_min_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 
@@ -384,19 +369,26 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
 
   // Solve again 
   printf("\nSolving LP without presolve and dual objective value upper bound of %g\n",
-	 use_dual_objective_value_upper_bound);
+	 use_min_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
 
+  HighsModelStatus model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+
   bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
   REQUIRE(bool_status);
 
+  status = highs.setHighsOptionValue("dual_objective_value_upper_bound",
+				     use_max_dual_objective_value_upper_bound);
+  REQUIRE(status == HighsStatus::OK);
+
   // Solve again 
   printf("\nSolving LP as maximization without presolve and dual objective value upper bound of %g\n",
-	 use_dual_objective_value_upper_bound);
+	 use_max_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 
