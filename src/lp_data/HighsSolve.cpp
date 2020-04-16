@@ -137,6 +137,7 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
     }
   }
   unscaled_solution_params.objective_function_value = objective;
+  basis.valid_ = true;
 
   if (infeasible) {
     highs_model_object.unscaled_model_status_ =
