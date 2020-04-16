@@ -545,10 +545,13 @@ HighsStatus writeMPS(
       break;
     }
   }
-  for (int c_n = 0; c_n < numCol; c_n++) {
-    if (integerColumn[c_n]) {
-      have_int = true;
-      break;
+  have_int = false;
+  if (integerColumn.size()) {
+    for (int c_n = 0; c_n < numCol; c_n++) {
+      if (integerColumn[c_n]) {
+	have_int = true;
+	break;
+      }
     }
   }
   for (int c_n = 0; c_n < numCol; c_n++) {
