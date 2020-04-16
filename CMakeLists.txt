@@ -50,23 +50,19 @@ if(EXT_PRESOLVE_DIR)
     include_directories(${EXT_PRESOLVE_DIR}/external)
 endif()
 
-# whether to use OpenMP
-option(OPENMP "OpenMP" ON)
-if(OPENMP)
-    find_package(OpenMP)
-    if(OPENMP_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    else()
-        set(OPENMP OFF)
-    endif()
+
+# Use OpenMP if version is high enough.
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(highs PUBLIC OpenMP::OpenMP_CXX)
+    message(STATUS "Linking with OpenMP... ")
 endif()
-message(STATUS "OpenMP: " ${OPENMP})
 
 # For the moment keep above coverage part in case we are testing at CI.
 option(CI "CI extended tests" ON)
 
 # Coverage part
-# 'make coverage' to start the coverage process
+# coverage' to start the coverage process
 option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 if (HIGHS_COVERAGE)
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
