@@ -184,8 +184,8 @@ void reportSolvedLpStats(FILE* output, int message_level,
 }
 
 HighsStatus callLpSolver(HighsOptions& use_options, const bool run_quiet) {
-  const bool write_lp = false;  // true;//
-  const bool write_ems = false;  // 
+  const bool write_lp = false;   // true;//
+  const bool write_ems = false;  //
   FILE* output = use_options.output;
   const int message_level = use_options.message_level;
 
@@ -202,7 +202,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const bool run_quiet) {
     HighsStatus write_status;
     if (write_ems) {
       HighsPrintMessage(output, message_level, ML_ALWAYS,
-			"Writing model as EMS\n");
+                        "Writing model as EMS\n");
       write_status = highs.writeModel("model.ems");
     } else {
       int default_message_level;

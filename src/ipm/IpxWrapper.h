@@ -730,9 +730,14 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     return_status = HighsStatus::Warning;
   } else {
     unscaled_model_status = HighsModelStatus::OPTIMAL;
+    unscaled_solution_params.primal_status =
+        PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    unscaled_solution_params.dual_status =
+        PrimalDualStatus::STATUS_FEASIBLE_POINT;
     return_status = HighsStatus::OK;
   }
-  unscaled_solution_params.objective_function_value = ipx_info.objval;
+  unscaled_solution_params.objective_function_value =
+      (int)lp.sense_ * ipx_info.objval;
   getPrimalDualInfeasibilitiesFromHighsBasicSolution(
       lp, highs_basis, highs_solution, unscaled_solution_params);
   return return_status;

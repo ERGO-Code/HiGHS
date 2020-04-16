@@ -4,32 +4,38 @@ const double inf = HIGHS_CONST_INF;
 void reportIssue(const int issue) {
   printf("\n *************\n * Issue %3d *\n *************\n", issue);
 }
-bool objectiveOk(const double optimal_objective, const double require_optimal_objective) {
-  double error = std::fabs(optimal_objective-require_optimal_objective)/std::max(1.0, std::fabs(require_optimal_objective));
+bool objectiveOk(const double optimal_objective,
+                 const double require_optimal_objective) {
+  double error = std::fabs(optimal_objective - require_optimal_objective) /
+                 std::max(1.0, std::fabs(require_optimal_objective));
   bool error_ok = error < 1e-10;
-  if (!error_ok) printf("Objective is %g but require %g (error %g)\n", optimal_objective, require_optimal_objective, error);
+  if (!error_ok)
+    printf("Objective is %g but require %g (error %g)\n", optimal_objective,
+           require_optimal_objective, error);
   return error_ok;
 }
 
 void reportSolution(Highs& highs) {
-   const HighsInfo& info = highs.getHighsInfo();
-   if (info.primal_status == PrimalDualStatus::STATUS_FEASIBLE_POINT) {
-     const HighsSolution& solution = highs.getSolution();
-     printf("Solution\n");
-     printf("Col       Value        Dual\n");
-     for (int iCol = 0; iCol < highs.getLp().numCol_; iCol++)
-       printf("%3d %11.4g %11.4g\n", iCol, solution.col_value[iCol], solution.col_dual[iCol]);
-     printf("Row       Value        Dual\n");
-     for (int iRow = 0; iRow < highs.getLp().numRow_; iRow++)
-       printf("%3d %11.4g %11.4g\n", iRow, solution.row_value[iRow], solution.row_dual[iRow]);
-   } else {
-     printf("info.primal_status = %d\n", info.primal_status);
-   }
+  const HighsInfo& info = highs.getHighsInfo();
+  if (info.primal_status == PrimalDualStatus::STATUS_FEASIBLE_POINT) {
+    const HighsSolution& solution = highs.getSolution();
+    printf("Solution\n");
+    printf("Col       Value        Dual\n");
+    for (int iCol = 0; iCol < highs.getLp().numCol_; iCol++)
+      printf("%3d %11.4g %11.4g\n", iCol, solution.col_value[iCol],
+             solution.col_dual[iCol]);
+    printf("Row       Value        Dual\n");
+    for (int iRow = 0; iRow < highs.getLp().numRow_; iRow++)
+      printf("%3d %11.4g %11.4g\n", iRow, solution.row_value[iRow],
+             solution.row_dual[iRow]);
+  } else {
+    printf("info.primal_status = %d\n", info.primal_status);
+  }
 }
 
 void solve(Highs& highs, std::string presolve, std::string solver,
-	   const HighsModelStatus require_model_status,
-	   const double require_optimal_objective = 0) {
+           const HighsModelStatus require_model_status,
+           const double require_optimal_objective = 0) {
   const HighsInfo& info = highs.getHighsInfo();
   HighsStatus status;
   HighsModelStatus model_status;
@@ -50,12 +56,12 @@ void solve(Highs& highs, std::string presolve, std::string solver,
   REQUIRE(model_status == require_model_status);
 
   if (require_model_status == HighsModelStatus::OPTIMAL) {
-    REQUIRE(objectiveOk(info.objective_function_value, require_optimal_objective));
+    REQUIRE(
+        objectiveOk(info.objective_function_value, require_optimal_objective));
   }
-  
+
   status = highs.resetHighsOptions();
   REQUIRE(status == HighsStatus::OK);
- 
 }
 
 void issue272(Highs& highs) {
@@ -82,6 +88,7 @@ void issue272(Highs& highs) {
   // Presolve reduces to empty, so no need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
+  reportSolution(highs);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
   reportSolution(highs);
   solve(highs, "off", "ipm", require_model_status, optimal_objective);
@@ -150,7 +157,8 @@ void issue285(Highs& highs) {
   // status detected on presolve: Infeasible"
   HighsStatus status;
   HighsLp lp;
-  const HighsModelStatus require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+  const HighsModelStatus require_model_status =
+      HighsModelStatus::PRIMAL_INFEASIBLE;
   lp.numCol_ = 2;
   lp.numRow_ = 3;
   lp.colCost_ = {-4, 1};
@@ -217,13 +225,15 @@ void issue306(Highs& highs) {
   lp.numCol_ = 10;
   lp.numRow_ = 6;
   lp.colCost_ = {-1.64, 0.7, 1.8, -1.06, -1.16, 0.26, 2.13, 1.53, 0.66, 0.28};
-  lp.colLower_ = {-0.84, -0.97, 0.34, 0.4, -0.33, -0.74, 0.47, 0.09, -1.45, -0.73};
-  lp.colUpper_ = { 0.37, 0.02, 2.86, 0.86, 1.18, 0.5, 1.76, 0.17, 0.32, -0.15};
+  lp.colLower_ = {-0.84, -0.97, 0.34, 0.4,   -0.33,
+                  -0.74, 0.47,  0.09, -1.45, -0.73};
+  lp.colUpper_ = {0.37, 0.02, 2.86, 0.86, 1.18, 0.5, 1.76, 0.17, 0.32, -0.15};
   lp.rowLower_ = {0.9626, -1e+200, -1e+200, -1e+200, -1e+200, -1e+200};
-  lp.rowUpper_ = { 0.9626, 0.615, 0, 0.172, -0.869, -0.022};
+  lp.rowUpper_ = {0.9626, 0.615, 0, 0.172, -0.869, -0.022};
   lp.Astart_ = {0, 0, 1, 2, 5, 5, 6, 7, 9, 10, 12};
   lp.Aindex_ = {4, 4, 0, 1, 3, 0, 4, 1, 5, 0, 1, 4};
-  lp.Avalue_ = { -1.22, -0.25, 0.93, 1.18, 0.43, 0.65, -2.06, -0.2, -0.25, 0.83, -0.22, 1.37};
+  lp.Avalue_ = {-1.22, -0.25, 0.93,  1.18, 0.43,  0.65,
+                -2.06, -0.2,  -0.25, 0.83, -0.22, 1.37};
 
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
@@ -244,28 +254,25 @@ void issue316(Highs& highs) {
   const double max_optimal_objective = 12;
   bool_status = highs.addCol(2, -3, 6, 0, NULL, NULL);
   REQUIRE(bool_status);
-  
+
   // Presolve reduces to empty
   solve(highs, "on", "simplex", require_model_status, min_optimal_objective);
   solve(highs, "off", "simplex", require_model_status, min_optimal_objective);
-  
+
   bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
   REQUIRE(bool_status);
 
   solve(highs, "on", "simplex", require_model_status, max_optimal_objective);
   solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
-  }
-
-TEST_CASE("test-special-lps", "[TestSpecialLps]") {
-  
-  Highs highs;
-  issue272(highs);
-  //issue280(highs);
-  //issue282(highs);
-  //issue285(highs);
-  //issue295(highs);
-  //issue306(highs);
-  //issue316(highs);
-  
 }
 
+TEST_CASE("test-special-lps", "[TestSpecialLps]") {
+  Highs highs;
+  issue272(highs);
+  // issue280(highs);
+  // issue282(highs);
+  // issue285(highs);
+  // issue295(highs);
+  // issue306(highs);
+  // issue316(highs);
+}

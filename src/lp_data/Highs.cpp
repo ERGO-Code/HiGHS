@@ -685,6 +685,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // them to have the right dimension.
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
+  if (model_status_ == HighsModelStatus::OPTIMAL) {
+    info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    info_.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  }
   // Report times
   if (hmos_[original_hmo].report_model_operations_clock) {
     std::vector<int> clockList{timer_.presolve_clock, timer_.solve_clock,
