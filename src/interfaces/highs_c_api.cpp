@@ -102,6 +102,7 @@ int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
   return (int)((Highs*)highs)->passModel(lp);
 }
 
+int Highs_clearModel(void* highs) { return (int)((Highs*)highs)->clearModel(); }
 int Highs_setHighsBoolOptionValue(void* highs, const char* option,
                                   const int value) {
   return (int)((Highs*)highs)
