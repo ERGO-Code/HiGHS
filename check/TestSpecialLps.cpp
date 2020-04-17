@@ -270,13 +270,44 @@ void issue316(Highs& highs) {
   solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
 }
 
+void mpsUnbounded(Highs& highs) {
+  // As a maximization, adlittle is unbounded, but a bug in hsol [due
+  // to jumping to phase 2 if optimal in phase 1 after clean-up
+  // yielded no dual infeasiblities despite the phase 1 objective
+  // being negative] resulted in the problem being declared infeasible
+  //
+  // Resulted in fixes being added to hsol dual
+  HighsStatus status;
+  bool bool_status;
+  const HighsModelStatus require_model_status =
+      HighsModelStatus::PRIMAL_UNBOUNDED;
+
+  const bool solve_adlittle_max = true;
+  std::string model = "adlittle";
+  if (!solve_adlittle_max) model = "gas11";
+  std::string model_file;
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  status = highs.readModel(model_file);
+  REQUIRE(status == HighsStatus::OK);
+
+  if (solve_adlittle_max) {
+    bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
+    REQUIRE(bool_status);
+  }
+  //  solve(highs, "on", "simplex", require_model_status);
+  solve(highs, "off", "simplex", require_model_status);
+  //  solve(highs, "on", "ipm", require_model_status);
+  //  solve(highs, "off", "ipm", require_model_status);
+}
+
 TEST_CASE("test-special-lps", "[TestSpecialLps]") {
   Highs highs;
-  issue272(highs);
-  issue280(highs);
-  issue282(highs);
-  issue285(highs);
-  issue295(highs);
-  issue306(highs);
-  issue316(highs);
+  //  issue272(highs);
+  //  issue280(highs);
+  //  issue282(highs);
+  //  issue285(highs);
+  //  issue295(highs);
+  //  issue306(highs);
+  //  issue316(highs);
+  mpsUnbounded(highs);
 }

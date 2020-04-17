@@ -568,16 +568,42 @@ void HDual::solvePhase1() {
     // Optimal in phase 1
     if (simplex_info.dual_objective_value == 0) {
       // Zero phase 1 objective so go to phase 2
+      //
+      // OK if costs are perturbed, since they remain perturbed in phase 2 until
+      // the final clean-up
       solvePhase = 2;
     } else {
-      // We still have dual infeasibilities
+      // We still have dual infeasibilities, so clean up any perturbations
+      // before concluding dual infeasibility
+      //
+      // What if the dual objective is nonzero but tiny?
+      if (fabs(simplex_info.dual_objective_value) <=
+          primal_feasibility_tolerance) {
+        HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                        "Optimal in phase 1 but not jumping to phase 2 since "
+                        "dual objective is %g: Costs perturbed = %d",
+                        simplex_info.dual_objective_value,
+                        workHMO.simplex_info_.costs_perturbed);
+      }
       if (workHMO.simplex_info_.costs_perturbed) {
         // Clean up perturbation
         cleanup();
-        if (dualInfeasCount == 0 && simplex_info.dual_objective_value == 0) {
-          // No dual infeasibilities and zero phase 1 objective so go
-          // to phase 2
-          solvePhase = 2;
+        if (dualInfeasCount == 0) {
+          // With no dual infeasibilities, hsol jumped straight to phase 2.
+          // However, that's wrong if the dual objective is (sufficiently)
+          // positive, since that implies that the LP is dual
+          // infeasible.
+          //
+          // If zero phase 1 objective then go to phase 2
+          bool as_hsol = true;
+          if (simplex_info.dual_objective_value == 0 || as_hsol) {
+            solvePhase = 2;
+          } else {
+            HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                            "Not jumping to phase 2 as hsol would, since dual "
+                            "objecive is %g, not zero",
+                            simplex_info.dual_objective_value);
+          }
         }
       } else {
         // Report dual infeasible
