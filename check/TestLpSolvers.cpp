@@ -13,8 +13,10 @@ void testSolver(Highs& highs, const std::string solver,
   double default_time_limit;
   int default_simplex_iteration_limit;
   int default_ipm_iteration_limit;
-  int use_simplex_iteration_limit;
-  int use_ipm_iteration_limit;
+  // Initialise use_simplex_iteration and use_ipm_iteration_limit to
+  // stop compiler warning about them being uninitialized
+  int use_simplex_iteration_limit = 0;
+  int use_ipm_iteration_limit = 0;
   int simplex_iteration_count;
   int ipm_iteration_count;
   int crossover_iteration_count;
