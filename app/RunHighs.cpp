@@ -168,7 +168,12 @@ void reportSolvedLpStats(FILE* output, int message_level,
                         "Objective value     : %13.6e\n",
                         objective_function_value);
     }
-
+    /*
+    double run_time = highs.getHighsRunTime();
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+                      "HiGHS run time      : %13.2e\n",
+                      run_time);
+    */
     // Possibly write the solution to a file
     const HighsOptions& options = highs.getHighsOptions();
     if (options.write_solution_to_file)
@@ -205,6 +210,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const bool run_quiet) {
                         "Writing model as EMS\n");
       write_status = highs.writeModel("model.ems");
     } else {
+      // Write to screen
       int default_message_level;
       highs.getHighsOptionValue("message_level", default_message_level);
       highs.setHighsOptionValue("message_level", 7);

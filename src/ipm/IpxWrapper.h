@@ -526,11 +526,6 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   imprecise_solution = false;
   resetModelStatusAndSolutionParams(unscaled_model_status,
                                     unscaled_solution_params, options);
-  int debug = 0;
-#ifdef CMAKE_BUILD_TYPE
-  debug = 1;
-#endif
-
   // Create the LpSolver instance
   ipx::LpSolver lps;
   // Set IPX parameters
@@ -538,14 +533,23 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Cannot set internal IPX parameters directly since they are
   // private, so create instance of parameters
   ipx::Parameters parameters;
-  // parameters.crossover = 1; by default
-  parameters.display = 0;
-  parameters.debug = 0;
-  if (debug) {
-    parameters.display = 1;
-    parameters.debug = 1;
-  }
   // Set IPX parameters from options
+  //
+  // Set display according to output
+  parameters.display = 1;
+  if (options.output == NULL) parameters.display = 0;
+  // Set debug according to message_level
+  parameters.debug = 0;
+  if (options.message_level % HighsPrintMessageLevel::ML_MINIMAL == 0) {
+    // Default options.message_level is
+    // HighsPrintMessageLevel::ML_MINIMAL, yielding default setting
+    // debug = 0
+    parameters.debug = 0;
+  } else if (options.message_level % HighsPrintMessageLevel::ML_DETAILED == 0) {
+    parameters.debug = 3;
+  } else if (options.message_level % HighsPrintMessageLevel::ML_VERBOSE == 0) {
+    parameters.debug = 4;
+  }
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
   parameters.ipm_feasibility_tol =
