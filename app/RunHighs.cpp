@@ -112,7 +112,7 @@ void reportLpStatsOrError(FILE* output, int message_level,
 }
 
 void reportSolvedLpStats(FILE* output, int message_level,
-                         const HighsStatus run_status, const Highs& highs) {
+                         const HighsStatus run_status, Highs& highs) {
   if (run_status == HighsStatus::Error) {
     std::string statusname = HighsStatusToString(run_status);
     HighsPrintMessage(output, message_level, ML_ALWAYS, "HiGHS status: %s\n",
@@ -141,14 +141,12 @@ void reportSolvedLpStats(FILE* output, int message_level,
     HighsPrintMessage(output, message_level, ML_ALWAYS,
                       "Model   status      : %s\n",
                       highs.highsModelStatusToString(model_status).c_str());
-    /*
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "Primal  status      : %s\n",
-                      highs.highsPrimalDualStatusToString(highs_info.primal_status).c_str());
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "Dual    status      : %s\n",
-                      highs.highsPrimalDualStatusToString(highs_info.dual_status).c_str());
-    */
+    HighsPrintMessage(
+        output, message_level, ML_ALWAYS, "Primal  status      : %s\n",
+        highs.highsPrimalDualStatusToString(highs_info.primal_status).c_str());
+    HighsPrintMessage(
+        output, message_level, ML_ALWAYS, "Dual    status      : %s\n",
+        highs.highsPrimalDualStatusToString(highs_info.dual_status).c_str());
     HighsPrintMessage(output, message_level, ML_ALWAYS,
                       "Simplex   iterations: %d\n",
                       highs_info.simplex_iteration_count);
@@ -168,12 +166,9 @@ void reportSolvedLpStats(FILE* output, int message_level,
                         "Objective value     : %13.6e\n",
                         objective_function_value);
     }
-    /*
     double run_time = highs.getHighsRunTime();
     HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "HiGHS run time      : %13.2e\n",
-                      run_time);
-    */
+                      "HiGHS run time      : %13.4e\n", run_time);
     // Possibly write the solution to a file
     const HighsOptions& options = highs.getHighsOptions();
     if (options.write_solution_to_file)

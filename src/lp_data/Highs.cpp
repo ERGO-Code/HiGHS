@@ -702,7 +702,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
     HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                      "Postsolve  : 0 (Not required)\n");
+                      "Postsolve  : \n");
   } else {
     HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
                       "Postsolve  : %d\n", postsolve_iteration_count);
