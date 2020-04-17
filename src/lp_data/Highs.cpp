@@ -1406,6 +1406,10 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
   HighsModelStatus& scaled_model_status = scaled_model_status_;
   HighsSolution& solution = solution_;
   HighsBasis& basis = basis_;
+  int unscaled_primal_status = info_.primal_status;
+  int scaled_primal_status = unscaled_primal_status;
+  int unscaled_dual_status = info_.dual_status;
+  int scaled_dual_status = unscaled_dual_status;
   HighsLp& lp = lp_;
   if (hmo_ix >= 0) {
     assert(hmo_ix < (int)hmos_.size());
@@ -1413,16 +1417,22 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
     scaled_model_status = hmos_[hmo_ix].scaled_model_status_;
     solution = hmos_[hmo_ix].solution_;
     basis = hmos_[hmo_ix].basis_;
+    unscaled_primal_status =
+        hmos_[hmo_ix].unscaled_solution_params_.primal_status;
+    scaled_primal_status = hmos_[hmo_ix].scaled_solution_params_.primal_status;
+    unscaled_dual_status = hmos_[hmo_ix].unscaled_solution_params_.dual_status;
+    scaled_dual_status = hmos_[hmo_ix].scaled_solution_params_.dual_status;
     lp = hmos_[hmo_ix].lp_;
   }
   printf(
       "\n%s\nModel status = %s; Scaled model status = %s; LP(%d, %d); solution "
-      "(%d, %d; %d, %d); basis %d "
+      "([%d:%d] %d, %d; [%d:%d] %d, %d); basis %d "
       "(%d, %d)\n\n",
       message.c_str(), utilHighsModelStatusToString(model_status).c_str(),
       utilHighsModelStatusToString(scaled_model_status).c_str(), lp.numCol_,
-      lp.numRow_, (int)solution.col_value.size(),
-      (int)solution.row_value.size(), (int)solution.col_dual.size(),
+      lp.numRow_, unscaled_primal_status, scaled_primal_status,
+      (int)solution.col_value.size(), (int)solution.row_value.size(),
+      unscaled_dual_status, scaled_dual_status, (int)solution.col_dual.size(),
       (int)solution.row_dual.size(), basis.valid_, (int)basis.col_status.size(),
       (int)basis.row_status.size());
 }
