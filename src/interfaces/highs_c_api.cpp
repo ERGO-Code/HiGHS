@@ -294,6 +294,10 @@ int Highs_setLogicalBasis(void* highs) {
   return (int)((Highs*)highs)->setBasis();
 }
 
+double Highs_getHighsRunTime(void* highs) {
+  return (double)((Highs*)highs)->getHighsRunTime();
+}
+
 int Highs_addRow(void* highs, const double lower, const double upper,
                  const int num_new_nz, const int* indices,
                  const double* values) {

@@ -310,6 +310,12 @@ int Highs_setLogicalBasis(void* highs  //!< HiGHS object reference
 );
 
 /**
+ * @brief Returns the cumulative wall-clock time spent in Highs_run();
+ */
+double Highs_getHighsRunTime(void* highs  //!< HiGHS object reference
+);
+
+/**
  * @brief Adds a row to the model
  */
 int Highs_addRow(
