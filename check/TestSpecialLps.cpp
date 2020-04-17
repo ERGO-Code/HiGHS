@@ -248,10 +248,14 @@ void issue316(Highs& highs) {
   // This is a test problem from matbesancon where maximization failed
   //
   // Resulted in fixes being added to unconstrained LP solver
+  HighsStatus status;
   bool bool_status;
   const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
   const double min_optimal_objective = -6;
   const double max_optimal_objective = 12;
+  status = highs.clearModel();
+  REQUIRE(status == HighsStatus::OK);
+
   bool_status = highs.addCol(2, -3, 6, 0, NULL, NULL);
   REQUIRE(bool_status);
 
@@ -269,10 +273,10 @@ void issue316(Highs& highs) {
 TEST_CASE("test-special-lps", "[TestSpecialLps]") {
   Highs highs;
   issue272(highs);
-  // issue280(highs);
-  // issue282(highs);
-  // issue285(highs);
-  // issue295(highs);
-  // issue306(highs);
-  // issue316(highs);
+  issue280(highs);
+  issue282(highs);
+  issue285(highs);
+  issue295(highs);
+  issue306(highs);
+  issue316(highs);
 }

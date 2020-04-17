@@ -54,6 +54,12 @@ class Highs {
   );
 
   /**
+   * @brief Clears the current model
+   */
+  HighsStatus clearModel(
+  );
+
+  /**
    * @brief Solves the model according to the specified options
    */
   HighsStatus run();

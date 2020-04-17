@@ -249,6 +249,20 @@ HighsStatus Highs::readModel(const std::string filename) {
   return return_status;
 }
 
+HighsStatus Highs::clearModel() {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  hmos_.clear();
+  HighsLp empty_lp;
+  lp_ = empty_lp;
+  hmos_.push_back(HighsModelObject(lp_, options_, timer_));
+  call_status = this->clearSolver();
+  return_status =
+      interpretCallStatus(call_status, return_status, "clearSolver");
+  if (return_status == HighsStatus::Error) return return_status;
+  return return_status;
+}
+
 HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
