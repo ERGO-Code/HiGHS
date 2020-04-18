@@ -918,6 +918,9 @@ void HDual::cleanup() {
   analysis->simplexTimerStart(ComputeDuObjClock);
   computeDualObjectiveValue(workHMO, solvePhase);
   analysis->simplexTimerStop(ComputeDuObjClock);
+  // Now that there's a new dual_objective_value, reset the updated
+  // value
+  simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
   analysis->simplexTimerStart(ReportRebuildClock);
   reportRebuild();
