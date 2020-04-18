@@ -680,6 +680,12 @@ int Highs_deleteRowsByMask(
 );
 
 /**
+ * @brief Returns the value of infinity used by HiGHS
+ */
+double Highs_getHighsInfinity(void* highs  //!< HiGHS object reference
+);
+
+/**
  * @brief Returns the number of columns of the current model
  */
 int Highs_getNumCols(void* highs  //!< HiGHS object reference

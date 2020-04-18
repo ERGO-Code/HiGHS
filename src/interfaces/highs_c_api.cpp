@@ -497,6 +497,10 @@ int Highs_deleteRowsByMask(void* highs, int* mask) {
   return ((Highs*)highs)->deleteRows(mask);
 }
 
+double Highs_getHighsInfinity(void* highs) {
+  return ((Highs*)highs)->getHighsInfinity();
+}
+
 int Highs_getNumCols(void* highs) { return ((Highs*)highs)->getLp().numCol_; }
 
 int Highs_getNumRows(void* highs) { return ((Highs*)highs)->getLp().numRow_; }

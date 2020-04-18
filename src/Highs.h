@@ -677,6 +677,11 @@ class Highs {
   // todo: getRangingInformation(..)
 
   /**
+   * @brief Gets the value of infinity used by HiGHS
+   */
+  double getHighsInfinity();
+
+  /**
    * @brief Gets the run time of HiGHS
    */
   double getHighsRunTime();

@@ -1403,6 +1403,8 @@ bool Highs::deleteRows(int* mask) {
   return return_status != HighsStatus::Error;
 }
 
+double Highs::getHighsInfinity() { return HIGHS_CONST_INF; }
+
 double Highs::getHighsRunTime() { return timer_.readRunHighsClock(); }
 
 HighsStatus Highs::clearSolver() {
