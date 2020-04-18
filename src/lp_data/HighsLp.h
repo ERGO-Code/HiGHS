@@ -241,6 +241,7 @@ struct HighsSimplexInfo {
   bool analyse_rebuild_time = false;
 #endif
   // Simplex runtime information
+  int allow_cost_perturbation = true;
   int costs_perturbed = 0;
   // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;

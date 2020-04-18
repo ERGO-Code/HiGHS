@@ -588,6 +588,9 @@ void HDual::solvePhase1() {
       if (workHMO.simplex_info_.costs_perturbed) {
         // Clean up perturbation
         cleanup();
+        HighsLogMessage(
+            workHMO.options_.logfile, HighsMessageType::WARNING,
+            "Cleaning up cost perturbation when optimal in phase 1");
         if (dualInfeasCount == 0) {
           // With no dual infeasibilities, hsol jumped straight to phase 2.
           // However, that's wrong if the dual objective is (sufficiently)
@@ -628,6 +631,9 @@ void HDual::solvePhase1() {
     if (workHMO.simplex_info_.costs_perturbed) {
       // Clean up perturbation
       cleanup();
+      HighsLogMessage(
+          workHMO.options_.logfile, HighsMessageType::WARNING,
+          "Cleaning up cost perturbation when unbounded in phase 1");
       if (dualInfeasCount == 0) {
         // No dual infeasibilities and (since unbounded) at least zero
         // phase 1 objective so go to phase 2
@@ -668,6 +674,10 @@ void HDual::solvePhase2() {
   // Report the phase start
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                     ML_DETAILED, "dual-phase-2-start\n");
+  // Allow perturbation of costs to the extent of the shifts required
+  // to eliminate dual infeasiblities. Once cost perturbation has been
+  // removed at the end of phase 2, such shifting won't be permitted.
+  simplex_info.allow_cost_perturbation = true;
   // Collect free variables
   dualRow.createFreelist();
   // Main solving structure
@@ -879,12 +889,13 @@ void HDual::rebuild() {
 void HDual::cleanup() {
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                     ML_DETAILED, "dual-cleanup-shift\n");
-  // Remove perturbation
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  // Remove perturbation and don't permit further perturbation
   initialise_cost(workHMO);
+  simplex_info.allow_cost_perturbation = false;
   initialise_bound(workHMO);
   // Compute the dual values
 #ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   vector<double> original_workDual = simplex_info.workDual_;
 #endif
   analysis->simplexTimerStart(ComputeDualClock);

@@ -3437,7 +3437,7 @@ void correctDual(HighsModelObject& highs_model_object,
             simplex_info.workUpper_[i] != inf) {
           // Boxed variable = flip
           flip_bound(highs_model_object, i);
-        } else if (simplex_info.costs_perturbed) {
+        } else if (simplex_info.allow_cost_perturbation) {
           // Other variable = shift
           //
           // Before 07/07/20, these shifts were always done, but doing
