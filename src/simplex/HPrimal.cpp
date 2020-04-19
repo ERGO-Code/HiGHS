@@ -342,9 +342,8 @@ void HPrimal::primalRebuild() {
   computePrimalObjectiveValue(workHMO);
   analysis->simplexTimerStop(ComputePrObjClock);
 
-  const bool primal = true;
   if (check_updated_objective_value)
-    checkUpdatedObjectiveValue(workHMO, primal);
+    checkUpdatedObjectiveValue(workHMO, algorithm);
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 

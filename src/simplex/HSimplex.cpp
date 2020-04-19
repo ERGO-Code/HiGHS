@@ -896,35 +896,6 @@ void report_basis(HighsLp& lp, SimplexBasis& simplex_basis) {
  * @brief Simplex utilities
  */
 
-/*
-// Increment iteration count (here!) and (possibly) store the pivots for
-// debugging NLA
-void record_pivots(int columnIn, int columnOut, double alpha) {
-  // NB This is where the iteration count is updated!
-  if (columnIn >= 0) iteration_counts.simplex++;
-#ifdef HiGHSDEV
-  historyColumnIn.push_back(columnIn);
-  historyColumnOut.push_back(columnOut);
-  historyAlpha.push_back(alpha);
-#endif
-}
-#ifdef HiGHSDEV
-// Store and write out the pivots for debugging NLA
-void writePivots(const char* suffix) {
-  string filename = "z-" + simplex_lp_->model_name_ + "-" + suffix;
-  ofstream output(filename.c_str());
-  int count = historyColumnIn.size();
-  double current_run_highs_time = timer_->readRunHighsClock();
-  output << simplex_lp_->model_name_ << " " << count << "\t" <<
-current_run_highs_time << endl; output << setprecision(12); for (int i = 0; i <
-count; i++) { output << historyColumnIn[i] << "\t"; output <<
-historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
-  }
-  output.close();
-}
-#endif
-*/
-
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                int phase) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
@@ -940,12 +911,15 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
           simplex_info.workValue_[i] * simplex_info.workDual_[i];
     }
   }
+  simplex_info.dual_objective_value *= highs_model_object.scale_.cost_;
   if (phase != 1) {
-    simplex_info.dual_objective_value *= highs_model_object.scale_.cost_;
-    // If minimizing the shift is added. If maximizing, workCost (and
-    // hence workDual) are negated, so the shift is subtracted
+    // In phase 1 the dual objective has no objective
+    // shift. Otherwise, if minimizing the shift is added. If
+    // maximizing, workCost (and hence workDual) are negated, so the
+    // shift is subtracted. Hence the shift is added according to the
+    // sign implied by sense_
     simplex_info.dual_objective_value +=
-        ((int)simplex_lp.sense_) * simplex_lp.offset_;
+      ((int)simplex_lp.sense_) * simplex_lp.offset_;
   }
   // Now have dual objective value
   simplex_lp_status.has_dual_objective_value = true;
@@ -4100,51 +4074,81 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
   return HighsStatus::OK;
 }
 
-double checkDualObjectiveValue(HighsModelObject& workHMO, const char* message,
-                               int phase) {
-  double updated_dual_objective_error = 0.;
+void checkUpdatedObjectiveValue(HighsModelObject& workHMO,
+				const SimplexAlgorithm algorithm,
+				const int phase,
+				const char* message) {
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  // Non-trivially expensive check of updated objective value. Computes the exact objective value
+  static double previous_updated_primal_objective_value = 0;
+  static double previous_primal_objective_value = 0;
   static double previous_updated_dual_objective_value = 0;
   static double previous_dual_objective_value = 0;
-  computeDualObjectiveValue(workHMO, phase);
-  double updated_dual_objective_value =
-      workHMO.simplex_info_.updated_dual_objective_value;
-  double dual_objective_value = workHMO.simplex_info_.dual_objective_value;
-  double change_in_updated_dual_objective_value =
-      updated_dual_objective_value - previous_updated_dual_objective_value;
-  double change_in_dual_objective_value =
-      dual_objective_value - previous_dual_objective_value;
-  updated_dual_objective_error =
-      dual_objective_value - updated_dual_objective_value;
-  double relative_updated_dual_objective_error =
-      fabs(updated_dual_objective_error) / max(1.0, fabs(dual_objective_value));
-  bool error_found = relative_updated_dual_objective_error > 1e-8;
+  double updated_objective_value;
+  double objective_value;
+  double previous_updated_objective_value;
+  double previous_objective_value;
+  std::string algorithm_id;
+  if (algorithm == SimplexAlgorithm::PRIMAL) {
+    algorithm_id = "Pr";
+    previous_updated_objective_value = previous_updated_primal_objective_value;
+    previous_objective_value = previous_primal_objective_value;
+    computePrimalObjectiveValue(workHMO);
+    updated_objective_value = simplex_info.updated_primal_objective_value;
+    objective_value = simplex_info.primal_objective_value;
+  } else {
+    algorithm_id = "Du";
+    previous_updated_objective_value = previous_updated_dual_objective_value;
+    previous_objective_value = previous_dual_objective_value;
+    computeDualObjectiveValue(workHMO, phase);
+    updated_objective_value = simplex_info.updated_dual_objective_value;
+    objective_value = simplex_info.dual_objective_value;
+  }
+  const double change_in_updated_objective_value =
+      updated_objective_value - previous_updated_objective_value;
+  const double change_in_objective_value =
+      objective_value - previous_objective_value;
+  const double updated_objective_error =
+      objective_value - updated_objective_value;
+  const double relative_updated_objective_error =
+      fabs(updated_objective_error) / max(1.0, fabs(objective_value));
+  const bool error_found = relative_updated_objective_error > 1e-8;
   if (error_found)
     printf(
-        "Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g "
-        "(%11.4g); Error(|Rel|) = %11.4g (%11.4g) |%s\n",
-        phase, dual_objective_value, change_in_dual_objective_value,
-        updated_dual_objective_value, change_in_updated_dual_objective_value,
-        updated_dual_objective_error, relative_updated_dual_objective_error,
+        "Phase %1d: %sObjV = %11.4g (%11.4g); updated %sObjV = %11.4g "
+        "(%11.4g); Error(|Rel|) = %11.4g (%11.4g) | %s\n",
+        phase, algorithm_id.c_str(), objective_value, change_in_objective_value,
+        algorithm_id.c_str(), updated_objective_value, change_in_updated_objective_value,
+        updated_objective_error, relative_updated_objective_error,
         message);
-  previous_dual_objective_value = dual_objective_value;
-  previous_updated_dual_objective_value = dual_objective_value;
-  workHMO.simplex_info_.updated_dual_objective_value = dual_objective_value;
-  // Now have dual objective value
-  workHMO.simplex_lp_status_.has_dual_objective_value = true;
+  // Now update the records of previous objective values and current objective value
+  if (algorithm == SimplexAlgorithm::PRIMAL) {
+    previous_primal_objective_value = objective_value;
+    previous_updated_primal_objective_value = objective_value;
+    simplex_info.updated_primal_objective_value = objective_value;
+    workHMO.simplex_lp_status_.has_primal_objective_value = true;
+  } else {
+    previous_dual_objective_value = objective_value;
+    previous_updated_dual_objective_value = objective_value;
+    simplex_info.updated_dual_objective_value = objective_value;
+    workHMO.simplex_lp_status_.has_dual_objective_value = true;
+  }
 #endif
-  return updated_dual_objective_error;
 }
 
 void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
-                                const bool primal) {
+                                const SimplexAlgorithm algorithm) {
 #ifdef HiGHSDEV
+  // Cheap check of updated objective value - assumes that the
+  // objective value computed directly is correct, so only call after
+  // this has been done
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  std::string algorithm = "Dual";
-  if (primal) algorithm = "Primal";
+  std::string algorithm_name = "Dual";
+  if (algorithm == SimplexAlgorithm::PRIMAL) algorithm_name = "Primal";
   double exact_objective;
   double updated_objective;
-  if (primal) {
+  if (algorithm == SimplexAlgorithm::PRIMAL) {
     assert(highs_model_object.simplex_lp_status_.has_primal_objective_value);
     exact_objective = simplex_info.primal_objective_value;
     updated_objective = simplex_info.updated_primal_objective_value;
@@ -4164,7 +4168,7 @@ void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
   if (relative_objective_error >= 1e-8)
     HighsLogMessage(
         highs_model_object.options_.logfile, HighsMessageType::WARNING,
-        "%s objective value error |rel| = %12g (%12g)", algorithm.c_str(),
+        "%s objective value error |rel| = %12g (%12g)", algorithm_name.c_str(),
         absolute_objective_error, relative_objective_error);
 #endif
 }

@@ -78,6 +78,8 @@ class HDual {
    */
   HighsStatus solve();
 
+  const SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
+
  public:
   /**
    * @brief Set solver options from simplex options

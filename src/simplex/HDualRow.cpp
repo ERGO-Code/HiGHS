@@ -304,7 +304,6 @@ bool HDualRow::chooseFinal() {
 }
 
 void HDualRow::updateFlip(HVector* bfrtColumn) {
-  checkDualObjectiveValue(workHMO, "Before update_flip");
   double* workDual = &workHMO.simplex_info_.workDual_[0];  //
   //  double *workLower = &workHMO.simplex_info_.workLower_[0];
   //  double *workUpper = &workHMO.simplex_info_.workUpper_[0];
@@ -326,11 +325,9 @@ void HDualRow::updateFlip(HVector* bfrtColumn) {
   }
   workHMO.simplex_info_.updated_dual_objective_value +=
       dual_objective_value_change;
-  checkDualObjectiveValue(workHMO, "After  update_flip");
 }
 
 void HDualRow::updateDual(double theta) {
-  checkDualObjectiveValue(workHMO, "Before update_dual");
   analysis->simplexTimerStart(UpdateDualClock);
   double* workDual = &workHMO.simplex_info_.workDual_[0];
   for (int i = 0; i < packCount; i++) {
@@ -345,7 +342,6 @@ void HDualRow::updateDual(double theta) {
     workHMO.simplex_info_.updated_dual_objective_value += dlDuObj;
   }
   analysis->simplexTimerStop(UpdateDualClock);
-  checkDualObjectiveValue(workHMO, "After update_dual");
 }
 
 void HDualRow::createFreelist() {

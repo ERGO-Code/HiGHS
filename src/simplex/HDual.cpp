@@ -807,9 +807,8 @@ void HDual::rebuild() {
   computeDualObjectiveValue(workHMO, solvePhase);
   analysis->simplexTimerStop(ComputeDuObjClock);
 
-  const bool primal = false;
   if (check_updated_objective_value)
-    checkUpdatedObjectiveValue(workHMO, primal);
+    checkUpdatedObjectiveValue(workHMO, algorithm);
   simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
   analysis->simplexTimerStart(ReportRebuildClock);
@@ -941,14 +940,14 @@ void HDual::iterate() {
   updateDual();
   analysis->simplexTimerStop(IterateDualClock);
 
-  checkDualObjectiveValue(workHMO, "Before updatePrimal");
+  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "Before updatePrimal");
   // updatePrimal(&row_ep); Updates the primal values and the edge weights
   analysis->simplexTimerStart(IteratePrimalClock);
   updatePrimal(&row_ep);
   analysis->simplexTimerStop(IteratePrimalClock);
   // After primal update in dual simplex the primal objective value is not known
   workHMO.simplex_lp_status_.has_primal_objective_value = false;
-  checkDualObjectiveValue(workHMO, "After updatePrimal");
+  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "After updatePrimal");
 
   // Update the basis representation
   analysis->simplexTimerStart(IteratePivotsClock);
@@ -1485,7 +1484,9 @@ void HDual::updateFtranBFRT() {
     analysis->simplexTimerStart(FtranBfrtClock);
   }
 
+  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "Before update_flip");
   dualRow.updateFlip(&col_BFRT);
+  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "After  update_flip");
 
   if (col_BFRT.count) {
 #ifdef HiGHSDEV
@@ -1563,12 +1564,12 @@ void HDual::updateDual() {
   // Update - dual (shift and back)
   if (thetaDual == 0) {
     // Little to do if thetaDual is zero
-    checkDualObjectiveValue(workHMO, "Before shift_cost");
+    checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "Before shift_cost");
     shift_cost(workHMO, columnIn, -workDual[columnIn]);
-    checkDualObjectiveValue(workHMO, "After shift_cost");
+    checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "After shift_cost");
   } else {
     // Update the whole vector of dual values
-    checkDualObjectiveValue(workHMO, "Before calling dualRow.updateDual");
+    checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "Before calling dualRow.updateDual");
     dualRow.updateDual(thetaDual);
     if (workHMO.simplex_info_.simplex_strategy != SIMPLEX_STRATEGY_DUAL_PLAIN &&
         slice_PRICE) {
@@ -1576,7 +1577,7 @@ void HDual::updateDual() {
       for (int i = 0; i < slice_num; i++)
         slice_dualRow[i].updateDual(thetaDual);
     }
-    checkDualObjectiveValue(workHMO, "After calling dualRow.updateDual");
+    checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "After calling dualRow.updateDual");
   }
   // Identify the changes in the dual objective
   double delta_dual_objective;
@@ -1619,9 +1620,9 @@ void HDual::updateDual() {
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
 
-  checkDualObjectiveValue(workHMO, "Before shift_back");
+  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "Before shift_back");
   shift_back(workHMO, columnOut);
-  checkDualObjectiveValue(workHMO, "After shift_back");
+  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "After shift_back");
 }
 
 void HDual::updatePrimal(HVector* DSE_Vector) {
@@ -1698,9 +1699,9 @@ void HDual::updatePivots() {
   if (invertHint) return;
   //
   // Update the sets of indices of basic and nonbasic variables
-  checkDualObjectiveValue(workHMO, "Before update_pivots");
+  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "Before update_pivots");
   update_pivots(workHMO, columnIn, rowOut, sourceOut);
-  checkDualObjectiveValue(workHMO, "After update_pivots");
+  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "After update_pivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined

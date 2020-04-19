@@ -56,34 +56,6 @@ void report_basis(HighsLp& lp, HighsBasis& basis);
 void report_basis(HighsLp& lp, SimplexBasis& simplex_basis);
 #endif
 
-/*
-// Increment iteration count (here!) and (possibly) store the pivots for
-// debugging NLA
-void record_pivots(int columnIn, int columnOut, double alpha) {
-  // NB This is where the iteration count is updated!
-  if (columnIn >= 0) iteration_counts_.simplex++;
-#ifdef HiGHSDEV
-  historyColumnIn.push_back(columnIn);
-  historyColumnOut.push_back(columnOut);
-  historyAlpha.push_back(alpha);
-#endif
-}
-#ifdef HiGHSDEV
-// Store and write out the pivots for debugging NLA
-void writePivots(const char* suffix) {
-  string filename = "z-" + simplex_lp_->model_name_ + "-" + suffix;
-  ofstream output(filename.c_str());
-  int count = historyColumnIn.size();
-  double current_run_highs_time = timer_->readRunHighsClock();
-  output << simplex_lp_->model_name_ << " " << count << "\t" <<
-current_run_highs_time << endl; output << setprecision(12); for (int i = 0; i <
-count; i++) { output << historyColumnIn[i] << "\t"; output <<
-historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
-  }
-  output.close();
-}
-#endif
-*/
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                int phase = 2);
 
@@ -280,11 +252,13 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     double& new_scaled_primal_feasibility_tolerance,
     double& new_scaled_dual_feasibility_tolerance);
 
-double checkDualObjectiveValue(HighsModelObject& highs_model_object,
-                               const char* message, int phase = 2);
+void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
+				const SimplexAlgorithm algorithm,
+				const int phase,
+				const char* message);
 
 void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
-                                const bool primal);
+                                const SimplexAlgorithm algorithm);
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase);
