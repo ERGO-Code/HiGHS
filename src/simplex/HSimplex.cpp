@@ -25,6 +25,7 @@
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"  // For simplex strategy constants
 #include "simplex/SimplexTimer.h"
+#include "simplex/HSimplexDebug.h"
 #include "util/HighsUtils.h"
 
 using std::runtime_error;
@@ -4077,101 +4078,12 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
 void checkUpdatedObjectiveValue(HighsModelObject& workHMO,
                                 const SimplexAlgorithm algorithm,
                                 const int phase, const char* message) {
-#ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  // Non-trivially expensive check of updated objective value. Computes the
-  // exact objective value
-  static double previous_updated_primal_objective_value = 0;
-  static double previous_primal_objective_value = 0;
-  static double previous_updated_dual_objective_value = 0;
-  static double previous_dual_objective_value = 0;
-  double updated_objective_value;
-  double objective_value;
-  double previous_updated_objective_value;
-  double previous_objective_value;
-  std::string algorithm_id;
-  if (algorithm == SimplexAlgorithm::PRIMAL) {
-    algorithm_id = "Pr";
-    previous_updated_objective_value = previous_updated_primal_objective_value;
-    previous_objective_value = previous_primal_objective_value;
-    computePrimalObjectiveValue(workHMO);
-    updated_objective_value = simplex_info.updated_primal_objective_value;
-    objective_value = simplex_info.primal_objective_value;
-  } else {
-    algorithm_id = "Du";
-    previous_updated_objective_value = previous_updated_dual_objective_value;
-    previous_objective_value = previous_dual_objective_value;
-    computeDualObjectiveValue(workHMO, phase);
-    updated_objective_value = simplex_info.updated_dual_objective_value;
-    objective_value = simplex_info.dual_objective_value;
-  }
-  const double change_in_updated_objective_value =
-      updated_objective_value - previous_updated_objective_value;
-  const double change_in_objective_value =
-      objective_value - previous_objective_value;
-  const double updated_objective_error =
-      objective_value - updated_objective_value;
-  const double relative_updated_objective_error =
-      fabs(updated_objective_error) / max(1.0, fabs(objective_value));
-  const bool error_found = relative_updated_objective_error > 1e-8;
-  if (error_found)
-    printf(
-        "Phase %1d: %sObjV = %11.4g (%11.4g); updated %sObjV = %11.4g "
-        "(%11.4g); Error(|Rel|) = %11.4g (%11.4g) | %s\n",
-        phase, algorithm_id.c_str(), objective_value, change_in_objective_value,
-        algorithm_id.c_str(), updated_objective_value,
-        change_in_updated_objective_value, updated_objective_error,
-        relative_updated_objective_error, message);
-  // Now update the records of previous objective values and current objective
-  // value
-  if (algorithm == SimplexAlgorithm::PRIMAL) {
-    previous_primal_objective_value = objective_value;
-    previous_updated_primal_objective_value = objective_value;
-    simplex_info.updated_primal_objective_value = objective_value;
-    workHMO.simplex_lp_status_.has_primal_objective_value = true;
-  } else {
-    previous_dual_objective_value = objective_value;
-    previous_updated_dual_objective_value = objective_value;
-    simplex_info.updated_dual_objective_value = objective_value;
-    workHMO.simplex_lp_status_.has_dual_objective_value = true;
-  }
-#endif
+  debugUpdatedObjectiveValue(workHMO, algorithm, phase, message);
 }
 
-void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
+void checkUpdatedObjectiveValue(const HighsModelObject& workHMO,
                                 const SimplexAlgorithm algorithm) {
-#ifdef HiGHSDEV
-  // Cheap check of updated objective value - assumes that the
-  // objective value computed directly is correct, so only call after
-  // this has been done
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  std::string algorithm_name = "Dual";
-  if (algorithm == SimplexAlgorithm::PRIMAL) algorithm_name = "Primal";
-  double exact_objective;
-  double updated_objective;
-  if (algorithm == SimplexAlgorithm::PRIMAL) {
-    assert(highs_model_object.simplex_lp_status_.has_primal_objective_value);
-    exact_objective = simplex_info.primal_objective_value;
-    updated_objective = simplex_info.updated_primal_objective_value;
-  } else {
-    assert(highs_model_object.simplex_lp_status_.has_dual_objective_value);
-    exact_objective = simplex_info.dual_objective_value;
-    updated_objective = simplex_info.updated_dual_objective_value;
-  }
-  double absolute_objective_error = fabs(updated_objective - exact_objective);
-  //  printf("CheckObj: absolute_objective_error = %g\n",
-  //  absolute_objective_error); printf("CheckObj: exact_objective = %g\n",
-  //  exact_objective);
-  double relative_objective_error =
-      absolute_objective_error / max(1.0, fabs(exact_objective));
-  //  printf("CheckObj: relative_objective_error = %g\n",
-  //  relative_objective_error);
-  if (relative_objective_error >= 1e-8)
-    HighsLogMessage(
-        highs_model_object.options_.logfile, HighsMessageType::WARNING,
-        "%s objective value error |rel| = %12g (%12g)", algorithm_name.c_str(),
-        absolute_objective_error, relative_objective_error);
-#endif
+  debugUpdatedObjectiveValue(workHMO, algorithm);
 }
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,

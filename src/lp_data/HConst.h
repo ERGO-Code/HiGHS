@@ -25,6 +25,22 @@ const std::string choose_string = "choose";
 const std::string on_string = "on";
 const int HIGHS_THREAD_LIMIT = 8;  // 32;
 
+enum HighsDebugLevel {
+  HIGHS_DEBUG_LEVEL_MIN = 0,
+  HIGHS_DEBUG_LEVEL_NONE = HIGHS_DEBUG_LEVEL_MIN,
+  HIGHS_DEBUG_LEVEL_CHEAP,
+  HIGHS_DEBUG_LEVEL_COSTLY,
+  HIGHS_DEBUG_LEVEL_EXPENSIVE,
+  HIGHS_DEBUG_LEVEL_MAX = HIGHS_DEBUG_LEVEL_EXPENSIVE
+};
+
+enum class HighsDebugStatus {
+  NOT_CHECKED = -1,
+  OK,
+  SMALL_ERROR,
+  LARGE_ERROR
+};
+
 enum HighsPrintMessageLevel {
   ML_MIN = 0,
   ML_NONE = ML_MIN,

@@ -256,7 +256,7 @@ void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
                                 const SimplexAlgorithm algorithm,
                                 const int phase, const char* message);
 
-void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
+void checkUpdatedObjectiveValue(const HighsModelObject& highs_model_object,
                                 const SimplexAlgorithm algorithm);
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,

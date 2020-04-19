@@ -290,6 +290,11 @@ HighsStatus Highs::writeModel(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runLpSolver(..)
 HighsStatus Highs::run() {
+#ifdef HiGHSDEV
+  printf("Highs::run() HiGHSDEV defines so set options_.highs_debug_level = HIGHS_DEBUG_LEVEL_MAX;\n");
+  options_.highs_debug_level = HIGHS_DEBUG_LEVEL_CHEAP;//HIGHS_DEBUG_LEVEL_MAX;
+#endif
+
 #ifdef OPENMP
   omp_max_threads = omp_get_max_threads();
   assert(omp_max_threads > 0);

@@ -1597,14 +1597,6 @@ void HDual::updateDual() {
       columnIn_nonbasicFlag * (-columnIn_value * columnIn_delta_dual);
   delta_dual_objective *= workHMO.scale_.cost_;
   workHMO.simplex_info_.updated_dual_objective_value += delta_dual_objective;
-#ifdef HiGHSDEV
-  if (delta_dual_objective)
-    printf(
-        "columnIn  = %6d: nonbasicFlag = %2d; value = %11.4g; delta_dual = "
-        "%11.4g; delta_obj = %11.4g\n",
-        columnIn, columnIn_nonbasicFlag, columnIn_value, columnIn_delta_dual,
-        delta_dual_objective);
-#endif
   const double columnOut_delta_dual = workDual[columnOut] - thetaDual;
   const double columnOut_value = workValue[columnOut];
   const int columnOut_nonbasicFlag =
@@ -1616,14 +1608,6 @@ void HDual::updateDual() {
   // Surely columnOut_nonbasicFlag is always 0 since it's basic - so there's no
   // dual objective change
   assert(columnOut_nonbasicFlag == 0);
-#ifdef HiGHSDEV
-  if (delta_dual_objective)
-    printf(
-        "columnOut = %6d: nonbasicFlag = %2d; value = %11.4g; delta_dual = "
-        "%11.4g; delta_obj = %11.4g\n",
-        columnOut, columnOut_nonbasicFlag, columnOut_value,
-        columnOut_delta_dual, delta_dual_objective);
-#endif
 
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
@@ -2006,8 +1990,6 @@ bool HDual::reachedExactDualObjectiveValueUpperBound() {
     const double perturbed_value_residual =
         perturbed_dual_objective_value - dual_objective_value_upper_bound;
     const double exact_dual_objective_value = computeExactDualObjectiveValue();
-    //      const double delta_dual_objective_value = exact_dual_objective_value
-    //      - perturbed_dual_objective_value;
     const double exact_value_residual =
         exact_dual_objective_value - dual_objective_value_upper_bound;
     std::string action;
