@@ -113,19 +113,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     // reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
-
-  // Determine whether the solution is optimal
-  HighsSolutionParams& scaled_solution_params =
-      highs_model_object.scaled_solution_params_;
-  if ((scaled_solution_params.num_primal_infeasibilities == 0) &&
-      (scaled_solution_params.num_dual_infeasibilities == 0)) {
-    // Simplex solution is optimal
-    highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
-    scaled_solution_params.primal_status =
-        PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    scaled_solution_params.dual_status =
-        PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  }
   //
   // Given a simplex basis and solution, use the number of primal and
   // dual infeasibilities to determine whether the simplex solver is
@@ -138,11 +125,24 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // dual feasibility
   //
   int simplex_strategy = highs_model_object.options_.simplex_strategy;
-  // Determine what dual simplex strategy should be used if there is a choice of
-  // dual strategy Determine the initial choice of simplex strategy If the
-  // simplex strategy is to choose, then choose dual simplex for now
-  if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
-    simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+  HighsSolutionParams& scaled_solution_params =
+      highs_model_object.scaled_solution_params_;
+  if (scaled_solution_params.num_primal_infeasibilities == 0) {
+    // Primal feasible
+    if (scaled_solution_params.num_dual_infeasibilities == 0) {
+      // Dual feasible
+      // Simplex solution is optimal
+      highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+      scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    } else {
+      // Only dual infeasible, so use primal simplex if choice is permitted
+      if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+    }
+  } else {
+    // Not primal feasible, so use dual simplex if choice is permitted
+    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+  }
   //
   // Set min/max_threads to correspond to serial code. They will be
   // set to other values if parallel options are used.
