@@ -919,7 +919,7 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
     // shift is subtracted. Hence the shift is added according to the
     // sign implied by sense_
     simplex_info.dual_objective_value +=
-      ((int)simplex_lp.sense_) * simplex_lp.offset_;
+        ((int)simplex_lp.sense_) * simplex_lp.offset_;
   }
   // Now have dual objective value
   simplex_lp_status.has_dual_objective_value = true;
@@ -4075,12 +4075,12 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
 }
 
 void checkUpdatedObjectiveValue(HighsModelObject& workHMO,
-				const SimplexAlgorithm algorithm,
-				const int phase,
-				const char* message) {
+                                const SimplexAlgorithm algorithm,
+                                const int phase, const char* message) {
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  // Non-trivially expensive check of updated objective value. Computes the exact objective value
+  // Non-trivially expensive check of updated objective value. Computes the
+  // exact objective value
   static double previous_updated_primal_objective_value = 0;
   static double previous_primal_objective_value = 0;
   static double previous_updated_dual_objective_value = 0;
@@ -4119,10 +4119,11 @@ void checkUpdatedObjectiveValue(HighsModelObject& workHMO,
         "Phase %1d: %sObjV = %11.4g (%11.4g); updated %sObjV = %11.4g "
         "(%11.4g); Error(|Rel|) = %11.4g (%11.4g) | %s\n",
         phase, algorithm_id.c_str(), objective_value, change_in_objective_value,
-        algorithm_id.c_str(), updated_objective_value, change_in_updated_objective_value,
-        updated_objective_error, relative_updated_objective_error,
-        message);
-  // Now update the records of previous objective values and current objective value
+        algorithm_id.c_str(), updated_objective_value,
+        change_in_updated_objective_value, updated_objective_error,
+        relative_updated_objective_error, message);
+  // Now update the records of previous objective values and current objective
+  // value
   if (algorithm == SimplexAlgorithm::PRIMAL) {
     previous_primal_objective_value = objective_value;
     previous_updated_primal_objective_value = objective_value;

@@ -27,10 +27,7 @@ enum class SimplexSolutionStatus {
   OUT_OF_TIME
 };
 
-enum class SimplexAlgorithm {
-  PRIMAL = 0,
-  DUAL
-};
+enum class SimplexAlgorithm { PRIMAL = 0, DUAL };
 
 enum SimplexStrategy {
   SIMPLEX_STRATEGY_MIN = 0,
