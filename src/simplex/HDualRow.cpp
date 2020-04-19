@@ -331,7 +331,8 @@ void HDualRow::updateDual(double theta) {
     const double delta_dual = theta * packValue[i];
     const double local_value = workHMO.simplex_info_.workValue_[iCol];
     double local_dual_objective_change =
-        workHMO.simplex_basis_.nonbasicFlag_[iCol] * (-local_value * delta_dual);
+        workHMO.simplex_basis_.nonbasicFlag_[iCol] *
+        (-local_value * delta_dual);
     local_dual_objective_change *= workHMO.scale_.cost_;
     dual_objective_value_change += local_dual_objective_change;
   }

@@ -810,6 +810,8 @@ void HDual::rebuild() {
 
   if (check_updated_objective_value)
     debugUpdatedObjectiveValue(workHMO, algorithm);
+  // Now that there's a new dual_objective_value, reset the updated
+  // value
   simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
   analysis->simplexTimerStart(ReportRebuildClock);
@@ -1589,27 +1591,30 @@ void HDual::updateDual() {
                                "After calling dualRow.updateDual");
   }
   // Identify the changes in the dual objective
-  double delta_dual_objective;
+  double dual_objective_value_change;
   const double columnIn_delta_dual = workDual[columnIn];
   const double columnIn_value = workValue[columnIn];
   const int columnIn_nonbasicFlag =
       workHMO.simplex_basis_.nonbasicFlag_[columnIn];
-  delta_dual_objective =
+  dual_objective_value_change =
       columnIn_nonbasicFlag * (-columnIn_value * columnIn_delta_dual);
-  delta_dual_objective *= workHMO.scale_.cost_;
-  workHMO.simplex_info_.updated_dual_objective_value += delta_dual_objective;
-  const double columnOut_delta_dual = workDual[columnOut] - thetaDual;
-  const double columnOut_value = workValue[columnOut];
-  const int columnOut_nonbasicFlag =
-      workHMO.simplex_basis_.nonbasicFlag_[columnOut];
-  delta_dual_objective =
-      columnOut_nonbasicFlag * (-columnOut_value * columnOut_delta_dual);
-  delta_dual_objective *= workHMO.scale_.cost_;
-  workHMO.simplex_info_.updated_dual_objective_value += delta_dual_objective;
+  dual_objective_value_change *= workHMO.scale_.cost_;
+  workHMO.simplex_info_.updated_dual_objective_value +=
+      dual_objective_value_change;
   // Surely columnOut_nonbasicFlag is always 0 since it's basic - so there's no
   // dual objective change
+  const int columnOut_nonbasicFlag =
+      workHMO.simplex_basis_.nonbasicFlag_[columnOut];
   assert(columnOut_nonbasicFlag == 0);
-
+  if (columnOut_nonbasicFlag) {
+    const double columnOut_delta_dual = workDual[columnOut] - thetaDual;
+    const double columnOut_value = workValue[columnOut];
+    dual_objective_value_change =
+        columnOut_nonbasicFlag * (-columnOut_value * columnOut_delta_dual);
+    dual_objective_value_change *= workHMO.scale_.cost_;
+    workHMO.simplex_info_.updated_dual_objective_value +=
+        dual_objective_value_change;
+  }
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
 

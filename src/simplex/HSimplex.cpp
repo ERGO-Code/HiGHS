@@ -21,11 +21,11 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/HCrash.h"
+#include "simplex/HSimplexDebug.h"
 #include "simplex/HVector.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"  // For simplex strategy constants
 #include "simplex/SimplexTimer.h"
-#include "simplex/HSimplexDebug.h"
 #include "util/HighsUtils.h"
 
 using std::runtime_error;
@@ -3399,6 +3399,9 @@ void correctDual(HighsModelObject& highs_model_object,
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
   const double inf = HIGHS_CONST_INF;
   int workCount = 0;
+  double dual_objective_value_change = 0;
+  int num_shift = 0;
+  double sum_shift = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (simplex_basis.nonbasicFlag_[i]) {
@@ -3415,7 +3418,7 @@ void correctDual(HighsModelObject& highs_model_object,
         } else if (simplex_info.allow_cost_perturbation) {
           // Other variable = shift
           //
-          // Before 07/07/20, these shifts were always done, but doing
+          // Before 07/01/20, these shifts were always done, but doing
           // it after cost perturbation has been removed can lead to
           // cycling when primal infeasibility has been detecteed in
           // Phase 2, since the shift below removes dual
@@ -3431,16 +3434,35 @@ void correctDual(HighsModelObject& highs_model_object,
             double shift = dual - simplex_info.workDual_[i];
             simplex_info.workDual_[i] = dual;
             simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
+            double local_dual_objective_change =
+                shift * simplex_info.workValue_[i];
+            local_dual_objective_change *= highs_model_object.scale_.cost_;
+            dual_objective_value_change += local_dual_objective_change;
+            num_shift++;
+            sum_shift += fabs(shift);
+            printf("Move up: shift = %g; DlObj = %g\n", shift,
+                   local_dual_objective_change);
           } else {
             double dual = -(1 + random.fraction()) * tau_d;
             double shift = dual - simplex_info.workDual_[i];
             simplex_info.workDual_[i] = dual;
             simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
+            double local_dual_objective_change =
+                shift * simplex_info.workValue_[i];
+            local_dual_objective_change *= highs_model_object.scale_.cost_;
+            dual_objective_value_change += local_dual_objective_change;
+            num_shift++;
+            sum_shift += fabs(shift);
+            printf("Move dn: shift = %g; DlObj = %g\n", shift,
+                   local_dual_objective_change);
           }
         }
       }
     }
   }
+  if (num_shift)
+    printf("Performed %d shifts: total = %g; DlObj = %g\n", num_shift,
+           sum_shift, dual_objective_value_change);
   *free_infeasibility_count = workCount;
 }
 

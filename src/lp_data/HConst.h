@@ -34,12 +34,7 @@ enum HighsDebugLevel {
   HIGHS_DEBUG_LEVEL_MAX = HIGHS_DEBUG_LEVEL_EXPENSIVE
 };
 
-enum class HighsDebugStatus {
-  NOT_CHECKED = -1,
-  OK,
-  SMALL_ERROR,
-  LARGE_ERROR
-};
+enum class HighsDebugStatus { NOT_CHECKED = -1, OK, SMALL_ERROR, LARGE_ERROR };
 
 enum HighsPrintMessageLevel {
   ML_MIN = 0,
