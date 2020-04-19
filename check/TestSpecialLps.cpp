@@ -1,6 +1,6 @@
 #include "Highs.h"
-#include "lp_data/HConst.h"
 #include "catch.hpp"
+#include "lp_data/HConst.h"
 const double inf = HIGHS_CONST_INF;
 void reportIssue(const int issue) {
   printf("\n *************\n * Issue %3d *\n *************\n", issue);
@@ -306,7 +306,8 @@ void almostNotUnbounded(Highs& highs) {
   // No
   HighsStatus status;
   HighsLp lp;
-  const HighsModelStatus require_model_status0 = HighsModelStatus::PRIMAL_UNBOUNDED;
+  const HighsModelStatus require_model_status0 =
+      HighsModelStatus::PRIMAL_UNBOUNDED;
   const HighsModelStatus require_model_status1 = HighsModelStatus::OPTIMAL;
   const HighsModelStatus require_model_status2 = HighsModelStatus::OPTIMAL;
   const double optimal_objective1 = -1;
@@ -316,17 +317,17 @@ void almostNotUnbounded(Highs& highs) {
   double objective_epsilon = 1e-6;
   lp.numCol_ = 2;
   lp.numRow_ = 3;
-  lp.colCost_ = {-1, 1-objective_epsilon};
+  lp.colCost_ = {-1, 1 - objective_epsilon};
   lp.colLower_ = {0, 0};
   lp.colUpper_ = {1e+200, 1e+200};
-  lp.rowLower_ = {-1+constraint_epsilon, -1, 3};
+  lp.rowLower_ = {-1 + constraint_epsilon, -1, 3};
   lp.rowUpper_ = {1e+200, 1e+200, 1e+200};
   lp.Astart_ = {0, 3, 6};
   lp.Aindex_ = {0, 1, 2, 0, 1, 2};
-  lp.Avalue_ = {1+constraint_epsilon, -1, 1, -1, 1, 1};
+  lp.Avalue_ = {1 + constraint_epsilon, -1, 1, -1, 1, 1};
   // LP is feasible on [1+alpha, alpha] with objective
   // -1-epsilon*alpha so unbounded
-  
+
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
   solve(highs, "off", "simplex", require_model_status0);
@@ -337,7 +338,7 @@ void almostNotUnbounded(Highs& highs) {
   lp.colCost_ = {-1, 1};
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
-  
+
   solve(highs, "off", "simplex", require_model_status1, optimal_objective1);
   reportSolution(highs);
   solve(highs, "off", "ipm", require_model_status1, optimal_objective1);
@@ -345,17 +346,15 @@ void almostNotUnbounded(Highs& highs) {
   // LP has bounded feasible region with optimal solution
   // [1+2/constraint_epsilon, 2/constraint_epsilon] and objective
   // value -3
-  lp.colCost_[1] = 1-objective_epsilon;
-  lp.rowLower_[0] = -1-constraint_epsilon;
-  lp.Avalue_[0] = 1-constraint_epsilon;
+  lp.colCost_[1] = 1 - objective_epsilon;
+  lp.rowLower_[0] = -1 - constraint_epsilon;
+  lp.Avalue_[0] = 1 - constraint_epsilon;
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
 
   solve(highs, "off", "simplex", require_model_status2, optimal_objective2);
   reportSolution(highs);
   solve(highs, "off", "ipm", require_model_status2, optimal_objective2);
-
-
 }
 TEST_CASE("test-special-lps", "[TestSpecialLps]") {
   Highs highs;
