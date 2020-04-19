@@ -4075,17 +4075,6 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
   return HighsStatus::OK;
 }
 
-void checkUpdatedObjectiveValue(HighsModelObject& workHMO,
-                                const SimplexAlgorithm algorithm,
-                                const int phase, const char* message) {
-  debugUpdatedObjectiveValue(workHMO, algorithm, phase, message);
-}
-
-void checkUpdatedObjectiveValue(const HighsModelObject& workHMO,
-                                const SimplexAlgorithm algorithm) {
-  debugUpdatedObjectiveValue(workHMO, algorithm);
-}
-
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase) {
   HighsSolutionParams& scaled_solution_params =

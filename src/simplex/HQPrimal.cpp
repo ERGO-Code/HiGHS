@@ -20,6 +20,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "simplex/HSimplex.h"
+#include "simplex/HSimplexDebug.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsRandom.h"
 #include "util/HighsUtils.h"
@@ -384,7 +385,7 @@ void HQPrimal::primalRebuild() {
   analysis->simplexTimerStop(ComputePrObjClock);
 
   if (check_updated_objective_value)
-    checkUpdatedObjectiveValue(workHMO, algorithm);
+    debugUpdatedObjectiveValue(workHMO, algorithm);
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 

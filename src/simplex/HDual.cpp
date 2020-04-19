@@ -30,6 +30,7 @@
 #include "simplex/HPrimal.h"
 #include "simplex/HQPrimal.h"
 #include "simplex/HSimplex.h"
+#include "simplex/HSimplexDebug.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsTimer.h"
 
@@ -808,7 +809,7 @@ void HDual::rebuild() {
   analysis->simplexTimerStop(ComputeDuObjClock);
 
   if (check_updated_objective_value)
-    checkUpdatedObjectiveValue(workHMO, algorithm);
+    debugUpdatedObjectiveValue(workHMO, algorithm);
   simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
   analysis->simplexTimerStart(ReportRebuildClock);
@@ -940,7 +941,7 @@ void HDual::iterate() {
   updateDual();
   analysis->simplexTimerStop(IterateDualClock);
 
-  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+  debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before updatePrimal");
   // updatePrimal(&row_ep); Updates the primal values and the edge weights
   analysis->simplexTimerStart(IteratePrimalClock);
@@ -948,7 +949,7 @@ void HDual::iterate() {
   analysis->simplexTimerStop(IteratePrimalClock);
   // After primal update in dual simplex the primal objective value is not known
   workHMO.simplex_lp_status_.has_primal_objective_value = false;
-  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+  debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "After updatePrimal");
 
   // Update the basis representation
@@ -1486,10 +1487,10 @@ void HDual::updateFtranBFRT() {
     analysis->simplexTimerStart(FtranBfrtClock);
   }
 
-  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+  debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before update_flip");
   dualRow.updateFlip(&col_BFRT);
-  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+  debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "After  update_flip");
 
   if (col_BFRT.count) {
@@ -1568,14 +1569,14 @@ void HDual::updateDual() {
   // Update - dual (shift and back)
   if (thetaDual == 0) {
     // Little to do if thetaDual is zero
-    checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+    debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "Before shift_cost");
     shift_cost(workHMO, columnIn, -workDual[columnIn]);
-    checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+    debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "After shift_cost");
   } else {
     // Update the whole vector of dual values
-    checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+    debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "Before calling dualRow.updateDual");
     dualRow.updateDual(thetaDual);
     if (workHMO.simplex_info_.simplex_strategy != SIMPLEX_STRATEGY_DUAL_PLAIN &&
@@ -1584,7 +1585,7 @@ void HDual::updateDual() {
       for (int i = 0; i < slice_num; i++)
         slice_dualRow[i].updateDual(thetaDual);
     }
-    checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+    debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "After calling dualRow.updateDual");
   }
   // Identify the changes in the dual objective
@@ -1612,10 +1613,10 @@ void HDual::updateDual() {
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
 
-  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+  debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before shift_back");
   shift_back(workHMO, columnOut);
-  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+  debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "After shift_back");
 }
 
@@ -1693,10 +1694,10 @@ void HDual::updatePivots() {
   if (invertHint) return;
   //
   // Update the sets of indices of basic and nonbasic variables
-  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+  debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before update_pivots");
   update_pivots(workHMO, columnIn, rowOut, sourceOut);
-  checkUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+  debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "After update_pivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV

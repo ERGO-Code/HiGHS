@@ -304,7 +304,7 @@ bool HDualRow::chooseFinal() {
 }
 
 void HDualRow::updateFlip(HVector* bfrtColumn) {
-  double* workDual = &workHMO.simplex_info_.workDual_[0];  //
+  double* workDual = &workHMO.simplex_info_.workDual_[0];
   double dual_objective_value_change = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
@@ -333,8 +333,10 @@ void HDualRow::updateDual(double theta) {
     double local_dual_objective_change =
         workHMO.simplex_basis_.nonbasicFlag_[iCol] * (-local_value * delta_dual);
     local_dual_objective_change *= workHMO.scale_.cost_;
-    workHMO.simplex_info_.updated_dual_objective_value += local_dual_objective_change;
+    dual_objective_value_change += local_dual_objective_change;
   }
+  workHMO.simplex_info_.updated_dual_objective_value +=
+      dual_objective_value_change;
   analysis->simplexTimerStop(UpdateDualClock);
 }
 

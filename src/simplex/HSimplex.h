@@ -252,13 +252,6 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     double& new_scaled_primal_feasibility_tolerance,
     double& new_scaled_dual_feasibility_tolerance);
 
-void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
-                                const SimplexAlgorithm algorithm,
-                                const int phase, const char* message);
-
-void checkUpdatedObjectiveValue(const HighsModelObject& highs_model_object,
-                                const SimplexAlgorithm algorithm);
-
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase);
 
