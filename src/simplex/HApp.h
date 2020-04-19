@@ -133,15 +133,19 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       // Dual feasible
       // Simplex solution is optimal
       highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
-      scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-      scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      scaled_solution_params.primal_status =
+          PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      scaled_solution_params.dual_status =
+          PrimalDualStatus::STATUS_FEASIBLE_POINT;
     } else {
       // Only dual infeasible, so use primal simplex if choice is permitted
-      if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+      if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+        simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
     }
   } else {
     // Not primal feasible, so use dual simplex if choice is permitted
-    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+    if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+      simplex_strategy = SIMPLEX_STRATEGY_DUAL;
   }
   //
   // Set min/max_threads to correspond to serial code. They will be

@@ -3484,8 +3484,8 @@ void shift_back(HighsModelObject& highs_model_object, int iCol) {
   /*
   if (simplex_info.workShift_[iCol]) {
     printf("shift_back: column %d: shift = %g; value = %g\n",
-	   iCol, simplex_info.workShift_[iCol],
-	   simplex_info.workValue_[iCol]);
+           iCol, simplex_info.workShift_[iCol],
+           simplex_info.workValue_[iCol]);
     simplex_info.updated_dual_objective_value -=
       simplex_info.workShift_[iCol] * simplex_info.workValue_[iCol];
   }
@@ -4100,7 +4100,8 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
   return HighsStatus::OK;
 }
 
-double checkDualObjectiveValue(HighsModelObject& workHMO, const char* message, int phase) {
+double checkDualObjectiveValue(HighsModelObject& workHMO, const char* message,
+                               int phase) {
   double updated_dual_objective_error = 0.;
 #ifdef HiGHSDEV
   static double previous_updated_dual_objective_value = 0;

@@ -1582,27 +1582,38 @@ void HDual::updateDual() {
   double delta_dual_objective;
   const double columnIn_delta_dual = workDual[columnIn];
   const double columnIn_value = workValue[columnIn];
-  const int columnIn_nonbasicFlag = workHMO.simplex_basis_.nonbasicFlag_[columnIn];
-  delta_dual_objective = columnIn_nonbasicFlag * (-columnIn_value * columnIn_delta_dual);
+  const int columnIn_nonbasicFlag =
+      workHMO.simplex_basis_.nonbasicFlag_[columnIn];
+  delta_dual_objective =
+      columnIn_nonbasicFlag * (-columnIn_value * columnIn_delta_dual);
   delta_dual_objective *= workHMO.scale_.cost_;
   workHMO.simplex_info_.updated_dual_objective_value += delta_dual_objective;
 #ifdef HiGHSDEV
   if (delta_dual_objective)
-    printf("columnIn  = %6d: nonbasicFlag = %2d; value = %11.4g; delta_dual = %11.4g; delta_obj = %11.4g\n",
-	   columnIn, columnIn_nonbasicFlag, columnIn_value, columnIn_delta_dual, delta_dual_objective);
+    printf(
+        "columnIn  = %6d: nonbasicFlag = %2d; value = %11.4g; delta_dual = "
+        "%11.4g; delta_obj = %11.4g\n",
+        columnIn, columnIn_nonbasicFlag, columnIn_value, columnIn_delta_dual,
+        delta_dual_objective);
 #endif
   const double columnOut_delta_dual = workDual[columnOut] - thetaDual;
   const double columnOut_value = workValue[columnOut];
-  const int columnOut_nonbasicFlag = workHMO.simplex_basis_.nonbasicFlag_[columnOut];
-  delta_dual_objective = columnOut_nonbasicFlag * (-columnOut_value * columnOut_delta_dual);
+  const int columnOut_nonbasicFlag =
+      workHMO.simplex_basis_.nonbasicFlag_[columnOut];
+  delta_dual_objective =
+      columnOut_nonbasicFlag * (-columnOut_value * columnOut_delta_dual);
   delta_dual_objective *= workHMO.scale_.cost_;
   workHMO.simplex_info_.updated_dual_objective_value += delta_dual_objective;
-  // Surely columnOut_nonbasicFlag is always 0 since it's basic - so there's no dual objective change
+  // Surely columnOut_nonbasicFlag is always 0 since it's basic - so there's no
+  // dual objective change
   assert(columnOut_nonbasicFlag == 0);
 #ifdef HiGHSDEV
   if (delta_dual_objective)
-    printf("columnOut = %6d: nonbasicFlag = %2d; value = %11.4g; delta_dual = %11.4g; delta_obj = %11.4g\n",
-	   columnOut, columnOut_nonbasicFlag, columnOut_value, columnOut_delta_dual, delta_dual_objective);
+    printf(
+        "columnOut = %6d: nonbasicFlag = %2d; value = %11.4g; delta_dual = "
+        "%11.4g; delta_obj = %11.4g\n",
+        columnOut, columnOut_nonbasicFlag, columnOut_value,
+        columnOut_delta_dual, delta_dual_objective);
 #endif
 
   workDual[columnIn] = 0;
@@ -1824,16 +1835,16 @@ void HDual::assessPhase1Optimality() {
   assert(rowOut == -1);
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Optimal in phase 1
-  
+
   if (simplex_info.dual_objective_value == 0) {
     // Zero phase 1 objective so go to phase 2
     //
     // OK if costs are perturbed, since they remain perturbed in phase 2 until
     // the final clean-up
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
-		    "Optimal in phase 1 and jumping to phase 2 since "
-		    "dual objective is %g",
-		    simplex_info.dual_objective_value);
+                    "Optimal in phase 1 and jumping to phase 2 since "
+                    "dual objective is %g",
+                    simplex_info.dual_objective_value);
     solvePhase = 2;
   } else {
     // We still have dual infeasibilities, so clean up any perturbations
@@ -1841,51 +1852,48 @@ void HDual::assessPhase1Optimality() {
     //
     // What if the dual objective is nonzero but tiny?
     if (fabs(simplex_info.dual_objective_value) <=
-	primal_feasibility_tolerance) {
+        primal_feasibility_tolerance) {
       HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		      "Optimal in phase 1 but not jumping to phase 2 since "
-		      "dual objective is %g: Costs perturbed = %d",
-		      simplex_info.dual_objective_value,
-		      workHMO.simplex_info_.costs_perturbed);
+                      "Optimal in phase 1 but not jumping to phase 2 since "
+                      "dual objective is %g: Costs perturbed = %d",
+                      simplex_info.dual_objective_value,
+                      workHMO.simplex_info_.costs_perturbed);
     }
     if (workHMO.simplex_info_.costs_perturbed) {
       // Clean up perturbation
       cleanup();
-      HighsLogMessage(
-		      workHMO.options_.logfile, HighsMessageType::WARNING,
-		      "Cleaning up cost perturbation when optimal in phase 1");
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                      "Cleaning up cost perturbation when optimal in phase 1");
       if (dualInfeasCount == 0) {
-	// With no dual infeasibilities, hsol jumped straight to phase 2.
-	// However, that's wrong if the dual objective is (sufficiently)
-	// positive, since that implies that the LP is dual
-	// infeasible.
-	//
-	// If zero phase 1 objective then go to phase 2
-	bool as_hsol = true;
-	if (simplex_info.dual_objective_value == 0 || as_hsol) {
-	  HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-			  "Jumping to phase 2 since dual "
-			  "objective is %g or as_hsol = %d",
-			  simplex_info.dual_objective_value, as_hsol);
-	  solvePhase = 2;
-	} else {
-	  HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-			  "Not jumping to phase 2 as hsol would, since dual "
-			  "objective is %g, not zero",
-			  simplex_info.dual_objective_value);
-	}
+        // With no dual infeasibilities, hsol jumped straight to phase 2.
+        // However, that's wrong if the dual objective is (sufficiently)
+        // positive, since that implies that the LP is dual
+        // infeasible.
+        //
+        // If zero phase 1 objective then go to phase 2
+        bool as_hsol = true;
+        if (simplex_info.dual_objective_value == 0 || as_hsol) {
+          HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                          "Jumping to phase 2 since dual "
+                          "objective is %g or as_hsol = %d",
+                          simplex_info.dual_objective_value, as_hsol);
+          solvePhase = 2;
+        } else {
+          HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                          "Not jumping to phase 2 as hsol would, since dual "
+                          "objective is %g, not zero",
+                          simplex_info.dual_objective_value);
+        }
       }
     } else {
       // Report dual infeasible
       solvePhase = -1;
-      HighsPrintMessage(workHMO.options_.output,
-			workHMO.options_.message_level, ML_MINIMAL,
-			"dual-infeasible\n");
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                        ML_MINIMAL, "dual-infeasible\n");
       workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
     }
   }
 }
-
 
 bool HDual::dualInfoOk(const HighsLp& lp) {
   int lp_numCol = lp.numCol_;
