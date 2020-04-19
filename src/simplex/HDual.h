@@ -292,9 +292,6 @@ class HDual {
                               );
   */
 
-#ifdef HiGHSDEV
-  double checkDualObjectiveValue(const char* message, int phase = 2);
-#endif
   bool reachedExactDualObjectiveValueUpperBound();
   double computeExactDualObjectiveValue();
 

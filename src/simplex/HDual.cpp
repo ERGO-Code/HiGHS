@@ -941,12 +941,14 @@ void HDual::iterate() {
   updateDual();
   analysis->simplexTimerStop(IterateDualClock);
 
+  checkDualObjectiveValue(workHMO, "Before updatePrimal");
   // updatePrimal(&row_ep); Updates the primal values and the edge weights
   analysis->simplexTimerStart(IteratePrimalClock);
   updatePrimal(&row_ep);
   analysis->simplexTimerStop(IteratePrimalClock);
   // After primal update in dual simplex the primal objective value is not known
   workHMO.simplex_lp_status_.has_primal_objective_value = false;
+  checkDualObjectiveValue(workHMO, "After updatePrimal");
 
   // Update the basis representation
   analysis->simplexTimerStart(IteratePivotsClock);
@@ -1559,11 +1561,14 @@ void HDual::updateDual() {
   if (invertHint) return;
 
   // Update - dual (shift and back)
-  if (thetaDual == 0)
+  if (thetaDual == 0) {
     // Little to do if thetaDual is zero
+    checkDualObjectiveValue(workHMO, "Before shift_cost");
     shift_cost(workHMO, columnIn, -workDual[columnIn]);
-  else {
+    checkDualObjectiveValue(workHMO, "After shift_cost");
+  } else {
     // Update the whole vector of dual values
+    checkDualObjectiveValue(workHMO, "Before calling dualRow.updateDual");
     dualRow.updateDual(thetaDual);
     if (workHMO.simplex_info_.simplex_strategy != SIMPLEX_STRATEGY_DUAL_PLAIN &&
         slice_PRICE) {
@@ -1571,10 +1576,41 @@ void HDual::updateDual() {
       for (int i = 0; i < slice_num; i++)
         slice_dualRow[i].updateDual(thetaDual);
     }
+    checkDualObjectiveValue(workHMO, "After calling dualRow.updateDual");
   }
+  // Identify the changes in the dual objective
+  double delta_dual_objective;
+  const double columnIn_delta_dual = workDual[columnIn];
+  const double columnIn_value = workValue[columnIn];
+  const int columnIn_nonbasicFlag = workHMO.simplex_basis_.nonbasicFlag_[columnIn];
+  delta_dual_objective = columnIn_nonbasicFlag * (-columnIn_value * columnIn_delta_dual);
+  delta_dual_objective *= workHMO.scale_.cost_;
+  workHMO.simplex_info_.updated_dual_objective_value += delta_dual_objective;
+#ifdef HiGHSDEV
+  if (delta_dual_objective)
+    printf("columnIn  = %6d: nonbasicFlag = %2d; value = %11.4g; delta_dual = %11.4g; delta_obj = %11.4g\n",
+	   columnIn, columnIn_nonbasicFlag, columnIn_value, columnIn_delta_dual, delta_dual_objective);
+#endif
+  const double columnOut_delta_dual = workDual[columnOut] - thetaDual;
+  const double columnOut_value = workValue[columnOut];
+  const int columnOut_nonbasicFlag = workHMO.simplex_basis_.nonbasicFlag_[columnOut];
+  delta_dual_objective = columnOut_nonbasicFlag * (-columnOut_value * columnOut_delta_dual);
+  delta_dual_objective *= workHMO.scale_.cost_;
+  workHMO.simplex_info_.updated_dual_objective_value += delta_dual_objective;
+  // Surely columnOut_nonbasicFlag is always 0 since it's basic - so there's no dual objective change
+  assert(columnOut_nonbasicFlag == 0);
+#ifdef HiGHSDEV
+  if (delta_dual_objective)
+    printf("columnOut = %6d: nonbasicFlag = %2d; value = %11.4g; delta_dual = %11.4g; delta_obj = %11.4g\n",
+	   columnOut, columnOut_nonbasicFlag, columnOut_value, columnOut_delta_dual, delta_dual_objective);
+#endif
+
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
+
+  checkDualObjectiveValue(workHMO, "Before shift_back");
   shift_back(workHMO, columnOut);
+  checkDualObjectiveValue(workHMO, "After shift_back");
 }
 
 void HDual::updatePrimal(HVector* DSE_Vector) {
@@ -1651,8 +1687,9 @@ void HDual::updatePivots() {
   if (invertHint) return;
   //
   // Update the sets of indices of basic and nonbasic variables
+  checkDualObjectiveValue(workHMO, "Before update_pivots");
   update_pivots(workHMO, columnIn, rowOut, sourceOut);
-  //  checkDualObjectiveValue("After update_pivots");
+  checkDualObjectiveValue(workHMO, "After update_pivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
@@ -2043,37 +2080,3 @@ double HDual::computeExactDualObjectiveValue() {
         norm_dual, norm_delta_dual, relative_delta);
   return dual_objective;
 }
-
-#ifdef HiGHSDEV
-double HDual::checkDualObjectiveValue(const char* message, int phase) {
-  static double previous_updated_dual_objective_value = 0;
-  static double previous_dual_objective_value = 0;
-  computeDualObjectiveValue(workHMO, phase);
-  double updated_dual_objective_value =
-      workHMO.simplex_info_.updated_dual_objective_value;
-  double dual_objective_value = workHMO.simplex_info_.dual_objective_value;
-  double change_in_updated_dual_objective_value =
-      updated_dual_objective_value - previous_updated_dual_objective_value;
-  double change_in_dual_objective_value =
-      dual_objective_value - previous_dual_objective_value;
-  double updated_dual_objective_error =
-      dual_objective_value - updated_dual_objective_value;
-  double relative_updated_dual_objective_error =
-      fabs(updated_dual_objective_error) / max(1.0, fabs(dual_objective_value));
-  bool error_found = relative_updated_dual_objective_error > 1e-8;
-  if (error_found)
-    printf(
-        "Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g "
-        "(%11.4g); Error(|Rel|) = %11.4g (%11.4g) |%s\n",
-        phase, dual_objective_value, change_in_dual_objective_value,
-        updated_dual_objective_value, change_in_updated_dual_objective_value,
-        updated_dual_objective_error, relative_updated_dual_objective_error,
-        message);
-  previous_dual_objective_value = dual_objective_value;
-  previous_updated_dual_objective_value = dual_objective_value;
-  workHMO.simplex_info_.updated_dual_objective_value = dual_objective_value;
-  // Now have dual objective value
-  workHMO.simplex_lp_status_.has_dual_objective_value = true;
-  return updated_dual_objective_error;
-}
-#endif

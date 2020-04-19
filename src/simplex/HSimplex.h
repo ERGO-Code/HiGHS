@@ -280,6 +280,8 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     double& new_scaled_primal_feasibility_tolerance,
     double& new_scaled_dual_feasibility_tolerance);
 
+double checkDualObjectiveValue(HighsModelObject& highs_model_object, const char* message, int phase = 2);
+
 void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
                                 const bool primal);
 

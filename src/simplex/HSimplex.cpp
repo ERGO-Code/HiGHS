@@ -3481,6 +3481,15 @@ void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount) {
 void shift_back(HighsModelObject& highs_model_object, int iCol) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   simplex_info.workDual_[iCol] -= simplex_info.workShift_[iCol];
+  /*
+  if (simplex_info.workShift_[iCol]) {
+    printf("shift_back: column %d: shift = %g; value = %g\n",
+	   iCol, simplex_info.workShift_[iCol],
+	   simplex_info.workValue_[iCol]);
+    simplex_info.updated_dual_objective_value -=
+      simplex_info.workShift_[iCol] * simplex_info.workValue_[iCol];
+  }
+  */
   simplex_info.workShift_[iCol] = 0;
 }
 
@@ -4089,6 +4098,41 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     }
   }
   return HighsStatus::OK;
+}
+
+double checkDualObjectiveValue(HighsModelObject& workHMO, const char* message, int phase) {
+  double updated_dual_objective_error = 0.;
+#ifdef HiGHSDEV
+  static double previous_updated_dual_objective_value = 0;
+  static double previous_dual_objective_value = 0;
+  computeDualObjectiveValue(workHMO, phase);
+  double updated_dual_objective_value =
+      workHMO.simplex_info_.updated_dual_objective_value;
+  double dual_objective_value = workHMO.simplex_info_.dual_objective_value;
+  double change_in_updated_dual_objective_value =
+      updated_dual_objective_value - previous_updated_dual_objective_value;
+  double change_in_dual_objective_value =
+      dual_objective_value - previous_dual_objective_value;
+  updated_dual_objective_error =
+      dual_objective_value - updated_dual_objective_value;
+  double relative_updated_dual_objective_error =
+      fabs(updated_dual_objective_error) / max(1.0, fabs(dual_objective_value));
+  bool error_found = relative_updated_dual_objective_error > 1e-8;
+  if (error_found)
+    printf(
+        "Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g "
+        "(%11.4g); Error(|Rel|) = %11.4g (%11.4g) |%s\n",
+        phase, dual_objective_value, change_in_dual_objective_value,
+        updated_dual_objective_value, change_in_updated_dual_objective_value,
+        updated_dual_objective_error, relative_updated_dual_objective_error,
+        message);
+  previous_dual_objective_value = dual_objective_value;
+  previous_updated_dual_objective_value = dual_objective_value;
+  workHMO.simplex_info_.updated_dual_objective_value = dual_objective_value;
+  // Now have dual objective value
+  workHMO.simplex_lp_status_.has_dual_objective_value = true;
+#endif
+  return updated_dual_objective_error;
 }
 
 void checkUpdatedObjectiveValue(HighsModelObject& highs_model_object,
