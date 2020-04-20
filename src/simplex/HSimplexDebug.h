@@ -18,13 +18,13 @@
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 
-const double computed_dual_small_relative_change = 1e-14;
+const double computed_dual_small_relative_change = 1e-12;
 const double computed_dual_large_relative_change =
     sqrt(computed_dual_small_relative_change);
 const double computed_dual_small_absolute_change = 1e-6;
 const double computed_dual_large_absolute_change =
     sqrt(computed_dual_small_absolute_change);
-const double updated_objective_small_relative_error = 1e-14;
+const double updated_objective_small_relative_error = 1e-12;
 const double updated_objective_large_relative_error =
     sqrt(updated_objective_small_relative_error);
 const double updated_objective_small_absolute_error = 1e-6;

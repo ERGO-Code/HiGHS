@@ -99,11 +99,13 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
   if (workHMO.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+
   static bool have_previous_primal_objective_value;
-  static bool have_previous_dual_objective_value;
   static double previous_primal_objective_value;
-  static double previous_dual_objective_value;
   static double previous_updated_primal_objective_value;
+
+  static bool have_previous_dual_objective_value;
+  static double previous_dual_objective_value;
   static double previous_updated_dual_objective_value;
   if (phase < 0) {
     if (algorithm == SimplexAlgorithm::PRIMAL) {
@@ -164,11 +166,11 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
   // Now update the records of previous objective value
   if (algorithm == SimplexAlgorithm::PRIMAL) {
     have_previous_primal_objective_value = true;
-    previous_primal_objective_value = simplex_info.primal_objective_value;
+    previous_primal_objective_value = objective_value;
     previous_updated_primal_objective_value = updated_objective_value;
   } else {
     have_previous_dual_objective_value = true;
-    previous_dual_objective_value = simplex_info.dual_objective_value;
+    previous_dual_objective_value = objective_value;
     previous_updated_dual_objective_value = updated_objective_value;
   }
 

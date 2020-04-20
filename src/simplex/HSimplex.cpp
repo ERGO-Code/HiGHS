@@ -1977,14 +1977,24 @@ void initialise_bound(HighsModelObject& highs_model_object, int phase) {
   initialise_phase2_row_bound(highs_model_object, 0, simplex_lp.numRow_ - 1);
   if (phase == 2) return;
 
-  // In Phase 1: change to dual phase 1 bound
+  // The dual objective is the sum of products of primal and dual
+  //values for nonbasic variables. For dual simplex phase 1, the
+  //primal bounds are set so that when the dual value is feasible, the
+  //primal value is set to zero. Otherwise the value is +1/-1
+  //according to the required sign of the dual, except for free
+  //variables, where the bounds are [-1000, 1000]. Hence the dual
+  //objective is the negation of the sum of infeasibilities, unless there are free In Phase
+  //1: change to dual phase 1 bound.
   const double inf = HIGHS_CONST_INF;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (simplex_info.workLower_[i] == -inf &&
         simplex_info.workUpper_[i] == inf) {
-      // Won't change for row variables: they should never become
-      // non basic
+      // Don't change for row variables: they should never become
+      // nonbasic when starting from a logical basis, and no crash
+      // should make a free row nonbasic, but could an advanced basis
+      // make a free row nonbasic.
+      // But what it it happened?
       if (i >= simplex_lp.numCol_) continue;
       simplex_info.workLower_[i] = -1000,
       simplex_info.workUpper_[i] = 1000;  // FREE
