@@ -935,9 +935,10 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   simplex_info.primal_objective_value = 0;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = simplex_basis.basicIndex_[row];
-    if (var < simplex_lp.numCol_)
+    if (var < simplex_lp.numCol_) {
       simplex_info.primal_objective_value +=
           simplex_info.baseValue_[row] * simplex_lp.colCost_[var];
+    }
   }
   for (int col = 0; col < simplex_lp.numCol_; col++) {
     if (simplex_basis.nonbasicFlag_[col])
@@ -3279,17 +3280,11 @@ void computeDual(HighsModelObject& highs_model_object) {
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  HighsSolutionParams& scaled_solution_params =
-      highs_model_object.scaled_solution_params_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HMatrix& matrix = highs_model_object.matrix_;
   HFactor& factor = highs_model_object.factor_;
-  const bool an_compute_dual_norm2 = false;
-  double btran_rhs_norm2;
-  double btran_sol_norm2;
-  double work_dual_norm2;
 
   // Create a local buffer for the pi vector
   HVector dual_col;
@@ -3305,15 +3300,21 @@ void computeDual(HighsModelObject& highs_model_object) {
       dual_col.array[iRow] = value;
     }
   }
+  // If debugging, take a copy of the basic costs and any previous duals
+  vector<double> debug_previous_workDual;
+  vector<double> debug_basic_costs;
+  if (highs_model_object.options_.highs_debug_level >=
+      HIGHS_DEBUG_LEVEL_COSTLY) {
+    debug_basic_costs = dual_col.array;
+    if (simplex_lp_status.has_nonbasic_dual_values)
+      debug_previous_workDual = simplex_info.workDual_;
+  }
   // Copy the costs in case the basic costs are all zero
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++)
     simplex_info.workDual_[i] = simplex_info.workCost_[i];
   if (dual_col.count) {
-    if (an_compute_dual_norm2) {
-      btran_rhs_norm2 = dual_col.norm2();
-      btran_rhs_norm2 = sqrt(btran_rhs_norm2);
-    }
+    // RHS of row dual calculation is nonzero
 #ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL,
@@ -3330,11 +3331,6 @@ void computeDual(HighsModelObject& highs_model_object) {
         (double)dual_col.count / simplex_lp.numRow_;
     analysis.updateOperationResultDensity(local_dual_col_density,
                                           analysis.dual_col_density);
-    if (an_compute_dual_norm2) {
-      btran_sol_norm2 = dual_col.norm2();
-      btran_sol_norm2 = sqrt(btran_sol_norm2);
-    }
-
     // Create a local buffer for the values of reduced costs
     HVector dual_row;
     dual_row.setup(simplex_lp.numCol_);
@@ -3350,40 +3346,14 @@ void computeDual(HighsModelObject& highs_model_object) {
     if (simplex_info.analyse_iterations)
       analysis.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
                                     dual_row);
-      //  const double local_density = 1.0 * dual_row.count /
-      //  simplex_lp.numCol_;
 #endif
     for (int i = 0; i < simplex_lp.numCol_; i++)
       simplex_info.workDual_[i] -= dual_row.array[i];
     for (int i = simplex_lp.numCol_; i < numTot; i++)
       simplex_info.workDual_[i] -= dual_col.array[i - simplex_lp.numCol_];
-    if (an_compute_dual_norm2) {
-      work_dual_norm2 = 0;
-      for (int i = 0; i < numTot; i++)
-        work_dual_norm2 +=
-            simplex_info.workDual_[i] * simplex_info.workDual_[i];
-      work_dual_norm2 = sqrt(work_dual_norm2);
-      //  printf("compute_dual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g;
-      //  ||pi^TA-c||=%11.4g\n", btran_rhs_norm2, btran_sol_norm2,
-      //  work_dual_norm2);
-      double current_dual_feasibility_tolerance =
-          scaled_solution_params.dual_feasibility_tolerance;
-      double new_dual_feasibility_tolerance = work_dual_norm2 / 1e16;
-      if (new_dual_feasibility_tolerance > 1e-1) {
-        printf(
-            "Seriously: do you expect to solve an LP with "
-            "||pi^TA-c||=%11.4g?\n",
-            work_dual_norm2);
-      } else if (new_dual_feasibility_tolerance >
-                 10 * current_dual_feasibility_tolerance) {
-        printf(
-            "||pi^TA-c|| = %12g so solving with dual_feasibility_tolerance = "
-            "%12g\n",
-            work_dual_norm2, new_dual_feasibility_tolerance);
-        scaled_solution_params.dual_feasibility_tolerance =
-            new_dual_feasibility_tolerance;
-      }
-    }
+    // Possibly analyse the computed dual values
+    debugComputedDual(highs_model_object, debug_previous_workDual,
+                      debug_basic_costs, dual_col.array);
   }
   // Now have nonbasic duals
   simplex_lp_status.has_nonbasic_dual_values = true;
@@ -3440,8 +3410,11 @@ void correctDual(HighsModelObject& highs_model_object,
             dual_objective_value_change += local_dual_objective_change;
             num_shift++;
             sum_shift += fabs(shift);
-            printf("Move up: shift = %g; DlObj = %g\n", shift,
-                   local_dual_objective_change);
+            HighsPrintMessage(highs_model_object.options_.output,
+                              highs_model_object.options_.message_level,
+                              ML_VERBOSE,
+                              "Move up: shift = %g; objective change = %g\n",
+                              shift, local_dual_objective_change);
           } else {
             double dual = -(1 + random.fraction()) * tau_d;
             double shift = dual - simplex_info.workDual_[i];
@@ -3453,16 +3426,22 @@ void correctDual(HighsModelObject& highs_model_object,
             dual_objective_value_change += local_dual_objective_change;
             num_shift++;
             sum_shift += fabs(shift);
-            printf("Move dn: shift = %g; DlObj = %g\n", shift,
-                   local_dual_objective_change);
+            HighsPrintMessage(highs_model_object.options_.output,
+                              highs_model_object.options_.message_level,
+                              ML_VERBOSE,
+                              "Move dn: shift = %g; objective change = %g\n",
+                              shift, local_dual_objective_change);
           }
         }
       }
     }
   }
   if (num_shift)
-    printf("Performed %d shifts: total = %g; DlObj = %g\n", num_shift,
-           sum_shift, dual_objective_value_change);
+    HighsPrintMessage(
+        highs_model_object.options_.output,
+        highs_model_object.options_.message_level, ML_DETAILED,
+        "Performed %d shift(s): total = %g; objective change = %g\n", num_shift,
+        sum_shift, dual_objective_value_change);
   *free_infeasibility_count = workCount;
 }
 

@@ -767,6 +767,24 @@ void HDual::rebuild() {
     analysis->simplexTimerStop(PermWtClock);
   }
 
+  // Record whether the update objective value should be tested. If
+  // the objective value is known, then the updated objective value
+  // should be correct - once the correction due to recomputing the
+  // dual values has been applied.
+  //
+  // Note that computePrimalObjectiveValue sets
+  // has_primal_objective_value
+  const bool check_updated_objective_value =
+      simplex_lp_status.has_dual_objective_value;
+  double previous_dual_objective_value;
+  if (check_updated_objective_value) {
+    debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
+                               "Before computeDual");
+    previous_dual_objective_value = simplex_info.updated_dual_objective_value;
+  } else {
+    // Reset the knowledge of previous objective values
+    debugUpdatedObjectiveValue(workHMO, algorithm, -1, "");
+  }
   // Recompute dual solution
   analysis->simplexTimerStart(ComputeDualClock);
   computeDual(workHMO);
@@ -797,19 +815,19 @@ void HDual::rebuild() {
 
   // Dual objective section
   //
-  // Record whether the update objective value should be tested. If
-  // the objective value is known, then the updated objective value
-  // should be correct.  Note that computePrimalObjectiveValue sets
-  // has_primal_objective_value
-  const bool check_updated_objective_value =
-      simplex_lp_status.has_dual_objective_value;
-
   analysis->simplexTimerStart(ComputeDuObjClock);
   computeDualObjectiveValue(workHMO, solvePhase);
   analysis->simplexTimerStop(ComputeDuObjClock);
 
-  if (check_updated_objective_value)
+  if (check_updated_objective_value) {
+    // Apply the objective value correction due to computing duals
+    // from scratch.
+    const double dual_objective_value_correction =
+        simplex_info.dual_objective_value - previous_dual_objective_value;
+    simplex_info.updated_dual_objective_value +=
+        dual_objective_value_correction;
     debugUpdatedObjectiveValue(workHMO, algorithm);
+  }
   // Now that there's a new dual_objective_value, reset the updated
   // value
   simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
@@ -1841,6 +1859,8 @@ void HDual::assessPhase1Optimality() {
 
   if (simplex_info.dual_objective_value == 0) {
     // Zero phase 1 objective so go to phase 2
+    //
+    //
     //
     // OK if costs are perturbed, since they remain perturbed in phase 2 until
     // the final clean-up

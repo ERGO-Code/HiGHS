@@ -338,8 +338,29 @@ void HQPrimal::solvePhase2() {
 void HQPrimal::primalRebuild() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  // Move this to Simplex class once it's created
-  //  simplex_method.record_pivots(-1, -1, 0);  // Indicate REINVERT
+
+  // Record whether the update objective value should be tested. If
+  // the objective value is known, then the updated objective value
+  // should be correct - once the correction due to recomputing the
+  // dual values has been applied.
+  //
+  // Note that computePrimalObjectiveValue sets
+  // has_primal_objective_value
+  //
+  // Have to do this before INVERT, as this permutes the indices of
+  // basic variables, and baseValue only corresponds to the new
+  // ordering once computePrimal has been called
+  const bool check_updated_objective_value =
+      simplex_lp_status.has_primal_objective_value;
+  double previous_primal_objective_value;
+  if (check_updated_objective_value) {
+    debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase, "Before INVERT");
+    previous_primal_objective_value =
+        simplex_info.updated_primal_objective_value;
+  } else {
+    // Reset the knowledge of previous objective values
+    debugUpdatedObjectiveValue(workHMO, algorithm, -1, "");
+  }
 
   // Rebuild workHMO.factor_ - only if we got updates
   int sv_invertHint = invertHint;
@@ -372,20 +393,21 @@ void HQPrimal::primalRebuild() {
   analysis->simplexTimerStop(ComputePrimalClock);
 
   // Primal objective section
-  //
-  // Record whether the update objective value should be tested. If
-  // the objective value is known, then the updated objective value
-  // should be correct.  Note that computePrimalObjectiveValue sets
-  // has_primal_objective_value
-  const bool check_updated_objective_value =
-      simplex_lp_status.has_primal_objective_value;
-
   analysis->simplexTimerStart(ComputePrObjClock);
   computePrimalObjectiveValue(workHMO);
   analysis->simplexTimerStop(ComputePrObjClock);
 
-  if (check_updated_objective_value)
+  if (check_updated_objective_value) {
+    // Apply the objective value correction due to computing primal
+    // values from scratch.
+    const double primal_objective_value_correction =
+        simplex_info.primal_objective_value - previous_primal_objective_value;
+    simplex_info.updated_primal_objective_value +=
+        primal_objective_value_correction;
     debugUpdatedObjectiveValue(workHMO, algorithm);
+  }
+  // Now that there's a new dual_objective_value, reset the updated
+  // value
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 
