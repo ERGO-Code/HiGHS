@@ -914,7 +914,6 @@ void HDual::cleanup() {
   reportRebuild();
   analysis->simplexTimerStop(ReportRebuildClock);
 
-  //  computeDualInfeasible(workHMO);
   dualInfeasCount = workHMO.scaled_solution_params_.num_dual_infeasibilities;
 }
 
