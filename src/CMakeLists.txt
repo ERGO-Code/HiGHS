@@ -107,6 +107,7 @@ set(sources
 #    simplex/HRanging.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
+    simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -155,6 +156,7 @@ set(headers
 #    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/HSimplexDebug.h
+    simplex/HSimplexReport.h
     simplex/SimplexConst.h
     presolve/Presolve.h
     presolve/PresolveAnalysis.h

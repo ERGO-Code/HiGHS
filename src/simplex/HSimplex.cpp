@@ -60,7 +60,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.store_squared_primal_infeasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = false;  // true;  //
+  bool useful_analysis =  false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;
@@ -566,8 +566,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 
   // Store, analyse and possibly report the number of primal and dual
   // infeasiblities and the simplex status
-  computePrimalInfeasible(highs_model_object);
-  computeDualInfeasible(highs_model_object);
+  computeLpInfeasible(highs_model_object);
 
   HighsSolutionParams& scaled_solution_params =
       highs_model_object.scaled_solution_params_;
@@ -2327,7 +2326,13 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
 }
 #endif
 
-double computeBasisCondition(HighsModelObject& highs_model_object) {
+void setRunQuiet(HighsModelObject& highs_model_object) {
+  highs_model_object.simplex_info_.run_quiet =
+    highs_model_object.options_.output == NULL &&
+    highs_model_object.options_.logfile == NULL;
+}
+
+double computeBasisCondition(const HighsModelObject& highs_model_object) {
   int solver_num_row = highs_model_object.simplex_lp_.numRow_;
   int solver_num_col = highs_model_object.simplex_lp_.numCol_;
   vector<double> bs_cond_x;
@@ -2337,7 +2342,7 @@ double computeBasisCondition(HighsModelObject& highs_model_object) {
   HVector row_ep;
   row_ep.setup(solver_num_row);
 
-  HFactor& factor = highs_model_object.factor_;
+  const HFactor& factor = highs_model_object.factor_;
   const int* Astart = &highs_model_object.simplex_lp_.Astart_[0];
   const double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
   // Compute the Hager condition number estimate for the basis matrix
@@ -2984,6 +2989,17 @@ void computePrimal(HighsModelObject& highs_model_object) {
   // Now have basic primals
   simplex_lp_status.has_basic_primal_values = true;
 }
+
+void computeLpInfeasible(HighsModelObject& highs_model_object) {
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
+  analysis.simplexTimerStart(ComputePrIfsClock);
+  computePrimalInfeasible(highs_model_object);
+  analysis.simplexTimerStop(ComputePrIfsClock);
+
+  analysis.simplexTimerStart(ComputeDuIfsClock);
+  computeDualInfeasible(highs_model_object);
+  analysis.simplexTimerStop(ComputeDuIfsClock);
+ }
 
 void computePrimalInfeasible(HighsModelObject& highs_model_object) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;

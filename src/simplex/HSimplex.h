@@ -133,12 +133,12 @@ void setup_num_basic_logicals(HighsModelObject& highs_model_object);
 void reportSimplexProfiling(HighsModelObject& highs_model_object);
 
 #endif
-
+void setRunQuiet(HighsModelObject& highs_model_object);
 /**
  * @brief Get the Hager condition number estimate for the basis matrix of a
  * model
  */
-double computeBasisCondition(HighsModelObject& highs_model_object);
+double computeBasisCondition(const HighsModelObject& highs_model_object);
 
 bool work_arrays_ok(HighsModelObject& highs_model_object, int phase);
 
@@ -157,6 +157,7 @@ int computeFactor(HighsModelObject& highs_model_object);
 // of basic variables
 void computePrimal(HighsModelObject& highs_model_object);
 
+void computeLpInfeasible(HighsModelObject& highs_model_object);
 void computePrimalInfeasible(HighsModelObject& highs_model_object);
 
 void computeDualInfeasible(HighsModelObject& highs_model_object);

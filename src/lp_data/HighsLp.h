@@ -172,7 +172,8 @@ struct HighsSimplexInfo {
   // is required to compute them. Knowledge of them is indicated by
   // has_nonbasic_dual_values
   //
-  // workShift: WTF
+  // workShift: Values added to workCost in order that workDual
+  // remains feasible, thereby remaining dual feasible in phase 2
   //
   std::vector<double> workCost_;
   std::vector<double> workDual_;
@@ -220,6 +221,7 @@ struct HighsSimplexInfo {
   int update_limit;
 
   // Internal options - can't be changed externally
+  bool run_quiet = false;
   bool store_squared_primal_infeasibility = false;
 #ifndef HiGHSDEV
   bool analyse_lp_solution = false;  // true;//

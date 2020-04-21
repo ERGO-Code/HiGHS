@@ -18,20 +18,7 @@
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 
-const double computed_dual_small_relative_change = 1e-12;
-const double computed_dual_large_relative_change =
-    sqrt(computed_dual_small_relative_change);
-const double computed_dual_small_absolute_change = 1e-6;
-const double computed_dual_large_absolute_change =
-    sqrt(computed_dual_small_absolute_change);
-const double updated_objective_small_relative_error = 1e-12;
-const double updated_objective_large_relative_error =
-    sqrt(updated_objective_small_relative_error);
-const double updated_objective_small_absolute_error = 1e-6;
-const double updated_objective_large_absolute_error =
-    sqrt(updated_objective_small_absolute_error);
-
-HighsDebugStatus debugComputedDual(const HighsModelObject& workHMO,
+HighsDebugStatus debugComputedDual(const HighsModelObject& highs_model_object,
                                    const std::vector<double>& previous_dual,
                                    const std::vector<double>& basic_costs,
                                    const std::vector<double>& row_dual);
@@ -44,6 +31,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(
     const HighsModelObject& highs_model_object,
     const SimplexAlgorithm algorithm);
 
-HighsDebugStatus debugFixedNonbasicMove(const HighsModelObject& workHMO);
-HighsDebugStatus debugNonbasicMove(const HighsModelObject& workHMO);
+HighsDebugStatus debugFixedNonbasicMove(const HighsModelObject& highs_model_object);
+HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object);
+HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object, const std::string message);
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_

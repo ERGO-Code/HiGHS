@@ -33,6 +33,8 @@
 //#include "HRanging.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
+#include "simplex/HSimplexDebug.h"
+#include "simplex/HSimplexReport.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
 
@@ -90,17 +92,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
                     highs_model_object.lp_.numRow_);
     return HighsStatus::Error;
   }
-#ifdef HiGHSDEV
-  const int iteration_count0 = highs_model_object.iteration_counts_.simplex;
-  const int dual_phase1_iteration_count0 =
-      simplex_info.dual_phase1_iteration_count;
-  const int dual_phase2_iteration_count0 =
-      simplex_info.dual_phase2_iteration_count;
-  const int primal_phase1_iteration_count0 =
-      simplex_info.primal_phase1_iteration_count;
-  const int primal_phase2_iteration_count0 =
-      simplex_info.primal_phase2_iteration_count;
-#endif
   // Set simplex options from HiGHS options.
   // ToDo: Should only be done when not hot-starting since strategy
   // knowledge based on run-time experience should be preserved.
@@ -213,6 +204,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_info.simplex_strategy = simplex_strategy;
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
+    SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
+    if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL)
+      algorithm = SimplexAlgorithm::PRIMAL;
+    reportSimplexPhaseIterations(highs_model_object, algorithm, true);
 #ifdef HiGHSDEV
     HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
     analysis.simplexTimerStart(SimplexTotalClock);
@@ -246,9 +241,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         HighsLogMessage(logfile, HighsMessageType::INFO,
                         "Using parallel simplex solver - PAMI with %d threads",
                         simplex_info.num_threads);
-        // writePivots("multi");
-        // if (opt.partitionFile.size() > 0)
-        // {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
         call_status = dual_solver.solve();
         return_status =
             interpretCallStatus(call_status, return_status, "HDual::solve");
@@ -263,58 +255,30 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         if (return_status == HighsStatus::Error) return return_status;
       }
     }
-    if (highs_model_object.options_.simplex_initial_condition_check) {
-      HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
-      analysis.simplexTimerStart(BasisConditionClock);
-      double basis_condition = computeBasisCondition(highs_model_object);
-      analysis.simplexTimerStop(BasisConditionClock);
-      HighsLogMessage(logfile, HighsMessageType::INFO,
-                      "Final basis condition estimate is %g", basis_condition);
-    }
+    
+    debugBasisCondition(highs_model_object, "Final");
 
-    // Official finish of solver
 
+   computeLpInfeasible(highs_model_object);
+   HighsSolutionParams local_scaled_solution_params = highs_model_object.scaled_solution_params_;
+
+   computePrimalInfeasible(highs_model_object);
+   computeDualInfeasible(highs_model_object);
+   if (!equalSolutionInfeasibilityParams(
+					 local_scaled_solution_params, highs_model_object.scaled_solution_params_)) {
+     printf("\n!!!!Unequal SolutionInfeasibilityParams!!!!\n\n");
+   } else {
+     printf("\n!!!!Equal SolutionInfeasibilityParams!!!!\n\n");
+   }     
+    
     scaled_solution_params.objective_function_value =
         simplex_info.primal_objective_value;
+    
+    // Official finish of solver
 #ifdef HiGHSDEV
     analysis.simplexTimerStop(SimplexTotalClock);
-    const int delta_iteration_count =
-        highs_model_object.iteration_counts_.simplex - iteration_count0;
-    const int delta_dual_phase1_iteration_count =
-        simplex_info.dual_phase1_iteration_count - dual_phase1_iteration_count0;
-    const int delta_dual_phase2_iteration_count =
-        simplex_info.dual_phase2_iteration_count - dual_phase2_iteration_count0;
-    const int delta_primal_phase1_iteration_count =
-        simplex_info.primal_phase1_iteration_count -
-        primal_phase1_iteration_count0;
-    const int delta_primal_phase2_iteration_count =
-        simplex_info.primal_phase2_iteration_count -
-        primal_phase2_iteration_count0;
-
-    if (delta_dual_phase1_iteration_count + delta_dual_phase2_iteration_count +
-            delta_primal_phase1_iteration_count +
-            delta_primal_phase2_iteration_count !=
-        delta_iteration_count) {
-      printf("Iteration total error %d + %d + %d + %d != %d\n",
-             delta_dual_phase1_iteration_count,
-             delta_dual_phase2_iteration_count,
-             delta_primal_phase1_iteration_count,
-             delta_primal_phase2_iteration_count, delta_iteration_count);
-    }
-    if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
-      HighsLogMessage(logfile, HighsMessageType::INFO,
-                      "Iterations [Ph1 %d; Ph2 %d] Total %d",
-                      delta_primal_phase1_iteration_count,
-                      delta_primal_phase2_iteration_count,
-                      delta_iteration_count);
-    } else {
-      HighsLogMessage(
-          logfile, HighsMessageType::INFO,
-          "Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d",
-          delta_dual_phase1_iteration_count, delta_dual_phase2_iteration_count,
-          delta_primal_phase2_iteration_count, delta_iteration_count);
-    }
 #endif
+    reportSimplexPhaseIterations(highs_model_object, algorithm);
   }
 
   if (simplex_info.analyse_lp_solution) {
@@ -452,6 +416,11 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // Reset unscaled and scaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndSolutionParams(highs_model_object);
+  // Set the value of simplex_info_.run_quiet to suppress computation
+  // that is just for reporting
+  setRunQuiet(highs_model_object);
+  //  printf("Forcing simplex_info_.run_quiet true for testing\n"); highs_model_object.simplex_info_.run_quiet = true;
+
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(highs_model_object);

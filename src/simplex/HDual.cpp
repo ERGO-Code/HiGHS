@@ -812,13 +812,7 @@ void HDual::rebuild() {
   dualRHS.createInfeasList(analysis->col_aq_density);
   analysis->simplexTimerStop(CollectPrIfsClock);
 
-  analysis->simplexTimerStart(ComputePrIfsClock);
-  computePrimalInfeasible(workHMO);
-  analysis->simplexTimerStop(ComputePrIfsClock);
-
-  analysis->simplexTimerStart(ComputeDuIfsClock);
-  computeDualInfeasible(workHMO);
-  analysis->simplexTimerStop(ComputeDuIfsClock);
+  if (!simplex_info.run_quiet) computeLpInfeasible(workHMO);
 
   // Dual objective section
   //
@@ -839,9 +833,7 @@ void HDual::rebuild() {
   // value
   simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
-  analysis->simplexTimerStart(ReportRebuildClock);
-  reportRebuild(rebuild_invert_hint);
-  analysis->simplexTimerStop(ReportRebuildClock);
+  if (!simplex_info.run_quiet) reportRebuild(rebuild_invert_hint);
 
   build_syntheticTick = factor->build_syntheticTick;
   total_syntheticTick = 0;
@@ -910,9 +902,7 @@ void HDual::cleanup() {
   // value
   simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
-  analysis->simplexTimerStart(ReportRebuildClock);
   reportRebuild();
-  analysis->simplexTimerStop(ReportRebuildClock);
 
   dualInfeasCount = workHMO.scaled_solution_params_.num_dual_infeasibilities;
 }
@@ -1100,9 +1090,11 @@ void HDual::iterationAnalysis() {
 }
 
 void HDual::reportRebuild(const int rebuild_invert_hint) {
+  analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
   analysis->invert_hint = rebuild_invert_hint;
   analysis->invertReport();
+  analysis->simplexTimerStop(ReportRebuildClock);
 }
 
 void HDual::chooseRow() {

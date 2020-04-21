@@ -371,17 +371,9 @@ void HPrimal::primalRebuild() {
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 
-  analysis->simplexTimerStart(ComputePrIfsClock);
-  computePrimalInfeasible(workHMO);
-  analysis->simplexTimerStop(ComputePrIfsClock);
+  computeLpInfeasible(workHMO);
 
-  analysis->simplexTimerStart(ComputeDuIfsClock);
-  computeDualInfeasible(workHMO);
-  analysis->simplexTimerStop(ComputeDuIfsClock);
-
-  analysis->simplexTimerStart(ReportRebuildClock);
   reportRebuild(sv_invertHint);
-  analysis->simplexTimerStop(ReportRebuildClock);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
@@ -822,9 +814,11 @@ void HPrimal::iterationAnalysis() {
 }
 
 void HPrimal::reportRebuild(const int rebuild_invert_hint) {
+  analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
   analysis->invert_hint = rebuild_invert_hint;
   analysis->invertReport();
+  analysis->simplexTimerStop(ReportRebuildClock);
 }
 
 bool HPrimal::bailout() {

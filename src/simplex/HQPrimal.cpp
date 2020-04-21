@@ -411,13 +411,7 @@ void HQPrimal::primalRebuild() {
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 
-  analysis->simplexTimerStart(ComputePrIfsClock);
-  computePrimalInfeasible(workHMO);
-  analysis->simplexTimerStop(ComputePrIfsClock);
-
-  analysis->simplexTimerStart(ComputeDuIfsClock);
-  computeDualInfeasible(workHMO);
-  analysis->simplexTimerStop(ComputeDuIfsClock);
+  computeLpInfeasible(workHMO);
 
   /* Whether to switch to primal phase 1 */
   isPrimalPhase1 = 0;
@@ -427,9 +421,7 @@ void HQPrimal::primalRebuild() {
     phase1ComputeDual();
   }
 
-  analysis->simplexTimerStart(ReportRebuildClock);
   reportRebuild(sv_invertHint);
-  analysis->simplexTimerStop(ReportRebuildClock);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
     int total_rebuilds =
@@ -1351,9 +1343,11 @@ void HQPrimal::iterationAnalysis() {
 }
 
 void HQPrimal::reportRebuild(const int rebuild_invert_hint) {
+  analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
   analysis->invert_hint = rebuild_invert_hint;
   analysis->invertReport();
+  analysis->simplexTimerStop(ReportRebuildClock);
 }
 
 bool HQPrimal::bailout() {
