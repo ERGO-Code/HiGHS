@@ -221,7 +221,6 @@ struct HighsSimplexInfo {
 
   // Internal options - can't be changed externally
   bool store_squared_primal_infeasibility = false;
-  bool allow_primal_flips_for_dual_feasibility = true;
 #ifndef HiGHSDEV
   bool analyse_lp_solution = false;  // true;//
 #else

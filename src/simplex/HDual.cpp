@@ -182,27 +182,7 @@ HighsStatus HDual::solve() {
   // Compute the dual values
   computeDual(workHMO);
   // Determine the number of dual infeasibilities, and hence the solve phase
-  const bool analyse_dual_infeasibilities_with_and_without_flips = false;
-  if (analyse_dual_infeasibilities_with_and_without_flips) {
-    computeDualInfeasible(workHMO);
-    int num_dual_infeasibilities_without_flips =
-        scaled_solution_params.num_dual_infeasibilities;
-    computeDualInfeasibleWithFlips(workHMO);
-    int num_dual_infeasibilities_with_flips =
-        scaled_solution_params.num_dual_infeasibilities;
-    printf(
-        "Dual infeasibilities with / without flips is %d / %d: Difference = "
-        "%d\n",
-        scaled_solution_params.num_dual_infeasibilities,
-        num_dual_infeasibilities_without_flips,
-        num_dual_infeasibilities_without_flips -
-            num_dual_infeasibilities_with_flips);
-  }
-  if (simplex_info.allow_primal_flips_for_dual_feasibility) {
-    computeDualInfeasibleWithFlips(workHMO);
-  } else {
-    computeDualInfeasible(workHMO);
-  }
+  computeDualInfeasibleWithFlips(workHMO);
   dualInfeasCount = scaled_solution_params.num_dual_infeasibilities;
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
   //
