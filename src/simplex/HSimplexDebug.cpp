@@ -103,10 +103,12 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
   static bool have_previous_primal_objective_value;
   static double previous_primal_objective_value;
   static double previous_updated_primal_objective_value;
+  static double updated_primal_objective_correction;
 
   static bool have_previous_dual_objective_value;
   static double previous_dual_objective_value;
   static double previous_updated_dual_objective_value;
+  static double updated_dual_objective_correction;
   if (phase < 0) {
     if (algorithm == SimplexAlgorithm::PRIMAL) {
       have_previous_primal_objective_value = false;
@@ -120,6 +122,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
   bool have_previous_objective_value;
   double previous_objective_value;
   double previous_updated_objective_value;
+  double updated_objective_correction;
   std::string algorithm_name;
   if (algorithm == SimplexAlgorithm::PRIMAL) {
     algorithm_name = "primal";
@@ -128,6 +131,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
       previous_objective_value = previous_primal_objective_value;
       previous_updated_objective_value =
           previous_updated_primal_objective_value;
+      updated_objective_correction = updated_primal_objective_correction;
     }
     updated_objective_value = simplex_info.updated_primal_objective_value;
     // Save the current objective value so that it can be recovered
@@ -142,6 +146,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
     if (have_previous_objective_value) {
       previous_objective_value = previous_dual_objective_value;
       previous_updated_objective_value = previous_updated_dual_objective_value;
+      updated_objective_correction = updated_dual_objective_correction;
     }
     updated_objective_value = simplex_info.updated_dual_objective_value;
     // Save the current objective value so that it can be recovered
@@ -157,21 +162,28 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
     change_in_objective_value = objective_value - previous_objective_value;
     change_in_updated_objective_value =
         updated_objective_value - previous_updated_objective_value;
+    updated_objective_value += updated_objective_correction;
+  } else {
+    updated_objective_correction = 0;
   }
+  const double updated_objective_error = objective_value - updated_objective_value;
   const double updated_objective_absolute_error =
-      fabs(objective_value - updated_objective_value);
+      fabs(updated_objective_error);
   const double updated_objective_relative_error =
       updated_objective_absolute_error / max(1.0, fabs(objective_value));
+  updated_objective_correction += updated_objective_error;
 
   // Now update the records of previous objective value
   if (algorithm == SimplexAlgorithm::PRIMAL) {
     have_previous_primal_objective_value = true;
     previous_primal_objective_value = objective_value;
     previous_updated_primal_objective_value = updated_objective_value;
+    updated_primal_objective_correction = updated_objective_correction;
   } else {
     have_previous_dual_objective_value = true;
     previous_dual_objective_value = objective_value;
     previous_updated_dual_objective_value = updated_objective_value;
+    updated_dual_objective_correction = updated_objective_correction;
   }
 
   // Now analyse the error
@@ -189,7 +201,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
           "Updated %s objective value: large absolute (%g) or relative (%g) "
           "error"
           " - objective change - exact (%g) updated (%g) | %s\n",
-          algorithm_name.c_str(), updated_objective_absolute_error,
+          algorithm_name.c_str(), updated_objective_error,
           updated_objective_relative_error, change_in_objective_value,
           change_in_updated_objective_value, message.c_str());
       return_status = HighsDebugStatus::LARGE_ERROR;
@@ -199,7 +211,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
           "Updated %s objective value: small absolute (%g) or relative (%g) "
           "error"
           " - objective change - exact (%g) updated (%g) | %s\n",
-          algorithm_name.c_str(), updated_objective_absolute_error,
+          algorithm_name.c_str(), updated_objective_error,
           updated_objective_relative_error, change_in_objective_value,
           change_in_updated_objective_value, message.c_str());
       return_status = HighsDebugStatus::SMALL_ERROR;
@@ -207,7 +219,7 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
     HighsPrintMessage(
         workHMO.options_.output, workHMO.options_.message_level, ML_VERBOSE,
         "Updated %s objective value: OK absolute (%g) or relative (%g) error\n",
-        algorithm_name.c_str(), updated_objective_absolute_error,
+        algorithm_name.c_str(), updated_objective_error,
         updated_objective_relative_error);
     return_status = HighsDebugStatus::OK;
   }

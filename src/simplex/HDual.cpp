@@ -1886,19 +1886,18 @@ void HDual::assessPhase1Optimality() {
   // before concluding dual infeasibility
   //
   // What if the dual objective is nonzero but tiny?
-  if (fabs(simplex_info.dual_objective_value) <=
-      primal_feasibility_tolerance) {
+  if (fabs(simplex_info.dual_objective_value) <= primal_feasibility_tolerance) {
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		    "Optimal in phase 1 but not jumping to phase 2 since "
-		    "dual objective is %g: Costs perturbed = %d",
-		    simplex_info.dual_objective_value,
-		    workHMO.simplex_info_.costs_perturbed);
+                    "Optimal in phase 1 but not jumping to phase 2 since "
+                    "dual objective is %g: Costs perturbed = %d",
+                    simplex_info.dual_objective_value,
+                    workHMO.simplex_info_.costs_perturbed);
   }
   if (workHMO.simplex_info_.costs_perturbed) {
     // Clean up perturbation
     cleanup();
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-		    "Cleaning up cost perturbation when optimal in phase 1");
+                    "Cleaning up cost perturbation when optimal in phase 1");
     if (dualInfeasCount == 0) {
       // With no dual infeasibilities, hsol jumped straight to phase 2.
       // However, that's wrong if the dual objective is (sufficiently)
@@ -1908,23 +1907,23 @@ void HDual::assessPhase1Optimality() {
       // If zero phase 1 objective then go to phase 2
       bool as_hsol = true;
       if (simplex_info.dual_objective_value == 0 || as_hsol) {
-	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-			"Jumping to phase 2 since dual "
-			"objective is %g or as_hsol = %d",
-			simplex_info.dual_objective_value, as_hsol);
-	solvePhase = 2;
+        HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                        "Jumping to phase 2 since dual "
+                        "objective is %g or as_hsol = %d",
+                        simplex_info.dual_objective_value, as_hsol);
+        solvePhase = 2;
       } else {
-	HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
-			"Not jumping to phase 2 as hsol would, since dual "
-			"objective is %g, not zero",
-			simplex_info.dual_objective_value);
+        HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                        "Not jumping to phase 2 as hsol would, since dual "
+                        "objective is %g, not zero",
+                        simplex_info.dual_objective_value);
       }
     }
   } else {
     // Report dual infeasible
     solvePhase = -1;
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
-		      ML_MINIMAL, "dual-infeasible\n");
+                      ML_MINIMAL, "dual-infeasible\n");
     workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
   }
 }

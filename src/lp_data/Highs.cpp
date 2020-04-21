@@ -291,12 +291,13 @@ HighsStatus Highs::writeModel(const std::string filename) {
 // with runLpSolver(..)
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
-  const int min_highs_debug_level = HIGHS_DEBUG_LEVEL_CHEAP; // HIGHS_DEBUG_LEVEL_MAX;  //
+  const int min_highs_debug_level =
+      HIGHS_DEBUG_LEVEL_CHEAP;  // HIGHS_DEBUG_LEVEL_MAX;  //
   if (options_.highs_debug_level < min_highs_debug_level) {
     printf(
-	   "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
-	   "from %d to %d\n",
-	   options_.highs_debug_level, min_highs_debug_level);
+        "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
+        "from %d to %d\n",
+        options_.highs_debug_level, min_highs_debug_level);
     options_.highs_debug_level = min_highs_debug_level;
   }
 #endif
