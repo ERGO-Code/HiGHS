@@ -166,9 +166,9 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& workHMO,
   } else {
     updated_objective_correction = 0;
   }
-  const double updated_objective_error = objective_value - updated_objective_value;
-  const double updated_objective_absolute_error =
-      fabs(updated_objective_error);
+  const double updated_objective_error =
+      objective_value - updated_objective_value;
+  const double updated_objective_absolute_error = fabs(updated_objective_error);
   const double updated_objective_relative_error =
       updated_objective_absolute_error / max(1.0, fabs(objective_value));
   updated_objective_correction += updated_objective_error;
@@ -286,4 +286,101 @@ HighsDebugStatus debugUpdatedObjectiveValue(const HighsModelObject& workHMO,
     return_status = HighsDebugStatus::OK;
   }
   return return_status;
+}
+
+HighsDebugStatus debugFixedNonbasicMove(const HighsModelObject& workHMO) {
+  // Non-trivially expensive check of nonbasicMove for fixed variables
+  if (workHMO.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+  const HighsLp& simplex_lp = workHMO.simplex_lp_;
+  const HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  const SimplexBasis& simplex_basis = workHMO.simplex_basis_;
+  int num_fixed_variable_move_errors = 0;
+  for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+    // Nonbasic column
+    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar] &&
+        simplex_basis.nonbasicMove_[iVar])
+      num_fixed_variable_move_errors++;
+  }
+  assert(num_fixed_variable_move_errors == 0);
+  if (num_fixed_variable_move_errors) {
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                      ML_ALWAYS, "There are %d fixed nonbasicMove errors",
+                      num_fixed_variable_move_errors);
+    return HighsDebugStatus::LOGICAL_ERROR;
+  }
+  return HighsDebugStatus::OK;
+}
+
+HighsDebugStatus debugNonbasicMove(const HighsModelObject& workHMO) {
+  // Non-trivially expensive check of NonbasicMove
+  if (workHMO.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+  const HighsLp& simplex_lp = workHMO.simplex_lp_;
+  const HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  const SimplexBasis& simplex_basis = workHMO.simplex_basis_;
+  int num_free_variable_move_errors = 0;
+  int num_lower_bounded_variable_move_errors = 0;
+  int num_upper_bounded_variable_move_errors = 0;
+  int num_boxed_variable_move_errors = 0;
+  int num_fixed_variable_move_errors = 0;
+  for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+    // Nonbasic column
+    const double lower = simplex_info.workLower_[iVar];
+    const double upper = simplex_info.workUpper_[iVar];
+
+    if (highs_isInfinity(upper)) {
+      if (highs_isInfinity(-lower)) {
+        // Free
+        if (simplex_basis.nonbasicMove_[iVar]) {
+          num_free_variable_move_errors++;
+        }
+      } else {
+        // Only lower bounded
+        if (simplex_basis.nonbasicMove_[iVar] != NONBASIC_MOVE_UP) {
+          num_lower_bounded_variable_move_errors++;
+        }
+      }
+    } else {
+      if (highs_isInfinity(-lower)) {
+        // Only upper bounded
+        if (simplex_basis.nonbasicMove_[iVar] != NONBASIC_MOVE_DN) {
+          num_upper_bounded_variable_move_errors++;
+        }
+      } else {
+        // Boxed or fixed
+        if (lower != upper) {
+          // Boxed
+          if (!simplex_basis.nonbasicMove_[iVar]) {
+            num_boxed_variable_move_errors++;
+          }
+        } else {
+          // Fixed
+          if (simplex_basis.nonbasicMove_[iVar]) {
+            num_fixed_variable_move_errors++;
+          }
+        }
+      }
+    }
+  }
+  int num_errors =
+      num_free_variable_move_errors + num_lower_bounded_variable_move_errors +
+      num_upper_bounded_variable_move_errors + num_boxed_variable_move_errors +
+      num_fixed_variable_move_errors;
+
+  if (num_errors) {
+    HighsPrintMessage(
+        workHMO.options_.output, workHMO.options_.message_level, ML_ALWAYS,
+        "There are %d nonbasicMove errors: %d free; %d lower; %d upper; %d "
+        "boxed; %d fixed",
+        num_errors, num_free_variable_move_errors,
+        num_lower_bounded_variable_move_errors,
+        num_upper_bounded_variable_move_errors, num_boxed_variable_move_errors,
+        num_fixed_variable_move_errors);
+  }
+  assert(num_errors == 0);
+  if (num_errors) return HighsDebugStatus::LOGICAL_ERROR;
+  return HighsDebugStatus::OK;
 }

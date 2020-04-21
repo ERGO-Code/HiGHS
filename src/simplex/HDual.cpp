@@ -588,7 +588,10 @@ void HDual::solvePhase1() {
       assert(simplex_info.dual_objective_value < 0);
       // A negative dual objective value at an optimal solution of
       // phase 1 means that there are dual infeasibilities. If the
-      // objective value
+      // objective value is very negative, then it's clear
+      // enough. However, if it's small, it could be the sum of
+      // values, all of which are smaller than the dual deasibility
+      // tolerance.
       assessPhase1Optimality();
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
@@ -900,8 +903,9 @@ void HDual::cleanup() {
     const double max_dual =
         max(fabs(simplex_info.workDual_[iCol]), fabs(original_workDual[iCol]));
     if (max_dual > workHMO.scaled_solution_params_.dual_feasibility_tolerance) {
-      if (simplex_info.workDual_[iCol] * original_workDual[iCol] < 0)
+      if (simplex_info.workDual_[iCol] * original_workDual[iCol] < 0) {
         num_dual_sign_change++;
+      }
     }
     const double dual_change =
         fabs(simplex_info.workDual_[iCol] - original_workDual[iCol]);
@@ -930,7 +934,7 @@ void HDual::cleanup() {
   reportRebuild();
   analysis->simplexTimerStop(ReportRebuildClock);
 
-  computeDualInfeasible(workHMO);
+  //  computeDualInfeasible(workHMO);
   dualInfeasCount = workHMO.scaled_solution_params_.num_dual_infeasibilities;
 }
 
@@ -1531,9 +1535,6 @@ void HDual::updateFtranBFRT() {
     analysis->simplexTimerStart(FtranBfrtClock);
   }
 
-  if (workHMO.iteration_counts_.simplex == 459) {
-    printf("Itertation %d\n", workHMO.iteration_counts_.simplex);
-  }
   debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before update_flip");
   dualRow.updateFlip(&col_BFRT);
@@ -1926,6 +1927,13 @@ void HDual::assessPhase1Optimality() {
                       ML_MINIMAL, "dual-infeasible\n");
     workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
   }
+}
+
+void HDual::computePhase2DualInfeasibleInPhase1() {
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
 }
 
 bool HDual::dualInfoOk(const HighsLp& lp) {

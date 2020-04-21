@@ -44,4 +44,6 @@ HighsDebugStatus debugUpdatedObjectiveValue(
     const HighsModelObject& highs_model_object,
     const SimplexAlgorithm algorithm);
 
+HighsDebugStatus debugFixedNonbasicMove(const HighsModelObject& workHMO);
+HighsDebugStatus debugNonbasicMove(const HighsModelObject& workHMO);
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_

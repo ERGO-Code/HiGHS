@@ -39,6 +39,7 @@ enum class HighsDebugStatus {
   OK,
   SMALL_ERROR,
   LARGE_ERROR,
+  LOGICAL_ERROR,
   WARNING
 };
 
