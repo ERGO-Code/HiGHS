@@ -412,6 +412,7 @@ void HQPrimal::primalRebuild() {
       simplex_info.primal_objective_value;
 
   computeSimplexInfeasible(workHMO);
+  //  copySimplexInfeasible(workHMO);
 
   /* Whether to switch to primal phase 1 */
   isPrimalPhase1 = 0;

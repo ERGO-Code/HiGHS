@@ -812,7 +812,10 @@ void HDual::rebuild() {
   dualRHS.createInfeasList(analysis->col_aq_density);
   analysis->simplexTimerStop(CollectPrIfsClock);
 
-  if (!simplex_info.run_quiet) computeSimplexInfeasible(workHMO);
+  if (!simplex_info.run_quiet) {
+    computeSimplexInfeasible(workHMO);
+    //    copySimplexInfeasible(workHMO);
+  }
 
   // Dual objective section
   //

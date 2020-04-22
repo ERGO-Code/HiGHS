@@ -567,6 +567,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Store, analyse and possibly report the number of primal and dual
   // infeasiblities and the simplex status
   computeSimplexInfeasible(highs_model_object);
+  //  copySimplexInfeasible(workHMO);
 
   HighsSolutionParams& scaled_solution_params =
       highs_model_object.scaled_solution_params_;
@@ -3092,7 +3093,11 @@ void computeSimplexDualInfeasible(HighsModelObject& highs_model_object) {
 
 void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
   // Compute num/max/sum of dual infeasibliities according to the
-  // bounds of the simplex LP
+  // bounds of the simplex LP. Assumes that boxed variables have
+  // primal variable at the bound corresponding to the sign of the
+  // dual so should only be used in dual phase 1 - where it's only
+  // used for reporting after rebuilds and to determine whether the LP
+  // is dual infeasible and, hence, primal unbounded.
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -3178,6 +3183,11 @@ void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
       printf("Variable %d: dual_infeasibility = %g; sum = %g\n", iVar, dual_infeasibility, sum_dual_infeasibilities);
     }
   }
+}
+
+void copySimplexInfeasible(HighsModelObject& highs_model_object) {
+  copySimplexPrimalInfeasible(highs_model_object);
+  copySimplexDualInfeasible(highs_model_object);
 }
 
 void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object) {

@@ -259,21 +259,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     debugBasisCondition(highs_model_object, "Final");
 
     computeSimplexInfeasible(highs_model_object);
-    HighsSolutionParams local_scaled_solution_params =
-        highs_model_object.scaled_solution_params_;
-
-    computeSimplexPrimalInfeasible(highs_model_object);
-    //    copySimplexPrimalInfeasible(highs_model_object);
-    computeSimplexLpDualInfeasible(highs_model_object);
-    //    computeSimplexDualInfeasible(highs_model_object);
-
-    if (!equalSolutionInfeasibilityParams(
-            local_scaled_solution_params,
-            highs_model_object.scaled_solution_params_)) {
-      printf("\n!!!!Unequal SolutionInfeasibilityParams!!!!\n\n");
-    } else {
-      printf("\n!!!!Equal SolutionInfeasibilityParams!!!!\n\n");
-    }
+    //    copySimplexInfeasible(highs_model_object);
 
     scaled_solution_params.objective_function_value =
         simplex_info.primal_objective_value;

@@ -164,6 +164,8 @@ void computeSimplexDualInfeasible(HighsModelObject& highs_model_object);
 void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object);
 
 void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object);
+
+void copySimplexInfeasible(HighsModelObject& highs_model_object);
 void copySimplexDualInfeasible(HighsModelObject& highs_model_object);
 void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object);
 

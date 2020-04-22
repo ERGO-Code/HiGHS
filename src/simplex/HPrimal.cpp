@@ -372,6 +372,7 @@ void HPrimal::primalRebuild() {
       simplex_info.primal_objective_value;
 
   computeSimplexInfeasible(workHMO);
+  //  copySimplexInfeasible(workHMO);
 
   reportRebuild(sv_invertHint);
 
