@@ -412,6 +412,8 @@ void HQPrimal::primalRebuild() {
       simplex_info.primal_objective_value;
 
   computeSimplexInfeasible(workHMO);
+  // Determine whether simplex_info.num_primal_infeasibilities and
+  // simplex_info.num_dual_infeasibilities can be used
   copySimplexInfeasible(workHMO);
 
   /* Whether to switch to primal phase 1 */
@@ -684,6 +686,7 @@ void HQPrimal::primalUpdate() {
   simplex_info.updated_primal_objective_value +=
       workDual[columnIn] * thetaPrimal;
 
+  // Why is the detailed primal infeasibility information needed?
   computeSimplexPrimalInfeasible(workHMO);
   copySimplexPrimalInfeasible(workHMO);
 
@@ -894,6 +897,7 @@ void HQPrimal::phase1ComputeDual() {
 
   /* Recompute number of dual infeasible variables with the phase 1 cost */
   computeSimplexDualInfeasible(workHMO);
+  // Determine whether simplex_info.num_dual_infeasibilities can be used
   copySimplexDualInfeasible(workHMO);
 }
 
@@ -1141,8 +1145,11 @@ void HQPrimal::phase1Update() {
       computePrimal(workHMO);
       analysis->simplexTimerStop(ComputePrimalClock);
       computeSimplexPrimalInfeasible(workHMO);
-      copySimplexPrimalInfeasible(workHMO);
-      if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
+      // Assumes that only simplex_info_.*_primal_infeasibilities is
+      // needed - probably only num_primal_infeasibilities
+      //
+      //      copySimplexPrimalInfeasible(workHMO);
+      if (workHMO.simplex_info_.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
         analysis->simplexTimerStart(ComputeDualClock);
         phase1ComputeDual();
@@ -1214,9 +1221,11 @@ void HQPrimal::phase1Update() {
     computePrimal(workHMO);
     analysis->simplexTimerStop(ComputePrimalClock);
     computeSimplexPrimalInfeasible(workHMO);
-    copySimplexPrimalInfeasible(workHMO);
-
-    if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
+    // Assumes that only simplex_info_.*_primal_infeasibilities is
+    // needed - probably only num_primal_infeasibilities
+    //
+    //      copySimplexPrimalInfeasible(workHMO);
+    if (workHMO.simplex_info_.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
       analysis->simplexTimerStart(ComputeDualClock);
       phase1ComputeDual();
@@ -1299,7 +1308,7 @@ void HQPrimal::devexUpdate() {
 }
 
 void HQPrimal::iterationAnalysisData() {
-  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
+  //  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
   analysis->edge_weight_mode = DualEdgeWeightMode::DEVEX;
@@ -1322,13 +1331,13 @@ void HQPrimal::iterationAnalysisData() {
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_primal_objective_value;
   analysis->num_primal_infeasibilities =
-      scaled_solution_params.num_primal_infeasibilities;
+      simplex_info.num_primal_infeasibilities;
   analysis->num_dual_infeasibilities =
-      scaled_solution_params.num_dual_infeasibilities;
+      simplex_info.num_dual_infeasibilities;
   analysis->sum_primal_infeasibilities =
-      scaled_solution_params.sum_primal_infeasibilities;
+      simplex_info.sum_primal_infeasibilities;
   analysis->sum_dual_infeasibilities =
-      scaled_solution_params.sum_dual_infeasibilities;
+      simplex_info.sum_dual_infeasibilities;
 #ifdef HiGHSDEV
   analysis->basis_condition = simplex_info.invert_condition;
 #endif

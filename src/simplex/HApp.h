@@ -408,7 +408,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   resetModelStatusAndSolutionParams(highs_model_object);
   // Set the value of simplex_info_.run_quiet to suppress computation
   // that is just for reporting
-  setRunQuiet(highs_model_object);
+  //  setRunQuiet(highs_model_object);
   //  printf("Forcing simplex_info_.run_quiet true for testing\n");
   //  highs_model_object.simplex_info_.run_quiet = true;
 

@@ -3087,7 +3087,6 @@ void computeSimplexDualInfeasible(HighsModelObject& highs_model_object) {
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibilities += dual_infeasibility;
-      printf("Variable %d: dual_infeasibility = %g; sum = %g\n", iVar, dual_infeasibility, sum_dual_infeasibilities);
     }
   }
 }
@@ -3147,7 +3146,6 @@ void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibilities += dual_infeasibility;
-      printf("Variable %d: dual_infeasibility = %g; sum = %g\n", iVar, dual_infeasibility, sum_dual_infeasibilities);
     }
   }
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
@@ -3181,7 +3179,6 @@ void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibilities += dual_infeasibility;
-      printf("Variable %d: dual_infeasibility = %g; sum = %g\n", iVar, dual_infeasibility, sum_dual_infeasibilities);
     }
   }
 }
@@ -3442,8 +3439,11 @@ void correctDual(HighsModelObject& highs_model_object,
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
   const double inf = HIGHS_CONST_INF;
   int workCount = 0;
-  double dual_objective_value_change = 0;
+  double flip_dual_objective_value_change = 0;
+  double shift_dual_objective_value_change = 0;
+  int num_flip = 0;
   int num_shift = 0;
+  double sum_flip = 0;
   double sum_shift = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
@@ -3457,7 +3457,21 @@ void correctDual(HighsModelObject& highs_model_object,
         if (simplex_info.workLower_[i] != -inf &&
             simplex_info.workUpper_[i] != inf) {
           // Boxed variable = flip
+	  const int move = simplex_basis.nonbasicMove_[i];
           flip_bound(highs_model_object, i);
+	  double flip = simplex_info.workUpper_[i] - simplex_info.workLower_[i];
+	  // Negative dual at lower bound (move=1): flip to upper
+	  // bound so objective contribution is change in value (flip)
+	  // times dual, being move*flip*dual
+	  //
+	  // Positive dual at upper bound (move=-1): flip to lower
+	  // bound so objective contribution is change in value
+	  // (-flip) times dual, being move*flip*dual
+	  double local_dual_objective_change = move * flip * simplex_info.workDual_[i];
+	  local_dual_objective_change *= highs_model_object.scale_.cost_;
+	  flip_dual_objective_value_change += local_dual_objective_change;
+	  num_flip++;
+	  sum_flip += fabs(flip);
         } else if (simplex_info.allow_cost_perturbation) {
           // Other variable = shift
           //
@@ -3472,49 +3486,47 @@ void correctDual(HighsModelObject& highs_model_object,
           // LP is declared to be (primal) infeasible. Should go to
           // phase 1 primal simplex to "prove" infeasibility.
           simplex_info.costs_perturbed = 1;
+	  std::string direction;
+	  double shift;
           if (simplex_basis.nonbasicMove_[i] == 1) {
+	    direction = "  up";
             double dual = (1 + random.fraction()) * tau_d;
-            double shift = dual - simplex_info.workDual_[i];
+            shift = dual - simplex_info.workDual_[i];
             simplex_info.workDual_[i] = dual;
             simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
-            double local_dual_objective_change =
-                shift * simplex_info.workValue_[i];
-            local_dual_objective_change *= highs_model_object.scale_.cost_;
-            dual_objective_value_change += local_dual_objective_change;
-            num_shift++;
-            sum_shift += fabs(shift);
-            HighsPrintMessage(highs_model_object.options_.output,
-                              highs_model_object.options_.message_level,
-                              ML_VERBOSE,
-                              "Move up: shift = %g; objective change = %g\n",
-                              shift, local_dual_objective_change);
           } else {
+	    direction = "down";
             double dual = -(1 + random.fraction()) * tau_d;
-            double shift = dual - simplex_info.workDual_[i];
+            shift = dual - simplex_info.workDual_[i];
             simplex_info.workDual_[i] = dual;
             simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
-            double local_dual_objective_change =
-                shift * simplex_info.workValue_[i];
-            local_dual_objective_change *= highs_model_object.scale_.cost_;
-            dual_objective_value_change += local_dual_objective_change;
-            num_shift++;
-            sum_shift += fabs(shift);
-            HighsPrintMessage(highs_model_object.options_.output,
-                              highs_model_object.options_.message_level,
-                              ML_VERBOSE,
-                              "Move dn: shift = %g; objective change = %g\n",
-                              shift, local_dual_objective_change);
           }
+	  double local_dual_objective_change = shift * simplex_info.workValue_[i];
+	  local_dual_objective_change *= highs_model_object.scale_.cost_;
+	  shift_dual_objective_value_change += local_dual_objective_change;
+	  num_shift++;
+	  sum_shift += fabs(shift);
+	  HighsPrintMessage(highs_model_object.options_.output,
+			    highs_model_object.options_.message_level,
+			    ML_VERBOSE,
+			    "Move %s: shift = %g; objective change = %g\n",
+			    direction.c_str(), shift, local_dual_objective_change);
         }
       }
     }
   }
+  if (num_flip)
+    HighsPrintMessage(
+        highs_model_object.options_.output,
+        highs_model_object.options_.message_level, ML_VERBOSE,
+        "Performed %d flip(s): total = %g; objective change = %g\n", num_flip,
+        sum_flip, flip_dual_objective_value_change);
   if (num_shift)
     HighsPrintMessage(
         highs_model_object.options_.output,
         highs_model_object.options_.message_level, ML_DETAILED,
         "Performed %d shift(s): total = %g; objective change = %g\n", num_shift,
-        sum_shift, dual_objective_value_change);
+        sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
 }
 

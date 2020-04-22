@@ -812,11 +812,6 @@ void HDual::rebuild() {
   dualRHS.createInfeasList(analysis->col_aq_density);
   analysis->simplexTimerStop(CollectPrIfsClock);
 
-  if (!simplex_info.run_quiet) {
-    computeSimplexInfeasible(workHMO);
-    copySimplexInfeasible(workHMO);
-  }
-
   // Dual objective section
   //
   analysis->simplexTimerStart(ComputeDuObjClock);
@@ -836,7 +831,18 @@ void HDual::rebuild() {
   // value
   simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
-  if (!simplex_info.run_quiet) reportRebuild(rebuild_invert_hint);
+  if (!simplex_info.run_quiet) {
+    // Report the primal infeasiblities
+    computeSimplexPrimalInfeasible(workHMO);
+    if (solvePhase == 1) {
+      // In phase 1, report the simplex LP dual infeasiblities
+      computeSimplexLpDualInfeasible(workHMO);
+    } else {
+      // In phase 2, report the simplex dual infeasiblities
+      computeSimplexDualInfeasible(workHMO);
+    }
+    reportRebuild(rebuild_invert_hint);
+  }
 
   build_syntheticTick = factor->build_syntheticTick;
   total_syntheticTick = 0;
@@ -864,39 +870,24 @@ void HDual::cleanup() {
   // Remove perturbation and don't permit further perturbation
   initialise_cost(workHMO);
   simplex_info.allow_cost_perturbation = false;
-  initialise_bound(workHMO);
+  // No solvePhase term in initialise_bound is surely an omission -
+  // when cleanup called in phase 1
+  initialise_bound(workHMO, solvePhase); 
+  // Possibly take a copy of the original duals before recomputing them
+  vector<double> original_workDual;
+  if (workHMO.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP)
+    original_workDual = simplex_info.workDual_;
   // Compute the dual values
-#ifdef HiGHSDEV
-  vector<double> original_workDual = simplex_info.workDual_;
-#endif
   analysis->simplexTimerStart(ComputeDualClock);
   computeDual(workHMO);
   analysis->simplexTimerStop(ComputeDualClock);
-#ifdef HiGHSDEV
-  int num_dual_sign_change = 0;
-  for (int iCol = 0; iCol < workHMO.simplex_lp_.numCol_; iCol++) {
-    const double max_dual =
-        max(fabs(simplex_info.workDual_[iCol]), fabs(original_workDual[iCol]));
-    if (max_dual > workHMO.scaled_solution_params_.dual_feasibility_tolerance) {
-      if (simplex_info.workDual_[iCol] * original_workDual[iCol] < 0) {
-        num_dual_sign_change++;
-      }
-    }
-    const double dual_change =
-        fabs(simplex_info.workDual_[iCol] - original_workDual[iCol]);
-    updateValueDistribution(dual_change,
-                            analysis->cleanup_dual_change_distribution);
-  }
-  printf(
-      "grep_DuPtrb: dualCleanup for %s has %d meaningful dual sign change(s)\n",
-      workHMO.simplex_lp_.model_name_.c_str(), num_dual_sign_change);
-#endif
-
+  // Possibly analyse the change in duals
+  debugCleanup(workHMO, original_workDual);
   // Compute the dual infeasibilities
   analysis->simplexTimerStart(ComputeDuIfsClock);
   computeSimplexDualInfeasible(workHMO);
-  copySimplexDualInfeasible(workHMO);
   analysis->simplexTimerStop(ComputeDuIfsClock);
+  dualInfeasCount = workHMO.simplex_info_.num_dual_infeasibilities;
 
   // Compute the dual objective value
   analysis->simplexTimerStart(ComputeDuObjClock);
@@ -906,9 +897,16 @@ void HDual::cleanup() {
   // value
   simplex_info.updated_dual_objective_value = simplex_info.dual_objective_value;
 
-  reportRebuild();
+  if (!simplex_info.run_quiet) {
+    // Report the primal infeasiblities
+    computeSimplexPrimalInfeasible(workHMO);
+    // In phase 1, report the simplex LP dual infeasiblities
+    // In phase 2, report the simplex dual infeasiblities (known)
+    if (solvePhase == 1)
+      computeSimplexLpDualInfeasible(workHMO);
+    reportRebuild();
+  }
 
-  dualInfeasCount = workHMO.scaled_solution_params_.num_dual_infeasibilities;
 }
 
 void HDual::iterate() {
@@ -1055,14 +1053,15 @@ void HDual::iterationAnalysisData() {
   // costs, in phase 2 the dual objective value is negated, so flip
   // its sign according to the LP sense
   if (solvePhase == 2) analysis->objective_value *= (int)workHMO.lp_.sense_;
-  analysis->num_primal_infeasibilities =
-      scaled_solution_params.num_primal_infeasibilities;
-  analysis->num_dual_infeasibilities =
-      scaled_solution_params.num_dual_infeasibilities;
-  analysis->sum_primal_infeasibilities =
-      scaled_solution_params.sum_primal_infeasibilities;
-  analysis->sum_dual_infeasibilities =
-      scaled_solution_params.sum_dual_infeasibilities;
+  analysis->num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
+  analysis->sum_primal_infeasibilities = simplex_info.sum_primal_infeasibilities;
+  if (solvePhase == 1) {
+    analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
+    analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
+  } else {
+    analysis->num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
+    analysis->sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;
+  }
 #ifdef HiGHSDEV
   analysis->basis_condition = simplex_info.invert_condition;
 #endif
