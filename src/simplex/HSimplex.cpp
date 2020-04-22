@@ -2999,11 +2999,11 @@ void computeSimplexPrimalInfeasible(HighsModelObject& highs_model_object) {
   const double scaled_primal_feasibility_tolerance =
       highs_model_object.scaled_solution_params_.primal_feasibility_tolerance;
   int& num_primal_infeasibilities =
-      highs_model_object.scaled_solution_params_.num_primal_infeasibilities;
+      highs_model_object.simplex_info_.num_primal_infeasibilities;
   double& max_primal_infeasibility =
-      highs_model_object.scaled_solution_params_.max_primal_infeasibility;
+      highs_model_object.simplex_info_.max_primal_infeasibility;
   double& sum_primal_infeasibilities =
-      highs_model_object.scaled_solution_params_.sum_primal_infeasibilities;
+      highs_model_object.simplex_info_.sum_primal_infeasibilities;
   num_primal_infeasibilities = 0;
   max_primal_infeasibility = 0;
   sum_primal_infeasibilities = 0;
@@ -3057,11 +3057,11 @@ void computeSimplexDualInfeasible(HighsModelObject& highs_model_object) {
   debugFixedNonbasicMove(highs_model_object);
 
   int& num_dual_infeasibilities =
-      highs_model_object.scaled_solution_params_.num_dual_infeasibilities;
+      highs_model_object.simplex_info_.num_dual_infeasibilities;
   double& max_dual_infeasibility =
-      highs_model_object.scaled_solution_params_.max_dual_infeasibility;
+      highs_model_object.simplex_info_.max_dual_infeasibility;
   double& sum_dual_infeasibilities =
-      highs_model_object.scaled_solution_params_.sum_dual_infeasibilities;
+      highs_model_object.simplex_info_.sum_dual_infeasibilities;
   num_dual_infeasibilities = 0;
   max_dual_infeasibility = 0;
   sum_dual_infeasibilities = 0;
@@ -3192,7 +3192,6 @@ void copySimplexInfeasible(HighsModelObject& highs_model_object) {
 }
 
 void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object) {
-  return;
   highs_model_object.scaled_solution_params_.num_primal_infeasibilities =
     highs_model_object.simplex_info_.num_primal_infeasibilities;
   highs_model_object.scaled_solution_params_.max_primal_infeasibility =
@@ -3202,7 +3201,6 @@ void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object) {
 }
 
 void copySimplexDualInfeasible(HighsModelObject& highs_model_object) {
-  return;
   highs_model_object.scaled_solution_params_.num_dual_infeasibilities =
     highs_model_object.simplex_info_.num_dual_infeasibilities;
   highs_model_object.scaled_solution_params_.max_dual_infeasibility =
