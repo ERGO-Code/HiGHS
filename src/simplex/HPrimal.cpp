@@ -372,7 +372,7 @@ void HPrimal::primalRebuild() {
       simplex_info.primal_objective_value;
 
   computeSimplexInfeasible(workHMO);
-  //  copySimplexInfeasible(workHMO);
+  copySimplexInfeasible(workHMO);
 
   reportRebuild(sv_invertHint);
 
@@ -638,6 +638,7 @@ void HPrimal::primalUpdate() {
       workDual[columnIn] * thetaPrimal;
 
   computeSimplexPrimalInfeasible(workHMO);
+  copySimplexPrimalInfeasible(workHMO);
 
   // If flipped, then no need touch the pivots
   if (flipped) {

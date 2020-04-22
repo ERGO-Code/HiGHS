@@ -259,7 +259,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     debugBasisCondition(highs_model_object, "Final");
 
     computeSimplexInfeasible(highs_model_object);
-    //    copySimplexInfeasible(highs_model_object);
+    copySimplexInfeasible(highs_model_object);
 
     scaled_solution_params.objective_function_value =
         simplex_info.primal_objective_value;

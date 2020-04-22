@@ -814,7 +814,7 @@ void HDual::rebuild() {
 
   if (!simplex_info.run_quiet) {
     computeSimplexInfeasible(workHMO);
-    //    copySimplexInfeasible(workHMO);
+    copySimplexInfeasible(workHMO);
   }
 
   // Dual objective section
@@ -895,6 +895,7 @@ void HDual::cleanup() {
   // Compute the dual infeasibilities
   analysis->simplexTimerStart(ComputeDuIfsClock);
   computeSimplexDualInfeasible(workHMO);
+  copySimplexDualInfeasible(workHMO);
   analysis->simplexTimerStop(ComputeDuIfsClock);
 
   // Compute the dual objective value

@@ -567,7 +567,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Store, analyse and possibly report the number of primal and dual
   // infeasiblities and the simplex status
   computeSimplexInfeasible(highs_model_object);
-  //  copySimplexInfeasible(workHMO);
+  copySimplexInfeasible(highs_model_object);
 
   HighsSolutionParams& scaled_solution_params =
       highs_model_object.scaled_solution_params_;
@@ -3051,16 +3051,20 @@ void computeSimplexDualInfeasible(HighsModelObject& highs_model_object) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  HighsSolutionParams& scaled_solution_params =
-      highs_model_object.scaled_solution_params_;
   const double scaled_dual_feasibility_tolerance =
-      scaled_solution_params.dual_feasibility_tolerance;
+      highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
   // Possibly verify that nonbasicMove is correct for fixed variables
   debugFixedNonbasicMove(highs_model_object);
 
-  int num_dual_infeasibilities = 0;
-  double max_dual_infeasibility = 0;
-  double sum_dual_infeasibilities = 0;
+  int& num_dual_infeasibilities =
+      highs_model_object.scaled_solution_params_.num_dual_infeasibilities;
+  double& max_dual_infeasibility =
+      highs_model_object.scaled_solution_params_.max_dual_infeasibility;
+  double& sum_dual_infeasibilities =
+      highs_model_object.scaled_solution_params_.sum_dual_infeasibilities;
+  num_dual_infeasibilities = 0;
+  max_dual_infeasibility = 0;
+  sum_dual_infeasibilities = 0;
 
   for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
     if (!simplex_basis.nonbasicFlag_[iVar]) continue;
@@ -3086,9 +3090,6 @@ void computeSimplexDualInfeasible(HighsModelObject& highs_model_object) {
       printf("Variable %d: dual_infeasibility = %g; sum = %g\n", iVar, dual_infeasibility, sum_dual_infeasibilities);
     }
   }
-  scaled_solution_params.num_dual_infeasibilities = num_dual_infeasibilities;
-  scaled_solution_params.max_dual_infeasibility = max_dual_infeasibility;
-  scaled_solution_params.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
 void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
@@ -3191,6 +3192,7 @@ void copySimplexInfeasible(HighsModelObject& highs_model_object) {
 }
 
 void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object) {
+  return;
   highs_model_object.scaled_solution_params_.num_primal_infeasibilities =
     highs_model_object.simplex_info_.num_primal_infeasibilities;
   highs_model_object.scaled_solution_params_.max_primal_infeasibility =
@@ -3200,6 +3202,7 @@ void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object) {
 }
 
 void copySimplexDualInfeasible(HighsModelObject& highs_model_object) {
+  return;
   highs_model_object.scaled_solution_params_.num_dual_infeasibilities =
     highs_model_object.simplex_info_.num_dual_infeasibilities;
   highs_model_object.scaled_solution_params_.max_dual_infeasibility =
