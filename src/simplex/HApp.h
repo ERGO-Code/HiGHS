@@ -32,9 +32,9 @@
 #include "util/HighsUtils.h"
 //#include "HRanging.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HighsSimplexInterface.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HSimplexReport.h"
+#include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
 
@@ -255,25 +255,29 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         if (return_status == HighsStatus::Error) return return_status;
       }
     }
-    
+
     debugBasisCondition(highs_model_object, "Final");
 
+    computeSimplexInfeasible(highs_model_object);
+    HighsSolutionParams local_scaled_solution_params =
+        highs_model_object.scaled_solution_params_;
 
-   computeLpInfeasible(highs_model_object);
-   HighsSolutionParams local_scaled_solution_params = highs_model_object.scaled_solution_params_;
+    computeSimplexPrimalInfeasible(highs_model_object);
+    //    copySimplexPrimalInfeasible(highs_model_object);
+    computeSimplexLpDualInfeasible(highs_model_object);
+    //    computeSimplexDualInfeasible(highs_model_object);
 
-   computePrimalInfeasible(highs_model_object);
-   computeDualInfeasible(highs_model_object);
-   if (!equalSolutionInfeasibilityParams(
-					 local_scaled_solution_params, highs_model_object.scaled_solution_params_)) {
-     printf("\n!!!!Unequal SolutionInfeasibilityParams!!!!\n\n");
-   } else {
-     printf("\n!!!!Equal SolutionInfeasibilityParams!!!!\n\n");
-   }     
-    
+    if (!equalSolutionInfeasibilityParams(
+            local_scaled_solution_params,
+            highs_model_object.scaled_solution_params_)) {
+      printf("\n!!!!Unequal SolutionInfeasibilityParams!!!!\n\n");
+    } else {
+      printf("\n!!!!Equal SolutionInfeasibilityParams!!!!\n\n");
+    }
+
     scaled_solution_params.objective_function_value =
         simplex_info.primal_objective_value;
-    
+
     // Official finish of solver
 #ifdef HiGHSDEV
     analysis.simplexTimerStop(SimplexTotalClock);
@@ -419,7 +423,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // Set the value of simplex_info_.run_quiet to suppress computation
   // that is just for reporting
   setRunQuiet(highs_model_object);
-  //  printf("Forcing simplex_info_.run_quiet true for testing\n"); highs_model_object.simplex_info_.run_quiet = true;
+  //  printf("Forcing simplex_info_.run_quiet true for testing\n");
+  //  highs_model_object.simplex_info_.run_quiet = true;
 
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly

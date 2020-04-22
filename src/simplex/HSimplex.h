@@ -157,12 +157,15 @@ int computeFactor(HighsModelObject& highs_model_object);
 // of basic variables
 void computePrimal(HighsModelObject& highs_model_object);
 
-void computeLpInfeasible(HighsModelObject& highs_model_object);
-void computePrimalInfeasible(HighsModelObject& highs_model_object);
-
-void computeDualInfeasible(HighsModelObject& highs_model_object);
+void computeSimplexInfeasible(HighsModelObject& highs_model_object);
+void computeSimplexPrimalInfeasible(HighsModelObject& highs_model_object);
+void computeSimplexDualInfeasible(HighsModelObject& highs_model_object);
 
 void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object);
+
+void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object);
+void copySimplexDualInfeasible(HighsModelObject& highs_model_object);
+void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object);
 
 void choosePriceTechnique(const int price_strategy, const double row_ep_density,
                           bool& use_col_price, bool& use_row_price_w_switch);

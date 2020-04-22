@@ -13,6 +13,7 @@
  */
 
 #include "simplex/HSimplexDebug.h"
+
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
 
@@ -39,7 +40,8 @@ HighsDebugStatus debugComputedDual(const HighsModelObject& highs_model_object,
   // Non-trivially expensive analysis of computed dual values.
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
-  const std::vector<double>& new_daul = highs_model_object.simplex_info_.workDual_;
+  const std::vector<double>& new_daul =
+      highs_model_object.simplex_info_.workDual_;
 
   int num_row = highs_model_object.simplex_lp_.numRow_;
   int num_col = highs_model_object.simplex_lp_.numCol_;
@@ -68,48 +70,50 @@ HighsDebugStatus debugComputedDual(const HighsModelObject& highs_model_object,
       if (computed_dual_relative_change > computed_dual_large_relative_change ||
           computed_dual_absolute_change > computed_dual_large_absolute_change) {
         HighsPrintMessage(
-            highs_model_object.options_.output, highs_model_object.options_.message_level,
-            ML_DETAILED,
+            highs_model_object.options_.output,
+            highs_model_object.options_.message_level, ML_DETAILED,
             "ComputedDual: B.pi=c_B has |c_B|=%g; |pi|=%g; |pi^TA-c|=%g\n",
             basic_costs_norm, row_dual_norm, new_dual_norm);
         HighsPrintMessage(
-            highs_model_object.options_.output, highs_model_object.options_.message_level,
-            ML_DETAILED,
+            highs_model_object.options_.output,
+            highs_model_object.options_.message_level, ML_DETAILED,
             "ComputedDual: Large absolute (%g) or relative (%g) change\n",
             computed_dual_absolute_change, computed_dual_relative_change);
       } else {
         HighsPrintMessage(
-            highs_model_object.options_.output, highs_model_object.options_.message_level,
-            ML_DETAILED,
+            highs_model_object.options_.output,
+            highs_model_object.options_.message_level, ML_DETAILED,
             "ComputedDual: B.pi=c_B has |c_B|=%g; |pi|=%g; |pi^TA-c|=%g\n",
             basic_costs_norm, row_dual_norm, new_dual_norm);
         HighsPrintMessage(
-            highs_model_object.options_.output, highs_model_object.options_.message_level,
-            ML_DETAILED,
+            highs_model_object.options_.output,
+            highs_model_object.options_.message_level, ML_DETAILED,
             "ComputedDual: Small absolute (%g) or relative (%g) change\n",
             computed_dual_absolute_change, computed_dual_relative_change);
       }
       HighsPrintMessage(
-          highs_model_object.options_.output, highs_model_object.options_.message_level, ML_VERBOSE,
+          highs_model_object.options_.output,
+          highs_model_object.options_.message_level, ML_VERBOSE,
           "ComputedDual: B.pi=c_B has |c_B|=%g; |pi|=%g; |pi^TA-c|=%g\n",
           basic_costs_norm, row_dual_norm, new_dual_norm);
       HighsPrintMessage(
-          highs_model_object.options_.output, highs_model_object.options_.message_level, ML_VERBOSE,
+          highs_model_object.options_.output,
+          highs_model_object.options_.message_level, ML_VERBOSE,
           "ComputedDual: OK absolute (%g) or relative (%g) change\n",
           computed_dual_absolute_change, computed_dual_relative_change);
     }
   } else {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
-                    "ComputedDual: |Dual| = %g", new_dual_norm);
+    HighsLogMessage(highs_model_object.options_.logfile,
+                    HighsMessageType::WARNING, "ComputedDual: |Dual| = %g",
+                    new_dual_norm);
     return HighsDebugStatus::WARNING;
   }
   return HighsDebugStatus::OK;
 }
 
-HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& highs_model_object,
-                                            const SimplexAlgorithm algorithm,
-                                            const int phase,
-                                            const std::string message) {
+HighsDebugStatus debugUpdatedObjectiveValue(
+    HighsModelObject& highs_model_object, const SimplexAlgorithm algorithm,
+    const int phase, const std::string message) {
   // Non-trivially expensive check of updated objective value. Computes the
   // exact objective value
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
@@ -213,7 +217,8 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& highs_model_object
         updated_objective_absolute_error >
             updated_objective_large_absolute_error) {
       HighsPrintMessage(
-          highs_model_object.options_.output, highs_model_object.options_.message_level, ML_ALWAYS,
+          highs_model_object.options_.output,
+          highs_model_object.options_.message_level, ML_ALWAYS,
           "Updated %s objective value: large absolute (%g) or relative (%g) "
           "error"
           " - objective change - exact (%g) updated (%g) | %s\n",
@@ -223,7 +228,8 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& highs_model_object
       return_status = HighsDebugStatus::LARGE_ERROR;
     } else {
       HighsPrintMessage(
-          highs_model_object.options_.output, highs_model_object.options_.message_level, ML_DETAILED,
+          highs_model_object.options_.output,
+          highs_model_object.options_.message_level, ML_DETAILED,
           "Updated %s objective value: small absolute (%g) or relative (%g) "
           "error"
           " - objective change - exact (%g) updated (%g) | %s\n",
@@ -233,7 +239,8 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& highs_model_object
       return_status = HighsDebugStatus::SMALL_ERROR;
     }
     HighsPrintMessage(
-        highs_model_object.options_.output, highs_model_object.options_.message_level, ML_VERBOSE,
+        highs_model_object.options_.output,
+        highs_model_object.options_.message_level, ML_VERBOSE,
         "Updated %s objective value: OK absolute (%g) or relative (%g) error\n",
         algorithm_name.c_str(), updated_objective_error,
         updated_objective_relative_error);
@@ -242,8 +249,9 @@ HighsDebugStatus debugUpdatedObjectiveValue(HighsModelObject& highs_model_object
   return return_status;
 }
 
-HighsDebugStatus debugUpdatedObjectiveValue(const HighsModelObject& highs_model_object,
-                                            const SimplexAlgorithm algorithm) {
+HighsDebugStatus debugUpdatedObjectiveValue(
+    const HighsModelObject& highs_model_object,
+    const SimplexAlgorithm algorithm) {
   // Cheap check of updated objective value - assumes that the
   // objective value computed directly is correct, so only call after
   // this has been done
@@ -279,7 +287,8 @@ HighsDebugStatus debugUpdatedObjectiveValue(const HighsModelObject& highs_model_
         updated_objective_absolute_error >
             updated_objective_large_absolute_error) {
       HighsPrintMessage(
-          highs_model_object.options_.output, highs_model_object.options_.message_level, ML_ALWAYS,
+          highs_model_object.options_.output,
+          highs_model_object.options_.message_level, ML_ALWAYS,
           "Updated %s objective value: large absolute (%g) or relative (%g) "
           "error\n",
           algorithm_name.c_str(), updated_objective_absolute_error,
@@ -287,7 +296,8 @@ HighsDebugStatus debugUpdatedObjectiveValue(const HighsModelObject& highs_model_
       return_status = HighsDebugStatus::LARGE_ERROR;
     } else {
       HighsPrintMessage(
-          highs_model_object.options_.output, highs_model_object.options_.message_level, ML_DETAILED,
+          highs_model_object.options_.output,
+          highs_model_object.options_.message_level, ML_DETAILED,
           "Updated %s objective value: small absolute (%g) or relative (%g) "
           "error\n",
           algorithm_name.c_str(), updated_objective_absolute_error,
@@ -295,7 +305,8 @@ HighsDebugStatus debugUpdatedObjectiveValue(const HighsModelObject& highs_model_
       return_status = HighsDebugStatus::SMALL_ERROR;
     }
     HighsPrintMessage(
-        highs_model_object.options_.output, highs_model_object.options_.message_level, ML_VERBOSE,
+        highs_model_object.options_.output,
+        highs_model_object.options_.message_level, ML_VERBOSE,
         "Updated %s objective value: OK absolute (%g) or relative (%g) error\n",
         algorithm_name.c_str(), updated_objective_absolute_error,
         updated_objective_relative_error);
@@ -304,7 +315,8 @@ HighsDebugStatus debugUpdatedObjectiveValue(const HighsModelObject& highs_model_
   return return_status;
 }
 
-HighsDebugStatus debugFixedNonbasicMove(const HighsModelObject& highs_model_object) {
+HighsDebugStatus debugFixedNonbasicMove(
+    const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check of nonbasicMove for fixed variables
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
@@ -321,8 +333,9 @@ HighsDebugStatus debugFixedNonbasicMove(const HighsModelObject& highs_model_obje
   }
   assert(num_fixed_variable_move_errors == 0);
   if (num_fixed_variable_move_errors) {
-    HighsPrintMessage(highs_model_object.options_.output, highs_model_object.options_.message_level,
-                      ML_ALWAYS, "There are %d fixed nonbasicMove errors",
+    HighsPrintMessage(highs_model_object.options_.output,
+                      highs_model_object.options_.message_level, ML_ALWAYS,
+                      "There are %d fixed nonbasicMove errors",
                       num_fixed_variable_move_errors);
     return HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -388,7 +401,8 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
 
   if (num_errors) {
     HighsPrintMessage(
-        highs_model_object.options_.output, highs_model_object.options_.message_level, ML_ALWAYS,
+        highs_model_object.options_.output,
+        highs_model_object.options_.message_level, ML_ALWAYS,
         "There are %d nonbasicMove errors: %d free; %d lower; %d upper; %d "
         "boxed; %d fixed",
         num_errors, num_free_variable_move_errors,
@@ -401,24 +415,31 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   return HighsDebugStatus::OK;
 }
 
-HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object, const std::string message) {
+HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
+                                     const std::string message) {
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
   double basis_condition = computeBasisCondition(highs_model_object);
   if (basis_condition > excessive_basis_condition) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
-		    "%s basis condition estimate of %g is excessive", message.c_str(), basis_condition);
+    HighsLogMessage(highs_model_object.options_.logfile,
+                    HighsMessageType::WARNING,
+                    "%s basis condition estimate of %g is excessive",
+                    message.c_str(), basis_condition);
     return HighsDebugStatus::WARNING;
   } else if (basis_condition > large_basis_condition) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::WARNING,
-		    "%s basis condition estimate of %g is large", message.c_str(), basis_condition);
+    HighsLogMessage(highs_model_object.options_.logfile,
+                    HighsMessageType::WARNING,
+                    "%s basis condition estimate of %g is large",
+                    message.c_str(), basis_condition);
     return HighsDebugStatus::WARNING;
   } else if (basis_condition > fair_basis_condition) {
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		    "%s basis condition estimate of %g is fair", message.c_str(), basis_condition);
+                    "%s basis condition estimate of %g is fair",
+                    message.c_str(), basis_condition);
     return HighsDebugStatus::OK;
   }
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		  "%s basis condition estimate of %g is small", message.c_str(), basis_condition);
+                  "%s basis condition estimate of %g is small", message.c_str(),
+                  basis_condition);
   return HighsDebugStatus::OK;
 }

@@ -411,7 +411,7 @@ void HQPrimal::primalRebuild() {
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 
-  computeLpInfeasible(workHMO);
+  computeSimplexInfeasible(workHMO);
 
   /* Whether to switch to primal phase 1 */
   isPrimalPhase1 = 0;
@@ -683,7 +683,7 @@ void HQPrimal::primalUpdate() {
   simplex_info.updated_primal_objective_value +=
       workDual[columnIn] * thetaPrimal;
 
-  computePrimalInfeasible(workHMO);
+  computeSimplexPrimalInfeasible(workHMO);
 
   // If flipped, then no need touch the pivots
   if (flipped) {
@@ -891,7 +891,7 @@ void HQPrimal::phase1ComputeDual() {
   }
 
   /* Recompute number of dual infeasible variables with the phase 1 cost */
-  computeDualInfeasible(workHMO);
+  computeSimplexDualInfeasible(workHMO);
 }
 
 /* Choose a pivot column for the phase 1 primal simplex method */
@@ -1137,7 +1137,7 @@ void HQPrimal::phase1Update() {
       analysis->simplexTimerStart(ComputePrimalClock);
       computePrimal(workHMO);
       analysis->simplexTimerStop(ComputePrimalClock);
-      computePrimalInfeasible(workHMO);
+      computeSimplexPrimalInfeasible(workHMO);
       if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
         analysis->simplexTimerStart(ComputeDualClock);
@@ -1209,7 +1209,7 @@ void HQPrimal::phase1Update() {
     analysis->simplexTimerStart(ComputePrimalClock);
     computePrimal(workHMO);
     analysis->simplexTimerStop(ComputePrimalClock);
-    computePrimalInfeasible(workHMO);
+    computeSimplexPrimalInfeasible(workHMO);
 
     if (workHMO.scaled_solution_params_.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;

@@ -244,6 +244,14 @@ struct HighsSimplexInfo {
   // Simplex runtime information
   int allow_cost_perturbation = true;
   int costs_perturbed = 0;
+
+  int num_primal_infeasibilities = -1;
+  double max_primal_infeasibility;
+  double sum_primal_infeasibilities;
+  int num_dual_infeasibilities = -1;
+  double max_dual_infeasibility;
+  double sum_dual_infeasibilities;
+
   // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;
   int dual_phase2_iteration_count = 0;
