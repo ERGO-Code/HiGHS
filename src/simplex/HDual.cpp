@@ -872,7 +872,7 @@ void HDual::cleanup() {
   simplex_info.allow_cost_perturbation = false;
   // No solvePhase term in initialise_bound is surely an omission -
   // when cleanup called in phase 1
-  initialise_bound(workHMO, solvePhase); 
+  initialise_bound(workHMO, solvePhase);
   // Possibly take a copy of the original duals before recomputing them
   vector<double> original_workDual;
   if (workHMO.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP)
@@ -902,11 +902,9 @@ void HDual::cleanup() {
     computeSimplexPrimalInfeasible(workHMO);
     // In phase 1, report the simplex LP dual infeasiblities
     // In phase 2, report the simplex dual infeasiblities (known)
-    if (solvePhase == 1)
-      computeSimplexLpDualInfeasible(workHMO);
+    if (solvePhase == 1) computeSimplexLpDualInfeasible(workHMO);
     reportRebuild();
   }
-
 }
 
 void HDual::iterate() {
@@ -1053,11 +1051,15 @@ void HDual::iterationAnalysisData() {
   // costs, in phase 2 the dual objective value is negated, so flip
   // its sign according to the LP sense
   if (solvePhase == 2) analysis->objective_value *= (int)workHMO.lp_.sense_;
-  analysis->num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
-  analysis->sum_primal_infeasibilities = simplex_info.sum_primal_infeasibilities;
+  analysis->num_primal_infeasibilities =
+      simplex_info.num_primal_infeasibilities;
+  analysis->sum_primal_infeasibilities =
+      simplex_info.sum_primal_infeasibilities;
   if (solvePhase == 1) {
-    analysis->num_dual_infeasibilities = scaled_solution_params.num_dual_infeasibilities;
-    analysis->sum_dual_infeasibilities = scaled_solution_params.sum_dual_infeasibilities;
+    analysis->num_dual_infeasibilities =
+        scaled_solution_params.num_dual_infeasibilities;
+    analysis->sum_dual_infeasibilities =
+        scaled_solution_params.sum_dual_infeasibilities;
   } else {
     analysis->num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
     analysis->sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;

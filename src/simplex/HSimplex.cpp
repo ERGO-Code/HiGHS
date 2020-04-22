@@ -2960,6 +2960,11 @@ void computePrimal(HighsModelObject& highs_model_object) {
       matrix.collect_aj(primal_col, i, simplex_info.workValue_[i]);
     }
   }
+  // If debugging, take a copy of the RHS
+  vector<double> debug_primal_rhs;
+  if (highs_model_object.options_.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY)
+    debug_primal_rhs = primal_col.array;
+
   // It's possible that the buffer has no nonzeros, so performing
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!
@@ -2977,6 +2982,7 @@ void computePrimal(HighsModelObject& highs_model_object) {
     simplex_info.baseLower_[i] = simplex_info.workLower_[iCol];
     simplex_info.baseUpper_[i] = simplex_info.workUpper_[iCol];
   }
+  debugComputePrimal(highs_model_object, debug_primal_rhs);
   // Now have basic primals
   simplex_lp_status.has_basic_primal_values = true;
 }
@@ -3106,11 +3112,11 @@ void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
   const double scaled_dual_feasibility_tolerance =
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
   int& num_dual_infeasibilities =
-    highs_model_object.scaled_solution_params_.num_dual_infeasibilities;
+      highs_model_object.scaled_solution_params_.num_dual_infeasibilities;
   double& max_dual_infeasibility =
-    highs_model_object.scaled_solution_params_.max_dual_infeasibility;
+      highs_model_object.scaled_solution_params_.max_dual_infeasibility;
   double& sum_dual_infeasibilities =
-    highs_model_object.scaled_solution_params_.sum_dual_infeasibilities;
+      highs_model_object.scaled_solution_params_.sum_dual_infeasibilities;
   num_dual_infeasibilities = 0;
   max_dual_infeasibility = 0;
   sum_dual_infeasibilities = 0;
@@ -3125,19 +3131,19 @@ void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
     double dual_infeasibility = 0;
     if (highs_isInfinity(upper)) {
       if (highs_isInfinity(-lower)) {
-	// Free: any nonzero dual value is infeasible
-	dual_infeasibility = fabs(dual);
+        // Free: any nonzero dual value is infeasible
+        dual_infeasibility = fabs(dual);
       } else {
-	// Only lower bounded: a negative dual is infeasible
-	dual_infeasibility = -dual;
+        // Only lower bounded: a negative dual is infeasible
+        dual_infeasibility = -dual;
       }
     } else {
       if (highs_isInfinity(-lower)) {
-	// Only upper bounded: a positive dual is infeasible
-	dual_infeasibility = dual;
+        // Only upper bounded: a positive dual is infeasible
+        dual_infeasibility = dual;
       } else {
-	// Boxed or fixed: any dual value is feasible
-	dual_infeasibility = 0;
+        // Boxed or fixed: any dual value is feasible
+        dual_infeasibility = 0;
       }
     }
     if (dual_infeasibility > 0) {
@@ -3158,19 +3164,19 @@ void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
     double dual_infeasibility = 0;
     if (highs_isInfinity(upper)) {
       if (highs_isInfinity(-lower)) {
-	// Free: any nonzero dual value is infeasible
-	dual_infeasibility = fabs(dual);
+        // Free: any nonzero dual value is infeasible
+        dual_infeasibility = fabs(dual);
       } else {
-	// Only lower bounded: a negative dual is infeasible
-	dual_infeasibility = -dual;
+        // Only lower bounded: a negative dual is infeasible
+        dual_infeasibility = -dual;
       }
     } else {
       if (highs_isInfinity(-lower)) {
-	// Only upper bounded: a positive dual is infeasible
-	dual_infeasibility = dual;
+        // Only upper bounded: a positive dual is infeasible
+        dual_infeasibility = dual;
       } else {
-	// Boxed or fixed: any dual value is feasible
-	dual_infeasibility = 0;
+        // Boxed or fixed: any dual value is feasible
+        dual_infeasibility = 0;
       }
     }
     if (dual_infeasibility > 0) {
@@ -3190,20 +3196,20 @@ void copySimplexInfeasible(HighsModelObject& highs_model_object) {
 
 void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object) {
   highs_model_object.scaled_solution_params_.num_primal_infeasibilities =
-    highs_model_object.simplex_info_.num_primal_infeasibilities;
+      highs_model_object.simplex_info_.num_primal_infeasibilities;
   highs_model_object.scaled_solution_params_.max_primal_infeasibility =
-    highs_model_object.simplex_info_.max_primal_infeasibility;
+      highs_model_object.simplex_info_.max_primal_infeasibility;
   highs_model_object.scaled_solution_params_.sum_primal_infeasibilities =
-    highs_model_object.simplex_info_.sum_primal_infeasibilities;
+      highs_model_object.simplex_info_.sum_primal_infeasibilities;
 }
 
 void copySimplexDualInfeasible(HighsModelObject& highs_model_object) {
   highs_model_object.scaled_solution_params_.num_dual_infeasibilities =
-    highs_model_object.simplex_info_.num_dual_infeasibilities;
+      highs_model_object.simplex_info_.num_dual_infeasibilities;
   highs_model_object.scaled_solution_params_.max_dual_infeasibility =
-    highs_model_object.simplex_info_.max_dual_infeasibility;
+      highs_model_object.simplex_info_.max_dual_infeasibility;
   highs_model_object.scaled_solution_params_.sum_dual_infeasibilities =
-    highs_model_object.simplex_info_.sum_dual_infeasibilities;
+      highs_model_object.simplex_info_.sum_dual_infeasibilities;
 }
 
 void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object) {
@@ -3457,21 +3463,22 @@ void correctDual(HighsModelObject& highs_model_object,
         if (simplex_info.workLower_[i] != -inf &&
             simplex_info.workUpper_[i] != inf) {
           // Boxed variable = flip
-	  const int move = simplex_basis.nonbasicMove_[i];
+          const int move = simplex_basis.nonbasicMove_[i];
           flip_bound(highs_model_object, i);
-	  double flip = simplex_info.workUpper_[i] - simplex_info.workLower_[i];
-	  // Negative dual at lower bound (move=1): flip to upper
-	  // bound so objective contribution is change in value (flip)
-	  // times dual, being move*flip*dual
-	  //
-	  // Positive dual at upper bound (move=-1): flip to lower
-	  // bound so objective contribution is change in value
-	  // (-flip) times dual, being move*flip*dual
-	  double local_dual_objective_change = move * flip * simplex_info.workDual_[i];
-	  local_dual_objective_change *= highs_model_object.scale_.cost_;
-	  flip_dual_objective_value_change += local_dual_objective_change;
-	  num_flip++;
-	  sum_flip += fabs(flip);
+          double flip = simplex_info.workUpper_[i] - simplex_info.workLower_[i];
+          // Negative dual at lower bound (move=1): flip to upper
+          // bound so objective contribution is change in value (flip)
+          // times dual, being move*flip*dual
+          //
+          // Positive dual at upper bound (move=-1): flip to lower
+          // bound so objective contribution is change in value
+          // (-flip) times dual, being move*flip*dual
+          double local_dual_objective_change =
+              move * flip * simplex_info.workDual_[i];
+          local_dual_objective_change *= highs_model_object.scale_.cost_;
+          flip_dual_objective_value_change += local_dual_objective_change;
+          num_flip++;
+          sum_flip += fabs(flip);
         } else if (simplex_info.allow_cost_perturbation) {
           // Other variable = shift
           //
@@ -3486,31 +3493,32 @@ void correctDual(HighsModelObject& highs_model_object,
           // LP is declared to be (primal) infeasible. Should go to
           // phase 1 primal simplex to "prove" infeasibility.
           simplex_info.costs_perturbed = 1;
-	  std::string direction;
-	  double shift;
+          std::string direction;
+          double shift;
           if (simplex_basis.nonbasicMove_[i] == 1) {
-	    direction = "  up";
+            direction = "  up";
             double dual = (1 + random.fraction()) * tau_d;
             shift = dual - simplex_info.workDual_[i];
             simplex_info.workDual_[i] = dual;
             simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
           } else {
-	    direction = "down";
+            direction = "down";
             double dual = -(1 + random.fraction()) * tau_d;
             shift = dual - simplex_info.workDual_[i];
             simplex_info.workDual_[i] = dual;
             simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
           }
-	  double local_dual_objective_change = shift * simplex_info.workValue_[i];
-	  local_dual_objective_change *= highs_model_object.scale_.cost_;
-	  shift_dual_objective_value_change += local_dual_objective_change;
-	  num_shift++;
-	  sum_shift += fabs(shift);
-	  HighsPrintMessage(highs_model_object.options_.output,
-			    highs_model_object.options_.message_level,
-			    ML_VERBOSE,
-			    "Move %s: shift = %g; objective change = %g\n",
-			    direction.c_str(), shift, local_dual_objective_change);
+          double local_dual_objective_change =
+              shift * simplex_info.workValue_[i];
+          local_dual_objective_change *= highs_model_object.scale_.cost_;
+          shift_dual_objective_value_change += local_dual_objective_change;
+          num_shift++;
+          sum_shift += fabs(shift);
+          HighsPrintMessage(
+              highs_model_object.options_.output,
+              highs_model_object.options_.message_level, ML_VERBOSE,
+              "Move %s: shift = %g; objective change = %g\n", direction.c_str(),
+              shift, local_dual_objective_change);
         }
       }
     }

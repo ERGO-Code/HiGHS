@@ -1308,7 +1308,8 @@ void HQPrimal::devexUpdate() {
 }
 
 void HQPrimal::iterationAnalysisData() {
-  //  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
+  //  HighsSolutionParams& scaled_solution_params =
+  //  workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
   analysis->edge_weight_mode = DualEdgeWeightMode::DEVEX;
@@ -1332,12 +1333,10 @@ void HQPrimal::iterationAnalysisData() {
   analysis->objective_value = simplex_info.updated_primal_objective_value;
   analysis->num_primal_infeasibilities =
       simplex_info.num_primal_infeasibilities;
-  analysis->num_dual_infeasibilities =
-      simplex_info.num_dual_infeasibilities;
+  analysis->num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
   analysis->sum_primal_infeasibilities =
       simplex_info.sum_primal_infeasibilities;
-  analysis->sum_dual_infeasibilities =
-      simplex_info.sum_dual_infeasibilities;
+  analysis->sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;
 #ifdef HiGHSDEV
   analysis->basis_condition = simplex_info.invert_condition;
 #endif

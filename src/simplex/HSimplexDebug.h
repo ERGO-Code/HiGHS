@@ -18,6 +18,9 @@
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 
+HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
+                                    const std::vector<double>& primal_rhs);
+
 HighsDebugStatus debugComputedDual(const HighsModelObject& highs_model_object,
                                    const std::vector<double>& previous_dual,
                                    const std::vector<double>& basic_costs,
@@ -37,5 +40,5 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object);
 HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
                                      const std::string message);
 HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
-			      const std::vector<double>& original_dual);
+                              const std::vector<double>& original_dual);
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_
