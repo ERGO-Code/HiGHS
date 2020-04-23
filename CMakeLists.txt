@@ -266,4 +266,4 @@ add_subdirectory(src)
 
 # Comment out for scaffold/ tests
 add_subdirectory(scaffold)
-add_subdirectory(unit_test)
+# add_subdirectory(unit_test)
