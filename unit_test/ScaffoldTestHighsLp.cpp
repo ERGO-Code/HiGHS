@@ -1,5 +1,5 @@
 #include "Highs.h"
-#include "catch.cpp"
+#include "scaffold/catch.cpp"
 
 TEST(HighsLp, Init) {
   // This test belongs to the IsPrimeTest test case.

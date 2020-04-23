@@ -3,7 +3,11 @@
 
 include(CTest)
 
-add_executable(unit_tests_scaffold ScaffoldTestHighsLp.cpp)
+add_executable(unit_tests_scaffold
+               ${PROJECT_SOURCE_DIR}/unit_test/ScaffoldTestHighsLp.cpp)
+
+target_include_directories(unit_tests_scaffold PUBLIC 
+                           ${PROJECT_SOURCE_DIR}/dev-presolve/src/scaffold)
 
 target_link_libraries(unit_tests_scaffold libhighs catch-scaffold)
 
@@ -22,7 +26,7 @@ set_tests_properties(unit-test-build
 # Create a binary running all the tests in the executable.
 add_test(NAME unit_tests_all COMMAND unit_tests --success)
 set_tests_properties(unit_tests_all
-                    PROPERTIS
+                    PROPERTIES
                     DEPENDS unit-test-build)
 
             

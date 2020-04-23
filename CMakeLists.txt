@@ -265,4 +265,5 @@ add_subdirectory(check)
 add_subdirectory(src)
 
 # Comment out for scaffold/ tests
-add_subdirectory(dev-presolve)
+add_subdirectory(scaffold)
+add_subdirectory(unit_test)
