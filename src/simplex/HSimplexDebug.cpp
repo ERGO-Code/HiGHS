@@ -17,36 +17,59 @@
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
 
-const double computed_primal_excessive_absolute_norm = 1e12;
-const double computed_primal_large_absolute_norm =
-    sqrt(computed_primal_excessive_absolute_norm);
-const double computed_primal_excessive_relative_norm = 1e6;
-const double computed_primal_large_relative_norm =
-    sqrt(computed_primal_excessive_relative_norm);
-const double computed_dual_excessive_absolute_norm = 1e12;
-const double computed_dual_large_absolute_norm =
-    sqrt(computed_dual_excessive_absolute_norm);
-const double computed_dual_excessive_relative_norm = 1e6;
-const double computed_dual_large_relative_norm =
-    sqrt(computed_dual_excessive_relative_norm);
-const double computed_dual_small_relative_basic_dual_norm = 1e-12;
-const double computed_dual_large_relative_basic_dual_norm =
-    sqrt(computed_dual_small_relative_basic_dual_norm);
-const double computed_dual_small_relative_change = 1e-12;
-const double computed_dual_large_relative_change =
-    sqrt(computed_dual_small_relative_change);
-const double computed_dual_small_absolute_change = 1e-6;
-const double computed_dual_large_absolute_change =
-    sqrt(computed_dual_small_absolute_change);
+const double excessive_primal_absolute_norm = 1e12;
+const double excessive_primal_relative_norm = 1e6;
+const double large_primal_absolute_norm = sqrt(excessive_primal_absolute_norm);
+const double large_primal_relative_norm = sqrt(excessive_primal_relative_norm);
+
+const double excessive_nonbasic_dual_absolute_norm = 1e12;
+const double excessive_nonbasic_dual_relative_norm = 1e6;
+const double large_nonbasic_dual_absolute_norm = sqrt(excessive_nonbasic_dual_absolute_norm);
+const double large_nonbasic_dual_relative_norm = sqrt(excessive_nonbasic_dual_relative_norm);
+
+const double large_basic_dual_absolute_norm = 1e-12;
+const double large_basic_dual_relative_norm = 1e-14;
+const double excessive_basic_dual_absolute_norm = sqrt(large_basic_dual_absolute_norm);
+const double excessive_basic_dual_relative_norm = sqrt(large_basic_dual_relative_norm);
+
+
+const double computed_primal_excessive_absolute_norm = excessive_primal_absolute_norm;
+const double computed_primal_excessive_relative_norm = excessive_primal_relative_norm;
+const double computed_primal_large_absolute_norm = large_primal_absolute_norm;
+const double computed_primal_large_relative_norm = large_primal_relative_norm;
+
+const double computed_dual_excessive_absolute_nonbasic_dual_norm = excessive_nonbasic_dual_absolute_norm;
+const double computed_dual_excessive_relative_nonbasic_dual_norm = excessive_nonbasic_dual_relative_norm;
+const double computed_dual_large_absolute_nonbasic_dual_norm = large_nonbasic_dual_absolute_norm;
+const double computed_dual_large_relative_nonbasic_dual_norm = large_nonbasic_dual_relative_norm;
+
+const double computed_dual_excessive_absolute_basic_dual_norm = excessive_basic_dual_absolute_norm;
+const double computed_dual_excessive_relative_basic_dual_norm = excessive_basic_dual_relative_norm;
+const double computed_dual_large_absolute_basic_dual_norm = large_basic_dual_absolute_norm;
+const double computed_dual_large_relative_basic_dual_norm = large_basic_dual_relative_norm;
+
+const double computed_dual_small_relative_nonbasic_dual_change_norm = 1e-12;
+const double computed_dual_large_relative_nonbasic_dual_change_norm =
+    sqrt(computed_dual_small_relative_nonbasic_dual_change_norm);
+const double computed_dual_small_absolute_nonbasic_dual_change_norm = 1e-6;
+const double computed_dual_large_absolute_nonbasic_dual_change_norm =
+    sqrt(computed_dual_small_absolute_nonbasic_dual_change_norm);
+
 const double updated_objective_small_relative_error = 1e-12;
 const double updated_objective_large_relative_error =
     sqrt(updated_objective_small_relative_error);
 const double updated_objective_small_absolute_error = 1e-6;
 const double updated_objective_large_absolute_error =
     sqrt(updated_objective_small_absolute_error);
+
 const double excessive_basis_condition = 1e16;
 const double large_basis_condition = sqrt(excessive_basis_condition);
 const double fair_basis_condition = sqrt(large_basis_condition);
+
+const double cleanup_large_absolute_nonbasic_dual_change_norm = 1e-12;
+const double cleanup_large_relative_nonbasic_dual_change_norm = 1e-6;
+const double cleanup_excessive_absolute_nonbasic_dual_change_norm = sqrt(cleanup_large_absolute_nonbasic_dual_change_norm);
+const double cleanup_excessive_relative_nonbasic_dual_change_norm = sqrt(cleanup_large_relative_nonbasic_dual_change_norm);
 
 HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs) {
@@ -99,19 +122,19 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
   }
   HighsPrintMessage(highs_model_object.options_.output,
                     highs_model_object.options_.message_level, report_level,
-                    "ComputePrimal: %s absolute (%g) or relative (%g) norm of "
+                    "ComputePrimal: %-9s absolute (%9.4g) or relative (%9.4g) norm of "
                     "primal values\n",
                     value_adjective.c_str(), computed_primal_absolute_norm,
                     computed_primal_relative_norm);
   if (have_primal_rhs && !primal_rhs_norm) {
     HighsLogMessage(highs_model_object.options_.logfile,
                     HighsMessageType::WARNING,
-                    "ComputePrimal: |PrimalRHS| = %g", primal_rhs_norm);
+                    "ComputePrimal: |PrimalRHS| = %9.4g", primal_rhs_norm);
     return_status = HighsDebugStatus::WARNING;
   }
   return return_status;
 }
-HighsDebugStatus debugComputedDual(const HighsModelObject& highs_model_object,
+HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
                                    const std::vector<double>& previous_dual,
                                    const std::vector<double>& basic_costs,
                                    const std::vector<double>& row_dual) {
@@ -125,82 +148,144 @@ HighsDebugStatus debugComputedDual(const HighsModelObject& highs_model_object,
   int num_row = highs_model_object.simplex_lp_.numRow_;
   int num_col = highs_model_object.simplex_lp_.numCol_;
 
-  // Make sure that previous_dual and basic_costs have the right size
-  assert((int)basic_costs.size() == num_row);
-  assert((int)row_dual.size() == num_row);
+  const bool have_basic_costs = (int)basic_costs.size() == num_row;
+  const bool have_row_dual = (int)row_dual.size() == num_row;
+  const bool have_previous_dual = (int)previous_dual.size() == num_col + num_row;
 
   double basic_costs_norm = 0;
-  double row_dual_norm = 0;
-  for (int iRow = 0; iRow < num_row; iRow++) {
-    basic_costs_norm += fabs(basic_costs[iRow]);
-    row_dual_norm += fabs(row_dual[iRow]);
+  if (have_basic_costs) {
+    for (int iRow = 0; iRow < num_row; iRow++)
+      basic_costs_norm += fabs(basic_costs[iRow]);
   }
-  double basic_dual_norm = 0;
-  double nonbasic_dual_norm = 0;
+  double row_dual_norm = 0;
+  if (have_row_dual) {
+    for (int iRow = 0; iRow < num_row; iRow++)
+      row_dual_norm += fabs(row_dual[iRow]);
+  }
+  double computed_dual_absolute_basic_dual_norm = 0;
+  double computed_dual_absolute_nonbasic_dual_norm = 0;
   for (int iVar = 0; iVar < num_row + num_col; iVar++) {
     if (!highs_model_object.simplex_basis_.nonbasicFlag_[iVar]) {
-      basic_dual_norm += fabs(new_dual[iVar]);
+      computed_dual_absolute_basic_dual_norm += fabs(new_dual[iVar]);
       continue;
     }
-    nonbasic_dual_norm += fabs(new_dual[iVar]);
+    computed_dual_absolute_nonbasic_dual_norm += fabs(new_dual[iVar]);
   }
   std::string value_adjective;
   int report_level;
   return_status = HighsDebugStatus::OK;
-  // Comment on the norm of basic duals (relative to |c_B|) which, as
-  // c_B-BB^{-1}c_B, should be zero
-  if (basic_costs_norm) {
-    double computed_dual_relative_basic_dual_norm =
-        basic_dual_norm / basic_costs_norm;
-    if (computed_dual_relative_basic_dual_norm >
-        computed_dual_large_relative_basic_dual_norm) {
-      value_adjective = "Large";
-      report_level = ML_DETAILED;
-      return_status = HighsDebugStatus::WARNING;
-    } else if (computed_dual_relative_basic_dual_norm >
-               computed_dual_small_relative_basic_dual_norm) {
-      value_adjective = "Small";
-      report_level = ML_DETAILED;
-      return_status = HighsDebugStatus::WARNING;
-    } else {
-      value_adjective = "OK";
-      report_level = ML_VERBOSE;
-    }
-    HighsPrintMessage(highs_model_object.options_.output,
-                      highs_model_object.options_.message_level, report_level,
-                      "ComputedDual: %s norm of basic duals (%g) relative to "
-                      "basic costs (%g)\n",
-                      value_adjective.c_str(),
-                      computed_dual_relative_basic_dual_norm, basic_costs_norm);
-  } else {
+  // Comment on the norm of the basic costs being zero
+  if (have_basic_costs && !basic_costs_norm) {
     HighsLogMessage(highs_model_object.options_.logfile,
                     HighsMessageType::WARNING,
-                    "ComputedDual: basic cost norm is = %g", basic_costs_norm);
+                    "ComputeDual:   basic cost norm is = %9.4g", basic_costs_norm);
     return_status = HighsDebugStatus::WARNING;
   }
-  std::string change_adjective;
-  double computed_dual_absolute_change = 0;
-  double computed_dual_relative_change = 0;
-  if (previous_dual.size()) {
+  // Comment on the norm of the nonbasic duals being zero
+  if (!computed_dual_absolute_nonbasic_dual_norm) {
+    HighsLogMessage(highs_model_object.options_.logfile,
+                    HighsMessageType::WARNING,
+                    "ComputeDual:   nonbasic dual norm is = %9.4g",
+		    computed_dual_absolute_nonbasic_dual_norm);
+    return_status = HighsDebugStatus::WARNING;
+  }
+  
+  // Comment on the norm of basic duals (relative to the norm of the
+  // basic costs) which, as c_B-BB^{-1}c_B, should be zero
+  double computed_dual_relative_basic_dual_norm;
+  if (basic_costs_norm) {
+    computed_dual_relative_basic_dual_norm =
+      computed_dual_absolute_basic_dual_norm / basic_costs_norm;
+  } else {
+    computed_dual_relative_basic_dual_norm = -1;
+  }
+  if (computed_dual_relative_basic_dual_norm > computed_dual_excessive_relative_basic_dual_norm ||
+      computed_dual_absolute_basic_dual_norm > computed_dual_excessive_absolute_basic_dual_norm) {
+    value_adjective = "Excessive";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (computed_dual_relative_basic_dual_norm > computed_dual_large_relative_basic_dual_norm ||
+	     computed_dual_absolute_basic_dual_norm > computed_dual_large_absolute_basic_dual_norm) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else {
+    value_adjective = "OK";
+    report_level = ML_VERBOSE;
+  }
+  HighsPrintMessage(highs_model_object.options_.output,
+                      highs_model_object.options_.message_level, report_level,
+                      "ComputeDual:   %-9s absolute (%9.4g) or relative (%9.4g) norm of "
+                    "   basic dual values\n",
+                      value_adjective.c_str(),
+                      computed_dual_absolute_basic_dual_norm,
+		    computed_dual_relative_basic_dual_norm);
+  // Comment on the norm of nonbasic duals relative to the norm of the
+  // basic costs
+  double computed_dual_relative_nonbasic_dual_norm;
+  if (basic_costs_norm) {
+    computed_dual_relative_nonbasic_dual_norm =
+      computed_dual_absolute_nonbasic_dual_norm / basic_costs_norm;
+  } else {
+    computed_dual_relative_nonbasic_dual_norm = -1;
+  }
+  if (computed_dual_relative_nonbasic_dual_norm > computed_dual_excessive_relative_nonbasic_dual_norm ||
+      computed_dual_absolute_nonbasic_dual_norm > computed_dual_excessive_absolute_nonbasic_dual_norm) {
+    value_adjective = "Excessive";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (computed_dual_relative_nonbasic_dual_norm > computed_dual_large_relative_nonbasic_dual_norm ||
+	     computed_dual_absolute_nonbasic_dual_norm > computed_dual_large_absolute_nonbasic_dual_norm) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else {
+    value_adjective = "OK";
+    report_level = ML_VERBOSE;
+  }
+  HighsPrintMessage(highs_model_object.options_.output,
+		    highs_model_object.options_.message_level, report_level,
+		    "ComputeDual:   %-9s absolute (%9.4g) or relative (%9.4g) norm of "
+                    "nonbasic dual values\n",
+		    value_adjective.c_str(),
+		    computed_dual_absolute_nonbasic_dual_norm,
+		    computed_dual_relative_nonbasic_dual_norm);
+  double report_basic_costs_norm = -1;
+  if (basic_costs_norm) report_basic_costs_norm = basic_costs_norm;
+  double report_row_dual_norm = -1;
+  if (row_dual_norm) report_row_dual_norm = row_dual_norm;
+  HighsPrintMessage(highs_model_object.options_.output,
+		    highs_model_object.options_.message_level, report_level,
+		    "ComputeDual:   B.pi=c_B has |c_B| = %9.4g; |pi| = %9.4g; "
+		    "|pi^TA-c| = [basic %9.4g; nonbasic %9.4g]\n",
+		    report_basic_costs_norm, report_row_dual_norm,
+		    computed_dual_absolute_basic_dual_norm,
+		    computed_dual_absolute_nonbasic_dual_norm);
+  if (have_previous_dual) {
+  // Comment on the change in the dual values
+    std::string change_adjective;
+    double computed_dual_absolute_nonbasic_dual_change_norm = 0;
     for (int iVar = 0; iVar < num_row + num_col; iVar++) {
       if (!highs_model_object.simplex_basis_.nonbasicFlag_[iVar]) continue;
-      computed_dual_absolute_change +=
-          fabs(new_dual[iVar] - previous_dual[iVar]);
+      computed_dual_absolute_nonbasic_dual_change_norm +=
+	fabs(new_dual[iVar] - previous_dual[iVar]);
     }
-    if (nonbasic_dual_norm)
-      computed_dual_relative_change =
-          computed_dual_absolute_change / nonbasic_dual_norm;
-  }
-  if (nonbasic_dual_norm) {
-    if (computed_dual_relative_change > computed_dual_large_relative_change ||
-        computed_dual_absolute_change > computed_dual_large_absolute_change) {
+    double computed_dual_relative_nonbasic_dual_change_norm;
+    if (computed_dual_absolute_nonbasic_dual_norm) {
+      computed_dual_relative_nonbasic_dual_change_norm =
+	computed_dual_absolute_nonbasic_dual_change_norm / computed_dual_absolute_nonbasic_dual_norm;
+    } else {
+      computed_dual_relative_nonbasic_dual_change_norm = -1;
+    }
+    if (computed_dual_relative_nonbasic_dual_change_norm > computed_dual_large_relative_nonbasic_dual_change_norm ||
+	computed_dual_absolute_nonbasic_dual_change_norm > computed_dual_large_absolute_nonbasic_dual_change_norm) {
       change_adjective = "Large";
       report_level = ML_DETAILED;
       return_status = HighsDebugStatus::WARNING;
-    } else if (computed_dual_relative_change >
-                   computed_dual_small_relative_change ||
-               computed_dual_absolute_change >
-                   computed_dual_small_absolute_change) {
+    } else if (computed_dual_relative_nonbasic_dual_change_norm >
+	       computed_dual_small_relative_nonbasic_dual_change_norm ||
+	       computed_dual_absolute_nonbasic_dual_change_norm >
+	       computed_dual_small_absolute_nonbasic_dual_change_norm) {
       change_adjective = "Small";
       report_level = ML_DETAILED;
       return_status = HighsDebugStatus::WARNING;
@@ -208,23 +293,13 @@ HighsDebugStatus debugComputedDual(const HighsModelObject& highs_model_object,
       change_adjective = "OK";
       report_level = ML_VERBOSE;
     }
-    HighsPrintMessage(highs_model_object.options_.output,
-                      highs_model_object.options_.message_level, report_level,
-                      "ComputedDual: B.pi=c_B has |c_B|=%g; |pi|=%g; "
-                      "|pi^TA-c|=[Nonbasic %g; Basic %g]\n",
-                      basic_costs_norm, row_dual_norm, nonbasic_dual_norm,
-                      basic_dual_norm);
     HighsPrintMessage(
-        highs_model_object.options_.output,
-        highs_model_object.options_.message_level, report_level,
-        "ComputedDual: %s absolute (%g) or relative (%g) change\n",
-        change_adjective.c_str(), computed_dual_absolute_change,
-        computed_dual_relative_change);
-  } else {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "ComputedDual: |NonbasicDual| = %g", nonbasic_dual_norm);
-    return_status = HighsDebugStatus::WARNING;
+		      highs_model_object.options_.output,
+		      highs_model_object.options_.message_level, report_level,
+		      "ComputeDual:   %-9s absolute (%9.4g) or relative (%9.4g) nonbasic dual change\n",
+		      change_adjective.c_str(),
+		      computed_dual_absolute_nonbasic_dual_change_norm,
+		      computed_dual_relative_nonbasic_dual_change_norm);
   }
   return return_status;
 }
@@ -238,35 +313,35 @@ HighsDebugStatus debugUpdatedObjectiveValue(
     return HighsDebugStatus::NOT_CHECKED;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
 
-  static bool have_previous_primal_objective_value;
-  static double previous_primal_objective_value;
+  static bool have_previous_exact_primal_objective_value;
+  static double previous_exact_primal_objective_value;
   static double previous_updated_primal_objective_value;
   static double updated_primal_objective_correction;
 
-  static bool have_previous_dual_objective_value;
-  static double previous_dual_objective_value;
+  static bool have_previous_exact_dual_objective_value;
+  static double previous_exact_dual_objective_value;
   static double previous_updated_dual_objective_value;
   static double updated_dual_objective_correction;
   if (phase < 0) {
     if (algorithm == SimplexAlgorithm::PRIMAL) {
-      have_previous_primal_objective_value = false;
+      have_previous_exact_primal_objective_value = false;
     } else {
-      have_previous_dual_objective_value = false;
+      have_previous_exact_dual_objective_value = false;
     }
     return HighsDebugStatus::OK;
   }
-  double objective_value;
+  double exact_objective_value;
   double updated_objective_value;
-  bool have_previous_objective_value;
-  double previous_objective_value;
+  bool have_previous_exact_objective_value;
+  double previous_exact_objective_value;
   double previous_updated_objective_value;
   double updated_objective_correction;
   std::string algorithm_name;
   if (algorithm == SimplexAlgorithm::PRIMAL) {
     algorithm_name = "primal";
-    have_previous_objective_value = have_previous_primal_objective_value;
-    if (have_previous_objective_value) {
-      previous_objective_value = previous_primal_objective_value;
+    have_previous_exact_objective_value = have_previous_exact_primal_objective_value;
+    if (have_previous_exact_objective_value) {
+      previous_exact_objective_value = previous_exact_primal_objective_value;
       previous_updated_objective_value =
           previous_updated_primal_objective_value;
       updated_objective_correction = updated_primal_objective_correction;
@@ -276,13 +351,13 @@ HighsDebugStatus debugUpdatedObjectiveValue(
     // after calling computePrimalObjectiveValue
     double save_objective_value = simplex_info.primal_objective_value;
     computePrimalObjectiveValue(highs_model_object);
-    objective_value = simplex_info.primal_objective_value;
+    exact_objective_value = simplex_info.primal_objective_value;
     simplex_info.primal_objective_value = save_objective_value;
   } else {
     algorithm_name = "dual";
-    have_previous_objective_value = have_previous_dual_objective_value;
-    if (have_previous_objective_value) {
-      previous_objective_value = previous_dual_objective_value;
+    have_previous_exact_objective_value = have_previous_exact_dual_objective_value;
+    if (have_previous_exact_objective_value) {
+      previous_exact_objective_value = previous_exact_dual_objective_value;
       previous_updated_objective_value = previous_updated_dual_objective_value;
       updated_objective_correction = updated_dual_objective_correction;
     }
@@ -291,13 +366,13 @@ HighsDebugStatus debugUpdatedObjectiveValue(
     // after calling computeDualObjectiveValue
     double save_objective_value = simplex_info.dual_objective_value;
     computeDualObjectiveValue(highs_model_object, phase);
-    objective_value = simplex_info.dual_objective_value;
+    exact_objective_value = simplex_info.dual_objective_value;
     simplex_info.dual_objective_value = save_objective_value;
   }
   double change_in_objective_value = 0;
   double change_in_updated_objective_value = 0;
-  if (have_previous_objective_value) {
-    change_in_objective_value = objective_value - previous_objective_value;
+  if (have_previous_exact_objective_value) {
+    change_in_objective_value = exact_objective_value - previous_exact_objective_value;
     change_in_updated_objective_value =
         updated_objective_value - previous_updated_objective_value;
     updated_objective_value += updated_objective_correction;
@@ -305,65 +380,56 @@ HighsDebugStatus debugUpdatedObjectiveValue(
     updated_objective_correction = 0;
   }
   const double updated_objective_error =
-      objective_value - updated_objective_value;
+      exact_objective_value - updated_objective_value;
   const double updated_objective_absolute_error = fabs(updated_objective_error);
   const double updated_objective_relative_error =
-      updated_objective_absolute_error / max(1.0, fabs(objective_value));
+      updated_objective_absolute_error / max(1.0, fabs(exact_objective_value));
   updated_objective_correction += updated_objective_error;
 
   // Now update the records of previous objective value
   if (algorithm == SimplexAlgorithm::PRIMAL) {
-    have_previous_primal_objective_value = true;
-    previous_primal_objective_value = objective_value;
+    have_previous_exact_primal_objective_value = true;
+    previous_exact_primal_objective_value = exact_objective_value;
     previous_updated_primal_objective_value = updated_objective_value;
     updated_primal_objective_correction = updated_objective_correction;
   } else {
-    have_previous_dual_objective_value = true;
-    previous_dual_objective_value = objective_value;
+    have_previous_exact_dual_objective_value = true;
+    previous_exact_dual_objective_value = exact_objective_value;
     previous_updated_dual_objective_value = updated_objective_value;
     updated_dual_objective_correction = updated_objective_correction;
   }
 
   // Now analyse the error
   HighsDebugStatus return_status = HighsDebugStatus::OK;
+  std::string error_adjective;
+  int report_level;
   if (updated_objective_relative_error >
-          updated_objective_small_relative_error ||
+      updated_objective_large_relative_error ||
       updated_objective_absolute_error >
-          updated_objective_small_absolute_error) {
-    if (updated_objective_relative_error >
-            updated_objective_large_relative_error ||
-        updated_objective_absolute_error >
-            updated_objective_large_absolute_error) {
-      HighsPrintMessage(
-          highs_model_object.options_.output,
-          highs_model_object.options_.message_level, ML_ALWAYS,
-          "Updated %s objective value: large absolute (%g) or relative (%g) "
-          "error"
-          " - objective change - exact (%g) updated (%g) | %s\n",
-          algorithm_name.c_str(), updated_objective_error,
-          updated_objective_relative_error, change_in_objective_value,
-          change_in_updated_objective_value, message.c_str());
-      return_status = HighsDebugStatus::LARGE_ERROR;
-    } else {
-      HighsPrintMessage(
-          highs_model_object.options_.output,
-          highs_model_object.options_.message_level, ML_DETAILED,
-          "Updated %s objective value: small absolute (%g) or relative (%g) "
-          "error"
-          " - objective change - exact (%g) updated (%g) | %s\n",
-          algorithm_name.c_str(), updated_objective_error,
-          updated_objective_relative_error, change_in_objective_value,
-          change_in_updated_objective_value, message.c_str());
-      return_status = HighsDebugStatus::SMALL_ERROR;
-    }
-    HighsPrintMessage(
-        highs_model_object.options_.output,
-        highs_model_object.options_.message_level, ML_VERBOSE,
-        "Updated %s objective value: OK absolute (%g) or relative (%g) error\n",
-        algorithm_name.c_str(), updated_objective_error,
-        updated_objective_relative_error);
+      updated_objective_large_absolute_error) {
+    error_adjective = "Large";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::LARGE_ERROR;
+  } else if (updated_objective_relative_error >
+	     updated_objective_small_relative_error ||
+	     updated_objective_absolute_error >
+	     updated_objective_small_absolute_error) {
+    error_adjective = "Small";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::SMALL_ERROR;
+  } else {
+    error_adjective = "OK";
+    report_level = ML_VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
+  HighsPrintMessage(
+		    highs_model_object.options_.output,
+		    highs_model_object.options_.message_level, report_level,
+		    "UpdateObjVal:  %-9s large absolute (%9.4g) or relative (%9.4g) error in updated %s objective value"
+		    " - objective change - exact (%9.4g) updated (%9.4g) | %s\n",
+		    error_adjective.c_str(), updated_objective_error,
+		    updated_objective_relative_error, algorithm_name.c_str(), change_in_objective_value,
+		    change_in_updated_objective_value, message.c_str());
   return return_status;
 }
 
@@ -378,58 +444,52 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   std::string algorithm_name = "dual";
   if (algorithm == SimplexAlgorithm::PRIMAL) algorithm_name = "primal";
-  double exact_objective;
-  double updated_objective;
+  double exact_objective_value;
+  double updated_objective_value;
   if (algorithm == SimplexAlgorithm::PRIMAL) {
     assert(highs_model_object.simplex_lp_status_.has_primal_objective_value);
-    exact_objective = simplex_info.primal_objective_value;
-    updated_objective = simplex_info.updated_primal_objective_value;
+    exact_objective_value = simplex_info.primal_objective_value;
+    updated_objective_value = simplex_info.updated_primal_objective_value;
   } else {
     assert(highs_model_object.simplex_lp_status_.has_dual_objective_value);
-    exact_objective = simplex_info.dual_objective_value;
-    updated_objective = simplex_info.updated_dual_objective_value;
+    exact_objective_value = simplex_info.dual_objective_value;
+    updated_objective_value = simplex_info.updated_dual_objective_value;
   }
-  const double updated_objective_absolute_error =
-      fabs(updated_objective - exact_objective);
+  const double updated_objective_error =
+      exact_objective_value - updated_objective_value;
+  const double updated_objective_absolute_error = fabs(updated_objective_error);
   const double updated_objective_relative_error =
-      updated_objective_absolute_error / max(1.0, fabs(exact_objective));
+      updated_objective_absolute_error / max(1.0, fabs(exact_objective_value));
 
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
   // Now analyse the error
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  std::string error_adjective;
+  int report_level;
   if (updated_objective_relative_error >
-          updated_objective_small_relative_error ||
+      updated_objective_large_relative_error ||
       updated_objective_absolute_error >
-          updated_objective_small_absolute_error) {
-    if (updated_objective_relative_error >
-            updated_objective_large_relative_error ||
-        updated_objective_absolute_error >
-            updated_objective_large_absolute_error) {
-      HighsPrintMessage(
-          highs_model_object.options_.output,
-          highs_model_object.options_.message_level, ML_ALWAYS,
-          "Updated %s objective value: large absolute (%g) or relative (%g) "
-          "error\n",
-          algorithm_name.c_str(), updated_objective_absolute_error,
-          updated_objective_relative_error);
-      return_status = HighsDebugStatus::LARGE_ERROR;
-    } else {
-      HighsPrintMessage(
-          highs_model_object.options_.output,
-          highs_model_object.options_.message_level, ML_DETAILED,
-          "Updated %s objective value: small absolute (%g) or relative (%g) "
-          "error\n",
-          algorithm_name.c_str(), updated_objective_absolute_error,
-          updated_objective_relative_error);
-      return_status = HighsDebugStatus::SMALL_ERROR;
-    }
-    HighsPrintMessage(
-        highs_model_object.options_.output,
-        highs_model_object.options_.message_level, ML_VERBOSE,
-        "Updated %s objective value: OK absolute (%g) or relative (%g) error\n",
-        algorithm_name.c_str(), updated_objective_absolute_error,
-        updated_objective_relative_error);
+      updated_objective_large_absolute_error) {
+    error_adjective = "Large";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::LARGE_ERROR;
+  } else if (updated_objective_relative_error >
+	     updated_objective_small_relative_error ||
+	     updated_objective_absolute_error >
+	     updated_objective_small_absolute_error) {
+    error_adjective = "Small";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::SMALL_ERROR;
+  } else {
+    error_adjective = "OK";
+    report_level = ML_VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
+  HighsPrintMessage(
+		    highs_model_object.options_.output,
+		    highs_model_object.options_.message_level, report_level,
+		    "UpdateObjVal:  %-9s large absolute (%9.4g) or relative (%9.4g) error in updated %s objective value\n",
+		    error_adjective.c_str(), updated_objective_error,
+		    updated_objective_relative_error, algorithm_name.c_str());
   return return_status;
 }
 
@@ -539,28 +599,28 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
   double basis_condition = computeBasisCondition(highs_model_object);
+  std::string value_adjective;
+  int report_level;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (basis_condition > excessive_basis_condition) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "%s basis condition estimate of %g is excessive",
-                    message.c_str(), basis_condition);
-    return HighsDebugStatus::WARNING;
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::WARNING;
   } else if (basis_condition > large_basis_condition) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "%s basis condition estimate of %g is large",
-                    message.c_str(), basis_condition);
-    return HighsDebugStatus::WARNING;
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
   } else if (basis_condition > fair_basis_condition) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-                    "%s basis condition estimate of %g is fair",
-                    message.c_str(), basis_condition);
-    return HighsDebugStatus::OK;
+    value_adjective = "Fair";
+    report_level = ML_VERBOSE;
+    return_status = HighsDebugStatus::OK;
   }
-  HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-                  "%s basis condition estimate of %g is small", message.c_str(),
-                  basis_condition);
-  return HighsDebugStatus::OK;
+  HighsPrintMessage(
+		    highs_model_object.options_.output,
+		    highs_model_object.options_.message_level, report_level,
+		    "BasisCond:     %-9s basis condition estimate (%9.4g) - %s\n", 
+		    value_adjective.c_str(), basis_condition, message.c_str());
+  return return_status;
 }
 
 HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
@@ -578,23 +638,69 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   const double dual_feasibility_tolerance =
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
   int num_dual_sign_change = 0;
-  double norm_nonbasic_dual_change = 0;
+  double cleanup_absolute_nonbasic_dual_change_norm = 0;
+  double cleanup_absolute_nonbasic_dual_norm = 0;
   for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
     if (!simplex_basis.nonbasicFlag_[iVar]) continue;
-    const double dual_change = std::fabs(new_dual[iVar] - original_dual[iVar]);
-    updateValueDistribution(dual_change,
+    cleanup_absolute_nonbasic_dual_norm += std::fabs(new_dual[iVar]);
+    const double nonbasic_dual_change = std::fabs(new_dual[iVar] - original_dual[iVar]);
+    updateValueDistribution(nonbasic_dual_change,
                             analysis.cleanup_dual_change_distribution);
-    norm_nonbasic_dual_change += dual_change;
+    cleanup_absolute_nonbasic_dual_change_norm += nonbasic_dual_change;
     const double max_dual =
         std::max(std::fabs(new_dual[iVar]), std::fabs(original_dual[iVar]));
     if (max_dual > dual_feasibility_tolerance &&
         new_dual[iVar] * original_dual[iVar] < 0)
       num_dual_sign_change++;
   }
-  printf(
-      "Dual cleanup for %s has |dual change| = %g, with %d meaningful sign "
-      "change(s)\n",
-      simplex_lp.model_name_.c_str(), norm_nonbasic_dual_change,
-      num_dual_sign_change);
-  return HighsDebugStatus::OK;
+  // Comment on the norm of the nonbasic duals being zero
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  if (!cleanup_absolute_nonbasic_dual_norm) {
+    HighsLogMessage(highs_model_object.options_.logfile,
+                    HighsMessageType::WARNING,
+                    "DualCleanup:   dual norm is = %9.4g",
+		    cleanup_absolute_nonbasic_dual_norm);
+    return_status = HighsDebugStatus::WARNING;
+  }
+  // Comment on the norm of the change being zero
+  if (!cleanup_absolute_nonbasic_dual_change_norm) {
+    HighsLogMessage(highs_model_object.options_.logfile,
+                    HighsMessageType::WARNING,
+                    "DualCleanup:   dual norm is = %9.4g",
+		    cleanup_absolute_nonbasic_dual_change_norm);
+    return_status = HighsDebugStatus::WARNING;
+  }
+  double cleanup_relative_nonbasic_dual_change_norm;
+  if (cleanup_absolute_nonbasic_dual_norm) {
+    cleanup_relative_nonbasic_dual_change_norm =
+      cleanup_absolute_nonbasic_dual_change_norm / cleanup_absolute_nonbasic_dual_norm;
+  } else {
+    cleanup_relative_nonbasic_dual_change_norm = -1;
+  }
+  std::string value_adjective;
+  int report_level;
+ if (cleanup_absolute_nonbasic_dual_change_norm > cleanup_excessive_absolute_nonbasic_dual_change_norm ||
+      cleanup_relative_nonbasic_dual_change_norm > cleanup_excessive_relative_nonbasic_dual_change_norm) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (cleanup_absolute_nonbasic_dual_change_norm > cleanup_large_absolute_nonbasic_dual_change_norm ||
+	     cleanup_relative_nonbasic_dual_change_norm > cleanup_large_relative_nonbasic_dual_change_norm) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else {
+    value_adjective = "OK";
+    report_level = ML_VERBOSE;
+    return_status = HighsDebugStatus::OK;
+  }
+  HighsPrintMessage(
+		    highs_model_object.options_.output,
+		    highs_model_object.options_.message_level, report_level,
+		    "DualCleanup:   %-9s absolute (%9.4g) or relative (%9.4g) dual change, "
+		    "with %d meaningful sign change(s)\n",
+		    value_adjective.c_str(),
+		    cleanup_absolute_nonbasic_dual_change_norm,
+		    cleanup_relative_nonbasic_dual_change_norm, num_dual_sign_change);
+  return return_status;
 }

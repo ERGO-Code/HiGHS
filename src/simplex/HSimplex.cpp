@@ -3428,7 +3428,7 @@ void computeDual(HighsModelObject& highs_model_object) {
     for (int i = simplex_lp.numCol_; i < numTot; i++)
       simplex_info.workDual_[i] -= dual_col.array[i - simplex_lp.numCol_];
     // Possibly analyse the computed dual values
-    debugComputedDual(highs_model_object, debug_previous_workDual,
+    debugComputeDual(highs_model_object, debug_previous_workDual,
                       debug_basic_costs, dual_col.array);
   }
   // Now have nonbasic duals

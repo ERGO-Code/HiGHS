@@ -21,7 +21,7 @@
 HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs);
 
-HighsDebugStatus debugComputedDual(const HighsModelObject& highs_model_object,
+HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
                                    const std::vector<double>& previous_dual,
                                    const std::vector<double>& basic_costs,
                                    const std::vector<double>& row_dual);
