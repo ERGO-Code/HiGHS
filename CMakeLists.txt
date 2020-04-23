@@ -263,3 +263,6 @@ enable_testing()
 add_subdirectory(app)
 add_subdirectory(check)
 add_subdirectory(src)
+
+# Comment out for scaffold/ tests
+add_subdirectory(dev-presolve)
