@@ -22,9 +22,9 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs);
 
 HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
-                                   const std::vector<double>& previous_dual,
-                                   const std::vector<double>& basic_costs,
-                                   const std::vector<double>& row_dual);
+                                  const std::vector<double>& previous_dual,
+                                  const std::vector<double>& basic_costs,
+                                  const std::vector<double>& row_dual);
 
 HighsDebugStatus debugUpdatedObjectiveValue(
     HighsModelObject& highs_model_object, const SimplexAlgorithm algorithm,
