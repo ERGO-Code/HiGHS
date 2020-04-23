@@ -2999,6 +2999,10 @@ void computeSimplexInfeasible(HighsModelObject& highs_model_object) {
 }
 
 void computeSimplexPrimalInfeasible(HighsModelObject& highs_model_object) {
+  // Computes num/max/sum of primal infeasibliities according to the
+  // simplex bounds. This is used to determine optimality in dual
+  // phase 1 and dual phase 2, albeit using different bounds in
+  // workLower/Upper.
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -3047,13 +3051,10 @@ void computeSimplexPrimalInfeasible(HighsModelObject& highs_model_object) {
 }
 
 void computeSimplexDualInfeasible(HighsModelObject& highs_model_object) {
-  // Computes num/max/sum of dual infeasibliities according to
-  // nonbasicMove, using the bounds only to identify free
-  // variables. Fixed variables are assumed to have nonbasicMove=0 so
-  // that no dual infeasibility is counted for them. Indeed, when
-  // called from cleanup() at the end of dual phase 1, nonbasicMove
-  // relates to the phase 1 bounds, but workLower and workUpper will
-  // have been set to phase 2 values!
+  // Computes num/max/sum of dual infeasibilities in phase 1 and phase
+  // 2 according to nonbasicMove. The bounds are only used to identify
+  // free variables. Fixed variables are assumed to have
+  // nonbasicMove=0 so that no dual infeasibility is counted for them.
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;

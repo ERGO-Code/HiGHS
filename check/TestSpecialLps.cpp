@@ -281,6 +281,7 @@ void mpsUnbounded(Highs& highs) {
   const HighsModelStatus require_model_status =
       HighsModelStatus::PRIMAL_UNBOUNDED;
 
+  // Unit test fails for IPX with adlittle_max
   const bool solve_adlittle_max = false;
   std::string model = "adlittle";
   if (!solve_adlittle_max) model = "gas11";
@@ -295,8 +296,8 @@ void mpsUnbounded(Highs& highs) {
   }
   solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);
-  //  solve(highs, "on", "ipm", require_model_status);
-  //  solve(highs, "off", "ipm", require_model_status);
+  solve(highs, "on", "ipm", require_model_status);
+  solve(highs, "off", "ipm", require_model_status);
 }
 
 void almostNotUnbounded(Highs& highs) {
@@ -313,23 +314,34 @@ void almostNotUnbounded(Highs& highs) {
   const double optimal_objective1 = -1;
   const double optimal_objective2 = -3;
 
-  double constraint_epsilon = 1e-6;
-  double objective_epsilon = 1e-6;
+  // With epsilon = 1e-7 hsol declares optimality as the primal
+  // infeasibility in phase 2 that would lead to unboundedness is
+  // sufficiently small
+  //
+  // With epsilon = 1e-6 hsol goes to phase 2 before detecting
+  // unboundedness, because the problem with perturbed costs is dual
+  // feasible.
+  //
+  // With epsilon = 1e-5 hsol identifies unboundedness in phase 1
+  // because the problem with perturbed costs is not dual feasible.
+  double epsilon = 1e-6;
   lp.numCol_ = 2;
   lp.numRow_ = 3;
-  lp.colCost_ = {-1, 1 - objective_epsilon};
+  lp.colCost_ = {-1, 1 - epsilon};
   lp.colLower_ = {0, 0};
   lp.colUpper_ = {1e+200, 1e+200};
-  lp.rowLower_ = {-1 + constraint_epsilon, -1, 3};
+  lp.rowLower_ = {-1 + epsilon, -1, 3};
   lp.rowUpper_ = {1e+200, 1e+200, 1e+200};
   lp.Astart_ = {0, 3, 6};
   lp.Aindex_ = {0, 1, 2, 0, 1, 2};
-  lp.Avalue_ = {1 + constraint_epsilon, -1, 1, -1, 1, 1};
+  lp.Avalue_ = {1 + epsilon, -1, 1, -1, 1, 1};
   // LP is feasible on [1+alpha, alpha] with objective
   // -1-epsilon*alpha so unbounded
 
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
+  //  status = highs.writeModel("epsilon_unbounded.mps"); REQUIRE(status ==
+  //  HighsStatus::WARNING);
   solve(highs, "off", "simplex", require_model_status0);
   solve(highs, "off", "ipm", require_model_status0);
 
@@ -344,11 +356,11 @@ void almostNotUnbounded(Highs& highs) {
   solve(highs, "off", "ipm", require_model_status1, optimal_objective1);
 
   // LP has bounded feasible region with optimal solution
-  // [1+2/constraint_epsilon, 2/constraint_epsilon] and objective
+  // [1+2/epsilon, 2/epsilon] and objective
   // value -3
-  lp.colCost_[1] = 1 - objective_epsilon;
-  lp.rowLower_[0] = -1 - constraint_epsilon;
-  lp.Avalue_[0] = 1 - constraint_epsilon;
+  lp.colCost_[1] = 1 - epsilon;
+  lp.rowLower_[0] = -1 - epsilon;
+  lp.Avalue_[0] = 1 - epsilon;
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
 
@@ -358,13 +370,13 @@ void almostNotUnbounded(Highs& highs) {
 }
 TEST_CASE("test-special-lps", "[TestSpecialLps]") {
   Highs highs;
-  //  issue272(highs);
-  //  issue280(highs);
-  //  issue282(highs);
-  //  issue285(highs);
-  //  issue295(highs);
-  //  issue306(highs);
-  //  issue316(highs);
+  issue272(highs);
+  issue280(highs);
+  issue282(highs);
+  issue285(highs);
+  issue295(highs);
+  issue306(highs);
+  issue316(highs);
   mpsUnbounded(highs);
-  //  almostNotUnbounded(highs);
+  almostNotUnbounded(highs);
 }

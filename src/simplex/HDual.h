@@ -386,8 +386,7 @@ class HDual {
   void majorRollback();
 
   void assessPhase1Optimality();
-
-  void computePhase2DualInfeasibleInPhase1();
+  void assessPhase1OptimalityWithOriginalCosts();
 
   bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);

@@ -122,7 +122,7 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
   if (computed_relative_primal_norm > computed_primal_excessive_relative_norm ||
       computed_absolute_primal_norm > computed_primal_excessive_absolute_norm) {
     value_adjective = "Excessive";
-    report_level = ML_DETAILED;
+    report_level = ML_ALWAYS;
     return_status = HighsDebugStatus::WARNING;
   } else if (computed_relative_primal_norm >
                  computed_primal_large_relative_norm ||
@@ -221,7 +221,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
       computed_dual_absolute_basic_dual_norm >
           computed_dual_excessive_absolute_basic_dual_norm) {
     value_adjective = "Excessive";
-    report_level = ML_DETAILED;
+    report_level = ML_ALWAYS;
     return_status = HighsDebugStatus::WARNING;
   } else if (computed_dual_relative_basic_dual_norm >
                  computed_dual_large_relative_basic_dual_norm ||
@@ -255,7 +255,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
       computed_dual_absolute_nonbasic_dual_norm >
           computed_dual_excessive_absolute_nonbasic_dual_norm) {
     value_adjective = "Excessive";
-    report_level = ML_DETAILED;
+    report_level = ML_ALWAYS;
     return_status = HighsDebugStatus::WARNING;
   } else if (computed_dual_relative_nonbasic_dual_norm >
                  computed_dual_large_relative_nonbasic_dual_norm ||
@@ -308,7 +308,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
         computed_dual_absolute_nonbasic_dual_change_norm >
             computed_dual_large_absolute_nonbasic_dual_change_norm) {
       change_adjective = "Large";
-      report_level = ML_DETAILED;
+      report_level = ML_ALWAYS;
       return_status = HighsDebugStatus::WARNING;
     } else if (computed_dual_relative_nonbasic_dual_change_norm >
                    computed_dual_small_relative_nonbasic_dual_change_norm ||
@@ -361,9 +361,10 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   double exact_objective_value;
   double updated_objective_value;
   bool have_previous_exact_objective_value;
-  double previous_exact_objective_value;
-  double previous_updated_objective_value;
-  double updated_objective_correction;
+  // Assign values to prevent compiler warning
+  double previous_exact_objective_value = 0;
+  double previous_updated_objective_value = 0;
+  double updated_objective_correction = 0;
   std::string algorithm_name;
   if (algorithm == SimplexAlgorithm::PRIMAL) {
     algorithm_name = "primal";
@@ -647,6 +648,10 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
     value_adjective = "Fair";
     report_level = ML_VERBOSE;
     return_status = HighsDebugStatus::OK;
+  } else {
+    value_adjective = "OK";
+    report_level = ML_VERBOSE;
+    return_status = HighsDebugStatus::OK;
   }
   HighsPrintMessage(
       highs_model_object.options_.output,
@@ -663,7 +668,9 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+#ifdef HiGHSDEV
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
+#endif
   // Make sure that the original_dual has been set up
   assert((int)original_dual.size() == simplex_lp.numCol_ + simplex_lp.numRow_);
   const std::vector<double>& new_dual = simplex_info.workDual_;
@@ -676,11 +683,13 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
     if (!simplex_basis.nonbasicFlag_[iVar]) continue;
     cleanup_absolute_nonbasic_dual_norm += std::fabs(new_dual[iVar]);
+#ifdef HiGHSDEV
     const double nonbasic_dual_change =
         std::fabs(new_dual[iVar] - original_dual[iVar]);
     updateValueDistribution(nonbasic_dual_change,
                             analysis.cleanup_dual_change_distribution);
     cleanup_absolute_nonbasic_dual_change_norm += nonbasic_dual_change;
+#endif
     const double max_dual =
         std::max(std::fabs(new_dual[iVar]), std::fabs(original_dual[iVar]));
     if (max_dual > dual_feasibility_tolerance &&
