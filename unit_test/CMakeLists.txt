@@ -4,10 +4,10 @@
 include(CTest)
 
 add_executable(unit_tests_scaffold
-               ${PROJECT_SOURCE_DIR}/unit_test/ScaffoldTestHighsLp.cpp)
+               ${HIGHS_SOURCE_DIR}/unit_test/ScaffoldTestHighsLp.cpp)
 
 target_include_directories(unit_tests_scaffold PUBLIC 
-                           ${PROJECT_SOURCE_DIR}/dev-presolve/src/scaffold)
+                           ${HIGHS_SOURCE_DIR}/dev-presolve/src/scaffold)
 
 target_link_libraries(unit_tests_scaffold libhighs catch-scaffold)
 

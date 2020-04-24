@@ -7,8 +7,8 @@ namespace scaffold {
 
 class ScaffoldUtils {
  public:
-  static void printHelloHighssScaffold() {
-    std::cout << "HiGHS scaffold linked." << std::endl;
+  static void scaffoldHello() {
+    std::cout << "HiGHS scaffold linked." << std::endl << std::endl;
     return;
   }
 };

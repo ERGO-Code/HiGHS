@@ -5,17 +5,14 @@
 
 #include <iostream>
 
-#include "util/HighsTimer.h"
-
 namespace scaffold {
 namespace dev_presolve {
 
-void testKktConditions() {
-  // Initialize.
-  HighsTimer timer;
+void devPresolveHello() {
 
   // Print details.
-  std::cout << "Dev - Presolve: Test KKT Conditions." << std::endl << std::endl;
+  std::cout << "Dev - Presolve: Example method." << std::endl << std::endl;
+  std::cout << "To be called from within presolve: so this file can not include Presolve.h or others." << std::endl << std::endl;
 
   return;
 }

@@ -1,12 +1,15 @@
 
-#include "scaffold/ScaffoldMethods.hpp"
-#include "dev-presolve/DevPresolveMethods.hpp"
+#include "../scaffold/ScaffoldMethods.hpp"
+#include "../dev_presolve/DevPresolveMethods.hpp"
 
 #include <iostream>
 
 int main(int argc, char* argv[]) {
   // Use a scaffold utility.
-  scaffold::ScaffoldUtils::printHelloHighsScaffold();
+
+  scaffold::ScaffoldUtils::scaffoldHello();
+
+  scaffold::dev_presolve::devPresolveHello();
   
   // todo: after target links against highs on its own. see if include dir is needed.
   // Use a presolve dev utility.
