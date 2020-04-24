@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-#include "util/HighsTimer.h"
+#include "Highs.h"
 #include "presolve/Presolve.h"
 
 namespace scaffold {
@@ -36,21 +36,10 @@ std::string PresolveStatusToString(const HighsPresolveStatus status) {
 }
 
 void testInit() {
-  // Initialize.
-  HighsTimer timer;
-  HighsLp lp;
-  const HighsLp& lp_ref = lp;
-  Presolve presolve(timer);
-  presolve.load(lp_ref);
-
-  // Solve.
-  HighsPresolveStatus presolve_status = presolve.presolve();
 
   // Print details.
-  std::cout << "Presolve library debug" << std::endl << std::endl;
-  std::cout << "PresolveStatus: " << PresolveStatusToString(presolve_status)
-            << std::endl;
-
+  std::cout << "Presolve library test: " << std::endl << std::endl;
+  
   return;
 }
 
@@ -62,7 +51,7 @@ void testPresolve() {
 }  // namespace
 
 void linkComponent() {
-  std::cout << "Presolve library debug..." << std::endl;
+  std::cout << "Presolve library debug link component" << std::endl;
   testPresolve();
   return;
 }

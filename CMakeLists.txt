@@ -266,11 +266,4 @@ add_subdirectory(src)
 
 # Comment out for scaffold/ tests
 add_subdirectory(scaffold)
-
-# This does not by default work yet since by default policy is old
-# more modern cmake
-cmake_policy(SET CMP0079 NEW)
-# target_include_directories(scaffold PUBLIC ${HIGHS_SOURCE_DIR}/scaffold)
-target_link_libraries(scaffold libhighs)
-
-# add_subdirectory(unit_test)
+add_subdirectory(unit_test)
