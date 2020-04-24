@@ -1,18 +1,16 @@
 
-#include "dev_presolve/DevPresolveMethods.hpp"
-#include "scaffold/ScaffoldMethods.hpp"
-
 #include <iostream>
+
+#include "DevPresolveMethods.hpp"
+#include "ScaffoldMethods.hpp"
+#include "TestPresolve.hpp"
 
 int main(int argc, char* argv[]) {
   // Use a scaffold utility.
-  scaffold::ScaffoldUtils::printHelloHighsScaffold();
+  scaffold::ScaffoldUtils::scaffoldHello();
 
-  // Use a presolve dev utility.
-  scaffold::dev_presolve::testKktConditions();
-  
   // Call test on presolve component.
   scaffold::dev_presolve::linkComponent();
-  
+
   return 0;
 }

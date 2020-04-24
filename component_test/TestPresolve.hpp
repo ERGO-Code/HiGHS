@@ -36,10 +36,9 @@ std::string PresolveStatusToString(const HighsPresolveStatus status) {
 }
 
 void testInit() {
-
   // Print details.
   std::cout << "Presolve library test: " << std::endl << std::endl;
-  
+
   return;
 }
 
@@ -51,7 +50,7 @@ void testPresolve() {
 }  // namespace
 
 void linkComponent() {
-  std::cout << "Presolve library debug link component" << std::endl;
+  std::cout << "Presolve library link component" << std::endl;
   testPresolve();
   return;
 }

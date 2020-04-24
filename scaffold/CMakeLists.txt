@@ -6,7 +6,9 @@
 # defined in dev-presolve/
 
 add_executable(scaffold)
-target_include_directories(scaffold PUBLIC ${HIGHS_SOURCE_DIR}/dev-presolve
-                                           ${HIGHS_SOURCE_DIR}/scaffold)
+target_include_directories(
+  scaffold
+  PUBLIC ${HIGHS_SOURCE_DIR}/dev-presolve ${HIGHS_SOURCE_DIR}/component_test
+         ${HIGHS_SOURCE_DIR}/scaffold)
 
 target_sources(scaffold PUBLIC ${HIGHS_SOURCE_DIR}/scaffold/ScaffoldMain.cpp)
