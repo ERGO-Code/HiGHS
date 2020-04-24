@@ -117,7 +117,9 @@ set(sources
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/stringutil.cpp
-    interfaces/highs_c_api.cpp)
+    interfaces/highs_c_api.cpp
+        interfaces/highs_java_api.cpp
+        )
 
 set(headers
     ipm/IpxStatus.h
@@ -176,7 +178,10 @@ set(headers
     util/HighsUtils.h
     Highs.h
     interfaces/highs_c_api.h
-)
+        interfaces/jhi/jhi.h
+        interfaces/jhi/jhi_md.h
+        interfaces/highs_java_api.h
+        )
 
 if (GAMS_FOUND)
     set(sources ${sources} interfaces/GAMS.cpp)
