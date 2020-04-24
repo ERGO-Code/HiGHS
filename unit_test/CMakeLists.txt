@@ -1,6 +1,14 @@
 # Unit tests from scaffold for development and testing independently from the
 # main ERGO-Code/HiGHS git repository.
 
+# Can't have two versions of catch both in HiGHS ctest so, at least the until old
+# version tests have been moved out of ERGO-Code and migrated to scaffold.git,
+# this is its own project and thus not just included in HiGHS with
+# add_subdirectory(unit_test)
+
+cmake_minimum_required(VERSION 3.15)
+project(scaffold-unit-test LANGUAGES CXX)
+
 include(CTest)
 
 add_executable(unit_test_scaffold_exe_example)
@@ -8,8 +16,11 @@ add_executable(unit_test_scaffold_exe_example)
 target_include_directories(unit_test_scaffold_exe_example
                            PUBLIC ${HIGHS_SOURCE_DIR}/scaffold)
 
+# todo: replace once catch is removed from master
 target_sources(unit_test_scaffold_exe_example
-               PUBLIC ${HIGHS_SOURCE_DIR}/unit_test/ScaffoldTestHighsLp.cpp)
+               PUBLIC ${PROJECT_SOURCE_DIR}/ScaffoldTestHighsLp.cpp)
+# target_sources(unit_test_scaffold_exe_example PUBLIC
+# ${HIGHS_SOURCE_DIR}/unit_test/ScaffoldTestHighsLp.cpp)
 
 cmake_policy(SET CMP0079 NEW)
 target_link_libraries(unit_test_scaffold_exe_example libhighs)
