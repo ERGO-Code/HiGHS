@@ -9,9 +9,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "io/Filereader.h"
-
-#include <cstring>  // For strrchr
-
 #include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
@@ -26,9 +23,6 @@ static const std::string getFilenameExt(const std::string filename) {
   } else {
     name = "";
   }
-  //  const char* dot = strrchr(filename, '.');
-  //  if (!dot || dot == filename) return "";
-  //  return dot + 1;
   return name;
 }
 

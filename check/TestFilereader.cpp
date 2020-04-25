@@ -143,25 +143,29 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   status = highs.readModel(filename_ems);
   REQUIRE(status == HighsStatus::OK);
 
-  //  HighsLp lp_ems = highs.getLp();
-
   std::cout << "Compare LP from .ems and .mps" << std::endl;
   are_the_same = lp_mps == highs.getLp();
   REQUIRE(are_the_same);
 
   std::remove(filename_ems.c_str());
 
-  // Read lp and compare with mps
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+ 
+  const HighsInfo& info = highs.getHighsInfo();
+  double mps_objective_function_value = info.objective_function_value;
+
+  // Read lp and compare objective with mps
   std::cout << "Reading " << filename_lp << std::endl;
   status = highs.readModel(filename_lp);
   REQUIRE(status == HighsStatus::OK);
 
-  //  HighsLp lp_lp = highs.getLp();
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+ 
+  REQUIRE(mps_objective_function_value == info.objective_function_value);
 
-  std::cout << "Compare LP from .lp and .mps" << std::endl;
-  are_the_same = lp_mps.equalButForNames(highs.getLp());
-  REQUIRE(are_the_same);
-
+ 
   std::remove(filename_lp.c_str());
 }
 
