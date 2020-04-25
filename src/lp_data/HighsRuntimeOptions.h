@@ -12,7 +12,7 @@
 #define LP_DATA_HIGHSRUNTIMEOPTIONS_H_
 
 #include "../external/cxxopts.hpp"
-#include "LoadOptions.h"
+#include "io/LoadOptions.h"
 #include "io/HighsIO.h"
 #include "util/stringutil.h"
 

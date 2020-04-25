@@ -25,7 +25,7 @@ void reportLpStatsOrError(FILE* output, int message_level,
                           const HighsStatus read_status, const HighsLp& lp);
 void reportSolvedLpStats(FILE* output, int message_level,
                          const HighsStatus run_status, const Highs& highs);
-HighsStatus callLpSolver(HighsOptions& options, const bool run_quiet);
+HighsStatus callLpSolver(HighsOptions& options);
 HighsStatus callMipSolver(HighsOptions& options);
 
 int main(int argc, char** argv) {
@@ -39,8 +39,7 @@ int main(int argc, char** argv) {
   // Run LP or MIP solver.
   HighsStatus run_status = HighsStatus::Error;
   if (!options.mip) {
-    bool run_quiet = false;  // true;//
-    run_status = callLpSolver(options, run_quiet);
+    run_status = callLpSolver(options);
   } else {
     run_status = callMipSolver(options);
   }
@@ -174,18 +173,9 @@ void reportSolvedLpStats(FILE* output, int message_level,
     if (options.write_solution_to_file)
       highs.writeSolution(options.solution_file, options.write_solution_pretty);
   }
-
-  /*
-  highs.writeSolution("", true);
-  highs.writeSolution("", false);
-  highs.writeHighsInfo("");
-  highs.writeHighsInfo("HighsInfo.html");
-  */
 }
 
-HighsStatus callLpSolver(HighsOptions& use_options, const bool run_quiet) {
-  const bool write_lp = false;   // true;//
-  const bool write_ems = false;  //
+HighsStatus callLpSolver(HighsOptions& use_options) {
   FILE* output = use_options.output;
   const int message_level = use_options.message_level;
 
@@ -198,53 +188,12 @@ HighsStatus callLpSolver(HighsOptions& use_options, const bool run_quiet) {
   reportLpStatsOrError(output, message_level, read_status, highs.getLp());
   if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
-  if (write_lp) {
-    HighsStatus write_status;
-    if (write_ems) {
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "Writing model as EMS\n");
-      write_status = highs.writeModel("model.ems");
-    } else {
-      // Write to screen
-      int default_message_level;
-      highs.getHighsOptionValue("message_level", default_message_level);
-      highs.setHighsOptionValue("message_level", 7);
-      write_status = highs.writeModel("");
-      highs.setHighsOptionValue("message_level", default_message_level);
-    }
-    if (write_status != HighsStatus::OK) {
-      if (write_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-        HighsPrintMessage(
-            output, message_level, ML_ALWAYS,
-            "HighsStatus::Warning return from highs.writeModel\n");
-#endif
-      } else {
-        HighsPrintMessage(output, message_level, ML_ALWAYS,
-                          "Error return from highs.writeModel\n");
-      }
-    }
-  }
+  // Run quietly
+  highs.setHighsLogfile(NULL);
+  highs.setHighsOutput(NULL);
 
-  // Write all the options to an options file
-  // highs.writeHighsOptions("HighsOptions.set", false);
-  // Write all the options as HTML
-  // highs.writeHighsOptions("HighsOptions.html", false);
-  // Possibly report options settings
-  highs.writeHighsOptions("");  //, false);
-
-  if (run_quiet) {
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "Before calling highs.run() quietly\n");
-    highs.setHighsLogfile(NULL);
-    highs.setHighsOutput(NULL);
-  }
   // Run HiGHS.
   HighsStatus run_status = highs.run();
-
-  if (run_quiet)
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "After calling highs.run() quietly\n");
 
   reportSolvedLpStats(output, message_level, run_status, highs);
   return run_status;
