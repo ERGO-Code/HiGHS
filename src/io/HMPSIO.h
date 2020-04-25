@@ -65,8 +65,10 @@ HighsStatus writeMPS(
 
 bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
                   double* data);
-// int isspace(int c);
-// char* fgets(char* str, int num, FILE* stream);
+
+HighsStatus writeLpAsMPS(const HighsOptions& options,
+                         const std::string filename, const HighsLp& lp,
+                         const bool free = true);
 
 inline const char* BoolToCharStar(bool b);
 

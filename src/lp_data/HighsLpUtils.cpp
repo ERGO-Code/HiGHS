@@ -1623,60 +1623,6 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
   return HighsStatus::OK;
 }
 
-HighsStatus writeLpAsMPS(const HighsOptions& options,
-                         const std::string filename, const HighsLp& lp,
-                         const bool free_format) {
-  bool warning_found = false;
-  bool have_col_names = lp.col_names_.size();
-  bool have_row_names = lp.row_names_.size();
-  std::vector<std::string> local_col_names;
-  std::vector<std::string> local_row_names;
-  local_col_names.resize(lp.numCol_);
-  local_row_names.resize(lp.numRow_);
-  //
-  // Initialise the local names to any existing names
-  if (have_col_names) local_col_names = lp.col_names_;
-  if (have_row_names) local_row_names = lp.row_names_;
-  //
-  // Normalise the column names
-  int max_col_name_length = HIGHS_CONST_I_INF;
-  if (!free_format) max_col_name_length = 8;
-  HighsStatus col_name_status = normaliseNames(
-      options, "Column", lp.numCol_, local_col_names, max_col_name_length);
-  if (col_name_status == HighsStatus::Error) return col_name_status;
-  warning_found = col_name_status == HighsStatus::Warning || warning_found;
-  //
-  // Normalise the row names
-  int max_row_name_length = HIGHS_CONST_I_INF;
-  if (!free_format) max_row_name_length = 8;
-  HighsStatus row_name_status = normaliseNames(
-      options, "Row", lp.numRow_, local_row_names, max_row_name_length);
-  if (row_name_status == HighsStatus::Error) return col_name_status;
-  warning_found = row_name_status == HighsStatus::Warning || warning_found;
-
-  int max_name_length = std::max(max_col_name_length, max_row_name_length);
-  bool use_free_format = free_format;
-  if (!free_format) {
-    if (max_name_length > 8) {
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                      "Maximum name length is %d so using free format rather "
-                      "than fixed format",
-                      max_name_length);
-      use_free_format = true;
-      warning_found = true;
-    }
-  }
-  HighsStatus write_status = writeMPS(
-      options.logfile, filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
-      lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
-      lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
-      local_col_names, local_row_names, use_free_format);
-  if (write_status == HighsStatus::OK && warning_found)
-    return HighsStatus::Warning;
-  ;
-  return write_status;
-}
-
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP
