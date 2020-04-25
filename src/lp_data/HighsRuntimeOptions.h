@@ -12,8 +12,8 @@
 #define LP_DATA_HIGHSRUNTIMEOPTIONS_H_
 
 #include "../external/cxxopts.hpp"
-#include "io/LoadOptions.h"
 #include "io/HighsIO.h"
+#include "io/LoadOptions.h"
 #include "util/stringutil.h"
 
 bool loadOptions(int argc, char** argv, HighsOptions& options) {

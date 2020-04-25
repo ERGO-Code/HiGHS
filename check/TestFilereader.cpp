@@ -151,7 +151,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
 
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
- 
+
   const HighsInfo& info = highs.getHighsInfo();
   double mps_objective_function_value = info.objective_function_value;
 
@@ -162,10 +162,9 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
 
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
- 
+
   REQUIRE(mps_objective_function_value == info.objective_function_value);
 
- 
   std::remove(filename_lp.c_str());
 }
 
