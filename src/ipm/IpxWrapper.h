@@ -51,8 +51,8 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
         lp.rowLower_[row] > -HIGHS_CONST_INF &&
         lp.rowUpper_[row] < HIGHS_CONST_INF)
       general_bounded_rows.push_back(row);
-    else if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
-             lp.rowUpper_[row] == HIGHS_CONST_INF)
+    else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
+             lp.rowUpper_[row] >= HIGHS_CONST_INF)
       free_rows.push_back(row);
 
   const int num_slack = general_bounded_rows.size();
@@ -64,10 +64,10 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
   for (int row = 0; row < num_row; row++) {
     if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-        lp.rowUpper_[row] == HIGHS_CONST_INF) {
+        lp.rowUpper_[row] >= HIGHS_CONST_INF) {
       rhs.push_back(lp.rowLower_[row]);
       constraint_type.push_back('>');
-    } else if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
+    } else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
                lp.rowUpper_[row] < HIGHS_CONST_INF) {
       rhs.push_back(lp.rowUpper_[row]);
       constraint_type.push_back('<');
@@ -146,12 +146,12 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   col_lb.resize(num_col);
   col_ub.resize(num_col);
   for (int col = 0; col < lp.numCol_; col++) {
-    if (lp.colLower_[col] == -HIGHS_CONST_INF)
+    if (lp.colLower_[col] <= -HIGHS_CONST_INF)
       col_lb[col] = -INFINITY;
     else
       col_lb[col] = lp.colLower_[col];
 
-    if (lp.colUpper_[col] == HIGHS_CONST_INF)
+    if (lp.colUpper_[col] >= HIGHS_CONST_INF)
       col_ub[col] = INFINITY;
     else
       col_ub[col] = lp.colUpper_[col];

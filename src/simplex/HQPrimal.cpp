@@ -495,8 +495,8 @@ void HQPrimal::primalChooseColumn() {
         // Always take free
         // TODO: if we found free,
         // Then deal with it in dual phase 1
-        if (workLower[iCol] == -HIGHS_CONST_INF &&
-            workUpper[iCol] == HIGHS_CONST_INF) {
+        if (workLower[iCol] <= -HIGHS_CONST_INF &&
+            workUpper[iCol] >= HIGHS_CONST_INF) {
           columnIn = iCol;
           break;
         }

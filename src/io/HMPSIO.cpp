@@ -375,7 +375,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol]) {
       num_int++;
-      if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
+      if (colUpper[iCol] >= HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
   if (num_alien_entries)

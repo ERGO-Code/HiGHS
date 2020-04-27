@@ -112,7 +112,7 @@ void FilereaderLp::handleBinarySection(HighsModelBuilder& model) {
                                     &variable);
     // update bounds if necessary
     if (variable->lowerBound == 0.0 &&
-        variable->upperBound == HIGHS_CONST_INF) {
+        variable->upperBound >= HIGHS_CONST_INF) {
       variable->upperBound = 1.0;
     }
     variable->type = HighsVarType::BIN;
