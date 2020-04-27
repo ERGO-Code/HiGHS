@@ -243,7 +243,7 @@ HighsStatus Highs::readModel(const std::string filename) {
         interpretCallStatus(call_status, return_status, "readModelFromFile");
     if (return_status == HighsStatus::Error) return return_status;
   }
-  model.model_name_ = extractModelName(filename.c_str());
+  model.model_name_ = extractModelName(filename);
   call_status = this->passModel(model);
   return_status = interpretCallStatus(call_status, return_status, "passModel");
   return return_status;

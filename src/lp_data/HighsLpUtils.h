@@ -186,13 +186,6 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
                          const double infinite_bound);
 
 /**
- * @brief Write out the LP as an MPS file
- */
-HighsStatus writeLpAsMPS(const HighsOptions& options,
-                         const std::string filename, const HighsLp& lp,
-                         const bool free = true);
-
-/**
  * @brief Report the data of an LP
  */
 void reportLp(const HighsOptions& options,
