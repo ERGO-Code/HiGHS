@@ -2215,8 +2215,8 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
     assert((int)equality_lp.Aindex_.size() == (int)equality_lp.Avalue_.size());
     const int nnz = equality_lp.Astart_[equality_lp.numCol_];
 
-    if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
-        lp.rowUpper_[row] == HIGHS_CONST_INF) {
+    if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
+        lp.rowUpper_[row] >= HIGHS_CONST_INF) {
       // free row
       equality_lp.Astart_.push_back(nnz + 1);
       equality_lp.Aindex_.push_back(row);
@@ -2227,7 +2227,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
       equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
       equality_lp.colCost_.push_back(0);
     } else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] == HIGHS_CONST_INF) {
+               lp.rowUpper_[row] >= HIGHS_CONST_INF) {
       // only lower bound
       rhs[row] = lp.rowLower_[row];
 
@@ -2239,7 +2239,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
       equality_lp.colLower_.push_back(0);
       equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
       equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
+    } else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
                lp.rowUpper_[row] < HIGHS_CONST_INF) {
       // only upper bound
       rhs[row] = lp.rowUpper_[row];

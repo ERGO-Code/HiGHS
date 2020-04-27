@@ -118,7 +118,6 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
 
   HighsStatus status;
-  bool are_the_same;
 
   // Read mps
   HighsOptions options;
@@ -128,14 +127,16 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   REQUIRE(status == HighsStatus::OK);
   HighsLp lp_mps = highs.getLp();
 
-  // Write ems
-  std::string filename_ems = "adlittle.ems";
-  status = highs.writeModel(filename_ems);
-  REQUIRE(status == HighsStatus::OK);
-
   // Write lp
   std::string filename_lp = "adlittle.lp";
   status = highs.writeModel(filename_lp);
+  REQUIRE(status == HighsStatus::OK);
+
+  /*
+  bool are_the_same;
+  // Write ems
+  std::string filename_ems = "adlittle.ems";
+  status = highs.writeModel(filename_ems);
   REQUIRE(status == HighsStatus::OK);
 
   // Read ems and compare with mps
@@ -148,6 +149,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   REQUIRE(are_the_same);
 
   std::remove(filename_ems.c_str());
+  */
 
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
