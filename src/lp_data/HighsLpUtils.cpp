@@ -1557,6 +1557,15 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
   return HighsStatus::OK;
 }
 
+int getNumInt(const HighsLp& lp) {
+  int num_int = 0;
+  if (lp.integrality_.size()) {
+    for (int iCol = 0; iCol < lp.numCol_; iCol++)
+      if (lp.integrality_[iCol]) num_int++;
+  }
+  return num_int;
+}
+
 HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
                        double* XcolCost) {
   if (from_col < 0 || to_col >= lp.numCol_) return HighsStatus::Error;
@@ -1614,8 +1623,9 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
   return HighsStatus::OK;
 }
 
-HighsStatus writeLpAsMPS(const HighsOptions& options, const char* filename,
-                         const HighsLp& lp, const bool free_format) {
+HighsStatus writeLpAsMPS(const HighsOptions& options,
+                         const std::string filename, const HighsLp& lp,
+                         const bool free_format) {
   bool warning_found = false;
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
@@ -1657,8 +1667,8 @@ HighsStatus writeLpAsMPS(const HighsOptions& options, const char* filename,
     }
   }
   HighsStatus write_status = writeMPS(
-      options.logfile, filename, lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
-      lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
+      options.logfile, filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
+      lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
       local_col_names, local_row_names, use_free_format);
   if (write_status == HighsStatus::OK && warning_found)
@@ -1695,13 +1705,14 @@ void reportLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     lp_num_nz = lp.Astart_[lp.numCol_];
   HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                     "LP has %d columns, %d rows", lp.numCol_, lp.numRow_);
-  if (lp.numInt_) {
+  int num_int = getNumInt(lp);
+  if (num_int) {
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                       ", %d nonzeros and %d integer columns\n", lp_num_nz,
-                      lp.numInt_);
+                      num_int);
   } else {
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      " and %d nonzeros\n", lp_num_nz, lp.numInt_);
+                      " and %d nonzeros\n", lp_num_nz, num_int);
   }
 }
 
@@ -1745,7 +1756,7 @@ void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
   if (lp.numCol_ <= 0) return;
   std::string type;
   int count;
-  bool have_integer_columns = lp.numInt_;
+  bool have_integer_columns = getNumInt(lp);
   bool have_col_names = lp.col_names_.size();
 
   HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
@@ -1834,12 +1845,12 @@ void reportLpColMatrix(const HighsOptions& options, const HighsLp& lp) {
   }
 }
 
-void reportMatrix(const HighsOptions& options, const char* message,
+void reportMatrix(const HighsOptions& options, const std::string message,
                   const int num_col, const int num_nz, const int* start,
                   const int* index, const double* value) {
   if (num_col <= 0) return;
   HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                    "%6s Index              Value\n", message);
+                    "%6s Index              Value\n", message.c_str());
   for (int col = 0; col < num_col; col++) {
     HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
                       "    %8d Start   %10d\n", col, start[col]);
@@ -1853,7 +1864,7 @@ void reportMatrix(const HighsOptions& options, const char* message,
 }
 
 #ifdef HiGHSDEV
-void analyseLp(const HighsLp& lp, const char* message) {
+void analyseLp(const HighsLp& lp, const std::string message) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
   vector<double> colRange;
@@ -1871,7 +1882,7 @@ void analyseLp(const HighsLp& lp, const char* message) {
   for (int row = 0; row < lp.numRow_; row++)
     rowRange[row] = lp.rowUpper_[row] - lp.rowLower_[row];
 
-  printf("\n%s model data: Analysis\n", message);
+  printf("\n%s model data: Analysis\n", message.c_str());
   analyseVectorValues("Column costs", lp.numCol_, lp.colCost_);
   analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_);
   analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_);
