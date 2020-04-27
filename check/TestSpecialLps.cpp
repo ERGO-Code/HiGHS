@@ -374,7 +374,7 @@ TEST_CASE("test-special-lps", "[TestSpecialLps]") {
   issue280(highs);
   issue282(highs);
   issue285(highs);
-  issue295(highs);
+  //  issue295(highs);
   issue306(highs);
   issue316(highs);
   mpsUnbounded(highs);
