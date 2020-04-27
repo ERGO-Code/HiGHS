@@ -350,8 +350,7 @@ void HDualRow::createFreelist() {
   const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   for (int i = 0; i < numTot; i++) {
     //    if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
-    if (nonbasicFlag[i] &&
-	highs_isInfinity(-workLower[i]) &&
+    if (nonbasicFlag[i] && highs_isInfinity(-workLower[i]) &&
         highs_isInfinity(workUpper[i])) {
       freeList.insert(i);
       ckFreeListSize++;
