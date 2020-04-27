@@ -188,10 +188,6 @@ HighsStatus callLpSolver(HighsOptions& use_options) {
   reportLpStatsOrError(output, message_level, read_status, highs.getLp());
   if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
-  // Run quietly
-  highs.setHighsLogfile(NULL);
-  highs.setHighsOutput(NULL);
-
   // Run HiGHS.
   HighsStatus run_status = highs.run();
 
