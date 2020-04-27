@@ -342,12 +342,17 @@ void HDualRow::updateDual(double theta) {
 }
 
 void HDualRow::createFreelist() {
+  double* workLower = &workHMO.simplex_info_.workLower_[0];
+  double* workUpper = &workHMO.simplex_info_.workUpper_[0];
   freeList.clear();
   const int* nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   int ckFreeListSize = 0;
   const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   for (int i = 0; i < numTot; i++) {
-    if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
+    //    if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
+    if (nonbasicFlag[i] &&
+	highs_isInfinity(-workLower[i]) &&
+        highs_isInfinity(workUpper[i])) {
       freeList.insert(i);
       ckFreeListSize++;
     }
