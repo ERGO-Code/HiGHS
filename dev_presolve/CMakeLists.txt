@@ -21,3 +21,5 @@ target_sources(dev-presolve
                PUBLIC ${HIGHS_SOURCE_DIR}/dev_presolve/DevPresolveMain.cpp)
 
 target_link_libraries(dev-presolve INTERFACE dev-presolve-lib)
+target_link_libraries(dev-presolve INTERFACE test-presolve)
+target_link_libraries(dev-presolve INTERFACE libhighs)

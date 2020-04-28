@@ -114,7 +114,7 @@ void testProblems() {
       try {
        std::string file = kFolder + test_run.name;
 
-  //     Highs highs;
+       Highs highs;
   //       HighsStatus highs_status = highs.readModel(file);
 
   //       highs.setHighsOptionValue("presolve", "on");
