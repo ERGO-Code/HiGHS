@@ -74,7 +74,6 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
         nz++;
       }
     }
-    model.nnz_ = nz;
     model.Astart_.push_back(nz);
     model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::MINIMIZE : ObjSense::MAXIMIZE;
   } catch(std::invalid_argument ex) {
