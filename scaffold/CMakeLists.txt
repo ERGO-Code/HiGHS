@@ -19,5 +19,4 @@ target_include_directories(
 
 target_sources(scaffold PUBLIC ${HIGHS_SOURCE_DIR}/scaffold/ScaffoldMain.cpp)
 
-target_link_libraries(scaffold test-presolve)
 target_link_libraries(scaffold libhighs)
