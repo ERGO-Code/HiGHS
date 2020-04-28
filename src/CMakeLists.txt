@@ -165,6 +165,7 @@ set(headers
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
+    util/HighsComponent.h
     util/HighsRandom.h
     util/HighsSort.h
     util/HighsTimer.h
