@@ -13,7 +13,7 @@
 namespace scaffold {
 namespace test_presolve {
 
-const std::string kFolder = "/check/instances/";
+const std::string kFolder =   std::string(HIGHS_DIR) + "/component_test/mps/";
 
 struct TestRunInfo {
   TestRunInfo(std::string xname, double x_optimal_obj)
