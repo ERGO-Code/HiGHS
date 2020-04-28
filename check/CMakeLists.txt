@@ -15,7 +15,6 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 set(TEST_SOURCES
     TestMain.cpp
     TestOptions.cpp
-    TestPresolve.cpp
     TestIO.cpp
     TestSort.cpp
     TestSetup.cpp
@@ -24,9 +23,11 @@ set(TEST_SOURCES
     TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
+    TestLpSolvers.cpp
+    TestSpecialLps.cpp
     Avgas.cpp)
 
-if (IPX_ON) 
+if (IPX_ON)
     set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 endif()
 
@@ -56,6 +57,7 @@ if(FORTRAN_FOUND)
 # check the C API
 add_executable(capi_unit_tests TestCAPI.c)
 target_link_libraries(capi_unit_tests libhighs)
+add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
@@ -83,7 +85,7 @@ add_test(NAME osi-unit-test-build
                  --build ${HIGHS_BINARY_DIR}
                  --target osi_unit_tests
          )
-         
+
 # Avoid that several build jobs try to concurretly build.
 set_tests_properties(osi-unit-test-build
 PROPERTIES
@@ -135,7 +137,6 @@ set(successInstances
     "afiro\;21\;-4.647531\;"
     "etamacro\;507\;-7.557152\;"
     "greenbea\;5249\;-7.255525\;"
-    "pilot87\;9919\; 3.017103\;"
     "shell\;624\; 1.208825\;"
     "stair\;555\;-2.512670\;"
     "standata\;74\; 1.257699\;"

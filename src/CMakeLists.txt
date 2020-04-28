@@ -33,8 +33,7 @@ set(basiclu_sources
     ipm/basiclu/src/lu_dfs.c
     ipm/basiclu/src/lu_garbage_perm.c
     ipm/basiclu/src/lu_residual_test.c
-    ipm/basiclu/src/lu_solve_for_update.c
-    ipm/basiclu/src/lu_timer.c)
+    ipm/basiclu/src/lu_solve_for_update.c)
 
 set(ipx_sources
     ipm/ipx/src/basiclu_kernel.cc
@@ -78,9 +77,7 @@ set(sources
     io/HighsIO.cpp
     io/HMPSIO.cpp
     io/HMpsFF.cpp
-    io/HToyIO.cpp
     io/LoadOptions.cpp
-    io/LoadProblem.cpp
     lp_data/Highs.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsLp.cpp
@@ -93,8 +90,6 @@ set(sources
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
     mip/SolveMip.cpp
-    presolve/ICrash.cpp
-    presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
     presolve/PresolveAnalysis.cpp
     presolve/HPreData.cpp
@@ -111,6 +106,8 @@ set(sources
     simplex/HQPrimal.cpp
 #    simplex/HRanging.cpp
     simplex/HSimplex.cpp
+    simplex/HSimplexDebug.cpp
+    simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -127,10 +124,7 @@ set(headers
     io/FilereaderMps.h
     io/HMpsFF.h
     io/HMPSIO.h
-    io/HToyIO_C.h
-    io/HToyIO.h
     io/HighsIO.h
-    io/LoadProblem.h
     io/LoadOptions.h
     lp_data/HConst.h
     lp_data/HighsAnalysis.h
@@ -161,9 +155,9 @@ set(headers
     simplex/HQPrimal.h
 #    simplex/HRanging.h
     simplex/HSimplex.h
+    simplex/HSimplexDebug.h
+    simplex/HSimplexReport.h
     simplex/SimplexConst.h
-    presolve/ICrash.h
-    presolve/ICrashUtil.h
     presolve/Presolve.h
     presolve/PresolveAnalysis.h
     presolve/HPreData.h

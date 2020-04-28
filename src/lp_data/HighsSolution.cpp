@@ -46,8 +46,10 @@ HighsStatus analyseHighsBasicSolution(
 
   return analyseHighsBasicSolution(
       logfile, highs_model_object.lp_, highs_model_object.basis_,
-      highs_model_object.solution_, highs_model_object.unscaled_model_status_,
-      get_unscaled_solution_params, message);
+      highs_model_object.solution_, highs_model_object.iteration_counts_,
+      highs_model_object.unscaled_model_status_, get_unscaled_solution_params,
+      message);
+  return HighsStatus::OK;
 }
 
 // Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
@@ -58,14 +60,16 @@ HighsStatus analyseHighsBasicSolution(
     const HighsSolutionParams& unscaled_solution_params, const string message) {
   return analyseHighsBasicSolution(
       logfile, highs_model_object.lp_, highs_model_object.basis_,
-      highs_model_object.solution_, highs_model_object.unscaled_model_status_,
-      unscaled_solution_params, message);
+      highs_model_object.solution_, highs_model_object.iteration_counts_,
+      highs_model_object.unscaled_model_status_, unscaled_solution_params,
+      message);
 }
 
 // Calls analyseHighsBasicSolution, adding report_level
 HighsStatus analyseHighsBasicSolution(
     FILE* logfile, const HighsLp& lp, const HighsBasis& basis,
-    const HighsSolution& solution, const HighsModelStatus model_status,
+    const HighsSolution& solution, const HighsIterationCounts& iteration_counts,
+    const HighsModelStatus model_status,
     const HighsSolutionParams& solution_params, const string message) {
   // Analyse and report on the (unscaled) HiGHS basic solution. Acts
   // as a check that the unscaled model status and unscaled solution
@@ -76,7 +80,8 @@ HighsStatus analyseHighsBasicSolution(
 #ifdef HiGHSDEV
   report_level = 1;
 #endif
-  return analyseHighsBasicSolution(logfile, lp, basis, solution, model_status,
+  return analyseHighsBasicSolution(logfile, lp, basis, solution,
+                                   iteration_counts, model_status,
                                    solution_params, message, report_level);
 }
 
@@ -88,7 +93,8 @@ HighsStatus analyseHighsBasicSolution(
 // argument.
 HighsStatus analyseHighsBasicSolution(
     FILE* logfile, const HighsLp& lp, const HighsBasis& basis,
-    const HighsSolution& solution, const HighsModelStatus model_status,
+    const HighsSolution& solution, const HighsIterationCounts& iteration_counts,
+    const HighsModelStatus model_status,
     const HighsSolutionParams& solution_params, const string message,
     const int report_level) {
   HighsLogMessage(logfile, HighsMessageType::INFO,
@@ -97,7 +103,7 @@ HighsStatus analyseHighsBasicSolution(
   if (model_status != HighsModelStatus::OPTIMAL) {
     HighsLogMessage(logfile, HighsMessageType::INFO,
                     "HiGHS basic solution: %sStatus: %s",
-                    iterationsToString(solution_params).c_str(),
+                    iterationsToString(iteration_counts).c_str(),
                     utilHighsModelStatusToString(model_status).c_str());
     return HighsStatus::OK;
   }
@@ -208,7 +214,7 @@ HighsStatus analyseHighsBasicSolution(
   }
   HighsLogMessage(logfile, HighsMessageType::INFO,
                   "HiGHS basic solution: %sObjective = %.15g",
-                  iterationsToString(solution_params).c_str(),
+                  iterationsToString(iteration_counts).c_str(),
                   primal_objective_value);
   HighsLogMessage(logfile, HighsMessageType::INFO,
                   "Infeasibilities: Pr %d(Max %.4g, Sum %.4g); Du %d(Max %.4g, "
@@ -222,13 +228,11 @@ HighsStatus analyseHighsBasicSolution(
                   utilHighsModelStatusToString(model_status).c_str());
 
 #ifdef HiGHSDEV
+
   printf(
-      "grep_AnBsSol,%s,%s,%d,%d,%d,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%"
+      "grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%"
       "g,%g,%d,%g,%g,%d,%g,%g\n",
-      lp.model_name_.c_str(), message.c_str(),
-      solution_params.simplex_iteration_count,
-      solution_params.ipm_iteration_count,
-      solution_params.crossover_iteration_count, primal_objective_value,
+      lp.model_name_.c_str(), message.c_str(), primal_objective_value,
       utilHighsModelStatusToString(model_status).c_str(),
       num_nonzero_basic_duals, num_large_nonzero_basic_duals,
       max_nonzero_basic_dual, sum_nonzero_basic_duals, num_off_bound_nonbasic,
@@ -319,7 +323,8 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
   max_dual_residual = 0;
   sum_dual_residual = 0;
 
-  // Initialise the objective value calculations
+  // Initialise the objective value calculations. Done using
+  // HighsSolution so offset is vanilla
   primal_objective_value = lp.offset_;
   dual_objective_value = lp.offset_;
 
@@ -335,6 +340,8 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
     HighsBasisStatus status = basis.col_status[iCol];
     primal_objective_value += lp.colCost_[iCol] * value;
     if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
+    // Flip dual according to lp.sense_
+    dual *= (int)lp.sense_;
     bool report = false;
     bool query = analyseVarBasicSolution(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -440,6 +447,8 @@ void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
     double dual = -solution.row_dual[iRow];
     HighsBasisStatus status = basis.row_status[iRow];
     if (status != HighsBasisStatus::BASIC) dual_objective_value += value * dual;
+    // Flip dual according to lp.sense_
+    dual *= (int)lp.sense_;
     bool report = false;
     bool query = analyseVarBasicSolution(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
@@ -619,7 +628,8 @@ void analyseSimplexAndHighsSolutionDifferences(
     if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
       // Consider this nonbasic column
       double local_col_value = simplex_info.workValue_[iVar] * scale.col_[iCol];
-      double local_col_dual = simplex_lp.sense_ * simplex_info.workDual_[iVar] /
+      double local_col_dual = (int)simplex_lp.sense_ *
+                              simplex_info.workDual_[iVar] /
                               (scale.col_[iCol] / scale.cost_);
       double value_difference =
           fabs(local_col_value - solution.col_value[iCol]);
@@ -655,7 +665,8 @@ void analyseSimplexAndHighsSolutionDifferences(
       // Consider this nonbasic row
       double local_row_value =
           -simplex_info.workValue_[iVar] / scale.row_[iRow];
-      double local_row_dual = simplex_lp.sense_ * simplex_info.workDual_[iVar] *
+      double local_row_dual = (int)simplex_lp.sense_ *
+                              simplex_info.workDual_[iVar] *
                               (scale.row_[iRow] * scale.cost_);
       double value_difference =
           fabs(local_row_value - solution.row_value[iRow]);
@@ -817,6 +828,7 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
   const ipx::Int ipx_basic = 0;
   const ipx::Int ipx_nonbasic_at_lb = -1;
   const ipx::Int ipx_nonbasic_at_ub = -2;
+  const ipx::Int ipx_superbasic = -3;
   // Row activities are needed to set activity values of free rows -
   // which are ignored by IPX
   vector<double> row_activity;
@@ -827,6 +839,7 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
   get_row_activities = get_row_activities || ipx_solution.num_col > lp.numCol_;
 #endif
   if (get_row_activities) row_activity.assign(lp.numRow_, 0);
+  int num_basic_variables = 0;
   for (int col = 0; col < lp.numCol_; col++) {
     bool unrecognised = false;
     if (ipx_col_status[col] == ipx_basic) {
@@ -842,6 +855,11 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
     } else if (ipx_col_status[col] == ipx_nonbasic_at_ub) {
       // Column is nonbasic at upper bound
       highs_basis.col_status[col] = HighsBasisStatus::UPPER;
+      highs_solution.col_value[col] = ipx_col_value[col];
+      highs_solution.col_dual[col] = ipx_col_dual[col];
+    } else if (ipx_col_status[col] == ipx_superbasic) {
+      // Column is superbasic
+      highs_basis.col_status[col] = HighsBasisStatus::ZERO;
       highs_solution.col_value[col] = ipx_col_value[col];
       highs_solution.col_dual[col] = ipx_col_dual[col];
     } else {
@@ -876,6 +894,8 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
         row_activity[row] += highs_solution.col_value[col] * lp.Avalue_[el];
       }
     }
+    if (highs_basis.col_status[col] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
   }
   int ipx_row = 0;
   int ipx_slack = lp.numCol_;
@@ -994,9 +1014,21 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
                       "Unrecognised ipx_row_status value from IPX");
       return HighsStatus::Error;
     }
+    if (highs_basis.row_status[row] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
   }
+  assert(num_basic_variables == lp.numRow_);
+  highs_basis.valid_ = true;
   assert(ipx_row == ipx_solution.num_row);
   assert(ipx_slack == ipx_solution.num_col);
+
+  // Flip dual according to lp.sense_
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    highs_solution.col_dual[iCol] *= (int)lp.sense_;
+  }
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    highs_solution.row_dual[iRow] *= (int)lp.sense_;
+  }
 
 #ifdef HiGHSDEV
   if (num_boxed_rows)
@@ -1007,13 +1039,13 @@ HighsStatus ipxToHighsBasicSolution(FILE* logfile, const HighsLp& lp,
 }
 #endif
 
-std::string iterationsToString(const HighsSolutionParams& solution_params) {
+std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
   std::string iteration_statement = "";
   bool not_first = false;
   int num_positive_count = 0;
-  if (solution_params.simplex_iteration_count) num_positive_count++;
-  if (solution_params.ipm_iteration_count) num_positive_count++;
-  if (solution_params.crossover_iteration_count) num_positive_count++;
+  if (iterations_counts.simplex) num_positive_count++;
+  if (iterations_counts.ipm) num_positive_count++;
+  if (iterations_counts.crossover) num_positive_count++;
   if (num_positive_count == 0) {
     iteration_statement += "0 iterations; ";
     return iteration_statement;
@@ -1021,21 +1053,21 @@ std::string iterationsToString(const HighsSolutionParams& solution_params) {
   if (num_positive_count > 1) iteration_statement += "(";
   int count;
   std::string count_str;
-  count = solution_params.simplex_iteration_count;
+  count = iterations_counts.simplex;
   if (count) {
     count_str = std::to_string(count);
     if (not_first) iteration_statement += "; ";
     iteration_statement += count_str + " " + "Simplex";
     not_first = true;
   }
-  count = solution_params.ipm_iteration_count;
+  count = iterations_counts.ipm;
   if (count) {
     count_str = std::to_string(count);
     if (not_first) iteration_statement += "; ";
     iteration_statement += count_str + " " + "IPM";
     not_first = true;
   }
-  count = solution_params.crossover_iteration_count;
+  count = iterations_counts.crossover;
   if (count) {
     count_str = std::to_string(count);
     if (not_first) iteration_statement += "; ";
@@ -1078,29 +1110,18 @@ void resetSolutionParams(HighsSolutionParams& solution_params,
   // Save a copy of the unscaled solution params to recover the iteration counts
   // and objective
   HighsSolutionParams save_solution_params;
-  copySolutionIterationCountAndObjectiveParams(solution_params,
-                                               save_solution_params);
+  copySolutionObjectiveParams(solution_params, save_solution_params);
   // Invalidate the solution params then reset the feasibility
-  // tolerances and recover the iteration counts and objective
+  // tolerances and recover the objective
   invalidateSolutionParams(solution_params);
-  copySolutionIterationCountAndObjectiveParams(save_solution_params,
-                                               solution_params);
+  copySolutionObjectiveParams(save_solution_params, solution_params);
 }
 
 // Invalidate a HighsSolutionParams instance
 void invalidateSolutionParams(HighsSolutionParams& solution_params) {
-  invalidateSolutionIterationCountAndObjectiveParams(solution_params);
+  solution_params.objective_function_value = 0;
   invalidateSolutionStatusParams(solution_params);
   invalidateSolutionInfeasibilityParams(solution_params);
-}
-
-// Invalidate the iteration counts in a HighsSolutionParams instance
-void invalidateSolutionIterationCountAndObjectiveParams(
-    HighsSolutionParams& solution_params) {
-  solution_params.simplex_iteration_count = 0;
-  solution_params.ipm_iteration_count = 0;
-  solution_params.crossover_iteration_count = 0;
-  solution_params.objective_function_value = 0;
 }
 
 // Invalidate the solution status values in a HighsSolutionParams
@@ -1126,8 +1147,7 @@ void invalidateSolutionInfeasibilityParams(
 bool equalSolutionParams(const HighsSolutionParams& solution_params0,
                          const HighsSolutionParams& solution_params1) {
   bool equal = true;
-  if (!equalSolutionIterationCountAndObjectiveParams(solution_params0,
-                                                     solution_params1))
+  if (!equalSolutionObjectiveParams(solution_params0, solution_params1))
     equal = false;
   if (!equalSolutionStatusParams(solution_params0, solution_params1))
     equal = false;
@@ -1136,37 +1156,9 @@ bool equalSolutionParams(const HighsSolutionParams& solution_params0,
   return equal;
 }
 
-bool equalSolutionIterationCountAndObjectiveParams(
-    const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1) {
+bool equalSolutionObjectiveParams(const HighsSolutionParams& solution_params0,
+                                  const HighsSolutionParams& solution_params1) {
   bool equal = true;
-  if (solution_params0.simplex_iteration_count !=
-      solution_params1.simplex_iteration_count) {
-#ifdef HiGHSDEV
-    printf("Solution params: simplex_iteration_count %d != %d\n",
-           solution_params0.simplex_iteration_count,
-           solution_params1.simplex_iteration_count);
-#endif
-    equal = false;
-  }
-  if (solution_params0.ipm_iteration_count !=
-      solution_params1.ipm_iteration_count) {
-#ifdef HiGHSDEV
-    printf("Solution params: ipm_iteration_count %d != %d\n",
-           solution_params0.ipm_iteration_count,
-           solution_params1.ipm_iteration_count);
-#endif
-    equal = false;
-  }
-  if (solution_params0.crossover_iteration_count !=
-      solution_params1.crossover_iteration_count) {
-#ifdef HiGHSDEV
-    printf("Solution params: crossover_iteration_count %d != %d\n",
-           solution_params0.crossover_iteration_count,
-           solution_params1.crossover_iteration_count);
-#endif
-    equal = false;
-  }
   double delta =
       highs_relative_difference(solution_params0.objective_function_value,
                                 solution_params1.objective_function_value);
@@ -1284,25 +1276,15 @@ bool equalSolutionInfeasibilityParams(
   return equal;
 }
 
-void copySolutionIterationCountAndObjectiveParams(
+void copySolutionObjectiveParams(
     const HighsSolutionParams& from_solution_params,
     HighsSolutionParams& to_solution_params) {
-  to_solution_params.simplex_iteration_count =
-      from_solution_params.simplex_iteration_count;
-  to_solution_params.ipm_iteration_count =
-      from_solution_params.ipm_iteration_count;
-  to_solution_params.crossover_iteration_count =
-      from_solution_params.crossover_iteration_count;
   to_solution_params.objective_function_value =
       from_solution_params.objective_function_value;
 }
 
 void copyFromSolutionParams(HighsInfo& highs_info,
                             const HighsSolutionParams& solution_params) {
-  highs_info.simplex_iteration_count = solution_params.simplex_iteration_count;
-  highs_info.ipm_iteration_count = solution_params.ipm_iteration_count;
-  highs_info.crossover_iteration_count =
-      solution_params.crossover_iteration_count;
   highs_info.primal_status = solution_params.primal_status;
   highs_info.dual_status = solution_params.dual_status;
   highs_info.objective_function_value =

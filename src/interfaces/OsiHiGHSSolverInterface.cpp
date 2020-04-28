@@ -352,7 +352,7 @@ int OsiHiGHSSolverInterface::getNumElements() const {
   HighsOptions& options = this->highs->options_;
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getNumElements()\n");
-  return this->highs->lp_.nnz_;
+  return this->highs->lp_.Astart_[this->highs->lp_.numCol_];
 }
 
 const double* OsiHiGHSSolverInterface::getColLower() const {
@@ -534,14 +534,16 @@ double OsiHiGHSSolverInterface::getObjSense() const {
   HighsOptions& options = this->highs->options_;
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjSense()\n");
-  return this->highs->lp_.sense_;
+  return (double)this->highs->lp_.sense_;
 }
 
 void OsiHiGHSSolverInterface::setObjSense(double s) {
   HighsOptions& options = this->highs->options_;
   HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjSense()\n");
-  this->highs->changeObjectiveSense((int)s);
+  ObjSense pass_sense = ObjSense::MINIMIZE;
+  if (s == (double)ObjSense::MAXIMIZE) pass_sense = ObjSense::MAXIMIZE;
+  this->highs->changeObjectiveSense(pass_sense);
 }
 
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase& vec,
@@ -730,7 +732,6 @@ void OsiHiGHSSolverInterface::loadProblem(
 
   lp.numRow_ = numrows;
   lp.numCol_ = numcols;
-  lp.nnz_ = start[numcols];
 
   // setup HighsLp data structures
   lp.colCost_.resize(numcols);
@@ -821,11 +822,11 @@ void OsiHiGHSSolverInterface::loadProblem(
 
   int numCol = matrix.getNumCols();
   int numRow = matrix.getNumRows();
-  int nnz = matrix.getNumElements();
+  int num_nz = matrix.getNumElements();
 
   int* start = new int[numCol + 1];
-  int* index = new int[nnz];
-  double* value = new double[nnz];
+  int* index = new int[num_nz];
+  double* value = new double[num_nz];
 
   // get matrix data
   // const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
@@ -845,7 +846,7 @@ void OsiHiGHSSolverInterface::loadProblem(
       nz++;
     }
   }
-  assert(nnz == nz);
+  assert(num_nz == nz);
 
   this->loadProblem(numCol, numRow, start, index, value, collb, colub, obj,
                     rowlb, rowub);
@@ -902,7 +903,7 @@ void OsiHiGHSSolverInterface::writeMps(const char* filename,
 
   FilereaderMps frmps;
   HighsStatus rc =
-      frmps.writeModelToFile(highs->options_, fullname.c_str(), highs->lp_);
+      frmps.writeModelToFile(highs->options_, fullname, highs->lp_);
 
   if (rc != HighsStatus::OK)
     throw CoinError("Creating MPS file failed", "writeMps",

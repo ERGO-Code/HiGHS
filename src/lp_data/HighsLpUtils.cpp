@@ -77,6 +77,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
     return_status =
         interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
+    // If entries have been removed from the matrix, resize the index
+    // and value vectors to prevent bug in presolve
+    if ((int)lp.Aindex_.size() > lp_num_nz) lp.Aindex_.resize(lp_num_nz);
+    if ((int)lp.Avalue_.size() > lp_num_nz) lp.Avalue_.resize(lp_num_nz);
     lp.Astart_[lp.numCol_] = lp_num_nz;
   }
   if (return_status == HighsStatus::Error)
@@ -609,6 +613,51 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
     return_status = HighsStatus::OK;
 
   return return_status;
+}
+
+HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
+  double max_residual = 0;
+  int num_change = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    double residual = lp.colLower_[iCol] - lp.colUpper_[iCol];
+    if (residual > options.primal_feasibility_tolerance) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Column %d has inconsistent bounds [%g, %g] (residual = "
+                      "%g) after presolve ",
+                      iCol, lp.colLower_[iCol], lp.colUpper_[iCol], residual);
+      return HighsStatus::Error;
+    } else if (residual > 0) {
+      num_change++;
+      max_residual = std::max(residual, max_residual);
+      double mid = 0.5 * (lp.colLower_[iCol] + lp.colUpper_[iCol]);
+      lp.colLower_[iCol] = mid;
+      lp.colUpper_[iCol] = mid;
+    }
+  }
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    double residual = lp.rowLower_[iRow] - lp.rowUpper_[iRow];
+    if (residual > options.primal_feasibility_tolerance) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Row %d has inconsistent bounds [%g, %g] (residual = %g) "
+                      "after presolve ",
+                      iRow, lp.rowLower_[iRow], lp.rowUpper_[iRow], residual);
+      return HighsStatus::Error;
+    } else if (residual > 0) {
+      num_change++;
+      max_residual = std::max(residual, max_residual);
+      double mid = 0.5 * (lp.rowLower_[iRow] + lp.rowUpper_[iRow]);
+      lp.rowLower_[iRow] = mid;
+      lp.rowUpper_[iRow] = mid;
+    }
+  }
+  if (num_change) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                    "Resolved %d inconsistent bounds (maximum residual = "
+                    "%9.4g) after presolve ",
+                    num_change, max_residual);
+    return HighsStatus::Warning;
+  }
+  return HighsStatus::OK;
 }
 
 HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
@@ -1508,6 +1557,15 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
   return HighsStatus::OK;
 }
 
+int getNumInt(const HighsLp& lp) {
+  int num_int = 0;
+  if (lp.integrality_.size()) {
+    for (int iCol = 0; iCol < lp.numCol_; iCol++)
+      if (lp.integrality_[iCol]) num_int++;
+  }
+  return num_int;
+}
+
 HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
                        double* XcolCost) {
   if (from_col < 0 || to_col >= lp.numCol_) return HighsStatus::Error;
@@ -1565,59 +1623,6 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
   return HighsStatus::OK;
 }
 
-HighsStatus writeLpAsMPS(const HighsOptions& options, const char* filename,
-                         const HighsLp& lp, const bool free_format) {
-  bool warning_found = false;
-  bool have_col_names = lp.col_names_.size();
-  bool have_row_names = lp.row_names_.size();
-  std::vector<std::string> local_col_names;
-  std::vector<std::string> local_row_names;
-  local_col_names.resize(lp.numCol_);
-  local_row_names.resize(lp.numRow_);
-  //
-  // Initialise the local names to any existing names
-  if (have_col_names) local_col_names = lp.col_names_;
-  if (have_row_names) local_row_names = lp.row_names_;
-  //
-  // Normalise the column names
-  int max_col_name_length = HIGHS_CONST_I_INF;
-  if (!free_format) max_col_name_length = 8;
-  HighsStatus col_name_status = normaliseNames(
-      options, "Column", lp.numCol_, local_col_names, max_col_name_length);
-  if (col_name_status == HighsStatus::Error) return col_name_status;
-  warning_found = col_name_status == HighsStatus::Warning || warning_found;
-  //
-  // Normalise the row names
-  int max_row_name_length = HIGHS_CONST_I_INF;
-  if (!free_format) max_row_name_length = 8;
-  HighsStatus row_name_status = normaliseNames(
-      options, "Row", lp.numRow_, local_row_names, max_row_name_length);
-  if (row_name_status == HighsStatus::Error) return col_name_status;
-  warning_found = row_name_status == HighsStatus::Warning || warning_found;
-
-  int max_name_length = std::max(max_col_name_length, max_row_name_length);
-  bool use_free_format = free_format;
-  if (!free_format) {
-    if (max_name_length > 8) {
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                      "Maximum name length is %d so using free format rather "
-                      "than fixed format",
-                      max_name_length);
-      use_free_format = true;
-      warning_found = true;
-    }
-  }
-  HighsStatus write_status = writeMPS(
-      options.logfile, filename, lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
-      lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
-      lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
-      local_col_names, local_row_names, use_free_format);
-  if (write_status == HighsStatus::OK && warning_found)
-    return HighsStatus::Warning;
-  ;
-  return write_status;
-}
-
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP
@@ -1646,22 +1651,23 @@ void reportLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     lp_num_nz = lp.Astart_[lp.numCol_];
   HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                     "LP has %d columns, %d rows", lp.numCol_, lp.numRow_);
-  if (lp.numInt_) {
+  int num_int = getNumInt(lp);
+  if (num_int) {
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                       ", %d nonzeros and %d integer columns\n", lp_num_nz,
-                      lp.numInt_);
+                      num_int);
   } else {
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
-                      " and %d nonzeros\n", lp_num_nz, lp.numInt_);
+                      " and %d nonzeros\n", lp_num_nz, num_int);
   }
 }
 
 // Report the LP objective sense
 void reportLpObjSense(const HighsOptions& options, const HighsLp& lp) {
-  if (lp.sense_ == OBJSENSE_MINIMIZE)
+  if (lp.sense_ == ObjSense::MINIMIZE)
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                       "Objective sense is minimize\n");
-  else if (lp.sense_ == OBJSENSE_MAXIMIZE)
+  else if (lp.sense_ == ObjSense::MAXIMIZE)
     HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                       "Objective sense is maximize\n");
   else
@@ -1696,7 +1702,7 @@ void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
   if (lp.numCol_ <= 0) return;
   std::string type;
   int count;
-  bool have_integer_columns = lp.numInt_;
+  bool have_integer_columns = getNumInt(lp);
   bool have_col_names = lp.col_names_.size();
 
   HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
@@ -1785,12 +1791,12 @@ void reportLpColMatrix(const HighsOptions& options, const HighsLp& lp) {
   }
 }
 
-void reportMatrix(const HighsOptions& options, const char* message,
+void reportMatrix(const HighsOptions& options, const std::string message,
                   const int num_col, const int num_nz, const int* start,
                   const int* index, const double* value) {
   if (num_col <= 0) return;
   HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
-                    "%6s Index              Value\n", message);
+                    "%6s Index              Value\n", message.c_str());
   for (int col = 0; col < num_col; col++) {
     HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
                       "    %8d Start   %10d\n", col, start[col]);
@@ -1804,7 +1810,7 @@ void reportMatrix(const HighsOptions& options, const char* message,
 }
 
 #ifdef HiGHSDEV
-void analyseLp(const HighsLp& lp, const char* message) {
+void analyseLp(const HighsLp& lp, const std::string message) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
   vector<double> colRange;
@@ -1822,7 +1828,7 @@ void analyseLp(const HighsLp& lp, const char* message) {
   for (int row = 0; row < lp.numRow_; row++)
     rowRange[row] = lp.rowUpper_[row] - lp.rowLower_[row];
 
-  printf("\n%s model data: Analysis\n", message);
+  printf("\n%s model data: Analysis\n", message.c_str());
   analyseVectorValues("Column costs", lp.numCol_, lp.colCost_);
   analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_);
   analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_);
@@ -1841,38 +1847,38 @@ void analyseLp(const HighsLp& lp, const char* message) {
 }
 #endif
 
-void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const bool pretty) {
-  if (pretty) {
-    reportModelBoundSol(file, true, lp.numCol_, lp.colLower_, lp.colUpper_,
-                        lp.col_names_, solution.col_value, solution.col_dual,
-                        basis.col_status);
-    reportModelBoundSol(file, false, lp.numRow_, lp.rowLower_, lp.rowUpper_,
-                        lp.row_names_, solution.row_value, solution.row_dual,
-                        basis.row_status);
-  } else {
-    fprintf(file,
-            "%d %d : Number of columns and rows for primal and dual solution "
-            "and basis\n",
-            lp.numCol_, lp.numRow_);
-    const bool with_basis = basis.valid_;
-    if (with_basis) {
-      fprintf(file, "T\n");
-    } else {
-      fprintf(file, "F\n");
-    }
-    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-      fprintf(file, "%g %g", solution.col_value[iCol], solution.col_dual[iCol]);
-      if (with_basis) fprintf(file, " %d", (int)basis.col_status[iCol]);
-      fprintf(file, " \n");
-    }
-    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-      fprintf(file, "%g %g", solution.row_value[iRow], solution.row_dual[iRow]);
-      if (with_basis) fprintf(file, " %d", (int)basis.row_status[iRow]);
-      fprintf(file, " \n");
-    }
-  }
-}
+// void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis&
+// basis,
+//                          const HighsSolution& solution, const bool pretty) {
+//   if (pretty) {
+//     reportModelBoundSol(file, true, lp.numCol_, lp.colLower_, lp.colUpper_,
+//                         lp.col_names_, solution.col_value, solution.col_dual,
+//                         basis.col_status);
+//     reportModelBoundSol(file, false, lp.numRow_, lp.rowLower_, lp.rowUpper_,
+//                         lp.row_names_, solution.row_value, solution.row_dual,
+//                         basis.row_status);
+//   } else {
+//     fprintf(file,
+//             "%d %d : Number of columns and rows for primal and dual solution
+//             " "and basis\n", lp.numCol_, lp.numRow_);
+//     const bool with_basis = basis.valid_;
+//     if (with_basis) {
+//       fprintf(file, "T\n");
+//     } else {
+//       fprintf(file, "F\n");
+//     }
+//     for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+//       fprintf(file, "%g %g", solution.col_value[iCol],
+//       solution.col_dual[iCol]); if (with_basis) fprintf(file, " %d",
+//       (int)basis.col_status[iCol]); fprintf(file, " \n");
+//     }
+//     for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+//       fprintf(file, "%g %g", solution.row_value[iRow],
+//       solution.row_dual[iRow]); if (with_basis) fprintf(file, " %d",
+//       (int)basis.row_status[iRow]); fprintf(file, " \n");
+//     }
+//   }
+// }
 
 HighsStatus convertBasis(const HighsLp& lp, const SimplexBasis& basis,
                          HighsBasis& new_basis) {
@@ -2209,8 +2215,8 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
     assert((int)equality_lp.Aindex_.size() == (int)equality_lp.Avalue_.size());
     const int nnz = equality_lp.Astart_[equality_lp.numCol_];
 
-    if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
-        lp.rowUpper_[row] == HIGHS_CONST_INF) {
+    if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
+        lp.rowUpper_[row] >= HIGHS_CONST_INF) {
       // free row
       equality_lp.Astart_.push_back(nnz + 1);
       equality_lp.Aindex_.push_back(row);
@@ -2221,7 +2227,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
       equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
       equality_lp.colCost_.push_back(0);
     } else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-               lp.rowUpper_[row] == HIGHS_CONST_INF) {
+               lp.rowUpper_[row] >= HIGHS_CONST_INF) {
       // only lower bound
       rhs[row] = lp.rowLower_[row];
 
@@ -2233,7 +2239,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
       equality_lp.colLower_.push_back(0);
       equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
       equality_lp.colCost_.push_back(0);
-    } else if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
+    } else if (lp.rowLower_[row] <= -HIGHS_CONST_INF &&
                lp.rowUpper_[row] < HIGHS_CONST_INF) {
       // only upper bound
       rhs[row] = lp.rowUpper_[row];
@@ -2296,7 +2302,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
 //        y free, zl >=0, zu >= 0
 HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
   std::vector<double> colCost = lp.colCost_;
-  if (lp.sense_ != OBJSENSE_MINIMIZE) {
+  if (lp.sense_ != ObjSense::MINIMIZE) {
     for (int col = 0; col < lp.numCol_; col++) colCost[col] = -colCost[col];
   }
 
@@ -2380,7 +2386,7 @@ HighsStatus dualizeEqualityProblem(const HighsLp& lp, HighsLp& dual) {
     }
   }
 
-  dual.sense_ = OBJSENSE_MINIMIZE;
+  dual.sense_ = ObjSense::MINIMIZE;
   for (int col = 0; col < dual.numCol_; col++) {
     dual.colCost_[col] = -dual.colCost_[col];
   }
@@ -2413,6 +2419,34 @@ void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
                   num_col_to, (num_col_from - num_col_to), num_row_to,
                   (num_row_from - num_row_to), num_els_to,
                   (num_els_from - num_els_to));
+}
+
+void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
+                           const bool presolve_to_empty) {
+  int num_col_from = lp.numCol_;
+  int num_row_from = lp.numRow_;
+  int num_els_from = lp.Astart_[num_col_from];
+  int num_col_to;
+  int num_row_to;
+  int num_els_to;
+  std::string message;
+  if (presolve_to_empty) {
+    num_col_to = 0;
+    num_row_to = 0;
+    num_els_to = 0;
+    message = "- Reduced to empty";
+  } else {
+    num_col_to = num_col_from;
+    num_row_to = num_row_from;
+    num_els_to = num_els_from;
+    message = "- Not reduced";
+  }
+  HighsLogMessage(options.logfile, HighsMessageType::INFO,
+                  "Presolve reductions: columns %d(-%d); rows %d(-%d) "
+                  "elements %d(-%d) %s",
+                  num_col_to, (num_col_from - num_col_to), num_row_to,
+                  (num_row_from - num_row_to), num_els_to,
+                  (num_els_from - num_els_to), message.c_str());
 }
 
 bool isLessInfeasibleDSECandidate(const HighsOptions& options,
@@ -2493,7 +2527,7 @@ bool isLessInfeasibleDSECandidate(const HighsOptions& options,
 }
 
 void convertToMinimization(HighsLp& lp) {
-  if (lp.sense_ != OBJSENSE_MINIMIZE) {
+  if (lp.sense_ != ObjSense::MINIMIZE) {
     for (int col = 0; col < lp.numCol_; col++)
       lp.colCost_[col] = -lp.colCost_[col];
   }

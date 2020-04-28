@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "io/HighsIO.h"
+#include "lp_data/HighsLp.h"  // for OBJSENSE_MINIMIZE and OBJSENSE_MAXIMIZE
 #include "util/stringutil.h"
 
 using Triplet = std::tuple<int, int, double>;
@@ -54,7 +55,7 @@ class HMpsFF {
   int numCol;
   int nnz;
 
-  int objSense;
+  ObjSense objSense = ObjSense::MINIMIZE;  // Minimization by default
   double objOffset = 0;
 
   std::vector<int> Astart;
@@ -85,6 +86,9 @@ class HMpsFF {
   const bool handle_bv_in_bounds = false;
 
   enum class parsekey {
+    OBJSENSE,
+    MAX,
+    MIN,
     ROWS,
     COLS,
     RHS,
@@ -113,6 +117,7 @@ class HMpsFF {
                                   std::string& word) const;
 
   HMpsFF::parsekey parseDefault(std::ifstream& file) const;
+  HMpsFF::parsekey parseObjsense(FILE* logfile, std::ifstream& file);
   HMpsFF::parsekey parseRows(FILE* logfile, std::ifstream& file);
   HMpsFF::parsekey parseCols(FILE* logfile, std::ifstream& file);
   HMpsFF::parsekey parseRhs(FILE* logfile, std::ifstream& file);
