@@ -76,7 +76,7 @@ typedef std::map<HighsLinearConsCoef*, HighsLinearCons*> CoefConsMap;
 class HighsModelBuilder {
  public:
   double objOffset;
-  int objSense = 1;  // 1: minimize, -1: maximize
+  ObjSense objSense = ObjSense::MINIMIZE;
 
   void HighsCreateVar(const char* name, double lo, double hi, double obj,
                       HighsVarType type, HighsVar** var);

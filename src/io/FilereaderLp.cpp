@@ -49,15 +49,15 @@ FilereaderLp::~FilereaderLp() {
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   HighsLp& model) {
   HighsModelBuilder m;
-  const char* filename = options.model_file.c_str();
+  const std::string filename = options.model_file;
   this->readModelFromFile(filename, m);
   m.HighsBuildTechnicalModel(&model);
   return FilereaderRetcode::OK;
 }
 
-FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
+FilereaderRetcode FilereaderLp::readModelFromFile(const std::string filename,
                                                   HighsModelBuilder& model) {
-  this->file = fopen(filename, "r");
+  this->file = fopen(filename.c_str(), "r");
   if (file == NULL) {
     return FilereaderRetcode::FILENOTFOUND;
   }
@@ -112,7 +112,7 @@ void FilereaderLp::handleBinarySection(HighsModelBuilder& model) {
                                     &variable);
     // update bounds if necessary
     if (variable->lowerBound == 0.0 &&
-        variable->upperBound == HIGHS_CONST_INF) {
+        variable->upperBound >= HIGHS_CONST_INF) {
       variable->upperBound = 1.0;
     }
     variable->type = HighsVarType::BIN;
@@ -395,7 +395,7 @@ void FilereaderLp::handleObjectiveSection(HighsModelBuilder& model) {
       LpObjectiveSectionKeywordType::MIN) {
     assert(((LpTokenObjectiveSectionKeyword*)token)->objectiveType ==
            LpObjectiveSectionKeywordType::MAX);
-    model.objSense = -1;
+    model.objSense = ObjSense::MAXIMIZE;
   }
   delete token;
 
@@ -951,17 +951,18 @@ void FilereaderLp::writeToFileLineend() {
 }
 
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
-                                           const char* filename,
+                                           const std::string filename,
                                            HighsLp& model) {
-  this->file = fopen(filename, "w");
+  this->file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
   this->writeToFile("\\ %s", LP_COMMENT_FILESTART);
   this->writeToFileLineend();
 
   // write objective
-  this->writeToFile(
-      "%s", model.sense_ == 1.0 ? LP_KEYWORD_MIN[0] : LP_KEYWORD_MAX[0]);
+  this->writeToFile("%s", model.sense_ == ObjSense::MINIMIZE
+                              ? LP_KEYWORD_MIN[0]
+                              : LP_KEYWORD_MAX[0]);
   this->writeToFileLineend();
   this->writeToFile(" obj: ");
   for (int i = 0; i < model.numCol_; i++) {
@@ -987,8 +988,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFile("= %+g", model.rowLower_[row]);
       this->writeToFileLineend();
     } else {
-      if (model.rowLower_[row] >= -10E10) {
-        // has a lower bounds
+      if (model.rowLower_[row] > -HIGHS_CONST_INF) {
+        // has a lower bound
         this->writeToFile(" con%dlo: ", row + 1);
         for (int var = 0; var < model.numCol_; var++) {
           for (int idx = model.Astart_[var]; idx < model.Astart_[var + 1];
@@ -1000,8 +1001,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         }
         this->writeToFile(">= %+g", model.rowLower_[row]);
         this->writeToFileLineend();
-      } else if (model.rowUpper_[row] <= 10E10) {
-        // has an upper bounds
+      } else if (model.rowUpper_[row] < HIGHS_CONST_INF) {
+        // has an upper bound
         this->writeToFile(" con%dup: ", row + 1);
         for (int var = 0; var < model.numCol_; var++) {
           for (int idx = model.Astart_[var]; idx < model.Astart_[var + 1];
@@ -1011,7 +1012,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
             }
           }
         }
-        this->writeToFile("<= %+g", model.rowLower_[row]);
+        this->writeToFile("<= %+g", model.rowUpper_[row]);
         this->writeToFileLineend();
       } else {
         // constraint has infinite lower & upper bounds so not a proper

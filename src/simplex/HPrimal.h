@@ -26,6 +26,7 @@
  * dual infeasibilities when dual optimality (primal feasibility) has
  * been acheived with the dual simplex method
  */
+
 class HPrimal {
  public:
   HPrimal(HighsModelObject& model_object) : workHMO(model_object) {}
@@ -39,6 +40,8 @@ class HPrimal {
    */
   void solvePhase2();
 
+  const SimplexAlgorithm algorithm = SimplexAlgorithm::PRIMAL;
+
  private:
   void primalRebuild();
   void primalChooseColumn();
@@ -48,6 +51,9 @@ class HPrimal {
   void iterationAnalysisData();
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint = -1);
+  bool bailout();
+  bool solve_bailout;  //!< Set true if control is to be returned immediately to
+                       //!< calling function
 
   // Model pointer
   HighsModelObject& workHMO;

@@ -27,28 +27,28 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
-                          int mxNumCol, int& numRow, int& numCol, int& numInt,
-                          int& objSense, double& objOffset, vector<int>& Astart,
-                          vector<int>& Aindex, vector<double>& Avalue,
-                          vector<double>& colCost, vector<double>& colLower,
-                          vector<double>& colUpper, vector<double>& rowLower,
-                          vector<double>& rowUpper, vector<int>& integerColumn,
-                          vector<string>& col_names, vector<string>& row_names,
-                          const int keep_n_rows) {
+FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
+                          int mxNumRow, int mxNumCol, int& numRow, int& numCol,
+                          ObjSense& objSense, double& objOffset,
+                          vector<int>& Astart, vector<int>& Aindex,
+                          vector<double>& Avalue, vector<double>& colCost,
+                          vector<double>& colLower, vector<double>& colUpper,
+                          vector<double>& rowLower, vector<double>& rowUpper,
+                          vector<int>& integerColumn, vector<string>& col_names,
+                          vector<string>& row_names, const int keep_n_rows) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;
   objOffset = 0;
-  objSense = OBJSENSE_MINIMIZE;
+  objSense = ObjSense::MINIMIZE;
 
   // Astart.clear() added since setting Astart.push_back(0) in
   // setup_clearModel() messes up the MPS read
   Astart.clear();
 #ifdef HiGHSDEV
-  printf("readMPS: Trying to open file %s\n", filename);
+  printf("readMPS: Trying to open file %s\n", filename.c_str());
 #endif
-  FILE* file = fopen(filename, "r");
+  FILE* file = fopen(filename.c_str(), "r");
   if (file == 0) {
 #ifdef HiGHSDEV
     printf("readMPS: Not opened file OK\n");
@@ -67,12 +67,31 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
   int num_alien_entries = 0;
   int integerCol = 0;
 
-  // Load NAME and ROWS
-  load_mpsLine(file, integerCol, lmax, line, flag, data);
+  // Load NAME
   load_mpsLine(file, integerCol, lmax, line, flag, data);
 #ifdef HiGHSDEV
   printf("readMPS: Read NAME    OK\n");
 #endif
+  // Load OBJSENSE or ROWS
+  load_mpsLine(file, integerCol, lmax, line, flag, data);
+  if (flag[0] == 'O') {
+    // Found OBJSENSE
+    load_mpsLine(file, integerCol, lmax, line, flag, data);
+    std::string sense(&line[2], &line[2] + 3);
+    // the sense must be "MAX" or "MIN"
+    if (sense.compare("MAX") == 0) {
+      objSense = ObjSense::MAXIMIZE;
+    } else if (sense.compare("MIN") == 0) {
+      objSense = ObjSense::MINIMIZE;
+    } else {
+      return FilereaderRetcode::PARSERERROR;
+    }
+#ifdef HiGHSDEV
+    printf("readMPS: Read OBJSENSE OK\n");
+#endif
+    // Load ROWS
+    load_mpsLine(file, integerCol, lmax, line, flag, data);
+  }
 
   row_names.clear();
   col_names.clear();
@@ -207,15 +226,16 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
                         name.c_str(), line);
       }
     } else {
-      // Treat a RHS entry for the N row as an objective offset. Not
-      // all MPS readers do this, so give different reported objective
-      // values for problems (eg e226)
+      // Treat negation of a RHS entry for the N row as an objective
+      // offset. Not all MPS readers do this, so give different
+      // reported objective values for problems (eg e226)
 #ifdef HiGHSDEV
       printf(
-          "Using RHS value of %g for N-row in MPS file as objective offset\n",
+          "Using RHS value of %g for N-row in MPS file as negated objective "
+          "offset\n",
           data[0]);
 #endif
-      objOffset = data[0];  // Objective offset
+      objOffset = -data[0];  // Objective offset
     }
     save_flag1 = flag[1];
   }
@@ -351,11 +371,11 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
   }
   // Determine the number of integer variables and set bounds of [0,1]
   // for integer variables without bounds
-  numInt = 0;
+  int num_int = 0;
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol]) {
-      numInt++;
-      if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
+      num_int++;
+      if (colUpper[iCol] >= HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
   if (num_alien_entries)
@@ -367,7 +387,7 @@ FilereaderRetcode readMPS(FILE* logfile, const char* filename, int mxNumRow,
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
   printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow,
-         numCol, numInt);
+         numCol, num_int);
 #endif
   // Load ENDATA and close file
   fclose(file);
@@ -392,7 +412,6 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
     // Line input
     fgets_rt = fgets(line, lmax, file);
     if (fgets_rt == NULL) {
-      printf("load_mpsLine: fgets_rt = %s\n", fgets_rt);
       return false;
     }
     // Line trim   -- to delete tailing white spaces
@@ -444,9 +463,63 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
   return true;
 }
 
+HighsStatus writeLpAsMPS(const HighsOptions& options,
+                         const std::string filename, const HighsLp& lp,
+                         const bool free_format) {
+  bool warning_found = false;
+  bool have_col_names = lp.col_names_.size();
+  bool have_row_names = lp.row_names_.size();
+  std::vector<std::string> local_col_names;
+  std::vector<std::string> local_row_names;
+  local_col_names.resize(lp.numCol_);
+  local_row_names.resize(lp.numRow_);
+  //
+  // Initialise the local names to any existing names
+  if (have_col_names) local_col_names = lp.col_names_;
+  if (have_row_names) local_row_names = lp.row_names_;
+  //
+  // Normalise the column names
+  int max_col_name_length = HIGHS_CONST_I_INF;
+  if (!free_format) max_col_name_length = 8;
+  HighsStatus col_name_status = normaliseNames(
+      options, "Column", lp.numCol_, local_col_names, max_col_name_length);
+  if (col_name_status == HighsStatus::Error) return col_name_status;
+  warning_found = col_name_status == HighsStatus::Warning || warning_found;
+  //
+  // Normalise the row names
+  int max_row_name_length = HIGHS_CONST_I_INF;
+  if (!free_format) max_row_name_length = 8;
+  HighsStatus row_name_status = normaliseNames(
+      options, "Row", lp.numRow_, local_row_names, max_row_name_length);
+  if (row_name_status == HighsStatus::Error) return col_name_status;
+  warning_found = row_name_status == HighsStatus::Warning || warning_found;
+
+  int max_name_length = std::max(max_col_name_length, max_row_name_length);
+  bool use_free_format = free_format;
+  if (!free_format) {
+    if (max_name_length > 8) {
+      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                      "Maximum name length is %d so using free format rather "
+                      "than fixed format",
+                      max_name_length);
+      use_free_format = true;
+      warning_found = true;
+    }
+  }
+  HighsStatus write_status = writeMPS(
+      options.logfile, filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
+      lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
+      lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
+      local_col_names, local_row_names, use_free_format);
+  if (write_status == HighsStatus::OK && warning_found)
+    return HighsStatus::Warning;
+  ;
+  return write_status;
+}
+
 HighsStatus writeMPS(
-    FILE* logfile, const char* filename, const int& numRow, const int& numCol,
-    const int& numInt, const int& objSense, const double& objOffset,
+    FILE* logfile, const std::string filename, const int& numRow,
+    const int& numCol, const ObjSense& objSense, const double& objOffset,
     const vector<int>& Astart, const vector<int>& Aindex,
     const vector<double>& Avalue, const vector<double>& colCost,
     const vector<double>& colLower, const vector<double>& colUpper,
@@ -457,12 +530,12 @@ HighsStatus writeMPS(
   int num_zero_no_cost_columns = 0;
   int num_zero_no_cost_columns_in_bounds_section = 0;
 #ifdef HiGHSDEV
-  printf("writeMPS: Trying to open file %s\n", filename);
+  printf("writeMPS: Trying to open file %s\n", filename.c_str());
 #endif
-  FILE* file = fopen(filename, "w");
+  FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
     HighsLogMessage(logfile, HighsMessageType::ERROR, "Cannot open file %s",
-                    filename);
+                    filename.c_str());
     return HighsStatus::Error;
   }
 #ifdef HiGHSDEV
@@ -483,6 +556,7 @@ HighsStatus writeMPS(
   bool have_rhs = false;
   bool have_ranges = false;
   bool have_bounds = false;
+  bool have_int = false;
   r_ty.resize(numRow);
   rhs.assign(numRow, 0);
   ranges.assign(numRow, 0);
@@ -525,13 +599,22 @@ HighsStatus writeMPS(
       break;
     }
   }
+  have_int = false;
+  if (integerColumn.size()) {
+    for (int c_n = 0; c_n < numCol; c_n++) {
+      if (integerColumn[c_n]) {
+        have_int = true;
+        break;
+      }
+    }
+  }
   for (int c_n = 0; c_n < numCol; c_n++) {
     if (colLower[c_n]) {
       have_bounds = true;
       break;
     }
     bool discrete = false;
-    if (numInt) discrete = integerColumn[c_n];
+    if (have_int) discrete = integerColumn[c_n];
     if (!highs_isInfinity(colUpper[c_n]) || discrete) {
       // If the upper bound is finite, or the variable is integer then there is
       // a BOUNDS section. Integer variables with infinite upper bound are
@@ -542,8 +625,8 @@ HighsStatus writeMPS(
   }
 #ifdef HiGHSDEV
   printf("Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
-         BoolToString(have_rhs), BoolToString(have_ranges),
-         BoolToString(have_bounds));
+         BoolToCharStar(have_rhs), BoolToCharStar(have_ranges),
+         BoolToCharStar(have_bounds));
 #endif
 
   // Field:    1           2          3         4         5         6
@@ -596,7 +679,7 @@ HighsStatus writeMPS(
       }
       continue;
     }
-    if (numInt) {
+    if (have_int) {
       if (integerColumn[c_n] && !integerFg) {
         // Start an integer section
         fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n",
@@ -612,7 +695,7 @@ HighsStatus writeMPS(
       }
     }
     if (colCost[c_n] != 0) {
-      double v = objSense * colCost[c_n];
+      double v = (int)objSense * colCost[c_n];
       fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
     }
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
@@ -627,7 +710,7 @@ HighsStatus writeMPS(
     fprintf(file, "RHS\n");
     if (objOffset) {
       // Handle the objective offset as a RHS entry for the cost row
-      double v = objSense * objOffset;
+      double v = -(int)objSense * objOffset;
       fprintf(file, "    RHS_V     COST      %.15g\n", v);
     }
     for (int r_n = 0; r_n < numRow; r_n++) {
@@ -652,7 +735,7 @@ HighsStatus writeMPS(
       double lb = colLower[c_n];
       double ub = colUpper[c_n];
       bool discrete = false;
-      if (numInt) discrete = integerColumn[c_n];
+      if (have_int) discrete = integerColumn[c_n];
       if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {
@@ -729,4 +812,4 @@ HighsStatus writeMPS(
   return HighsStatus::OK;
 }
 
-inline const char* BoolToString(bool b) { return b ? "True" : "False"; }
+inline const char* BoolToCharStar(bool b) { return b ? "True" : "False"; }

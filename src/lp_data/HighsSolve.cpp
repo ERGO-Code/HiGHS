@@ -15,7 +15,13 @@
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsSolution.h"
+#include "simplex/HApp.h"
 #include "util/HighsUtils.h"
+#ifdef IPX_ON
+#include "ipm/IpxWrapper.h"
+#else
+#include "ipm/IpxWrapperEmpty.h"
+#endif
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
 // and HighsSolutionParams
@@ -50,6 +56,8 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   double dual_feasibility_tolerance =
       unscaled_solution_params.dual_feasibility_tolerance;
 
+  // Initialise the objective value calculation. Done using
+  // HighsSolution so offset is vanilla
   double objective = lp.offset_;
   bool infeasible = false;
   bool unbounded = false;
@@ -58,7 +66,8 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   unscaled_solution_params.num_dual_infeasibilities = 0;
 
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    double cost = lp.sense_ * lp.colCost_[iCol];
+    double cost = lp.colCost_[iCol];
+    double dual = (int)lp.sense_ * cost;
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
     double value;
@@ -90,21 +99,21 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
       // Free column: must have zero cost
       value = 0;
       status = HighsBasisStatus::ZERO;
-      if (fabs(cost) > dual_feasibility_tolerance) unbounded = true;
-    } else if (cost >= dual_feasibility_tolerance) {
-      // Column with sufficiently positive cost: set to lower bound
+      if (fabs(dual) > dual_feasibility_tolerance) unbounded = true;
+    } else if (dual >= dual_feasibility_tolerance) {
+      // Column with sufficiently positive dual: set to lower bound
       // and check for unboundedness
       if (highs_isInfinity(-lower)) unbounded = true;
       value = lower;
       status = HighsBasisStatus::LOWER;
-    } else if (cost <= -dual_feasibility_tolerance) {
-      // Column with sufficiently negative cost: set to upper bound
+    } else if (dual <= -dual_feasibility_tolerance) {
+      // Column with sufficiently negative dual: set to upper bound
       // and check for unboundedness
       if (highs_isInfinity(upper)) unbounded = true;
       value = upper;
       status = HighsBasisStatus::UPPER;
     } else {
-      // Column with sufficiently small cost: set to lower bound (if
+      // Column with sufficiently small dual: set to lower bound (if
       // finite) otherwise upper bound
       if (highs_isInfinity(-lower)) {
         value = upper;
@@ -115,7 +124,7 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
       }
     }
     solution.col_value[iCol] = value;
-    solution.col_dual[iCol] = cost;
+    solution.col_dual[iCol] = (int)lp.sense_ * dual;
     basis.col_status[iCol] = status;
     objective += value * cost;
     unscaled_solution_params.sum_primal_infeasibilities += primal_infeasibility;
@@ -128,6 +137,7 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
     }
   }
   unscaled_solution_params.objective_function_value = objective;
+  basis.valid_ = true;
 
   if (infeasible) {
     highs_model_object.unscaled_model_status_ =
@@ -144,5 +154,87 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
       unscaled_solution_params.dual_status = STATUS_FEASIBLE_POINT;
     }
   }
+  highs_model_object.scaled_model_status_ =
+      highs_model_object.unscaled_model_status_;
   return HighsStatus::OK;
+}
+
+// The method below runs simplex or ipx solver on the lp.
+HighsStatus solveLp(HighsModelObject& model, const string message) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsOptions& options = model.options_;
+  // Reset unscaled and scaled model status and solution params - except for
+  // iteration counts
+  resetModelStatusAndSolutionParams(model);
+  HighsLogMessage(options.logfile, HighsMessageType::INFO, message.c_str());
+#ifdef HIGHSDEV
+  // Shouldn't have to check validity of the LP since this is done when it is
+  // loaded or modified
+  //  bool normalise = true;
+  call_status = assessLp(model.lp_, options_);
+  assert(call_status == HighsStatus::OK);
+  return_status = interpretCallStatus(call_status, return_status, "assessLp");
+  if (return_status == HighsStatus::Error) return return_status;
+#endif
+  if (!model.lp_.numRow_) {
+    // Unconstrained LP so solve directly
+    call_status = solveUnconstrainedLp(model);
+    return_status =
+        interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
+    if (return_status == HighsStatus::Error) return return_status;
+  } else if (options.solver == ipm_string) {
+    // Use IPM
+#ifdef IPX_ON
+    bool imprecise_solution;
+    call_status = solveLpIpx(
+        options, model.timer_, model.lp_, imprecise_solution, model.basis_,
+        model.solution_, model.iteration_counts_, model.unscaled_model_status_,
+        model.unscaled_solution_params_);
+    return_status =
+        interpretCallStatus(call_status, return_status, "solveLpIpx");
+    if (return_status == HighsStatus::Error) return return_status;
+    if (imprecise_solution) {
+      // IPX+crossover has not obtained a solution satisfying the tolerances.
+      // Use the simplex method to clean up
+      call_status = solveLpSimplex(model);
+      return_status =
+          interpretCallStatus(call_status, return_status, "solveLpSimplex");
+      if (return_status == HighsStatus::Error) return return_status;
+
+      if (!isSolutionConsistent(model.lp_, model.solution_)) {
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Inconsistent solution returned from solver");
+        return HighsStatus::Error;
+      }
+    } else {
+      // Set the scaled model status and solution params for completeness
+      model.scaled_model_status_ = model.unscaled_model_status_;
+      model.scaled_solution_params_ = model.unscaled_solution_params_;
+    }
+#else
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Model cannot be solved with IPM");
+    return HighsStatus::Error;
+#endif
+  } else {
+    // Use Simplex
+    call_status = solveLpSimplex(model);
+    return_status =
+        interpretCallStatus(call_status, return_status, "solveLpSimplex");
+    if (return_status == HighsStatus::Error) return return_status;
+
+    if (!isSolutionConsistent(model.lp_, model.solution_)) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Inconsistent solution returned from solver");
+      return HighsStatus::Error;
+    }
+  }
+  call_status = analyseHighsBasicSolution(
+      options.logfile, model.lp_, model.basis_, model.solution_,
+      model.iteration_counts_, model.unscaled_model_status_,
+      model.unscaled_solution_params_, message);
+  return_status = interpretCallStatus(call_status, return_status,
+                                      "analyseHighsBasicSolution");
+  return return_status;
 }

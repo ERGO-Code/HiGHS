@@ -260,6 +260,8 @@ class PresolveInfo {
     }
   }
 
+  void negateReducedCosts();
+  void negateColDuals(bool reduced);
   HighsLp& getReducedProblem();
   HighsPresolveStatus presolve_status_;
   HighsPostsolveStatus postsolve_status_;

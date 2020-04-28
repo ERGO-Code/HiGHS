@@ -23,9 +23,8 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(FILE* logfile,
 
   lp.numRow_ = std::move(numRow);
   lp.numCol_ = std::move(numCol);
-  lp.nnz_ = Avalue.size();
 
-  lp.sense_ = 1;
+  lp.sense_ = objSense;
   lp.offset_ = objOffset;
 
   lp.Astart_ = std::move(Astart);
@@ -97,6 +96,9 @@ FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile,
     while (keyword != HMpsFF::parsekey::FAIL &&
            keyword != HMpsFF::parsekey::END) {
       switch (keyword) {
+        case HMpsFF::parsekey::OBJSENSE:
+          keyword = parseObjsense(logfile, f);
+          break;
         case HMpsFF::parsekey::ROWS:
           keyword = parseRows(logfile, f);
           break;
@@ -158,7 +160,16 @@ HMpsFF::parsekey HMpsFF::checkFirstWord(std::string& strline, int& start,
 
   word = strline.substr(start, end - start);
 
-  if (word.front() == 'R') {
+  if (word == "OBJSENSE")
+    return HMpsFF::parsekey::OBJSENSE;
+  else if (word.front() == 'M') {
+    if (word == "MAX")
+      return HMpsFF::parsekey::MAX;
+    else if (word == "MIN")
+      return HMpsFF::parsekey::MIN;
+    else
+      return HMpsFF::parsekey::NONE;
+  } else if (word.front() == 'R') {
     if (word == "ROWS")
       return HMpsFF::parsekey::ROWS;
     else if (word == "RHS")
@@ -182,6 +193,34 @@ HMpsFF::parsekey HMpsFF::parseDefault(std::ifstream& file) const {
   getline(file, strline);
   int s, e;
   return checkFirstWord(strline, s, e, word);
+}
+
+HMpsFF::parsekey HMpsFF::parseObjsense(FILE* logfile, std::ifstream& file) {
+  std::string strline, word;
+
+  while (getline(file, strline)) {
+    if (is_empty(strline) || strline[0] == '*') continue;
+
+    int start = 0;
+    int end = 0;
+
+    HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
+
+    // Interpret key being MAX or MIN
+    if (key == HMpsFF::parsekey::MAX) {
+      objSense = ObjSense::MAXIMIZE;
+      continue;
+    }
+    if (key == HMpsFF::parsekey::MIN) {
+      objSense = ObjSense::MINIMIZE;
+      continue;
+    }
+    // start of new section?
+    if (key != HMpsFF::parsekey::NONE) {
+      return key;
+    }
+  }
+  return HMpsFF::parsekey::FAIL;
 }
 
 HMpsFF::parsekey HMpsFF::parseRows(FILE* logfile, std::ifstream& file) {
@@ -401,9 +440,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
                       "COLUMNS section contains row %s not in ROWS section",
                       marker.c_str());
     } else {
-      parsename(marker);  // rowidx set
       double value = atof(word.c_str());
-      addtuple(value);
+      if (value) {
+        parsename(marker);  // rowidx set and nnz incremented
+        addtuple(value);
+      }
     }
 
     if (!is_end(strline, end)) {
@@ -432,10 +473,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
             marker.c_str());
         continue;
       };
-
       double value = atof(word.c_str());
-      parsename(marker);  // rowidx set
-      addtuple(value);
+      if (value) {
+        parsename(marker);  // rowidx set and nnz incremented
+        addtuple(value);
+      }
     }
   }
 
@@ -469,7 +511,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
       }
     } else if (rowidx == -1) {
       // objective shift
-      objOffset = val;
+      objOffset = -val;
     }
   };
 
