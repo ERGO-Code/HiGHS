@@ -104,9 +104,9 @@ void FilereaderLp::writeToFileLineend(FILE* file) {
 }
 
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
-                                           const char* filename,
+                                           const std::string filename,
                                            HighsLp& model) {
-  FILE* file = fopen(filename, "w");
+  FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file
   this->writeToFile(file, "\\ %s", LP_COMMENT_FILESTART);
@@ -141,7 +141,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
       this->writeToFile(file, "= %+g", model.rowLower_[row]);
       this->writeToFileLineend(file);
     } else {
-      if (model.rowLower_[row] >= -10E10) {
+      if (model.rowLower_[row] > -HIGHS_CONST_INF) {
         // has a lower bounds
         this->writeToFile(file, " con%dlo: ", row + 1);
         for (int var = 0; var < model.numCol_; var++) {
@@ -154,7 +154,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
         }
         this->writeToFile(file, ">= %+g", model.rowLower_[row]);
         this->writeToFileLineend(file);
-      } else if (model.rowUpper_[row] <= 10E10) {
+      } else if (model.rowUpper_[row] < HIGHS_CONST_INF) {
         // has an upper bounds
         this->writeToFile(file, " con%dup: ", row + 1);
         for (int var = 0; var < model.numCol_; var++) {
