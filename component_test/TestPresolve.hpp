@@ -76,16 +76,16 @@ void testInit() {
   return;
 }
 
-// void loadTestRunInfo(const Highs& highs, TestRunInfo& info) {
-//   // info.removed_cols = highs.
-//   // info.removed_rows =
-//   // info.removed_nnz =
+void loadTestRunInfo(const Highs& highs, TestRunInfo& info) {
+  // info.removed_cols = highs.
+  // info.removed_rows =
+  // info.removed_nnz =
 
-//   info.time_total = -1;
-//   info.time_presolve = -1;
-//   info.time_solve = -1;
-//   info.time_postsolve = -1;
-// }
+  info.time_total = -1;
+  info.time_presolve = -1;
+  info.time_solve = -1;
+  info.time_postsolve = -1;
+}
 
 void printInfo(TestRunInfo& info, const bool desc) {
   if (desc) {
@@ -93,8 +93,7 @@ void printInfo(TestRunInfo& info, const bool desc) {
                  "x_rows,	x_cols, x_nnz"
               << std::endl;
   } else {
-    std::cout << "scaffold-run-test-presolve, " << info.optimal_objective <<
-    " "
+    std::cout << "scaffold-run-test-presolve, " << info.optimal_objective << " "
               << info.objective << " " << info.x_rows << " " << info.x_cols
               << " " << info.x_nnz << std::endl;
   }
@@ -110,33 +109,40 @@ void testProblems() {
 
   printInfo(problems[0], true);
 
-    for (TestRunInfo& test_run : problems) {
-      try {
-       std::string file = kFolder + test_run.name;
+  for (TestRunInfo& test_run : problems) {
+    try {
+      std::string file{kFolder + test_run.name + ".mps"};
 
-       Highs highs;
-  //       HighsStatus highs_status = highs.readModel(file);
+      Highs highs;
+      HighsStatus highs_status = highs.readModel(file);
 
-  //       highs.setHighsOptionValue("presolve", "on");
-  //       HighsStatus run_status = highs.run();
+      if (highs_status != HighsStatus::OK) {
+        std::cout << "TestPresolve:: Highs readModel returned Warning or Error "
+                     "on problem: "
+                  << test_run.name << std::endl;
+        continue;
+      }
 
-  //       if (run_status == HighsStatus::OK) {
-  //         // Load TestRunInfo
-  //         loadTestRunInfo(highs, test_run);
+      // Making sure presolve is on (default).
+      highs.setHighsOptionValue("presolve", "on");
+      HighsStatus run_status = highs.run();
 
-  //         // output main stats
-  //         printInfo(test_run, false);
-  //       } else {
-  //         std::cout << "TestPresolve:: Highs run() returned Warning or Error
-  //         on "
-  //                      "problem: "
-  //                   << test_run.name << std::endl;
-        //}
-      } catch (int e) {
-        std::cout << "TestPresolve:: Highs run() caught an exception on problem: "
+      if (run_status == HighsStatus::OK) {
+        // Load TestRunInfo
+        loadTestRunInfo(highs, test_run);
+
+        // output main stats
+        printInfo(test_run, false);
+      } else {
+        std::cout << "TestPresolve:: Highs run() returned Warning or Error on "
+                     "problem: "
                   << test_run.name << std::endl;
       }
+    } catch (int e) {
+      std::cout << "TestPresolve:: Highs run() caught an exception on problem: "
+                << test_run.name << std::endl;
     }
+  }
   return;
 }
 
