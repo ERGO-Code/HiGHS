@@ -24,13 +24,13 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   HighsLp& model) {
   try {
     Model m = readinstance(options.model_file);
-    
+
     // build variable index and gather variable information
     std::map<std::string, unsigned int> varindex;
 
     model.numCol_ = m.variables.size();
     model.numRow_ = m.constraints.size();
-    for (unsigned int i=0; i<m.variables.size(); i++) {
+    for (unsigned int i = 0; i < m.variables.size(); i++) {
       varindex[m.variables[i]->name] = i;
       model.colLower_.push_back(m.variables[i]->lowerbound);
       model.colUpper_.push_back(m.variables[i]->upperbound);
@@ -40,21 +40,22 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     // get objective
     model.offset_ = m.objective->offset;
     model.colCost_.resize(model.numCol_, 0.0);
-    for (unsigned int i=0; i<m.objective->linterms.size(); i++) {
+    for (unsigned int i = 0; i < m.objective->linterms.size(); i++) {
       std::shared_ptr<LinTerm> lt = m.objective->linterms[i];
       model.colCost_[varindex[lt->var->name]] = lt->coef;
     }
 
-    //handle constraints
-    std::map<std::shared_ptr<Variable>, std::vector<unsigned int>> consofvarmap_index;
+    // handle constraints
+    std::map<std::shared_ptr<Variable>, std::vector<unsigned int>>
+        consofvarmap_index;
     std::map<std::shared_ptr<Variable>, std::vector<double>> consofvarmap_value;
-    for (unsigned int i=0; i<m.constraints.size(); i++) {
+    for (unsigned int i = 0; i < m.constraints.size(); i++) {
       std::shared_ptr<Constraint> con = m.constraints[i];
-      for (unsigned int j=0; j<con->expr->linterms.size(); j++) {
+      for (unsigned int j = 0; j < con->expr->linterms.size(); j++) {
         std::shared_ptr<LinTerm> lt = con->expr->linterms[j];
         if (consofvarmap_index.count(lt->var) == 0) {
-           consofvarmap_index[lt->var] = std::vector<unsigned int>();
-           consofvarmap_value[lt->var] = std::vector<double>();
+          consofvarmap_index[lt->var] = std::vector<unsigned int>();
+          consofvarmap_value[lt->var] = std::vector<double>();
         }
         consofvarmap_index[lt->var].push_back(i);
         consofvarmap_value[lt->var].push_back(lt->coef);
@@ -65,19 +66,20 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
     }
 
     int nz = 0;
-    for(int i=0; i<model.numCol_; i++) {
+    for (int i = 0; i < model.numCol_; i++) {
       std::shared_ptr<Variable> var = m.variables[i];
       model.Astart_.push_back(nz);
-      for(unsigned int j=0; j<consofvarmap_index[var].size(); j++) {
+      for (unsigned int j = 0; j < consofvarmap_index[var].size(); j++) {
         model.Aindex_.push_back(consofvarmap_index[var][j]);
         model.Avalue_.push_back(consofvarmap_value[var][j]);
         nz++;
       }
     }
     model.Astart_.push_back(nz);
-    model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::MINIMIZE : ObjSense::MAXIMIZE;
-  } catch(std::invalid_argument ex) {
-     return FilereaderRetcode::PARSERERROR;
+    model.sense_ = m.sense == ObjectiveSense::MIN ? ObjSense::MINIMIZE
+                                                  : ObjSense::MAXIMIZE;
+  } catch (std::invalid_argument ex) {
+    return FilereaderRetcode::PARSERERROR;
   }
   return FilereaderRetcode::OK;
 }
@@ -85,7 +87,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
 void FilereaderLp::writeToFile(FILE* file, const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
-  char stringbuffer[LP_MAX_LINE_LENGTH+1];
+  char stringbuffer[LP_MAX_LINE_LENGTH + 1];
   int tokenlength = vsprintf(stringbuffer, format, argptr);
   if (this->linelength + tokenlength >= LP_MAX_LINE_LENGTH) {
     fprintf(file, "\n");
@@ -112,9 +114,8 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
   this->writeToFileLineend(file);
 
   // write objective
-  this->writeToFile(file, "%s", model.sense_ == ObjSense::MINIMIZE
-                              ? "min"
-                              : "max");
+  this->writeToFile(file, "%s",
+                    model.sense_ == ObjSense::MINIMIZE ? "min" : "max");
   this->writeToFileLineend(file);
   this->writeToFile(file, " obj: ");
   for (int i = 0; i < model.numCol_; i++) {
