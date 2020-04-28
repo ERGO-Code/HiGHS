@@ -7,7 +7,54 @@
 // gcc call_highs_from_c.c -o highstest -I ../build/install_folder/include/ -L ../build/install_folder/lib/ -lhighs
 
 void minimal_api() {
-  // Form and solve the LP
+  // This illustrates the use of Highs_call, the simple C interface to
+  // HiGHS. It's designed to solve the general LP problem
+  //
+  // Min c^Tx subject to L <= Ax <= U; l <= x <= u
+  //
+  // where A is a matrix with m rows and n columns
+  //
+  // The scalar n is numcol
+  // The scalar m is numrow
+  //
+  // The vector c is colcost
+  // The vector l is collower
+  // The vector u is colupper
+  // The vector L is rowlower
+  // The vector U is rowupper
+  //
+  // The matrix A is represented in packed column-wise form: only its
+  // nonzeros are stored
+  // 
+  // * The number of nonzeros in A is nnz
+  // 
+  // * The row indices of the nonnzeros in A are stored column-by-column
+  // in aindex
+  // 
+  // * The values of the nonnzeros in A are stored column-by-column in
+  // avalue
+  // 
+  // * The position in aindex/avalue of the index/value of the first
+  // nonzero in each column is stored in astart
+  // 
+  // Note that astart[0] must be zero
+  //
+  // After a successful call to Highs_call, the primal and dual
+  // solution, and the simplex basis are returned as follows
+  //
+  // The vector x is colvalue
+  // The vector Ax is rowvalue
+  // The vector of dual values for the variables x is coldual
+  // The vector of dual values for the variables Ax is rowdual
+  // The basic/nonbasic status of the variables x is colbasisstatus
+  // The basic/nonbasic status of the variables Ax is rowbasisstatus
+  //
+  // The status of the solution obtained is modelstatus
+  //
+  // To solve maximization problems, the values in c must be negated
+  //
+  // The use of Highs_call is illustrated for the LP
+  //
   // Min    f  = 2x_0 + 3x_1
   // s.t.                x_1 <= 6
   //       10 <=  x_0 + 2x_1 <= 14
@@ -17,7 +64,6 @@ void minimal_api() {
   int numcol = 2;
   int numrow = 3;
   int nnz = 5;
-  int i;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[numcol] = {2.0, 3.0};
@@ -53,6 +99,7 @@ void minimal_api() {
 
   printf("Run status = %d; Model status = %d\n", status, modelstatus);
 
+  int i;
   if (modelstatus == 9) {
     // Report the column primal and dual values, and basis status
     for (i = 0; i < numcol; i++) {
