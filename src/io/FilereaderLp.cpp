@@ -164,7 +164,7 @@ HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
             }
           }
         }
-        this->writeToFile(file, "<= %+g", model.rowLower_[row]);
+        this->writeToFile(file, "<= %+g", model.rowUpper_[row]);
         this->writeToFileLineend(file);
       } else {
         // constraint has infinite lower & upper bounds so not a proper
