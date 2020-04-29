@@ -1494,7 +1494,7 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
   if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
     return HighsPresolveStatus::NullError;
-  
+
   // Clear info from previous runs if lp_ has been modified.
   if (presolve_.has_run_) presolve_.clear();
 
@@ -1513,7 +1513,8 @@ HighsPresolveStatus Highs::runPresolve() {
       HighsLp& reduced_lp = presolve_.getReducedProblem();
       presolve_.info_.n_cols_removed = lp_.numCol_ - reduced_lp.numCol_;
       presolve_.info_.n_rows_removed = lp_.numRow_ - reduced_lp.numRow_;
-      presolve_.info_.n_nnz_removed = (int)lp_.Avalue_.size() - (int)reduced_lp.Avalue_.size();
+      presolve_.info_.n_nnz_removed =
+          (int)lp_.Avalue_.size() - (int)reduced_lp.Avalue_.size();
       break;
     }
     case HighsPresolveStatus::ReducedToEmpty: {
