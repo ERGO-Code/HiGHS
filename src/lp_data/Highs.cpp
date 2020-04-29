@@ -198,10 +198,11 @@ HighsStatus Highs::writeHighsInfo(const std::string filename) {
 }
 
 HighsStatus Highs::reset() {
+  HighsStatus return_status = HighsStatus::OK;
   // Clear the status, solution, basis and info associated with any previous
   // model
   HighsStatus call_status = clearSolver();
-  HighsStatus return_status =
+  return_status =
       interpretCallStatus(call_status, return_status, "clearSolver");
 
   if (return_status == HighsStatus::Error) return return_status;
@@ -211,6 +212,7 @@ HighsStatus Highs::reset() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 
   presolve_.clear();
+  return HighsStatus::OK;
 }
 
 HighsStatus Highs::passModel(const HighsLp& lp) {
