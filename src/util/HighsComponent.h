@@ -22,6 +22,7 @@
 class HighsComponentData {
  public:
   bool is_valid = false;
+  virtual ~HighsComponentData() {}
 };
 
 // HighsComponentInfo is a placeholder for details we want to query from outside
@@ -47,6 +48,7 @@ class HighsComponent {
   const HighsComponentData& getData() { return data_; }
   const HighsComponentOptions& getOptions() { return options_; }
 
+  virtual ~HighsComponent() {}
  private:
   bool has_run_ = false;
 
