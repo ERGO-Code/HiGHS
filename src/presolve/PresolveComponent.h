@@ -24,15 +24,13 @@
 // specific.
 
 namespace {}
-class PresolveComponentData : public HighsComponentData {
- public:
+struct PresolveComponentData : public HighsComponentData {
   std::vector<Presolve> presolve_;
   HighsLp reduced_lp_;
 
   // todo: make reduced one const.
   HighsSolution reduced_solution_;
   HighsSolution recovered_solution_;
-  ~PresolveComponentData() {}
 };
 
 // HighsComponentInfo is a placeholder for details we want to query from outside
