@@ -66,9 +66,8 @@ class PresolveComponent : public HighsComponent {
 
   HighsStatus setOptions(const HighsOptions& options);
 
-  void setBasisInfo(
-      const std::vector<HighsBasisStatus>& pass_col_status,
-      const std::vector<HighsBasisStatus>& pass_row_status);
+  void setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status,
+                    const std::vector<HighsBasisStatus>& pass_row_status);
 
   void negateReducedLpColDuals(bool reduced);
   void negateReducedLpCost();
@@ -82,6 +81,5 @@ class PresolveComponent : public HighsComponent {
   HighsPresolveStatus presolve_status_ = HighsPresolveStatus::NotPresolved;
   HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::NotPresolved;
 };
-  
 
 #endif
