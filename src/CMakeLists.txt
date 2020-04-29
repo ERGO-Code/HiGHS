@@ -196,6 +196,7 @@ else ()
 endif()
 
 add_library(libhighs ${sources})
+target_include_directories(libhighs PRIVATE "../dev-presolve")
 
 if (IPX_ON)
     target_link_libraries(libhighs libipx)
