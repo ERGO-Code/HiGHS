@@ -14,43 +14,72 @@
 #ifndef PRESOLVE_PRESOLVE_COMPONENT_H_
 #define PRESOLVE_PRESOLVE_COMPONENT_H_
 
+#include "presolve/Presolve.h"
 #include "util/HighsComponent.h"
 
-// HighsComponentData is a placeholder for structs which we will keep after
-// run() is done, internally.
-class PresolveComponentData : public HighsComponent {
-  const HighsLp& original_lp; // golden copy?
-  HighsLp& reduced_lp; // does this remain the same always? or does simplex do some modifications of this lp before it solves?
+// Class defining the Presolve Component to be used in HiGHS.
+// What used to be in Presolve.h but allowing for further testing and dev.
 
-// todo: link with what you currently have as presolve info: similar idea but previous generation
+// The structure of component is general, of the presolve component - presolve
+// specific.
+
+namespace {}
+class PresolveComponentData : public HighsComponentData {
+ public:
+  const HighsLp& getReducedProblem() const { return reduced_lp_; };
+
+  std::vector<Presolve> presolve_;
+  HighsLp reduced_lp_;
+
+  // todo: make reduced one const.
+  HighsSolution reduced_solution_;
+  HighsSolution recovered_solution_;
 };
 
 // HighsComponentInfo is a placeholder for details we want to query from outside
 // of HiGHS like execution information.
-struct HighsComponentInfo {
-  bool is_valid = false;
+struct PresolveComponentInfo : public HighsComponentInfo {
+  int n_rows_removed = 0;
+  int n_cols_removed = 0;
+
+  double presolve_time = 0;
+  double postsolve_time = 0;
 };
 
 // HighsComponentOptions is a placeholder for options specific to this component
-struct HighsComponentOptions {
+struct PresolveComponentOptions : public HighsComponentOptions {
   bool is_valid = false;
+  // presolve options later when needed.
+  bool presolve_on = true;
 };
 
-class HighsComponent {
+class PresolveComponent : public HighsComponent {
  public:
-  HighsStatus run();
+  void clear() override;
+
+  HighsStatus init(const HighsLp& lp, HighsTimer& timer);
+
+  HighsPresolveStatus run();
+
+  HighsLp& getReducedProblem();
+
   HighsStatus setOptions(const HighsOptions& options);
 
-  const HighsComponentInfo& getInfo() { return info_; }
-  const HighsComponentData& getData() { return data_; }
-  const HighsComponentOptions& getOptions() { return options_; }
+  void setBasisInfo(
+      const std::vector<HighsBasisStatus>& pass_col_status,
+      const std::vector<HighsBasisStatus>& pass_row_status);
 
- private:
+  void negateReducedLpColDuals(bool reduced);
+  void negateReducedLpCost();
+
   bool has_run_ = false;
 
-  HighsComponentInfo info_;
-  HighsComponentData data_;
-  HighsComponentOptions options_;
+  PresolveComponentInfo info_;
+  PresolveComponentData data_;
+  PresolveComponentOptions options_;
+
+  HighsPresolveStatus presolve_status_ = HighsPresolveStatus::NotPresolved;
+  HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::NotPresolved;
 };
 
 #endif

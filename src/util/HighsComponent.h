@@ -20,28 +20,32 @@
 // HighsComponentData is a placeholder for structs which we will keep after
 // run() is done, internally.
 class HighsComponentData {
+ public:
   bool is_valid = false;
 };
 
 // HighsComponentInfo is a placeholder for details we want to query from outside
 // of HiGHS like execution information.
 struct HighsComponentInfo {
+ public:
   bool is_valid = false;
 };
 
 // HighsComponentOptions is a placeholder for options specific to this component
 struct HighsComponentOptions {
+ public:
   bool is_valid = false;
 };
 
 class HighsComponent {
  public:
+  virtual void clear() = 0;
   HighsStatus run();
   HighsStatus setOptions(const HighsOptions& options);
 
-  const HighsComponentInfo& getInfo() {return info_;}
-  const HighsComponentData& getData(){return data_;}
-  const HighsComponentOptions& getOptions(){return options_;}
+  const HighsComponentInfo& getInfo() { return info_; }
+  const HighsComponentData& getData() { return data_; }
+  const HighsComponentOptions& getOptions() { return options_; }
 
  private:
   bool has_run_ = false;

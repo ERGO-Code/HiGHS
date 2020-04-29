@@ -91,6 +91,7 @@ set(sources
     mip/HighsMipSolver.cpp
     mip/SolveMip.cpp
     presolve/Presolve.cpp
+    presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
@@ -161,6 +162,7 @@ set(headers
     simplex/HSimplexReport.h
     simplex/SimplexConst.h
     presolve/Presolve.h
+    presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
     presolve/HPreData.h
     simplex/HVector.h
