@@ -34,6 +34,7 @@ class PresolveComponentData : public HighsComponentData {
   // todo: make reduced one const.
   HighsSolution reduced_solution_;
   HighsSolution recovered_solution_;
+  ~PresolveComponentData() {}
 };
 
 // HighsComponentInfo is a placeholder for details we want to query from outside

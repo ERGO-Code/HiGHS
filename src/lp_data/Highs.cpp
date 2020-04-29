@@ -1492,6 +1492,9 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
   if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
     return HighsPresolveStatus::NullError;
+  
+  // Clear info from previous runs if lp_ has been modified.
+  if (presolve_.has_run_) presolve_.clear();
 
   // Presolve.
   presolve_.init(lp_, timer_);
