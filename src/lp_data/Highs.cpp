@@ -447,6 +447,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
     timer_.stop(timer_.presolve_clock);
     const double to_presolve_time = timer_.read(timer_.presolve_clock);
     this_presolve_time += to_presolve_time;
+    presolve_.info_.presolve_time = this_presolve_time;
 
     // Run solver.
     switch (presolve_status) {
@@ -606,6 +607,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         HighsPostsolveStatus postsolve_status = runPostsolve();
         timer_.stop(timer_.postsolve_clock);
         this_postsolve_time += -timer_.read(timer_.postsolve_clock);
+        presolve_.info_.postsolve_time = this_postsolve_time;
 
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
           HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
@@ -1505,6 +1507,24 @@ HighsPresolveStatus Highs::runPresolve() {
       lp_.sense_ == ObjSense::MAXIMIZE)
     presolve_.negateReducedLpCost();
 
+  // Update reduction counts.
+  switch (presolve_.presolve_status_) {
+    case HighsPresolveStatus::Reduced: {
+      HighsLp& reduced_lp = presolve_.getReducedProblem();
+      presolve_.info_.n_cols_removed = lp_.numCol_ - reduced_lp.numCol_;
+      presolve_.info_.n_rows_removed = lp_.numRow_ - reduced_lp.numRow_;
+      presolve_.info_.n_nnz_removed = (int)lp_.Avalue_.size() - (int)reduced_lp.Avalue_.size();
+      break;
+    }
+    case HighsPresolveStatus::ReducedToEmpty: {
+      presolve_.info_.n_cols_removed = lp_.numCol_;
+      presolve_.info_.n_rows_removed = lp_.numRow_;
+      presolve_.info_.n_nnz_removed = (int)lp_.Avalue_.size();
+      break;
+    }
+    default:
+      break;
+  }
   return presolve_return_status;
 }
 

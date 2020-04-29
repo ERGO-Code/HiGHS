@@ -26,8 +26,6 @@
 namespace {}
 class PresolveComponentData : public HighsComponentData {
  public:
-  const HighsLp& getReducedProblem() const { return reduced_lp_; };
-
   std::vector<Presolve> presolve_;
   HighsLp reduced_lp_;
 
@@ -42,9 +40,13 @@ class PresolveComponentData : public HighsComponentData {
 struct PresolveComponentInfo : public HighsComponentInfo {
   int n_rows_removed = 0;
   int n_cols_removed = 0;
+  int n_nnz_removed = 0;
 
   double presolve_time = 0;
   double postsolve_time = 0;
+
+  double solve_time = 0;
+  double cleanup_time = 0;
 };
 
 // HighsComponentOptions is a placeholder for options specific to this component
@@ -62,7 +64,7 @@ class PresolveComponent : public HighsComponent {
 
   HighsPresolveStatus run();
 
-  HighsLp& getReducedProblem();
+  HighsLp& getReducedProblem() { return data_.reduced_lp_; }
 
   HighsStatus setOptions(const HighsOptions& options);
 
@@ -82,5 +84,6 @@ class PresolveComponent : public HighsComponent {
   HighsPresolveStatus presolve_status_ = HighsPresolveStatus::NotPresolved;
   HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::NotPresolved;
 };
+  
 
 #endif

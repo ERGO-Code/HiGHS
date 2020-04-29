@@ -41,11 +41,15 @@ void PresolveComponent::setBasisInfo(
 
 void PresolveComponent::negateReducedLpColDuals(bool reduced) {
   if (reduced)
-    for (unsigned int col = 0; col < data_.reduced_solution_.col_dual.size(); col++)
-      data_.reduced_solution_.col_dual[col] = data_.reduced_solution_.col_dual[col];
+    for (unsigned int col = 0; col < data_.reduced_solution_.col_dual.size();
+         col++)
+      data_.reduced_solution_.col_dual[col] =
+          data_.reduced_solution_.col_dual[col];
   else
-    for (unsigned int col = 0; col < data_.recovered_solution_.col_dual.size(); col++)
-      data_.recovered_solution_.col_dual[col] = data_.recovered_solution_.col_dual[col];
+    for (unsigned int col = 0; col < data_.recovered_solution_.col_dual.size();
+         col++)
+      data_.recovered_solution_.col_dual[col] =
+          data_.recovered_solution_.col_dual[col];
   return;
 }
 
@@ -55,43 +59,32 @@ void PresolveComponent::negateReducedLpCost() {
   return;
 }
 
-HighsLp& PresolveComponent::getReducedProblem() {
-  if (data_.presolve_.size() == 0) {
-    std::cout << "Error: No reduced problem. No presolve initialized." << std::endl;
-  } else if (presolve_status_ != HighsPresolveStatus::Reduced && presolve_status_ != HighsPresolveStatus::ReducedToEmpty) {
-    std::cout << "Error: No reduced problem. " << std::endl;
-  } else {
-    if (data_.presolve_[0].numRow == 0 && data_.presolve_[0].numCol == 0) {
-      // Reduced problem has been already moved to this.reduced_lp_;
-      // reduced_lp_ remains where it is.
-      return data_.reduced_lp_;
-    } else {
-      // Move vectors so no copying happens. presolve does not need that lp
-      // any more.
-      data_.reduced_lp_.numCol_ = data_.presolve_[0].numCol;
-      data_.reduced_lp_.numRow_ = data_.presolve_[0].numRow;
-      data_.reduced_lp_.Astart_ = std::move(data_.presolve_[0].Astart);
-      data_.reduced_lp_.Aindex_ = std::move(data_.presolve_[0].Aindex);
-      data_.reduced_lp_.Avalue_ = std::move(data_.presolve_[0].Avalue);
-      data_.reduced_lp_.colCost_ = std::move(data_.presolve_[0].colCost);
-      data_.reduced_lp_.colLower_ = std::move(data_.presolve_[0].colLower);
-      data_.reduced_lp_.colUpper_ = std::move(data_.presolve_[0].colUpper);
-      data_.reduced_lp_.rowLower_ = std::move(data_.presolve_[0].rowLower);
-      data_.reduced_lp_.rowUpper_ = std::move(data_.presolve_[0].rowUpper);
-
-      data_.reduced_lp_.sense_ = ObjSense::MINIMIZE;
-      data_.reduced_lp_.offset_ = 0;
-      data_.reduced_lp_.model_name_ =
-          std::move(data_.presolve_[0].modelName);  //"Presolved model";
-    }
-  }
-  return data_.reduced_lp_;
-}
-
 HighsPresolveStatus PresolveComponent::run() {
   has_run_ = true;
   assert(data_.presolve_.size() > 0);
   presolve_status_ = data_.presolve_[0].presolve();
+
+  if (presolve_status_ == HighsPresolveStatus::Reduced ||
+      presolve_status_ == HighsPresolveStatus::ReducedToEmpty) {
+    // Move vectors so no copying happens. presolve does not need that lp
+    // any more.
+    data_.reduced_lp_.numCol_ = data_.presolve_[0].numCol;
+    data_.reduced_lp_.numRow_ = data_.presolve_[0].numRow;
+    data_.reduced_lp_.Astart_ = std::move(data_.presolve_[0].Astart);
+    data_.reduced_lp_.Aindex_ = std::move(data_.presolve_[0].Aindex);
+    data_.reduced_lp_.Avalue_ = std::move(data_.presolve_[0].Avalue);
+    data_.reduced_lp_.colCost_ = std::move(data_.presolve_[0].colCost);
+    data_.reduced_lp_.colLower_ = std::move(data_.presolve_[0].colLower);
+    data_.reduced_lp_.colUpper_ = std::move(data_.presolve_[0].colUpper);
+    data_.reduced_lp_.rowLower_ = std::move(data_.presolve_[0].rowLower);
+    data_.reduced_lp_.rowUpper_ = std::move(data_.presolve_[0].rowUpper);
+
+    data_.reduced_lp_.sense_ = ObjSense::MINIMIZE;
+    data_.reduced_lp_.offset_ = 0;
+    data_.reduced_lp_.model_name_ =
+        std::move(data_.presolve_[0].modelName);  //"Presolved model";
+  }
+
   return presolve_status_;
 }
 
