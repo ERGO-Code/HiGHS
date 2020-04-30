@@ -20,7 +20,7 @@ def Highs_call(colcost, collower, colupper, rowlower, rowupper, astart, aindex, 
 
    dbl_array_type_col = ctypes.c_double * n_col
    dbl_array_type_row = ctypes.c_double * n_row
-   int_array_type_astart = ctypes.c_int * (n_col + 1)
+   int_array_type_astart = ctypes.c_int * n_col
    int_array_type_aindex = ctypes.c_int * n_nz
    dbl_array_type_avalue = ctypes.c_double * n_nz
 
