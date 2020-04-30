@@ -81,7 +81,7 @@ void Presolve::setBasisInfo(
 
 // printing with cout goes here.
 void reportDev(const string& message) {
-  if (iPrint == -1) std::cout << message << std::endl;
+  if (iPrint == -1) std::cout << message << std::flush;
   return;
 }
 
@@ -139,8 +139,7 @@ int Presolve::presolve(int print) {
 
   if (iPrint < 0) {
     stringstream ss;
-    ss << "dev-presolve: model:      rows, colx, nnz" << std::endl;
-    ss << "dev-presolve: " + modelName << ":  " << numRow << ",  " << numCol
+    ss << "dev-presolve: model:      rows, colx, nnz , " << modelName << ":  " << numRow << ",  " << numCol
        << ",  " << (int)Avalue.size();
     reportDev(ss.str());
   }
@@ -648,6 +647,13 @@ void Presolve::resizeProblem() {
   numCol = nC;
   numTot = nR + nC;
 
+  if (iPrint < 0) {
+    stringstream ss;
+    ss << ",  Reduced : " << numRow << ",  " << numCol
+       << ",  ";
+    reportDev(ss.str());
+  }
+
   if (nR + nC == 0) {
     status = Empty;
     return;
@@ -683,6 +689,13 @@ void Presolve::resizeProblem() {
       }
     }
   }
+
+  if (iPrint < 0) {
+    stringstream ss;
+    ss << Avalue.size() << ", ";
+    reportDev(ss.str());
+  }
+
   // For KKT checker: pass vectors before you trim them
   if (iKKTcheck == 1) {
     chk.setFlags(flagRow, flagCol);
