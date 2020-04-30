@@ -20,3 +20,8 @@ target_include_directories(
 target_sources(scaffold PUBLIC ${HIGHS_SOURCE_DIR}/scaffold/ScaffoldMain.cpp)
 
 target_link_libraries(scaffold libhighs)
+
+add_test(NAME scaffold COMMAND scaffold)
+        set_tests_properties (scaffold PROPERTIES
+                PASS_REGULAR_EXPRESSION
+                "End of Scaffold: return 0.")

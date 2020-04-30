@@ -131,7 +131,8 @@ void testProblems() {
         std::cout << "TestPresolve:: Highs readModel returned Warning or Error "
                      "on problem: "
                   << test_run.name << std::endl;
-        continue;
+        // continue;
+        exit(2); // so ctest can fail.
       }
 
       // Making sure presolve is on (default).

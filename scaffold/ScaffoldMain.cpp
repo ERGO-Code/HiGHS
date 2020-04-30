@@ -19,6 +19,7 @@ int main(int argc, char* argv[]) {
 
   // Dev code should be compiled and used with a target specified in its
   // dev-*/CMakeLists.txt.
+  std::cout << "End of Scaffold: return 0." << std::endl;
 
   return 0;
 }
