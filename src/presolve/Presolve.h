@@ -49,6 +49,18 @@ enum class HighsPresolveStatus {
   NullError
 };
 
+namespace presolve {
+struct MainLoop {
+  int rows;
+  int cols;
+  int nnz;
+};
+
+struct DevStats {
+  int n_loops;
+  std::vector<MainLoop> loops;
+};
+
 class Presolve : public HPreData {
  public:
   Presolve(HighsTimer& timer_ref) : timer(timer_ref) {
@@ -57,7 +69,6 @@ class Presolve : public HPreData {
     objShift = 0;
     hasChange = true;
     iKKTcheck = 0;
-    iPrint = 0;
     countsFile = "";
   }
 
@@ -75,7 +86,6 @@ class Presolve : public HPreData {
   string modelName;
 
  private:
-  int iPrint;
   int iKKTcheck;
   int presolve(int print);
 
@@ -241,6 +251,13 @@ class Presolve : public HPreData {
   //
 
   string countsFile;
+
+  // Dev presolve
+  // April 2020
+  void reportDevMainLoop();
+  DevStats dev_stats;
 };
+
+}  // namespace presolve
 
 #endif /* PRESOLVE_HPRESOLVE_H_ */

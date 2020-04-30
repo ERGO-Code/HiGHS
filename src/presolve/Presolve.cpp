@@ -28,6 +28,8 @@
 
 #include "test/KktChStep.h"
 
+namespace presolve {
+
 using std::cout;
 using std::endl;
 using std::flush;
@@ -41,6 +43,10 @@ using std::ofstream;
 using std::setprecision;
 using std::setw;
 using std::stringstream;
+
+constexpr int iPrint = -1;
+// todo:
+// iKKTcheck = 1;
 
 void Presolve::load(const HighsLp& lp) {
   timer.recordStart(MATRIX_COPY);
@@ -73,16 +79,70 @@ void Presolve::setBasisInfo(
   row_status = pass_row_status;
 }
 
+// printing with cout goes here.
+void reportDev(const string& message) {
+  if (iPrint == -1) std::cout << message << std::endl;
+  return;
+}
+
+// todo:
+// printing with cout << goes here.
+// void Presolve::reportDebug(const string& message) const {
+
+void print(const DevStats& stats) {
+  std::cout << "dev-presolve-stats::" << std::endl;
+  std::cout << "  n_loops = " << std::endl;
+  std::cout << "    loop : rows, cols, nnz " << std::endl;
+  for (const MainLoop l : stats.loops)
+    std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz
+              << "   " << std::endl;
+  return;
+}
+
+void Presolve::reportDevMainLoop() {
+  int rows = 0;
+  int cols = 0;
+
+  std::vector<int> nnz_rows(numRow, 0);
+  std::vector<int> nnz_cols(numCol, 0);
+
+  int total_rows = 0;
+  int total_cols = 0;
+
+  for (int i = 0; i < numRow; i++)
+    if (flagRow.at(i)) {
+      rows++;
+      nnz_rows[i] += nzRow[i];
+      total_rows += nzRow[i];
+    }
+
+  for (int j = 0; j < numCol; j++)
+    if (flagCol.at(j)) {
+      cols++;
+      nnz_cols[j] += nzCol[j];
+      total_cols += nzCol[j];
+    }
+
+  // Nonzeros.
+  assert(total_cols == total_rows);
+
+  dev_stats.n_loops++;
+  dev_stats.loops.push_back(MainLoop{rows, cols, total_cols});
+  return;
+}
+
 int Presolve::presolve(int print) {
-  iPrint = print;
-
-  // iPrint = 1;
-  // iKKTcheck = 1;
-  // chk.print = 1;
-
   if (iPrint > 0) {
     cout << "Presolve started ..." << endl;
     cout << "Original problem ... N=" << numCol << "  M=" << numRow << endl;
+  }
+
+  if (iPrint < 0) {
+    stringstream ss;
+    ss << "dev-presolve: model:      rows, colx, nnz" << std::endl;
+    ss << "dev-presolve: " + modelName << ":  " << numRow << ",  " << numCol
+       << ",  " << (int)Avalue.size();
+    reportDev(ss.str());
   }
 
   initializeVectors();
@@ -102,6 +162,7 @@ int Presolve::presolve(int print) {
   while (hasChange == 1) {
     hasChange = false;
     if (iPrint > 0) cout << "PR: main loop " << iter << ":" << endl;
+    reportDevMainLoop();
     //***************** main loop ******************
     checkBoundsAreConsistent();
     if (status) return status;
@@ -2250,8 +2311,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   for (int i = 0; i < numCol; ++i) {
     int iCol = eqIndexOfReduced.at(i);
-    assert(iCol < (int)valuePrimal.size()); 
-    assert(iCol < (int)valueColDual.size()); 
+    assert(iCol < (int)valuePrimal.size());
+    assert(iCol < (int)valueColDual.size());
     assert(iCol >= 0);
     valuePrimal[iCol] = colValue.at(i);
     valueColDual[iCol] = colDual.at(i);
@@ -3406,3 +3467,5 @@ void Presolve::countRemovedRows(PresolveRule rule) {
 void Presolve::countRemovedCols(PresolveRule rule) {
   timer.increaseCount(false, rule);
 }
+
+}  // namespace presolve
