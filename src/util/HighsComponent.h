@@ -45,6 +45,7 @@ class HighsComponent {
   const HighsComponentOptions& getOptions() { return options_; }
 
   virtual ~HighsComponent() {}
+
  private:
   bool has_run_ = false;
 
