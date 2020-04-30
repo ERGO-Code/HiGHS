@@ -2250,8 +2250,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   for (int i = 0; i < numCol; ++i) {
     int iCol = eqIndexOfReduced.at(i);
-    assert(iCol < (int)valuePrimal.size()); 
-    assert(iCol < (int)valueColDual.size()); 
+    assert(iCol < (int)valuePrimal.size());
+    assert(iCol < (int)valueColDual.size());
     assert(iCol >= 0);
     valuePrimal[iCol] = colValue.at(i);
     valueColDual[iCol] = colDual.at(i);
