@@ -7,46 +7,51 @@ program fortrantest
   integer ( c_int ), parameter :: m = 2
   integer ( c_int ), parameter :: nz = 4
 
-  real ( c_double ) cc(n)
-  real ( c_double ) cl(n)
-  real ( c_double ) cu(n)
-  real ( c_double ) rl(m)
-  real ( c_double ) ru(m)
-  integer ( c_int ) as(n+1)
-  integer ( c_int ) ai(nz)
-  real ( c_double ) av(nz)
+  real ( c_double ) colcost(n)
+  real ( c_double ) collower(n)
+  real ( c_double ) colupper(n)
+  real ( c_double ) rowlower(m)
+  real ( c_double ) rowupper(m)
+  integer ( c_int ) astart(n)
+  integer ( c_int ) aindex(nz)
+  real ( c_double ) avalue(nz)
 
-  real ( c_double ) cv(n)
-  real ( c_double ) cd(n)
-  real ( c_double ) rv(m)
-  real ( c_double ) rd(m)
-  integer ( c_int ) cbs(n)
-  integer ( c_int ) rbs(m)
-  integer ( c_int ) ms
+  real ( c_double ) colvalue(n)
+  real ( c_double ) coldual(n)
+  real ( c_double ) rowvalue(m)
+  real ( c_double ) rowdual(m)
+  integer ( c_int ) colbasisstatus(n)
+  integer ( c_int ) rowbasisstatus(m)
+  integer ( c_int ) modelstatus
+  integer ( c_int ) runstatus
 
-  cc(1) = 1
-  cc(2) = -2
-  cl(1) = 0
-  cl(2) = 0
-  cu(1) = 1000
-  cu(2) = 1000
-  rl(1) = 0.0
-  rl(2) = 0.0
-  ru(1) = 10.0
-  ru(2) = 10.0
-  as(1) = 0
-  as(2) = 2
-  as(3) = 4
-  ai(1) = 0
-  ai(2) = 1
-  ai(3) = 0
-  ai(4) = 1
-  av(1) = 1
-  av(2) = -1
-  av(3) = 3
-  av(4) = 0.2
+  colcost(1) = 1
+  colcost(2) = -2
+  collower(1) = 0
+  collower(2) = 0
+  colupper(1) = 1000
+  colupper(2) = 1000
+  rowlower(1) = 0.0
+  rowlower(2) = 0.0
+  rowupper(1) = 10.0
+  rowupper(2) = 10.0
+  astart(1) = 0
+  astart(2) = 2
+  aindex(1) = 0
+  aindex(2) = 1
+  aindex(3) = 0
+  aindex(4) = 1
+  avalue(1) = 1
+  avalue(2) = -1
+  avalue(3) = 3
+  avalue(4) = 0.2
 
-  call Highs_call( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs, ms)
+  runstatus = Highs_call( n, m, nz,&
+  colcost, collower, colupper,&
+  rowlower, rowupper,&
+  astart, aindex, avalue,&
+  colvalue, coldual, rowvalue, rowdual,&
+  colbasisstatus, rowbasisstatus, modelstatus)
       
 
 end program fortrantest
