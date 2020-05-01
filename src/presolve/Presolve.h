@@ -57,7 +57,7 @@ struct MainLoop {
 };
 
 struct DevStats {
-  int n_loops;
+  int n_loops = 0;
   std::vector<MainLoop> loops;
 };
 
@@ -161,7 +161,7 @@ class Presolve : public HPreData {
   int getSingColElementIndexInA(int j);
 
   // forcing constraints
-  void removeForcingConstraints(int mainIter);
+  void removeForcingConstraints();
   pair<double, double> getImpliedRowBounds(int row);
   void setVariablesToBoundForForcingRow(const int row, const bool isLower);
   void dominatedConstraintProcedure(const int i, const double g,
@@ -256,6 +256,7 @@ class Presolve : public HPreData {
   // April 2020
   void reportDevMainLoop();
   DevStats dev_stats;
+  int runPresolvers();
 };
 
 }  // namespace presolve

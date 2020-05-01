@@ -44,7 +44,7 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-constexpr int iPrint = -1;
+constexpr int iPrint = 1;
 // todo:
 // iKKTcheck = 1;
 
@@ -81,7 +81,7 @@ void Presolve::setBasisInfo(
 
 // printing with cout goes here.
 void reportDev(const string& message) {
-  if (iPrint == -1) std::cout << message << std::flush;
+  if (iPrint) std::cout << message << std::flush;
   return;
 }
 
@@ -89,13 +89,17 @@ void reportDev(const string& message) {
 // printing with cout << goes here.
 // void Presolve::reportDebug(const string& message) const {
 
-void print(const DevStats& stats) {
+void printMainLoop(const MainLoop& l) {
+    std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz
+              << "   " << std::endl;
+}
+
+void printDevStats(const DevStats& stats) {
   std::cout << "dev-presolve-stats::" << std::endl;
   std::cout << "  n_loops = " << std::endl;
   std::cout << "    loop : rows, cols, nnz " << std::endl;
   for (const MainLoop l : stats.loops)
-    std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz
-              << "   " << std::endl;
+    printMainLoop(l);
   return;
 }
 
@@ -128,8 +132,71 @@ void Presolve::reportDevMainLoop() {
 
   dev_stats.n_loops++;
   dev_stats.loops.push_back(MainLoop{rows, cols, total_cols});
+
+  std::cout << "Starting loop " << dev_stats.n_loops;
+
+  printMainLoop(dev_stats.loops[dev_stats.n_loops -1]);
   return;
 }
+
+int Presolve::runPresolvers() {
+    //***************** main loop ******************
+    checkBoundsAreConsistent();
+    if (status) return status;
+
+    double time_start = timer.timer_.readRunHighsClock();
+    std::cout << "----> row singletons" << std::endl;
+    removeRowSingletons();
+    double time_end = timer.timer_.readRunHighsClock();
+    std::cout << "----> row singletons time: " << time_end - time_start << std::endl;
+    if (status) return status;
+
+    time_start = timer.timer_.readRunHighsClock();
+    std::cout << "----> forcing constraints" << std::endl;
+    removeForcingConstraints();
+    time_end = timer.timer_.readRunHighsClock();
+    std::cout << "----> forcing constraints time: " << time_end - time_start << std::endl;
+    if (status) return status;
+
+    time_start = timer.timer_.readRunHighsClock();
+    std::cout << "----> row singletons" << std::endl;
+    removeRowSingletons();
+    time_end = timer.timer_.readRunHighsClock();
+    std::cout << "----> row singletons time: " << time_end - time_start << std::endl;
+    if (status) return status;
+    
+    time_start = timer.timer_.readRunHighsClock();
+    std::cout << "----> doubleton equations" << std::endl;
+    removeDoubletonEquations();
+    time_end = timer.timer_.readRunHighsClock();
+    std::cout << "----> doubleton equations time: " << time_end - time_start << std::endl;
+    if (status) return status;
+
+    time_start = timer.timer_.readRunHighsClock();
+    std::cout << "----> row singletons" << std::endl;
+    removeRowSingletons();
+    time_end = timer.timer_.readRunHighsClock();
+    std::cout << "----> row singletons time: " << time_end - time_start << std::endl;
+    if (status) return status;
+
+    time_start = timer.timer_.readRunHighsClock();
+    std::cout << "----> col singletons" << std::endl;
+    removeColumnSingletons();
+    time_end = timer.timer_.readRunHighsClock();
+    std::cout << "----> col singletons time: " << time_end - time_start << std::endl;
+    if (status) return status;
+
+    time_start = timer.timer_.readRunHighsClock();
+    std::cout << "----> dominated cols" << std::endl;
+    removeDominatedColumns();
+    time_end = timer.timer_.readRunHighsClock();
+    std::cout << "----> row singletons time: " << time_end - time_start << std::endl;
+    if (status) return status;
+
+    //***************** main loop ******************
+  return status;
+}
+
 
 int Presolve::presolve(int print) {
   if (iPrint > 0) {
@@ -140,7 +207,7 @@ int Presolve::presolve(int print) {
   if (iPrint < 0) {
     stringstream ss;
     ss << "dev-presolve: model:      rows, colx, nnz , " << modelName << ":  " << numRow << ",  " << numCol
-       << ",  " << (int)Avalue.size();
+       << ",  " << (int)Avalue.size() << std::endl;
     reportDev(ss.str());
   }
 
@@ -160,39 +227,25 @@ int Presolve::presolve(int print) {
 
   while (hasChange == 1) {
     hasChange = false;
+
     if (iPrint > 0) cout << "PR: main loop " << iter << ":" << endl;
     reportDevMainLoop();
-    //***************** main loop ******************
-    checkBoundsAreConsistent();
+    int run_status = runPresolvers();
+    assert (run_status == status);
     if (status) return status;
 
-    removeRowSingletons();
-    if (status) return status;
-    removeForcingConstraints(iter);
-    if (status) return status;
-
-    removeRowSingletons();
-    if (status) return status;
-    removeDoubletonEquations();
-    if (status) return status;
-
-    removeRowSingletons();
-    if (status) return status;
-    removeColumnSingletons();
-    if (status) return status;
-
-    removeDominatedColumns();
-    if (status) return status;
-
-    //***************** main loop ******************
     iter++;
   }
+
+  reportDevMainLoop();
 
   timer.recordStart(RESIZE_MATRIX);
   checkForChanges(iter);
   timer.recordFinish(RESIZE_MATRIX);
 
   timer.updateInfo();
+  
+  printDevStats(dev_stats);
 
   return status;
 }
@@ -1753,7 +1806,7 @@ void Presolve::dominatedConstraintProcedure(const int i, const double g,
   }
 }
 
-void Presolve::removeForcingConstraints(int mainIter) {
+void Presolve::removeForcingConstraints() {
   double g, h;
   pair<double, double> implBounds;
 
@@ -1805,8 +1858,6 @@ void Presolve::removeForcingConstraints(int mainIter) {
       }
       timer.recordFinish(FORCING_ROW);
     }
-  if (mainIter) {
-  }  // surpress warning.
 }
 
 void Presolve::removeRowSingletons() {
