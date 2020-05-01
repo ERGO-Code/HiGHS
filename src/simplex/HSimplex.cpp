@@ -3522,7 +3522,7 @@ void correctDual(HighsModelObject& highs_model_object,
           HighsPrintMessage(
               highs_model_object.options_.output,
               highs_model_object.options_.message_level, ML_VERBOSE,
-              "Move %s: shift = %g; objective change = %g\n", direction.c_str(),
+              "Move %s: cost shift = %g; objective change = %g\n", direction.c_str(),
               shift, local_dual_objective_change);
         }
       }
@@ -3538,7 +3538,7 @@ void correctDual(HighsModelObject& highs_model_object,
     HighsPrintMessage(
         highs_model_object.options_.output,
         highs_model_object.options_.message_level, ML_DETAILED,
-        "Performed %d shift(s): total = %g; objective change = %g\n", num_shift,
+        "Performed %d cost shift(s): total = %g; objective change = %g\n", num_shift,
         sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
 }

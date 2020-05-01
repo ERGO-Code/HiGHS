@@ -386,6 +386,7 @@ class HDual {
   void majorRollback();
 
   void assessPhase1Optimality();
+  void exitPhase1ResetDuals();
   void reportOnPossibleLpDualInfeasibility();
 
   bool checkNonUnitWeightError(std::string message);

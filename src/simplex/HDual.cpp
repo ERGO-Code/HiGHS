@@ -603,6 +603,10 @@ void HDual::solvePhase1() {
   }
 
   if (solvePhase == 2) {
+    // Moving to phase 2 so allow cost perturbation. It may have been
+    // prevented to avoid cleanup-perturbation loops when optimal in
+    // phase 1
+    simplex_info.allow_cost_perturbation = true;
     initialise_bound(workHMO);
     initialise_value(workHMO);
   }
@@ -628,10 +632,6 @@ void HDual::solvePhase2() {
   // Report the phase start
   HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                     ML_DETAILED, "dual-phase-2-start\n");
-  // Allow perturbation of costs to the extent of the shifts required
-  // to eliminate dual infeasiblities. Once cost perturbation has been
-  // removed at the end of phase 2, such shifting won't be permitted.
-  simplex_info.allow_cost_perturbation = true;
   // Collect free variables
   dualRow.createFreelist();
   // Main solving structure
@@ -1913,14 +1913,66 @@ void HDual::assessPhase1Optimality() {
   } else {
     // Optimal in dual phase 1, so must go to phase 2
     assert(solvePhase == 2);
+    // Reset the duals, if necessary shifting costs of free variable
+    // so that their duals are zero
+    exitPhase1ResetDuals();
   }
 
-  if (solvePhase == -1) {
-    // Report dual infeasible
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
-                      ML_DETAILED, "dual-infeasible\n");
-    workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+}
+
+void HDual::exitPhase1ResetDuals() {
+  const HighsLp& simplex_lp = workHMO.simplex_lp_;
+  const SimplexBasis& simplex_basis = workHMO.simplex_basis_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+
+  const bool reperturb_costs = false;
+  if (reperturb_costs) {
+    if (simplex_info.costs_perturbed) {
+    	HighsPrintMessage(
+              workHMO.options_.output,
+              workHMO.options_.message_level, ML_MINIMAL,
+              "Costs are already perturbed in exitPhase1ResetDuals\n");
+    } else {
+      initialise_cost(workHMO, 1);
+      analysis->simplexTimerStart(ComputeDualClock);
+      computeDual(workHMO);
+      analysis->simplexTimerStop(ComputeDualClock);
+    }
   }
+
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  int num_shift = 0;
+  double sum_shift = 0;
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (simplex_basis.nonbasicFlag_[iVar]) {
+      double lp_lower;
+      double lp_upper;
+      if (iVar < simplex_lp.numCol_) {
+	lp_lower = simplex_lp.colLower_[iVar];
+	lp_upper = simplex_lp.colUpper_[iVar];
+      } else {
+	int iRow = iVar - simplex_lp.numCol_;
+	lp_lower = simplex_lp.rowLower_[iRow];
+	lp_upper = simplex_lp.rowUpper_[iRow];
+      }
+      if (lp_lower <= -HIGHS_CONST_INF && lp_upper >= HIGHS_CONST_INF) {
+	const double shift = -simplex_info.workDual_[iVar];
+	simplex_info.workDual_[iVar] = 0;
+	simplex_info.workCost_[iVar] = simplex_info.workCost_[iVar] + shift;
+	num_shift++;
+	sum_shift += fabs(shift);
+	HighsPrintMessage(
+              workHMO.options_.output,
+              workHMO.options_.message_level, ML_VERBOSE,
+              "Variable %d is free: shift cost to zero dual of %g\n", iVar, shift);
+      }
+    }
+  }
+  if (num_shift)
+    HighsPrintMessage(
+        workHMO.options_.output,
+        workHMO.options_.message_level, ML_DETAILED,
+        "Performed %d cost shift(s) for free variables to zero dual values: total = %g\n", num_shift, sum_shift);
 }
 
 void HDual::reportOnPossibleLpDualInfeasibility() {
@@ -1937,9 +1989,9 @@ void HDual::reportOnPossibleLpDualInfeasibility() {
       workHMO.scaled_solution_params_.sum_dual_infeasibilities;
   std::string lp_dual_status;
   if (num_lp_dual_infeasibilities) {
-    lp_dual_status = "feasible";
-  } else {
     lp_dual_status = "infeasible";
+  } else {
+    lp_dual_status = "feasible";
   }
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
                     "LP is dual %s with dual phase 1 objective %10.4g and num / "
