@@ -90,20 +90,26 @@ void reportDev(const string& message) {
 // void Presolve::reportDebug(const string& message) const {
 
 void printMainLoop(const MainLoop& l) {
-    std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz
-              << "   " << std::endl;
+  std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz << "   "
+            << std::endl;
 }
 
 void printDevStats(const DevStats& stats) {
+  assert(stats.n_loops == stats.loops.size());
   std::cout << "dev-presolve-stats::" << std::endl;
-  std::cout << "  n_loops = " << std::endl;
+  std::cout << "  n_loops = " << stats.n_loops << std::endl;
   std::cout << "    loop : rows, cols, nnz " << std::endl;
-  for (const MainLoop l : stats.loops)
-    printMainLoop(l);
+  for (const MainLoop l : stats.loops) printMainLoop(l);
   return;
 }
 
-void Presolve::reportDevMainLoop() {
+void getRowsColsNnz(const std::vector<int>& flagRow,
+                    const std::vector<int>& flagCol,
+                    const std::vector<int>& nzRow,
+                    const std::vector<int>& nzCol, int& _rows, int& _cols,
+                    int& _nnz) {
+  int numCol = flagCol.size();
+  int numRow = flagRow.size();
   int rows = 0;
   int cols = 0;
 
@@ -130,73 +136,111 @@ void Presolve::reportDevMainLoop() {
   // Nonzeros.
   assert(total_cols == total_rows);
 
+  _rows = rows;
+  _cols = cols;
+  _nnz = total_cols;
+}
+
+void Presolve::reportDevMidMainLoop() {
+  int rows = 0;
+  int cols = 0;
+  int nnz = 0;
+  getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
+
+  std::cout << "                                             counts " << rows
+            << ",  " << cols << ", " << nnz << std::endl;
+}
+
+void Presolve::reportDevMainLoop() {
+  int rows = 0;
+  int cols = 0;
+  int nnz = 0;
+
+  getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
+
   dev_stats.n_loops++;
-  dev_stats.loops.push_back(MainLoop{rows, cols, total_cols});
+  dev_stats.loops.push_back(MainLoop{rows, cols, nnz});
 
   std::cout << "Starting loop " << dev_stats.n_loops;
 
-  printMainLoop(dev_stats.loops[dev_stats.n_loops -1]);
+  printMainLoop(dev_stats.loops[dev_stats.n_loops - 1]);
   return;
 }
 
 int Presolve::runPresolvers() {
-    //***************** main loop ******************
-    checkBoundsAreConsistent();
-    if (status) return status;
+  //***************** main loop ******************
+  checkBoundsAreConsistent();
+  if (status) return status;
 
-    double time_start = timer.timer_.readRunHighsClock();
-    std::cout << "----> row singletons" << std::endl;
-    removeRowSingletons();
-    double time_end = timer.timer_.readRunHighsClock();
-    std::cout << "----> row singletons time: " << time_end - time_start << std::endl;
-    if (status) return status;
+  double time_start = timer.timer_.readRunHighsClock();
+  std::cout << "----> row singletons" << std::endl;
+  removeRowSingletons();
+  double time_end = timer.timer_.readRunHighsClock();
+  std::cout << "----> row singletons time: " << time_end - time_start
+            << std::endl;
+  reportDevMidMainLoop();
+  if (status) return status;
 
-    time_start = timer.timer_.readRunHighsClock();
-    std::cout << "----> forcing constraints" << std::endl;
-    removeForcingConstraints();
-    time_end = timer.timer_.readRunHighsClock();
-    std::cout << "----> forcing constraints time: " << time_end - time_start << std::endl;
-    if (status) return status;
+  time_start = timer.timer_.readRunHighsClock();
+  std::cout << "----> forcing constraints" << std::endl;
+  removeForcingConstraints();
+  time_end = timer.timer_.readRunHighsClock();
+  std::cout << "----> forcing constraints time: " << time_end - time_start
+            << std::endl;
+  reportDevMidMainLoop();
+  if (status) return status;
 
-    time_start = timer.timer_.readRunHighsClock();
-    std::cout << "----> row singletons" << std::endl;
-    removeRowSingletons();
-    time_end = timer.timer_.readRunHighsClock();
-    std::cout << "----> row singletons time: " << time_end - time_start << std::endl;
-    if (status) return status;
-    
-    time_start = timer.timer_.readRunHighsClock();
-    std::cout << "----> doubleton equations" << std::endl;
-    removeDoubletonEquations();
-    time_end = timer.timer_.readRunHighsClock();
-    std::cout << "----> doubleton equations time: " << time_end - time_start << std::endl;
-    if (status) return status;
+  time_start = timer.timer_.readRunHighsClock();
+  std::cout << "----> row singletons" << std::endl;
+  removeRowSingletons();
+  time_end = timer.timer_.readRunHighsClock();
+  std::cout << "----> row singletons time: " << time_end - time_start
+            << std::endl;
+  reportDevMidMainLoop();
+  if (status) return status;
 
-    time_start = timer.timer_.readRunHighsClock();
-    std::cout << "----> row singletons" << std::endl;
-    removeRowSingletons();
-    time_end = timer.timer_.readRunHighsClock();
-    std::cout << "----> row singletons time: " << time_end - time_start << std::endl;
-    if (status) return status;
+  // time_start = timer.timer_.readRunHighsClock();
+  // std::cout << "----> doubleton equations" << std::endl;
+  // removeDoubletonEquations();
+  // time_end = timer.timer_.readRunHighsClock();
+  // std::cout << "----> doubleton equations time: " << time_end - time_start
+  //           << std::endl;
+  // reportDevMidMainLoop();
+  // if (status) return status;
 
-    time_start = timer.timer_.readRunHighsClock();
-    std::cout << "----> col singletons" << std::endl;
-    removeColumnSingletons();
-    time_end = timer.timer_.readRunHighsClock();
-    std::cout << "----> col singletons time: " << time_end - time_start << std::endl;
-    if (status) return status;
+  std::cout << "----> doubleton equations disabled."
+            << std::endl;
 
-    time_start = timer.timer_.readRunHighsClock();
-    std::cout << "----> dominated cols" << std::endl;
-    removeDominatedColumns();
-    time_end = timer.timer_.readRunHighsClock();
-    std::cout << "----> row singletons time: " << time_end - time_start << std::endl;
-    if (status) return status;
+  time_start = timer.timer_.readRunHighsClock();
+  std::cout << "----> row singletons" << std::endl;
+  removeRowSingletons();
+  time_end = timer.timer_.readRunHighsClock();
+  std::cout << "----> row singletons time: " << time_end - time_start
+            << std::endl;
+  reportDevMidMainLoop();
+  if (status) return status;
 
-    //***************** main loop ******************
+  time_start = timer.timer_.readRunHighsClock();
+  std::cout << "----> col singletons" << std::endl;
+  removeColumnSingletons();
+  time_end = timer.timer_.readRunHighsClock();
+  std::cout << "----> col singletons time: " << time_end - time_start
+            << std::endl;
+  reportDevMidMainLoop();
+  if (status) return status;
+
+  time_start = timer.timer_.readRunHighsClock();
+  std::cout << "----> dominated cols" << std::endl;
+  removeDominatedColumns();
+  time_end = timer.timer_.readRunHighsClock();
+  std::cout << "----> row singletons time: " << time_end - time_start
+            << std::endl;
+  reportDevMidMainLoop();
+  if (status) return status;
+
+  //***************** main loop ******************
   return status;
 }
-
 
 int Presolve::presolve(int print) {
   if (iPrint > 0) {
@@ -206,8 +250,8 @@ int Presolve::presolve(int print) {
 
   if (iPrint < 0) {
     stringstream ss;
-    ss << "dev-presolve: model:      rows, colx, nnz , " << modelName << ":  " << numRow << ",  " << numCol
-       << ",  " << (int)Avalue.size() << std::endl;
+    ss << "dev-presolve: model:      rows, colx, nnz , " << modelName << ":  "
+       << numRow << ",  " << numCol << ",  " << (int)Avalue.size() << std::endl;
     reportDev(ss.str());
   }
 
@@ -228,11 +272,16 @@ int Presolve::presolve(int print) {
   while (hasChange == 1) {
     hasChange = false;
 
-    if (iPrint > 0) cout << "PR: main loop " << iter << ":" << endl;
+    cout << "PR: main loop " << iter << ":" << endl;
     reportDevMainLoop();
     int run_status = runPresolvers();
-    assert (run_status == status);
+    assert(run_status == status);
     if (status) return status;
+     
+     //todo: next ~~~
+    // Exit check: less than 10 % of what we had before.
+    // if (dev_stats.loops)
+    if (iter == 5) break;
 
     iter++;
   }
@@ -244,7 +293,7 @@ int Presolve::presolve(int print) {
   timer.recordFinish(RESIZE_MATRIX);
 
   timer.updateInfo();
-  
+
   printDevStats(dev_stats);
 
   return status;
@@ -702,8 +751,7 @@ void Presolve::resizeProblem() {
 
   if (iPrint < 0) {
     stringstream ss;
-    ss << ",  Reduced : " << numRow << ",  " << numCol
-       << ",  ";
+    ss << ",  Reduced : " << numRow << ",  " << numCol << ",  ";
     reportDev(ss.str());
   }
 

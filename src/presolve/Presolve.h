@@ -255,6 +255,7 @@ class Presolve : public HPreData {
   // Dev presolve
   // April 2020
   void reportDevMainLoop();
+  void reportDevMidMainLoop();
   DevStats dev_stats;
   int runPresolvers();
 };
