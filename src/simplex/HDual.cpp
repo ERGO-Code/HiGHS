@@ -1887,9 +1887,9 @@ void HDual::assessPhase1Optimality() {
       // whether the LP is primal unbounded.
       //
       if (simplex_info.dual_objective_value == 0) {
-        HighsLogMessage(
-            workHMO.options_.logfile, HighsMessageType::INFO,
-            "LP is dual feasible after removing cost perturbations so go to phase 2");
+        HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
+                        "LP is dual feasible after removing cost perturbations "
+                        "so go to phase 2");
       } else {
         reportOnPossibleLpDualInfeasibility();
       }
@@ -1917,7 +1917,6 @@ void HDual::assessPhase1Optimality() {
     // so that their duals are zero
     exitPhase1ResetDuals();
   }
-
 }
 
 void HDual::exitPhase1ResetDuals() {
@@ -1925,14 +1924,16 @@ void HDual::exitPhase1ResetDuals() {
   const SimplexBasis& simplex_basis = workHMO.simplex_basis_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
 
-  const bool reperturb_costs = false;
+  const bool reperturb_costs = true;
   if (reperturb_costs) {
     if (simplex_info.costs_perturbed) {
-    	HighsPrintMessage(
-              workHMO.options_.output,
-              workHMO.options_.message_level, ML_MINIMAL,
-              "Costs are already perturbed in exitPhase1ResetDuals\n");
+      HighsPrintMessage(
+          workHMO.options_.output, workHMO.options_.message_level, ML_MINIMAL,
+          "Costs are already perturbed in exitPhase1ResetDuals\n");
     } else {
+      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                        ML_DETAILED,
+                        "Re-perturbing costs when optimal in phase 1\n");
       initialise_cost(workHMO, 1);
       analysis->simplexTimerStart(ComputeDualClock);
       computeDual(workHMO);
@@ -1948,31 +1949,32 @@ void HDual::exitPhase1ResetDuals() {
       double lp_lower;
       double lp_upper;
       if (iVar < simplex_lp.numCol_) {
-	lp_lower = simplex_lp.colLower_[iVar];
-	lp_upper = simplex_lp.colUpper_[iVar];
+        lp_lower = simplex_lp.colLower_[iVar];
+        lp_upper = simplex_lp.colUpper_[iVar];
       } else {
-	int iRow = iVar - simplex_lp.numCol_;
-	lp_lower = simplex_lp.rowLower_[iRow];
-	lp_upper = simplex_lp.rowUpper_[iRow];
+        int iRow = iVar - simplex_lp.numCol_;
+        lp_lower = simplex_lp.rowLower_[iRow];
+        lp_upper = simplex_lp.rowUpper_[iRow];
       }
       if (lp_lower <= -HIGHS_CONST_INF && lp_upper >= HIGHS_CONST_INF) {
-	const double shift = -simplex_info.workDual_[iVar];
-	simplex_info.workDual_[iVar] = 0;
-	simplex_info.workCost_[iVar] = simplex_info.workCost_[iVar] + shift;
-	num_shift++;
-	sum_shift += fabs(shift);
-	HighsPrintMessage(
-              workHMO.options_.output,
-              workHMO.options_.message_level, ML_VERBOSE,
-              "Variable %d is free: shift cost to zero dual of %g\n", iVar, shift);
+        const double shift = -simplex_info.workDual_[iVar];
+        simplex_info.workDual_[iVar] = 0;
+        simplex_info.workCost_[iVar] = simplex_info.workCost_[iVar] + shift;
+        num_shift++;
+        sum_shift += fabs(shift);
+        HighsPrintMessage(
+            workHMO.options_.output, workHMO.options_.message_level, ML_VERBOSE,
+            "Variable %d is free: shift cost to zero dual of %g\n", iVar,
+            shift);
       }
     }
   }
   if (num_shift)
-    HighsPrintMessage(
-        workHMO.options_.output,
-        workHMO.options_.message_level, ML_DETAILED,
-        "Performed %d cost shift(s) for free variables to zero dual values: total = %g\n", num_shift, sum_shift);
+    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
+                      ML_DETAILED,
+                      "Performed %d cost shift(s) for free variables to zero "
+                      "dual values: total = %g\n",
+                      num_shift, sum_shift);
 }
 
 void HDual::reportOnPossibleLpDualInfeasibility() {
@@ -1993,14 +1995,12 @@ void HDual::reportOnPossibleLpDualInfeasibility() {
   } else {
     lp_dual_status = "feasible";
   }
-    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
-                    "LP is dual %s with dual phase 1 objective %10.4g and num / "
-                    "max / sum dual infeasibilities = %d / %9.4g / %9.4g",
-                    lp_dual_status.c_str(),
-		    simplex_info.dual_objective_value,
-		    num_lp_dual_infeasibilities,
-		    max_lp_dual_infeasibility,
-                    sum_lp_dual_infeasibilities);
+  HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
+                  "LP is dual %s with dual phase 1 objective %10.4g and num / "
+                  "max / sum dual infeasibilities = %d / %9.4g / %9.4g",
+                  lp_dual_status.c_str(), simplex_info.dual_objective_value,
+                  num_lp_dual_infeasibilities, max_lp_dual_infeasibility,
+                  sum_lp_dual_infeasibilities);
 }
 
 bool HDual::dualInfoOk(const HighsLp& lp) {
