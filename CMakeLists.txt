@@ -166,7 +166,7 @@ set(IPX_ON ON)
 #endif()
 
 include(CheckLanguage)
-check_language("Fortran")
+#check_language("Fortran")
 if(CMAKE_Fortran_COMPILER)
     enable_language(Fortran)
     set(FORTRAN_FOUND ON)
