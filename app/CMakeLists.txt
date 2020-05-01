@@ -1,6 +1,5 @@
 # create highs binary using library without pic
-add_executable(highs)
-target_sources(highs PRIVATE RunHighs.cpp)
+add_executable(highs RunHighs.cpp)
 target_include_directories(highs PRIVATE ${HIGHS_SOURCE_DIR}/app)
 target_link_libraries(highs libhighs)
 

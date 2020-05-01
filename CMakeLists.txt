@@ -2,7 +2,7 @@
 # means, adding the subdirectories for all CMake projects in this tree, and
 # finding external libraries and turning them into imported targets.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.10)
 
 project(HIGHS LANGUAGES CXX C)
 
