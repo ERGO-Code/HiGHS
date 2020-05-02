@@ -756,9 +756,10 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   return return_status;
 }
 
-HighsDebugStatus debugFreeListNumEntries(const HighsModelObject& highs_model_object,
-					 const std::set<int>& freeList) {
-  //  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+HighsDebugStatus debugFreeListNumEntries(
+    const HighsModelObject& highs_model_object, const std::set<int>& freeList) {
+  //  if (highs_model_object.options_.highs_debug_level <
+  //  HIGHS_DEBUG_LEVEL_CHEAP)
   //    return HighsDebugStatus::NOT_CHECKED;
 
   int freelist_num_entries = 0;
@@ -767,15 +768,15 @@ HighsDebugStatus debugFreeListNumEntries(const HighsModelObject& highs_model_obj
     for (sit = freeList.begin(); sit != freeList.end(); sit++)
       freelist_num_entries++;
   }
-  
+
   const int numTot = highs_model_object.simplex_lp_.numCol_ +
-    highs_model_object.simplex_lp_.numRow_;
+                     highs_model_object.simplex_lp_.numRow_;
   double pct_freelist_num_entries = (100.0 * freelist_num_entries) / numTot;
 
   std::string value_adjective;
   int report_level;
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
-  
+
   if (pct_freelist_num_entries > freelist_excessive_pct_num_entries) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
@@ -787,7 +788,7 @@ HighsDebugStatus debugFreeListNumEntries(const HighsModelObject& highs_model_obj
     report_level = ML_VERBOSE;
   } else {
     value_adjective = "OK";
-    report_level = ML_ALWAYS;//ML_VERBOSE;
+    report_level = ML_ALWAYS;  // ML_VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
 

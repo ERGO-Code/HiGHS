@@ -340,9 +340,10 @@ void HDualRow::updateDual(double theta) {
 
 void HDualRow::createFreelist() {
   freeList.clear();
-  for (int i = 0; i < workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_; i++) {
+  for (int i = 0; i < workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
+       i++) {
     if (workHMO.simplex_basis_.nonbasicFlag_[i] &&
-	highs_isInfinity(-workHMO.simplex_info_.workLower_[i]) &&
+        highs_isInfinity(-workHMO.simplex_info_.workLower_[i]) &&
         highs_isInfinity(workHMO.simplex_info_.workUpper_[i]))
       freeList.insert(i);
   }
@@ -383,8 +384,7 @@ void HDualRow::deleteFreemove() {
 
 void HDualRow::deleteFreelist(int iColumn) {
   if (!freeList.empty()) {
-    if (freeList.count(iColumn))
-      freeList.erase(iColumn);
+    if (freeList.count(iColumn)) freeList.erase(iColumn);
   }
 }
 
