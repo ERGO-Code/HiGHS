@@ -41,4 +41,5 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
                                      const std::string message);
 HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
                               const std::vector<double>& original_dual);
+HighsDebugStatus debugFreeListNumEn();
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_

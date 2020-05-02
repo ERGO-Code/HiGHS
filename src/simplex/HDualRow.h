@@ -132,7 +132,7 @@ class HDualRow {
 
   // Freelist:
   std::set<int> freeList;  //!< Freelist itself
-  int freeListSize = 0;    //!< Number of entries in freeList
+  int freelist_num_entries = 0;    //!< Number of entries in freeList
 
   // packed data:
   int packCount;                  //!< number of packed indices/values

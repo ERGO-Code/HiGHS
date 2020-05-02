@@ -751,3 +751,7 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
       cleanup_relative_nonbasic_dual_change_norm, num_dual_sign_change);
   return return_status;
 }
+
+HighsDebugStatus debugFreeListNumEn() {
+  return HighsDebugStatus::OK;			    
+}

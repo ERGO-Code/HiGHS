@@ -1205,13 +1205,13 @@ void HighsSimplexAnalysis::reportIterationData(const bool header,
   }
 }
 
-void HighsSimplexAnalysis::reportFreeListSize(const bool header,
+void HighsSimplexAnalysis::reportFreeListNumEntries(const bool header,
                                               const int this_message_level) {
   if (header) {
     HighsPrintMessage(output, message_level, this_message_level, " FreeLsZ");
   } else {
     HighsPrintMessage(output, message_level, this_message_level, " %7d",
-                      freelist_size);
+                      freelist_num_entries);
   }
 }
 
