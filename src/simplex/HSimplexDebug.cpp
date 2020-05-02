@@ -752,6 +752,7 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   return return_status;
 }
 
-HighsDebugStatus debugFreeListNumEn() {
+HighsDebugStatus debugFreeListNumEn(const HighsModelObject& highs_model_object,
+				    const std::set<int>& freeList, const bool setup) {
   return HighsDebugStatus::OK;			    
 }
