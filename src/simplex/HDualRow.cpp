@@ -50,15 +50,11 @@ void HDualRow::setup() {
   setupSlice(numTot);
   workNumTotPermutation = &workHMO.simplex_info_.numTotPermutation_[0];
 
-  // delete_Freelist() is being called in Phase 1 and Phase 2 since
+  // deleteFreelist() is being called in Phase 1 and Phase 2 since
   // it's in updatePivots(), but create_Freelist() is only called in
-  // Phase 2. Hence freeList and freelist_num_entries are not initialised when
-  // freeList.empty() is used to identify that freelist_num_entries should be
-  // tested for zero. Suddenly freelist_num_entries is 1212631365 rather than
-  // zero when uninitialised, triggering a warning. So, let's clear
-  // freeList and set freelist_num_entries = 0.
+  // Phase 2. Hence freeList is not initialised when freeList.empty()
+  // is used in deleteFreelist(), clear freeList now.
   freeList.clear();
-  freelist_num_entries = 0;
 }
 
 void HDualRow::clear() {
@@ -343,32 +339,14 @@ void HDualRow::updateDual(double theta) {
 }
 
 void HDualRow::createFreelist() {
-  double* workLower = &workHMO.simplex_info_.workLower_[0];
-  double* workUpper = &workHMO.simplex_info_.workUpper_[0];
   freeList.clear();
-  const int* nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
-  int check_freelist_num_entries = 0;
-  const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
-  for (int i = 0; i < numTot; i++) {
-    //    if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
-    if (nonbasicFlag[i] && highs_isInfinity(-workLower[i]) &&
-        highs_isInfinity(workUpper[i])) {
+  for (int i = 0; i < workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_; i++) {
+    if (workHMO.simplex_basis_.nonbasicFlag_[i] &&
+	highs_isInfinity(-workHMO.simplex_info_.workLower_[i]) &&
+        highs_isInfinity(workHMO.simplex_info_.workUpper_[i]))
       freeList.insert(i);
-      check_freelist_num_entries++;
-    }
   }
-  if (freeList.size() > 0) {
-    //  int freeListSa = *freeList.begin();
-    //  int freeListE = *freeList.end();
-    freelist_num_entries = *freeList.end();
-    if (freelist_num_entries != check_freelist_num_entries) {
-      printf("!! STRANGE: freelist_num_entries != check_freelist_num_entries\n");
-    }
-    // const int numTot = workHMO.simplex_lp_.numCol_ +
-    // workHMO.simplex_lp_.numRow_;
-    //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
-    //  freeListE, freelist_num_entries, 100*freelist_num_entries/numTot);
-  }
+  debugFreeListNumEntries(workHMO, freeList);
 }
 
 void HDualRow::createFreemove(HVector* row_ep) {
@@ -405,28 +383,8 @@ void HDualRow::deleteFreemove() {
 
 void HDualRow::deleteFreelist(int iColumn) {
   if (!freeList.empty()) {
-    if (freeList.count(iColumn)) freeList.erase(iColumn);
-    //  int freeListSa = *freeList.begin();
-    //  int freeListE = *freeList.end();
-    int check_freelist_num_entries = 0;
-    set<int>::iterator sit;
-    for (sit = freeList.begin(); sit != freeList.end(); sit++) check_freelist_num_entries++;
-    freelist_num_entries = *freeList.end();
-    if (freelist_num_entries != check_freelist_num_entries) {
-      printf("!! STRANGE: freelist_num_entries != check_freelist_num_entries\n");
-    }
-    // const int numTot = workHMO.simplex_lp_.numCol_ +
-    // workHMO.simplex_lp_.numRow_;
-    //  printf("Update Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
-    //  freeListE, freelist_num_entries, 100*freelist_num_entries/numTot); if
-    //  (freeList.empty()) {
-    //    printf("Empty  Freelist\n");
-    //  } else {
-    //    printf("\n");
-    //  }
-  } else {
-    if (freelist_num_entries > 0)
-      printf("!! STRANGE: Empty Freelist has size %d\n", freelist_num_entries);
+    if (freeList.count(iColumn))
+      freeList.erase(iColumn);
   }
 }
 
