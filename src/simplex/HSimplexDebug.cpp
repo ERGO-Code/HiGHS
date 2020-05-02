@@ -758,8 +758,8 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
 
 HighsDebugStatus debugFreeListNumEntries(
     const HighsModelObject& highs_model_object, const std::set<int>& freeList) {
-  //  if (highs_model_object.options_.highs_debug_level <
-  //  HIGHS_DEBUG_LEVEL_CHEAP)
+  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    printf("FreeList   :   Reporting nonzero free list size\n");
   //    return HighsDebugStatus::NOT_CHECKED;
 
   int freelist_num_entries = 0;
@@ -788,7 +788,11 @@ HighsDebugStatus debugFreeListNumEntries(
     report_level = ML_VERBOSE;
   } else {
     value_adjective = "OK";
-    report_level = ML_ALWAYS;  // ML_VERBOSE;
+    if (freelist_num_entries) {
+      report_level = ML_ALWAYS;
+    } else {
+      report_level = ML_VERBOSE;
+    }
     return_status = HighsDebugStatus::OK;
   }
 
