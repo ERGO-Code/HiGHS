@@ -20,6 +20,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 
 #include "lp_data/HighsLp.h"
 #include "presolve/HPreData.h"
@@ -50,6 +51,23 @@ enum class HighsPresolveStatus {
 };
 
 namespace presolve {
+
+enum class Presolver {
+  kMainRowSingletons,
+  kMainForcing,
+  kMainColSingletons,
+  kMainDoubletonEq,
+  kMainDominatedCols,
+};
+
+const std::map<Presolver, std::string> kPresolverNames{
+  {Presolver::kMainRowSingletons,"Row singletons ()"},
+  {Presolver::kMainForcing,"Main forcing ()"},
+  {Presolver::kMainColSingletons,"Col singletons ()"},
+  {Presolver::kMainDoubletonEq,"Doubleton eq ()"},    
+  {Presolver::kMainDominatedCols,"Dominated Cols()"}
+};
+
 struct MainLoop {
   int rows;
   int cols;
@@ -257,7 +275,7 @@ class Presolve : public HPreData {
   void reportDevMainLoop();
   void reportDevMidMainLoop();
   DevStats dev_stats;
-  int runPresolvers();
+  int runPresolvers(const std::vector<Presolver>& order);
 };
 
 }  // namespace presolve

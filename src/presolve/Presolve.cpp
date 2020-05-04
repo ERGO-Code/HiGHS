@@ -18,6 +18,7 @@
 
 //#include "simplex/HFactor.h"
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <iomanip>
@@ -44,7 +45,7 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-constexpr int iPrint = -1;
+constexpr int iPrint = 0;
 // todo:
 // iKKTcheck = 1;
 
@@ -81,21 +82,26 @@ void Presolve::setBasisInfo(
 
 // printing with cout goes here.
 void reportDev(const string& message) {
-  if (iPrint) std::cout << message << std::flush;
+  if (iPrint == 0)
+    return;
+
+  std::cout << message << std::flush;
   return;
 }
 
-// todo:
-// printing with cout << goes here.
-// void Presolve::reportDebug(const string& message) const {
-
 void printMainLoop(const MainLoop& l) {
+  if (iPrint == 0)
+    return;
+
   std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz << "   "
             << std::endl;
 }
 
 void printDevStats(const DevStats& stats) {
   assert(stats.n_loops == stats.loops.size());
+  if (iPrint == 0)
+    return;
+
   std::cout << "dev-presolve-stats::" << std::endl;
   std::cout << "  n_loops = " << stats.n_loops << std::endl;
   std::cout << "    loop : rows, cols, nnz " << std::endl;
@@ -142,6 +148,8 @@ void getRowsColsNnz(const std::vector<int>& flagRow,
 }
 
 void Presolve::reportDevMidMainLoop() {
+  if (iPrint == 0) return;
+
   int rows = 0;
   int cols = 0;
   int nnz = 0;
@@ -152,6 +160,8 @@ void Presolve::reportDevMidMainLoop() {
 }
 
 void Presolve::reportDevMainLoop() {
+  if (iPrint == 0) return;
+
   int rows = 0;
   int cols = 0;
   int nnz = 0;
@@ -167,76 +177,44 @@ void Presolve::reportDevMainLoop() {
   return;
 }
 
-int Presolve::runPresolvers() {
+int Presolve::runPresolvers(const std::vector<Presolver>& order) {
   //***************** main loop ******************
+
   checkBoundsAreConsistent();
   if (status) return status;
 
-  double time_start = timer.timer_.readRunHighsClock();
-  std::cout << "----> row singletons" << std::endl;
-  removeRowSingletons();
-  double time_end = timer.timer_.readRunHighsClock();
-  std::cout << "----> row singletons time: " << time_end - time_start
-            << std::endl;
-  reportDevMidMainLoop();
-  if (status) return status;
+  for (Presolver main_loop_presolver : order) {
+    double time_start = timer.timer_.readRunHighsClock();
+    if (iPrint) std::cout << "----> ";
+    auto it = kPresolverNames.find(main_loop_presolver);
+    assert(it != kPresolverNames.end());
+    if (iPrint) std::cout << (*it).second << std::endl;
 
-  time_start = timer.timer_.readRunHighsClock();
-  std::cout << "----> forcing constraints" << std::endl;
-  removeForcingConstraints();
-  time_end = timer.timer_.readRunHighsClock();
-  std::cout << "----> forcing constraints time: " << time_end - time_start
-            << std::endl;
-  reportDevMidMainLoop();
-  if (status) return status;
+    switch (main_loop_presolver) {
+      case Presolver::kMainRowSingletons:
+        removeRowSingletons();
+        break;
+      case Presolver::kMainForcing:
+        removeForcingConstraints();
+        break;
+      case Presolver::kMainColSingletons:
+        removeColumnSingletons();
+        break;
+      case Presolver::kMainDoubletonEq:
+        removeDoubletonEquations();
+        break;
+      case Presolver::kMainDominatedCols:
+        removeDominatedColumns();
+        break;
+    }
 
-  time_start = timer.timer_.readRunHighsClock();
-  std::cout << "----> row singletons" << std::endl;
-  removeRowSingletons();
-  time_end = timer.timer_.readRunHighsClock();
-  std::cout << "----> row singletons time: " << time_end - time_start
-            << std::endl;
-  reportDevMidMainLoop();
-  if (status) return status;
-
-  // time_start = timer.timer_.readRunHighsClock();
-  // std::cout << "----> doubleton equations" << std::endl;
-  // removeDoubletonEquations();
-  // time_end = timer.timer_.readRunHighsClock();
-  // std::cout << "----> doubleton equations time: " << time_end - time_start
-  //           << std::endl;
-  // reportDevMidMainLoop();
-  // if (status) return status;
-
-  std::cout << "----> doubleton equations disabled."
-            << std::endl;
-
-  time_start = timer.timer_.readRunHighsClock();
-  std::cout << "----> row singletons" << std::endl;
-  removeRowSingletons();
-  time_end = timer.timer_.readRunHighsClock();
-  std::cout << "----> row singletons time: " << time_end - time_start
-            << std::endl;
-  reportDevMidMainLoop();
-  if (status) return status;
-
-  time_start = timer.timer_.readRunHighsClock();
-  std::cout << "----> col singletons" << std::endl;
-  removeColumnSingletons();
-  time_end = timer.timer_.readRunHighsClock();
-  std::cout << "----> col singletons time: " << time_end - time_start
-            << std::endl;
-  reportDevMidMainLoop();
-  if (status) return status;
-
-  time_start = timer.timer_.readRunHighsClock();
-  std::cout << "----> dominated cols" << std::endl;
-  removeDominatedColumns();
-  time_end = timer.timer_.readRunHighsClock();
-  std::cout << "----> row singletons time: " << time_end - time_start
-            << std::endl;
-  reportDevMidMainLoop();
-  if (status) return status;
+    double time_end = timer.timer_.readRunHighsClock();
+    if (iPrint)
+      std::cout << (*it).second << " time: " << time_end - time_start
+                << std::endl;
+    reportDevMidMainLoop();
+    if (status) return status;
+  }
 
   //***************** main loop ******************
   return status;
@@ -269,19 +247,25 @@ int Presolve::presolve(int print) {
     }
   timer.recordFinish(FIXED_COL);
 
+  std::vector<Presolver> pre_release_order;
+  pre_release_order.push_back(Presolver::kMainRowSingletons);
+  pre_release_order.push_back(Presolver::kMainForcing);
+  pre_release_order.push_back(Presolver::kMainRowSingletons);
+  pre_release_order.push_back(Presolver::kMainDoubletonEq);
+  pre_release_order.push_back(Presolver::kMainRowSingletons);
+  pre_release_order.push_back(Presolver::kMainColSingletons);
+  pre_release_order.push_back(Presolver::kMainDominatedCols);
+
   while (hasChange == 1) {
     hasChange = false;
 
-    cout << "PR: main loop " << iter << ":" << endl;
     reportDevMainLoop();
-    int run_status = runPresolvers();
+    int run_status = runPresolvers(pre_release_order);
     assert(run_status == status);
     if (status) return status;
-     
-     //todo: next ~~~
+
+    // todo: next ~~~
     // Exit check: less than 10 % of what we had before.
-    // if (dev_stats.loops)
-    if (iter == 5) break;
 
     iter++;
   }

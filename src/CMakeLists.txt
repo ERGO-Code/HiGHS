@@ -228,7 +228,7 @@ if (IPX_ON)
 endif()
 
 include(CheckLanguage)
-# check_language("Fortran")
+check_language("Fortran")
 if(FORTRAN_FOUND)
     set(fortransources interfaces/highs_lp_solver.f90)
     set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
