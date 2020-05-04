@@ -20,10 +20,10 @@
 #include "lp_data/HighsStatus.h"
 
 class HighsLp;
-class HighsBasis;
-class HighsSolution;
+struct HighsBasis;
+struct HighsSolution;
 class HighsOptions;
-class SimplexBasis;
+struct SimplexBasis;
 
 using std::vector;
 
@@ -54,6 +54,8 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                          int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
                          const double small_matrix_value,
                          const double large_matrix_value, bool normalise);
+
+HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
                             vector<double>& colScale, const bool interval,
@@ -184,12 +186,6 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
                          const double infinite_bound);
 
 /**
- * @brief Write out the LP as an MPS file
- */
-HighsStatus writeLpAsMPS(const HighsOptions& options, const char* filename,
-                         const HighsLp& lp, const bool free = true);
-
-/**
  * @brief Report the data of an LP
  */
 void reportLp(const HighsOptions& options,
@@ -235,9 +231,12 @@ void reportLpColMatrix(const HighsOptions& options,
                        const HighsLp& lp  //!< LP whose data are to be reported
 );
 
-void reportMatrix(const HighsOptions& options, const char* message,
+void reportMatrix(const HighsOptions& options, const std::string message,
                   const int num_col, const int num_nz, const int* start,
                   const int* index, const double* value);
+
+// Get the number of integer-valued columns in the LP
+int getNumInt(const HighsLp& lp);
 
 // Get the costs for a contiguous set of columns
 HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
@@ -257,11 +256,12 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int row,
                                    const int col, double* val);
 #ifdef HiGHSDEV
 // Analyse the data in an LP problem
-void analyseLp(const HighsLp& lp, const char* message);
+void analyseLp(const HighsLp& lp, const std::string message);
 #endif
 
-void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
-                         const HighsSolution& solution, const bool pretty);
+// void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis&
+// basis,
+//                          const HighsSolution& solution, const bool pretty);
 
 HighsBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis);
 
@@ -303,6 +303,9 @@ double vectorProduct(const std::vector<double>& v1,
 
 void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
                            const HighsLp& presolve_lp);
+
+void logPresolveReductions(const HighsOptions& options, const HighsLp& lp,
+                           const bool presolve_to_empty);
 
 bool isLessInfeasibleDSECandidate(const HighsOptions& options,
                                   const HighsLp& lp);

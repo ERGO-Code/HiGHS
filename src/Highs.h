@@ -21,8 +21,7 @@
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
-#include "presolve/ICrash.h"
-#include "presolve/Presolve.h"
+#include "presolve/PresolveComponent.h"
 #include "util/HighsTimer.h"
 
 /**
@@ -53,6 +52,11 @@ class Highs {
    */
   HighsStatus readModel(const std::string filename  //!< the filename
   );
+
+  /**
+   * @brief Clears the current model
+   */
+  HighsStatus clearModel();
 
   /**
    * @brief Solves the model according to the specified options
@@ -111,6 +115,8 @@ class Highs {
   HighsStatus passHighsOptions(const HighsOptions& options  //!< The options
   );
 
+  const HighsOptions& getHighsOptions();
+
   /**
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
@@ -136,6 +142,8 @@ class Highs {
   );
 
   const HighsOptions& getHighsOptions() const;
+
+  HighsStatus resetHighsOptions();
 
   HighsStatus writeHighsOptions(
       const std::string filename,  //!< The filename
@@ -171,8 +179,6 @@ class Highs {
    * @brief Returns the HighsSolution
    */
   const HighsSolution& getSolution() const;
-
-  const ICrashInfo& getICrashInfo() const;
 
   /**
    * @brief Returns the HighsBasis
@@ -280,6 +286,11 @@ class Highs {
     if (lp_.numCol_) return lp_.Astart_[lp_.numCol_];
     return 0;
   }
+
+  /**
+   * @brief Get the objective sense of the model
+   */
+  bool getObjectiveSense(ObjSense& sense);
 
   /**
    * @brief Get multiple columns from the model given by an interval
@@ -410,7 +421,7 @@ class Highs {
   /**
    * @brief Change the objective sense of the model
    */
-  bool changeObjectiveSense(const int sense  //!< New objective sense
+  bool changeObjectiveSense(const ObjSense sense  //!< New objective sense
   );
 
   /**
@@ -658,8 +669,22 @@ class Highs {
   HighsStatus setBasis(const HighsBasis& basis  //!< Basis to be used
   );
 
+  /**
+   * @brief Clears the HighsBasis for the LP of the HighsModelObject
+   */
+  HighsStatus setBasis();
+
   // todo: getRangingInformation(..)
 
+  /**
+   * @brief Gets the value of infinity used by HiGHS
+   */
+  double getHighsInfinity();
+
+  /**
+   * @brief Gets the run time of HiGHS
+   */
+  double getHighsRunTime();
   /**
    * @brief Clear data associated with solving the model: basis, solution and
    * internal data etc
@@ -672,10 +697,7 @@ class Highs {
    * validity
    */
   void reportModelStatusSolutionBasis(const std::string message,
-                                      const HighsModelStatus model_status,
-                                      const HighsLp& lp,
-                                      const HighsSolution& solution,
-                                      const HighsBasis& basis);
+                                      const int hmo_ix = -1);
 #endif
 
   std::string highsModelStatusToString(
@@ -691,7 +713,6 @@ class Highs {
   HighsSolution solution_;
   HighsBasis basis_;
   HighsLp lp_;
-  ICrashInfo icrash_info_;
 
   HighsTimer timer_;
 
@@ -714,20 +735,39 @@ class Highs {
   // it's set to the correct positive number in Highs::run()
   int omp_max_threads = 0;
 
-  HighsStatus runLpSolver(HighsModelObject& model, const string message);
+  HighsStatus runLpSolver(const int model_index, const string message);
 
-  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
-  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
+  PresolveComponent presolve_;
+  HighsPresolveStatus runPresolve();
+  HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
                             FILE*& file, bool& html) const;
+
+  HighsStatus getUseModelStatus(
+      HighsModelStatus& use_model_status,
+      const double unscaled_primal_feasibility_tolerance,
+      const double unscaled_dual_feasibility_tolerance,
+      const bool rerun_from_logical_basis = false);
+
+  bool unscaledOptimal(const double unscaled_primal_feasibility_tolerance,
+                       const double unscaled_dual_feasibility_tolerance,
+                       const bool report = false);
 
   bool haveHmo(const string method_name);
 
   bool updateHighsSolutionBasis();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
+  HighsStatus reset();
+
+  void clearModelStatus();
+  void clearSolution();
+  void clearBasis();
+  void clearInfo();
+
   void underDevelopmentLogMessage(const string method_name);
+  void beforeReturnFromRun(HighsStatus& return_status);
 
   friend class HighsMipSolver;
 };

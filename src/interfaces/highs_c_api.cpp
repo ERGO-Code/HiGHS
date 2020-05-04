@@ -78,35 +78,89 @@ int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
   HighsLp lp;
   lp.numCol_ = numcol;
   lp.numRow_ = numrow;
-  lp.nnz_ = numnz;
-
-  lp.colCost_.resize(numcol);
-  lp.colLower_.resize(numcol);
-  lp.colUpper_.resize(numcol);
-
-  lp.rowLower_.resize(numrow);
-  lp.rowUpper_.resize(numrow);
-  lp.Astart_.resize(numcol + 1);
-  lp.Aindex_.resize(numnz);
-  lp.Avalue_.resize(numnz);
 
   lp.colCost_.assign(colcost, colcost + numcol);
   lp.colLower_.assign(collower, collower + numcol);
   lp.colUpper_.assign(colupper, colupper + numcol);
 
   lp.rowLower_.assign(rowlower, rowlower + numrow);
-  lp.rowUpper_.assign(rowupper, rowupper + numcol);
-  lp.Astart_.assign(astart, astart + numcol + 1);
+  lp.rowUpper_.assign(rowupper, rowupper + numrow);
+
+  lp.Astart_.assign(astart, astart + numcol);
+  lp.Astart_.resize(numcol + 1);
+  lp.Astart_[numcol] = numnz;
   lp.Aindex_.assign(aindex, aindex + numnz);
   lp.Avalue_.assign(avalue, avalue + numnz);
 
   return (int)((Highs*)highs)->passModel(lp);
 }
 
+int Highs_clearModel(void* highs) { return (int)((Highs*)highs)->clearModel(); }
+int Highs_setHighsBoolOptionValue(void* highs, const char* option,
+                                  const int value) {
+  return (int)((Highs*)highs)
+      ->setHighsOptionValue(std::string(option), (bool)value);
+}
+
+int Highs_setHighsIntOptionValue(void* highs, const char* option,
+                                 const int value) {
+  return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), value);
+}
+
+int Highs_setHighsDoubleOptionValue(void* highs, const char* option,
+                                    const double value) {
+  return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), value);
+}
+
+int Highs_setHighsStringOptionValue(void* highs, const char* option,
+                                    const char* value) {
+  return (int)((Highs*)highs)
+      ->setHighsOptionValue(std::string(option), std::string(value));
+}
+
 int Highs_setHighsOptionValue(void* highs, const char* option,
                               const char* value) {
   return (int)((Highs*)highs)
       ->setHighsOptionValue(std::string(option), std::string(value));
+}
+
+int Highs_getHighsBoolOptionValue(void* highs, const char* option, int* value) {
+  bool v;
+  int retcode =
+      (int)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
+  *value = (int)v;
+  return retcode;
+}
+
+int Highs_getHighsIntOptionValue(void* highs, const char* option, int* value) {
+  return (int)((Highs*)highs)->getHighsOptionValue(std::string(option), *value);
+}
+
+int Highs_getHighsDoubleOptionValue(void* highs, const char* option,
+                                    double* value) {
+  return (int)((Highs*)highs)->getHighsOptionValue(std::string(option), *value);
+}
+
+int Highs_getHighsStringOptionValue(void* highs, const char* option,
+                                    char* value) {
+  std::string v;
+  int retcode =
+      (int)((Highs*)highs)->getHighsOptionValue(std::string(option), v);
+  strcpy(value, v.c_str());
+  return retcode;
+}
+
+int Highs_resetHighsOptions(void* highs) {
+  return (int)((Highs*)highs)->resetHighsOptions();
+}
+
+int Highs_getHighsIntInfoValue(void* highs, const char* info, int* value) {
+  return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
+}
+
+int Highs_getHighsDoubleInfoValue(void* highs, const char* info,
+                                  double* value) {
+  return (int)((Highs*)highs)->getHighsInfoValue(info, *value);
 }
 
 void Highs_getSolution(void* highs, double* colvalue, double* coldual,
@@ -132,7 +186,6 @@ void Highs_getSolution(void* highs, double* colvalue, double* coldual,
 
 void Highs_getBasis(void* highs, int* colstatus, int* rowstatus) {
   HighsBasis basis = ((Highs*)highs)->getBasis();
-
   for (int i = 0; i < (int)basis.col_status.size(); i++) {
     colstatus[i] = (int)basis.col_status[i];
   }
@@ -142,13 +195,101 @@ void Highs_getBasis(void* highs, int* colstatus, int* rowstatus) {
   }
 }
 
-int Highs_getIntHighsInfoValue(void* highs, const char* info, int& value) {
-  return (int)((Highs*)highs)->getHighsInfoValue(info, value);
+int Highs_getModelStatus(void* highs, const int scaled_model) {
+  return (int)((Highs*)highs)->getModelStatus(scaled_model);
 }
 
-int Highs_getDoubleHighsInfoValue(void* highs, const char* info,
-                                  double& value) {
-  return (int)((Highs*)highs)->getHighsInfoValue(info, value);
+int Highs_getBasicVariables(void* highs, int* basic_variables) {
+  return (int)((Highs*)highs)->getBasicVariables(basic_variables);
+}
+
+int Highs_getBasisInverseRow(void* highs, const int row, double* row_vector,
+                             int* row_num_nz, int* row_indices) {
+  return (int)((Highs*)highs)
+      ->getBasisInverseRow(row, row_vector, row_num_nz, row_indices);
+}
+
+int Highs_getBasisInverseCol(void* highs, const int col, double* col_vector,
+                             int* col_num_nz, int* col_indices) {
+  return (int)((Highs*)highs)
+      ->getBasisInverseCol(col, col_vector, col_num_nz, col_indices);
+}
+
+int Highs_getBasisSolve(void* highs, const double* rhs, double* solution_vector,
+                        int* solution_num_nz, int* solution_indices) {
+  return (int)((Highs*)highs)
+      ->getBasisSolve(rhs, solution_vector, solution_num_nz, solution_indices);
+}
+
+int Highs_getBasisTransposeSolve(void* highs, const double* rhs,
+                                 double* solution_vector, int* solution_nz,
+                                 int* solution_indices) {
+  return (int)((Highs*)highs)
+      ->getBasisTransposeSolve(rhs, solution_vector, solution_nz,
+                               solution_indices);
+}
+
+int Highs_getReducedRow(void* highs, const int row, double* row_vector,
+                        int* row_num_nz, int* row_indices) {
+  return (int)((Highs*)highs)
+      ->getReducedRow(row, row_vector, row_num_nz, row_indices);
+}
+
+int Highs_getReducedColumn(void* highs, const int col, double* col_vector,
+                           int* col_num_nz, int* col_indices) {
+  return (int)((Highs*)highs)
+      ->getReducedColumn(col, col_vector, col_num_nz, col_indices);
+}
+
+int Highs_setBasis(void* highs, const int* colstatus, const int* rowstatus) {
+  HighsBasis basis;
+  const int num_col = Highs_getNumCols(highs);
+  basis.col_status.resize(num_col);
+  for (int i = 0; i < num_col; i++) {
+    if (colstatus[i] == (int)HighsBasisStatus::LOWER) {
+      basis.col_status[i] = HighsBasisStatus::LOWER;
+    } else if (colstatus[i] == (int)HighsBasisStatus::BASIC) {
+      basis.col_status[i] = HighsBasisStatus::BASIC;
+    } else if (colstatus[i] == (int)HighsBasisStatus::UPPER) {
+      basis.col_status[i] = HighsBasisStatus::UPPER;
+    } else if (colstatus[i] == (int)HighsBasisStatus::ZERO) {
+      basis.col_status[i] = HighsBasisStatus::ZERO;
+    } else if (colstatus[i] == (int)HighsBasisStatus::NONBASIC) {
+      basis.col_status[i] = HighsBasisStatus::NONBASIC;
+    } else if (colstatus[i] == (int)HighsBasisStatus::SUPER) {
+      basis.col_status[i] = HighsBasisStatus::SUPER;
+    } else {
+      return (int)HighsStatus::Error;
+    }
+  }
+  const int num_row = Highs_getNumRows(highs);
+  basis.row_status.resize(num_row);
+  for (int i = 0; i < num_row; i++) {
+    if (rowstatus[i] == (int)HighsBasisStatus::LOWER) {
+      basis.row_status[i] = HighsBasisStatus::LOWER;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::BASIC) {
+      basis.row_status[i] = HighsBasisStatus::BASIC;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::UPPER) {
+      basis.row_status[i] = HighsBasisStatus::UPPER;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::ZERO) {
+      basis.row_status[i] = HighsBasisStatus::ZERO;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::NONBASIC) {
+      basis.row_status[i] = HighsBasisStatus::NONBASIC;
+    } else if (rowstatus[i] == (int)HighsBasisStatus::SUPER) {
+      basis.row_status[i] = HighsBasisStatus::SUPER;
+    } else {
+      return (int)HighsStatus::Error;
+    }
+  }
+  return (int)((Highs*)highs)->setBasis(basis);
+}
+
+int Highs_setLogicalBasis(void* highs) {
+  return (int)((Highs*)highs)->setBasis();
+}
+
+double Highs_getHighsRunTime(void* highs) {
+  return (double)((Highs*)highs)->getHighsRunTime();
 }
 
 int Highs_addRow(void* highs, const double lower, const double upper,
@@ -181,7 +322,9 @@ int Highs_addCols(void* highs, const int num_new_col, const double* costs,
 }
 
 int Highs_changeObjectiveSense(void* highs, const int sense) {
-  return ((Highs*)highs)->changeObjectiveSense(sense);
+  ObjSense pass_sense = ObjSense::MINIMIZE;
+  if (sense == (int)ObjSense::MAXIMIZE) pass_sense = ObjSense::MAXIMIZE;
+  return ((Highs*)highs)->changeObjectiveSense(pass_sense);
 }
 
 int Highs_changeColCost(void* highs, const int col, const double cost) {
@@ -234,6 +377,13 @@ int Highs_changeRowsBoundsBySet(void* highs, const int num_set_entries,
 int Highs_changeRowsBoundsByMask(void* highs, const int* mask,
                                  const double* lower, const double* upper) {
   return ((Highs*)highs)->changeRowsBounds(mask, lower, upper);
+}
+
+int Highs_getObjectiveSense(void* highs, int* sense) {
+  ObjSense get_sense;
+  int status = ((Highs*)highs)->getObjectiveSense(get_sense);
+  *sense = (int)get_sense;
+  return status;
 }
 
 int Highs_getColsByRange(void* highs, const int from_col, const int to_col,
@@ -340,6 +490,10 @@ int Highs_deleteRowsByMask(void* highs, int* mask) {
   return ((Highs*)highs)->deleteRows(mask);
 }
 
+double Highs_getHighsInfinity(void* highs) {
+  return ((Highs*)highs)->getHighsInfinity();
+}
+
 int Highs_getNumCols(void* highs) { return ((Highs*)highs)->getLp().numCol_; }
 
 int Highs_getNumRows(void* highs) { return ((Highs*)highs)->getLp().numRow_; }
@@ -348,50 +502,4 @@ int Highs_getNumNz(void* highs) {
   int numCol = Highs_getNumCols(highs);
   if (numCol <= 0) return 0;
   return ((Highs*)highs)->getLp().Astart_[numCol];
-}
-
-int Highs_getModelStatus(void* highs, const bool scaled_model) {
-  return (int)((Highs*)highs)->getModelStatus(scaled_model);
-}
-
-int Highs_getBasicVariables(void* highs, int* basic_variables) {
-  return (int)((Highs*)highs)->getBasicVariables(basic_variables);
-}
-
-int Highs_getBasisInverseRow(void* highs, const int row, double* row_vector,
-                             int* row_num_nz, int* row_indices) {
-  return (int)((Highs*)highs)
-      ->getBasisInverseRow(row, row_vector, row_num_nz, row_indices);
-}
-
-int Highs_getBasisInverseCol(void* highs, const int col, double* col_vector,
-                             int* col_num_nz, int* col_indices) {
-  return (int)((Highs*)highs)
-      ->getBasisInverseCol(col, col_vector, col_num_nz, col_indices);
-}
-
-int Highs_getBasisSolve(void* highs, const double* rhs, double* solution_vector,
-                        int* solution_num_nz, int* solution_indices) {
-  return (int)((Highs*)highs)
-      ->getBasisSolve(rhs, solution_vector, solution_num_nz, solution_indices);
-}
-
-int Highs_getBasisTransposeSolve(void* highs, const double* rhs,
-                                 double* solution_vector, int* solution_nz,
-                                 int* solution_indices) {
-  return (int)((Highs*)highs)
-      ->getBasisTransposeSolve(rhs, solution_vector, solution_nz,
-                               solution_indices);
-}
-
-int Highs_getReducedRow(void* highs, const int row, double* row_vector,
-                        int* row_num_nz, int* row_indices) {
-  return (int)((Highs*)highs)
-      ->getReducedRow(row, row_vector, row_num_nz, row_indices);
-}
-
-int Highs_getReducedColumn(void* highs, const int col, double* col_vector,
-                           int* col_num_nz, int* col_indices) {
-  return (int)((Highs*)highs)
-      ->getReducedColumn(col, col_vector, col_num_nz, col_indices);
 }

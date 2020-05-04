@@ -63,7 +63,7 @@ void HighsSetOutput(FILE* output  //!< The output file: default stdout
  */
 void HighsSetMessagelevel(
     int level  //!< The message level: Use | operator to display at level NONE,
-    //!< VERBOSE, DETAILED, MINIMAL. default NONE
+               //!< VERBOSE, DETAILED, MINIMAL. default NONE
 );
 
 /*

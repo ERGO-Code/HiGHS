@@ -38,11 +38,10 @@ void HDualRHS::setup() {
   workEdWtFull.resize(numTot);
   partNum = 0;
   partSwitch = 0;
+  analysis = &workHMO.simplex_analysis_;
 }
 
 void HDualRHS::chooseNormal(int* chIndex) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   // Moved the following to the top to avoid starting the clock for a trivial
   // call. NB Must still call int to maintain sequence of random numbers
   // for code reproducibility!! Never mind if we're not timing the random number
@@ -55,10 +54,10 @@ void HDualRHS::chooseNormal(int* chIndex) {
 
   // Since chooseNormal calls itself, only start the clock if it's not
   // currently running
-  bool keepTimerRunning =
-      timer.clock_start[simplex_info.clock_[ChuzrDualClock]] < 0;
-  if (!keepTimerRunning) {
-    timer.start(simplex_info.clock_[ChuzrDualClock]);
+  bool keep_timer_running = analysis->simplexTimerRunning(ChuzrDualClock);
+  //      timer.clock_start[simplex_info.clock_[ChuzrDualClock]] < 0;
+  if (!keep_timer_running) {
+    analysis->simplexTimerStart(ChuzrDualClock);
   }
 
   if (workCount < 0) {
@@ -131,15 +130,11 @@ void HDualRHS::chooseNormal(int* chIndex) {
   }
   // Since chooseNormal calls itself, only stop the clock if it's not currently
   // running
-  if (!keepTimerRunning) {
-    timer.stop(simplex_info.clock_[ChuzrDualClock]);
-  }
+  if (!keep_timer_running) analysis->simplexTimerStop(ChuzrDualClock);
 }
 
 void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[ChuzrDualClock]);
+  analysis->simplexTimerStart(ChuzrDualClock);
 
   for (int i = 0; i < chLimit; i++) chIndex[i] = -1;
 
@@ -225,7 +220,7 @@ void HDualRHS::chooseMultiGlobal(int* chIndex, int* chCount, int chLimit) {
   if ((int)(setP.size()) > chLimit) setP.resize(chLimit);
   *chCount = setP.size();
   for (unsigned i = 0; i < setP.size(); i++) chIndex[i] = setP[i].second;
-  timer.stop(simplex_info.clock_[ChuzrDualClock]);
+  analysis->simplexTimerStop(ChuzrDualClock);
 }
 
 void HDualRHS::chooseMultiHyperGraphAuto(int* chIndex, int* chCount,
@@ -239,15 +234,13 @@ void HDualRHS::chooseMultiHyperGraphAuto(int* chIndex, int* chCount,
 
 void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount,
                                          int chLimit) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[ChuzrDualClock]);
+  analysis->simplexTimerStart(ChuzrDualClock);
 
   // Force to use partition method, unless doesn't exist
   if (partNum != chLimit) {
     chooseMultiGlobal(chIndex, chCount, chLimit);
     partSwitch = 0;
-    timer.stop(simplex_info.clock_[ChuzrDualClock]);
+    analysis->simplexTimerStop(ChuzrDualClock);
     return;
   }
 
@@ -287,7 +280,7 @@ void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount,
   } else {
     // SPARSE mode
     if (workCount == 0) {
-      timer.stop(simplex_info.clock_[ChuzrDualClock]);
+      analysis->simplexTimerStop(ChuzrDualClock);
       return;
     }
 
@@ -319,13 +312,11 @@ void HDualRHS::chooseMultiHyperGraphPart(int* chIndex, int* chCount,
     *chCount = count;
   }
 
-  timer.stop(simplex_info.clock_[ChuzrDualClock]);
+  analysis->simplexTimerStop(ChuzrDualClock);
 }
 
 void HDualRHS::updatePrimal(HVector* column, double theta) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStart(UpdatePrimalClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
@@ -368,16 +359,14 @@ void HDualRHS::updatePrimal(HVector* column, double theta) {
     }
   }
 
-  timer.stop(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
 // Update the DSE weights
 void HDualRHS::updateWeightDualSteepestEdge(
     HVector* column, const double new_pivotal_edge_weight, double Kai,
     double* dseArray) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[DseUpdateWeightClock]);
+  analysis->simplexTimerStart(DseUpdateWeightClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
@@ -403,14 +392,12 @@ void HDualRHS::updateWeightDualSteepestEdge(
         workEdWt[iRow] = min_dual_steepest_edge_weight;
     }
   }
-  timer.stop(simplex_info.clock_[DseUpdateWeightClock]);
+  analysis->simplexTimerStop(DseUpdateWeightClock);
 }
 // Update the Devex weights
 void HDualRHS::updateWeightDevex(HVector* column,
                                  const double new_pivotal_edge_weight) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[DevexUpdateWeightClock]);
+  analysis->simplexTimerStart(DevexUpdateWeightClock);
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
@@ -432,7 +419,7 @@ void HDualRHS::updateWeightDevex(HVector* column,
           max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
     }
   }
-  timer.stop(simplex_info.clock_[DevexUpdateWeightClock]);
+  analysis->simplexTimerStop(DevexUpdateWeightClock);
 }
 
 void HDualRHS::updatePivots(int iRow, double value) {
@@ -459,15 +446,13 @@ void HDualRHS::updatePivots(int iRow, double value) {
 }
 
 void HDualRHS::updateInfeasList(HVector* column) {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   const int columnCount = column->count;
   const int* columnIndex = &column->index[0];
 
   // DENSE mode: disabled
   if (workCount < 0) return;
 
-  timer.start(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStart(UpdatePrimalClock);
 
   if (workCutoff <= 0) {
     // The regular sparse way
@@ -493,7 +478,7 @@ void HDualRHS::updateInfeasList(HVector* column) {
     }
   }
 
-  timer.stop(simplex_info.clock_[UpdatePrimalClock]);
+  analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
 void HDualRHS::createArrayOfPrimalInfeasibilities() {

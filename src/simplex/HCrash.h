@@ -161,6 +161,7 @@ class HCrash {
   // int crsh_mode;
   int crsh_f_vr_ty;
   int crsh_l_vr_ty;
+  int crsh_num_vr_ty;
 
   int crsh_mn_pri_v;      // = 0;
   int crsh_mx_pri_v;      // = 3;
@@ -177,7 +178,6 @@ class HCrash {
   // LTSSF scalar identifiers
   int n_crsh_ps;
   int n_crsh_bs_cg;
-  int n_vr_in_r;
   int cz_r_n;
   int cz_r_pri_v;
   int cz_c_n;
@@ -186,8 +186,6 @@ class HCrash {
   double mn_abs_pv_v;
   double mn_rlv_pv_v;
   int mx_r_pri_v;
-  int lg_bs_n_fx_vr;
-  int crsh_bs_n_fx_vr;
   int n_abs_pv_no_ok;
   int n_rlv_pv_no_ok;
   int mx_r_pri;

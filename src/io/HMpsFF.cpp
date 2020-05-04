@@ -23,9 +23,8 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(FILE* logfile,
 
   lp.numRow_ = std::move(numRow);
   lp.numCol_ = std::move(numCol);
-  lp.nnz_ = Avalue.size();
 
-  lp.sense_ = 1;
+  lp.sense_ = objSense;
   lp.offset_ = objOffset;
 
   lp.Astart_ = std::move(Astart);
@@ -97,6 +96,9 @@ FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile,
     while (keyword != HMpsFF::parsekey::FAIL &&
            keyword != HMpsFF::parsekey::END) {
       switch (keyword) {
+        case HMpsFF::parsekey::OBJSENSE:
+          keyword = parseObjsense(logfile, f);
+          break;
         case HMpsFF::parsekey::ROWS:
           keyword = parseRows(logfile, f);
           break;
@@ -158,7 +160,16 @@ HMpsFF::parsekey HMpsFF::checkFirstWord(std::string& strline, int& start,
 
   word = strline.substr(start, end - start);
 
-  if (word.front() == 'R') {
+  if (word == "OBJSENSE")
+    return HMpsFF::parsekey::OBJSENSE;
+  else if (word.front() == 'M') {
+    if (word == "MAX")
+      return HMpsFF::parsekey::MAX;
+    else if (word == "MIN")
+      return HMpsFF::parsekey::MIN;
+    else
+      return HMpsFF::parsekey::NONE;
+  } else if (word.front() == 'R') {
     if (word == "ROWS")
       return HMpsFF::parsekey::ROWS;
     else if (word == "RHS")
@@ -182,6 +193,34 @@ HMpsFF::parsekey HMpsFF::parseDefault(std::ifstream& file) const {
   getline(file, strline);
   int s, e;
   return checkFirstWord(strline, s, e, word);
+}
+
+HMpsFF::parsekey HMpsFF::parseObjsense(FILE* logfile, std::ifstream& file) {
+  std::string strline, word;
+
+  while (getline(file, strline)) {
+    if (is_empty(strline) || strline[0] == '*') continue;
+
+    int start = 0;
+    int end = 0;
+
+    HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
+
+    // Interpret key being MAX or MIN
+    if (key == HMpsFF::parsekey::MAX) {
+      objSense = ObjSense::MAXIMIZE;
+      continue;
+    }
+    if (key == HMpsFF::parsekey::MIN) {
+      objSense = ObjSense::MINIMIZE;
+      continue;
+    }
+    // start of new section?
+    if (key != HMpsFF::parsekey::NONE) {
+      return key;
+    }
+  }
+  return HMpsFF::parsekey::FAIL;
 }
 
 HMpsFF::parsekey HMpsFF::parseRows(FILE* logfile, std::ifstream& file) {
@@ -372,16 +411,14 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
         return parsekey::FAIL;
       }
 
+      // Mark the column as integer and binary, according to whether
+      // the integral_cols flag is set
       col_integrality.push_back((int)integral_cols);
+      col_binary.push_back(integral_cols);
 
       // initialize with default bounds
-      if (integral_cols) {
-        colLower.push_back(0.0);
-        colUpper.push_back(1.0);
-      } else {
-        colLower.push_back(0.0);
-        colUpper.push_back(HIGHS_CONST_INF);
-      }
+      colLower.push_back(0.0);
+      colUpper.push_back(HIGHS_CONST_INF);
     }
 
     assert(ncols > 0);
@@ -403,9 +440,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
                       "COLUMNS section contains row %s not in ROWS section",
                       marker.c_str());
     } else {
-      parsename(marker);  // rowidx set
       double value = atof(word.c_str());
-      addtuple(value);
+      if (value) {
+        parsename(marker);  // rowidx set and nnz incremented
+        addtuple(value);
+      }
     }
 
     if (!is_end(strline, end)) {
@@ -434,10 +473,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
             marker.c_str());
         continue;
       };
-
       double value = atof(word.c_str());
-      parsename(marker);  // rowidx set
-      addtuple(value);
+      if (value) {
+        parsename(marker);  // rowidx set and nnz incremented
+        addtuple(value);
+      }
     }
   }
 
@@ -471,7 +511,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
       }
     } else if (rowidx == -1) {
       // objective shift
-      objOffset = val;
+      objOffset = -val;
     }
   };
 
@@ -611,6 +651,13 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
         printf("Number of LI entries in BOUNDS section is %d\n", num_li);
       if (num_ui)
         printf("Number of UI entries in BOUNDS section is %d\n", num_ui);
+      // Assign bounds to columns that remain binary by default
+      for (int colidx = 0; colidx < numCol; colidx++) {
+        if (col_binary[colidx]) {
+          colLower[colidx] = 0.0;
+          colUpper[colidx] = 1.0;
+        }
+      }
       return key;
     }
     bool islb = false;
@@ -685,7 +732,9 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
       // auto ret = colname2idx.emplace(colname, numCol++);
       colNames.push_back(colname);
 
+      // Mark the column as continuous and non-binary
       col_integrality.push_back(0);
+      col_binary.push_back(false);
 
       // initialize with default bounds
       colLower.push_back(0.0);
@@ -697,9 +746,16 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
       if (isintegral)
       // binary: BV
       {
-        if (islb) colLower[colidx] = 0.0;
-        if (isub) colUpper[colidx] = 1.0;
+        if (!islb || !isub) {
+          HighsLogMessage(logfile, HighsMessageType::ERROR,
+                          "BV row %s but [islb, isub] = [%1d, %1d]",
+                          marker.c_str(), islb, isub);
+          assert(islb && isub);
+          return HMpsFF::parsekey::FAIL;
+        }
+        // Mark the column as integer and binary
         col_integrality[colidx] = true;
+        col_binary[colidx] = true;
       } else {
         // continuous: MI, PL or FR
         if (islb) colLower[colidx] = -HIGHS_CONST_INF;
@@ -720,28 +776,22 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
     }
     double value = atof(word.c_str());
     if (isintegral) {
-      // Must be LI or UI
-      //
-      // Bounds will be either [-inf, value] (if LI) or [value, inf] (if UI)
-      //
-      // Slightly clunky, but set bounds to be [-inf, inf] and one
-      // bounds will be over-written by value according to islb/isub
-      colLower[colidx] = -HIGHS_CONST_INF;
-      colUpper[colidx] = HIGHS_CONST_INF;
-      //
-      // Also, value should be integer
+      // Must be LI or UI, and value should be integer
       int i_value = static_cast<int>(value);
       double dl = value - i_value;
       if (dl)
         HighsLogMessage(logfile, HighsMessageType::ERROR,
-                        "Bound for for LI/UI row %s is %g: not integer",
+                        "Bound for LI/UI row %s is %g: not integer",
                         marker.c_str(), value);
+      // Bound marker LI or UI defines the column as integer
+      col_integrality[colidx] = true;
     }
+    // Column is not binary by default
+    col_binary[colidx] = false;
+    // Assign the bounds that have been read
     if (islb) colLower[colidx] = value;
     if (isub) colUpper[colidx] = value;
-    if (isintegral) col_integrality[colidx] = true;
   }
-
   return parsekey::FAIL;
 }
 

@@ -51,7 +51,14 @@ void HDual::iterateMulti() {
   }
   // If we failed.
   if (invertHint) {
-    majorUpdate();
+    if (multi_nFinish) {
+      majorUpdate();
+    } else {
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                      "PAMI skipping majorUpdate() due to multi_nFinish = %d; "
+                      "invertHint = %d",
+                      multi_nFinish, invertHint);
+    }
     return;
   }
 
@@ -62,9 +69,8 @@ void HDual::iterateMulti() {
     printf(
         "Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = "
         "%11.4g; alpha = %11.4g; Dvx = %d\n",
-        workHMO.scaled_solution_params_.simplex_iteration_count, rowOut,
-        columnOut, columnIn, computed_edge_weight, thetaDual, alphaRow,
-        num_devex_iterations);
+        workHMO.iteration_counts_.simplex, rowOut, columnOut, columnIn,
+        computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
   }
 #endif
 
@@ -178,9 +184,7 @@ void HDual::majorChooseRow() {
 }
 
 void HDual::majorChooseRowBtran() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[BtranClock]);
+  analysis->simplexTimerStart(BtranClock);
 
   // 4.1. Prepare BTRAN buffer
   int multi_ntasks = 0;
@@ -212,7 +216,10 @@ void HDual::majorChooseRowBtran() {
     work_ep->index[0] = iRow;
     work_ep->array[iRow] = 1;
     work_ep->packFlag = true;
-    factor->btran(*work_ep, analysis->row_ep_density);
+    HighsTimerClock* factor_timer_clock_pointer =
+        analysis->getThreadFactorTimerClockPointer();
+    factor->btran(*work_ep, analysis->row_ep_density,
+                  factor_timer_clock_pointer);
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // For Dual steepest edge we know the exact weight as the 2-norm of
       // work_ep
@@ -232,7 +239,7 @@ void HDual::majorChooseRowBtran() {
   for (int i = 0; i < multi_ntasks; i++)
     multi_choice[multi_iwhich[i]].infeasEdWt = multi_EdWt[i];
 
-  timer.stop(simplex_info.clock_[BtranClock]);
+  analysis->simplexTimerStop(BtranClock);
 }
 
 void HDual::minorChooseRow() {
@@ -303,7 +310,7 @@ void HDual::minorUpdate() {
   if (minor_new_devex_framework) {
     /*
     printf("Iter %7d (Major %7d): Minor new Devex framework\n",
-           workHMO.scaled_solution_params_.simplex_iteration_count,
+           workHMO.iteration_counts_.simplex,
            multi_iteration);
     */
     minorInitialiseDevexFramework();
@@ -441,13 +448,11 @@ void HDual::minorUpdatePivots() {
   numericalTrouble = -1;
   // Move thisTo Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
-  workHMO.scaled_solution_params_.simplex_iteration_count++;
+  workHMO.iteration_counts_.simplex++;
 }
 
 void HDual::minorUpdateRows() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[UpdateRowClock]);
+  analysis->simplexTimerStart(UpdateRowClock);
   const HVector* Row = multi_finish[multi_nFinish].row_ep;
   int updateRows_inDense =
       (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
@@ -508,7 +513,7 @@ void HDual::minorUpdateRows() {
       }
     }
   }
-  timer.stop(simplex_info.clock_[UpdateRowClock]);
+  analysis->simplexTimerStop(UpdateRowClock);
 }
 
 void HDual::minorInitialiseDevexFramework() {
@@ -555,7 +560,7 @@ void HDual::majorUpdate() {
   majorUpdateFactor();
   if (new_devex_framework) {
     //    printf("Iter %7d: New Devex framework\n",
-    //    workHMO.scaled_solution_params_.simplex_iteration_count);
+    //    workHMO.iteration_counts_.simplex);
     const bool parallel = true;
     initialiseDevexFramework(parallel);
   }
@@ -599,9 +604,7 @@ void HDual::majorUpdateFtranPrepare() {
 }
 
 void HDual::majorUpdateFtranParallel() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[FtranMixParClock]);
+  analysis->simplexTimerStart(FtranMixParClock);
 
   // Prepare buffers
   int multi_ntasks = 0;
@@ -645,7 +648,9 @@ void HDual::majorUpdateFtranParallel() {
   for (int i = 0; i < multi_ntasks; i++) {
     HVector_ptr rhs = multi_vector[i];
     double density = multi_density[i];
-    factor->ftran(*rhs, density);
+    HighsTimerClock* factor_timer_clock_pointer =
+        analysis->getThreadFactorTimerClockPointer();
+    factor->ftran(*rhs, density, factor_timer_clock_pointer);
   }
 
   // Update ticks
@@ -682,13 +687,11 @@ void HDual::majorUpdateFtranParallel() {
 #endif
     }
   }
-  timer.stop(simplex_info.clock_[FtranMixParClock]);
+  analysis->simplexTimerStop(FtranMixParClock);
 }
 
 void HDual::majorUpdateFtranFinal() {
-  HighsTimer& timer = workHMO.timer_;
-  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  timer.start(simplex_info.clock_[FtranMixFinalClock]);
+  analysis->simplexTimerStart(FtranMixFinalClock);
   int updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -746,7 +749,7 @@ void HDual::majorUpdateFtranFinal() {
       }
     }
   }
-  timer.stop(simplex_info.clock_[FtranMixFinalClock]);
+  analysis->simplexTimerStop(FtranMixFinalClock);
 }
 
 void HDual::majorUpdatePrimal() {
@@ -938,7 +941,7 @@ void HDual::majorRollback() {
     workHMO.simplex_info_.workShift_[finish->columnOut] = finish->shiftOut;
 
     // 5. The iteration count
-    workHMO.scaled_solution_params_.simplex_iteration_count--;
+    workHMO.iteration_counts_.simplex--;
   }
 }
 

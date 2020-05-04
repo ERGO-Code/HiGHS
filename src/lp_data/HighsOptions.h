@@ -191,6 +191,8 @@ OptionStatus getOptionValue(FILE* logfile, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
+void resetOptions(std::vector<OptionRecord*>& option_records);
+
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
                                const bool report_only_non_default_values = true,
@@ -221,8 +223,7 @@ const string parallel_string = "parallel";
 const string time_limit_string = "time_limit";
 const string options_file_string = "options_file";
 
-/** SCIP/HiGHS Objective sense */
-enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
+// enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 
 struct HighsOptionsStruct {
   // Options read from the command line
@@ -241,6 +242,7 @@ struct HighsOptionsStruct {
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double dual_objective_value_upper_bound;
+  int highs_debug_level;
   int simplex_strategy;
   int simplex_scale_strategy;
   int simplex_crash_strategy;
@@ -248,6 +250,7 @@ struct HighsOptionsStruct {
   int simplex_primal_edge_weight_strategy;
   int simplex_iteration_limit;
   int simplex_update_limit;
+  int ipm_iteration_limit;
   int highs_min_threads;
   int highs_max_threads;
   int message_level;
@@ -271,16 +274,11 @@ struct HighsOptionsStruct {
   double dual_simplex_cost_perturbation_multiplier;
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
+  bool use_original_HFactor_logic;
 
-  // Options for iCrash
-  bool icrash;
-  bool icrash_dualize;
-  std::string icrash_strategy;
-  double icrash_starting_weight;
-  int icrash_iterations;
-  int icrash_approximate_minimization_iterations;
-  bool icrash_exact;
-  bool icrash_breakpoints;
+  // Options for MIP solver
+  int mip_max_nodes;
+  int mip_report_level;
 
   // Switch for MIP solver
   bool mip;
@@ -417,6 +415,12 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_int =
+        new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",
+                            advanced, &highs_debug_level, HIGHS_DEBUG_LEVEL_MIN,
+                            HIGHS_DEBUG_LEVEL_MIN, HIGHS_DEBUG_LEVEL_MAX);
+    records.push_back(record_int);
+
+    record_int =
         new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",
                             advanced, &simplex_strategy, SIMPLEX_STRATEGY_MIN,
                             SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
@@ -426,7 +430,7 @@ class HighsOptions : public HighsOptionsStruct {
         "simplex_scale_strategy",
         "Strategy for scaling before simplex solver: off / on (0/1)", advanced,
         &simplex_scale_strategy, SIMPLEX_SCALE_STRATEGY_MIN,
-        SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
+        SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED, SIMPLEX_SCALE_STRATEGY_MAX);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
@@ -468,6 +472,11 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
+        "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
+        &ipm_iteration_limit, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
         "highs_min_threads", "Minimum number of threads in parallel execution",
         advanced, &highs_min_threads, 1, 1, HIGHS_THREAD_LIMIT);
     records.push_back(record_int);
@@ -501,6 +510,16 @@ class HighsOptions : public HighsOptionsStruct {
                                        "a pretty (human-readable) format",
                                        advanced, &write_solution_pretty, false);
     records.push_back(record_bool);
+
+    record_int = new OptionRecordInt(
+        "mip_max_nodes", "MIP solver max number of nodes", advanced,
+        &mip_max_nodes, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("mip_report_level", "MIP solver reporting level",
+                            advanced, &mip_report_level, 0, 1, 2);
+    records.push_back(record_int);
 
     // Advanced options
     advanced = true;
@@ -586,44 +605,11 @@ class HighsOptions : public HighsOptionsStruct {
         HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_bool =
-        new OptionRecordBool("icrash", "Run iCrash", advanced, &icrash, false);
+    record_bool = new OptionRecordBool(
+        "use_original_HFactor_logic",
+        "Use original HFactor logic for sparse vs hyper-sparse TRANs", advanced,
+        &use_original_HFactor_logic, true);
     records.push_back(record_bool);
-
-    record_bool =
-        new OptionRecordBool("icrash_dualize", "Dualise strategy for iCrash",
-                             advanced, &icrash_dualize, false);
-    records.push_back(record_bool);
-
-    record_string =
-        new OptionRecordString("icrash_strategy", "Strategy for iCrash",
-                               advanced, &icrash_strategy, "ICA");
-    records.push_back(record_string);
-
-    record_double = new OptionRecordDouble(
-        "icrash_starting_weight", "iCrash starting weight", advanced,
-        &icrash_starting_weight, 1e-10, 1e-3, 1e50);
-    records.push_back(record_double);
-
-    record_int = new OptionRecordInt("icrash_iterations", "iCrash iterations",
-                                     advanced, &icrash_iterations, 0, 30, 200);
-    records.push_back(record_int);
-
-    record_bool = new OptionRecordBool("icrash_exact",
-                                       "Exact subproblem solution for iCrash",
-                                       advanced, &icrash_exact, false);
-    records.push_back(record_bool);
-
-    record_bool = new OptionRecordBool("icrash_breakpoints",
-                                       "Exact subproblem solution for iCrash",
-                                       advanced, &icrash_breakpoints, false);
-    records.push_back(record_bool);
-
-    record_int = new OptionRecordInt(
-        "icrash_approximate_minimization_iterations",
-        "iCrash approximate minimization iterations", advanced,
-        &icrash_approximate_minimization_iterations, 0, 50, 100);
-    records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
         "less_infeasible_DSE_check", "Check whether LP is candidate for LiDSE",

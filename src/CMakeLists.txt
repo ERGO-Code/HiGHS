@@ -33,8 +33,7 @@ set(basiclu_sources
     ipm/basiclu/src/lu_dfs.c
     ipm/basiclu/src/lu_garbage_perm.c
     ipm/basiclu/src/lu_residual_test.c
-    ipm/basiclu/src/lu_solve_for_update.c
-    ipm/basiclu/src/lu_timer.c)
+    ipm/basiclu/src/lu_solve_for_update.c)
 
 set(ipx_sources
     ipm/ipx/src/basiclu_kernel.cc
@@ -71,6 +70,7 @@ set(ipx_sources
 endif()
 
 set(sources
+    ../external/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -78,24 +78,20 @@ set(sources
     io/HighsIO.cpp
     io/HMPSIO.cpp
     io/HMpsFF.cpp
-    io/HToyIO.cpp
     io/LoadOptions.cpp
-    io/LoadProblem.cpp
     lp_data/Highs.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
-    lp_data/HighsModelBuilder.cpp
     lp_data/HighsSolution.cpp
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
     mip/SolveMip.cpp
-    presolve/ICrash.cpp
-    presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
+    presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
@@ -111,6 +107,8 @@ set(sources
     simplex/HQPrimal.cpp
 #    simplex/HRanging.cpp
     simplex/HSimplex.cpp
+    simplex/HSimplexDebug.cpp
+    simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -122,6 +120,9 @@ set(sources
         )
 
 set(headers
+    ../external/filereaderlp/builder.hpp
+    ../external/filereaderlp/model.hpp
+    ../external/filereaderlp/reader.hpp
     ipm/IpxStatus.h
     io/Filereader.h
     io/FilereaderLp.h
@@ -129,12 +130,10 @@ set(headers
     io/FilereaderMps.h
     io/HMpsFF.h
     io/HMPSIO.h
-    io/HToyIO_C.h
-    io/HToyIO.h
     io/HighsIO.h
-    io/LoadProblem.h
     io/LoadOptions.h
     lp_data/HConst.h
+    lp_data/HighsAnalysis.h
     lp_data/HighsInfo.h
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h
@@ -145,7 +144,6 @@ set(headers
     lp_data/HighsSolution.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
-    lp_data/HighsModelBuilder.h
     mip/HighsMipSolver.h
     mip/SolveMip.h
     simplex/HApp.h
@@ -162,16 +160,18 @@ set(headers
     simplex/HQPrimal.h
 #    simplex/HRanging.h
     simplex/HSimplex.h
+    simplex/HSimplexDebug.h
+    simplex/HSimplexReport.h
     simplex/SimplexConst.h
-    presolve/ICrash.h
-    presolve/ICrashUtil.h
     presolve/Presolve.h
+    presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
     presolve/HPreData.h
     simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
+    util/HighsComponent.h
     util/HighsRandom.h
     util/HighsSort.h
     util/HighsTimer.h
