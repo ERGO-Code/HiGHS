@@ -62,7 +62,7 @@ enum class Presolver {
 
 const std::map<Presolver, std::string> kPresolverNames{
   {Presolver::kMainRowSingletons,"Row singletons ()"},
-  {Presolver::kMainForcing,"Main forcing ()"},
+  {Presolver::kMainForcing,"Forcing rows ()"},
   {Presolver::kMainColSingletons,"Col singletons ()"},
   {Presolver::kMainDoubletonEq,"Doubleton eq ()"},    
   {Presolver::kMainDominatedCols,"Dominated Cols()"}
