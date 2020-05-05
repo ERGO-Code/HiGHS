@@ -82,16 +82,14 @@ void Presolve::setBasisInfo(
 
 // printing with cout goes here.
 void reportDev(const string& message) {
-  if (iPrint == 0)
-    return;
+  if (iPrint == 0) return;
 
   std::cout << message << std::flush;
   return;
 }
 
 void printMainLoop(const MainLoop& l) {
-  if (iPrint == 0)
-    return;
+  if (iPrint == 0) return;
 
   std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz << "   "
             << std::endl;
@@ -99,8 +97,7 @@ void printMainLoop(const MainLoop& l) {
 
 void printDevStats(const DevStats& stats) {
   assert(stats.n_loops == stats.loops.size());
-  if (iPrint == 0)
-    return;
+  if (iPrint == 0) return;
 
   std::cout << "dev-presolve-stats::" << std::endl;
   std::cout << "  n_loops = " << stats.n_loops << std::endl;
