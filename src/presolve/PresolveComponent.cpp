@@ -31,7 +31,7 @@ HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
 
   assert(options_.presolve_on);
   return HighsStatus::OK;
-};
+}
 
 void PresolveComponent::setBasisInfo(
     const std::vector<HighsBasisStatus>& pass_col_status,
