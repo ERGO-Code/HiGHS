@@ -15,12 +15,12 @@
 #define PRESOLVE_PRESOLVE_H_
 
 #include <list>
+#include <map>
 #include <stack>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
-#include <map>
 
 #include "lp_data/HighsLp.h"
 #include "presolve/HPreData.h"
@@ -61,12 +61,11 @@ enum class Presolver {
 };
 
 const std::map<Presolver, std::string> kPresolverNames{
-  {Presolver::kMainRowSingletons,"Row singletons ()"},
-  {Presolver::kMainForcing,"Forcing rows ()"},
-  {Presolver::kMainColSingletons,"Col singletons ()"},
-  {Presolver::kMainDoubletonEq,"Doubleton eq ()"},    
-  {Presolver::kMainDominatedCols,"Dominated Cols()"}
-};
+    {Presolver::kMainRowSingletons, "Row singletons ()"},
+    {Presolver::kMainForcing, "Forcing rows ()"},
+    {Presolver::kMainColSingletons, "Col singletons ()"},
+    {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
+    {Presolver::kMainDominatedCols, "Dominated Cols()"}};
 
 struct MainLoop {
   int rows;
