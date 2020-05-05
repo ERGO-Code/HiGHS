@@ -1883,8 +1883,8 @@ void Highs::underDevelopmentLogMessage(const string method_name) {
       method_name.c_str());
 }
 
-  void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
-    rows = presolve_.info_.n_rows_removed;
-    cols = presolve_.info_.n_cols_removed;
-    nnz = presolve_.info_.n_nnz_removed;
-  }
+void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
+  rows = presolve_.info_.n_rows_removed;
+  cols = presolve_.info_.n_cols_removed;
+  nnz = presolve_.info_.n_nnz_removed;
+}
