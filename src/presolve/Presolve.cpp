@@ -45,7 +45,7 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-constexpr int iPrint = -1;
+constexpr int iPrint = 0;
 // todo:
 // iKKTcheck = 1;
 
