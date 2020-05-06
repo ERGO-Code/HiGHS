@@ -110,22 +110,22 @@ JNIEXPORT void JNICALL Java_org_best_team_Highs_invokeLpOptimization
 
 
 
+    auto *highs = new Highs();
 
-    Highs highs;
 
     int status =
-            Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower, colupper,
+            Highs_passLp(highs, numcol, numrow, numnz, colcost, collower, colupper,
                         rowlower, rowupper, astart, aindex, avalue);
     env -> CallVoidMethod(thisObj, setStatusMethod, status);
 
-    status = (int)highs.run();
+    status = (int)highs->run();
 
     if (status == 0) {
         HighsSolution solution;
         HighsBasis basis;
-        solution = highs.getSolution();
-        basis = highs.getBasis();
-        int modelStatus = (int)highs.getModelStatus();
+        solution = highs->getSolution();
+        basis = highs->getBasis();
+        int modelStatus = (int)highs->getModelStatus();
 
         if(toPrintModel) {
             std::cout << "model status is " << modelStatus << std::endl;
@@ -185,6 +185,7 @@ JNIEXPORT void JNICALL Java_org_best_team_Highs_invokeLpOptimization
     env->ReleaseIntArrayElements(jAindex, aindex,  JNI_ABORT);
     env->ReleaseDoubleArrayElements(jAvalue, avalue,  JNI_ABORT);
 
+    delete(highs);
 }
 
 
