@@ -40,7 +40,7 @@ void HVector::setup(int size_) {
   // (re-)used.
   packFlag = false;
   syntheticTick = 0;
-  next = 0;  
+  next = 0;
 }
 
 void HVector::clear() {

@@ -11,13 +11,14 @@
  * @brief Types of solution classes
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "simplex/HFactor.h"
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
 
 #include "lp_data/HConst.h"
-#include "simplex/HFactor.h"
 #include "simplex/FactorTimer.h"
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
