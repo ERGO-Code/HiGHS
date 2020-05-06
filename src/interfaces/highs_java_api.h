@@ -11,16 +11,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 /*
  * Class:     org_best_team_Highs
- * Method:    multiply
- * Signature: (II)I
+ * Method:    invokeLpOptimization
+ * Signature: (III[D[D[D[D[D[I[I[D)V
  */
-JNIEXPORT jint JNICALL Java_org_best_team_Highs_multiply
-        (JNIEnv *env, jobject, jint, jint);
-
 // Вызов процедуры линейной оптимизации.
-JNIEXPORT jobject JNICALL Java_org_best_team_Highs_invokeLpOptimization
+JNIEXPORT void JNICALL Java_org_best_team_Highs_invokeLpOptimization
         (JNIEnv *env, jobject thisObj,
          jint numcol,        //!< number of columns
          jint numrow,        //!< number of rows
