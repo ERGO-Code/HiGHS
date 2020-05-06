@@ -5,6 +5,14 @@ const double inf = HIGHS_CONST_INF;
 void reportIssue(const int issue) {
   printf("\n *************\n * Issue %3d *\n *************\n", issue);
 }
+void reportLpName(const std::string lp_name) {
+  int lp_name_length = lp_name.length();
+  printf("\n **");
+  for (int i = 0; i < lp_name_length; i++) printf("*");
+  printf("**\n * %s *\n **", lp_name.c_str());
+  for (int i = 0; i < lp_name_length; i++) printf("*");
+  printf("**\n");
+}
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective) {
   double error = std::fabs(optimal_objective - require_optimal_objective) /
@@ -269,7 +277,35 @@ void issue316(Highs& highs) {
   solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
 }
 
+void primalDualInfeasible(Highs& highs) {
+  reportLpName("primalDualInfeasible");
+  // This LP is both primal and dual infeasible. IPX fails to identify
+  // primal infeasibility
+  HighsStatus status;
+  HighsLp lp;
+  const HighsModelStatus require_model_status =
+      HighsModelStatus::PRIMAL_INFEASIBLE;
+  lp.numCol_ = 2;
+  lp.numRow_ = 2;
+  lp.colCost_ = {2, -1};
+  lp.colLower_ = {0, 0};
+  lp.colUpper_ = {inf, inf};
+  lp.rowLower_ = {-inf, -inf};
+  lp.rowUpper_ = {1, -2};
+  lp.Astart_ = {0, 2, 4};
+  lp.Aindex_ = {0, 1, 0, 1};
+  lp.Avalue_ = {1, -1, -1, 1};
+
+  status = highs.passModel(lp);
+  REQUIRE(status == HighsStatus::OK);
+  // Presolve doesn't reduce the LP
+  solve(highs, "on", "simplex", require_model_status);
+  // Don't run the IPX test until it's fixed
+  //  solve(highs, "on", "ipm", require_model_status);
+}
+
 void mpsUnbounded(Highs& highs) {
+  reportLpName("mpsUnbounded");
   // As a maximization, adlittle is unbounded, but a bug in hsol [due
   // to jumping to phase 2 if optimal in phase 1 after clean-up
   // yielded no dual infeasiblities despite the phase 1 objective
@@ -301,6 +337,7 @@ void mpsUnbounded(Highs& highs) {
 }
 
 void almostNotUnbounded(Highs& highs) {
+  reportLpName("almostNotUnbounded");
   // This problem tests how well HiGHS handles
   // near-unboundedness. None of the LPs is reduced by presolve
   //
@@ -377,6 +414,7 @@ TEST_CASE("test-special-lps", "[TestSpecialLps]") {
   issue295(highs);
   issue306(highs);
   issue316(highs);
+  primalDualInfeasible(highs);
   mpsUnbounded(highs);
   almostNotUnbounded(highs);
 }

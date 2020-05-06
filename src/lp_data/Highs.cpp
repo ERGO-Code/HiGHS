@@ -748,6 +748,12 @@ basis_.valid_, hmos_[0].basis_.valid_);
   }
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
                     "Time       : %0.3g\n", this_solve_time);
+  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+                    "Time Pre   : %0.3g\n", this_presolve_time);
+  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+                    "Time PreLP : %0.3g\n", this_solve_presolved_lp_time);
+  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+                    "Time PostLP: %0.3g\n", this_solve_original_lp_time);
   if (this_solve_time > 0) {
     HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
                       "For LP %16s",
@@ -1881,4 +1887,10 @@ void Highs::underDevelopmentLogMessage(const string method_name) {
       options_.logfile, HighsMessageType::WARNING,
       "Method %s is still under development and behaviour may be unpredictable",
       method_name.c_str());
+}
+
+void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
+  rows = presolve_.info_.n_rows_removed;
+  cols = presolve_.info_.n_cols_removed;
+  nnz = presolve_.info_.n_nnz_removed;
 }
