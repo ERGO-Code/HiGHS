@@ -6,6 +6,9 @@ cmake_minimum_required(VERSION 3.15)
 
 project(HIGHS LANGUAGES CXX C)
 
+option(FAST_BUILD "Fast build: no interfaces or installation, generate a static library and exe fast." ON)
+if (NOT FAST_BUILD)
+
 set(HIGHS_VERSION_MAJOR 1)
 set(HIGHS_VERSION_MINOR 0)
 set(HIGHS_VERSION_PATCH 0)
@@ -285,3 +288,7 @@ add_subdirectory(src)
 # # Only needed if it defines a target like a main executable. For methods stick
 # # to header-only.
 # add_subdirectory(dev_presolve)
+
+else()
+message(STATUS "FAST BUILD set to on... ")
+endif()
