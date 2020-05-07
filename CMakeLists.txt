@@ -400,4 +400,7 @@ foreach(setting ${settings})
     add_instance_tests(optionsInstances "Optimal" ${setting})
 endforeach()
 
+# Dashboards later on.
+# include(CTest)
+
 endif()
