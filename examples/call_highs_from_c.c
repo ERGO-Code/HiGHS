@@ -192,15 +192,21 @@ void full_api() {
   const int scaled_model = 0;
   int modelstatus = Highs_getModelStatus(highs, scaled_model);
 
-  printf("Run status = %d; Model status = %d\n", status, modelstatus);
+  printf("Run status = %d; Model status = %d = %s\n", status, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
 
   double objective_function_value;
   Highs_getHighsDoubleInfoValue(highs, "objective_function_value", &objective_function_value);
   int simplex_iteration_count = 0;
   Highs_getHighsIntInfoValue(highs, "simplex_iteration_count", &simplex_iteration_count);
+  int primal_status = 0;
+  Highs_getHighsIntInfoValue(highs, "primal_status", &primal_status);
+  int dual_status = 0;
+  Highs_getHighsIntInfoValue(highs, "dual_status", &dual_status);
 
   printf("Objective value = %g; Iteration count = %d\n", objective_function_value, simplex_iteration_count);
   if (modelstatus == 9) {
+    printf("Solution primal status = %s\n", Highs_primalDualStatusToChar(highs, primal_status));
+    printf("Solution dual status = %s\n", Highs_primalDualStatusToChar(highs, dual_status));
     // Get the primal and dual solution 
     Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
     // Get the basis

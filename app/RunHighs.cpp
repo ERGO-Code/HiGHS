@@ -142,10 +142,10 @@ void reportSolvedLpStats(FILE* output, int message_level,
                       highs.highsModelStatusToString(model_status).c_str());
     HighsPrintMessage(
         output, message_level, ML_ALWAYS, "Primal  status      : %s\n",
-        highs.highsPrimalDualStatusToString(highs_info.primal_status).c_str());
+        highs.primalDualStatusToString(highs_info.primal_status).c_str());
     HighsPrintMessage(
         output, message_level, ML_ALWAYS, "Dual    status      : %s\n",
-        highs.highsPrimalDualStatusToString(highs_info.dual_status).c_str());
+        highs.primalDualStatusToString(highs_info.dual_status).c_str());
     HighsPrintMessage(output, message_level, ML_ALWAYS,
                       "Simplex   iterations: %d\n",
                       highs_info.simplex_iteration_count);
