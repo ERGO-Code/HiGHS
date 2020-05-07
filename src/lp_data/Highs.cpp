@@ -469,8 +469,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
       case HighsPresolveStatus::NotReduced: {
         hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        logPresolveReductions(hmos_[original_hmo].options_,
-                              hmos_[original_hmo].lp_, false);
+        reportPresolveReductions(hmos_[original_hmo].options_,
+                                 hmos_[original_hmo].lp_, false);
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
         call_status = runLpSolver(
@@ -500,8 +500,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
         hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
         // Log the presolve reductions
-        logPresolveReductions(hmos_[original_hmo].options_,
-                              hmos_[original_hmo].lp_, hmos_[presolve_hmo].lp_);
+        reportPresolveReductions(hmos_[original_hmo].options_,
+                                 hmos_[original_hmo].lp_,
+                                 hmos_[presolve_hmo].lp_);
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
@@ -527,8 +528,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
-        logPresolveReductions(hmos_[original_hmo].options_,
-                              hmos_[original_hmo].lp_, true);
+        reportPresolveReductions(hmos_[original_hmo].options_,
+                                 hmos_[original_hmo].lp_, true);
         hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
         hmos_[original_hmo].scaled_model_status_ =
             hmos_[original_hmo].unscaled_model_status_;
