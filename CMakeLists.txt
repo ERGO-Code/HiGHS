@@ -9,6 +9,13 @@ project(HIGHS VERSION 1.0 LANGUAGES CXX C)
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
 
+### Require out-of-source builds
+file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
+if(EXISTS "${LOC_PATH}")
+    message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file). 
+    Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
+endif()
+
 # Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
@@ -291,7 +298,9 @@ add_subdirectory(src)
 # add_subdirectory(dev_presolve)
 
 else()
-message(STATUS "FAST BUILD set to on... ")
+message(STATUS "FAST BUILD set to on.
+ Note: The HiGHS team is preparing for our first official release. If you
+       experience any issues please let us know via email or on GitHub.")
 
 # todo: remove patch once release is official. 
 # add here to avoid compile errors.
