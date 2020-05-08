@@ -39,7 +39,6 @@ jobs:
       run: ctest -C $BUILD_TYPE
 
   release:
-
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -65,3 +64,30 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: ctest
+
+  fast-build-off-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DFAST_BUILD=OFF
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . 
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      r
