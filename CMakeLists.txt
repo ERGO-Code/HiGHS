@@ -19,7 +19,10 @@ endif()
 # Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
-option(FAST_BUILD "Fast build: only build static lib and exe and quick test." ON)
+
+# Note: Not ON by default. Still need to fix the exe generation dir: rename from 
+# app/ to bin/
+option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
 if (NOT FAST_BUILD)
 
 set(HIGHS_VERSION_PATCH 0)
