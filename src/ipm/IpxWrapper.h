@@ -559,6 +559,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Determine the run time allowed for IPX
   parameters.time_limit = options.time_limit - timer.readRunHighsClock();
   parameters.ipm_maxiter = options.ipm_iteration_limit - iteration_counts.ipm;
+  // Determine if crossover is to be run or not
+  parameters.crossover = options.run_crossover;
   // Set the internal IPX parameters
   lps.SetParameters(parameters);
 
@@ -582,6 +584,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   ipx::Info ipx_info = lps.GetInfo();
   iteration_counts.ipm += (int)ipx_info.iter;
   //  iteration_counts.crossover += (int)ipx_info.updates_crossover;
+  iteration_counts.crossover += (int)ipx_info.pushes_crossover;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {

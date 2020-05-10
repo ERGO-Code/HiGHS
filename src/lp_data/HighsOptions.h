@@ -251,6 +251,7 @@ struct HighsOptionsStruct {
   int simplex_iteration_limit;
   int simplex_update_limit;
   int ipm_iteration_limit;
+  bool run_crossover;
   int highs_min_threads;
   int highs_max_threads;
   int message_level;
@@ -475,6 +476,11 @@ class HighsOptions : public HighsOptionsStruct {
         "ipm_iteration_limit", "Iteration limit for IPM solver", advanced,
         &ipm_iteration_limit, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("run_crossover",
+                                       "Run the crossover routine for IPX",
+                                       advanced, &run_crossover, true);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "highs_min_threads", "Minimum number of threads in parallel execution",
