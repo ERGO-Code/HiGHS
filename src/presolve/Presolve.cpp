@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -174,13 +175,31 @@ void Presolve::reportDevMainLoop() {
   return;
 }
 
+void foo2(int i)
+{
+	std::cout << "foo2 is called with: " << i << "\n";
+}
+
 int Presolve::runPresolvers(const std::vector<Presolver>& order) {
   //***************** main loop ******************
+  std::vector<Presolver> modified_order;
+
+  // no callback
+  modified_order = order;
+
+  using cb1_t = std::function<void()>;
+  using cb2_t = std::function<void(int)>;
+
+  // Bind a free function with an int argument.
+	// Note that the argument can be specified with bind directly.
+	cb1_t f2 = std::bind(&foo2, 5);
+	// Invoke the function foo2.
+	f2();
 
   checkBoundsAreConsistent();
   if (status) return status;
 
-  for (Presolver main_loop_presolver : order) {
+  for (Presolver main_loop_presolver : modified_order) {
     double time_start = timer.timer_.readRunHighsClock();
     if (iPrint) std::cout << "----> ";
     auto it = kPresolverNames.find(main_loop_presolver);
