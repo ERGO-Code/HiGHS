@@ -74,8 +74,6 @@ class PresolveComponent : public HighsComponent {
 
   bool has_run_ = false;
 
-  HighsStatus changeOrder(std::vector<presolve::Presolver>& order);
-
   PresolveComponentInfo info_;
   PresolveComponentData data_;
   PresolveComponentOptions options_;
