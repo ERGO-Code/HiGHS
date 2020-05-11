@@ -14,11 +14,6 @@
 
 #include "presolve/PresolveComponent.h"
 
-void foo2(int i)
-{
-	std::cout << "foo2 is called with: " << i << "\n";
-}
-
 HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer) {
   assert(options_.presolve_on);
   data_.presolve_.push_back(presolve::Presolve(timer));
@@ -26,12 +21,7 @@ HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer) {
   return HighsStatus::OK;
 }
 
-HighsStatus PresolveComponent::changeOrder(std::vector<presolve::Presolver>& order) {
-  options_.order = order;
-}
-
 HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
-
   if (options.presolve == off_string) {
     options_.presolve_on = false;
     return HighsStatus::OK;

@@ -21,7 +21,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
-#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -175,31 +174,13 @@ void Presolve::reportDevMainLoop() {
   return;
 }
 
-void foo2(int i)
-{
-	std::cout << "foo2 is called with: " << i << "\n";
-}
-
 int Presolve::runPresolvers(const std::vector<Presolver>& order) {
   //***************** main loop ******************
-  std::vector<Presolver> modified_order;
-
-  // no callback
-  modified_order = order;
-
-  using cb1_t = std::function<void()>;
-  using cb2_t = std::function<void(int)>;
-
-  // Bind a free function with an int argument.
-	// Note that the argument can be specified with bind directly.
-	cb1_t f2 = std::bind(&foo2, 5);
-	// Invoke the function foo2.
-	f2();
 
   checkBoundsAreConsistent();
   if (status) return status;
 
-  for (Presolver main_loop_presolver : modified_order) {
+  for (Presolver main_loop_presolver : order) {
     double time_start = timer.timer_.readRunHighsClock();
     if (iPrint) std::cout << "----> ";
     auto it = kPresolverNames.find(main_loop_presolver);
@@ -263,23 +244,23 @@ int Presolve::presolve(int print) {
     }
   timer.recordFinish(FIXED_COL);
 
-  std::vector<Presolver> pre_release_order;
-  pre_release_order.push_back(Presolver::kMainRowSingletons);
-  pre_release_order.push_back(Presolver::kMainForcing);
-  pre_release_order.push_back(Presolver::kMainRowSingletons);
-  pre_release_order.push_back(Presolver::kMainDoubletonEq);
-  pre_release_order.push_back(Presolver::kMainRowSingletons);
-  pre_release_order.push_back(Presolver::kMainColSingletons);
-  pre_release_order.push_back(Presolver::kMainDominatedCols);
-  
-  // The order has been modified for experiments
-  if (order.size() > 0)
-    pre_release_order = order;
+  if (order.size() == 0) {
+    // pre_release_order:
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainForcing);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainDoubletonEq);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainColSingletons);
+    order.push_back(Presolver::kMainDominatedCols);
+  }
+  // Else: The order has been modified for experiments
+
   while (hasChange == 1) {
     hasChange = false;
 
     reportDevMainLoop();
-    int run_status = runPresolvers(pre_release_order);
+    int run_status = runPresolvers(order);
     assert(run_status == status);
     if (status) return status;
 

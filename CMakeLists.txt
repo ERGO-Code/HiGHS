@@ -416,7 +416,3 @@ endforeach()
 # include(CTest)
 
 endif()
-
-# # Comment out for scaffold/ tests
-add_subdirectory(scaffold)
-add_subdirectory(dev_presolve)
