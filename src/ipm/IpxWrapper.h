@@ -669,6 +669,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   //==============
   // For crossover
   //==============
+  // Can be not run
   // Can solve and be optimal
   // Can solve and be imprecise
   //========
@@ -686,12 +687,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     return HighsStatus::OK;
   }
 
-  // Should only reach here if crossover is optimal or imprecise
+  // Should only reach here if crossover is not run, optimal or imprecise
   if (ipxStatusError(
+          ipx_info.status_crossover != IPX_STATUS_not_run &&
           ipx_info.status_crossover != IPX_STATUS_optimal &&
               ipx_info.status_crossover != IPX_STATUS_imprecise,
           options,
-          "crossover status should be optimal or imprecise but value is",
+          "crossover status should be not run, optimal or imprecise but value is",
           (int)ipx_info.status_crossover))
     return HighsStatus::Error;
 
@@ -720,14 +722,22 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   ipx_solution.ipx_row_status.resize(num_row);
   ipx_solution.ipx_col_status.resize(num_col);
 
-  lps.GetBasicSolution(
-      &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
-      &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
-      &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
+  if (ipx_info.status_crossover == IPX_STATUS_not_run) {
+    // Crossover wasn't run, so don't have a basic solution
+    ipxSolutionToHighsSolution(options.logfile, lp, rhs, constraint_type,
+			       ipx_solution, highs_solution);
+
+    highs_basis.valid_ = false;
+  } else {
+    lps.GetBasicSolution(
+			 &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
+			 &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
+			 &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
 
   // Convert the IPX basic solution to a HiGHS basic solution
-  ipxToHighsBasicSolution(options.logfile, lp, rhs, constraint_type,
-                          ipx_solution, highs_basis, highs_solution);
+    ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs, constraint_type,
+					 ipx_solution, highs_basis, highs_solution);
+  }
 
   imprecise_solution = ipx_info.status_crossover == IPX_STATUS_imprecise;
 
@@ -745,8 +755,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   unscaled_solution_params.objective_function_value =
       (int)lp.sense_ * ipx_info.objval;
-  getPrimalDualInfeasibilitiesFromHighsBasicSolution(
-      lp, highs_basis, highs_solution, unscaled_solution_params);
+  if (highs_basis.valid_) 
+    getPrimalDualInfeasibilitiesFromHighsBasicSolution(
+        lp, highs_basis, highs_solution, unscaled_solution_params);
   return return_status;
 }
 #endif

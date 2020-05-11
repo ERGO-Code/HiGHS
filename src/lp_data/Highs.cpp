@@ -431,6 +431,16 @@ basis_.valid_, hmos_[0].basis_.valid_);
   //  fflush(stdout);
   if (!basis_.valid_ && options_.presolve != off_string) {
     // No HiGHS basis so consider presolve
+    //
+    // If using IPX to solve the reduced LP, crossover must be run
+    // since a basic solution is required by postsolve
+    if (options_.solver == ipm_string && !options_.run_crossover) {
+      HighsLogMessage(
+        options_.logfile, HighsMessageType::WARNING,
+	"Forcing IPX to use crossover after presolve");
+      options_.run_crossover = true;
+    }
+     
     hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::NOTSET;
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
