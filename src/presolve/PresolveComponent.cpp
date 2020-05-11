@@ -63,8 +63,7 @@ HighsPresolveStatus PresolveComponent::run() {
   has_run_ = true;
   assert(data_.presolve_.size() > 0);
   // Set options.
-  if (options_.order.size() > 0)
-    data_.presolve_[0].order = options_.order;
+  if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
 
   // Run presolve.
   presolve_status_ = data_.presolve_[0].presolve();

@@ -103,6 +103,7 @@ class Presolve : public HPreData {
   string modelName;
 
   std::vector<Presolver> order;
+
  private:
   int iKKTcheck;
   int presolve(int print);

@@ -709,8 +709,10 @@ class Highs {
   friend class OsiHiGHSSolverInterface;
 #endif
   void getPresolveReductionCounts(int& rows, int& cols, int& nnz) const;
-  PresolveComponentInfo getPresolveInfo() const {return presolve_.info_;}
-  void setPresolveOptions(const PresolveComponentOptions& options) {presolve_.options_ = options;}
+  PresolveComponentInfo getPresolveInfo() const { return presolve_.info_; }
+  void setPresolveOptions(const PresolveComponentOptions& options) {
+    presolve_.options_ = options;
+  }
 
  private:
   HighsSolution solution_;
