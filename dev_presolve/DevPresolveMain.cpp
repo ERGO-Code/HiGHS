@@ -3,15 +3,42 @@
 
 #include "DevPresolveMethods.hpp"
 #include "ScaffoldMethods.hpp"
-#include "TestPresolve.hpp"
+// #include "TestPresolve.hpp"
+#include "Highs.h"
 
-constexpr std::string filename{"/Users/mac/test_pr/netlib/adlittle.mps"};
+const std::string filename{"/Users/mac/test_pr/netlib/adlittle.mps"};
 
-HighsLp read(const std::string& filename) {
+void print(const PresolveComponentInfo& info) {
+ std::cout<< info.n_cols_removed << std::endl;
+ std::cout<< info.n_rows_removed << std::endl;
+ std::cout<< info.n_nnz_removed << std::endl;
+
+ // todo: next: add times. julia?
+
+} 
+int read(const std::string& filename) {
   Highs highs;
-  highs.readModel(filename)
+  highs.readModel(filename);
+
+  Highs highs2;
+  highs2.passModel(highs.getLp());
+
+  highs.run();
+
+  PresolveComponentInfo vanilla = highs.getPresolveInfo();
+
+  PresolveComponentOptions presolve_options;
+  presolve_options.order.push_back(presolve::Presolver::kMainRowSingletons);
+
+  highs2.setPresolveOptions(presolve_options);
+  highs2.run();
+
+  PresolveComponentInfo rs_only = highs2.getPresolveInfo();
+
+  print(vanilla);
+  print(rs_only);
   
-  return highs.getLp();
+  return 0;
 }
 
 int main(int argc, char* argv[]) {
@@ -19,21 +46,31 @@ int main(int argc, char* argv[]) {
   scaffold::ScaffoldUtils::scaffoldHello();
 
   // Call test on presolve component.
-  scaffold::test_presolve::linkComponent();
+  // scaffold::test_presolve::linkComponent();
 
   // Enable for dev-presolve
   // Call test on presolve component.
   scaffold::dev_presolve::devPresolveHello();
 
-  PresolveComponent presolve;
-  HighsTimer timer;
-  HighsLp lp = read(filename);
+  int status = read(filename);
 
-  presolve.init(lp, timer);
-  presolve.run();
-  HighsLp& ref_reduced_lp = presolve.getReducedProblem();
+  // PresolveComponent presolve;
+  // HighsTimer timer;
+  // HighsLp lp = read(filename);
 
+  // presolve.init(lp, timer);
+  // presolve.run();
+  // PresolveComponentInfo info_vanilla = presolve.info_;
+  // HighsLp& reduced = presolve.getReducedProblem();
+
+  // const int n_vanilla 
   
+  // using namespace presolve;
+  // std::vector<Presolver> just_sing_rows{Presolver::kMainRowSingleton};
+
+  // presolve.
+  
+
 
   return 0;
 }
