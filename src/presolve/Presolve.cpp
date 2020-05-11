@@ -271,7 +271,10 @@ int Presolve::presolve(int print) {
   pre_release_order.push_back(Presolver::kMainRowSingletons);
   pre_release_order.push_back(Presolver::kMainColSingletons);
   pre_release_order.push_back(Presolver::kMainDominatedCols);
-
+  
+  // The order has been modified for experiments
+  if (order.size() > 0)
+    pre_release_order = order;
   while (hasChange == 1) {
     hasChange = false;
 

@@ -51,6 +51,7 @@ struct PresolveComponentOptions : public HighsComponentOptions {
   bool is_valid = false;
   // presolve options later when needed.
   bool presolve_on = true;
+  std::vector<presolve::Presolver> order;
 };
 
 class PresolveComponent : public HighsComponent {
@@ -72,6 +73,8 @@ class PresolveComponent : public HighsComponent {
   void negateReducedLpCost();
 
   bool has_run_ = false;
+
+  HighsStatus changeOrder(std::vector<presolve::Presolver>& order);
 
   PresolveComponentInfo info_;
   PresolveComponentData data_;

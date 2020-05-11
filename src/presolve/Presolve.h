@@ -102,6 +102,7 @@ class Presolve : public HPreData {
   // todo: clear the public from below.
   string modelName;
 
+  std::vector<Presolver> order;
  private:
   int iKKTcheck;
   int presolve(int print);
@@ -275,6 +276,8 @@ class Presolve : public HPreData {
   void reportDevMidMainLoop();
   DevStats dev_stats;
   int runPresolvers(const std::vector<Presolver>& order);
+
+  void changeOrder(std::vector<Presolver>& order) {std::cout << "changeOrder is called.\n";}
 };
 
 }  // namespace presolve

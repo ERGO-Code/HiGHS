@@ -14,6 +14,11 @@
 
 #include "presolve/PresolveComponent.h"
 
+void foo2(int i)
+{
+	std::cout << "foo2 is called with: " << i << "\n";
+}
+
 HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer) {
   assert(options_.presolve_on);
   data_.presolve_.push_back(presolve::Presolve(timer));
@@ -21,7 +26,12 @@ HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer) {
   return HighsStatus::OK;
 }
 
+HighsStatus PresolveComponent::changeOrder(std::vector<presolve::Presolver>& order) {
+  options_.order = order;
+}
+
 HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
+
   if (options.presolve == off_string) {
     options_.presolve_on = false;
     return HighsStatus::OK;
@@ -62,6 +72,11 @@ void PresolveComponent::negateReducedLpCost() {
 HighsPresolveStatus PresolveComponent::run() {
   has_run_ = true;
   assert(data_.presolve_.size() > 0);
+  // Set options.
+  if (options_.order.size() > 0)
+    data_.presolve_[0].order = options_.order;
+
+  // Run presolve.
   presolve_status_ = data_.presolve_[0].presolve();
 
   if (presolve_status_ == HighsPresolveStatus::Reduced ||
