@@ -18,6 +18,19 @@
 #include <vector>
 
 #include "HConfig.h"
+#include "lp_data/HighsOptions.h"
+
+struct HighsIndexCollection {
+  int dimension_;
+  bool interval_ = false;
+  int from_col_;
+  int to_col_;
+  bool set_ = false;
+  int num_set_entries_;
+  int* set_entries_;
+  bool mask_ = false;
+  int* mask_entries_;    
+};
 
 #ifdef HiGHSDEV
 struct HighsValueDistribution {
@@ -61,6 +74,12 @@ struct HighsScatterData {
 const double awful_regression_error = 2.0;
 const double bad_regression_error = 0.2;
 const double fair_regression_error = 0.02;
+
+bool assessIndexCollection(const HighsOptions& options,
+			   const HighsIndexCollection index_collection);
+
+void limitsForIndexCollection(const HighsIndexCollection index_collection,
+			      int& from_k, int& to_k);
 
 double getNorm2(const std::vector<double> values);
 
