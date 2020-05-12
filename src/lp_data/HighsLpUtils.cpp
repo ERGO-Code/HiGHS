@@ -1095,31 +1095,32 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
   return HighsStatus::OK;
 }
 
-HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp, const HighsIndexCollection& index_collection, 
+HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp,
+                         const HighsIndexCollection& index_collection,
                          const bool interval, const int from_col,
                          const int to_col, const bool set,
                          const int num_set_entries, const int* col_set,
                          const bool mask, int* col_mask) {
   int new_num_col;
   HighsStatus call_status;
-  call_status = deleteColsFromLpVectors(options, lp, new_num_col, index_collection, interval,
-                                        from_col, to_col, set, num_set_entries,
-                                        col_set, mask, col_mask);
+  call_status = deleteColsFromLpVectors(
+      options, lp, new_num_col, index_collection, interval, from_col, to_col,
+      set, num_set_entries, col_set, mask, col_mask);
   if (call_status != HighsStatus::OK) return call_status;
-  call_status =
-      deleteColsFromLpMatrix(options, lp, index_collection, interval, from_col, to_col, set,
-                             num_set_entries, col_set, mask, col_mask);
+  call_status = deleteColsFromLpMatrix(options, lp, index_collection, interval,
+                                       from_col, to_col, set, num_set_entries,
+                                       col_set, mask, col_mask);
   if (call_status != HighsStatus::OK) return call_status;
   lp.numCol_ = new_num_col;
   return HighsStatus::OK;
 }
 
-HighsStatus deleteColsFromLpVectors(const HighsOptions& options, HighsLp& lp,
-                                    int& new_num_col, const HighsIndexCollection& index_collection, const bool interval,
-                                    const int from_col, const int to_col,
-                                    const bool set, const int num_set_entries,
-                                    const int* col_set, const bool mask,
-                                    const int* col_mask) {
+HighsStatus deleteColsFromLpVectors(
+    const HighsOptions& options, HighsLp& lp, int& new_num_col,
+    const HighsIndexCollection& index_collection, const bool interval,
+    const int from_col, const int to_col, const bool set,
+    const int num_set_entries, const int* col_set, const bool mask,
+    const int* col_mask) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   int from_k;
@@ -1130,13 +1131,15 @@ HighsStatus deleteColsFromLpVectors(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
-  if (!assessIndexCollection(options, index_collection)) 
-    return interpretCallStatus(HighsStatus::Error, return_status, "assessIndexCollection");
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
 
   int from_k1;
   int to_k1;
   if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
-    return interpretCallStatus(HighsStatus::Error, return_status, "limitsForIndexCollection");
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
   assert(from_k1 == from_k);
   assert(to_k1 == to_k);
 
@@ -1169,9 +1172,9 @@ HighsStatus deleteColsFromLpVectors(const HighsOptions& options, HighsLp& lp,
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, delete_from_col, delete_to_col,
                   keep_from_col, keep_to_col, current_set_entry);
-    updateIndexCollectionOutInIndex(index_collection,
-				    delete_from_col1, delete_to_col1,
-                  keep_from_col1, keep_to_col1, current_set_entry1);
+    updateIndexCollectionOutInIndex(index_collection, delete_from_col1,
+                                    delete_to_col1, keep_from_col1,
+                                    keep_to_col1, current_set_entry1);
     assert(delete_from_col1 == delete_from_col);
     assert(delete_to_col1 == delete_to_col);
     assert(keep_from_col1 == keep_from_col);
@@ -1196,7 +1199,8 @@ HighsStatus deleteColsFromLpVectors(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const HighsIndexCollection& index_collection, const bool interval, const int from_col,
+                                   const HighsIndexCollection& index_collection,
+                                   const bool interval, const int from_col,
                                    const int to_col, const bool set,
                                    const int num_set_entries,
                                    const int* col_set, const bool mask,
@@ -1211,13 +1215,15 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
-  if (!assessIndexCollection(options, index_collection)) 
-    return interpretCallStatus(HighsStatus::Error, return_status, "assessIndexCollection");
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
 
   int from_k1;
   int to_k1;
   if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
-    return interpretCallStatus(HighsStatus::Error, return_status, "limitsForIndexCollection");
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
   assert(from_k1 == from_k);
   assert(to_k1 == to_k);
 
@@ -1248,9 +1254,9 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, delete_from_col, delete_to_col,
                   keep_from_col, keep_to_col, current_set_entry);
-    updateIndexCollectionOutInIndex(index_collection,
-				    delete_from_col1, delete_to_col1,
-                  keep_from_col1, keep_to_col1, current_set_entry1);
+    updateIndexCollectionOutInIndex(index_collection, delete_from_col1,
+                                    delete_to_col1, keep_from_col1,
+                                    keep_to_col1, current_set_entry1);
     assert(delete_from_col1 == delete_from_col);
     assert(delete_to_col1 == delete_to_col);
     assert(keep_from_col1 == keep_from_col);
@@ -1292,7 +1298,7 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
-    const HighsIndexCollection& index_collection,
+                         const HighsIndexCollection& index_collection,
                          const bool interval, const int from_row,
                          const int to_row, const bool set,
                          const int num_set_entries, const int* row_set,
@@ -1300,15 +1306,15 @@ HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   int new_num_row;
-  call_status = deleteRowsFromLpVectors(options, lp, new_num_row, index_collection, interval,
-                                        from_row, to_row, set, num_set_entries,
-                                        row_set, mask, row_mask);
+  call_status = deleteRowsFromLpVectors(
+      options, lp, new_num_row, index_collection, interval, from_row, to_row,
+      set, num_set_entries, row_set, mask, row_mask);
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
-  call_status =
-      deleteRowsFromLpMatrix(options, lp, index_collection, interval, from_row, to_row, set,
-                             num_set_entries, row_set, mask, row_mask);
+  call_status = deleteRowsFromLpMatrix(options, lp, index_collection, interval,
+                                       from_row, to_row, set, num_set_entries,
+                                       row_set, mask, row_mask);
   return_status =
       interpretCallStatus(call_status, return_status, "deleteRowsFromLpMatrix");
   if (return_status == HighsStatus::Error) return return_status;
@@ -1316,13 +1322,12 @@ HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
-                                    int& new_num_row, 
+HighsStatus deleteRowsFromLpVectors(
+    const HighsOptions& options, HighsLp& lp, int& new_num_row,
     const HighsIndexCollection& index_collection, const bool interval,
-                                    const int from_row, const int to_row,
-                                    const bool set, const int num_set_entries,
-                                    const int* row_set, const bool mask,
-                                    const int* row_mask) {
+    const int from_row, const int to_row, const bool set,
+    const int num_set_entries, const int* row_set, const bool mask,
+    const int* row_mask) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   int from_k;
@@ -1333,13 +1338,15 @@ HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
-  if (!assessIndexCollection(options, index_collection)) 
-    return interpretCallStatus(HighsStatus::Error, return_status, "assessIndexCollection");
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
 
   int from_k1;
   int to_k1;
   if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
-    return interpretCallStatus(HighsStatus::Error, return_status, "limitsForIndexCollection");
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
   assert(from_k1 == from_k);
   assert(to_k1 == to_k);
 
@@ -1372,9 +1379,9 @@ HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
     updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                   row_set, mask, row_mask, delete_from_row, delete_to_row,
                   keep_from_row, keep_to_row, current_set_entry);
-    updateIndexCollectionOutInIndex(index_collection,
-				    delete_from_row1, delete_to_row1,
-                  keep_from_row1, keep_to_row1, current_set_entry1);
+    updateIndexCollectionOutInIndex(index_collection, delete_from_row1,
+                                    delete_to_row1, keep_from_row1,
+                                    keep_to_row1, current_set_entry1);
     assert(delete_from_row1 == delete_from_row);
     assert(delete_to_row1 == delete_to_row);
     assert(keep_from_row1 == keep_from_row);
@@ -1398,7 +1405,7 @@ HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
-    const HighsIndexCollection& index_collection,
+                                   const HighsIndexCollection& index_collection,
                                    const bool interval, const int from_row,
                                    const int to_row, const bool set,
                                    const int num_set_entries,
@@ -1414,13 +1421,15 @@ HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
-  if (!assessIndexCollection(options, index_collection)) 
-    return interpretCallStatus(HighsStatus::Error, return_status, "assessIndexCollection");
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
 
   int from_k1;
   int to_k1;
   if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
-    return interpretCallStatus(HighsStatus::Error, return_status, "limitsForIndexCollection");
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
   assert(from_k1 == from_k);
   assert(to_k1 == to_k);
 
@@ -1457,14 +1466,14 @@ HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                     row_set, mask, row_mask, delete_from_row, delete_to_row,
                     keep_from_row, keep_to_row, current_set_entry);
-    updateIndexCollectionOutInIndex(index_collection,
-				    delete_from_row1, delete_to_row1,
-                  keep_from_row1, keep_to_row1, current_set_entry1);
-    assert(delete_from_row1 == delete_from_row);
-    assert(delete_to_row1 == delete_to_row);
-    assert(keep_from_row1 == keep_from_row);
-    assert(keep_to_row1 == keep_to_row);
-    assert(current_set_entry1 == current_set_entry);
+      updateIndexCollectionOutInIndex(index_collection, delete_from_row1,
+                                      delete_to_row1, keep_from_row1,
+                                      keep_to_row1, current_set_entry1);
+      assert(delete_from_row1 == delete_from_row);
+      assert(delete_to_row1 == delete_to_row);
+      assert(keep_from_row1 == keep_from_row);
+      assert(keep_to_row1 == keep_to_row);
+      assert(current_set_entry1 == current_set_entry);
       if (k == from_k) {
         // Account for any initial rows being kept
         for (int row = 0; row < delete_from_row; row++) {

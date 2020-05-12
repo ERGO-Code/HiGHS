@@ -12,13 +12,14 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
+#include "util/HighsUtils.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <vector>
 
 #include "HConfig.h"
-#include "util/HighsUtils.h"
 //#include "io/HighsIO.h"
 //#include "lp_data/HConst.h"
 
@@ -29,7 +30,7 @@ int getOmpNumThreads() {
 */
 
 bool assessIndexCollection(const HighsOptions& options,
-			   const HighsIndexCollection& index_collection) {
+                           const HighsIndexCollection& index_collection) {
   // Check parameter for each technique of defining an index collection
   if (index_collection.is_interval_) {
     // Changing by interval: check the parameters and that check set and mask
@@ -46,13 +47,14 @@ bool assessIndexCollection(const HighsOptions& options,
     }
     if (index_collection.from_ < 0) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval lower limit is %d < 0", index_collection.from_);
+                      "Index interval lower limit is %d < 0",
+                      index_collection.from_);
       return false;
     }
     if (index_collection.to_ > index_collection.dimension_ - 1) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval upper limit is %d > %d", index_collection.to_,
-                      index_collection.dimension_ - 1);
+                      "Index interval upper limit is %d > %d",
+                      index_collection.to_, index_collection.dimension_ - 1);
       return false;
     }
   } else if (index_collection.is_set_) {
@@ -79,10 +81,9 @@ bool assessIndexCollection(const HighsOptions& options,
     int prev_set_entry = -1;
     for (int k = 0; k < index_collection.set_num_entries_; k++) {
       if (set[k] < 0 || set[k] > set_entry_upper) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Index set entry set[%d] = %d is out of bounds [0, %d]", k,
-            set[k], set_entry_upper);
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Index set entry set[%d] = %d is out of bounds [0, %d]",
+                        k, set[k], set_entry_upper);
         return false;
       }
       if (set[k] <= prev_set_entry) {
@@ -122,8 +123,8 @@ bool assessIndexCollection(const HighsOptions& options,
 }
 
 bool limitsForIndexCollection(const HighsOptions& options,
-			      const HighsIndexCollection& index_collection,
-			      int& from_k, int& to_k) {
+                              const HighsIndexCollection& index_collection,
+                              int& from_k, int& to_k) {
   if (index_collection.is_interval_) {
     from_k = index_collection.from_;
     to_k = index_collection.to_;
@@ -141,9 +142,9 @@ bool limitsForIndexCollection(const HighsOptions& options,
   return true;
 }
 
-void updateIndexCollectionOutInIndex(const HighsIndexCollection& index_collection,
-				     int& out_from_ix, int& out_to_ix, int& in_from_ix,
-				     int& in_to_ix, int& current_set_entry) {
+void updateIndexCollectionOutInIndex(
+    const HighsIndexCollection& index_collection, int& out_from_ix,
+    int& out_to_ix, int& in_from_ix, int& in_to_ix, int& current_set_entry) {
   if (index_collection.is_interval_) {
     out_from_ix = index_collection.from_;
     out_to_ix = index_collection.to_;
@@ -154,8 +155,8 @@ void updateIndexCollectionOutInIndex(const HighsIndexCollection& index_collectio
     out_to_ix = out_from_ix;  //+1;
     current_set_entry++;
     int current_set_entry0 = current_set_entry;
-    for (int set_entry = current_set_entry0; set_entry < index_collection.set_num_entries_;
-         set_entry++) {
+    for (int set_entry = current_set_entry0;
+         set_entry < index_collection.set_num_entries_; set_entry++) {
       int ix = index_collection.set_[set_entry];
       if (ix > out_to_ix + 1) break;
       out_to_ix = index_collection.set_[current_set_entry];
@@ -187,7 +188,7 @@ void updateIndexCollectionOutInIndex(const HighsIndexCollection& index_collectio
     }
   }
 }
-				     
+
 double getNorm2(const std::vector<double> values) {
   double sum = 0;
   int values_size = values.size();

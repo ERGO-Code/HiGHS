@@ -22,8 +22,8 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/PresolveComponent.h"
-#include "util/HighsUtils.h"
 #include "util/HighsTimer.h"
+#include "util/HighsUtils.h"
 
 /**
  * @brief Class to set parameters and run HiGHS

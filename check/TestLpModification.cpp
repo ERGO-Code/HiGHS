@@ -1,8 +1,8 @@
 #include "Avgas.h"
 #include "Highs.h"
 #include "catch.hpp"
-#include "util/HighsUtils.h"
 #include "lp_data/HighsLpUtils.h"
+#include "util/HighsUtils.h"
 
 void HighsStatusReport(FILE* logfile, const char* message, HighsStatus status) {
   HighsLogMessage(logfile, HighsMessageType::INFO,
@@ -272,9 +272,8 @@ void testDeleteKeep(const HighsIndexCollection& index_collection) {
   const int* mask = index_collection.mask_;
   const int dimension = index_collection.dimension_;
   if (index_collection.is_interval_) {
-    printf("With index interval [%d, %d] in [%d, %d]\n",
-	   index_collection.from_, index_collection.to_,
-	   0, dimension - 1);
+    printf("With index interval [%d, %d] in [%d, %d]\n", index_collection.from_,
+           index_collection.to_, 0, dimension - 1);
   } else if (index_collection.is_set_) {
     printf("With index set\n");
     for (int entry = 0; entry < index_collection.set_num_entries_; entry++)
@@ -293,27 +292,29 @@ void testDeleteKeep(const HighsIndexCollection& index_collection) {
 
   keep_from_index = 0;
   if (index_collection.is_interval_) {
-    keep_to_index = index_collection.from_-1;
+    keep_to_index = index_collection.from_ - 1;
   } else if (index_collection.is_set_) {
     current_set_entry = 0;
-    keep_to_index = set[0]-1;
+    keep_to_index = set[0] - 1;
   } else {
     keep_to_index = dimension;
     for (int index = 0; index < dimension; index++) {
       if (mask[index]) {
-        keep_to_index = index-1;
+        keep_to_index = index - 1;
         break;
       }
     }
   }
   printf("Keep   [%2d, %2d]\n", 0, keep_to_index);
-  if (keep_to_index >= dimension-1) return;
+  if (keep_to_index >= dimension - 1) return;
   for (int k = 0; k < dimension; k++) {
-    updateIndexCollectionOutInIndex(index_collection, delete_from_index, delete_to_index,
-                  keep_from_index, keep_to_index, current_set_entry);
+    updateIndexCollectionOutInIndex(index_collection, delete_from_index,
+                                    delete_to_index, keep_from_index,
+                                    keep_to_index, current_set_entry);
     printf("Delete [%2d, %2d]; keep [%2d, %2d]\n", delete_from_index,
            delete_to_index, keep_from_index, keep_to_index);
-    if (delete_to_index >= dimension - 1 || keep_to_index >= dimension - 1) break;
+    if (delete_to_index >= dimension - 1 || keep_to_index >= dimension - 1)
+      break;
   }
 }
 
@@ -332,7 +333,7 @@ bool testAllDeleteKeep(int num_row) {
   index_collection.set_ = &set[0];
   index_collection.is_mask_ = false;
   index_collection.mask_ = &mask[0];
-  
+
   int save_from = index_collection.from_;
   int save_set_0 = set[0];
   int save_mask_0 = mask[0];
