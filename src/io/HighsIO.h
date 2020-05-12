@@ -14,7 +14,9 @@
 #ifndef HIGHS_IO_H
 #define HIGHS_IO_H
 
-#include "lp_data/HighsLp.h"
+#include <iostream>
+#include <vector>
+#include "lp_data/HConst.h"
 
 class HighsOptions;
 
