@@ -15,8 +15,6 @@
 #define HIGHS_IO_H
 
 #include <iostream>
-#include <vector>
-
 class HighsOptions;
 
 /**
