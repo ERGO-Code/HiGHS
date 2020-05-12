@@ -1496,7 +1496,7 @@ std::string Highs::highsModelStatusToString(
   return utilHighsModelStatusToString(model_status);
 }
 
-std::string Highs::highsPrimalDualStatusToString(const int primal_dual_status) {
+std::string Highs::primalDualStatusToString(const int primal_dual_status) {
   return utilPrimalDualStatusToString(primal_dual_status);
 }
 
