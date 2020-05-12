@@ -268,8 +268,8 @@ void testDeleteKeep(const HighsIndexCollection& index_collection) {
   int keep_from_index;
   int keep_to_index;
   int current_set_entry;
-  int* set = index_collection.set_;
-  int* mask = index_collection.mask_;
+  const int* set = index_collection.set_;
+  const int* mask = index_collection.mask_;
   const int dimension = index_collection.dimension_;
   if (index_collection.is_interval_) {
     printf("With index interval [%d, %d] in [%d, %d]\n",
@@ -391,7 +391,9 @@ void messageReportMatrix(const char* message, const int num_col,
 
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
+  printf("test_all_delete_keep\n");
   test_all_delete_keep(10);
+  printf("testAllDeleteKeep\n");
   testAllDeleteKeep(10);
 
   HighsOptions options;
@@ -569,6 +571,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
   REQUIRE(return_bool);
 
+  /*
 #ifdef HiGHSDEV
   message = "After deleting columns 1, 3, 5, 7";
   //  messageReportLp(message.c_str(), highs.getLp());
@@ -1050,4 +1053,5 @@ TEST_CASE("LP-modification", "[highs_data]") {
   //  messageReportLp("After restoring costs and bounds", highs.getLp());
   printf("Finished successfully\n");
   fflush(stdout);
+  */
 }

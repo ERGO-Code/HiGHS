@@ -132,21 +132,25 @@ HighsStatus HighsSimplexInterface::addCols(
   return return_status;
 }
 
-HighsStatus HighsSimplexInterface::deleteCols(int from_col, int to_col) {
-  return deleteColsGeneral(true, from_col, to_col, false, 0, NULL, false, NULL);
+HighsStatus HighsSimplexInterface::deleteCols(const HighsIndexCollection& index_collection,
+					      int from_col, int to_col) {
+  return deleteColsGeneral(index_collection, true, from_col, to_col, false, 0, NULL, false, NULL);
 }
 
-HighsStatus HighsSimplexInterface::deleteCols(int num_set_entries,
+HighsStatus HighsSimplexInterface::deleteCols(const HighsIndexCollection& index_collection,
+					      int num_set_entries,
                                               const int* col_set) {
-  return deleteColsGeneral(false, 0, 0, true, num_set_entries, col_set, false,
+  return deleteColsGeneral(index_collection, false, 0, 0, true, num_set_entries, col_set, false,
                            NULL);
 }
 
-HighsStatus HighsSimplexInterface::deleteCols(int* col_mask) {
-  return deleteColsGeneral(false, 0, 0, false, 0, NULL, true, col_mask);
+HighsStatus HighsSimplexInterface::deleteCols(const HighsIndexCollection& index_collection,
+					      int* col_mask) {
+  return deleteColsGeneral(index_collection, false, 0, 0, false, 0, NULL, true, col_mask);
 }
 
 HighsStatus HighsSimplexInterface::deleteColsGeneral(
+    const HighsIndexCollection& index_collection,
     bool interval, int from_col, int to_col, bool set, int num_set_entries,
     const int* col_set, bool mask, int* col_mask) {
   HighsOptions& options = highs_model_object.options_;
@@ -161,7 +165,7 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
   int original_num_col = lp.numCol_;
 
   HighsStatus returnStatus;
-  returnStatus = deleteLpCols(options, lp, interval, from_col, to_col, set,
+  returnStatus = deleteLpCols(options, lp, index_collection, interval, from_col, to_col, set,
                               num_set_entries, col_set, mask, col_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
   assert(lp.numCol_ <= original_num_col);
@@ -176,7 +180,7 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    returnStatus = deleteLpCols(options, simplex_lp, interval, from_col, to_col,
+    returnStatus = deleteLpCols(options, simplex_lp, index_collection, interval, from_col, to_col,
                                 set, num_set_entries, col_set, mask, col_mask);
     if (returnStatus != HighsStatus::OK) return returnStatus;
     //    HighsScale& scale = highs_model_object.scale_;

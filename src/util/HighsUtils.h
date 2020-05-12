@@ -27,9 +27,9 @@ struct HighsIndexCollection {
   int to_;
   bool is_set_ = false;
   int set_num_entries_;
-  int* set_;
+  const int* set_;
   bool is_mask_ = false;
-  int* mask_;    
+  const int* mask_;    
 };
 
 #ifdef HiGHSDEV
@@ -76,13 +76,13 @@ const double bad_regression_error = 0.2;
 const double fair_regression_error = 0.02;
 
 bool assessIndexCollection(const HighsOptions& options,
-			   const HighsIndexCollection index_collection);
+			   const HighsIndexCollection& index_collection);
 
 bool limitsForIndexCollection(const HighsOptions& options,
-			      const HighsIndexCollection index_collection,
+			      const HighsIndexCollection& index_collection,
 			      int& from_k, int& to_k);
 
-void updateIndexCollectionOutInIndex(const HighsIndexCollection index_collection,
+void updateIndexCollectionOutInIndex(const HighsIndexCollection& index_collection,
 				     int& out_from_ix, int& out_to_ix, int& in_from_ix,
 				     int& in_to_ix, int& current_set_entry);
 				     

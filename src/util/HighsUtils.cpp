@@ -29,7 +29,7 @@ int getOmpNumThreads() {
 */
 
 bool assessIndexCollection(const HighsOptions& options,
-			   const HighsIndexCollection index_collection) {
+			   const HighsIndexCollection& index_collection) {
   // Check parameter for each technique of defining an index collection
   if (index_collection.is_interval_) {
     // Changing by interval: check the parameters and that check set and mask
@@ -74,7 +74,7 @@ bool assessIndexCollection(const HighsOptions& options,
       return false;
     }
     // Check that the values in the vector of integers are ascending
-    int* set = index_collection.set_;
+    const int* set = index_collection.set_;
     const int set_entry_upper = index_collection.dimension_ - 1;
     int prev_set_entry = -1;
     for (int k = 0; k < index_collection.set_num_entries_; k++) {
@@ -122,7 +122,7 @@ bool assessIndexCollection(const HighsOptions& options,
 }
 
 bool limitsForIndexCollection(const HighsOptions& options,
-			      const HighsIndexCollection index_collection,
+			      const HighsIndexCollection& index_collection,
 			      int& from_k, int& to_k) {
   if (index_collection.is_interval_) {
     from_k = index_collection.from_;
@@ -141,7 +141,7 @@ bool limitsForIndexCollection(const HighsOptions& options,
   return true;
 }
 
-void updateIndexCollectionOutInIndex(const HighsIndexCollection index_collection,
+void updateIndexCollectionOutInIndex(const HighsIndexCollection& index_collection,
 				     int& out_from_ix, int& out_to_ix, int& in_from_ix,
 				     int& in_to_ix, int& current_set_entry) {
   if (index_collection.is_interval_) {
