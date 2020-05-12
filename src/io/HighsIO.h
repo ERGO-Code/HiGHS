@@ -15,6 +15,7 @@
 #define HIGHS_IO_H
 
 #include <iostream>
+
 class HighsOptions;
 
 /**
