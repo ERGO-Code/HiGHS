@@ -261,6 +261,58 @@ bool test_all_delete_keep(int num_row) {
   return true;
 }
 
+bool testAllDeleteKeep(int num_row) {
+  // Test the extraction of intervals from index collections
+  int set[] = {1, 4, 5, 8};
+  int mask[] = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
+
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = num_row;
+  index_collection.is_interval_ = false;
+  index_collection.from_ = 3;
+  index_collection.to_ = 6;
+  index_collection.is_set_ = false;
+  index_collection.set_num_entries_ = 4;
+  index_collection.set = &set;
+  index_collection.is_mask_ = false;
+  index_collection.mask = &mask;
+  
+  int save_from = index_collection.from_;
+  int save_set_0 = set[0];
+  int save_mask_0 = mask[0];
+
+  int to_pass = 2;  // 2
+  for (int pass = 0; pass <= to_pass; pass++) {
+    printf("\nTesting delete-keep: pass %d\n", pass);
+    if (pass == 1) {
+      // Mods to test LH limit behaviour
+      index_collection.from_ = 0;
+      set[0] = 0;
+      mask[0] = 1;
+    } else if (pass == 2) {
+      // Mods to test RH limit behaviour
+      index_collection.from_ = save_from;
+      index_collection.to_ = 9;
+      set[0] = save_set_0;
+      set[3] = 9;
+      mask[0] = save_mask_0;
+      mask[9] = 1;
+    }
+
+    index_collection.is_interval_ = true;
+    testDeleteKeep(index_collection);
+    index_collection.is_interval_ = false;
+
+    index_collection.is_set_ = true;
+    testDeleteKeep(index_collection);
+    index_collection.is_set_ = false;
+
+    index_collection.is_mask_ = true;
+    testDeleteKeep(index_collection);
+  }
+  return true;
+}
+
 void messageReportLp(const char* message, const HighsLp& lp) {
   HighsOptions options;
   options.output = stdout;
@@ -284,6 +336,7 @@ void messageReportMatrix(const char* message, const int num_col,
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
   test_all_delete_keep(10);
+  testAllDeleteKeep(10);
 
   HighsOptions options;
   options.message_level = ML_ALWAYS;
