@@ -141,6 +141,53 @@ bool limitsForIndexCollection(const HighsOptions& options,
   return true;
 }
 
+void updateIndexCollectionOutInIndex(const HighsIndexCollection index_collection,
+				     int& out_from_ix, int& out_to_ix, int& in_from_ix,
+				     int& in_to_ix, int& current_set_entry) {
+  if (index_collection.is_interval_) {
+    out_from_ix = index_collection.from_;
+    out_to_ix = index_collection.to_;
+    in_from_ix = index_collection.to_ + 1;
+    in_to_ix = index_collection.dimension_ - 1;
+  } else if (index_collection.is_set_) {
+    out_from_ix = index_collection.set_[current_set_entry];
+    out_to_ix = out_from_ix;  //+1;
+    current_set_entry++;
+    int current_set_entry0 = current_set_entry;
+    for (int set_entry = current_set_entry0; set_entry < index_collection.set_num_entries_;
+         set_entry++) {
+      int ix = index_collection.set_[set_entry];
+      if (ix > out_to_ix + 1) break;
+      out_to_ix = index_collection.set_[current_set_entry];
+      current_set_entry++;
+    }
+    in_from_ix = out_to_ix + 1;
+    if (current_set_entry < index_collection.set_num_entries_) {
+      in_to_ix = index_collection.set_[current_set_entry] - 1;
+    } else {
+      // Account for getting to the end of the set
+      in_to_ix = index_collection.dimension_ - 1;
+    }
+  } else {
+    out_from_ix = in_to_ix + 1;
+    out_to_ix = index_collection.dimension_ - 1;
+    for (int ix = in_to_ix + 1; ix < index_collection.dimension_; ix++) {
+      if (!index_collection.mask_[ix]) {
+        out_to_ix = ix - 1;
+        break;
+      }
+    }
+    in_from_ix = out_to_ix + 1;
+    in_to_ix = index_collection.dimension_ - 1;
+    for (int ix = out_to_ix + 1; ix < index_collection.dimension_; ix++) {
+      if (index_collection.mask_[ix]) {
+        in_to_ix = ix - 1;
+        break;
+      }
+    }
+  }
+}
+				     
 double getNorm2(const std::vector<double> values) {
   double sum = 0;
   int values_size = values.size();

@@ -82,6 +82,11 @@ bool limitsForIndexCollection(const HighsOptions& options,
 			      const HighsIndexCollection index_collection,
 			      int& from_k, int& to_k);
 
+void updateIndexCollectionOutInIndex(const HighsIndexCollection index_collection,
+				     int& out_from_ix, int& out_to_ix, int& in_from_ix,
+				     int& in_to_ix, int& current_set_entry);
+				     
+				     
 double getNorm2(const std::vector<double> values);
 
 /**
