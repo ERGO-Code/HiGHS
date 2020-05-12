@@ -261,6 +261,9 @@ bool test_all_delete_keep(int num_row) {
   return true;
 }
 
+void testDeleteKeep(const HighsIndexCollection& index_collection) {
+}
+
 bool testAllDeleteKeep(int num_row) {
   // Test the extraction of intervals from index collections
   int set[] = {1, 4, 5, 8};
@@ -273,9 +276,9 @@ bool testAllDeleteKeep(int num_row) {
   index_collection.to_ = 6;
   index_collection.is_set_ = false;
   index_collection.set_num_entries_ = 4;
-  index_collection.set = &set;
+  index_collection.set_ = &set[0];
   index_collection.is_mask_ = false;
-  index_collection.mask = &mask;
+  index_collection.mask_ = &mask[0];
   
   int save_from = index_collection.from_;
   int save_set_0 = set[0];
