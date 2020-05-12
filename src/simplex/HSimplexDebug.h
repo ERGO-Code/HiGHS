@@ -20,6 +20,8 @@
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 
+HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object);
+
 HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs);
 

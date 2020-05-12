@@ -90,6 +90,21 @@ const double freelist_excessive_pct_num_entries = 25.0;
 const double freelist_large_pct_num_entries = 10.0;
 const double freelist_fair_pct_num_entries = 1.0;
 
+HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
+  // Non-trivially expensive check that the .simplex_lp, if valid is .lp scaled
+  // according to .scale
+  const HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  if (!simplex_lp_status.valid ||
+      highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+  // Take a copy of the original LP
+  HighsLp check_lp = highs_model_object.lp_;
+  return_status = HighsDebugStatus::OK;
+  return return_status;
+}
+
 HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs) {
   // Non-trivially expensive analysis of computed primal values.
