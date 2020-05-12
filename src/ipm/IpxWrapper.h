@@ -688,13 +688,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
 
   // Should only reach here if crossover is not run, optimal or imprecise
-  if (ipxStatusError(
-          ipx_info.status_crossover != IPX_STATUS_not_run &&
-          ipx_info.status_crossover != IPX_STATUS_optimal &&
-              ipx_info.status_crossover != IPX_STATUS_imprecise,
-          options,
-          "crossover status should be not run, optimal or imprecise but value is",
-          (int)ipx_info.status_crossover))
+  if (ipxStatusError(ipx_info.status_crossover != IPX_STATUS_not_run &&
+                         ipx_info.status_crossover != IPX_STATUS_optimal &&
+                         ipx_info.status_crossover != IPX_STATUS_imprecise,
+                     options,
+                     "crossover status should be not run, optimal or imprecise "
+                     "but value is",
+                     (int)ipx_info.status_crossover))
     return HighsStatus::Error;
 
   // Get the interior solution (available if IPM was started).
@@ -712,35 +712,34 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
 
-  IpxSolution ipx_solution;
-  ipx_solution.num_col = num_col;
-  ipx_solution.num_row = num_row;
-  ipx_solution.ipx_col_value.resize(num_col);
-  ipx_solution.ipx_row_value.resize(num_row);
-  ipx_solution.ipx_col_dual.resize(num_col);
-  ipx_solution.ipx_row_dual.resize(num_row);
-  ipx_solution.ipx_row_status.resize(num_row);
-  ipx_solution.ipx_col_status.resize(num_col);
-
-  if (ipx_info.status_crossover == IPX_STATUS_not_run) {
-    // Crossover wasn't run, so don't have a basic solution
-    ipxSolutionToHighsSolution(options.logfile, lp, rhs, constraint_type,
-			       ipx_solution, highs_solution);
-
-    highs_basis.valid_ = false;
-  } else {
-    lps.GetBasicSolution(
-			 &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
-			 &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
-			 &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
-
-  // Convert the IPX basic solution to a HiGHS basic solution
-    ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs, constraint_type,
-					 ipx_solution, highs_basis, highs_solution);
-  }
-
+  // Basic solution depends on crossover being run
+  const bool have_basic_solution =
+      ipx_info.status_crossover != IPX_STATUS_not_run;
   imprecise_solution = ipx_info.status_crossover == IPX_STATUS_imprecise;
+  if (have_basic_solution) {
+    IpxSolution ipx_solution;
+    ipx_solution.num_col = num_col;
+    ipx_solution.num_row = num_row;
+    ipx_solution.ipx_col_value.resize(num_col);
+    ipx_solution.ipx_row_value.resize(num_row);
+    ipx_solution.ipx_col_dual.resize(num_col);
+    ipx_solution.ipx_row_dual.resize(num_row);
+    ipx_solution.ipx_row_status.resize(num_row);
+    ipx_solution.ipx_col_status.resize(num_col);
+    lps.GetBasicSolution(
+        &ipx_solution.ipx_col_value[0], &ipx_solution.ipx_row_value[0],
+        &ipx_solution.ipx_row_dual[0], &ipx_solution.ipx_col_dual[0],
+        &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
 
+    // Convert the IPX basic solution to a HiGHS basic solution
+    ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs,
+                                         constraint_type, ipx_solution,
+                                         highs_basis, highs_solution);
+  } else {
+    ipxSolutionToHighsSolution(options.logfile, lp, rhs, constraint_type,
+                               num_col, num_row, x, slack, highs_solution);
+    highs_basis.valid_ = false;
+  }
   HighsStatus return_status;
   if (imprecise_solution) {
     unscaled_model_status = HighsModelStatus::NOTSET;
@@ -749,13 +748,18 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     unscaled_model_status = HighsModelStatus::OPTIMAL;
     unscaled_solution_params.primal_status =
         PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    unscaled_solution_params.dual_status =
-        PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    // Currently only have a dual solution if there is a basic solution
+    if (have_basic_solution)
+      unscaled_solution_params.dual_status =
+          PrimalDualStatus::STATUS_FEASIBLE_POINT;
     return_status = HighsStatus::OK;
   }
-  unscaled_solution_params.objective_function_value =
-      (int)lp.sense_ * ipx_info.objval;
-  if (highs_basis.valid_) 
+  double objective_function_value = lp.offset_;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++)
+    objective_function_value +=
+        highs_solution.col_value[iCol] * lp.colCost_[iCol];
+  unscaled_solution_params.objective_function_value = objective_function_value;
+  if (highs_basis.valid_)
     getPrimalDualInfeasibilitiesFromHighsBasicSolution(
         lp, highs_basis, highs_solution, unscaled_solution_params);
   return return_status;

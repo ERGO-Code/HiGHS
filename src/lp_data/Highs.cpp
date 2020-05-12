@@ -435,12 +435,11 @@ basis_.valid_, hmos_[0].basis_.valid_);
     // If using IPX to solve the reduced LP, crossover must be run
     // since a basic solution is required by postsolve
     if (options_.solver == ipm_string && !options_.run_crossover) {
-      HighsLogMessage(
-        options_.logfile, HighsMessageType::WARNING,
-	"Forcing IPX to use crossover after presolve");
+      HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
+                      "Forcing IPX to use crossover after presolve");
       options_.run_crossover = true;
     }
-     
+
     hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::NOTSET;
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
@@ -735,10 +734,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // them to have the right dimension.
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
-  if (model_status_ == HighsModelStatus::OPTIMAL) {
-    info_.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    info_.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  }
   // Report times
   if (hmos_[original_hmo].report_model_operations_clock) {
     std::vector<int> clockList{timer_.presolve_clock, timer_.solve_clock,
@@ -1795,7 +1790,6 @@ void Highs::clearInfo() { info_.clear(); }
 
 void Highs::beforeReturnFromRun(HighsStatus& return_status) {
   bool have_solution = false;
-  bool have_basis = false;
   if (hmos_.size() == 0) {
     // No model has been loaded: ensure that the status, solution,
     // basis and info associated with any previous model are cleared
@@ -1836,7 +1830,6 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
         clearSolution();
         // May have a basis, according to whether infeasibility was
         // detected in presolve or solve
-        have_basis = basis_.valid_;
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
@@ -1845,7 +1838,6 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
         clearSolution();
         // May have a basis, according to whether infeasibility was
         // detected in presolve or solve
-        have_basis = basis_.valid_;
         clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
@@ -1853,7 +1845,6 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
 
       case HighsModelStatus::OPTIMAL:
         have_solution = true;
-        have_basis = true;
         // The following is an aspiration
         //        assert(info_.primal_status ==
         //                   (int)PrimalDualStatus::STATUS_FEASIBLE_POINT);
@@ -1884,12 +1875,11 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
     }
   }
   if (have_solution) assert(isSolutionConsistent(lp_, solution_));
-  if (have_basis) {
+  if (basis_.valid_) {
     if (!isBasisConsistent(lp_, basis_)) {
       printf("Basis not consistent when it should be\n");
     }
     assert(isBasisConsistent(lp_, basis_));
-    assert(basis_.valid_);
   }
 }
 
