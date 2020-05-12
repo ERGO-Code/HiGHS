@@ -22,14 +22,14 @@
 
 struct HighsIndexCollection {
   int dimension_;
-  bool interval_ = false;
-  int from_col_;
-  int to_col_;
-  bool set_ = false;
-  int num_set_entries_;
-  int* set_entries_;
-  bool mask_ = false;
-  int* mask_entries_;    
+  bool is_interval_ = false;
+  int from_;
+  int to_;
+  bool is_set_ = false;
+  int set_num_entries_;
+  int* set_;
+  bool is_mask_ = false;
+  int* mask_;    
 };
 
 #ifdef HiGHSDEV
@@ -78,7 +78,8 @@ const double fair_regression_error = 0.02;
 bool assessIndexCollection(const HighsOptions& options,
 			   const HighsIndexCollection index_collection);
 
-void limitsForIndexCollection(const HighsIndexCollection index_collection,
+bool limitsForIndexCollection(const HighsOptions& options,
+			      const HighsIndexCollection index_collection,
 			      int& from_k, int& to_k);
 
 double getNorm2(const std::vector<double> values);

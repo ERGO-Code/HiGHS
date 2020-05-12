@@ -31,106 +31,114 @@ int getOmpNumThreads() {
 bool assessIndexCollection(const HighsOptions& options,
 			   const HighsIndexCollection index_collection) {
   // Check parameter for each technique of defining an index collection
-  /*  
-  if (interval) {
+  if (index_collection.is_interval_) {
     // Changing by interval: check the parameters and that check set and mask
     // are false
-    if (set) {
+    if (index_collection.is_set_) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval and set are both true");
-      return HighsStatus::Error;
+                      "Index collection is both interval and set");
+      return false;
     }
-    if (mask) {
+    if (index_collection.is_mask_) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval and mask are both true");
-      return HighsStatus::Error;
+                      "Index collection is both interval and mask");
+      return false;
     }
-    if (from_ix < 0) {
+    if (index_collection.from_ < 0) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval lower limit is %d < 0", from_ix);
-      return HighsStatus::Error;
+                      "Index interval lower limit is %d < 0", index_collection.from_);
+      return false;
     }
-    if (to_ix > ix_dim - 1) {
+    if (index_collection.to_ > index_collection.dimension_ - 1) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval upper limit is %d > %d", to_ix,
-                      ix_dim - 1);
-      return HighsStatus::Error;
+                      "Index interval upper limit is %d > %d", index_collection.to_,
+                      index_collection.dimension_ - 1);
+      return false;
     }
-    from_k = from_ix;
-    to_k = to_ix;
-  } else if (set) {
+  } else if (index_collection.is_set_) {
     // Changing by set: check the parameters and check that interval and mask
     // are false
-    if (interval) {
+    if (index_collection.is_interval_) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index set and interval are both true");
-      return HighsStatus::Error;
+                      "Index collection is both set and interval");
+      return false;
     }
-    if (mask) {
+    if (index_collection.is_mask_) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index set and mask are both true");
-      return HighsStatus::Error;
+                      "Index collection is both set and mask");
+      return false;
     }
-    if (ix_set == NULL) {
+    if (index_collection.set_ == NULL) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index set NULL");
-      return HighsStatus::Error;
+                      "Index set is NULL");
+      return false;
     }
-    from_k = 0;
-    to_k = num_set_entries - 1;
     // Check that the values in the vector of integers are ascending
-    int set_entry_upper = (int)ix_dim - 1;
+    int* set = index_collection.set_;
+    const int set_entry_upper = index_collection.dimension_ - 1;
     int prev_set_entry = -1;
-    for (int k = 0; k < num_set_entries; k++) {
-      if (ix_set[k] < 0 || ix_set[k] > set_entry_upper) {
+    for (int k = 0; k < index_collection.set_num_entries_; k++) {
+      if (set[k] < 0 || set[k] > set_entry_upper) {
         HighsLogMessage(
             options.logfile, HighsMessageType::ERROR,
-            "Index set entry ix_set[%d] = %d is out of bounds [0, %d]", k,
-            ix_set[k], set_entry_upper);
-        return HighsStatus::Error;
+            "Index set entry set[%d] = %d is out of bounds [0, %d]", k,
+            set[k], set_entry_upper);
+        return false;
       }
-      if (ix_set[k] <= prev_set_entry) {
+      if (set[k] <= prev_set_entry) {
         HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Index set entry ix_set[%d] = %d is not greater than "
+                        "Index set entry set[%d] = %d is not greater than "
                         "previous entry %d",
-                        k, ix_set[k], prev_set_entry);
-        return HighsStatus::Error;
+                        k, set[k], prev_set_entry);
+        return false;
       }
-      prev_set_entry = ix_set[k];
+      prev_set_entry = set[k];
     }
-  } else if (mask) {
+  } else if (index_collection.is_mask_) {
     // Changing by mask: check the parameters and check that set and interval
     // are false
-    if (ix_mask == NULL) {
+    if (index_collection.mask_ == NULL) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Index mask is NULL");
-      return HighsStatus::Error;
+      return false;
     }
-    if (interval) {
+    if (index_collection.is_interval_) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index mask and interval are both true");
-      return HighsStatus::Error;
+                      "Index collection is both mask and interval");
+      return false;
     }
-    if (set) {
+    if (index_collection.is_set_) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index mask and set are both true");
-      return HighsStatus::Error;
+                      "Index collection is both mask and set");
+      return false;
     }
-    from_k = 0;
-    to_k = ix_dim - 1;
   } else {
     // No method defined
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "None of index interval, set or mask is true");
-    return HighsStatus::Error;
+                    "Undefined index collection");
+    return false;
   }
-  return HighsStatus::OK;
-  */
   return true;
 }
 
-void limitsForIndexCollection(const HighsIndexCollection index_collection,
+bool limitsForIndexCollection(const HighsOptions& options,
+			      const HighsIndexCollection index_collection,
 			      int& from_k, int& to_k) {
+  if (index_collection.is_interval_) {
+    from_k = index_collection.from_;
+    to_k = index_collection.to_;
+  } else if (index_collection.is_set_) {
+    from_k = 0;
+    to_k = index_collection.set_num_entries_ - 1;
+  } else if (index_collection.is_mask_) {
+    from_k = 0;
+    to_k = index_collection.dimension_ - 1;
+  } else {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Undefined index collection");
+    return false;
+  }
+  return true;
 }
 
 double getNorm2(const std::vector<double> values) {

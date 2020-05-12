@@ -14,7 +14,7 @@
 #ifndef LP_DATA_HIGHS_OPTIONS_H_
 #define LP_DATA_HIGHS_OPTIONS_H_
 
-#include <cstring>  // For strrchr
+#include <cstring>  // For strlen
 #include <vector>
 
 #include "io/HighsIO.h"
