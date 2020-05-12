@@ -1333,6 +1333,8 @@ HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection)) 
+    return interpretCallStatus(HighsStatus::Error, return_status, "assessIndexCollection");
 
   int from_k1;
   int to_k1;
@@ -1412,6 +1414,8 @@ HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection)) 
+    return interpretCallStatus(HighsStatus::Error, return_status, "assessIndexCollection");
 
   int from_k1;
   int to_k1;

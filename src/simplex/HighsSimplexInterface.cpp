@@ -474,38 +474,42 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
   return HighsStatus::OK;
 }
 
-HighsStatus HighsSimplexInterface::getCols(const int from_col, const int to_col,
+HighsStatus HighsSimplexInterface::getCols(    const HighsIndexCollection& index_collection,
+const int from_col, const int to_col,
                                            int& num_col, double* col_cost,
                                            double* col_lower, double* col_upper,
                                            int& num_nz, int* col_matrix_start,
                                            int* col_matrix_index,
                                            double* col_matrix_value) {
-  return getColsGeneral(true, from_col, to_col, false, 0, NULL, false, NULL,
+  return getColsGeneral(index_collection, true, from_col, to_col, false, 0, NULL, false, NULL,
                         num_col, col_cost, col_lower, col_upper, num_nz,
                         col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getCols(
+    const HighsIndexCollection& index_collection,
     const int num_set_entries, const int* col_set, int& num_col,
     double* col_cost, double* col_lower, double* col_upper, int& num_nz,
     int* col_matrix_start, int* col_matrix_index, double* col_matrix_value) {
-  return getColsGeneral(false, 0, 0, true, num_set_entries, col_set, false,
+  return getColsGeneral(index_collection, false, 0, 0, true, num_set_entries, col_set, false,
                         NULL, num_col, col_cost, col_lower, col_upper, num_nz,
                         col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
-HighsStatus HighsSimplexInterface::getCols(const int* col_mask, int& num_col,
+HighsStatus HighsSimplexInterface::getCols(    const HighsIndexCollection& index_collection,
+const int* col_mask, int& num_col,
                                            double* col_cost, double* col_lower,
                                            double* col_upper, int& num_nz,
                                            int* col_matrix_start,
                                            int* col_matrix_index,
                                            double* col_matrix_value) {
-  return getColsGeneral(false, 0, 0, false, 0, NULL, true, col_mask, num_col,
+  return getColsGeneral(index_collection, false, 0, 0, false, 0, NULL, true, col_mask, num_col,
                         col_cost, col_lower, col_upper, num_nz,
                         col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getColsGeneral(
+    const HighsIndexCollection& index_collection,
     const bool interval, const int from_col, const int to_col, const bool set,
     const int num_set_entries, const int* col_set, const bool mask,
     const int* col_mask, int& num_col, double* col_cost, double* col_lower,
@@ -523,6 +527,16 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection)) 
+    return interpretCallStatus(HighsStatus::Error, return_status, "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status, "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k < 0 || to_k > lp.numCol_) {
     call_status = HighsStatus::Error;
     return_status =
@@ -543,10 +557,27 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
   int in_to_col = -1;
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
+
+  int out_from_col1;
+  int out_to_col1;
+  int in_from_col1;
+  int in_to_col1 = -1;
+  int current_set_entry1 = 0;
+
   for (int k = from_k; k <= to_k; k++) {
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, out_from_col, out_to_col,
                   in_from_col, in_to_col, current_set_entry);
+
+    updateIndexCollectionOutInIndex(index_collection,
+				     
+				    out_from_col1, out_to_col1, in_from_col1, in_to_col1, current_set_entry1);
+    assert(out_from_col1 == out_from_col);
+    assert(out_to_col1 == out_to_col);
+    assert(in_from_col1 == in_from_col);
+    assert(in_to_col1 == in_to_col);
+    assert(current_set_entry1 == current_set_entry);
+
     assert(out_to_col < col_dim);
     assert(in_to_col < col_dim);
     for (int col = out_from_col; col <= out_to_col; col++) {
@@ -571,39 +602,43 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
   return HighsStatus::OK;
 }
 
-HighsStatus HighsSimplexInterface::getRows(const int from_row, const int to_row,
+HighsStatus HighsSimplexInterface::getRows(    const HighsIndexCollection& index_collection,
+const int from_row, const int to_row,
                                            int& num_row, double* row_lower,
                                            double* row_upper, int& num_nz,
                                            int* row_matrix_start,
                                            int* row_matrix_index,
                                            double* row_matrix_value) {
-  return getRowsGeneral(true, from_row, to_row, false, 0, NULL, false, NULL,
+  return getRowsGeneral(index_collection, true, from_row, to_row, false, 0, NULL, false, NULL,
                         num_row, row_lower, row_upper, num_nz, row_matrix_start,
                         row_matrix_index, row_matrix_value);
 }
 
-HighsStatus HighsSimplexInterface::getRows(const int num_set_entries,
+HighsStatus HighsSimplexInterface::getRows(    const HighsIndexCollection& index_collection,
+const int num_set_entries,
                                            const int* row_set, int& num_row,
                                            double* row_lower, double* row_upper,
                                            int& num_nz, int* row_matrix_start,
                                            int* row_matrix_index,
                                            double* row_matrix_value) {
-  return getRowsGeneral(false, 0, 0, true, num_set_entries, row_set, false,
+  return getRowsGeneral(index_collection, false, 0, 0, true, num_set_entries, row_set, false,
                         NULL, num_row, row_lower, row_upper, num_nz,
                         row_matrix_start, row_matrix_index, row_matrix_value);
 }
 
-HighsStatus HighsSimplexInterface::getRows(const int* row_mask, int& num_row,
+HighsStatus HighsSimplexInterface::getRows(    const HighsIndexCollection& index_collection,
+const int* row_mask, int& num_row,
                                            double* row_lower, double* row_upper,
                                            int& num_nz, int* row_matrix_start,
                                            int* row_matrix_index,
                                            double* row_matrix_value) {
-  return getRowsGeneral(false, 0, 0, false, 0, NULL, true, row_mask, num_row,
+  return getRowsGeneral(index_collection, false, 0, 0, false, 0, NULL, true, row_mask, num_row,
                         row_lower, row_upper, num_nz, row_matrix_start,
                         row_matrix_index, row_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getRowsGeneral(
+    const HighsIndexCollection& index_collection,
     const bool interval, const int from_row, const int to_row, const bool set,
     const int num_set_entries, const int* row_set, const bool mask,
     const int* row_mask, int& num_row, double* row_lower, double* row_upper,
@@ -621,6 +656,16 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection)) 
+    return interpretCallStatus(HighsStatus::Error, return_status, "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status, "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k < 0 || to_k > lp.numRow_) {
     call_status = HighsStatus::Error;
     return_status =
@@ -643,17 +688,38 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   int in_to_row = -1;
   int current_set_entry = 0;
   int row_dim = lp.numRow_;
+
+  int out_from_row1;
+  int out_to_row1;
+  int in_from_row1;
+  int in_to_row1 = -1;
+  int current_set_entry1 = 0;
+
   // Set up a row mask so that entries to be got from the column-wise
   // matrix can be identified and have their correct row index.
   int* new_index = (int*)malloc(sizeof(int) * lp.numRow_);
 
   if (!mask) {
     out_to_row = -1;
+    out_to_row1 = -1;
     current_set_entry = 0;
+    current_set_entry1 = 0;
     for (int k = from_k; k <= to_k; k++) {
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                     row_set, mask, row_mask, in_from_row, in_to_row,
                     out_from_row, out_to_row, current_set_entry);
+
+    updateIndexCollectionOutInIndex(index_collection,
+				     in_from_row1, in_to_row1,
+				    out_from_row1, out_to_row1,
+				    current_set_entry1);
+    assert(in_from_row1 == in_from_row);
+    assert(in_to_row1 == in_to_row);
+    assert(out_from_row1 == out_from_row);
+    assert(out_to_row1 == out_to_row);
+    assert(current_set_entry1 == current_set_entry);
+
+
       if (k == from_k) {
         // Account for any initial rows not being extracted
         for (int row = 0; row < in_from_row; row++) {

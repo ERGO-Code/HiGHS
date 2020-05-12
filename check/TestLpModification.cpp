@@ -616,7 +616,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.deleteRows(0, num_row - 1);
   REQUIRE(return_bool);
 
-  /*
 #ifdef HiGHSDEV
   message = "After deleting all rows";
   //  messageReportLp(message.c_str(), highs.getLp());
@@ -946,6 +945,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   row0135789_upper[5] = 3.81;
   row0135789_upper[6] = 3.91;
 
+  /*
   // Attempting to set a cost to infinity returns error
   return_bool = highs.changeColCost(7, HIGHS_CONST_INF);
   REQUIRE(!return_bool);

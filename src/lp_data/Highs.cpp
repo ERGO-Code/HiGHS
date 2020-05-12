@@ -1266,38 +1266,52 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
   HighsStatus call_status;
   underDevelopmentLogMessage("getCols");
   if (!haveHmo("getCols")) return false;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numCol_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_col;
+  index_collection.to_ = to_col;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.getCols(from_col, to_col, num_col, costs, lower,
+  call_status = interface.getCols(index_collection, from_col, to_col, num_col, costs, lower,
                                   upper, num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
-bool Highs::getCols(const int n, const int* set, int& num_col, double* costs,
+bool Highs::getCols(const int num_set_entries, const int* set, int& num_col, double* costs,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("getCols");
   if (!haveHmo("getCols")) return false;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numCol_;
+  index_collection.is_set_ = true;
+  index_collection.set_ = &set[0];
+  index_collection.set_num_entries_ = num_set_entries;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.getCols(n, set, num_col, costs, lower, upper, num_nz,
+  call_status = interface.getCols(index_collection, num_set_entries, set, num_col, costs, lower, upper, num_nz,
                                   start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
 
-bool Highs::getCols(const int* col_mask, int& num_col, double* costs,
+bool Highs::getCols(const int* mask, int& num_col, double* costs,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("getCols");
   if (!haveHmo("getCols")) return false;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numCol_;
+  index_collection.is_mask_ = true;
+  index_collection.mask_ = &mask[0];
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.getCols(col_mask, num_col, costs, lower, upper,
+  call_status = interface.getCols(index_collection, mask, num_col, costs, lower, upper,
                                   num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
@@ -1311,8 +1325,13 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
   HighsStatus call_status;
   underDevelopmentLogMessage("getRows");
   if (!haveHmo("getRows")) return false;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numRow_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = from_row;
+  index_collection.to_ = to_row;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.getRows(from_row, to_row, num_row, lower, upper,
+  call_status = interface.getRows(index_collection, from_row, to_row, num_row, lower, upper,
                                   num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
@@ -1326,8 +1345,13 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
   HighsStatus call_status;
   underDevelopmentLogMessage("getRows");
   if (!haveHmo("getRows")) return false;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numRow_;
+  index_collection.is_set_ = true;
+  index_collection.set_ = &set[0];
+  index_collection.set_num_entries_ = num_set_entries;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.getRows(num_set_entries, set, num_row, lower, upper,
+  call_status = interface.getRows(index_collection, num_set_entries, set, num_row, lower, upper,
                                   num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
@@ -1340,8 +1364,12 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
   HighsStatus call_status;
   underDevelopmentLogMessage("getRows");
   if (!haveHmo("getRows")) return false;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp_.numRow_;
+  index_collection.is_mask_ = true;
+  index_collection.mask_ = &mask[0];
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.getRows(mask, num_row, lower, upper, num_nz, start,
+  call_status = interface.getRows(index_collection, mask, num_row, lower, upper, num_nz, start,
                                   index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
