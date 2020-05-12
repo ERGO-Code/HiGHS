@@ -571,7 +571,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
   REQUIRE(return_bool);
 
-  /*
 #ifdef HiGHSDEV
   message = "After deleting columns 1, 3, 5, 7";
   //  messageReportLp(message.c_str(), highs.getLp());
@@ -617,6 +616,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.deleteRows(0, num_row - 1);
   REQUIRE(return_bool);
 
+  /*
 #ifdef HiGHSDEV
   message = "After deleting all rows";
   //  messageReportLp(message.c_str(), highs.getLp());

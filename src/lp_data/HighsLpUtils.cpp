@@ -1235,7 +1235,6 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
   int keep_to_col = -1;  // 0; 191021 change
   int current_set_entry = 0;
 
-
   int delete_from_col1;
   int delete_to_col1;
   int keep_from_col1;
@@ -1293,6 +1292,7 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
+    const HighsIndexCollection& index_collection,
                          const bool interval, const int from_row,
                          const int to_row, const bool set,
                          const int num_set_entries, const int* row_set,
@@ -1300,14 +1300,14 @@ HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   int new_num_row;
-  call_status = deleteRowsFromLpVectors(options, lp, new_num_row, interval,
+  call_status = deleteRowsFromLpVectors(options, lp, new_num_row, index_collection, interval,
                                         from_row, to_row, set, num_set_entries,
                                         row_set, mask, row_mask);
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
   call_status =
-      deleteRowsFromLpMatrix(options, lp, interval, from_row, to_row, set,
+      deleteRowsFromLpMatrix(options, lp, index_collection, interval, from_row, to_row, set,
                              num_set_entries, row_set, mask, row_mask);
   return_status =
       interpretCallStatus(call_status, return_status, "deleteRowsFromLpMatrix");
@@ -1317,7 +1317,8 @@ HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
-                                    int& new_num_row, const bool interval,
+                                    int& new_num_row, 
+    const HighsIndexCollection& index_collection, const bool interval,
                                     const int from_row, const int to_row,
                                     const bool set, const int num_set_entries,
                                     const int* row_set, const bool mask,
@@ -1332,6 +1333,14 @@ HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status, "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (row_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteRowsFromLpVectors\n");
@@ -1345,8 +1354,15 @@ HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
   int delete_from_row;
   int delete_to_row;
   int keep_from_row;
-  int keep_to_row = -1;  // 0; 191021 change
+  int keep_to_row = -1;
   int current_set_entry = 0;
+
+  int delete_from_row1;
+  int delete_to_row1;
+  int keep_from_row1;
+  int keep_to_row1 = -1;
+  int current_set_entry1 = 0;
+
   int row_dim = lp.numRow_;
   new_num_row = 0;
   bool have_names = lp.row_names_.size();
@@ -1354,6 +1370,14 @@ HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
     updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                   row_set, mask, row_mask, delete_from_row, delete_to_row,
                   keep_from_row, keep_to_row, current_set_entry);
+    updateIndexCollectionOutInIndex(index_collection,
+				    delete_from_row1, delete_to_row1,
+                  keep_from_row1, keep_to_row1, current_set_entry1);
+    assert(delete_from_row1 == delete_from_row);
+    assert(delete_to_row1 == delete_to_row);
+    assert(keep_from_row1 == keep_from_row);
+    assert(keep_to_row1 == keep_to_row);
+    assert(current_set_entry1 == current_set_entry);
     if (k == from_k) {
       // Account for the initial rows being kept
       new_num_row = delete_from_row;
@@ -1372,6 +1396,7 @@ HighsStatus deleteRowsFromLpVectors(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
+    const HighsIndexCollection& index_collection,
                                    const bool interval, const int from_row,
                                    const int to_row, const bool set,
                                    const int num_set_entries,
@@ -1387,6 +1412,14 @@ HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status, "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (row_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteRowsFromLpMatrix\n");
@@ -1401,18 +1434,33 @@ HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
   int row_dim = lp.numRow_;
   int keep_to_row;
   int current_set_entry;
+
+  int delete_from_row1;
+  int delete_to_row1;
+  int keep_from_row1;
+  int keep_to_row1 = -1;
+  int current_set_entry1 = 0;
+
   // Set up a row mask to indicate the new row index of kept rows and
   // -1 for deleted rows so that the kept entries in the column-wise
   // matrix can be identified and have their correct row index.
   int* new_index = (int*)malloc(sizeof(int) * lp.numRow_);
   int new_num_row = 0;
   if (!mask) {
-    keep_to_row = -1;  // 0; 191021 change
+    keep_to_row = -1;
     current_set_entry = 0;
     for (int k = from_k; k <= to_k; k++) {
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                     row_set, mask, row_mask, delete_from_row, delete_to_row,
                     keep_from_row, keep_to_row, current_set_entry);
+    updateIndexCollectionOutInIndex(index_collection,
+				    delete_from_row1, delete_to_row1,
+                  keep_from_row1, keep_to_row1, current_set_entry1);
+    assert(delete_from_row1 == delete_from_row);
+    assert(delete_to_row1 == delete_to_row);
+    assert(keep_from_row1 == keep_from_row);
+    assert(keep_to_row1 == keep_to_row);
+    assert(current_set_entry1 == current_set_entry);
       if (k == from_k) {
         // Account for any initial rows being kept
         for (int row = 0; row < delete_from_row; row++) {

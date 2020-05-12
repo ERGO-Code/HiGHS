@@ -396,21 +396,22 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   return return_status;
 }
 
-HighsStatus HighsSimplexInterface::deleteRows(int from_row, int to_row) {
-  return deleteRowsGeneral(true, from_row, to_row, false, 0, NULL, false, NULL);
+HighsStatus HighsSimplexInterface::deleteRows(const HighsIndexCollection& index_collection, int from_row, int to_row) {
+  return deleteRowsGeneral(index_collection, true, from_row, to_row, false, 0, NULL, false, NULL);
 }
 
-HighsStatus HighsSimplexInterface::deleteRows(int num_set_entries,
+HighsStatus HighsSimplexInterface::deleteRows(const HighsIndexCollection& index_collection, int num_set_entries,
                                               const int* row_set) {
-  return deleteRowsGeneral(false, 0, 0, true, num_set_entries, row_set, false,
+  return deleteRowsGeneral(index_collection, false, 0, 0, true, num_set_entries, row_set, false,
                            NULL);
 }
 
-HighsStatus HighsSimplexInterface::deleteRows(int* row_mask) {
-  return deleteRowsGeneral(false, 0, 0, false, 0, NULL, true, row_mask);
+HighsStatus HighsSimplexInterface::deleteRows(const HighsIndexCollection& index_collection, int* row_mask) {
+  return deleteRowsGeneral(index_collection, false, 0, 0, false, 0, NULL, true, row_mask);
 }
 
 HighsStatus HighsSimplexInterface::deleteRowsGeneral(
+    const HighsIndexCollection& index_collection,
     bool interval, int from_row, int to_row, bool set, int num_set_entries,
     const int* row_set, bool mask, int* row_mask) {
 #ifdef HiGHSDEV
@@ -430,7 +431,7 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
   int original_num_row = lp.numRow_;
 
   HighsStatus returnStatus;
-  returnStatus = deleteLpRows(options, lp, interval, from_row, to_row, set,
+  returnStatus = deleteLpRows(options, lp, index_collection, interval, from_row, to_row, set,
                               num_set_entries, row_set, mask, row_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
   assert(lp.numRow_ <= original_num_row);
@@ -445,7 +446,7 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    returnStatus = deleteLpRows(options, simplex_lp, interval, from_row, to_row,
+    returnStatus = deleteLpRows(options, simplex_lp, index_collection, interval, from_row, to_row,
                                 set, num_set_entries, row_set, mask, row_mask);
     if (returnStatus != HighsStatus::OK) return returnStatus;
     //    HighsScale& scale = highs_model_object.scale_;
