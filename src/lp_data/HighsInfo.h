@@ -17,7 +17,7 @@
 #include <cstring>  // For strchr
 #include <vector>
 
-//#include "lp_data/HConst.h"
+#include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
 
 class HighsOptions;
