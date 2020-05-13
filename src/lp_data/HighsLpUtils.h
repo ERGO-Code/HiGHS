@@ -59,21 +59,24 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
-                            vector<double>& colScale, const bool interval,
+                            vector<double>& colScale,  
+    const HighsIndexCollection& index_collection, const bool interval,
                             const int from_col, const int to_col,
                             const bool set, const int num_set_entries,
                             const int* col_set, const bool mask,
                             const int* col_mask);
 
 HighsStatus scaleLpColBounds(const HighsOptions& options, HighsLp& lp,
-                             vector<double>& colScale, const bool interval,
+                             vector<double>& colScale, 
+    const HighsIndexCollection& index_collection, const bool interval,
                              const int from_col, const int to_col,
                              const bool set, const int num_set_entries,
                              const int* col_set, const bool mask,
                              const int* col_mask);
 
 HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
-                             vector<double>& rowScale, const bool interval,
+                             vector<double>& rowScale, 
+    const HighsIndexCollection& index_collection, const bool interval,
                              const int from_row, const int to_row,
                              const bool set, const int num_set_entries,
                              const int* row_set, const bool mask,
@@ -156,6 +159,7 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
                                       const double new_value);
 
 HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
+                         const HighsIndexCollection& index_collection,
                           const bool interval, const int from_col,
                           const int to_col, const bool set,
                           const int num_set_entries, const int* col_set,
@@ -164,6 +168,7 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
                           const double infinite_cost);
 
 HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
+                         const HighsIndexCollection& index_collection,
                               const bool interval, const int from_col,
                               const int to_col, const bool set,
                               const int num_set_entries, const int* col_set,
@@ -173,6 +178,7 @@ HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const double infinite_bound);
 
 HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
+                         const HighsIndexCollection& index_collection,
                               const bool interval, const int from_row,
                               const int to_row, const bool set,
                               const int num_set_entries, const int* row_set,
@@ -183,6 +189,7 @@ HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
 
 HighsStatus changeBounds(const HighsOptions& options, const char* type,
                          double* lower, double* upper, const int mask_num_ix,
+                         const HighsIndexCollection& index_collection,
                          const bool interval, const int from_ix,
                          const int to_ix, const bool set,
                          const int num_set_entries, const int* ix_set,

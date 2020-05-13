@@ -144,36 +144,44 @@ class HighsSimplexInterface {
   HighsStatus changeObjectiveSense(const ObjSense Xsense);
 
   // Change the costs for an interval of columns
-  HighsStatus changeCosts(int from_col, int to_col, const double* usr_col_cost);
+  HighsStatus changeCosts(
+    const HighsIndexCollection& index_collection, int from_col, int to_col, const double* usr_col_cost);
 
   // Change the costs from an ordered set of indices
-  HighsStatus changeCosts(int num_set_entries, const int* col_set,
+  HighsStatus changeCosts(
+    const HighsIndexCollection& index_collection, int num_set_entries, const int* col_set,
                           const double* usr_col_cost);
 
   // Change the costs with a mask
-  HighsStatus changeCosts(const int* col_mask, const double* usr_col_cost);
+  HighsStatus changeCosts(
+    const HighsIndexCollection& index_collection, const int* col_mask, const double* usr_col_cost);
 
-  HighsStatus changeCostsGeneral(bool interval, int from_col, int to_col,
+  HighsStatus changeCostsGeneral(
+    const HighsIndexCollection& index_collection, bool interval, int from_col, int to_col,
                                  bool set, int num_set_entries,
                                  const int* col_set, bool mask,
                                  const int* col_mask,
                                  const double* usr_col_cost);
 
   // Change the bounds for an interval of columns
-  HighsStatus changeColBounds(int from_col, int to_col,
+  HighsStatus changeColBounds(
+    const HighsIndexCollection& index_collection, int from_col, int to_col,
                               const double* usr_col_lower,
                               const double* usr_col_upper);
 
   // Change the bounds from an ordered set of indices
-  HighsStatus changeColBounds(int num_set_entries, const int* col_set,
+  HighsStatus changeColBounds(
+    const HighsIndexCollection& index_collection, int num_set_entries, const int* col_set,
                               const double* usr_col_lower,
                               const double* usr_col_upper);
 
   // Change the bounds with a mask
-  HighsStatus changeColBounds(const int* col_mask, const double* usr_col_lower,
+  HighsStatus changeColBounds(
+    const HighsIndexCollection& index_collection, const int* col_mask, const double* usr_col_lower,
                               const double* usr_col_upper);
 
-  HighsStatus changeColBoundsGeneral(bool interval, int from_col, int to_col,
+  HighsStatus changeColBoundsGeneral(
+    const HighsIndexCollection& index_collection, bool interval, int from_col, int to_col,
                                      bool set, int num_set_entries,
                                      const int* col_set, bool mask,
                                      const int* col_mask,
@@ -181,20 +189,24 @@ class HighsSimplexInterface {
                                      const double* usr_col_upper);
 
   // Change the bounds for an interval of rows
-  HighsStatus changeRowBounds(int from_row, int to_row,
+  HighsStatus changeRowBounds(
+    const HighsIndexCollection& index_collection, int from_row, int to_row,
                               const double* usr_row_lower,
                               const double* usr_row_upper);
 
   // Change the bounds from an ordered set of indices
-  HighsStatus changeRowBounds(int num_set_entries, const int* row_set,
+  HighsStatus changeRowBounds(
+    const HighsIndexCollection& index_collection, int num_set_entries, const int* row_set,
                               const double* usr_row_lower,
                               const double* usr_row_upper);
 
   // Change the bounds with a mask
-  HighsStatus changeRowBounds(const int* row_mask, const double* usr_row_lower,
+  HighsStatus changeRowBounds(
+    const HighsIndexCollection& index_collection, const int* row_mask, const double* usr_row_lower,
                               const double* usr_row_upper);
 
-  HighsStatus changeRowBoundsGeneral(bool interval, int from_row, int to_row,
+  HighsStatus changeRowBoundsGeneral(
+    const HighsIndexCollection& index_collection, bool interval, int from_row, int to_row,
                                      bool set, int num_set_entries,
                                      const int* row_set, bool mask,
                                      const int* row_mask,
