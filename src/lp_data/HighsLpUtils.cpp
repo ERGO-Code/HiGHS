@@ -45,15 +45,20 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
   assert(lp.numCol_ > 0);
 
   // Assess the LP column costs
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = lp.numCol_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = 0;
+  index_collection.to_ = lp.numCol_ - 1;
   call_status =
-      assessCosts(options, 0, lp.numCol_, true, 0, lp.numCol_ - 1, false, 0,
+    assessCosts(options, 0, index_collection, lp.numCol_, true, 0, lp.numCol_ - 1, false, 0,
                   NULL, false, NULL, &lp.colCost_[0], options.infinite_cost);
   return_status =
       interpretCallStatus(call_status, return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the LP column bounds
   call_status =
-      assessBounds(options, "Col", 0, lp.numCol_, true, 0, lp.numCol_ - 1,
+      assessBounds(options, "Col", 0, index_collection, lp.numCol_, true, 0, lp.numCol_ - 1,
                    false, 0, NULL, false, NULL, &lp.colLower_[0],
                    &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status =
@@ -61,8 +66,12 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
   if (return_status == HighsStatus::Error) return return_status;
   if (lp.numRow_) {
     // Assess the LP row bounds
+  index_collection.dimension_ = lp.numRow_;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = 0;
+  index_collection.to_ = lp.numRow_ - 1;
     call_status =
-        assessBounds(options, "Row", 0, lp.numRow_, true, 0, lp.numRow_ - 1,
+        assessBounds(options, "Row", 0, index_collection, lp.numRow_, true, 0, lp.numRow_ - 1,
                      false, 0, NULL, false, NULL, &lp.rowLower_[0],
                      &lp.rowUpper_[0], options.infinite_bound, normalise);
     return_status =
@@ -222,7 +231,8 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
   return return_status;
 }
 
-HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
+HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os, 
+    const HighsIndexCollection& index_collection, 
                         const int col_dim, const bool interval,
                         const int from_col, const int to_col, const bool set,
                         const int num_set_entries, const int* col_set,
@@ -239,6 +249,18 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k > to_k) return return_status;
 
   return_status = HighsStatus::OK;
@@ -295,7 +317,8 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
 }
 
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
-                         const int ml_ix_os, const int ix_dim,
+                         const int ml_ix_os, 
+    const HighsIndexCollection& index_collection, const int ix_dim,
                          const bool interval, const int from_ix,
                          const int to_ix, const bool set,
                          const int num_set_entries, const int* ix_set,
@@ -313,6 +336,18 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k > to_k) return HighsStatus::OK;
 
   return_status = HighsStatus::OK;
@@ -692,6 +727,18 @@ HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k > to_k) return HighsStatus::OK;
 
   int local_col;
@@ -730,6 +777,18 @@ HighsStatus scaleLpColBounds(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k > to_k) return HighsStatus::OK;
 
   int local_col;
@@ -771,6 +830,18 @@ HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
   return_status =
       interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
   if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k > to_k) return HighsStatus::OK;
 
   int local_row;
@@ -803,17 +874,22 @@ HighsStatus appendLpCols(const HighsOptions& options, HighsLp& lp,
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
   int newNumCol = lp.numCol_ + num_new_col;
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = num_new_col;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = 0;
+  index_collection.to_ = num_new_col-1;
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   // Assess the column costs
-  call_status = assessCosts(options, lp.numCol_, num_new_col, true, 0,
+  call_status = assessCosts(options, lp.numCol_, index_collection, num_new_col, true, 0,
                             num_new_col - 1, false, 0, NULL, false, NULL,
                             (double*)XcolCost, options.infinite_cost);
   return_status =
       interpretCallStatus(call_status, return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the column bounds
-  call_status = assessBounds(options, "Col", lp.numCol_, num_new_col, true, 0,
+  call_status = assessBounds(options, "Col", lp.numCol_, index_collection, num_new_col, true, 0,
                              num_new_col - 1, false, 0, NULL, false, NULL,
                              (double*)XcolLower, (double*)XcolUpper,
                              options.infinite_bound, normalise);
@@ -848,7 +924,7 @@ HighsStatus appendLpCols(const HighsOptions& options, HighsLp& lp,
 
   // Normalise the new LP column bounds
   normalise = true;
-  call_status = assessBounds(options, "Col", lp.numCol_, num_new_col, true, 0,
+  call_status = assessBounds(options, "Col", lp.numCol_, index_collection, num_new_col, true, 0,
                              num_new_col - 1, false, 0, NULL, false, NULL,
                              &lp.colLower_[0], &lp.colUpper_[0],
                              options.infinite_bound, normalise);
@@ -906,7 +982,12 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   // Assess the row bounds
-  call_status = assessBounds(options, "Row", lp.numRow_, num_new_row, true, 0,
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = num_new_row;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = 0;
+  index_collection.to_ = num_new_row-1;
+  call_status = assessBounds(options, "Row", lp.numRow_, index_collection, num_new_row, true, 0,
                              num_new_row - 1, false, 0, NULL, false, NULL,
                              (double*)XrowLower, (double*)XrowUpper,
                              options.infinite_bound, normalise);
@@ -934,7 +1015,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
 
   // Normalise the new LP row bounds
   normalise = true;
-  call_status = assessBounds(options, "Row", lp.numRow_, num_new_row, true, 0,
+  call_status = assessBounds(options, "Row", lp.numRow_, index_collection, num_new_row, true, 0,
                              num_new_row - 1, false, 0, NULL, false, NULL,
                              &lp.rowLower_[0], &lp.rowUpper_[0],
                              options.infinite_bound, normalise);
@@ -1313,7 +1394,7 @@ HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
       options, lp, new_num_row, index_collection, interval, from_row, to_row,
       set, num_set_entries, row_set, mask, row_mask);
   return_status =
-      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+      interpretCallStatus(call_status, return_status, "deleteRowsFromLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
   call_status = deleteRowsFromLpMatrix(options, lp, index_collection, interval,
                                        from_row, to_row, set, num_set_entries,
@@ -1575,11 +1656,23 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
     return_status = call_status;
     return return_status;
   }
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k > to_k) return HighsStatus::OK;
   if (usr_col_cost == NULL) return HighsStatus::Error;
 
   // Assess the user costs and return on error
-  call_status = assessCosts(options, 0, lp.numCol_, interval, from_col, to_col,
+  call_status = assessCosts(options, 0, index_collection, lp.numCol_, interval, from_col, to_col,
                             set, num_set_entries, col_set, mask, col_mask,
                             usr_col_cost, infinite_cost);
   if (call_status != HighsStatus::OK) {
@@ -1651,6 +1744,18 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
     return_status = call_status;
     return return_status;
   }
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
   if (from_k > to_k) return HighsStatus::OK;
   if (usr_lower == NULL) return HighsStatus::Error;
   if (usr_upper == NULL) return HighsStatus::Error;
@@ -1658,7 +1763,7 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
   // Assess the user bounds and return on error
   bool normalise = false;
   call_status =
-      assessBounds(options, type, 0, ix_dim, interval, from_ix, to_ix, set,
+      assessBounds(options, type, 0, index_collection, ix_dim, interval, from_ix, to_ix, set,
                    num_set_entries, ix_set, mask, ix_mask, (double*)usr_lower,
                    (double*)usr_upper, infinite_bound, normalise);
   if (call_status != HighsStatus::OK) {
@@ -1679,7 +1784,7 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
     upper[ix] = usr_upper[k];
   }
   normalise = true;
-  call_status = assessBounds(options, type, 0, ix_dim, interval, from_ix, to_ix,
+  call_status = assessBounds(options, type, 0, index_collection, ix_dim, interval, from_ix, to_ix,
                              set, num_set_entries, ix_set, mask, ix_mask, lower,
                              upper, infinite_bound, normalise);
   if (call_status != HighsStatus::OK) {

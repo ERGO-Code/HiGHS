@@ -285,8 +285,13 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   }
 #endif
   // Assess the bounds and matrix indices, returning on error
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = XnumNewRow;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = 0;
+  index_collection.to_ = XnumNewRow - 1;
   bool normalise = false;
-  call_status = assessBounds(options, "Row", lp.numRow_, XnumNewRow, true, 0,
+  call_status = assessBounds(options, "Row", lp.numRow_, index_collection, XnumNewRow, true, 0,
                              XnumNewRow - 1, false, 0, NULL, false, NULL,
                              (double*)XrowLower, (double*)XrowUpper,
                              options.infinite_bound, normalise);
@@ -309,8 +314,13 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   // Normalise the LP row bounds
   normalise = true;
+  // Index collection is now the interval [lp.numRow_...newNumRow - 1]
+  // in arrays of length newNumRow
+  index_collection.dimension_ = newNumRow;
+  index_collection.from_ = lp.numRow_;
+  index_collection.to_ = newNumRow - 1;
   call_status =
-      assessBounds(options, "Row", lp.numRow_, newNumRow, true, 0,
+      assessBounds(options, "Row", 0, index_collection, newNumRow, true, lp.numRow_,
                    newNumRow - 1, false, 0, NULL, false, NULL, &lp.rowLower_[0],
                    &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status =
@@ -341,10 +351,11 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   if (valid_simplex_lp) {
     appendRowsToLpVectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
-    call_status = assessBounds(
-        options, "Row", simplex_lp.numRow_, newNumRow, true, 0, newNumRow - 1,
-        false, 0, NULL, false, NULL, &simplex_lp.rowLower_[0],
-        &simplex_lp.rowUpper_[0], options.infinite_bound, normalise);
+    call_status =
+      assessBounds(
+		   options, "Row", 0, index_collection, newNumRow, true, simplex_lp.numRow_,
+                   newNumRow - 1, false, 0, NULL, false, NULL, &simplex_lp.rowLower_[0],
+		   &simplex_lp.rowUpper_[0], options.infinite_bound, normalise);
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::Error) return return_status;
