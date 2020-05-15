@@ -52,6 +52,11 @@ struct PresolveComponentOptions : public HighsComponentOptions {
   // presolve options later when needed.
   bool presolve_on = true;
   std::vector<presolve::Presolver> order;
+
+  int max_iterations = 0;
+  std::string iteration_strategy = "smart";
+
+  double time_limit = -1;
 };
 
 class PresolveComponent : public HighsComponent {
@@ -81,5 +86,11 @@ class PresolveComponent : public HighsComponent {
   HighsPresolveStatus presolve_status_ = HighsPresolveStatus::NotPresolved;
   HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::NotPresolved;
 };
+
+namespace presolve {
+
+bool checkOptions(const PresolveComponentOptions& options);
+
+}
 
 #endif

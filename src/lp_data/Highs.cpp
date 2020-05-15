@@ -1509,9 +1509,44 @@ HighsPresolveStatus Highs::runPresolve() {
 
   // Clear info from previous runs if lp_ has been modified.
   if (presolve_.has_run_) presolve_.clear();
+  double start_presolve = timer_.readRunHighsClock();
+
+  // Set time limit.
+  if (options_.time_limit > 0) {
+    double left = options_.time_limit - start_presolve;
+    if (left <= 0) {
+      HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+                        "Time limit reached while reading in matrix\n");
+      return HighsPresolveStatus::Timeout;
+    }
+
+    HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+                      "Time limit set: reading matrix took %.2g, presolve "
+                      "time left: %.2g\n",
+                      start_presolve, left);
+    presolve_.options_.time_limit = left;
+  }
 
   // Presolve.
   presolve_.init(lp_, timer_);
+  if (options_.time_limit > 0) {
+    double current = timer_.readRunHighsClock();
+    double time_init = current - start_presolve;
+    double left = presolve_.options_.time_limit - time_init;
+    if (left <= 0) {
+      HighsPrintMessage(
+          options_.output, options_.message_level, ML_VERBOSE,
+          "Time limit reached while copying matrix into presolve.\n");
+      return HighsPresolveStatus::Timeout;
+    }
+
+    HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+                      "Time limit set: copying matrix took %.2g, presolve "
+                      "time left: %.2g\n",
+                      time_init, left);
+    presolve_.options_.time_limit = options_.time_limit;
+  }
+
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
   // Handle max case.

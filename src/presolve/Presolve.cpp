@@ -45,7 +45,6 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-constexpr int iPrint = 0;
 // todo:
 // iKKTcheck = 1;
 
@@ -257,6 +256,7 @@ int Presolve::presolve(int print) {
   // Else: The order has been modified for experiments
 
   while (hasChange == 1) {
+    if (max_iterations && iter > max_iterations) break;
     hasChange = false;
 
     reportDevMainLoop();
@@ -475,6 +475,7 @@ void Presolve::removeDoubletonEquations() {
         akx = getaij(row, x);
         aky = getaij(row, y);
         processRowDoubletonEquation(row, x, y, akx, aky, b);
+        if (status) return;
 
         for (int k = Astart.at(y); k < Aend.at(y); ++k)
           if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -1146,6 +1147,7 @@ void Presolve::removeDominatedColumns() {
         continue;
       }
       timer.recordFinish(DOMINATED_COLS);
+      if (status) return;
     }
 }
 
@@ -1498,6 +1500,8 @@ void Presolve::removeColumnSingletons() {
         }
       }
       it++;
+
+      if (status) return;
     } else
       it = singCol.erase(it);
   }
@@ -1844,6 +1848,7 @@ void Presolve::removeForcingConstraints() {
 
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
+      if (status) return;
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
         countRemovedRows(EMPTY_ROW);
@@ -1902,6 +1907,7 @@ void Presolve::removeRowSingletons() {
   }
   */
   while (!(singRow.empty())) {
+    if (status) return;
     i = singRow.front();
     singRow.pop_front();
 
@@ -3558,10 +3564,12 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
 
 void Presolve::countRemovedRows(PresolveRule rule) {
   timer.increaseCount(true, rule);
+  if (timer.timer_.readRunHighsClock() > time_limit) status = stat::Timeout;
 }
 
 void Presolve::countRemovedCols(PresolveRule rule) {
   timer.increaseCount(false, rule);
+  if (timer.timer_.readRunHighsClock() > time_limit) status = stat::Timeout;
 }
 
 }  // namespace presolve
