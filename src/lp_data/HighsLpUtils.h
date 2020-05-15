@@ -35,7 +35,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
 HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);
 
 HighsStatus assessCosts(const HighsOptions& options, const int col_ix_os,
-    const HighsIndexCollection& index_collection, 
+                        const HighsIndexCollection& index_collection,
                         const int mask_num_col, const bool interval,
                         const int from_col, const int to_col, const bool set,
                         const int num_set_entries, const int* col_set,
@@ -43,10 +43,10 @@ HighsStatus assessCosts(const HighsOptions& options, const int col_ix_os,
                         const double* usr_col_cost, const double infinite_cost);
 
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
-                         const int ix_os, 
-    const HighsIndexCollection& index_collection, const int mask_num_ix,
-                         const bool interval, const int from_ix,
-                         const int to_ix, const bool set,
+                         const int ix_os,
+                         const HighsIndexCollection& index_collection,
+                         const int mask_num_ix, const bool interval,
+                         const int from_ix, const int to_ix, const bool set,
                          const int num_set_entries, const int* ix_set,
                          const bool mask, const int* ix_mask, double* usr_lower,
                          double* usr_upper, const double infinite_bound,
@@ -61,28 +61,28 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
-                            vector<double>& colScale,  
-    const HighsIndexCollection& index_collection, const bool interval,
-                            const int from_col, const int to_col,
-                            const bool set, const int num_set_entries,
-                            const int* col_set, const bool mask,
-                            const int* col_mask);
+                            vector<double>& colScale,
+                            const HighsIndexCollection& index_collection,
+                            const bool interval, const int from_col,
+                            const int to_col, const bool set,
+                            const int num_set_entries, const int* col_set,
+                            const bool mask, const int* col_mask);
 
 HighsStatus scaleLpColBounds(const HighsOptions& options, HighsLp& lp,
-                             vector<double>& colScale, 
-    const HighsIndexCollection& index_collection, const bool interval,
-                             const int from_col, const int to_col,
-                             const bool set, const int num_set_entries,
-                             const int* col_set, const bool mask,
-                             const int* col_mask);
+                             vector<double>& colScale,
+                             const HighsIndexCollection& index_collection,
+                             const bool interval, const int from_col,
+                             const int to_col, const bool set,
+                             const int num_set_entries, const int* col_set,
+                             const bool mask, const int* col_mask);
 
 HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
-                             vector<double>& rowScale, 
-    const HighsIndexCollection& index_collection, const bool interval,
-                             const int from_row, const int to_row,
-                             const bool set, const int num_set_entries,
-                             const int* row_set, const bool mask,
-                             const int* row_mask);
+                             vector<double>& rowScale,
+                             const HighsIndexCollection& index_collection,
+                             const bool interval, const int from_row,
+                             const int to_row, const bool set,
+                             const int num_set_entries, const int* row_set,
+                             const bool mask, const int* row_mask);
 
 HighsStatus appendLpCols(const HighsOptions& options, HighsLp& lp,
                          const int num_new_col, const double* XcolCost,
@@ -161,7 +161,7 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
                                       const double new_value);
 
 HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
+                          const HighsIndexCollection& index_collection,
                           const bool interval, const int from_col,
                           const int to_col, const bool set,
                           const int num_set_entries, const int* col_set,
@@ -170,7 +170,7 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
                           const double infinite_cost);
 
 HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
+                              const HighsIndexCollection& index_collection,
                               const bool interval, const int from_col,
                               const int to_col, const bool set,
                               const int num_set_entries, const int* col_set,
@@ -180,7 +180,7 @@ HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const double infinite_bound);
 
 HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
+                              const HighsIndexCollection& index_collection,
                               const bool interval, const int from_row,
                               const int to_row, const bool set,
                               const int num_set_entries, const int* row_set,

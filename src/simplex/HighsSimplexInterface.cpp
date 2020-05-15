@@ -238,6 +238,9 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
                                            int XnumNewNZ, const int* XARstart,
                                            const int* XARindex,
                                            const double* XARvalue) {
+  // addRows is fundamentally different from addCols, since the new
+  // matrix data are held row-wise, so we have to insert data into the
+  // column-wise matrix of the LP.
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
 #ifdef HiGHSDEV
@@ -291,10 +294,10 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   index_collection.from_ = 0;
   index_collection.to_ = XnumNewRow - 1;
   bool normalise = false;
-  call_status = assessBounds(options, "Row", lp.numRow_, index_collection, XnumNewRow, true, 0,
-                             XnumNewRow - 1, false, 0, NULL, false, NULL,
-                             (double*)XrowLower, (double*)XrowUpper,
-                             options.infinite_bound, normalise);
+  call_status = assessBounds(
+      options, "Row", lp.numRow_, index_collection, XnumNewRow, true, 0,
+      XnumNewRow - 1, false, 0, NULL, false, NULL, (double*)XrowLower,
+      (double*)XrowUpper, options.infinite_bound, normalise);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -319,10 +322,10 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   index_collection.dimension_ = newNumRow;
   index_collection.from_ = lp.numRow_;
   index_collection.to_ = newNumRow - 1;
-  call_status =
-      assessBounds(options, "Row", 0, index_collection, newNumRow, true, lp.numRow_,
-                   newNumRow - 1, false, 0, NULL, false, NULL, &lp.rowLower_[0],
-                   &lp.rowUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds(options, "Row", 0, index_collection, newNumRow,
+                             true, lp.numRow_, newNumRow - 1, false, 0, NULL,
+                             false, NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
+                             options.infinite_bound, normalise);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -352,10 +355,10 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   if (valid_simplex_lp) {
     appendRowsToLpVectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
     call_status =
-      assessBounds(
-		   options, "Row", 0, index_collection, newNumRow, true, simplex_lp.numRow_,
-                   newNumRow - 1, false, 0, NULL, false, NULL, &simplex_lp.rowLower_[0],
-		   &simplex_lp.rowUpper_[0], options.infinite_bound, normalise);
+        assessBounds(options, "Row", 0, index_collection, newNumRow, true,
+                     simplex_lp.numRow_, newNumRow - 1, false, 0, NULL, false,
+                     NULL, &simplex_lp.rowLower_[0], &simplex_lp.rowUpper_[0],
+                     options.infinite_bound, normalise);
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::Error) return return_status;
@@ -908,31 +911,30 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
 
 HighsStatus HighsSimplexInterface::changeCosts(
     const HighsIndexCollection& index_collection, int from_col, int to_col,
-                                               const double* usr_col_cost) {
-  return changeCostsGeneral(index_collection, true, from_col, to_col, false, 0, NULL, false, NULL,
-                            usr_col_cost);
+    const double* usr_col_cost) {
+  return changeCostsGeneral(index_collection, true, from_col, to_col, false, 0,
+                            NULL, false, NULL, usr_col_cost);
 }
 
 HighsStatus HighsSimplexInterface::changeCosts(
     const HighsIndexCollection& index_collection, int num_set_entries,
-                                               const int* col_set,
-                                               const double* usr_col_cost) {
-  return changeCostsGeneral(index_collection, false, 0, 0, true, num_set_entries, col_set, false,
-                            NULL, usr_col_cost);
+    const int* col_set, const double* usr_col_cost) {
+  return changeCostsGeneral(index_collection, false, 0, 0, true,
+                            num_set_entries, col_set, false, NULL,
+                            usr_col_cost);
 }
 
 HighsStatus HighsSimplexInterface::changeCosts(
     const HighsIndexCollection& index_collection, const int* col_mask,
-                                               const double* usr_col_cost) {
-  return changeCostsGeneral(index_collection, false, 0, 0, false, 0, NULL, true, col_mask,
-                            usr_col_cost);
+    const double* usr_col_cost) {
+  return changeCostsGeneral(index_collection, false, 0, 0, false, 0, NULL, true,
+                            col_mask, usr_col_cost);
 }
 
 HighsStatus HighsSimplexInterface::changeCostsGeneral(
-    const HighsIndexCollection& index_collection, 
-    bool interval, int from_col, int to_col, bool set, int num_set_entries,
-    const int* col_set, bool mask, const int* col_mask,
-    const double* usr_col_cost) {
+    const HighsIndexCollection& index_collection, bool interval, int from_col,
+    int to_col, bool set, int num_set_entries, const int* col_set, bool mask,
+    const int* col_mask, const double* usr_col_cost) {
   bool null_data = false;
   if (usr_col_cost == NULL) {
     HighsLogMessage(highs_model_object.options_.logfile,
@@ -955,9 +957,9 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
     use_cost = (double*)usr_col_cost;
   }
   HighsStatus call_status = changeLpCosts(
-      highs_model_object.options_, highs_model_object.lp_, index_collection, interval, from_col,
-      to_col, set, num_set_entries, use_set, mask, col_mask, use_cost,
-      highs_model_object.options_.infinite_cost);
+      highs_model_object.options_, highs_model_object.lp_, index_collection,
+      interval, from_col, to_col, set, num_set_entries, use_set, mask, col_mask,
+      use_cost, highs_model_object.options_.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   // Deduce the consequences of new costs
   highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -969,34 +971,34 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
 }
 
 HighsStatus HighsSimplexInterface::changeColBounds(
-    const HighsIndexCollection& index_collection, 
-    int from_col, int to_col, const double* usr_col_lower,
-    const double* usr_col_upper) {
-  return changeColBoundsGeneral(index_collection, true, from_col, to_col, false, 0, NULL, false,
-                                NULL, usr_col_lower, usr_col_upper);
+    const HighsIndexCollection& index_collection, int from_col, int to_col,
+    const double* usr_col_lower, const double* usr_col_upper) {
+  return changeColBoundsGeneral(index_collection, true, from_col, to_col, false,
+                                0, NULL, false, NULL, usr_col_lower,
+                                usr_col_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeColBounds(
-    const HighsIndexCollection& index_collection, 
-    int num_set_entries, const int* col_set, const double* usr_col_lower,
+    const HighsIndexCollection& index_collection, int num_set_entries,
+    const int* col_set, const double* usr_col_lower,
     const double* usr_col_upper) {
-  return changeColBoundsGeneral(index_collection, false, 0, 0, true, num_set_entries, col_set,
-                                false, NULL, usr_col_lower, usr_col_upper);
-}
-
-HighsStatus HighsSimplexInterface::changeColBounds(
-    const HighsIndexCollection& index_collection, 
-    const int* col_mask, const double* usr_col_lower,
-    const double* usr_col_upper) {
-  return changeColBoundsGeneral(index_collection, false, 0, 0, false, 0, NULL, true, col_mask,
+  return changeColBoundsGeneral(index_collection, false, 0, 0, true,
+                                num_set_entries, col_set, false, NULL,
                                 usr_col_lower, usr_col_upper);
 }
 
-HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
-    const HighsIndexCollection& index_collection, 
-    bool interval, int from_col, int to_col, bool set, int num_set_entries,
-    const int* col_set, bool mask, const int* col_mask,
+HighsStatus HighsSimplexInterface::changeColBounds(
+    const HighsIndexCollection& index_collection, const int* col_mask,
     const double* usr_col_lower, const double* usr_col_upper) {
+  return changeColBoundsGeneral(index_collection, false, 0, 0, false, 0, NULL,
+                                true, col_mask, usr_col_lower, usr_col_upper);
+}
+
+HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
+    const HighsIndexCollection& index_collection, bool interval, int from_col,
+    int to_col, bool set, int num_set_entries, const int* col_set, bool mask,
+    const int* col_mask, const double* usr_col_lower,
+    const double* usr_col_upper) {
   bool null_data = false;
   if (usr_col_lower == NULL) {
     HighsLogMessage(highs_model_object.options_.logfile,
@@ -1028,9 +1030,9 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
     use_upper = (double*)usr_col_upper;
   }
   HighsStatus call_status = changeLpColBounds(
-      highs_model_object.options_, highs_model_object.lp_, index_collection, interval, from_col,
-      to_col, set, num_set_entries, use_set, mask, col_mask, use_lower,
-      use_upper, highs_model_object.options_.infinite_bound);
+      highs_model_object.options_, highs_model_object.lp_, index_collection,
+      interval, from_col, to_col, set, num_set_entries, use_set, mask, col_mask,
+      use_lower, use_upper, highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -1041,15 +1043,16 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
            highs_model_object.simplex_lp_.numRow_);
 
     call_status = changeLpColBounds(
-        highs_model_object.options_, highs_model_object.simplex_lp_, index_collection, interval,
-        from_col, to_col, set, num_set_entries, use_set, mask, col_mask,
-        use_lower, use_upper, highs_model_object.options_.infinite_bound);
+        highs_model_object.options_, highs_model_object.simplex_lp_,
+        index_collection, interval, from_col, to_col, set, num_set_entries,
+        use_set, mask, col_mask, use_lower, use_upper,
+        highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpColBounds(highs_model_object.options_,
-                       highs_model_object.simplex_lp_,
-                       highs_model_object.scale_.col_, index_collection, interval, from_col,
-                       to_col, set, num_set_entries, use_set, mask, col_mask);
+      scaleLpColBounds(
+          highs_model_object.options_, highs_model_object.simplex_lp_,
+          highs_model_object.scale_.col_, index_collection, interval, from_col,
+          to_col, set, num_set_entries, use_set, mask, col_mask);
     }
     // Deduce the consequences of new col bounds
     highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -1062,34 +1065,34 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
 }
 
 HighsStatus HighsSimplexInterface::changeRowBounds(
-    const HighsIndexCollection& index_collection, 
-    int from_row, int to_row, const double* usr_row_lower,
-    const double* usr_row_upper) {
-  return changeRowBoundsGeneral(index_collection, true, from_row, to_row, false, 0, NULL, false,
-                                NULL, usr_row_lower, usr_row_upper);
+    const HighsIndexCollection& index_collection, int from_row, int to_row,
+    const double* usr_row_lower, const double* usr_row_upper) {
+  return changeRowBoundsGeneral(index_collection, true, from_row, to_row, false,
+                                0, NULL, false, NULL, usr_row_lower,
+                                usr_row_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeRowBounds(
-    const HighsIndexCollection& index_collection, 
-    int num_set_entries, const int* row_set, const double* usr_row_lower,
+    const HighsIndexCollection& index_collection, int num_set_entries,
+    const int* row_set, const double* usr_row_lower,
     const double* usr_row_upper) {
-  return changeRowBoundsGeneral(index_collection, false, 0, 0, true, num_set_entries, row_set,
-                                false, NULL, usr_row_lower, usr_row_upper);
-}
-
-HighsStatus HighsSimplexInterface::changeRowBounds(
-    const HighsIndexCollection& index_collection, 
-    const int* row_mask, const double* usr_row_lower,
-    const double* usr_row_upper) {
-  return changeRowBoundsGeneral(index_collection, false, 0, 0, false, 0, NULL, true, row_mask,
+  return changeRowBoundsGeneral(index_collection, false, 0, 0, true,
+                                num_set_entries, row_set, false, NULL,
                                 usr_row_lower, usr_row_upper);
 }
 
-HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
-    const HighsIndexCollection& index_collection, 
-    bool interval, int from_row, int to_row, bool set, int num_set_entries,
-    const int* row_set, bool mask, const int* row_mask,
+HighsStatus HighsSimplexInterface::changeRowBounds(
+    const HighsIndexCollection& index_collection, const int* row_mask,
     const double* usr_row_lower, const double* usr_row_upper) {
+  return changeRowBoundsGeneral(index_collection, false, 0, 0, false, 0, NULL,
+                                true, row_mask, usr_row_lower, usr_row_upper);
+}
+
+HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
+    const HighsIndexCollection& index_collection, bool interval, int from_row,
+    int to_row, bool set, int num_set_entries, const int* row_set, bool mask,
+    const int* row_mask, const double* usr_row_lower,
+    const double* usr_row_upper) {
   bool null_data = false;
   if (usr_row_lower == NULL) {
     HighsLogMessage(highs_model_object.options_.logfile,
@@ -1121,9 +1124,9 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
     use_upper = (double*)usr_row_upper;
   }
   HighsStatus call_status = changeLpRowBounds(
-      highs_model_object.options_, highs_model_object.lp_, index_collection, interval, from_row,
-      to_row, set, num_set_entries, use_set, mask, row_mask, use_lower,
-      use_upper, highs_model_object.options_.infinite_bound);
+      highs_model_object.options_, highs_model_object.lp_, index_collection,
+      interval, from_row, to_row, set, num_set_entries, use_set, mask, row_mask,
+      use_lower, use_upper, highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   if (highs_model_object.simplex_lp_status_.valid) {
     // Also change the simplex LP's column bounds
@@ -1132,15 +1135,16 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
     assert(highs_model_object.lp_.numRow_ ==
            highs_model_object.simplex_lp_.numRow_);
     call_status = changeLpRowBounds(
-        highs_model_object.options_, highs_model_object.simplex_lp_, index_collection, interval,
-        from_row, to_row, set, num_set_entries, use_set, mask, row_mask,
-        use_lower, use_upper, highs_model_object.options_.infinite_bound);
+        highs_model_object.options_, highs_model_object.simplex_lp_,
+        index_collection, interval, from_row, to_row, set, num_set_entries,
+        use_set, mask, row_mask, use_lower, use_upper,
+        highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpRowBounds(highs_model_object.options_,
-                       highs_model_object.simplex_lp_,
-                       highs_model_object.scale_.row_, index_collection, interval, from_row,
-                       to_row, set, num_set_entries, row_set, mask, row_mask);
+      scaleLpRowBounds(
+          highs_model_object.options_, highs_model_object.simplex_lp_,
+          highs_model_object.scale_.row_, index_collection, interval, from_row,
+          to_row, set, num_set_entries, row_set, mask, row_mask);
     }
     // Deduce the consequences of new row bounds
     highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
