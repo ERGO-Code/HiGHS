@@ -34,6 +34,7 @@
 #include "lp_data/HighsLp.h"  // for OBJSENSE_MINIMIZE and OBJSENSE_MAXIMIZE
 #include "util/stringutil.h"
 
+
 using Triplet = std::tuple<int, int, double>;
 
 enum class FreeFormatParserReturnCode {
@@ -43,6 +44,14 @@ enum class FreeFormatParserReturnCode {
   FIXED_FORMAT
 };
 
+namespace free_format_parser {
+
+// private:
+using wall_clock = std::chrono::high_resolution_clock;
+using time_point = wall_clock::time_point;
+
+double getWallTime();
+
 class HMpsFF {
  public:
   HMpsFF() {}
@@ -51,6 +60,9 @@ class HMpsFF {
                                          HighsLp& lp);
 
  private:
+  double start_time;
+  double time_limit;
+
   int numRow;
   int numCol;
   int nnz;
@@ -98,7 +110,8 @@ class HMpsFF {
     END,
     FAIL,
     COMMENT,
-    FIXED_FORMAT
+    FIXED_FORMAT,
+    TIMEOUT
   };
 
   enum class boundtype { LE, EQ, GE, FR };
@@ -125,4 +138,5 @@ class HMpsFF {
   HMpsFF::parsekey parseBounds(FILE* logfile, std::ifstream& file);
 };
 
+}  // namespace fixed_format_parser
 #endif /* IO_HMPSFF_H_ */

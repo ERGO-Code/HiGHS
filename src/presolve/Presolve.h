@@ -70,17 +70,6 @@ const std::map<Presolver, std::string> kPresolverNames{
     {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
     {Presolver::kMainDominatedCols, "Dominated Cols()"}};
 
-struct MainLoop {
-  int rows;
-  int cols;
-  int nnz;
-};
-
-struct DevStats {
-  int n_loops = 0;
-  std::vector<MainLoop> loops;
-};
-
 class Presolve : public HPreData {
  public:
   Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
@@ -101,7 +90,7 @@ class Presolve : public HPreData {
   // Options
   std::vector<Presolver> order;
 
-  int max_iterations = -1;
+  int max_iterations = 0;
   int time_limit = 0;
 
  private:

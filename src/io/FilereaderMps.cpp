@@ -19,6 +19,8 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 
+using free_format_parser::HMpsFF;
+
 FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
                                                    HighsLp& model) {
   const std::string filename = options.model_file;

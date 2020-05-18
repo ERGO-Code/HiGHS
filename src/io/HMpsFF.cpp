@@ -10,6 +10,8 @@
 
 #include "io/HMpsFF.h"
 
+namespace free_format_parser {
+
 FreeFormatParserReturnCode HMpsFF::loadProblem(FILE* logfile,
                                                const std::string filename,
                                                HighsLp& lp) {
@@ -89,6 +91,7 @@ FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile,
   std::ifstream f;
   f.open(filename.c_str(), std::ios::in);
   if (f.is_open()) {
+    start_time = getWallTime();
     nnz = 0;
     HMpsFF::parsekey keyword = HMpsFF::parsekey::NONE;
 
@@ -195,6 +198,12 @@ HMpsFF::parsekey HMpsFF::parseDefault(std::ifstream& file) const {
   return checkFirstWord(strline, s, e, word);
 }
 
+double getWallTime() {
+  using namespace std::chrono;
+  return duration_cast<duration<double> >(wall_clock::now().time_since_epoch())
+      .count();
+}
+
 HMpsFF::parsekey HMpsFF::parseObjsense(FILE* logfile, std::ifstream& file) {
   std::string strline, word;
 
@@ -231,6 +240,8 @@ HMpsFF::parsekey HMpsFF::parseRows(FILE* logfile, std::ifstream& file) {
 
   while (getline(file, strline)) {
     if (is_empty(strline) || strline[0] == '*') continue;
+    double current = getWallTime();
+    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
 
     bool isobj = false;
     bool isFreeRow = false;
@@ -352,6 +363,9 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
   };
 
   while (getline(file, strline)) {
+    double current = getWallTime();
+    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+
     if (any_first_non_blank_as_star_implies_comment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
@@ -516,6 +530,9 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
   };
 
   while (getline(file, strline)) {
+    double current = getWallTime();
+    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+
     if (any_first_non_blank_as_star_implies_comment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
@@ -622,6 +639,9 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
   };
 
   while (getline(file, strline)) {
+    double current = getWallTime();
+    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+
     if (any_first_non_blank_as_star_implies_comment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
@@ -823,6 +843,9 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
   };
 
   while (getline(file, strline)) {
+    double current = getWallTime();
+    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+
     if (any_first_non_blank_as_star_implies_comment) {
       trim(strline);
       if (strline.size() == 0 || strline[0] == '*') continue;
@@ -909,3 +932,5 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
 
   return HMpsFF::parsekey::FAIL;
 }
+
+}  // namespace free_format_parser

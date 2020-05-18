@@ -256,7 +256,7 @@ int Presolve::presolve(int print) {
   // Else: The order has been modified for experiments
 
   while (hasChange == 1) {
-    if (max_iterations && iter > max_iterations) break;
+    if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
 
     reportDevMainLoop();
