@@ -412,8 +412,8 @@ endforeach()
 endif()
 
 # # Comment out for scaffold/ tests
- add_subdirectory(scaffold)
+# add_subdirectory(scaffold)
 
 # # Only needed if it defines a target like a main executable. For methods stick
 # # to header-only.
-add_subdirectory(dev_presolve)
+# add_subdirectory(dev_presolve)
