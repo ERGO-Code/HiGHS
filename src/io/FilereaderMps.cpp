@@ -49,7 +49,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       case FreeFormatParserReturnCode::TIMEOUT:
         HighsLogMessage(options.logfile, HighsMessageType::WARNING,
                         "Free format reader reached time_limit while parsing the input file");
-        break;
+        return FilereaderRetcode::TIMEOUT;
 
     }
   }
