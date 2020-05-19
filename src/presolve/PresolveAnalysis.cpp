@@ -13,6 +13,10 @@
  */
 #include "presolve/PresolveAnalysis.h"
 
+#include <limits>
+
+namespace presolve {
+
 void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
   assert((int)rules.size() == 0);
 
@@ -48,4 +52,6 @@ void PresolveTimer::updateInfo() {
   for (PresolveRuleInfo& rule : rules_) {
     rule.total_time = timer_.read(rule.clock_id);
   }
+}
+
 }

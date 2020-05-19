@@ -91,7 +91,11 @@ class Presolve : public HPreData {
   std::vector<Presolver> order;
 
   int max_iterations = 0;
-  int time_limit = 0;
+  
+  void setTimeLimit(const double limit) {
+    assert (limit < inf && limit > 0);
+    timer.time_limit = limit;
+  }
 
  private:
   int iKKTcheck = 0;

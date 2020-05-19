@@ -241,7 +241,8 @@ HMpsFF::parsekey HMpsFF::parseRows(FILE* logfile, std::ifstream& file) {
   while (getline(file, strline)) {
     if (is_empty(strline) || strline[0] == '*') continue;
     double current = getWallTime();
-    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+    if (time_limit > 0 && current - start_time > time_limit)
+      return HMpsFF::parsekey::TIMEOUT;
 
     bool isobj = false;
     bool isFreeRow = false;
@@ -364,7 +365,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
 
   while (getline(file, strline)) {
     double current = getWallTime();
-    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+    if (time_limit > 0 && current - start_time > time_limit)
+      return HMpsFF::parsekey::TIMEOUT;
 
     if (any_first_non_blank_as_star_implies_comment) {
       trim(strline);
@@ -531,7 +533,8 @@ HMpsFF::parsekey HMpsFF::parseRhs(FILE* logfile, std::ifstream& file) {
 
   while (getline(file, strline)) {
     double current = getWallTime();
-    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+    if (time_limit > 0 && current - start_time > time_limit)
+      return HMpsFF::parsekey::TIMEOUT;
 
     if (any_first_non_blank_as_star_implies_comment) {
       trim(strline);
@@ -640,7 +643,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
 
   while (getline(file, strline)) {
     double current = getWallTime();
-    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+    if (time_limit > 0 && current - start_time > time_limit)
+      return HMpsFF::parsekey::TIMEOUT;
 
     if (any_first_non_blank_as_star_implies_comment) {
       trim(strline);
@@ -844,7 +848,8 @@ HMpsFF::parsekey HMpsFF::parseRanges(FILE* logfile, std::ifstream& file) {
 
   while (getline(file, strline)) {
     double current = getWallTime();
-    if (current - start_time > time_limit) return HMpsFF::parsekey::TIMEOUT;
+    if (time_limit > 0 && current - start_time > time_limit)
+      return HMpsFF::parsekey::TIMEOUT;
 
     if (any_first_non_blank_as_star_implies_comment) {
       trim(strline);

@@ -79,8 +79,8 @@ HighsPresolveStatus PresolveComponent::run() {
   if (options_.iteration_strategy == "num_limit")
     data_.presolve_[0].max_iterations = options_.max_iterations;
 
-  if (options_.time_limit > 0)
-    data_.presolve_[0].time_limit = options_.time_limit;
+  if (options_.time_limit < presolve::inf && options_.time_limit > 0)
+    data_.presolve_[0].setTimeLimit(options_.time_limit);
 
   // Run presolve.
   presolve_status_ = data_.presolve_[0].presolve();

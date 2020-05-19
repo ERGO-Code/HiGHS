@@ -217,6 +217,8 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
 }
 
 int Presolve::presolve(int print) {
+  timer.start_time = timer.getTime();
+
   if (iPrint > 0) {
     cout << "Presolve started ..." << endl;
     cout << "Original problem ... N=" << numCol << "  M=" << numRow << endl;
@@ -462,6 +464,12 @@ void Presolve::removeDoubletonEquations() {
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
           fabs(rowLower[row] - rowUpper[row]) < tol) {
+
+    if (timer.reachLimit()) {
+      status = stat::Timeout;
+      return;
+    }
+
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);
@@ -1101,6 +1109,12 @@ void Presolve::removeDominatedColumns() {
   pair<double, double> p;
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
+
+    if (timer.reachLimit()) {
+      status = stat::Timeout;
+      return;
+    }
+
       timer.recordStart(DOMINATED_COLS);
 
       p = getImpliedColumnBounds(j);
@@ -1465,6 +1479,12 @@ void Presolve::removeColumnSingletons() {
 
   while (it != singCol.end()) {
     if (flagCol[*it]) {
+
+    if (timer.reachLimit()) {
+      status = stat::Timeout;
+      return;
+    }
+
       col = *it;
       k = getSingColElementIndexInA(col);
       i = Aindex.at(k);
@@ -1849,6 +1869,11 @@ void Presolve::removeForcingConstraints() {
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
       if (status) return;
+    if (timer.reachLimit()) {
+      status = stat::Timeout;
+      return;
+    }
+
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
         countRemovedRows(EMPTY_ROW);
@@ -1908,6 +1933,11 @@ void Presolve::removeRowSingletons() {
   */
   while (!(singRow.empty())) {
     if (status) return;
+    if (timer.reachLimit()) {
+      status = stat::Timeout;
+      return;
+    }
+
     i = singRow.front();
     singRow.pop_front();
 
@@ -3564,12 +3594,11 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
 
 void Presolve::countRemovedRows(PresolveRule rule) {
   timer.increaseCount(true, rule);
-  if (timer.timer_.readRunHighsClock() > time_limit) status = stat::Timeout;
 }
 
 void Presolve::countRemovedCols(PresolveRule rule) {
   timer.increaseCount(false, rule);
-  if (timer.timer_.readRunHighsClock() > time_limit) status = stat::Timeout;
+  if (timer.time_limit > 0 && timer.timer_.readRunHighsClock() > timer.time_limit) status = stat::Timeout;
 }
 
 }  // namespace presolve

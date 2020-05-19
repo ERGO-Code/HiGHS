@@ -1512,7 +1512,7 @@ HighsPresolveStatus Highs::runPresolve() {
   double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
-  if (options_.time_limit > 0) {
+  if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
     double left = options_.time_limit - start_presolve;
     if (left <= 0) {
       HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
@@ -1529,7 +1529,7 @@ HighsPresolveStatus Highs::runPresolve() {
 
   // Presolve.
   presolve_.init(lp_, timer_);
-  if (options_.time_limit > 0) {
+  if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
     double current = timer_.readRunHighsClock();
     double time_init = current - start_presolve;
     double left = presolve_.options_.time_limit - time_init;
