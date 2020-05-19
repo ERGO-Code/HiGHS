@@ -14,11 +14,6 @@
 
 #include "presolve/PresolveComponent.h"
 
-#include <chrono>
-#include <future>
-#include <iostream>
-#include <thread>
-
 HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer) {
   assert(options_.presolve_on);
   data_.presolve_.push_back(presolve::Presolve(timer));

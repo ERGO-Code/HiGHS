@@ -139,5 +139,5 @@ class HMpsFF {
   HMpsFF::parsekey parseBounds(FILE* logfile, std::ifstream& file);
 };
 
-}  // namespace fixed_format_parser
+}  // namespace free_format_parser
 #endif /* IO_HMPSFF_H_ */
