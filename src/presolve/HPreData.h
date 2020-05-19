@@ -129,8 +129,6 @@ class PresolveStats {
   int n_nnz_removed = 0;
 };
 
-std::function<void> initPresolveFunc(PresolveStats& stats);
-
 void initPresolve(PresolveStats& stats);
 
 }  // namespace presolve
