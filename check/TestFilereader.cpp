@@ -213,7 +213,7 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   options.model_file = filename;
 
   HighsLp lp;
-  HMpsFF parser{};
+  free_format_parser::HMpsFF parser{};
   FreeFormatParserReturnCode result = parser.loadProblem(stdout, filename, lp);
   REQUIRE(result == FreeFormatParserReturnCode::SUCCESS);
 
