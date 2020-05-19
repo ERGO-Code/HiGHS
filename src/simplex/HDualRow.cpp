@@ -158,6 +158,7 @@ bool HDualRow::chooseFinal() {
 #endif
   // 2. Choose by small step BFRT
   analysis->simplexTimerStart(Chuzc3Clock);
+  analysis->simplexTimerStart(Chuzc3aClock);
   const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   fullCount = workCount;
   workCount = 0;
@@ -169,6 +170,7 @@ bool HDualRow::chooseFinal() {
   int prev_workCount = workCount;
   double prev_remainTheta = iz_remainTheta;
   double prev_selectTheta = selectTheta;
+  int debug_num_loop = 0;
   while (selectTheta < 1e18) {
     double remainTheta = iz_remainTheta;
 #ifdef HiGHSDEV
@@ -178,6 +180,8 @@ bool HDualRow::chooseFinal() {
           "fullCount=%d\n",
           selectTheta, workCount, fullCount);
 #endif
+    debug_num_loop++;
+    int debug_loop_ln = 0;
     for (int i = workCount; i < fullCount; i++) {
       int iCol = workData[i].first;
       double value = workData[i].second;
@@ -202,7 +206,10 @@ bool HDualRow::chooseFinal() {
       if (rp_Choose_final)
         printf(": totCg=%11.4g; rmTh=%11.4g\n", totalChange, remainTheta);
 #endif
+      debug_loop_ln++;
     }
+    printf("Loop %4d: Length = %4d; selectTheta = %10.4g; remainTheta = %10.4g; workCount = %4d\n",
+	   debug_num_loop, debug_loop_ln, selectTheta, remainTheta, workCount);
     workGroup.push_back(workCount);
     // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
@@ -226,6 +233,7 @@ bool HDualRow::chooseFinal() {
              selectTheta, remainTheta);
       printf("workDataNorm = %g; dualNorm = %g\n", workDataNorm, dualNorm);
 #endif
+      analysis->simplexTimerStop(Chuzc3aClock);
       analysis->simplexTimerStop(Chuzc3Clock);
       return true;
     }
@@ -236,6 +244,8 @@ bool HDualRow::chooseFinal() {
     prev_selectTheta = selectTheta;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
+  analysis->simplexTimerStop(Chuzc3aClock);
+  analysis->simplexTimerStart(Chuzc3bClock);
 
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 2\n");
@@ -270,6 +280,8 @@ bool HDualRow::chooseFinal() {
       break;
     }
   }
+  analysis->simplexTimerStop(Chuzc3bClock);
+  analysis->simplexTimerStart(Chuzc3cClock);
 
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 3\n");
@@ -283,6 +295,9 @@ bool HDualRow::chooseFinal() {
     workTheta = 0;
   }
 
+  analysis->simplexTimerStop(Chuzc3cClock);
+  analysis->simplexTimerStart(Chuzc3dClock);
+
   // 4. Determine BFRT flip index: flip all
   fullCount = breakIndex;
   workCount = 0;
@@ -292,7 +307,10 @@ bool HDualRow::chooseFinal() {
     workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
   }
   if (workTheta == 0) workCount = 0;
+  analysis->simplexTimerStop(Chuzc3dClock);
+  analysis->simplexTimerStart(Chuzc3eClock);
   sort(workData.begin(), workData.begin() + workCount);
+  analysis->simplexTimerStop(Chuzc3eClock);
   analysis->simplexTimerStop(Chuzc3Clock);
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 4\n");

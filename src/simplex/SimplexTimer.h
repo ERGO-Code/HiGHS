@@ -64,6 +64,13 @@ enum iClockSimplex {
   Chuzc1Clock,             //!< CHUZC - Dual stage 1
   Chuzc2Clock,             //!< CHUZC - Dual stage 2
   Chuzc3Clock,             //!< CHUZC - Dual stage 3
+
+  Chuzc3aClock,             //!< CHUZC - Dual stage 3a
+  Chuzc3bClock,             //!< CHUZC - Dual stage 3b
+  Chuzc3cClock,             //!< CHUZC - Dual stage 3c
+  Chuzc3dClock,             //!< CHUZC - Dual stage 3d
+  Chuzc3eClock,             //!< CHUZC - Dual stage 3e
+
   Chuzc4Clock,             //!< CHUZC - Dual stage 4
   DevexWtClock,            //!< Calculation of Devex weight of entering variable
   FtranClock,              //!< FTRAN - pivotal column
@@ -137,6 +144,11 @@ class SimplexTimer {
     clock[Chuzc1Clock] = timer.clock_def("CHUZC1", "CC1");
     clock[Chuzc2Clock] = timer.clock_def("CHUZC2", "CC2");
     clock[Chuzc3Clock] = timer.clock_def("CHUZC3", "CC3");
+    clock[Chuzc3aClock] = timer.clock_def("CHUZC3a", "C3a");
+    clock[Chuzc3bClock] = timer.clock_def("CHUZC3b", "C3b");
+    clock[Chuzc3cClock] = timer.clock_def("CHUZC3c", "C3c");
+    clock[Chuzc3dClock] = timer.clock_def("CHUZC3d", "C3d");
+    clock[Chuzc3eClock] = timer.clock_def("CHUZC3e", "C3e");
     clock[Chuzc4Clock] = timer.clock_def("CHUZC4", "CC4");
     clock[DevexWtClock] = timer.clock_def("DEVEX_WT", "DWT");
     clock[FtranClock] = timer.clock_def("FTRAN", "COL");
@@ -219,6 +231,14 @@ class SimplexTimer {
         DseUpdateWeightClock, DevexIzClock,      UpdatePivotsClock,
         UpdateFactorClock,    UpdateMatrixClock};
     reportSimplexClockList("SimplexInner", simplex_clock_list,
+                           simplex_timer_clock);
+  };
+
+  void reportSimplexChuzc3Clock(HighsTimerClock& simplex_timer_clock) {
+    std::vector<int> simplex_clock_list{
+      Chuzc3aClock, Chuzc3bClock, Chuzc3cClock, Chuzc3dClock, Chuzc3eClock
+	};
+    reportSimplexClockList("SimplexChuzc3", simplex_clock_list,
                            simplex_timer_clock);
   };
 

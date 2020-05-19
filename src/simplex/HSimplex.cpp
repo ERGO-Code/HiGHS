@@ -2266,6 +2266,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   } else if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportSimplexInnerClock(analysis.thread_simplex_clocks[0]);
+      simplex_timer.reportSimplexChuzc3Clock(analysis.thread_simplex_clocks[0]);
     }
     if (simplex_info.report_simplex_outer_clock) {
       simplex_timer.reportDualSimplexIterateClock(
