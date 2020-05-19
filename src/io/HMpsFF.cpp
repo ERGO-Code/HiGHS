@@ -89,15 +89,17 @@ int HMpsFF::fillMatrix() {
 FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile,
                                          const std::string& filename) {
   std::ifstream f;
+  HMpsFF::parsekey keyword = HMpsFF::parsekey::NONE;
+
   f.open(filename.c_str(), std::ios::in);
   if (f.is_open()) {
     start_time = getWallTime();
     nnz = 0;
-    HMpsFF::parsekey keyword = HMpsFF::parsekey::NONE;
 
     // parsing loop
     while (keyword != HMpsFF::parsekey::FAIL &&
-           keyword != HMpsFF::parsekey::END) {
+           keyword != HMpsFF::parsekey::END &&
+           keyword != HMpsFF::parsekey::TIMEOUT) {
       switch (keyword) {
         case HMpsFF::parsekey::OBJSENSE:
           keyword = parseObjsense(logfile, f);
@@ -139,6 +141,9 @@ FreeFormatParserReturnCode HMpsFF::parse(FILE* logfile,
   }
 
   f.close();
+
+  if (keyword == HMpsFF::parsekey::TIMEOUT)
+    return FreeFormatParserReturnCode::TIMEOUT;
 
   assert(row_type.size() == unsigned(numRow));
 

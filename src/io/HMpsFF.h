@@ -41,7 +41,8 @@ enum class FreeFormatParserReturnCode {
   SUCCESS,
   PARSERERROR,
   FILENOTFOUND,
-  FIXED_FORMAT
+  FIXED_FORMAT,
+  TIMEOUT,
 };
 
 namespace free_format_parser {
@@ -59,9 +60,9 @@ class HMpsFF {
                                          const std::string filename,
                                          HighsLp& lp);
 
+  double time_limit = HIGHS_CONST_INF;
  private:
   double start_time;
-  double time_limit;
 
   int numRow;
   int numCol;

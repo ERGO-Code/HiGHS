@@ -26,7 +26,20 @@ target_sources(dev-presolve
 
 target_link_libraries(dev-presolve libhighs ${Boost_LIBRARIES}) 
 
+# Vanilla
 add_test(NAME dev-presolve COMMAND  dev-presolve)
         set_tests_properties (dev-presolve PROPERTIES
+                PASS_REGULAR_EXPRESSION
+                "2\n3\n10")
+
+# Row singletons only
+add_test(NAME options-order-rs-only COMMAND  dev-presolve --presolvers=rs_only)
+        set_tests_properties (options-order-rs-only PROPERTIES
+                PASS_REGULAR_EXPRESSION
+                "dev-presolve: pass")
+
+# Max iterations
+add_test(NAME options-max-iterations COMMAND  dev-presolve --max_iterations=1)
+        set_tests_properties (options-max-iterations PROPERTIES
                 PASS_REGULAR_EXPRESSION
                 "dev-presolve: pass")

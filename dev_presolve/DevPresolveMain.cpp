@@ -23,20 +23,12 @@ int read(const std::string& filename, const PresolveComponentOptions& options) {
   Highs highs;
   highs.readModel(filename);
 
-  Highs highs2;
-  highs2.passModel(highs.getLp());
-
+  highs.setPresolveOptions(options);
   highs.run();
 
-  PresolveComponentInfo vanilla = highs.getPresolveInfo();
+  PresolveComponentInfo info = highs.getPresolveInfo();
 
-  highs2.setPresolveOptions(options);
-  highs2.run();
-
-  PresolveComponentInfo rs_only = highs2.getPresolveInfo();
-
-  print(vanilla);
-  print(rs_only);
+  print(info);
 
   return 0;
 }
@@ -69,7 +61,7 @@ int main(int argc, char* argv[]) {
     desc.add_options()("help,h", "Help screen")(
         "file", value<std::string>()->default_value(""), "problem file")(
         "presolvers", value<std::string>()->default_value(""), "presolvers")(
-        "max_iterations", "max iterations")(
+        "max_iterations", value<int>()->default_value(0), "max iterations")(
         "iterations_strategy", value<std::string>()->default_value("num_limit"),
         "iterations strategy")("time_limit", value<double>()->default_value(-1),
                                "time limit");
@@ -80,22 +72,33 @@ int main(int argc, char* argv[]) {
 
     std::string presolvers = "";
 
-    if (vm.count("help"))
+    if (vm.count("help")) {
       std::cout << desc << '\n';
-    else if (vm.count("file")) {
+      return 0;
+    }
+
+    if (vm.count("file")) {
       filenames.push_back(vm["file"].as<std::string>());
       std::cout << "file:             " << filenames[(int)filenames.size() - 1]
                 << '\n';
-    } else if (vm.count("presolvers")) {
+    }
+
+    if (vm.count("presolvers")) {
       presolvers = vm["presolvers"].as<std::string>();
       std::cout << "presolvers:       " << presolvers << '\n';
-    } else if (vm.count("max_iterations")) {
+    }
+
+    if (vm.count("max_iterations")) {
       options.max_iterations = vm["max_iterations"].as<int>();
       std::cout << "max_iterations:   " << options.max_iterations << '\n';
-    } else if (vm.count("iterations_trategy")) {
+    }
+
+    if (vm.count("iterations_trategy")) {
       options.iteration_strategy = vm["iterations_trategy"].as<std::string>();
       std::cout << "iteration_strategy: " << options.iteration_strategy << '\n';
-    } else if (vm.count("time_limit ")) {
+    }
+
+    if (vm.count("time_limit ")) {
       options.time_limit = vm[""].as<double>();
       std::cout << "time_limit : " << options.time_limit << '\n';
     }
@@ -126,10 +129,10 @@ int main(int argc, char* argv[]) {
   if (filenames.size() == 0) {
     int result = scaffold_main(adlittle, options);
     return result;
-    }
-    
-   for (const std::string& file : filenames)
+  }
+
+  for (const std::string& file : filenames)
     int result = scaffold_main(file, options);
 
-    return 0;
+  return 0;
 }
