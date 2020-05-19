@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
 
     if (vm.count("file")) {
       filenames.push_back(vm["file"].as<std::string>());
-      std::cout << "file:             " << filenames[(int)filenames.size() - 1]
+      std::cout << "file:             " << filenames[0]
                 << '\n';
     }
 
@@ -89,6 +89,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (vm.count("max_iterations")) {
+      options.iteration_strategy = "num_limit";
       options.max_iterations = vm["max_iterations"].as<int>();
       std::cout << "max_iterations:   " << options.max_iterations << '\n';
     }
@@ -126,7 +127,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Run scaffold.
-  if (filenames.size() == 0) {
+  if (filenames.size() == 1 && filenames[0] == "") {
     int result = scaffold_main(adlittle, options);
     return result;
   }
