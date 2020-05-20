@@ -311,6 +311,8 @@ HighsPresolveStatus Presolve::presolve() {
       // reduced problem solution indicated as optimal by
       // the solver.
       break;
+    case stat::Timeout:
+      presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
 
