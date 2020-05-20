@@ -165,12 +165,10 @@ class HDualRow {
   std::vector<int>
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
 
-  std::vector<std::pair<int, double>> originalWorkData; 
-  std::vector<std::pair<int, double>> sortedWorkData; 
-  int altWorkCount;
-  std::vector<int> altWorkGroup;
-  std::vector<int> heap_i;
-  std::vector<double> heap_v;
+  std::vector<std::pair<int, double>> original_workData; 
+  std::vector<std::pair<int, double>> sorted_workData; 
+  int alt_workCount;
+  std::vector<int> alt_workGroup;
 
   HighsSimplexAnalysis* analysis;
 };
