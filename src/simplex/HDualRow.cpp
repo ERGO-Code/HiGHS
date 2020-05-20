@@ -322,9 +322,8 @@ bool HDualRow::chooseWorkGroupHeap() {
 
   alt_workGroup.clear();
   alt_workGroup.push_back(0);
-  sorted_workData.resize(workCount);
+  sorted_workData.resize(heap_num_en);
   for (int en = 1; en <= heap_num_en; en++) {
-    alt_workCount++;
     int i = heap_i[en];
     int iCol = original_workData[i].first;
     double value = original_workData[i].second;
@@ -337,9 +336,10 @@ bool HDualRow::chooseWorkGroupHeap() {
       alt_workGroup.push_back(alt_workCount);
       selectTheta = (dual + Td) / value;
     }
+    alt_workCount++;
     if (totalChange >= totalDelta) break;
   }
-  alt_workGroup.push_back(alt_workCount + 1);
+  alt_workGroup.push_back(alt_workCount);
   //  printf("CHUZC3(Heap): Selected %4d candidates in %4d groups\n", alt_workCount,
   //         (int)alt_workGroup.size() - 1);
   return true;
