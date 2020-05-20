@@ -54,4 +54,4 @@ void PresolveTimer::updateInfo() {
   }
 }
 
-}
+}  // namespace presolve
