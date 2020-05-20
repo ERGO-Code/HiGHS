@@ -22,6 +22,7 @@
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HVector.h"
 #include "simplex/SimplexTimer.h"
+#include "util/HighsSort.h"
 
 using std::make_pair;
 using std::pair;
@@ -132,7 +133,7 @@ bool HDualRow::chooseFinal() {
   int fullCount = workCount;
   workCount = 0;
   double totalChange = 0;
-  double totalDelta = fabs(workDelta);
+  const double totalDelta = fabs(workDelta);
   double selectTheta = 10 * workTheta + 1e-7;
   for (;;) {
     for (int i = workCount; i < fullCount; i++) {
@@ -152,11 +153,20 @@ bool HDualRow::chooseFinal() {
   // 2. Choose by small step BFRT
   analysis->simplexTimerStart(Chuzc3Clock);
   analysis->simplexTimerStart(Chuzc3aClock);
+
+  std::vector<std::pair<int, double>> originalWorkData = workData;
+  std::vector<std::pair<int, double>> sortedWorkData;
+  std::vector<int> altWorkGroup;
+  //  altWorkGroup.resize(workCount);
+  int altWorkCount = workCount;
+
   const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   fullCount = workCount;
   workCount = 0;
   totalChange = 1e-12;
   selectTheta = workTheta;
+  printf("workGroup.size() = %d; workGroup.capacity() = %d\n",
+         (int)workGroup.size(), (int)workGroup.capacity());
   workGroup.clear();
   workGroup.push_back(0);
   const double iz_remainTheta = 1e100;
@@ -188,17 +198,18 @@ bool HDualRow::chooseFinal() {
         "Loop %4d: Length = %4d; selectTheta = %10.4g; remainTheta = %10.4g; "
         "workCount = %4d\n",
         debug_num_loop, debug_loop_ln, selectTheta, remainTheta, workCount);
-    printf("Loop %4d: Selected %d ratios\n", debug_num_loop, workCount-prev_workCount);
-    for (int i = prev_workCount; i<workCount; i++) {
+    printf("Loop %4d: Selected %d ratios\n", debug_num_loop,
+    workCount-prev_workCount); for (int i = prev_workCount; i<workCount; i++) {
       int iCol = workData[i].first;
       double value = workData[i].second;
       double dual = workMove[iCol] * workDual[iCol];
       printf("   Col %4d: dual / value = %10.4g / %10.4g = %10.4g\n",
-	     iCol, dual, value, dual / value);
+             iCol, dual, value, dual / value);
     }
-    printf("selectTheta = %10.4g; remainTheta = %10.4g; workCount = %4d\n\n", selectTheta, remainTheta, workCount);
+    printf("selectTheta = %10.4g; remainTheta = %10.4g; workCount = %4d\n\n",
+    selectTheta, remainTheta, workCount);
     */
-    
+
     // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
     // Check for no change in this loop - to prevent infinite loop
@@ -217,6 +228,13 @@ bool HDualRow::chooseFinal() {
     prev_selectTheta = selectTheta;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
+  printf("CHUZC3(Quad): Selected %4d candidates in %4d groups\n", workCount,
+         (int)workGroup.size() - 1);
+  chooseWorkGroupHeap(originalWorkData, altWorkCount, sortedWorkData,
+                      altWorkGroup);
+  reportWorkDataAndGroup("Original", workCount, workData, workGroup);
+  reportWorkDataAndGroup("Heap-derived", altWorkCount, sortedWorkData,
+                         altWorkGroup);
   analysis->simplexTimerStop(Chuzc3aClock);
   analysis->simplexTimerStart(Chuzc3bClock);
 
@@ -280,6 +298,93 @@ bool HDualRow::chooseFinal() {
   analysis->simplexTimerStop(Chuzc3eClock);
   analysis->simplexTimerStop(Chuzc3Clock);
   return false;
+}
+
+bool HDualRow::chooseWorkGroupHeap(
+    const std::vector<std::pair<int, double>>& originalWorkData,
+    int& altWorkCount, std::vector<std::pair<int, double>>& sortedWorkData,
+    std::vector<int>& localWorkGroup) {
+  sortedWorkData.resize(workCount);
+  std::vector<int> heap_i;
+  std::vector<double> heap_v;
+  heap_i.clear();
+  heap_v.clear();
+  heap_i.resize(workCount + 1);
+  heap_v.resize(workCount + 1);
+  int heap_num_en = 0;
+
+  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
+  int fullCount = altWorkCount;
+  altWorkCount = 0;
+  double totalChange = 1e-12;
+  double selectTheta = workTheta;
+  const double totalDelta = fabs(workDelta);
+  for (int i = 0; i < fullCount; i++) {
+    int iCol = originalWorkData[i].first;
+    double value = originalWorkData[i].second;
+    double dual = workMove[iCol] * workDual[iCol];
+    double ratio = dual / value;
+    if (ratio < 1e18) {
+      heap_num_en++;
+      heap_i[heap_num_en] = i;
+      heap_v[heap_num_en] = ratio;
+    }
+  }
+  maxheapsort(&heap_v[0], &heap_i[0], heap_num_en);
+
+  printf("localWorkGroup.size() = %d; localWorkGroup.capacity() = %d\n",
+         (int)localWorkGroup.size(), (int)localWorkGroup.capacity());
+  fflush(stdout);
+  localWorkGroup.clear();
+  localWorkGroup.push_back(0);
+  printf(
+      "localWorkGroup.size() = %d; localWorkGroup.capacity() = %d; "
+      "localWorkGroup[0] = %d\n",
+      (int)localWorkGroup.size(), (int)localWorkGroup.capacity(),
+      localWorkGroup[0]);
+  for (int en = 1; en <= heap_num_en; en++) {
+    altWorkCount++;
+    int i = heap_i[en];
+    int iCol = originalWorkData[i].first;
+    double value = originalWorkData[i].second;
+    double dual = workMove[iCol] * workDual[iCol];
+    totalChange += value * (workRange[iCol]);
+    sortedWorkData[en - 1].first = iCol;
+    sortedWorkData[en - 1].second = value;
+    if (dual > selectTheta * value) {
+      // Breakpoint is in the next group
+      localWorkGroup.push_back(altWorkCount);
+      selectTheta = (dual + Td) / value;
+    }
+    if (totalChange >= totalDelta) break;
+  }
+  localWorkGroup.push_back(altWorkCount + 1);
+  printf("CHUZC3(Heap): Selected %4d candidates in %4d groups\n", altWorkCount,
+         (int)localWorkGroup.size() - 1);
+  return true;
+}
+
+void HDualRow::reportWorkDataAndGroup(
+    const std::string message, const int reportWorkCount,
+    const std::vector<std::pair<int, double>>& reportWorkData,
+    const std::vector<int>& reportWorkGroup) {
+  printf("\n%s:\nworkData\n  En iCol      Value       Dual      Ratio\n",
+         message.c_str());
+  for (int i = 0; i < reportWorkCount; i++) {
+    int iCol = reportWorkData[i].first;
+    double value = reportWorkData[i].second;
+    double dual = workMove[iCol] * workDual[iCol];
+    printf("%4d %4d %10.4g %10.4g %10.4g\n", i, iCol, value, dual,
+           value / dual);
+  }
+  printf("workGroup\nSize: Entries\n");
+  for (int group = 0; group < (int)workGroup.size() - 1; group++) {
+    printf("%4d: ", group);
+    for (int en = workGroup[group]; en < workGroup[group + 1]; en++) {
+      printf("%4d ", en);
+    }
+    printf("\n");
+  }
 }
 
 void HDualRow::updateFlip(HVector* bfrtColumn) {

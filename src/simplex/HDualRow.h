@@ -74,10 +74,24 @@ class HDualRow {
   /**
    * @brief Chooses the entering variable via BFRT and EXPAND
    *
-   * Can fail when there are excessive dual vaules due to EXPAND
+   * Can fail when there are excessive dual values due to EXPAND
    * perturbation not being relatively too small
    */
   bool chooseFinal();
+
+  /**
+   * @brief Identifies the groups of degenerate nodes in BFRT after a
+   * heap sort of ratios
+   */
+  bool chooseWorkGroupHeap(
+      const std::vector<std::pair<int, double>>& originalWorkData,
+      int& altWorkCount, std::vector<std::pair<int, double>>& sortedWorkData,
+      std::vector<int>& localWorkGroup);
+
+  void reportWorkDataAndGroup(
+      const std::string message, const int reportWorkCount,
+      const std::vector<std::pair<int, double>>& reportWorkData,
+      const std::vector<int>& reportWorkGroup);
 
   /**
    * @brief Update bounds when flips have occurred, and accumulate the
@@ -148,7 +162,7 @@ class HDualRow {
   int workPivot;     //!< Index of the column entering the basis
   int workCount;     //!< Number of BFRT flips
 
-  std::vector<std::pair<int, double> >
+  std::vector<std::pair<int, double>>
       workData;  //!< Index-Value pairs for ratio test
   std::vector<int>
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
