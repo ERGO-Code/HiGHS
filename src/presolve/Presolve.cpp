@@ -164,12 +164,12 @@ void Presolve::reportDevMainLoop() {
 
   getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
 
-  dev_stats.n_loops++;
-  dev_stats.loops.push_back(MainLoop{rows, cols, nnz});
+  stats.dev.n_loops++;
+  stats.dev.loops.push_back(MainLoop{rows, cols, nnz});
 
-  std::cout << "Starting loop " << dev_stats.n_loops;
+  std::cout << "Starting loop " << stats.dev.n_loops;
 
-  printMainLoop(dev_stats.loops[dev_stats.n_loops - 1]);
+  printMainLoop(stats.dev.loops[stats.dev.n_loops - 1]);
   return;
 }
 
@@ -264,6 +264,7 @@ int Presolve::presolve(int print) {
     reportDevMainLoop();
     int run_status = runPresolvers(order);
     assert(run_status == status);
+    if (run_status != status) {}
     if (status) return status;
 
     // todo: next ~~~
@@ -280,7 +281,7 @@ int Presolve::presolve(int print) {
 
   timer.updateInfo();
 
-  printDevStats(dev_stats);
+  printDevStats(stats.dev);
 
   return status;
 }

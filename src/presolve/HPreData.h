@@ -121,8 +121,8 @@ struct DevStats {
   std::vector<MainLoop> loops;
 };
 
-class PresolveStats {
-  DevStats stats;
+struct PresolveStats {
+  DevStats dev;
 
   int n_rows_removed = 0;
   int n_cols_removed = 0;

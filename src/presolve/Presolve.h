@@ -267,7 +267,7 @@ class Presolve : public HPreData {
   // April 2020
   void reportDevMainLoop();
   void reportDevMidMainLoop();
-  DevStats dev_stats;
+  PresolveStats stats;
   int runPresolvers(const std::vector<Presolver>& order);
 };
 

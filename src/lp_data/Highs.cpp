@@ -573,6 +573,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
         beforeReturnFromRun(return_status);
         return return_status;
       }
+      case HighsPresolveStatus::Timeout: {
+        model_status_ = HighsModelStatus::PRESOLVE_ERROR;
+        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+                          "Presolve reached timeout");
+        if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+        return HighsStatus::Warning;
+      }
       default: {
         // case HighsPresolveStatus::Error
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
