@@ -154,19 +154,14 @@ bool HDualRow::chooseFinal() {
   analysis->simplexTimerStart(Chuzc3Clock);
   analysis->simplexTimerStart(Chuzc3aClock);
 
-  std::vector<std::pair<int, double>> originalWorkData = workData;
-  std::vector<std::pair<int, double>> sortedWorkData;
-  std::vector<int> altWorkGroup;
-  //  altWorkGroup.resize(workCount);
-  int altWorkCount = workCount;
+  originalWorkData = workData;
+  altWorkCount = workCount;
 
   const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   fullCount = workCount;
   workCount = 0;
   totalChange = 1e-12;
   selectTheta = workTheta;
-  printf("workGroup.size() = %d; workGroup.capacity() = %d\n",
-         (int)workGroup.size(), (int)workGroup.capacity());
   workGroup.clear();
   workGroup.push_back(0);
   const double iz_remainTheta = 1e100;
@@ -228,13 +223,13 @@ bool HDualRow::chooseFinal() {
     prev_selectTheta = selectTheta;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
-  printf("CHUZC3(Quad): Selected %4d candidates in %4d groups\n", workCount,
-         (int)workGroup.size() - 1);
-  chooseWorkGroupHeap(originalWorkData, altWorkCount, sortedWorkData,
-                      altWorkGroup);
-  reportWorkDataAndGroup("Original", workCount, workData, workGroup);
-  reportWorkDataAndGroup("Heap-derived", altWorkCount, sortedWorkData,
-                         altWorkGroup);
+  //  printf("CHUZC3(Quad): Selected %4d candidates in %4d groups\n", workCount,
+  //	 (int)workGroup.size() - 1);
+  chooseWorkGroupHeap();
+  compareWorkDataAndGroup();
+  //  reportWorkDataAndGroup("Original", workCount, workData, workGroup);
+  //  reportWorkDataAndGroup("Heap-derived", altWorkCount, sortedWorkData,
+  //			 altWorkGroup);
   analysis->simplexTimerStop(Chuzc3aClock);
   analysis->simplexTimerStart(Chuzc3bClock);
 
@@ -300,25 +295,16 @@ bool HDualRow::chooseFinal() {
   return false;
 }
 
-bool HDualRow::chooseWorkGroupHeap(
-    const std::vector<std::pair<int, double>>& originalWorkData,
-    int& altWorkCount, std::vector<std::pair<int, double>>& sortedWorkData,
-    std::vector<int>& localWorkGroup) {
-  sortedWorkData.resize(workCount);
-  std::vector<int> heap_i;
-  std::vector<double> heap_v;
-  heap_i.clear();
-  heap_v.clear();
-  heap_i.resize(workCount + 1);
-  heap_v.resize(workCount + 1);
-  int heap_num_en = 0;
-
+bool HDualRow::chooseWorkGroupHeap() {
   const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   int fullCount = altWorkCount;
   altWorkCount = 0;
   double totalChange = 1e-12;
   double selectTheta = workTheta;
   const double totalDelta = fabs(workDelta);
+  int heap_num_en = 0;
+  heap_i.resize(fullCount + 1);
+  heap_v.resize(fullCount + 1);
   for (int i = 0; i < fullCount; i++) {
     int iCol = originalWorkData[i].first;
     double value = originalWorkData[i].second;
@@ -332,16 +318,9 @@ bool HDualRow::chooseWorkGroupHeap(
   }
   maxheapsort(&heap_v[0], &heap_i[0], heap_num_en);
 
-  printf("localWorkGroup.size() = %d; localWorkGroup.capacity() = %d\n",
-         (int)localWorkGroup.size(), (int)localWorkGroup.capacity());
-  fflush(stdout);
-  localWorkGroup.clear();
-  localWorkGroup.push_back(0);
-  printf(
-      "localWorkGroup.size() = %d; localWorkGroup.capacity() = %d; "
-      "localWorkGroup[0] = %d\n",
-      (int)localWorkGroup.size(), (int)localWorkGroup.capacity(),
-      localWorkGroup[0]);
+  altWorkGroup.clear();
+  altWorkGroup.push_back(0);
+  sortedWorkData.resize(workCount);
   for (int en = 1; en <= heap_num_en; en++) {
     altWorkCount++;
     int i = heap_i[en];
@@ -353,14 +332,14 @@ bool HDualRow::chooseWorkGroupHeap(
     sortedWorkData[en - 1].second = value;
     if (dual > selectTheta * value) {
       // Breakpoint is in the next group
-      localWorkGroup.push_back(altWorkCount);
+      altWorkGroup.push_back(altWorkCount);
       selectTheta = (dual + Td) / value;
     }
     if (totalChange >= totalDelta) break;
   }
-  localWorkGroup.push_back(altWorkCount + 1);
-  printf("CHUZC3(Heap): Selected %4d candidates in %4d groups\n", altWorkCount,
-         (int)localWorkGroup.size() - 1);
+  altWorkGroup.push_back(altWorkCount + 1);
+  //  printf("CHUZC3(Heap): Selected %4d candidates in %4d groups\n", altWorkCount,
+  //         (int)altWorkGroup.size() - 1);
   return true;
 }
 
@@ -385,6 +364,27 @@ void HDualRow::reportWorkDataAndGroup(
     }
     printf("\n");
   }
+}
+
+void HDualRow::compareWorkDataAndGroup() {
+  printf("compareWorkDataAndGroup\n");
+  assert(altWorkCount == workCount);
+  for (int i = 0; i < workCount; i++) {
+    if (workData[i].first != sortedWorkData[i].first) {
+      int iCol = workData[i].first;
+      double value = workData[i].second;
+      double dual = workMove[iCol] * workDual[iCol];
+      int alt_iCol = sortedWorkData[i].first;
+      double alt_value = sortedWorkData[i].second;
+      double alt_dual = workMove[alt_iCol] * workDual[alt_iCol];
+      printf("Entry %4d: iCol(%4d, %4d); ratio(%10.4g, %10.4g)\n",
+	     i, alt_iCol, iCol, alt_dual / alt_value, dual / value);
+    }
+    //    for (int group = 0; group < (int)workGroup.size() - 1; group++) {
+    //      if (
+  }
+	     
+  assert((int)altWorkGroup.size() == (int)workGroup.size());
 }
 
 void HDualRow::updateFlip(HVector* bfrtColumn) {

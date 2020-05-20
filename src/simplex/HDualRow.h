@@ -83,15 +83,13 @@ class HDualRow {
    * @brief Identifies the groups of degenerate nodes in BFRT after a
    * heap sort of ratios
    */
-  bool chooseWorkGroupHeap(
-      const std::vector<std::pair<int, double>>& originalWorkData,
-      int& altWorkCount, std::vector<std::pair<int, double>>& sortedWorkData,
-      std::vector<int>& localWorkGroup);
+  bool chooseWorkGroupHeap();
 
   void reportWorkDataAndGroup(
       const std::string message, const int reportWorkCount,
       const std::vector<std::pair<int, double>>& reportWorkData,
       const std::vector<int>& reportWorkGroup);
+  void compareWorkDataAndGroup();
 
   /**
    * @brief Update bounds when flips have occurred, and accumulate the
@@ -166,6 +164,14 @@ class HDualRow {
       workData;  //!< Index-Value pairs for ratio test
   std::vector<int>
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
+
+  std::vector<std::pair<int, double>> originalWorkData; 
+  std::vector<std::pair<int, double>> sortedWorkData; 
+  int altWorkCount;
+  std::vector<int> altWorkGroup;
+  std::vector<int> heap_i;
+  std::vector<double> heap_v;
+
   HighsSimplexAnalysis* analysis;
 };
 
