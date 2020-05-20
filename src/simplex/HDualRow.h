@@ -89,7 +89,7 @@ class HDualRow {
       const std::string message, const int reportWorkCount,
       const std::vector<std::pair<int, double>>& reportWorkData,
       const std::vector<int>& reportWorkGroup);
-  void compareWorkDataAndGroup();
+  bool compareWorkDataAndGroup();
 
   /**
    * @brief Update bounds when flips have occurred, and accumulate the
