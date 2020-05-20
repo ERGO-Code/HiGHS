@@ -39,6 +39,11 @@ HighsDebugStatus debugUpdatedObjectiveValue(
 HighsDebugStatus debugFixedNonbasicMove(
     const HighsModelObject& highs_model_object);
 HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object);
+HighsDebugStatus debugDualChuzcFail(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const double* workDual,
+    const double selectTheta, const double remainTheta);
+
 HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
                                      const std::string message);
 HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,

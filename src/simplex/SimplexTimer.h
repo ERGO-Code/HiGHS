@@ -54,22 +54,22 @@ enum iClockSimplex {
   ComputeDuObjClock,  //!< Computation of dual objective value in dual rebuild()
   ComputePrObjClock,  //!< Computation of primalal objective value in primal
                       //!< rebuild()
-  ReportRebuildClock,      //!< Reporting of log line in dual rebuild()
-  ChuzrDualClock,          //!< CHUZR - Dual
-  Chuzr1Clock,             //!< CHUZR - Primal stage 1
-  Chuzr2Clock,             //!< CHUZR - Primal stage 2
-  ChuzcPrimalClock,        //!< CHUZC - Primal
-  Chuzc0Clock,             //!< CHUZC - Dual stage 0
-  PriceChuzc1Clock,        //!< PRICE + CHUZC - Dual stage 1: parallel
-  Chuzc1Clock,             //!< CHUZC - Dual stage 1
-  Chuzc2Clock,             //!< CHUZC - Dual stage 2
-  Chuzc3Clock,             //!< CHUZC - Dual stage 3
+  ReportRebuildClock,  //!< Reporting of log line in dual rebuild()
+  ChuzrDualClock,      //!< CHUZR - Dual
+  Chuzr1Clock,         //!< CHUZR - Primal stage 1
+  Chuzr2Clock,         //!< CHUZR - Primal stage 2
+  ChuzcPrimalClock,    //!< CHUZC - Primal
+  Chuzc0Clock,         //!< CHUZC - Dual stage 0
+  PriceChuzc1Clock,    //!< PRICE + CHUZC - Dual stage 1: parallel
+  Chuzc1Clock,         //!< CHUZC - Dual stage 1
+  Chuzc2Clock,         //!< CHUZC - Dual stage 2
+  Chuzc3Clock,         //!< CHUZC - Dual stage 3
 
-  Chuzc3aClock,             //!< CHUZC - Dual stage 3a
-  Chuzc3bClock,             //!< CHUZC - Dual stage 3b
-  Chuzc3cClock,             //!< CHUZC - Dual stage 3c
-  Chuzc3dClock,             //!< CHUZC - Dual stage 3d
-  Chuzc3eClock,             //!< CHUZC - Dual stage 3e
+  Chuzc3aClock,  //!< CHUZC - Dual stage 3a
+  Chuzc3bClock,  //!< CHUZC - Dual stage 3b
+  Chuzc3cClock,  //!< CHUZC - Dual stage 3c
+  Chuzc3dClock,  //!< CHUZC - Dual stage 3d
+  Chuzc3eClock,  //!< CHUZC - Dual stage 3e
 
   Chuzc4Clock,             //!< CHUZC - Dual stage 4
   DevexWtClock,            //!< Calculation of Devex weight of entering variable
@@ -236,8 +236,7 @@ class SimplexTimer {
 
   void reportSimplexChuzc3Clock(HighsTimerClock& simplex_timer_clock) {
     std::vector<int> simplex_clock_list{
-      Chuzc3aClock, Chuzc3bClock, Chuzc3cClock, Chuzc3dClock, Chuzc3eClock
-	};
+        Chuzc3aClock, Chuzc3bClock, Chuzc3cClock, Chuzc3dClock, Chuzc3eClock};
     reportSimplexClockList("SimplexChuzc3", simplex_clock_list,
                            simplex_timer_clock);
   };

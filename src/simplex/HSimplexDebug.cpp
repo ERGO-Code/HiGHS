@@ -631,6 +631,37 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   return HighsDebugStatus::OK;
 }
 
+HighsDebugStatus debugDualChuzcFail(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const double* workDual,
+    const double selectTheta, const double remainTheta) {
+  // Non-trivially expensive assessment of basis condition
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "DualChuzC:     No change in loop 2 so return error\n");
+  double workDataNorm = 0;
+  double dualNorm = 0;
+  for (int i = 0; i < workCount; i++) {
+    int iCol = workData[i].first;
+    double value = workData[i].second;
+    workDataNorm += value * value;
+    value = workDual[iCol];
+    dualNorm += value * value;
+  }
+  workDataNorm += sqrt(workDataNorm);
+  dualNorm += sqrt(dualNorm);
+  HighsPrintMessage(
+      options.output, options.message_level, ML_ALWAYS,
+      "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
+      workCount, selectTheta, remainTheta);
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "DualChuzC:     workDataNorm = %g; dualNorm = %g\n",
+                    workDataNorm, dualNorm);
+  return HighsDebugStatus::OK;
+}
+
 HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
                                      const std::string message) {
   // Non-trivially expensive assessment of basis condition

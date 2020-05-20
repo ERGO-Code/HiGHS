@@ -127,10 +127,6 @@ bool HDualRow::chooseFinal() {
    * (4) determine final flip variables
    */
 
-#ifdef HiGHSDEV
-  bool rp_Choose_final = false;
-  //   rp_Choose_final = true;
-#endif
   // 1. Reduce by large step BFRT
   analysis->simplexTimerStart(Chuzc2Clock);
   int fullCount = workCount;
@@ -153,9 +149,6 @@ bool HDualRow::chooseFinal() {
   }
   analysis->simplexTimerStop(Chuzc2Clock);
 
-#ifdef HiGHSDEV
-  if (rp_Choose_final) printf("Completed  choose_final 1\n");
-#endif
   // 2. Choose by small step BFRT
   analysis->simplexTimerStart(Chuzc3Clock);
   analysis->simplexTimerStart(Chuzc3aClock);
@@ -173,66 +166,33 @@ bool HDualRow::chooseFinal() {
   int debug_num_loop = 0;
   while (selectTheta < 1e18) {
     double remainTheta = iz_remainTheta;
-#ifdef HiGHSDEV
-    if (rp_Choose_final)
-      printf(
-          "Performing choose_final 2; selectTheta = %11.4g; workCount=%d; "
-          "fullCount=%d\n",
-          selectTheta, workCount, fullCount);
-#endif
     debug_num_loop++;
     int debug_loop_ln = 0;
     for (int i = workCount; i < fullCount; i++) {
       int iCol = workData[i].first;
       double value = workData[i].second;
       double dual = workMove[iCol] * workDual[iCol];
-#ifdef HiGHSDEV
-      if (rp_Choose_final)
-        printf("iCol=%4d; v=%11.4g; d=%11.4g |", iCol, value, dual);
-#endif
-        // Tight satisfy
-#ifdef HiGHSDEV
-      if (rp_Choose_final)
-        printf(" %11.4g = dual ?<=? sTh * v = %11.4g; workCount=%2d", dual,
-               selectTheta * value, workCount);
-#endif
+      // Tight satisfy
       if (dual <= selectTheta * value) {
         swap(workData[workCount++], workData[i]);
         totalChange += value * (workRange[iCol]);
       } else if (dual + Td < remainTheta * value) {
         remainTheta = (dual + Td) / value;
       }
-#ifdef HiGHSDEV
-      if (rp_Choose_final)
-        printf(": totCg=%11.4g; rmTh=%11.4g\n", totalChange, remainTheta);
-#endif
       debug_loop_ln++;
     }
-    printf("Loop %4d: Length = %4d; selectTheta = %10.4g; remainTheta = %10.4g; workCount = %4d\n",
-	   debug_num_loop, debug_loop_ln, selectTheta, remainTheta, workCount);
+    printf(
+        "Loop %4d: Length = %4d; selectTheta = %10.4g; remainTheta = %10.4g; "
+        "workCount = %4d\n",
+        debug_num_loop, debug_loop_ln, selectTheta, remainTheta, workCount);
     workGroup.push_back(workCount);
     // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
     // Check for no change in this loop - to prevent infinite loop
     if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
         (prev_remainTheta == remainTheta)) {
-#ifdef HiGHSDEV
-      printf("In choose_final: No change in loop 2 so return error\n");
-      double workDataNorm = 0;
-      double dualNorm = 0;
-      for (int i = 0; i < workCount; i++) {
-        int iCol = workData[i].first;
-        double value = workData[i].second;
-        workDataNorm += value * value;
-        value = workDual[iCol];
-        dualNorm += value * value;
-      }
-      workDataNorm += sqrt(workDataNorm);
-      dualNorm += sqrt(dualNorm);
-      printf("   workCount = %d; selectTheta=%g; remainTheta=%g\n", workCount,
-             selectTheta, remainTheta);
-      printf("workDataNorm = %g; dualNorm = %g\n", workDataNorm, dualNorm);
-#endif
+      debugDualChuzcFail(workHMO.options_, workCount, workData, workDual,
+                         selectTheta, remainTheta);
       analysis->simplexTimerStop(Chuzc3aClock);
       analysis->simplexTimerStop(Chuzc3Clock);
       return true;
@@ -247,9 +207,6 @@ bool HDualRow::chooseFinal() {
   analysis->simplexTimerStop(Chuzc3aClock);
   analysis->simplexTimerStart(Chuzc3bClock);
 
-#ifdef HiGHSDEV
-  if (rp_Choose_final) printf("Completed  choose_final 2\n");
-#endif
   // 3. Choose large alpha
   double finalCompare = 0;
   for (int i = 0; i < workCount; i++)
@@ -283,9 +240,6 @@ bool HDualRow::chooseFinal() {
   analysis->simplexTimerStop(Chuzc3bClock);
   analysis->simplexTimerStart(Chuzc3cClock);
 
-#ifdef HiGHSDEV
-  if (rp_Choose_final) printf("Completed  choose_final 3\n");
-#endif
   int sourceOut = workDelta < 0 ? -1 : 1;
   workPivot = workData[breakIndex].first;
   workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
@@ -312,9 +266,6 @@ bool HDualRow::chooseFinal() {
   sort(workData.begin(), workData.begin() + workCount);
   analysis->simplexTimerStop(Chuzc3eClock);
   analysis->simplexTimerStop(Chuzc3Clock);
-#ifdef HiGHSDEV
-  if (rp_Choose_final) printf("Completed  choose_final 4\n");
-#endif
   return false;
 }
 
