@@ -181,13 +181,24 @@ bool HDualRow::chooseFinal() {
       }
       debug_loop_ln++;
     }
+    workGroup.push_back(workCount);
+
     /*
     printf(
         "Loop %4d: Length = %4d; selectTheta = %10.4g; remainTheta = %10.4g; "
         "workCount = %4d\n",
         debug_num_loop, debug_loop_ln, selectTheta, remainTheta, workCount);
+    printf("Loop %4d: Selected %d ratios\n", debug_num_loop, workCount-prev_workCount);
+    for (int i = prev_workCount; i<workCount; i++) {
+      int iCol = workData[i].first;
+      double value = workData[i].second;
+      double dual = workMove[iCol] * workDual[iCol];
+      printf("   Col %4d: dual / value = %10.4g / %10.4g = %10.4g\n",
+	     iCol, dual, value, dual / value);
+    }
+    printf("selectTheta = %10.4g; remainTheta = %10.4g; workCount = %4d\n\n", selectTheta, remainTheta, workCount);
     */
-    workGroup.push_back(workCount);
+    
     // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
     // Check for no change in this loop - to prevent infinite loop
@@ -200,7 +211,7 @@ bool HDualRow::chooseFinal() {
       return true;
     }
     // Record the initial values of workCount, remainTheta and selectTheta for
-    // the next pass through the loop
+    // the next pass through the loop - to check for infinite loop condition
     prev_workCount = workCount;
     prev_remainTheta = remainTheta;
     prev_selectTheta = selectTheta;
