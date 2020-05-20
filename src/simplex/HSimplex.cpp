@@ -1743,7 +1743,6 @@ void permuteSimplexLp(HighsModelObject& highs_model_object) {
   vector<double>& colCost = highs_model_object.simplex_lp_.colCost_;
   vector<double>& colLower = highs_model_object.simplex_lp_.colLower_;
   vector<double>& colUpper = highs_model_object.simplex_lp_.colUpper_;
-  vector<double>& colScale = highs_model_object.scale_.col_;
 
   // 2. Duplicate the original data to copy from
   vector<int> saveAstart = highs_model_object.simplex_lp_.Astart_;
@@ -1752,7 +1751,6 @@ void permuteSimplexLp(HighsModelObject& highs_model_object) {
   vector<double> saveColCost = highs_model_object.simplex_lp_.colCost_;
   vector<double> saveColLower = highs_model_object.simplex_lp_.colLower_;
   vector<double> saveColUpper = highs_model_object.simplex_lp_.colUpper_;
-  vector<double> saveColScale = highs_model_object.scale_.col_;
 
   // 3. Generate the permuted matrix and corresponding vectors of column data
   int countX = 0;
@@ -1767,7 +1765,15 @@ void permuteSimplexLp(HighsModelObject& highs_model_object) {
     colCost[i] = saveColCost[fromCol];
     colLower[i] = saveColLower[fromCol];
     colUpper[i] = saveColUpper[fromCol];
-    colScale[i] = saveColScale[fromCol];
+  }
+  if (highs_model_object.scale_.is_scaled_) {
+    // Permute any columns scaling factors
+    vector<double>& colScale = highs_model_object.scale_.col_;
+    vector<double> saveColScale = highs_model_object.scale_.col_;
+    for (int i = 0; i < numCol; i++) {
+      int fromCol = numColPermutation[i];
+      colScale[i] = saveColScale[fromCol];
+    }
   }
   assert(Astart[numCol] == countX);
   // Deduce the consequences of permuting the LP

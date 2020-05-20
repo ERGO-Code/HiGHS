@@ -181,10 +181,12 @@ bool HDualRow::chooseFinal() {
       }
       debug_loop_ln++;
     }
+    /*
     printf(
         "Loop %4d: Length = %4d; selectTheta = %10.4g; remainTheta = %10.4g; "
         "workCount = %4d\n",
         debug_num_loop, debug_loop_ln, selectTheta, remainTheta, workCount);
+    */
     workGroup.push_back(workCount);
     // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
