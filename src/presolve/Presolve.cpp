@@ -264,7 +264,8 @@ int Presolve::presolve(int print) {
     reportDevMainLoop();
     int run_status = runPresolvers(order);
     assert(run_status == status);
-    if (run_status != status) {}
+    if (run_status != status) {
+    }
     if (status) return status;
 
     // todo: next ~~~
@@ -465,11 +466,10 @@ void Presolve::removeDoubletonEquations() {
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
           fabs(rowLower[row] - rowUpper[row]) < tol) {
-
-    if (timer.reachLimit()) {
-      status = stat::Timeout;
-      return;
-    }
+        if (timer.reachLimit()) {
+          status = stat::Timeout;
+          return;
+        }
 
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
@@ -1110,11 +1110,10 @@ void Presolve::removeDominatedColumns() {
   pair<double, double> p;
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
-
-    if (timer.reachLimit()) {
-      status = stat::Timeout;
-      return;
-    }
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
 
       timer.recordStart(DOMINATED_COLS);
 
@@ -1480,11 +1479,10 @@ void Presolve::removeColumnSingletons() {
 
   while (it != singCol.end()) {
     if (flagCol[*it]) {
-
-    if (timer.reachLimit()) {
-      status = stat::Timeout;
-      return;
-    }
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
 
       col = *it;
       k = getSingColElementIndexInA(col);
@@ -1870,10 +1868,10 @@ void Presolve::removeForcingConstraints() {
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
       if (status) return;
-    if (timer.reachLimit()) {
-      status = stat::Timeout;
-      return;
-    }
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
 
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
@@ -3599,7 +3597,9 @@ void Presolve::countRemovedRows(PresolveRule rule) {
 
 void Presolve::countRemovedCols(PresolveRule rule) {
   timer.increaseCount(false, rule);
-  if (timer.time_limit > 0 && timer.timer_.readRunHighsClock() > timer.time_limit) status = stat::Timeout;
+  if (timer.time_limit > 0 &&
+      timer.timer_.readRunHighsClock() > timer.time_limit)
+    status = stat::Timeout;
 }
 
 }  // namespace presolve

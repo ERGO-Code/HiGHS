@@ -77,8 +77,7 @@ HighsPresolveStatus PresolveComponent::run() {
   if (options_.time_limit < presolve::inf && options_.time_limit > 0)
     data_.presolve_[0].setTimeLimit(options_.time_limit);
 
-  if (options_.order.size() > 0)
-    data_.presolve_[0].order = options_.order;
+  if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
 
   // Run presolve.
   presolve_status_ = data_.presolve_[0].presolve();
