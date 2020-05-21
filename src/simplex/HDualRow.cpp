@@ -178,14 +178,6 @@ bool HDualRow::chooseFinal() {
 
   analysis->simplexTimerStart(Chuzc3cClock);
 
-  int alt_workPivot = sorted_workData[alt_breakIndex].first;
-  if (alt_workPivot != workPivot) {
-    printf("Quad workPivot = %d; Heap workPivot = %d\n", workPivot, alt_workPivot);
-    reportWorkDataAndGroup("Original", workCount, workData, workGroup);
-    reportWorkDataAndGroup("Heap-derived", alt_workCount, sorted_workData,
-			   alt_workGroup);
-  }
-
   int sourceOut = workDelta < 0 ? -1 : 1;
   workPivot = workData[breakIndex].first;
   workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
@@ -196,6 +188,15 @@ bool HDualRow::chooseFinal() {
   }
 
   analysis->simplexTimerStop(Chuzc3cClock);
+
+  int alt_workPivot = sorted_workData[alt_breakIndex].first;
+  if (alt_workPivot != workPivot) {
+    printf("Quad workPivot = %d; Heap workPivot = %d\n", workPivot, alt_workPivot);
+    reportWorkDataAndGroup("Original", workCount, workData, workGroup);
+    reportWorkDataAndGroup("Heap-derived", alt_workCount, sorted_workData,
+			   alt_workGroup);
+  }
+
   analysis->simplexTimerStart(Chuzc3dClock);
 
   // 4. Determine BFRT flip index: flip all
