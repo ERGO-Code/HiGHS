@@ -188,6 +188,22 @@ class SimplexTimer {
     timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
 
+  void reportChuzc3ClockList(
+                              std::vector<int> simplex_clock_list,
+                              HighsTimerClock& simplex_timer_clock) {
+    HighsTimer& timer = simplex_timer_clock.timer_;
+    std::vector<int>& clock = simplex_timer_clock.clock_;
+    int simplex_clock_list_size = simplex_clock_list.size();
+    std::vector<int> clockList;
+    clockList.resize(simplex_clock_list_size);
+    for (int en = 0; en < simplex_clock_list_size; en++) {
+      clockList[en] = clock[simplex_clock_list[en]];
+    }
+    const double ideal_sum_time = timer.read(clock[Chuzc3Clock]);
+    printf("reportChuzc3ClockList: ideal_sum_time = %g\n", ideal_sum_time);
+    timer.report_tl("CHUZC3:", clockList, ideal_sum_time, 1e-8);
+  };
+
   void reportSimplexTotalClock(HighsTimerClock& simplex_timer_clock) {
     std::vector<int> simplex_clock_list{SimplexTotalClock};
     reportSimplexClockList("SimplexTotal", simplex_clock_list,
@@ -239,8 +255,7 @@ class SimplexTimer {
   void reportSimplexChuzc3Clock(HighsTimerClock& simplex_timer_clock) {
     std::vector<int> simplex_clock_list{
         Chuzc3a0Clock, Chuzc3a1Clock, Chuzc3bClock, Chuzc3cClock, Chuzc3dClock, Chuzc3eClock};
-    reportSimplexClockList("SimplexChuzc3", simplex_clock_list,
-                           simplex_timer_clock);
+    reportChuzc3ClockList(simplex_clock_list, simplex_timer_clock);
   };
 
   void reportSimplexMultiInnerClock(HighsTimerClock& simplex_timer_clock) {

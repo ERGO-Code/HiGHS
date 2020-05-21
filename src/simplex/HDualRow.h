@@ -83,7 +83,12 @@ class HDualRow {
    * @brief Identifies the groups of degenerate nodes in BFRT after a
    * heap sort of ratios
    */
-  bool chooseWorkGroupHeap();
+  bool chooseFinalWorkGroupQuad();
+  bool chooseFinalWorkGroupHeap();
+
+  void chooseFinalLargeAlpha(int& breakIndex, int& breakGroup,
+			const std::vector<std::pair<int, double>>& workData,
+			     const std::vector<int>& workGroup);
 
   void reportWorkDataAndGroup(
       const std::string message, const int reportWorkCount,

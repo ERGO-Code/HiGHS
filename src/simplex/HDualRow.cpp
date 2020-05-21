@@ -152,17 +152,76 @@ bool HDualRow::chooseFinal() {
   analysis->simplexTimerStop(Chuzc2Clock);
 
   // 2. Choose by small step BFRT
-  analysis->simplexTimerStart(Chuzc3Clock);
-  analysis->simplexTimerStart(Chuzc3a0Clock);
 
   original_workData = workData;
   alt_workCount = workCount;
+  analysis->simplexTimerStart(Chuzc3Clock);
+  analysis->simplexTimerStart(Chuzc3a0Clock);
+  bool choose_ok = chooseFinalWorkGroupQuad();
+  analysis->simplexTimerStop(Chuzc3a0Clock);
+  if (!choose_ok) {
+      analysis->simplexTimerStop(Chuzc3Clock);
+      return true;
+  }
+  analysis->simplexTimerStart(Chuzc3a1Clock);
+  chooseFinalWorkGroupHeap();
+  analysis->simplexTimerStop(Chuzc3a1Clock);
+  // 3. Choose large alpha
+  analysis->simplexTimerStart(Chuzc3bClock);
+  int breakIndex;
+  int breakGroup;
+  chooseFinalLargeAlpha(breakIndex, breakGroup, workData, workGroup);
+  int alt_breakIndex;
+  int alt_breakGroup;
+  chooseFinalLargeAlpha(alt_breakIndex, alt_breakGroup, sorted_workData, alt_workGroup);
+  analysis->simplexTimerStop(Chuzc3bClock);
 
-  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
-  fullCount = workCount;
+  analysis->simplexTimerStart(Chuzc3cClock);
+
+  int alt_workPivot = sorted_workData[alt_breakIndex].first;
+  if (alt_workPivot != workPivot) {
+    printf("Quad workPivot = %d; Heap workPivot = %d\n", workPivot, alt_workPivot);
+    reportWorkDataAndGroup("Original", workCount, workData, workGroup);
+    reportWorkDataAndGroup("Heap-derived", alt_workCount, sorted_workData,
+			   alt_workGroup);
+  }
+
+  int sourceOut = workDelta < 0 ? -1 : 1;
+  workPivot = workData[breakIndex].first;
+  workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
+  if (workDual[workPivot] * workMove[workPivot] > 0) {
+    workTheta = workDual[workPivot] / workAlpha;
+  } else {
+    workTheta = 0;
+  }
+
+  analysis->simplexTimerStop(Chuzc3cClock);
+  analysis->simplexTimerStart(Chuzc3dClock);
+
+  // 4. Determine BFRT flip index: flip all
+  fullCount = breakIndex;
   workCount = 0;
-  totalChange = 1e-12;
-  selectTheta = workTheta;
+  for (int i = 0; i < workGroup[breakGroup]; i++) {
+    const int iCol = workData[i].first;
+    const int move = workMove[iCol];
+    workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
+  }
+  if (workTheta == 0) workCount = 0;
+  analysis->simplexTimerStop(Chuzc3dClock);
+  analysis->simplexTimerStart(Chuzc3eClock);
+  sort(workData.begin(), workData.begin() + workCount);
+  analysis->simplexTimerStop(Chuzc3eClock);
+  analysis->simplexTimerStop(Chuzc3Clock);
+  return false;
+}
+
+bool HDualRow::chooseFinalWorkGroupQuad() {
+  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
+  int fullCount = workCount;
+  workCount = 0;
+  double totalChange = 1e-12;
+  double selectTheta = workTheta;
+  const double totalDelta = fabs(workDelta);
   workGroup.clear();
   workGroup.push_back(0);
   const double iz_remainTheta = 1e100;
@@ -197,9 +256,7 @@ bool HDualRow::chooseFinal() {
         (prev_remainTheta == remainTheta)) {
       debugDualChuzcFail(workHMO.options_, workCount, workData, workDual,
                          selectTheta, remainTheta);
-      analysis->simplexTimerStop(Chuzc3a0Clock);
-      analysis->simplexTimerStop(Chuzc3Clock);
-      return true;
+      return false;
     }
     // Record the initial values of workCount, remainTheta and selectTheta for
     // the next pass through the loop - to check for infinite loop condition
@@ -208,81 +265,10 @@ bool HDualRow::chooseFinal() {
     prev_selectTheta = selectTheta;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
-  analysis->simplexTimerStop(Chuzc3a0Clock);
-  analysis->simplexTimerStart(Chuzc3a1Clock);
-  chooseWorkGroupHeap();
-  analysis->simplexTimerStop(Chuzc3a1Clock);
-  /*
-  if (!compareWorkDataAndGroup()) {
-    reportWorkDataAndGroup("Original", workCount, workData, workGroup);
-    reportWorkDataAndGroup("Heap-derived", alt_workCount, sorted_workData,
-			   alt_workGroup);
-  }
-  */
-  // 3. Choose large alpha
-  analysis->simplexTimerStart(Chuzc3bClock);
-  double finalCompare = 0;
-  for (int i = 0; i < workCount; i++)
-    finalCompare = max(finalCompare, workData[i].second);
-  finalCompare = min(0.1 * finalCompare, 1.0);
-  int countGroup = workGroup.size() - 1;
-  int breakGroup = -1;
-  int breakIndex = -1;
-  for (int iGroup = countGroup - 1; iGroup >= 0; iGroup--) {
-    double dMaxFinal = 0;
-    int iMaxFinal = -1;
-    for (int i = workGroup[iGroup]; i < workGroup[iGroup + 1]; i++) {
-      if (dMaxFinal < workData[i].second) {
-        dMaxFinal = workData[i].second;
-        iMaxFinal = i;
-      } else if (dMaxFinal == workData[i].second) {
-        int jCol = workData[iMaxFinal].first;
-        int iCol = workData[i].first;
-        if (workNumTotPermutation[iCol] < workNumTotPermutation[jCol]) {
-          iMaxFinal = i;
-        }
-      }
-    }
-
-    if (workData[iMaxFinal].second > finalCompare) {
-      breakIndex = iMaxFinal;
-      breakGroup = iGroup;
-      break;
-    }
-  }
-  analysis->simplexTimerStop(Chuzc3bClock);
-  analysis->simplexTimerStart(Chuzc3cClock);
-
-  int sourceOut = workDelta < 0 ? -1 : 1;
-  workPivot = workData[breakIndex].first;
-  workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
-  if (workDual[workPivot] * workMove[workPivot] > 0) {
-    workTheta = workDual[workPivot] / workAlpha;
-  } else {
-    workTheta = 0;
-  }
-
-  analysis->simplexTimerStop(Chuzc3cClock);
-  analysis->simplexTimerStart(Chuzc3dClock);
-
-  // 4. Determine BFRT flip index: flip all
-  fullCount = breakIndex;
-  workCount = 0;
-  for (int i = 0; i < workGroup[breakGroup]; i++) {
-    const int iCol = workData[i].first;
-    const int move = workMove[iCol];
-    workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
-  }
-  if (workTheta == 0) workCount = 0;
-  analysis->simplexTimerStop(Chuzc3dClock);
-  analysis->simplexTimerStart(Chuzc3eClock);
-  sort(workData.begin(), workData.begin() + workCount);
-  analysis->simplexTimerStop(Chuzc3eClock);
-  analysis->simplexTimerStop(Chuzc3Clock);
-  return false;
+  return true;
 }
 
-bool HDualRow::chooseWorkGroupHeap() {
+bool HDualRow::chooseFinalWorkGroupHeap() {
   const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   int fullCount = alt_workCount;
   double totalChange = 1e-12;
@@ -334,6 +320,41 @@ bool HDualRow::chooseWorkGroupHeap() {
   if (alt_workCount>this_group_first_entry)
     alt_workGroup.push_back(alt_workCount);
   return true;
+}
+
+void HDualRow::chooseFinalLargeAlpha(int& breakIndex, int& breakGroup,
+			const std::vector<std::pair<int, double>>& workData,
+				     const std::vector<int>& workGroup) {
+  double finalCompare = 0;
+  for (int i = 0; i < workCount; i++)
+    finalCompare = max(finalCompare, workData[i].second);
+  finalCompare = min(0.1 * finalCompare, 1.0);
+  int countGroup = workGroup.size() - 1;
+  breakGroup = -1;
+  breakIndex = -1;
+  for (int iGroup = countGroup - 1; iGroup >= 0; iGroup--) {
+    double dMaxFinal = 0;
+    int iMaxFinal = -1;
+    for (int i = workGroup[iGroup]; i < workGroup[iGroup + 1]; i++) {
+      if (dMaxFinal < workData[i].second) {
+        dMaxFinal = workData[i].second;
+        iMaxFinal = i;
+      } else if (dMaxFinal == workData[i].second) {
+        int jCol = workData[iMaxFinal].first;
+        int iCol = workData[i].first;
+        if (workNumTotPermutation[iCol] < workNumTotPermutation[jCol]) {
+          iMaxFinal = i;
+        }
+      }
+    }
+
+    if (workData[iMaxFinal].second > finalCompare) {
+      breakIndex = iMaxFinal;
+      breakGroup = iGroup;
+      break;
+    }
+  }
+
 }
 
 void HDualRow::reportWorkDataAndGroup(
