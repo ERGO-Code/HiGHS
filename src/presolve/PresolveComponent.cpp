@@ -65,22 +65,30 @@ HighsPresolveStatus PresolveComponent::run() {
   // Set options.
   bool options_ok = presolve::checkOptions(options_);
   assert(options_ok);
-  if (!options_ok) {
+  if (options_ok) {
+    if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
+
+    // max iterations
+    if (options_.iteration_strategy == "num_limit")
+      data_.presolve_[0].max_iterations = options_.max_iterations;
+
+    // time limit
+    if (options_.time_limit < presolve::inf && options_.time_limit > 0)
+      data_.presolve_[0].setTimeLimit(options_.time_limit);
+
+    // order and selection of presolvers
+    if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
+
+    // printing
+    if (options_.dev) data_.presolve_[0].iPrint = -1;
+  
+    // Run presolve.
+    presolve_status_ = data_.presolve_[0].presolve();
+  } else {
+    presolve_status_ = HighsPresolveStatus::OptionsError;
   }
 
-  if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
-
-  // max iterations
-  if (options_.iteration_strategy == "num_limit")
-    data_.presolve_[0].max_iterations = options_.max_iterations;
-
-  if (options_.time_limit < presolve::inf && options_.time_limit > 0)
-    data_.presolve_[0].setTimeLimit(options_.time_limit);
-
-  if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
-
-  // Run presolve.
-  presolve_status_ = data_.presolve_[0].presolve();
+  // else: Run default.
 
   if (presolve_status_ == HighsPresolveStatus::Reduced ||
       presolve_status_ == HighsPresolveStatus::ReducedToEmpty) {
@@ -119,19 +127,19 @@ namespace presolve {
 
 bool checkOptions(const PresolveComponentOptions& options) {
   // todo: check options in a smart way
-  if (presolve::iPrint) std::cout << "Checking presolve options... ";
+  if (options.dev) std::cout << "Checking presolve options... ";
 
   if (!(options.iteration_strategy == "smart" ||
         options.iteration_strategy == "off" ||
         options.iteration_strategy == "num_limit")) {
-    if (presolve::iPrint)
+    if (options.dev)
       std::cout << "warning: iteration strategy unknown: "
                 << options.iteration_strategy << ". ignored." << std::endl;
     return false;
   }
 
   if (options.iteration_strategy == "num_limit" && options.max_iterations < 0) {
-    if (presolve::iPrint)
+    if (options.dev)
       std::cout << "warning: negative iteration limit: "
                 << options.max_iterations
                 << ". Presolve will be run with no limit on iterations."

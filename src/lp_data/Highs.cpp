@@ -577,7 +577,14 @@ basis_.valid_, hmos_[0].basis_.valid_);
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
         HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
                           "Presolve reached timeout");
-        if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+        if (run_highs_clock_already_running) timer_.stopRunHighsClock();
+        return HighsStatus::Warning;
+      }
+      case HighsPresolveStatus::OptionsError: {
+        model_status_ = HighsModelStatus::PRESOLVE_ERROR;
+        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+                          "Presolve options error.");
+        if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         return HighsStatus::Warning;
       }
       default: {
@@ -585,7 +592,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
         HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
                           "Presolve failed");
-        if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+        if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         // Transfer the model status to the scaled model status and orriginal
         // HMO statuses;
         scaled_model_status_ = model_status_;
@@ -1553,6 +1560,9 @@ HighsPresolveStatus Highs::runPresolve() {
                       time_init, left);
     presolve_.options_.time_limit = options_.time_limit;
   }
+
+  presolve_.data_.presolve_[0].message_level = options_.message_level;
+  presolve_.data_.presolve_[0].output = options_.output;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 

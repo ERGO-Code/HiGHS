@@ -57,6 +57,7 @@ struct PresolveComponentOptions : public HighsComponentOptions {
   std::string iteration_strategy = "smart";
 
   double time_limit = -1;
+  bool dev = false;
 };
 
 class PresolveComponent : public HighsComponent {
