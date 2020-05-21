@@ -367,6 +367,7 @@ void HDualRow::reportWorkDataAndGroup(
 }
 
 bool HDualRow::compareWorkDataAndGroup() {
+  bool no_difference = true;
   if (alt_workCount != workCount) {
     printf("Iteration %d: %d = alt_workCount != workCount = %d\n",
 	   workHMO.iteration_counts_.simplex, alt_workCount, workCount);
@@ -374,6 +375,7 @@ bool HDualRow::compareWorkDataAndGroup() {
   }
   for (int i = 0; i < workCount; i++) {
     if (workData[i].first != sorted_workData[i].first) {
+      no_difference = false;
       int iCol = workData[i].first;
       double value = workData[i].second;
       double dual = workMove[iCol] * workDual[iCol];
@@ -397,7 +399,10 @@ bool HDualRow::compareWorkDataAndGroup() {
       return false;
     }
   }
-  return true;
+  if (!no_difference) printf("WorkDataAndGroup difference in Iteration %d\n",
+			     workHMO.iteration_counts_.simplex);
+    
+  return no_difference;
 }
 
 void HDualRow::updateFlip(HVector* bfrtColumn) {
