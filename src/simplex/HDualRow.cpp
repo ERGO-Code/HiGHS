@@ -188,23 +188,6 @@ bool HDualRow::chooseFinal() {
     }
     workGroup.push_back(workCount);
 
-    /*
-    printf(
-        "Loop %4d: Length = %4d; selectTheta = %10.4g; remainTheta = %10.4g; "
-        "workCount = %4d\n",
-        debug_num_loop, debug_loop_ln, selectTheta, remainTheta, workCount);
-    printf("Loop %4d: Selected %d ratios\n", debug_num_loop,
-    workCount-prev_workCount); for (int i = prev_workCount; i<workCount; i++) {
-      int iCol = workData[i].first;
-      double value = workData[i].second;
-      double dual = workMove[iCol] * workDual[iCol];
-      printf("   Col %4d: dual / value = %10.4g / %10.4g = %10.4g\n",
-             iCol, dual, value, dual / value);
-    }
-    printf("selectTheta = %10.4g; remainTheta = %10.4g; workCount = %4d\n\n",
-    selectTheta, remainTheta, workCount);
-    */
-
     // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
     // Check for no change in this loop - to prevent infinite loop
@@ -221,11 +204,18 @@ bool HDualRow::chooseFinal() {
     prev_workCount = workCount;
     prev_remainTheta = remainTheta;
     prev_selectTheta = selectTheta;
-    if (totalChange >= totalDelta || workCount == fullCount) break;
+    if (totalChange >= totalDelta || workCount == fullCount) {
+      /*
+      if (totalChange >= totalDelta)
+	printf("Break on %10.4g = totalChange >= totalDelta = %10.4g\n", totalChange, totalDelta);
+      if (workCount == fullCount) 
+	printf("Break on workCount == fullCount = %d\n", workCount);
+      */
+      break;
+    }
   }
-  //  printf("CHUZC3(Quad): Selected %4d candidates in %4d groups\n", workCount,
-  //	 (int)workGroup.size() - 1);
   chooseWorkGroupHeap();
+  //  bool diff_workData_or_workGroup = compareWorkDataAndGroup();
   if (!compareWorkDataAndGroup()) {
     reportWorkDataAndGroup("Original", workCount, workData, workGroup);
     reportWorkDataAndGroup("Heap-derived", alt_workCount, sorted_workData,
@@ -299,7 +289,6 @@ bool HDualRow::chooseFinal() {
 bool HDualRow::chooseWorkGroupHeap() {
   const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   int fullCount = alt_workCount;
-  alt_workCount = 0;
   double totalChange = 1e-12;
   double selectTheta = workTheta;
   const double totalDelta = fabs(workDelta);
@@ -321,53 +310,56 @@ bool HDualRow::chooseWorkGroupHeap() {
   }
   maxheapsort(&heap_v[0], &heap_i[0], heap_num_en);
 
+  alt_workCount = 0;
   alt_workGroup.clear();
-  alt_workGroup.push_back(0);
+  alt_workGroup.push_back(alt_workCount);
+  int this_group_first_entry = alt_workCount;
   sorted_workData.resize(heap_num_en);
   for (int en = 1; en <= heap_num_en; en++) {
-    for (int inner_en = en; inner_en <= heap_num_en; inner_en++) {
-      int i = heap_i[inner_en];
-      int iCol = original_workData[i].first;
-      double value = original_workData[i].second;
-      double dual = workMove[iCol] * workDual[iCol];
-      totalChange += value * (workRange[iCol]);
-      sorted_workData[inner_en - 1].first = iCol;
-      sorted_workData[inner_en - 1].second = value;
-      alt_workCount++;
-      if (dual > selectTheta * value) {
-	// Breakpoint is in the next group
-	alt_workGroup.push_back(alt_workCount);
-	selectTheta = (dual + Td) / value;
-	en = inner_en;
-	break;
-      }
-      en = inner_en;
+    int i = heap_i[en];
+    int iCol = original_workData[i].first;
+    double value = original_workData[i].second;
+    double dual = workMove[iCol] * workDual[iCol];
+    if (dual > selectTheta * value) {
+      // Breakpoint is in the next group, so mark the end of this
+      // group
+      alt_workGroup.push_back(alt_workCount);
+      this_group_first_entry = alt_workCount;
+      selectTheta = (dual + Td) / value;
+      // End loop if all permitted groups have been identified
+      if (totalChange >= totalDelta) break;
     }
-    if (totalChange >= totalDelta) break;
+    // Store the breakpoint
+    sorted_workData[alt_workCount].first = iCol;
+    sorted_workData[alt_workCount].second = value;
+    totalChange += value * (workRange[iCol]);
+    alt_workCount++;
   }
-  alt_workGroup.push_back(alt_workCount);
-  //  printf("CHUZC3(Heap): Selected %4d candidates in %4d groups\n", alt_workCount,
-  //         (int)alt_workGroup.size() - 1);
+  if (alt_workCount>this_group_first_entry)
+    alt_workGroup.push_back(alt_workCount);
   return true;
 }
 
 void HDualRow::reportWorkDataAndGroup(
-    const std::string message, const int reportWorkCount,
-    const std::vector<std::pair<int, double>>& reportWorkData,
-    const std::vector<int>& reportWorkGroup) {
-  printf("\n%s:\nworkData\n  En iCol       Dual      Value      Ratio\n",
-         message.c_str());
-  for (int i = 0; i < reportWorkCount; i++) {
-    int iCol = reportWorkData[i].first;
-    double value = reportWorkData[i].second;
+    const std::string message, const int report_workCount,
+    const std::vector<std::pair<int, double>>& report_workData,
+    const std::vector<int>& report_workGroup) {
+  double totalChange = 1e-12;
+  const double totalDelta = fabs(workDelta);
+  printf("\n%s: totalDelta = %10.4g\nworkData\n  En iCol       Dual      Value      Ratio     Change\n",
+         message.c_str(), totalDelta);
+  for (int i = 0; i < report_workCount; i++) {
+    int iCol = report_workData[i].first;
+    double value = report_workData[i].second;
     double dual = workMove[iCol] * workDual[iCol];
-    printf("%4d %4d %10.4g %10.4g %10.4g\n", i, iCol, dual, value, 
-           dual / value);
+    totalChange += value * (workRange[iCol]);
+    printf("%4d %4d %10.4g %10.4g %10.4g %10.4g\n", i, iCol, dual, value, 
+           dual / value, totalChange);
   }
   printf("workGroup\n  Ix:    Entries\n");
-  for (int group = 0; group < (int)workGroup.size() - 1; group++) {
+  for (int group = 0; group < (int)report_workGroup.size() - 1; group++) {
     printf("%4d: ", group);
-    for (int en = workGroup[group]; en < workGroup[group + 1]; en++) {
+    for (int en = report_workGroup[group]; en < report_workGroup[group + 1]; en++) {
       printf("%4d ", en);
     }
     printf("\n");
