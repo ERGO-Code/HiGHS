@@ -64,7 +64,6 @@ HighsPresolveStatus PresolveComponent::run() {
   assert(data_.presolve_.size() > 0);
   // Set options.
   bool options_ok = presolve::checkOptions(options_);
-  assert(options_ok);
   if (options_ok) {
     if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
 
@@ -133,8 +132,8 @@ bool checkOptions(const PresolveComponentOptions& options) {
         options.iteration_strategy == "off" ||
         options.iteration_strategy == "num_limit")) {
     if (options.dev)
-      std::cout << "warning: iteration strategy unknown: "
-                << options.iteration_strategy << ". ignored." << std::endl;
+      std::cout << "error: iteration strategy unknown: "
+                << options.iteration_strategy << "." << std::endl;
     return false;
   }
 
