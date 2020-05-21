@@ -50,6 +50,7 @@ void HDualRow::setup() {
   const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   setupSlice(numTot);
   workNumTotPermutation = &workHMO.simplex_info_.numTotPermutation_[0];
+  debug_zero_vector.assign(numTot, 0);
 
   // deleteFreelist() is being called in Phase 1 and Phase 2 since
   // it's in updatePivots(), but create_Freelist() is only called in
@@ -169,6 +170,10 @@ bool HDualRow::chooseFinal() {
   double prev_remainTheta = iz_remainTheta;
   double prev_selectTheta = selectTheta;
   int debug_num_loop = 0;
+  
+  if (workHMO.iteration_counts_.simplex == 141) {
+    printf("Iteration 141\n Original: workCount selectTheta");
+  }
   while (selectTheta < 1e18) {
     double remainTheta = iz_remainTheta;
     debug_num_loop++;
@@ -190,6 +195,9 @@ bool HDualRow::chooseFinal() {
 
     // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
+    if (workHMO.iteration_counts_.simplex == 141) {
+      printf(" Original:   %4d %10.4g\n", workCount, selectTheta);
+    }
     // Check for no change in this loop - to prevent infinite loop
     if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
         (prev_remainTheta == remainTheta)) {
@@ -321,8 +329,8 @@ bool HDualRow::chooseWorkGroupHeap() {
     double value = original_workData[i].second;
     double dual = workMove[iCol] * workDual[iCol];
     if (dual > selectTheta * value) {
-      // Breakpoint is in the next group, so mark the end of this
-      // group
+      // Breakpoint is in the next group, so record the pointer to its
+      // first entry
       alt_workGroup.push_back(alt_workCount);
       this_group_first_entry = alt_workCount;
       selectTheta = (dual + Td) / value;
@@ -344,6 +352,7 @@ void HDualRow::reportWorkDataAndGroup(
     const std::string message, const int report_workCount,
     const std::vector<std::pair<int, double>>& report_workData,
     const std::vector<int>& report_workGroup) {
+  const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
   double totalChange = 1e-12;
   const double totalDelta = fabs(workDelta);
   printf("\n%s: totalDelta = %10.4g\nworkData\n  En iCol       Dual      Value      Ratio     Change\n",
@@ -356,13 +365,19 @@ void HDualRow::reportWorkDataAndGroup(
     printf("%4d %4d %10.4g %10.4g %10.4g %10.4g\n", i, iCol, dual, value, 
            dual / value, totalChange);
   }
-  printf("workGroup\n  Ix:    Entries\n");
+  double selectTheta = workTheta;
+  printf("workGroup\n  Ix:   selectTheta Entries\n");
   for (int group = 0; group < (int)report_workGroup.size() - 1; group++) {
-    printf("%4d: ", group);
+    printf("%4d: selectTheta = %10.4g ", group, selectTheta);
     for (int en = report_workGroup[group]; en < report_workGroup[group + 1]; en++) {
       printf("%4d ", en);
     }
     printf("\n");
+    int en = report_workGroup[group + 1];
+    int iCol = original_workData[en].first;
+    double value = original_workData[en].second;
+    double dual = workMove[iCol] * workDual[iCol];
+    selectTheta = (dual + Td) / value;
   }
 }
 
@@ -373,6 +388,7 @@ bool HDualRow::compareWorkDataAndGroup() {
 	   workHMO.iteration_counts_.simplex, alt_workCount, workCount);
     return false;
   }
+  /*
   for (int i = 0; i < workCount; i++) {
     if (workData[i].first != sorted_workData[i].first) {
       no_difference = false;
@@ -386,18 +402,44 @@ bool HDualRow::compareWorkDataAndGroup() {
 	     i, alt_iCol, iCol, alt_dual / alt_value, dual / value);
     }
   }
+  */
 	     
   if ((int)alt_workGroup.size() != (int)workGroup.size()) {
     printf("Iteration %d: %d = alt_workGroup.size() != (int)workGroup.size() = %d\n",
 	   workHMO.iteration_counts_.simplex, (int)alt_workGroup.size(), (int)workGroup.size());
     return false;
   }
+  if (workGroup[0] != alt_workGroup[0]) {
+    printf("Group workGroup[0] = %4d != %4d = alt_workGroup[0]\n",
+	   workGroup[0], alt_workGroup[0]);
+    return false;
+  }
   for (int group = 0; group < (int)workGroup.size() - 1; group++) {
-    if (workGroup[group] != alt_workGroup[group]) {
+    if (workGroup[group+1] != alt_workGroup[group+1]) {
       printf("Group workGroup[%4d] = %4d != %4d = alt_workGroup[%4d]\n",
-	     group, workGroup[group], alt_workGroup[group], group);
+	     group+1, workGroup[group+1], alt_workGroup[group+1], group+1);
       return false;
     }
+    for (int en = workGroup[group]; en < workGroup[group+1]; en++)
+      debug_zero_vector[workData[en].first] = 1;
+    for (int en = alt_workGroup[group]; en < alt_workGroup[group+1]; en++) {
+      int iCol = sorted_workData[en].first;
+      if (debug_zero_vector[iCol] != 1) {
+	no_difference = false;
+	printf("workGroup[%4d] does not contain column %d\n", group, iCol);
+      }
+      debug_zero_vector[iCol] = 0;
+    }
+    for (int en = workGroup[group]; en < workGroup[group+1]; en++) {
+      int iCol = workData[en].first;
+      if (debug_zero_vector[iCol] == 1) {
+	no_difference = false;
+	printf("alt_workGroup[%4d] does not contain column %d\n", group, iCol);
+      }
+      debug_zero_vector[iCol] = 0;
+    }
+    for (int iCol = 0; iCol < (int)debug_zero_vector.size(); iCol++) 
+      assert(debug_zero_vector[iCol] == 0);
   }
   if (!no_difference) printf("WorkDataAndGroup difference in Iteration %d\n",
 			     workHMO.iteration_counts_.simplex);
