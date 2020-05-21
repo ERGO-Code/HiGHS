@@ -153,7 +153,7 @@ bool HDualRow::chooseFinal() {
 
   // 2. Choose by small step BFRT
   analysis->simplexTimerStart(Chuzc3Clock);
-  analysis->simplexTimerStart(Chuzc3aClock);
+  analysis->simplexTimerStart(Chuzc3a0Clock);
 
   original_workData = workData;
   alt_workCount = workCount;
@@ -171,9 +171,6 @@ bool HDualRow::chooseFinal() {
   double prev_selectTheta = selectTheta;
   int debug_num_loop = 0;
   
-  if (workHMO.iteration_counts_.simplex == 141) {
-    printf("Iteration 141\n Original: workCount selectTheta");
-  }
   while (selectTheta < 1e18) {
     double remainTheta = iz_remainTheta;
     debug_num_loop++;
@@ -195,15 +192,12 @@ bool HDualRow::chooseFinal() {
 
     // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
-    if (workHMO.iteration_counts_.simplex == 141) {
-      printf(" Original:   %4d %10.4g\n", workCount, selectTheta);
-    }
     // Check for no change in this loop - to prevent infinite loop
     if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
         (prev_remainTheta == remainTheta)) {
       debugDualChuzcFail(workHMO.options_, workCount, workData, workDual,
                          selectTheta, remainTheta);
-      analysis->simplexTimerStop(Chuzc3aClock);
+      analysis->simplexTimerStop(Chuzc3a0Clock);
       analysis->simplexTimerStop(Chuzc3Clock);
       return true;
     }
@@ -212,27 +206,21 @@ bool HDualRow::chooseFinal() {
     prev_workCount = workCount;
     prev_remainTheta = remainTheta;
     prev_selectTheta = selectTheta;
-    if (totalChange >= totalDelta || workCount == fullCount) {
-      /*
-      if (totalChange >= totalDelta)
-	printf("Break on %10.4g = totalChange >= totalDelta = %10.4g\n", totalChange, totalDelta);
-      if (workCount == fullCount) 
-	printf("Break on workCount == fullCount = %d\n", workCount);
-      */
-      break;
-    }
+    if (totalChange >= totalDelta || workCount == fullCount) break;
   }
+  analysis->simplexTimerStop(Chuzc3a0Clock);
+  analysis->simplexTimerStart(Chuzc3a1Clock);
   chooseWorkGroupHeap();
-  //  bool diff_workData_or_workGroup = compareWorkDataAndGroup();
+  analysis->simplexTimerStop(Chuzc3a1Clock);
+  /*
   if (!compareWorkDataAndGroup()) {
     reportWorkDataAndGroup("Original", workCount, workData, workGroup);
     reportWorkDataAndGroup("Heap-derived", alt_workCount, sorted_workData,
 			   alt_workGroup);
   }
-  analysis->simplexTimerStop(Chuzc3aClock);
-  analysis->simplexTimerStart(Chuzc3bClock);
-
+  */
   // 3. Choose large alpha
+  analysis->simplexTimerStart(Chuzc3bClock);
   double finalCompare = 0;
   for (int i = 0; i < workCount; i++)
     finalCompare = max(finalCompare, workData[i].second);
@@ -388,22 +376,7 @@ bool HDualRow::compareWorkDataAndGroup() {
 	   workHMO.iteration_counts_.simplex, alt_workCount, workCount);
     return false;
   }
-  /*
-  for (int i = 0; i < workCount; i++) {
-    if (workData[i].first != sorted_workData[i].first) {
-      no_difference = false;
-      int iCol = workData[i].first;
-      double value = workData[i].second;
-      double dual = workMove[iCol] * workDual[iCol];
-      int alt_iCol = sorted_workData[i].first;
-      double alt_value = sorted_workData[i].second;
-      double alt_dual = workMove[alt_iCol] * workDual[alt_iCol];
-      printf("Entry %4d: iCol(%4d, %4d); ratio(%10.4g, %10.4g)\n",
-	     i, alt_iCol, iCol, alt_dual / alt_value, dual / value);
-    }
-  }
-  */
-	     
+ 
   if ((int)alt_workGroup.size() != (int)workGroup.size()) {
     printf("Iteration %d: %d = alt_workGroup.size() != (int)workGroup.size() = %d\n",
 	   workHMO.iteration_counts_.simplex, (int)alt_workGroup.size(), (int)workGroup.size());
