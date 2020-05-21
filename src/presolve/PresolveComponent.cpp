@@ -80,7 +80,7 @@ HighsPresolveStatus PresolveComponent::run() {
 
     // printing
     if (options_.dev) data_.presolve_[0].iPrint = -1;
-  
+
     // Run presolve.
     presolve_status_ = data_.presolve_[0].presolve();
   } else {
