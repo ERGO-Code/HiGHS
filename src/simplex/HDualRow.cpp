@@ -152,11 +152,30 @@ bool HDualRow::chooseFinal() {
 
   // 2. Choose by small step BFRT
 
-  // Use the quadratic cost sort for smaller values of workCount,
-  // otherwise use the heap-based sort
-  const bool use_quad_sort = true;//false;  // workCount < 100;
-  const bool use_heap_sort = true;//!use_quad_sort;
-
+  bool use_quad_sort = false;
+  bool use_heap_sort = false;
+  const int dual_chuzc_sort_strategy =
+      workHMO.options_.dual_chuzc_sort_strategy;
+  if (dual_chuzc_sort_strategy == SIMPLEX_DUAL_CHUZC_STRATEGY_CHOOSE) {  // 0
+    // Use the quadratic cost sort for smaller values of workCount,
+    // otherwise use the heap-based sort
+    use_quad_sort = workCount < 100;
+    use_heap_sort = !use_quad_sort;
+  } else if (dual_chuzc_sort_strategy ==
+             SIMPLEX_DUAL_CHUZC_STRATEGY_QUAD) {  // 1
+    // Use the quadratic cost sort
+    use_quad_sort = true;
+  } else if (dual_chuzc_sort_strategy ==
+             SIMPLEX_DUAL_CHUZC_STRATEGY_HEAP) {  // 2
+    // Use the heap-based sort
+    use_heap_sort = true;
+  } else if (dual_chuzc_sort_strategy ==
+             SIMPLEX_DUAL_CHUZC_STRATEGY_BOTH) {  // 3
+    // Use the both sorts - for debugging
+    use_quad_sort = true;
+    use_heap_sort = true;
+  }
+  // Ensure that at least one sort is used!
   assert(use_heap_sort || use_quad_sort);
 
   if (use_heap_sort) {
