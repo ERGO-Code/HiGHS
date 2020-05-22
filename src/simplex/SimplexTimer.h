@@ -67,10 +67,10 @@ enum iClockSimplex {
 
   Chuzc3a0Clock,  //!< CHUZC - Dual stage 3a0
   Chuzc3a1Clock,  //!< CHUZC - Dual stage 3a1
-  Chuzc3bClock,  //!< CHUZC - Dual stage 3b
-  Chuzc3cClock,  //!< CHUZC - Dual stage 3c
-  Chuzc3dClock,  //!< CHUZC - Dual stage 3d
-  Chuzc3eClock,  //!< CHUZC - Dual stage 3e
+  Chuzc3bClock,   //!< CHUZC - Dual stage 3b
+  Chuzc3cClock,   //!< CHUZC - Dual stage 3c
+  Chuzc3dClock,   //!< CHUZC - Dual stage 3d
+  Chuzc3eClock,   //!< CHUZC - Dual stage 3e
 
   Chuzc4Clock,             //!< CHUZC - Dual stage 4
   DevexWtClock,            //!< Calculation of Devex weight of entering variable
@@ -188,9 +188,8 @@ class SimplexTimer {
     timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
 
-  void reportChuzc3ClockList(
-                              std::vector<int> simplex_clock_list,
-                              HighsTimerClock& simplex_timer_clock) {
+  void reportChuzc3ClockList(std::vector<int> simplex_clock_list,
+                             HighsTimerClock& simplex_timer_clock) {
     HighsTimer& timer = simplex_timer_clock.timer_;
     std::vector<int>& clock = simplex_timer_clock.clock_;
     int simplex_clock_list_size = simplex_clock_list.size();
@@ -253,8 +252,9 @@ class SimplexTimer {
   };
 
   void reportSimplexChuzc3Clock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{
-        Chuzc3a0Clock, Chuzc3a1Clock, Chuzc3bClock, Chuzc3cClock, Chuzc3dClock, Chuzc3eClock};
+    std::vector<int> simplex_clock_list{Chuzc3a0Clock, Chuzc3a1Clock,
+                                        Chuzc3bClock,  Chuzc3cClock,
+                                        Chuzc3dClock,  Chuzc3eClock};
     reportChuzc3ClockList(simplex_clock_list, simplex_timer_clock);
   };
 

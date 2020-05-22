@@ -20,6 +20,9 @@
 #include "lp_data/HighsModelObject.h"
 
 class HVector;
+const double initial_total_change = 1e-12;
+const double initial_remain_theta = 1e100;
+const double max_select_theta = 1e18;
 
 /**
  * @brief Dual simplex ratio test for HiGHS
@@ -86,9 +89,10 @@ class HDualRow {
   bool chooseFinalWorkGroupQuad();
   bool chooseFinalWorkGroupHeap();
 
-  void chooseFinalLargeAlpha(int& breakIndex, int& breakGroup,
-			const std::vector<std::pair<int, double>>& workData,
-			     const std::vector<int>& workGroup);
+  void chooseFinalLargeAlpha(
+      int& breakIndex, int& breakGroup, int pass_workCount,
+      const std::vector<std::pair<int, double>>& pass_workData,
+      const std::vector<int>& pass_workGroup);
 
   void reportWorkDataAndGroup(
       const std::string message, const int reportWorkCount,
@@ -170,9 +174,10 @@ class HDualRow {
   std::vector<int>
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
 
-  std::vector<std::pair<int, double>> original_workData; 
-  std::vector<std::pair<int, double>> sorted_workData; 
+  // Independent identifiers for heap-based sort in BFRT
   int alt_workCount;
+  std::vector<std::pair<int, double>> original_workData;
+  std::vector<std::pair<int, double>> sorted_workData;
   std::vector<int> alt_workGroup;
   std::vector<int> debug_zero_vector;
 
