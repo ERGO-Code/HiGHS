@@ -154,8 +154,8 @@ bool HDualRow::chooseFinal() {
 
   // Use the quadratic cost sort for smaller values of workCount,
   // otherwise use the heap-based sort
-  const bool use_quad_sort = false;  // workCount < 100;
-  const bool use_heap_sort = !use_quad_sort;
+  const bool use_quad_sort = true;//false;  // workCount < 100;
+  const bool use_heap_sort = true;//!use_quad_sort;
 
   assert(use_heap_sort || use_quad_sort);
 
