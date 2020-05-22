@@ -9,7 +9,7 @@
 
 using namespace boost::program_options;
 
-const std::string adlittle{"/Users/mac/test_pr/netlib/adlittle.mps"};
+const std::string adlittle = HIGHS_DIR + "/check/instances/adlittle.mps";
 
 void print(const PresolveComponentInfo& info) {
   std::cout << info.n_cols_removed << std::endl;
