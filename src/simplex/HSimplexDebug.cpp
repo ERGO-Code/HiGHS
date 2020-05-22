@@ -16,6 +16,7 @@
 
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
+#include "simplex/HDualRow.h"
 
 const double excessive_absolute_primal_norm = 1e12;
 const double excessive_relative_primal_norm = 1e6;
@@ -631,37 +632,6 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   return HighsDebugStatus::OK;
 }
 
-HighsDebugStatus debugDualChuzcFail(
-    const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const double* workDual,
-    const double selectTheta, const double remainTheta) {
-  // Non-trivially expensive assessment of basis condition
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
-    return HighsDebugStatus::NOT_CHECKED;
-
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                    "DualChuzC:     No change in loop 2 so return error\n");
-  double workDataNorm = 0;
-  double dualNorm = 0;
-  for (int i = 0; i < workCount; i++) {
-    int iCol = workData[i].first;
-    double value = workData[i].second;
-    workDataNorm += value * value;
-    value = workDual[iCol];
-    dualNorm += value * value;
-  }
-  workDataNorm += sqrt(workDataNorm);
-  dualNorm += sqrt(dualNorm);
-  HighsPrintMessage(
-      options.output, options.message_level, ML_ALWAYS,
-      "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
-      workCount, selectTheta, remainTheta);
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                    "DualChuzC:     workDataNorm = %g; dualNorm = %g\n",
-                    workDataNorm, dualNorm);
-  return HighsDebugStatus::OK;
-}
-
 HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
                                      const std::string message) {
   // Non-trivially expensive assessment of basis condition
@@ -836,4 +806,108 @@ HighsDebugStatus debugFreeListNumEntries(
       value_adjective.c_str(), pct_freelist_num_entries, numTot);
 
   return return_status;
+}
+
+HighsDebugStatus debugDualChuzcFail(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const double* workDual,
+    const double selectTheta, const double remainTheta) {
+  // Non-trivially expensive assessment of basis condition
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "DualChuzC:     No change in loop 2 so return error\n");
+  double workDataNorm = 0;
+  double dualNorm = 0;
+  for (int i = 0; i < workCount; i++) {
+    int iCol = workData[i].first;
+    double value = workData[i].second;
+    workDataNorm += value * value;
+    value = workDual[iCol];
+    dualNorm += value * value;
+  }
+  workDataNorm += sqrt(workDataNorm);
+  dualNorm += sqrt(dualNorm);
+  HighsPrintMessage(
+      options.output, options.message_level, ML_ALWAYS,
+      "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
+      workCount, selectTheta, remainTheta);
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "DualChuzC:     workDataNorm = %g; dualNorm = %g\n",
+                    workDataNorm, dualNorm);
+  return HighsDebugStatus::OK;
+}
+
+void debugDualChuzcWorkDataAndGroupReport(
+    const HighsModelObject& highs_model_object,
+    const double workDelta,
+    const double workTheta,
+    const std::string message, const int report_workCount,
+    const std::vector<std::pair<int, double>>& report_workData,
+    const std::vector<int>& report_workGroup) {
+  const std::vector<int>& workMove = highs_model_object.simplex_basis_.nonbasicMove_;
+  const std::vector<double>& workDual = highs_model_object.simplex_info_.workDual_;
+  const std::vector<double>& workRange = highs_model_object.simplex_info_.workRange_;
+  const double Td = highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
+  double totalChange = initial_total_change;
+  const double totalDelta = fabs(workDelta);
+  printf(
+      "\n%s: totalDelta = %10.4g\nworkData\n  En iCol       Dual      Value    "
+      "  Ratio     Change\n",
+      message.c_str(), totalDelta);
+  for (int i = 0; i < report_workCount; i++) {
+    int iCol = report_workData[i].first;
+    double value = report_workData[i].second;
+    double dual = workMove[iCol] * workDual[iCol];
+    totalChange += value * (workRange[iCol]);
+    printf("%4d %4d %10.4g %10.4g %10.4g %10.4g\n", i, iCol, dual, value,
+           dual / value, totalChange);
+  }
+  double selectTheta = workTheta;
+  printf("workGroup\n  Ix:   selectTheta Entries\n");
+  for (int group = 0; group < (int)report_workGroup.size() - 1; group++) {
+    printf("%4d: selectTheta = %10.4g ", group, selectTheta);
+    for (int en = report_workGroup[group]; en < report_workGroup[group + 1];
+         en++) {
+      printf("%4d ", en);
+    }
+    printf("\n");
+    int en = report_workGroup[group + 1];
+    int iCol = report_workData[en].first;
+    double value = report_workData[en].second;
+    double dual = workMove[iCol] * workDual[iCol];
+    selectTheta = (dual + Td) / value;
+  }
+
+}
+
+HighsDebugStatus debugDualChuzcWorkDataAndGroup(
+    const HighsModelObject& highs_model_object,
+    const double workDelta,
+    const double workTheta,
+    const int workCount,
+    const int alt_workCount,
+    const int breakIndex,
+    const int alt_breakIndex,
+    const std::vector<std::pair<int, double>>& workData,
+    const std::vector<std::pair<int, double>>& sorted_workData,
+    const std::vector<int>& workGroup,
+    const std::vector<int>& alt_workGroup
+    ) {
+  // Non-trivially expensive comparison and possible reporting of the
+  // two sorting methods for BFRT nodes in dual CHUZC
+  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+  int workPivot = workData[breakIndex].first;
+  int alt_workPivot = sorted_workData[alt_breakIndex].first;
+  if (alt_workPivot != workPivot) {
+    printf("Quad workPivot = %d; Heap workPivot = %d\n", workPivot,
+	   alt_workPivot);
+    debugDualChuzcWorkDataAndGroupReport(highs_model_object, workDelta, workTheta,
+					 "Original", workCount, workData, workGroup);
+    debugDualChuzcWorkDataAndGroupReport(highs_model_object, workDelta, workTheta,
+					 "Heap-derived", alt_workCount, sorted_workData, alt_workGroup);
+  }
+  return HighsDebugStatus::OK;
 }
