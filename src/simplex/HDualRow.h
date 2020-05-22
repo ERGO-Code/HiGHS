@@ -179,7 +179,6 @@ class HDualRow {
   std::vector<std::pair<int, double>> original_workData;
   std::vector<std::pair<int, double>> sorted_workData;
   std::vector<int> alt_workGroup;
-  std::vector<int> debug_zero_vector;
 
   HighsSimplexAnalysis* analysis;
 };

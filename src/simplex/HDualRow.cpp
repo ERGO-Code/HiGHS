@@ -50,7 +50,6 @@ void HDualRow::setup() {
   const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   setupSlice(numTot);
   workNumTotPermutation = &workHMO.simplex_info_.numTotPermutation_[0];
-  debug_zero_vector.assign(numTot, 0);
 
   // deleteFreelist() is being called in Phase 1 and Phase 2 since
   // it's in updatePivots(), but create_Freelist() is only called in
@@ -155,9 +154,9 @@ bool HDualRow::chooseFinal() {
 
   // Use the quadratic cost sort for smaller values of workCount,
   // otherwise use the heap-based sort
-  const bool use_quad_sort = false;//workCount < 100;
+  const bool use_quad_sort = false;  // workCount < 100;
   const bool use_heap_sort = !use_quad_sort;
-    
+
   assert(use_heap_sort || use_quad_sort);
 
   if (use_heap_sort) {
@@ -222,12 +221,10 @@ bool HDualRow::chooseFinal() {
 
   analysis->simplexTimerStop(Chuzc3cClock);
 
-  if (use_quad_sort && use_heap_sort) 
-    debugDualChuzcWorkDataAndGroup(workHMO, workDelta, workTheta,
-				   workCount, alt_workCount,
-				   breakIndex, alt_breakIndex,
-				   workData, sorted_workData,
-				   workGroup, alt_workGroup);
+  if (use_quad_sort && use_heap_sort)
+    debugDualChuzcWorkDataAndGroup(
+        workHMO, workDelta, workTheta, workCount, alt_workCount, breakIndex,
+        alt_breakIndex, workData, sorted_workData, workGroup, alt_workGroup);
 
   analysis->simplexTimerStart(Chuzc3dClock);
 
@@ -244,16 +241,18 @@ bool HDualRow::chooseFinal() {
     for (int i = 0; i < alt_workGroup[breakGroup]; i++) {
       const int iCol = sorted_workData[i].first;
       const int move = workMove[iCol];
-      sorted_workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
+      workData[workCount++] = make_pair(iCol, move * workRange[iCol]);
     }
   }
   if (workTheta == 0) workCount = 0;
   analysis->simplexTimerStop(Chuzc3dClock);
 
   analysis->simplexTimerStart(Chuzc3eClock);
+  /*
   if (!use_quad_sort) {
     for (int i = 0; i < workCount; i++) workData[i] = sorted_workData[i];
   }
+  */
   sort(workData.begin(), workData.begin() + workCount);
   analysis->simplexTimerStop(Chuzc3eClock);
   analysis->simplexTimerStop(Chuzc3Clock);
