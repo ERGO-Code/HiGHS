@@ -16,6 +16,13 @@ if(EXISTS "${LOC_PATH}")
     Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
 
+# Use OpenMP if version is high enough.
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(highs PUBLIC OpenMP::OpenMP_CXX)
+    message(STATUS "Linking with OpenMP... ")
+endif()
+
 # Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
@@ -68,12 +75,6 @@ if(EXT_PRESOLVE_DIR)
 endif()
 
 
-# Use OpenMP if version is high enough.
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(highs PUBLIC OpenMP::OpenMP_CXX)
-    message(STATUS "Linking with OpenMP... ")
-endif()
 
 # For the moment keep above coverage part in case we are testing at CI.
 option(CI "CI extended tests" ON)
