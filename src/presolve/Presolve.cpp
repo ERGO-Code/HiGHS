@@ -2273,15 +2273,11 @@ int Presolve::getSingRowElementIndexInAR(int i) {
   int k = ARstart.at(i);
   while (!flagCol.at(ARindex.at(k))) ++k;
   if (k >= ARstart.at(i + 1)) {
-    cout << "Error during presolve: no variable found in singleton row " << i
-         << endl;
     return -1;
   }
   int rest = k + 1;
   while (rest < ARstart.at(i + 1) && !flagCol.at(ARindex.at(rest))) ++rest;
   if (rest < ARstart.at(i + 1)) {
-    cout << "Error during presolve: more variables found in singleton row " << i
-         << endl;
     return -1;
   }
   return k;
@@ -2291,15 +2287,11 @@ int Presolve::getSingColElementIndexInA(int j) {
   int k = Astart.at(j);
   while (!flagRow.at(Aindex.at(k))) ++k;
   if (k >= Aend.at(j)) {
-    cout << "Error during presolve: no variable found in singleton col " << j
-         << ".";
     return -1;
   }
   int rest = k + 1;
   while (rest < Aend.at(j) && !flagRow.at(Aindex.at(rest))) ++rest;
   if (rest < Aend.at(j)) {
-    cout << "Error during presolve: more variables found in singleton col " << j
-         << ".";
     return -1;
   }
   return k;
