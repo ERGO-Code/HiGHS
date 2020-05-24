@@ -17,7 +17,7 @@ if(EXISTS "${LOC_PATH}")
 endif()
 
 # Use OpenMP if version is high enough.
-find_package(OpenMP)
+find_package(OpenMP 3.0)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(highs PUBLIC OpenMP::OpenMP_CXX)
     message(STATUS "Linking with OpenMP... ")
