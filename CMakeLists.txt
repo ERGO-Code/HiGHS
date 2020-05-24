@@ -81,7 +81,7 @@ endif()
 option(CI "CI extended tests" ON)
 
 # Coverage part
-# coverage' to start the coverage process
+# 'make coverage' to start the coverage process
 option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 if (HIGHS_COVERAGE)
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
