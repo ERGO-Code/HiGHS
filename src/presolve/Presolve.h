@@ -19,7 +19,6 @@
 #include <stack>
 #include <stdexcept>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -97,7 +96,7 @@ class Presolve : public HPreData {
     timer.time_limit = limit;
   }
 
-  int iPrint = -1;
+  int iPrint = 0;
   int message_level;
   FILE* output;
 
@@ -146,8 +145,8 @@ class Presolve : public HPreData {
   bool hasChange = true;
   int status = 0;  // 0 is unassigned, see enum stat
 
-  std::unordered_set<int> singRow;  // singleton rows
-  std::unordered_set<int> singCol;  // singleton columns
+  list<int> singRow;  // singleton rows
+  list<int> singCol;  // singleton columns
 
   // original data
  public:

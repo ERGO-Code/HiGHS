@@ -571,7 +571,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
 
   nzCol.at(x)++;
   // nzRow does not change here.
-  if (nzCol.at(x) == 2) singCol.erase(x);
+  if (nzCol.at(x) == 2) singCol.remove(x);
 }
 
 void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
@@ -582,12 +582,11 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
   // update nonzeros: for removal of
   nzRow.at(i)--;
   if (nzRow.at(i) == 1) {
-    assert(singRow.find(i) == singRow.end());
-    singRow.insert(i);
+    singRow.push_back(i);
   }
 
   if (nzRow.at(i) == 0) {
-    singRow.erase(i);
+    singRow.remove(i);
     removeEmptyRow(i);
     countRemovedRows(DOUBLETON_EQUATION);
   }
@@ -620,12 +619,11 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     nzRow.at(i)--;
     // update singleton row list
     if (nzRow.at(i) == 1) {
-      assert(singRow.find(i) == singRow.end());
-      singRow.insert(i);
+      singRow.push_back(i);
     }
 
     if (nzRow.at(i) == 0) {
-      singRow.erase(i);
+      singRow.remove(i);
       removeEmptyRow(i);
       countRemovedRows(DOUBLETON_EQUATION);
     }
@@ -671,7 +669,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     // update nz col
     nzCol.at(x)--;
     // update singleton col list
-    if (nzCol.at(x) == 1) singCol.insert(x);
+    if (nzCol.at(x) == 1) singCol.push_back(x);
     if (nzCol.at(x) == 0) {
       removeEmptyColumn(x);
     }
@@ -883,8 +881,7 @@ void Presolve::initializeVectors() {
   for (int i = 0; i < numRow; ++i) {
     nzRow.at(i) = ARstart.at(i + 1) - ARstart.at(i);
     if (nzRow.at(i) == 1) {
-      assert(singRow.find(i) == singRow.end());
-      singRow.insert(i);
+      singRow.push_back(i);
     }
 
     if (nzRow.at(i) == 0) {
@@ -899,7 +896,7 @@ void Presolve::initializeVectors() {
   for (int i = 0; i < numCol; ++i) {
     Aend.at(i) = Astart.at(i + 1);
     nzCol.at(i) = Aend.at(i) - Astart.at(i);
-    if (nzCol.at(i) == 1) singCol.insert(i);
+    if (nzCol.at(i) == 1) singCol.push_back(i);
   }
   objShift = 0;
 
@@ -971,7 +968,7 @@ void Presolve::removeEmptyRow(int i) {
 
 void Presolve::removeEmptyColumn(int j) {
   flagCol.at(j) = 0;
-  singCol.erase(j);
+  singCol.remove(j);
   double value;
   if ((colCost.at(j) < 0 && colUpper.at(j) >= HIGHS_CONST_INF) ||
       (colCost.at(j) > 0 && colLower.at(j) <= -HIGHS_CONST_INF)) {
@@ -1009,9 +1006,7 @@ void Presolve::rowDualBoundsDominatedColumns() {
 
   // for each row calc yihat and yibar and store in implRowDualLower and
   // implRowDualUpper
-  for (unsigned i = 0; i < singCol.bucket_count(); ++i) {
-    // std::cout << "bucket #" << i << " contains:";
-    for (auto it = singCol.begin(i); it != singCol.end(i); ++it)
+    for (auto it = singCol.begin(); it != singCol.end(); ++it) {
       if (flagCol.at(*it)) {
         col = *it;
         k = getSingColElementIndexInA(col);
@@ -1486,12 +1481,12 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
     cout << "PR: Second singleton column " << j << " in doubleton row " << i
          << " removed.\n";
   countRemovedCols(SING_COL_DOUBLETON_INEQ);
-  singCol.erase(j);
+  singCol.remove(j);
 }
 
 void Presolve::removeColumnSingletons() {
   int i, k, col;
-  std::unordered_set<int>::iterator it = singCol.begin();
+  std::list<int>::iterator it = singCol.begin();
 
   while (it != singCol.end()) {
     if (flagCol[*it]) {
@@ -1713,7 +1708,7 @@ void Presolve::removeRow(int i) {
       if (nzCol.at(j) == 1) {
         int index = getSingColElementIndexInA(j);
         if (index >= 0)
-          singCol.insert(j);
+          singCol.remove(j);
         else
           cout << "Warning: Column " << j
                << " with 1 nz but not in singCol or? Row removing of " << i
@@ -1812,7 +1807,7 @@ void Presolve::setVariablesToBoundForForcingRow(const int row,
     ++k;
   }
 
-  if (nzRow.at(row) == 1) singRow.erase(row);
+  if (nzRow.at(row) == 1) singRow.remove(row);
 
   countRemovedRows(FORCING_ROW);
 }
@@ -2082,10 +2077,9 @@ void Presolve::setPrimalValue(int j, double value) {
 
       // update singleton row list
       if (nzRow.at(row) == 1) {
-        assert(singRow.find(row) == singRow.end());
-        singRow.insert(row);
+        singRow.push_back(row);
       } else if (nzRow.at(row) == 0)
-        singRow.erase(row);
+        singRow.remove(row);
     }
   }
 
