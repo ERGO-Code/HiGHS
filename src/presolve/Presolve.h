@@ -47,10 +47,13 @@ enum class HighsPresolveStatus {
   Empty,
   Reduced,
   ReducedToEmpty,
+  Timeout,
   NullError
 };
 
 namespace presolve {
+
+constexpr int iPrint = 0;
 
 enum class Presolver {
   kMainRowSingletons,
@@ -67,27 +70,9 @@ const std::map<Presolver, std::string> kPresolverNames{
     {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
     {Presolver::kMainDominatedCols, "Dominated Cols()"}};
 
-struct MainLoop {
-  int rows;
-  int cols;
-  int nnz;
-};
-
-struct DevStats {
-  int n_loops = 0;
-  std::vector<MainLoop> loops;
-};
-
 class Presolve : public HPreData {
  public:
-  Presolve(HighsTimer& timer_ref) : timer(timer_ref) {
-    tol = 0.0000001;
-    noPostSolve = false;
-    objShift = 0;
-    hasChange = true;
-    iKKTcheck = 0;
-    countsFile = "";
-  }
+  Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
 
   HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
@@ -102,10 +87,18 @@ class Presolve : public HPreData {
   // todo: clear the public from below.
   string modelName;
 
+  // Options
   std::vector<Presolver> order;
 
+  int max_iterations = 0;
+
+  void setTimeLimit(const double limit) {
+    assert(limit < inf && limit > 0);
+    timer.time_limit = limit;
+  }
+
  private:
-  int iKKTcheck;
+  int iKKTcheck = 0;
   int presolve(int print);
 
   const bool report_postsolve = false;
@@ -142,10 +135,11 @@ class Presolve : public HPreData {
     Empty = 3,
     Optimal = 4,
     Reduced = 5,
+    Timeout = 6,
   };
 
  private:
-  bool hasChange;
+  bool hasChange = true;
   int status = 0;  // 0 is unassigned, see enum stat
 
   list<int> singRow;  // singleton rows
@@ -238,10 +232,10 @@ class Presolve : public HPreData {
   void countRemovedRows(PresolveRule rule);
   void countRemovedCols(PresolveRule rule);
 
-  double tol;
+  double tol = 0.0000001;
 
   // postsolve
-  bool noPostSolve;
+  bool noPostSolve = false;
 
   void addChange(PresolveRule type, int row, int col);
   void fillStackRowBounds(int col);
@@ -269,13 +263,11 @@ class Presolve : public HPreData {
   //	int testBasisMatrixSingularity();
   //
 
-  string countsFile;
-
   // Dev presolve
   // April 2020
   void reportDevMainLoop();
   void reportDevMidMainLoop();
-  DevStats dev_stats;
+  PresolveStats stats;
   int runPresolvers(const std::vector<Presolver>& order);
 };
 

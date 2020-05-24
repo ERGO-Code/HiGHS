@@ -45,7 +45,6 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-constexpr int iPrint = 0;
 // todo:
 // iKKTcheck = 1;
 
@@ -165,12 +164,12 @@ void Presolve::reportDevMainLoop() {
 
   getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
 
-  dev_stats.n_loops++;
-  dev_stats.loops.push_back(MainLoop{rows, cols, nnz});
+  stats.dev.n_loops++;
+  stats.dev.loops.push_back(MainLoop{rows, cols, nnz});
 
-  std::cout << "Starting loop " << dev_stats.n_loops;
+  std::cout << "Starting loop " << stats.dev.n_loops;
 
-  printMainLoop(dev_stats.loops[dev_stats.n_loops - 1]);
+  printMainLoop(stats.dev.loops[stats.dev.n_loops - 1]);
   return;
 }
 
@@ -218,6 +217,8 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
 }
 
 int Presolve::presolve(int print) {
+  timer.start_time = timer.getTime();
+
   if (iPrint > 0) {
     cout << "Presolve started ..." << endl;
     cout << "Original problem ... N=" << numCol << "  M=" << numRow << endl;
@@ -257,11 +258,14 @@ int Presolve::presolve(int print) {
   // Else: The order has been modified for experiments
 
   while (hasChange == 1) {
+    if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
 
     reportDevMainLoop();
     int run_status = runPresolvers(order);
     assert(run_status == status);
+    if (run_status != status) {
+    }
     if (status) return status;
 
     // todo: next ~~~
@@ -278,7 +282,7 @@ int Presolve::presolve(int print) {
 
   timer.updateInfo();
 
-  printDevStats(dev_stats);
+  printDevStats(stats.dev);
 
   return status;
 }
@@ -307,6 +311,8 @@ HighsPresolveStatus Presolve::presolve() {
       // reduced problem solution indicated as optimal by
       // the solver.
       break;
+    case stat::Timeout:
+      presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
 
@@ -462,6 +468,11 @@ void Presolve::removeDoubletonEquations() {
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
           fabs(rowLower[row] - rowUpper[row]) < tol) {
+        if (timer.reachLimit()) {
+          status = stat::Timeout;
+          return;
+        }
+
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);
@@ -475,6 +486,7 @@ void Presolve::removeDoubletonEquations() {
         akx = getaij(row, x);
         aky = getaij(row, y);
         processRowDoubletonEquation(row, x, y, akx, aky, b);
+        if (status) return;
 
         for (int k = Astart.at(y); k < Aend.at(y); ++k)
           if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -1100,6 +1112,11 @@ void Presolve::removeDominatedColumns() {
   pair<double, double> p;
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
+
       timer.recordStart(DOMINATED_COLS);
 
       p = getImpliedColumnBounds(j);
@@ -1146,6 +1163,7 @@ void Presolve::removeDominatedColumns() {
         continue;
       }
       timer.recordFinish(DOMINATED_COLS);
+      if (status) return;
     }
 }
 
@@ -1463,6 +1481,11 @@ void Presolve::removeColumnSingletons() {
 
   while (it != singCol.end()) {
     if (flagCol[*it]) {
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
+
       col = *it;
       k = getSingColElementIndexInA(col);
       i = Aindex.at(k);
@@ -1498,6 +1521,8 @@ void Presolve::removeColumnSingletons() {
         }
       }
       it++;
+
+      if (status) return;
     } else
       it = singCol.erase(it);
   }
@@ -1844,6 +1869,12 @@ void Presolve::removeForcingConstraints() {
 
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
+      if (status) return;
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
+
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
         countRemovedRows(EMPTY_ROW);
@@ -1902,6 +1933,12 @@ void Presolve::removeRowSingletons() {
   }
   */
   while (!(singRow.empty())) {
+    if (status) return;
+    if (timer.reachLimit()) {
+      status = stat::Timeout;
+      return;
+    }
+
     i = singRow.front();
     singRow.pop_front();
 
@@ -3562,6 +3599,9 @@ void Presolve::countRemovedRows(PresolveRule rule) {
 
 void Presolve::countRemovedCols(PresolveRule rule) {
   timer.increaseCount(false, rule);
+  if (timer.time_limit > 0 &&
+      timer.timer_.readRunHighsClock() > timer.time_limit)
+    status = stat::Timeout;
 }
 
 }  // namespace presolve
