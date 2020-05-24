@@ -581,7 +581,10 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
 
   // update nonzeros: for removal of
   nzRow.at(i)--;
-  if (nzRow.at(i) == 1) singRow.insert(i);
+  if (nzRow.at(i) == 1) {
+    assert(singRow.find(i) == singRow.end());
+    singRow.insert(i);
+  }
 
   if (nzRow.at(i) == 0) {
     singRow.erase(i);
@@ -616,7 +619,10 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     // update nz row
     nzRow.at(i)--;
     // update singleton row list
-    if (nzRow.at(i) == 1) singRow.insert(i);
+    if (nzRow.at(i) == 1) {
+      assert(singRow.find(i) == singRow.end());
+      singRow.insert(i);
+    }
 
     if (nzRow.at(i) == 0) {
       singRow.erase(i);
@@ -876,7 +882,11 @@ void Presolve::initializeVectors() {
 
   for (int i = 0; i < numRow; ++i) {
     nzRow.at(i) = ARstart.at(i + 1) - ARstart.at(i);
-    if (nzRow.at(i) == 1) singRow.insert(i);
+    if (nzRow.at(i) == 1) {
+      assert(singRow.find(i) == singRow.end());
+      singRow.insert(i);
+    }
+
     if (nzRow.at(i) == 0) {
       timer.recordStart(EMPTY_ROW);
       removeEmptyRow(i);
@@ -1929,16 +1939,13 @@ void Presolve::removeForcingConstraints() {
 
 void Presolve::removeRowSingletons() {
   timer.recordStart(SING_ROW);
-  int i;
   int singRowZ = singRow.size();
   /*
   if (singRowZ == 36) {
     printf("JAJH: singRow.size() = %d\n", singRowZ);fflush(stdout);
   }
   */
-  for (unsigned i = 0; i < singRow.bucket_count(); ++i) {
-    // std::cout << "bucket #" << i << " contains:";
-    for (auto it = singRow.begin(i); it != singRow.end(i); ++it) {
+  for (const auto& it : singRow) {
       // std::cout << " " << *it;
 
       if (status) return;
@@ -1947,8 +1954,9 @@ void Presolve::removeRowSingletons() {
         return;
       }
 
-      i = *it;
-
+      int i = it;
+      assert(i >= 0 && i < numRow);
+      std::cout << ">>>>>>> . i = " << i << std::endl;
       assert(flagRow[i]);
 
       int k = getSingRowElementIndexInAR(i);
@@ -2046,8 +2054,8 @@ void Presolve::removeRowSingletons() {
       if (flagCol.at(j) && colLower.at(j) == colUpper.at(j)) removeIfFixed(j);
 
       countRemovedRows(SING_ROW);
-    }
   }
+  singRow.clear();
   timer.recordFinish(SING_ROW);
 }
 
@@ -2075,9 +2083,10 @@ void Presolve::setPrimalValue(int j, double value) {
       nzRow.at(row)--;
 
       // update singleton row list
-      if (nzRow.at(row) == 1)
+      if (nzRow.at(row) == 1) {
+        assert(singRow.find(row) == singRow.end());
         singRow.insert(row);
-      else if (nzRow.at(row) == 0)
+      } else if (nzRow.at(row) == 0)
         singRow.erase(row);
     }
   }
