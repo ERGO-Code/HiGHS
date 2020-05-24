@@ -1945,7 +1945,7 @@ void Presolve::removeRowSingletons() {
     printf("JAJH: singRow.size() = %d\n", singRowZ);fflush(stdout);
   }
   */
-  for (const auto& it : singRow) {
+  for (const int i : singRow) {
       // std::cout << " " << *it;
 
       if (status) return;
@@ -1954,10 +1954,8 @@ void Presolve::removeRowSingletons() {
         return;
       }
 
-      int i = it;
       assert(i >= 0 && i < numRow);
-      std::cout << ">>>>>>> . i = " << i << std::endl;
-      assert(flagRow[i]);
+      if (!flagRow[i]) continue;
 
       int k = getSingRowElementIndexInAR(i);
       // JAJH(190419): This throws a segfault with greenbea and greenbeb since

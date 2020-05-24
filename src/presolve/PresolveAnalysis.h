@@ -138,11 +138,11 @@ class PresolveTimer {
 
   HighsTimer& timer_;
 
-  inline double getTime() { return timer_.getWallTime(); }
+  inline double getTime() { return timer_.readRunHighsClock(); }
 
   inline bool reachLimit() {
     if (time_limit == inf || time_limit <= 0) return false;
-    if (getTime() - start_time < time_limit) return false;
+    if (getTime() < time_limit) return false;
     return true;
   }
 

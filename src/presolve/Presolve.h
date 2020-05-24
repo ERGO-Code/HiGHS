@@ -19,9 +19,9 @@
 #include <stack>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
-#include <unordered_set>
 
 #include "lp_data/HighsLp.h"
 #include "presolve/HPreData.h"
@@ -97,7 +97,7 @@ class Presolve : public HPreData {
     timer.time_limit = limit;
   }
 
-  int iPrint = 1;
+  int iPrint = -1;
   int message_level;
   FILE* output;
 
