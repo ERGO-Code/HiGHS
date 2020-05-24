@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_set>
 
 #include "lp_data/HighsLp.h"
 #include "presolve/HPreData.h"
@@ -145,8 +146,8 @@ class Presolve : public HPreData {
   bool hasChange = true;
   int status = 0;  // 0 is unassigned, see enum stat
 
-  list<int> singRow;  // singleton rows
-  list<int> singCol;  // singleton columns
+  std::unordered_set<int> singRow;  // singleton rows
+  std::unordered_set<int> singCol;  // singleton columns
 
   // original data
  public:
