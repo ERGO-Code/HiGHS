@@ -1941,6 +1941,8 @@ void Presolve::removeRowSingletons() {
 
     i = singRow.front();
     singRow.pop_front();
+    if (!flagRow[i]) continue;
+
 
     int k = getSingRowElementIndexInAR(i);
     // JAJH(190419): This throws a segfault with greenbea and greenbeb since
@@ -2067,8 +2069,8 @@ void Presolve::setPrimalValue(int j, double value) {
       // update singleton row list
       if (nzRow.at(row) == 1)
         singRow.push_back(row);
-      // else if (nzRow.at(row) == 0)
-      //   singRow.remove(row);
+      else if (nzRow.at(row) == 0)
+        singRow.remove(row);
     }
   }
 
