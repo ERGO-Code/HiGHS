@@ -409,8 +409,15 @@ endforeach()
 
 endif()
 
+# Modern CMake link in FAST_BUILD mode
+# All uses of target_link_libraries with a target must be either 
+# all-keyword or all-plain.
 if (OPENMP)
-    target_link_libraries(libhighs PUBLIC OpenMP::OpenMP_CXX)
+    if (FAST_BUILD)
+        target_link_libraries(libhighs PUBLIC OpenMP::OpenMP_CXX)
+    else()
+        target_link_libraries(libhighs OpenMP::OpenMP_CXX)
+    endif()
 endif()
 
 # # Comment out for scaffold/ tests
