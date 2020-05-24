@@ -17,10 +17,12 @@ if(EXISTS "${LOC_PATH}")
 endif()
 
 # Use OpenMP if version is high enough.
+option(OPENMP "OpenMP" OFF)
 find_package(OpenMP 3.0)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(highs PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(libhighs PUBLIC OpenMP::OpenMP_CXX)
     message(STATUS "Linking with OpenMP... ")
+    set(OPENMP ON)
 endif()
 
 # Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
