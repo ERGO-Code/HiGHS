@@ -584,7 +584,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
   if (nzRow.at(i) == 1) singRow.push_back(i);
 
   if (nzRow.at(i) == 0) {
-    singRow.remove(i);
+    // singRow.remove(i);
     removeEmptyRow(i);
     countRemovedRows(DOUBLETON_EQUATION);
   }
@@ -619,7 +619,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (nzRow.at(i) == 1) singRow.push_back(i);
 
     if (nzRow.at(i) == 0) {
-      singRow.remove(i);
+      //singRow.remove(i);
       removeEmptyRow(i);
       countRemovedRows(DOUBLETON_EQUATION);
     }
@@ -961,7 +961,7 @@ void Presolve::removeEmptyRow(int i) {
 
 void Presolve::removeEmptyColumn(int j) {
   flagCol.at(j) = 0;
-  singCol.remove(j);
+  // singCol.remove(j);
   double value;
   if ((colCost.at(j) < 0 && colUpper.at(j) >= HIGHS_CONST_INF) ||
       (colCost.at(j) > 0 && colLower.at(j) <= -HIGHS_CONST_INF)) {
@@ -1472,7 +1472,7 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
     cout << "PR: Second singleton column " << j << " in doubleton row " << i
          << " removed.\n";
   countRemovedCols(SING_COL_DOUBLETON_INEQ);
-  singCol.remove(j);
+  // singCol.remove(j);
 }
 
 void Presolve::removeColumnSingletons() {
@@ -1798,7 +1798,7 @@ void Presolve::setVariablesToBoundForForcingRow(const int row,
     ++k;
   }
 
-  if (nzRow.at(row) == 1) singRow.remove(row);
+  // if (nzRow.at(row) == 1) singRow.remove(row);
 
   countRemovedRows(FORCING_ROW);
 }
@@ -1942,8 +1942,6 @@ void Presolve::removeRowSingletons() {
     i = singRow.front();
     singRow.pop_front();
 
-    assert(flagRow[i]);
-
     int k = getSingRowElementIndexInAR(i);
     // JAJH(190419): This throws a segfault with greenbea and greenbeb since
     // k=-1
@@ -2069,8 +2067,8 @@ void Presolve::setPrimalValue(int j, double value) {
       // update singleton row list
       if (nzRow.at(row) == 1)
         singRow.push_back(row);
-      else if (nzRow.at(row) == 0)
-        singRow.remove(row);
+      // else if (nzRow.at(row) == 0)
+      //   singRow.remove(row);
     }
   }
 
