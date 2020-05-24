@@ -33,7 +33,8 @@ struct PresolveComponentData : public HighsComponentData {
 };
 
 // HighsComponentInfo is a placeholder for details we want to query from outside
-// of HiGHS like execution information. Times are recorded at the end of Highs::run()
+// of HiGHS like execution information. Times are recorded at the end of
+// Highs::run()
 struct PresolveComponentInfo : public HighsComponentInfo {
   int n_rows_removed = 0;
   int n_cols_removed = 0;
