@@ -571,7 +571,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
 
   nzCol.at(x)++;
   // nzRow does not change here.
-  if (nzCol.at(x) == 2) singCol.remove(x);
+  // if (nzCol.at(x) == 2) singCol.remove(x);
 }
 
 void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
@@ -1003,6 +1003,8 @@ void Presolve::rowDualBoundsDominatedColumns() {
     if (flagCol.at(*it)) {
       col = *it;
       k = getSingColElementIndexInA(col);
+      if (k < 0) continue;
+      assert(k < Aindex.size());
       i = Aindex.at(k);
 
       if (!flagRow.at(i)) {
@@ -1488,6 +1490,8 @@ void Presolve::removeColumnSingletons() {
 
       col = *it;
       k = getSingColElementIndexInA(col);
+      if (k < 0) { it++; continue;}
+      assert(k < Aindex.size());
       i = Aindex.at(k);
 
       // free
@@ -2069,8 +2073,8 @@ void Presolve::setPrimalValue(int j, double value) {
       // update singleton row list
       if (nzRow.at(row) == 1)
         singRow.push_back(row);
-      else if (nzRow.at(row) == 0)
-        singRow.remove(row);
+      // else if (nzRow.at(row) == 0)
+      //   singRow.remove(row);
     }
   }
 
