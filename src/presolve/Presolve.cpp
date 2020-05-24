@@ -18,6 +18,7 @@
 
 //#include "simplex/HFactor.h"
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <iomanip>
@@ -27,6 +28,8 @@
 #include <sstream>
 
 #include "test/KktChStep.h"
+
+namespace presolve {
 
 using std::cout;
 using std::endl;
@@ -41,6 +44,9 @@ using std::ofstream;
 using std::setprecision;
 using std::setw;
 using std::stringstream;
+
+// todo:
+// iKKTcheck = 1;
 
 void Presolve::load(const HighsLp& lp) {
   timer.recordStart(MATRIX_COPY);
@@ -66,56 +72,6 @@ void Presolve::load(const HighsLp& lp) {
   timer.recordFinish(MATRIX_COPY);
 }
 
-void PresolveInfo::negateColDuals(bool reduced) {
-  if (reduced)
-    for (unsigned int col = 0; col < reduced_solution_.col_dual.size(); col++)
-      reduced_solution_.col_dual[col] = reduced_solution_.col_dual[col];
-  else
-    for (unsigned int col = 0; col < recovered_solution_.col_dual.size(); col++)
-      recovered_solution_.col_dual[col] = recovered_solution_.col_dual[col];
-  return;
-}
-
-void PresolveInfo::negateReducedCosts() {
-  for (unsigned int col = 0; col < reduced_lp_.colCost_.size(); col++)
-    reduced_lp_.colCost_[col] = -reduced_lp_.colCost_[col];
-}
-
-HighsLp& PresolveInfo::getReducedProblem() {
-  if (presolve_.size() == 0) {
-    std::cout << "Error during presolve. No presolve initialized." << std::endl;
-  } else if (presolve_[0].status != presolve_[0].stat::Reduced) {
-    std::cout << "Error during presolve. No reduced LP. status: "
-              << presolve_[0].status << std::endl;
-  } else {
-    if (presolve_[0].numRow == 0 && presolve_[0].numCol == 0) {
-      // Reduced problem has been already moved to this.reduced_lp_;
-      return reduced_lp_;
-    } else {
-      // Move vectors so no copying happens. presolve does not need that lp
-      // any more.
-      reduced_lp_.numCol_ = presolve_[0].numCol;
-      reduced_lp_.numRow_ = presolve_[0].numRow;
-      reduced_lp_.Astart_ = std::move(presolve_[0].Astart);
-      reduced_lp_.Aindex_ = std::move(presolve_[0].Aindex);
-      reduced_lp_.Avalue_ = std::move(presolve_[0].Avalue);
-      reduced_lp_.colCost_ = std::move(presolve_[0].colCost);
-      reduced_lp_.colLower_ = std::move(presolve_[0].colLower);
-      reduced_lp_.colUpper_ = std::move(presolve_[0].colUpper);
-      reduced_lp_.rowLower_ = std::move(presolve_[0].rowLower);
-      reduced_lp_.rowUpper_ = std::move(presolve_[0].rowUpper);
-
-      reduced_lp_.sense_ = ObjSense::MINIMIZE;
-      reduced_lp_.offset_ = 0;
-      reduced_lp_.model_name_ =
-          std::move(presolve_[0].modelName);  //"Presolved model";
-
-      reduced_lp_.nnz_ = reduced_lp_.Avalue_.size();
-    }
-  }
-  return reduced_lp_;
-}
-
 void Presolve::setBasisInfo(
     const std::vector<HighsBasisStatus>& pass_col_status,
     const std::vector<HighsBasisStatus>& pass_row_status) {
@@ -123,16 +79,156 @@ void Presolve::setBasisInfo(
   row_status = pass_row_status;
 }
 
-int Presolve::presolve(int print) {
-  iPrint = print;
+// printing with cout goes here.
+void reportDev(const string& message) {
+  if (iPrint == 0) return;
 
-  // iPrint = 1;
-  // iKKTcheck = 1;
-  // chk.print = 1;
+  std::cout << message << std::flush;
+  return;
+}
+
+void printMainLoop(const MainLoop& l) {
+  if (iPrint == 0) return;
+
+  std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz << "   "
+            << std::endl;
+}
+
+void printDevStats(const DevStats& stats) {
+  assert(stats.n_loops == (int)stats.loops.size());
+  if (iPrint == 0) return;
+
+  std::cout << "dev-presolve-stats::" << std::endl;
+  std::cout << "  n_loops = " << stats.n_loops << std::endl;
+  std::cout << "    loop : rows, cols, nnz " << std::endl;
+  for (const MainLoop l : stats.loops) printMainLoop(l);
+  return;
+}
+
+void getRowsColsNnz(const std::vector<int>& flagRow,
+                    const std::vector<int>& flagCol,
+                    const std::vector<int>& nzRow,
+                    const std::vector<int>& nzCol, int& _rows, int& _cols,
+                    int& _nnz) {
+  int numCol = flagCol.size();
+  int numRow = flagRow.size();
+  int rows = 0;
+  int cols = 0;
+
+  std::vector<int> nnz_rows(numRow, 0);
+  std::vector<int> nnz_cols(numCol, 0);
+
+  int total_rows = 0;
+  int total_cols = 0;
+
+  for (int i = 0; i < numRow; i++)
+    if (flagRow.at(i)) {
+      rows++;
+      nnz_rows[i] += nzRow[i];
+      total_rows += nzRow[i];
+    }
+
+  for (int j = 0; j < numCol; j++)
+    if (flagCol.at(j)) {
+      cols++;
+      nnz_cols[j] += nzCol[j];
+      total_cols += nzCol[j];
+    }
+
+  // Nonzeros.
+  assert(total_cols == total_rows);
+
+  _rows = rows;
+  _cols = cols;
+  _nnz = total_cols;
+}
+
+void Presolve::reportDevMidMainLoop() {
+  if (iPrint == 0) return;
+
+  int rows = 0;
+  int cols = 0;
+  int nnz = 0;
+  getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
+
+  std::cout << "                                             counts " << rows
+            << ",  " << cols << ", " << nnz << std::endl;
+}
+
+void Presolve::reportDevMainLoop() {
+  if (iPrint == 0) return;
+
+  int rows = 0;
+  int cols = 0;
+  int nnz = 0;
+
+  getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
+
+  stats.dev.n_loops++;
+  stats.dev.loops.push_back(MainLoop{rows, cols, nnz});
+
+  std::cout << "Starting loop " << stats.dev.n_loops;
+
+  printMainLoop(stats.dev.loops[stats.dev.n_loops - 1]);
+  return;
+}
+
+int Presolve::runPresolvers(const std::vector<Presolver>& order) {
+  //***************** main loop ******************
+
+  checkBoundsAreConsistent();
+  if (status) return status;
+
+  for (Presolver main_loop_presolver : order) {
+    double time_start = timer.timer_.readRunHighsClock();
+    if (iPrint) std::cout << "----> ";
+    auto it = kPresolverNames.find(main_loop_presolver);
+    assert(it != kPresolverNames.end());
+    if (iPrint) std::cout << (*it).second << std::endl;
+
+    switch (main_loop_presolver) {
+      case Presolver::kMainRowSingletons:
+        removeRowSingletons();
+        break;
+      case Presolver::kMainForcing:
+        removeForcingConstraints();
+        break;
+      case Presolver::kMainColSingletons:
+        removeColumnSingletons();
+        break;
+      case Presolver::kMainDoubletonEq:
+        removeDoubletonEquations();
+        break;
+      case Presolver::kMainDominatedCols:
+        removeDominatedColumns();
+        break;
+    }
+
+    double time_end = timer.timer_.readRunHighsClock();
+    if (iPrint)
+      std::cout << (*it).second << " time: " << time_end - time_start
+                << std::endl;
+    reportDevMidMainLoop();
+    if (status) return status;
+  }
+
+  //***************** main loop ******************
+  return status;
+}
+
+int Presolve::presolve(int print) {
+  timer.start_time = timer.getTime();
 
   if (iPrint > 0) {
     cout << "Presolve started ..." << endl;
     cout << "Original problem ... N=" << numCol << "  M=" << numRow << endl;
+  }
+
+  if (iPrint < 0) {
+    stringstream ss;
+    ss << "dev-presolve: model:      rows, colx, nnz , " << modelName << ":  "
+       << numRow << ",  " << numCol << ",  " << (int)Avalue.size() << std::endl;
+    reportDev(ss.str());
   }
 
   initializeVectors();
@@ -149,40 +245,44 @@ int Presolve::presolve(int print) {
     }
   timer.recordFinish(FIXED_COL);
 
+  if (order.size() == 0) {
+    // pre_release_order:
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainForcing);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainDoubletonEq);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainColSingletons);
+    order.push_back(Presolver::kMainDominatedCols);
+  }
+  // Else: The order has been modified for experiments
+
   while (hasChange == 1) {
+    if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
-    if (iPrint > 0) cout << "PR: main loop " << iter << ":" << endl;
-    //***************** main loop ******************
-    checkBoundsAreConsistent();
+
+    reportDevMainLoop();
+    int run_status = runPresolvers(order);
+    assert(run_status == status);
+    if (run_status != status) {
+    }
     if (status) return status;
 
-    removeRowSingletons();
-    if (status) return status;
-    removeForcingConstraints(iter);
-    if (status) return status;
+    // todo: next ~~~
+    // Exit check: less than 10 % of what we had before.
 
-    removeRowSingletons();
-    if (status) return status;
-    removeDoubletonEquations();
-    if (status) return status;
-
-    removeRowSingletons();
-    if (status) return status;
-    removeColumnSingletons();
-    if (status) return status;
-
-    removeDominatedColumns();
-    if (status) return status;
-
-    //***************** main loop ******************
     iter++;
   }
+
+  reportDevMainLoop();
 
   timer.recordStart(RESIZE_MATRIX);
   checkForChanges(iter);
   timer.recordFinish(RESIZE_MATRIX);
 
   timer.updateInfo();
+
+  printDevStats(stats.dev);
 
   return status;
 }
@@ -211,6 +311,8 @@ HighsPresolveStatus Presolve::presolve() {
       // reduced problem solution indicated as optimal by
       // the solver.
       break;
+    case stat::Timeout:
+      presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
 
@@ -366,6 +468,11 @@ void Presolve::removeDoubletonEquations() {
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
           fabs(rowLower[row] - rowUpper[row]) < tol) {
+        if (timer.reachLimit()) {
+          status = stat::Timeout;
+          return;
+        }
+
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);
@@ -379,6 +486,7 @@ void Presolve::removeDoubletonEquations() {
         akx = getaij(row, x);
         aky = getaij(row, y);
         processRowDoubletonEquation(row, x, y, akx, aky, b);
+        if (status) return;
 
         for (int k = Astart.at(y); k < Aend.at(y); ++k)
           if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -637,6 +745,12 @@ void Presolve::resizeProblem() {
   numCol = nC;
   numTot = nR + nC;
 
+  if (iPrint < 0) {
+    stringstream ss;
+    ss << ",  Reduced : " << numRow << ",  " << numCol << ",  ";
+    reportDev(ss.str());
+  }
+
   if (nR + nC == 0) {
     status = Empty;
     return;
@@ -672,6 +786,13 @@ void Presolve::resizeProblem() {
       }
     }
   }
+
+  if (iPrint < 0) {
+    stringstream ss;
+    ss << Avalue.size() << ", ";
+    reportDev(ss.str());
+  }
+
   // For KKT checker: pass vectors before you trim them
   if (iKKTcheck == 1) {
     chk.setFlags(flagRow, flagCol);
@@ -788,13 +909,13 @@ void Presolve::initializeVectors() {
   implRowValueUpper = rowUpper;
 
   for (int i = 0; i < numRow; ++i) {
-    if (rowLower.at(i) == -HIGHS_CONST_INF) implRowDualUpper.at(i) = 0;
-    if (rowUpper.at(i) == HIGHS_CONST_INF) implRowDualLower.at(i) = 0;
+    if (rowLower.at(i) <= -HIGHS_CONST_INF) implRowDualUpper.at(i) = 0;
+    if (rowUpper.at(i) >= HIGHS_CONST_INF) implRowDualLower.at(i) = 0;
   }
 
   for (int i = 0; i < numCol; ++i) {
-    if (colLower.at(i) == -HIGHS_CONST_INF) implColDualUpper.at(i) = 0;
-    if (colUpper.at(i) == HIGHS_CONST_INF) implColDualLower.at(i) = 0;
+    if (colLower.at(i) <= -HIGHS_CONST_INF) implColDualUpper.at(i) = 0;
+    if (colUpper.at(i) >= HIGHS_CONST_INF) implColDualLower.at(i) = 0;
   }
 
   colCostAtEl = colCost;
@@ -842,8 +963,8 @@ void Presolve::removeEmptyColumn(int j) {
   flagCol.at(j) = 0;
   singCol.remove(j);
   double value;
-  if ((colCost.at(j) < 0 && colUpper.at(j) == HIGHS_CONST_INF) ||
-      (colCost.at(j) > 0 && colLower.at(j) == -HIGHS_CONST_INF)) {
+  if ((colCost.at(j) < 0 && colUpper.at(j) >= HIGHS_CONST_INF) ||
+      (colCost.at(j) > 0 && colLower.at(j) <= -HIGHS_CONST_INF)) {
     if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
     status = Unbounded;
     return;
@@ -890,17 +1011,17 @@ void Presolve::rowDualBoundsDominatedColumns() {
         exit(-1);
       }
 
-      if (colLower.at(col) == -HIGHS_CONST_INF ||
-          colUpper.at(col) == HIGHS_CONST_INF) {
+      if (colLower.at(col) <= -HIGHS_CONST_INF ||
+          colUpper.at(col) >= HIGHS_CONST_INF) {
         if (colLower.at(col) > -HIGHS_CONST_INF &&
-            colUpper.at(col) == HIGHS_CONST_INF) {
+            colUpper.at(col) >= HIGHS_CONST_INF) {
           if (Avalue.at(k) > 0)
             if ((colCost.at(col) / Avalue.at(k)) < implRowDualUpper.at(i))
               implRowDualUpper.at(i) = colCost.at(col) / Avalue.at(k);
           if (Avalue.at(k) < 0)
             if ((colCost.at(col) / Avalue.at(k)) > implRowDualLower.at(i))
               implRowDualLower.at(i) = colCost.at(col) / Avalue.at(k);
-        } else if (colLower.at(col) == -HIGHS_CONST_INF &&
+        } else if (colLower.at(col) <= -HIGHS_CONST_INF &&
                    colUpper.at(col) < HIGHS_CONST_INF) {
           if (Avalue.at(k) > 0)
             if ((colCost.at(col) / Avalue.at(k)) > implRowDualLower.at(i))
@@ -908,8 +1029,8 @@ void Presolve::rowDualBoundsDominatedColumns() {
           if (Avalue.at(k) < 0)
             if ((colCost.at(col) / Avalue.at(k)) < implRowDualUpper.at(i))
               implRowDualUpper.at(i) = colCost.at(col) / Avalue.at(k);
-        } else if (colLower.at(col) == -HIGHS_CONST_INF &&
-                   colUpper.at(col) == HIGHS_CONST_INF) {
+        } else if (colLower.at(col) <= -HIGHS_CONST_INF &&
+                   colUpper.at(col) >= HIGHS_CONST_INF) {
           // all should be removed earlier but use them
           if ((colCost.at(col) / Avalue.at(k)) > implRowDualLower.at(i))
             implRowDualLower.at(i) = colCost.at(col) / Avalue.at(k);
@@ -991,6 +1112,11 @@ void Presolve::removeDominatedColumns() {
   pair<double, double> p;
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
+
       timer.recordStart(DOMINATED_COLS);
 
       p = getImpliedColumnBounds(j);
@@ -999,7 +1125,7 @@ void Presolve::removeDominatedColumns() {
 
       // check if it is dominated
       if (colCost.at(j) - d > tol) {
-        if (colLower.at(j) == -HIGHS_CONST_INF) {
+        if (colLower.at(j) <= -HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
           return;
@@ -1011,7 +1137,7 @@ void Presolve::removeDominatedColumns() {
                << " removed. Value := " << valuePrimal.at(j) << endl;
         countRemovedCols(DOMINATED_COLS);
       } else if (colCost.at(j) - e < -tol) {
-        if (colUpper.at(j) == HIGHS_CONST_INF) {
+        if (colUpper.at(j) >= HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
           return;
@@ -1037,6 +1163,7 @@ void Presolve::removeDominatedColumns() {
         continue;
       }
       timer.recordFinish(DOMINATED_COLS);
+      if (status) return;
     }
 }
 
@@ -1070,7 +1197,7 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
 
       // calculate new bounds
       if (colLower.at(j) > -HIGHS_CONST_INF ||
-          colUpper.at(j) == HIGHS_CONST_INF)
+          colUpper.at(j) >= HIGHS_CONST_INF)
         for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
           if (flagRow.at(Aindex.at(kk)) && d < HIGHS_CONST_INF) {
             i = Aindex.at(kk);
@@ -1091,7 +1218,7 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
             }
           }
 
-      if (colLower.at(j) == -HIGHS_CONST_INF ||
+      if (colLower.at(j) <= -HIGHS_CONST_INF ||
           colUpper.at(j) < HIGHS_CONST_INF)
         for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
           if (flagRow.at(Aindex.at(kk)) && e > -HIGHS_CONST_INF) {
@@ -1318,14 +1445,14 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
   flagRow.at(i) = 0;
   double value;
   if (colCost.at(j) > 0) {
-    if (colLower.at(j) == -HIGHS_CONST_INF) {
+    if (colLower.at(j) <= -HIGHS_CONST_INF) {
       if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
       status = Unbounded;
       return;
     }
     value = colLower.at(j);
   } else if (colCost.at(j) < 0) {
-    if (colUpper.at(j) == HIGHS_CONST_INF) {
+    if (colUpper.at(j) >= HIGHS_CONST_INF) {
       if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
       status = Unbounded;
       return;
@@ -1354,13 +1481,18 @@ void Presolve::removeColumnSingletons() {
 
   while (it != singCol.end()) {
     if (flagCol[*it]) {
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
+
       col = *it;
       k = getSingColElementIndexInA(col);
       i = Aindex.at(k);
 
       // free
-      if (colLower.at(col) == -HIGHS_CONST_INF &&
-          colUpper.at(col) == HIGHS_CONST_INF) {
+      if (colLower.at(col) <= -HIGHS_CONST_INF &&
+          colUpper.at(col) >= HIGHS_CONST_INF) {
         timer.recordStart(FREE_SING_COL);
         removeFreeColumnSingleton(col, i, k);
         it = singCol.erase(it);
@@ -1389,6 +1521,8 @@ void Presolve::removeColumnSingletons() {
         }
       }
       it++;
+
+      if (status) return;
     } else
       it = singCol.erase(it);
   }
@@ -1422,12 +1556,12 @@ pair<double, double> Presolve::getBoundsImpliedFree(double lowInit,
 
       if ((Avalue.at(k) < 0 && ARvalue.at(kk) > 0) ||
           (Avalue.at(k) > 0 && ARvalue.at(kk) < 0))
-        if (l == -HIGHS_CONST_INF) {
+        if (l <= -HIGHS_CONST_INF) {
           low = -HIGHS_CONST_INF;
           break;
         } else
           low -= ARvalue.at(kk) * l;
-      else if (u == HIGHS_CONST_INF) {
+      else if (u >= HIGHS_CONST_INF) {
         low = -HIGHS_CONST_INF;
         break;
       } else
@@ -1451,12 +1585,12 @@ pair<double, double> Presolve::getBoundsImpliedFree(double lowInit,
       // low::
       if ((Avalue.at(k) < 0 && ARvalue.at(kk) > 0) ||
           (Avalue.at(k) > 0 && ARvalue.at(kk) < 0))
-        if (u == HIGHS_CONST_INF) {
+        if (u >= HIGHS_CONST_INF) {
           upp = HIGHS_CONST_INF;
           break;
         } else
           upp -= ARvalue.at(kk) * u;
-      else if (l == -HIGHS_CONST_INF) {
+      else if (l <= -HIGHS_CONST_INF) {
         upp = HIGHS_CONST_INF;
         break;
       } else
@@ -1507,11 +1641,11 @@ bool Presolve::removeIfImpliedFree(int col, int i, int k) {
   double low, upp;
 
   if (yi > 0) {
-    if (rowUpper.at(i) == HIGHS_CONST_INF) return false;
+    if (rowUpper.at(i) >= HIGHS_CONST_INF) return false;
     low = rowUpper.at(i);
     upp = rowUpper.at(i);
   } else if (yi < 0) {
-    if (rowLower.at(i) == -HIGHS_CONST_INF) return false;
+    if (rowLower.at(i) <= -HIGHS_CONST_INF) return false;
     low = rowLower.at(i);
     upp = rowLower.at(i);
   } else {
@@ -1729,12 +1863,18 @@ void Presolve::dominatedConstraintProcedure(const int i, const double g,
   }
 }
 
-void Presolve::removeForcingConstraints(int mainIter) {
+void Presolve::removeForcingConstraints() {
   double g, h;
   pair<double, double> implBounds;
 
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
+      if (status) return;
+      if (timer.reachLimit()) {
+        status = stat::Timeout;
+        return;
+      }
+
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
         countRemovedRows(EMPTY_ROW);
@@ -1781,8 +1921,6 @@ void Presolve::removeForcingConstraints(int mainIter) {
       }
       timer.recordFinish(FORCING_ROW);
     }
-  if (mainIter) {
-  }  // surpress warning.
 }
 
 void Presolve::removeRowSingletons() {
@@ -1795,6 +1933,12 @@ void Presolve::removeRowSingletons() {
   }
   */
   while (!(singRow.empty())) {
+    if (status) return;
+    if (timer.reachLimit()) {
+      status = stat::Timeout;
+      return;
+    }
+
     i = singRow.front();
     singRow.pop_front();
 
@@ -2300,6 +2444,9 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   for (int i = 0; i < numCol; ++i) {
     int iCol = eqIndexOfReduced.at(i);
+    assert(iCol < (int)valuePrimal.size());
+    assert(iCol < (int)valueColDual.size());
+    assert(iCol >= 0);
     valuePrimal[iCol] = colValue.at(i);
     valueColDual[iCol] = colDual.at(i);
     col_status.at(iCol) = temp_col_status.at(i);
@@ -2664,11 +2811,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         }
 
         else if ((ck > 0 && aik > 0) || (ck < 0 && aik < 0)) {
-          if (low == -HIGHS_CONST_INF)
+          if (low <= -HIGHS_CONST_INF)
             cout << "ERROR UNBOUNDED? unnecessary check";
           xkValue = low;
         } else if ((ck > 0 && aik < 0) || (ck < 0 && aik > 0)) {
-          if (upp == HIGHS_CONST_INF)
+          if (upp >= HIGHS_CONST_INF)
             cout << "ERROR UNBOUNDED? unnecessary check";
           xkValue = upp;
         }
@@ -3452,4 +3599,9 @@ void Presolve::countRemovedRows(PresolveRule rule) {
 
 void Presolve::countRemovedCols(PresolveRule rule) {
   timer.increaseCount(false, rule);
+  if (timer.time_limit > 0 &&
+      timer.timer_.readRunHighsClock() > timer.time_limit)
+    status = stat::Timeout;
 }
+
+}  // namespace presolve

@@ -21,7 +21,7 @@
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
-#include "presolve/Presolve.h"
+#include "presolve/PresolveComponent.h"
 #include "util/HighsTimer.h"
 
 /**
@@ -52,6 +52,11 @@ class Highs {
    */
   HighsStatus readModel(const std::string filename  //!< the filename
   );
+
+  /**
+   * @brief Clears the current model
+   */
+  HighsStatus clearModel();
 
   /**
    * @brief Solves the model according to the specified options
@@ -137,6 +142,8 @@ class Highs {
   );
 
   const HighsOptions& getHighsOptions() const;
+
+  HighsStatus resetHighsOptions();
 
   HighsStatus writeHighsOptions(
       const std::string filename,  //!< The filename
@@ -662,8 +669,22 @@ class Highs {
   HighsStatus setBasis(const HighsBasis& basis  //!< Basis to be used
   );
 
+  /**
+   * @brief Clears the HighsBasis for the LP of the HighsModelObject
+   */
+  HighsStatus setBasis();
+
   // todo: getRangingInformation(..)
 
+  /**
+   * @brief Gets the value of infinity used by HiGHS
+   */
+  double getHighsInfinity();
+
+  /**
+   * @brief Gets the run time of HiGHS
+   */
+  double getHighsRunTime();
   /**
    * @brief Clear data associated with solving the model: basis, solution and
    * internal data etc
@@ -676,20 +697,22 @@ class Highs {
    * validity
    */
   void reportModelStatusSolutionBasis(const std::string message,
-                                      const HighsModelStatus model_status,
-                                      const HighsLp& lp,
-                                      const HighsSolution& solution,
-                                      const HighsBasis& basis);
+                                      const int hmo_ix = -1);
 #endif
 
   std::string highsModelStatusToString(
       const HighsModelStatus model_status) const;
 
-  std::string highsPrimalDualStatusToString(const int primal_dual_status);
+  std::string primalDualStatusToString(const int primal_dual_status);
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
 #endif
+  void getPresolveReductionCounts(int& rows, int& cols, int& nnz) const;
+  PresolveComponentInfo getPresolveInfo() const { return presolve_.info_; }
+  void setPresolveOptions(const PresolveComponentOptions& options) {
+    presolve_.options_ = options;
+  }
 
  private:
   HighsSolution solution_;
@@ -717,10 +740,11 @@ class Highs {
   // it's set to the correct positive number in Highs::run()
   int omp_max_threads = 0;
 
-  HighsStatus runLpSolver(HighsModelObject& model, const string message);
+  HighsStatus runLpSolver(const int model_index, const string message);
 
-  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
-  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
+  PresolveComponent presolve_;
+  HighsPresolveStatus runPresolve();
+  HighsPostsolveStatus runPostsolve();
 
   HighsStatus openWriteFile(const string filename, const string method_name,
                             FILE*& file, bool& html) const;
@@ -740,7 +764,15 @@ class Highs {
   bool updateHighsSolutionBasis();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
+  HighsStatus reset();
+
+  void clearModelStatus();
+  void clearSolution();
+  void clearBasis();
+  void clearInfo();
+
   void underDevelopmentLogMessage(const string method_name);
+  void beforeReturnFromRun(HighsStatus& return_status);
 
   friend class HighsMipSolver;
 };

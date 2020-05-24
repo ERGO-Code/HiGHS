@@ -15,6 +15,7 @@
 #define PRESOLVE_PRESOLVE_H_
 
 #include <list>
+#include <map>
 #include <stack>
 #include <stdexcept>
 #include <string>
@@ -29,6 +30,7 @@ using std::list;
 using std::string;
 
 enum class HighsPostsolveStatus {
+  NotPresolved = -1,
   ReducedSolutionEmpty,
   ReducedSolutionDimenionsError,
   SolutionRecovered,
@@ -45,20 +47,32 @@ enum class HighsPresolveStatus {
   Empty,
   Reduced,
   ReducedToEmpty,
+  Timeout,
   NullError
 };
 
+namespace presolve {
+
+constexpr int iPrint = 0;
+
+enum class Presolver {
+  kMainRowSingletons,
+  kMainForcing,
+  kMainColSingletons,
+  kMainDoubletonEq,
+  kMainDominatedCols,
+};
+
+const std::map<Presolver, std::string> kPresolverNames{
+    {Presolver::kMainRowSingletons, "Row singletons ()"},
+    {Presolver::kMainForcing, "Forcing rows ()"},
+    {Presolver::kMainColSingletons, "Col singletons ()"},
+    {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
+    {Presolver::kMainDominatedCols, "Dominated Cols()"}};
+
 class Presolve : public HPreData {
  public:
-  Presolve(HighsTimer& timer_ref) : timer(timer_ref) {
-    tol = 0.0000001;
-    noPostSolve = false;
-    objShift = 0;
-    hasChange = true;
-    iKKTcheck = 0;
-    iPrint = 0;
-    countsFile = "";
-  }
+  Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
 
   HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
@@ -73,9 +87,18 @@ class Presolve : public HPreData {
   // todo: clear the public from below.
   string modelName;
 
+  // Options
+  std::vector<Presolver> order;
+
+  int max_iterations = 0;
+
+  void setTimeLimit(const double limit) {
+    assert(limit < inf && limit > 0);
+    timer.time_limit = limit;
+  }
+
  private:
-  int iPrint;
-  int iKKTcheck;
+  int iKKTcheck = 0;
   int presolve(int print);
 
   const bool report_postsolve = false;
@@ -112,12 +135,12 @@ class Presolve : public HPreData {
     Empty = 3,
     Optimal = 4,
     Reduced = 5,
+    Timeout = 6,
   };
 
  private:
-  bool hasChange;
+  bool hasChange = true;
   int status = 0;  // 0 is unassigned, see enum stat
-  friend class PresolveInfo;
 
   list<int> singRow;  // singleton rows
   list<int> singCol;  // singleton columns
@@ -151,7 +174,7 @@ class Presolve : public HPreData {
   int getSingColElementIndexInA(int j);
 
   // forcing constraints
-  void removeForcingConstraints(int mainIter);
+  void removeForcingConstraints();
   pair<double, double> getImpliedRowBounds(int row);
   void setVariablesToBoundForForcingRow(const int row, const bool isLower);
   void dominatedConstraintProcedure(const int i, const double g,
@@ -209,10 +232,10 @@ class Presolve : public HPreData {
   void countRemovedRows(PresolveRule rule);
   void countRemovedCols(PresolveRule rule);
 
-  double tol;
+  double tol = 0.0000001;
 
   // postsolve
-  bool noPostSolve;
+  bool noPostSolve = false;
 
   void addChange(PresolveRule type, int row, int col);
   void fillStackRowBounds(int col);
@@ -240,41 +263,14 @@ class Presolve : public HPreData {
   //	int testBasisMatrixSingularity();
   //
 
-  string countsFile;
+  // Dev presolve
+  // April 2020
+  void reportDevMainLoop();
+  void reportDevMidMainLoop();
+  PresolveStats stats;
+  int runPresolvers(const std::vector<Presolver>& order);
 };
 
-// comment out whole class and see what the issue is.
-
-// Class for easy communication between Presolve and Highs. A single
-// instance of PresolveInfo handles a single presolve execution on one
-// LP.
-class PresolveInfo {
- public:
-  PresolveInfo() {}
-  // option_presolve : off_string means don't presolve.
-  PresolveInfo(std::string option_presolve, const HighsLp& lp,
-               HighsTimer& timer) {
-    if (option_presolve != off_string) {
-      lp_ = &lp;
-      presolve_.push_back(Presolve(timer));
-    }
-  }
-
-  void negateReducedCosts();
-  void negateColDuals(bool reduced);
-  HighsLp& getReducedProblem();
-  HighsPresolveStatus presolve_status_;
-  HighsPostsolveStatus postsolve_status_;
-
- public:
-  // Original problem is lp_.
-  const HighsLp* lp_;
-  std::vector<Presolve> presolve_;
-  HighsLp reduced_lp_;
-
-  // todo: make reduced one const.
-  HighsSolution reduced_solution_;
-  HighsSolution recovered_solution_;
-};
+}  // namespace presolve
 
 #endif /* PRESOLVE_HPRESOLVE_H_ */

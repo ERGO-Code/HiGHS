@@ -191,6 +191,8 @@ OptionStatus getOptionValue(FILE* logfile, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
+void resetOptions(std::vector<OptionRecord*>& option_records);
+
 HighsStatus writeOptionsToFile(FILE* file,
                                const std::vector<OptionRecord*>& option_records,
                                const bool report_only_non_default_values = true,
@@ -240,6 +242,7 @@ struct HighsOptionsStruct {
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double dual_objective_value_upper_bound;
+  int highs_debug_level;
   int simplex_strategy;
   int simplex_scale_strategy;
   int simplex_crash_strategy;
@@ -256,6 +259,7 @@ struct HighsOptionsStruct {
   bool write_solution_pretty;
 
   // Advanced options
+  bool run_crossover;
   bool run_as_hsol;
   bool mps_parser_type_free;
   int keep_n_rows;
@@ -265,6 +269,7 @@ struct HighsOptionsStruct {
   int simplex_permute_strategy;
   int dual_simplex_cleanup_strategy;
   int simplex_price_strategy;
+  int dual_chuzc_sort_strategy;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshhold;
@@ -412,6 +417,12 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_int =
+        new OptionRecordInt("highs_debug_level", "Debugging level in HiGHS",
+                            advanced, &highs_debug_level, HIGHS_DEBUG_LEVEL_MIN,
+                            HIGHS_DEBUG_LEVEL_MIN, HIGHS_DEBUG_LEVEL_MAX);
+    records.push_back(record_int);
+
+    record_int =
         new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",
                             advanced, &simplex_strategy, SIMPLEX_STRATEGY_MIN,
                             SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
@@ -514,6 +525,12 @@ class HighsOptions : public HighsOptionsStruct {
 
     // Advanced options
     advanced = true;
+
+    record_bool = new OptionRecordBool("run_crossover",
+                                       "Run the crossover routine for IPX",
+                                       advanced, &run_crossover, true);
+    records.push_back(record_bool);
+
     record_bool = new OptionRecordBool(
         "run_as_hsol", "Run HiGHS simplex solver as if it were hsol", advanced,
         &run_as_hsol, false);
@@ -568,6 +585,12 @@ class HighsOptions : public HighsOptionsStruct {
         &simplex_price_strategy, SIMPLEX_PRICE_STRATEGY_MIN,
         SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
         SIMPLEX_PRICE_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "dual_chuzc_sort_strategy", "Strategy for CHUZC sort in dual simplex",
+        advanced, &dual_chuzc_sort_strategy, SIMPLEX_DUAL_CHUZC_STRATEGY_MIN,
+        SIMPLEX_DUAL_CHUZC_STRATEGY_CHOOSE, SIMPLEX_DUAL_CHUZC_STRATEGY_MAX);
     records.push_back(record_int);
 
     record_bool =

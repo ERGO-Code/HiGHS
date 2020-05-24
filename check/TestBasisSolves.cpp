@@ -7,8 +7,8 @@
 
 bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution_vector,
                                 int* solution_num_nz, int* solution_indices) {
-  double* solution_vector = (double*)malloc(sizeof(double) * numRow);
   if (solution_num_nz == NULL) return true;
+  double* solution_vector = (double*)malloc(sizeof(double) * numRow);
   bool solution_nz_ok = true;
   for (int row = 0; row < numRow; row++)
     solution_vector[row] = pass_solution_vector[row];
@@ -31,7 +31,7 @@ bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution_vector,
       solution_nz_ok = false;
     }
   }
-  delete solution_vector;
+  free(solution_vector);
   return solution_nz_ok;
 }
 double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables,

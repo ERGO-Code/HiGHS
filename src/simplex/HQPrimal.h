@@ -30,6 +30,7 @@ using std::pair;
  * dual infeasibilities when dual optimality (primal feasibility) has
  * been acheived with the dual simplex method
  */
+
 class HQPrimal {
  public:
   HQPrimal(HighsModelObject& model_object) : workHMO(model_object) {}
@@ -42,6 +43,8 @@ class HQPrimal {
    * @brief Perform Phase 2 primal simplex iterations
    */
   void solvePhase2();
+
+  const SimplexAlgorithm algorithm = SimplexAlgorithm::PRIMAL;
 
  private:
   void primalRebuild();
@@ -115,9 +118,6 @@ class HQPrimal {
   HVector row_ep;
   HVector row_ap;
   HVector col_aq;
-
-  double row_epDensity;
-  double columnDensity;
 };
 
 #endif /* SIMPLEX_HQPRIMAL_H_ */

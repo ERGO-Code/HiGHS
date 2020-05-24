@@ -1,4 +1,6 @@
 # Define library.
+# Outdated CMake approach: update in progress
+if (NOT FAST_BUILD)
 include_directories(ipm/ipx/src)
 include_directories(ipm/ipx/include)
 include_directories(ipm/basiclu/src)
@@ -70,6 +72,7 @@ set(ipx_sources
 endif()
 
 set(sources
+    ../external/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -77,15 +80,12 @@ set(sources
     io/HighsIO.cpp
     io/HMPSIO.cpp
     io/HMpsFF.cpp
-    io/HToyIO.cpp
     io/LoadOptions.cpp
-    io/LoadProblem.cpp
     lp_data/Highs.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
-    lp_data/HighsModelBuilder.cpp
     lp_data/HighsSolution.cpp
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
@@ -93,6 +93,7 @@ set(sources
     mip/HighsMipSolver.cpp
     mip/SolveMip.cpp
     presolve/Presolve.cpp
+    presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
@@ -108,6 +109,8 @@ set(sources
     simplex/HQPrimal.cpp
 #    simplex/HRanging.cpp
     simplex/HSimplex.cpp
+    simplex/HSimplexDebug.cpp
+    simplex/HSimplexReport.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -117,6 +120,9 @@ set(sources
     interfaces/highs_c_api.cpp)
 
 set(headers
+    ../external/filereaderlp/builder.hpp
+    ../external/filereaderlp/model.hpp
+    ../external/filereaderlp/reader.hpp
     ipm/IpxStatus.h
     io/Filereader.h
     io/FilereaderLp.h
@@ -124,10 +130,7 @@ set(headers
     io/FilereaderMps.h
     io/HMpsFF.h
     io/HMPSIO.h
-    io/HToyIO_C.h
-    io/HToyIO.h
     io/HighsIO.h
-    io/LoadProblem.h
     io/LoadOptions.h
     lp_data/HConst.h
     lp_data/HighsAnalysis.h
@@ -141,7 +144,6 @@ set(headers
     lp_data/HighsSolution.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
-    lp_data/HighsModelBuilder.h
     mip/HighsMipSolver.h
     mip/SolveMip.h
     simplex/HApp.h
@@ -158,14 +160,18 @@ set(headers
     simplex/HQPrimal.h
 #    simplex/HRanging.h
     simplex/HSimplex.h
+    simplex/HSimplexDebug.h
+    simplex/HSimplexReport.h
     simplex/SimplexConst.h
     presolve/Presolve.h
+    presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
     presolve/HPreData.h
     simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
+    util/HighsComponent.h
     util/HighsRandom.h
     util/HighsSort.h
     util/HighsTimer.h
@@ -344,3 +350,63 @@ install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
     DESTINATION lib/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" 
     DESTINATION lib/pkg-config)
+
+else() 
+
+# FAST_BUILD is set to on.
+# At the moment used only for gradually updating the CMake targets build and install / export.
+# Define library in modern CMake using target_*()
+# No interfaces (apart from c); No ipx; New (short) ctest instances.
+add_library(libhighs)
+target_sources(libhighs PRIVATE 
+    ../external/filereaderlp/reader.cpp
+    io/Filereader.cpp
+    io/FilereaderLp.cpp
+    io/FilereaderEms.cpp
+    io/FilereaderMps.cpp
+    io/HighsIO.cpp
+    io/HMPSIO.cpp
+    io/HMpsFF.cpp
+    io/LoadOptions.cpp
+    lp_data/Highs.cpp
+    lp_data/HighsInfo.cpp
+    lp_data/HighsLp.cpp
+    lp_data/HighsLpUtils.cpp
+    lp_data/HighsModelUtils.cpp
+    lp_data/HighsSolution.cpp
+    lp_data/HighsSolve.cpp
+    lp_data/HighsStatus.cpp
+    lp_data/HighsOptions.cpp
+    mip/HighsMipSolver.cpp
+    mip/SolveMip.cpp
+    presolve/Presolve.cpp
+    presolve/PresolveComponent.cpp
+    presolve/PresolveAnalysis.cpp
+    presolve/HPreData.cpp
+    simplex/HCrash.cpp
+    simplex/HDual.cpp
+    simplex/HDualRHS.cpp
+    simplex/HDualRow.cpp
+    simplex/HDualMulti.cpp
+    simplex/HFactor.cpp
+    simplex/HighsSimplexAnalysis.cpp
+    simplex/HighsSimplexInterface.cpp
+    simplex/HMatrix.cpp
+    simplex/HPrimal.cpp
+    simplex/HQPrimal.cpp
+    simplex/HSimplex.cpp
+    simplex/HSimplexDebug.cpp
+    simplex/HSimplexReport.cpp
+    simplex/HVector.cpp
+    test/KktCheck.cpp
+    test/KktChStep.cpp
+    util/HighsSort.cpp
+    util/HighsUtils.cpp
+    util/stringutil.cpp
+    interfaces/highs_c_api.cpp)
+
+target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
+                           presolve/ util/ test/ interfaces/ ../external/)
+target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
+
+endif()
