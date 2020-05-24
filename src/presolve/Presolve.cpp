@@ -81,22 +81,17 @@ void Presolve::setBasisInfo(
 
 // printing with cout goes here.
 void reportDev(const string& message) {
-  if (iPrint == 0) return;
-
   std::cout << message << std::flush;
   return;
 }
 
 void printMainLoop(const MainLoop& l) {
-  if (iPrint == 0) return;
-
   std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz << "   "
             << std::endl;
 }
 
 void printDevStats(const DevStats& stats) {
   assert(stats.n_loops == (int)stats.loops.size());
-  if (iPrint == 0) return;
 
   std::cout << "dev-presolve-stats::" << std::endl;
   std::cout << "  n_loops = " << stats.n_loops << std::endl;
@@ -156,20 +151,25 @@ void Presolve::reportDevMidMainLoop() {
 }
 
 void Presolve::reportDevMainLoop() {
-  if (iPrint == 0) return;
+  if (iPrint == 0) {
+    if (timer.getTime() > 10)
+      HighsPrintMessage(output, message_level, ML_VERBOSE,
+                        "Presolve finished main loop %d... ",
+                        stats.dev.n_loops + 1);
+  } else {
+    int rows = 0;
+    int cols = 0;
+    int nnz = 0;
 
-  int rows = 0;
-  int cols = 0;
-  int nnz = 0;
+    getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
 
-  getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
+    stats.dev.n_loops++;
+    stats.dev.loops.push_back(MainLoop{rows, cols, nnz});
 
-  stats.dev.n_loops++;
-  stats.dev.loops.push_back(MainLoop{rows, cols, nnz});
+    std::cout << "Starting loop " << stats.dev.n_loops;
 
-  std::cout << "Starting loop " << stats.dev.n_loops;
-
-  printMainLoop(stats.dev.loops[stats.dev.n_loops - 1]);
+    printMainLoop(stats.dev.loops[stats.dev.n_loops - 1]);
+  }
   return;
 }
 
@@ -282,7 +282,7 @@ int Presolve::presolve(int print) {
 
   timer.updateInfo();
 
-  printDevStats(stats.dev);
+  if (iPrint != 0) printDevStats(stats.dev);
 
   return status;
 }

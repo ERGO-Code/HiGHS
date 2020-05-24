@@ -48,12 +48,11 @@ enum class HighsPresolveStatus {
   Reduced,
   ReducedToEmpty,
   Timeout,
-  NullError
+  NullError,
+  OptionsError,
 };
 
 namespace presolve {
-
-constexpr int iPrint = 0;
 
 enum class Presolver {
   kMainRowSingletons,
@@ -96,6 +95,10 @@ class Presolve : public HPreData {
     assert(limit < inf && limit > 0);
     timer.time_limit = limit;
   }
+
+  int iPrint = 0;
+  int message_level;
+  FILE* output;
 
  private:
   int iKKTcheck = 0;
