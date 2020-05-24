@@ -1949,13 +1949,7 @@ void Presolve::removeRowSingletons() {
 
 
     int k = getSingRowElementIndexInAR(i);
-    // JAJH(190419): This throws a segfault with greenbea and greenbeb since
-    // k=-1
-    if (k < 0) {
-      printf("In removeRowSingletons: %d = k < 0\n", k);
-      printf("   Occurs for case when initial singRow.size() = %d\n", singRowZ);
-      fflush(stdout);
-    }
+    if (k < 0) continue;
     int j = ARindex.at(k);
 
     // add old bounds OF X to checker and for postsolve
