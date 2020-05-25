@@ -241,7 +241,10 @@ int Presolve::presolve(int print) {
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
       removeIfFixed(j);
-      if (status) return status;
+      if (status) {
+        timer.recordFinish(FIXED_COL);
+        return status;
+      }
     }
   timer.recordFinish(FIXED_COL);
 
@@ -315,6 +318,7 @@ HighsPresolveStatus Presolve::presolve() {
       presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
+  if (iPrint > 0) timer.reportClocks();
 
   return presolve_status;
 }
@@ -470,6 +474,7 @@ void Presolve::removeDoubletonEquations() {
           fabs(rowLower[row] - rowUpper[row]) < tol) {
         if (timer.reachLimit()) {
           status = stat::Timeout;
+          timer.recordFinish(DOUBLETON_EQUATION);
           return;
         }
 
@@ -486,7 +491,10 @@ void Presolve::removeDoubletonEquations() {
         akx = getaij(row, x);
         aky = getaij(row, y);
         processRowDoubletonEquation(row, x, y, akx, aky, b);
-        if (status) return;
+        if (status) {
+          timer.recordFinish(DOUBLETON_EQUATION);
+          return;
+        }
 
         for (int k = Astart.at(y); k < Aend.at(y); ++k)
           if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -619,7 +627,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (nzRow.at(i) == 1) singRow.push_back(i);
 
     if (nzRow.at(i) == 0) {
-      //singRow.remove(i);
+      // singRow.remove(i);
       removeEmptyRow(i);
       countRemovedRows(DOUBLETON_EQUATION);
     }
@@ -1130,6 +1138,7 @@ void Presolve::removeDominatedColumns() {
         if (colLower.at(j) <= -HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
+          timer.recordFinish(DOMINATED_COLS);
           return;
         }
         setPrimalValue(j, colLower.at(j));
@@ -1142,6 +1151,7 @@ void Presolve::removeDominatedColumns() {
         if (colUpper.at(j) >= HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
+          timer.recordFinish(DOMINATED_COLS);
           return;
         }
         setPrimalValue(j, colUpper.at(j));
@@ -1490,7 +1500,10 @@ void Presolve::removeColumnSingletons() {
 
       col = *it;
       k = getSingColElementIndexInA(col);
-      if (k < 0) { it++; continue;}
+      if (k < 0) {
+        it++;
+        continue;
+      }
       assert(k < Aindex.size());
       i = Aindex.at(k);
 
@@ -1947,7 +1960,6 @@ void Presolve::removeRowSingletons() {
     singRow.pop_front();
     if (!flagRow[i]) continue;
 
-
     int k = getSingRowElementIndexInAR(i);
     if (k < 0) continue;
     int j = ARindex.at(k);
@@ -2065,8 +2077,7 @@ void Presolve::setPrimalValue(int j, double value) {
       nzRow.at(row)--;
 
       // update singleton row list
-      if (nzRow.at(row) == 1)
-        singRow.push_back(row);
+      if (nzRow.at(row) == 1) singRow.push_back(row);
       // else if (nzRow.at(row) == 0)
       //   singRow.remove(row);
     }
