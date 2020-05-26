@@ -128,8 +128,11 @@ class PresolveTimer {
       assert(rules_[id].rule_id == id);
       clocks[id] = rules_[id].clock_id;
     }
+    const int total_presolve_time_as_rule = TOTAL_PRESOLVE_TIME;
+    const double ideal_time = getRuleTime(total_presolve_time_as_rule);
+
     std::cout << std::endl;
-    timer_.report("grep-Presolve", clocks);
+    timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
   }
 
@@ -137,6 +140,10 @@ class PresolveTimer {
   double getTotalTime() { return total_time_; }
 
   HighsTimer& timer_;
+
+  double getRuleTime(const int rule_id) {
+    return timer_.read(rules_[rule_id].clock_id);
+  }
 
   inline double getTime() { return timer_.readRunHighsClock(); }
 

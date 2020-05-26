@@ -92,7 +92,6 @@ class PresolveComponent : public HighsComponent {
 namespace presolve {
 
 bool checkOptions(const PresolveComponentOptions& options);
-
 }
 
 #endif

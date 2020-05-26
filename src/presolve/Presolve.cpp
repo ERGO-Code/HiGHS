@@ -241,7 +241,10 @@ int Presolve::presolve(int print) {
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
       removeIfFixed(j);
-      if (status) return status;
+      if (status) {
+        timer.recordFinish(FIXED_COL);
+        return status;
+      }
     }
   timer.recordFinish(FIXED_COL);
 
@@ -315,6 +318,7 @@ HighsPresolveStatus Presolve::presolve() {
       presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
+  if (iPrint > 0) timer.reportClocks();
 
   return presolve_status;
 }
@@ -470,6 +474,7 @@ void Presolve::removeDoubletonEquations() {
           fabs(rowLower[row] - rowUpper[row]) < tol) {
         if (timer.reachLimit()) {
           status = stat::Timeout;
+          timer.recordFinish(DOUBLETON_EQUATION);
           return;
         }
 
@@ -486,7 +491,10 @@ void Presolve::removeDoubletonEquations() {
         akx = getaij(row, x);
         aky = getaij(row, y);
         processRowDoubletonEquation(row, x, y, akx, aky, b);
-        if (status) return;
+        if (status) {
+          timer.recordFinish(DOUBLETON_EQUATION);
+          return;
+        }
 
         for (int k = Astart.at(y); k < Aend.at(y); ++k)
           if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -571,7 +579,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
 
   nzCol.at(x)++;
   // nzRow does not change here.
-  if (nzCol.at(x) == 2) singCol.remove(x);
+  // if (nzCol.at(x) == 2) singCol.remove(x);
 }
 
 void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
@@ -584,7 +592,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
   if (nzRow.at(i) == 1) singRow.push_back(i);
 
   if (nzRow.at(i) == 0) {
-    singRow.remove(i);
+    // singRow.remove(i);
     removeEmptyRow(i);
     countRemovedRows(DOUBLETON_EQUATION);
   }
@@ -619,7 +627,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (nzRow.at(i) == 1) singRow.push_back(i);
 
     if (nzRow.at(i) == 0) {
-      singRow.remove(i);
+      // singRow.remove(i);
       removeEmptyRow(i);
       countRemovedRows(DOUBLETON_EQUATION);
     }
@@ -961,7 +969,7 @@ void Presolve::removeEmptyRow(int i) {
 
 void Presolve::removeEmptyColumn(int j) {
   flagCol.at(j) = 0;
-  singCol.remove(j);
+  // singCol.remove(j);
   double value;
   if ((colCost.at(j) < 0 && colUpper.at(j) >= HIGHS_CONST_INF) ||
       (colCost.at(j) > 0 && colLower.at(j) <= -HIGHS_CONST_INF)) {
@@ -1003,6 +1011,8 @@ void Presolve::rowDualBoundsDominatedColumns() {
     if (flagCol.at(*it)) {
       col = *it;
       k = getSingColElementIndexInA(col);
+      if (k < 0) continue;
+      assert(k < Aindex.size());
       i = Aindex.at(k);
 
       if (!flagRow.at(i)) {
@@ -1128,6 +1138,7 @@ void Presolve::removeDominatedColumns() {
         if (colLower.at(j) <= -HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
+          timer.recordFinish(DOMINATED_COLS);
           return;
         }
         setPrimalValue(j, colLower.at(j));
@@ -1140,6 +1151,7 @@ void Presolve::removeDominatedColumns() {
         if (colUpper.at(j) >= HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
+          timer.recordFinish(DOMINATED_COLS);
           return;
         }
         setPrimalValue(j, colUpper.at(j));
@@ -1472,7 +1484,7 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
     cout << "PR: Second singleton column " << j << " in doubleton row " << i
          << " removed.\n";
   countRemovedCols(SING_COL_DOUBLETON_INEQ);
-  singCol.remove(j);
+  // singCol.remove(j);
 }
 
 void Presolve::removeColumnSingletons() {
@@ -1488,6 +1500,11 @@ void Presolve::removeColumnSingletons() {
 
       col = *it;
       k = getSingColElementIndexInA(col);
+      if (k < 0) {
+        it++;
+        continue;
+      }
+      assert(k < Aindex.size());
       i = Aindex.at(k);
 
       // free
@@ -1798,7 +1815,7 @@ void Presolve::setVariablesToBoundForForcingRow(const int row,
     ++k;
   }
 
-  if (nzRow.at(row) == 1) singRow.remove(row);
+  // if (nzRow.at(row) == 1) singRow.remove(row);
 
   countRemovedRows(FORCING_ROW);
 }
@@ -1941,17 +1958,10 @@ void Presolve::removeRowSingletons() {
 
     i = singRow.front();
     singRow.pop_front();
-
-    assert(flagRow[i]);
+    if (!flagRow[i]) continue;
 
     int k = getSingRowElementIndexInAR(i);
-    // JAJH(190419): This throws a segfault with greenbea and greenbeb since
-    // k=-1
-    if (k < 0) {
-      printf("In removeRowSingletons: %d = k < 0\n", k);
-      printf("   Occurs for case when initial singRow.size() = %d\n", singRowZ);
-      fflush(stdout);
-    }
+    if (k < 0) continue;
     int j = ARindex.at(k);
 
     // add old bounds OF X to checker and for postsolve
@@ -2067,10 +2077,9 @@ void Presolve::setPrimalValue(int j, double value) {
       nzRow.at(row)--;
 
       // update singleton row list
-      if (nzRow.at(row) == 1)
-        singRow.push_back(row);
-      else if (nzRow.at(row) == 0)
-        singRow.remove(row);
+      if (nzRow.at(row) == 1) singRow.push_back(row);
+      // else if (nzRow.at(row) == 0)
+      //   singRow.remove(row);
     }
   }
 
@@ -2275,15 +2284,11 @@ int Presolve::getSingRowElementIndexInAR(int i) {
   int k = ARstart.at(i);
   while (!flagCol.at(ARindex.at(k))) ++k;
   if (k >= ARstart.at(i + 1)) {
-    cout << "Error during presolve: no variable found in singleton row " << i
-         << endl;
     return -1;
   }
   int rest = k + 1;
   while (rest < ARstart.at(i + 1) && !flagCol.at(ARindex.at(rest))) ++rest;
   if (rest < ARstart.at(i + 1)) {
-    cout << "Error during presolve: more variables found in singleton row " << i
-         << endl;
     return -1;
   }
   return k;
@@ -2293,15 +2298,11 @@ int Presolve::getSingColElementIndexInA(int j) {
   int k = Astart.at(j);
   while (!flagRow.at(Aindex.at(k))) ++k;
   if (k >= Aend.at(j)) {
-    cout << "Error during presolve: no variable found in singleton col " << j
-         << ".";
     return -1;
   }
   int rest = k + 1;
   while (rest < Aend.at(j) && !flagRow.at(Aindex.at(rest))) ++rest;
   if (rest < Aend.at(j)) {
-    cout << "Error during presolve: more variables found in singleton col " << j
-         << ".";
     return -1;
   }
   return k;
