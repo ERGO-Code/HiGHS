@@ -202,6 +202,9 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
       case Presolver::kMainDominatedCols:
         removeDominatedColumns();
         break;
+      case Presolver::kKnapsack:
+        removeKnapsackConstraints();
+        break;
     }
 
     double time_end = timer.timer_.readRunHighsClock();
@@ -627,7 +630,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (nzRow.at(i) == 1) singRow.push_back(i);
 
     if (nzRow.at(i) == 0) {
-      // singRow.remove(i);
       removeEmptyRow(i);
       countRemovedRows(DOUBLETON_EQUATION);
     }
@@ -1545,6 +1547,48 @@ void Presolve::removeColumnSingletons() {
   }
 }
 
+void Presolve::removeKnapsackConstraints() {
+  timer.recordStart(KNAPSACK);
+
+  list<int>::iterator it = singCol.begin();
+  while (it != singCol.end()) {
+    const int col = *it;
+    if (!flagCol[col]) {
+      it = singCol.erase(it);
+      continue;
+    }
+
+    bool remove = isKnapsack(col);
+    if (remove) {
+      removeKnapsack(col);
+      it = singCol.erase(it);
+      continue;
+    }
+  }
+
+  timer.recordFinish(KNAPSACK);
+}
+
+void Presolve::removeKnapsack(const int col) {
+  for (int k = Astart[col]; k<Aend[col]; k++) {
+    assert(Aindex[k] >= 0 && Aindex[k] <= numRow);
+    // todo:
+  }
+
+  return;
+}
+
+
+bool Presolve::isKnapsack(const int col) const {
+  for (int k = Astart[col]; k<Aend[col]; k++) {
+    assert(Aindex[k] >= 0 && Aindex[k] <= numRow);
+    if (flagRow[Aindex[k]]) {
+      if (nzCol[Aindex[k]] !=1) return false;
+    }
+  }
+  return true;
+}
+
 pair<double, double> Presolve::getBoundsImpliedFree(double lowInit,
                                                     double uppInit,
                                                     const int col, const int i,
@@ -1815,8 +1859,6 @@ void Presolve::setVariablesToBoundForForcingRow(const int row,
     ++k;
   }
 
-  // if (nzRow.at(row) == 1) singRow.remove(row);
-
   countRemovedRows(FORCING_ROW);
 }
 
@@ -2078,8 +2120,6 @@ void Presolve::setPrimalValue(int j, double value) {
 
       // update singleton row list
       if (nzRow.at(row) == 1) singRow.push_back(row);
-      // else if (nzRow.at(row) == 0)
-      //   singRow.remove(row);
     }
   }
 

@@ -60,6 +60,7 @@ enum class Presolver {
   kMainColSingletons,
   kMainDoubletonEq,
   kMainDominatedCols,
+  kKnapsack,
 };
 
 const std::map<Presolver, std::string> kPresolverNames{
@@ -67,7 +68,8 @@ const std::map<Presolver, std::string> kPresolverNames{
     {Presolver::kMainForcing, "Forcing rows ()"},
     {Presolver::kMainColSingletons, "Col singletons ()"},
     {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
-    {Presolver::kMainDominatedCols, "Dominated Cols()"}};
+    {Presolver::kMainDominatedCols, "Dominated Cols()"},
+    {Presolver::kKnapsack, "Knapsack()"}};
 
 class Presolve : public HPreData {
  public:
@@ -272,6 +274,10 @@ class Presolve : public HPreData {
   void reportDevMidMainLoop();
   PresolveStats stats;
   int runPresolvers(const std::vector<Presolver>& order);
+
+  bool isKnapsack(const int col) const;
+  void removeKnapsack(const int col);
+  void removeKnapsackConstraints();
 };
 
 }  // namespace presolve
