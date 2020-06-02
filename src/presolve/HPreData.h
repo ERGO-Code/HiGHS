@@ -38,6 +38,7 @@ struct change {
 class HPreData {
  public:
   HPreData();
+  virtual ~HPreData() {}
 
   // Model data
   int numCol;

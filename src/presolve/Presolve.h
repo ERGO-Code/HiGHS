@@ -72,6 +72,7 @@ const std::map<Presolver, std::string> kPresolverNames{
 class Presolve : public HPreData {
  public:
   Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
+  virtual ~Presolve() {}
 
   HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,

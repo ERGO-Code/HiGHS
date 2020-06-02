@@ -14,6 +14,7 @@
 #include "test/KktChStep.h"
 
 #include <utility>
+#include <cassert>
 
 #include "test/KktCheck.h"
 
@@ -78,9 +79,17 @@ void KktChStep::passBasis(const vector<HighsBasisStatus>& columns,
       j++;
     }
 
-  for (int i = 0; i < numCol; i++) col_status[eqIndexOfReduced[i]] = columns[i];
+  if (numCol > 0)
+    for (int i = 0; i < numCol; i++) {
+      assert(i < (int)eqIndexOfReduced.size());
+      assert(eqIndexOfReduced[i] < (int)col_status.size());
+      assert(eqIndexOfReduced[i] > 0);
+      col_status[eqIndexOfReduced[i]] = columns[i];
+    }
 
-  for (int i = 0; i < numRow; i++) row_status[eqIndexOfReduROW[i]] = rows[i];
+  if (numRow > 0)
+    for (int i = 0; i < numRow; i++)
+      row_status[eqIndexOfReduROW[i]] = rows[i];
 }
 
 void KktChStep::passSolution(const vector<double>& colVal,
