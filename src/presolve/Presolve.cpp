@@ -756,6 +756,12 @@ void Presolve::resizeProblem() {
     reportDev(ss.str());
   }
 
+  // For KKT checker: pass vectors before you trim them
+  if (iKKTcheck == 1) {
+    chk.setFlags(flagRow, flagCol);
+    chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
+  }
+
   if (nR + nC == 0) {
     status = Empty;
     return;
@@ -796,12 +802,6 @@ void Presolve::resizeProblem() {
     stringstream ss;
     ss << Avalue.size() << ", ";
     reportDev(ss.str());
-  }
-
-  // For KKT checker: pass vectors before you trim them
-  if (iKKTcheck == 1) {
-    chk.setFlags(flagRow, flagCol);
-    chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
   }
 
   // also call before trimming
@@ -2397,7 +2397,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
     chk.passSolution(colValue, colDual, rowDual);
     chk.passBasis(col_status, row_status);
-((int) colValue.size() > 0 || (int) rowDual.size() > 0)
     chk.makeKKTCheck();
   }
   // So there have been changes definitely ->
