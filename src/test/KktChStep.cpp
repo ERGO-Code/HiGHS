@@ -24,6 +24,9 @@ using std::pair;
 using std::setw;
 using std::vector;
 
+namespace presolve {
+namespace kkt_check {
+
 void KktChStep::replaceBasis(const vector<HighsBasisStatus>& columns,
                              const vector<HighsBasisStatus>& rows) {
   col_status = columns;
@@ -668,3 +671,6 @@ void KktChStep::printAR() {
 
   cout << endl;
 }
+
+}  // namespace kkt_check
+}  // namespace presolve

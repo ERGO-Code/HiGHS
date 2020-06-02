@@ -45,9 +45,6 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-// todo:
-// iKKTcheck = 1;
-
 void Presolve::load(const HighsLp& lp) {
   timer.recordStart(MATRIX_COPY);
   numCol = lp.numCol_;

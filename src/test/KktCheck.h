@@ -23,6 +23,9 @@
 
 #include "lp_data/HConst.h"
 
+namespace presolve {
+namespace kkt_check {
+
 class KktCheck {
   // model
   int numCol;
@@ -88,4 +91,8 @@ class KktCheck {
                          const std::vector<double>& rowUpper_,
                          const std::vector<double>& cost);
 };
+
+}
+}
+
 #endif /* TEST_KKTCHECK_H_ */

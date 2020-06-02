@@ -16,6 +16,9 @@
 #include <cassert>
 #include <vector>
 
+namespace presolve {
+namespace kkt_check {
+
 void KktCheck::printAR() {
   std::cout << "N=" << numCol << ",  M=" << numRow
             << ",  NZ= " << ARstart[numRow] << '\n';
@@ -360,6 +363,8 @@ void KktCheck::checkKKT() {
 
   istrueGlb = false;
 
+  std::cout << std::endl;
+
   makeARCopy();
   // printAR();printSol();
   chPrimalBounds();
@@ -429,4 +434,7 @@ void KktCheck::setIndexVectors(std::vector<int>& rIndex,
       cIndexRev.push_back(i);
     }
   }
+}
+
+}
 }

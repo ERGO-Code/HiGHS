@@ -24,6 +24,9 @@
 
 #include "lp_data/HConst.h"
 
+namespace presolve {
+namespace kkt_check {
+
 class KktCheck;
 
 class KktChStep {
@@ -110,4 +113,7 @@ class KktChStep {
   void resizeProblemMatrix(KktCheck& checker);
   void addCost(int col, double value);
 };
+
+}  // namespace kkt_check
+}  // namespace presolve
 #endif /* TEST_KKTCHSTEP_H_ */
