@@ -31,7 +31,7 @@ class KktCheck;
 
 class KktChStep {
  public:
-  KktChStep() { print = 0; }
+  KktChStep() {}
 
   // model: full matrix in AR (row-wise) and working copy(column-wise)
   std::vector<int> ARstart;
@@ -69,7 +69,7 @@ class KktChStep {
   std::vector<double> colUpper;
   std::vector<double> rowLower;
   std::vector<double> rowUpper;
-  int print;
+  int print = 1;
 
   // basis
   std::vector<HighsBasisStatus> col_status;

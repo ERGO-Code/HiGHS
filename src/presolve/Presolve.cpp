@@ -841,20 +841,6 @@ void Presolve::resizeProblem() {
       k++;
     }
 
-  if (chk.print == 3) {
-    ofstream myfile;
-    myfile.open("../experiments/out", ios::app);
-    myfile << " eliminated rows " << (numRowOriginal - numRow) << " cols "
-           << (numColOriginal - numCol);
-    myfile.close();
-
-    myfile.open("../experiments/t3", ios::app);
-    myfile << (numRowOriginal) << "  &  " << (numColOriginal) << "  & ";
-    myfile << (numRowOriginal - numRow) << "  &  " << (numColOriginal - numCol)
-           << "  & " << endl;
-
-    myfile.close();
-  }
 }
 
 void Presolve::initializeVectors() {
@@ -1009,7 +995,7 @@ void Presolve::rowDualBoundsDominatedColumns() {
       col = *it;
       k = getSingColElementIndexInA(col);
       if (k < 0) continue;
-      assert(k < Aindex.size());
+      assert(k < (int)Aindex.size());
       i = Aindex.at(k);
 
       if (!flagRow.at(i)) {
@@ -1501,7 +1487,7 @@ void Presolve::removeColumnSingletons() {
         it++;
         continue;
       }
-      assert(k < Aindex.size());
+      assert(k < (int)Aindex.size());
       i = Aindex.at(k);
 
       // free
@@ -1940,7 +1926,7 @@ void Presolve::removeForcingConstraints() {
 void Presolve::removeRowSingletons() {
   timer.recordStart(SING_ROW);
   int i;
-  int singRowZ = singRow.size();
+  // int singRowZ = singRow.size();
   /*
   if (singRowZ == 36) {
     printf("JAJH: singRow.size() = %d\n", singRowZ);fflush(stdout);
@@ -2406,7 +2392,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // }
 
   // For KKT check: first check solver results before we do any postsolve
-  if (iKKTcheck == 1) {
+  if (((int) colValue.size() > 0 || (int) rowDual.size() > 0) && iKKTcheck == 1) {
     cout << "----KKT check on HiGHS solution-----\n";
 
     chk.passSolution(colValue, colDual, rowDual);
@@ -2993,7 +2979,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // testBasisMatrixSingularity();
 
   if (iKKTcheck == 2) {
-    if (chk.print == 3) chk.print = 2;
     chk.passSolution(valuePrimal, valueColDual, valueRowDual);
     chk.makeKKTCheck();
   }
