@@ -2392,11 +2392,12 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // }
 
   // For KKT check: first check solver results before we do any postsolve
-  if (((int) colValue.size() > 0 || (int) rowDual.size() > 0) && iKKTcheck == 1) {
-    cout << "----KKT check on HiGHS solution-----\n";
+  if (iKKTcheck == 1) {
+    cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
 
     chk.passSolution(colValue, colDual, rowDual);
     chk.passBasis(col_status, row_status);
+((int) colValue.size() > 0 || (int) rowDual.size() > 0)
     chk.makeKKTCheck();
   }
   // So there have been changes definitely ->
