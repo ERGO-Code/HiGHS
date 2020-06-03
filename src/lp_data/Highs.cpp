@@ -614,17 +614,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
         // solution(?) and basis that is, hopefully, optimal. This is
         // confirmed or corrected by hot-starting the simplex solver
         if (presolve_status == HighsPresolveStatus::ReducedToEmpty) {
-          // Have to resize the solution to correspond to an empty
-          // problem because runPostsolve checks this. Size of basis
-          // seems unimportant
-          hmos_[solved_hmo].solution_.col_value.resize(0);
-          hmos_[solved_hmo].solution_.row_value.resize(0);
-          hmos_[solved_hmo].solution_.col_dual.resize(0);
-          hmos_[solved_hmo].solution_.row_dual.resize(0);
+          clearSolutionUtil(hmos_[solved_hmo].solution_);
+          clearBasisUtil(hmos_[solved_hmo].basis_);
         }
 
         presolve_.data_.reduced_solution_ = hmos_[solved_hmo].solution_;
-        presolve_.data_.reduced_basis_ = hmos_[solved_hmo].basis_;
+        presolve_.data_.reduced_basis_.col_status = hmos_[solved_hmo].basis_.col_status;
+        presolve_.data_.reduced_basis_.row_status = hmos_[solved_hmo].basis_.row_status;
 
         this_postsolve_time = -timer_.read(timer_.postsolve_clock);
         timer_.start(timer_.postsolve_clock);
