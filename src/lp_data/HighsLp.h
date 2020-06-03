@@ -364,7 +364,8 @@ bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 // standard build it only prints a message.
 // void checkStatus(HighsStatus status);
 
-void clearSolution(HighsSolution& solution);
+void clearSolutionUtil(HighsSolution& solution);
+void clearBasisUtil(HighsBasis& solution);
 void clearLp(HighsLp& lp);
 
 #endif

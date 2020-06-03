@@ -69,13 +69,6 @@ void Presolve::load(const HighsLp& lp) {
   timer.recordFinish(MATRIX_COPY);
 }
 
-void Presolve::setBasisInfo(
-    const std::vector<HighsBasisStatus>& pass_col_status,
-    const std::vector<HighsBasisStatus>& pass_row_status) {
-  col_status = pass_col_status;
-  row_status = pass_row_status;
-}
-
 // printing with cout goes here.
 void reportDev(const string& message) {
   std::cout << message << std::flush;
@@ -930,6 +923,8 @@ void Presolve::removeIfFixed(int j) {
 
         if (nzRow.at(i) == 0) {
           removeEmptyRow(i);
+          if (status == stat::Infeasible)
+            return;
           countRemovedRows(FIXED_COL);
         }
       }
@@ -1933,7 +1928,6 @@ void Presolve::removeRowSingletons() {
   }
   */
   while (!(singRow.empty())) {
-    if (status) return;
     if (timer.reachLimit()) {
       status = stat::Timeout;
       return;
@@ -2030,8 +2024,12 @@ void Presolve::removeRowSingletons() {
     removeRow(i);
 
     if (flagCol.at(j) && colLower.at(j) == colUpper.at(j)) removeIfFixed(j);
-
     countRemovedRows(SING_ROW);
+
+    if (status) {
+      timer.recordFinish(SING_ROW);
+      return;
+    }
   }
   timer.recordFinish(SING_ROW);
 }
@@ -2362,10 +2360,15 @@ void Presolve::testAnAR(int post) {
 
 // todo: error reporting.
 HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
-                                         HighsSolution& recovered_solution) {
+                                         const HighsBasis& reduced_basis,
+                                         HighsSolution& recovered_solution,
+                                         HighsBasis& recovered_basis) {
   colValue = reduced_solution.col_value;
   colDual = reduced_solution.col_dual;
   rowDual = reduced_solution.row_dual;
+
+  col_status = reduced_basis.col_status;
+  row_status = reduced_basis.row_status;
 
   // todo: add nonbasic flag to Solution.
   // todo: change to new basis info structure later or keep.
@@ -3020,12 +3023,17 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
       rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
   }
-  // JAJH(120519) Added following four lines so that recovered solution is
-  // returned
+
+  // Save solution to PresolveComponentData.
+
   recovered_solution.col_value = colValue;
   recovered_solution.col_dual = colDual;
   recovered_solution.row_value = rowValue;
   recovered_solution.row_dual = rowDual;
+
+  recovered_basis.col_status = col_status;
+  recovered_basis.row_status = row_status;
+
   return HighsPostsolveStatus::SolutionRecovered;
 }
 

@@ -76,12 +76,9 @@ class Presolve : public HPreData {
 
   HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
-                                 HighsSolution& recovered_solution);
-
-  void setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status,
-                    const std::vector<HighsBasisStatus>& pass_row_status);
-  const std::vector<HighsBasisStatus>& getRowStatus() { return row_status; }
-  const std::vector<HighsBasisStatus>& getColStatus() { return col_status; }
+                                 const HighsBasis& reduced_basis,
+                                 HighsSolution& recovered_solution,
+                                 HighsBasis& recovered_basis);
 
   void load(const HighsLp& lp);
   // todo: clear the public from below.

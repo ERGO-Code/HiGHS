@@ -28,12 +28,19 @@ bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
   return false;
 }
 
-void clearSolution(HighsSolution& solution) {
+void clearSolutionUtil(HighsSolution& solution) {
   solution.col_dual.clear();
   solution.col_value.clear();
   solution.row_dual.clear();
   solution.row_value.clear();
 }
+
+void clearBasisUtil(HighsBasis& basis) {
+  basis.row_status.clear();
+  basis.col_status.clear();
+  basis.valid_ = false;
+}
+
 
 void clearLp(HighsLp& lp) {
   lp.Astart_.clear();
