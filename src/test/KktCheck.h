@@ -30,7 +30,7 @@ class KktCheck {
  public:
   virtual ~KktCheck() {}
 
-  bool istrueGlb;
+  bool istrueGlb = false;
  private:
   // model
   int numCol;
