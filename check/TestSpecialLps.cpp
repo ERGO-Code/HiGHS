@@ -96,17 +96,9 @@ void issue272(Highs& highs) {
   REQUIRE(status == HighsStatus::OK);
   // Presolve reduces to empty, so no need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
 }
 
 void issue280(Highs& highs) {
@@ -131,15 +123,9 @@ void issue280(Highs& highs) {
   REQUIRE(status == HighsStatus::OK);
   // Presolve reduces to empty, so no need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
   reportSolution(highs);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   // STILL FAILS!!! Reported to Lukas as issue #1 on IPX
   //    solve(highs, "off", "ipm", require_model_status, optimal_objective);
 }
@@ -163,22 +149,13 @@ void issue282(Highs& highs) {
   lp.Aindex_ = {0, 1, 2, 0, 1};
   lp.Avalue_ = {2, 1, 1, 1, 1};
 
-  highs.clearSolver();
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
   // Presolve reduces to empty, so no real need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
 }
 
 void issue285(Highs& highs) {
@@ -204,17 +181,9 @@ void issue285(Highs& highs) {
   REQUIRE(status == HighsStatus::OK);
   // Presolve identifies infeasibility, so no need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "simplex", require_model_status);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "on", "ipm", require_model_status);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status);
-  highs.clearSolver();
-  status = highs.passModel(lp);
 }
 
 void issue295(Highs& highs) {
@@ -242,21 +211,12 @@ void issue295(Highs& highs) {
   lp.Aindex_ = {0, 1, 0};
   lp.Avalue_ = {1, 1, 0};
 
-  highs.clearSolver();
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
 }
 
 void issue306(Highs& highs) {
@@ -285,17 +245,9 @@ void issue306(Highs& highs) {
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status, optimal_objective);
-  highs.clearSolver();
-  status = highs.passModel(lp);
 }
 
 void issue316(Highs& highs) {
@@ -348,8 +300,6 @@ void primalDualInfeasible(Highs& highs) {
   REQUIRE(status == HighsStatus::OK);
   // Presolve doesn't reduce the LP
   solve(highs, "on", "simplex", require_model_status);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   // Don't run the IPX test until it's fixed
   //  solve(highs, "on", "ipm", require_model_status);
 }
@@ -381,34 +331,9 @@ void mpsUnbounded(Highs& highs) {
     REQUIRE(bool_status);
   }
   solve(highs, "on", "simplex", require_model_status);
-  highs.clearSolver();
-  status = highs.readModel(model_file);
-  REQUIRE(status == HighsStatus::OK);
-
-  if (solve_adlittle_max) {
-    bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
-    REQUIRE(bool_status);
-  }
   solve(highs, "off", "simplex", require_model_status);
-  highs.clearSolver();
-  status = highs.readModel(model_file);
-  REQUIRE(status == HighsStatus::OK);
-
-  if (solve_adlittle_max) {
-    bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
-    REQUIRE(bool_status);
-  }
   solve(highs, "on", "ipm", require_model_status);
-  highs.clearSolver();
-  status = highs.readModel(model_file);
-  REQUIRE(status == HighsStatus::OK);
-
-  if (solve_adlittle_max) {
-    bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
-    REQUIRE(bool_status);
-  }
   solve(highs, "off", "ipm", require_model_status);
-  highs.clearSolver();
 }
 
 void almostNotUnbounded(Highs& highs) {
@@ -455,11 +380,7 @@ void almostNotUnbounded(Highs& highs) {
   //  status = highs.writeModel("epsilon_unbounded.mps"); REQUIRE(status ==
   //  HighsStatus::WARNING);
   solve(highs, "off", "simplex", require_model_status0);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status0);
-  highs.clearSolver();
-  status = highs.passModel(lp);
 
   // LP is feasible on [1+alpha, alpha] with objective -1 so optimal,
   // but has open set of optimal solutions
@@ -469,11 +390,7 @@ void almostNotUnbounded(Highs& highs) {
 
   solve(highs, "off", "simplex", require_model_status1, optimal_objective1);
   reportSolution(highs);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status1, optimal_objective1);
-  highs.clearSolver();
-  status = highs.passModel(lp);
 
   // LP has bounded feasible region with optimal solution
   // [1+2/epsilon, 2/epsilon] and objective
@@ -486,13 +403,8 @@ void almostNotUnbounded(Highs& highs) {
 
   solve(highs, "off", "simplex", require_model_status2, optimal_objective2);
   reportSolution(highs);
-  highs.clearSolver();
-  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status2, optimal_objective2);
-  highs.clearSolver();
-  status = highs.passModel(lp);
 }
-
 TEST_CASE("test-special-lps", "[TestSpecialLps]") {
   Highs highs;
   issue272(highs);
@@ -501,12 +413,8 @@ TEST_CASE("test-special-lps", "[TestSpecialLps]") {
   issue285(highs);
   issue295(highs);
   issue306(highs);
+  issue316(highs);
   primalDualInfeasible(highs);
   mpsUnbounded(highs);
   almostNotUnbounded(highs);
-}
-
-TEST_CASE("316", "[TestSpecialLps]") {
-  Highs highs;
-  issue316(highs);
 }
