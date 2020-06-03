@@ -363,8 +363,6 @@ void KktCheck::checkBFS() {
 void KktCheck::checkKKT() {
   if (numCol == 0) return;
 
-  istrueGlb = false;
-
   std::cout << std::endl;
 
   makeARCopy();

@@ -11,12 +11,12 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef DEV_PRESOLVE_DEV_KKT_H_
-#define DEV_PRESOLVE_DEV_KKT_H_
+#ifndef TEST_DEV_KKT_H_
+#define TEST_DEV_KKT_H_
 
 #include <iostream>
-#include <vector>
 #include <map>
+#include <vector>
 
 #include "lp_data/HConst.h"
 
@@ -24,20 +24,20 @@ namespace presolve {
 namespace dev_kkt_check {
 
 struct State {
-  State(
-      const int numCol_, const int numRow_, const std::vector<int>& Astart_,
-      const std::vector<int>& Aindex_, const std::vector<double>& Avalue_,
-      const std::vector<int>& ARstart_, const std::vector<int>& ARindex_,
-      const std::vector<double>& ARvalue_, const std::vector<double>& colCost_,
-      const std::vector<double>& colLower_,
-      const std::vector<double>& colUpper_,
-      const std::vector<double>& rowLower_,
-      const std::vector<double>& rowUpper_, const std::vector<int> flagCol_,
-      const std::vector<int> flagRow_, const std::vector<double> colValue_,
-      const std::vector<double> colDual_, const std::vector<double> rowValue_,
-      const std::vector<double> rowDual_,
-      const std::vector<HighsBasisStatus>& col_status_,
-      const std::vector<HighsBasisStatus>& row_status_)
+  State(const int numCol_, const int numRow_, const std::vector<int>& Astart_,
+        const std::vector<int>& Aindex_, const std::vector<double>& Avalue_,
+        const std::vector<int>& ARstart_, const std::vector<int>& ARindex_,
+        const std::vector<double>& ARvalue_,
+        const std::vector<double>& colCost_,
+        const std::vector<double>& colLower_,
+        const std::vector<double>& colUpper_,
+        const std::vector<double>& rowLower_,
+        const std::vector<double>& rowUpper_, const std::vector<int> flagCol_,
+        const std::vector<int> flagRow_, const std::vector<double> colValue_,
+        const std::vector<double> colDual_, const std::vector<double> rowValue_,
+        const std::vector<double> rowDual_,
+        const std::vector<HighsBasisStatus>& col_status_,
+        const std::vector<HighsBasisStatus>& row_status_)
       : numCol(numCol_),
         numRow(numRow_),
         Astart(Astart_),
@@ -60,7 +60,6 @@ struct State {
         col_status(col_status_),
         row_status(row_status_) {}
 
- private:
   const int numCol;
   const int numRow;
 
@@ -94,7 +93,6 @@ struct State {
 
 enum class KktCondition {
   kColBounds,
-  kRowBounds,
   kPrimalFeasibility,
   kDualFeasibility,
   kComplementarySlackness,
@@ -104,27 +102,29 @@ enum class KktCondition {
 struct KktConditionDetails {
   KktConditionDetails(KktCondition type_) : type(type_) {}
 
-    KktCondition type;
-    double max_violation = 0;
-    double sum_violation = 0;
-    int total = 0;
-    int violated = 0;
+  KktCondition type;
+  double max_violation = 0.0;
+  double sum_violation_2 = 0.0;
+  int checked = 0;
+  int violated = 0;
 };
 
 struct KktInfo {
-    std::map<KktCondition, KktConditionDetails> rules;
-    bool pass_col_bounds = false;
-    bool pass_row_bounds = false;
-    bool pass_primal_feas_matrix = false;
-    bool pass_dual_feas = false;
-    bool pass_st_of_L = false;
-    bool pass_comp_slackness = false;
+  std::map<KktCondition, KktConditionDetails> rules;
+  bool pass_col_bounds = false;
+  bool pass_primal_feas_matrix = false;
+  bool pass_dual_feas = false;
+  bool pass_st_of_L = false;
+  bool pass_comp_slackness = false;
 };
 
-void initInfo (KktInfo& info);
+void initInfo(KktInfo& info);
 
 bool checkKkt(const State& state, KktInfo info);
 
-}  // namespace kkt_check
+void checkPrimalBounds(const State& state, KktConditionDetails& details);
+
+}  // namespace dev_kkt_check
 }  // namespace presolve
+
 #endif /* TEST_KKTCHSTEP_H_ */

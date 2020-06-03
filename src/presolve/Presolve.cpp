@@ -833,7 +833,6 @@ void Presolve::resizeProblem() {
       rowUpper.at(k) = teup.at(i);
       k++;
     }
-
 }
 
 void Presolve::initializeVectors() {
@@ -923,8 +922,7 @@ void Presolve::removeIfFixed(int j) {
 
         if (nzRow.at(i) == 0) {
           removeEmptyRow(i);
-          if (status == stat::Infeasible)
-            return;
+          if (status == stat::Infeasible) return;
           countRemovedRows(FIXED_COL);
         }
       }
@@ -2982,13 +2980,17 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // testBasisMatrixSingularity();
 
   if (iKKTcheck != 0) {
-    cout << "~~~~~ KKT check of postsolved solution ~~~~~" << std::endl;
-    chk.passSolution(valuePrimal, valueColDual, valueRowDual);
-    chk.makeKKTCheck();
-    if (chk.pass) std::cout << "KKT PASS" << std::endl;
-    else std::cout << "KKT FAIL" << std::endl;
+    cout << "~~~~~ KKT check of postsolved solution with new checker ~~~~~"
+         << std::endl;
 
+    dev_kkt_check::State state = initState();
+    dev_kkt_check::KktInfo info;
+    bool pass = dev_kkt_check::checkKkt(state, info);
 
+    if (pass)
+      std::cout << "KKT PASS" << std::endl;
+    else
+      std::cout << "KKT FAIL" << std::endl;
   }
 
   // now recover original model data to pass back to HiGHS
@@ -3598,6 +3600,13 @@ void Presolve::countRemovedCols(PresolveRule rule) {
   if (timer.time_limit > 0 &&
       timer.timer_.readRunHighsClock() > timer.time_limit)
     status = stat::Timeout;
+}
+
+dev_kkt_check::State Presolve::initState() {
+  return dev_kkt_check::State(
+      numCol, numRow, Astart, Aindex, Avalue, ARstart, ARindex, ARvalue,
+      colCost, colLower, colUpper, rowLower, rowUpper, flagCol, flagRow,
+      colValue, colDual, rowValue, rowDual, col_status, row_status);
 }
 
 }  // namespace presolve

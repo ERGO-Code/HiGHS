@@ -25,6 +25,7 @@
 #include "lp_data/HighsLp.h"
 #include "presolve/HPreData.h"
 #include "presolve/PresolveAnalysis.h"
+#include "test/DevKkt.h"
 
 using std::list;
 using std::string;
@@ -270,6 +271,8 @@ class Presolve : public HPreData {
   void reportDevMidMainLoop();
   PresolveStats stats;
   int runPresolvers(const std::vector<Presolver>& order);
+
+  dev_kkt_check::State initState();
 };
 
 }  // namespace presolve
