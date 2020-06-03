@@ -615,6 +615,8 @@ void KktChStep::makeKKTCheck() {
   if (count != numRow)
     std::cout << "Wrong number of basic variables: numRow = " << numRow
               << ", count = " << count << std::endl;
+
+  if (!checker.istrueGlb) pass = true;
 }
 
 void KktChStep::printA() {

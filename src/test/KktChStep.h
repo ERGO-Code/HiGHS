@@ -113,6 +113,8 @@ class KktChStep {
   void makeKKTCheck();
   void resizeProblemMatrix(KktCheck& checker);
   void addCost(int col, double value);
+
+  bool pass = false;
 };
 
 }  // namespace kkt_check

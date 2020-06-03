@@ -30,6 +30,7 @@ class KktCheck {
  public:
   virtual ~KktCheck() {}
 
+  bool istrueGlb;
  private:
   // model
   int numCol;
@@ -50,7 +51,6 @@ class KktCheck {
   int i, j, k;
   double tol;
 
-  bool istrueGlb;
 
   // index std::vectors
   std::vector<int> rIndexRev;

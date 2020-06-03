@@ -343,6 +343,7 @@ void KktCheck::checkBFS() {
       if (print == 1)
         std::cout << "Col " << cIndexRev[j] << " is basic but has nonzero dual."
                   << std::endl;
+      istrueGlb = true;
     }
   }
 
@@ -354,6 +355,7 @@ void KktCheck::checkBFS() {
       if (print == 1)
         std::cout << "Row " << rIndexRev[i] << " is basic but has nonzero dual."
                   << std::endl;
+      istrueGlb = true;
     }
   }
 }
@@ -374,16 +376,6 @@ void KktCheck::checkKKT() {
   chStOfLagrangian();
 
   checkBFS();
-
-  // if (print == 2) {
-  //   std::ofstream myfile;
-  //   myfile.open("../experiments/out", std::ios::app);
-  //   if (istrueGlb)
-  //     myfile << "           KKT fail      ";
-  //   else
-  //     myfile << "           KKT pass      ";
-  //   myfile.close();
-  // }
 }
 
 void KktCheck::passSolution(const std::vector<double>& colVal,

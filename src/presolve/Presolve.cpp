@@ -2981,9 +2981,14 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // cout<<"Singularity check at end of postsolve: ";
   // testBasisMatrixSingularity();
 
-  if (iKKTcheck == 2) {
+  if (iKKTcheck != 0) {
+    cout << "~~~~~ KKT check of postsolved solution ~~~~~" << std::endl;
     chk.passSolution(valuePrimal, valueColDual, valueRowDual);
     chk.makeKKTCheck();
+    if (chk.pass) std::cout << "KKT PASS" << std::endl;
+    else std::cout << "KKT FAIL" << std::endl;
+
+
   }
 
   // now recover original model data to pass back to HiGHS
