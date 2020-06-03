@@ -1458,10 +1458,6 @@ HighsStatus Highs::clearSolver() {
   clearSolution();
   clearBasis();
   clearInfo();
-  // if (hmos_.size() > 0) {
-  //   hmos_.clear();
-  //   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
-  // }
   return HighsStatus::OK;
 }
 
