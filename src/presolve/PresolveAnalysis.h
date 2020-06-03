@@ -47,6 +47,13 @@ enum PresolveRule {
   MATRIX_COPY,
   RESIZE_MATRIX,
 
+  RUN_PRESOLVERS,
+  REMOVE_ROW_SINGLETONS,
+  REMOVE_FORCING_CONSTRAINTS,
+  REMOVE_COLUMN_SINGLETONS,
+  REMOVE_DOUBLETON_EQUATIONS,
+  REMOVE_DOMINATED_COLUMNS,
+
   TOTAL_PRESOLVE_TIME,
   // Number of presolve rules.
   PRESOLVE_RULES_COUNT,
@@ -123,15 +130,38 @@ class PresolveTimer {
   }
 
   void reportClocks() {
-    std::vector<int> clocks(PRESOLVE_RULES_COUNT - 1);
+    std::vector<int> clocks;
     for (int id = 0; id < PRESOLVE_RULES_COUNT - 1; id++) {
       assert(rules_[id].rule_id == id);
-      clocks[id] = rules_[id].clock_id;
+      if (id == RUN_PRESOLVERS) continue;
+      if (id == REMOVE_ROW_SINGLETONS) continue;
+      if (id == REMOVE_FORCING_CONSTRAINTS) continue;
+      if (id == REMOVE_COLUMN_SINGLETONS) continue;
+      if (id == REMOVE_DOUBLETON_EQUATIONS) continue;
+      if (id == REMOVE_DOMINATED_COLUMNS) continue;
+      clocks.push_back(rules_[id].clock_id);
     }
     const int total_presolve_time_as_rule = TOTAL_PRESOLVE_TIME;
-    const double ideal_time = getRuleTime(total_presolve_time_as_rule);
-
+    double ideal_time = getRuleTime(total_presolve_time_as_rule);
     std::cout << std::endl;
+    timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
+    std::cout << std::endl;
+
+    clocks.clear();
+    clocks.push_back(rules_[RUN_PRESOLVERS].clock_id);
+    clocks.push_back(rules_[RESIZE_MATRIX].clock_id);
+    std::cout << std::endl;
+    timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
+    std::cout << std::endl;
+
+    clocks.clear();
+    const int run_presolvers_as_rule = RUN_PRESOLVERS;
+    ideal_time = getRuleTime(run_presolvers_as_rule);
+    clocks.push_back(rules_[REMOVE_ROW_SINGLETONS].clock_id);
+    clocks.push_back(rules_[REMOVE_FORCING_CONSTRAINTS].clock_id);
+    clocks.push_back(rules_[REMOVE_COLUMN_SINGLETONS].clock_id);
+    clocks.push_back(rules_[REMOVE_DOUBLETON_EQUATIONS].clock_id);
+    clocks.push_back(rules_[REMOVE_DOMINATED_COLUMNS].clock_id);
     timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
   }

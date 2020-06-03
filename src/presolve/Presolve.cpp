@@ -188,19 +188,29 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
 
     switch (main_loop_presolver) {
       case Presolver::kMainRowSingletons:
+	timer.recordStart(REMOVE_ROW_SINGLETONS);
         removeRowSingletons();
+	timer.recordFinish(REMOVE_ROW_SINGLETONS);
         break;
       case Presolver::kMainForcing:
+	timer.recordStart(REMOVE_FORCING_CONSTRAINTS);
         removeForcingConstraints();
+	timer.recordFinish(REMOVE_FORCING_CONSTRAINTS);
         break;
       case Presolver::kMainColSingletons:
+	timer.recordStart(REMOVE_COLUMN_SINGLETONS);
         removeColumnSingletons();
+	timer.recordFinish(REMOVE_COLUMN_SINGLETONS);
         break;
       case Presolver::kMainDoubletonEq:
+	timer.recordStart(REMOVE_DOUBLETON_EQUATIONS);
         removeDoubletonEquations();
+	timer.recordFinish(REMOVE_DOUBLETON_EQUATIONS);
         break;
       case Presolver::kMainDominatedCols:
+	timer.recordStart(REMOVE_DOMINATED_COLUMNS);
         removeDominatedColumns();
+	timer.recordFinish(REMOVE_DOMINATED_COLUMNS);
         break;
     }
 
@@ -265,7 +275,9 @@ int Presolve::presolve(int print) {
     hasChange = false;
 
     reportDevMainLoop();
+    timer.recordStart(RUN_PRESOLVERS);
     int run_status = runPresolvers(order);
+    timer.recordFinish(RUN_PRESOLVERS);
     assert(run_status == status);
     if (run_status != status) {
     }
@@ -318,7 +330,8 @@ HighsPresolveStatus Presolve::presolve() {
       presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
-  if (iPrint > 0) timer.reportClocks();
+  //  if (iPrint > 0)
+    timer.reportClocks();
 
   return presolve_status;
 }
