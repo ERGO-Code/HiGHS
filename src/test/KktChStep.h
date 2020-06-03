@@ -32,6 +32,7 @@ class KktCheck;
 class KktChStep {
  public:
   KktChStep() {}
+  virtual ~KktChStep() {}
 
   // model: full matrix in AR (row-wise) and working copy(column-wise)
   std::vector<int> ARstart;

@@ -27,6 +27,10 @@ namespace presolve {
 namespace kkt_check {
 
 class KktCheck {
+ public:
+  virtual ~KktCheck() {}
+
+ private:
   // model
   int numCol;
   int numRow;
@@ -92,7 +96,7 @@ class KktCheck {
                          const std::vector<double>& cost);
 };
 
-}
-}
+}  // namespace kkt_check
+}  // namespace presolve
 
 #endif /* TEST_KKTCHECK_H_ */

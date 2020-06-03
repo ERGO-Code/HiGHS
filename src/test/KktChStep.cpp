@@ -83,7 +83,7 @@ void KktChStep::passBasis(const vector<HighsBasisStatus>& columns,
     for (int i = 0; i < numCol; i++) {
       assert(i < (int)eqIndexOfReduced.size());
       assert(eqIndexOfReduced[i] < (int)col_status.size());
-      assert(eqIndexOfReduced[i] > 0);
+      assert(eqIndexOfReduced[i] >= 0);
       col_status[eqIndexOfReduced[i]] = columns[i];
     }
 

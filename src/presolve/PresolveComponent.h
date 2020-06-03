@@ -30,6 +30,13 @@ struct PresolveComponentData : public HighsComponentData {
   // todo: make reduced one const.
   HighsSolution reduced_solution_;
   HighsSolution recovered_solution_;
+
+  void clear() {
+    presolve_.clear();
+    clearLp(reduced_lp_);
+    clearSolution(reduced_solution_);
+    clearSolution(recovered_solution_);
+  }
 };
 
 // HighsComponentInfo is a placeholder for details we want to query from outside

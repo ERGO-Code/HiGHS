@@ -538,6 +538,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
+        basis_.col_status.clear();
+        basis_.row_status.clear();
+        presolve_.setBasisInfo(basis_.col_status, basis_.row_status);
         reportPresolveReductions(hmos_[original_hmo].options_,
                                  hmos_[original_hmo].lp_, true);
         hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
@@ -621,6 +624,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
           hmos_[solved_hmo].solution_.row_value.resize(0);
           hmos_[solved_hmo].solution_.col_dual.resize(0);
           hmos_[solved_hmo].solution_.row_dual.resize(0);
+          hmos_[solved_hmo].basis_.col_status.clear();
+          hmos_[solved_hmo].basis_.row_status.clear();
+          basis_.col_status.clear();
+          basis_.row_status.clear();
         }
 
         presolve_.data_.reduced_solution_ = hmos_[solved_hmo].solution_;
@@ -1464,6 +1471,8 @@ HighsStatus Highs::clearSolver() {
   clearSolution();
   clearBasis();
   clearInfo();
+  hmos_.clear();
+  hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   return HighsStatus::OK;
 }
 
@@ -1835,8 +1844,8 @@ void Highs::clearSolution() {
 
 void Highs::clearBasis() {
   basis_.valid_ = false;
-  basis_.col_status.resize(0);
-  basis_.row_status.resize(0);
+  basis_.col_status.clear();
+  basis_.row_status.clear();
 }
 
 void Highs::clearInfo() { info_.clear(); }

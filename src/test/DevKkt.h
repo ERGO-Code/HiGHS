@@ -125,7 +125,6 @@ void initInfo (KktInfo& info);
 
 bool checkKkt(const State& state, KktInfo info);
 
-}
 }  // namespace kkt_check
 }  // namespace presolve
 #endif /* TEST_KKTCHSTEP_H_ */
