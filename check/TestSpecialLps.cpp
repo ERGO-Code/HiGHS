@@ -316,25 +316,13 @@ void issue316(Highs& highs) {
 
   // Presolve reduces to empty
   solve(highs, "on", "simplex", require_model_status, min_optimal_objective);
-
-  bool_status = highs.addCol(2, -3, 6, 0, NULL, NULL);
-  REQUIRE(bool_status);
-
   solve(highs, "off", "simplex", require_model_status, min_optimal_objective);
-
-  highs.clearSolver();
-  bool_status = highs.addCol(2, -3, 6, 0, NULL, NULL);
-  REQUIRE(bool_status);
 
   bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
   REQUIRE(bool_status);
 
   solve(highs, "on", "simplex", require_model_status, max_optimal_objective);
-  highs.clearSolver();
-  bool_status = highs.addCol(2, -3, 6, 0, NULL, NULL);
-  REQUIRE(bool_status);
   solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
-  highs.clearSolver();
 }
 
 void primalDualInfeasible(Highs& highs) {

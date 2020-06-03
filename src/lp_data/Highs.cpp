@@ -647,7 +647,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
           // Set basis and its status
           hmos_[original_hmo].basis_.valid_ = true;
-          hmos_[original_hmo].basis_ = presolve_.data_.recovered_basis_;
+          hmos_[original_hmo].basis_.col_status = presolve_.data_.recovered_basis_.col_status;
+          hmos_[original_hmo].basis_.row_status = presolve_.data_.recovered_basis_.row_status;
 
           analyseHighsBasicSolution(options_.logfile, hmos_[original_hmo],
                                     "after returning from postsolve");
