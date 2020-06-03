@@ -644,13 +644,11 @@ basis_.valid_, hmos_[0].basis_.valid_);
           resetModelStatusAndSolutionParams(hmos_[original_hmo]);
           // Set solution and its status
           hmos_[original_hmo].solution_ = presolve_.data_.recovered_solution_;
-          //
+
           // Set basis and its status
-          hmos_[original_hmo].basis_.col_status =
-              presolve_.data_.reduced_basis_.col_status;
-          hmos_[original_hmo].basis_.row_status =
-              presolve_.data_.reduced_basis_.row_status;
           hmos_[original_hmo].basis_.valid_ = true;
+          hmos_[original_hmo].basis_ = presolve_.data_.recovered_basis_;
+
           analyseHighsBasicSolution(options_.logfile, hmos_[original_hmo],
                                     "after returning from postsolve");
           // Now hot-start the simplex solver for the original_hmo
@@ -1463,10 +1461,10 @@ HighsStatus Highs::clearSolver() {
   clearSolution();
   clearBasis();
   clearInfo();
-  if (hmos_.size() > 0) {
-    hmos_.clear();
-    hmos_.push_back(HighsModelObject(lp_, options_, timer_));
-  }
+  // if (hmos_.size() > 0) {
+  //   hmos_.clear();
+  //   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
+  // }
   return HighsStatus::OK;
 }
 

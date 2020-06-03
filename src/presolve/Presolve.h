@@ -99,7 +99,7 @@ class Presolve : public HPreData {
   FILE* output;
 
  private:
-  int iKKTcheck = 1;
+  int iKKTcheck = 0;
   int presolve(int print);
 
   const bool report_postsolve = false;

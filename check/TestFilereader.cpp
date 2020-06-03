@@ -29,7 +29,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::Error);
 
-  highs.clearSolver();
   // Set model_file to non-existent file and try to run HiGHS
   model = "";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -38,8 +37,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::Error);
-   
-  highs.clearSolver();
+
   // Set model_file to non-supported file type and try to run HiGHS
   model = "model";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".xyz";
@@ -49,7 +47,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   run_status = highs.run();
   REQUIRE(run_status == HighsStatus::Error);
 
-  highs.clearSolver();
   // Set model_file to existing MPS file and run HiGHS
   model = "adlittle";
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -60,7 +57,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   REQUIRE(run_status == HighsStatus::OK);
   REQUIRE(info.simplex_iteration_count == 86);
 
-  highs.clearSolver();
   model = "garbage";
   if (test_garbage_mps) {
     model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -89,7 +85,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
     REQUIRE(read_status == HighsStatus::Error);
   }
 }
-
 TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
