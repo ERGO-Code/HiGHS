@@ -96,9 +96,17 @@ void issue272(Highs& highs) {
   REQUIRE(status == HighsStatus::OK);
   // Presolve reduces to empty, so no need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
+  highs.clearSolver();
+  status = highs.passModel(lp);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
+  highs.clearSolver();
+  status = highs.passModel(lp);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
+  highs.clearSolver();
+  status = highs.passModel(lp);
   solve(highs, "off", "ipm", require_model_status, optimal_objective);
+  highs.clearSolver();
+  status = highs.passModel(lp);
 }
 
 void issue280(Highs& highs) {
