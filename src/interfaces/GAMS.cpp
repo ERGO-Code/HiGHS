@@ -364,7 +364,9 @@ static int processSolve(gamshighs_t* gh) {
                            stat);
     }
 
-    gmoCompleteObjective(gmo, highs->getHighsInfo().objective_function_value);
+    // if there were =N= rows (lp08), then gmoCompleteObjective wouldn't get their activity right
+    //gmoCompleteObjective(gmo, highs->getHighsInfo().objective_function_value);
+    gmoCompleteSolution(gmo);
   }
 
   return 0;
