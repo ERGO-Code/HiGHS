@@ -2976,22 +2976,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     return HighsPostsolveStatus::BasisError;
   }
 
-  // cout<<"Singularity check at end of postsolve: ";
-  // testBasisMatrixSingularity();
-
-  if (iKKTcheck != 0) {
-    cout << "~~~~~ KKT check of postsolved solution with new checker ~~~~~"
-         << std::endl;
-
-    dev_kkt_check::State state = initState();
-    dev_kkt_check::KktInfo info;
-    bool pass = dev_kkt_check::checkKkt(state, info);
-
-    if (pass)
-      std::cout << "KKT PASS" << std::endl;
-    else
-      std::cout << "KKT FAIL" << std::endl;
-  }
 
   // now recover original model data to pass back to HiGHS
   // A is already recovered!
@@ -3011,28 +2995,35 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   colCost = colCostOriginal;
 
-  /*
-  nonbasicMove.resize(numTot, 0);
-  for (int i = 0; i < numColOriginal; ++i) {
-    if (colLower.at(i) != colUpper.at(i) && colLower.at(i) != -HIGHS_CONST_INF)
-      nonbasicMove.at(i) = 1;
-    else if (colUpper.at(i) != HIGHS_CONST_INF)
-      nonbasicMove.at(i) = -1;
-    else
-      nonbasicMove.at(i) = 0;
-  }
-  */
   colValue = valuePrimal;
   colDual = valueColDual;
   rowDual = valueRowDual;
+
   rowValue.assign(numRow, 0);
   for (int i = 0; i < numRowOriginal; ++i) {
     for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
       rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
   }
 
-  // Save solution to PresolveComponentData.
+  // cout<<"Singularity check at end of postsolve: ";
+  // testBasisMatrixSingularity();
 
+  if (iKKTcheck != 0) {
+    cout << "~~~~~ KKT check of postsolved solution with DevKkt checker ~~~~~"
+         << std::endl;
+
+    dev_kkt_check::State state = initState();
+    dev_kkt_check::KktInfo info = dev_kkt_check::initInfo();
+
+    bool pass = dev_kkt_check::checkKkt(state, info);
+
+    if (pass)
+      std::cout << "KKT PASS" << std::endl;
+    else
+      std::cout << "KKT FAIL" << std::endl;
+  }
+
+  // Save solution to PresolveComponentData.
   recovered_solution.col_value = colValue;
   recovered_solution.col_dual = colDual;
   recovered_solution.row_value = rowValue;

@@ -122,7 +122,7 @@ struct KktInfo {
   bool pass_bfs = false;
 };
 
-void initInfo(KktInfo& info);
+KktInfo initInfo();
 
 bool checkKkt(const State& state, KktInfo info);
 

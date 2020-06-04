@@ -23,7 +23,8 @@ namespace dev_kkt_check {
 constexpr int dev_print = 1;
 constexpr double tol = 1e-08;
 
-void initInfo(KktInfo& info) {
+KktInfo initInfo() {
+  KktInfo info;
   info.rules[KktCondition::kColBounds] =
       KktConditionDetails(KktCondition::kColBounds);
   info.rules[KktCondition::kPrimalFeasibility] =
@@ -36,6 +37,7 @@ void initInfo(KktInfo& info) {
       KktConditionDetails(KktCondition::kStationarityOfLagrangian);
   info.rules[KktCondition::kBasicFeasibleSolution] =
       KktConditionDetails(KktCondition::kBasicFeasibleSolution);
+  return info;
 }
 
 void checkPrimalBounds(const State& state, KktConditionDetails& details) {
@@ -48,7 +50,7 @@ void checkPrimalBounds(const State& state, KktConditionDetails& details) {
   for (int i = 0; i < state.numCol; i++) {
     if (state.flagCol[i]) {
       details.checked++;
-      double infeas;
+      double infeas = 0;
 
       if ((state.colLower[i] - state.colValue[i] > tol) ||
           (state.colValue[i] - state.colUpper[i] > tol)) {
@@ -93,6 +95,7 @@ void checkPrimalFeasMatrix(const State& state, KktConditionDetails& details) {
 
       if (state.rowLower[i] < rowV && rowV < state.rowUpper[i]) continue;
       double infeas = 0;
+
       if (((rowV - state.rowLower[i]) < 0) &&
           (fabs(rowV - state.rowLower[i]) > tol)) {
         infeas = state.rowLower[i] - rowV;
@@ -110,18 +113,19 @@ void checkPrimalFeasMatrix(const State& state, KktConditionDetails& details) {
                     << "  L=" << state.rowLower[i]
                     << "  U=" << state.rowUpper[i] << std::endl;
       }
+      if (infeas > 0) {
+        details.violated++;
+        details.sum_violation_2 += infeas * infeas;
 
-      details.violated++;
-      details.sum_violation_2 += infeas * infeas;
-
-      if (details.max_violation < infeas) details.max_violation = infeas;
+        if (details.max_violation < infeas) details.max_violation = infeas;
+      }
     }
+  }
 
-    if (details.violated == 0) {
-      if (dev_print == 1) std::cout << "Primal feasible.\n";
-    } else {
-      if (dev_print == 1) std::cout << "KKT check error: Primal infeasible.\n";
-    }
+  if (details.violated == 0) {
+    if (dev_print == 1) std::cout << "Primal feasible.\n";
+  } else {
+    if (dev_print == 1) std::cout << "KKT check error: Primal infeasible.\n";
   }
 }
 
@@ -242,7 +246,7 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
     }
   }
 
-  if (details.violated) {
+  if (details.violated == 0) {
     if (dev_print == 1) std::cout << "Dual feasible.\n";
   } else {
     if (dev_print == 1)
@@ -294,7 +298,7 @@ void checkComplementarySlackness(const State& state,
     }
   }
 
-  if (details.violated) {
+  if (details.violated == 0) {
     if (dev_print == 1) std::cout << "Complementary Slackness.\n";
   } else {
     if (dev_print == 1) std::cout << "KKT check error: Comp slackness fail.\n";
@@ -340,7 +344,7 @@ void checkStationarityOfLagrangian(const State& state,
     }
   }
 
-  if (details.violated) {
+  if (details.violated == 0) {
     if (dev_print == 1) std::cout << "Stationarity of Lagrangian.\n";
   } else {
     if (dev_print == 1)
@@ -358,7 +362,7 @@ void checkBasicFeasibleSolution(const State& state,
       details.checked++;
       double infeas = 0;
       if (state.col_status[j] == HighsBasisStatus::BASIC &&
-          fabs(state.colDual[j]) < tol) {
+          fabs(state.colDual[j]) > tol) {
         if (dev_print == 1)
           std::cout << "Col " << j << " is basic but has nonzero dual."
                     << std::endl;
@@ -380,9 +384,9 @@ void checkBasicFeasibleSolution(const State& state,
   for (int i = 0; i < state.numRow; i++) {
     if (state.flagRow[i]) {
       details.checked++;
-      double infeas;
+      double infeas = 0;
       if (state.row_status[i] == HighsBasisStatus::BASIC &&
-          fabs(state.rowDual[i]) > 0) {
+          fabs(state.rowDual[i]) > tol) {
         if (dev_print == 1)
           std::cout << "Row " << i << " is basic but has nonzero dual."
                     << std::endl;
@@ -397,10 +401,11 @@ void checkBasicFeasibleSolution(const State& state,
     }
   }
 
-  if (details.violated) {
-    if (dev_print == 1) std::cout << "BFS.\n";
+  if (details.violated == 0) {
+    if (dev_print == 1) std::cout << "BFS." << std::endl;
   } else {
-    if (dev_print == 1) std::cout << "BFS X.\n";
+    if (dev_print == 1)
+      std::cout << "BFS X Violated: " << details.violated << std::endl;
   }
 }
 
@@ -422,8 +427,7 @@ bool checkKkt(const State& state, KktInfo info) {
   checkBasicFeasibleSolution(state,
                              info.rules[KktCondition::kBasicFeasibleSolution]);
 
-  bool pass = true;
-  assert(info.rules.size() == 5);
+  assert(info.rules.size() == 6);
 
   if (info.rules[KktCondition::kColBounds].violated == 0)
     info.pass_col_bounds = true;
@@ -441,6 +445,7 @@ bool checkKkt(const State& state, KktInfo info) {
   if (info.pass_primal_feas_matrix && info.pass_col_bounds &&
       info.pass_dual_feas && info.pass_comp_slackness && info.pass_st_of_L)
     return true;
+
   return false;
 }
 

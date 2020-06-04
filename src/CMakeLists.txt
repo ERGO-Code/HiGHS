@@ -112,6 +112,7 @@ set(sources
     simplex/HSimplexDebug.cpp
     simplex/HSimplexReport.cpp
     simplex/HVector.cpp
+    test/DevKkt.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
     util/HighsSort.cpp
@@ -168,6 +169,7 @@ set(headers
     presolve/PresolveAnalysis.h
     presolve/HPreData.h
     simplex/HVector.h
+    test/DevKkt.h
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
