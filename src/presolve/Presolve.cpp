@@ -474,16 +474,23 @@ void Presolve::removeDoubletonEquations() {
   int x, y;
   int iter = 0;
 
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    timer.recordFinish(DOUBLETON_EQUATION);
+    return;
+  }
   for (int row = 0; row < numRow; row++)
     if (flagRow.at(row))
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
           fabs(rowLower[row] - rowUpper[row]) < tol) {
+	/*
         if (timer.reachLimit()) {
           status = stat::Timeout;
           timer.recordFinish(DOUBLETON_EQUATION);
           return;
         }
+	*/
 
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
@@ -1127,12 +1134,18 @@ void Presolve::removeDominatedColumns() {
   // for each column j calculate e and d and check:
   double e, d;
   pair<double, double> p;
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
+  }
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
+      /*
       if (timer.reachLimit()) {
         status = stat::Timeout;
         return;
       }
+      */
 
       //      timer.recordStart(DOMINATED_COLS);
 
@@ -1498,13 +1511,19 @@ void Presolve::removeColumnSingletons() {
   int i, k, col;
   list<int>::iterator it = singCol.begin();
 
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
+  }
+
   while (it != singCol.end()) {
     if (flagCol[*it]) {
+    /*
       if (timer.reachLimit()) {
         status = stat::Timeout;
         return;
       }
-
+    */
       col = *it;
       k = getSingColElementIndexInA(col);
       if (k < 0) {
@@ -1891,13 +1910,19 @@ void Presolve::removeForcingConstraints() {
   double g, h;
   pair<double, double> implBounds;
 
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
+  }
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
       if (status) return;
+      /*
       if (timer.reachLimit()) {
         status = stat::Timeout;
         return;
       }
+      */
 
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
@@ -1950,19 +1975,18 @@ void Presolve::removeForcingConstraints() {
 void Presolve::removeRowSingletons() {
   timer.recordStart(SING_ROW);
   int i;
-  int singRowZ = singRow.size();
-  /*
-  if (singRowZ == 36) {
-    printf("JAJH: singRow.size() = %d\n", singRowZ);fflush(stdout);
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
   }
-  */
   while (!(singRow.empty())) {
     if (status) return;
+    /*
     if (timer.reachLimit()) {
       status = stat::Timeout;
       return;
     }
-
+    */
     i = singRow.front();
     singRow.pop_front();
     if (!flagRow[i]) continue;
