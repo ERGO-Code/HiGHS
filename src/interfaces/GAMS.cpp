@@ -22,6 +22,7 @@ typedef struct optRec* optHandle_t;
 
 /* HiGHS API */
 #include "Highs.h"
+#include "HighsIO.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
 #include "io/LoadOptions.h" /* for loadOptionsFromFile */
@@ -122,6 +123,7 @@ static int setupOptions(gamshighs_t* gh) {
   gh->options->printmsgcb = gevprint;
   gh->options->logmsgcb = gevlog;
   gh->options->msgcb_data = (void*)gh->gev;
+  HighsSetIO(*gh->options);
 
   return 0;
 }
