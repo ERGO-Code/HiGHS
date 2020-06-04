@@ -97,6 +97,7 @@ enum class KktCondition {
   kDualFeasibility,
   kComplementarySlackness,
   kStationarityOfLagrangian,
+  kBasicFeasibleSolution,
 };
 
 struct KktConditionDetails {
@@ -123,6 +124,11 @@ void initInfo(KktInfo& info);
 bool checkKkt(const State& state, KktInfo info);
 
 void checkPrimalBounds(const State& state, KktConditionDetails& details);
+void checkPrimalFeasMatrix(const State& state, KktConditionDetails& details);
+void checkDualFeasibility(const State& state, KktConditionDetails& details);
+void checkComplementarySlackness(const State& state, KktConditionDetails& details);
+void checkStationarityOfLagrangian(const State& state, KktConditionDetails& details);
+void checkBasicFeasibleSolution(const State& state, KktConditionDetails& details);
 
 }  // namespace dev_kkt_check
 }  // namespace presolve

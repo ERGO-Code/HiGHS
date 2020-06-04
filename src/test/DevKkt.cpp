@@ -230,188 +230,204 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
           infeas = state.rowDual[i];
         }
       }
-    }
+      if (infeas > 0) {
+        details.violated++;
+        details.sum_violation_2 += infeas * infeas;
 
-    if (details.violated) {
-      if (dev_print == 1) std::cout << "Dual feasible.\n";
-    } else {
-      if (dev_print == 1)
-        std::cout << "KKT check error: Dual feasibility fail.\n";
+        if (details.max_violation < infeas) details.max_violation = infeas;
+      }
     }
   }
 
-  void KktCheck::chComplementarySlackness() {
-    bool istrue = true;
+  if (details.violated) {
+    if (dev_print == 1) std::cout << "Dual feasible.\n";
+  } else {
+    if (dev_print == 1)
+      std::cout << "KKT check error: Dual feasibility fail.\n";
+  }
+}
 
-    for (i = 0; i < numCol; i++) {
-      if (colLower[i] > -HIGHS_CONST_INF)
-        if (fabs((colValue[i] - colLower[i]) * (colDual[i])) > tol &&
-            colValue[i] != colUpper[i] && fabs(colDual[i]) > tol) {
-          if (print == 1)
-            std::cout << "Comp. slackness fail: "
-                      << "l[" << cIndexRev[i] << "]=" << colLower[i] << ", x["
-                      << i << "]=" << colValue[i] << ", z[" << i
-                      << "]=" << colDual[i] << std::endl;
-          // std::cout<<"Comp. slackness fail: "<<"l["<<i<<"]="<<colLower[i]<<",
-          // x["<<i<<"]="<<colValue[i]<<", z["<<i<<"]="<<colDual[i]<<std::endl;
-          istrue = false;
+void checkComplementarySlackness(const State& state,
+                                 KktConditionDetails& details) {
+  details.type = KktCondition::kComplementarySlackness;
+  details.checked = 0;
+  details.violated = 0;
+  details.max_violation = 0.0;
+  details.sum_violation_2 = 0.0;
+
+  for (int i = 0; i < state.numCol; i++) {
+    if (state.flagCol[i]) {
+      double infeas = 0;
+      details.checked++;
+      if (state.colLower[i] > -HIGHS_CONST_INF &&
+          state.colValue[i] - state.colLower[i] > tol) {
+          if (fabs(state.colDual[i]) > tol) {
+              if (dev_print)
+                std::cout << "Comp. slackness fail: "
+                          << "l[" << i << "]=" << i << ", x[" << i
+                          << "]=" << state.colValue[i] << ", z[" << i
+                          << "]=" << state.colDual[i] << std::endl;
+              infeas = fabs(state.colDual[i]);
+            }
         }
-      if (colUpper[i] < HIGHS_CONST_INF)
-        if (fabs((colUpper[i] - colValue[i]) * (colDual[i])) > tol &&
-            colValue[i] != colLower[i] && fabs(colDual[i]) > tol) {
-          if (print == 1)
-            std::cout << "Comp. slackness fail: x[" << cIndexRev[i]
-                      << "]=" << colValue[i] << ", u[" << i
-                      << "]=" << colUpper[i] << ", z[" << i
-                      << "]=" << colDual[i] << std::endl;
-          // std::cout<<"Comp. slackness fail: x["<<i<<"]="<<colValue[i]<<",
-          // u["<<i<<"]="<<colUpper[i]<<", z["<<i<<"]="<<colDual[i]<<std::endl;
-          istrue = false;
+      if (state.colUpper[i] < HIGHS_CONST_INF &&
+          fabs(state.colUpper[i] - state.colValue[i]) > tol) {
+        if (fabs(state.colDual[i]) > tol) {
+          if (dev_print == 1)
+            std::cout << "Comp. slackness fail: x[" << i
+                      << "]=" << state.colValue[i] << ", u[" << i
+                      << "]=" << state.colUpper[i] << ", z[" << i
+                      << "]=" << state.colDual[i] << std::endl;
+          infeas = fabs(state.colDual[i]);
         }
-    }
+      }
 
-    if (istrue) {
-      if (print == 1) std::cout << "Complementary Slackness.\n";
-    } else {
-      if (print == 1) std::cout << "KKT check error: Comp slackness fail.\n";
-      istrueGlb = true;
+      if (infeas > 0) {
+        details.violated++;
+        details.sum_violation_2 += infeas * infeas;
+
+        if (details.max_violation < infeas) details.max_violation = infeas;
+      }
     }
   }
 
-  void KktCheck::printSol() {
-    char buff[10];
-    std::cout << std::endl << "Col value: ";
-    for (size_t i = 0; i < colValue.size(); i++) {
-      sprintf(buff, "%2.2f ", colValue[i]);
-      std::cout << std::setw(5) << buff;
-    }
-    std::cout << std::endl << "Col dual:  ";
-    for (size_t i = 0; i < colDual.size(); i++) {
-      sprintf(buff, "%2.2f ", colDual[i]);
-      std::cout << std::setw(5) << buff;
-    }
-    /*	cout<<std::endl<<"Row value: ";
-            for (i=0;i<numRow;i++) {
-                    sprintf(buff, "%2.2f ", rowValue[i]);
-                    std::cout<<setw(5)<<buff;
-                    }*/
-    std::cout << std::endl << "Row dual:  ";
-    for (size_t i = 0; i < rowDual.size(); i++) {
-      sprintf(buff, "%2.2f ", rowDual[i]);
-      std::cout << std::setw(5) << buff;
-    }
-    std::cout << std::endl << std::endl;
+  if (details.violated) {
+    if (dev_print == 1) std::cout << "Complementary Slackness.\n";
+  } else {
+    if (dev_print == 1) std::cout << "KKT check error: Comp slackness fail.\n";
   }
+}
 
-  void KktCheck::chStOfLagrangian() {
-    bool istrue = true;
-    double lagrV;
-    // A'y + c - z = 0
-    for (j = 0; j < numCol; j++) {
-      lagrV = colCost[j] - colDual[j];
-      for (k = Astart[j]; k < Astart[j + 1]; k++)
-        lagrV = lagrV + rowDual[Aindex[k]] * Avalue[k];
+void checkStationarityOfLagrangian(const State& state,
+                                   KktConditionDetails& details) {
+  details.type = KktCondition::kStationarityOfLagrangian;
+  details.checked = 0;
+  details.violated = 0;
+  details.max_violation = 0.0;
+  details.sum_violation_2 = 0.0;
+
+  // A'y + c - z = 0
+  for (int j = 0; j < state.numCol; j++) {
+    if (state.flagCol[j]) {
+      details.checked++;
+      double infeas = 0;
+
+      double lagrV = state.colCost[j] - state.colDual[j];
+      for (int k = state.Astart[j]; k < state.Astart[j + 1]; k++) {
+        const int row = state.Aindex[k];
+        assert(row >= 0 && row < state.numRow);
+        if (state.flagRow[row]) lagrV = lagrV + state.rowDual[row] * state.Avalue[k];
+      }
 
       if (fabs(lagrV) > tol) {
-        if (print == 1)
-          std::cout << "Column " << cIndexRev[j]
+        if (dev_print == 1)
+          std::cout << "Column " << j
                     << " fails stationary of Lagrangian: dL/dx" << j << " = "
                     << lagrV << ", rather than zero." << std::endl;
-        // std::cout<<"Column "<<j<<" fails stationary of Lagrangian:
-        // dL/dx"<<j<<"
-        // =
-        // "<<lagrV<<", rather than zero."<<std::endl;
-        istrue = false;
+        infeas = fabs(lagrV);
       }
-    }
 
-    if (istrue) {
-      if (print == 1) std::cout << "Stationarity of Lagrangian.\n";
-    } else {
-      if (print == 1)
-        std::cout << "KKT check error: Lagrangian is not stationary.\n";
-      istrueGlb = true;
-    }
-  }
+      if (infeas > 0) {
+        details.violated++;
+        details.sum_violation_2 += infeas * infeas;
 
-  void KktCheck::checkBFS() {
-    // Go over cols and check that the duals of basic values are zero.
-    assert((int)col_status.size() == numCol);
-    assert((int)colDual.size() == numCol);
-    for (int j = 0; j < numCol; j++) {
-      if (col_status[j] == HighsBasisStatus::BASIC && colDual[j] != 0) {
-        if (print == 1)
-          std::cout << "Col " << cIndexRev[j]
-                    << " is basic but has nonzero dual." << std::endl;
-        istrueGlb = true;
-      }
-    }
-
-    // Go over rows and check that the duals of basic values are zero.
-    assert((int)row_status.size() == numRow);
-    assert((int)rowDual.size() == numRow);
-    for (int i = 0; i < numRow; i++) {
-      if (row_status[i] == HighsBasisStatus::BASIC && rowDual[i] != 0) {
-        if (print == 1)
-          std::cout << "Row " << rIndexRev[i]
-                    << " is basic but has nonzero dual." << std::endl;
-        istrueGlb = true;
+        if (details.max_violation < infeas) details.max_violation = infeas;
       }
     }
   }
 
-  void KktCheck::checkKKT(const State& state, KktInfo info) {
-    if (numCol == 0) {
-      std::cout << "KKT warning: empty problem" << std::endl;
-      return;
+  if (details.violated) {
+    if (dev_print == 1) std::cout << "Stationarity of Lagrangian.\n";
+  } else {
+    if (dev_print == 1)
+      std::cout << "KKT check error: Lagrangian is not stationary.\n";
+  }
+}
+
+void checkBasicFeasibleSolution(const State& state,
+                                KktConditionDetails& details) {
+  // Go over cols and check that the duals of basic values are zero.
+  assert((int)state.col_status.size() == state.numCol);
+  assert((int)state.colDual.size() == state.numCol);
+  for (int j = 0; j < state.numCol; j++) {
+    if (state.flagCol[j]) {
+      details.checked++;
+      double infeas = 0;
+      if (state.col_status[j] == HighsBasisStatus::BASIC &&
+          fabs(state.colDual[j]) < tol) {
+        if (dev_print == 1)
+          std::cout << "Col " << j << " is basic but has nonzero dual."
+                    << std::endl;
+        infeas = fabs(state.colDual[j]);
+      }
+
+      if (infeas > 0) {
+        details.violated++;
+        details.sum_violation_2 += infeas * infeas;
+
+        if (details.max_violation < infeas) details.max_violation = infeas;
+      }
     }
-
-    std::cout << std::endl;
-
-    checkPrimalBounds(state, info);
-
-    bool pass = true;
-    assert(info.rules.size() == 5);
-    if (info.rules[KktCondition::kColBounds].violated == 0)
-      info.pass_col_bounds = true;
-    if (info.rules[KktCondition::kPrimalFeasibility].violated == 0)
-      info.pass_col_bounds = true;
-    if (info.rules[KktCondition::kDualFeasibility].violated == 0)
-      info.pass_col_bounds = true;
-    if (info.rules[KktCondition::kComplementarySlackness].violated == 0)
-      info.pass_col_bounds = true;
-    if (info.rules[KktCondition::kStationarityOfLagrangian].violated == 0)
-      info.pass_col_bounds = true;
   }
 
-  void KktCheck::passSolution(const std::vector<double>& colVal,
-                              const std::vector<double>& colDu,
-                              const std::vector<double>& rDu) {
-    colValue = colVal;
-    colDual = colDu;
-    rowDual = rDu;
-  }
-  // get DATA
-  void KktCheck::setMatrix(const std::vector<int>& Astart_,
-                           const std::vector<int>& Aindex_,
-                           const std::vector<double>& Avalue_) {
-    Astart = Astart_;
-    Aindex = Aindex_;
-    Avalue = Avalue_;
+  // Go over rows and check that the duals of basic values are zero.
+  assert((int)state.row_status.size() == state.numRow);
+  assert((int)state.rowDual.size() == state.numRow);
+  for (int i = 0; i < state.numRow; i++) {
+    if (state.flagRow[i]) {
+      details.checked++;
+      double infeas;
+      if (state.row_status[i] == HighsBasisStatus::BASIC &&
+          fabs(state.rowDual[i]) > 0) {
+        if (dev_print == 1)
+          std::cout << "Row " << i << " is basic but has nonzero dual."
+                    << std::endl;
+        infeas = fabs(state.rowDual[i]);
+      }
+      if (infeas > 0) {
+        details.violated++;
+        details.sum_violation_2 += infeas * infeas;
+
+        if (details.max_violation < infeas) details.max_violation = infeas;
+      }
+    }
   }
 
-  void KktCheck::setBounds(const std::vector<double>& colUpper_,
-                           const std::vector<double>& colLower_) {
-    colLower = colLower_;
-    colUpper = colUpper_;
+  if (details.violated) {
+    if (dev_print == 1) std::cout << "BFS.\n";
+  } else {
+    if (dev_print == 1) std::cout << "BFS X.\n";
+  }
+}
+
+void check(const State& state, KktInfo& info) {
+  if (state.numCol == 0) {
+    std::cout << "KKT warning: empty problem" << std::endl;
+    return;
   }
 
-  void KktCheck::setNumbersCostRHS(
-      int nCol, int nRow, const std::vector<double>& rowLower_,
-      const std::vector<double>& rowUpper_, const std::vector<double>& cost) {
-    numCol = nCol;
-    numRow = nRow;
-    colCost = cost;
-    rowLower = rowLower_
-  }  // namespace dev_kkt_check
+  std::cout << std::endl;
+
+  checkPrimalBounds(state, info.rules[KktCondition::kColBounds]);
+  checkPrimalFeasMatrix(state, info.rules[KktCondition::kPrimalFeasibility]);
+  checkDualFeasibility(state, info.rules[KktCondition::kDualFeasibility]);
+  checkComplementarySlackness(state, info.rules[KktCondition::kComplementarySlackness]);
+  checkStationarityOfLagrangian(state, info.rules[KktCondition::kStationarityOfLagrangian]);
+  checkBasicFeasibleSolution(state, info.rules[KktCondition::kBasicFeasibleSolution]);
+
+  bool pass = true;
+  assert(info.rules.size() == 5);
+  if (info.rules[KktCondition::kColBounds].violated == 0)
+    info.pass_col_bounds = true;
+  if (info.rules[KktCondition::kPrimalFeasibility].violated == 0)
+    info.pass_col_bounds = true;
+  if (info.rules[KktCondition::kDualFeasibility].violated == 0)
+    info.pass_col_bounds = true;
+  if (info.rules[KktCondition::kComplementarySlackness].violated == 0)
+    info.pass_col_bounds = true;
+  if (info.rules[KktCondition::kStationarityOfLagrangian].violated == 0)
+    info.pass_col_bounds = true;
+}
+
 }  // namespace dev_kkt_check
+}  // namespace presolve

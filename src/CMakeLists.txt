@@ -400,6 +400,7 @@ target_sources(libhighs PRIVATE
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    test/DevKkt.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/stringutil.cpp
