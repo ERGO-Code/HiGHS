@@ -1973,14 +1973,17 @@ void Presolve::removeForcingConstraints() {
 }
 
 void Presolve::removeRowSingletons() {
-  timer.recordStart(SING_ROW);
   int i;
   if (timer.reachLimit()) {
     status = stat::Timeout;
     return;
   }
+  timer.recordStart(SING_ROW);
   while (!(singRow.empty())) {
-    if (status) return;
+    if (status) {
+      timer.recordFinish(SING_ROW);
+      return;
+    }
     /*
     if (timer.reachLimit()) {
       status = stat::Timeout;
