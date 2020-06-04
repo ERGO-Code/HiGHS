@@ -324,8 +324,7 @@ HighsPresolveStatus Presolve::presolve() {
       presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
-  //  if (iPrint > 0)
-  timer.reportClocks();
+  if (iPrint > 0) timer.reportClocks();
 
   return presolve_status;
 }
