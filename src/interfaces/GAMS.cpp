@@ -238,8 +238,9 @@ static int setupProblem(gamshighs_t* gh) {
     }
 
     basis.valid_ = nbasic == numRow;
-
-    gh->highs->setBasis(basis);
+    /* HiGHS compiled without NDEBUG defined currently raises an assert in basisOK() if given an invalid basis */
+    if (basis.valid_)
+       gh->highs->setBasis(basis);
   }
 
   rc = 0;
