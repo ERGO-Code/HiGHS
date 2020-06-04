@@ -14,7 +14,6 @@
 #ifndef TEST_DEV_KKT_H_
 #define TEST_DEV_KKT_H_
 
-#include <iostream>
 #include <map>
 #include <vector>
 
@@ -32,10 +31,11 @@ struct State {
         const std::vector<double>& colLower_,
         const std::vector<double>& colUpper_,
         const std::vector<double>& rowLower_,
-        const std::vector<double>& rowUpper_, const std::vector<int> flagCol_,
-        const std::vector<int> flagRow_, const std::vector<double> colValue_,
-        const std::vector<double> colDual_, const std::vector<double> rowValue_,
-        const std::vector<double> rowDual_,
+        const std::vector<double>& rowUpper_, const std::vector<int>& flagCol_,
+        const std::vector<int>& flagRow_, const std::vector<double>& colValue_,
+        const std::vector<double>& colDual_,
+        const std::vector<double>& rowValue_,
+        const std::vector<double>& rowDual_,
         const std::vector<HighsBasisStatus>& col_status_,
         const std::vector<HighsBasisStatus>& row_status_)
       : numCol(numCol_),
@@ -98,12 +98,14 @@ enum class KktCondition {
   kComplementarySlackness,
   kStationarityOfLagrangian,
   kBasicFeasibleSolution,
+  kUnset,
 };
 
 struct KktConditionDetails {
+  KktConditionDetails() {}
   KktConditionDetails(KktCondition type_) : type(type_) {}
 
-  KktCondition type;
+  KktCondition type = KktCondition::kUnset;
   double max_violation = 0.0;
   double sum_violation_2 = 0.0;
   int checked = 0;
@@ -117,6 +119,7 @@ struct KktInfo {
   bool pass_dual_feas = false;
   bool pass_st_of_L = false;
   bool pass_comp_slackness = false;
+  bool pass_bfs = false;
 };
 
 void initInfo(KktInfo& info);
@@ -126,9 +129,12 @@ bool checkKkt(const State& state, KktInfo info);
 void checkPrimalBounds(const State& state, KktConditionDetails& details);
 void checkPrimalFeasMatrix(const State& state, KktConditionDetails& details);
 void checkDualFeasibility(const State& state, KktConditionDetails& details);
-void checkComplementarySlackness(const State& state, KktConditionDetails& details);
-void checkStationarityOfLagrangian(const State& state, KktConditionDetails& details);
-void checkBasicFeasibleSolution(const State& state, KktConditionDetails& details);
+void checkComplementarySlackness(const State& state,
+                                 KktConditionDetails& details);
+void checkStationarityOfLagrangian(const State& state,
+                                   KktConditionDetails& details);
+void checkBasicFeasibleSolution(const State& state,
+                                KktConditionDetails& details);
 
 }  // namespace dev_kkt_check
 }  // namespace presolve

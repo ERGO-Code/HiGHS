@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <iostream>
 
 namespace presolve {
 namespace dev_kkt_check {
@@ -33,6 +34,8 @@ void initInfo(KktInfo& info) {
       KktConditionDetails(KktCondition::kComplementarySlackness);
   info.rules[KktCondition::kStationarityOfLagrangian] =
       KktConditionDetails(KktCondition::kStationarityOfLagrangian);
+  info.rules[KktCondition::kBasicFeasibleSolution] =
+      KktConditionDetails(KktCondition::kBasicFeasibleSolution);
 }
 
 void checkPrimalBounds(const State& state, KktConditionDetails& details) {
@@ -261,15 +264,15 @@ void checkComplementarySlackness(const State& state,
       details.checked++;
       if (state.colLower[i] > -HIGHS_CONST_INF &&
           state.colValue[i] - state.colLower[i] > tol) {
-          if (fabs(state.colDual[i]) > tol) {
-              if (dev_print)
-                std::cout << "Comp. slackness fail: "
-                          << "l[" << i << "]=" << i << ", x[" << i
-                          << "]=" << state.colValue[i] << ", z[" << i
-                          << "]=" << state.colDual[i] << std::endl;
-              infeas = fabs(state.colDual[i]);
-            }
+        if (fabs(state.colDual[i]) > tol) {
+          if (dev_print)
+            std::cout << "Comp. slackness fail: "
+                      << "l[" << i << "]=" << i << ", x[" << i
+                      << "]=" << state.colValue[i] << ", z[" << i
+                      << "]=" << state.colDual[i] << std::endl;
+          infeas = fabs(state.colDual[i]);
         }
+      }
       if (state.colUpper[i] < HIGHS_CONST_INF &&
           fabs(state.colUpper[i] - state.colValue[i]) > tol) {
         if (fabs(state.colDual[i]) > tol) {
@@ -316,7 +319,8 @@ void checkStationarityOfLagrangian(const State& state,
       for (int k = state.Astart[j]; k < state.Astart[j + 1]; k++) {
         const int row = state.Aindex[k];
         assert(row >= 0 && row < state.numRow);
-        if (state.flagRow[row]) lagrV = lagrV + state.rowDual[row] * state.Avalue[k];
+        if (state.flagRow[row])
+          lagrV = lagrV + state.rowDual[row] * state.Avalue[k];
       }
 
       if (fabs(lagrV) > tol) {
@@ -400,10 +404,10 @@ void checkBasicFeasibleSolution(const State& state,
   }
 }
 
-void check(const State& state, KktInfo& info) {
+bool checkKkt(const State& state, KktInfo info) {
   if (state.numCol == 0) {
     std::cout << "KKT warning: empty problem" << std::endl;
-    return;
+    return true;
   }
 
   std::cout << std::endl;
@@ -411,22 +415,33 @@ void check(const State& state, KktInfo& info) {
   checkPrimalBounds(state, info.rules[KktCondition::kColBounds]);
   checkPrimalFeasMatrix(state, info.rules[KktCondition::kPrimalFeasibility]);
   checkDualFeasibility(state, info.rules[KktCondition::kDualFeasibility]);
-  checkComplementarySlackness(state, info.rules[KktCondition::kComplementarySlackness]);
-  checkStationarityOfLagrangian(state, info.rules[KktCondition::kStationarityOfLagrangian]);
-  checkBasicFeasibleSolution(state, info.rules[KktCondition::kBasicFeasibleSolution]);
+  checkComplementarySlackness(
+      state, info.rules[KktCondition::kComplementarySlackness]);
+  checkStationarityOfLagrangian(
+      state, info.rules[KktCondition::kStationarityOfLagrangian]);
+  checkBasicFeasibleSolution(state,
+                             info.rules[KktCondition::kBasicFeasibleSolution]);
 
   bool pass = true;
   assert(info.rules.size() == 5);
+
   if (info.rules[KktCondition::kColBounds].violated == 0)
     info.pass_col_bounds = true;
   if (info.rules[KktCondition::kPrimalFeasibility].violated == 0)
-    info.pass_col_bounds = true;
+    info.pass_primal_feas_matrix = true;
   if (info.rules[KktCondition::kDualFeasibility].violated == 0)
-    info.pass_col_bounds = true;
+    info.pass_dual_feas = true;
   if (info.rules[KktCondition::kComplementarySlackness].violated == 0)
-    info.pass_col_bounds = true;
+    info.pass_comp_slackness = true;
   if (info.rules[KktCondition::kStationarityOfLagrangian].violated == 0)
-    info.pass_col_bounds = true;
+    info.pass_st_of_L = true;
+  if (info.rules[KktCondition::kBasicFeasibleSolution].violated == 0)
+    info.pass_bfs = true;
+
+  if (info.pass_primal_feas_matrix && info.pass_col_bounds &&
+      info.pass_dual_feas && info.pass_comp_slackness && info.pass_st_of_L)
+    return true;
+  return false;
 }
 
 }  // namespace dev_kkt_check
