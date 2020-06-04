@@ -479,7 +479,7 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr) {
 
   gevLogStatPChar(gh->gev, "HiGHS " XQUOTE(HIGHS_VERSION_MAJOR) "." XQUOTE(HIGHS_VERSION_MINOR) "." XQUOTE(HIGHS_VERSION_PATCH) " [date: " HIGHS_COMPILATION_DATE ", git hash: " HIGHS_GITHASH "]\n");
   gevLogStatPChar(gh->gev,
-                  "Copyright (c) 2019 ERGO-Code under MIT license terms.\n");
+                  "Copyright (c) 2020 ERGO-Code under MIT license terms.\n");
 
   gmoModelStatSet(gh->gmo, gmoModelStat_NoSolutionReturned);
   gmoSolveStatSet(gh->gmo, gmoSolveStat_SystemErr);
