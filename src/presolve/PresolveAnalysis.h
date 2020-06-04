@@ -53,6 +53,7 @@ enum PresolveRule {
   REMOVE_COLUMN_SINGLETONS,
   REMOVE_DOUBLETON_EQUATIONS,
   REMOVE_DOMINATED_COLUMNS,
+  REMOVE_EMPTY_ROW,
 
   TOTAL_PRESOLVE_TIME,
   // Number of presolve rules.
@@ -135,14 +136,17 @@ class PresolveTimer {
       assert(rules_[id].rule_id == id);
       if (id == RUN_PRESOLVERS) continue;
       if (id == REMOVE_ROW_SINGLETONS) continue;
-      if (id == REMOVE_FORCING_CONSTRAINTS) continue;
-      if (id == REMOVE_COLUMN_SINGLETONS) continue;
+      //      if (id == REMOVE_FORCING_CONSTRAINTS) continue;
+      //      if (id == REMOVE_COLUMN_SINGLETONS) continue;
       if (id == REMOVE_DOUBLETON_EQUATIONS) continue;
-      if (id == REMOVE_DOMINATED_COLUMNS) continue;
+      //      if (id == REMOVE_DOMINATED_COLUMNS) continue;
+      if (id == REMOVE_EMPTY_ROW) continue;
       clocks.push_back(rules_[id].clock_id);
     }
-    const int total_presolve_time_as_rule = TOTAL_PRESOLVE_TIME;
-    double ideal_time = getRuleTime(total_presolve_time_as_rule);
+    int ideal_time_rule;
+    double ideal_time;
+    ideal_time_rule = TOTAL_PRESOLVE_TIME;
+    ideal_time = getRuleTime(ideal_time_rule);
     std::cout << std::endl;
     timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
     std::cout << std::endl;
@@ -155,14 +159,41 @@ class PresolveTimer {
     std::cout << std::endl;
 
     clocks.clear();
-    const int run_presolvers_as_rule = RUN_PRESOLVERS;
-    ideal_time = getRuleTime(run_presolvers_as_rule);
+    ideal_time_rule = RUN_PRESOLVERS;
+    ideal_time = getRuleTime(ideal_time_rule);
     clocks.push_back(rules_[REMOVE_ROW_SINGLETONS].clock_id);
     clocks.push_back(rules_[REMOVE_FORCING_CONSTRAINTS].clock_id);
     clocks.push_back(rules_[REMOVE_COLUMN_SINGLETONS].clock_id);
     clocks.push_back(rules_[REMOVE_DOUBLETON_EQUATIONS].clock_id);
     clocks.push_back(rules_[REMOVE_DOMINATED_COLUMNS].clock_id);
     timer_.report_tl("grep-Presolve", clocks, ideal_time, 0);
+    std::cout << std::endl;
+
+    clocks.clear();
+    ideal_time_rule = REMOVE_FORCING_CONSTRAINTS;
+    ideal_time = getRuleTime(ideal_time_rule);
+    clocks.push_back(rules_[REMOVE_EMPTY_ROW].clock_id);
+    clocks.push_back(rules_[FORCING_ROW].clock_id);
+    clocks.push_back(rules_[REDUNDANT_ROW].clock_id);
+    clocks.push_back(rules_[DOMINATED_ROW_BOUNDS].clock_id);
+    timer_.report_tl("grep--RmFrcCs", clocks, ideal_time, 0);
+    std::cout << std::endl;
+
+    clocks.clear();
+    ideal_time_rule = REMOVE_COLUMN_SINGLETONS;
+    ideal_time = getRuleTime(ideal_time_rule);
+    clocks.push_back(rules_[FREE_SING_COL].clock_id);
+    clocks.push_back(rules_[SING_COL_DOUBLETON_INEQ].clock_id);
+    clocks.push_back(rules_[IMPLIED_FREE_SING_COL].clock_id);
+    timer_.report_tl("grep-RmColSng", clocks, ideal_time, 0);
+    std::cout << std::endl;
+
+    clocks.clear();
+    ideal_time_rule = REMOVE_DOMINATED_COLUMNS;
+    ideal_time = getRuleTime(ideal_time_rule);
+    clocks.push_back(rules_[DOMINATED_COLS].clock_id);
+    clocks.push_back(rules_[WEAKLY_DOMINATED_COLS].clock_id);
+    timer_.report_tl("grep-RmDomCol", clocks, ideal_time, 0);
     std::cout << std::endl;
   }
 
