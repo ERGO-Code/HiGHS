@@ -22,6 +22,7 @@ typedef struct optRec* optHandle_t;
 
 /* HiGHS API */
 #include "Highs.h"
+#include "HighsIO.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
 #include "io/LoadOptions.h" /* for loadOptionsFromFile */
@@ -122,6 +123,7 @@ static int setupOptions(gamshighs_t* gh) {
   gh->options->printmsgcb = gevprint;
   gh->options->logmsgcb = gevlog;
   gh->options->msgcb_data = (void*)gh->gev;
+  HighsSetIO(*gh->options);
 
   return 0;
 }
@@ -149,7 +151,7 @@ static int setupProblem(gamshighs_t* gh) {
 
   gh->lp->numRow_ = numRow;
   gh->lp->numCol_ = numCol;
-  gh->lp->nnz_ = numNz;
+//  gh->lp->nnz_ = numNz;
 
   /* columns */
   gh->lp->colUpper_.resize(numCol);
@@ -161,9 +163,9 @@ static int setupProblem(gamshighs_t* gh) {
   gh->lp->colCost_.resize(numCol);
   gmoGetObjVector(gh->gmo, &gh->lp->colCost_[0], NULL);
   if (gmoSense(gh->gmo) == gmoObj_Min)
-    gh->lp->sense_ = OBJSENSE_MINIMIZE;
+    gh->lp->sense_ = ObjSense::MINIMIZE;
   else
-    gh->lp->sense_ = OBJSENSE_MAXIMIZE;
+    gh->lp->sense_ = ObjSense::MAXIMIZE;
   gh->lp->offset_ = gmoObjConst(gh->gmo);
 
   /* row left- and right-hand-side */
@@ -214,7 +216,7 @@ static int setupProblem(gamshighs_t* gh) {
   gmoGetVarL(gh->gmo, &sol.col_value[0]);
   gmoGetVarM(gh->gmo, &sol.col_dual[0]);
   gmoGetEquL(gh->gmo, &sol.row_value[0]);
-  gmoGetEquM(gh->gmo, &sol.row_dual[0]);
+  gmoGetEquM(gh->gmo, &sol.row_dual[0]);  // TODO do they need to be negated, like in processSolve()?
   gh->highs->setSolution(sol);
 
   if (gmoHaveBasis(gh->gmo)) {
@@ -236,8 +238,9 @@ static int setupProblem(gamshighs_t* gh) {
     }
 
     basis.valid_ = nbasic == numRow;
-
-    gh->highs->setBasis(basis);
+    /* HiGHS compiled without NDEBUG defined currently raises an assert in basisOK() if given an invalid basis */
+    if (basis.valid_)
+       gh->highs->setBasis(basis);
   }
 
   rc = 0;
@@ -255,7 +258,7 @@ static int processSolve(gamshighs_t* gh) {
   Highs* highs = gh->highs;
 
   gmoSetHeadnTail(gmo, gmoHresused, gevTimeDiffStart(gh->gev));
-  gmoSetHeadnTail(gmo, gmoHiterused, highs->getIterationCount());
+  gmoSetHeadnTail(gmo, gmoHiterused, highs->getHighsInfo().simplex_iteration_count);
 
   // figure out model and solution status and whether we should have a solution
   // to be written
@@ -358,11 +361,14 @@ static int processSolve(gamshighs_t* gh) {
       // TODO change when we can process infeasible or unbounded solutions
       gmoVarEquStatus stat = gmoCstat_OK;
 
-      gmoSetSolutionEquRec(gmo, i, sol.row_value[i], sol.row_dual[i], basisstat,
+      // somehow, row duals returns by HiGHS have the wrong sign
+      gmoSetSolutionEquRec(gmo, i, sol.row_value[i], -sol.row_dual[i], basisstat,
                            stat);
     }
 
-    gmoCompleteObjective(gmo, highs->getObjectiveValue());
+    // if there were =N= rows (lp08), then gmoCompleteObjective wouldn't get their activity right
+    //gmoCompleteObjective(gmo, highs->getHighsInfo().objective_function_value);
+    gmoCompleteSolution(gmo);
   }
 
   return 0;
@@ -475,7 +481,7 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr) {
 
   gevLogStatPChar(gh->gev, "HiGHS " XQUOTE(HIGHS_VERSION_MAJOR) "." XQUOTE(HIGHS_VERSION_MINOR) "." XQUOTE(HIGHS_VERSION_PATCH) " [date: " HIGHS_COMPILATION_DATE ", git hash: " HIGHS_GITHASH "]\n");
   gevLogStatPChar(gh->gev,
-                  "Copyright (c) 2019 ERGO-Code under MIT license terms.\n");
+                  "Copyright (c) 2020 ERGO-Code under MIT license terms.\n");
 
   gmoModelStatSet(gh->gmo, gmoModelStat_NoSolutionReturned);
   gmoSolveStatSet(gh->gmo, gmoSolveStat_SystemErr);
