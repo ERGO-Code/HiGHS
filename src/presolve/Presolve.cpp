@@ -338,7 +338,7 @@ HighsPresolveStatus Presolve::presolve() {
 void Presolve::checkBoundsAreConsistent() {
   for (int col = 0; col < numCol; col++) {
     if (flagCol[col]) {
-      if (colUpper[col] - colLower[col] < -tol) {
+      if (colUpper[col] - colLower[col] < -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -347,7 +347,7 @@ void Presolve::checkBoundsAreConsistent() {
 
   for (int row = 0; row < numRow; row++) {
     if (flagRow[row]) {
-      if (rowUpper[row] - rowLower[row] < -tol) {
+      if (rowUpper[row] - rowLower[row] < -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -481,9 +481,12 @@ void Presolve::removeDoubletonEquations() {
 
   for (int row = 0; row < numRow; row++)
     if (flagRow.at(row))
-      if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
+      if (nzRow.at(row) == 2 &&
+	  rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
-          fabs(rowLower[row] - rowUpper[row]) < tol) {
+	  // I'd say that the following should be <=, in case the tolerance is zero
+          fabs(rowLower[row] - rowUpper[row]) <= doubleton_equation_bound_tolerance) {
+	//          fabs(rowLower[row] - rowUpper[row]) < tol) {
         if (timer.reachLimit()) {
           status = stat::Timeout;
           timer.recordFinish(DOUBLETON_EQUATION);
@@ -614,7 +617,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (ARindex.at(ind) == x) break;
 
   xNew = ARvalue.at(ind) - (aiy * akx) / aky;
-  if (fabs(xNew) > tol) {
+  if (fabs(xNew) > presolve_small_matrix_value) {
     // case new x != 0
     // cout<<"case: x still there row "<<i<<" "<<endl;
 
@@ -630,7 +633,11 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
         break;
       }
     Avalue.at(ind) = xNew;
-  } else if (xNew < tol) {
+  } else if (
+	     // Should be <= tolerance otherwise "= tolerance" isn't
+	     // handled. Why isn't this juet "else", anyway?
+	     xNew <= presolve_small_matrix_value // < tol //
+	     ) {
     // case new x == 0
     // cout<<"case: x also disappears from row "<<i<<" "<<endl;
     // update nz row
@@ -967,7 +974,8 @@ void Presolve::removeIfFixed(int j) {
 }
 
 void Presolve::removeEmptyRow(int i) {
-  if (rowLower.at(i) <= tol && rowUpper.at(i) >= -tol) {
+  if (rowLower.at(i) <= empty_row_bound_tolerance &&
+      rowUpper.at(i) >= -empty_row_bound_tolerance) {
     if (iPrint > 0) cout << "PR: Empty row " << i << " removed. " << endl;
     flagRow.at(i) = 0;
     valueRowDual.at(i) = 0;
@@ -1957,12 +1965,6 @@ void Presolve::removeForcingConstraints() {
 void Presolve::removeRowSingletons() {
   timer.recordStart(SING_ROW);
   int i;
-  int singRowZ = singRow.size();
-  /*
-  if (singRowZ == 36) {
-    printf("JAJH: singRow.size() = %d\n", singRowZ);fflush(stdout);
-  }
-  */
   while (!(singRow.empty())) {
     if (status) return;
     if (timer.reachLimit()) {
