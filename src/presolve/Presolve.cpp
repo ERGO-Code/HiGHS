@@ -191,22 +191,22 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
         removeRowSingletons();
         break;
       case Presolver::kMainForcing:
-	timer.recordStart(REMOVE_FORCING_CONSTRAINTS);
+        timer.recordStart(REMOVE_FORCING_CONSTRAINTS);
         removeForcingConstraints();
-	timer.recordFinish(REMOVE_FORCING_CONSTRAINTS);
+        timer.recordFinish(REMOVE_FORCING_CONSTRAINTS);
         break;
       case Presolver::kMainColSingletons:
-	timer.recordStart(REMOVE_COLUMN_SINGLETONS);
+        timer.recordStart(REMOVE_COLUMN_SINGLETONS);
         removeColumnSingletons();
-	timer.recordFinish(REMOVE_COLUMN_SINGLETONS);
+        timer.recordFinish(REMOVE_COLUMN_SINGLETONS);
         break;
       case Presolver::kMainDoubletonEq:
         removeDoubletonEquations();
         break;
       case Presolver::kMainDominatedCols:
-	timer.recordStart(REMOVE_DOMINATED_COLUMNS);
+        timer.recordStart(REMOVE_DOMINATED_COLUMNS);
         removeDominatedColumns();
-	timer.recordFinish(REMOVE_DOMINATED_COLUMNS);
+        timer.recordFinish(REMOVE_DOMINATED_COLUMNS);
         break;
     }
 
@@ -325,7 +325,7 @@ HighsPresolveStatus Presolve::presolve() {
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
   //  if (iPrint > 0)
-    timer.reportClocks();
+  timer.reportClocks();
 
   return presolve_status;
 }
@@ -484,13 +484,13 @@ void Presolve::removeDoubletonEquations() {
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
           fabs(rowLower[row] - rowUpper[row]) < tol) {
-	/*
+        /*
         if (timer.reachLimit()) {
           status = stat::Timeout;
           timer.recordFinish(DOUBLETON_EQUATION);
           return;
         }
-	*/
+        */
 
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
@@ -1158,7 +1158,7 @@ void Presolve::removeDominatedColumns() {
         if (colLower.at(j) <= -HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
-	  //          timer.recordFinish(DOMINATED_COLS);
+          //          timer.recordFinish(DOMINATED_COLS);
           return;
         }
         setPrimalValue(j, colLower.at(j));
@@ -1171,7 +1171,7 @@ void Presolve::removeDominatedColumns() {
         if (colUpper.at(j) >= HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
-	  //          timer.recordFinish(DOMINATED_COLS);
+          //          timer.recordFinish(DOMINATED_COLS);
           return;
         }
         setPrimalValue(j, colUpper.at(j));
@@ -1189,7 +1189,7 @@ void Presolve::removeDominatedColumns() {
         if (implColDualLower.at(j) > implColDualUpper.at(j))
           cout << "INCONSISTENT\n";
 
-	//        timer.recordFinish(DOMINATED_COLS);
+        //        timer.recordFinish(DOMINATED_COLS);
 
         removeIfWeaklyDominated(j, d, e);
         continue;
@@ -1518,12 +1518,12 @@ void Presolve::removeColumnSingletons() {
 
   while (it != singCol.end()) {
     if (flagCol[*it]) {
-    /*
-      if (timer.reachLimit()) {
-        status = stat::Timeout;
-        return;
-      }
-    */
+      /*
+        if (timer.reachLimit()) {
+          status = stat::Timeout;
+          return;
+        }
+      */
       col = *it;
       k = getSingColElementIndexInA(col);
       if (k < 0) {
@@ -1536,18 +1536,18 @@ void Presolve::removeColumnSingletons() {
       // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
           colUpper.at(col) >= HIGHS_CONST_INF) {
-	//        timer.recordStart(FREE_SING_COL);
+        //        timer.recordStart(FREE_SING_COL);
         removeFreeColumnSingleton(col, i, k);
         it = singCol.erase(it);
-	//        timer.recordFinish(FREE_SING_COL);
+        //        timer.recordFinish(FREE_SING_COL);
         continue;
       }
       // singleton column in a doubleton inequality
       // case two column singletons
       else if (nzRow.at(i) == 2) {
-	//        timer.recordStart(SING_COL_DOUBLETON_INEQ);
+        //        timer.recordStart(SING_COL_DOUBLETON_INEQ);
         bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
-	//        timer.recordFinish(SING_COL_DOUBLETON_INEQ);
+        //        timer.recordFinish(SING_COL_DOUBLETON_INEQ);
         if (result) {
           it = singCol.erase(it);
           continue;
@@ -1555,9 +1555,9 @@ void Presolve::removeColumnSingletons() {
       }
       // implied free
       else {
-	//        timer.recordStart(IMPLIED_FREE_SING_COL);
+        //        timer.recordStart(IMPLIED_FREE_SING_COL);
         bool result = removeIfImpliedFree(col, i, k);
-	//        timer.recordFinish(IMPLIED_FREE_SING_COL);
+        //        timer.recordFinish(IMPLIED_FREE_SING_COL);
         if (result) {
           it = singCol.erase(it);
           continue;
@@ -1943,7 +1943,7 @@ void Presolve::removeForcingConstraints() {
       if (g > rowUpper.at(i) || h < rowLower.at(i)) {
         if (iPrint > 0) cout << "PR: Problem infeasible." << endl;
         status = Infeasible;
-	//        timer.recordFinish(FORCING_ROW);
+        //        timer.recordFinish(FORCING_ROW);
         return;
       }
       // Forcing row
@@ -1962,10 +1962,10 @@ void Presolve::removeForcingConstraints() {
       }
       // Dominated constraints
       else {
-	//        timer.recordFinish(FORCING_ROW);
-	//        timer.recordStart(DOMINATED_ROW_BOUNDS);
+        //        timer.recordFinish(FORCING_ROW);
+        //        timer.recordStart(DOMINATED_ROW_BOUNDS);
         dominatedConstraintProcedure(i, g, h);
-	//        timer.recordFinish(DOMINATED_ROW_BOUNDS);
+        //        timer.recordFinish(DOMINATED_ROW_BOUNDS);
         continue;
       }
       //      timer.recordFinish(FORCING_ROW);
