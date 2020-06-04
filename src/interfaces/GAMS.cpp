@@ -149,7 +149,7 @@ static int setupProblem(gamshighs_t* gh) {
 
   gh->lp->numRow_ = numRow;
   gh->lp->numCol_ = numCol;
-  gh->lp->nnz_ = numNz;
+//  gh->lp->nnz_ = numNz;
 
   /* columns */
   gh->lp->colUpper_.resize(numCol);
@@ -161,9 +161,9 @@ static int setupProblem(gamshighs_t* gh) {
   gh->lp->colCost_.resize(numCol);
   gmoGetObjVector(gh->gmo, &gh->lp->colCost_[0], NULL);
   if (gmoSense(gh->gmo) == gmoObj_Min)
-    gh->lp->sense_ = OBJSENSE_MINIMIZE;
+    gh->lp->sense_ = ObjSense::MINIMIZE;
   else
-    gh->lp->sense_ = OBJSENSE_MAXIMIZE;
+    gh->lp->sense_ = ObjSense::MAXIMIZE;
   gh->lp->offset_ = gmoObjConst(gh->gmo);
 
   /* row left- and right-hand-side */
@@ -255,7 +255,7 @@ static int processSolve(gamshighs_t* gh) {
   Highs* highs = gh->highs;
 
   gmoSetHeadnTail(gmo, gmoHresused, gevTimeDiffStart(gh->gev));
-  gmoSetHeadnTail(gmo, gmoHiterused, highs->getIterationCount());
+  gmoSetHeadnTail(gmo, gmoHiterused, highs->getHighsInfo().simplex_iteration_count);
 
   // figure out model and solution status and whether we should have a solution
   // to be written
@@ -362,7 +362,7 @@ static int processSolve(gamshighs_t* gh) {
                            stat);
     }
 
-    gmoCompleteObjective(gmo, highs->getObjectiveValue());
+    gmoCompleteObjective(gmo, highs->getHighsInfo().objective_function_value);
   }
 
   return 0;
