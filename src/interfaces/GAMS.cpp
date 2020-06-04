@@ -151,7 +151,7 @@ static int setupProblem(gamshighs_t* gh) {
 
   gh->lp->numRow_ = numRow;
   gh->lp->numCol_ = numCol;
-//  gh->lp->nnz_ = numNz;
+  //  gh->lp->nnz_ = numNz;
 
   /* columns */
   gh->lp->colUpper_.resize(numCol);
@@ -216,7 +216,8 @@ static int setupProblem(gamshighs_t* gh) {
   gmoGetVarL(gh->gmo, &sol.col_value[0]);
   gmoGetVarM(gh->gmo, &sol.col_dual[0]);
   gmoGetEquL(gh->gmo, &sol.row_value[0]);
-  gmoGetEquM(gh->gmo, &sol.row_dual[0]);  // TODO do they need to be negated, like in processSolve()?
+  gmoGetEquM(gh->gmo, &sol.row_dual[0]);  // TODO do they need to be negated,
+                                          // like in processSolve()?
   gh->highs->setSolution(sol);
 
   if (gmoHaveBasis(gh->gmo)) {
@@ -238,9 +239,9 @@ static int setupProblem(gamshighs_t* gh) {
     }
 
     basis.valid_ = nbasic == numRow;
-    /* HiGHS compiled without NDEBUG defined currently raises an assert in basisOK() if given an invalid basis */
-    if (basis.valid_)
-       gh->highs->setBasis(basis);
+    /* HiGHS compiled without NDEBUG defined currently raises an assert in
+     * basisOK() if given an invalid basis */
+    if (basis.valid_) gh->highs->setBasis(basis);
   }
 
   rc = 0;
@@ -258,7 +259,8 @@ static int processSolve(gamshighs_t* gh) {
   Highs* highs = gh->highs;
 
   gmoSetHeadnTail(gmo, gmoHresused, gevTimeDiffStart(gh->gev));
-  gmoSetHeadnTail(gmo, gmoHiterused, highs->getHighsInfo().simplex_iteration_count);
+  gmoSetHeadnTail(gmo, gmoHiterused,
+                  highs->getHighsInfo().simplex_iteration_count);
 
   // figure out model and solution status and whether we should have a solution
   // to be written
@@ -362,12 +364,14 @@ static int processSolve(gamshighs_t* gh) {
       gmoVarEquStatus stat = gmoCstat_OK;
 
       // somehow, row duals returns by HiGHS have the wrong sign
-      gmoSetSolutionEquRec(gmo, i, sol.row_value[i], -sol.row_dual[i], basisstat,
-                           stat);
+      gmoSetSolutionEquRec(gmo, i, sol.row_value[i], -sol.row_dual[i],
+                           basisstat, stat);
     }
 
-    // if there were =N= rows (lp08), then gmoCompleteObjective wouldn't get their activity right
-    //gmoCompleteObjective(gmo, highs->getHighsInfo().objective_function_value);
+    // if there were =N= rows (lp08), then gmoCompleteObjective wouldn't get
+    // their activity right
+    // gmoCompleteObjective(gmo,
+    // highs->getHighsInfo().objective_function_value);
     gmoCompleteSolution(gmo);
   }
 
