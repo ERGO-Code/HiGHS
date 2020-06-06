@@ -52,13 +52,7 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
   rules.push_back(
       PresolveRuleInfo(REMOVE_ROW_SINGLETONS, "Rm row sing", "RRS"));
   rules.push_back(
-      PresolveRuleInfo(REMOVE_FORCING_CONSTRAINTS, "Rm forcing cs", "RFC"));
-  rules.push_back(
-      PresolveRuleInfo(REMOVE_COLUMN_SINGLETONS, "Rm col sing", "RCS"));
-  rules.push_back(
       PresolveRuleInfo(REMOVE_DOUBLETON_EQUATIONS, "Rm dbleton eq", "RDE"));
-  rules.push_back(
-      PresolveRuleInfo(REMOVE_DOMINATED_COLUMNS, "Rm dom col", "RDC"));
   rules.push_back(PresolveRuleInfo(REMOVE_EMPTY_ROW, "Rm empty row", "RER"));
   //
   rules.push_back(
