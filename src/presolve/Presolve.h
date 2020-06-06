@@ -82,6 +82,7 @@ class Presolve : public HPreData {
   const std::vector<HighsBasisStatus>& getRowStatus() { return row_status; }
   const std::vector<HighsBasisStatus>& getColStatus() { return col_status; }
 
+  void setNumericalTolerances();
   void load(const HighsLp& lp);
   // todo: clear the public from below.
   string modelName;
@@ -237,31 +238,11 @@ class Presolve : public HPreData {
 
   double tol = 0.0000001;
   const double default_primal_feasiblility_tolerance = 1e-7;
-  // Tolerance on bounds being inconsistent: should be twice
-  // primal_feasibility_tolerance since bounds inconsistent by this
-  // value can be satisfied to within the primal feasibility tolerance
-  // by a primal vlaue at their midpoint. The following is twice the
-  // default primal_feasibility_tolerance.
-  const double inconsistent_bounds_tolerance = 2*default_primal_feasiblility_tolerance;
-  // Tolerance on bound differences being considered to be zero,
-  // allowing a doubleton to be treated as an equation. What value
-  // this should have is unclear. It could depend on the coefficients
-  // of the two variables and the values of the bounds, as there's an
-  // implicit infeasibility created when the optimal value for one
-  // variable is substituted to deduce the optimal value of the other.
-  const double doubleton_equation_bound_tolerance = 2*default_primal_feasiblility_tolerance;
-  // Need to decide when a matrix coefficient changed by substitution
-  // is zeroed: should be the small_matrix_value, for which the
-  // following is the default value
-  const double presolve_small_matrix_value = 1e-9;
-  // Tolerance on the lower and upper bound being sufficiently close
-  // to zero to allowing an empty row to be removed, rather than have
-  // the LP deduced as infeasible. This should be t =
-  // primal_feasibility_tolerance since the row activity of zero
-  // satisfies a lower bound of at most t, and an upper bound of at
-  // least -t. The following is the default
-  // primal_feasibility_tolerance.
-  const double empty_row_bound_tolerance = default_primal_feasiblility_tolerance;
+  const double default_small_matrix_value = 1e-9;
+  double inconsistent_bounds_tolerance;
+  double doubleton_equation_bound_tolerance;
+  double presolve_small_matrix_value;
+  double empty_row_bound_tolerance;
 
   // postsolve
   bool noPostSolve = false;

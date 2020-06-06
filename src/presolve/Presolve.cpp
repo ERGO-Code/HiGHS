@@ -72,6 +72,46 @@ void Presolve::load(const HighsLp& lp) {
   timer.recordFinish(MATRIX_COPY);
 }
 
+void Presolve::setNumericalTolerances() {
+  const bool use_original_tol = false;
+  if (use_original_tol) {
+    inconsistent_bounds_tolerance = tol;
+    doubleton_equation_bound_tolerance = tol;
+    presolve_small_matrix_value = tol;
+    empty_row_bound_tolerance = tol;
+  } else {
+    // Tolerance on bounds being inconsistent: should be twice
+    // primal_feasibility_tolerance since bounds inconsistent by this
+    // value can be satisfied to within the primal feasibility tolerance
+    // by a primal vlaue at their midpoint. The following is twice the
+    // default primal_feasibility_tolerance.
+    inconsistent_bounds_tolerance = 2*default_primal_feasiblility_tolerance;
+    // Tolerance on bound differences being considered to be zero,
+    // allowing a doubleton to be treated as an equation. What value
+    // this should have is unclear. It could depend on the coefficients
+    // of the two variables and the values of the bounds, as there's an
+    // implicit infeasibility created when the optimal value for one
+    // variable is substituted to deduce the optimal value of the other.
+    doubleton_equation_bound_tolerance = 2*default_primal_feasiblility_tolerance;
+    // Need to decide when a matrix coefficient changed by substitution
+    // is zeroed: should be the small_matrix_value, for which the
+    // following is the default value
+    presolve_small_matrix_value = default_small_matrix_value;
+    // Tolerance on the lower and upper bound being sufficiently close
+    // to zero to allowing an empty row to be removed, rather than have
+    // the LP deduced as infeasible. This should be t =
+    // primal_feasibility_tolerance since the row activity of zero
+    // satisfies a lower bound of at most t, and an upper bound of at
+    // least -t. The following is the default
+    // primal_feasibility_tolerance.
+    empty_row_bound_tolerance = default_primal_feasiblility_tolerance;
+  }
+  timer.initialiseNumericsRecord(timer.inconsistent_bounds, inconsistent_bounds_tolerance);
+  timer.initialiseNumericsRecord(timer.doubleton_equation_bound, doubleton_equation_bound_tolerance);
+  timer.initialiseNumericsRecord(timer.small_matrix_value, presolve_small_matrix_value);
+  timer.initialiseNumericsRecord(timer.empty_row_bound, empty_row_bound_tolerance);
+}
+
 void Presolve::setBasisInfo(
     const std::vector<HighsBasisStatus>& pass_col_status,
     const std::vector<HighsBasisStatus>& pass_row_status) {
@@ -330,7 +370,9 @@ HighsPresolveStatus Presolve::presolve() {
       presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
-  if (iPrint > 0) timer.reportClocks();
+  //  if (iPrint > 0) 
+  timer.reportClocks();
+  timer.reportAllNumericsRecord();
 
   return presolve_status;
 }
@@ -338,6 +380,8 @@ HighsPresolveStatus Presolve::presolve() {
 void Presolve::checkBoundsAreConsistent() {
   for (int col = 0; col < numCol; col++) {
     if (flagCol[col]) {
+      timer.updateNumericsRecord(timer.inconsistent_bounds,
+				 colLower[col] - colUpper[col]);
       if (colUpper[col] - colLower[col] < -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
@@ -347,6 +391,8 @@ void Presolve::checkBoundsAreConsistent() {
 
   for (int row = 0; row < numRow; row++) {
     if (flagRow[row]) {
+      timer.updateNumericsRecord(timer.inconsistent_bounds,
+				 rowLower[row] - rowUpper[row]);
       if (rowUpper[row] - rowLower[row] < -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
@@ -483,71 +529,75 @@ void Presolve::removeDoubletonEquations() {
     if (flagRow.at(row))
       if (nzRow.at(row) == 2 &&
 	  rowLower[row] > -HIGHS_CONST_INF &&
-          rowUpper[row] < HIGHS_CONST_INF &&
-	  // I'd say that the following should be <=, in case the tolerance is zero
-          fabs(rowLower[row] - rowUpper[row]) <= doubleton_equation_bound_tolerance) {
-	//          fabs(rowLower[row] - rowUpper[row]) < tol) {
-        if (timer.reachLimit()) {
-          status = stat::Timeout;
-          timer.recordFinish(DOUBLETON_EQUATION);
-          return;
-        }
+          rowUpper[row] < HIGHS_CONST_INF) {
+	// Possible doubleton equation
+	// I'd say that the following should be <=, in case the tolerance is zero
+	double value = fabs(rowLower[row] - rowUpper[row]);
+	timer.updateNumericsRecord(timer.doubleton_equation_bound, value);
+	if (fabs(rowLower[row] - rowUpper[row]) <= doubleton_equation_bound_tolerance) {
+	  //          fabs(rowLower[row] - rowUpper[row]) < tol) {
+	  if (timer.reachLimit()) {
+	    status = stat::Timeout;
+	    timer.recordFinish(DOUBLETON_EQUATION);
+	    return;
+	  }
 
-        // row is of form akx_x + aky_y = b, where k=row and y is present in
-        // fewer constraints
-        b = rowLower.at(row);
-        pair<int, int> colIndex = getXYDoubletonEquations(row);
-        x = colIndex.first;
-        y = colIndex.second;
+	  // row is of form akx_x + aky_y = b, where k=row and y is present in
+	  // fewer constraints
+	  b = rowLower.at(row);
+	  pair<int, int> colIndex = getXYDoubletonEquations(row);
+	  x = colIndex.first;
+	  y = colIndex.second;
 
-        // two singletons case handled elsewhere
-        if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) continue;
+	  // two singletons case handled elsewhere
+	  if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) continue;
 
-        akx = getaij(row, x);
-        aky = getaij(row, y);
-        processRowDoubletonEquation(row, x, y, akx, aky, b);
-        if (status) {
-          timer.recordFinish(DOUBLETON_EQUATION);
-          return;
-        }
+	  akx = getaij(row, x);
+	  aky = getaij(row, y);
+	  processRowDoubletonEquation(row, x, y, akx, aky, b);
+	  if (status) {
+	    timer.recordFinish(DOUBLETON_EQUATION);
+	    return;
+	  }
 
-        for (int k = Astart.at(y); k < Aend.at(y); ++k)
-          if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
-            int i = Aindex.at(k);
-            double aiy = Avalue.at(k);
+	  for (int k = Astart.at(y); k < Aend.at(y); ++k)
+	    if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
+	      int i = Aindex.at(k);
+	      double aiy = Avalue.at(k);
 
-            // update row bounds
-            if (iKKTcheck == 1) {
-              vector<pair<int, double>> bndsL, bndsU;
-              bndsL.push_back(make_pair(i, rowLower.at(i)));
-              bndsU.push_back(make_pair(i, rowUpper.at(i)));
-              chk.rLowers.push(bndsL);
-              chk.rUppers.push(bndsU);
-              addChange(DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE, i, y);
-            }
-
-            if (rowLower.at(i) > -HIGHS_CONST_INF)
-              rowLower.at(i) -= b * aiy / aky;
-            if (rowUpper.at(i) < HIGHS_CONST_INF)
-              rowUpper.at(i) -= b * aiy / aky;
-
-            if (implRowValueLower.at(i) > -HIGHS_CONST_INF)
-              implRowValueLower.at(i) -= b * aiy / aky;
-            if (implRowValueUpper.at(i) < HIGHS_CONST_INF)
-              implRowValueUpper.at(i) -= b * aiy / aky;
-
-            // update matrix coefficients
-            if (isZeroA(i, x))
-              UpdateMatrixCoeffDoubletonEquationXzero(i, x, y, aiy, akx, aky);
-            else
-              UpdateMatrixCoeffDoubletonEquationXnonZero(i, x, y, aiy, akx,
-                                                         aky);
-          }
-        if (Avalue.size() > 40000000) {
-          trimA();
-        }
-
-        iter++;
+	      // update row bounds
+	      if (iKKTcheck == 1) {
+		vector<pair<int, double>> bndsL, bndsU;
+		bndsL.push_back(make_pair(i, rowLower.at(i)));
+		bndsU.push_back(make_pair(i, rowUpper.at(i)));
+		chk.rLowers.push(bndsL);
+		chk.rUppers.push(bndsU);
+		addChange(DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE, i, y);
+	      }
+	      
+	      if (rowLower.at(i) > -HIGHS_CONST_INF)
+		rowLower.at(i) -= b * aiy / aky;
+	      if (rowUpper.at(i) < HIGHS_CONST_INF)
+		rowUpper.at(i) -= b * aiy / aky;
+	      
+	      if (implRowValueLower.at(i) > -HIGHS_CONST_INF)
+		implRowValueLower.at(i) -= b * aiy / aky;
+	      if (implRowValueUpper.at(i) < HIGHS_CONST_INF)
+		implRowValueUpper.at(i) -= b * aiy / aky;
+	      
+	      // update matrix coefficients
+	      if (isZeroA(i, x))
+		UpdateMatrixCoeffDoubletonEquationXzero(i, x, y, aiy, akx, aky);
+	      else
+		UpdateMatrixCoeffDoubletonEquationXnonZero(i, x, y, aiy, akx,
+							   aky);
+	    }
+	  if (Avalue.size() > 40000000) {
+	    trimA();
+	  }
+	  
+	  iter++;
+	}
       }
   timer.recordFinish(DOUBLETON_EQUATION);
 }

@@ -87,6 +87,14 @@ struct PresolveRuleInfo {
   double total_time = 0;
 };
 
+struct numericsRecord {
+  double tolerance;
+  int num_zero_true;
+  int num_tol_true;
+  int num_10tol_true;
+  int num_test;
+};
+
 void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules);
 
 class PresolveTimer {
@@ -197,6 +205,45 @@ class PresolveTimer {
     std::cout << std::endl;
   }
 
+  void initialiseNumericsRecord(numericsRecord& numerics_record, const double tolerance) {
+    numerics_record.tolerance = tolerance;
+    numerics_record.num_zero_true = 0;
+    numerics_record.num_tol_true = 0;
+    numerics_record.num_10tol_true = 0;
+    numerics_record.num_test = 0;
+  }
+
+  void updateNumericsRecord(numericsRecord& numerics_record, const double value) {
+    double tolerance = numerics_record.tolerance;
+    numerics_record.num_test++;
+    if (value < 0) return;
+    if (value == 0) {
+      numerics_record.num_zero_true++;
+    } else if (value <= tolerance) {
+      numerics_record.num_tol_true++;
+    } else if (value <= 10*tolerance) {
+      numerics_record.num_10tol_true++;
+    }
+  }
+
+  void reportNumericsRecord(const std::string message, const numericsRecord& numerics_record) {
+    if (!numerics_record.num_test) return;
+    printf("%16s: tolerance = %8.2g: Zero = %9d; Tol = %9d; 10Tol = %9d; Tests = %9d\n",
+	   message.c_str(),
+	   numerics_record.tolerance,
+	   numerics_record.num_zero_true,
+	   numerics_record.num_tol_true,
+	   numerics_record.num_10tol_true,
+	   numerics_record.num_test);
+  }
+
+  void reportAllNumericsRecord() {
+    reportNumericsRecord("Inconsistent bounds", inconsistent_bounds);
+    reportNumericsRecord("Doubleton equation bound", doubleton_equation_bound);
+    reportNumericsRecord("Small matrix value", small_matrix_value);
+    reportNumericsRecord("Empty row bounds", empty_row_bound);
+  }
+
   void updateInfo();
   double getTotalTime() { return total_time_; }
 
@@ -217,6 +264,10 @@ class PresolveTimer {
   double start_time = 0.0;
   double time_limit = 0.0;
 
+  numericsRecord inconsistent_bounds;
+  numericsRecord doubleton_equation_bound;
+  numericsRecord small_matrix_value;
+  numericsRecord empty_row_bound;
  private:
   std::vector<PresolveRuleInfo> rules_;
 
