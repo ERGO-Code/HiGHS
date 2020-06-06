@@ -161,10 +161,7 @@ class PresolveTimer {
       assert(rules_[id].rule_id == id);
       if (id == RUN_PRESOLVERS) continue;
       if (id == REMOVE_ROW_SINGLETONS) continue;
-      //      if (id == REMOVE_FORCING_CONSTRAINTS) continue;
-      //      if (id == REMOVE_COLUMN_SINGLETONS) continue;
       if (id == REMOVE_DOUBLETON_EQUATIONS) continue;
-      //      if (id == REMOVE_DOMINATED_COLUMNS) continue;
       if (id == REMOVE_EMPTY_ROW) continue;
       clocks.push_back(rules_[id].clock_id);
     }

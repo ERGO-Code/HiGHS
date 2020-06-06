@@ -408,7 +408,8 @@ void Presolve::checkBoundsAreConsistent() {
       // Analyse dependency on numerical tolerance
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  colLower[col] - colUpper[col]);
-      if (colUpper[col] - colLower[col] < -inconsistent_bounds_tolerance) {
+      if (colLower[col] - colUpper[col] > inconsistent_bounds_tolerance) {
+	//      if (colUpper[col] - colLower[col] < -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -420,7 +421,8 @@ void Presolve::checkBoundsAreConsistent() {
       // Analyse dependency on numerical tolerance
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  rowLower[row] - rowUpper[row]);
-      if (rowUpper[row] - rowLower[row] < -inconsistent_bounds_tolerance) {
+      if (rowLower[row] - rowUpper[row] > inconsistent_bounds_tolerance) {
+	//      if (rowUpper[row] - rowLower[row] < -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -726,7 +728,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     Avalue.at(ind) = xNew;
   } else if (
       // Should be <= tolerance otherwise "= tolerance" isn't
-      // handled. Why isn't this juet "else", anyway?
+      // handled. Why isn't this just "else", anyway?
       xNew <= presolve_small_matrix_value  // < tol //
   ) {
     // case new x == 0
@@ -1126,7 +1128,7 @@ void Presolve::rowDualBoundsDominatedColumns() {
       col = *it;
       k = getSingColElementIndexInA(col);
       if (k < 0) continue;
-      assert(k < Aindex.size());
+      assert(k < (int)Aindex.size());
       i = Aindex.at(k);
 
       if (!flagRow.at(i)) {
@@ -1240,15 +1242,6 @@ void Presolve::removeDominatedColumns() {
   }
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
-      /*
-      if (timer.reachLimit()) {
-        status = stat::Timeout;
-        return;
-      }
-      */
-
-      //      timer.recordStart(DOMINATED_COLS);
-
       p = getImpliedColumnBounds(j);
       d = p.first;
       e = p.second;
@@ -1265,7 +1258,6 @@ void Presolve::removeDominatedColumns() {
         if (colLower.at(j) <= -HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
-          //          timer.recordFinish(DOMINATED_COLS);
           return;
         }
         setPrimalValue(j, colLower.at(j));
@@ -1278,7 +1270,6 @@ void Presolve::removeDominatedColumns() {
         if (colUpper.at(j) >= HIGHS_CONST_INF) {
           if (iPrint > 0) cout << "PR: Problem unbounded." << endl;
           status = Unbounded;
-          //          timer.recordFinish(DOMINATED_COLS);
           return;
         }
         setPrimalValue(j, colUpper.at(j));
@@ -1296,20 +1287,15 @@ void Presolve::removeDominatedColumns() {
         if (implColDualLower.at(j) > implColDualUpper.at(j))
           cout << "INCONSISTENT\n";
 
-        //        timer.recordFinish(DOMINATED_COLS);
-
         removeIfWeaklyDominated(j, d, e);
         continue;
       }
-      //      timer.recordFinish(DOMINATED_COLS);
       if (status) return;
     }
 }
 
 void Presolve::removeIfWeaklyDominated(const int j, const double d,
                                        const double e) {
-  //  timer.recordStart(WEAKLY_DOMINATED_COLS);
-
   int i;
   // check if it is weakly dominated: Excluding singletons!
   if (nzCol.at(j) > 1) {
@@ -1392,7 +1378,6 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
           }
     }
   }
-  //  timer.recordFinish(WEAKLY_DOMINATED_COLS);
 }
 
 void Presolve::setProblemStatus(const int s) {
@@ -1644,36 +1629,26 @@ void Presolve::removeColumnSingletons() {
 
   while (it != singCol.end()) {
     if (flagCol[*it]) {
-      /*
-        if (timer.reachLimit()) {
-          status = stat::Timeout;
-          return;
-        }
-      */
       col = *it;
       k = getSingColElementIndexInA(col);
       if (k < 0) {
         it++;
         continue;
       }
-      assert(k < Aindex.size());
+      assert(k < (int)Aindex.size());
       i = Aindex.at(k);
 
       // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
           colUpper.at(col) >= HIGHS_CONST_INF) {
-        //        timer.recordStart(FREE_SING_COL);
         removeFreeColumnSingleton(col, i, k);
         it = singCol.erase(it);
-        //        timer.recordFinish(FREE_SING_COL);
         continue;
       }
       // singleton column in a doubleton inequality
       // case two column singletons
       else if (nzRow.at(i) == 2) {
-        //        timer.recordStart(SING_COL_DOUBLETON_INEQ);
         bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
-        //        timer.recordFinish(SING_COL_DOUBLETON_INEQ);
         if (result) {
           it = singCol.erase(it);
           continue;
@@ -1681,9 +1656,7 @@ void Presolve::removeColumnSingletons() {
       }
       // implied free
       else {
-        //        timer.recordStart(IMPLIED_FREE_SING_COL);
         bool result = removeIfImpliedFree(col, i, k);
-        //        timer.recordFinish(IMPLIED_FREE_SING_COL);
         if (result) {
           it = singCol.erase(it);
           continue;
@@ -2043,25 +2016,15 @@ void Presolve::removeForcingConstraints() {
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
       if (status) return;
-      /*
-      if (timer.reachLimit()) {
-        status = stat::Timeout;
-        return;
-      }
-      */
-
       if (nzRow.at(i) == 0) {
-        //	timer.recordStart(REMOVE_EMPTY_ROW);
         removeEmptyRow(i);
         countRemovedRows(EMPTY_ROW);
-        //	timer.recordFinish(REMOVE_EMPTY_ROW);
         continue;
       }
 
       // removeRowSingletons will handle just after removeForcingConstraints
       if (nzRow.at(i) == 1) continue;
 
-      //      timer.recordStart(FORCING_ROW);
       implBounds = getImpliedRowBounds(i);
 
       g = implBounds.first;
@@ -2071,7 +2034,6 @@ void Presolve::removeForcingConstraints() {
       if (g > rowUpper.at(i) || h < rowLower.at(i)) {
         if (iPrint > 0) cout << "PR: Problem infeasible." << endl;
         status = Infeasible;
-        //        timer.recordFinish(FORCING_ROW);
         return;
       }
       // Forcing row
@@ -2090,13 +2052,9 @@ void Presolve::removeForcingConstraints() {
       }
       // Dominated constraints
       else {
-        //        timer.recordFinish(FORCING_ROW);
-        //        timer.recordStart(DOMINATED_ROW_BOUNDS);
         dominatedConstraintProcedure(i, g, h);
-        //        timer.recordFinish(DOMINATED_ROW_BOUNDS);
         continue;
       }
-      //      timer.recordFinish(FORCING_ROW);
     }
 }
 
@@ -2112,12 +2070,6 @@ void Presolve::removeRowSingletons() {
       timer.recordFinish(SING_ROW);
       return;
     }
-    /*
-    if (timer.reachLimit()) {
-      status = stat::Timeout;
-      return;
-    }
-    */
     i = singRow.front();
     singRow.pop_front();
     if (!flagRow[i]) continue;
@@ -2193,7 +2145,11 @@ void Presolve::removeRowSingletons() {
     }*/
 
     // check for feasibility
-    if (colLower.at(j) > colUpper.at(j) + tol) {
+    // Analyse dependency on numerical tolerance
+    timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
+			       colLower.at(j) - colUpper.at(j));
+    //    if (colLower.at(j) > colUpper.at(j) + tol) {
+    if (colLower.at(j) - colUpper.at(j) > inconsistent_bounds_tolerance) {
       status = Infeasible;
       timer.recordFinish(SING_ROW);
       return;
