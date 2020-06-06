@@ -70,6 +70,17 @@ enum PresolveRule {
   FORCING_ROW_VARIABLE
 };
 
+enum presolveNumerics{
+  INCONSISTENT_BOUNDS,
+  DOUBLETON_EQUATION_BOUND,
+  DOUBLETON_INEQUALITY_BOUND,
+  SMALL_MATRIX_VALUE,
+  EMPTY_ROW_BOUND,
+  DOMINATED_COLUMN,
+  WEAKLY_DOMINATED_COLUMN,
+  PRESOLVE_NUMRICS_COUNT
+};
+
 struct PresolveRuleInfo {
   PresolveRuleInfo(PresolveRule id, std::string name, std::string name_ch3)
       : rule_id(id),
@@ -89,6 +100,7 @@ struct PresolveRuleInfo {
 };
 
 struct numericsRecord {
+  std::string name;
   double tolerance;
   int num_test;
   int num_zero_true;
@@ -110,6 +122,8 @@ class PresolveTimer {
       rule.clock_id = clock_id;
     }
   }
+
+  std::vector<numericsRecord> presolve_numerics;
 
   void recordStart(PresolveRule rule) {
     assert(rule >= 0 && rule < PRESOLVE_RULES_COUNT);
@@ -208,10 +222,12 @@ class PresolveTimer {
     std::cout << std::endl;
   }
 
-  void initialiseNumericsRecord(numericsRecord& numerics_record,
+  void initialiseNumericsRecord(int record, std::string name,
                                 const double tolerance) {
     // Make sure that the tolerance has been set to a positive value
     assert(tolerance > 0);
+    numericsRecord& numerics_record = presolve_numerics[record];
+    numerics_record.name = name;
     numerics_record.tolerance = tolerance;
     numerics_record.num_test = 0;
     numerics_record.num_zero_true = 0;
@@ -221,8 +237,8 @@ class PresolveTimer {
     numerics_record.min_positive_true = HIGHS_CONST_INF;
   }
 
-  void updateNumericsRecord(numericsRecord& numerics_record,
-                            const double value) {
+  void updateNumericsRecord(int record, const double value) {
+    numericsRecord& numerics_record = presolve_numerics[record];
     double tolerance = numerics_record.tolerance;
     numerics_record.num_test++;
     if (value < 0) return;
@@ -240,27 +256,35 @@ class PresolveTimer {
           std::min(value, numerics_record.min_positive_true);
   }
 
-  void reportNumericsRecord(const std::string message,
-                            const numericsRecord& numerics_record) {
+  void reportNumericsRecord(const numericsRecord& numerics_record) {
     if (!numerics_record.num_test) return;
     printf(
         "%-26s: tolerance =%6.1g: Zero =%9d; Tol =%9d; 10Tol =%9d; Clear =%9d; "
         "MinPositive =%7.2g; Tests =%9d\n",
-        message.c_str(), numerics_record.tolerance,
+        numerics_record.name.c_str(), numerics_record.tolerance,
         numerics_record.num_zero_true, numerics_record.num_tol_true,
         numerics_record.num_10tol_true, numerics_record.num_clear_true,
         numerics_record.min_positive_true, numerics_record.num_test);
   }
 
+  void reportNumericsCsvRecord(const numericsRecord& numerics_record) {
+    if (!numerics_record.num_test) return;
+    printf(",%d,%d,%d", 
+	   numerics_record.num_zero_true,
+	   numerics_record.num_tol_true+numerics_record.num_10tol_true,
+	   numerics_record.num_clear_true);
+  }
+
   void reportAllNumericsRecord() {
-    reportNumericsRecord("Inconsistent bounds", inconsistent_bounds);
-    reportNumericsRecord("Doubleton equation bound", doubleton_equation_bound);
-    reportNumericsRecord("Doubleton inequality bound",
-                         doubleton_inequality_bound);
-    reportNumericsRecord("Small matrix value", small_matrix_value);
-    reportNumericsRecord("Empty row bounds", empty_row_bound);
-    reportNumericsRecord("Dominated column", dominated_column);
-    reportNumericsRecord("Weakly dominated column", weakly_dominated_column);
+    assert ((int)presolve_numerics.size() == PRESOLVE_NUMRICS_COUNT);
+    if (presolve_numerics.size() < PRESOLVE_NUMRICS_COUNT) return;
+    for (int record=0; record < PRESOLVE_NUMRICS_COUNT; record++) 
+      reportNumericsRecord(presolve_numerics[record]);
+    printf("grep_presolveNumerics:");
+    for (int record=0; record < PRESOLVE_NUMRICS_COUNT; record++) 
+      reportNumericsCsvRecord(presolve_numerics[record]);
+    printf("\n");
+    
   }
 
   void updateInfo();
@@ -282,14 +306,6 @@ class PresolveTimer {
 
   double start_time = 0.0;
   double time_limit = 0.0;
-
-  numericsRecord inconsistent_bounds;
-  numericsRecord doubleton_equation_bound;
-  numericsRecord doubleton_inequality_bound;
-  numericsRecord small_matrix_value;
-  numericsRecord empty_row_bound;
-  numericsRecord dominated_column;
-  numericsRecord weakly_dominated_column;
 
  private:
   std::vector<PresolveRuleInfo> rules_;
