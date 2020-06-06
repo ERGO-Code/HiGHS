@@ -532,8 +532,8 @@ void Presolve::removeDoubletonEquations() {
           rowUpper[row] < HIGHS_CONST_INF) {
 	// Possible doubleton equation
 	// I'd say that the following should be <=, in case the tolerance is zero
-	double value = fabs(rowLower[row] - rowUpper[row]);
-	timer.updateNumericsRecord(timer.doubleton_equation_bound, value);
+	timer.updateNumericsRecord(timer.doubleton_equation_bound,
+				   fabs(rowLower[row] - rowUpper[row]));
 	if (fabs(rowLower[row] - rowUpper[row]) <= doubleton_equation_bound_tolerance) {
 	  //          fabs(rowLower[row] - rowUpper[row]) < tol) {
 	  if (timer.reachLimit()) {
@@ -667,6 +667,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (ARindex.at(ind) == x) break;
 
   xNew = ARvalue.at(ind) - (aiy * akx) / aky;
+  timer.updateNumericsRecord(timer.small_matrix_value, fabs(xNew));
   if (fabs(xNew) > presolve_small_matrix_value) {
     // case new x != 0
     // cout<<"case: x still there row "<<i<<" "<<endl;
@@ -1024,6 +1025,8 @@ void Presolve::removeIfFixed(int j) {
 }
 
 void Presolve::removeEmptyRow(int i) {
+  double value = min(rowLower.at(i), -rowUpper.at(i));
+  timer.updateNumericsRecord(timer.empty_row_bound, value);
   if (rowLower.at(i) <= empty_row_bound_tolerance &&
       rowUpper.at(i) >= -empty_row_bound_tolerance) {
     if (iPrint > 0) cout << "PR: Empty row " << i << " removed. " << endl;

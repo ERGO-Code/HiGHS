@@ -228,7 +228,7 @@ class PresolveTimer {
 
   void reportNumericsRecord(const std::string message, const numericsRecord& numerics_record) {
     if (!numerics_record.num_test) return;
-    printf("%16s: tolerance = %8.2g: Zero = %9d; Tol = %9d; 10Tol = %9d; Tests = %9d\n",
+    printf("%-24s: tolerance = %8.2g: Zero = %9d; Tol = %9d; 10Tol = %9d; Tests = %9d\n",
 	   message.c_str(),
 	   numerics_record.tolerance,
 	   numerics_record.num_zero_true,
