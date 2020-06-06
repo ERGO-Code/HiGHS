@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "lp_data/HConst.h"
 #include "util/HighsTimer.h"
 
 namespace presolve {
@@ -89,10 +90,12 @@ struct PresolveRuleInfo {
 
 struct numericsRecord {
   double tolerance;
+  int num_test;
   int num_zero_true;
   int num_tol_true;
   int num_10tol_true;
-  int num_test;
+  int num_clear_true;
+  double min_positive_true;
 };
 
 void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules);
@@ -207,10 +210,12 @@ class PresolveTimer {
 
   void initialiseNumericsRecord(numericsRecord& numerics_record, const double tolerance) {
     numerics_record.tolerance = tolerance;
+    numerics_record.num_test = 0;
     numerics_record.num_zero_true = 0;
     numerics_record.num_tol_true = 0;
     numerics_record.num_10tol_true = 0;
-    numerics_record.num_test = 0;
+    numerics_record.num_clear_true = 0;
+    numerics_record.min_positive_true = HIGHS_CONST_INF;
   }
 
   void updateNumericsRecord(numericsRecord& numerics_record, const double value) {
@@ -223,17 +228,23 @@ class PresolveTimer {
       numerics_record.num_tol_true++;
     } else if (value <= 10*tolerance) {
       numerics_record.num_10tol_true++;
+    } else {
+      numerics_record.num_clear_true++;
     }
+    if (value > 0)
+      numerics_record.min_positive_true = std::min(value, numerics_record.min_positive_true);
   }
 
   void reportNumericsRecord(const std::string message, const numericsRecord& numerics_record) {
     if (!numerics_record.num_test) return;
-    printf("%-24s: tolerance = %8.2g: Zero = %9d; Tol = %9d; 10Tol = %9d; Tests = %9d\n",
+    printf("%-24s: tolerance =%6.1g: Zero =%9d; Tol =%9d; 10Tol =%9d; Clear =%9d; MinPositive =%7.2g; Tests =%9d\n",
 	   message.c_str(),
 	   numerics_record.tolerance,
 	   numerics_record.num_zero_true,
 	   numerics_record.num_tol_true,
 	   numerics_record.num_10tol_true,
+	   numerics_record.num_clear_true,
+	   numerics_record.min_positive_true,
 	   numerics_record.num_test);
   }
 
@@ -242,6 +253,8 @@ class PresolveTimer {
     reportNumericsRecord("Doubleton equation bound", doubleton_equation_bound);
     reportNumericsRecord("Small matrix value", small_matrix_value);
     reportNumericsRecord("Empty row bounds", empty_row_bound);
+    reportNumericsRecord("Dominated column", dominated_column);
+    reportNumericsRecord("Weakly dominated column", weakly_dominated_column);
   }
 
   void updateInfo();
@@ -268,6 +281,8 @@ class PresolveTimer {
   numericsRecord doubleton_equation_bound;
   numericsRecord small_matrix_value;
   numericsRecord empty_row_bound;
+  numericsRecord dominated_column;
+  numericsRecord weakly_dominated_column;
  private:
   std::vector<PresolveRuleInfo> rules_;
 

@@ -79,6 +79,8 @@ void Presolve::setNumericalTolerances() {
     doubleton_equation_bound_tolerance = tol;
     presolve_small_matrix_value = tol;
     empty_row_bound_tolerance = tol;
+    dominated_column_tolerance = tol;
+    weakly_dominated_column_tolerance = tol;
   } else {
     // Tolerance on bounds being inconsistent: should be twice
     // primal_feasibility_tolerance since bounds inconsistent by this
@@ -105,11 +107,15 @@ void Presolve::setNumericalTolerances() {
     // least -t. The following is the default
     // primal_feasibility_tolerance.
     empty_row_bound_tolerance = default_primal_feasiblility_tolerance;
+    dominated_column_tolerance = default_dual_feasiblility_tolerance;
+    weakly_dominated_column_tolerance = default_dual_feasiblility_tolerance;
   }
   timer.initialiseNumericsRecord(timer.inconsistent_bounds, inconsistent_bounds_tolerance);
   timer.initialiseNumericsRecord(timer.doubleton_equation_bound, doubleton_equation_bound_tolerance);
   timer.initialiseNumericsRecord(timer.small_matrix_value, presolve_small_matrix_value);
   timer.initialiseNumericsRecord(timer.empty_row_bound, empty_row_bound_tolerance);
+  timer.initialiseNumericsRecord(timer.dominated_column, dominated_column_tolerance);
+  timer.initialiseNumericsRecord(timer.weakly_dominated_column, weakly_dominated_column_tolerance);
 }
 
 void Presolve::setBasisInfo(
@@ -1206,6 +1212,15 @@ void Presolve::removeDominatedColumns() {
       d = p.first;
       e = p.second;
 
+      bool dominated = colCost.at(j) - d > tol;
+      timer.updateNumericsRecord(timer.dominated_column,
+				 colCost.at(j) - d);
+      if (!dominated) {
+	timer.updateNumericsRecord(timer.dominated_column,
+				   e - colCost.at(j));
+      }
+	
+
       // check if it is dominated
       if (colCost.at(j) - d > tol) {
         if (colLower.at(j) <= -HIGHS_CONST_INF) {
@@ -1259,7 +1274,15 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
   int i;
   // check if it is weakly dominated: Excluding singletons!
   if (nzCol.at(j) > 1) {
-    if (d < HIGHS_CONST_INF && fabs(colCost.at(j) - d) < tol &&
+    // Analyse dependency on numerical tolerance
+    bool possible = d < HIGHS_CONST_INF && colLower.at(j) > -HIGHS_CONST_INF;
+    timer.updateNumericsRecord(timer.weakly_dominated_column, fabs(colCost.at(j) - d));
+    if (possible && fabs(colCost.at(j) - d) < weakly_dominated_column_tolerance) {
+      if (e > -HIGHS_CONST_INF && colUpper.at(j) < HIGHS_CONST_INF)
+	timer.updateNumericsRecord(timer.weakly_dominated_column, fabs(colCost.at(j) - e));
+    }
+      
+    if (d < HIGHS_CONST_INF && fabs(colCost.at(j) - d) < weakly_dominated_column_tolerance &&
         colLower.at(j) > -HIGHS_CONST_INF) {
       setPrimalValue(j, colLower.at(j));
       addChange(WEAKLY_DOMINATED_COLS, 0, j);
@@ -1268,7 +1291,7 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
              << " removed. Value := " << valuePrimal.at(j) << endl;
 
       countRemovedCols(WEAKLY_DOMINATED_COLS);
-    } else if (e > -HIGHS_CONST_INF && fabs(colCost.at(j) - e) < tol &&
+    } else if (e > -HIGHS_CONST_INF && fabs(colCost.at(j) - e) < weakly_dominated_column_tolerance &&
                colUpper.at(j) < HIGHS_CONST_INF) {
       setPrimalValue(j, colUpper.at(j));
       addChange(WEAKLY_DOMINATED_COLS, 0, j);
