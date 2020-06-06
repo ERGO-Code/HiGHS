@@ -14,6 +14,7 @@
 #ifndef PRESOLVE_PRESOLVE_ANALYSIS_H_
 #define PRESOLVE_PRESOLVE_ANALYSIS_H_
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -22,6 +23,8 @@
 #include "util/HighsTimer.h"
 
 namespace presolve {
+
+using std::min;
 
 constexpr double inf = std::numeric_limits<double>::infinity();
 
@@ -250,7 +253,7 @@ class PresolveTimer {
     }
     if (value > 0)
       numerics_record.min_positive_true =
-          std::min(value, numerics_record.min_positive_true);
+          min(value, numerics_record.min_positive_true);
   }
 
   void reportNumericsRecord(const numericsRecord& numerics_record) {
