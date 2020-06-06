@@ -242,6 +242,7 @@ class Presolve : public HPreData {
   const double default_small_matrix_value = 1e-9;
   double inconsistent_bounds_tolerance;
   double doubleton_equation_bound_tolerance;
+  double doubleton_inequality_bound_tolerance;
   double presolve_small_matrix_value;
   double empty_row_bound_tolerance;
   double dominated_column_tolerance;

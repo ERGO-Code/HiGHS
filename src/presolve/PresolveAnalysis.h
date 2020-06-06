@@ -208,7 +208,10 @@ class PresolveTimer {
     std::cout << std::endl;
   }
 
-  void initialiseNumericsRecord(numericsRecord& numerics_record, const double tolerance) {
+  void initialiseNumericsRecord(numericsRecord& numerics_record,
+                                const double tolerance) {
+    // Make sure that the tolerance has been set to a positive value
+    assert(tolerance > 0);
     numerics_record.tolerance = tolerance;
     numerics_record.num_test = 0;
     numerics_record.num_zero_true = 0;
@@ -218,7 +221,8 @@ class PresolveTimer {
     numerics_record.min_positive_true = HIGHS_CONST_INF;
   }
 
-  void updateNumericsRecord(numericsRecord& numerics_record, const double value) {
+  void updateNumericsRecord(numericsRecord& numerics_record,
+                            const double value) {
     double tolerance = numerics_record.tolerance;
     numerics_record.num_test++;
     if (value < 0) return;
@@ -226,31 +230,33 @@ class PresolveTimer {
       numerics_record.num_zero_true++;
     } else if (value <= tolerance) {
       numerics_record.num_tol_true++;
-    } else if (value <= 10*tolerance) {
+    } else if (value <= 10 * tolerance) {
       numerics_record.num_10tol_true++;
     } else {
       numerics_record.num_clear_true++;
     }
     if (value > 0)
-      numerics_record.min_positive_true = std::min(value, numerics_record.min_positive_true);
+      numerics_record.min_positive_true =
+          std::min(value, numerics_record.min_positive_true);
   }
 
-  void reportNumericsRecord(const std::string message, const numericsRecord& numerics_record) {
+  void reportNumericsRecord(const std::string message,
+                            const numericsRecord& numerics_record) {
     if (!numerics_record.num_test) return;
-    printf("%-24s: tolerance =%6.1g: Zero =%9d; Tol =%9d; 10Tol =%9d; Clear =%9d; MinPositive =%7.2g; Tests =%9d\n",
-	   message.c_str(),
-	   numerics_record.tolerance,
-	   numerics_record.num_zero_true,
-	   numerics_record.num_tol_true,
-	   numerics_record.num_10tol_true,
-	   numerics_record.num_clear_true,
-	   numerics_record.min_positive_true,
-	   numerics_record.num_test);
+    printf(
+        "%-26s: tolerance =%6.1g: Zero =%9d; Tol =%9d; 10Tol =%9d; Clear =%9d; "
+        "MinPositive =%7.2g; Tests =%9d\n",
+        message.c_str(), numerics_record.tolerance,
+        numerics_record.num_zero_true, numerics_record.num_tol_true,
+        numerics_record.num_10tol_true, numerics_record.num_clear_true,
+        numerics_record.min_positive_true, numerics_record.num_test);
   }
 
   void reportAllNumericsRecord() {
     reportNumericsRecord("Inconsistent bounds", inconsistent_bounds);
     reportNumericsRecord("Doubleton equation bound", doubleton_equation_bound);
+    reportNumericsRecord("Doubleton inequality bound",
+                         doubleton_inequality_bound);
     reportNumericsRecord("Small matrix value", small_matrix_value);
     reportNumericsRecord("Empty row bounds", empty_row_bound);
     reportNumericsRecord("Dominated column", dominated_column);
@@ -279,10 +285,12 @@ class PresolveTimer {
 
   numericsRecord inconsistent_bounds;
   numericsRecord doubleton_equation_bound;
+  numericsRecord doubleton_inequality_bound;
   numericsRecord small_matrix_value;
   numericsRecord empty_row_bound;
   numericsRecord dominated_column;
   numericsRecord weakly_dominated_column;
+
  private:
   std::vector<PresolveRuleInfo> rules_;
 
