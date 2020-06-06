@@ -70,7 +70,7 @@ enum PresolveRule {
   FORCING_ROW_VARIABLE
 };
 
-enum presolveNumerics{
+enum presolveNumerics {
   INCONSISTENT_BOUNDS,
   DOUBLETON_EQUATION_BOUND,
   DOUBLETON_INEQUALITY_BOUND,
@@ -266,22 +266,20 @@ class PresolveTimer {
 
   void reportNumericsCsvRecord(const numericsRecord& numerics_record) {
     if (!numerics_record.num_test) return;
-    printf(",%d,%d,%d", 
-	   numerics_record.num_zero_true,
-	   numerics_record.num_tol_true+numerics_record.num_10tol_true,
-	   numerics_record.num_clear_true);
+    printf(",%d,%d,%d", numerics_record.num_zero_true,
+           numerics_record.num_tol_true + numerics_record.num_10tol_true,
+           numerics_record.num_clear_true);
   }
 
   void reportAllNumericsRecord() {
-    assert ((int)presolve_numerics.size() == PRESOLVE_NUMRICS_COUNT);
+    assert((int)presolve_numerics.size() == PRESOLVE_NUMRICS_COUNT);
     if (presolve_numerics.size() < PRESOLVE_NUMRICS_COUNT) return;
-    for (int record=0; record < PRESOLVE_NUMRICS_COUNT; record++) 
+    for (int record = 0; record < PRESOLVE_NUMRICS_COUNT; record++)
       reportNumericsRecord(presolve_numerics[record]);
     printf("grep_presolveNumerics:");
-    for (int record=0; record < PRESOLVE_NUMRICS_COUNT; record++) 
+    for (int record = 0; record < PRESOLVE_NUMRICS_COUNT; record++)
       reportNumericsCsvRecord(presolve_numerics[record]);
     printf("\n");
-    
   }
 
   void updateInfo();

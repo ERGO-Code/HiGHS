@@ -114,26 +114,22 @@ void Presolve::setNumericalTolerances() {
     weakly_dominated_column_tolerance = default_dual_feasiblility_tolerance;
   }
   timer.presolve_numerics.resize(PRESOLVE_NUMRICS_COUNT);
-  timer.initialiseNumericsRecord(INCONSISTENT_BOUNDS,
-				 "Inconsistent bounds", 
+  timer.initialiseNumericsRecord(INCONSISTENT_BOUNDS, "Inconsistent bounds",
                                  inconsistent_bounds_tolerance);
   timer.initialiseNumericsRecord(DOUBLETON_EQUATION_BOUND,
-				 "Doubleton equation bound", 
+                                 "Doubleton equation bound",
                                  doubleton_equation_bound_tolerance);
   timer.initialiseNumericsRecord(DOUBLETON_INEQUALITY_BOUND,
-				 "Doubleton inequality bound",
+                                 "Doubleton inequality bound",
                                  doubleton_inequality_bound_tolerance);
-  timer.initialiseNumericsRecord(SMALL_MATRIX_VALUE,
-				 "Small matrix value", 
+  timer.initialiseNumericsRecord(SMALL_MATRIX_VALUE, "Small matrix value",
                                  presolve_small_matrix_value);
-  timer.initialiseNumericsRecord(EMPTY_ROW_BOUND,
-				 "Empty row bounds", 
+  timer.initialiseNumericsRecord(EMPTY_ROW_BOUND, "Empty row bounds",
                                  empty_row_bound_tolerance);
-  timer.initialiseNumericsRecord(DOMINATED_COLUMN,
-				 "Dominated column", 
+  timer.initialiseNumericsRecord(DOMINATED_COLUMN, "Dominated column",
                                  dominated_column_tolerance);
   timer.initialiseNumericsRecord(WEAKLY_DOMINATED_COLUMN,
-				 "Weakly dominated column", 
+                                 "Weakly dominated column",
                                  weakly_dominated_column_tolerance);
 }
 
@@ -409,7 +405,8 @@ void Presolve::checkBoundsAreConsistent() {
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  colLower[col] - colUpper[col]);
       if (colLower[col] - colUpper[col] > inconsistent_bounds_tolerance) {
-	//      if (colUpper[col] - colLower[col] < -inconsistent_bounds_tolerance) {
+        //      if (colUpper[col] - colLower[col] <
+        //      -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -422,7 +419,8 @@ void Presolve::checkBoundsAreConsistent() {
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  rowLower[row] - rowUpper[row]);
       if (rowLower[row] - rowUpper[row] > inconsistent_bounds_tolerance) {
-	//      if (rowUpper[row] - rowLower[row] < -inconsistent_bounds_tolerance) {
+        //      if (rowUpper[row] - rowLower[row] <
+        //      -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -2147,7 +2145,7 @@ void Presolve::removeRowSingletons() {
     // check for feasibility
     // Analyse dependency on numerical tolerance
     timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
-			       colLower.at(j) - colUpper.at(j));
+                               colLower.at(j) - colUpper.at(j));
     //    if (colLower.at(j) > colUpper.at(j) + tol) {
     if (colLower.at(j) - colUpper.at(j) > inconsistent_bounds_tolerance) {
       status = Infeasible;
