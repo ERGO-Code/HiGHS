@@ -164,7 +164,8 @@ class Presolve : public HPreData {
   void resizeImpliedBounds();
 
   // easy transformations
-  void removeIfFixed(int j);
+  void removeFixedCol(int j);
+  void removeFixed();
   void removeEmptyRow(int i);
   void removeEmptyColumn(int j);
   void removeRow(int i);
@@ -274,7 +275,6 @@ class Presolve : public HPreData {
 
   void checkKkt(bool final = false);
   dev_kkt_check::State initState();
-  void removeFixed();
 };
 
 }  // namespace presolve

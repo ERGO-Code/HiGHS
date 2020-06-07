@@ -88,7 +88,7 @@ void checkPrimalFeasMatrix(const State& state, KktConditionDetails& details) {
 
       for (int k = state.ARstart[i]; k < state.ARstart[i + 1]; k++) {
         const int col = state.ARindex[k];
-        assert(col >= 0 && col < state.colLower.size());
+        assert(col >= 0 && col < (int)state.colLower.size());
         if (state.flagCol[col])
           rowV = rowV + state.colValue[col] * state.ARvalue[k];
       }
@@ -271,7 +271,7 @@ void checkComplementarySlackness(const State& state,
         if (fabs(state.colDual[i]) > tol) {
           if (dev_print)
             std::cout << "Comp. slackness fail: "
-                      << "l[" << i << "]=" << state.colLower[i]  << ", x[" << i
+                      << "l[" << i << "]=" << state.colLower[i] << ", x[" << i
                       << "]=" << state.colValue[i] << ", z[" << i
                       << "]=" << state.colDual[i] << std::endl;
           infeas = fabs(state.colDual[i]);

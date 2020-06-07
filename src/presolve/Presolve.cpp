@@ -217,7 +217,7 @@ void Presolve::removeFixed() {
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
       if (fabs(colLower.at(j) - colUpper.at(j)) > tol) continue;
-      removeIfFixed(j);
+      removeFixedCol(j);
       if (status) {
         timer.recordFinish(FIXED_COL);
         return;
@@ -225,7 +225,6 @@ void Presolve::removeFixed() {
     }
   timer.recordFinish(FIXED_COL);
 }
-
 
 int Presolve::presolve(int print) {
   timer.start_time = timer.getTime();
@@ -253,13 +252,13 @@ int Presolve::presolve(int print) {
 
   if (order.size() == 0) {
     // pre_release_order:
-    // order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainForcing);
-    // order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainDoubletonEq);
-    // order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainColSingletons);
-    // order.push_back(Presolver::kMainDominatedCols);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainForcing);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainDoubletonEq);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainColSingletons);
+    order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
@@ -926,25 +925,23 @@ void Presolve::initializeVectors() {
   rowUpperAtEl = rowUpper;
 }
 
-void Presolve::removeIfFixed(int j) {
-  if (colLower.at(j) == colUpper.at(j)) {
-    setPrimalValue(j, colUpper.at(j));
-    addChange(FIXED_COL, 0, j);
-    if (iPrint > 0)
-      cout << "PR: Fixed variable " << j << " = " << colUpper.at(j)
-           << ". Column eliminated." << endl;
+void Presolve::removeFixedCol(int j) {
+  setPrimalValue(j, colUpper.at(j));
+  addChange(FIXED_COL, 0, j);
+  if (iPrint > 0)
+    cout << "PR: Fixed variable " << j << " = " << colUpper.at(j)
+         << ". Column eliminated." << endl;
 
-    countRemovedCols(FIXED_COL);
+  countRemovedCols(FIXED_COL);
 
-    for (int k = Astart.at(j); k < Aend.at(j); ++k) {
-      if (flagRow.at(Aindex.at(k))) {
-        int i = Aindex.at(k);
+  for (int k = Astart.at(j); k < Aend.at(j); ++k) {
+    if (flagRow.at(Aindex.at(k))) {
+      int i = Aindex.at(k);
 
-        if (nzRow.at(i) == 0) {
-          removeEmptyRow(i);
-          if (status == stat::Infeasible) return;
-          countRemovedRows(FIXED_COL);
-        }
+      if (nzRow.at(i) == 0) {
+        removeEmptyRow(i);
+        if (status == stat::Infeasible) return;
+        countRemovedRows(FIXED_COL);
       }
     }
   }
@@ -2062,7 +2059,7 @@ void Presolve::removeRowSingletons() {
     postValue.push(colCost.at(j));
     removeRow(i);
 
-    if (flagCol.at(j) && colLower.at(j) == colUpper.at(j)) removeIfFixed(j);
+    if (flagCol.at(j) && colLower.at(j) == colUpper.at(j)) removeFixedCol(j);
     countRemovedRows(SING_ROW);
 
     if (status) {
