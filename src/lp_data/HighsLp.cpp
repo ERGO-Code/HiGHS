@@ -41,7 +41,6 @@ void clearBasisUtil(HighsBasis& basis) {
   basis.valid_ = false;
 }
 
-
 void clearLp(HighsLp& lp) {
   lp.Astart_.clear();
   lp.Aindex_.clear();
