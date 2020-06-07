@@ -619,8 +619,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
         }
 
         presolve_.data_.reduced_solution_ = hmos_[solved_hmo].solution_;
-        presolve_.data_.reduced_basis_.col_status = hmos_[solved_hmo].basis_.col_status;
-        presolve_.data_.reduced_basis_.row_status = hmos_[solved_hmo].basis_.row_status;
+        presolve_.data_.reduced_basis_.col_status =
+            hmos_[solved_hmo].basis_.col_status;
+        presolve_.data_.reduced_basis_.row_status =
+            hmos_[solved_hmo].basis_.row_status;
 
         this_postsolve_time = -timer_.read(timer_.postsolve_clock);
         timer_.start(timer_.postsolve_clock);
@@ -643,8 +645,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
           // Set basis and its status
           hmos_[original_hmo].basis_.valid_ = true;
-          hmos_[original_hmo].basis_.col_status = presolve_.data_.recovered_basis_.col_status;
-          hmos_[original_hmo].basis_.row_status = presolve_.data_.recovered_basis_.row_status;
+          hmos_[original_hmo].basis_.col_status =
+              presolve_.data_.recovered_basis_.col_status;
+          hmos_[original_hmo].basis_.row_status =
+              presolve_.data_.recovered_basis_.row_status;
 
           analyseHighsBasicSolution(options_.logfile, hmos_[original_hmo],
                                     "after returning from postsolve");
@@ -1604,9 +1608,8 @@ HighsPostsolveStatus Highs::runPostsolve() {
 
   HighsPostsolveStatus postsolve_status =
       presolve_.data_.presolve_[0].postsolve(
-          presolve_.data_.reduced_solution_,
-          presolve_.data_.reduced_basis_,
-          presolve_.data_.recovered_solution_, 
+          presolve_.data_.reduced_solution_, presolve_.data_.reduced_basis_,
+          presolve_.data_.recovered_solution_,
           presolve_.data_.recovered_basis_);
 
   if (postsolve_status != HighsPostsolveStatus::SolutionRecovered)
@@ -1826,9 +1829,7 @@ void Highs::clearSolution() {
   clearSolutionUtil(solution_);
 }
 
-void Highs::clearBasis() {
-  clearBasisUtil(basis_);
-}
+void Highs::clearBasis() { clearBasisUtil(basis_); }
 
 void Highs::clearInfo() { info_.clear(); }
 
