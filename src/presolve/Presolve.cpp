@@ -73,7 +73,7 @@ void Presolve::load(const HighsLp& lp) {
 }
 
 void Presolve::setNumericalTolerances() {
-  const bool use_original_tol = false;
+  const bool use_original_tol = true;
   if (use_original_tol) {
     inconsistent_bounds_tolerance = tol;
     doubleton_equation_bound_tolerance = tol;
@@ -113,6 +113,7 @@ void Presolve::setNumericalTolerances() {
     dominated_column_tolerance = default_dual_feasiblility_tolerance;
     weakly_dominated_column_tolerance = default_dual_feasiblility_tolerance;
   }
+  timer.model_name = modelName;
   timer.presolve_numerics.resize(PRESOLVE_NUMRICS_COUNT);
   timer.initialiseNumericsRecord(INCONSISTENT_BOUNDS, "Inconsistent bounds",
                                  inconsistent_bounds_tolerance);

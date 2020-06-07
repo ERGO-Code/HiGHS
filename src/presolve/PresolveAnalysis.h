@@ -268,7 +268,6 @@ class PresolveTimer {
   }
 
   void reportNumericsCsvRecord(const numericsRecord& numerics_record) {
-    if (!numerics_record.num_test) return;
     printf(",%d,%d,%d", numerics_record.num_zero_true,
            numerics_record.num_tol_true + numerics_record.num_10tol_true,
            numerics_record.num_clear_true);
@@ -277,9 +276,10 @@ class PresolveTimer {
   void reportAllNumericsRecord() {
     assert((int)presolve_numerics.size() == PRESOLVE_NUMRICS_COUNT);
     if (presolve_numerics.size() < PRESOLVE_NUMRICS_COUNT) return;
+    printf("Presolve numerics analysis for %s\n", model_name.c_str());
     for (int record = 0; record < PRESOLVE_NUMRICS_COUNT; record++)
       reportNumericsRecord(presolve_numerics[record]);
-    printf("grep_presolveNumerics:");
+    printf("grep_presolveNumerics:,%s", model_name.c_str());
     for (int record = 0; record < PRESOLVE_NUMRICS_COUNT; record++)
       reportNumericsCsvRecord(presolve_numerics[record]);
     printf("\n");
@@ -304,6 +304,7 @@ class PresolveTimer {
 
   double start_time = 0.0;
   double time_limit = 0.0;
+  std::string model_name;
 
  private:
   std::vector<PresolveRuleInfo> rules_;
