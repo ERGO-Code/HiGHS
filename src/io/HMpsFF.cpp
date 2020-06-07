@@ -198,9 +198,13 @@ HMpsFF::parsekey HMpsFF::checkFirstWord(std::string& strline, int& start,
 
 HMpsFF::parsekey HMpsFF::parseDefault(std::ifstream& file) const {
   std::string strline, word;
-  getline(file, strline);
-  int s, e;
-  return checkFirstWord(strline, s, e, word);
+  if (getline(file, strline)) {
+    strline = trim(strline);
+    if (strline.empty()) return HMpsFF::parsekey::COMMENT;
+    int s, e;
+    return checkFirstWord(strline, s, e, word);
+  }
+  return HMpsFF::parsekey::FAIL;
 }
 
 double getWallTime() {
