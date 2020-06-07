@@ -70,9 +70,10 @@ void Presolve::load(const HighsLp& lp) {
 }
 
 void Presolve::setNumericalTolerances() {
-  const bool use_original_tol = true;
+  const bool use_original_tol = false;
   if (use_original_tol) {
     inconsistent_bounds_tolerance = tol;
+    fixed_column_tolerance = 0;  // Since exact equality is currently used
     doubleton_equation_bound_tolerance = tol;
     doubleton_inequality_bound_tolerance = tol;
     presolve_small_matrix_value = tol;
@@ -86,6 +87,10 @@ void Presolve::setNumericalTolerances() {
     // by a primal vlaue at their midpoint. The following is twice the
     // default primal_feasibility_tolerance.
     inconsistent_bounds_tolerance = 2 * default_primal_feasiblility_tolerance;
+    // Tolerance on column bounds differences being considered to be
+    // zero, allowing a column to be fixed
+    fixed_column_tolerance = 0;  // Since exact equality is currently used
+    //        2 * default_primal_feasiblility_tolerance;
     // Tolerance on bound differences being considered to be zero,
     // allowing a doubleton to be treated as an equation. What value
     // this should have is unclear. It could depend on the coefficients
@@ -114,6 +119,8 @@ void Presolve::setNumericalTolerances() {
   timer.presolve_numerics.resize(PRESOLVE_NUMRICS_COUNT);
   timer.initialiseNumericsRecord(INCONSISTENT_BOUNDS, "Inconsistent bounds",
                                  inconsistent_bounds_tolerance);
+  timer.initialiseNumericsRecord(FIXED_COLUMN, "Fixed column",
+                                 fixed_column_tolerance);
   timer.initialiseNumericsRecord(DOUBLETON_EQUATION_BOUND,
                                  "Doubleton equation bound",
                                  doubleton_equation_bound_tolerance);
@@ -282,7 +289,11 @@ void Presolve::removeFixed() {
   timer.recordStart(FIXED_COL);
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
-      if (fabs(colLower.at(j) - colUpper.at(j)) > tol) continue;
+      // Analyse dependency on numerical tolerance
+      timer.updateNumericsRecord(FIXED_COLUMN,
+                                 fabs(colUpper.at(j) - colLower.at(j)));
+      if (fabs(colUpper.at(j) - colLower.at(j)) > fixed_column_tolerance)
+        continue;
       removeFixedCol(j);
       if (status) {
         timer.recordFinish(FIXED_COL);
@@ -2143,7 +2154,13 @@ void Presolve::removeRowSingletons() {
     postValue.push(colCost.at(j));
     removeRow(i);
 
-    if (flagCol.at(j) && colLower.at(j) == colUpper.at(j)) removeFixedCol(j);
+    if (flagCol.at(j)) {
+      // Analyse dependency on numerical tolerance
+      timer.updateNumericsRecord(FIXED_COLUMN,
+                                 fabs(colUpper.at(j) - colLower.at(j)));
+      if (fabs(colUpper.at(j) - colLower.at(j)) <= fixed_column_tolerance)
+        removeFixedCol(j);
+    }
     countRemovedRows(SING_ROW);
 
     if (status) {
