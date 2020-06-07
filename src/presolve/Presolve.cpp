@@ -71,9 +71,11 @@ void Presolve::load(const HighsLp& lp) {
 
 void Presolve::setNumericalTolerances() {
   const bool use_original_tol = false;
+  const double zero_tolerance = 1e-16;
   if (use_original_tol) {
     inconsistent_bounds_tolerance = tol;
-    fixed_column_tolerance = 0;  // Since exact equality is currently used
+    fixed_column_tolerance =
+        zero_tolerance;  // Since exact equality is currently used
     doubleton_equation_bound_tolerance = tol;
     doubleton_inequality_bound_tolerance = tol;
     presolve_small_matrix_value = tol;
@@ -89,7 +91,8 @@ void Presolve::setNumericalTolerances() {
     inconsistent_bounds_tolerance = 2 * default_primal_feasiblility_tolerance;
     // Tolerance on column bounds differences being considered to be
     // zero, allowing a column to be fixed
-    fixed_column_tolerance = 0;  // Since exact equality is currently used
+    fixed_column_tolerance =
+        zero_tolerance;  // Since exact equality is currently used
     //        2 * default_primal_feasiblility_tolerance;
     // Tolerance on bound differences being considered to be zero,
     // allowing a doubleton to be treated as an equation. What value
