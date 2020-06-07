@@ -2314,8 +2314,10 @@ void Presolve::resizeImpliedBounds() {
 }
 
 int Presolve::getSingRowElementIndexInAR(int i) {
+  assert(i >= 0 && i < numRow);
   int k = ARstart.at(i);
-  while (!flagCol.at(ARindex.at(k))) ++k;
+  while (k < ARstart[i+1] && !flagCol.at(ARindex.at(k))) 
+    k++;
   if (k >= ARstart.at(i + 1)) {
     return -1;
   }
