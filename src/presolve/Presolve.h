@@ -272,6 +272,7 @@ class Presolve : public HPreData {
   PresolveStats stats;
   int runPresolvers(const std::vector<Presolver>& order);
 
+  void checkKkt(bool final = false);
   dev_kkt_check::State initState();
 };
 

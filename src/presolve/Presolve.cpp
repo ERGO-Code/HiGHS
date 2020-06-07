@@ -3010,7 +3010,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     return HighsPostsolveStatus::BasisError;
   }
 
-
   // now recover original model data to pass back to HiGHS
   // A is already recovered!
   // however, A is expressed in terms of Astart, Aend and columns are in
@@ -3046,15 +3045,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     cout << "~~~~~ KKT check of postsolved solution with DevKkt checker ~~~~~"
          << std::endl;
 
-    dev_kkt_check::State state = initState();
-    dev_kkt_check::KktInfo info = dev_kkt_check::initInfo();
-
-    bool pass = dev_kkt_check::checkKkt(state, info);
-
-    if (pass)
-      std::cout << "KKT PASS" << std::endl;
-    else
-      std::cout << "KKT FAIL" << std::endl;
+    checkKkt(true);
   }
 
   // Save solution to PresolveComponentData.
@@ -3067,6 +3058,22 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   recovered_basis.row_status = row_status;
 
   return HighsPostsolveStatus::SolutionRecovered;
+}
+
+void Presolve::checkKkt(bool final) {
+  if (!iKKTcheck) return;
+  std::cout << "~~~~~~~~ " << std::endl;
+  dev_kkt_check::State state = initState();
+  dev_kkt_check::KktInfo info = dev_kkt_check::initInfo();
+
+  bool pass = dev_kkt_check::checkKkt(state, info);
+  if (final) {
+    if (pass)
+      std::cout << "KKT PASS" << std::endl;
+    else
+      std::cout << "KKT FAIL" << std::endl;
+  }
+  std::cout << "~~~~~~~~ " << std::endl;
 }
 
 void Presolve::setBasisElement(change c) {
