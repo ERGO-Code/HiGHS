@@ -274,6 +274,7 @@ class Presolve : public HPreData {
 
   void checkKkt(bool final = false);
   dev_kkt_check::State initState();
+  void removeFixed();
 };
 
 }  // namespace presolve
