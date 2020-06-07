@@ -45,9 +45,6 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-// todo:
-// iKKTcheck = 1;
-
 void Presolve::load(const HighsLp& lp) {
   timer.recordStart(MATRIX_COPY);
   numCol = lp.numCol_;
@@ -132,13 +129,6 @@ void Presolve::setNumericalTolerances() {
   timer.initialiseNumericsRecord(WEAKLY_DOMINATED_COLUMN,
                                  "Weakly dominated column",
                                  weakly_dominated_column_tolerance);
-}
-
-void Presolve::setBasisInfo(
-    const std::vector<HighsBasisStatus>& pass_col_status,
-    const std::vector<HighsBasisStatus>& pass_row_status) {
-  col_status = pass_col_status;
-  row_status = pass_row_status;
 }
 
 // printing with cout goes here.
@@ -288,6 +278,20 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
   return status;
 }
 
+void Presolve::removeFixed() {
+  timer.recordStart(FIXED_COL);
+  for (int j = 0; j < numCol; ++j)
+    if (flagCol.at(j)) {
+      if (fabs(colLower.at(j) - colUpper.at(j)) > tol) continue;
+      removeFixedCol(j);
+      if (status) {
+        timer.recordFinish(FIXED_COL);
+        return;
+      }
+    }
+  timer.recordFinish(FIXED_COL);
+}
+
 int Presolve::presolve(int print) {
   timer.start_time = timer.getTime();
 
@@ -309,16 +313,8 @@ int Presolve::presolve(int print) {
   int iter = 1;
   // print(0);
 
-  timer.recordStart(FIXED_COL);
-  for (int j = 0; j < numCol; ++j)
-    if (flagCol.at(j)) {
-      removeIfFixed(j);
-      if (status) {
-        timer.recordFinish(FIXED_COL);
-        return status;
-      }
-    }
-  timer.recordFinish(FIXED_COL);
+  removeFixed();
+  if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
@@ -870,6 +866,12 @@ void Presolve::resizeProblem() {
     reportDev(ss.str());
   }
 
+  // For KKT checker: pass vectors before you trim them
+  if (iKKTcheck == 1) {
+    chk.setFlags(flagRow, flagCol);
+    chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
+  }
+
   if (nR + nC == 0) {
     status = Empty;
     return;
@@ -912,12 +914,6 @@ void Presolve::resizeProblem() {
     reportDev(ss.str());
   }
 
-  // For KKT checker: pass vectors before you trim them
-  if (iKKTcheck == 1) {
-    chk.setFlags(flagRow, flagCol);
-    chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
-  }
-
   // also call before trimming
   resizeImpliedBounds();
 
@@ -954,21 +950,6 @@ void Presolve::resizeProblem() {
       rowUpper.at(k) = teup.at(i);
       k++;
     }
-
-  if (chk.print == 3) {
-    ofstream myfile;
-    myfile.open("../experiments/out", ios::app);
-    myfile << " eliminated rows " << (numRowOriginal - numRow) << " cols "
-           << (numColOriginal - numCol);
-    myfile.close();
-
-    myfile.open("../experiments/t3", ios::app);
-    myfile << (numRowOriginal) << "  &  " << (numColOriginal) << "  & ";
-    myfile << (numRowOriginal - numRow) << "  &  " << (numColOriginal - numCol)
-           << "  & " << endl;
-
-    myfile.close();
-  }
 }
 
 void Presolve::initializeVectors() {
@@ -1042,24 +1023,23 @@ void Presolve::initializeVectors() {
   rowUpperAtEl = rowUpper;
 }
 
-void Presolve::removeIfFixed(int j) {
-  if (colLower.at(j) == colUpper.at(j)) {
-    setPrimalValue(j, colUpper.at(j));
-    addChange(FIXED_COL, 0, j);
-    if (iPrint > 0)
-      cout << "PR: Fixed variable " << j << " = " << colUpper.at(j)
-           << ". Column eliminated." << endl;
+void Presolve::removeFixedCol(int j) {
+  setPrimalValue(j, colUpper.at(j));
+  addChange(FIXED_COL, 0, j);
+  if (iPrint > 0)
+    cout << "PR: Fixed variable " << j << " = " << colUpper.at(j)
+         << ". Column eliminated." << endl;
 
-    countRemovedCols(FIXED_COL);
+  countRemovedCols(FIXED_COL);
 
-    for (int k = Astart.at(j); k < Aend.at(j); ++k) {
-      if (flagRow.at(Aindex.at(k))) {
-        int i = Aindex.at(k);
+  for (int k = Astart.at(j); k < Aend.at(j); ++k) {
+    if (flagRow.at(Aindex.at(k))) {
+      int i = Aindex.at(k);
 
-        if (nzRow.at(i) == 0) {
-          removeEmptyRow(i);
-          countRemovedRows(FIXED_COL);
-        }
+      if (nzRow.at(i) == 0) {
+        removeEmptyRow(i);
+        if (status == stat::Infeasible) return;
+        countRemovedRows(FIXED_COL);
       }
     }
   }
@@ -2163,9 +2143,13 @@ void Presolve::removeRowSingletons() {
     postValue.push(colCost.at(j));
     removeRow(i);
 
-    if (flagCol.at(j) && colLower.at(j) == colUpper.at(j)) removeIfFixed(j);
-
+    if (flagCol.at(j) && colLower.at(j) == colUpper.at(j)) removeFixedCol(j);
     countRemovedRows(SING_ROW);
+
+    if (status) {
+      timer.recordFinish(SING_ROW);
+      return;
+    }
   }
   timer.recordFinish(SING_ROW);
 }
@@ -2497,10 +2481,15 @@ void Presolve::testAnAR(int post) {
 
 // todo: error reporting.
 HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
-                                         HighsSolution& recovered_solution) {
+                                         const HighsBasis& reduced_basis,
+                                         HighsSolution& recovered_solution,
+                                         HighsBasis& recovered_basis) {
   colValue = reduced_solution.col_value;
   colDual = reduced_solution.col_dual;
   rowDual = reduced_solution.row_dual;
+
+  col_status = reduced_basis.col_status;
+  row_status = reduced_basis.row_status;
 
   // todo: add nonbasic flag to Solution.
   // todo: change to new basis info structure later or keep.
@@ -2528,13 +2517,15 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   // For KKT check: first check solver results before we do any postsolve
   if (iKKTcheck == 1) {
-    cout << "----KKT check on HiGHS solution-----\n";
+    cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
 
     chk.passSolution(colValue, colDual, rowDual);
     chk.passBasis(col_status, row_status);
     chk.makeKKTCheck();
   }
+
   // So there have been changes definitely ->
+
   makeACopy();  // so we can efficiently calculate primal and dual values
 
   //	iKKTcheck = false;
@@ -3110,15 +3101,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     return HighsPostsolveStatus::BasisError;
   }
 
-  // cout<<"Singularity check at end of postsolve: ";
-  // testBasisMatrixSingularity();
-
-  if (iKKTcheck == 2) {
-    if (chk.print == 3) chk.print = 2;
-    chk.passSolution(valuePrimal, valueColDual, valueRowDual);
-    chk.makeKKTCheck();
-  }
-
   // now recover original model data to pass back to HiGHS
   // A is already recovered!
   // however, A is expressed in terms of Astart, Aend and columns are in
@@ -3137,32 +3119,52 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   colCost = colCostOriginal;
 
-  /*
-  nonbasicMove.resize(numTot, 0);
-  for (int i = 0; i < numColOriginal; ++i) {
-    if (colLower.at(i) != colUpper.at(i) && colLower.at(i) != -HIGHS_CONST_INF)
-      nonbasicMove.at(i) = 1;
-    else if (colUpper.at(i) != HIGHS_CONST_INF)
-      nonbasicMove.at(i) = -1;
-    else
-      nonbasicMove.at(i) = 0;
-  }
-  */
   colValue = valuePrimal;
   colDual = valueColDual;
   rowDual = valueRowDual;
+
   rowValue.assign(numRow, 0);
   for (int i = 0; i < numRowOriginal; ++i) {
     for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
       rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
   }
-  // JAJH(120519) Added following four lines so that recovered solution is
-  // returned
+
+  // cout<<"Singularity check at end of postsolve: ";
+  // testBasisMatrixSingularity();
+
+  if (iKKTcheck != 0) {
+    cout << "~~~~~ KKT check of postsolved solution with DevKkt checker ~~~~~"
+         << std::endl;
+
+    checkKkt(true);
+  }
+
+  // Save solution to PresolveComponentData.
   recovered_solution.col_value = colValue;
   recovered_solution.col_dual = colDual;
   recovered_solution.row_value = rowValue;
   recovered_solution.row_dual = rowDual;
+
+  recovered_basis.col_status = col_status;
+  recovered_basis.row_status = row_status;
+
   return HighsPostsolveStatus::SolutionRecovered;
+}
+
+void Presolve::checkKkt(bool final) {
+  if (!iKKTcheck) return;
+  std::cout << "~~~~~~~~ " << std::endl;
+  dev_kkt_check::State state = initState();
+  dev_kkt_check::KktInfo info = dev_kkt_check::initInfo();
+
+  bool pass = dev_kkt_check::checkKkt(state, info);
+  if (final) {
+    if (pass)
+      std::cout << "KKT PASS" << std::endl;
+    else
+      std::cout << "KKT FAIL" << std::endl;
+  }
+  std::cout << "~~~~~~~~ " << std::endl;
 }
 
 void Presolve::setBasisElement(change c) {
@@ -3721,6 +3723,13 @@ void Presolve::countRemovedCols(PresolveRule rule) {
   if (timer.time_limit > 0 &&
       timer.timer_.readRunHighsClock() > timer.time_limit)
     status = stat::Timeout;
+}
+
+dev_kkt_check::State Presolve::initState() {
+  return dev_kkt_check::State(
+      numCol, numRow, Astart, Aindex, Avalue, ARstart, ARindex, ARvalue,
+      colCost, colLower, colUpper, rowLower, rowUpper, flagCol, flagRow,
+      colValue, colDual, rowValue, rowDual, col_status, row_status);
 }
 
 }  // namespace presolve

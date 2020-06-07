@@ -25,6 +25,7 @@
 #include "lp_data/HighsLp.h"
 #include "presolve/HPreData.h"
 #include "presolve/PresolveAnalysis.h"
+#include "test/DevKkt.h"
 
 using std::list;
 using std::string;
@@ -72,15 +73,13 @@ const std::map<Presolver, std::string> kPresolverNames{
 class Presolve : public HPreData {
  public:
   Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
+  virtual ~Presolve() {}
 
   HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
-                                 HighsSolution& recovered_solution);
-
-  void setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status,
-                    const std::vector<HighsBasisStatus>& pass_row_status);
-  const std::vector<HighsBasisStatus>& getRowStatus() { return row_status; }
-  const std::vector<HighsBasisStatus>& getColStatus() { return col_status; }
+                                 const HighsBasis& reduced_basis,
+                                 HighsSolution& recovered_solution,
+                                 HighsBasis& recovered_basis);
 
   void setNumericalTolerances();
   void load(const HighsLp& lp);
@@ -166,7 +165,8 @@ class Presolve : public HPreData {
   void resizeImpliedBounds();
 
   // easy transformations
-  void removeIfFixed(int j);
+  void removeFixedCol(int j);
+  void removeFixed();
   void removeEmptyRow(int i);
   void removeEmptyColumn(int j);
   void removeRow(int i);
@@ -283,6 +283,9 @@ class Presolve : public HPreData {
   void reportDevMidMainLoop();
   PresolveStats stats;
   int runPresolvers(const std::vector<Presolver>& order);
+
+  void checkKkt(bool final = false);
+  dev_kkt_check::State initState();
 };
 
 }  // namespace presolve
