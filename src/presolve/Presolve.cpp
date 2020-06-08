@@ -247,18 +247,18 @@ int Presolve::presolve(int print) {
   int iter = 1;
   // print(0);
 
-  removeFixed();
+  // removeFixed();
   if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainForcing);
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainDoubletonEq);
-    order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainForcing);
+    // order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainDoubletonEq);
+    // order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainColSingletons);
-    order.push_back(Presolver::kMainDominatedCols);
+    // order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
@@ -1487,7 +1487,6 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
 }
 
 void Presolve::removeColumnSingletons() {
-  int i, k, col;
   list<int>::iterator it = singCol.begin();
 
   if (timer.reachLimit()) {
@@ -1497,36 +1496,27 @@ void Presolve::removeColumnSingletons() {
 
   while (it != singCol.end()) {
     if (flagCol[*it]) {
-      /*
-        if (timer.reachLimit()) {
-          status = stat::Timeout;
-          return;
-        }
-      */
-      col = *it;
-      k = getSingColElementIndexInA(col);
+      int col = *it;
+      int k = getSingColElementIndexInA(col);
       if (k < 0) {
         it++;
         continue;
       }
       assert(k < (int)Aindex.size());
-      i = Aindex.at(k);
+      int i = Aindex.at(k);
 
       // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
           colUpper.at(col) >= HIGHS_CONST_INF) {
-        //        timer.recordStart(FREE_SING_COL);
-        removeFreeColumnSingleton(col, i, k);
-        it = singCol.erase(it);
-        //        timer.recordFinish(FREE_SING_COL);
-        continue;
+        // removeFreeColumnSingleton(col, i, k);
+        // it = singCol.erase(it);
+        // continue;
       }
       // singleton column in a doubleton inequality
       // case two column singletons
       else if (nzRow.at(i) == 2) {
-        //        timer.recordStart(SING_COL_DOUBLETON_INEQ);
+ //        bool result = false;
         bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
-        //        timer.recordFinish(SING_COL_DOUBLETON_INEQ);
         if (result) {
           it = singCol.erase(it);
           continue;
@@ -1534,9 +1524,8 @@ void Presolve::removeColumnSingletons() {
       }
       // implied free
       else {
-        //        timer.recordStart(IMPLIED_FREE_SING_COL);
-        bool result = removeIfImpliedFree(col, i, k);
-        //        timer.recordFinish(IMPLIED_FREE_SING_COL);
+         bool result = false;
+      //  bool result = removeIfImpliedFree(col, i, k);
         if (result) {
           it = singCol.erase(it);
           continue;
