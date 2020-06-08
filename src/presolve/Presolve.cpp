@@ -119,7 +119,10 @@ void Presolve::setNumericalTolerances() {
     weakly_dominated_column_tolerance = default_dual_feasiblility_tolerance;
   }
   timer.model_name = modelName;
-  timer.presolve_numerics.resize(PRESOLVE_NUMRICS_COUNT);
+  // Initialise the numerics records. JAJH thinks that this has to be
+  // done here, as the tolerances are only known in Presolve.h/cpp so
+  // have to be passed in
+  timer.presolve_numerics.resize(PRESOLVE_NUMERICS_COUNT);
   timer.initialiseNumericsRecord(INCONSISTENT_BOUNDS, "Inconsistent bounds",
                                  inconsistent_bounds_tolerance);
   timer.initialiseNumericsRecord(FIXED_COLUMN, "Fixed column",
@@ -575,8 +578,7 @@ void Presolve::removeDoubletonEquations() {
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
           fabs(rowLower[row] - rowUpper[row]) <=
-	  doubleton_equation_bound_tolerance) {
-
+              doubleton_equation_bound_tolerance) {
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);

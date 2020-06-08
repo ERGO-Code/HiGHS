@@ -82,7 +82,7 @@ enum presolveNumerics {
   EMPTY_ROW_BOUND,
   DOMINATED_COLUMN,
   WEAKLY_DOMINATED_COLUMN,
-  PRESOLVE_NUMRICS_COUNT
+  PRESOLVE_NUMERICS_COUNT
 };
 
 struct PresolveRuleInfo {
@@ -275,13 +275,13 @@ class PresolveTimer {
   }
 
   void reportAllNumericsRecord() {
-    assert((int)presolve_numerics.size() == PRESOLVE_NUMRICS_COUNT);
-    if (presolve_numerics.size() < PRESOLVE_NUMRICS_COUNT) return;
+    assert((int)presolve_numerics.size() == PRESOLVE_NUMERICS_COUNT);
+    if (presolve_numerics.size() < PRESOLVE_NUMERICS_COUNT) return;
     printf("Presolve numerics analysis for %s\n", model_name.c_str());
-    for (int record = 0; record < PRESOLVE_NUMRICS_COUNT; record++)
+    for (int record = 0; record < PRESOLVE_NUMERICS_COUNT; record++)
       reportNumericsRecord(presolve_numerics[record]);
     printf("grep_presolveNumerics:,%s", model_name.c_str());
-    for (int record = 0; record < PRESOLVE_NUMRICS_COUNT; record++)
+    for (int record = 0; record < PRESOLVE_NUMERICS_COUNT; record++)
       reportNumericsCsvRecord(presolve_numerics[record]);
     printf("\n");
   }
