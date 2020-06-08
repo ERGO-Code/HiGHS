@@ -402,10 +402,10 @@ HighsPresolveStatus Presolve::presolve() {
       presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
-  //  if (iPrint > 0)
+  //  if (iPrint > 0) {
   timer.reportClocks();
   timer.reportAllNumericsRecord();
-
+  //}
   return presolve_status;
 }
 
@@ -416,8 +416,6 @@ void Presolve::checkBoundsAreConsistent() {
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  colLower[col] - colUpper[col]);
       if (colLower[col] - colUpper[col] > inconsistent_bounds_tolerance) {
-        //      if (colUpper[col] - colLower[col] <
-        //      -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -430,8 +428,6 @@ void Presolve::checkBoundsAreConsistent() {
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  rowLower[row] - rowUpper[row]);
       if (rowLower[row] - rowUpper[row] > inconsistent_bounds_tolerance) {
-        //      if (rowUpper[row] - rowLower[row] <
-        //      -inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -578,18 +574,8 @@ void Presolve::removeDoubletonEquations() {
       }
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
-          // I'd say that the following should be <=, in case the tolerance is
-          // zero
           fabs(rowLower[row] - rowUpper[row]) <=
-              doubleton_equation_bound_tolerance) {
-        //          fabs(rowLower[row] - rowUpper[row]) < tol) {
-        /*
-        if (timer.reachLimit()) {
-          status = stat::Timeout;
-          timer.recordFinish(DOUBLETON_EQUATION);
-          return;
-        }
-        */
+	  doubleton_equation_bound_tolerance) {
 
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
@@ -735,11 +721,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
         break;
       }
     Avalue.at(ind) = xNew;
-  } else if (
-      // Should be <= tolerance otherwise "= tolerance" isn't
-      // handled. Why isn't this just "else", anyway?
-      xNew <= presolve_small_matrix_value  // < tol //
-  ) {
+  } else {
     // case new x == 0
     // cout<<"case: x also disappears from row "<<i<<" "<<endl;
     // update nz row
@@ -799,8 +781,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
       removeEmptyColumn(x);
     }
   }
-  if (y) {
-  }  // surpress warning.
 }
 
 void Presolve::trimA() {
