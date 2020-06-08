@@ -407,7 +407,7 @@ HighsPresolveStatus Presolve::presolve() {
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
   //  if (iPrint > 0) {
   timer.reportClocks();
-  timer.reportAllNumericsRecord();
+  timer.reportNumericsRecords();
   //}
   return presolve_status;
 }

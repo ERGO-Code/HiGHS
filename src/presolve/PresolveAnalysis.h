@@ -274,7 +274,7 @@ class PresolveTimer {
            numerics_record.num_clear_true);
   }
 
-  void reportAllNumericsRecord() {
+  void reportNumericsRecords() {
     assert((int)presolve_numerics.size() == PRESOLVE_NUMERICS_COUNT);
     if (presolve_numerics.size() < PRESOLVE_NUMERICS_COUNT) return;
     printf("Presolve numerics analysis for %s\n", model_name.c_str());
