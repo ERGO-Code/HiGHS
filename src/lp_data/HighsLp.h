@@ -59,7 +59,6 @@ enum class HighsModelStatus {
 enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
 
 class HighsLp;
-bool equalButForNames(const HighsLp& lp);
 
 class HighsLp {
  public:
@@ -87,6 +86,7 @@ class HighsLp {
 
   std::vector<int> integrality_;
 
+  bool equalButForNames(const HighsLp& lp);
   bool operator==(const HighsLp& lp);
 };
 

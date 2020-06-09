@@ -81,6 +81,7 @@ class Presolve : public HPreData {
                                  HighsSolution& recovered_solution,
                                  HighsBasis& recovered_basis);
 
+  void setNumericalTolerances();
   void load(const HighsLp& lp);
   // todo: clear the public from below.
   string modelName;
@@ -236,6 +237,17 @@ class Presolve : public HPreData {
   void countRemovedCols(PresolveRule rule);
 
   double tol = 0.0000001;
+  const double default_primal_feasiblility_tolerance = 1e-7;
+  const double default_dual_feasiblility_tolerance = 1e-7;
+  const double default_small_matrix_value = 1e-9;
+  double inconsistent_bounds_tolerance;
+  double fixed_column_tolerance;
+  double doubleton_equation_bound_tolerance;
+  double doubleton_inequality_bound_tolerance;
+  double presolve_small_matrix_value;
+  double empty_row_bound_tolerance;
+  double dominated_column_tolerance;
+  double weakly_dominated_column_tolerance;
 
   // postsolve
   bool noPostSolve = false;

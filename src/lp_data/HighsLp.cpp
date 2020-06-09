@@ -58,20 +58,20 @@ void clearLp(HighsLp& lp) {
   lp.integrality_.clear();
 }
 
-bool equalButForNames(const HighsLp& lp) {
-  if (lp.numCol_ != lp.numCol_ || lp.numRow_ != lp.numRow_ ||
-      lp.sense_ != lp.sense_ || lp.offset_ != lp.offset_ ||
-      lp.model_name_ != lp.model_name_)
+bool HighsLp::equalButForNames(const HighsLp& lp) {
+  if (this->numCol_ != lp.numCol_ || this->numRow_ != lp.numRow_ ||
+      this->sense_ != lp.sense_ || this->offset_ != lp.offset_ ||
+      this->model_name_ != lp.model_name_)
     return false;
 
-  if (lp.colCost_ != lp.colCost_) return false;
+  if (this->colCost_ != lp.colCost_) return false;
 
-  if (lp.colUpper_ != lp.colUpper_ || lp.colLower_ != lp.colLower_ ||
-      lp.rowUpper_ != lp.rowUpper_ || lp.rowLower_ != lp.rowLower_)
+  if (this->colUpper_ != lp.colUpper_ || this->colLower_ != lp.colLower_ ||
+      this->rowUpper_ != lp.rowUpper_ || this->rowLower_ != lp.rowLower_)
     return false;
 
-  if (lp.Astart_ != lp.Astart_ || lp.Aindex_ != lp.Aindex_ ||
-      lp.Avalue_ != lp.Avalue_)
+  if (this->Astart_ != lp.Astart_ || this->Aindex_ != lp.Aindex_ ||
+      this->Avalue_ != lp.Avalue_)
     return false;
 
   return true;
