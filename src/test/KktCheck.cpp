@@ -61,7 +61,7 @@ void KktCheck::printAR() {
 }
 
 void KktCheck::makeARCopy() {
-  tol = 0.00000001;
+  tol = 0.0000001;
   // Make a AR copy
   std::vector<int> iwork(numRow, 0);
   ARstart.resize(numRow + 1, 0);

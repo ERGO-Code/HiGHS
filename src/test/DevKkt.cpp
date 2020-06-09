@@ -21,7 +21,7 @@ namespace presolve {
 namespace dev_kkt_check {
 
 constexpr int dev_print = 1;
-constexpr double tol = 1e-08;
+constexpr double tol = 1e-07;
 
 KktInfo initInfo() {
   KktInfo info;
