@@ -975,7 +975,7 @@ void Presolve::initializeVectors() {
     if (nzRow.at(i) == 1) singRow.push_back(i);
     if (nzRow.at(i) == 0) {
       timer.recordStart(EMPTY_ROW);
-      removeEmptyRow(i);
+      //removeEmptyRow(i);
       countRemovedRows(EMPTY_ROW);
       timer.recordFinish(EMPTY_ROW);
     }
@@ -1451,6 +1451,7 @@ void Presolve::removeFreeColumnSingleton(const int col, const int row,
 bool Presolve::removeColumnSingletonInDoubletonInequality(const int col,
                                                           const int i,
                                                           const int k) {
+                                                            if (col != 72) return false;
   // second column index j
   // second column row array index kk
   int j = -1;
