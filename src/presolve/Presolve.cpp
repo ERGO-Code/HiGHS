@@ -2535,19 +2535,19 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   //	iKKTcheck = false;
   // set corresponding parts of solution vectors:
-  int j = 0;
+  int j_index = 0;
   vector<int> eqIndexOfReduced(numCol, -1);
   vector<int> eqIndexOfReduROW(numRow, -1);
   for (int i = 0; i < numColOriginal; ++i)
     if (cIndex.at(i) > -1) {
-      eqIndexOfReduced.at(j) = i;
-      ++j;
+      eqIndexOfReduced.at(j_index) = i;
+      ++j_index;
     }
-  j = 0;
+  j_index = 0;
   for (int i = 0; i < numRowOriginal; ++i)
     if (rIndex.at(i) > -1) {
-      eqIndexOfReduROW.at(j) = i;
-      ++j;
+      eqIndexOfReduROW.at(j_index) = i;
+      ++j_index;
     }
 
   vector<HighsBasisStatus> temp_col_status = col_status;
@@ -2875,20 +2875,22 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         // row. c.col is column COL (K) - eliminated, j is with new bounds
         pair<int, vector<double>> p = oldBounds.top();
         oldBounds.pop();
-        vector<double> v = get<1>(p);
-        int j = get<0>(p);
-        // double ubNew = v[1];
+        const int j = p.first;
+        vector<double> v = p.second;
         // double lbNew = v[0];
+        // double ubNew = v[1];
         double cjNew = v[2];
+
         p = oldBounds.top();
         oldBounds.pop();
-        v = get<1>(p);
+        v = p.second;
         double ubOld = v[1];
         double lbOld = v[0];
         double cjOld = v[2];
+
         p = oldBounds.top();
         oldBounds.pop();
-        v = get<1>(p);
+        v = p.second;
         double ubCOL = v[1];
         double lbCOL = v[0];
         double ck = v[2];
