@@ -826,8 +826,6 @@ void Presolve::trimA() {
 }
 
 void Presolve::resizeProblem() {
-  int i, j, k;
-
   int nz = 0;
   int nR = 0;
   int nC = 0;
@@ -836,14 +834,14 @@ void Presolve::resizeProblem() {
   rIndex.assign(numRow, -1);
   cIndex.assign(numCol, -1);
 
-  for (i = 0; i < numRow; ++i)
+  for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
       nz += nzRow.at(i);
       rIndex.at(i) = nR;
       nR++;
     }
 
-  for (i = 0; i < numCol; ++i)
+  for (int i = 0; i < numCol; ++i)
     if (flagCol.at(i)) {
       cIndex.at(i) = nC;
       nC++;
@@ -880,20 +878,21 @@ void Presolve::resizeProblem() {
   Aindex.resize(nz);
   Avalue.resize(nz);
 
-  for (i = 0; i < numRowOriginal; ++i)
+  for (int i = 0; i < numRowOriginal; ++i)
     if (flagRow.at(i))
       for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
-        j = ARindex.at(k);
+        const int j = ARindex.at(k);
         if (flagCol.at(j)) iwork.at(cIndex.at(j))++;
       }
-  for (i = 1; i <= numCol; ++i)
+
+  for (int i = 1; i <= numCol; ++i)
     Astart.at(i) = Astart.at(i - 1) + iwork.at(i - 1);
-  for (i = 0; i < numCol; ++i) iwork.at(i) = Aend.at(i) = Astart.at(i);
-  for (i = 0; i < numRowOriginal; ++i) {
+  for (int i = 0; i < numCol; ++i) iwork.at(i) = Aend.at(i) = Astart.at(i);
+  for (int i = 0; i < numRowOriginal; ++i) {
     if (flagRow.at(i)) {
       int iRow = rIndex.at(i);
-      for (k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
-        j = ARindex.at(k);
+      for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
+        const int j = ARindex.at(k);
         if (flagCol.at(j)) {
           int iCol = cIndex.at(j);
           int iPut = iwork.at(iCol)++;
@@ -923,8 +922,8 @@ void Presolve::resizeProblem() {
   colLower.resize(numCol);
   colUpper.resize(numCol);
 
-  k = 0;
-  for (i = 0; i < numColOriginal; ++i)
+  int k = 0;
+  for (int i = 0; i < numColOriginal; ++i)
     if (flagCol.at(i)) {
       colCost.at(k) = tempCost.at(i);
       colLower.at(k) = temp.at(i);
@@ -940,7 +939,7 @@ void Presolve::resizeProblem() {
   rowLower.resize(numRow);
   rowUpper.resize(numRow);
   k = 0;
-  for (i = 0; i < numRowOriginal; ++i)
+  for (int i = 0; i < numRowOriginal; ++i)
     if (flagRow.at(i)) {
       rowLower.at(k) = temp.at(i);
       rowUpper.at(k) = teup.at(i);
@@ -2418,7 +2417,6 @@ int Presolve::getSingColElementIndexInA(int j) {
 void Presolve::testAnAR(int post) {
   int rows = numRow;
   int cols = numCol;
-  int i, j, k;
 
   double valueA = 0;
   double valueAR = 0;
@@ -2430,19 +2428,19 @@ void Presolve::testAnAR(int post) {
   }
 
   // check that A = AR
-  for (i = 0; i < rows; ++i) {
-    for (j = 0; j < cols; ++j) {
+  for (int i = 0; i < rows; ++i) {
+    for (int j = 0; j < cols; ++j) {
       if (post == 0)
         if (!flagRow.at(i) || !flagCol.at(j)) continue;
       hasValueA = false;
-      for (k = Astart.at(j); k < Aend.at(j); ++k)
+      for (int k = Astart.at(j); k < Aend.at(j); ++k)
         if (Aindex.at(k) == i) {
           hasValueA = true;
           valueA = Avalue.at(k);
         }
 
       hasValueAR = false;
-      for (k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
+      for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
         if (ARindex.at(k) == j) {
           hasValueAR = true;
           valueAR = ARvalue.at(k);
@@ -2462,20 +2460,20 @@ void Presolve::testAnAR(int post) {
   if (post == 0) {
     // check nz
     int nz = 0;
-    for (i = 0; i < rows; ++i) {
+    for (int i = 0; i < rows; ++i) {
       if (!flagRow.at(i)) continue;
       nz = 0;
-      for (k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
+      for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
         if (flagCol.at(ARindex.at(k))) nz++;
       if (nz != nzRow.at(i))
         cout << "    NZ ROW      DIFF row=" << i << " nzRow=" << nzRow.at(i)
              << " actually " << nz << "------------" << endl;
     }
 
-    for (j = 0; j < cols; ++j) {
+    for (int j = 0; j < cols; ++j) {
       if (!flagCol.at(j)) continue;
       nz = 0;
-      for (k = Astart.at(j); k < Aend.at(j); ++k)
+      for (int k = Astart.at(j); k < Aend.at(j); ++k)
         if (flagRow.at(Aindex.at(k))) nz++;
       if (nz != nzCol.at(j))
         cout << "    NZ COL      DIFF col=" << j << " nzCol=" << nzCol.at(j)
@@ -3017,6 +3015,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                  << " in doubleton eq re-introduced. Row: " << c.row
                  << " -----\n";
 
+          chk.addCost(j, cjOld);
           chk.addChange(5, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
           chk.replaceBasis(col_status, row_status);

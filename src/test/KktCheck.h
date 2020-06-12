@@ -48,7 +48,6 @@ class KktCheck {
   std::vector<int> ARstart;
   std::vector<int> ARindex;
   std::vector<double> ARvalue;
-  int i, j, k;
   double tol;
 
 

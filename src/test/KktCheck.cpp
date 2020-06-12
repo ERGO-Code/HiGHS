@@ -29,8 +29,8 @@ void KktCheck::printAR() {
   }
   std::cout << std::endl;
   std::cout << "------AR | b----KktCheck-\n";
-  for (i = 0; i < numRow; i++) {
-    for (j = 0; j < numCol; j++) {
+  for (int i = 0; i < numRow; i++) {
+    for (int j = 0; j < numCol; j++) {
       int ind = ARstart[i];
       while (ARindex[ind] != j && ind < ARstart[i + 1]) ind++;
       // if a_ij is nonzero print
@@ -61,28 +61,28 @@ void KktCheck::printAR() {
 }
 
 void KktCheck::makeARCopy() {
-  tol = 0.0000001;
-  // Make a AR copy
-  std::vector<int> iwork(numRow, 0);
-  ARstart.resize(numRow + 1, 0);
-  int AcountX = Aindex.size();
-  ARindex.resize(AcountX);
-  ARvalue.resize(AcountX);
-  for (k = 0; k < AcountX; k++) iwork[Aindex[k]]++;
-  for (i = 1; i <= numRow; i++) ARstart[i] = ARstart[i - 1] + iwork[i - 1];
-  for (i = 0; i < numRow; i++) iwork[i] = ARstart[i];
-  for (int iCol = 0; iCol < numCol; iCol++) {
-    for (k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
-      int iRow = Aindex[k];
-      int iPut = iwork[iRow]++;
-      ARindex[iPut] = iCol;
-      ARvalue[iPut] = Avalue[k];
+    tol = 0.0000001;
+    // Make a AR copy
+    std::vector<int> iwork(numRow, 0);
+    ARstart.resize(numRow + 1, 0);
+    int AcountX = Aindex.size();
+    ARindex.resize(AcountX);
+    ARvalue.resize(AcountX);
+    for (int k = 0; k < AcountX; k++) iwork[Aindex[k]]++;
+    for (int i = 1; i <= numRow; i++) ARstart[i] = ARstart[i - 1] + iwork[i - 1];
+    for (int i = 0; i < numRow; i++) iwork[i] = ARstart[i];
+    for (int iCol = 0; iCol < numCol; iCol++) {
+      for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+        int iRow = Aindex[k];
+        int iPut = iwork[iRow]++;
+        ARindex[iPut] = iCol;
+        ARvalue[iPut] = Avalue[k];
+      }
     }
-  }
 }
 
 void KktCheck::chPrimalBounds() {
-  for (i = 0; i < numCol; i++) {
+  for (int i = 0; i < numCol; i++) {
     if ((colLower[i] - colValue[i] > tol) ||
         (colValue[i] - colUpper[i] > tol)) {
       if (print == 1)
@@ -101,9 +101,9 @@ void KktCheck::chPrimalFeas() {
   bool istrue = true;
   double rowV;
   // Ax = b
-  for (i = 0; i < numRow; i++) {
+  for (int i = 0; i < numRow; i++) {
     rowV = 0;
-    for (k = ARstart[i]; k < ARstart[i + 1]; k++)
+    for (int k = ARstart[i]; k < ARstart[i + 1]; k++)
       rowV = rowV + colValue[ARindex[k]] * ARvalue[k];
 
     if (((rowV - rowLower[i]) < 0) && (fabs(rowV - rowLower[i]) > tol)) {
@@ -139,7 +139,7 @@ void KktCheck::chDualFeas() {
   bool istrue = true;
 
   // check values of z_j are dual feasible
-  for (i = 0; i < numCol; i++) {
+  for (int i = 0; i < numCol; i++) {
     // j not in L or U
     if (colLower[i] <= -HIGHS_CONST_INF && colUpper[i] >= HIGHS_CONST_INF) {
       if (fabs(colDual[i]) > tol) {
@@ -182,9 +182,9 @@ void KktCheck::chDualFeas() {
   }
 
   // check values of y_i are dual feasible
-  for (i = 0; i < numRow; i++) {
+  for (int i = 0; i < numRow; i++) {
     double rowV = 0;
-    for (k = ARstart[i]; k < ARstart[i + 1]; k++)
+    for (int k = ARstart[i]; k < ARstart[i + 1]; k++)
       rowV = rowV + colValue[ARindex[k]] * ARvalue[k];
 
     // L = Ax = U can be any sign
@@ -245,7 +245,7 @@ void KktCheck::chDualFeas() {
 void KktCheck::chComplementarySlackness() {
   bool istrue = true;
 
-  for (i = 0; i < numCol; i++) {
+    for (int i = 0; i < numCol; i++) {
     if (colLower[i] > -HIGHS_CONST_INF)
       if (fabs((colValue[i] - colLower[i]) * (colDual[i])) > tol &&
           colValue[i] != colUpper[i] && fabs(colDual[i]) > tol) {
@@ -306,11 +306,10 @@ void KktCheck::printSol() {
 
 void KktCheck::chStOfLagrangian() {
   bool istrue = true;
-  double lagrV;
   // A'y + c - z = 0
-  for (j = 0; j < numCol; j++) {
-    lagrV = colCost[j] - colDual[j];
-    for (k = Astart[j]; k < Astart[j + 1]; k++)
+  for (int j = 0; j < numCol; j++) {
+    double lagrV = colCost[j] - colDual[j];
+    for (int k = Astart[j]; k < Astart[j + 1]; k++)
       lagrV = lagrV + rowDual[Aindex[k]] * Avalue[k];
 
     if (fabs(lagrV) > tol) {
