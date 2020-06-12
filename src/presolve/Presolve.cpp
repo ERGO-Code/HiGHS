@@ -975,7 +975,7 @@ void Presolve::initializeVectors() {
     if (nzRow.at(i) == 1) singRow.push_back(i);
     if (nzRow.at(i) == 0) {
       timer.recordStart(EMPTY_ROW);
-      //removeEmptyRow(i);
+      // removeEmptyRow(i);
       countRemovedRows(EMPTY_ROW);
       timer.recordFinish(EMPTY_ROW);
     }
@@ -1378,38 +1378,43 @@ void Presolve::setKKTcheckerData() {
   chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
 }
 
-pair<double, double> Presolve::getNewBoundsDoubletonConstraint(int row, int col,
-                                                               int j,
-                                                               double aik,
-                                                               double aij) {
+pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
+    const int row, const int col, const int j, const double aik,
+    const double aij) {
   int i = row;
 
   double upp = HIGHS_CONST_INF;
   double low = -HIGHS_CONST_INF;
 
   if (aij > 0 && aik > 0) {
-    if (colLower.at(col) > -HIGHS_CONST_INF)
+    if (colLower.at(col) > -HIGHS_CONST_INF && rowUpper.at(i) < HIGHS_CONST_INF)
       upp = (rowUpper.at(i) - aik * colLower.at(col)) / aij;
-    if (colUpper.at(col) < HIGHS_CONST_INF)
+    if (colUpper.at(col) < HIGHS_CONST_INF && rowLower.at(i) > -HIGHS_CONST_INF)
       low = (rowLower.at(i) - aik * colUpper.at(col)) / aij;
   } else if (aij > 0 && aik < 0) {
-    if (colLower.at(col) > -HIGHS_CONST_INF)
+    if (colLower.at(col) > -HIGHS_CONST_INF &&
+        rowLower.at(i) > -HIGHS_CONST_INF)
       low = (rowLower.at(i) - aik * colLower.at(col)) / aij;
-    if (colUpper.at(col) < HIGHS_CONST_INF)
+    if (colUpper.at(col) < HIGHS_CONST_INF && rowUpper.at(i) < HIGHS_CONST_INF)
       upp = (rowUpper.at(i) - aik * colUpper.at(col)) / aij;
   } else if (aij < 0 && aik > 0) {
-    if (colLower.at(col) > -HIGHS_CONST_INF)
+    if (colLower.at(col) > -HIGHS_CONST_INF && rowUpper.at(i) < HIGHS_CONST_INF)
       low = (rowUpper.at(i) - aik * colLower.at(col)) / aij;
-    if (colUpper.at(col) < HIGHS_CONST_INF)
+    if (colUpper.at(col) < HIGHS_CONST_INF && rowLower.at(i) > -HIGHS_CONST_INF)
       upp = (rowLower.at(i) - aik * colUpper.at(col)) / aij;
   } else {
-    if (colLower.at(col) > -HIGHS_CONST_INF)
+    if (colLower.at(col) > -HIGHS_CONST_INF &&
+        rowLower.at(i) > -HIGHS_CONST_INF)
       upp = (rowLower.at(i) - aik * colLower.at(col)) / aij;
-    if (colUpper.at(col) < HIGHS_CONST_INF)
+    if (colUpper.at(col) < HIGHS_CONST_INF && rowUpper.at(i) < HIGHS_CONST_INF)
       low = (rowUpper.at(i) - aik * colUpper.at(col)) / aij;
   }
 
-  if (j) {
+  if (upp - low < -inconsistent_bounds_tolerance) {
+    if (iPrint > 0)
+      std::cout << "Presolve warning: inconsistent bounds in doubleton "
+                   "constraint row "
+                << row << std::endl;
   }  // surpress warning.
 
   return make_pair(low, upp);
@@ -1451,7 +1456,7 @@ void Presolve::removeFreeColumnSingleton(const int col, const int row,
 bool Presolve::removeColumnSingletonInDoubletonInequality(const int col,
                                                           const int i,
                                                           const int k) {
-                                                            if (col != 72) return false;
+  if (col != 72) return false;
   // second column index j
   // second column row array index kk
   int j = -1;
@@ -1623,7 +1628,7 @@ void Presolve::removeColumnSingletons() {
       // singleton column in a doubleton inequality
       // case two column singletons
       else if (nzRow.at(i) == 2) {
- //        bool result = false;
+        //        bool result = false;
         bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
         if (result) {
           it = singCol.erase(it);
@@ -1632,8 +1637,8 @@ void Presolve::removeColumnSingletons() {
       }
       // implied free
       else {
-         bool result = false;
-      //  bool result = removeIfImpliedFree(col, i, k);
+        bool result = false;
+        //  bool result = removeIfImpliedFree(col, i, k);
         if (result) {
           it = singCol.erase(it);
           continue;
@@ -1790,10 +1795,6 @@ bool Presolve::removeIfImpliedFree(int col, int i, int k) {
       implColLower.at(col) = low;
       implColUpperRowIndex.at(col) = i;
     }
-    // JAJH(190419): Segfault here since i is a row index and
-    // segfaults (on dcp1) due to i=4899 exceeding column dimension of
-    // 3007. Hence correction. Also pattern-matches the next case :-)
-    //    implColDualUpper.at(i) = 0;
     implColDualUpper.at(col) = 0;
   } else if (low <= upp && upp <= colUpper.at(col)) {
     if (implColUpper.at(col) > upp) {
@@ -2907,11 +2908,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         double low = -HIGHS_CONST_INF;
 
         if ((aij > 0 && aik > 0) || (aij < 0 && aik < 0)) {
-          upp = (rowub - aij * xj) / aik;
-          low = (rowlb - aij * xj) / aik;
+          if (rowub < HIGHS_CONST_INF) upp = (rowub - aij * xj) / aik;
+          if (rowlb > -HIGHS_CONST_INF) low = (rowlb - aij * xj) / aik;
         } else {
-          upp = (rowub - aij * xj) / aik;
-          low = (rowlb - aij * xj) / aik;
+          if (rowub < HIGHS_CONST_INF) upp = (rowub - aij * xj) / aik;
+          if (rowlb > -HIGHS_CONST_INF) low = (rowlb - aij * xj) / aik;
         }
 
         double xkValue = 0;
@@ -2939,15 +2940,19 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         objShift += -cjNew * xj + cjOld * xj + ck * xkValue;
 
         // fix duals
-
         double rowVal = aij * xj + aik * xkValue;
-        if (rowub - rowVal > tol && rowVal - rowlb > tol) {
+
+        // If row is strictly between bounds:
+        // Row is basic and column is non basic.
+        if ((rowub == HIGHS_CONST_INF || (rowub - rowVal > tol)) &&
+            (rowlb == -HIGHS_CONST_INF || (rowVal - rowlb > tol))) {
           row_status.at(c.row) = HighsBasisStatus::BASIC;
           col_status.at(c.col) = HighsBasisStatus::NONBASIC;
           valueRowDual[c.row] = 0;
           flagRow[c.row] = 1;
           valueColDual[c.col] = getColumnDualPost(c.col);
         } else {
+          // row is at a bound
           double lo, up;
           if (fabs(rowlb - rowub) < tol) {
             lo = -HIGHS_CONST_INF;
@@ -2957,7 +2962,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
             up = HIGHS_CONST_INF;
           } else if (fabs(rowlb - rowVal) <= tol) {
             lo = -HIGHS_CONST_INF;
-            ;
             up = 0;
           }
 
@@ -2968,7 +2972,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           // calculate yi
           if (lo - up > tol)
             cout << "PR: Error in postsolving doubleton inequality " << c.row
-                 << " : inconsistent bounds for its dual value.\n";
+                 << " : inconsistent bounds for its dual value." << std::endl;
 
           // WARNING: bound_row_dual not used. commented out to surpress warning
           // but maybe this causes trouble. Look into when you do dual postsolve
