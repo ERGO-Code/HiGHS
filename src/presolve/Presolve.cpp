@@ -2986,8 +2986,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           //   bound_row_dual = up;
           // }
 
-          if (lo > 0 || up < 0) {
-            // row is nonbasic, since dual value zero for it is infeasible.
+          if (lo > 0 || up < 0 || ck != 0) {
+            // row is nonbasic
+            // since either dual value zero for it is infeasible
+            // or the column cost has changed for col j hence the row dual has
+            // to be nonzero to balance out the Stationarity of Lagrangian.
             row_status.at(c.row) = HighsBasisStatus::NONBASIC;
             col_status.at(c.col) = HighsBasisStatus::BASIC;
             valueColDual[c.col] = 0;
