@@ -1414,7 +1414,7 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
       std::cout << "Presolve warning: inconsistent bounds in doubleton "
                    "constraint row "
                 << row << std::endl;
-  }  // surpress warning.
+  }
 
   return make_pair(low, upp);
 }
@@ -1455,7 +1455,6 @@ void Presolve::removeFreeColumnSingleton(const int col, const int row,
 bool Presolve::removeColumnSingletonInDoubletonInequality(const int col,
                                                           const int i,
                                                           const int k) {
-  if (col != 72) return false;
   // second column index j
   // second column row array index kk
   int j = -1;
@@ -1620,24 +1619,22 @@ void Presolve::removeColumnSingletons() {
       // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
           colUpper.at(col) >= HIGHS_CONST_INF) {
-        // removeFreeColumnSingleton(col, i, k);
-        // it = singCol.erase(it);
-        // continue;
+        removeFreeColumnSingleton(col, i, k);
+        it = singCol.erase(it);
+        continue;
       }
+
+      // implied free
+      bool result = removeIfImpliedFree(col, i, k);
+      if (result) {
+        it = singCol.erase(it);
+        continue;
+      }
+
       // singleton column in a doubleton inequality
       // case two column singletons
-      else if (nzRow.at(i) == 2) {
-        //        bool result = false;
+      if (nzRow.at(i) == 2) {
         bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
-        if (result) {
-          it = singCol.erase(it);
-          continue;
-        }
-      }
-      // implied free
-      else {
-        bool result = false;
-        //  bool result = removeIfImpliedFree(col, i, k);
         if (result) {
           it = singCol.erase(it);
           continue;
@@ -2953,11 +2950,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           valueColDual[c.col] = getColumnDualPost(c.col);
         } else {
           // row is at a bound
-          double lo, up;
-          if (fabs(rowlb - rowub) < tol) {
-            lo = -HIGHS_CONST_INF;
-            up = HIGHS_CONST_INF;
-          } else if (fabs(rowub - rowVal) <= tol) {
+          // case fabs(rowlb - rowub) < tol
+          double lo = -HIGHS_CONST_INF;
+          double up = HIGHS_CONST_INF;
+
+          if (fabs(rowub - rowVal) <= tol) {
             lo = 0;
             up = HIGHS_CONST_INF;
           } else if (fabs(rowlb - rowVal) <= tol) {
@@ -3018,7 +3015,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                  << " in doubleton eq re-introduced. Row: " << c.row
                  << " -----\n";
 
-          chk.addCost(j, cjOld);
           chk.addChange(5, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
           chk.replaceBasis(col_status, row_status);
