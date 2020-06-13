@@ -300,6 +300,9 @@ void Presolve::removeFixed() {
                                  fabs(colUpper.at(j) - colLower.at(j)));
       if (fabs(colUpper.at(j) - colLower.at(j)) > fixed_column_tolerance)
         continue;
+
+      if (j < 9796) continue;
+      if (j > 9796) continue;
       removeFixedCol(j);
       if (status) {
         timer.recordFinish(FIXED_COL);
@@ -335,13 +338,13 @@ int Presolve::presolve(int print) {
 
   if (order.size() == 0) {
     // pre_release_order:
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainForcing);
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainDoubletonEq);
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainColSingletons);
-    order.push_back(Presolver::kMainDominatedCols);
+    // order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainForcing);
+    // order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainDoubletonEq);
+     order.push_back(Presolver::kMainRowSingletons);
+     order.push_back(Presolver::kMainColSingletons);
+    //  order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
@@ -974,7 +977,7 @@ void Presolve::initializeVectors() {
     if (nzRow.at(i) == 1) singRow.push_back(i);
     if (nzRow.at(i) == 0) {
       timer.recordStart(EMPTY_ROW);
-      removeEmptyRow(i);
+      // removeEmptyRow(i);
       countRemovedRows(EMPTY_ROW);
       timer.recordFinish(EMPTY_ROW);
     }
@@ -1610,7 +1613,7 @@ void Presolve::removeColumnSingletons() {
       int col = *it;
       int k = getSingColElementIndexInA(col);
       if (k < 0) {
-        it++;
+        it = singCol.erase(it);
         continue;
       }
       assert(k < (int)Aindex.size());
@@ -1625,21 +1628,25 @@ void Presolve::removeColumnSingletons() {
       }
 
       // implied free
-      bool result = removeIfImpliedFree(col, i, k);
-      if (result) {
-        it = singCol.erase(it);
-        continue;
-      }
-
-      // singleton column in a doubleton inequality
-      // case two column singletons
-      if (nzRow.at(i) == 2) {
-        bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
+      // bool implied_free = (col < 6000 || (col > 6000 && col < 9900 ));
+      bool implied_free = ((col > 4000  && col < 5000)|| (col > 6000 && col < 9900 ));
+      if (implied_free) {
+        bool result = removeIfImpliedFree(col, i, k);
         if (result) {
           it = singCol.erase(it);
           continue;
         }
       }
+
+      // singleton column in a doubleton inequality
+      // case two column singletons
+      // if (nzRow.at(i) == 2) {
+      //   bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
+      //   if (result) {
+      //     it = singCol.erase(it);
+      //     continue;
+      //   }
+      // }
       it++;
 
       if (status) return;
@@ -2033,7 +2040,6 @@ void Presolve::removeForcingConstraints() {
 }
 
 void Presolve::removeRowSingletons() {
-  int i;
   if (timer.reachLimit()) {
     status = stat::Timeout;
     return;
@@ -2044,9 +2050,10 @@ void Presolve::removeRowSingletons() {
       timer.recordFinish(SING_ROW);
       return;
     }
-    i = singRow.front();
+    int i = singRow.front();
     singRow.pop_front();
     if (!flagRow[i]) continue;
+    if (i != 830) continue;
 
     int k = getSingRowElementIndexInAR(i);
     if (k < 0) continue;
