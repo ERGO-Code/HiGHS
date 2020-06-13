@@ -330,18 +330,18 @@ int Presolve::presolve(int print) {
   int iter = 1;
   // print(0);
 
-  // removeFixed();
+  removeFixed();
   if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
-    // order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainForcing);
-    // order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainDoubletonEq);
-    // order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainForcing);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainDoubletonEq);
+    order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainColSingletons);
-    // order.push_back(Presolver::kMainDominatedCols);
+    order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
@@ -974,7 +974,7 @@ void Presolve::initializeVectors() {
     if (nzRow.at(i) == 1) singRow.push_back(i);
     if (nzRow.at(i) == 0) {
       timer.recordStart(EMPTY_ROW);
-      // removeEmptyRow(i);
+      removeEmptyRow(i);
       countRemovedRows(EMPTY_ROW);
       timer.recordFinish(EMPTY_ROW);
     }
@@ -2923,12 +2923,10 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         }
 
         else if ((ck > 0 && aik > 0) || (ck < 0 && aik < 0)) {
-          if (low <= -HIGHS_CONST_INF)
-            cout << "ERROR UNBOUNDED? unnecessary check";
+          assert(low > -HIGHS_CONST_INF);
           xkValue = low;
         } else if ((ck > 0 && aik < 0) || (ck < 0 && aik > 0)) {
-          if (upp >= HIGHS_CONST_INF)
-            cout << "ERROR UNBOUNDED? unnecessary check";
+          assert(low < HIGHS_CONST_INF);
           xkValue = upp;
         }
 
