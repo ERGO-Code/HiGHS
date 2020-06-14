@@ -3533,23 +3533,25 @@ string Presolve::getDualsForcingRow(int row, vector<int>& fRjs) {
   return ss.str();
 }
 
-void Presolve::getDualsSingletonRow(int row, int col) {
+void Presolve::getDualsSingletonRow(const int row, const int col) {
   pair<int, vector<double>> bnd = oldBounds.top();
   oldBounds.pop();
 
   valueRowDual.at(row) = 0;
-  //   double cost = postValue.top();
+
+  const double cost = postValue.top();
   postValue.pop();
-  double aij = getaij(row, col);
-  double l = (get<1>(bnd))[0];
-  double u = (get<1>(bnd))[1];
-  double lrow = (get<1>(bnd))[2];
-  double urow = (get<1>(bnd))[3];
+  colCostAtEl[col] = cost;
+
+  const double aij = getaij(row, col);
+  const double l = (get<1>(bnd))[0];
+  const double u = (get<1>(bnd))[1];
+  const double lrow = (get<1>(bnd))[2];
+  const double urow = (get<1>(bnd))[3];
 
   flagRow.at(row) = 1;
 
-  HighsBasisStatus local_status;
-  local_status = col_status.at(col);
+  HighsBasisStatus local_status = col_status.at(col);
   if (local_status != HighsBasisStatus::BASIC) {
     // x was not basic but is now
     // if x is strictly between original bounds or a_ij*x_j is at a bound.
@@ -3564,12 +3566,12 @@ void Presolve::getDualsSingletonRow(int row, int col) {
       valueRowDual[row] = getRowDualPost(row, col);
     } else {
       // column is at bound
-      bool isRowAtLB = fabs(aij * valuePrimal[col] - lrow) < tol;
-      bool isRowAtUB = fabs(aij * valuePrimal[col] - urow) < tol;
+      const bool isRowAtLB = fabs(aij * valuePrimal[col] - lrow) < tol;
+      const bool isRowAtUB = fabs(aij * valuePrimal[col] - urow) < tol;
 
-      double save_dual = valueColDual[col];
+      const double save_dual = valueColDual[col];
       valueColDual[col] = 0;
-      double row_dual = getRowDualPost(row, col);
+      const double row_dual = getRowDualPost(row, col);
 
       if ((isRowAtLB && !isRowAtUB && row_dual > 0) ||
           (!isRowAtLB && isRowAtUB && row_dual < 0) ||
