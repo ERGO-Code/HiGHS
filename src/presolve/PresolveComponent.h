@@ -30,19 +30,34 @@ struct PresolveComponentData : public HighsComponentData {
   // todo: make reduced one const.
   HighsSolution reduced_solution_;
   HighsSolution recovered_solution_;
+
+  HighsBasis reduced_basis_;
+  HighsBasis recovered_basis_;
+
+  void clear() {
+    is_valid = false;
+
+    presolve_.clear();
+    clearLp(reduced_lp_);
+    clearSolutionUtil(reduced_solution_);
+    clearSolutionUtil(recovered_solution_);
+    clearBasisUtil(reduced_basis_);
+    clearBasisUtil(recovered_basis_);
+  }
 };
 
 // HighsComponentInfo is a placeholder for details we want to query from outside
-// of HiGHS like execution information.
+// of HiGHS like execution information. Times are recorded at the end of
+// Highs::run()
 struct PresolveComponentInfo : public HighsComponentInfo {
   int n_rows_removed = 0;
   int n_cols_removed = 0;
   int n_nnz_removed = 0;
 
+  double init_time = 0;
   double presolve_time = 0;
-  double postsolve_time = 0;
-
   double solve_time = 0;
+  double postsolve_time = 0;
   double cleanup_time = 0;
 };
 
@@ -52,6 +67,12 @@ struct PresolveComponentOptions : public HighsComponentOptions {
   // presolve options later when needed.
   bool presolve_on = true;
   std::vector<presolve::Presolver> order;
+
+  std::string iteration_strategy = "smart";
+  int max_iterations = 0;
+
+  double time_limit = -1;
+  bool dev = false;
 };
 
 class PresolveComponent : public HighsComponent {
@@ -66,9 +87,6 @@ class PresolveComponent : public HighsComponent {
 
   HighsStatus setOptions(const HighsOptions& options);
 
-  void setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status,
-                    const std::vector<HighsBasisStatus>& pass_row_status);
-
   void negateReducedLpColDuals(bool reduced);
   void negateReducedLpCost();
 
@@ -81,5 +99,10 @@ class PresolveComponent : public HighsComponent {
   HighsPresolveStatus presolve_status_ = HighsPresolveStatus::NotPresolved;
   HighsPostsolveStatus postsolve_status_ = HighsPostsolveStatus::NotPresolved;
 };
+
+namespace presolve {
+
+bool checkOptions(const PresolveComponentOptions& options);
+}
 
 #endif

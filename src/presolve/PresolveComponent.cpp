@@ -33,12 +33,6 @@ HighsStatus PresolveComponent::setOptions(const HighsOptions& options) {
   return HighsStatus::OK;
 }
 
-void PresolveComponent::setBasisInfo(
-    const std::vector<HighsBasisStatus>& pass_col_status,
-    const std::vector<HighsBasisStatus>& pass_row_status) {
-  data_.presolve_[0].setBasisInfo(pass_col_status, pass_row_status);
-}
-
 void PresolveComponent::negateReducedLpColDuals(bool reduced) {
   if (reduced)
     for (unsigned int col = 0; col < data_.reduced_solution_.col_dual.size();
@@ -63,10 +57,33 @@ HighsPresolveStatus PresolveComponent::run() {
   has_run_ = true;
   assert(data_.presolve_.size() > 0);
   // Set options.
-  if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
+  bool options_ok = presolve::checkOptions(options_);
+  if (options_ok) {
+    if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
 
-  // Run presolve.
-  presolve_status_ = data_.presolve_[0].presolve();
+    // max iterations
+    if (options_.iteration_strategy == "num_limit")
+      data_.presolve_[0].max_iterations = options_.max_iterations;
+
+    // time limit
+    if (options_.time_limit < presolve::inf && options_.time_limit > 0)
+      data_.presolve_[0].setTimeLimit(options_.time_limit);
+
+    // order and selection of presolvers
+    if (options_.order.size() > 0) data_.presolve_[0].order = options_.order;
+
+    // printing
+    if (options_.dev) data_.presolve_[0].iPrint = -1;
+
+    data_.presolve_[0].setNumericalTolerances();
+
+    // Run presolve.
+    presolve_status_ = data_.presolve_[0].presolve();
+  } else {
+    presolve_status_ = HighsPresolveStatus::OptionsError;
+  }
+
+  // else: Run default.
 
   if (presolve_status_ == HighsPresolveStatus::Reduced ||
       presolve_status_ == HighsPresolveStatus::ReducedToEmpty) {
@@ -94,10 +111,33 @@ HighsPresolveStatus PresolveComponent::run() {
 
 void PresolveComponent::clear() {
   has_run_ = false;
-  data_.presolve_.clear();
-  HighsLp lp;
-  HighsSolution solution;
-  data_.reduced_lp_ = lp;
-  data_.reduced_solution_ = solution;
-  data_.recovered_solution_ = solution;
+  data_.clear();
 }
+namespace presolve {
+
+bool checkOptions(const PresolveComponentOptions& options) {
+  // todo: check options in a smart way
+  if (options.dev) std::cout << "Checking presolve options... ";
+
+  if (!(options.iteration_strategy == "smart" ||
+        options.iteration_strategy == "off" ||
+        options.iteration_strategy == "num_limit")) {
+    if (options.dev)
+      std::cout << "error: iteration strategy unknown: "
+                << options.iteration_strategy << "." << std::endl;
+    return false;
+  }
+
+  if (options.iteration_strategy == "num_limit" && options.max_iterations < 0) {
+    if (options.dev)
+      std::cout << "warning: negative iteration limit: "
+                << options.max_iterations
+                << ". Presolve will be run with no limit on iterations."
+                << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+}  // namespace presolve

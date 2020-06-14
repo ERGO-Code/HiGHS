@@ -38,7 +38,6 @@ struct HighsClockRecord {
 class HighsTimer {
  public:
   HighsTimer() {
-    start_time = wall_clock::now();
     num_clock = 0;
     int i_clock = clock_def("Run HiGHS", "RnH");
     assert(i_clock == 0);
@@ -100,7 +99,6 @@ class HighsTimer {
    * constructor
    */
   void resetHighsTimer() {
-    this->start_time = wall_clock::now();
     this->num_clock = 0;
     this->clock_num_call.clear();
     this->clock_start.clear();
@@ -123,7 +121,6 @@ class HighsTimer {
       clock_start[i] = initial_clock_start;
       clock_time[i] = 0;
     }
-    start_time = wall_clock::now();
   }
 
   /**
@@ -257,6 +254,11 @@ class HighsTimer {
 #endif
       assert(clock_start[clock_list[i]] > 0);
     }
+    // Determine whether there are any times to report
+    int sum_calls = 0;
+    for (int i = 0; i < num_clock_list_entries; i++)
+      sum_calls += clock_num_call[clock_list[i]];
+    if (!sum_calls) return;
 
     // Report in one line the per-mille contribution from each clock
     // First give the 3-character clock names as column headers
@@ -366,7 +368,6 @@ class HighsTimer {
   // having been stopped
   const double initial_clock_start = 1.0;
 
-  time_point start_time;  //!< Elapsed time when the clocks were reset
   int num_clock = 0;
   std::vector<int> clock_num_call;
   std::vector<double> clock_start;

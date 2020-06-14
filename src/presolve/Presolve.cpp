@@ -45,10 +45,6 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-constexpr int iPrint = 0;
-// todo:
-// iKKTcheck = 1;
-
 void Presolve::load(const HighsLp& lp) {
   timer.recordStart(MATRIX_COPY);
   numCol = lp.numCol_;
@@ -73,31 +69,94 @@ void Presolve::load(const HighsLp& lp) {
   timer.recordFinish(MATRIX_COPY);
 }
 
-void Presolve::setBasisInfo(
-    const std::vector<HighsBasisStatus>& pass_col_status,
-    const std::vector<HighsBasisStatus>& pass_row_status) {
-  col_status = pass_col_status;
-  row_status = pass_row_status;
+void Presolve::setNumericalTolerances() {
+  const bool use_original_tol = false;
+  const double zero_tolerance = 1e-16;
+  if (use_original_tol) {
+    inconsistent_bounds_tolerance = tol;
+    fixed_column_tolerance =
+        zero_tolerance;  // Since exact equality is currently used
+    doubleton_equation_bound_tolerance = tol;
+    doubleton_inequality_bound_tolerance = tol;
+    presolve_small_matrix_value = tol;
+    empty_row_bound_tolerance = tol;
+    dominated_column_tolerance = tol;
+    weakly_dominated_column_tolerance = tol;
+  } else {
+    // Tolerance on bounds being inconsistent: should be twice
+    // primal_feasibility_tolerance since bounds inconsistent by this
+    // value can be satisfied to within the primal feasibility tolerance
+    // by a primal vlaue at their midpoint. The following is twice the
+    // default primal_feasibility_tolerance.
+    inconsistent_bounds_tolerance = 2 * default_primal_feasiblility_tolerance;
+    // Tolerance on column bounds differences being considered to be
+    // zero, allowing a column to be fixed
+    fixed_column_tolerance =
+        zero_tolerance;  // Since exact equality is currently used
+    //        2 * default_primal_feasiblility_tolerance;
+    // Tolerance on bound differences being considered to be zero,
+    // allowing a doubleton to be treated as an equation. What value
+    // this should have is unclear. It could depend on the coefficients
+    // of the two variables and the values of the bounds, as there's an
+    // implicit infeasibility created when the optimal value for one
+    // variable is substituted to deduce the optimal value of the other.
+    doubleton_equation_bound_tolerance =
+        2 * default_primal_feasiblility_tolerance;
+    doubleton_inequality_bound_tolerance = doubleton_equation_bound_tolerance;
+    // Need to decide when a matrix coefficient changed by substitution
+    // is zeroed: should be the small_matrix_value, for which the
+    // following is the default value
+    presolve_small_matrix_value = default_small_matrix_value;
+    // Tolerance on the lower and upper bound being sufficiently close
+    // to zero to allowing an empty row to be removed, rather than have
+    // the LP deduced as infeasible. This should be t =
+    // primal_feasibility_tolerance since the row activity of zero
+    // satisfies a lower bound of at most t, and an upper bound of at
+    // least -t. The following is the default
+    // primal_feasibility_tolerance.
+    empty_row_bound_tolerance = default_primal_feasiblility_tolerance;
+    dominated_column_tolerance = default_dual_feasiblility_tolerance;
+    weakly_dominated_column_tolerance = default_dual_feasiblility_tolerance;
+  }
+  timer.model_name = modelName;
+  // Initialise the numerics records. JAJH thinks that this has to be
+  // done here, as the tolerances are only known in Presolve.h/cpp so
+  // have to be passed in
+  timer.presolve_numerics.resize(PRESOLVE_NUMERICS_COUNT);
+  timer.initialiseNumericsRecord(INCONSISTENT_BOUNDS, "Inconsistent bounds",
+                                 inconsistent_bounds_tolerance);
+  timer.initialiseNumericsRecord(FIXED_COLUMN, "Fixed column",
+                                 fixed_column_tolerance);
+  timer.initialiseNumericsRecord(DOUBLETON_EQUATION_BOUND,
+                                 "Doubleton equation bound",
+                                 doubleton_equation_bound_tolerance);
+  timer.initialiseNumericsRecord(DOUBLETON_INEQUALITY_BOUND,
+                                 "Doubleton inequality bound",
+                                 doubleton_inequality_bound_tolerance);
+  timer.initialiseNumericsRecord(SMALL_MATRIX_VALUE, "Small matrix value",
+                                 presolve_small_matrix_value);
+  timer.initialiseNumericsRecord(EMPTY_ROW_BOUND, "Empty row bounds",
+                                 empty_row_bound_tolerance);
+  timer.initialiseNumericsRecord(DOMINATED_COLUMN, "Dominated column",
+                                 dominated_column_tolerance);
+  timer.initialiseNumericsRecord(WEAKLY_DOMINATED_COLUMN,
+                                 "Weakly dominated column",
+                                 weakly_dominated_column_tolerance);
 }
 
 // printing with cout goes here.
 void reportDev(const string& message) {
-  if (iPrint == 0) return;
-
   std::cout << message << std::flush;
   return;
 }
 
 void printMainLoop(const MainLoop& l) {
-  if (iPrint == 0) return;
-
   std::cout << "    loop : " << l.rows << "," << l.cols << "," << l.nnz << "   "
             << std::endl;
 }
 
 void printDevStats(const DevStats& stats) {
   assert(stats.n_loops == (int)stats.loops.size());
-  if (iPrint == 0) return;
 
   std::cout << "dev-presolve-stats::" << std::endl;
   std::cout << "  n_loops = " << stats.n_loops << std::endl;
@@ -157,20 +216,25 @@ void Presolve::reportDevMidMainLoop() {
 }
 
 void Presolve::reportDevMainLoop() {
-  if (iPrint == 0) return;
+  if (iPrint == 0) {
+    if (timer.getTime() > 10)
+      HighsPrintMessage(output, message_level, ML_VERBOSE,
+                        "Presolve finished main loop %d... ",
+                        stats.dev.n_loops + 1);
+  } else {
+    int rows = 0;
+    int cols = 0;
+    int nnz = 0;
 
-  int rows = 0;
-  int cols = 0;
-  int nnz = 0;
+    getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
 
-  getRowsColsNnz(flagRow, flagCol, nzRow, nzCol, rows, cols, nnz);
+    stats.dev.n_loops++;
+    stats.dev.loops.push_back(MainLoop{rows, cols, nnz});
 
-  dev_stats.n_loops++;
-  dev_stats.loops.push_back(MainLoop{rows, cols, nnz});
+    std::cout << "Starting loop " << stats.dev.n_loops;
 
-  std::cout << "Starting loop " << dev_stats.n_loops;
-
-  printMainLoop(dev_stats.loops[dev_stats.n_loops - 1]);
+    printMainLoop(stats.dev.loops[stats.dev.n_loops - 1]);
+  }
   return;
 }
 
@@ -189,19 +253,29 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
 
     switch (main_loop_presolver) {
       case Presolver::kMainRowSingletons:
+        timer.recordStart(REMOVE_ROW_SINGLETONS);
         removeRowSingletons();
+        timer.recordFinish(REMOVE_ROW_SINGLETONS);
         break;
       case Presolver::kMainForcing:
+        timer.recordStart(REMOVE_FORCING_CONSTRAINTS);
         removeForcingConstraints();
+        timer.recordFinish(REMOVE_FORCING_CONSTRAINTS);
         break;
       case Presolver::kMainColSingletons:
+        timer.recordStart(REMOVE_COLUMN_SINGLETONS);
         removeColumnSingletons();
+        timer.recordFinish(REMOVE_COLUMN_SINGLETONS);
         break;
       case Presolver::kMainDoubletonEq:
+        timer.recordStart(REMOVE_DOUBLETON_EQUATIONS);
         removeDoubletonEquations();
+        timer.recordFinish(REMOVE_DOUBLETON_EQUATIONS);
         break;
       case Presolver::kMainDominatedCols:
+        timer.recordStart(REMOVE_DOMINATED_COLUMNS);
         removeDominatedColumns();
+        timer.recordFinish(REMOVE_DOMINATED_COLUMNS);
         break;
     }
 
@@ -217,7 +291,27 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
   return status;
 }
 
+void Presolve::removeFixed() {
+  timer.recordStart(FIXED_COL);
+  for (int j = 0; j < numCol; ++j)
+    if (flagCol.at(j)) {
+      // Analyse dependency on numerical tolerance
+      timer.updateNumericsRecord(FIXED_COLUMN,
+                                 fabs(colUpper.at(j) - colLower.at(j)));
+      if (fabs(colUpper.at(j) - colLower.at(j)) > fixed_column_tolerance)
+        continue;
+      removeFixedCol(j);
+      if (status) {
+        timer.recordFinish(FIXED_COL);
+        return;
+      }
+    }
+  timer.recordFinish(FIXED_COL);
+}
+
 int Presolve::presolve(int print) {
+  timer.start_time = timer.getTime();
+
   if (iPrint > 0) {
     cout << "Presolve started ..." << endl;
     cout << "Original problem ... N=" << numCol << "  M=" << numRow << endl;
@@ -236,13 +330,8 @@ int Presolve::presolve(int print) {
   int iter = 1;
   // print(0);
 
-  timer.recordStart(FIXED_COL);
-  for (int j = 0; j < numCol; ++j)
-    if (flagCol.at(j)) {
-      removeIfFixed(j);
-      if (status) return status;
-    }
-  timer.recordFinish(FIXED_COL);
+  removeFixed();
+  if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
@@ -257,11 +346,16 @@ int Presolve::presolve(int print) {
   // Else: The order has been modified for experiments
 
   while (hasChange == 1) {
+    if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
 
     reportDevMainLoop();
+    timer.recordStart(RUN_PRESOLVERS);
     int run_status = runPresolvers(order);
+    timer.recordFinish(RUN_PRESOLVERS);
     assert(run_status == status);
+    if (run_status != status) {
+    }
     if (status) return status;
 
     // todo: next ~~~
@@ -278,7 +372,7 @@ int Presolve::presolve(int print) {
 
   timer.updateInfo();
 
-  printDevStats(dev_stats);
+  if (iPrint != 0) printDevStats(stats.dev);
 
   return status;
 }
@@ -307,16 +401,24 @@ HighsPresolveStatus Presolve::presolve() {
       // reduced problem solution indicated as optimal by
       // the solver.
       break;
+    case stat::Timeout:
+      presolve_status = HighsPresolveStatus::Timeout;
   }
   timer.recordFinish(TOTAL_PRESOLVE_TIME);
-
+  if (iPrint > 0) {
+    timer.reportClocks();
+    timer.reportNumericsRecords();
+  }
   return presolve_status;
 }
 
 void Presolve::checkBoundsAreConsistent() {
   for (int col = 0; col < numCol; col++) {
     if (flagCol[col]) {
-      if (colUpper[col] - colLower[col] < -tol) {
+      // Analyse dependency on numerical tolerance
+      timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
+                                 colLower[col] - colUpper[col]);
+      if (colLower[col] - colUpper[col] > inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -325,7 +427,10 @@ void Presolve::checkBoundsAreConsistent() {
 
   for (int row = 0; row < numRow; row++) {
     if (flagRow[row]) {
-      if (rowUpper[row] - rowLower[row] < -tol) {
+      // Analyse dependency on numerical tolerance
+      timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
+                                 rowLower[row] - rowUpper[row]);
+      if (rowLower[row] - rowUpper[row] > inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
       }
@@ -448,6 +553,10 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
 }
 
 void Presolve::removeDoubletonEquations() {
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
+  }
   timer.recordStart(DOUBLETON_EQUATION);
   // flagCol should have one more element at end which is zero
   // needed for AR matrix manipulation
@@ -457,11 +566,19 @@ void Presolve::removeDoubletonEquations() {
   int x, y;
   int iter = 0;
 
-  for (int row = 0; row < numRow; row++)
-    if (flagRow.at(row))
+  for (int row = 0; row < numRow; row++) {
+    if (flagRow.at(row)) {
+      // Analyse dependency on numerical tolerance
+      if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
+          rowUpper[row] < HIGHS_CONST_INF) {
+        // Possible doubleton equation
+        timer.updateNumericsRecord(DOUBLETON_EQUATION_BOUND,
+                                   fabs(rowLower[row] - rowUpper[row]));
+      }
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
-          fabs(rowLower[row] - rowUpper[row]) < tol) {
+          fabs(rowLower[row] - rowUpper[row]) <=
+              doubleton_equation_bound_tolerance) {
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);
@@ -475,6 +592,10 @@ void Presolve::removeDoubletonEquations() {
         akx = getaij(row, x);
         aky = getaij(row, y);
         processRowDoubletonEquation(row, x, y, akx, aky, b);
+        if (status) {
+          timer.recordFinish(DOUBLETON_EQUATION);
+          return;
+        }
 
         for (int k = Astart.at(y); k < Aend.at(y); ++k)
           if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -514,6 +635,8 @@ void Presolve::removeDoubletonEquations() {
 
         iter++;
       }
+    }
+  }
   timer.recordFinish(DOUBLETON_EQUATION);
 }
 
@@ -559,7 +682,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
 
   nzCol.at(x)++;
   // nzRow does not change here.
-  if (nzCol.at(x) == 2) singCol.remove(x);
+  // if (nzCol.at(x) == 2) singCol.remove(x);
 }
 
 void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
@@ -572,7 +695,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
   if (nzRow.at(i) == 1) singRow.push_back(i);
 
   if (nzRow.at(i) == 0) {
-    singRow.remove(i);
+    // singRow.remove(i);
     removeEmptyRow(i);
     countRemovedRows(DOUBLETON_EQUATION);
   }
@@ -582,7 +705,9 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (ARindex.at(ind) == x) break;
 
   xNew = ARvalue.at(ind) - (aiy * akx) / aky;
-  if (fabs(xNew) > tol) {
+  // Analyse dependency on numerical tolerance
+  timer.updateNumericsRecord(SMALL_MATRIX_VALUE, fabs(xNew));
+  if (fabs(xNew) > presolve_small_matrix_value) {
     // case new x != 0
     // cout<<"case: x still there row "<<i<<" "<<endl;
 
@@ -598,7 +723,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
         break;
       }
     Avalue.at(ind) = xNew;
-  } else if (xNew < tol) {
+  } else {
     // case new x == 0
     // cout<<"case: x also disappears from row "<<i<<" "<<endl;
     // update nz row
@@ -607,7 +732,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (nzRow.at(i) == 1) singRow.push_back(i);
 
     if (nzRow.at(i) == 0) {
-      singRow.remove(i);
+      // singRow.remove(i);
       removeEmptyRow(i);
       countRemovedRows(DOUBLETON_EQUATION);
     }
@@ -658,8 +783,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
       removeEmptyColumn(x);
     }
   }
-  if (y) {
-  }  // surpress warning.
 }
 
 void Presolve::trimA() {
@@ -739,6 +862,12 @@ void Presolve::resizeProblem() {
     reportDev(ss.str());
   }
 
+  // For KKT checker: pass vectors before you trim them
+  if (iKKTcheck == 1) {
+    chk.setFlags(flagRow, flagCol);
+    chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
+  }
+
   if (nR + nC == 0) {
     status = Empty;
     return;
@@ -781,12 +910,6 @@ void Presolve::resizeProblem() {
     reportDev(ss.str());
   }
 
-  // For KKT checker: pass vectors before you trim them
-  if (iKKTcheck == 1) {
-    chk.setFlags(flagRow, flagCol);
-    chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
-  }
-
   // also call before trimming
   resizeImpliedBounds();
 
@@ -823,21 +946,6 @@ void Presolve::resizeProblem() {
       rowUpper.at(k) = teup.at(i);
       k++;
     }
-
-  if (chk.print == 3) {
-    ofstream myfile;
-    myfile.open("../experiments/out", ios::app);
-    myfile << " eliminated rows " << (numRowOriginal - numRow) << " cols "
-           << (numColOriginal - numCol);
-    myfile.close();
-
-    myfile.open("../experiments/t3", ios::app);
-    myfile << (numRowOriginal) << "  &  " << (numColOriginal) << "  & ";
-    myfile << (numRowOriginal - numRow) << "  &  " << (numColOriginal - numCol)
-           << "  & " << endl;
-
-    myfile.close();
-  }
 }
 
 void Presolve::initializeVectors() {
@@ -911,31 +1019,34 @@ void Presolve::initializeVectors() {
   rowUpperAtEl = rowUpper;
 }
 
-void Presolve::removeIfFixed(int j) {
-  if (colLower.at(j) == colUpper.at(j)) {
-    setPrimalValue(j, colUpper.at(j));
-    addChange(FIXED_COL, 0, j);
-    if (iPrint > 0)
-      cout << "PR: Fixed variable " << j << " = " << colUpper.at(j)
-           << ". Column eliminated." << endl;
+void Presolve::removeFixedCol(int j) {
+  setPrimalValue(j, colUpper.at(j));
+  addChange(FIXED_COL, 0, j);
+  if (iPrint > 0)
+    cout << "PR: Fixed variable " << j << " = " << colUpper.at(j)
+         << ". Column eliminated." << endl;
 
-    countRemovedCols(FIXED_COL);
+  countRemovedCols(FIXED_COL);
 
-    for (int k = Astart.at(j); k < Aend.at(j); ++k) {
-      if (flagRow.at(Aindex.at(k))) {
-        int i = Aindex.at(k);
+  for (int k = Astart.at(j); k < Aend.at(j); ++k) {
+    if (flagRow.at(Aindex.at(k))) {
+      int i = Aindex.at(k);
 
-        if (nzRow.at(i) == 0) {
-          removeEmptyRow(i);
-          countRemovedRows(FIXED_COL);
-        }
+      if (nzRow.at(i) == 0) {
+        removeEmptyRow(i);
+        if (status == stat::Infeasible) return;
+        countRemovedRows(FIXED_COL);
       }
     }
   }
 }
 
 void Presolve::removeEmptyRow(int i) {
-  if (rowLower.at(i) <= tol && rowUpper.at(i) >= -tol) {
+  // Analyse dependency on numerical tolerance
+  double value = min(rowLower.at(i), -rowUpper.at(i));
+  timer.updateNumericsRecord(EMPTY_ROW_BOUND, value);
+  if (rowLower.at(i) <= empty_row_bound_tolerance &&
+      rowUpper.at(i) >= -empty_row_bound_tolerance) {
     if (iPrint > 0) cout << "PR: Empty row " << i << " removed. " << endl;
     flagRow.at(i) = 0;
     valueRowDual.at(i) = 0;
@@ -949,7 +1060,7 @@ void Presolve::removeEmptyRow(int i) {
 
 void Presolve::removeEmptyColumn(int j) {
   flagCol.at(j) = 0;
-  singCol.remove(j);
+  // singCol.remove(j);
   double value;
   if ((colCost.at(j) < 0 && colUpper.at(j) >= HIGHS_CONST_INF) ||
       (colCost.at(j) > 0 && colLower.at(j) <= -HIGHS_CONST_INF)) {
@@ -991,6 +1102,8 @@ void Presolve::rowDualBoundsDominatedColumns() {
     if (flagCol.at(*it)) {
       col = *it;
       k = getSingColElementIndexInA(col);
+      if (k < 0) continue;
+      assert(k < (int)Aindex.size());
       i = Aindex.at(k);
 
       if (!flagRow.at(i)) {
@@ -1098,13 +1211,22 @@ void Presolve::removeDominatedColumns() {
   // for each column j calculate e and d and check:
   double e, d;
   pair<double, double> p;
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
+  }
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) {
-      timer.recordStart(DOMINATED_COLS);
-
       p = getImpliedColumnBounds(j);
       d = p.first;
       e = p.second;
+
+      // Analyse dependency on numerical tolerance
+      bool dominated = colCost.at(j) - d > tol;
+      timer.updateNumericsRecord(DOMINATED_COLUMN, colCost.at(j) - d);
+      if (!dominated) {
+        timer.updateNumericsRecord(DOMINATED_COLUMN, e - colCost.at(j));
+      }
 
       // check if it is dominated
       if (colCost.at(j) - d > tol) {
@@ -1140,23 +1262,31 @@ void Presolve::removeDominatedColumns() {
         if (implColDualLower.at(j) > implColDualUpper.at(j))
           cout << "INCONSISTENT\n";
 
-        timer.recordFinish(DOMINATED_COLS);
-
         removeIfWeaklyDominated(j, d, e);
         continue;
       }
-      timer.recordFinish(DOMINATED_COLS);
+      if (status) return;
     }
 }
 
 void Presolve::removeIfWeaklyDominated(const int j, const double d,
                                        const double e) {
-  timer.recordStart(WEAKLY_DOMINATED_COLS);
-
   int i;
   // check if it is weakly dominated: Excluding singletons!
   if (nzCol.at(j) > 1) {
-    if (d < HIGHS_CONST_INF && fabs(colCost.at(j) - d) < tol &&
+    // Analyse dependency on numerical tolerance
+    bool possible = d < HIGHS_CONST_INF && colLower.at(j) > -HIGHS_CONST_INF;
+    timer.updateNumericsRecord(WEAKLY_DOMINATED_COLUMN,
+                               fabs(colCost.at(j) - d));
+    if (possible &&
+        fabs(colCost.at(j) - d) < weakly_dominated_column_tolerance) {
+      if (e > -HIGHS_CONST_INF && colUpper.at(j) < HIGHS_CONST_INF)
+        timer.updateNumericsRecord(WEAKLY_DOMINATED_COLUMN,
+                                   fabs(colCost.at(j) - e));
+    }
+
+    if (d < HIGHS_CONST_INF &&
+        fabs(colCost.at(j) - d) < weakly_dominated_column_tolerance &&
         colLower.at(j) > -HIGHS_CONST_INF) {
       setPrimalValue(j, colLower.at(j));
       addChange(WEAKLY_DOMINATED_COLS, 0, j);
@@ -1165,7 +1295,8 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
              << " removed. Value := " << valuePrimal.at(j) << endl;
 
       countRemovedCols(WEAKLY_DOMINATED_COLS);
-    } else if (e > -HIGHS_CONST_INF && fabs(colCost.at(j) - e) < tol &&
+    } else if (e > -HIGHS_CONST_INF &&
+               fabs(colCost.at(j) - e) < weakly_dominated_column_tolerance &&
                colUpper.at(j) < HIGHS_CONST_INF) {
       setPrimalValue(j, colUpper.at(j));
       addChange(WEAKLY_DOMINATED_COLS, 0, j);
@@ -1222,7 +1353,6 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
           }
     }
   }
-  timer.recordFinish(WEAKLY_DOMINATED_COLS);
 }
 
 void Presolve::setProblemStatus(const int s) {
@@ -1339,7 +1469,13 @@ bool Presolve::removeColumnSingletonInDoubletonInequality(const int col,
 
   // only inequality case and case two singletons here,
   // others handled in doubleton equation
-  if ((fabs(rowLower.at(i) - rowUpper.at(i)) < tol) && (nzCol.at(j) > 1))
+  // Analyse dependency on numerical tolerance
+  if (nzCol.at(j) > 1)
+    timer.updateNumericsRecord(DOUBLETON_INEQUALITY_BOUND,
+                               fabs(rowLower.at(i) - rowUpper.at(i)));
+  if ((fabs(rowLower.at(i) - rowUpper.at(i)) <
+       doubleton_inequality_bound_tolerance) &&
+      (nzCol.at(j) > 1))
     return false;
 
   // additional check if it is indeed implied free
@@ -1454,34 +1590,40 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
     cout << "PR: Second singleton column " << j << " in doubleton row " << i
          << " removed.\n";
   countRemovedCols(SING_COL_DOUBLETON_INEQ);
-  singCol.remove(j);
+  // singCol.remove(j);
 }
 
 void Presolve::removeColumnSingletons() {
   int i, k, col;
   list<int>::iterator it = singCol.begin();
 
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
+  }
+
   while (it != singCol.end()) {
     if (flagCol[*it]) {
       col = *it;
       k = getSingColElementIndexInA(col);
+      if (k < 0) {
+        it++;
+        continue;
+      }
+      assert(k < (int)Aindex.size());
       i = Aindex.at(k);
 
       // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
           colUpper.at(col) >= HIGHS_CONST_INF) {
-        timer.recordStart(FREE_SING_COL);
         removeFreeColumnSingleton(col, i, k);
         it = singCol.erase(it);
-        timer.recordFinish(FREE_SING_COL);
         continue;
       }
       // singleton column in a doubleton inequality
       // case two column singletons
       else if (nzRow.at(i) == 2) {
-        timer.recordStart(SING_COL_DOUBLETON_INEQ);
         bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
-        timer.recordFinish(SING_COL_DOUBLETON_INEQ);
         if (result) {
           it = singCol.erase(it);
           continue;
@@ -1489,15 +1631,15 @@ void Presolve::removeColumnSingletons() {
       }
       // implied free
       else {
-        timer.recordStart(IMPLIED_FREE_SING_COL);
         bool result = removeIfImpliedFree(col, i, k);
-        timer.recordFinish(IMPLIED_FREE_SING_COL);
         if (result) {
           it = singCol.erase(it);
           continue;
         }
       }
       it++;
+
+      if (status) return;
     } else
       it = singCol.erase(it);
   }
@@ -1773,7 +1915,7 @@ void Presolve::setVariablesToBoundForForcingRow(const int row,
     ++k;
   }
 
-  if (nzRow.at(row) == 1) singRow.remove(row);
+  // if (nzRow.at(row) == 1) singRow.remove(row);
 
   countRemovedRows(FORCING_ROW);
 }
@@ -1842,8 +1984,13 @@ void Presolve::removeForcingConstraints() {
   double g, h;
   pair<double, double> implBounds;
 
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
+  }
   for (int i = 0; i < numRow; ++i)
     if (flagRow.at(i)) {
+      if (status) return;
       if (nzRow.at(i) == 0) {
         removeEmptyRow(i);
         countRemovedRows(EMPTY_ROW);
@@ -1853,7 +2000,6 @@ void Presolve::removeForcingConstraints() {
       // removeRowSingletons will handle just after removeForcingConstraints
       if (nzRow.at(i) == 1) continue;
 
-      timer.recordStart(FORCING_ROW);
       implBounds = getImpliedRowBounds(i);
 
       g = implBounds.first;
@@ -1863,7 +2009,6 @@ void Presolve::removeForcingConstraints() {
       if (g > rowUpper.at(i) || h < rowLower.at(i)) {
         if (iPrint > 0) cout << "PR: Problem infeasible." << endl;
         status = Infeasible;
-        timer.recordFinish(FORCING_ROW);
         return;
       }
       // Forcing row
@@ -1882,39 +2027,30 @@ void Presolve::removeForcingConstraints() {
       }
       // Dominated constraints
       else {
-        timer.recordFinish(FORCING_ROW);
-        timer.recordStart(DOMINATED_ROW_BOUNDS);
         dominatedConstraintProcedure(i, g, h);
-        timer.recordFinish(DOMINATED_ROW_BOUNDS);
         continue;
       }
-      timer.recordFinish(FORCING_ROW);
     }
 }
 
 void Presolve::removeRowSingletons() {
-  timer.recordStart(SING_ROW);
   int i;
-  int singRowZ = singRow.size();
-  /*
-  if (singRowZ == 36) {
-    printf("JAJH: singRow.size() = %d\n", singRowZ);fflush(stdout);
+  if (timer.reachLimit()) {
+    status = stat::Timeout;
+    return;
   }
-  */
+  timer.recordStart(SING_ROW);
   while (!(singRow.empty())) {
+    if (status) {
+      timer.recordFinish(SING_ROW);
+      return;
+    }
     i = singRow.front();
     singRow.pop_front();
-
-    assert(flagRow[i]);
+    if (!flagRow[i]) continue;
 
     int k = getSingRowElementIndexInAR(i);
-    // JAJH(190419): This throws a segfault with greenbea and greenbeb since
-    // k=-1
-    if (k < 0) {
-      printf("In removeRowSingletons: %d = k < 0\n", k);
-      printf("   Occurs for case when initial singRow.size() = %d\n", singRowZ);
-      fflush(stdout);
-    }
+    if (k < 0) continue;
     int j = ARindex.at(k);
 
     // add old bounds OF X to checker and for postsolve
@@ -1984,7 +2120,11 @@ void Presolve::removeRowSingletons() {
     }*/
 
     // check for feasibility
-    if (colLower.at(j) > colUpper.at(j) + tol) {
+    // Analyse dependency on numerical tolerance
+    timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
+                               colLower.at(j) - colUpper.at(j));
+    //    if (colLower.at(j) > colUpper.at(j) + tol) {
+    if (colLower.at(j) - colUpper.at(j) > inconsistent_bounds_tolerance) {
       status = Infeasible;
       timer.recordFinish(SING_ROW);
       return;
@@ -1999,9 +2139,19 @@ void Presolve::removeRowSingletons() {
     postValue.push(colCost.at(j));
     removeRow(i);
 
-    if (flagCol.at(j) && colLower.at(j) == colUpper.at(j)) removeIfFixed(j);
-
+    if (flagCol.at(j)) {
+      // Analyse dependency on numerical tolerance
+      timer.updateNumericsRecord(FIXED_COLUMN,
+                                 fabs(colUpper.at(j) - colLower.at(j)));
+      if (fabs(colUpper.at(j) - colLower.at(j)) <= fixed_column_tolerance)
+        removeFixedCol(j);
+    }
     countRemovedRows(SING_ROW);
+
+    if (status) {
+      timer.recordFinish(SING_ROW);
+      return;
+    }
   }
   timer.recordFinish(SING_ROW);
 }
@@ -2030,10 +2180,9 @@ void Presolve::setPrimalValue(int j, double value) {
       nzRow.at(row)--;
 
       // update singleton row list
-      if (nzRow.at(row) == 1)
-        singRow.push_back(row);
-      else if (nzRow.at(row) == 0)
-        singRow.remove(row);
+      if (nzRow.at(row) == 1) singRow.push_back(row);
+      // else if (nzRow.at(row) == 0)
+      //   singRow.remove(row);
     }
   }
 
@@ -2235,18 +2384,15 @@ void Presolve::resizeImpliedBounds() {
 }
 
 int Presolve::getSingRowElementIndexInAR(int i) {
+  assert(i >= 0 && i < numRow);
   int k = ARstart.at(i);
-  while (!flagCol.at(ARindex.at(k))) ++k;
+  while (k < ARstart[i + 1] && !flagCol.at(ARindex.at(k))) k++;
   if (k >= ARstart.at(i + 1)) {
-    cout << "Error during presolve: no variable found in singleton row " << i
-         << endl;
     return -1;
   }
   int rest = k + 1;
   while (rest < ARstart.at(i + 1) && !flagCol.at(ARindex.at(rest))) ++rest;
   if (rest < ARstart.at(i + 1)) {
-    cout << "Error during presolve: more variables found in singleton row " << i
-         << endl;
     return -1;
   }
   return k;
@@ -2256,15 +2402,11 @@ int Presolve::getSingColElementIndexInA(int j) {
   int k = Astart.at(j);
   while (!flagRow.at(Aindex.at(k))) ++k;
   if (k >= Aend.at(j)) {
-    cout << "Error during presolve: no variable found in singleton col " << j
-         << ".";
     return -1;
   }
   int rest = k + 1;
   while (rest < Aend.at(j) && !flagRow.at(Aindex.at(rest))) ++rest;
   if (rest < Aend.at(j)) {
-    cout << "Error during presolve: more variables found in singleton col " << j
-         << ".";
     return -1;
   }
   return k;
@@ -2341,10 +2483,15 @@ void Presolve::testAnAR(int post) {
 
 // todo: error reporting.
 HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
-                                         HighsSolution& recovered_solution) {
+                                         const HighsBasis& reduced_basis,
+                                         HighsSolution& recovered_solution,
+                                         HighsBasis& recovered_basis) {
   colValue = reduced_solution.col_value;
   colDual = reduced_solution.col_dual;
   rowDual = reduced_solution.row_dual;
+
+  col_status = reduced_basis.col_status;
+  row_status = reduced_basis.row_status;
 
   // todo: add nonbasic flag to Solution.
   // todo: change to new basis info structure later or keep.
@@ -2372,13 +2519,15 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   // For KKT check: first check solver results before we do any postsolve
   if (iKKTcheck == 1) {
-    cout << "----KKT check on HiGHS solution-----\n";
+    cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
 
     chk.passSolution(colValue, colDual, rowDual);
     chk.passBasis(col_status, row_status);
     chk.makeKKTCheck();
   }
+
   // So there have been changes definitely ->
+
   makeACopy();  // so we can efficiently calculate primal and dual values
 
   //	iKKTcheck = false;
@@ -2954,15 +3103,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     return HighsPostsolveStatus::BasisError;
   }
 
-  // cout<<"Singularity check at end of postsolve: ";
-  // testBasisMatrixSingularity();
-
-  if (iKKTcheck == 2) {
-    if (chk.print == 3) chk.print = 2;
-    chk.passSolution(valuePrimal, valueColDual, valueRowDual);
-    chk.makeKKTCheck();
-  }
-
   // now recover original model data to pass back to HiGHS
   // A is already recovered!
   // however, A is expressed in terms of Astart, Aend and columns are in
@@ -2981,32 +3121,52 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   colCost = colCostOriginal;
 
-  /*
-  nonbasicMove.resize(numTot, 0);
-  for (int i = 0; i < numColOriginal; ++i) {
-    if (colLower.at(i) != colUpper.at(i) && colLower.at(i) != -HIGHS_CONST_INF)
-      nonbasicMove.at(i) = 1;
-    else if (colUpper.at(i) != HIGHS_CONST_INF)
-      nonbasicMove.at(i) = -1;
-    else
-      nonbasicMove.at(i) = 0;
-  }
-  */
   colValue = valuePrimal;
   colDual = valueColDual;
   rowDual = valueRowDual;
+
   rowValue.assign(numRow, 0);
   for (int i = 0; i < numRowOriginal; ++i) {
     for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
       rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
   }
-  // JAJH(120519) Added following four lines so that recovered solution is
-  // returned
+
+  // cout<<"Singularity check at end of postsolve: ";
+  // testBasisMatrixSingularity();
+
+  if (iKKTcheck != 0) {
+    cout << "~~~~~ KKT check of postsolved solution with DevKkt checker ~~~~~"
+         << std::endl;
+
+    checkKkt(true);
+  }
+
+  // Save solution to PresolveComponentData.
   recovered_solution.col_value = colValue;
   recovered_solution.col_dual = colDual;
   recovered_solution.row_value = rowValue;
   recovered_solution.row_dual = rowDual;
+
+  recovered_basis.col_status = col_status;
+  recovered_basis.row_status = row_status;
+
   return HighsPostsolveStatus::SolutionRecovered;
+}
+
+void Presolve::checkKkt(bool final) {
+  if (!iKKTcheck) return;
+  std::cout << "~~~~~~~~ " << std::endl;
+  dev_kkt_check::State state = initState();
+  dev_kkt_check::KktInfo info = dev_kkt_check::initInfo();
+
+  bool pass = dev_kkt_check::checkKkt(state, info);
+  if (final) {
+    if (pass)
+      std::cout << "KKT PASS" << std::endl;
+    else
+      std::cout << "KKT FAIL" << std::endl;
+  }
+  std::cout << "~~~~~~~~ " << std::endl;
 }
 
 void Presolve::setBasisElement(change c) {
@@ -3562,6 +3722,16 @@ void Presolve::countRemovedRows(PresolveRule rule) {
 
 void Presolve::countRemovedCols(PresolveRule rule) {
   timer.increaseCount(false, rule);
+  if (timer.time_limit > 0 &&
+      timer.timer_.readRunHighsClock() > timer.time_limit)
+    status = stat::Timeout;
+}
+
+dev_kkt_check::State Presolve::initState() {
+  return dev_kkt_check::State(
+      numCol, numRow, Astart, Aindex, Avalue, ARstart, ARindex, ARvalue,
+      colCost, colLower, colUpper, rowLower, rowUpper, flagCol, flagRow,
+      colValue, colDual, rowValue, rowDual, col_status, row_status);
 }
 
 }  // namespace presolve
