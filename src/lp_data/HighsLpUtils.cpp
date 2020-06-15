@@ -465,6 +465,146 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
+HighsStatus assessBounds(const HighsOptions& options, const char* type,
+                         const int ml_ix_os,
+                         const HighsIndexCollection& index_collection,
+                         const int ix_dim, const bool interval,
+                         const int from_ix, const int to_ix, const bool set,
+                         const int num_set_entries, const int* ix_set,
+                         const bool mask, const int* ix_mask,
+                         double* lower_bounds, double* upper_bounds,
+                         const double infinite_bound) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  // Check parameters for technique and, if OK set the loop limits
+  int from_k;
+  int to_k;
+  call_status = assessIntervalSetMask(options, ix_dim, interval, from_ix, to_ix,
+                                      set, num_set_entries, ix_set, mask,
+                                      ix_mask, from_k, to_k);
+  return_status =
+      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
+  if (return_status == HighsStatus::Error) return return_status;
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+
+  int from_k1;
+  int to_k1;
+  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  assert(from_k1 == from_k);
+  assert(to_k1 == to_k);
+
+  if (from_k > to_k) return HighsStatus::OK;
+
+  return_status = HighsStatus::OK;
+  bool error_found = false;
+  bool warning_found = false;
+  // Work through the data to be assessed.
+  //
+  // Loop is k \in [from_k...to_k) covering the entries in the
+  // interval, set or mask to be considered.
+  //
+  // For an interval or mask, these values of k are the row/column
+  // indices to be considered in a local sense, as well as the entries
+  // in the lower and upper bound data to be assessed
+  //
+  // For a set, these values of k are the indices in the set, from
+  // which the indices to be considered in a local sense are
+  // drawn. The entries in the lower and
+  // upper bound data to be assessed correspond to the values of
+  // k.
+  //
+  // Adding the value of ml_ix_os to local_ix yields the value of
+  // ml_ix, being the index in a global (whole-model) sense. This is
+  // necessary when assessing the bounds of rows/columns being added
+  // to a model, since they are specified using an interval
+  // [0...num_new_row/col) which must be offset by the current number
+  // of rows/columns (generically indices) in the model.
+  //
+  int num_infinite_lower_bound = 0;
+  int num_infinite_upper_bound = 0;
+  int local_ix;
+  int data_ix;
+  int ml_ix;
+  for (int k = from_k; k < to_k + 1; k++) {
+    if (interval || mask) {
+      local_ix = k;
+      data_ix = k;
+    } else {
+      local_ix = ix_set[k];
+      data_ix = k;
+    }
+    ml_ix = ml_ix_os + local_ix;
+    if (mask && !ix_mask[local_ix]) continue;
+
+    if (!highs_isInfinity(-lower_bounds[data_ix])) {
+      // Check whether a finite lower bound will be treated as -Infinity
+      bool infinite_lower_bound = lower_bounds[data_ix] <= -infinite_bound;
+      if (infinite_lower_bound) {
+        lower_bounds[data_ix] = -HIGHS_CONST_INF;
+        num_infinite_lower_bound++;
+      }
+    }
+    if (!highs_isInfinity(upper_bounds[data_ix])) {
+      // Check whether a finite upper bound will be treated as Infinity
+      bool infinite_upper_bound = upper_bounds[data_ix] >= infinite_bound;
+      if (infinite_upper_bound) {
+        upper_bounds[data_ix] = HIGHS_CONST_INF;
+        num_infinite_upper_bound++;
+      }
+    }
+    // Check that the lower bound does not exceed the upper bound
+    bool legalLowerUpperBound = lower_bounds[data_ix] <= upper_bounds[data_ix];
+    if (!legalLowerUpperBound) {
+      // Leave inconsistent bounds to be used to deduce infeasibility
+      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                      "%3s  %12d has inconsistent bounds [%12g, %12g]", type,
+                      ml_ix, lower_bounds[data_ix], upper_bounds[data_ix]);
+      warning_found = true;
+    }
+    // Check that the lower bound is not as much as +Infinity
+    bool legalLowerBound = lower_bounds[data_ix] < infinite_bound;
+    if (!legalLowerBound) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "%3s  %12d has lower bound of %12g >= %12g", type, ml_ix,
+                      lower_bounds[data_ix], infinite_bound);
+      error_found = true;
+    }
+    // Check that the upper bound is not as little as -Infinity
+    bool legalUpperBound = upper_bounds[data_ix] > -infinite_bound;
+    if (!legalUpperBound) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "%3s  %12d has upper bound of %12g <= %12g", type, ml_ix,
+                      upper_bounds[data_ix], -infinite_bound);
+      error_found = true;
+    }
+  }
+  if (num_infinite_lower_bound) {
+    HighsLogMessage(
+		    options.logfile, HighsMessageType::INFO,
+		    "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity",
+		    type, num_infinite_lower_bound, -infinite_bound);
+  }
+  if (num_infinite_upper_bound) {
+    HighsLogMessage(
+		    options.logfile, HighsMessageType::INFO,
+		    "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity",
+		    type, num_infinite_upper_bound, infinite_bound);
+  }
+
+  if (error_found)
+    return_status = HighsStatus::Error;
+  else if (warning_found)
+    return_status = HighsStatus::Warning;
+  else
+    return_status = HighsStatus::OK;
+
+  return return_status;
+}
+
 HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                          const int from_ix, const int to_ix, const int num_vec,
                          int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
@@ -652,6 +792,184 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       }
       num_nz = num_new_nz;
     }
+  }
+  if (error_found)
+    return_status = HighsStatus::Error;
+  else if (warning_found)
+    return_status = HighsStatus::Warning;
+  else
+    return_status = HighsStatus::OK;
+
+  return return_status;
+}
+
+HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
+                         const int from_ix, const int to_ix, const int num_vec,
+                         int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
+                         const double small_matrix_value,
+                         const double large_matrix_value) {
+  if (from_ix < 0) return HighsStatus::OK;
+  if (from_ix > to_ix) return HighsStatus::OK;
+  if (num_nz > 0 && vec_dim <= 0) return HighsStatus::Error;
+  if (num_nz <= 0) return HighsStatus::OK;
+
+  HighsStatus return_status = HighsStatus::OK;
+  bool error_found = false;
+  bool warning_found = false;
+
+  // Warn the user if the first start is not zero
+  int fromEl = Xstart[0];
+  if (fromEl != 0) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                    "Matrix starts do not begin with 0");
+    warning_found = true;
+  }
+  // Assess the starts
+  // Set up previous_start for a fictitious previous empty packed vector
+  int previous_start = std::max(0, Xstart[from_ix]);
+  for (int ix = from_ix; ix < to_ix + 1; ix++) {
+    int this_start = Xstart[ix];
+    bool this_start_too_small = this_start < previous_start;
+    if (this_start_too_small) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Matrix packed vector %d has illegal start of %d < %d = "
+                      "previous start",
+                      ix, this_start, previous_start);
+      return HighsStatus::Error;
+    }
+    bool this_start_too_big = this_start > num_nz;
+    if (this_start_too_big) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Matrix packed vector %d has illegal start of %d > %d = "
+                      "number of nonzeros",
+                      ix, this_start, num_nz);
+      return HighsStatus::Error;
+    }
+  }
+
+  // Assess the indices and values
+  // Count the number of acceptable indices/values
+  int num_new_nz = Xstart[from_ix];
+  int num_small_values = 0;
+  double max_small_value = 0;
+  double min_small_value = HIGHS_CONST_INF;
+  // Set up a zeroed vector to detect duplicate indices
+  vector<int> check_vector;
+  if (vec_dim > 0) check_vector.assign(vec_dim, 0);
+  for (int ix = from_ix; ix < to_ix + 1; ix++) {
+    int from_el = Xstart[ix];
+    int to_el;
+    if (ix < num_vec - 1) {
+      to_el = Xstart[ix + 1];
+    } else {
+      // num_vec is the number of vectors in the whole matrix data
+      // structure. Need to know if only the final columns are being
+      // assessed so that num_nz rather than Xstart[num_vec] is
+      // accessed since the latter may not be assigned.
+      to_el = num_nz;
+    }
+    // Account for any index-value pairs removed so far
+    Xstart[ix] = num_new_nz;
+    for (int el = from_el; el < to_el; el++) {
+      int component = Xindex[el];
+      // Check that the index is non-negative
+      bool legal_component = component >= 0;
+      if (!legal_component) {
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "Matrix packed vector %d, entry %d, is illegal index %d", ix, el,
+            component);
+        return HighsStatus::Error;
+      }
+      // Check that the index does not exceed the vector dimension
+      legal_component = component < vec_dim;
+      if (!legal_component) {
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Matrix packed vector %d, entry %d, is illegal index "
+                        "%12d >= %d = vector dimension",
+                        ix, el, component, vec_dim);
+        return HighsStatus::Error;
+      }
+      // Check that the index has not already ocurred
+      legal_component = check_vector[component] == 0;
+      if (!legal_component) {
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "Matrix packed vector %d, entry %d, is duplicate index %d", ix, el,
+            component);
+        return HighsStatus::Error;
+      }
+      // Indicate that the index has occurred
+      check_vector[component] = 1;
+      // Check that the value is not too large
+      double abs_value = fabs(Xvalue[el]);
+      bool large_value = abs_value >= large_matrix_value;
+      if (large_value) {
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "Matrix packed vector %d, entry %d, is large value |%g| >= %g", ix,
+            el, abs_value, large_matrix_value);
+        return HighsStatus::Error;
+      }
+      bool ok_value = abs_value > small_matrix_value;
+      if (!ok_value) {
+        if (max_small_value < abs_value) max_small_value = abs_value;
+        if (min_small_value > abs_value) min_small_value = abs_value;
+        num_small_values++;
+      }
+      if (ok_value) {
+	// Shift the index and value of the OK entry to the new
+	// position in the index and value vectors, and increment
+	// the new number of nonzeros
+	Xindex[num_new_nz] = Xindex[el];
+	Xvalue[num_new_nz] = Xvalue[el];
+	num_new_nz++;
+      } else {
+	// Zero the check_vector entry since the small value
+	// _hasn't_ occurred
+	check_vector[component] = 0;
+      }
+    }
+    // Zero check_vector
+    for (int el = Xstart[ix]; el < num_new_nz; el++) check_vector[Xindex[el]] = 0;
+#ifdef HiGHSDEV
+    // NB This is very expensive so shouldn't be true
+    const bool check_check_vector = false;
+    if (check_check_vector) {
+      // Check zeroing of check vector
+      for (int component = 0; component < vec_dim; component++) {
+        if (check_vector[component]) error_found = true;
+      }
+      if (error_found)
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "assessMatrix: check_vector not zeroed");
+    }
+#endif
+  }
+  if (num_small_values) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		    "Matrix packed vector contains %d |values| in [%g, %g] "
+		    "less than %g: ignored",
+		    num_small_values, min_small_value, max_small_value,
+		    small_matrix_value);
+    warning_found = true;
+    // Accommodate the loss of these values in any subsequent packed vectors
+    for (int ix = to_ix + 1; ix < num_vec; ix++) {
+      // int from_el = Xstart[ix];
+      Xstart[ix] = num_new_nz;
+      int to_el;
+      if (ix < num_vec) {
+	to_el = Xstart[ix + 1];
+      } else {
+	to_el = num_nz;
+      }
+      for (int el = Xstart[ix]; el < to_el; el++) {
+	Xindex[num_new_nz] = Xindex[el];
+	Xvalue[num_new_nz] = Xvalue[el];
+	num_new_nz++;
+      }
+    }
+    num_nz = num_new_nz;
   }
   if (error_found)
     return_status = HighsStatus::Error;

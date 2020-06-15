@@ -49,6 +49,15 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const int from_ix, const int to_ix, const bool set,
                          const int num_set_entries, const int* ix_set,
                          const bool mask, const int* ix_mask, double* usr_lower,
+                         double* usr_upper, const double infinite_bound);
+
+HighsStatus assessBounds(const HighsOptions& options, const char* type,
+                         const int ix_os,
+                         const HighsIndexCollection& index_collection,
+                         const int mask_num_ix, const bool interval,
+                         const int from_ix, const int to_ix, const bool set,
+                         const int num_set_entries, const int* ix_set,
+                         const bool mask, const int* ix_mask, double* usr_lower,
                          double* usr_upper, const double infinite_bound,
                          const bool normalise);
 
@@ -57,6 +66,12 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                          int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
                          const double small_matrix_value,
                          const double large_matrix_value, bool normalise);
+
+HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
+                         const int from_ix, const int to_ix, const int num_vec,
+                         int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
+                         const double small_matrix_value,
+                         const double large_matrix_value);
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
