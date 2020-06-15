@@ -26,8 +26,7 @@
 #include "util/HighsTimer.h"
 //#include "util/HighsUtils.h"
 
-HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
-                     const bool normalise) {
+HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   // Assess the LP dimensions and vector sizes, returning on error
@@ -57,10 +56,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
       interpretCallStatus(call_status, return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the LP column bounds
-  call_status = assessBounds(options, "Col", 0, index_collection, lp.numCol_,
-                             true, 0, lp.numCol_ - 1, false, 0, NULL, false,
-                             NULL, &lp.colLower_[0], &lp.colUpper_[0],
-                             options.infinite_bound, normalise);
+  call_status =
+      assessBounds(options, "Col", 0, index_collection, lp.numCol_, true, 0,
+                   lp.numCol_ - 1, false, 0, NULL, false, NULL,
+                   &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -73,7 +72,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
     call_status = assessBounds(options, "Row", 0, index_collection, lp.numRow_,
                                true, 0, lp.numRow_ - 1, false, 0, NULL, false,
                                NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
-                               options.infinite_bound, normalise);
+                               options.infinite_bound);
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::Error) return return_status;
@@ -92,10 +91,10 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
       return HighsStatus::Error;
     }
     int lp_num_nz = lp.Astart_[lp.numCol_];
-    call_status = assessMatrix(
-        options, lp.numRow_, 0, lp.numCol_ - 1, lp.numCol_, lp_num_nz,
-        &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
-        options.small_matrix_value, options.large_matrix_value, normalise);
+    call_status =
+        assessMatrix(options, lp.numRow_, 0, lp.numCol_ - 1, lp.numCol_,
+                     lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+                     options.small_matrix_value, options.large_matrix_value);
     return_status =
         interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
@@ -584,15 +583,15 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   }
   if (num_infinite_lower_bound) {
     HighsLogMessage(
-		    options.logfile, HighsMessageType::INFO,
-		    "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity",
-		    type, num_infinite_lower_bound, -infinite_bound);
+        options.logfile, HighsMessageType::INFO,
+        "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity", type,
+        num_infinite_lower_bound, -infinite_bound);
   }
   if (num_infinite_upper_bound) {
     HighsLogMessage(
-		    options.logfile, HighsMessageType::INFO,
-		    "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity",
-		    type, num_infinite_upper_bound, infinite_bound);
+        options.logfile, HighsMessageType::INFO,
+        "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity", type,
+        num_infinite_upper_bound, infinite_bound);
   }
 
   if (error_found)
@@ -918,20 +917,21 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
         num_small_values++;
       }
       if (ok_value) {
-	// Shift the index and value of the OK entry to the new
-	// position in the index and value vectors, and increment
-	// the new number of nonzeros
-	Xindex[num_new_nz] = Xindex[el];
-	Xvalue[num_new_nz] = Xvalue[el];
-	num_new_nz++;
+        // Shift the index and value of the OK entry to the new
+        // position in the index and value vectors, and increment
+        // the new number of nonzeros
+        Xindex[num_new_nz] = Xindex[el];
+        Xvalue[num_new_nz] = Xvalue[el];
+        num_new_nz++;
       } else {
-	// Zero the check_vector entry since the small value
-	// _hasn't_ occurred
-	check_vector[component] = 0;
+        // Zero the check_vector entry since the small value
+        // _hasn't_ occurred
+        check_vector[component] = 0;
       }
     }
     // Zero check_vector
-    for (int el = Xstart[ix]; el < num_new_nz; el++) check_vector[Xindex[el]] = 0;
+    for (int el = Xstart[ix]; el < num_new_nz; el++)
+      check_vector[Xindex[el]] = 0;
 #ifdef HiGHSDEV
     // NB This is very expensive so shouldn't be true
     const bool check_check_vector = false;
@@ -948,10 +948,10 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
   }
   if (num_small_values) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		    "Matrix packed vector contains %d |values| in [%g, %g] "
-		    "less than %g: ignored",
-		    num_small_values, min_small_value, max_small_value,
-		    small_matrix_value);
+                    "Matrix packed vector contains %d |values| in [%g, %g] "
+                    "less than %g: ignored",
+                    num_small_values, min_small_value, max_small_value,
+                    small_matrix_value);
     warning_found = true;
     // Accommodate the loss of these values in any subsequent packed vectors
     for (int ix = to_ix + 1; ix < num_vec; ix++) {
@@ -959,14 +959,14 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       Xstart[ix] = num_new_nz;
       int to_el;
       if (ix < num_vec) {
-	to_el = Xstart[ix + 1];
+        to_el = Xstart[ix + 1];
       } else {
-	to_el = num_nz;
+        to_el = num_nz;
       }
       for (int el = Xstart[ix]; el < to_el; el++) {
-	Xindex[num_new_nz] = Xindex[el];
-	Xvalue[num_new_nz] = Xvalue[el];
-	num_new_nz++;
+        Xindex[num_new_nz] = Xindex[el];
+        Xvalue[num_new_nz] = Xvalue[el];
+        num_new_nz++;
       }
     }
     num_nz = num_new_nz;

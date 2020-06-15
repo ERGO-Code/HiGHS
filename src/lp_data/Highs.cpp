@@ -219,7 +219,7 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   HighsStatus return_status = HighsStatus::OK;
   // Copy the LP to the internal LP
   lp_ = lp;
-  // Check validity of the LP, normalising its values (by default).
+  // Check validity of the LP, normalising its values
   HighsStatus call_status = assessLp(lp_, options_);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
@@ -374,8 +374,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
-  //  bool normalise = true;
-  call_status = assessLp(lp_, options_);  //, normalise);
+  call_status = assessLp(lp_, options_);
+  // If any errors have been found or normalisation carried out,
+  // call_status will be ERROR or WARNING, so only valid return is OK.
   assert(call_status == HighsStatus::OK);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
   if (return_status == HighsStatus::Error) {

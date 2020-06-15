@@ -29,8 +29,7 @@ struct SimplexBasis;
 using std::vector;
 
 // Methods taking HighsLp as an argument
-HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
-                     const bool normalise = true);
+HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
 HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);
 
