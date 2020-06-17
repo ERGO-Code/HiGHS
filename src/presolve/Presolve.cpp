@@ -330,18 +330,18 @@ int Presolve::presolve(int print) {
   int iter = 1;
   // print(0);
 
-  removeFixed();
+  //removeFixed();
   if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
     order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainForcing);
-    order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainDoubletonEq);
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainColSingletons);
-    order.push_back(Presolver::kMainDominatedCols);
+    // order.push_back(Presolver::kMainForcing);
+    // order.push_back(Presolver::kMainRowSingletons);
+    // // order.push_back(Presolver::kMainDoubletonEq);
+    // order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainColSingletons);
+    // order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
