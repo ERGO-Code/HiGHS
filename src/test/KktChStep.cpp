@@ -240,20 +240,24 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       colValue[col] = valC;
       colDual[col] = dualC;
       rowDual[row] = dualR;
-      if (valC != 0) {
         upd = cLowers.top();
         cLowers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
           int ind = get<0>(upd[i]);
           RcolLower[ind] = get<1>(upd[i]);
         }
-        upd = cUppers.top();
-        cUppers.pop();
+        upd = cLowers.top();
+        cLowers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
           int ind = get<0>(upd[i]);
-          RcolUpper[ind] = get<1>(upd[i]);
+          RcolLower[ind] = get<1>(upd[i]);
         }
-      }
+        upd = costs.top();
+        costs.pop();
+        for (size_t i = 0; i < upd.size(); i++) {
+          int ind = get<0>(upd[i]);
+          RcolCost[ind] = get<1>(upd[i]);
+        }
       break;
     case 2:  // each variable at forcing row: rowDual is cost here
       colValue[col] = valC;

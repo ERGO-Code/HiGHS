@@ -517,6 +517,11 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
     chk.cLowers.push(bndsL);
     chk.cUppers.push(bndsU);
     chk.costs.push(costS);
+
+    chk2.cLowers.push(bndsL);
+    chk2.cUppers.push(bndsU);
+    chk2.costs.push(costS);
+
   }
 
   vector<double> bnds({colLower.at(y), colUpper.at(y), colCost.at(y)});
@@ -865,6 +870,8 @@ void Presolve::resizeProblem() {
     chk.setFlags(flagRow, flagCol);
     chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
   }
+
+  chk2.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
 
   if (nR + nC == 0) {
     status = Empty;
@@ -1513,6 +1520,9 @@ bool Presolve::removeColumnSingletonInDoubletonInequality(const int col,
     chk.cLowers.push(bndsL);
     chk.cUppers.push(bndsU);
     chk.costs.push(costS);
+    chk2.cLowers.push(bndsL);
+    chk2.cUppers.push(bndsU);
+    chk2.costs.push(costS);
   }
 
   vector<double> bndsCol({colLower.at(col), colUpper.at(col), colCost.at(col)});
@@ -2058,8 +2068,15 @@ void Presolve::removeRowSingletons() {
       vector<pair<int, double>> bndsL, bndsU, costS;
       bndsL.push_back(make_pair(j, colLower.at(j)));
       bndsU.push_back(make_pair(j, colUpper.at(j)));
+      costS.push_back(make_pair(j, colCost.at(j)));
+
       chk.cLowers.push(bndsL);
       chk.cUppers.push(bndsU);
+      // chk.costs.push(costS);
+
+      chk2.cLowers.push(bndsL);
+      chk2.cUppers.push(bndsU);
+      chk2.costs.push(costS);
     }
 
     vector<double> bnds(
@@ -2499,7 +2516,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     chk.passSolution(colValue, colDual, rowDual);
     chk.passBasis(col_status, row_status);
     chk.makeKKTCheck();
-    checkKkt();
   }
 
   // So there have been changes definitely ->
@@ -3622,6 +3638,8 @@ void Presolve::getDualsSingletonRow(const int row, const int col) {
   }
 
   if (iKKTcheck == 1) {
+    chk.colDual.at(col) = valueColDual.at(col);
+    chk.rowDual.at(row) = valueRowDual.at(row);
     chk.colDual.at(col) = valueColDual.at(col);
     chk.rowDual.at(row) = valueRowDual.at(row);
   }

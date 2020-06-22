@@ -89,7 +89,6 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       }
       break;
     case 1:  // row singleton
-      if (valC != 0) {
         upd = cLowers.top();
         cLowers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
@@ -102,7 +101,12 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
           int ind = get<0>(upd[i]);
           RcolUpper[ind] = get<1>(upd[i]);
         }
-      }
+        upd = costs.top();
+        costs.pop();
+        for (size_t i = 0; i < upd.size(); i++) {
+          int ind = get<0>(upd[i]);
+          RcolCost[ind] = get<1>(upd[i]);
+        }
       break;
     case 2:  // each variable at forcing row: rowDual is cost here
       RcolCost[col] = dualR;
