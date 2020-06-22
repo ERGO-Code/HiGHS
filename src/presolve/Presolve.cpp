@@ -2062,6 +2062,7 @@ void Presolve::removeRowSingletons() {
     int i = singRow.front();
     singRow.pop_front();
     if (!flagRow[i]) continue;
+    if (i > 4) continue;
 
     int k = getSingRowElementIndexInAR(i);
     if (k < 0) continue;
@@ -3202,10 +3203,12 @@ void Presolve::checkKkt(bool final) {
   // update row valuo
   rowValue.assign(numRowOriginal, 0);
   for (int i = 0; i < numRowOriginal; ++i) {
+    if (i != 61) continue;
     if (flagRow[i])
       for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
         const int col = ARindex[k];
-        if (flagCol[i]) rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
+        if (flagCol[i]) 
+          rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
       }
   }
 
