@@ -2231,8 +2231,9 @@ void Presolve::setPrimalValue(int j, double value) {
 
     if (iKKTcheck == 1) {
       chk.rLowers.push(bndsL);
-      chk.rLowers.push(bndsL);
-      chk2.rUppers.push(bndsU);
+      chk.rUppers.push(bndsU);
+
+      chk2.rLowers.push(bndsL);
       chk2.rUppers.push(bndsU);
     }
 
