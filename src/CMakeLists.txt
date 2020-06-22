@@ -115,6 +115,7 @@ set(sources
     test/DevKkt.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    test/KktCh2.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/stringutil.cpp
@@ -402,6 +403,7 @@ target_sources(libhighs PRIVATE
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    test/KktCh2.cpp
     test/DevKkt.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp

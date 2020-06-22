@@ -382,6 +382,7 @@ void KktCheck::passSolution(const std::vector<double>& colVal,
   colDual = colDu;
   rowDual = rDu;
 }
+
 // get DATA
 void KktCheck::setMatrix(const std::vector<int>& Astart_,
                          const std::vector<int>& Aindex_,

@@ -22,6 +22,7 @@
 
 #include "lp_data/HConst.h"
 #include "test/KktChStep.h"
+#include "test/KktCh2.h"
 
 using std::pair;
 using std::stack;
@@ -108,6 +109,7 @@ class HPreData {
   vector<int> cIndex;
 
   kkt_check::KktChStep chk;
+  dev_kkt_check::KktChStep chk2;
 
   stack<change> chng;
   stack<pair<int, vector<double>>> oldBounds;  //(j, l, u)
