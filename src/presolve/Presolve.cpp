@@ -614,6 +614,8 @@ void Presolve::removeDoubletonEquations() {
               bndsU.push_back(make_pair(i, rowUpper.at(i)));
               chk.rLowers.push(bndsL);
               chk.rUppers.push(bndsU);
+              chk2.rLowers.push(bndsL);
+              chk2.rUppers.push(bndsU);
               addChange(DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE, i, y);
             }
 
@@ -1446,6 +1448,7 @@ void Presolve::removeFreeColumnSingleton(const int col, const int row,
     }
   }
   if (iKKTcheck == 1) chk.costs.push(newCosts);
+  if (iKKTcheck == 1) chk2.costs.push(newCosts);
 
   flagCol.at(col) = 0;
   postValue.push(colCost.at(col));
@@ -1753,6 +1756,7 @@ void Presolve::removeImpliedFreeColumn(const int col, const int i,
     }
   }
   if (iKKTcheck == 1) chk.costs.push(newCosts);
+  if (iKKTcheck == 1) chk2.costs.push(newCosts);
 
   flagCol.at(col) = 0;
   postValue.push(colCost.at(col));
@@ -2072,7 +2076,7 @@ void Presolve::removeRowSingletons() {
 
       chk.cLowers.push(bndsL);
       chk.cUppers.push(bndsU);
-      // chk.costs.push(costS);
+      chk.costs.push(costS);
 
       chk2.cLowers.push(bndsL);
       chk2.cUppers.push(bndsU);
@@ -2227,7 +2231,9 @@ void Presolve::setPrimalValue(int j, double value) {
 
     if (iKKTcheck == 1) {
       chk.rLowers.push(bndsL);
-      chk.rUppers.push(bndsU);
+      chk.rLowers.push(bndsL);
+      chk2.rUppers.push(bndsU);
+      chk2.rUppers.push(bndsU);
     }
 
     // shift objective
