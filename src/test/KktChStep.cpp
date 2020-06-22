@@ -246,11 +246,11 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
           int ind = get<0>(upd[i]);
           RcolLower[ind] = get<1>(upd[i]);
         }
-        upd = cLowers.top();
-        cLowers.pop();
+        upd = cUppers.top();
+        cUppers.pop();
         for (size_t i = 0; i < upd.size(); i++) {
           int ind = get<0>(upd[i]);
-          RcolLower[ind] = get<1>(upd[i]);
+          RcolUpper[ind] = get<1>(upd[i]);
         }
         upd = costs.top();
         costs.pop();
