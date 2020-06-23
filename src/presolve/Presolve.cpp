@@ -13,9 +13,6 @@
  */
 #include "presolve/Presolve.h"
 
-#include "io/HighsIO.h"
-#include "lp_data/HConst.h"
-
 //#include "simplex/HFactor.h"
 #include <algorithm>
 #include <cassert>
@@ -27,6 +24,9 @@
 #include <queue>
 #include <sstream>
 
+#include "io/HighsIO.h"
+#include "lp_data/HConst.h"
+#include "presolve/PresolveUtils.h"
 #include "test/KktChStep.h"
 
 namespace presolve {
@@ -520,7 +520,6 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
     chk2.cLowers.push(bndsL);
     chk2.cUppers.push(bndsU);
     chk2.costs.push(costS);
-
   }
 
   vector<double> bnds({colLower.at(y), colUpper.at(y), colCost.at(y)});
@@ -2598,7 +2597,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           chk.addChange(17, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
           chk2.addChange(17, c.row, c.col, valuePrimal[c.col],
-                        valueColDual[c.col], valueRowDual[c.row]);
+                         valueColDual[c.col], valueRowDual[c.row]);
           chk.replaceBasis(col_status, row_status);
           chk.makeKKTCheck();
           checkKkt();
@@ -2750,7 +2749,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           chk.addChange(1, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
           chk2.addChange(1, c.row, c.col, valuePrimal[c.col],
-                        valueColDual[c.col], valueRowDual[c.row]);
+                         valueColDual[c.col], valueRowDual[c.row]);
           chk.replaceBasis(col_status, row_status);
           chk.makeKKTCheck();
           checkKkt();
@@ -2885,7 +2884,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           chk.addChange(4, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
           chk2.addChange(4, c.row, c.col, valuePrimal[c.col],
-                        valueColDual[c.col], valueRowDual[c.row]);
+                         valueColDual[c.col], valueRowDual[c.row]);
           chk.makeKKTCheck();
           checkKkt();
         }
@@ -3045,7 +3044,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           chk.addChange(5, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
           chk2.addChange(5, c.row, c.col, valuePrimal[c.col],
-                        valueColDual[c.col], valueRowDual[c.row]);
+                         valueColDual[c.col], valueRowDual[c.row]);
           chk.replaceBasis(col_status, row_status);
           chk.makeKKTCheck();
           checkKkt();
@@ -3080,7 +3079,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           chk.addChange(6, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
                         0);
           chk2.addChange(6, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
-                        0);
+                         0);
           chk.makeKKTCheck();
           checkKkt();
         }
@@ -3099,7 +3098,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           chk.addChange(7, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
                         0);
           chk2.addChange(7, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
-                        0);
+                         0);
           chk.makeKKTCheck();
           checkKkt();
         }
@@ -3203,11 +3202,14 @@ void Presolve::checkKkt(bool final) {
   rowValue.assign(numRowOriginal, 0);
   for (int i = 0; i < numRowOriginal; ++i) {
     if (i != 61) continue;
+
+    presolve::printRow(i, numRow, numCol, flagRow, flagCol, rowLower, rowUpper,
+             valuePrimal, ARstart, ARindex, ARvalue);
+
     if (flagRow[i])
       for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
         const int col = ARindex[k];
-        if (flagCol[i]) 
-          rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
+        if (flagCol[i]) rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
       }
   }
 
@@ -3797,8 +3799,7 @@ dev_kkt_check::State Presolve::initState(const bool intermediate) {
     if (flagRow[row]) {
       for (int k = ARstart[row]; k < ARstart[row + 1]; k++) {
         const int col = ARindex[k];
-        if (flagCol[col]) 
-          rowValue[row] += ARvalue[k] * valuePrimal[col];
+        if (flagCol[col]) rowValue[row] += ARvalue[k] * valuePrimal[col];
       }
     }
   }
@@ -3810,9 +3811,10 @@ dev_kkt_check::State Presolve::initState(const bool intermediate) {
         colValue, colDual, rowValue, rowDual, col_status, row_status);
 
   // if intermediate step use checker's row and col bounds and cost
-  return chk2.initState(numColOriginal, numRowOriginal, Astart, Aindex, Avalue, ARstart, ARindex,
-                       ARvalue, flagCol, flagRow, valuePrimal, valueColDual,
-                       rowValue, valueRowDual, col_status, row_status);
+  return chk2.initState(numColOriginal, numRowOriginal, Astart, Aindex, Avalue,
+                        ARstart, ARindex, ARvalue, flagCol, flagRow,
+                        valuePrimal, valueColDual, rowValue, valueRowDual,
+                        col_status, row_status);
 }
 
 }  // namespace presolve

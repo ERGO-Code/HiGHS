@@ -13,10 +13,10 @@ using std::setw;
 
 void printRow(
     const int row, const int numRow, const int numCol,
-    const std::vector<double>& flagRow, const std::vector<double>& flagCol,
+    const std::vector<int>& flagRow, const std::vector<int>& flagCol,
     const std::vector<double>& rowLower, const std::vector<double>& rowUpper,
-    const std::vector<double>& values, const std::vector<double>& ARstart,
-    const std::vector<double>& ARindex, const std::vector<double>& ARvalue) {
+    const std::vector<double>& values, const std::vector<int>& ARstart,
+    const std::vector<int>& ARindex, const std::vector<double>& ARvalue) {
   assert(row >= 0 && row < numRow);
 
   std::cout << "row " << row << ": " << flagRow[row] << "   " << rowLower[row]
@@ -53,10 +53,10 @@ void printRow(
 
 void printCol(
     const int col, const int numRow, const int numCol,
-    const std::vector<double>& flagRow, const std::vector<double>& flagCol,
+    const std::vector<int>& flagRow, const std::vector<int>& flagCol,
     const std::vector<double>& colLower, const std::vector<double>& colUpper,
-    const std::vector<double>& values, const std::vector<double>& Astart,
-    const std::vector<double>& Aend, const std::vector<double>& Aindex,
+    const std::vector<double>& values, const std::vector<int>& Astart,
+    const std::vector<int>& Aend, const std::vector<int>& Aindex,
     const std::vector<double>& Avalue) {
   assert(col >= 0 && col < numCol);
 
@@ -86,7 +86,7 @@ void printRowWise(
     const int numRow, const int numCol, const std::vector<double>& colCost,
     const std::vector<double>& colLower, const std::vector<double>& colUpper,
     const std::vector<double>& rowLower, const std::vector<double>& rowUpper,
-    const std::vector<double>& ARstart, const std::vector<double>& ARindex,
+    const std::vector<int>& ARstart, const std::vector<int>& ARindex,
     const std::vector<double>& ARvalue) {
   const int rows = numRow;
   const int cols = numCol;
