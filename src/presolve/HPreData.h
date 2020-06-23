@@ -93,13 +93,10 @@ class HPreData {
   vector<double> rowLowerAtEl;
   vector<double> rowUpperAtEl;
 
-  void print(int k);
-  void printAR(int i);
   void makeARCopy();
   void makeACopy();
   double getaij(int i, int j);
   bool isZeroA(int i, int j);
-  void printSolution();
   double getRowValue(int i);
 
   stack<double> postValue;

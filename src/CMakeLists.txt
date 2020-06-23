@@ -95,6 +95,7 @@ set(sources
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
+    presolve/PresolveUtils.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
@@ -168,6 +169,7 @@ set(headers
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
+    presolve/PresolveUtils.h
     presolve/HPreData.h
     simplex/HVector.h
     test/DevKkt.h
@@ -385,6 +387,7 @@ target_sources(libhighs PRIVATE
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
+    presolve/PresolveUtils.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp

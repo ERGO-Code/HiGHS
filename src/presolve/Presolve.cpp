@@ -328,7 +328,6 @@ int Presolve::presolve(int print) {
   if (status) return status;
 
   int iter = 1;
-  // print(0);
 
   // removeFixed();
   if (status) return status;
