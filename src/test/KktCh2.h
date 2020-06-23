@@ -36,14 +36,12 @@ class KktChStep {
   KktChStep() {}
   virtual ~KktChStep() {}
 
- private:
   std::vector<double> RcolCost;
   std::vector<double> RcolLower;
   std::vector<double> RcolUpper;
   std::vector<double> RrowLower;
   std::vector<double> RrowUpper;
 
- public:
   int print = 1;
 
   std::stack<std::vector<std::pair<int, double> > > rLowers;

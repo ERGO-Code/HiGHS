@@ -3201,9 +3201,9 @@ void Presolve::checkKkt(bool final) {
   // update row valuo
   rowValue.assign(numRowOriginal, 0);
   for (int i = 0; i < numRowOriginal; ++i) {
-    if (i != 61) continue;
+//     if (i != 61) continue;
 
-    presolve::printRow(i, numRow, numCol, flagRow, flagCol, rowLower, rowUpper,
+    presolve::printRow(i, numRowOriginal, numColOriginal, flagRow, flagCol, chk2.RrowLower, chk2.RrowUpper,
              valuePrimal, ARstart, ARindex, ARvalue);
 
     if (flagRow[i])
