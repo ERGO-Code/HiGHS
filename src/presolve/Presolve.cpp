@@ -2060,7 +2060,6 @@ void Presolve::removeRowSingletons() {
     int i = singRow.front();
     singRow.pop_front();
     if (!flagRow[i]) continue;
-    if (i > 4) continue;
 
     int k = getSingRowElementIndexInAR(i);
     if (k < 0) continue;
@@ -2575,14 +2574,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // cmpNBF(-1, -1);
   // testBasisMatrixSingularity();
 
-  presolve::printRowOneLine(61, numRowOriginal, numColOriginal, flagRow, flagCol,
-                      chk.RrowLower, chk.RrowUpper, valuePrimal, ARstart,
-                      ARindex, ARvalue);
-  std::cout << "ROW DUAL IS " << valueRowDual[61] << std::endl;
-  presolve::printRow(61, numRowOriginal, numColOriginal, flagRow, flagCol,
-                      chk.RrowLower, chk.RrowUpper, valuePrimal, ARstart,
-                      ARindex, ARvalue);
-
   assert(chk.RrowLower == chk2.RrowLower);
   assert(chk.RrowUpper == chk2.RrowUpper);
 
@@ -2887,7 +2878,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         // valueRowDual[c.row] = 0;
 
         if (iKKTcheck == 1) {
-          // todo needed?
           chk.addCost(c.col, costAtTimeOfElimination);
           chk2.addCost(c.col, costAtTimeOfElimination);
           if (c.type == FREE_SING_COL && chk.print == 1)

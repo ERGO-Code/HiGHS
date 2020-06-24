@@ -185,20 +185,9 @@ void KktCheck::chDualFeas() {
 
   // check values of y_i are dual feasible
   for (int i = 0; i < numRow; i++) {
-    if (i != 60) continue;
     double rowV = 0;
     for (int k = ARstart[i]; k < ARstart[i + 1]; k++)
       rowV = rowV + colValue[ARindex[k]] * ARvalue[k];
-
-    const std::vector<int> flagRow(numRow, 1);
-    const std::vector<int> flagCol(numCol, 1);
-    presolve::printRowOneLine(i, numRow, numCol, flagRow, flagCol,
-                        rowLower, rowUpper, colValue, ARstart,
-                        ARindex, ARvalue);
-    std::cout << "ROW DUAL IS " << rowDual[60] << std::endl;
-    presolve::printRow(i, numRow, numCol, flagRow, flagCol,
-                        rowLower, rowUpper, colValue, ARstart,
-                        ARindex, ARvalue);
 
     // L = Ax = U can be any sign
     if (fabs(rowLower[i] - rowV) < tol && fabs(rowUpper[i] - rowV) < tol) {
