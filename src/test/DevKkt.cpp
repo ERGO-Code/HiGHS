@@ -84,14 +84,7 @@ void checkPrimalFeasMatrix(const State& state, KktConditionDetails& details) {
   for (int i = 0; i < state.numRow; i++) {
     if (state.flagRow[i]) {
       details.checked++;
-      double rowV = 0;
-
-      for (int k = state.ARstart[i]; k < state.ARstart[i + 1]; k++) {
-        const int col = state.ARindex[k];
-        assert(col >= 0 && col < (int)state.colLower.size());
-        if (state.flagCol[col])
-          rowV = rowV + state.colValue[col] * state.ARvalue[k];
-      }
+      double rowV = state.rowValue[i];
 
       if (state.rowLower[i] < rowV && rowV < state.rowUpper[i]) continue;
       double infeas = 0;
@@ -190,12 +183,8 @@ void checkDualFeasibility(const State& state, KktConditionDetails& details) {
     if (state.flagRow[i]) {
       details.checked++;
 
-      double rowV = 0;
-      for (int k = state.ARstart[i]; k < state.ARstart[i + 1]; k++) {
-        const int col = state.ARindex[k];
-        assert(col >= 0 && col < state.numCol);
-        rowV = rowV + state.colValue[col] * state.ARvalue[k];
-      }
+      double rowV = state.rowValue[i];
+
       // L = Ax = U can be any sign
       if (fabs(state.rowLower[i] - rowV) < tol &&
           fabs(state.rowUpper[i] - rowV) < tol)

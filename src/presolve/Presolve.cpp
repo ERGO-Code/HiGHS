@@ -3213,16 +3213,7 @@ void Presolve::checkKkt(bool final) {
   // final = true or intermediate = true
   if (!iKKTcheck) return;
 
-  // update row valuo
-  rowValue.assign(numRowOriginal, 0);
-  for (int i = 0; i < numRowOriginal; ++i) {
-    if (flagRow[i])
-      for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
-        const int col = ARindex[k];
-        if (flagCol[col]) 
-          rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
-      }
-  }
+  // update row value done in initState below.
 
   std::cout << "~~~~~~~~ " << std::endl;
   bool intermediate = !final;
@@ -3806,13 +3797,13 @@ void Presolve::countRemovedCols(PresolveRule rule) {
 dev_kkt_check::State Presolve::initState(const bool intermediate) {
   // update row value
   rowValue.assign(numRowOriginal, 0);
-  for (int row = 0; row < numRowOriginal; row++) {
-    if (flagRow[row]) {
-      for (int k = ARstart[row]; k < ARstart[row + 1]; k++) {
+  for (int i = 0; i < numRowOriginal; ++i) {
+    if (flagRow[i])
+      for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
         const int col = ARindex[k];
-        if (flagCol[col]) rowValue[row] += ARvalue[k] * valuePrimal[col];
+        if (flagCol[col]) 
+          rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
       }
-    }
   }
 
   if (!intermediate)
