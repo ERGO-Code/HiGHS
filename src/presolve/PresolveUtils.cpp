@@ -11,6 +11,30 @@ namespace presolve {
 
 using std::setw;
 
+void printRowOneLine(
+    const int row, const int numRow, const int numCol,
+    const std::vector<int>& flagRow, const std::vector<int>& flagCol,
+    const std::vector<double>& rowLower, const std::vector<double>& rowUpper,
+    const std::vector<double>& values, const std::vector<int>& ARstart,
+    const std::vector<int>& ARindex, const std::vector<double>& ARvalue) {
+  assert(row >= 0 && row < numRow);
+
+  // go over row and sum
+  // col
+  // if flagCol[] 
+  // a_ij * value_j
+  
+  double sum = 0.0;
+  for (int k = ARstart[row]; k < ARstart[row + 1]; k++) {
+    const int col = ARindex[k];
+    assert(col >= 0 && col <= numCol);
+    sum += ARvalue[k] * values[col];
+  }
+
+  std::cout << "row " << row << ": " << flagRow[row] << "   " << rowLower[row]
+            << " <= " << sum << " <= " << rowUpper[row] << std::endl;
+}
+
 void printRow(
     const int row, const int numRow, const int numCol,
     const std::vector<int>& flagRow, const std::vector<int>& flagCol,

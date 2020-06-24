@@ -39,17 +39,17 @@ class KktChStep {
   std::vector<int> ARindex;
   std::vector<double> ARvalue;
 
- private:
-  int RnumCol;
-  int RnumRow;
-
   // the 4 std::vectors below always of full length
+
   std::vector<double> RcolCost;
   std::vector<double> RcolLower;
   std::vector<double> RcolUpper;
   // std::vector<double> Rb;
   std::vector<double> RrowLower;
   std::vector<double> RrowUpper;
+ private:
+  int RnumCol;
+  int RnumRow;
 
   std::vector<int> flagCol;
   std::vector<int> flagRow;

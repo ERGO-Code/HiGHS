@@ -2213,19 +2213,23 @@ void Presolve::setPrimalValue(int j, double value) {
 
     for (int k = Astart.at(j); k < Aend.at(j); ++k)
       if (flagRow.at(Aindex.at(k))) {
-        if (iKKTcheck == 1) {
-          bndsL.push_back(make_pair(Aindex.at(k), rowLower.at(Aindex.at(k))));
-          bndsU.push_back(make_pair(Aindex.at(k), rowUpper.at(Aindex.at(k))));
-        }
-        if (rowLower.at(Aindex.at(k)) > -HIGHS_CONST_INF)
-          rowLower.at(Aindex.at(k)) -= Avalue.at(k) * value;
-        if (rowUpper.at(Aindex.at(k)) < HIGHS_CONST_INF)
-          rowUpper.at(Aindex.at(k)) -= Avalue.at(k) * value;
+        const int row = Aindex[k];
 
-        if (implRowValueLower.at(Aindex.at(k)) > -HIGHS_CONST_INF)
-          implRowValueLower.at(Aindex.at(k)) -= Avalue.at(k) * value;
-        if (implRowValueUpper.at(Aindex.at(k)) < HIGHS_CONST_INF)
-          implRowValueUpper.at(Aindex.at(k)) -= Avalue.at(k) * value;
+        if (iKKTcheck == 1) {
+          bndsL.push_back(make_pair(row, rowLower.at(row)));
+          bndsU.push_back(make_pair(row, rowUpper.at(row)));
+        }
+        if (rowLower.at(row) > -HIGHS_CONST_INF)
+          rowLower.at(row) -= Avalue.at(k) * value;
+        if (rowUpper.at(row) < HIGHS_CONST_INF)
+          rowUpper.at(row) -= Avalue.at(k) * value;
+
+        if (implRowValueLower.at(row) > -HIGHS_CONST_INF)
+          implRowValueLower.at(row) -= Avalue.at(k) * value;
+        if (implRowValueUpper.at(row) < HIGHS_CONST_INF)
+          implRowValueUpper.at(row) -= Avalue.at(k) * value;
+
+        // std::cout << "Bounds of row " << row << " updated." << std::endl;
       }
 
     if (iKKTcheck == 1) {
@@ -2571,7 +2575,18 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // cmpNBF(-1, -1);
   // testBasisMatrixSingularity();
 
-  if (iKKTcheck == 1) {
+  presolve::printRowOneLine(61, numRowOriginal, numColOriginal, flagRow, flagCol,
+                      chk.RrowLower, chk.RrowUpper, valuePrimal, ARstart,
+                      ARindex, ARvalue);
+  std::cout << "ROW DUAL IS " << valueRowDual[61] << std::endl;
+  presolve::printRow(61, numRowOriginal, numColOriginal, flagRow, flagCol,
+                      chk.RrowLower, chk.RrowUpper, valuePrimal, ARstart,
+                      ARindex, ARvalue);
+
+  assert(chk.RrowLower == chk2.RrowLower);
+  assert(chk.RrowUpper == chk2.RrowUpper);
+
+  if (iKKTcheck) {
     cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
     checkKkt();
   }
@@ -3201,15 +3216,11 @@ void Presolve::checkKkt(bool final) {
   // update row valuo
   rowValue.assign(numRowOriginal, 0);
   for (int i = 0; i < numRowOriginal; ++i) {
-//     if (i != 61) continue;
-
-    presolve::printRow(i, numRowOriginal, numColOriginal, flagRow, flagCol, chk2.RrowLower, chk2.RrowUpper,
-             valuePrimal, ARstart, ARindex, ARvalue);
-
     if (flagRow[i])
       for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
         const int col = ARindex[k];
-        if (flagCol[i]) rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
+        if (flagCol[col]) 
+          rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
       }
   }
 

@@ -27,6 +27,13 @@ void printCol(
     const std::vector<double>& Aend, const std::vector<int>& Aindex,
     const std::vector<double>& Avalue);
 
+void printRowOneLine(
+    const int row, const int numRow, const int numCol,
+    const std::vector<int>& flagRow, const std::vector<int>& flagCol,
+    const std::vector<double>& rowLower, const std::vector<double>& rowUpper,
+    const std::vector<double>& values, const std::vector<int>& ARstart,
+    const std::vector<int>& ARindex, const std::vector<double>& ARvalue);
+
 }  // namespace presolve
 
 #endif
