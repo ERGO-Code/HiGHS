@@ -19,6 +19,8 @@
 #include <vector>
 
 #include "HConfig.h"
+#include "io/HighsIO.h"
+#include "lp_data/HConst.h"
 #include "lp_data/HighsAnalysis.h"
 
 using std::max;
@@ -103,9 +105,13 @@ class HFactor {
              const int* Aindex,     //!< Row indices of constraint matrix
              const double* Avalue,  //!< Row values of constraint matrix
              int* baseIndex,        //!< Indices of basic variables
+	     int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN,
+	     FILE* logfile = NULL,
+	     FILE* output = NULL,
+	     int message_level = ML_NONE,
              const bool use_original_HFactor_logic = true,
              int updateMethod =
-                 UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
+	     UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
 
 #ifdef HiGHSDEV
@@ -245,6 +251,11 @@ class HFactor {
   int* baseIndex;
   int updateMethod;
   bool use_original_HFactor_logic;
+  int highs_debug_level;
+  FILE* logfile;
+  FILE* output;
+  int message_level;
+ 
 
   // Working buffer
   int nwork;
@@ -329,7 +340,7 @@ class HFactor {
   //    void buildKernel();
   int buildKernel();
   void buildHandleRankDeficiency();
-  void buildRpRankDeficiency();
+  void buildReportRankDeficiency();
   void buildMarkSingC();
   void buildFinish();
 

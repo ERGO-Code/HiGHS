@@ -19,6 +19,7 @@
 #include <stdexcept>
 
 #include "lp_data/HConst.h"
+#include "simplex/HFactorDebug.h"
 #include "simplex/FactorTimer.h"
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
@@ -159,7 +160,12 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
-                    const bool use_original_HFactor_logic_, int updateMethod_) {
+		    int highs_debug_level_,
+		    FILE* logfile_,
+		    FILE* output_,
+		    int message_level_,
+                    const bool use_original_HFactor_logic_,
+		    int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -167,9 +173,14 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   Aindex = Aindex_;
   Avalue = Avalue_;
   baseIndex = baseIndex_;
+  use_original_HFactor_logic = use_original_HFactor_logic_;
   updateMethod = updateMethod_;
 
-  use_original_HFactor_logic = use_original_HFactor_logic_;
+  highs_debug_level = highs_debug_level_;
+  logfile = logfile_;
+  output = output_;
+  message_level = message_level_;
+  
 
   // Allocate for working buffer
   iwork.reserve(numRow * 2);
@@ -278,7 +289,6 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
     // singular columns are in the position corresponding to the
     // logical which replaces them
     buildHandleRankDeficiency();
-    buildRpRankDeficiency();
     factor_timer.stop(FactorInvertDeficient, factor_timer_clock_pointer);
     //      buildMarkSingC();
   }
@@ -905,19 +915,9 @@ int HFactor::buildKernel() {
 }
 
 void HFactor::buildHandleRankDeficiency() {
-  bool rp = true;
-  if (rp) rp = numRow < 123;
-  if (rp) {
-    printf("buildRankDeficiency1:");
-    printf("\nIndex  ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", i);
-    printf("\nPerm   ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", permute[i]);
-    printf("\nIwork  ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
-    printf("\nBaseI  ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
-  }
+  debugReportRankDeficiency(0, highs_debug_level, output, message_level,
+			    numRow, permute, iwork, baseIndex,
+			    rankDeficiency, noPvR, noPvC);
   // iwork can now be used as workspace: use it to accumulate the new
   // baseIndex. iwork is set to -1 and baseIndex is permuted into it.
   // Indices of iwork corresponding to missing indices in permute
@@ -951,24 +951,9 @@ void HFactor::buildHandleRankDeficiency() {
     }
   }
   assert(lc_rankDeficiency == rankDeficiency);
-  rp = true;
-  if (rp) rp = rankDeficiency < 100;
-  if (rp) {
-    printf("\nbuildRankDeficiency2:");
-    printf("\nIndex  ");
-    for (int i = 0; i < rankDeficiency; i++) printf(" %2d", i);
-    printf("\nnoPvR  ");
-    for (int i = 0; i < rankDeficiency; i++) printf(" %2d", noPvR[i]);
-    printf("\nnoPvC  ");
-    for (int i = 0; i < rankDeficiency; i++) printf(" %2d", noPvC[i]);
-    if (numRow < 123) {
-      printf("\nIndex  ");
-      for (int i = 0; i < numRow; i++) printf(" %2d", i);
-      printf("\nIwork  ");
-      for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
-    }
-    printf("\n");
-  }
+  debugReportRankDeficiency(1, highs_debug_level, output, message_level,
+			    numRow, permute, iwork, baseIndex,
+			    rankDeficiency, noPvR, noPvC);
   for (int k = 0; k < rankDeficiency; k++) {
     int iRow = noPvR[k];
     int iCol = noPvC[k];
@@ -980,79 +965,20 @@ void HFactor::buildHandleRankDeficiency() {
     UpivotValue.push_back(1);
     Ustart.push_back(Uindex.size());
   }
-  if (rp) rp = numRow < 123;
-  if (rp) {
-    printf("\nbuildRankDeficiency3:");
-    printf("\nIndex  ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", i);
-    printf("\nPerm   ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", permute[i]);
-    printf("\n");
-  }
-}
-
-void HFactor::buildRpRankDeficiency() {
-  // Singular matrix B: Report the active submatrix following detection of rank
-  // deficiency
-  if (rankDeficiency > 10) return;
-  double* ASM;
-  ASM = (double*)malloc(sizeof(double) * rankDeficiency * rankDeficiency);
-  for (int i = 0; i < rankDeficiency; i++) {
-    for (int j = 0; j < rankDeficiency; j++) {
-      ASM[i + j * rankDeficiency] = 0;
-    }
-  }
-  for (int j = 0; j < rankDeficiency; j++) {
-    int ASMcol = noPvC[j];
-    int start = MCstart[ASMcol];
-    int end = start + MCcountA[ASMcol];
-    for (int en = start; en < end; en++) {
-      int ASMrow = MCindex[en];
-      int i = -iwork[ASMrow] - 1;
-      if (i < 0 || i >= rankDeficiency) {
-        printf("STRANGE: 0 > i = %d || %d = i >= rankDeficiency = %d\n", i, i,
-               rankDeficiency);
-      } else {
-        if (noPvR[i] != ASMrow) {
-          printf("STRANGE: %d = noPvR[i] != ASMrow = %d\n", noPvR[i], ASMrow);
-        }
-        printf("Setting ASM(%2d, %2d) = %11.4g\n", i, j, MCvalue[en]);
-        ASM[i + j * rankDeficiency] = MCvalue[en];
-      }
-    }
-  }
-  printf("\nASM:                    ");
-  for (int j = 0; j < rankDeficiency; j++) printf(" %11d", j);
-  printf("\n                        ");
-  for (int j = 0; j < rankDeficiency; j++) printf(" %11d", noPvC[j]);
-  printf("\n                        ");
-  for (int j = 0; j < rankDeficiency; j++) printf("------------");
-  printf("\n");
-  for (int i = 0; i < rankDeficiency; i++) {
-    printf("%11d %11d|", i, noPvR[i]);
-    for (int j = 0; j < rankDeficiency; j++) {
-      printf(" %11.4g", ASM[i + j * rankDeficiency]);
-    }
-    printf("\n");
-  }
-  free(ASM);
+  debugReportRankDeficiency(2, highs_debug_level, output, message_level,
+			    numRow, permute, iwork, baseIndex,
+			    rankDeficiency, noPvR, noPvC);
+  debugReportRankDeficientASM(highs_debug_level, output, message_level,
+			      numRow, MCstart, MCcountA, MCindex, MCvalue, iwork,
+			      rankDeficiency, noPvC, noPvR);
 }
 
 void HFactor::buildMarkSingC() {
   // Singular matrix B: reorder the basic variables so that the
   // singular columns are in the position corresponding to the
   // logical which replaces them
-  bool rp = true;
-  if (rp) rp = numRow < 123;
-  if (rp) {
-    printf("\nMarkSingC1");
-    printf("\nIndex  ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", i);
-    printf("\niwork  ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
-    printf("\nBaseI  ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
-  }
+  debugReportMarkSingC(0, highs_debug_level, output, message_level,
+		       numRow, iwork, baseIndex);
 
   for (int k = 0; k < rankDeficiency; k++) {
     int ASMrow = noPvR[k];
@@ -1066,15 +992,9 @@ void HFactor::buildMarkSingC() {
                                       // removing column 0 can be identified!
     }
   }
-  for (int i = 0; i < numRow; i++) baseIndex[i] = iwork[i];
-  if (rp) {
-    printf("\nMarkSingC2");
-    printf("\nIndex  ");
-    for (int i = 0; i < numRow; i++) printf(" %2d", i);
-    printf("\nNwBaseI");
-    for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
-    printf("\n");
-  }
+  for (int i = 0; i < numRow; i++)
+    baseIndex[i] = iwork[i];
+  debugReportMarkSingC(1, highs_debug_level, output, message_level, numRow, iwork, baseIndex); 
 }
 
 void HFactor::buildFinish() {

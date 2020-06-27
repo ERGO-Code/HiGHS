@@ -333,9 +333,15 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   //
   // First setup the factor arrays if they don't exist
   if (!simplex_lp_status.has_factor_arrays) {
-    factor.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
-                 &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-                 &simplex_basis.basicIndex_[0]);
+    factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+		 &simplex_lp.Astart_[0],
+                 &simplex_lp.Aindex_[0],
+		 &simplex_lp.Avalue_[0],
+                 &simplex_basis.basicIndex_[0],
+		 options.highs_debug_level,
+		 options.logfile,
+		 options.output,
+		 options.message_level);
     simplex_lp_status.has_factor_arrays = true;
   }
   // Reinvert if there isn't a fresh INVERT. ToDo Override this for MIP hot

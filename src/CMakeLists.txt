@@ -154,6 +154,7 @@ set(headers
     simplex/HDualRow.h
     simplex/HDualRHS.h
     simplex/HFactor.h
+    simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
     simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
@@ -161,7 +162,6 @@ set(headers
     simplex/HQPrimal.h
 #    simplex/HRanging.h
     simplex/HSimplex.h
-    simplex/HSimplexDebug.h
     simplex/HSimplexReport.h
     simplex/SimplexConst.h
     presolve/Presolve.h
