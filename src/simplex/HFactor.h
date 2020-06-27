@@ -105,13 +105,12 @@ class HFactor {
              const int* Aindex,     //!< Row indices of constraint matrix
              const double* Avalue,  //!< Row values of constraint matrix
              int* baseIndex,        //!< Indices of basic variables
-	     int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN,
-	     FILE* logfile = NULL,
-	     FILE* output = NULL,
-	     int message_level = ML_NONE,
+             int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN,
+             FILE* logfile = NULL, FILE* output = NULL,
+             int message_level = ML_NONE,
              const bool use_original_HFactor_logic = true,
              int updateMethod =
-	     UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
+                 UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
 
 #ifdef HiGHSDEV
@@ -255,7 +254,6 @@ class HFactor {
   FILE* logfile;
   FILE* output;
   int message_level;
- 
 
   // Working buffer
   int nwork;
