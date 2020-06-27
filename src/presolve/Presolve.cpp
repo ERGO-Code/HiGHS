@@ -329,18 +329,18 @@ int Presolve::presolve(int print) {
 
   int iter = 1;
 
-  // removeFixed();
+  removeFixed();
   if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
-    order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainForcing);
-    // order.push_back(Presolver::kMainRowSingletons);
-    // // order.push_back(Presolver::kMainDoubletonEq);
-    // order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainColSingletons);
-    // order.push_back(Presolver::kMainDominatedCols);
+     order.push_back(Presolver::kMainRowSingletons);
+     order.push_back(Presolver::kMainForcing);
+     order.push_back(Presolver::kMainRowSingletons);
+     order.push_back(Presolver::kMainDoubletonEq);
+     order.push_back(Presolver::kMainRowSingletons);
+     order.push_back(Presolver::kMainColSingletons);
+     order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
@@ -2622,7 +2622,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         // matrix transformation from doubleton equation, case x still there
         // case new x is not 0
         // just change value of entry in row for x
-
         int indi;
         for (indi = ARstart[c.row]; indi < ARstart[c.row + 1]; ++indi)
           if (ARindex.at(indi) == c.col) break;
