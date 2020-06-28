@@ -213,14 +213,25 @@ class HFactor {
   // different ways ends up equivalent.
   //  vector<int>& getNoPvC() {return noPvC;}
 
-#ifdef HiGHSDEV
   /**
-   * @brief Checks \f$B^{-1}\mathbf{a}_i=\mathbf{e}_i\f$ for each column \f$i\f$
-   *
-   * Should only be compiled when HiGHSDEV=on
+   * @brief Gets baseIndex since it is private
    */
-  void checkInvert();
-#endif
+  const int* getBaseIndex() const { return baseIndex; }
+
+  /**
+   * @brief Gets Astart since it is private
+   */
+  const int* getAstart() const { return Astart; }
+
+  /**
+   * @brief Gets Aindex since it is private
+   */
+  const int* getAindex() const { return Aindex; }
+
+  /**
+   * @brief Gets Avalue since it is private
+   */
+  const double* getAvalue() const { return Avalue; }
 
   // Properties of data held in HFactor.h. To "have" them means that
   // they are assigned.
