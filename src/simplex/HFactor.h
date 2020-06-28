@@ -113,18 +113,6 @@ class HFactor {
                  UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
 
-#ifdef HiGHSDEV
-  /**
-   * @brief Change the update method
-   *
-   * Only called in HighsSimplexInterface::change_update_method, which
-   * is only called in HTester.cpp Should only be compiled when
-   * HiGHSDEV=on
-   */
-  void change(int updateMethod  //!< New update method
-  );
-#endif
-
   /**
    * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank
    * deficiency.
@@ -157,20 +145,6 @@ class HFactor {
               int* iRow,    //!< Index of pivotal row
               int* hint     //!< Reinversion status
   );
-
-#ifdef HiGHSDEV
-  /**
-   * @brief Data used for reporting in HTester.cpp. Should only be
-   * compiled when HiGHSDEV=on
-   */
-  int BtotalX;
-
-  /**
-   * @brief Data used for reporting in HTester.cpp. Should only be
-   * compiled when HiGHSDEV=on
-   */
-  int FtotalX;
-#endif
 
   /**
    * @brief Wall clock time for INVERT
