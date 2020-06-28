@@ -16,7 +16,8 @@
 
 #include "simplex/HFactor.h"
 
-HighsDebugStatus debugCheckInvert(const int highs_debug_level,
+HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
+                                  const int message_level,
                                   const HFactor& factor);
 
 void debugReportRankDeficiency(const int call_id, const int highs_debug_level,

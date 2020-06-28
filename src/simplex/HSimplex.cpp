@@ -2921,6 +2921,8 @@ int computeFactor(HighsModelObject& highs_model_object) {
 #endif
   simplex_info.update_count = 0;
   debugCheckInvert(highs_model_object.options_.highs_debug_level,
+                   highs_model_object.options_.output,
+                   highs_model_object.options_.message_level,
                    highs_model_object.factor_);
 
 #ifdef HiGHSDEV

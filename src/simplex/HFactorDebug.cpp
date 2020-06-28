@@ -12,12 +12,19 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include "util/HighsRandom.h"
 #include "simplex/HFactorDebug.h"
 
 #include "simplex/HVector.h"
+#include "util/HighsRandom.h"
 
-HighsDebugStatus debugCheckInvert(const int highs_debug_level,
+const double solve_large_error = 1e-12;
+const double solve_excessive_error = sqrt(solve_large_error);
+
+const double inverse_large_error = 1e-12;
+const double inverse_excessive_error = sqrt(inverse_large_error);
+
+HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
+                                  const int message_level,
                                   const HFactor& factor) {
   if (highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
@@ -50,7 +57,7 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level,
     if (iCol < numCol) {
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
         int index = Aindex[k];
-        rhs.array[index] += value*Avalue[k];
+        rhs.array[index] += value * Avalue[k];
       }
     } else {
       int index = iCol - numCol;
@@ -59,25 +66,36 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level,
   }
   factor.ftran(rhs, rhsDensity);
   double solve_error_norm = 0;
-  const double solve_error_tolerance = 1e-8;
   for (int iRow = 0; iRow < numRow; iRow++) {
     double solve_error = fabs(rhs.array[iRow] - column.array[iRow]);
-    if (solve_error > solve_error_tolerance)
-      printf("Entry %2d of random solution has error %10.4g\n",
-	     iRow, solve_error);
     solve_error_norm = std::max(solve_error, solve_error_norm);
   }
-  if (solve_error_norm > solve_error_tolerance)
-    printf("Random solution has |error|_inf = %10.4g\n",
-	   solve_error_norm);
+  std::string value_adjective;
+  int report_level;
+  return_status = HighsDebugStatus::OK;
 
-  if (highs_debug_level < HIGHS_DEBUG_LEVEL_EXPENSIVE)
-    return HighsDebugStatus::NOT_CHECKED;
+  if (solve_error_norm > solve_excessive_error) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (solve_error_norm > solve_large_error) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else {
+    value_adjective = "Small";
+    report_level = ML_VERBOSE;
+  }
+  HighsPrintMessage(
+      output, message_level, report_level,
+      "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
+      value_adjective.c_str(), solve_error_norm);
+
+  if (highs_debug_level < HIGHS_DEBUG_LEVEL_EXPENSIVE) return return_status;
 
   double columnDensity = 0;
   double inverse_error_norm = 0;
   const double inverse_error_tolerance = 1e-8;
-  bool report_row = numRow < 20;
   for (int iRow = 0; iRow < numRow; iRow++) {
     int iCol = baseIndex[iRow];
     column.clear();
@@ -94,7 +112,6 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level,
       column.index[column.count++] = index;
     }
     factor.ftran(column, columnDensity);
-    if (report_row) printf("Checking Basic column %2d as %2d", iRow, iCol);
     double inverse_column_error_norm = 0;
     for (int lc_iRow = 0; lc_iRow < numRow; lc_iRow++) {
       double value = column.array[lc_iRow];
@@ -105,21 +122,27 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level,
         ckValue = 0;
       }
       double inverse_error = fabs(value - ckValue);
-      inverse_column_error_norm = std::max(inverse_error, inverse_column_error_norm);
+      inverse_column_error_norm =
+          std::max(inverse_error, inverse_column_error_norm);
     }
-    if (report_row) {
-      if (inverse_column_error_norm > inverse_error_tolerance) {
-	printf(": error = %11.4g\n", inverse_column_error_norm);
-      } else {
-	printf("\n");
-      }
-    }
-    inverse_error_norm = std::max(inverse_column_error_norm, inverse_error_norm);
+    inverse_error_norm =
+        std::max(inverse_column_error_norm, inverse_error_norm);
   }
-  if (inverse_error_norm > inverse_error_tolerance)
-    printf("Checking INVERT: ||B^{-1}B-I|| = %g\n", inverse_error_norm);
-  else
-    printf("Checking INVERT: ||B^{-1}B-I|| = %g\n", inverse_error_norm);
+  if (inverse_error_norm > inverse_excessive_error) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (inverse_error_norm > inverse_large_error) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else {
+    value_adjective = "Small";
+    report_level = ML_VERBOSE;
+  }
+  HighsPrintMessage(output, message_level, report_level,
+                    "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
+                    value_adjective.c_str(), inverse_error_norm);
 
   return return_status;
 }
