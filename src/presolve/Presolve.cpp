@@ -329,21 +329,22 @@ int Presolve::presolve(int print) {
 
   int iter = 1;
 
-  removeFixed();
+  // removeFixed();
   if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
-     order.push_back(Presolver::kMainRowSingletons);
-     order.push_back(Presolver::kMainForcing);
-     order.push_back(Presolver::kMainRowSingletons);
-     order.push_back(Presolver::kMainDoubletonEq);
-     order.push_back(Presolver::kMainRowSingletons);
-     order.push_back(Presolver::kMainColSingletons);
-     order.push_back(Presolver::kMainDominatedCols);
+    //  order.push_back(Presolver::kMainRowSingletons);
+    //  order.push_back(Presolver::kMainForcing);
+    //  order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainDoubletonEq);
+    //  order.push_back(Presolver::kMainRowSingletons);
+    //  order.push_back(Presolver::kMainColSingletons);
+    //  order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
+  max_iterations = 1;
   while (hasChange == 1) {
     if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
@@ -484,9 +485,11 @@ pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
     y = col2;
   }
 
-  //	if (nzCol.at(y) == 1 && nzCol.at(x) == 1) { //two singletons case
-  // handled elsewhere 		colIndex.second = -1; 		return colIndex;
-  //	}
+  // two singletons case handled elsewhere
+  if (nzCol.at(y) == 1 && nzCol.at(x) == 1) {
+    colIndex.second = -1;
+    return colIndex;
+  }
 
   colIndex.first = x;
   colIndex.second = y;
@@ -534,6 +537,7 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
   colCost.at(x) = colCost.at(x) - colCost.at(y) * akx / aky;
 
   // for postsolve: need the new bounds too
+  assert(x >= 0 && x < numCol);
   vector<double> bnds3({colLower.at(x), colUpper.at(x), colCost.at(x)});
   oldBounds.push(make_pair(x, bnds3));
 
@@ -555,6 +559,10 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
   if (!hasChange) hasChange = true;
 }
 
+ void Presolve::caseTwoSingletonsDoubletonEquation(const int row, const int x,const int y) {
+
+ }
+
 void Presolve::removeDoubletonEquations() {
   if (timer.reachLimit()) {
     status = stat::Timeout;
@@ -565,12 +573,11 @@ void Presolve::removeDoubletonEquations() {
   // needed for AR matrix manipulation
   if ((int)flagCol.size() == numCol) flagCol.push_back(0);
 
-  double b, akx, aky;
-  int x, y;
   int iter = 0;
 
   for (int row = 0; row < numRow; row++) {
     if (flagRow.at(row)) {
+      if (row > 2) continue;
       // Analyse dependency on numerical tolerance
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF) {
@@ -584,16 +591,19 @@ void Presolve::removeDoubletonEquations() {
               doubleton_equation_bound_tolerance) {
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
-        b = rowLower.at(row);
+        const double b = rowLower.at(row);
         pair<int, int> colIndex = getXYDoubletonEquations(row);
-        x = colIndex.first;
-        y = colIndex.second;
+        const int x = colIndex.first;
+        const int y = colIndex.second;
 
         // two singletons case handled elsewhere
-        if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) continue;
+        if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) {
+          caseTwoSingletonsDoubletonEquation(row, x,y);
+          continue;
+        }
 
-        akx = getaij(row, x);
-        aky = getaij(row, y);
+        const double akx = getaij(row, x);
+        const double aky = getaij(row, y);
         processRowDoubletonEquation(row, x, y, akx, aky, b);
         if (status) {
           timer.recordFinish(DOUBLETON_EQUATION);
@@ -602,8 +612,8 @@ void Presolve::removeDoubletonEquations() {
 
         for (int k = Astart.at(y); k < Aend.at(y); ++k)
           if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
-            int i = Aindex.at(k);
-            double aiy = Avalue.at(k);
+            const int i = Aindex.at(k);
+            const double aiy = Avalue.at(k);
 
             // update row bounds
             if (iKKTcheck == 1) {
@@ -628,11 +638,14 @@ void Presolve::removeDoubletonEquations() {
               implRowValueUpper.at(i) -= b * aiy / aky;
 
             // update matrix coefficients
-            if (isZeroA(i, x))
+            if (isZeroA(i, x)) {
               UpdateMatrixCoeffDoubletonEquationXzero(i, x, y, aiy, akx, aky);
-            else
+              std::cout << "   . row " << i << " zero " << std::endl;
+            } else {
               UpdateMatrixCoeffDoubletonEquationXnonZero(i, x, y, aiy, akx,
                                                          aky);
+              std::cout << "   . row " << i << " zero " << std::endl;
+            }
           }
         if (Avalue.size() > 40000000) {
           trimA();
@@ -661,7 +674,9 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
       break;
     }
 
-  postValue.push(ARvalue.at(ind));
+  assert(ARvalue.at(ind) == aiy);
+
+  postValue.push(aiy);
   postValue.push(y);
   addChange(DOUBLETON_EQUATION_X_ZERO_INITIALLY, i, x);
 
@@ -675,8 +690,8 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
   }
 
   // update A: append X column to end of array
-  int st = Avalue.size();
-  for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) {
+  const int st = Avalue.size();
+  for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) { 
     Avalue.push_back(Avalue.at(ind));
     Aindex.push_back(Aindex.at(ind));
   }
@@ -687,7 +702,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
 
   nzCol.at(x)++;
   // nzRow does not change here.
-  // if (nzCol.at(x) == 2) singCol.remove(x);
 }
 
 void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
@@ -2433,6 +2447,7 @@ int Presolve::getSingColElementIndexInA(int j) {
   int rest = k + 1;
   while (rest < Aend.at(j) && !flagRow.at(Aindex.at(rest))) ++rest;
   if (rest < Aend.at(j)) {
+    // Occurs if a singleton column is no longer singleton.
     return -1;
   }
   return k;
@@ -3234,11 +3249,6 @@ void Presolve::setBasisElement(change c) {
       row_status.at(c.row) = HighsBasisStatus::BASIC;
       break;
     }
-    case SING_ROW:
-    case FORCING_ROW_VARIABLE:
-    case FORCING_ROW:
-    case SING_COL_DOUBLETON_INEQ:
-      break;
     case REDUNDANT_ROW: {
       if (report_postsolve) {
         printf("2.3 : Recover row %3d as %3d (basic): redundant\n", c.row,
@@ -3290,6 +3300,8 @@ void Presolve::setBasisElement(change c) {
         }
       break;
     }
+    default:
+      break;
   }
 }
 
@@ -3660,12 +3672,14 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
   double ubxNew = v[1];
   double lbxNew = v[0];
   double cxNew = v[2];
+
   p = oldBounds.top();
   oldBounds.pop();
   v = get<1>(p);
   double ubxOld = v[1];
   double lbxOld = v[0];
   double cxOld = v[2];
+
   p = oldBounds.top();
   oldBounds.pop();
   v = get<1>(p);
@@ -3692,67 +3706,36 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
 
   flagRow.at(row) = 1;
 
-  HighsBasisStatus local_status;
-  if (x < numColOriginal) {
-    local_status = col_status.at(x);
-  } else {
-    local_status = row_status.at(x - numColOriginal);
-  }
+  HighsBasisStatus local_status = col_status.at(x);
   if ((local_status != HighsBasisStatus::BASIC && valueX == ubxNew &&
        ubxNew < ubxOld) ||
       (local_status != HighsBasisStatus::BASIC && valueX == lbxNew &&
        lbxNew > lbxOld)) {
-    if (x < numColOriginal) {
+      // Value is nonbasic at reduced bound but needs to be changed to basic since bound is expanding.
       col_status.at(x) = HighsBasisStatus::BASIC;
+      row_status.at(row) = HighsBasisStatus::NONBASIC;
+
       // transfer dual of x to dual of row
       valueColDual.at(x) = 0;
       valueRowDual.at(row) = getRowDualPost(row, x);
       valueColDual.at(y) = getColumnDualPost(y);
 
       if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
-    } else {
-      row_status.at(x - numColOriginal) = HighsBasisStatus::BASIC;
-      if (report_postsolve)
-        printf("4.1 : Make row    %3d basic\n", x - numColOriginal);
-
-      valueRowDual.at(row) = 0;
-      valueColDual.at(x) = getColumnDualPost(x);
-      valueColDual.at(y) = getColumnDualPost(y);
-    }
   } else {
     // row becomes basic unless y is between bounds, in which case y is basic
     if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
-      if (y < numColOriginal) {
         col_status.at(y) = HighsBasisStatus::BASIC;
         if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
 
         valueColDual.at(y) = 0;
         valueRowDual.at(row) = getRowDualPost(row, y);
-      } else {
-        row_status.at(y - numColOriginal) = HighsBasisStatus::BASIC;
-        if (report_postsolve)
-          printf("4.2 : Make row    %3d basic\n", y - numColOriginal);
-
-        valueRowDual.at(row) = 0;
-        valueColDual.at(x) = getColumnDualPost(x);
-        valueColDual.at(y) = getColumnDualPost(y);
-      }
     } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
-      if (y < numColOriginal) {
+      // x is at a bound: set x to N
         col_status.at(y) = HighsBasisStatus::BASIC;
         if (report_postsolve) printf("4.3 : Make column %3d basic\n", y);
 
         valueColDual.at(y) = 0;
         valueRowDual.at(row) = getRowDualPost(row, y);
-      } else {
-        row_status.at(y - numColOriginal) = HighsBasisStatus::BASIC;
-        if (report_postsolve)
-          printf("4.3 : Make row    %3d basic\n", y - numColOriginal);
-
-        valueRowDual.at(row) = 0;
-        valueColDual.at(x) = getColumnDualPost(x);
-        valueColDual.at(y) = getColumnDualPost(y);
-      }
     } else {
       if (report_postsolve) {
         printf("4.4 : Make row    %3d basic\n", row);
@@ -3763,6 +3746,7 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
       valueColDual.at(y) = getColumnDualPost(y);
     }
   }
+
   if (iKKTcheck == 1) {
     chk.colDual.at(x) = valueColDual.at(x);
     chk.colDual.at(y) = valueColDual.at(y);
@@ -3790,8 +3774,7 @@ dev_kkt_check::State Presolve::initState(const bool intermediate) {
     if (flagRow[i])
       for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
         const int col = ARindex[k];
-        if (flagCol[col]) 
-          rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
+        if (flagCol[col]) rowValue.at(i) += valuePrimal.at(col) * ARvalue.at(k);
       }
   }
 

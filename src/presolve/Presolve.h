@@ -96,15 +96,15 @@ class Presolve : public HPreData {
     timer.time_limit = limit;
   }
 
-  int iPrint = 0;
+  int iPrint = 1;
   int message_level;
   FILE* output;
 
  private:
-  int iKKTcheck = 0;
+  int iKKTcheck = 1;
   int presolve(int print);
 
-  const bool report_postsolve = false;
+  const bool report_postsolve = true;
 
   double objShift;
   void initializeVectors();
@@ -287,6 +287,8 @@ class Presolve : public HPreData {
 
   void checkKkt(const bool final = false);
   dev_kkt_check::State initState(const bool intermediate = false);
+
+  void caseTwoSingletonsDoubletonEquation(const int row, const int x, const int y);
 };
 
 }  // namespace presolve
