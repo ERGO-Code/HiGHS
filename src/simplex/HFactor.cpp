@@ -25,12 +25,6 @@
 #include "simplex/HVector.h"
 #include "util/HighsTimer.h"
 
-#ifdef HiGHSDEV
-#ifdef OPENMP
-#include "omp.h"
-#endif
-#endif
-
 using std::copy;
 using std::fill_n;
 using std::make_pair;
