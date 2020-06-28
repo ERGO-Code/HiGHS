@@ -1932,7 +1932,6 @@ void HFactor::updatePF(HVector* aq, int iRow, int* hint) {
 }
 
 void HFactor::updateMPF(HVector* aq, HVector* ep, int iRow, int* hint) {
-
   // Store elements
   for (int i = 0; i < aq->packCount; i++) {
     PFindex.push_back(aq->packIndex[i]);
@@ -1966,7 +1965,6 @@ void HFactor::updateMPF(HVector* aq, HVector* ep, int iRow, int* hint) {
 void HFactor::updateAPF(HVector* aq, HVector* ep, int iRow
                         //, int* hint
 ) {
-
   // Store elements
   for (int i = 0; i < aq->packCount; i++) {
     PFindex.push_back(aq->packIndex[i]);

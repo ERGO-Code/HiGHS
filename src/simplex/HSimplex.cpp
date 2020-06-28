@@ -21,6 +21,7 @@
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/HCrash.h"
+#include "simplex/HFactorDebug.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HVector.h"
 #include "simplex/HighsSimplexInterface.h"
@@ -2830,10 +2831,8 @@ simplex_basis.basicIndex_[rowOut], columnOut); fflush(stdout);
   //    printf("After  - simplex_basis.basicIndex_:"); for (int iRow=0;
 iRow<simplex_lp.numRow_; iRow++)
   //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
-#ifdef HiGHSDEV
-  factor.checkInvert();
-#endif
-  return 0;
+  debugCheckInvert(highs_model_object.options_.highs_debug_level,
+highs_model_object.factor); return 0;
 }
 */
 int computeFactor(HighsModelObject& highs_model_object) {
@@ -2921,6 +2920,8 @@ int computeFactor(HighsModelObject& highs_model_object) {
   }
 #endif
   simplex_info.update_count = 0;
+  debugCheckInvert(highs_model_object.options_.highs_debug_level,
+                   highs_model_object.factor_);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_time) {

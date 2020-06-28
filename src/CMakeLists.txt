@@ -102,6 +102,7 @@ set(sources
     simplex/HDualRow.cpp
     simplex/HDualMulti.cpp
     simplex/HFactor.cpp
+    simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
