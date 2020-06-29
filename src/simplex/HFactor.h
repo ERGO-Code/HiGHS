@@ -174,20 +174,6 @@ class HFactor {
   vector<int> noPvC;
 
   /**
-   * @brief Gets noPvR when HFactor.h cannot be included
-   */
-  vector<int>& getNoPvR() { return noPvR; }
-
-  /**
-   * @brief Gets noPvC when HFactor.h cannot be included
-   */
-  const int* getNoPvC() const { return &noPvC[0]; }
-
-  // TODO Understand why handling noPvC and noPvR in what seem to be
-  // different ways ends up equivalent.
-  //  vector<int>& getNoPvC() {return noPvC;}
-
-  /**
    * @brief Gets baseIndex since it is private
    */
   const int* getBaseIndex() const { return baseIndex; }

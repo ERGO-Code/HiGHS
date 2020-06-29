@@ -2799,7 +2799,7 @@ int simplexHandleRankDeficiency(HighsModelObject &highs_model_object) {
   HFactor &factor = highs_model_object.factor_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   int rankDeficiency = factor.rankDeficiency;
-  const int *noPvC = factor.getNoPvC();
+  vector<int> & noPvC = factor.noPvC;
   printf("Returned %d = factor.build();\n", rankDeficiency);
   fflush(stdout);
   vector<int> basicRows;
