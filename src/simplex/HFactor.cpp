@@ -316,14 +316,14 @@ void HFactor::btran(HVector& vector, double historical_density,
 void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
   // Special case
   if (aq->next) {
-    updateCFT(aq, ep, iRow);  //, hint);
+    updateCFT(aq, ep, iRow);
     return;
   }
 
-  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow);  //, hint);
+  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow);
   if (updateMethod == UPDATE_METHOD_PF) updatePF(aq, *iRow, hint);
   if (updateMethod == UPDATE_METHOD_MPF) updateMPF(aq, ep, *iRow, hint);
-  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);  //, hint);
+  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);
 }
 
 void HFactor::buildSimple() {

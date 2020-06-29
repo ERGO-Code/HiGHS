@@ -331,11 +331,11 @@ class HFactor {
   void ftranAPF(HVector& vector) const;
   void btranAPF(HVector& vector) const;
 
-  void updateCFT(HVector* aq, HVector* ep, int* iRow);  //, int* hint);
-  void updateFT(HVector* aq, HVector* ep, int iRow);    //, int* hint);
+  void updateCFT(HVector* aq, HVector* ep, int* iRow);
+  void updateFT(HVector* aq, HVector* ep, int iRow);
   void updatePF(HVector* aq, int iRow, int* hint);
   void updateMPF(HVector* aq, HVector* ep, int iRow, int* hint);
-  void updateAPF(HVector* aq, HVector* ep, int iRow);  //, int* hint);
+  void updateAPF(HVector* aq, HVector* ep, int iRow);
 
   /**
    * Local in-line functions
