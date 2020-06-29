@@ -2071,124 +2071,128 @@ void Presolve::removeRowSingletons() {
     return;
   }
   timer.recordStart(SING_ROW);
-  while (!(singRow.empty())) {
-    if (status) {
-      timer.recordFinish(SING_ROW);
-      return;
-    }
-    int i = singRow.front();
-    singRow.pop_front();
-    if (!flagRow[i]) continue;
 
-    int k = getSingRowElementIndexInAR(i);
-    if (k < 0) continue;
-    int j = ARindex.at(k);
+  list<int>::iterator it = singRow.begin();
+  while (it != singRow.end()) {
+    if (flagRow[*it]) {
+      const int i = *it;
+      assert(i >= 0 && i < numRow);
 
-    // add old bounds OF X to checker and for postsolve
-    if (iKKTcheck == 1) {
-      vector<pair<int, double>> bndsL, bndsU, costS;
-      bndsL.push_back(make_pair(j, colLower.at(j)));
-      bndsU.push_back(make_pair(j, colUpper.at(j)));
-      costS.push_back(make_pair(j, colCost.at(j)));
+      const int k = getSingRowElementIndexInAR(i);
+      if (k < 0) {
+        it = singRow.erase(it);
+        continue;
+      }
 
-      chk.cLowers.push(bndsL);
-      chk.cUppers.push(bndsU);
-      chk.costs.push(costS);
+      const int j = ARindex.at(k);
 
-      chk2.cLowers.push(bndsL);
-      chk2.cUppers.push(bndsU);
-      chk2.costs.push(costS);
-    }
+      // add old bounds OF X to checker and for postsolve
+      if (iKKTcheck == 1) {
+        vector<pair<int, double>> bndsL, bndsU, costS;
+        bndsL.push_back(make_pair(j, colLower.at(j)));
+        bndsU.push_back(make_pair(j, colUpper.at(j)));
+        costS.push_back(make_pair(j, colCost.at(j)));
 
-    vector<double> bnds(
-        {colLower.at(j), colUpper.at(j), rowLower.at(i), rowUpper.at(i)});
-    oldBounds.push(make_pair(j, bnds));
+        chk.cLowers.push(bndsL);
+        chk.cUppers.push(bndsU);
+        chk.costs.push(costS);
 
-    double aij = ARvalue.at(k);
-    /*		//before update bounds of x take it out of rows with implied row
-    bounds for (int r = Astart.at(j); r<Aend.at(j); r++) { if
-    (flagRow[Aindex[r]]) { int rr = Aindex[r]; if (implRowValueLower[rr] >
-    -HIGHS_CONST_INF) { if (aij > 0) implRowValueLower[rr] =
-    implRowValueLower[rr] - aij*colLower.at(j); else implRowValueLower[rr] =
-    implRowValueLower[rr] - aij*colUpper.at(j);
-                    }
-                    if (implRowValueUpper[rr] < HIGHS_CONST_INF) {
-                            if (aij > 0)
-                                    implRowValueUpper[rr] =
-    implRowValueUpper[rr] - aij*colUpper.at(j); else implRowValueUpper[rr] =
-    implRowValueUpper[rr] - aij*colLower.at(j);
-                    }
-            }
-    }*/
+        chk2.cLowers.push(bndsL);
+        chk2.cUppers.push(bndsU);
+        chk2.costs.push(costS);
+      }
 
-    // update bounds of X
-    if (aij > 0) {
-      if (rowLower.at(i) != -HIGHS_CONST_INF)
-        colLower.at(j) =
-            max(max(rowLower.at(i) / aij, -HIGHS_CONST_INF), colLower.at(j));
-      if (rowUpper.at(i) != HIGHS_CONST_INF)
-        colUpper.at(j) =
-            min(min(rowUpper.at(i) / aij, HIGHS_CONST_INF), colUpper.at(j));
-    } else if (aij < 0) {
-      if (rowLower.at(i) != -HIGHS_CONST_INF)
-        colUpper.at(j) =
-            min(min(rowLower.at(i) / aij, HIGHS_CONST_INF), colUpper.at(j));
-      if (rowUpper.at(i) != HIGHS_CONST_INF)
-        colLower.at(j) =
-            max(max(rowUpper.at(i) / aij, -HIGHS_CONST_INF), colLower.at(j));
-    }
+      vector<double> bnds(
+          {colLower.at(j), colUpper.at(j), rowLower.at(i), rowUpper.at(i)});
+      oldBounds.push(make_pair(j, bnds));
 
-    /*		//after update bounds of x add to rows with implied row bounds
-    for (int r = Astart.at(j); r<Aend.at(j); r++) {
-            if (flagRow[r]) {
-                    int rr = Aindex[r];
-                    if (implRowValueLower[rr] > -HIGHS_CONST_INF) {
-                            if (aij > 0)
-                                    implRowValueLower[rr] =
-    implRowValueLower[rr] + aij*colLower.at(j); else implRowValueLower[rr] =
-    implRowValueLower[rr] + aij*colUpper.at(j);
-                    }
-                    if (implRowValueUpper[rr] < HIGHS_CONST_INF) {
-                            if (aij > 0)
-                                    implRowValueUpper[rr] =
-    implRowValueUpper[rr] + aij*colUpper.at(j); else implRowValueUpper[rr] =
-    implRowValueUpper[rr] + aij*colLower.at(j);
-                    }
-            }
-    }*/
+      double aij = ARvalue.at(k);
+      /*		//before update bounds of x take it out of rows with
+      implied row bounds for (int r = Astart.at(j); r<Aend.at(j); r++) { if
+      (flagRow[Aindex[r]]) { int rr = Aindex[r]; if (implRowValueLower[rr] >
+      -HIGHS_CONST_INF) { if (aij > 0) implRowValueLower[rr] =
+      implRowValueLower[rr] - aij*colLower.at(j); else implRowValueLower[rr] =
+      implRowValueLower[rr] - aij*colUpper.at(j);
+                      }
+                      if (implRowValueUpper[rr] < HIGHS_CONST_INF) {
+                              if (aij > 0)
+                                      implRowValueUpper[rr] =
+      implRowValueUpper[rr] - aij*colUpper.at(j); else implRowValueUpper[rr] =
+      implRowValueUpper[rr] - aij*colLower.at(j);
+                      }
+              }
+      }*/
 
-    // check for feasibility
-    // Analyse dependency on numerical tolerance
-    timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
-                               colLower.at(j) - colUpper.at(j));
-    //    if (colLower.at(j) > colUpper.at(j) + tol) {
-    if (colLower.at(j) - colUpper.at(j) > inconsistent_bounds_tolerance) {
-      status = Infeasible;
-      timer.recordFinish(SING_ROW);
-      return;
-    }
+      // update bounds of X
+      if (aij > 0) {
+        if (rowLower.at(i) != -HIGHS_CONST_INF)
+          colLower.at(j) =
+              max(max(rowLower.at(i) / aij, -HIGHS_CONST_INF), colLower.at(j));
+        if (rowUpper.at(i) != HIGHS_CONST_INF)
+          colUpper.at(j) =
+              min(min(rowUpper.at(i) / aij, HIGHS_CONST_INF), colUpper.at(j));
+      } else if (aij < 0) {
+        if (rowLower.at(i) != -HIGHS_CONST_INF)
+          colUpper.at(j) =
+              min(min(rowLower.at(i) / aij, HIGHS_CONST_INF), colUpper.at(j));
+        if (rowUpper.at(i) != HIGHS_CONST_INF)
+          colLower.at(j) =
+              max(max(rowUpper.at(i) / aij, -HIGHS_CONST_INF), colLower.at(j));
+      }
 
-    if (iPrint > 0)
-      cout << "PR: Singleton row " << i << " removed. Bounds of variable  " << j
-           << " modified: l= " << colLower.at(j) << " u=" << colUpper.at(j)
-           << ", aij = " << aij << endl;
+      /*		//after update bounds of x add to rows with implied row
+      bounds for (int r = Astart.at(j); r<Aend.at(j); r++) { if (flagRow[r]) {
+                      int rr = Aindex[r];
+                      if (implRowValueLower[rr] > -HIGHS_CONST_INF) {
+                              if (aij > 0)
+                                      implRowValueLower[rr] =
+      implRowValueLower[rr] + aij*colLower.at(j); else implRowValueLower[rr] =
+      implRowValueLower[rr] + aij*colUpper.at(j);
+                      }
+                      if (implRowValueUpper[rr] < HIGHS_CONST_INF) {
+                              if (aij > 0)
+                                      implRowValueUpper[rr] =
+      implRowValueUpper[rr] + aij*colUpper.at(j); else implRowValueUpper[rr] =
+      implRowValueUpper[rr] + aij*colLower.at(j);
+                      }
+              }
+      }*/
 
-    addChange(SING_ROW, i, j);
-    postValue.push(colCost.at(j));
-    removeRow(i);
-
-    if (flagCol.at(j)) {
+      // check for feasibility
       // Analyse dependency on numerical tolerance
-      timer.updateNumericsRecord(FIXED_COLUMN,
-                                 fabs(colUpper.at(j) - colLower.at(j)));
-      if (fabs(colUpper.at(j) - colLower.at(j)) <= fixed_column_tolerance)
-        removeFixedCol(j);
-    }
-    countRemovedRows(SING_ROW);
+      timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
+                                 colLower.at(j) - colUpper.at(j));
+      if (colLower.at(j) - colUpper.at(j) > inconsistent_bounds_tolerance) {
+        status = Infeasible;
+        timer.recordFinish(SING_ROW);
+        return;
+      }
 
-    if (status) {
-      timer.recordFinish(SING_ROW);
-      return;
+      if (iPrint > 0)
+        cout << "PR: Singleton row " << i << " removed. Bounds of variable  "
+             << j << " modified: l= " << colLower.at(j)
+             << " u=" << colUpper.at(j) << ", aij = " << aij << endl;
+
+      addChange(SING_ROW, i, j);
+      postValue.push(colCost.at(j));
+      removeRow(i);
+
+      if (flagCol.at(j)) {
+        // Analyse dependency on numerical tolerance
+        timer.updateNumericsRecord(FIXED_COLUMN,
+                                   fabs(colUpper.at(j) - colLower.at(j)));
+        if (fabs(colUpper.at(j) - colLower.at(j)) <= fixed_column_tolerance)
+          removeFixedCol(j);
+      }
+      countRemovedRows(SING_ROW);
+
+      if (status) {
+        timer.recordFinish(SING_ROW);
+        return;
+      }
+      it = singRow.erase(it);
+    } else {
+      it++;
     }
   }
   timer.recordFinish(SING_ROW);
@@ -2594,10 +2598,10 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // cmpNBF(-1, -1);
   // testBasisMatrixSingularity();
 
-  assert(chk.RrowLower == chk2.RrowLower);
-  assert(chk.RrowUpper == chk2.RrowUpper);
 
   if (iKKTcheck) {
+    assert(chk.RrowLower == chk2.RrowLower);
+    assert(chk.RrowUpper == chk2.RrowUpper);
     cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
     checkKkt();
   }
