@@ -405,16 +405,112 @@ void almostNotUnbounded(Highs& highs) {
   reportSolution(highs);
   solve(highs, "off", "ipm", require_model_status2, optimal_objective2);
 }
-TEST_CASE("test-special-lps", "[TestSpecialLps]") {
+
+void singularStartingBasis(Highs& highs) {
+  reportLpName("singularStartingBasis");
+  // This problem tests how well HiGHS handles
+  // near-unboundedness. None of the LPs is reduced by presolve
+  //
+  // No
+  HighsStatus status;
+  HighsLp lp;
+  const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
+  const double optimal_objective = -3;
+
+  lp.numCol_ = 3;
+  lp.numRow_ = 2;
+  lp.colCost_ = {-3, -2, -1};
+  lp.colLower_ = {0, 0, 0};
+  lp.colUpper_ = {1e+200, 1e+200, 1e+200};
+  lp.rowLower_ = {-1e+200, -1e+200};
+  lp.rowUpper_ = {3, 2};
+  lp.Astart_ = {0, 2, 4, 6};
+  lp.Aindex_ = {0, 1, 0, 1, 0, 1};
+  lp.Avalue_ = {1, 2, 2, 4, 1, 3};
+
+  status = highs.passModel(lp);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.setHighsOptionValue("message_level", 6);
+  REQUIRE(status == HighsStatus::OK);
+
+  status = highs.setHighsOptionValue("highs_debug_level", 3);
+  REQUIRE(status == HighsStatus::OK);
+
+  HighsBasis basis;
+  basis.col_status.resize(lp.numCol_);
+  basis.row_status.resize(lp.numRow_);
+  basis.col_status[0] = HighsBasisStatus::BASIC;
+  basis.col_status[1] = HighsBasisStatus::BASIC;
+  basis.col_status[2] = HighsBasisStatus::LOWER;
+  basis.row_status[0] = HighsBasisStatus::UPPER;
+  basis.row_status[1] = HighsBasisStatus::UPPER;
+  basis.valid_ = true;
+
+  status = highs.setBasis(basis);
+  REQUIRE(status == HighsStatus::OK);
+
+  
+  status = highs.run();
+  REQUIRE(status == HighsStatus::OK);
+
+  const HighsInfo& info = highs.getHighsInfo();
+  HighsModelStatus model_status;
+
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == require_model_status);
+
+  if (require_model_status == HighsModelStatus::OPTIMAL) {
+    REQUIRE(objectiveOk(info.objective_function_value, optimal_objective));
+  }
+  status = highs.resetHighsOptions();
+  REQUIRE(status == HighsStatus::OK);
+
+  reportSolution(highs);
+ 
+  
+}
+TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;
   issue272(highs);
+}
+TEST_CASE("LP-280", "[highs_test_special_lps]") {
+  Highs highs;
   issue280(highs);
+}
+TEST_CASE("LP-282", "[highs_test_special_lps]") {
+  Highs highs;
   issue282(highs);
+}
+TEST_CASE("LP-285", "[highs_test_special_lps]") {
+  Highs highs;
   issue285(highs);
+}
+TEST_CASE("LP-295", "[highs_test_special_lps]") {
+  Highs highs;
   issue295(highs);
+}
+TEST_CASE("LP-306", "[highs_test_special_lps]") {
+  Highs highs;
   issue306(highs);
+}
+TEST_CASE("LP-316", "[highs_test_special_lps]") {
+  Highs highs;
   issue316(highs);
+}
+TEST_CASE("LP-primal-dual-infeasible", "[highs_test_special_lps]") {
+  Highs highs;
   primalDualInfeasible(highs);
+}
+TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
+  Highs highs;
   mpsUnbounded(highs);
+}
+TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
+  Highs highs;
   almostNotUnbounded(highs);
+}
+TEST_CASE("LP-singular-starting-basis", "[highs_test_special_lps]") {
+  Highs highs;
+  singularStartingBasis(highs);
 }

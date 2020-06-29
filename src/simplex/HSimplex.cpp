@@ -2793,8 +2793,8 @@ void flip_bound(HighsModelObject& highs_model_object, int iCol) {
   simplex_info.workValue_[iCol] =
       move == 1 ? simplex_info.workLower_[iCol] : simplex_info.workUpper_[iCol];
 }
-/*
-int handle_rank_deficiency(HighsModelObject &highs_model_object) {
+
+int simplexHandleRankDeficiency(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HFactor &factor = highs_model_object.factor_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
@@ -2805,36 +2805,39 @@ int handle_rank_deficiency(HighsModelObject &highs_model_object) {
   vector<int> basicRows;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   basicRows.resize(numTot);
-  //    printf("Before - simplex_basis.basicIndex_:"); for (int iRow=0;
-iRow<simplex_lp.numRow_; iRow++)
+  //    printf("Before - simplex_basis.basicIndex_:");
+  // for (int iRow=0; iRow<simplex_lp.numRow_; iRow++)
   //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-basicRows[simplex_basis.basicIndex_[iRow]] = iRow; for (int k = 0; k <
-rankDeficiency; k++) {
+    basicRows[simplex_basis.basicIndex_[iRow]] = iRow;
+  for (int k = 0; k < rankDeficiency; k++) {
     //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k],
     //      k, noPvC[k]);fflush(stdout);
     int columnIn = simplex_lp.numCol_ + factor.noPvR[k];
     int columnOut = noPvC[k];
     int rowOut = basicRows[columnOut];
     //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g,
-    //      %11.4g]\n", columnIn, columnOut, rowOut,
-simplex_info.workLower_[columnOut],
+    //      %11.4g]\n", columnIn, columnOut, rowOut, simplex_info.workLower_[columnOut],
     //      simplex_info.workUpper_[columnOut]);
     if (simplex_basis.basicIndex_[rowOut] != columnOut) {
       printf("%d = simplex_basis.basicIndex_[rowOut] != noPvC[k] = %d\n",
-simplex_basis.basicIndex_[rowOut], columnOut); fflush(stdout);
+	     simplex_basis.basicIndex_[rowOut], columnOut); fflush(stdout);
     }
-    int sourceOut = setSourceOutFmBd(columnOut);
-    updatePivots(columnIn, rowOut, sourceOut);
-    updateMatrix(columnIn, columnOut);
+    // 29.06.20 Need to fix the following 3 lines
+    //    int sourceOut = setSourceOutFmBd(columnOut);
+    //    updatePivots(columnIn, rowOut, sourceOut);
+    //    updateMatrix(columnIn, columnOut);
   }
-  //    printf("After  - simplex_basis.basicIndex_:"); for (int iRow=0;
-iRow<simplex_lp.numRow_; iRow++)
+  //    printf("After  - simplex_basis.basicIndex_:");
+  // for (int iRow=0; iRow<simplex_lp.numRow_; iRow++)
   //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
   debugCheckInvert(highs_model_object.options_.highs_debug_level,
-highs_model_object.factor); return 0;
+                   highs_model_object.options_.output,
+                   highs_model_object.options_.message_level,
+                   highs_model_object.factor_);
+  return 0;
 }
-*/
+
 int computeFactor(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -2861,16 +2864,11 @@ int computeFactor(HighsModelObject& highs_model_object) {
 #endif
   int rankDeficiency = factor.build(factor_timer_clock_pointer);
   if (rankDeficiency) {
-    //    handle_rank_deficiency();
-    //    highs_model_object.scaled_model_status_ =
-    //    HighsModelStatus::SOLVE_ERROR;
-#ifdef HiGHSDEV
-    //    writePivots("failed");
-#endif
-    //      return rankDeficiency;
+    // 29.06.20: Following three lines previously commented out
+    simplexHandleRankDeficiency(highs_model_object);
+    highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+    return rankDeficiency;
   }
-  //    printf("INVERT: After %d iterations and %d updates\n",
-  //    iteration_counts.simplex, simplex_info.update_count);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_form) {
     const bool report_kernel = false;
@@ -3619,35 +3617,21 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
 
   // Outgoing variable
   simplex_basis.nonbasicFlag_[columnOut] = 1;
-  //  double dlValue;
-  //  double vrLb = simplex_info.workLower_[columnOut];
-  //  double vrV = simplex_info.workValue_[columnOut];
-  //  double vrUb = simplex_info.workUpper_[columnOut];
   if (simplex_info.workLower_[columnOut] ==
       simplex_info.workUpper_[columnOut]) {
-    //    dlValue =
-    //    simplex_info.workLower_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
     simplex_basis.nonbasicMove_[columnOut] = 0;
   } else if (sourceOut == -1) {
-    //    dlValue =
-    //    simplex_info.workLower_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
     simplex_basis.nonbasicMove_[columnOut] = 1;
   } else {
-    //    dlValue =
-    //    simplex_info.workUpper_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workUpper_[columnOut];
     simplex_basis.nonbasicMove_[columnOut] = -1;
   }
+  // Update the dual objective value
   double nwValue = simplex_info.workValue_[columnOut];
   double vrDual = simplex_info.workDual_[columnOut];
   double dl_dual_objective_value = nwValue * vrDual;
-  //  if (fabs(nwValue))
-  //    printf("update_pivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g],
-  //    nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
-  //			   columnOut, simplex_basis.nonbasicMove_[columnOut],
-  // vrLb, vrV, vrUb, nwValue, vrDual, dl_dual_objective_value);
   simplex_info.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info.update_count++;
   // Update the number of basic logicals
@@ -3709,12 +3693,6 @@ bool reinvertOnNumericalTrouble(const std::string method_name,
                     HighsMessageType::WARNING,
                     "HiGHS has identified numerical trouble so reinvert");
 #endif
-    /*
-  } else if (numerical_trouble_measure > 0.1*numerical_trouble_tolerance &&
-  update_count > 0) { printf("%s has ALMOST identified numerical trouble solving
-  LP %s in iteration %d\n", method_name.c_str(), model_name.c_str(),
-  iteration_count);
-    */
   }
   return reinvert;
 }

@@ -95,7 +95,6 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
 
   double columnDensity = 0;
   double inverse_error_norm = 0;
-  const double inverse_error_tolerance = 1e-8;
   for (int iRow = 0; iRow < numRow; iRow++) {
     int iCol = baseIndex[iRow];
     column.clear();
@@ -166,9 +165,10 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
     for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
     printf("\nBaseI  ");
     for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
+    printf("\n");
   } else if (call_id == 1) {
-    if (rankDeficiency < 100) return;
-    printf("\nbuildRankDeficiency2:");
+    if (rankDeficiency > 100) return;
+    printf("buildRankDeficiency1:");
     printf("\nIndex  ");
     for (int i = 0; i < rankDeficiency; i++) printf(" %2d", i);
     printf("\nnoPvR  ");
@@ -184,7 +184,7 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
     printf("\n");
   } else if (call_id == 2) {
     if (numRow > 123) return;
-    printf("\nbuildRankDeficiency3:");
+    printf("buildRankDeficiency2:");
     printf("\nIndex  ");
     for (int i = 0; i < numRow; i++) printf(" %2d", i);
     printf("\nPerm   ");
@@ -227,7 +227,7 @@ void debugReportRankDeficientASM(
       }
     }
   }
-  printf("\nASM:                    ");
+  printf("ASM:                    ");
   for (int j = 0; j < rankDeficiency; j++) printf(" %11d", j);
   printf("\n                        ");
   for (int j = 0; j < rankDeficiency; j++) printf(" %11d", noPvC[j]);

@@ -276,8 +276,9 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
     // singular columns are in the position corresponding to the
     // logical which replaces them
     buildHandleRankDeficiency();
+    // 29.06.20: buildMarkSingC() previously commented out
+    buildMarkSingC();
     factor_timer.stop(FactorInvertDeficient, factor_timer_clock_pointer);
-    //      buildMarkSingC();
   }
   // Complete INVERT
   factor_timer.start(FactorInvertFinish, factor_timer_clock_pointer);
