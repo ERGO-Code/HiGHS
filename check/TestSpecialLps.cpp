@@ -448,8 +448,8 @@ void singularStartingBasis(Highs& highs) {
   status = highs.setBasis(basis);
   REQUIRE(status == HighsStatus::OK);
 
-  /*
   status = highs.run();
+  /*
   REQUIRE(status == HighsStatus::OK);
 
   const HighsInfo& info = highs.getHighsInfo();

@@ -277,7 +277,7 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
     // logical which replaces them
     buildHandleRankDeficiency();
     // 29.06.20: buildMarkSingC() previously commented out
-    buildMarkSingC();
+    //    buildMarkSingC();
     factor_timer.stop(FactorInvertDeficient, factor_timer_clock_pointer);
   }
   // Complete INVERT
