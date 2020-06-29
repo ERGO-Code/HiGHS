@@ -151,7 +151,7 @@ bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase);
 
 void flip_bound(HighsModelObject& highs_model_object, int iCol);
 
-int simplexHandleRankDeficiency(HighsModelObject &highs_model_object);
+int simplexHandleRankDeficiency(HighsModelObject& highs_model_object);
 
 int computeFactor(HighsModelObject& highs_model_object);
 

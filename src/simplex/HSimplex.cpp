@@ -2794,12 +2794,12 @@ void flip_bound(HighsModelObject& highs_model_object, int iCol) {
       move == 1 ? simplex_info.workLower_[iCol] : simplex_info.workUpper_[iCol];
 }
 
-int simplexHandleRankDeficiency(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HFactor &factor = highs_model_object.factor_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+int simplexHandleRankDeficiency(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HFactor& factor = highs_model_object.factor_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   int rankDeficiency = factor.rankDeficiency;
-  vector<int> & noPvC = factor.noPvC;
+  vector<int>& noPvC = factor.noPvC;
   printf("Returned %d = factor.build();\n", rankDeficiency);
   fflush(stdout);
   vector<int> basicRows;
@@ -2817,11 +2817,13 @@ int simplexHandleRankDeficiency(HighsModelObject &highs_model_object) {
     int columnOut = noPvC[k];
     int rowOut = basicRows[columnOut];
     //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g,
-    //      %11.4g]\n", columnIn, columnOut, rowOut, simplex_info.workLower_[columnOut],
+    //      %11.4g]\n", columnIn, columnOut, rowOut,
+    //      simplex_info.workLower_[columnOut],
     //      simplex_info.workUpper_[columnOut]);
     if (simplex_basis.basicIndex_[rowOut] != columnOut) {
       printf("%d = simplex_basis.basicIndex_[rowOut] != noPvC[k] = %d\n",
-	     simplex_basis.basicIndex_[rowOut], columnOut); fflush(stdout);
+             simplex_basis.basicIndex_[rowOut], columnOut);
+      fflush(stdout);
     }
     // 29.06.20 Need to fix the following 3 lines
     //    int sourceOut = setSourceOutFmBd(columnOut);
