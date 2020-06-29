@@ -13,8 +13,8 @@
  */
 #include "test/KktCh2.h"
 
-#include <utility>
 #include <cassert>
+#include <utility>
 
 #include "test/DevKkt.h"
 
@@ -89,24 +89,24 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       }
       break;
     case 1:  // row singleton
-        upd = cLowers.top();
-        cLowers.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
-          RcolLower[ind] = get<1>(upd[i]);
-        }
-        upd = cUppers.top();
-        cUppers.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
-          RcolUpper[ind] = get<1>(upd[i]);
-        }
-        upd = costs.top();
-        costs.pop();
-        for (size_t i = 0; i < upd.size(); i++) {
-          int ind = get<0>(upd[i]);
-          RcolCost[ind] = get<1>(upd[i]);
-        }
+      upd = cLowers.top();
+      cLowers.pop();
+      for (size_t i = 0; i < upd.size(); i++) {
+        int ind = get<0>(upd[i]);
+        RcolLower[ind] = get<1>(upd[i]);
+      }
+      upd = cUppers.top();
+      cUppers.pop();
+      for (size_t i = 0; i < upd.size(); i++) {
+        int ind = get<0>(upd[i]);
+        RcolUpper[ind] = get<1>(upd[i]);
+      }
+      upd = costs.top();
+      costs.pop();
+      for (size_t i = 0; i < upd.size(); i++) {
+        int ind = get<0>(upd[i]);
+        RcolCost[ind] = get<1>(upd[i]);
+      }
       break;
     case 2:  // each variable at forcing row: rowDual is cost here
       RcolCost[col] = dualR;
@@ -237,7 +237,7 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       }
       break;
     case 12:  // doubleton eq from dupliocate rows;
-     upd = cLowers.top();
+      upd = cLowers.top();
       cLowers.pop();
       for (size_t i = 0; i < upd.size(); i++) {
         int ind = get<0>(upd[i]);
@@ -257,51 +257,48 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
       }
       break;
     case 121:  //
-      break; /*
-case 14: //two duplicate columns by one
-       colValue[col] = valC;
-       colDual[col] = dualC;
-       RcolLower = cLowers.top(); cLowers.pop();
-       RcolUpper = cUppers.top(); cUppers.pop();
-       break;
-case 15: //sing variable on initEq
-       flagRow[row] = true;
-       rowDual[row] = dualR;
-       break;*/
+      break;   /*
+  case 14: //two duplicate columns by one
+         colValue[col] = valC;
+         colDual[col] = dualC;
+         RcolLower = cLowers.top(); cLowers.pop();
+         RcolUpper = cUppers.top(); cUppers.pop();
+         break;
+  case 15: //sing variable on initEq
+         flagRow[row] = true;
+         rowDual[row] = dualR;
+         break;*/
   }
 }
 
 dev_kkt_check::State KktChStep::initState(
-  const int numCol_, const int numRow_, const std::vector<int>& Astart_,
-        const std::vector<int>& Aindex_, const std::vector<double>& Avalue_,
-        const std::vector<int>& ARstart_, const std::vector<int>& ARindex_,
-        const std::vector<double>& ARvalue_,
-        const std::vector<int>& flagCol_,
-        const std::vector<int>& flagRow_, const std::vector<double>& colValue_,
-        const std::vector<double>& colDual_,
-        const std::vector<double>& rowValue_,
-        const std::vector<double>& rowDual_,
-        const std::vector<HighsBasisStatus>& col_status_,
-        const std::vector<HighsBasisStatus>& row_status_) {
+    const int numCol_, const int numRow_, const std::vector<int>& Astart_,
+    const std::vector<int>& Aend_, const std::vector<int>& Aindex_,
+    const std::vector<double>& Avalue_, const std::vector<int>& ARstart_,
+    const std::vector<int>& ARindex_, const std::vector<double>& ARvalue_,
+    const std::vector<int>& flagCol_, const std::vector<int>& flagRow_,
+    const std::vector<double>& colValue_, const std::vector<double>& colDual_,
+    const std::vector<double>& rowValue_, const std::vector<double>& rowDual_,
+    const std::vector<HighsBasisStatus>& col_status_,
+    const std::vector<HighsBasisStatus>& row_status_) {
   // check row value
-  
 
   std::vector<double> rowValue(numRow_, 0);
   for (int row = 0; row < numRow_; row++) {
     if (flagRow_[row]) {
       for (int k = ARstart_[row]; k < ARstart_[row + 1]; k++) {
         const int col = ARindex_[k];
-        if (flagCol_[col]) 
-          rowValue[row] += ARvalue_[k] * colValue_[col];
+        if (flagCol_[col]) rowValue[row] += ARvalue_[k] * colValue_[col];
       }
       assert(rowValue_[row] == rowValue[row]);
     }
   }
 
-  return dev_kkt_check::State(
-      numCol_, numRow_, Astart_, Aindex_, Avalue_, ARstart_, ARindex_, ARvalue_,
-      RcolCost, RcolLower, RcolUpper, RrowLower, RrowUpper, flagCol_, flagRow_,
-      colValue_, colDual_, rowValue_, rowDual_, col_status_, row_status_);
+  return dev_kkt_check::State(numCol_, numRow_, Astart_, Aend_, Aindex_,
+                              Avalue_, ARstart_, ARindex_, ARvalue_, RcolCost,
+                              RcolLower, RcolUpper, RrowLower, RrowUpper,
+                              flagCol_, flagRow_, colValue_, colDual_,
+                              rowValue_, rowDual_, col_status_, row_status_);
 }
 
 }  // namespace dev_kkt_check

@@ -17,6 +17,8 @@
 #include <cmath>
 #include <iostream>
 
+#include "presolve/PresolveUtils.h"
+
 namespace presolve {
 namespace dev_kkt_check {
 
@@ -257,7 +259,8 @@ void checkComplementarySlackness(const State& state,
       details.checked++;
       if (state.colLower[i] > -HIGHS_CONST_INF &&
           fabs(state.colValue[i] - state.colLower[i]) > tol) {
-        if (fabs(state.colDual[i]) > tol && fabs(state.colValue[i] - state.colUpper[i]) > tol) {
+        if (fabs(state.colDual[i]) > tol &&
+            fabs(state.colValue[i] - state.colUpper[i]) > tol) {
           if (dev_print)
             std::cout << "Comp. slackness fail: "
                       << "l[" << i << "]=" << state.colLower[i] << ", x[" << i
@@ -268,7 +271,8 @@ void checkComplementarySlackness(const State& state,
       }
       if (state.colUpper[i] < HIGHS_CONST_INF &&
           fabs(state.colUpper[i] - state.colValue[i]) > tol) {
-        if (fabs(state.colDual[i]) > tol && fabs(state.colValue[i] - state.colLower[i]) > tol) {
+        if (fabs(state.colDual[i]) > tol &&
+            fabs(state.colValue[i] - state.colLower[i]) > tol) {
           if (dev_print == 1)
             std::cout << "Comp. slackness fail: x[" << i
                       << "]=" << state.colValue[i] << ", u[" << i
@@ -309,7 +313,7 @@ void checkStationarityOfLagrangian(const State& state,
       double infeas = 0;
 
       double lagrV = state.colCost[j] - state.colDual[j];
-      for (int k = state.Astart[j]; k < state.Astart[j + 1]; k++) {
+      for (int k = state.Astart[j]; k < state.Aend[j]; k++) {
         const int row = state.Aindex[k];
         assert(row >= 0 && row < state.numRow);
         if (state.flagRow[row])

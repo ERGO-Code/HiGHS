@@ -499,6 +499,10 @@ pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
 void Presolve::processRowDoubletonEquation(const int row, const int x,
                                            const int y, const double akx,
                                            const double aky, const double b) {
+  // std::cout << "col 2... c = " << colCost.at(2)<< std::endl;
+  // presolve::printCol(2, numRow, numCol, flagRow, flagCol, colLower,
+  //                    colUpper, valueRowDual, Astart, Aend, Aindex, Avalue);
+
   postValue.push(akx);
   postValue.push(aky);
   postValue.push(b);
@@ -559,9 +563,8 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
   if (!hasChange) hasChange = true;
 }
 
- void Presolve::caseTwoSingletonsDoubletonEquation(const int row, const int x,const int y) {
-
- }
+void Presolve::caseTwoSingletonsDoubletonEquation(const int row, const int x,
+                                                  const int y) {}
 
 void Presolve::removeDoubletonEquations() {
   if (timer.reachLimit()) {
@@ -598,7 +601,7 @@ void Presolve::removeDoubletonEquations() {
 
         // two singletons case handled elsewhere
         if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) {
-          caseTwoSingletonsDoubletonEquation(row, x,y);
+          caseTwoSingletonsDoubletonEquation(row, x, y);
           continue;
         }
 
@@ -609,6 +612,9 @@ void Presolve::removeDoubletonEquations() {
           timer.recordFinish(DOUBLETON_EQUATION);
           return;
         }
+
+        // printRow(row, numRow, numCol, flagRow, flagCol, rowLower, rowUpper,
+        //          valuePrimal, ARstart, ARindex, ARvalue);
 
         for (int k = Astart.at(y); k < Aend.at(y); ++k)
           if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -691,7 +697,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
 
   // update A: append X column to end of array
   const int st = Avalue.size();
-  for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) { 
+  for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) {
     Avalue.push_back(Avalue.at(ind));
     Aindex.push_back(Aindex.at(ind));
   }
@@ -2658,11 +2664,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         // case when row does not have x initially: entries for row i swap x and
         // y cols
 
-        int indi, yindex;
-        yindex = (int)postValue.top();
+        int yindex = (int)postValue.top();
         postValue.pop();
 
         // reverse AR for case when x is zero and y entry has moved
+        int indi;
         for (indi = ARstart[c.row]; indi < ARstart[c.row + 1]; ++indi)
           if (ARindex.at(indi) == c.col) break;
         ARvalue.at(indi) = postValue.top();
@@ -2696,11 +2702,12 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         Astart[yindex] = st;
         Aend[yindex] = Avalue.size();
 
-        if (iKKTcheck == 1)
-          chk.addChange(173, c.row, c.col, postValue.top(), (double)yindex, 0);
-        if (iKKTcheck == 1)
-          chk2.addChange(173, c.row, c.col, postValue.top(), (double)yindex, 0);
+        double topp = postValue.top();
         postValue.pop();
+        if (iKKTcheck == 1) {
+          chk.addChange(173, c.row, c.col, topp, (double)yindex, 0);
+          chk2.addChange(173, c.row, c.col, topp, (double)yindex, 0);
+        }
 
         break;
       }
@@ -3659,7 +3666,7 @@ void Presolve::getDualsSingletonRow(const int row, const int col) {
   }
 }
 
-void Presolve::getDualsDoubletonEquation(int row, int col) {
+void Presolve::getDualsDoubletonEquation(const int row, const int col) {
   // colDual already set. need valuePrimal from stack. maybe change rowDual
   // depending on bounds. old bounds kept in oldBounds. variables j,k : we
   // eliminated col(k)(c.col) and are left with changed bounds on j and no row.
@@ -3706,44 +3713,50 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
 
   flagRow.at(row) = 1;
 
+  // x stayed, y was removed
   HighsBasisStatus local_status = col_status.at(x);
-  if ((local_status != HighsBasisStatus::BASIC && valueX == ubxNew &&
+  if ((local_status == HighsBasisStatus::NONBASIC && valueX == ubxNew &&
        ubxNew < ubxOld) ||
-      (local_status != HighsBasisStatus::BASIC && valueX == lbxNew &&
+      (local_status == HighsBasisStatus::NONBASIC && valueX == lbxNew &&
        lbxNew > lbxOld)) {
-      // Value is nonbasic at reduced bound but needs to be changed to basic since bound is expanding.
-      col_status.at(x) = HighsBasisStatus::BASIC;
+    // Value is nonbasic at reduced bound but needs to be changed to basic since
+    // bound is expanding.
+    col_status.at(x) = HighsBasisStatus::BASIC;
+    row_status.at(row) = HighsBasisStatus::NONBASIC;
+
+    // transfer dual of x to dual of row
+    valueColDual.at(x) = 0;
+    valueRowDual.at(row) = getRowDualPost(row, x);
+    valueColDual.at(y) = getColumnDualPost(y);
+
+    if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
+  } else {
+    // if column y has value between bounds set it to basic, else set row to
+    // be basic
+    if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
+      col_status.at(y) = HighsBasisStatus::BASIC;
       row_status.at(row) = HighsBasisStatus::NONBASIC;
 
-      // transfer dual of x to dual of row
-      valueColDual.at(x) = 0;
-      valueRowDual.at(row) = getRowDualPost(row, x);
-      valueColDual.at(y) = getColumnDualPost(y);
+      valueColDual.at(y) = 0;
+      valueRowDual.at(row) = getRowDualPost(row, y);
 
-      if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
-  } else {
-    // row becomes basic unless y is between bounds, in which case y is basic
-    if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
-        col_status.at(y) = HighsBasisStatus::BASIC;
-        if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
+      if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
 
-        valueColDual.at(y) = 0;
-        valueRowDual.at(row) = getRowDualPost(row, y);
-    } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
-      // x is at a bound: set x to N
-        col_status.at(y) = HighsBasisStatus::BASIC;
-        if (report_postsolve) printf("4.3 : Make column %3d basic\n", y);
+      //} else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
+      //// x is at a bound: set x to N col_status.at(y) =
+      // HighsBasisStatus::BASIC; if (report_postsolve) printf("4.3 : Make
+      // column %3d basic\n", y);
 
-        valueColDual.at(y) = 0;
-        valueRowDual.at(row) = getRowDualPost(row, y);
+      //       valueColDual.at(y) = 0; valueRowDual.at(row) =
+      //       getRowDualPost(row, y);
     } else {
-      if (report_postsolve) {
-        printf("4.4 : Make row    %3d basic\n", row);
-      }
       row_status.at(row) = HighsBasisStatus::BASIC;
+      col_status.at(y) = HighsBasisStatus::NONBASIC;
+
       valueRowDual.at(row) = 0;
       valueColDual.at(x) = getColumnDualPost(x);
       valueColDual.at(y) = getColumnDualPost(y);
+      if (report_postsolve) printf("4.4 : Make row    %3d basic\n", row);
     }
   }
 
@@ -3780,13 +3793,13 @@ dev_kkt_check::State Presolve::initState(const bool intermediate) {
 
   if (!intermediate)
     return dev_kkt_check::State(
-        numCol, numRow, Astart, Aindex, Avalue, ARstart, ARindex, ARvalue,
+        numCol, numRow, Astart, Aend, Aindex, Avalue, ARstart, ARindex, ARvalue,
         colCost, colLower, colUpper, rowLower, rowUpper, flagCol, flagRow,
         colValue, colDual, rowValue, rowDual, col_status, row_status);
 
   // if intermediate step use checker's row and col bounds and cost
-  return chk2.initState(numColOriginal, numRowOriginal, Astart, Aindex, Avalue,
-                        ARstart, ARindex, ARvalue, flagCol, flagRow,
+  return chk2.initState(numColOriginal, numRowOriginal, Astart, Aend, Aindex,
+                        Avalue, ARstart, ARindex, ARvalue, flagCol, flagRow,
                         valuePrimal, valueColDual, rowValue, valueRowDual,
                         col_status, row_status);
 }

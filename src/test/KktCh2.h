@@ -62,12 +62,12 @@ class KktChStep {
 
   dev_kkt_check::State initState(
       const int numCol_, const int numRow_, const std::vector<int>& Astart_,
-      const std::vector<int>& Aindex_, const std::vector<double>& Avalue_,
-      const std::vector<int>& ARstart_, const std::vector<int>& ARindex_,
-      const std::vector<double>& ARvalue_, const std::vector<int>& flagCol_,
-      const std::vector<int>& flagRow_, const std::vector<double>& colValue_,
-      const std::vector<double>& colDual_, const std::vector<double>& rowValue_,
-      const std::vector<double>& rowDual_,
+      const std::vector<int>& Aend_, const std::vector<int>& Aindex_,
+      const std::vector<double>& Avalue_, const std::vector<int>& ARstart_,
+      const std::vector<int>& ARindex_, const std::vector<double>& ARvalue_,
+      const std::vector<int>& flagCol_, const std::vector<int>& flagRow_,
+      const std::vector<double>& colValue_, const std::vector<double>& colDual_,
+      const std::vector<double>& rowValue_, const std::vector<double>& rowDual_,
       const std::vector<HighsBasisStatus>& col_status_,
       const std::vector<HighsBasisStatus>& row_status_);
 };

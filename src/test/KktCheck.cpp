@@ -16,8 +16,6 @@
 #include <cassert>
 #include <vector>
 
-#include "presolve/PresolveUtils.h"
-
 namespace presolve {
 namespace kkt_check {
 
