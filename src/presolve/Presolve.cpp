@@ -27,7 +27,6 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "presolve/PresolveUtils.h"
-#include "test/KktChStep.h"
 
 namespace presolve {
 
@@ -520,9 +519,6 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
     bndsL.push_back(make_pair(x, colLower.at(x)));
     bndsU.push_back(make_pair(x, colUpper.at(x)));
     costS.push_back(make_pair(x, colCost.at(x)));
-    chk.cLowers.push(bndsL);
-    chk.cUppers.push(bndsU);
-    chk.costs.push(costS);
 
     chk2.cLowers.push(bndsL);
     chk2.cUppers.push(bndsU);
@@ -625,8 +621,6 @@ void Presolve::removeDoubletonEquations() {
               vector<pair<int, double>> bndsL, bndsU;
               bndsL.push_back(make_pair(i, rowLower.at(i)));
               bndsU.push_back(make_pair(i, rowUpper.at(i)));
-              chk.rLowers.push(bndsL);
-              chk.rUppers.push(bndsU);
               chk2.rLowers.push(bndsL);
               chk2.rUppers.push(bndsU);
               addChange(DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE, i, y);
@@ -688,12 +682,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i, const int x,
   ARindex.at(ind) = x;
   ARvalue.at(ind) = -aiy * akx / aky;
 
-  // just row rep in checker
-  if (iKKTcheck == 1) {
-    chk.ARvalue.at(ind) = ARvalue.at(ind);
-    chk.ARindex.at(ind) = ARindex.at(ind);
-  }
-
   // update A: append X column to end of array
   const int st = Avalue.size();
   for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) {
@@ -739,8 +727,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     addChange(DOUBLETON_EQUATION_NEW_X_NONZERO, i, x);
     ARvalue.at(ind) = xNew;
 
-    if (iKKTcheck == 1) chk.ARvalue.at(ind) = xNew;
-
     // update A:
     for (ind = Astart.at(x); ind < Aend.at(x); ++ind)
       if (Aindex.at(ind) == i) {
@@ -769,10 +755,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
       postValue.push(ARvalue.at(ind));
 
       ARindex.at(ind) = numCol;
-      if (iKKTcheck == 1) {
-        chk.ARindex.at(ind) = ARindex.at(ind);
-        chk.ARvalue.at(ind) = ARvalue.at(ind);
-      }
 
       addChange(DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE, i, x);
     }
@@ -882,12 +864,6 @@ void Presolve::resizeProblem() {
     stringstream ss;
     ss << ",  Reduced : " << numRow << ",  " << numCol << ",  ";
     reportDev(ss.str());
-  }
-
-  // For KKT checker: pass vectors before you trim them
-  if (iKKTcheck == 1) {
-    chk.setFlags(flagRow, flagCol);
-    chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
   }
 
   chk2.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
@@ -1398,10 +1374,6 @@ void Presolve::setProblemStatus(const int s) {
 
 void Presolve::setKKTcheckerData() {
   // after initializing equations.
-  chk.setMatrixAR(numCol, numRow, ARstart, ARindex, ARvalue);
-  chk.setFlags(flagRow, flagCol);
-  chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
-
   chk2.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
 }
 
@@ -1464,7 +1436,6 @@ void Presolve::removeFreeColumnSingleton(const int col, const int row,
           colCost.at(j) - colCost.at(col) * ARvalue.at(kk) / Avalue.at(k);
     }
   }
-  if (iKKTcheck == 1) chk.costs.push(newCosts);
   if (iKKTcheck == 1) chk2.costs.push(newCosts);
 
   flagCol.at(col) = 0;
@@ -1537,9 +1508,6 @@ bool Presolve::removeColumnSingletonInDoubletonInequality(const int col,
     bndsL.push_back(make_pair(j, colLower.at(j)));
     bndsU.push_back(make_pair(j, colUpper.at(j)));
     costS.push_back(make_pair(j, colCost.at(j)));
-    chk.cLowers.push(bndsL);
-    chk.cUppers.push(bndsU);
-    chk.costs.push(costS);
     chk2.cLowers.push(bndsL);
     chk2.cUppers.push(bndsU);
     chk2.costs.push(costS);
@@ -1772,7 +1740,6 @@ void Presolve::removeImpliedFreeColumn(const int col, const int i,
           colCost.at(j) - colCost.at(col) * ARvalue.at(kk) / Avalue.at(k);
     }
   }
-  if (iKKTcheck == 1) chk.costs.push(newCosts);
   if (iKKTcheck == 1) chk2.costs.push(newCosts);
 
   flagCol.at(col) = 0;
@@ -2093,10 +2060,6 @@ void Presolve::removeRowSingletons() {
         bndsU.push_back(make_pair(j, colUpper.at(j)));
         costS.push_back(make_pair(j, colCost.at(j)));
 
-        chk.cLowers.push(bndsL);
-        chk.cUppers.push(bndsU);
-        chk.costs.push(costS);
-
         chk2.cLowers.push(bndsL);
         chk2.cUppers.push(bndsU);
         chk2.costs.push(costS);
@@ -2255,9 +2218,6 @@ void Presolve::setPrimalValue(int j, double value) {
       }
 
     if (iKKTcheck == 1) {
-      chk.rLowers.push(bndsL);
-      chk.rUppers.push(bndsU);
-
       chk2.rLowers.push(bndsL);
       chk2.rUppers.push(bndsU);
     }
@@ -2542,17 +2502,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   col_status = reduced_basis.col_status;
   row_status = reduced_basis.row_status;
 
-  // For KKT check: first check solver results before we do any postsolve
-  if (iKKTcheck == 1) {
-    cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
-
-    chk.passSolution(colValue, colDual, rowDual);
-    chk.passBasis(col_status, row_status);
-    chk.makeKKTCheck();
-  }
-
-  // So there have been changes definitely ->
-
   makeACopy();  // so we can efficiently calculate primal and dual values
 
   //	iKKTcheck = false;
@@ -2600,8 +2549,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
 
   if (iKKTcheck) {
-    assert(chk.RrowLower == chk2.RrowLower);
-    assert(chk.RrowUpper == chk2.RrowUpper);
     cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
     checkKkt();
   }
@@ -2613,23 +2560,17 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     // cout<<"chng.pop:       "<<c.col<<"       "<<c.row << endl;
 
     setBasisElement(c);
-    if (iKKTcheck == 1) chk.replaceBasis(col_status, row_status);
-
     switch (c.type) {
       case DOUBLETON_EQUATION: {  // Doubleton equation row
         getDualsDoubletonEquation(c.row, c.col);
 
         if (iKKTcheck == 1) {
-          if (chk.print == 1)
+          if (chk2.print == 1)
             cout
                 << "----KKT check after doubleton equation re-introduced. Row: "
                 << c.row << ", column " << c.col << " -----\n";
-          chk.addChange(17, c.row, c.col, valuePrimal[c.col],
-                        valueColDual[c.col], valueRowDual[c.row]);
           chk2.addChange(17, c.row, c.col, valuePrimal[c.col],
                          valueColDual[c.col], valueRowDual[c.row]);
-          chk.replaceBasis(col_status, row_status);
-          chk.makeKKTCheck();
           checkKkt();
         }
         // exit(2);
@@ -2638,7 +2579,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
       case DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE: {
         // new bounds from doubleton equation, retrieve old ones
         // just for KKT check, not called otherwise
-        chk.addChange(171, c.row, c.col, 0, 0, 0);
         chk2.addChange(171, c.row, c.col, 0, 0, 0);
         break;
       }
@@ -2654,8 +2594,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           if (Aindex.at(indi) == c.row) break;
         Avalue.at(indi) = postValue.top();
 
-        if (iKKTcheck == 1)
-          chk.addChange(172, c.row, c.col, postValue.top(), 0, 0);
         if (iKKTcheck == 1)
           chk2.addChange(172, c.row, c.col, postValue.top(), 0, 0);
         postValue.pop();
@@ -2708,7 +2646,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         double topp = postValue.top();
         postValue.pop();
         if (iKKTcheck == 1) {
-          chk.addChange(173, c.row, c.col, topp, (double)yindex, 0);
           chk2.addChange(173, c.row, c.col, topp, (double)yindex, 0);
         }
 
@@ -2721,11 +2658,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           if (ARindex.at(indi) == numColOriginal) break;
         ARindex.at(indi) = c.col;
         ARvalue.at(indi) = postValue.top();
-
-        if (iKKTcheck == 1) {
-          chk.ARindex.at(indi) = c.col;
-          chk.ARvalue.at(indi) = postValue.top();
-        }
 
         postValue.pop();
 
@@ -2756,12 +2688,10 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         valueRowDual[c.row] = 0;
         flagRow[c.row] = 1;
         if (iKKTcheck == 1) {
-          if (chk.print == 1)
+          if (chk2.print == 1)
             cout << "----KKT check after empty row " << c.row
                  << " re-introduced-----\n";
-          chk.addChange(0, c.row, 0, 0, 0, 0);
           chk2.addChange(0, c.row, 0, 0, 0, 0);
-          chk.makeKKTCheck();
           checkKkt();
         }
         break;
@@ -2773,15 +2703,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         getDualsSingletonRow(c.row, c.col);
 
         if (iKKTcheck == 1) {
-          if (chk.print == 1)
+          if (chk2.print == 1)
             cout << "----KKT check after singleton row " << c.row
                  << " re-introduced. Variable: " << c.col << " -----\n";
-          chk.addChange(1, c.row, c.col, valuePrimal[c.col],
-                        valueColDual[c.col], valueRowDual[c.row]);
           chk2.addChange(1, c.row, c.col, valuePrimal[c.col],
                          valueColDual[c.col], valueRowDual[c.row]);
-          chk.replaceBasis(col_status, row_status);
-          chk.makeKKTCheck();
           checkKkt();
         }
         break;
@@ -2790,21 +2716,16 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         fRjs.push_back(c.col);
         flagCol[c.col] = 1;
         if (iKKTcheck == 1 && valuePrimal[c.col] != 0)
-          chk.addChange(22, c.row, c.col, 0, 0, 0);
-        if (iKKTcheck == 1 && valuePrimal[c.col] != 0)
           chk2.addChange(22, c.row, c.col, 0, 0, 0);
         break;
       case FORCING_ROW: {
         string str = getDualsForcingRow(c.row, fRjs);
 
         if (iKKTcheck == 1) {
-          if (chk.print == 1)
+          if (chk2.print == 1)
             cout << "----KKT check after forcing row " << c.row
                  << " re-introduced. Variable(s): " << str << " -----\n";
-          chk.replaceBasis(col_status, row_status);
-          chk.addChange(3, c.row, 0, 0, 0, valueRowDual[c.row]);
           chk2.addChange(3, c.row, 0, 0, 0, valueRowDual[c.row]);
-          chk.makeKKTCheck();
           checkKkt();
         }
         fRjs.clear();
@@ -2818,11 +2739,9 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         flagRow[c.row] = 1;
 
         if (iKKTcheck == 1) {
-          if (chk.print == 1)
+          if (chk2.print == 1)
             cout << "----KKT check after redundant row " << c.row
                  << " re-introduced.----------------\n";
-          chk.addChange(0, c.row, 0, 0, 0, 0);
-          chk.makeKKTCheck();
           checkKkt();
         }
         break;
@@ -2902,19 +2821,15 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         // valueRowDual[c.row] = 0;
 
         if (iKKTcheck == 1) {
-          chk.addCost(c.col, costAtTimeOfElimination);
           chk2.addCost(c.col, costAtTimeOfElimination);
-          if (c.type == FREE_SING_COL && chk.print == 1)
+          if (c.type == FREE_SING_COL && chk2.print == 1)
             cout << "----KKT check after free col singleton " << c.col
                  << " re-introduced. Row: " << c.row << " -----\n";
-          else if (c.type == IMPLIED_FREE_SING_COL && chk.print == 1)
+          else if (c.type == IMPLIED_FREE_SING_COL && chk2.print == 1)
             cout << "----KKT check after implied free col singleton " << c.col
                  << " re-introduced. Row: " << c.row << " -----\n";
-          chk.addChange(4, c.row, c.col, valuePrimal[c.col],
-                        valueColDual[c.col], valueRowDual[c.row]);
           chk2.addChange(4, c.row, c.col, valuePrimal[c.col],
                          valueColDual[c.col], valueRowDual[c.row]);
-          chk.makeKKTCheck();
           checkKkt();
         }
         break;
@@ -3058,24 +2973,18 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
             flagRow[c.row] = 1;
             valueColDual[c.col] = getColumnDualPost(c.col);
           }
-
-          if (iKKTcheck == 1) chk.colDual.at(j) = valueColDual.at(j);
         }
 
         flagCol[c.col] = 1;
 
         if (iKKTcheck == 1) {
-          if (chk.print == 1)
+          if (chk2.print == 1)
             cout << "----KKT check after col singleton " << c.col
                  << " in doubleton eq re-introduced. Row: " << c.row
                  << " -----\n";
 
-          chk.addChange(5, c.row, c.col, valuePrimal[c.col],
-                        valueColDual[c.col], valueRowDual[c.row]);
           chk2.addChange(5, c.row, c.col, valuePrimal[c.col],
                          valueColDual[c.col], valueRowDual[c.row]);
-          chk.replaceBasis(col_status, row_status);
-          chk.makeKKTCheck();
           checkKkt();
         }
         // exit(2);
@@ -3095,21 +3004,18 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
         flagCol[c.col] = 1;
         if (iKKTcheck == 1) {
-          if (c.type == EMPTY_COL && chk.print == 1)
+          if (c.type == EMPTY_COL && chk2.print == 1)
             cout << "----KKT check after empty column " << c.col
                  << " re-introduced.-----------\n";
-          else if (c.type == DOMINATED_COLS && chk.print == 1)
+          else if (c.type == DOMINATED_COLS && chk2.print == 1)
             cout << "----KKT check after dominated column " << c.col
                  << " re-introduced.-----------\n";
-          else if (c.type == WEAKLY_DOMINATED_COLS && chk.print == 1)
+          else if (c.type == WEAKLY_DOMINATED_COLS && chk2.print == 1)
             cout << "----KKT check after weakly dominated column " << c.col
                  << " re-introduced.-----------\n";
 
-          chk.addChange(6, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
-                        0);
           chk2.addChange(6, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
                          0);
-          chk.makeKKTCheck();
           checkKkt();
         }
         break;
@@ -3121,14 +3027,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
         flagCol[c.col] = 1;
         if (iKKTcheck == 1) {
-          if (chk.print == 1)
+          if (chk2.print == 1)
             cout << "----KKT check after fixed variable " << c.col
                  << " re-introduced.-----------\n";
-          chk.addChange(7, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
-                        0);
           chk2.addChange(7, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
                          0);
-          chk.makeKKTCheck();
           checkKkt();
         }
         break;
@@ -3588,7 +3491,6 @@ string Presolve::getDualsForcingRow(int row, vector<int>& fRjs) {
     if (iKKTcheck == 1) {
       ss << j;
       ss << " ";
-      chk.addChange(2, 0, j, valuePrimal.at(j), valueColDual.at(j), cost);
       chk2.addChange(2, 0, j, valuePrimal.at(j), valueColDual.at(j), cost);
     }
   }
@@ -3659,13 +3561,6 @@ void Presolve::getDualsSingletonRow(const int row, const int col) {
     row_status.at(row) = HighsBasisStatus::BASIC;
     valueRowDual[row] = 0;
     // if the row dual is zero it does not contribute to the column dual.
-  }
-
-  if (iKKTcheck == 1) {
-    chk.colDual.at(col) = valueColDual.at(col);
-    chk.rowDual.at(row) = valueRowDual.at(row);
-    chk.colDual.at(col) = valueColDual.at(col);
-    chk.rowDual.at(row) = valueRowDual.at(row);
   }
 }
 
@@ -3761,12 +3656,6 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
       valueColDual.at(y) = getColumnDualPost(y);
       if (report_postsolve) printf("4.4 : Make row    %3d basic\n", row);
     }
-  }
-
-  if (iKKTcheck == 1) {
-    chk.colDual.at(x) = valueColDual.at(x);
-    chk.colDual.at(y) = valueColDual.at(y);
-    chk.rowDual.at(row) = valueRowDual.at(row);
   }
 
   flagCol.at(y) = 1;

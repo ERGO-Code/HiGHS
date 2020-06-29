@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
-#include "test/KktChStep.h"
 #include "test/KktCh2.h"
 
 using std::pair;
@@ -105,7 +104,6 @@ class HPreData {
   vector<int> rIndex;
   vector<int> cIndex;
 
-  kkt_check::KktChStep chk;
   dev_kkt_check::KktChStep chk2;
 
   stack<change> chng;
