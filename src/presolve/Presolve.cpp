@@ -329,18 +329,18 @@ int Presolve::presolve(int print) {
 
   int iter = 1;
 
-  // removeFixed();
+  removeFixed();
   if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
-    //  order.push_back(Presolver::kMainRowSingletons);
-    //  order.push_back(Presolver::kMainForcing);
-    //  order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainForcing);
+    order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainDoubletonEq);
-    //  order.push_back(Presolver::kMainRowSingletons);
-    //  order.push_back(Presolver::kMainColSingletons);
-    //  order.push_back(Presolver::kMainDominatedCols);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainColSingletons);
+    order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
@@ -580,7 +580,6 @@ void Presolve::removeDoubletonEquations() {
 
   for (int row = 0; row < numRow; row++) {
     if (flagRow.at(row)) {
-      if (row > 2) continue;
       // Analyse dependency on numerical tolerance
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF) {
