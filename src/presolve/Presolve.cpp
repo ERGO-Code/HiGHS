@@ -2047,6 +2047,7 @@ void Presolve::removeRowSingletons() {
       const int k = getSingRowElementIndexInAR(i);
       if (k < 0) {
         // it = singRow.erase(it);
+        it++;
         // kxx
         continue;
       }
