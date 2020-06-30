@@ -1,6 +1,6 @@
 # HiGHS - Linear optimization software
 
-![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)(https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster)
+[![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)](https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster)
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear programming (LP) problems of the form
