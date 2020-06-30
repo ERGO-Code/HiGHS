@@ -638,11 +638,11 @@ void Presolve::removeDoubletonEquations() {
             // update matrix coefficients
             if (isZeroA(i, x)) {
               UpdateMatrixCoeffDoubletonEquationXzero(i, x, y, aiy, akx, aky);
-              std::cout << "   . row " << i << " zero " << std::endl;
+              // std::cout << "   . row " << i << " zero " << std::endl;
             } else {
               UpdateMatrixCoeffDoubletonEquationXnonZero(i, x, y, aiy, akx,
                                                          aky);
-              std::cout << "   . row " << i << " zero " << std::endl;
+              // std::cout << "   . row " << i << " zero " << std::endl;
             }
           }
         if (Avalue.size() > 40000000) {
@@ -2046,7 +2046,8 @@ void Presolve::removeRowSingletons() {
 
       const int k = getSingRowElementIndexInAR(i);
       if (k < 0) {
-        it = singRow.erase(it);
+        // it = singRow.erase(it);
+        // kxx
         continue;
       }
 
@@ -2952,7 +2953,9 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           //   bound_row_dual = up;
           // }
 
-           if (lo > 0 || up < 0 || ck != 0) {
+           if (lo > 0 || up < 0) {
+           //if (lo > 0 || up < 0 || ck != 0) {
+             // kxx
             // row is nonbasic
             // since either dual value zero for it is infeasible
             // or the column cost has changed for col j hence the row dual has
