@@ -1633,7 +1633,8 @@ void Presolve::removeColumnSingletons() {
       // singleton column in a doubleton inequality
       // case two column singletons
       if (nzRow.at(i) == 2) {
-        const bool result_di = removeColumnSingletonInDoubletonInequality(col, i, k);
+        const bool result_di =
+            removeColumnSingletonInDoubletonInequality(col, i, k);
         if (result_di) {
           it = singCol.erase(it);
           continue;
@@ -2046,8 +2047,7 @@ void Presolve::removeRowSingletons() {
 
       const int k = getSingRowElementIndexInAR(i);
       if (k < 0) {
-        // it = singRow.erase(it);
-        it++;
+        it = singRow.erase(it);
         // kxx
         continue;
       }
@@ -2548,7 +2548,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // cmpNBF(-1, -1);
   // testBasisMatrixSingularity();
 
-
   if (iKKTcheck) {
     cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
     checkKkt();
@@ -2954,9 +2953,9 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           //   bound_row_dual = up;
           // }
 
-           if (lo > 0 || up < 0) {
-           //if (lo > 0 || up < 0 || ck != 0) {
-             // kxx
+          // kxx
+          // if (lo > 0 || up < 0)
+          if (lo > 0 || up < 0 || ck != 0) {
             // row is nonbasic
             // since either dual value zero for it is infeasible
             // or the column cost has changed for col j hence the row dual has
@@ -3620,7 +3619,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
   //      ubxNew < ubxOld) ||
   //     (local_status == HighsBasisStatus::NONBASIC && valueX == lbxNew &&
   //      lbxNew > lbxOld)) {
-  //   // Value is nonbasic at reduced bound but needs to be changed to basic since
+  //   // Value is nonbasic at reduced bound but needs to be changed to basic
+  //   since
   //   // bound is expanding.
   //   col_status.at(x) = HighsBasisStatus::BASIC;
   //   row_status.at(row) = HighsBasisStatus::NONBASIC;
@@ -3643,7 +3643,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
 
   //     if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
 
-  //     //} else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
+  //     //} else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) <
+  //     tol) {
   //     //// x is at a bound: set x to N col_status.at(y) =
   //     // HighsBasisStatus::BASIC; if (report_postsolve) printf("4.3 : Make
   //     // column %3d basic\n", y);
@@ -3730,7 +3731,6 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
       valueColDual.at(y) = getColumnDualPost(y);
     }
   }
-
 
   flagCol.at(y) = 1;
 }
