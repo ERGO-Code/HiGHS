@@ -19,6 +19,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolutionDebug.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/HCrash.h"
 #include "simplex/HFactorDebug.h"

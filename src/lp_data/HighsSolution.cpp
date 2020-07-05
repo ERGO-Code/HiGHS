@@ -11,8 +11,6 @@
  * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "lp_data/HighsSolution.h"
-
 #include <string>
 #include <vector>
 
@@ -20,6 +18,8 @@
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolutionDebug.h"
 #include "util/HighsUtils.h"
 
 #ifdef IPX_ON
@@ -1222,138 +1222,6 @@ void invalidateSolutionInfeasibilityParams(
   solution_params.num_dual_infeasibilities = -1;
   solution_params.sum_dual_infeasibilities = 0;
   solution_params.max_dual_infeasibility = 0;
-}
-
-bool equalSolutionParams(const HighsSolutionParams& solution_params0,
-                         const HighsSolutionParams& solution_params1) {
-  bool equal = true;
-  if (!equalSolutionObjectiveParams(solution_params0, solution_params1))
-    equal = false;
-  if (!equalSolutionStatusParams(solution_params0, solution_params1))
-    equal = false;
-  if (!equalSolutionInfeasibilityParams(solution_params0, solution_params1))
-    equal = false;
-  return equal;
-}
-
-bool equalSolutionObjectiveParams(const HighsSolutionParams& solution_params0,
-                                  const HighsSolutionParams& solution_params1) {
-  bool equal = true;
-  double delta =
-      highs_relative_difference(solution_params0.objective_function_value,
-                                solution_params1.objective_function_value);
-  if (solution_params0.objective_function_value !=
-      solution_params1.objective_function_value) {
-#ifdef HiGHSDEV
-    printf(
-        "Solution params: objective_function_value %g != %g Difference = %g\n",
-        solution_params0.objective_function_value,
-        solution_params1.objective_function_value, delta);
-#endif
-    if (delta > 1e-12) equal = false;
-  }
-  return equal;
-}
-
-bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
-                               const HighsSolutionParams& solution_params1) {
-  bool equal = true;
-  if (solution_params0.primal_status != solution_params1.primal_status) {
-#ifdef HiGHSDEV
-    printf("Solution params: primal_status %d != %d\n",
-           solution_params0.primal_status, solution_params1.primal_status);
-#endif
-    equal = false;
-  }
-  if (solution_params0.dual_status != solution_params1.dual_status) {
-#ifdef HiGHSDEV
-    printf("Solution params: dual_status %d != %d\n",
-           solution_params0.dual_status, solution_params1.dual_status);
-#endif
-    equal = false;
-  }
-  return equal;
-}
-
-bool equalSolutionInfeasibilityParams(
-    const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1) {
-  double delta;
-  bool equal = true;
-  if (solution_params0.num_primal_infeasibilities !=
-      solution_params1.num_primal_infeasibilities) {
-#ifdef HiGHSDEV
-    printf("Solution params: num_primal_infeasibilities %d != %d\n",
-           solution_params0.num_primal_infeasibilities,
-           solution_params1.num_primal_infeasibilities);
-#endif
-    equal = false;
-  }
-
-  delta =
-      highs_relative_difference(solution_params0.sum_primal_infeasibilities,
-                                solution_params1.sum_primal_infeasibilities);
-  if (solution_params0.sum_primal_infeasibilities !=
-      solution_params1.sum_primal_infeasibilities) {
-#ifdef HiGHSDEV
-    printf(
-        "Solution params: sum_primal_infeasibilities %g != %g Difference = "
-        "%g\n",
-        solution_params0.sum_primal_infeasibilities,
-        solution_params1.sum_primal_infeasibilities, delta);
-#endif
-    if (delta > 1e-12) equal = false;
-  }
-
-  delta = highs_relative_difference(solution_params0.max_primal_infeasibility,
-                                    solution_params1.max_primal_infeasibility);
-  if (solution_params0.max_primal_infeasibility !=
-      solution_params1.max_primal_infeasibility) {
-#ifdef HiGHSDEV
-    printf(
-        "Solution params: max_primal_infeasibility %g != %g Difference = %g\n",
-        solution_params0.max_primal_infeasibility,
-        solution_params1.max_primal_infeasibility, delta);
-#endif
-    if (delta > 1e-12) equal = false;
-  }
-
-  if (solution_params0.num_dual_infeasibilities !=
-      solution_params1.num_dual_infeasibilities) {
-#ifdef HiGHSDEV
-    printf("Solution params: num_dual_infeasibilities %d != %d\n",
-           solution_params0.num_dual_infeasibilities,
-           solution_params1.num_dual_infeasibilities);
-#endif
-    equal = false;
-  }
-
-  delta = highs_relative_difference(solution_params0.sum_dual_infeasibilities,
-                                    solution_params1.sum_dual_infeasibilities);
-  if (solution_params0.sum_dual_infeasibilities !=
-      solution_params1.sum_dual_infeasibilities) {
-#ifdef HiGHSDEV
-    printf(
-        "Solution params: sum_dual_infeasibilities %g != %g Difference = %g\n",
-        solution_params0.sum_dual_infeasibilities,
-        solution_params1.sum_dual_infeasibilities, delta);
-#endif
-    if (delta > 1e-12) equal = false;
-  }
-
-  delta = highs_relative_difference(solution_params0.max_dual_infeasibility,
-                                    solution_params1.max_dual_infeasibility);
-  if (solution_params0.max_dual_infeasibility !=
-      solution_params1.max_dual_infeasibility) {
-#ifdef HiGHSDEV
-    printf("Solution params: max_dual_infeasibility %g != %g Difference = %g\n",
-           solution_params0.max_dual_infeasibility,
-           solution_params1.max_dual_infeasibility, delta);
-#endif
-    if (delta > 1e-12) equal = false;
-  }
-
-  return equal;
 }
 
 void copySolutionObjectiveParams(

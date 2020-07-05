@@ -87,6 +87,7 @@ set(sources
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
     lp_data/HighsSolution.cpp
+    lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
@@ -144,6 +145,7 @@ set(headers
     lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsSolution.h
+    lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
     mip/HighsMipSolver.h

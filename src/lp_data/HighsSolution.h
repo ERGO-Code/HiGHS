@@ -129,16 +129,6 @@ void invalidateSolutionStatusParams(HighsSolutionParams& solution_params);
 void invalidateSolutionInfeasibilityParams(
     HighsSolutionParams& solution_params);
 
-bool equalSolutionParams(const HighsSolutionParams& solution_params0,
-                         const HighsSolutionParams& solution_params1);
-bool equalSolutionObjectiveParams(const HighsSolutionParams& solution_params0,
-                                  const HighsSolutionParams& solution_params1);
-bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
-                               const HighsSolutionParams& solution_params1);
-bool equalSolutionInfeasibilityParams(
-    const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1);
-
 void copySolutionObjectiveParams(
     const HighsSolutionParams& from_solution_params,
     HighsSolutionParams& to_solution_params);
