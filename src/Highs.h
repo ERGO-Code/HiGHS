@@ -20,6 +20,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsSolutionDebug.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/PresolveComponent.h"
 #include "util/HighsTimer.h"
