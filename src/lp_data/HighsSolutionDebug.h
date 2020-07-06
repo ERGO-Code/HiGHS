@@ -58,16 +58,21 @@ bool debugBasicSolutionVariable(bool report,
 				double& primal_infeasibility,
 				double& dual_infeasibility);
 
-bool equalSolutionParams(const HighsSolutionParams& solution_params0,
-                         const HighsSolutionParams& solution_params1);
-bool equalSolutionObjectiveParams(const HighsSolutionParams& solution_params0,
-                                  const HighsSolutionParams& solution_params1);
-bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
-                               const HighsSolutionParams& solution_params1);
-bool equalSolutionInfeasibilityParams(
-    const HighsSolutionParams& solution_params0,
-    const HighsSolutionParams& solution_params1);
+HighsDebugStatus debugEqualSolutionParams(const HighsOptions& options,
+					  const HighsSolutionParams& solution_params0,
+					  const HighsSolutionParams& solution_params1);
+HighsDebugStatus debugEqualSolutionObjectiveParams(const HighsOptions& options,
+						   const HighsSolutionParams& solution_params0,
+						   const HighsSolutionParams& solution_params1);
+HighsDebugStatus debugEqualSolutionStatusParams(const HighsOptions& options,
+						const HighsSolutionParams& solution_params0,
+						const HighsSolutionParams& solution_params1);
+HighsDebugStatus debugEqualSolutionInfeasibilityParams(const HighsOptions& options,
+						       const HighsSolutionParams& solution_params0,
+						       const HighsSolutionParams& solution_params1);
 
+HighsDebugStatus debugCompareSolutionParamValue(const string name, const HighsOptions& options,
+						const double v0, const double v1);
 
 
 #endif  // SIMPLEX_HIGHSSOLUTIONDEBUG_H_

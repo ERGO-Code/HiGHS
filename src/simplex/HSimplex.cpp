@@ -4141,10 +4141,12 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
   }
 
-  bool equal_solution_infeasibility_params;
-  equal_solution_infeasibility_params = equalSolutionInfeasibilityParams(
+  /*
+  HighsDebugStatus debug_status;
+  debug_status = debugEqualSolutionInfeasibilityParams(
+      highs_model_object.options_,						      
       get_unscaled_solution_params, unscaled_solution_params);
-  if (!equal_solution_infeasibility_params) {
+  if (debug_status != HighsDebugStatus::OK) {
     HighsLogMessage(logfile, HighsMessageType::ERROR,
                     "Unequal unscaled solution infeasibility params in "
                     "getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
@@ -4162,6 +4164,7 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
       return HighsStatus::Error;
     }
   }
+  */
   return HighsStatus::OK;
 }
 

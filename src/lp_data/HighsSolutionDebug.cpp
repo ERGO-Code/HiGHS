@@ -16,6 +16,10 @@
 #include "lp_data/HighsSolutionDebug.h"
 #include "util/HighsUtils.h"
 
+const double large_relative_solution_param_error = 1e-12;
+const double excessive_relative_solution_param_error =
+  sqrt(large_relative_solution_param_error);
+
 HighsDebugStatus debugHighsBasicSolution(const string message,
 					 const HighsOptions& options,
 					 const HighsLp& lp,
@@ -66,9 +70,11 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
   HighsSolutionParams check_solution_params;
   double check_primal_objective_value;
   double check_dual_objective_value;
-  // Extract the primal and dual feasibility tolerances 
+  // Extract the primal and dual feasibility tolerances and solution status 
   check_solution_params.primal_feasibility_tolerance = solution_params.primal_feasibility_tolerance;
   check_solution_params.dual_feasibility_tolerance = solution_params.dual_feasibility_tolerance;
+  check_solution_params.primal_status = solution_params.primal_status;
+  check_solution_params.dual_status = solution_params.dual_status;
   // Get values for solution params from scratch. Also get primal/dual errors
   HighsPrimalDualErrors primal_dual_errors;
   printf("\ndebugHighsBasicSolution: %s\n", message.c_str());
@@ -77,7 +83,9 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
 	check_primal_objective_value, check_dual_objective_value,
 	check_solution_params,
 	primal_dual_errors);
-  if (equalSolutionParams(solution_params, check_solution_params)) {
+  check_solution_params.objective_function_value = check_primal_objective_value;
+  HighsDebugStatus call_status = debugEqualSolutionParams(options, solution_params, check_solution_params);
+  if (call_status == HighsDebugStatus::OK) {
     printf("OK:    equalSolutionParams\n");
   } else {
     printf("ERROR: equalSolutionParams\n");
@@ -438,117 +446,112 @@ bool debugBasicSolutionVariable(bool report,
 }
 
 
-bool equalSolutionParams(const HighsSolutionParams& solution_params0,
-                         const HighsSolutionParams& solution_params1) {
-  bool equal = true;
-  if (!equalSolutionObjectiveParams(solution_params0, solution_params1))
-    equal = false;
-  if (!equalSolutionStatusParams(solution_params0, solution_params1))
-    equal = false;
-  if (!equalSolutionInfeasibilityParams(solution_params0, solution_params1))
-    equal = false;
-  return equal;
+HighsDebugStatus debugEqualSolutionParams(const HighsOptions& options,
+					  const HighsSolutionParams& solution_params0,
+					  const HighsSolutionParams& solution_params1) {
+  HighsDebugStatus call_status;
+  call_status = debugEqualSolutionObjectiveParams(options, solution_params0, solution_params1);
+  if (call_status == HighsDebugStatus::WARNING) return call_status;
+  call_status = debugEqualSolutionStatusParams(options, solution_params0, solution_params1);
+  if (call_status == HighsDebugStatus::WARNING) return call_status;
+  call_status = debugEqualSolutionInfeasibilityParams(options, solution_params0, solution_params1);
+  if (call_status == HighsDebugStatus::WARNING) return call_status;
+  return HighsDebugStatus::OK;
 }
 
-bool equalSolutionObjectiveParams(const HighsSolutionParams& solution_params0,
+HighsDebugStatus debugEqualSolutionObjectiveParams(const HighsOptions& options,
+					  const HighsSolutionParams& solution_params0,
                                   const HighsSolutionParams& solution_params1) {
-  bool equal = true;
-  double delta =
-      highsRelativeDifference(solution_params0.objective_function_value,
-                                solution_params1.objective_function_value);
-  if (solution_params0.objective_function_value !=
-      solution_params1.objective_function_value) {
-    printf(
-        "Solution params: objective_function_value %g != %g Difference = %g\n",
-        solution_params0.objective_function_value,
-        solution_params1.objective_function_value, delta);
-    if (delta > 1e-12) equal = false;
-  }
-  return equal;
+  return debugCompareSolutionParamValue("objective_function_value", options,
+					solution_params0.objective_function_value,
+					solution_params1.objective_function_value);
 }
 
-bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
+HighsDebugStatus debugEqualSolutionStatusParams(const HighsOptions& options,
+					  const HighsSolutionParams& solution_params0,
                                const HighsSolutionParams& solution_params1) {
-  bool equal = true;
   if (solution_params0.primal_status != solution_params1.primal_status) {
     printf("Solution params: primal_status %d != %d\n",
            solution_params0.primal_status, solution_params1.primal_status);
-    equal = false;
+    return HighsDebugStatus::WARNING;
   }
   if (solution_params0.dual_status != solution_params1.dual_status) {
     printf("Solution params: dual_status %d != %d\n",
            solution_params0.dual_status, solution_params1.dual_status);
-    equal = false;
+    return HighsDebugStatus::WARNING;
   }
-  return equal;
+  return HighsDebugStatus::OK;
 }
 
-bool equalSolutionInfeasibilityParams(
-    const HighsSolutionParams& solution_params0,
+HighsDebugStatus debugEqualSolutionInfeasibilityParams(const HighsOptions& options,
+					      const HighsSolutionParams& solution_params0,
     const HighsSolutionParams& solution_params1) {
-  double delta;
-  bool equal = true;
   if (solution_params0.num_primal_infeasibilities !=
       solution_params1.num_primal_infeasibilities) {
     printf("Solution params: num_primal_infeasibilities %d != %d\n",
            solution_params0.num_primal_infeasibilities,
            solution_params1.num_primal_infeasibilities);
-    equal = false;
+    return HighsDebugStatus::WARNING;
   }
 
-  delta =
-      highsRelativeDifference(solution_params0.sum_primal_infeasibilities,
-                                solution_params1.sum_primal_infeasibilities);
-  if (solution_params0.sum_primal_infeasibilities !=
-      solution_params1.sum_primal_infeasibilities) {
-    printf(
-        "Solution params: sum_primal_infeasibilities %g != %g Difference = "
-        "%g\n",
-        solution_params0.sum_primal_infeasibilities,
-        solution_params1.sum_primal_infeasibilities, delta);
-    if (delta > 1e-12) equal = false;
-  }
-
-  delta = highsRelativeDifference(solution_params0.max_primal_infeasibility,
-                                    solution_params1.max_primal_infeasibility);
-  if (solution_params0.max_primal_infeasibility !=
-      solution_params1.max_primal_infeasibility) {
-    printf(
-        "Solution params: max_primal_infeasibility %g != %g Difference = %g\n",
-        solution_params0.max_primal_infeasibility,
-        solution_params1.max_primal_infeasibility, delta);
-    if (delta > 1e-12) equal = false;
-  }
+  HighsDebugStatus call_status;
+  call_status = debugCompareSolutionParamValue(
+		"sum_primal_infeasibilities", options, 
+		solution_params0.sum_primal_infeasibilities,
+		solution_params1.sum_primal_infeasibilities);
+  if (call_status == HighsDebugStatus::WARNING) return call_status;
+  call_status = debugCompareSolutionParamValue(
+		"max_primal_infeasibility", options,
+		solution_params0.max_primal_infeasibility,
+		solution_params1.max_primal_infeasibility);
+  if (call_status == HighsDebugStatus::WARNING) return call_status;
 
   if (solution_params0.num_dual_infeasibilities !=
       solution_params1.num_dual_infeasibilities) {
     printf("Solution params: num_dual_infeasibilities %d != %d\n",
            solution_params0.num_dual_infeasibilities,
            solution_params1.num_dual_infeasibilities);
-    equal = false;
+    return HighsDebugStatus::WARNING;
   }
 
-  delta = highsRelativeDifference(solution_params0.sum_dual_infeasibilities,
-                                    solution_params1.sum_dual_infeasibilities);
-  if (solution_params0.sum_dual_infeasibilities !=
-      solution_params1.sum_dual_infeasibilities) {
-    printf(
-        "Solution params: sum_dual_infeasibilities %g != %g Difference = %g\n",
-        solution_params0.sum_dual_infeasibilities,
-        solution_params1.sum_dual_infeasibilities, delta);
-    if (delta > 1e-12) equal = false;
-  }
+  call_status = debugCompareSolutionParamValue(
+		"sum_dual_infeasibilities", options, 
+		solution_params0.sum_dual_infeasibilities,
+		solution_params1.sum_dual_infeasibilities);
+  if (call_status == HighsDebugStatus::WARNING) return call_status;
+  call_status = debugCompareSolutionParamValue(
+		"max_dual_infeasibility", options,
+		solution_params0.max_dual_infeasibility,
+		solution_params1.max_dual_infeasibility);
+  if (call_status == HighsDebugStatus::WARNING) return call_status;
 
-  delta = highsRelativeDifference(solution_params0.max_dual_infeasibility,
-                                    solution_params1.max_dual_infeasibility);
-  if (solution_params0.max_dual_infeasibility !=
-      solution_params1.max_dual_infeasibility) {
-    printf("Solution params: max_dual_infeasibility %g != %g Difference = %g\n",
-           solution_params0.max_dual_infeasibility,
-           solution_params1.max_dual_infeasibility, delta);
-    if (delta > 1e-12) equal = false;
-  }
+  return call_status;
+  
+}
 
-  return equal;
+HighsDebugStatus debugCompareSolutionParamValue(const string name, const HighsOptions& options,
+						const double v0, const double v1) {
+  double delta = highsRelativeDifference(v0, v1);
+  std::string value_adjective;
+  int report_level;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  if (delta > excessive_relative_solution_param_error) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (delta > large_relative_solution_param_error) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (v0 != v1) {
+    value_adjective = "OK";
+    report_level = ML_VERBOSE;
+  }
+  HighsPrintMessage(
+      options.output,
+      options.message_level, report_level,
+      "SolutionPar:  %-9s relative difference of %9.4g for %s\n",
+      value_adjective.c_str(), delta, name.c_str());
+  return return_status;
 }
 

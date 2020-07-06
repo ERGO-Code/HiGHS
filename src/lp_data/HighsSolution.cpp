@@ -148,6 +148,7 @@ HighsStatus analyseHighsBasicSolution(
   double& max_dual_residual = primal_dual_errors.max_dual_residual;
   double& sum_dual_residual = primal_dual_errors.sum_dual_residual;
 
+  /*
   bool equal_solution_params =
       equalSolutionParams(solution_params, check_solution_params);
   if (!equal_solution_params) {
@@ -156,7 +157,7 @@ HighsStatus analyseHighsBasicSolution(
     assert(equal_solution_params);
     return HighsStatus::Error;
   }
-
+  */
   bool primal_feasible = num_primal_infeasibilities == 0;
   //  primal_feasible = primal_feasible &&
   //    max_primal_residual < primal_feasibility_tolerance;
