@@ -11,31 +11,37 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include <math.h>
-#include <vector>
 #include "lp_data/HighsSolutionDebug.h"
+
+#include <math.h>
+
+#include <vector>
+
 #include "util/HighsUtils.h"
 
 const double large_relative_solution_param_error = 1e-12;
 const double excessive_relative_solution_param_error =
-  sqrt(large_relative_solution_param_error);
+    sqrt(large_relative_solution_param_error);
 
-HighsDebugStatus debugHighsBasicSolution(const string message,
-					 const HighsOptions& options,
-					 const HighsLp& lp,
-					 const HighsBasis& basis,
-					 const HighsSolution& solution,
-					 const HighsInfo& info,
-					 const HighsModelStatus model_status,
-					 const HighsModelStatus scaled_model_status) {
-  // Non-trivially expensive analysis of a HiGHS basic solution, starting from options and info
+const double large_residual_error = 1e-12;
+const double excessive_residual_error = sqrt(large_residual_error);
+
+HighsDebugStatus debugHighsBasicSolution(
+    const string message, const HighsOptions& options, const HighsLp& lp,
+    const HighsBasis& basis, const HighsSolution& solution,
+    const HighsInfo& info, const HighsModelStatus model_status,
+    const HighsModelStatus scaled_model_status) {
+  // Non-trivially expensive analysis of a HiGHS basic solution, starting from
+  // options and info
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
 
-  // Extract the solution_params from info and options 
+  // Extract the solution_params from info and options
   HighsSolutionParams solution_params;
-  solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  solution_params.primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance =
+      options.dual_feasibility_tolerance;
   solution_params.primal_status = info.primal_status;
   solution_params.dual_status = info.dual_status;
   solution_params.objective_function_value = info.objective_function_value;
@@ -46,64 +52,58 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
   solution_params.max_dual_infeasibility = info.max_dual_infeasibility;
   solution_params.sum_dual_infeasibilities = info.sum_dual_infeasibilities;
 
-  return debugHighsBasicSolution(message, 
-				 options, lp, basis, solution, solution_params,
-				 model_status, scaled_model_status);
+  return debugHighsBasicSolution(message, options, lp, basis, solution,
+                                 solution_params, model_status,
+                                 scaled_model_status);
 }
 
-HighsDebugStatus debugHighsBasicSolution(const string message,
-					 const HighsOptions& options,
-					 const HighsLp& lp,
-					 const HighsBasis& basis,
-					 const HighsSolution& solution,
-					 const HighsSolutionParams& solution_params,
-					 const HighsModelStatus model_status,
-					 const HighsModelStatus scaled_model_status) {
-  // Non-trivially expensive analysis of a HiGHS basic solution, starting from solution_params
+HighsDebugStatus debugHighsBasicSolution(
+    const string message, const HighsOptions& options, const HighsLp& lp,
+    const HighsBasis& basis, const HighsSolution& solution,
+    const HighsSolutionParams& solution_params,
+    const HighsModelStatus model_status,
+    const HighsModelStatus scaled_model_status) {
+  // Non-trivially expensive analysis of a HiGHS basic solution, starting from
+  // solution_params
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
   if (!isSolutionConsistent(lp, solution)) return HighsDebugStatus::NOT_CHECKED;
-  if (!isBasisConsistent(lp, basis) || !basis.valid_) return HighsDebugStatus::NOT_CHECKED;
+  if (!isBasisConsistent(lp, basis) || !basis.valid_)
+    return HighsDebugStatus::NOT_CHECKED;
 
   HighsSolutionParams check_solution_params;
   double check_primal_objective_value;
   double check_dual_objective_value;
-  // Extract the primal and dual feasibility tolerances and solution status 
-  check_solution_params.primal_feasibility_tolerance = solution_params.primal_feasibility_tolerance;
-  check_solution_params.dual_feasibility_tolerance = solution_params.dual_feasibility_tolerance;
+  // Extract the primal and dual feasibility tolerances and solution status
+  check_solution_params.primal_feasibility_tolerance =
+      solution_params.primal_feasibility_tolerance;
+  check_solution_params.dual_feasibility_tolerance =
+      solution_params.dual_feasibility_tolerance;
   check_solution_params.primal_status = solution_params.primal_status;
   check_solution_params.dual_status = solution_params.dual_status;
   // Get values for solution params from scratch. Also get primal/dual errors
   HighsPrimalDualErrors primal_dual_errors;
   printf("\ndebugHighsBasicSolution: %s\n", message.c_str());
+  // Get the primal and dual infeasibilities and errors
   debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
-       	options, lp, basis, solution, 
-	check_primal_objective_value, check_dual_objective_value,
-	check_solution_params,
-	primal_dual_errors);
+      options, lp, basis, solution, check_primal_objective_value,
+      check_dual_objective_value, check_solution_params, primal_dual_errors);
   check_solution_params.objective_function_value = check_primal_objective_value;
-  HighsDebugStatus call_status = debugEqualSolutionParams(options, solution_params, check_solution_params);
-  if (call_status == HighsDebugStatus::OK) {
-    printf("OK:    equalSolutionParams\n");
-  } else {
-    printf("ERROR: equalSolutionParams\n");
-  }
 
-  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = debugCompareSolutionParams(
+      options, solution_params, check_solution_params);
+  return_status = debugWorseStatus(
+      debugAnalysePrimalDualErrors(options, primal_dual_errors), return_status);
   return return_status;
 }
 
-void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(const HighsOptions& options,
-					 const HighsLp& lp,
-					 const HighsBasis& basis,
-					 const HighsSolution& solution,
-  				         double& primal_objective_value,
-  				         double& dual_objective_value,
-					 HighsSolutionParams& solution_params,
-					 HighsPrimalDualErrors& primal_dual_errors) {
-
+void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
+    const HighsOptions& options, const HighsLp& lp, const HighsBasis& basis,
+    const HighsSolution& solution, double& primal_objective_value,
+    double& dual_objective_value, HighsSolutionParams& solution_params,
+    HighsPrimalDualErrors& primal_dual_errors) {
   double primal_feasibility_tolerance =
       solution_params.primal_feasibility_tolerance;
   double dual_feasibility_tolerance =
@@ -215,8 +215,9 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(const HighsOption
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibilities += dual_infeasibility;
     }
-    report = options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
-      (options.highs_debug_level == HIGHS_DEBUG_LEVEL_EXPENSIVE && query);
+    report =
+        options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
+        (options.highs_debug_level == HIGHS_DEBUG_LEVEL_EXPENSIVE && query);
     if (report) {
       if (!header_written) {
         printf(
@@ -323,8 +324,9 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(const HighsOption
           std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibilities += dual_infeasibility;
     }
-    report = options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
-      (options.highs_debug_level == HIGHS_DEBUG_LEVEL_EXPENSIVE && query);
+    report =
+        options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE ||
+        (options.highs_debug_level == HIGHS_DEBUG_LEVEL_EXPENSIVE && query);
     if (report) {
       if (!header_written) {
         printf(
@@ -344,15 +346,13 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(const HighsOption
   }
 }
 
-bool debugBasicSolutionVariable(bool report,
-                             const double primal_feasibility_tolerance,
-                             const double dual_feasibility_tolerance,
-                             const HighsBasisStatus status, const double lower,
-                             const double upper, const double value,
-                             const double dual, int& num_non_basic_var,
-                             int& num_basic_var, double& off_bound_nonbasic,
-                             double& primal_infeasibility,
-                             double& dual_infeasibility) {
+bool debugBasicSolutionVariable(
+    bool report, const double primal_feasibility_tolerance,
+    const double dual_feasibility_tolerance, const HighsBasisStatus status,
+    const double lower, const double upper, const double value,
+    const double dual, int& num_non_basic_var, int& num_basic_var,
+    double& off_bound_nonbasic, double& primal_infeasibility,
+    double& dual_infeasibility) {
   double middle = (lower + upper) * 0.5;
 
   bool query = false;
@@ -445,92 +445,201 @@ bool debugBasicSolutionVariable(bool report,
   return query;
 }
 
-
-HighsDebugStatus debugEqualSolutionParams(const HighsOptions& options,
-					  const HighsSolutionParams& solution_params0,
-					  const HighsSolutionParams& solution_params1) {
-  HighsDebugStatus call_status;
-  call_status = debugEqualSolutionObjectiveParams(options, solution_params0, solution_params1);
-  if (call_status == HighsDebugStatus::WARNING) return call_status;
-  call_status = debugEqualSolutionStatusParams(options, solution_params0, solution_params1);
-  if (call_status == HighsDebugStatus::WARNING) return call_status;
-  call_status = debugEqualSolutionInfeasibilityParams(options, solution_params0, solution_params1);
-  if (call_status == HighsDebugStatus::WARNING) return call_status;
-  return HighsDebugStatus::OK;
-}
-
-HighsDebugStatus debugEqualSolutionObjectiveParams(const HighsOptions& options,
-					  const HighsSolutionParams& solution_params0,
-                                  const HighsSolutionParams& solution_params1) {
-  return debugCompareSolutionParamValue("objective_function_value", options,
-					solution_params0.objective_function_value,
-					solution_params1.objective_function_value);
-}
-
-HighsDebugStatus debugEqualSolutionStatusParams(const HighsOptions& options,
-					  const HighsSolutionParams& solution_params0,
-                               const HighsSolutionParams& solution_params1) {
-  if (solution_params0.primal_status != solution_params1.primal_status) {
-    printf("Solution params: primal_status %d != %d\n",
-           solution_params0.primal_status, solution_params1.primal_status);
-    return HighsDebugStatus::WARNING;
+HighsDebugStatus debugAnalysePrimalDualErrors(
+    const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors) {
+  std::string value_adjective;
+  int report_level;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  if (primal_dual_errors.num_nonzero_basic_duals) {
+    value_adjective = "Error";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  } else {
+    value_adjective = "";
+    report_level = ML_NONE;
+    return_status = HighsDebugStatus::OK;
   }
-  if (solution_params0.dual_status != solution_params1.dual_status) {
-    printf("Solution params: dual_status %d != %d\n",
-           solution_params0.dual_status, solution_params1.dual_status);
-    return HighsDebugStatus::WARNING;
+  if (options.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP) {
+    report_level = ML_ALWAYS;
+  } else {
+    report_level = ML_DETAILED;
   }
-  return HighsDebugStatus::OK;
+  HighsPrintMessage(options.output, options.message_level, report_level,
+                    "PrDuErrors : %-9s Nonzero basic duals:       num = %2d; "
+                    "max = %9.4g; sum = %9.4g\n",
+                    value_adjective.c_str(),
+                    primal_dual_errors.num_nonzero_basic_duals,
+                    primal_dual_errors.max_nonzero_basic_dual,
+                    primal_dual_errors.sum_nonzero_basic_duals);
+
+  if (primal_dual_errors.num_off_bound_nonbasic) {
+    value_adjective = "Error";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  } else {
+    value_adjective = "";
+    report_level = ML_NONE;
+    return_status = HighsDebugStatus::OK;
+  }
+  if (options.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP) {
+    report_level = ML_ALWAYS;
+  } else {
+    report_level = ML_DETAILED;
+  }
+  HighsPrintMessage(options.output, options.message_level, report_level,
+                    "PrDuErrors : %-9s Off-bound nonbasic values: num = %2d; "
+                    "max = %9.4g; sum = %9.4g\n",
+                    value_adjective.c_str(),
+                    primal_dual_errors.num_off_bound_nonbasic,
+                    primal_dual_errors.max_off_bound_nonbasic,
+                    primal_dual_errors.sum_off_bound_nonbasic);
+
+  if (primal_dual_errors.max_primal_residual > excessive_residual_error) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (primal_dual_errors.max_primal_residual > large_residual_error) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else {
+    value_adjective = "";
+    report_level = ML_VERBOSE;
+    return_status = HighsDebugStatus::OK;
+  }
+  if (options.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP) {
+    report_level = ML_ALWAYS;
+  } else {
+    report_level = ML_DETAILED;
+  }
+  HighsPrintMessage(options.output, options.message_level, report_level,
+                    "PrDuErrors : %-9s Primal residual:           num = %2d; "
+                    "max = %9.4g; sum = %9.4g\n",
+                    value_adjective.c_str(),
+                    primal_dual_errors.num_primal_residual,
+                    primal_dual_errors.max_primal_residual,
+                    primal_dual_errors.sum_primal_residual);
+
+  if (primal_dual_errors.max_dual_residual > excessive_residual_error) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = HighsDebugStatus::WARNING;
+  } else if (primal_dual_errors.max_dual_residual > large_residual_error) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = HighsDebugStatus::WARNING;
+  } else {
+    value_adjective = "";
+    report_level = ML_VERBOSE;
+    return_status = HighsDebugStatus::OK;
+  }
+  if (options.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP) {
+    report_level = ML_ALWAYS;
+  } else {
+    report_level = ML_DETAILED;
+  }
+  HighsPrintMessage(options.output, options.message_level, report_level,
+                    "PrDuErrors : %-9s Dual residual:             num = %2d; "
+                    "max = %9.4g; sum = %9.4g\n",
+                    value_adjective.c_str(),
+                    primal_dual_errors.num_dual_residual,
+                    primal_dual_errors.max_dual_residual,
+                    primal_dual_errors.sum_dual_residual);
+
+  return return_status;
 }
 
-HighsDebugStatus debugEqualSolutionInfeasibilityParams(const HighsOptions& options,
-					      const HighsSolutionParams& solution_params0,
+HighsDebugStatus debugCompareSolutionParams(
+    const HighsOptions& options, const HighsSolutionParams& solution_params0,
     const HighsSolutionParams& solution_params1) {
-  if (solution_params0.num_primal_infeasibilities !=
-      solution_params1.num_primal_infeasibilities) {
-    printf("Solution params: num_primal_infeasibilities %d != %d\n",
-           solution_params0.num_primal_infeasibilities,
-           solution_params1.num_primal_infeasibilities);
-    return HighsDebugStatus::WARNING;
-  }
-
-  HighsDebugStatus call_status;
-  call_status = debugCompareSolutionParamValue(
-		"sum_primal_infeasibilities", options, 
-		solution_params0.sum_primal_infeasibilities,
-		solution_params1.sum_primal_infeasibilities);
-  if (call_status == HighsDebugStatus::WARNING) return call_status;
-  call_status = debugCompareSolutionParamValue(
-		"max_primal_infeasibility", options,
-		solution_params0.max_primal_infeasibility,
-		solution_params1.max_primal_infeasibility);
-  if (call_status == HighsDebugStatus::WARNING) return call_status;
-
-  if (solution_params0.num_dual_infeasibilities !=
-      solution_params1.num_dual_infeasibilities) {
-    printf("Solution params: num_dual_infeasibilities %d != %d\n",
-           solution_params0.num_dual_infeasibilities,
-           solution_params1.num_dual_infeasibilities);
-    return HighsDebugStatus::WARNING;
-  }
-
-  call_status = debugCompareSolutionParamValue(
-		"sum_dual_infeasibilities", options, 
-		solution_params0.sum_dual_infeasibilities,
-		solution_params1.sum_dual_infeasibilities);
-  if (call_status == HighsDebugStatus::WARNING) return call_status;
-  call_status = debugCompareSolutionParamValue(
-		"max_dual_infeasibility", options,
-		solution_params0.max_dual_infeasibility,
-		solution_params1.max_dual_infeasibility);
-  if (call_status == HighsDebugStatus::WARNING) return call_status;
-
-  return call_status;
-  
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  return_status =
+      debugWorseStatus(debugCompareSolutionObjectiveParams(
+                           options, solution_params0, solution_params1),
+                       return_status);
+  return_status =
+      debugWorseStatus(debugCompareSolutionStatusParams(
+                           options, solution_params0, solution_params1),
+                       return_status);
+  return_status =
+      debugWorseStatus(debugCompareSolutionInfeasibilityParams(
+                           options, solution_params0, solution_params1),
+                       return_status);
+  return return_status;
 }
 
-HighsDebugStatus debugCompareSolutionParamValue(const string name, const HighsOptions& options,
-						const double v0, const double v1) {
+HighsDebugStatus debugCompareSolutionObjectiveParams(
+    const HighsOptions& options, const HighsSolutionParams& solution_params0,
+    const HighsSolutionParams& solution_params1) {
+  return debugCompareSolutionParamValue(
+      "objective_function_value", options,
+      solution_params0.objective_function_value,
+      solution_params1.objective_function_value);
+}
+
+HighsDebugStatus debugCompareSolutionStatusParams(
+    const HighsOptions& options, const HighsSolutionParams& solution_params0,
+    const HighsSolutionParams& solution_params1) {
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamInteger("primal_status", options,
+                                       solution_params0.primal_status,
+                                       solution_params1.primal_status),
+      return_status);
+  return_status =
+      debugWorseStatus(debugCompareSolutionParamInteger(
+                           "dual_status", options, solution_params0.dual_status,
+                           solution_params1.dual_status),
+                       return_status);
+  return return_status;
+}
+
+HighsDebugStatus debugCompareSolutionInfeasibilityParams(
+    const HighsOptions& options, const HighsSolutionParams& solution_params0,
+    const HighsSolutionParams& solution_params1) {
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  return_status =
+      debugWorseStatus(debugCompareSolutionParamInteger(
+                           "num_primal_infeasibilities", options,
+                           solution_params0.num_primal_infeasibilities,
+                           solution_params1.num_primal_infeasibilities),
+                       return_status);
+  return_status =
+      debugWorseStatus(debugCompareSolutionParamValue(
+                           "sum_primal_infeasibilities", options,
+                           solution_params0.sum_primal_infeasibilities,
+                           solution_params1.sum_primal_infeasibilities),
+                       return_status);
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamValue("max_primal_infeasibility", options,
+                                     solution_params0.max_primal_infeasibility,
+                                     solution_params1.max_primal_infeasibility),
+      return_status);
+
+  return_status =
+      debugWorseStatus(debugCompareSolutionParamInteger(
+                           "num_dual_infeasibilities", options,
+                           solution_params0.num_dual_infeasibilities,
+                           solution_params1.num_dual_infeasibilities),
+                       return_status);
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamValue("sum_dual_infeasibilities", options,
+                                     solution_params0.sum_dual_infeasibilities,
+                                     solution_params1.sum_dual_infeasibilities),
+      return_status);
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamValue("max_dual_infeasibility", options,
+                                     solution_params0.max_dual_infeasibility,
+                                     solution_params1.max_dual_infeasibility),
+      return_status);
+  return return_status;
+}
+
+HighsDebugStatus debugCompareSolutionParamValue(const string name,
+                                                const HighsOptions& options,
+                                                const double v0,
+                                                const double v1) {
+  if (v0 == v1) return HighsDebugStatus::OK;
   double delta = highsRelativeDifference(v0, v1);
   std::string value_adjective;
   int report_level;
@@ -547,11 +656,23 @@ HighsDebugStatus debugCompareSolutionParamValue(const string name, const HighsOp
     value_adjective = "OK";
     report_level = ML_VERBOSE;
   }
-  HighsPrintMessage(
-      options.output,
-      options.message_level, report_level,
-      "SolutionPar:  %-9s relative difference of %9.4g for %s\n",
-      value_adjective.c_str(), delta, name.c_str());
+  HighsPrintMessage(options.output, options.message_level, report_level,
+                    "SolutionPar:  %-9s relative difference of %9.4g for %s\n",
+                    value_adjective.c_str(), delta, name.c_str());
   return return_status;
 }
 
+HighsDebugStatus debugCompareSolutionParamInteger(const string name,
+                                                  const HighsOptions& options,
+                                                  const int v0, const int v1) {
+  if (v0 == v1) return HighsDebugStatus::OK;
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "SolutionPar:  difference of %d for %s\n", v1 - v0,
+                    name.c_str());
+  return HighsDebugStatus::LOGICAL_ERROR;
+}
+
+HighsDebugStatus debugWorseStatus(HighsDebugStatus status0,
+                                  HighsDebugStatus status1) {
+  return static_cast<HighsDebugStatus>(std::max((int)status0, (int)status1));
+}

@@ -1920,8 +1920,7 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
         break;
     }
   }
-  if (have_solution)
-    assert(isSolutionConsistent(lp_, solution_));
+  if (have_solution) assert(isSolutionConsistent(lp_, solution_));
   if (basis_.valid_) {
     if (!isBasisConsistent(lp_, basis_)) {
       printf("Basis not consistent when it should be\n");
@@ -1929,10 +1928,9 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
     assert(isBasisConsistent(lp_, basis_));
   }
   if (have_solution && basis_.valid_) {
-    
-    debugHighsBasicSolution("Before return from run()",
-			    options_, lp_, basis_, solution_, info_,
-			    model_status_, scaled_model_status_);
+    debugHighsBasicSolution("Before return from run()", options_, lp_, basis_,
+                            solution_, info_, model_status_,
+                            scaled_model_status_);
   }
 }
 

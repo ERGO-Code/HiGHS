@@ -11,6 +11,8 @@
  * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "lp_data/HighsSolution.h"
+
 #include <string>
 #include <vector>
 
@@ -18,7 +20,6 @@
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsOptions.h"
-#include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "util/HighsUtils.h"
 

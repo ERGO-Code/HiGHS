@@ -62,7 +62,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.store_squared_primal_infeasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = false;  //true;  // 
+  bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;
@@ -4144,7 +4144,7 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
   /*
   HighsDebugStatus debug_status;
   debug_status = debugEqualSolutionInfeasibilityParams(
-      highs_model_object.options_,						      
+      highs_model_object.options_,
       get_unscaled_solution_params, unscaled_solution_params);
   if (debug_status != HighsDebugStatus::OK) {
     HighsLogMessage(logfile, HighsMessageType::ERROR,
