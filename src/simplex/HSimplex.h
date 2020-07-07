@@ -247,7 +247,7 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(
 
 HighsStatus
 getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-    FILE* logfile, const HighsLp& lp, const HighsScale& scale,
+    const HighsOptions& options, const HighsLp& lp, const HighsScale& scale,
     const SimplexBasis& basis, const HighsSimplexInfo& simplex_info,
     const HighsModelStatus scaled_model_status,
     const HighsSolutionParams& unscaled_solution_params,

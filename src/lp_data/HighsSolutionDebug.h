@@ -19,18 +19,22 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
+HighsDebugStatus debugHighsBasicSolution(const string message,
+                                         const HighsOptions& options,
+                                         const HighsLp& lp,
+                                         const HighsBasis& basis,
+                                         const HighsSolution& solution);
+
 HighsDebugStatus debugHighsBasicSolution(
     const string message, const HighsOptions& options, const HighsLp& lp,
     const HighsBasis& basis, const HighsSolution& solution,
-    const HighsInfo& info, const HighsModelStatus model_status,
-    const HighsModelStatus scaled_model_status);
+    const HighsInfo& info, const HighsModelStatus model_status);
 
 HighsDebugStatus debugHighsBasicSolution(
     const string message, const HighsOptions& options, const HighsLp& lp,
     const HighsBasis& basis, const HighsSolution& solution,
     const HighsSolutionParams& solution_params,
-    const HighsModelStatus model_status,
-    const HighsModelStatus scaled_model_status);
+    const HighsModelStatus model_status);
 
 void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     const HighsOptions& options, const HighsLp& lp, const HighsBasis& basis,
@@ -73,4 +77,10 @@ HighsDebugStatus debugCompareSolutionParamInteger(const string name,
 
 HighsDebugStatus debugWorseStatus(HighsDebugStatus status0,
                                   HighsDebugStatus status1);
+
+void debugReportHighsBasicSolution(const string message,
+                                   const HighsOptions& options,
+                                   const HighsSolutionParams& solution_params,
+                                   const HighsModelStatus model_status);
+
 #endif  // SIMPLEX_HIGHSSOLUTIONDEBUG_H_

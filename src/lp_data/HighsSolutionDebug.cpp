@@ -17,6 +17,7 @@
 
 #include <vector>
 
+#include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 
 const double large_relative_solution_param_error = 1e-12;
@@ -26,11 +27,51 @@ const double excessive_relative_solution_param_error =
 const double large_residual_error = 1e-12;
 const double excessive_residual_error = sqrt(large_residual_error);
 
+HighsDebugStatus debugHighsBasicSolution(const string message,
+                                         const HighsOptions& options,
+                                         const HighsLp& lp,
+                                         const HighsBasis& basis,
+                                         const HighsSolution& solution) {
+  // Non-trivially expensive analysis of a HiGHS basic solution, starting from
+  // options, assuming no knowledge of solution parameters or model status
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  // Check that there is a solution and valid basis to use
+  if (!isSolutionConsistent(lp, solution)) return HighsDebugStatus::NOT_CHECKED;
+  if (!isBasisConsistent(lp, basis) || !basis.valid_)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  // Extract the solution_params from options
+  HighsSolutionParams solution_params;
+  solution_params.primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance =
+      options.dual_feasibility_tolerance;
+
+  double check_primal_objective_value;
+  double check_dual_objective_value;
+  // Get values for solution params from scratch. Also get primal/dual errors
+  HighsPrimalDualErrors primal_dual_errors;
+  // Get the primal and dual infeasibilities and errors
+  debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
+      options, lp, basis, solution, check_primal_objective_value,
+      check_dual_objective_value, solution_params, primal_dual_errors);
+
+  HighsModelStatus model_status = HighsModelStatus::NOTSET;
+  if (solution_params.num_primal_infeasibilities == 0 &&
+      solution_params.num_dual_infeasibilities == 0)
+    model_status = HighsModelStatus::OPTIMAL;
+
+  debugReportHighsBasicSolution(message, options, solution_params,
+                                model_status);
+  return debugAnalysePrimalDualErrors(options, primal_dual_errors);
+}
+
 HighsDebugStatus debugHighsBasicSolution(
     const string message, const HighsOptions& options, const HighsLp& lp,
     const HighsBasis& basis, const HighsSolution& solution,
-    const HighsInfo& info, const HighsModelStatus model_status,
-    const HighsModelStatus scaled_model_status) {
+    const HighsInfo& info, const HighsModelStatus model_status) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // options and info
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
@@ -53,16 +94,14 @@ HighsDebugStatus debugHighsBasicSolution(
   solution_params.sum_dual_infeasibilities = info.sum_dual_infeasibilities;
 
   return debugHighsBasicSolution(message, options, lp, basis, solution,
-                                 solution_params, model_status,
-                                 scaled_model_status);
+                                 solution_params, model_status);
 }
 
 HighsDebugStatus debugHighsBasicSolution(
     const string message, const HighsOptions& options, const HighsLp& lp,
     const HighsBasis& basis, const HighsSolution& solution,
     const HighsSolutionParams& solution_params,
-    const HighsModelStatus model_status,
-    const HighsModelStatus scaled_model_status) {
+    const HighsModelStatus model_status) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // solution_params
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
@@ -85,7 +124,6 @@ HighsDebugStatus debugHighsBasicSolution(
   check_solution_params.dual_status = solution_params.dual_status;
   // Get values for solution params from scratch. Also get primal/dual errors
   HighsPrimalDualErrors primal_dual_errors;
-  printf("\ndebugHighsBasicSolution: %s\n", message.c_str());
   // Get the primal and dual infeasibilities and errors
   debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       options, lp, basis, solution, check_primal_objective_value,
@@ -94,8 +132,11 @@ HighsDebugStatus debugHighsBasicSolution(
 
   HighsDebugStatus return_status = debugCompareSolutionParams(
       options, solution_params, check_solution_params);
+  debugReportHighsBasicSolution(message, options, solution_params,
+                                model_status);
   return_status = debugWorseStatus(
       debugAnalysePrimalDualErrors(options, primal_dual_errors), return_status);
+
   return return_status;
 }
 
@@ -245,9 +286,9 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
   bool report = options.highs_debug_level > HIGHS_DEBUG_LEVEL_EXPENSIVE;
   header_written = false;
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    double primal_residual =
+    double primal_residual_error =
         std::fabs(primal_activities[iRow] - solution.row_value[iRow]);
-    if (primal_residual > primal_feasibility_tolerance) {
+    if (primal_residual_error > large_residual_error) {
       if (report) {
         if (!header_written) {
           printf(
@@ -256,18 +297,18 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
           header_written = true;
         }
         printf("%5d %12g %12g %12g\n", iRow, primal_activities[iRow],
-               solution.row_value[iRow], primal_residual);
+               solution.row_value[iRow], primal_residual_error);
       }
       num_primal_residual++;
     }
-    max_primal_residual = std::max(primal_residual, max_primal_residual);
-    sum_primal_residual += primal_residual;
+    max_primal_residual = std::max(primal_residual_error, max_primal_residual);
+    sum_primal_residual += primal_residual_error;
   }
   header_written = false;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    double dual_residual =
+    double dual_residual_error =
         std::fabs(dual_activities[iCol] - solution.col_dual[iCol]);
-    if (dual_residual > dual_feasibility_tolerance) {
+    if (dual_residual_error > large_residual_error) {
       if (report) {
         if (!header_written) {
           printf(
@@ -276,12 +317,12 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
           header_written = true;
         }
         printf("%5d %12g %12g %12g\n", iCol, dual_activities[iCol],
-               solution.col_dual[iCol], dual_residual);
+               solution.col_dual[iCol], dual_residual_error);
       }
       num_dual_residual++;
     }
-    max_dual_residual = std::max(dual_residual, max_dual_residual);
-    sum_dual_residual += dual_residual;
+    max_dual_residual = std::max(dual_residual_error, max_dual_residual);
+    sum_dual_residual += dual_residual_error;
   }
   header_written = false;
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
@@ -450,6 +491,8 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
   std::string value_adjective;
   int report_level;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
+  const bool force_report =
+      options.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY;
   if (primal_dual_errors.num_nonzero_basic_duals) {
     value_adjective = "Error";
     report_level = ML_ALWAYS;
@@ -459,11 +502,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     report_level = ML_NONE;
     return_status = HighsDebugStatus::OK;
   }
-  if (options.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP) {
-    report_level = ML_ALWAYS;
-  } else {
-    report_level = ML_DETAILED;
-  }
+  if (force_report) report_level = ML_ALWAYS;
   HighsPrintMessage(options.output, options.message_level, report_level,
                     "PrDuErrors : %-9s Nonzero basic duals:       num = %2d; "
                     "max = %9.4g; sum = %9.4g\n",
@@ -481,11 +520,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     report_level = ML_NONE;
     return_status = HighsDebugStatus::OK;
   }
-  if (options.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP) {
-    report_level = ML_ALWAYS;
-  } else {
-    report_level = ML_DETAILED;
-  }
+  if (force_report) report_level = ML_ALWAYS;
   HighsPrintMessage(options.output, options.message_level, report_level,
                     "PrDuErrors : %-9s Off-bound nonbasic values: num = %2d; "
                     "max = %9.4g; sum = %9.4g\n",
@@ -507,11 +542,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     report_level = ML_VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (options.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP) {
-    report_level = ML_ALWAYS;
-  } else {
-    report_level = ML_DETAILED;
-  }
+  if (force_report) report_level = ML_ALWAYS;
   HighsPrintMessage(options.output, options.message_level, report_level,
                     "PrDuErrors : %-9s Primal residual:           num = %2d; "
                     "max = %9.4g; sum = %9.4g\n",
@@ -533,11 +564,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
     report_level = ML_VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (options.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP) {
-    report_level = ML_ALWAYS;
-  } else {
-    report_level = ML_DETAILED;
-  }
+  if (force_report) report_level = ML_ALWAYS;
   HighsPrintMessage(options.output, options.message_level, report_level,
                     "PrDuErrors : %-9s Dual residual:             num = %2d; "
                     "max = %9.4g; sum = %9.4g\n",
@@ -675,4 +702,23 @@ HighsDebugStatus debugCompareSolutionParamInteger(const string name,
 HighsDebugStatus debugWorseStatus(HighsDebugStatus status0,
                                   HighsDebugStatus status1) {
   return static_cast<HighsDebugStatus>(std::max((int)status0, (int)status1));
+}
+
+void debugReportHighsBasicSolution(const string message,
+                                   const HighsOptions& options,
+                                   const HighsSolutionParams& solution_params,
+                                   const HighsModelStatus model_status) {
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                    "\nHiGHS basic solution: %s\n", message.c_str());
+  HighsPrintMessage(
+      options.output, options.message_level, ML_ALWAYS,
+      "Infeas:                Pr %d(Max %.4g, Sum %.4g); Du %d(Max %.4g, "
+      "Sum %.4g); Status: %s\n",
+      solution_params.num_primal_infeasibilities,
+      solution_params.max_primal_infeasibility,
+      solution_params.sum_primal_infeasibilities,
+      solution_params.num_dual_infeasibilities,
+      solution_params.max_dual_infeasibility,
+      solution_params.sum_dual_infeasibilities,
+      utilHighsModelStatusToString(model_status).c_str());
 }

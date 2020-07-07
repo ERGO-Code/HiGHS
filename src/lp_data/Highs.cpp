@@ -650,6 +650,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
           hmos_[original_hmo].basis_.row_status =
               presolve_.data_.recovered_basis_.row_status;
 
+          int save_highs_debug_level = options_.highs_debug_level;
+          options_.highs_debug_level = HIGHS_DEBUG_LEVEL_COSTLY;
+          debugHighsBasicSolution("After returning from postsolve", options_,
+                                  lp_, hmos_[original_hmo].basis_,
+                                  hmos_[original_hmo].solution_);
+          options_.highs_debug_level = save_highs_debug_level;
+
           analyseHighsBasicSolution(options_.logfile, hmos_[original_hmo],
                                     "after returning from postsolve");
           // Now hot-start the simplex solver for the original_hmo
@@ -1929,8 +1936,7 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
   }
   if (have_solution && basis_.valid_) {
     debugHighsBasicSolution("Before return from run()", options_, lp_, basis_,
-                            solution_, info_, model_status_,
-                            scaled_model_status_);
+                            solution_, info_, model_status_);
   }
 }
 

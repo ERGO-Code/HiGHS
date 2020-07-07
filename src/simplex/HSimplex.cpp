@@ -3869,7 +3869,7 @@ HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(
   double new_scaled_primal_feasibility_tolerance;
   double new_scaled_dual_feasibility_tolerance;
   return getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-      highs_model_object.options_.logfile, highs_model_object.lp_,
+      highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.scale_, highs_model_object.simplex_basis_,
       highs_model_object.simplex_info_, highs_model_object.scaled_model_status_,
       highs_model_object.unscaled_solution_params_, get_scaled_solution_params,
@@ -3890,7 +3890,7 @@ HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(
   double new_scaled_primal_feasibility_tolerance;
   double new_scaled_dual_feasibility_tolerance;
   return getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-      highs_model_object.options_.logfile, highs_model_object.lp_,
+      highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.scale_, highs_model_object.simplex_basis_,
       highs_model_object.simplex_info_, highs_model_object.scaled_model_status_,
       get_unscaled_solution_params, highs_model_object.scaled_solution_params_,
@@ -3910,7 +3910,7 @@ HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(
   double new_scaled_primal_feasibility_tolerance;
   double new_scaled_dual_feasibility_tolerance;
   return getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-      highs_model_object.options_.logfile, highs_model_object.lp_,
+      highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.scale_, highs_model_object.simplex_basis_,
       highs_model_object.simplex_info_, highs_model_object.scaled_model_status_,
       get_unscaled_solution_params, get_scaled_solution_params,
@@ -3932,7 +3932,7 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(
   HighsSolutionParams get_scaled_solution_params =
       highs_model_object.scaled_solution_params_;
   return getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-      highs_model_object.options_.logfile, highs_model_object.lp_,
+      highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.scale_, highs_model_object.simplex_basis_,
       highs_model_object.simplex_info_, highs_model_object.scaled_model_status_,
       get_unscaled_solution_params, highs_model_object.scaled_solution_params_,
@@ -3948,7 +3948,7 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(
 // resolving the scaled LP
 HighsStatus
 getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-    FILE* logfile, const HighsLp& lp, const HighsScale& scale,
+    const HighsOptions& options, const HighsLp& lp, const HighsScale& scale,
     const SimplexBasis& basis, const HighsSimplexInfo& simplex_info,
     const HighsModelStatus scaled_model_status,
     const HighsSolutionParams& unscaled_solution_params,
@@ -4141,30 +4141,27 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
   }
 
-  /*
   HighsDebugStatus debug_status;
-  debug_status = debugEqualSolutionInfeasibilityParams(
-      highs_model_object.options_,
-      get_unscaled_solution_params, unscaled_solution_params);
+  debug_status = debugCompareSolutionInfeasibilityParams(
+      options, get_unscaled_solution_params, unscaled_solution_params);
   if (debug_status != HighsDebugStatus::OK) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "Unequal unscaled solution infeasibility params in "
                     "getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
-    assert(equal_solution_infeasibility_params);
+    assert(debug_status == HighsDebugStatus::OK);
     return HighsStatus::Error;
   }
   if (check_scaled_solution_params) {
-    equal_solution_infeasibility_params = equalSolutionInfeasibilityParams(
-        get_scaled_solution_params, scaled_solution_params);
-    if (!equal_solution_infeasibility_params) {
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
+    debug_status = debugCompareSolutionInfeasibilityParams(
+        options, get_scaled_solution_params, scaled_solution_params);
+    if (debug_status != HighsDebugStatus::OK) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Unequal scaled solution infeasibility params in "
                       "getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
-      assert(equal_solution_infeasibility_params);
+      assert(debug_status == HighsDebugStatus::OK);
       return HighsStatus::Error;
     }
   }
-  */
   return HighsStatus::OK;
 }
 
