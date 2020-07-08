@@ -328,18 +328,18 @@ int Presolve::presolve(int print) {
 
   int iter = 1;
 
-  removeFixed();
+  // removeFixed();
   if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainForcing);
-    order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainForcing);
+    // order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainDoubletonEq);
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainColSingletons);
-    order.push_back(Presolver::kMainDominatedCols);
+    // order.push_back(Presolver::kMainRowSingletons);
+    // order.push_back(Presolver::kMainColSingletons);
+    // order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
@@ -574,6 +574,9 @@ void Presolve::removeDoubletonEquations() {
   int iter = 0;
 
   for (int row = 0; row < numRow; row++) {
+    // if (row != 53) continue;
+    // if (row != 771) continue;
+
     if (flagRow.at(row)) {
       // Analyse dependency on numerical tolerance
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
@@ -638,11 +641,11 @@ void Presolve::removeDoubletonEquations() {
             // update matrix coefficients
             if (isZeroA(i, x)) {
               UpdateMatrixCoeffDoubletonEquationXzero(i, x, y, aiy, akx, aky);
-              // std::cout << "   . row " << i << " zero " << std::endl;
+              std::cout << "   . row " << i << " zero " << std::endl;
             } else {
               UpdateMatrixCoeffDoubletonEquationXnonZero(i, x, y, aiy, akx,
                                                          aky);
-              // std::cout << "   . row " << i << " zero " << std::endl;
+              std::cout << "   . row " << i << " zero " << std::endl;
             }
           }
         if (Avalue.size() > 40000000) {
@@ -3575,34 +3578,36 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
   pair<int, vector<double>> p = oldBounds.top();
   oldBounds.pop();
   vector<double> v = get<1>(p);
-  int x = get<0>(p);
-  double ubxNew = v[1];
-  double lbxNew = v[0];
-  double cxNew = v[2];
+  const int x = get<0>(p);
+  assert(x >= 0 && x <= numColOriginal);
+  const double ubxNew = v[1];
+  const double lbxNew = v[0];
+  const double cxNew = v[2];
 
   p = oldBounds.top();
   oldBounds.pop();
   v = get<1>(p);
-  double ubxOld = v[1];
-  double lbxOld = v[0];
-  double cxOld = v[2];
+  const double ubxOld = v[1];
+  const double lbxOld = v[0];
+  const double cxOld = v[2];
 
   p = oldBounds.top();
   oldBounds.pop();
   v = get<1>(p);
-  double uby = v[1];
-  double lby = v[0];
-  double cy = v[2];
+  const double uby = v[1];
+  const double lby = v[0];
+  const double cy = v[2];
 
-  int y = col;
+  const int y = col;
+  assert(y >= 0 && y <= numColOriginal);
 
-  double b = postValue.top();
+  const double b = postValue.top();
   postValue.pop();
-  double aky = postValue.top();
+  const double aky = postValue.top();
   postValue.pop();
-  double akx = postValue.top();
+  const double akx = postValue.top();
   postValue.pop();
-  double valueX = valuePrimal.at(x);
+  const double valueX = valuePrimal.at(x);
 
   // primal value and objective shift
   valuePrimal.at(y) = (b - akx * valueX) / aky;
@@ -3612,128 +3617,212 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
   colCostAtEl.at(x) = cxOld;
 
   flagRow.at(row) = 1;
-
-  // // x stayed, y was removed
-  // HighsBasisStatus local_status = col_status.at(x);
-  // if ((local_status == HighsBasisStatus::NONBASIC && valueX == ubxNew &&
-  //      ubxNew < ubxOld) ||
-  //     (local_status == HighsBasisStatus::NONBASIC && valueX == lbxNew &&
-  //      lbxNew > lbxOld)) {
-  //   // Value is nonbasic at reduced bound but needs to be changed to basic
-  //   since
-  //   // bound is expanding.
-  //   col_status.at(x) = HighsBasisStatus::BASIC;
-  //   row_status.at(row) = HighsBasisStatus::NONBASIC;
-
-  //   // transfer dual of x to dual of row
-  //   valueColDual.at(x) = 0;
-  //   valueRowDual.at(row) = getRowDualPost(row, x);
-  //   valueColDual.at(y) = getColumnDualPost(y);
-
-  //   if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
-  // } else {
-  //   // if column y has value between bounds set it to basic, else set row to
-  //   // be basic
-  //   if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
-  //     col_status.at(y) = HighsBasisStatus::BASIC;
-  //     row_status.at(row) = HighsBasisStatus::NONBASIC;
-
-  //     valueColDual.at(y) = 0;
-  //     valueRowDual.at(row) = getRowDualPost(row, y);
-
-  //     if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
-
-  //     //} else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) <
-  //     tol) {
-  //     //// x is at a bound: set x to N col_status.at(y) =
-  //     // HighsBasisStatus::BASIC; if (report_postsolve) printf("4.3 : Make
-  //     // column %3d basic\n", y);
-
-  //     //       valueColDual.at(y) = 0; valueRowDual.at(row) =
-  //     //       getRowDualPost(row, y);
-  //   } else {
-  //     row_status.at(row) = HighsBasisStatus::BASIC;
-  //     col_status.at(y) = HighsBasisStatus::NONBASIC;
-
-  //     valueRowDual.at(row) = 0;
-  //     valueColDual.at(x) = getColumnDualPost(x);
-  //     valueColDual.at(y) = getColumnDualPost(y);
-  //     if (report_postsolve) printf("4.4 : Make row    %3d basic\n", row);
-  //   }
-  HighsBasisStatus local_status;
-  if (x < numColOriginal) {
-    local_status = col_status.at(x);
-  } else {
-    local_status = row_status.at(x - numColOriginal);
-  }
-  if ((local_status != HighsBasisStatus::BASIC && valueX == ubxNew &&
-       ubxNew < ubxOld) ||
-      (local_status != HighsBasisStatus::BASIC && valueX == lbxNew &&
-       lbxNew > lbxOld)) {
-    if (x < numColOriginal) {
-      col_status.at(x) = HighsBasisStatus::BASIC;
-      // transfer dual of x to dual of row
-      valueColDual.at(x) = 0;
-      valueRowDual.at(row) = getRowDualPost(row, x);
-      valueColDual.at(y) = getColumnDualPost(y);
-
-      if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
-    } else {
-      row_status.at(x - numColOriginal) = HighsBasisStatus::BASIC;
-      if (report_postsolve)
-        printf("4.1 : Make row    %3d basic\n", x - numColOriginal);
-
-      valueRowDual.at(row) = 0;
-      valueColDual.at(x) = getColumnDualPost(x);
-      valueColDual.at(y) = getColumnDualPost(y);
-    }
-  } else {
-    // row becomes basic unless y is between bounds, in which case y is basic
-    if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
-      if (y < numColOriginal) {
-        col_status.at(y) = HighsBasisStatus::BASIC;
-        if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
-
-        valueColDual.at(y) = 0;
-        valueRowDual.at(row) = getRowDualPost(row, y);
-      } else {
-        row_status.at(y - numColOriginal) = HighsBasisStatus::BASIC;
-        if (report_postsolve)
-          printf("4.2 : Make row    %3d basic\n", y - numColOriginal);
-
-        valueRowDual.at(row) = 0;
-        valueColDual.at(x) = getColumnDualPost(x);
-        valueColDual.at(y) = getColumnDualPost(y);
-      }
-    } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
-      if (y < numColOriginal) {
-        col_status.at(y) = HighsBasisStatus::BASIC;
-        if (report_postsolve) printf("4.3 : Make column %3d basic\n", y);
-
-        valueColDual.at(y) = 0;
-        valueRowDual.at(row) = getRowDualPost(row, y);
-      } else {
-        row_status.at(y - numColOriginal) = HighsBasisStatus::BASIC;
-        if (report_postsolve)
-          printf("4.3 : Make row    %3d basic\n", y - numColOriginal);
-
-        valueRowDual.at(row) = 0;
-        valueColDual.at(x) = getColumnDualPost(x);
-        valueColDual.at(y) = getColumnDualPost(y);
-      }
-    } else {
-      if (report_postsolve) {
-        printf("4.4 : Make row    %3d basic\n", row);
-      }
-      row_status.at(row) = HighsBasisStatus::BASIC;
-      valueRowDual.at(row) = 0;
-      valueColDual.at(x) = getColumnDualPost(x);
-      valueColDual.at(y) = getColumnDualPost(y);
-    }
-  }
-
   flagCol.at(y) = 1;
+
+  // x stayed, y was removed
+  const HighsBasisStatus x_status_reduced = col_status.at(x);
+  if (((x_status_reduced == HighsBasisStatus::NONBASIC ||
+        x_status_reduced == HighsBasisStatus::UPPER) &&
+       fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
+      ((x_status_reduced == HighsBasisStatus::NONBASIC ||
+        x_status_reduced == HighsBasisStatus::LOWER) &&
+       fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
+    // Column x is nonbasic at reduced solution at a reduced bound but needs to
+    // be changed to basic since this bound is expanding.
+    col_status.at(x) = HighsBasisStatus::BASIC;
+    assert(col_status.at(y) == HighsBasisStatus::NONBASIC);
+    row_status.at(row) = HighsBasisStatus::NONBASIC;
+
+    // transfer dual of x to dual of row
+    valueColDual.at(x) = 0;
+    valueRowDual.at(row) = getRowDualPost(row, x);
+    valueColDual.at(y) = getColumnDualPost(y);
+
+    if (fabs(lby - uby) > tol) {
+      // Make sure y is at a bound
+      assert(fabs(valuePrimal[y] - lby) < tol ||
+             fabs(valuePrimal[y] - uby) < tol);
+
+      // Check that y is dual feasible
+      bool feasible = true;
+      if (fabs(valuePrimal[y] - lby) < tol && valueColDual[y] < -tol)
+        feasible = false;
+      if (fabs(valuePrimal[y] - uby) < tol && valueColDual[y] > tol)
+        feasible = false;
+      assert(feasible);
+    }
+    if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
+  } else if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
+    // if column y has value between bounds set it to basic, else set row to
+    // be basic
+    col_status.at(y) = HighsBasisStatus::BASIC;
+    row_status.at(row) = HighsBasisStatus::NONBASIC;
+
+    valueColDual.at(y) = 0;
+    valueRowDual.at(row) = getRowDualPost(row, y);
+
+    if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
+  } else {
+    // Column y is at a bound.
+    bool row_basic = false;
+    // Check if tight.
+    if (fabs(lby - uby) < tol) {
+      assert(fabs(lby - valuePrimal[y]) < tol);
+      // no restriction so can make row basic...
+      row_basic = true;
+    } // Else Will need to check dual feasibility of y dual.
+
+    // Print & check some info.
+    if (x_status_reduced == HighsBasisStatus::BASIC)
+      std::cout << "BASIC" << std::endl;
+    else
+      std::cout << "NOT BASIC" << std::endl;
+
+    // see if X at a bound
+    if ( fabs(valueX - ubxNew) < tol  ||
+       fabs(valueX - lbxNew) < tol ) {
+      if (( fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
+        (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
+          std::cout << "     4.12" << std::endl;
+        }
+    } else {
+      // X strictly between bounds
+      assert(x_status_reduced == HighsBasisStatus::BASIC);
+      assert(valuePrimal[x] - lbxNew > tol && ubxNew - valuePrimal[x] > tol);
+
+      if (valuePrimal[x] == lbxNew || valuePrimal[x] == ubxNew) 
+        std::cout << "     it happens" << std::endl;
+    }
+    
+    if (row_basic) {
+      assert(col_status.at(y) == HighsBasisStatus::NONBASIC);
+
+      valueRowDual.at(row) = 0;
+      valueColDual.at(y) = getColumnDualPost(y);
+
+     if (report_postsolve) printf("4.1 : Make row    %3d basic\n", row);
+    } else {
+
+    // bool feasible = true;
+    // if (lby > -HIGHS_CONST_INF && lby < uby && fabs(lby - valuePrimal[y]) < tol)
+    //   if (valueColDual[y] < 0) feasible = false;
+    // if (uby < HIGHS_CONST_INF && lby < uby && fabs(uby - valuePrimal[y]) < tol)
+    //   if (valueColDual[y] > 0) feasible = false;
+
+    // if (!feasible) 
+
+
+      // y is at a bound with infeasible dual
+      // : attempt to make basic
+      col_status.at(y) = HighsBasisStatus::BASIC;
+      row_status.at(row) = HighsBasisStatus::NONBASIC;
+
+      valueColDual.at(y) = 0;
+      valueRowDual.at(row) = getRowDualPost(row, y);
+
+      if (report_postsolve) printf("4.4 : Make column %3d basic\n", y);
+    }
+  }
 }
+
+//     bool feasible_x = true;
+//     if (lbxOld > -HIGHS_CONST_INF && lbxOld < ubxOld &&
+//         fabs(lbxOld - valuePrimal[x]) < tol)
+//       if (valueColDual[y] < 0) feasible_x = false;
+//     if (uby < HIGHS_CONST_INF && lby < uby && fabs(uby - valuePrimal[y]) < tol)
+//       if (valueColDual[y] > 0) feasible_x = false;
+
+//     if (feasible_x) {
+//       col_status.at(x) = HighsBasisStatus::BASIC;
+//       row_status.at(row) = HighsBasisStatus::NONBASIC;
+//       if (report_postsolve) printf("4.4 : Make column %3d basic\n", x);
+//     }
+
+//     row_status.at(row) = HighsBasisStatus::BASIC;
+//     col_status.at(y) = HighsBasisStatus::NONBASIC;
+//     if (report_postsolve) printf("4.3 : Make row    %3d basic\n", row);
+//   }
+//   else {
+//     // basic row not feasible.
+//     // Try to make x basic
+//     valueColDual.at(x) = 0;
+//     valueRowDual.at(row) = getRowDualPost(row, x);
+//     valueColDual.at(y) = getColumnDualPost(y);
+//   }
+// }
+
+// HighsBasisStatus local_status;
+// if (x < numColOriginal) {
+//   local_status = col_status.at(x);
+// } else {
+//   local_status = row_status.at(x - numColOriginal);
+// }
+// if ((local_status != HighsBasisStatus::BASIC && valueX == ubxNew &&
+//      ubxNew < ubxOld) ||
+//     (local_status != HighsBasisStatus::BASIC && valueX == lbxNew &&
+//      lbxNew > lbxOld)) {
+//   if (x < numColOriginal) {
+//     col_status.at(x) = HighsBasisStatus::BASIC;
+//     // transfer dual of x to dual of row
+//     valueColDual.at(x) = 0;
+//     valueRowDual.at(row) = getRowDualPost(row, x);
+//     valueColDual.at(y) = getColumnDualPost(y);
+
+//     if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
+//   } else {
+//     row_status.at(x - numColOriginal) = HighsBasisStatus::BASIC;
+//     if (report_postsolve)
+//       printf("4.1 : Make row    %3d basic\n", x - numColOriginal);
+
+//     valueRowDual.at(row) = 0;
+//     valueColDual.at(x) = getColumnDualPost(x);
+//     valueColDual.at(y) = getColumnDualPost(y);
+//   }
+// } else {
+//   // row becomes basic unless y is between bounds, in which case y is basic
+//   if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
+//     if (y < numColOriginal) {
+//       col_status.at(y) = HighsBasisStatus::BASIC;
+//       if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
+
+//       valueColDual.at(y) = 0;
+//       valueRowDual.at(row) = getRowDualPost(row, y);
+//     } else {
+//       row_status.at(y - numColOriginal) = HighsBasisStatus::BASIC;
+//       if (report_postsolve)
+//         printf("4.2 : Make row    %3d basic\n", y - numColOriginal);
+
+//       valueRowDual.at(row) = 0;
+//       valueColDual.at(x) = getColumnDualPost(x);
+//       valueColDual.at(y) = getColumnDualPost(y);
+//     }
+//   } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
+//     if (y < numColOriginal) {
+//       col_status.at(y) = HighsBasisStatus::BASIC;
+//       if (report_postsolve) printf("4.3 : Make column %3d basic\n", y);
+
+//       valueColDual.at(y) = 0;
+//       valueRowDual.at(row) = getRowDualPost(row, y);
+//     } else {
+//       row_status.at(y - numColOriginal) = HighsBasisStatus::BASIC;
+//       if (report_postsolve)
+//         printf("4.3 : Make row    %3d basic\n", y - numColOriginal);
+
+//       valueRowDual.at(row) = 0;
+//       valueColDual.at(x) = getColumnDualPost(x);
+//       valueColDual.at(y) = getColumnDualPost(y);
+//     }
+//   } else {
+//     if (report_postsolve) {
+//       printf("4.4 : Make row    %3d basic\n", row);
+//     }
+//     row_status.at(row) = HighsBasisStatus::BASIC;
+//     valueRowDual.at(row) = 0;
+//     valueColDual.at(x) = getColumnDualPost(x);
+//     valueColDual.at(y) = getColumnDualPost(y);
+//   }
+// }
+
 
 void Presolve::countRemovedRows(PresolveRule rule) {
   timer.increaseCount(true, rule);
