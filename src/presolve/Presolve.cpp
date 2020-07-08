@@ -576,6 +576,8 @@ void Presolve::removeDoubletonEquations() {
   for (int row = 0; row < numRow; row++) {
     // if (row != 53) continue;
     // if (row != 771) continue;
+    // ~~~
+    if (row != 128) continue;
 
     if (flagRow.at(row)) {
       // Analyse dependency on numerical tolerance
@@ -3626,7 +3628,10 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
        fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
       ((x_status_reduced == HighsBasisStatus::NONBASIC ||
         x_status_reduced == HighsBasisStatus::LOWER) &&
-       fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
+       fabs(valueX - lbxNew) < tol && lbxNew > lbxOld) ||
+      (fabs(valueX - lbxNew) < tol && fabs(lbxOld - lbxNew) < tol &&
+       (x_status_reduced == HighsBasisStatus::UPPER ||
+        x_status_reduced == HighsBasisStatus::LOWER))) {
     // Column x is nonbasic at reduced solution at a reduced bound but needs to
     // be changed to basic since this bound is expanding.
     col_status.at(x) = HighsBasisStatus::BASIC;
@@ -3670,7 +3675,7 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
       assert(fabs(lby - valuePrimal[y]) < tol);
       // no restriction so can make row basic...
       row_basic = true;
-    } // Else Will need to check dual feasibility of y dual.
+    }  // Else Will need to check dual feasibility of y dual.
 
     // Print & check some info.
     if (x_status_reduced == HighsBasisStatus::BASIC)
@@ -3679,38 +3684,38 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
       std::cout << "NOT BASIC" << std::endl;
 
     // see if X at a bound
-    if ( fabs(valueX - ubxNew) < tol  ||
-       fabs(valueX - lbxNew) < tol ) {
-      if (( fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
-        (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
-          std::cout << "     4.12" << std::endl;
-        }
+    if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
+      if ((fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
+          (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
+        std::cout << "     4.122" << std::endl;
+        assert(x_status_reduced == HighsBasisStatus::BASIC);
+
+      } else {
+        std::cout << "     4.002" << std::endl;
+      }
     } else {
       // X strictly between bounds
       assert(x_status_reduced == HighsBasisStatus::BASIC);
       assert(valuePrimal[x] - lbxNew > tol && ubxNew - valuePrimal[x] > tol);
-
-      if (valuePrimal[x] == lbxNew || valuePrimal[x] == ubxNew) 
-        std::cout << "     it happens" << std::endl;
     }
-    
+
     if (row_basic) {
       assert(col_status.at(y) == HighsBasisStatus::NONBASIC);
 
       valueRowDual.at(row) = 0;
       valueColDual.at(y) = getColumnDualPost(y);
 
-     if (report_postsolve) printf("4.1 : Make row    %3d basic\n", row);
+      if (report_postsolve) printf("4.1 : Make row    %3d basic\n", row);
     } else {
+      // bool feasible = true;
+      // if (lby > -HIGHS_CONST_INF && lby < uby && fabs(lby - valuePrimal[y]) <
+      // tol)
+      //   if (valueColDual[y] < 0) feasible = false;
+      // if (uby < HIGHS_CONST_INF && lby < uby && fabs(uby - valuePrimal[y]) <
+      // tol)
+      //   if (valueColDual[y] > 0) feasible = false;
 
-    // bool feasible = true;
-    // if (lby > -HIGHS_CONST_INF && lby < uby && fabs(lby - valuePrimal[y]) < tol)
-    //   if (valueColDual[y] < 0) feasible = false;
-    // if (uby < HIGHS_CONST_INF && lby < uby && fabs(uby - valuePrimal[y]) < tol)
-    //   if (valueColDual[y] > 0) feasible = false;
-
-    // if (!feasible) 
-
+      // if (!feasible)
 
       // y is at a bound with infeasible dual
       // : attempt to make basic
@@ -3729,7 +3734,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
 //     if (lbxOld > -HIGHS_CONST_INF && lbxOld < ubxOld &&
 //         fabs(lbxOld - valuePrimal[x]) < tol)
 //       if (valueColDual[y] < 0) feasible_x = false;
-//     if (uby < HIGHS_CONST_INF && lby < uby && fabs(uby - valuePrimal[y]) < tol)
+//     if (uby < HIGHS_CONST_INF && lby < uby && fabs(uby - valuePrimal[y]) <
+//     tol)
 //       if (valueColDual[y] > 0) feasible_x = false;
 
 //     if (feasible_x) {
@@ -3822,7 +3828,6 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
 //     valueColDual.at(y) = getColumnDualPost(y);
 //   }
 // }
-
 
 void Presolve::countRemovedRows(PresolveRule rule) {
   timer.increaseCount(true, rule);
