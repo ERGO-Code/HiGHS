@@ -286,25 +286,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     return_status = interpretCallStatus(call_status, return_status,
                                         "analyseSimplexBasicSolution");
     if (return_status == HighsStatus::Error) return return_status;
-
-#ifdef HiGHSDEV
-    // For debugging, it's good to be able to check what comes out of
-    // the solver. This is done fully by analyseHighsBasicSolution,
-    // which computes the primal and dual residuals so isn't cheap.
-    //
-    // Copy the solution and basis
-    HighsSimplexInterface simplex_interface(highs_model_object);
-    simplex_interface.convertSimplexToHighsSolution();
-    simplex_interface.convertSimplexToHighsBasis();
-    call_status = analyseHighsBasicSolution(logfile, highs_model_object,
-                                            "to check simplex basic solution");
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "analyseHighsBasicSolution");
-    if (return_status == HighsStatus::Error) return return_status;
-    // Invalidate the basis to make sure it is set again later
-    // without HiGHSDEV
-    highs_model_object.basis_.valid_ = false;
-#endif
   }
   return_status =
       highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);

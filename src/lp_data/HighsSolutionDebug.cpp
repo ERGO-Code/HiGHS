@@ -28,6 +28,46 @@ const double large_residual_error = 1e-12;
 const double excessive_residual_error = sqrt(large_residual_error);
 
 HighsDebugStatus debugHighsBasicSolution(const string message,
+					 const HighsModelObject& highs_model_object) {
+  // Non-trivially expensive analysis of a HiGHS basic solution, starting from
+  // highs_model_object
+  return debugHighsBasicSolution(message,
+				 highs_model_object.options_,
+				 highs_model_object.lp_,
+				 highs_model_object.basis_,
+				 highs_model_object.solution_,
+                                 highs_model_object.unscaled_solution_params_,
+				 highs_model_object.unscaled_model_status_);  
+}
+
+HighsDebugStatus debugHighsBasicSolution(
+    const string message, const HighsOptions& options, const HighsLp& lp,
+    const HighsBasis& basis, const HighsSolution& solution,
+    const HighsInfo& info, const HighsModelStatus model_status) {
+  // Non-trivially expensive analysis of a HiGHS basic solution, starting from
+  // options and info
+  //
+  // Extract the solution_params from info and options
+  HighsSolutionParams solution_params;
+  solution_params.primal_feasibility_tolerance =
+      options.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance =
+      options.dual_feasibility_tolerance;
+  solution_params.primal_status = info.primal_status;
+  solution_params.dual_status = info.dual_status;
+  solution_params.objective_function_value = info.objective_function_value;
+  solution_params.num_primal_infeasibilities = info.num_primal_infeasibilities;
+  solution_params.max_primal_infeasibility = info.max_primal_infeasibility;
+  solution_params.sum_primal_infeasibilities = info.sum_primal_infeasibilities;
+  solution_params.num_dual_infeasibilities = info.num_dual_infeasibilities;
+  solution_params.max_dual_infeasibility = info.max_dual_infeasibility;
+  solution_params.sum_dual_infeasibilities = info.sum_dual_infeasibilities;
+
+  return debugHighsBasicSolution(message, options, lp, basis, solution,
+                                 solution_params, model_status);
+}
+
+HighsDebugStatus debugHighsBasicSolution(const string message,
                                          const HighsOptions& options,
                                          const HighsLp& lp,
                                          const HighsBasis& basis,
@@ -66,35 +106,6 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
   debugReportHighsBasicSolution(message, options, solution_params,
                                 model_status);
   return debugAnalysePrimalDualErrors(options, primal_dual_errors);
-}
-
-HighsDebugStatus debugHighsBasicSolution(
-    const string message, const HighsOptions& options, const HighsLp& lp,
-    const HighsBasis& basis, const HighsSolution& solution,
-    const HighsInfo& info, const HighsModelStatus model_status) {
-  // Non-trivially expensive analysis of a HiGHS basic solution, starting from
-  // options and info
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
-    return HighsDebugStatus::NOT_CHECKED;
-
-  // Extract the solution_params from info and options
-  HighsSolutionParams solution_params;
-  solution_params.primal_feasibility_tolerance =
-      options.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance =
-      options.dual_feasibility_tolerance;
-  solution_params.primal_status = info.primal_status;
-  solution_params.dual_status = info.dual_status;
-  solution_params.objective_function_value = info.objective_function_value;
-  solution_params.num_primal_infeasibilities = info.num_primal_infeasibilities;
-  solution_params.max_primal_infeasibility = info.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibilities = info.sum_primal_infeasibilities;
-  solution_params.num_dual_infeasibilities = info.num_dual_infeasibilities;
-  solution_params.max_dual_infeasibility = info.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibilities = info.sum_dual_infeasibilities;
-
-  return debugHighsBasicSolution(message, options, lp, basis, solution,
-                                 solution_params, model_status);
 }
 
 HighsDebugStatus debugHighsBasicSolution(

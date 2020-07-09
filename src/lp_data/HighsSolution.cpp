@@ -98,6 +98,7 @@ HighsStatus analyseHighsBasicSolution(
     const HighsModelStatus model_status,
     const HighsSolutionParams& solution_params, const string message,
     const int report_level) {
+  printf("\n\nFRED\n\n");
   HighsLogMessage(logfile, HighsMessageType::INFO,
                   "HiGHS basic solution: Analysis - %s", message.c_str());
 

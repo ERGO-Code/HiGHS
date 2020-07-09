@@ -20,15 +20,18 @@
 #include "lp_data/HighsSolution.h"
 
 HighsDebugStatus debugHighsBasicSolution(const string message,
-                                         const HighsOptions& options,
-                                         const HighsLp& lp,
-                                         const HighsBasis& basis,
-                                         const HighsSolution& solution);
+					 const HighsModelObject& highs_model_object);
 
 HighsDebugStatus debugHighsBasicSolution(
     const string message, const HighsOptions& options, const HighsLp& lp,
     const HighsBasis& basis, const HighsSolution& solution,
     const HighsInfo& info, const HighsModelStatus model_status);
+
+HighsDebugStatus debugHighsBasicSolution(const string message,
+                                         const HighsOptions& options,
+                                         const HighsLp& lp,
+                                         const HighsBasis& basis,
+                                         const HighsSolution& solution);
 
 HighsDebugStatus debugHighsBasicSolution(
     const string message, const HighsOptions& options, const HighsLp& lp,

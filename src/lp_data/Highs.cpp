@@ -657,8 +657,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
                                   hmos_[original_hmo].solution_);
           options_.highs_debug_level = save_highs_debug_level;
 
-          analyseHighsBasicSolution(options_.logfile, hmos_[original_hmo],
-                                    "after returning from postsolve");
           // Now hot-start the simplex solver for the original_hmo
           solved_hmo = original_hmo;
           // Save the options to allow the best simplex strategy to
