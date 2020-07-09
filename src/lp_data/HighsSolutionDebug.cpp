@@ -27,17 +27,15 @@ const double excessive_relative_solution_param_error =
 const double large_residual_error = 1e-12;
 const double excessive_residual_error = sqrt(large_residual_error);
 
-HighsDebugStatus debugHighsBasicSolution(const string message,
-					 const HighsModelObject& highs_model_object) {
+HighsDebugStatus debugHighsBasicSolution(
+    const string message, const HighsModelObject& highs_model_object) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // highs_model_object
-  return debugHighsBasicSolution(message,
-				 highs_model_object.options_,
-				 highs_model_object.lp_,
-				 highs_model_object.basis_,
-				 highs_model_object.solution_,
-                                 highs_model_object.unscaled_solution_params_,
-				 highs_model_object.unscaled_model_status_);  
+  return debugHighsBasicSolution(
+      message, highs_model_object.options_, highs_model_object.lp_,
+      highs_model_object.basis_, highs_model_object.solution_,
+      highs_model_object.unscaled_solution_params_,
+      highs_model_object.unscaled_model_status_);
 }
 
 HighsDebugStatus debugHighsBasicSolution(

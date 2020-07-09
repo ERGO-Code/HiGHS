@@ -19,8 +19,24 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
 
-HighsDebugStatus debugHighsBasicSolution(const string message,
-					 const HighsModelObject& highs_model_object);
+struct HighsPrimalDualErrors {
+  int num_nonzero_basic_duals;
+  int num_large_nonzero_basic_duals;
+  double max_nonzero_basic_dual;
+  double sum_nonzero_basic_duals;
+  int num_off_bound_nonbasic;
+  double max_off_bound_nonbasic;
+  double sum_off_bound_nonbasic;
+  int num_primal_residual;
+  double max_primal_residual;
+  double sum_primal_residual;
+  int num_dual_residual;
+  double max_dual_residual;
+  double sum_dual_residual;
+};
+
+HighsDebugStatus debugHighsBasicSolution(
+    const string message, const HighsModelObject& highs_model_object);
 
 HighsDebugStatus debugHighsBasicSolution(
     const string message, const HighsOptions& options, const HighsLp& lp,

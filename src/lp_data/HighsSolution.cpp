@@ -29,12 +29,9 @@
 #include "ipm/ipx/src/lp_solver.h"
 #endif
 
-void getPrimalDualInfeasibilities(
-    const HighsLp& lp, const HighsBasis& basis, const HighsSolution& solution,
-    HighsSolutionParams& solution_params) {
-  double primal_objective_value;
-  double dual_objective_value;
-
+void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
+                                  const HighsSolution& solution,
+                                  HighsSolutionParams& solution_params) {
   double primal_feasibility_tolerance =
       solution_params.primal_feasibility_tolerance;
   double dual_feasibility_tolerance =
@@ -56,94 +53,67 @@ void getPrimalDualInfeasibilities(
   max_dual_infeasibility = 0;
   sum_dual_infeasibilities = 0;
 
-  //  int num_non_basic_var = 0;
-  //  int num_basic_var = 0;
-
   double primal_infeasibility;
   double dual_infeasibility;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    double lower = lp.colLower_[iCol];
-    double upper = lp.colUpper_[iCol];
-    double value = solution.col_value[iCol];
-    double dual = solution.col_dual[iCol];
-    HighsBasisStatus status = basis.col_status[iCol];
+  double lower;
+  double upper;
+  double value;
+  double dual;
+  HighsBasisStatus status;
+  for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
+    if (iVar < lp.numCol_) {
+      int iCol = iVar;
+      lower = lp.colLower_[iCol];
+      upper = lp.colUpper_[iCol];
+      value = solution.col_value[iCol];
+      dual = solution.col_dual[iCol];
+      status = basis.col_status[iCol];
+    } else {
+      int iRow = iVar - lp.numCol_;
+      lower = lp.rowLower_[iRow];
+      upper = lp.rowUpper_[iRow];
+      value = solution.row_value[iRow];
+      dual = -solution.row_dual[iRow];
+      status = basis.row_status[iRow];
+    }
     // Flip dual according to lp.sense_
     dual *= (int)lp.sense_;
-    analyseVarBasicSolution(
-        primal_feasibility_tolerance, dual_feasibility_tolerance,
-        status, lower, upper, value, dual, 
-        primal_infeasibility, dual_infeasibility);
-    if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
-    max_primal_infeasibility =
-        std::max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
-    if (status != HighsBasisStatus::BASIC) {
-      if (dual_infeasibility > dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
-      max_dual_infeasibility =
-          std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
-    }
-  }
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    double lower = lp.rowLower_[iRow];
-    double upper = lp.rowUpper_[iRow];
-    double value = solution.row_value[iRow];
-    double dual = -solution.row_dual[iRow];
-    HighsBasisStatus status = basis.row_status[iRow];
-    // Flip dual according to lp.sense_
-    dual *= (int)lp.sense_;
-    analyseVarBasicSolution(
-        primal_feasibility_tolerance, dual_feasibility_tolerance,
-        status, lower, upper, value, dual, 
-        primal_infeasibility, dual_infeasibility);
-    if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
-    max_primal_infeasibility =
-        std::max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
-    if (status != HighsBasisStatus::BASIC) {
-      if (dual_infeasibility > dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
-      max_dual_infeasibility =
-          std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
-    }
-  }
-}
 
-void analyseVarBasicSolution(const double primal_feasibility_tolerance,
-                             const double dual_feasibility_tolerance,
-                             const HighsBasisStatus status, const double lower,
-                             const double upper, const double value,
-                             const double dual, 
-                             double& primal_infeasibility,
-                             double& dual_infeasibility) {
-  double middle = (lower + upper) * 0.5;
-  double primal_residual = std::max(lower - value, value - upper);
-  primal_infeasibility = std::max(primal_residual, 0.);
-  // ToDo Strange: nonbasic_flag seems to be inverted???
-  if (status != HighsBasisStatus::BASIC) {
-    // Nonbasic variable: look for primal and dual infeasibility
-    if (primal_residual >= -primal_feasibility_tolerance) {
-      // At a bound: check for dual feasibility
-      if (lower < upper) {
-        // Non-fixed variable
-        if (value < middle) {
-          // At lower
-          dual_infeasibility = std::max(-dual, 0.);
+    double primal_residual = std::max(lower - value, value - upper);
+    primal_infeasibility = std::max(primal_residual, 0.);
+    if (primal_infeasibility > primal_feasibility_tolerance)
+      num_primal_infeasibilities++;
+    max_primal_infeasibility =
+        std::max(primal_infeasibility, max_primal_infeasibility);
+    sum_primal_infeasibilities += primal_infeasibility;
+
+    if (status != HighsBasisStatus::BASIC) {
+      // Nonbasic variable: look for dual infeasibility
+      if (primal_residual >= -primal_feasibility_tolerance) {
+        // At a bound
+        double middle = (lower + upper) * 0.5;
+        if (lower < upper) {
+          // Non-fixed variable
+          if (value < middle) {
+            // At lower
+            dual_infeasibility = std::max(-dual, 0.);
+          } else {
+            // At Upper
+            dual_infeasibility = std::max(dual, 0.);
+          }
         } else {
-          // At Upper
-          dual_infeasibility = std::max(dual, 0.);
+          // Fixed variable
+          dual_infeasibility = 0;
         }
       } else {
-        // Fixed variable
-        dual_infeasibility = 0;
+        // Between bounds (or free)
+        dual_infeasibility = fabs(dual);
       }
-    } else {
-      // Between bounds (or free)
-      dual_infeasibility = fabs(dual);
+      if (dual_infeasibility > dual_feasibility_tolerance)
+        num_dual_infeasibilities++;
+      max_dual_infeasibility =
+          std::max(dual_infeasibility, max_dual_infeasibility);
+      sum_dual_infeasibilities += dual_infeasibility;
     }
   }
 }

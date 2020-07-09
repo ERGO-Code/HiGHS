@@ -28,33 +28,9 @@ class HighsModelObject;
 
 using std::string;
 
-struct HighsPrimalDualErrors {
-  int num_nonzero_basic_duals;
-  int num_large_nonzero_basic_duals;
-  double max_nonzero_basic_dual;
-  double sum_nonzero_basic_duals;
-  int num_off_bound_nonbasic;
-  double max_off_bound_nonbasic;
-  double sum_off_bound_nonbasic;
-  int num_primal_residual;
-  double max_primal_residual;
-  double sum_primal_residual;
-  int num_dual_residual;
-  double max_dual_residual;
-  double sum_dual_residual;
-};
-
-void getPrimalDualInfeasibilities(
-    const HighsLp& lp, const HighsBasis& basis, const HighsSolution& solution,
-    HighsSolutionParams& solution_params);
-
-void analyseVarBasicSolution(const double primal_feasibility_tolerance,
-                             const double dual_feasibility_tolerance,
-                             const HighsBasisStatus status, const double lower,
-                             const double upper, const double value,
-                             const double dual, 
-                             double& primal_infeasibility,
-                             double& dual_infeasibility);
+void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
+                                  const HighsSolution& solution,
+                                  HighsSolutionParams& solution_params);
 
 #ifdef HiGHSDEV
 void analyseSimplexAndHighsSolutionDifferences(
