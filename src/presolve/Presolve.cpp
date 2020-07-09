@@ -577,7 +577,7 @@ void Presolve::removeDoubletonEquations() {
     // if (row != 53) continue;
     // if (row != 771) continue;
     // ~~~
-    /// if (row != 344) continue;
+     // if (row != 344) continue;
 
     if (flagRow.at(row)) {
       // Analyse dependency on numerical tolerance
@@ -1420,12 +1420,14 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
                 << row << std::endl;
   }
 
-  if (low < colLower[j]) std::cout << "low tighter" << std::endl;
-  if (low > colLower[j]) std::cout << "low looser" << std::endl;
+  if (low < colLower[j]) std::cout << "low looser" << std::endl;
+  if (low > colLower[j]) std::cout << "low tighter" << std::endl;
   if (low == colLower[j]) std::cout << "low eq" << std::endl;
   if (upp < colUpper[j]) std::cout << "up  tighter" << std::endl;
   if (upp > colUpper[j]) std::cout << "up  looser" << std::endl;
   if (upp == colUpper[j]) std::cout << "up  eq" << std::endl;
+  if (upp < colUpper[j] && upp == colLower[j]) 
+   std::cout << "weeeeee" << std::endl;
 
   return make_pair(low, upp);
 }
@@ -3641,7 +3643,7 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
 
   } else {
     const HighsBasisStatus x_status_reduced = col_status.at(x);
-    if (((x_status_reduced == HighsBasisStatus::NONBASIC ||
+    if ((ubxNew > lbxNew) && (((x_status_reduced == HighsBasisStatus::NONBASIC ||
           x_status_reduced == HighsBasisStatus::UPPER) &&
          fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
         ((x_status_reduced == HighsBasisStatus::NONBASIC ||
@@ -3649,7 +3651,7 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
          fabs(valueX - lbxNew) < tol && lbxNew > lbxOld) ||
         (fabs(valueX - lbxNew) < tol && fabs(lbxOld - lbxNew) < tol &&
          (x_status_reduced == HighsBasisStatus::UPPER ||
-          x_status_reduced == HighsBasisStatus::LOWER))) {
+          x_status_reduced == HighsBasisStatus::LOWER)))) {
       // Column x is nonbasic at reduced solution at a reduced bound but needs
       // to be changed to basic since this bound is expanding.
       col_status.at(x) = HighsBasisStatus::BASIC;
