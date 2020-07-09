@@ -44,39 +44,6 @@ struct HighsPrimalDualErrors {
   double sum_dual_residual;
 };
 
-// Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
-// of the unscaled LP in a HighsModelObject instance, after computing
-// the unscaled infeasibilities locally
-HighsStatus analyseHighsBasicSolution(
-    FILE* logfile, const HighsModelObject& highs_model_object,
-    const string message);
-
-// Calls analyseHighsBasicSolution to analyse the HiGHS basic solution
-// of the unscaled LP in a HighsModelObject instance, assuming that
-// the unscaled infeasibilities are known
-HighsStatus analyseHighsBasicSolution(
-    FILE* logfile, const HighsModelObject& highs_model_object,
-    const HighsSolutionParams& unscaled_solution_params, const string message);
-
-// Analyse the HiGHS basic solution of the given LP. Currently only
-// used with the unscaled LP, but would work just as well with a
-// scaled LP. The solution data passed in is assumed to be correct and
-// it is checked as much as possible. Inconsistencies are reported,
-// but not corrected.
-HighsStatus analyseHighsBasicSolution(
-    FILE* logfile, const HighsLp& lp, const HighsBasis& basis,
-    const HighsSolution& solution, const HighsIterationCounts& iteration_counts,
-    const HighsModelStatus model_status,
-    const HighsSolutionParams& solution_params, const string message);
-
-// As above, but with report_level
-HighsStatus analyseHighsBasicSolution(
-    FILE* logfile, const HighsLp& lp, const HighsBasis& basis,
-    const HighsSolution& solution, const HighsIterationCounts& iteration_counts,
-    const HighsModelStatus model_status,
-    const HighsSolutionParams& solution_params, const string message,
-    const int report_level);
-
 void getPrimalDualInfeasibilitiesFromHighsBasicSolution(
     const HighsLp& lp, const HighsBasis& basis, const HighsSolution& solution,
     HighsSolutionParams& solution_params);
