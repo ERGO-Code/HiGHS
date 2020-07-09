@@ -44,22 +44,15 @@ struct HighsPrimalDualErrors {
   double sum_dual_residual;
 };
 
-void getPrimalDualInfeasibilitiesFromHighsBasicSolution(
+void getPrimalDualInfeasibilities(
     const HighsLp& lp, const HighsBasis& basis, const HighsSolution& solution,
     HighsSolutionParams& solution_params);
 
-void getPrimalDualInfeasibilitiesAndErrorsFromHighsBasicSolution(
-    const HighsLp& lp, const HighsBasis& basis, const HighsSolution& solution,
-    HighsSolutionParams& solution_params,
-    HighsPrimalDualErrors& primal_dual_errors, double& primal_objective_value,
-    double& dual_objective_value, const int report_level = -1);
-bool analyseVarBasicSolution(bool report,
-                             const double primal_feasibility_tolerance,
+void analyseVarBasicSolution(const double primal_feasibility_tolerance,
                              const double dual_feasibility_tolerance,
                              const HighsBasisStatus status, const double lower,
                              const double upper, const double value,
-                             const double dual, int& num_non_basic_var,
-                             int& num_basic_var, double& off_bound_nonbasic,
+                             const double dual, 
                              double& primal_infeasibility,
                              double& dual_infeasibility);
 

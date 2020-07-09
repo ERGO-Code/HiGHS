@@ -768,7 +768,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
         highs_solution.col_value[iCol] * lp.colCost_[iCol];
   unscaled_solution_params.objective_function_value = objective_function_value;
   if (highs_basis.valid_)
-    getPrimalDualInfeasibilitiesFromHighsBasicSolution(
+    getPrimalDualInfeasibilities(
         lp, highs_basis, highs_solution, unscaled_solution_params);
   return return_status;
 }

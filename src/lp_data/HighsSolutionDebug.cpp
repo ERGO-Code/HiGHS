@@ -237,7 +237,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     // Flip dual according to lp.sense_
     dual *= (int)lp.sense_;
     bool report = false;
-    bool query = analyseVarBasicSolution(
+    bool query = debugBasicSolutionVariable(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
         status, lower, upper, value, dual, num_non_basic_var, num_basic_var,
         off_bound_nonbasic, primal_infeasibility, dual_infeasibility);
@@ -280,7 +280,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       printf("%5d %5d [%12g, %12g] %12g %12g", iCol, (int)status, lower, upper,
              value, dual);
       printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
-      analyseVarBasicSolution(
+      debugBasicSolutionVariable(
           report, primal_feasibility_tolerance, dual_feasibility_tolerance,
           status, lower, upper, value, dual, num_non_basic_var, num_basic_var,
           off_bound_nonbasic, primal_infeasibility, dual_infeasibility);
@@ -346,7 +346,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     // Flip dual according to lp.sense_
     dual *= (int)lp.sense_;
     bool report = false;
-    bool query = analyseVarBasicSolution(
+    bool query = debugBasicSolutionVariable(
         report, primal_feasibility_tolerance, dual_feasibility_tolerance,
         status, lower, upper, value, dual, num_non_basic_var, num_basic_var,
         off_bound_nonbasic, primal_infeasibility, dual_infeasibility);
@@ -389,7 +389,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
       printf("%5d %5d [%12g, %12g] %12g %12g", iRow, (int)status, lower, upper,
              value, dual);
       printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
-      analyseVarBasicSolution(
+      debugBasicSolutionVariable(
           report, primal_feasibility_tolerance, dual_feasibility_tolerance,
           status, lower, upper, value, dual, num_non_basic_var, num_basic_var,
           off_bound_nonbasic, primal_infeasibility, dual_infeasibility);
