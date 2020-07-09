@@ -575,7 +575,7 @@ void Presolve::removeDoubletonEquations() {
 
   for (int row = 0; row < numRow; row++) {
     // if (row != 53) continue;
-    // if (row != 2188) continue;
+    if (row != 2338) continue;
     // ~~~
 
     if (flagRow.at(row)) {
@@ -3631,6 +3631,7 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
 
   const HighsBasisStatus x_status_reduced = col_status.at(x);
   bool x_make_basic = false;
+  bool y_make_basic = false;
   bool row_basic = false;
   // x stayed, y was removed
   if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
@@ -3672,7 +3673,7 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
           (lbxNew == ubxOld && lbxNew > lbxOld)) {
         if (report_postsolve) printf("4.6 : Change dual of x to zero.\n");
         valueColDual[x] = 0;
-        row_basic = true;
+        x_make_basic = true;
       }
     }
 
@@ -3697,60 +3698,64 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
           feasible = false;
         if (fabs(valuePrimal[y] - uby) < tol && valueColDual[y] > tol)
           feasible = false;
-        assert(feasible);
+        if (feasible)
+          if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
+        return;
+        y_make_basic = true;
       }
-      if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
-      return;
+      // If not feasble X will remail nonbasic and we will make the
     }
   }
 
-  if (lby != uby) {
-    assert(fabs(lby - valuePrimal[y]) < tol ||
-           fabs(uby - valuePrimal[y]) < tol);
-    // If postsolved column y is at a bound. If lby != uby we have a
-    // restriction on the dual sign of y.
-    col_status.at(y) = HighsBasisStatus::BASIC;
-    row_status.at(row) = HighsBasisStatus::NONBASIC;
+  if (!y_make_basic) {
+    if (lby != uby) {
+      assert(fabs(lby - valuePrimal[y]) < tol ||
+             fabs(uby - valuePrimal[y]) < tol);
+      // If postsolved column y is at a bound. If lby != uby we have a
+      // restriction on the dual sign of y.
+      col_status.at(y) = HighsBasisStatus::BASIC;
+      row_status.at(row) = HighsBasisStatus::NONBASIC;
 
-    valueColDual.at(y) = 0;
-    valueRowDual.at(row) = getRowDualPost(row, y);
+      valueColDual.at(y) = 0;
+      valueRowDual.at(row) = getRowDualPost(row, y);
 
-    if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
-  } else {
-    // Column y is at a bound.
-    assert(fabs(uby - valuePrimal[y]) < tol ||
-           fabs(lby - valuePrimal[y]) < tol);
-
-    // Check if tight.
-    if (fabs(lby - uby) < tol) {
-      // assert(fabs(lby - valuePrimal[y]) < tol);
-      // no restriction so can make row basic but we don't have to always
-      // since it can make the dual of X infeasible (check below)
-      row_basic = true;
-    }  // Else Will need to check dual feasibility of y dual.
-
-    // Print & check some info.
-    if (x_status_reduced == HighsBasisStatus::BASIC)
-      std::cout << "BASIC" << std::endl;
-    else
-      std::cout << "NOT BASIC" << std::endl;
-
-    // see if X at a bound
-    if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
-      if ((fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
-          (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
-        std::cout << "     4.122" << std::endl;
-        if (ubxNew > lbxNew)
-          assert(x_status_reduced == HighsBasisStatus::BASIC);
-        row_basic = false;
-
-      } else {
-        std::cout << "     4.002" << std::endl;
-      }
+      if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
     } else {
-      // X strictly between bounds
-      assert(x_status_reduced == HighsBasisStatus::BASIC);
-      assert(valuePrimal[x] - lbxNew > tol && ubxNew - valuePrimal[x] > tol);
+      // Column y is at a bound.
+      assert(fabs(uby - valuePrimal[y]) < tol ||
+             fabs(lby - valuePrimal[y]) < tol);
+
+      // Check if tight.
+      if (fabs(lby - uby) < tol) {
+        // assert(fabs(lby - valuePrimal[y]) < tol);
+        // no restriction so can make row basic but we don't have to always
+        // since it can make the dual of X infeasible (check below)
+        row_basic = true;
+      }  // Else Will need to check dual feasibility of y dual.
+
+      // Print & check some info.
+      if (x_status_reduced == HighsBasisStatus::BASIC)
+        std::cout << "BASIC" << std::endl;
+      else
+        std::cout << "NOT BASIC" << std::endl;
+
+      // see if X at a bound
+      if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
+        if ((fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
+            (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
+          std::cout << "     4.122" << std::endl;
+          if (ubxNew > lbxNew)
+            assert(x_status_reduced == HighsBasisStatus::BASIC);
+          row_basic = false;
+
+        } else {
+          std::cout << "     4.002" << std::endl;
+        }
+      } else {
+        // X strictly between bounds
+        assert(x_status_reduced == HighsBasisStatus::BASIC);
+        assert(valuePrimal[x] - lbxNew > tol && ubxNew - valuePrimal[x] > tol);
+      }
     }
   }
 
