@@ -577,7 +577,6 @@ void Presolve::removeDoubletonEquations() {
     // if (row != 53) continue;
     // if (row != 771) continue;
     // ~~~
-     // if (row != 344) continue;
 
     if (flagRow.at(row)) {
       // Analyse dependency on numerical tolerance
@@ -3696,7 +3695,7 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
       // Check if tight.
       if (fabs(lby - uby) < tol) {
         assert(fabs(lby - valuePrimal[y]) < tol);
-        // no restriction so can make row basic...
+        // no restriction so can make row basic but we don't have to always since it can make the dual of X infeasible (check below)
         row_basic = true;
       }  // Else Will need to check dual feasibility of y dual.
 
@@ -3711,7 +3710,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
         if ((fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
             (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
           std::cout << "     4.122" << std::endl;
-          assert(x_status_reduced == HighsBasisStatus::BASIC);
+          if (ubxNew > lbxNew) assert(x_status_reduced == HighsBasisStatus::BASIC);
+          row_basic = false;
 
         } else {
           std::cout << "     4.002" << std::endl;
