@@ -76,9 +76,12 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
-  if (!isSolutionConsistent(lp, solution)) return HighsDebugStatus::NOT_CHECKED;
-  if (!isBasisConsistent(lp, basis) || !basis.valid_)
-    return HighsDebugStatus::NOT_CHECKED;
+  const bool have_solution = isSolutionConsistent(lp, solution);
+  const bool have_basis = isBasisConsistent(lp, basis) && !basis.valid_;
+  assert(have_solution);
+  assert(have_basis);
+  if (!have_solution) return HighsDebugStatus::LOGICAL_ERROR;
+  if (!have_basis) return HighsDebugStatus::LOGICAL_ERROR;
 
   // Extract the solution_params from options
   HighsSolutionParams solution_params;
@@ -117,9 +120,12 @@ HighsDebugStatus debugHighsBasicSolution(
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
-  if (!isSolutionConsistent(lp, solution)) return HighsDebugStatus::NOT_CHECKED;
-  if (!isBasisConsistent(lp, basis) || !basis.valid_)
-    return HighsDebugStatus::NOT_CHECKED;
+  const bool have_solution = isSolutionConsistent(lp, solution);
+  const bool have_basis = isBasisConsistent(lp, basis) && !basis.valid_;
+  assert(have_solution);
+  assert(have_basis);
+  if (!have_solution) return HighsDebugStatus::LOGICAL_ERROR;
+  if (!have_basis) return HighsDebugStatus::LOGICAL_ERROR;
 
   HighsSolutionParams check_solution_params;
   double check_primal_objective_value;
@@ -149,6 +155,82 @@ HighsDebugStatus debugHighsBasicSolution(
   return return_status;
 }
 
+HighsDebugStatus debugSimplexBasicSolution(
+    const string message, const HighsModelObject& highs_model_object) {
+  // Non-trivially expensive analysis of a simplex basic solution, starting from
+  // solution_params
+  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+
+  const HighsLp& lp = highs_model_object.lp_;
+  //  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  /*
+  HighsLp& lp = highs_model_object.lp_;
+  // Check that there is a solution and valid basis to use
+  const bool have_solution = isSolutionConsistent(lp, solution);
+  const bool have_basis = isBasisConsistent(lp, basis) && !basis.valid_;
+  assert(have_solution);
+  assert(have_basis);
+  if (!have_solution) return HighsDebugStatus::LOGICAL_ERROR;
+  if (!have_basis) return HighsDebugStatus::LOGICAL_ERROR;
+  */
+
+  // Determine a HiGHS basis from the simplex basis. Only basic/nonbasic is needed
+  HighsBasis basis;
+  basis.col_status.resize(lp.numCol_);
+  basis.row_status.resize(lp.numRow_);
+  // Now scatter the indices of basic variables
+  for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
+    if (iVar < lp.numCol_) {
+      int iCol = iVar;
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+	basis.col_status[iCol] = HighsBasisStatus::NONBASIC;
+      } else {
+	basis.col_status[iCol] = HighsBasisStatus::BASIC;
+      }
+    } else {
+      int iRow = iVar - lp.numCol_;
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+	basis.row_status[iRow] = HighsBasisStatus::NONBASIC;
+      } else {
+	basis.row_status[iRow] = HighsBasisStatus::BASIC;
+      }
+    }
+  }
+  // Possibly scaled model
+  // Determine a HiGHS solution simplex solution
+  HighsSolution solution;
+  solution.col_value.resize(lp.numCol_);
+  solution.col_dual.resize(lp.numCol_);
+  solution.row_value.resize(lp.numRow_);
+  solution.row_dual.resize(lp.numRow_);
+  /*  
+  for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
+    if (iVar < lp.numCol_) {
+      int iCol = iVar;
+      solution.col_value[iCol] = 
+      } else {
+	solution.col_status[iCol] = HighsBasisStatus::BASIC;
+      }
+    } else {
+      int iRow = iVar - lp.numCol_;
+      if (simplex_basis.nonbasic_flag[iVar] == NONBASIC_FLAG_TRUE) {
+	solution.row_status[iRow] = HighsBasisStatus::NONBASIC;
+      } else {
+	solution.row_status[iRow] = HighsBasisStatus::BASIC;
+      }
+    }
+  }
+  */
+
+  if (!highs_model_object.scale_.is_scaled_) return return_status;
+
+  // Scaled model
+return return_status;
+}
 void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     const HighsOptions& options, const HighsLp& lp, const HighsBasis& basis,
     const HighsSolution& solution, double& primal_objective_value,

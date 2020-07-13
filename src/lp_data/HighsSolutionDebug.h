@@ -55,6 +55,9 @@ HighsDebugStatus debugHighsBasicSolution(
     const HighsSolutionParams& solution_params,
     const HighsModelStatus model_status);
 
+HighsDebugStatus debugSimplexBasicSolution(
+    const string message, const HighsModelObject& highs_model_object);
+
 void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     const HighsOptions& options, const HighsLp& lp, const HighsBasis& basis,
     const HighsSolution& solution, double& primal_objective_value,
