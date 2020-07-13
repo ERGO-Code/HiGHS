@@ -592,15 +592,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   if (have_highs_solution)
     analyseSimplexAndHighsSolutionDifferences(highs_model_object);
 #endif
-  // Use analyseSimplexBasicSolution to report the model status and
-  // solution params for the scaled LP
-  if (simplex_info.analyse_lp_solution) {
-    const bool report = true;
-    call_status = analyseSimplexBasicSolution(highs_model_object, report);
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "analyseSimplexBasicSolution");
-    if (return_status == HighsStatus::Error) return return_status;
-  }
+
+  if (debugSimplexBasicSolution("After transition", highs_model_object) == HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
+
   return return_status;
 }
 

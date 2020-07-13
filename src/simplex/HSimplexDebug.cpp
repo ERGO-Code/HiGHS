@@ -12,6 +12,8 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
+#include <string>
+#include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HSimplexDebug.h"
 
 #include "simplex/HDualRow.h"
@@ -930,6 +932,8 @@ HighsDebugStatus debugSimplexBasicSolution(
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
 
   const HighsLp& lp = highs_model_object.lp_;
+  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  const HighsScale& scale = highs_model_object.scale_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
@@ -959,6 +963,7 @@ HighsDebugStatus debugSimplexBasicSolution(
       }
     }
   }
+  basis.valid_ = true;
   // Possibly scaled model
   // Determine a HiGHS solution simplex solution
   HighsSolution solution;
@@ -971,25 +976,55 @@ HighsDebugStatus debugSimplexBasicSolution(
     if (iVar < lp.numCol_) {
       int iCol = iVar;
       solution.col_value[iCol] = simplex_info.workValue_[iVar];
-      solution.col_dual[iCol] = simplex_info.workDual_[iVar];
+      solution.col_dual[iCol] = (int)simplex_lp.sense_ * simplex_info.workDual_[iVar];
     } else {
       int iRow = iVar - lp.numCol_;
-      solution.row_value[iRow] = simplex_info.workValue_[iVar];
-      solution.row_dual[iRow] = simplex_info.workDual_[iVar];
+      solution.row_value[iRow] = -simplex_info.workValue_[iVar];
+      solution.row_dual[iRow] = (int)simplex_lp.sense_ * simplex_info.workDual_[iVar];
     }
   }
   // Now insert the basic values
-  for (int ix = 0; ix < lp.numCol_ + lp.numRow_; ix++) {
+  for (int ix = 0; ix < lp.numRow_; ix++) {
     int iVar = simplex_basis.basicIndex_[ix];
     if (iVar < lp.numCol_) {
       solution.col_value[iVar] = simplex_info.baseValue_[ix];
+      solution.col_dual[iVar] = 0;
     } else {
-      solution.row_value[iVar - lp.numCol_] = simplex_info.baseValue_[ix];
+      int iRow = iVar - lp.numCol_;
+      solution.row_value[iRow] = -simplex_info.baseValue_[ix];
+      solution.row_dual[iRow] = 0;
     }
   }
 
+  const std::string message_scaled = message + " - scaled";
+  return_status =
+    debugWorseStatus(debugHighsBasicSolution(
+    message_scaled,
+    highs_model_object.options_,
+    simplex_lp, basis, solution,
+    highs_model_object.scaled_solution_params_,
+    highs_model_object.scaled_model_status_), return_status);
+  
   if (!highs_model_object.scale_.is_scaled_) return return_status;
 
+  // Doesn't work if simplex LP has permuted columns
+  assert(!highs_model_object.simplex_lp_status_.is_permuted);
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    solution.col_value[iCol] *= scale.col_[iCol];
+    solution.col_dual[iCol] /= (scale.col_[iCol] / scale.cost_);
+  }
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+    solution.row_value[iRow] /= scale.row_[iRow];
+    solution.row_dual[iRow] *= (scale.row_[iRow] * scale.cost_);
+  }
+  // Cannot assume unscaled solution params or unscaled model status are known
+  const std::string message_unscaled = message + " - unscaled";
+  return_status =
+    debugWorseStatus(debugHighsBasicSolution(
+    message_unscaled,
+    highs_model_object.options_,
+    lp, basis, solution), return_status);
+  
   // Scaled model
   return return_status;
 }

@@ -277,16 +277,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     reportSimplexPhaseIterations(highs_model_object, algorithm);
   }
 
-  if (simplex_info.analyse_lp_solution) {
-    // Analyse the simplex basic solution, assuming that the scaled solution
-    // params are known
-    const bool report = true;
-    call_status = analyseSimplexBasicSolution(
-        highs_model_object, highs_model_object.scaled_solution_params_, report);
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "analyseSimplexBasicSolution");
-    if (return_status == HighsStatus::Error) return return_status;
-  }
+  if (debugSimplexBasicSolution("After runSimplexSolver", highs_model_object) == HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
+
   return_status =
       highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 #ifdef HiGHSDEV
