@@ -102,7 +102,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Use nonbasicFlag and any HiGHS solution to determine nonbasicMove
   //
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   const HighsOptions& options = highs_model_object.options_;
   const HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
