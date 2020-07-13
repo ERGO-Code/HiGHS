@@ -277,7 +277,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     reportSimplexPhaseIterations(highs_model_object, algorithm);
   }
 
-  if (debugSimplexBasicSolution("After runSimplexSolver", highs_model_object) == HighsDebugStatus::LOGICAL_ERROR)
+  if (debugSimplexBasicSolution("After runSimplexSolver", highs_model_object) ==
+      HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
 
   return_status =
@@ -301,13 +302,12 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 #endif
     // Deduce the unscaled solution parameters, and new fasibility tolerances if
     // not primal and/or dual feasible
-    call_status =
-        getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(
-            highs_model_object, highs_model_object.unscaled_solution_params_,
-            new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
+    call_status = getNewInfeasibilityTolerancesFromSimplexBasicSolution(
+        highs_model_object, highs_model_object.unscaled_solution_params_,
+        new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
     return_status = interpretCallStatus(
         call_status, return_status,
-        "getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution");
+        "getNewInfeasibilityTolerancesFromSimplexBasicSolution");
     if (return_status == HighsStatus::Error) return return_status;
     int num_unscaled_primal_infeasibilities =
         highs_model_object.unscaled_solution_params_.num_primal_infeasibilities;

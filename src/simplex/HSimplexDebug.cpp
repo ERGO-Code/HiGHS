@@ -12,10 +12,11 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include <string>
-#include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HSimplexDebug.h"
 
+#include <string>
+
+#include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HDualRow.h"
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
@@ -976,11 +977,13 @@ HighsDebugStatus debugSimplexBasicSolution(
     if (iVar < lp.numCol_) {
       int iCol = iVar;
       solution.col_value[iCol] = simplex_info.workValue_[iVar];
-      solution.col_dual[iCol] = (int)simplex_lp.sense_ * simplex_info.workDual_[iVar];
+      solution.col_dual[iCol] =
+          (int)simplex_lp.sense_ * simplex_info.workDual_[iVar];
     } else {
       int iRow = iVar - lp.numCol_;
       solution.row_value[iRow] = -simplex_info.workValue_[iVar];
-      solution.row_dual[iRow] = (int)simplex_lp.sense_ * simplex_info.workDual_[iVar];
+      solution.row_dual[iRow] =
+          (int)simplex_lp.sense_ * simplex_info.workDual_[iVar];
     }
   }
   // Now insert the basic values
@@ -997,14 +1000,13 @@ HighsDebugStatus debugSimplexBasicSolution(
   }
 
   const std::string message_scaled = message + " - scaled";
-  return_status =
-    debugWorseStatus(debugHighsBasicSolution(
-    message_scaled,
-    highs_model_object.options_,
-    simplex_lp, basis, solution,
-    highs_model_object.scaled_solution_params_,
-    highs_model_object.scaled_model_status_), return_status);
-  
+  return_status = debugWorseStatus(
+      debugHighsBasicSolution(message_scaled, highs_model_object.options_,
+                              simplex_lp, basis, solution,
+                              highs_model_object.scaled_solution_params_,
+                              highs_model_object.scaled_model_status_),
+      return_status);
+
   if (!highs_model_object.scale_.is_scaled_) return return_status;
 
   // Doesn't work if simplex LP has permuted columns
@@ -1019,12 +1021,11 @@ HighsDebugStatus debugSimplexBasicSolution(
   }
   // Cannot assume unscaled solution params or unscaled model status are known
   const std::string message_unscaled = message + " - unscaled";
-  return_status =
-    debugWorseStatus(debugHighsBasicSolution(
-    message_unscaled,
-    highs_model_object.options_,
-    lp, basis, solution), return_status);
-  
+  return_status = debugWorseStatus(
+      debugHighsBasicSolution(message_unscaled, highs_model_object.options_, lp,
+                              basis, solution),
+      return_status);
+
   // Scaled model
   return return_status;
 }
