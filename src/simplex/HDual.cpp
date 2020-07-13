@@ -51,7 +51,8 @@ HighsStatus HDual::solve() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
-  if (debugSimplexInfoBasisConsistent(workHMO) == HighsDebugStatus::LOGICAL_ERROR)
+  if (debugSimplexInfoBasisConsistent(workHMO) ==
+      HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
   // Assumes that the LP has a positive number of rows, since
   // unconstrained LPs should be solved in solveLpSimplex

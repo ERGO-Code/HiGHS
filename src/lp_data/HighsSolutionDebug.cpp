@@ -77,7 +77,7 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
 
   // Check that there is a solution and valid basis to use
   const bool have_solution = isSolutionConsistent(lp, solution);
-  const bool have_basis = isBasisConsistent(lp, basis) && !basis.valid_;
+  const bool have_basis = isBasisConsistent(lp, basis) && basis.valid_;
   assert(have_solution);
   assert(have_basis);
   if (!have_solution) return HighsDebugStatus::LOGICAL_ERROR;
@@ -121,7 +121,7 @@ HighsDebugStatus debugHighsBasicSolution(
 
   // Check that there is a solution and valid basis to use
   const bool have_solution = isSolutionConsistent(lp, solution);
-  const bool have_basis = isBasisConsistent(lp, basis) && !basis.valid_;
+  const bool have_basis = isBasisConsistent(lp, basis) && basis.valid_;
   assert(have_solution);
   assert(have_basis);
   if (!have_solution) return HighsDebugStatus::LOGICAL_ERROR;

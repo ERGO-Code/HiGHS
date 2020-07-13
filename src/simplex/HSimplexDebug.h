@@ -68,5 +68,6 @@ HighsDebugStatus debugDualChuzcWorkDataAndGroup(
 HighsDebugStatus debugSimplexBasicSolution(
     const string message, const HighsModelObject& highs_model_object);
 
-HighsDebugStatus debugSimplexInfoBasisConsistent(const HighsModelObject& highs_model_object);
+HighsDebugStatus debugSimplexInfoBasisConsistent(
+    const HighsModelObject& highs_model_object);
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_
