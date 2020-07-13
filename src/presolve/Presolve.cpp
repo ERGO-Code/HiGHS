@@ -328,18 +328,18 @@ int Presolve::presolve(int print) {
 
   int iter = 1;
 
-  // removeFixed();
+  removeFixed();
   if (status) return status;
 
   if (order.size() == 0) {
     // pre_release_order:
-    // order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainForcing);
-    // order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainForcing);
+    order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainDoubletonEq);
-    // order.push_back(Presolver::kMainRowSingletons);
-    // order.push_back(Presolver::kMainColSingletons);
-    // order.push_back(Presolver::kMainDominatedCols);
+    order.push_back(Presolver::kMainRowSingletons);
+    order.push_back(Presolver::kMainColSingletons);
+    order.push_back(Presolver::kMainDominatedCols);
   }
   // Else: The order has been modified for experiments
 
@@ -3680,8 +3680,6 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
     }
 
     if (x_make_basic) {
-      col_status.at(x) = HighsBasisStatus::BASIC;
-      row_status.at(row) = HighsBasisStatus::NONBASIC;
 
       // transfer dual of x to dual of row
       valueColDual.at(x) = 0;
@@ -3702,6 +3700,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
           feasible = false;
 
         if (feasible) {
+          col_status.at(x) = HighsBasisStatus::BASIC;
+          row_status.at(row) = HighsBasisStatus::NONBASIC;
           if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
           return;
         }
