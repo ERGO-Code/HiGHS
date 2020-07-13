@@ -19,8 +19,10 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolutionDebug.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/HCrash.h"
+#include "simplex/HFactorDebug.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HVector.h"
 #include "simplex/HighsSimplexInterface.h"
@@ -60,7 +62,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.store_squared_primal_infeasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = true;  // false;  //
+  bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;
@@ -100,7 +102,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Use nonbasicFlag and any HiGHS solution to determine nonbasicMove
   //
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   const HighsOptions& options = highs_model_object.options_;
   const HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
@@ -335,7 +336,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   if (!simplex_lp_status.has_factor_arrays) {
     factor.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-                 &simplex_basis.basicIndex_[0]);
+                 &simplex_basis.basicIndex_[0], options.highs_debug_level,
+                 options.logfile, options.output, options.message_level);
     simplex_lp_status.has_factor_arrays = true;
   }
   // Reinvert if there isn't a fresh INVERT. ToDo Override this for MIP hot
@@ -589,15 +591,11 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   if (have_highs_solution)
     analyseSimplexAndHighsSolutionDifferences(highs_model_object);
 #endif
-  // Use analyseSimplexBasicSolution to report the model status and
-  // solution params for the scaled LP
-  if (simplex_info.analyse_lp_solution) {
-    const bool report = true;
-    call_status = analyseSimplexBasicSolution(highs_model_object, report);
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "analyseSimplexBasicSolution");
-    if (return_status == HighsStatus::Error) return return_status;
-  }
+
+  if (debugSimplexBasicSolution("After transition", highs_model_object) ==
+      HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
+
   return return_status;
 }
 
@@ -2791,24 +2789,24 @@ void flip_bound(HighsModelObject& highs_model_object, int iCol) {
   simplex_info.workValue_[iCol] =
       move == 1 ? simplex_info.workLower_[iCol] : simplex_info.workUpper_[iCol];
 }
-/*
-int handle_rank_deficiency(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HFactor &factor = highs_model_object.factor_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+
+int simplexHandleRankDeficiency(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HFactor& factor = highs_model_object.factor_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   int rankDeficiency = factor.rankDeficiency;
-  const int *noPvC = factor.getNoPvC();
+  vector<int>& noPvC = factor.noPvC;
   printf("Returned %d = factor.build();\n", rankDeficiency);
   fflush(stdout);
   vector<int> basicRows;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   basicRows.resize(numTot);
-  //    printf("Before - simplex_basis.basicIndex_:"); for (int iRow=0;
-iRow<simplex_lp.numRow_; iRow++)
+  //    printf("Before - simplex_basis.basicIndex_:");
+  // for (int iRow=0; iRow<simplex_lp.numRow_; iRow++)
   //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-basicRows[simplex_basis.basicIndex_[iRow]] = iRow; for (int k = 0; k <
-rankDeficiency; k++) {
+    basicRows[simplex_basis.basicIndex_[iRow]] = iRow;
+  for (int k = 0; k < rankDeficiency; k++) {
     //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k],
     //      k, noPvC[k]);fflush(stdout);
     int columnIn = simplex_lp.numCol_ + factor.noPvR[k];
@@ -2816,25 +2814,28 @@ rankDeficiency; k++) {
     int rowOut = basicRows[columnOut];
     //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g,
     //      %11.4g]\n", columnIn, columnOut, rowOut,
-simplex_info.workLower_[columnOut],
+    //      simplex_info.workLower_[columnOut],
     //      simplex_info.workUpper_[columnOut]);
     if (simplex_basis.basicIndex_[rowOut] != columnOut) {
       printf("%d = simplex_basis.basicIndex_[rowOut] != noPvC[k] = %d\n",
-simplex_basis.basicIndex_[rowOut], columnOut); fflush(stdout);
+             simplex_basis.basicIndex_[rowOut], columnOut);
+      fflush(stdout);
     }
-    int sourceOut = setSourceOutFmBd(columnOut);
-    updatePivots(columnIn, rowOut, sourceOut);
-    updateMatrix(columnIn, columnOut);
+    // 29.06.20 Need to fix the following 3 lines
+    //    int sourceOut = setSourceOutFmBd(columnOut);
+    //    updatePivots(columnIn, rowOut, sourceOut);
+    //    updateMatrix(columnIn, columnOut);
   }
-  //    printf("After  - simplex_basis.basicIndex_:"); for (int iRow=0;
-iRow<simplex_lp.numRow_; iRow++)
+  //    printf("After  - simplex_basis.basicIndex_:");
+  // for (int iRow=0; iRow<simplex_lp.numRow_; iRow++)
   //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
-#ifdef HiGHSDEV
-  factor.checkInvert();
-#endif
+  debugCheckInvert(highs_model_object.options_.highs_debug_level,
+                   highs_model_object.options_.output,
+                   highs_model_object.options_.message_level,
+                   highs_model_object.factor_);
   return 0;
 }
-*/
+
 int computeFactor(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -2861,16 +2862,11 @@ int computeFactor(HighsModelObject& highs_model_object) {
 #endif
   int rankDeficiency = factor.build(factor_timer_clock_pointer);
   if (rankDeficiency) {
-    //    handle_rank_deficiency();
-    //    highs_model_object.scaled_model_status_ =
-    //    HighsModelStatus::SOLVE_ERROR;
-#ifdef HiGHSDEV
-    //    writePivots("failed");
-#endif
-    //      return rankDeficiency;
+    // 29.06.20: Following three lines previously commented out
+    simplexHandleRankDeficiency(highs_model_object);
+    highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+    return rankDeficiency;
   }
-  //    printf("INVERT: After %d iterations and %d updates\n",
-  //    iteration_counts.simplex, simplex_info.update_count);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_form) {
     const bool report_kernel = false;
@@ -2920,6 +2916,10 @@ int computeFactor(HighsModelObject& highs_model_object) {
   }
 #endif
   simplex_info.update_count = 0;
+  debugCheckInvert(highs_model_object.options_.highs_debug_level,
+                   highs_model_object.options_.output,
+                   highs_model_object.options_.message_level,
+                   highs_model_object.factor_);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_time) {
@@ -3615,35 +3615,21 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
 
   // Outgoing variable
   simplex_basis.nonbasicFlag_[columnOut] = 1;
-  //  double dlValue;
-  //  double vrLb = simplex_info.workLower_[columnOut];
-  //  double vrV = simplex_info.workValue_[columnOut];
-  //  double vrUb = simplex_info.workUpper_[columnOut];
   if (simplex_info.workLower_[columnOut] ==
       simplex_info.workUpper_[columnOut]) {
-    //    dlValue =
-    //    simplex_info.workLower_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
     simplex_basis.nonbasicMove_[columnOut] = 0;
   } else if (sourceOut == -1) {
-    //    dlValue =
-    //    simplex_info.workLower_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
     simplex_basis.nonbasicMove_[columnOut] = 1;
   } else {
-    //    dlValue =
-    //    simplex_info.workUpper_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workUpper_[columnOut];
     simplex_basis.nonbasicMove_[columnOut] = -1;
   }
+  // Update the dual objective value
   double nwValue = simplex_info.workValue_[columnOut];
   double vrDual = simplex_info.workDual_[columnOut];
   double dl_dual_objective_value = nwValue * vrDual;
-  //  if (fabs(nwValue))
-  //    printf("update_pivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g],
-  //    nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
-  //			   columnOut, simplex_basis.nonbasicMove_[columnOut],
-  // vrLb, vrV, vrUb, nwValue, vrDual, dl_dual_objective_value);
   simplex_info.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info.update_count++;
   // Update the number of basic logicals
@@ -3705,249 +3691,24 @@ bool reinvertOnNumericalTrouble(const std::string method_name,
                     HighsMessageType::WARNING,
                     "HiGHS has identified numerical trouble so reinvert");
 #endif
-    /*
-  } else if (numerical_trouble_measure > 0.1*numerical_trouble_tolerance &&
-  update_count > 0) { printf("%s has ALMOST identified numerical trouble solving
-  LP %s in iteration %d\n", method_name.c_str(), model_name.c_str(),
-  iteration_count);
-    */
   }
   return reinvert;
 }
 
-// Analyse a simplex basic solution when the scaled and unscaled infeasibilities
-// aren't known
-HighsStatus analyseSimplexBasicSolution(
-    const HighsModelObject& highs_model_object, const bool report) {
-  HighsSolutionParams get_unscaled_solution_params =
-      highs_model_object.unscaled_solution_params_;
-  HighsSolutionParams get_scaled_solution_params =
-      highs_model_object.scaled_solution_params_;
-  getPrimalDualInfeasibilitiesFromSimplexBasicSolution(
-      highs_model_object, get_unscaled_solution_params,
-      get_scaled_solution_params);
-  return analyseSimplexBasicSolution(highs_model_object,
-                                     get_unscaled_solution_params,
-                                     get_scaled_solution_params, report);
-}
-
-// Analyse a simplex basic solution when the unscaled infeasibilities aren't
-// known
-HighsStatus analyseSimplexBasicSolution(
-    const HighsModelObject& highs_model_object,
-    const HighsSolutionParams& scaled_solution_params, const bool report) {
-  HighsSolutionParams get_unscaled_solution_params =
-      highs_model_object.unscaled_solution_params_;
-  getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(
-      highs_model_object, get_unscaled_solution_params);
-  return analyseSimplexBasicSolution(highs_model_object,
-                                     get_unscaled_solution_params,
-                                     scaled_solution_params, report);
-}
-
-// Analyse a simplex basic solution when the unscaled and scaled infeasibilities
-// aren both known
-HighsStatus analyseSimplexBasicSolution(
-    const HighsModelObject& highs_model_object,
-    const HighsSolutionParams& unscaled_solution_params,
-    const HighsSolutionParams& scaled_solution_params, const bool report) {
-  // Check the infeasibility parameters against freshly computed values
-  HighsSolutionParams get_unscaled_solution_params =
-      highs_model_object.unscaled_solution_params_;
-  HighsSolutionParams get_scaled_solution_params =
-      highs_model_object.scaled_solution_params_;
-  getPrimalDualInfeasibilitiesFromSimplexBasicSolution(
-      highs_model_object, get_unscaled_solution_params,
-      get_scaled_solution_params);
-
-  const HighsModelStatus scaled_model_status =
-      highs_model_object.scaled_model_status_;
-  const HighsModelStatus unscaled_model_status =
-      highs_model_object.unscaled_model_status_;
-#ifdef HiGHSDEV
-  int num_scaled_primal_infeasibilities =
-      scaled_solution_params.num_primal_infeasibilities;
-  double max_scaled_primal_infeasibility =
-      scaled_solution_params.max_primal_infeasibility;
-  double sum_scaled_primal_infeasibilities =
-      scaled_solution_params.sum_primal_infeasibilities;
-  int num_scaled_dual_infeasibilities =
-      scaled_solution_params.num_dual_infeasibilities;
-  double max_scaled_dual_infeasibility =
-      scaled_solution_params.max_dual_infeasibility;
-  double sum_scaled_dual_infeasibilities =
-      scaled_solution_params.sum_dual_infeasibilities;
-
-  if (scaled_model_status == HighsModelStatus::OPTIMAL) {
-    // If numbers of scaled primal or dual infeasibilities are
-    // inconsistent with the scaled model status, then flag up an error
-    bool should_be_primal_infeasibilities = false;
-    bool should_be_dual_infeasibilities = false;
-    bool infeasibility_error;
-    std::string error_comment;
-    // Consider primal infeasibility errors
-    infeasibility_error = false;
-    if (num_scaled_primal_infeasibilities &&
-        !should_be_primal_infeasibilities) {
-      infeasibility_error = true;
-      error_comment = "Scaled primal infeasibilities, but should be none";
-    } else if (num_scaled_primal_infeasibilities == 0 &&
-               should_be_primal_infeasibilities) {
-      infeasibility_error = true;
-      error_comment = "No scaled primal infeasibilities, but should be some";
-    }
-    if (infeasibility_error)
-      HighsLogMessage(
-          highs_model_object.options_.logfile, HighsMessageType::ERROR,
-          "%s: num/max/sum = %6d/%0.4g/%0.4g", error_comment.c_str(),
-          num_scaled_primal_infeasibilities, max_scaled_primal_infeasibility,
-          sum_scaled_primal_infeasibilities);
-    // Consider dual infeasibility errors
-    infeasibility_error = false;
-    if (num_scaled_dual_infeasibilities && !should_be_dual_infeasibilities) {
-      infeasibility_error = true;
-      error_comment = "Scaled dual infeasibilities, but should be none";
-    } else if (num_scaled_dual_infeasibilities == 0 &&
-               should_be_dual_infeasibilities) {
-      infeasibility_error = true;
-      error_comment = "No scaled dual infeasibilities, but should be some";
-    }
-    if (infeasibility_error)
-      HighsLogMessage(
-          highs_model_object.options_.logfile, HighsMessageType::ERROR,
-          "%s: num/max/sum = %6d/%0.4g/%0.4g", error_comment.c_str(),
-          num_scaled_dual_infeasibilities, max_scaled_dual_infeasibility,
-          sum_scaled_dual_infeasibilities);
-  }
-#endif
-
-  /*
-  unscaled_model_status = scaled_model_status;
-  unscaled_solution_params.primal_status = scaled_solution_params.primal_status;
-  unscaled_solution_params.dual_status = scaled_solution_params.dual_status;
-
-  // The solution status for the unscaled LP is inherited from the
-  // scaled LP, unless there are infeasibilities in the unscaled
-  // solution
-  // unscaled_solution_params.primal_status =
-  scaled_solution_params.primal_status;
-  // unscaled_solution_params.dual_status = scaled_solution_params.dual_status;
-  if (num_unscaled_primal_infeasibilities) {
-    if (unscaled_model_status == HighsModelStatus::OPTIMAL)
-      unscaled_model_status = HighsModelStatus::NOTSET;
-    unscaled_solution_params.primal_status = STATUS_NO_SOLUTION;
-  }
-  if (num_unscaled_dual_infeasibilities)
-    unscaled_solution_params.dual_status = STATUS_NO_SOLUTION;
-  */
-
-  if (report) {
-    HighsLogMessage(
-        highs_model_object.options_.logfile, HighsMessageType::INFO,
-        "Simplex basic solution: %sObjective = %0.15g",
-        iterationsToString(highs_model_object.iteration_counts_).c_str(),
-        scaled_solution_params.objective_function_value);
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-                    "Infeasibilities -   scaled - Pr %d(Max %0.4g, Sum %0.4g); "
-                    "Du %d(Max %0.4g, Sum %0.4g); Status: %s",
-                    scaled_solution_params.num_primal_infeasibilities,
-                    scaled_solution_params.max_primal_infeasibility,
-                    scaled_solution_params.sum_primal_infeasibilities,
-                    scaled_solution_params.num_dual_infeasibilities,
-                    scaled_solution_params.max_dual_infeasibility,
-                    scaled_solution_params.sum_dual_infeasibilities,
-                    utilHighsModelStatusToString(scaled_model_status).c_str());
-    HighsLogMessage(
-        highs_model_object.options_.logfile, HighsMessageType::INFO,
-        "Infeasibilities - unscaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max "
-        "%0.4g, Sum %0.4g); Status: %s",
-        unscaled_solution_params.num_primal_infeasibilities,
-        unscaled_solution_params.max_primal_infeasibility,
-        unscaled_solution_params.sum_primal_infeasibilities,
-        unscaled_solution_params.num_dual_infeasibilities,
-        unscaled_solution_params.max_dual_infeasibility,
-        unscaled_solution_params.sum_dual_infeasibilities,
-        utilHighsModelStatusToString(unscaled_model_status).c_str());
-  }
-  return HighsStatus::OK;
-}
-
-// Gets the scaled primal and dual infeasibilities from a simplex
-// basic solution. Assumes that these values are not known in
-// highs_model_object, so also passes get_scaled_solution_params as
-// values to check from
-HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(
-    const HighsModelObject& highs_model_object,
-    HighsSolutionParams& get_scaled_solution_params) {
-  HighsSolutionParams get_unscaled_solution_params =
-      highs_model_object.unscaled_solution_params_;
-  double new_scaled_primal_feasibility_tolerance;
-  double new_scaled_dual_feasibility_tolerance;
-  return getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-      highs_model_object.options_.logfile, highs_model_object.lp_,
-      highs_model_object.scale_, highs_model_object.simplex_basis_,
-      highs_model_object.simplex_info_, highs_model_object.scaled_model_status_,
-      highs_model_object.unscaled_solution_params_, get_scaled_solution_params,
-      get_unscaled_solution_params, get_scaled_solution_params,
-      new_scaled_primal_feasibility_tolerance,
-      new_scaled_dual_feasibility_tolerance);
-}
-
-// Gets the unscaled primal and dual infeasibilities from a simplex
-// basic solution. Assumes that these values are not known in
-// highs_model_object, so also passes get_unscaled_solution_params as
-// values to check from
-HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(
-    const HighsModelObject& highs_model_object,
-    HighsSolutionParams& get_unscaled_solution_params) {
-  HighsSolutionParams get_scaled_solution_params =
-      highs_model_object.scaled_solution_params_;
-  double new_scaled_primal_feasibility_tolerance;
-  double new_scaled_dual_feasibility_tolerance;
-  return getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-      highs_model_object.options_.logfile, highs_model_object.lp_,
-      highs_model_object.scale_, highs_model_object.simplex_basis_,
-      highs_model_object.simplex_info_, highs_model_object.scaled_model_status_,
-      get_unscaled_solution_params, highs_model_object.scaled_solution_params_,
-      get_unscaled_solution_params, get_scaled_solution_params,
-      new_scaled_primal_feasibility_tolerance,
-      new_scaled_dual_feasibility_tolerance);
-}
-
-// Gets the unscaled and scaled primal and dual infeasibilities from a
-// simplex basic solution. Assumes that these values are not known in
-// highs_model_object, so also passes get_unscaled_solution_params and
-// get_scaled_solution_params as values to check from
-HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(
-    const HighsModelObject& highs_model_object,
-    HighsSolutionParams& get_unscaled_solution_params,
-    HighsSolutionParams& get_scaled_solution_params) {
-  double new_scaled_primal_feasibility_tolerance;
-  double new_scaled_dual_feasibility_tolerance;
-  return getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-      highs_model_object.options_.logfile, highs_model_object.lp_,
-      highs_model_object.scale_, highs_model_object.simplex_basis_,
-      highs_model_object.simplex_info_, highs_model_object.scaled_model_status_,
-      get_unscaled_solution_params, get_scaled_solution_params,
-      get_unscaled_solution_params, get_scaled_solution_params,
-      new_scaled_primal_feasibility_tolerance,
-      new_scaled_dual_feasibility_tolerance);
-}
-
 // If the scaled LP's model status is optimal, gets suggested
 // feasibility tolerances for resolving the scaled LP. Assumes that
-// the unscaled primal and dual infeasibilitiesse are not known in
+// the unscaled primal and dual infeasibilities are not known in
 // highs_model_object, so also passes get_unscaled_solution_params as
 // values to check from
-HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(
+HighsStatus getNewInfeasibilityTolerancesFromSimplexBasicSolution(
     const HighsModelObject& highs_model_object,
     HighsSolutionParams& get_unscaled_solution_params,
     double& new_scaled_primal_feasibility_tolerance,
     double& new_scaled_dual_feasibility_tolerance) {
   HighsSolutionParams get_scaled_solution_params =
       highs_model_object.scaled_solution_params_;
-  return getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-      highs_model_object.options_.logfile, highs_model_object.lp_,
+  return getInfeasibilitiesAndNewTolerances(
+      highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.scale_, highs_model_object.simplex_basis_,
       highs_model_object.simplex_info_, highs_model_object.scaled_model_status_,
       get_unscaled_solution_params, highs_model_object.scaled_solution_params_,
@@ -3961,9 +3722,8 @@ HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(
 // scaled_solution_params are checked against them. If the scaled LP's
 // model status is optimal, gets suggested feasibility tolerances for
 // resolving the scaled LP
-HighsStatus
-getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
-    FILE* logfile, const HighsLp& lp, const HighsScale& scale,
+HighsStatus getInfeasibilitiesAndNewTolerances(
+    const HighsOptions& options, const HighsLp& lp, const HighsScale& scale,
     const SimplexBasis& basis, const HighsSimplexInfo& simplex_info,
     const HighsModelStatus scaled_model_status,
     const HighsSolutionParams& unscaled_solution_params,
@@ -4156,24 +3916,24 @@ getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(
     sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
   }
 
-  bool equal_solution_infeasibility_params;
-  equal_solution_infeasibility_params = equalSolutionInfeasibilityParams(
-      get_unscaled_solution_params, unscaled_solution_params);
-  if (!equal_solution_infeasibility_params) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
+  HighsDebugStatus debug_status;
+  debug_status = debugCompareSolutionInfeasibilityParams(
+      options, get_unscaled_solution_params, unscaled_solution_params);
+  if (debug_status != HighsDebugStatus::OK) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "Unequal unscaled solution infeasibility params in "
                     "getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
-    assert(equal_solution_infeasibility_params);
+    assert(debug_status == HighsDebugStatus::OK);
     return HighsStatus::Error;
   }
   if (check_scaled_solution_params) {
-    equal_solution_infeasibility_params = equalSolutionInfeasibilityParams(
-        get_scaled_solution_params, scaled_solution_params);
-    if (!equal_solution_infeasibility_params) {
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
+    debug_status = debugCompareSolutionInfeasibilityParams(
+        options, get_scaled_solution_params, scaled_solution_params);
+    if (debug_status != HighsDebugStatus::OK) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Unequal scaled solution infeasibility params in "
                       "getPrimalDualInfeasibilitiesFromSimplexBasicSolution");
-      assert(equal_solution_infeasibility_params);
+      assert(debug_status == HighsDebugStatus::OK);
       return HighsStatus::Error;
     }
   }
@@ -4376,64 +4136,4 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #endif
       break;
   }
-}
-
-bool simplexInfoOk(const HighsLp& lp, const HighsLp& simplex_lp,
-                   const HighsSimplexInfo& simplex_info) {
-  int numCol = lp.numCol_;
-  int numRow = lp.numRow_;
-  int numTot = numCol + numRow;
-  bool dimension_ok =
-      numCol == simplex_lp.numCol_ && numRow == simplex_lp.numRow_;
-  assert(dimension_ok);
-  if (!dimension_ok) {
-    printf("LP-SimplexLP dimension incompatibility (%d, %d) != (%d, %d)\n",
-           numCol, simplex_lp.numCol_, numRow, simplex_lp.numRow_);
-    return false;
-  }
-  //  if (!simplex_info.initialised) {printf("SimplexInfo not initialised)\n");
-  //  return true;}
-  int workCost_size = simplex_info.workCost_.size();
-  assert(workCost_size == numTot);
-  if (workCost_size != numTot) {
-    printf("workCost size is %d, not %d)\n", workCost_size, numTot);
-    return false;
-  }
-  int workDual_size = simplex_info.workDual_.size();
-  assert(workDual_size == numTot);
-  if (workDual_size != numTot) {
-    printf("workDual size is %d, not %d)\n", workDual_size, numTot);
-    return false;
-  }
-  int workShift_size = simplex_info.workShift_.size();
-  assert(workShift_size == numTot);
-  if (workShift_size != numTot) {
-    printf("workShift size is %d, not %d)\n", workShift_size, numTot);
-    return false;
-  }
-  int workLower_size = simplex_info.workLower_.size();
-  assert(workLower_size == numTot);
-  if (workLower_size != numTot) {
-    printf("workLower size is %d, not %d)\n", workLower_size, numTot);
-    return false;
-  }
-  int workUpper_size = simplex_info.workUpper_.size();
-  assert(workUpper_size == numTot);
-  if (workUpper_size != numTot) {
-    printf("workUpper size is %d, not %d)\n", workUpper_size, numTot);
-    return false;
-  }
-  int workRange_size = simplex_info.workRange_.size();
-  assert(workRange_size == numTot);
-  if (workRange_size != numTot) {
-    printf("workRange size is %d, not %d)\n", workRange_size, numTot);
-    return false;
-  }
-  int workValue_size = simplex_info.workValue_.size();
-  assert(workValue_size == numTot);
-  if (workValue_size != numTot) {
-    printf("workValue size is %d, not %d)\n", workValue_size, numTot);
-    return false;
-  }
-  return true;
 }

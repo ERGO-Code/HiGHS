@@ -65,4 +65,9 @@ HighsDebugStatus debugDualChuzcWorkDataAndGroup(
     const std::vector<std::pair<int, double>>& sorted_workData,
     const std::vector<int>& workGroup, const std::vector<int>& alt_workGroup);
 
+HighsDebugStatus debugSimplexBasicSolution(
+    const string message, const HighsModelObject& highs_model_object);
+
+HighsDebugStatus debugSimplexInfoBasisConsistent(
+    const HighsModelObject& highs_model_object);
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_
