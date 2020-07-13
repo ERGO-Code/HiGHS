@@ -1415,15 +1415,6 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
                 << row << std::endl;
   }
 
-  // if (low < colLower[j]) std::cout << "low looser" << std::endl;
-  // if (low > colLower[j]) std::cout << "low tighter" << std::endl;
-  // if (low == colLower[j]) std::cout << "low eq" << std::endl;
-  // if (upp < colUpper[j]) std::cout << "up  tighter" << std::endl;
-  // if (upp > colUpper[j]) std::cout << "up  looser" << std::endl;
-  // if (upp == colUpper[j]) std::cout << "up  eq" << std::endl;
-  // if (upp < colUpper[j] && upp == colLower[j])
-  //   std::cout << "weeeeee" << std::endl;
-
   return make_pair(low, upp);
 }
 
