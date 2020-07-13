@@ -171,6 +171,7 @@ set(headers
     presolve/HPreData.h
     simplex/HVector.h
     test/DevKkt.h
+    test/KktCh2.h
     util/stringutil.h
     util/HighsComponent.h
     util/HighsRandom.h
