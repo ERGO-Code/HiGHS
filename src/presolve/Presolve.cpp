@@ -574,11 +574,6 @@ void Presolve::removeDoubletonEquations() {
   int iter = 0;
 
   for (int row = 0; row < numRow; row++) {
-    // if (row != 53) continue;
-    // if (row != 53) continue;
-    // if (row !=128 ) continue;
-    // ~~~
-
     if (flagRow.at(row)) {
       // Analyse dependency on numerical tolerance
       if (nzRow.at(row) == 2 && rowLower[row] > -HIGHS_CONST_INF &&
@@ -643,11 +638,11 @@ void Presolve::removeDoubletonEquations() {
             // update matrix coefficients
             if (isZeroA(i, x)) {
               UpdateMatrixCoeffDoubletonEquationXzero(i, x, y, aiy, akx, aky);
-              std::cout << "   . row " << i << " zero " << std::endl;
+              // std::cout << "   . row " << i << " zero " << std::endl;
             } else {
               UpdateMatrixCoeffDoubletonEquationXnonZero(i, x, y, aiy, akx,
                                                          aky);
-              std::cout << "   . row " << i << " zero " << std::endl;
+              // std::cout << "   . row " << i << " zero " << std::endl;
             }
           }
         if (Avalue.size() > 40000000) {
@@ -1420,14 +1415,14 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
                 << row << std::endl;
   }
 
-  if (low < colLower[j]) std::cout << "low looser" << std::endl;
-  if (low > colLower[j]) std::cout << "low tighter" << std::endl;
-  if (low == colLower[j]) std::cout << "low eq" << std::endl;
-  if (upp < colUpper[j]) std::cout << "up  tighter" << std::endl;
-  if (upp > colUpper[j]) std::cout << "up  looser" << std::endl;
-  if (upp == colUpper[j]) std::cout << "up  eq" << std::endl;
-  if (upp < colUpper[j] && upp == colLower[j])
-    std::cout << "weeeeee" << std::endl;
+  // if (low < colLower[j]) std::cout << "low looser" << std::endl;
+  // if (low > colLower[j]) std::cout << "low tighter" << std::endl;
+  // if (low == colLower[j]) std::cout << "low eq" << std::endl;
+  // if (upp < colUpper[j]) std::cout << "up  tighter" << std::endl;
+  // if (upp > colUpper[j]) std::cout << "up  looser" << std::endl;
+  // if (upp == colUpper[j]) std::cout << "up  eq" << std::endl;
+  // if (upp < colUpper[j] && upp == colLower[j])
+  //   std::cout << "weeeeee" << std::endl;
 
   return make_pair(low, upp);
 }
@@ -3738,22 +3733,22 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
       }  // Else Will need to check dual feasibility of y dual.
 
       // Print & check some info.
-      if (x_status_reduced == HighsBasisStatus::BASIC)
-        std::cout << "BASIC" << std::endl;
-      else
-        std::cout << "NOT BASIC" << std::endl;
+      // if (x_status_reduced == HighsBasisStatus::BASIC)
+      //   std::cout << "BASIC" << std::endl;
+      // else
+      //   std::cout << "NOT BASIC" << std::endl;
 
       // see if X at a bound
       if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
         if ((fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
             (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
-          std::cout << "     4.122" << std::endl;
+          // std::cout << "     4.122" << std::endl;
           if (ubxNew > lbxNew)
             assert(x_status_reduced == HighsBasisStatus::BASIC);
           row_basic = false;
 
         } else {
-          std::cout << "     4.002" << std::endl;
+          // std::cout << "     4.002" << std::endl;
         }
       } else {
         // X strictly between bounds

@@ -96,15 +96,15 @@ class Presolve : public HPreData {
     timer.time_limit = limit;
   }
 
-  int iPrint = 1;
+  int iPrint = 0;
   int message_level;
   FILE* output;
 
  private:
-  int iKKTcheck = 1;
+  int iKKTcheck = 0;
   int presolve(int print);
 
-  const bool report_postsolve = true;
+  const bool report_postsolve = false;
 
   double objShift;
   void initializeVectors();
