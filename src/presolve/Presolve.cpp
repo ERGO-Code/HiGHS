@@ -3691,7 +3691,7 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
           if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
           return;
         }
-        y_make_basic = true;
+        // y_make_basic = true;
       }
       // If not feasble X will remail nonbasic and we will make the
     }
