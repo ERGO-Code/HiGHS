@@ -456,10 +456,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
         // Finite lower bound so boxed or lower
         if (!highs_isInfinity(upper)) {
           // Finite upper bound so boxed
-	  //
+          //
           // Determine the bound to set the value to according to, in order of
           // priority
-	  //
+          //
           // 1. Any valid HiGHS basis status
           if (have_highs_basis) {
             if (iVar < simplex_lp.numCol_) {
@@ -483,47 +483,49 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
           }
           // 2. Any HiGHS solution value
           if (move == illegal_move_value && have_highs_solution) {
-	    // Reach here if there is no HiGHS basis or the HiGHS
-	    // nonbasic status is just NONBASIC.
+            // Reach here if there is no HiGHS basis or the HiGHS
+            // nonbasic status is just NONBASIC.
             double midpoint = 0.5 * (lower + upper);
-	    double value_from_highs_solution;
+            double value_from_highs_solution;
             if (iVar < simplex_lp.numCol_) {
-	      assert(basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
-	      value_from_highs_solution = solution.col_value[iVar] / scale.col_[iVar];
+              assert(basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
+              value_from_highs_solution =
+                  solution.col_value[iVar] / scale.col_[iVar];
             } else {
               int iRow = iVar - simplex_lp.numCol_;
-	      assert(basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
-	      value_from_highs_solution = -solution.row_value[iRow] * scale.row_[iRow];
+              assert(basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
+              value_from_highs_solution =
+                  -solution.row_value[iRow] * scale.row_[iRow];
             }
-	    if (value_from_highs_solution < midpoint) {
-	      move = NONBASIC_MOVE_UP;
-	      value = lower;
-	    } else {
-	      move = NONBASIC_MOVE_DN;
-	      value = upper;
-	    }
+            if (value_from_highs_solution < midpoint) {
+              move = NONBASIC_MOVE_UP;
+              value = lower;
+            } else {
+              move = NONBASIC_MOVE_DN;
+              value = upper;
+            }
           }
           // 3. Lower bound for original LP
           if (move == illegal_move_value) {
-	    const bool gurobi_initial_value = false;
-	    if (gurobi_initial_value) {
-	      // Set to bound that is closer to zero
-	      if (fabs(lower) < fabs(upper)) {
-		move = NONBASIC_MOVE_UP;
-		value = lower;
-	      } else {
-		move = NONBASIC_MOVE_DN;
-		value = upper;
-	      }
-	    } else {
-	      if (iVar < simplex_lp.numCol_) {
-		move = NONBASIC_MOVE_UP;
-		value = lower;
-	      } else {
-		move = NONBASIC_MOVE_DN;
-		value = upper;
-	      }
-	    }
+            const bool gurobi_initial_value = false;
+            if (gurobi_initial_value) {
+              // Set to bound that is closer to zero
+              if (fabs(lower) < fabs(upper)) {
+                move = NONBASIC_MOVE_UP;
+                value = lower;
+              } else {
+                move = NONBASIC_MOVE_DN;
+                value = upper;
+              }
+            } else {
+              if (iVar < simplex_lp.numCol_) {
+                move = NONBASIC_MOVE_UP;
+                value = lower;
+              } else {
+                move = NONBASIC_MOVE_DN;
+                value = upper;
+              }
+            }
           }
         } else {
           // Lower (since upper bound is infinite)
@@ -540,35 +542,36 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
         value = 0;
       }
       assert(move != illegal_move_value);
+      /*
       if (have_highs_basis && have_highs_solution) {
-	// See how the deduced value differs from the HiGHS solution
-	double debug_solution = 0;
-	std::string debug_type;
-	int debug_index;
-	HighsBasisStatus debug_basis;
-	if (iVar < simplex_lp.numCol_) {
-	  // Column
-	  debug_type = "Col";
-	  debug_index = iVar;
-	  debug_solution = solution.col_value[iVar] / scale.col_[iVar];
-	  debug_basis = basis.col_status[iVar];
-	} else {
-	  int iRow = iVar - simplex_lp.numCol_;
-	  debug_type = "Row";
-	  debug_index = iRow;
-	  debug_solution = -solution.row_value[iRow] * scale.row_[iRow];
-	  debug_basis = basis.row_status[iRow];
-	}
-	const double debug_solution_difference = fabs(debug_solution - value);
-	if (debug_solution_difference>1e-12) {
-	  printf("%s %6d: Difference %g Solution(H%g, %g); Bounds [%g, %g]; Basis(H%2d, S%2d)\n",
-		 debug_type.c_str(), debug_index,
-		 debug_solution_difference,
-		 debug_solution, value,
-		 lower, upper,
-		 (int)debug_basis, move);
-	}
+        // See how the deduced value differs from the HiGHS solution
+        double debug_solution = 0;
+        std::string debug_type;
+        int debug_index;
+        HighsBasisStatus debug_basis;
+        if (iVar < simplex_lp.numCol_) {
+          // Column
+          debug_type = "Col";
+          debug_index = iVar;
+          debug_solution = solution.col_value[iVar] / scale.col_[iVar];
+          debug_basis = basis.col_status[iVar];
+        } else {
+          int iRow = iVar - simplex_lp.numCol_;
+          debug_type = "Row";
+          debug_index = iRow;
+          debug_solution = -solution.row_value[iRow] * scale.row_[iRow];
+          debug_basis = basis.row_status[iRow];
+        }
+        const double debug_solution_difference = fabs(debug_solution - value);
+        if (debug_solution_difference > 1e-12) {
+          printf(
+              "%s %6d: Difference %g Solution(H%g, %g); Bounds [%g, %g]; "
+              "Basis(H%2d, S%2d)\n",
+              debug_type.c_str(), debug_index, debug_solution_difference,
+              debug_solution, value, lower, upper, (int)debug_basis, move);
+        }
       }
+      */
       simplex_info.workValue_[iVar] = value;
       simplex_basis.nonbasicMove_[iVar] = move;
     } else {
