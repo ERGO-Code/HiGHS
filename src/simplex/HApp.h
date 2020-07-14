@@ -277,35 +277,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     reportSimplexPhaseIterations(highs_model_object, algorithm);
   }
 
-  if (simplex_info.analyse_lp_solution) {
-    // Analyse the simplex basic solution, assuming that the scaled solution
-    // params are known
-    const bool report = true;
-    call_status = analyseSimplexBasicSolution(
-        highs_model_object, highs_model_object.scaled_solution_params_, report);
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "analyseSimplexBasicSolution");
-    if (return_status == HighsStatus::Error) return return_status;
+  if (debugSimplexBasicSolution("After runSimplexSolver", highs_model_object) ==
+      HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
 
-#ifdef HiGHSDEV
-    // For debugging, it's good to be able to check what comes out of
-    // the solver. This is done fully by analyseHighsBasicSolution,
-    // which computes the primal and dual residuals so isn't cheap.
-    //
-    // Copy the solution and basis
-    HighsSimplexInterface simplex_interface(highs_model_object);
-    simplex_interface.convertSimplexToHighsSolution();
-    simplex_interface.convertSimplexToHighsBasis();
-    call_status = analyseHighsBasicSolution(logfile, highs_model_object,
-                                            "to check simplex basic solution");
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "analyseHighsBasicSolution");
-    if (return_status == HighsStatus::Error) return return_status;
-    // Invalidate the basis to make sure it is set again later
-    // without HiGHSDEV
-    highs_model_object.basis_.valid_ = false;
-#endif
-  }
   return_status =
       highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 #ifdef HiGHSDEV
@@ -327,13 +302,12 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 #endif
     // Deduce the unscaled solution parameters, and new fasibility tolerances if
     // not primal and/or dual feasible
-    call_status =
-        getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(
-            highs_model_object, highs_model_object.unscaled_solution_params_,
-            new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
+    call_status = getNewInfeasibilityTolerancesFromSimplexBasicSolution(
+        highs_model_object, highs_model_object.unscaled_solution_params_,
+        new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
     return_status = interpretCallStatus(
         call_status, return_status,
-        "getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution");
+        "getNewInfeasibilityTolerancesFromSimplexBasicSolution");
     if (return_status == HighsStatus::Error) return return_status;
     int num_unscaled_primal_infeasibilities =
         highs_model_object.unscaled_solution_params_.num_primal_infeasibilities;
