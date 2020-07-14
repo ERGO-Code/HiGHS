@@ -443,6 +443,7 @@ bool debugBasicSolutionVariable(
 
     if (primal_infeasibility > primal_feasibility_tolerance) {
       // Outside a bound
+      off_bound_nonbasic = primal_infeasibility;
       dual_infeasibility = 0;
       if (value < lower) {
         query = true;
@@ -455,6 +456,7 @@ bool debugBasicSolutionVariable(
       }
     } else if (primal_residual >= -primal_feasibility_tolerance) {
       // At a bound: check for dual feasibility
+      off_bound_nonbasic = std::fabs(primal_residual);
       if (lower < upper) {
         // Non-fixed variable
         if (value < middle) {

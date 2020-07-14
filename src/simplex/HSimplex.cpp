@@ -561,9 +561,15 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   computeDual(highs_model_object);
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
-  computeDualObjectiveValue(highs_model_object);
-  computePrimalObjectiveValue(highs_model_object);
-  simplex_lp_status.valid = true;
+
+  // If there is a HiGHS solution then determine the changes in basic
+  // and nonbasic values and duals for columns and rows
+  if (have_highs_solution) {
+    //    analyseSimplexAndHighsSolutionDifferences(highs_model_object);
+    if (debugSimplexHighsSolutionDifferences(highs_model_object) ==
+        HighsDebugStatus::LOGICAL_ERROR)
+      return HighsStatus::Error;
+  }
 
   // Store, analyse and possibly report the number of primal and dual
   // infeasiblities and the simplex status
@@ -572,6 +578,22 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 
   HighsSolutionParams& scaled_solution_params =
       highs_model_object.scaled_solution_params_;
+  const double max_dual_infeasibility =
+      scaled_solution_params.max_dual_infeasibility;
+
+  if (scaled_solution_params.num_dual_infeasibilities &&
+      max_dual_infeasibility < -1e-3) {
+    // There are dual infeasibilities, but they are not excessive so shift them
+    // rather than flipping primal
+    correctDual(highs_model_object);
+    computeSimplexInfeasible(highs_model_object);
+    copySimplexInfeasible(highs_model_object);
+  }
+
+  computeDualObjectiveValue(highs_model_object);
+  computePrimalObjectiveValue(highs_model_object);
+  simplex_lp_status.valid = true;
+
   bool primal_feasible = scaled_solution_params.num_primal_infeasibilities == 0;
   bool dual_feasible = scaled_solution_params.num_dual_infeasibilities == 0;
   if (primal_feasible && dual_feasible) {
@@ -584,13 +606,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 
   scaled_solution_params.objective_function_value =
       simplex_info.primal_objective_value;
-
-#ifdef HiGHSDEV
-  // If there is a HiGHS solution then determine the changes in basic
-  // and nonbasic values and duals for columns and rows
-  if (have_highs_solution)
-    analyseSimplexAndHighsSolutionDifferences(highs_model_object);
-#endif
 
   if (debugSimplexBasicSolution("After transition", highs_model_object) ==
       HighsDebugStatus::LOGICAL_ERROR)
@@ -3547,6 +3562,56 @@ void correctDual(HighsModelObject& highs_model_object,
         "Performed %d cost shift(s): total = %g; objective change = %g\n",
         num_shift, sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
+}
+
+void correctDual(HighsModelObject& highs_model_object) {
+  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsRandom& random = highs_model_object.random_;
+  const double tau_d =
+      highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
+  const double inf = HIGHS_CONST_INF;
+  int num_shift = 0;
+  double sum_shift = 0;
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  for (int i = 0; i < numTot; i++) {
+    if (simplex_basis.nonbasicFlag_[i]) {
+      if (simplex_info.workLower_[i] == -inf &&
+          simplex_info.workUpper_[i] == inf) {
+        // FREE variable
+      } else if (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <=
+                 -tau_d) {
+        simplex_info.costs_perturbed = 1;
+        std::string direction;
+        double shift;
+        if (simplex_basis.nonbasicMove_[i] == 1) {
+          direction = "  up";
+          double dual = (1 + random.fraction()) * tau_d;
+          shift = dual - simplex_info.workDual_[i];
+          simplex_info.workDual_[i] = dual;
+          simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
+        } else {
+          direction = "down";
+          double dual = -(1 + random.fraction()) * tau_d;
+          shift = dual - simplex_info.workDual_[i];
+          simplex_info.workDual_[i] = dual;
+          simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
+        }
+        num_shift++;
+        sum_shift += fabs(shift);
+        HighsPrintMessage(highs_model_object.options_.output,
+                          highs_model_object.options_.message_level, ML_VERBOSE,
+                          "Move %s: cost shift = %g\n", direction.c_str(),
+                          shift);
+      }
+    }
+  }
+  if (num_shift)
+    HighsPrintMessage(highs_model_object.options_.output,
+                      highs_model_object.options_.message_level, ML_DETAILED,
+                      "Performed %d cost shift(s): total = %g\n", num_shift,
+                      sum_shift);
 }
 
 // Record the shift in the cost of a particular column

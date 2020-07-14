@@ -181,6 +181,7 @@ void computeDual(HighsModelObject& highs_model_object);
 
 void correctDual(HighsModelObject& highs_model_object,
                  int* free_infeasibility_count);
+void correctDual(HighsModelObject& highs_model_object);
 
 // Record the shift in the cost of a particular column
 void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount);
