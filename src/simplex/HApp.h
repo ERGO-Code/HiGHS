@@ -256,7 +256,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       }
 
       int& num_scaled_primal_infeasibilities =
-          highs_model_object.scaled_solution_params_.num_primal_infeasibilities;
+          simplex_info.num_primal_infeasibilities;
       if (highs_model_object.scaled_model_status_ ==
               HighsModelStatus::OPTIMAL &&
           num_scaled_primal_infeasibilities) {

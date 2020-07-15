@@ -507,26 +507,14 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
               value = upper;
             }
           }
-          // 3. Lower bound for original LP
+          // 3. Bound of original LP that is closer to zero
           if (move == illegal_move_value) {
-            const bool gurobi_initial_value = false;
-            if (gurobi_initial_value) {
-              // Set to bound that is closer to zero
-              if (fabs(lower) < fabs(upper)) {
-                move = NONBASIC_MOVE_UP;
-                value = lower;
-              } else {
-                move = NONBASIC_MOVE_DN;
-                value = upper;
-              }
+            if (fabs(lower) < fabs(upper)) {
+              move = NONBASIC_MOVE_UP;
+              value = lower;
             } else {
-              if (iVar < simplex_lp.numCol_) {
-                move = NONBASIC_MOVE_UP;
-                value = lower;
-              } else {
-                move = NONBASIC_MOVE_DN;
-                value = upper;
-              }
+              move = NONBASIC_MOVE_DN;
+              value = upper;
             }
           }
         } else {
@@ -615,15 +603,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       highs_model_object.scaled_solution_params_;
   const double max_dual_infeasibility =
       scaled_solution_params.max_dual_infeasibility;
-
-  if (scaled_solution_params.num_dual_infeasibilities &&
-      max_dual_infeasibility < -1e-3) {
-    // There are dual infeasibilities, but they are not excessive so shift them
-    // rather than flipping primal
-    correctDual(highs_model_object);
-    computeSimplexInfeasible(highs_model_object);
-    copySimplexInfeasible(highs_model_object);
-  }
 
   computeDualObjectiveValue(highs_model_object);
   computePrimalObjectiveValue(highs_model_object);
@@ -3597,56 +3576,6 @@ void correctDual(HighsModelObject& highs_model_object,
         "Performed %d cost shift(s): total = %g; objective change = %g\n",
         num_shift, sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
-}
-
-void correctDual(HighsModelObject& highs_model_object) {
-  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  HighsRandom& random = highs_model_object.random_;
-  const double tau_d =
-      highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
-  const double inf = HIGHS_CONST_INF;
-  int num_shift = 0;
-  double sum_shift = 0;
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  for (int i = 0; i < numTot; i++) {
-    if (simplex_basis.nonbasicFlag_[i]) {
-      if (simplex_info.workLower_[i] == -inf &&
-          simplex_info.workUpper_[i] == inf) {
-        // FREE variable
-      } else if (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <=
-                 -tau_d) {
-        simplex_info.costs_perturbed = 1;
-        std::string direction;
-        double shift;
-        if (simplex_basis.nonbasicMove_[i] == 1) {
-          direction = "  up";
-          double dual = (1 + random.fraction()) * tau_d;
-          shift = dual - simplex_info.workDual_[i];
-          simplex_info.workDual_[i] = dual;
-          simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
-        } else {
-          direction = "down";
-          double dual = -(1 + random.fraction()) * tau_d;
-          shift = dual - simplex_info.workDual_[i];
-          simplex_info.workDual_[i] = dual;
-          simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
-        }
-        num_shift++;
-        sum_shift += fabs(shift);
-        HighsPrintMessage(highs_model_object.options_.output,
-                          highs_model_object.options_.message_level, ML_VERBOSE,
-                          "Move %s: cost shift = %g\n", direction.c_str(),
-                          shift);
-      }
-    }
-  }
-  if (num_shift)
-    HighsPrintMessage(highs_model_object.options_.output,
-                      highs_model_object.options_.message_level, ML_DETAILED,
-                      "Performed %d cost shift(s): total = %g\n", num_shift,
-                      sum_shift);
 }
 
 // Record the shift in the cost of a particular column
