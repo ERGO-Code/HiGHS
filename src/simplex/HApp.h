@@ -254,9 +254,35 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
             interpretCallStatus(call_status, return_status, "HDual::solve");
         if (return_status == HighsStatus::Error) return return_status;
       }
-    }
 
-    debugBasisCondition(highs_model_object, "Final");
+      int& num_scaled_primal_infeasibilities =
+          highs_model_object.scaled_solution_params_.num_primal_infeasibilities;
+      if (highs_model_object.scaled_model_status_ ==
+              HighsModelStatus::OPTIMAL &&
+          num_scaled_primal_infeasibilities) {
+        // If Phase 2 primal simplex solver creates primal
+        // infeasibilities it doesn't check and may claim
+        // optimality. Try again with serial dual solver
+        HighsLogMessage(
+            logfile, HighsMessageType::WARNING,
+            "Phase 2 primal simplex clean-up infeasibilities: Pr %d(Max %9.4g, "
+            "Sum %9.4g) so re-solving",
+            num_scaled_primal_infeasibilities,
+            highs_model_object.scaled_solution_params_.max_primal_infeasibility,
+            highs_model_object.scaled_solution_params_
+                .sum_primal_infeasibilities);
+        call_status = dual_solver.solve();
+        return_status =
+            interpretCallStatus(call_status, return_status, "HDual::solve");
+        if (return_status == HighsStatus::Error) return return_status;
+        if (highs_model_object.scaled_model_status_ ==
+                HighsModelStatus::OPTIMAL &&
+            num_scaled_primal_infeasibilities) {
+          // Still optimal with primal infeasibilities
+          highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+        }
+      }
+    }
 
     computeSimplexInfeasible(highs_model_object);
     copySimplexInfeasible(highs_model_object);
@@ -270,6 +296,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       highs_model_object.scaled_solution_params_.dual_status =
           PrimalDualStatus::STATUS_FEASIBLE_POINT;
     }
+    debugBasisCondition(highs_model_object, "Final");
+
     // Official finish of solver
 #ifdef HiGHSDEV
     analysis.simplexTimerStop(SimplexTotalClock);
