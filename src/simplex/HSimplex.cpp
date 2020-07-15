@@ -488,12 +488,14 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
             double midpoint = 0.5 * (lower + upper);
             double value_from_highs_solution;
             if (iVar < simplex_lp.numCol_) {
-              assert(basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
+              assert(!have_highs_basis ||
+                     basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
               value_from_highs_solution =
                   solution.col_value[iVar] / scale.col_[iVar];
             } else {
               int iRow = iVar - simplex_lp.numCol_;
-              assert(basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
+              assert(!have_highs_basis ||
+                     basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
               value_from_highs_solution =
                   -solution.row_value[iRow] * scale.row_[iRow];
             }
