@@ -72,7 +72,7 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
                                          const HighsSolution& solution) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // options, assuming no knowledge of solution parameters or model status
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
@@ -116,7 +116,7 @@ HighsDebugStatus debugHighsBasicSolution(
     const HighsModelStatus model_status) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // solution_params
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use

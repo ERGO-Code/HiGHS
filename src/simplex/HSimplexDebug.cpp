@@ -927,7 +927,7 @@ HighsDebugStatus debugSimplexBasicSolution(
     const string message, const HighsModelObject& highs_model_object) {
   // Non-trivially expensive analysis of a simplex basic solution, starting from
   // solution_params
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
 
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
@@ -1137,7 +1137,7 @@ HighsDebugStatus debugSimplexInfoBasisConsistent(
 HighsDebugStatus debugSimplexHighsSolutionDifferences(
     const HighsModelObject& highs_model_object) {
   // Nontrivially expensive check of dimensions and sizes
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
 
   const HighsOptions& options = highs_model_object.options_;
