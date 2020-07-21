@@ -448,7 +448,6 @@ void singularStartingBasis(Highs& highs) {
   status = highs.setBasis(basis);
   REQUIRE(status == HighsStatus::OK);
 
-  /*
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
 
@@ -458,6 +457,7 @@ void singularStartingBasis(Highs& highs) {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == require_model_status);
 
+  /*
   if (require_model_status == HighsModelStatus::OPTIMAL) {
     REQUIRE(objectiveOk(info.objective_function_value, optimal_objective));
   }

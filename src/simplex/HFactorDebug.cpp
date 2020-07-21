@@ -74,22 +74,24 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
   int report_level;
   return_status = HighsDebugStatus::OK;
 
-  if (solve_error_norm > solve_excessive_error) {
-    value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
-  } else if (solve_error_norm > solve_large_error) {
-    value_adjective = "Large";
-    report_level = ML_DETAILED;
-    return_status = HighsDebugStatus::WARNING;
-  } else {
-    value_adjective = "Small";
-    report_level = ML_VERBOSE;
+  if (solve_error_norm) {
+    if (solve_error_norm > solve_excessive_error) {
+      value_adjective = "Excessive";
+      report_level = ML_ALWAYS;
+      return_status = HighsDebugStatus::WARNING;
+    } else if (solve_error_norm > solve_large_error) {
+      value_adjective = "Large";
+      report_level = ML_DETAILED;
+      return_status = HighsDebugStatus::WARNING;
+    } else {
+      value_adjective = "Small";
+      report_level = ML_VERBOSE;
+    }
+    HighsPrintMessage(
+         output, message_level, report_level,
+	 "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
+	 value_adjective.c_str(), solve_error_norm);
   }
-  HighsPrintMessage(
-      output, message_level, report_level,
-      "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
-      value_adjective.c_str(), solve_error_norm);
 
   if (highs_debug_level < HIGHS_DEBUG_LEVEL_EXPENSIVE) return return_status;
 
@@ -127,21 +129,23 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
     inverse_error_norm =
         std::max(inverse_column_error_norm, inverse_error_norm);
   }
-  if (inverse_error_norm > inverse_excessive_error) {
-    value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
-  } else if (inverse_error_norm > inverse_large_error) {
-    value_adjective = "Large";
-    report_level = ML_DETAILED;
-    return_status = HighsDebugStatus::WARNING;
-  } else {
-    value_adjective = "Small";
-    report_level = ML_VERBOSE;
+  if (inverse_error_norm) {
+    if (inverse_error_norm > inverse_excessive_error) {
+      value_adjective = "Excessive";
+      report_level = ML_ALWAYS;
+      return_status = HighsDebugStatus::WARNING;
+    } else if (inverse_error_norm > inverse_large_error) {
+      value_adjective = "Large";
+      report_level = ML_DETAILED;
+      return_status = HighsDebugStatus::WARNING;
+    } else {
+      value_adjective = "Small";
+      report_level = ML_VERBOSE;
+    }
+    HighsPrintMessage(output, message_level, report_level,
+                      "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
+		      value_adjective.c_str(), inverse_error_norm);
   }
-  HighsPrintMessage(output, message_level, report_level,
-                    "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
-                    value_adjective.c_str(), inverse_error_norm);
 
   return return_status;
 }
