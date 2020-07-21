@@ -651,8 +651,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
           hmos_[original_hmo].basis_.row_status =
               presolve_.data_.recovered_basis_.row_status;
 
-          analyseHighsBasicSolution(options_.logfile, hmos_[original_hmo],
-                                    "after returning from postsolve");
+          int save_highs_debug_level = options_.highs_debug_level;
+          options_.highs_debug_level = HIGHS_DEBUG_LEVEL_COSTLY;
+          debugHighsBasicSolution("After returning from postsolve", options_,
+                                  lp_, hmos_[original_hmo].basis_,
+                                  hmos_[original_hmo].solution_);
+          options_.highs_debug_level = save_highs_debug_level;
+
           // Now hot-start the simplex solver for the original_hmo
           solved_hmo = original_hmo;
           // Save the options to allow the best simplex strategy to
@@ -2017,11 +2022,14 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
     }
   }
   if (have_solution) assert(isSolutionConsistent(lp_, solution_));
+  bool have_basis = false;
   if (basis_.valid_) {
-    if (!isBasisConsistent(lp_, basis_)) {
-      printf("Basis not consistent when it should be\n");
-    }
-    assert(isBasisConsistent(lp_, basis_));
+    have_basis = isBasisConsistent(lp_, basis_);
+    assert(have_basis);
+  }
+  if (have_solution && have_basis) {
+    debugHighsBasicSolution("Before return from run()", options_, lp_, basis_,
+                            solution_, info_, model_status_);
   }
 }
 
