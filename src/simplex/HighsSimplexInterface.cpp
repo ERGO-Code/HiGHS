@@ -73,21 +73,82 @@ HighsStatus HighsSimplexInterface::addCols(
     assert(!apply_row_scaling);
   }
 #endif
-  call_status = appendLpCols(options, lp, XnumNewCol, XcolCost, XcolLower,
-                             XcolUpper, XnumNewNZ, XAstart, XAindex, XAvalue);
+
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = XnumNewCol;
+  index_collection.is_interval_ = true;
+  index_collection.from_ = 0;
+  index_collection.to_ = XnumNewCol - 1;
+  
+  // Take a copy of the cost and bounds that can be normalised
+  std::vector<double> local_colCost{XcolCost, XcolCost+XnumNewCol};
+  std::vector<double> local_colLower{XcolLower, XcolLower+XnumNewCol};
+  std::vector<double> local_colUpper{XcolUpper, XcolUpper+XnumNewCol};
+
+  // There are sure to be new columns since XnumNewCol <= 0 is handled above
+  // Assess the column costs
+  assert(XnumNewCol>0);
+  call_status = assessCosts(options, lp.numCol_, index_collection, XnumNewCol,
+                            true, 0, XnumNewCol - 1, false, 0, NULL, false,
+                            NULL, &local_colCost[0], options.infinite_cost);
   return_status =
-      interpretCallStatus(call_status, return_status, "appendLpCols");
+      interpretCallStatus(call_status, return_status, "assessCosts");
+  if (return_status == HighsStatus::Error) return return_status;
+  // Assess the column bounds
+  call_status = assessBounds(
+      options, "Col", lp.numCol_, index_collection, XnumNewCol, true, 0,
+      XnumNewCol - 1, false, 0, NULL, false, NULL,
+      &local_colLower[0],
+      &local_colUpper[0], options.infinite_bound);
+  return_status =
+    interpretCallStatus(call_status, return_status, "assessBounds");
+  if (return_status == HighsStatus::Error) return return_status;
+  // Append the columns to the LP vectors and matrix
+  call_status =
+    appendColsToLpVectors(lp, XnumNewCol, &local_colCost[0], &local_colLower[0], &local_colUpper[0]);
+  return_status =
+    interpretCallStatus(call_status, return_status, "appendColsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
+  // Append the columns to the Simplex LP vectors and matrix
     call_status =
-        appendLpCols(options, simplex_lp, XnumNewCol, XcolCost, XcolLower,
-                     XcolUpper, XnumNewNZ, XAstart, XAindex, XAvalue);
+      appendColsToLpVectors(simplex_lp, XnumNewCol, &local_colCost[0], &local_colLower[0], &local_colUpper[0]);
     return_status =
-        interpretCallStatus(call_status, return_status, "appendLpCols");
+      interpretCallStatus(call_status, return_status, "appendColsToLpVectors");
     if (return_status == HighsStatus::Error) return return_status;
   }
 
+  // Now consider any new matrix columns
+  if (XnumNewNZ) {
+    // Take a copy of the matrix that can be normalised
+    int local_num_new_nz = XnumNewNZ;
+    std::vector<int> local_Astart{XAstart, XAstart+XnumNewCol};
+    std::vector<int> local_Aindex{XAindex, XAindex+XnumNewNZ};
+    std::vector<double> local_Avalue{XAvalue, XAvalue+XnumNewNZ};
+    // Assess the matrix columns
+    call_status = assessMatrix(
+        options, lp.numRow_, 0, XnumNewCol - 1, XnumNewCol, local_num_new_nz,
+        &local_Astart[0], &local_Aindex[0], &local_Avalue[0],
+        options.small_matrix_value, options.large_matrix_value);
+    return_status =
+      interpretCallStatus(call_status, return_status, "assessMatrix");
+    if (return_status == HighsStatus::Error) return return_status;
+    // Append the columns to the LP matrix
+    call_status = appendColsToLpMatrix(lp, XnumNewCol, local_num_new_nz,
+   				       &local_Astart[0], &local_Aindex[0], &local_Avalue[0]);
+    return_status =
+      interpretCallStatus(call_status, return_status, "appendColsToLpMatrix");
+    if (return_status == HighsStatus::Error) return return_status;
+    if (valid_simplex_lp) {
+      // Append the columns to the Simplex LP matrix
+      call_status = appendColsToLpMatrix(simplex_lp, XnumNewCol, local_num_new_nz,
+					 &local_Astart[0], &local_Aindex[0], &local_Avalue[0]);
+      return_status =
+	interpretCallStatus(call_status, return_status, "appendColsToLpMatrix");
+      if (return_status == HighsStatus::Error) return return_status;
+    }
+  }
   // Now consider scaling
   scale.col_.resize(newNumCol);
   for (int col = 0; col < XnumNewCol; col++)
@@ -287,85 +348,71 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     assert(!apply_row_scaling);
   }
 #endif
-  // Assess the bounds and matrix indices, returning on error
+
   HighsIndexCollection index_collection;
   index_collection.dimension_ = XnumNewRow;
   index_collection.is_interval_ = true;
   index_collection.from_ = 0;
   index_collection.to_ = XnumNewRow - 1;
-  bool normalise = false;
+  // Take a copy of the bounds that can be normalised
+  std::vector<double> local_rowLower{XrowLower, XrowLower+XnumNewRow};
+  std::vector<double> local_rowUpper{XrowUpper, XrowUpper+XnumNewRow};
+
   call_status = assessBounds(
       options, "Row", lp.numRow_, index_collection, XnumNewRow, true, 0,
-      XnumNewRow - 1, false, 0, NULL, false, NULL, (double*)XrowLower,
-      (double*)XrowUpper, options.infinite_bound, normalise);
+      XnumNewRow - 1, false, 0, NULL, false, NULL, &local_rowLower[0],
+      &local_rowUpper[0], options.infinite_bound);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
 
+  // Append the rows to the LP vectors and matrix
+  call_status =
+    appendRowsToLpVectors(lp, XnumNewRow, &local_rowLower[0], &local_rowUpper[0]);
+  return_status =
+    interpretCallStatus(call_status, return_status, "appendRowsToLpVectors");
+  if (return_status == HighsStatus::Error) return return_status;
+
+  if (valid_simplex_lp) {
+  // Append the rows to the Simplex LP vectors and matrix
+    call_status =
+      appendRowsToLpVectors(simplex_lp, XnumNewRow, &local_rowLower[0], &local_rowUpper[0]);
+    return_status =
+      interpretCallStatus(call_status, return_status, "appendRowsToLpVectors");
+    if (return_status == HighsStatus::Error) return return_status;
+  }
+
+  // Now consider any new matrix rows
   if (XnumNewNZ) {
+    // Take a copy of the matrix that can be normalised
+    int local_num_new_nz = XnumNewNZ;
+    std::vector<int> local_ARstart{XARstart, XARstart+XnumNewRow};
+    std::vector<int> local_ARindex{XARindex, XARindex+XnumNewNZ};
+    std::vector<double> local_ARvalue{XARvalue, XARvalue+XnumNewNZ};
     call_status = assessMatrix(
-        options, lp.numCol_, 0, XnumNewRow - 1, XnumNewRow, XnumNewNZ,
-        (int*)XARstart, (int*)XARindex, (double*)XARvalue,
-        options.small_matrix_value, options.large_matrix_value, normalise);
+        options, lp.numCol_, 0, XnumNewRow - 1, XnumNewRow, local_num_new_nz,
+        &local_ARstart[0], &local_ARindex[0], &local_ARvalue[0],
+        options.small_matrix_value, options.large_matrix_value);
     return_status =
         interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
-  }
-
-  // Append the columns to the LP vectors and matrix
-  appendRowsToLpVectors(lp, XnumNewRow, XrowLower, XrowUpper);
-
-  // Normalise the LP row bounds
-  normalise = true;
-  // Index collection is now the interval [lp.numRow_...newNumRow - 1]
-  // in arrays of length newNumRow
-  index_collection.dimension_ = newNumRow;
-  index_collection.from_ = lp.numRow_;
-  index_collection.to_ = newNumRow - 1;
-  call_status = assessBounds(options, "Row", 0, index_collection, newNumRow,
-                             true, lp.numRow_, newNumRow - 1, false, 0, NULL,
-                             false, NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
-                             options.infinite_bound, normalise);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessBounds");
-  if (return_status == HighsStatus::Error) return return_status;
-
-  int lc_XnumNewNZ = XnumNewNZ;
-  int* lc_XARstart = (int*)malloc(sizeof(int) * XnumNewRow);
-  int* lc_XARindex = (int*)malloc(sizeof(int) * XnumNewNZ);
-  double* lc_XARvalue = (double*)malloc(sizeof(double) * XnumNewNZ);
-  if (XnumNewNZ) {
-    // Copy the new row-wise matrix into a local copy that can be normalised
-    std::memcpy(lc_XARstart, XARstart, sizeof(int) * XnumNewRow);
-    std::memcpy(lc_XARindex, XARindex, sizeof(int) * XnumNewNZ);
-    std::memcpy(lc_XARvalue, XARvalue, sizeof(double) * XnumNewNZ);
-    // Normalise the new matrix columns
-    normalise = true;
-    call_status = assessMatrix(
-        options, lp.numCol_, 0, XnumNewRow - 1, XnumNewRow, lc_XnumNewNZ,
-        lc_XARstart, lc_XARindex, lc_XARvalue, options.small_matrix_value,
-        options.large_matrix_value, normalise);
-    if (lc_XnumNewNZ) {
+    if (local_num_new_nz) {
       // Append rows to LP matrix
-      appendRowsToLpMatrix(lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart,
-                           lc_XARindex, lc_XARvalue);
+      call_status =
+	appendRowsToLpMatrix(lp, XnumNewRow, local_num_new_nz,
+			     &local_ARstart[0], &local_ARindex[0], &local_ARvalue[0]);
+      return_status =
+	interpretCallStatus(call_status, return_status, "appendRowsToLpMatrix");
+      if (return_status == HighsStatus::Error) return return_status;
+      if (valid_simplex_lp) {
+	call_status =
+	  appendRowsToLpMatrix(simplex_lp, XnumNewRow, local_num_new_nz,
+			       &local_ARstart[0], &local_ARindex[0], &local_ARvalue[0]);
+      return_status =
+	interpretCallStatus(call_status, return_status, "appendRowsToLpMatrix");
+      if (return_status == HighsStatus::Error) return return_status;
+      }
     }
-  }
-
-  if (valid_simplex_lp) {
-    appendRowsToLpVectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
-    call_status =
-        assessBounds(options, "Row", 0, index_collection, newNumRow, true,
-                     simplex_lp.numRow_, newNumRow - 1, false, 0, NULL, false,
-                     NULL, &simplex_lp.rowLower_[0], &simplex_lp.rowUpper_[0],
-                     options.infinite_bound, normalise);
-    return_status =
-        interpretCallStatus(call_status, return_status, "assessBounds");
-    if (return_status == HighsStatus::Error) return return_status;
-  }
-  if (lc_XnumNewNZ) {
-    appendRowsToLpMatrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart,
-                         lc_XARindex, lc_XARvalue);
   }
 
   // Now consider scaling
@@ -408,9 +455,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     report_basis(simplex_lp, simplex_basis);
   }
 #endif
-  free(lc_XARstart);
-  free(lc_XARindex);
-  free(lc_XARvalue);
   return return_status;
 }
 

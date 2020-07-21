@@ -98,12 +98,6 @@ HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
                              const int num_set_entries, const int* row_set,
                              const bool mask, const int* row_mask);
 
-HighsStatus appendLpCols(const HighsOptions& options, HighsLp& lp,
-                         const int num_new_col, const double* XcolCost,
-                         const double* XcolLower, const double* XcolUpper,
-                         const int num_new_nz, const int* XAstart,
-                         const int* XAindex, const double* XAvalue);
-
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
                                   const double* XcolCost,
                                   const double* colLower,
@@ -112,12 +106,6 @@ HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
 HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
                                  const int num_new_nz, const int* XAstart,
                                  const int* XAindex, const double* XAvalue);
-
-HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
-                         const double* XrowLower, const double* XrowUpper,
-                         const int num_new_nz, const int* XARstart,
-                         const int* XARindex, const double* XARvalue,
-                         const HighsOptions& options);
 
 HighsStatus appendRowsToLpVectors(HighsLp& lp, const int num_new_row,
                                   const double* XrowLower,
