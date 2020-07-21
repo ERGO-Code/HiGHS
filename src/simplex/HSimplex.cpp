@@ -916,8 +916,9 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
   simplex_lp_status.has_dual_objective_value = true;
 }
 
-int setSourceOutFmBd(const HighsModelObject& highs_model_object, const int columnOut) {
-  const HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+int setSourceOutFmBd(const HighsModelObject& highs_model_object,
+                     const int columnOut) {
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   int sourceOut = 0;
   if (simplex_info.workLower_[columnOut] !=
       simplex_info.workUpper_[columnOut]) {

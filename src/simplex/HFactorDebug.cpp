@@ -88,9 +88,9 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
       report_level = ML_VERBOSE;
     }
     HighsPrintMessage(
-         output, message_level, report_level,
-	 "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
-	 value_adjective.c_str(), solve_error_norm);
+        output, message_level, report_level,
+        "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
+        value_adjective.c_str(), solve_error_norm);
   }
 
   if (highs_debug_level < HIGHS_DEBUG_LEVEL_EXPENSIVE) return return_status;
@@ -144,7 +144,7 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
     }
     HighsPrintMessage(output, message_level, report_level,
                       "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
-		      value_adjective.c_str(), inverse_error_norm);
+                      value_adjective.c_str(), inverse_error_norm);
   }
 
   return return_status;

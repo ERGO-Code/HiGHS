@@ -61,7 +61,8 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
 
-int setSourceOutFmBd(const HighsModelObject& highs_model_object, const int column_out);
+int setSourceOutFmBd(const HighsModelObject& highs_model_object,
+                     const int column_out);
 
 #ifdef HiGHSDEV
 void getPrimalValue(const HighsModelObject& highs_model_object,

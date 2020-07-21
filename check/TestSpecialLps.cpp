@@ -457,7 +457,6 @@ void singularStartingBasis(Highs& highs) {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == require_model_status);
 
-  /*
   if (require_model_status == HighsModelStatus::OPTIMAL) {
     REQUIRE(objectiveOk(info.objective_function_value, optimal_objective));
   }
@@ -465,7 +464,6 @@ void singularStartingBasis(Highs& highs) {
   REQUIRE(status == HighsStatus::OK);
 
   reportSolution(highs);
-  */
 }
 TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;
