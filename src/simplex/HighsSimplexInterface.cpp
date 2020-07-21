@@ -55,6 +55,7 @@ HighsStatus HighsSimplexInterface::addCols(
   bool valid_basis = basis.valid_;
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
+  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -71,6 +72,7 @@ HighsStatus HighsSimplexInterface::addCols(
   // scaling
   if (!valid_simplex_lp) {
     assert(!apply_row_scaling);
+    assert(!valid_simplex_matrix);
   }
 #endif
 
@@ -119,9 +121,9 @@ HighsStatus HighsSimplexInterface::addCols(
     if (return_status == HighsStatus::Error) return return_status;
   }
 
-  // Now consider any new matrix columns
+  // Now consider the new matrix columns
   if (XnumNewNZ) {
-    // Take a copy of the matrix that can be normalised
+    // There are nonzeros, so take a copy of the matrix that can be normalised
     int local_num_new_nz = XnumNewNZ;
     std::vector<int> local_Astart{XAstart, XAstart+XnumNewCol};
     std::vector<int> local_Aindex{XAindex, XAindex+XnumNewNZ};
@@ -140,13 +142,20 @@ HighsStatus HighsSimplexInterface::addCols(
     return_status =
       interpretCallStatus(call_status, return_status, "appendColsToLpMatrix");
     if (return_status == HighsStatus::Error) return return_status;
-    if (valid_simplex_lp) {
+    if (valid_simplex_matrix) {
       // Append the columns to the Simplex LP matrix
       call_status = appendColsToLpMatrix(simplex_lp, XnumNewCol, local_num_new_nz,
 					 &local_Astart[0], &local_Aindex[0], &local_Avalue[0]);
       return_status =
 	interpretCallStatus(call_status, return_status, "appendColsToLpMatrix");
       if (return_status == HighsStatus::Error) return return_status;
+    }
+  } else {
+    // There are no nonzeros, so XAstart/XAindex/XAvalue may be null. Have to set up starts for empty columns
+    assert(XnumNewCol>0);
+    appendColsToLpMatrix(lp, XnumNewCol, 0, NULL, NULL, NULL);
+    if (valid_simplex_matrix) {
+      appendColsToLpMatrix(simplex_lp, XnumNewCol, 0, NULL, NULL, NULL);
     }
   }
   // Now consider scaling
@@ -404,16 +413,11 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
       return_status =
 	interpretCallStatus(call_status, return_status, "appendRowsToLpMatrix");
       if (return_status == HighsStatus::Error) return return_status;
-      if (valid_simplex_lp) {
-	call_status =
-	  appendRowsToLpMatrix(simplex_lp, XnumNewRow, local_num_new_nz,
-			       &local_ARstart[0], &local_ARindex[0], &local_ARvalue[0]);
-      return_status =
-	interpretCallStatus(call_status, return_status, "appendRowsToLpMatrix");
-      if (return_status == HighsStatus::Error) return return_status;
-      }
     }
   }
+
+  // Adding rows so don't maintain the simplex column-wise matrix
+  simplex_lp_status.has_matrix_col_wise = false;
 
   // Now consider scaling
   scale.row_.resize(newNumRow);
