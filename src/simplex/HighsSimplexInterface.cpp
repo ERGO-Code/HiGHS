@@ -27,7 +27,6 @@ HighsStatus HighsSimplexInterface::addCols(
     const double* XcolUpper, int XnumNewNZ, const int* XAstart,
     const int* XAindex, const double* XAvalue) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
 #ifdef HiGHSDEV
   printf("Called addCols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol,
          XnumNewNZ);
@@ -88,34 +87,32 @@ HighsStatus HighsSimplexInterface::addCols(
   // There are sure to be new columns since XnumNewCol <= 0 is handled above
   // Assess the column costs
   assert(XnumNewCol > 0);
-  call_status = assessCosts(options, lp.numCol_, index_collection, XnumNewCol,
-                            true, 0, XnumNewCol - 1, false, 0, NULL, false,
-                            NULL, &local_colCost[0], options.infinite_cost);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessCosts");
+  interpretCallStatus(
+      assessCosts(options, lp.numCol_, index_collection, XnumNewCol, true, 0,
+                  XnumNewCol - 1, false, 0, NULL, false, NULL,
+                  &local_colCost[0], options.infinite_cost),
+      return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the column bounds
-  call_status = assessBounds(options, "Col", lp.numCol_, index_collection,
-                             XnumNewCol, true, 0, XnumNewCol - 1, false, 0,
-                             NULL, false, NULL, &local_colLower[0],
-                             &local_colUpper[0], options.infinite_bound);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessBounds");
+  interpretCallStatus(assessBounds(options, "Col", lp.numCol_, index_collection,
+                                   XnumNewCol, true, 0, XnumNewCol - 1, false,
+                                   0, NULL, false, NULL, &local_colLower[0],
+                                   &local_colUpper[0], options.infinite_bound),
+                      return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
   // Append the columns to the LP vectors and matrix
-  call_status = appendColsToLpVectors(lp, XnumNewCol, &local_colCost[0],
-                                      &local_colLower[0], &local_colUpper[0]);
-  return_status =
-      interpretCallStatus(call_status, return_status, "appendColsToLpVectors");
+  interpretCallStatus(
+      appendColsToLpVectors(lp, XnumNewCol, &local_colCost[0],
+                            &local_colLower[0], &local_colUpper[0]),
+      return_status, "appendColsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
     // Append the columns to the Simplex LP vectors and matrix
-    call_status =
+    interpretCallStatus(
         appendColsToLpVectors(simplex_lp, XnumNewCol, &local_colCost[0],
-                              &local_colLower[0], &local_colUpper[0]);
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "appendColsToLpVectors");
+                              &local_colLower[0], &local_colUpper[0]),
+        return_status, "appendColsToLpVectors");
     if (return_status == HighsStatus::Error) return return_status;
   }
 
@@ -127,27 +124,26 @@ HighsStatus HighsSimplexInterface::addCols(
     std::vector<int> local_Aindex{XAindex, XAindex + XnumNewNZ};
     std::vector<double> local_Avalue{XAvalue, XAvalue + XnumNewNZ};
     // Assess the matrix columns
-    call_status = assessMatrix(
-        options, lp.numRow_, 0, XnumNewCol - 1, XnumNewCol, local_num_new_nz,
-        &local_Astart[0], &local_Aindex[0], &local_Avalue[0],
-        options.small_matrix_value, options.large_matrix_value);
-    return_status =
-        interpretCallStatus(call_status, return_status, "assessMatrix");
+    interpretCallStatus(
+        assessMatrix(options, lp.numRow_, 0, XnumNewCol - 1, XnumNewCol,
+                     local_num_new_nz, &local_Astart[0], &local_Aindex[0],
+                     &local_Avalue[0], options.small_matrix_value,
+                     options.large_matrix_value),
+        return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     // Append the columns to the LP matrix
-    call_status =
+    interpretCallStatus(
         appendColsToLpMatrix(lp, XnumNewCol, local_num_new_nz, &local_Astart[0],
-                             &local_Aindex[0], &local_Avalue[0]);
-    return_status =
-        interpretCallStatus(call_status, return_status, "appendColsToLpMatrix");
+                             &local_Aindex[0], &local_Avalue[0]),
+        return_status, "appendColsToLpMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     if (valid_simplex_lp) {
       // Append the columns to the Simplex LP matrix
-      call_status = appendColsToLpMatrix(simplex_lp, XnumNewCol,
-                                         local_num_new_nz, &local_Astart[0],
-                                         &local_Aindex[0], &local_Avalue[0]);
-      return_status = interpretCallStatus(call_status, return_status,
-                                          "appendColsToLpMatrix");
+      interpretCallStatus(
+          appendColsToLpMatrix(simplex_lp, XnumNewCol, local_num_new_nz,
+                               &local_Astart[0], &local_Aindex[0],
+                               &local_Avalue[0]),
+          return_status, "appendColsToLpMatrix");
       if (return_status == HighsStatus::Error) return return_status;
     }
   } else {
@@ -313,7 +309,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // matrix data are held row-wise, so we have to insert data into the
   // column-wise matrix of the LP.
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
 #ifdef HiGHSDEV
   printf("Called addRows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow,
          XnumNewNZ);
@@ -368,27 +363,27 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   std::vector<double> local_rowLower{XrowLower, XrowLower + XnumNewRow};
   std::vector<double> local_rowUpper{XrowUpper, XrowUpper + XnumNewRow};
 
-  call_status = assessBounds(options, "Row", lp.numRow_, index_collection,
-                             XnumNewRow, true, 0, XnumNewRow - 1, false, 0,
-                             NULL, false, NULL, &local_rowLower[0],
-                             &local_rowUpper[0], options.infinite_bound);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessBounds");
+  return_status = interpretCallStatus(
+      assessBounds(options, "Row", lp.numRow_, index_collection, XnumNewRow,
+                   true, 0, XnumNewRow - 1, false, 0, NULL, false, NULL,
+                   &local_rowLower[0], &local_rowUpper[0],
+                   options.infinite_bound),
+      return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the rows to the LP vectors
-  call_status = appendRowsToLpVectors(lp, XnumNewRow, &local_rowLower[0],
-                                      &local_rowUpper[0]);
-  return_status =
-      interpretCallStatus(call_status, return_status, "appendRowsToLpVectors");
+  return_status = interpretCallStatus(
+      appendRowsToLpVectors(lp, XnumNewRow, &local_rowLower[0],
+			    &local_rowUpper[0]),
+      return_status, "appendRowsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
     // Append the rows to the Simplex LP vectors
-    call_status = appendRowsToLpVectors(simplex_lp, XnumNewRow,
-                                        &local_rowLower[0], &local_rowUpper[0]);
-    return_status = interpretCallStatus(call_status, return_status,
-                                        "appendRowsToLpVectors");
+    return_status = interpretCallStatus(
+        appendRowsToLpVectors(simplex_lp, XnumNewRow, &local_rowLower[0],
+                              &local_rowUpper[0]),
+        return_status, "appendRowsToLpVectors");
     if (return_status == HighsStatus::Error) return return_status;
   }
 
@@ -399,28 +394,28 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     std::vector<int> local_ARstart{XARstart, XARstart + XnumNewRow};
     std::vector<int> local_ARindex{XARindex, XARindex + XnumNewNZ};
     std::vector<double> local_ARvalue{XARvalue, XARvalue + XnumNewNZ};
-    call_status = assessMatrix(
-        options, lp.numCol_, 0, XnumNewRow - 1, XnumNewRow, local_num_new_nz,
-        &local_ARstart[0], &local_ARindex[0], &local_ARvalue[0],
-        options.small_matrix_value, options.large_matrix_value);
-    return_status =
-        interpretCallStatus(call_status, return_status, "assessMatrix");
+    return_status = interpretCallStatus(
+        assessMatrix(options, lp.numCol_, 0, XnumNewRow - 1, XnumNewRow,
+                     local_num_new_nz, &local_ARstart[0], &local_ARindex[0],
+                     &local_ARvalue[0], options.small_matrix_value,
+                     options.large_matrix_value),
+        return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     if (local_num_new_nz) {
       // Append the rows to LP matrix
-      call_status = appendRowsToLpMatrix(lp, XnumNewRow, local_num_new_nz,
-                                         &local_ARstart[0], &local_ARindex[0],
-                                         &local_ARvalue[0]);
-      return_status = interpretCallStatus(call_status, return_status,
-                                          "appendRowsToLpMatrix");
+      return_status = interpretCallStatus(
+          appendRowsToLpMatrix(lp, XnumNewRow, local_num_new_nz,
+                               &local_ARstart[0], &local_ARindex[0],
+                               &local_ARvalue[0]),
+          return_status, "appendRowsToLpMatrix");
       if (return_status == HighsStatus::Error) return return_status;
       if (valid_simplex_lp) {
         // Append the rows to the Simplex LP matrix
-        call_status = appendRowsToLpMatrix(
-            simplex_lp, XnumNewRow, local_num_new_nz, &local_ARstart[0],
-            &local_ARindex[0], &local_ARvalue[0]);
-        return_status = interpretCallStatus(call_status, return_status,
-                                            "appendRowsToLpMatrix");
+        return_status = interpretCallStatus(
+            appendRowsToLpMatrix(simplex_lp, XnumNewRow, local_num_new_nz,
+                                 &local_ARstart[0], &local_ARindex[0],
+                                 &local_ARvalue[0]),
+            return_status, "appendRowsToLpMatrix");
         if (return_status == HighsStatus::Error) return return_status;
       }
     }
