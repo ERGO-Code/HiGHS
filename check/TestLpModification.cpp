@@ -1021,7 +1021,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
          after_num_col);
   REQUIRE(after_num_col == before_num_col - 1);
 
-  /*
   before_num_row = highs.getNumRows();
   rm_row = 0;
   return_bool = highs.deleteRows(rm_row, rm_row);
@@ -1054,5 +1053,4 @@ TEST_CASE("LP-modification", "[highs_data]") {
   //  messageReportLp("After restoring costs and bounds", highs.getLp());
   printf("Finished successfully\n");
   fflush(stdout);
-  */
 }
