@@ -946,7 +946,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   row0135789_upper[5] = 3.81;
   row0135789_upper[6] = 3.91;
 
-  /*
   // Attempting to set a cost to infinity returns error
   return_bool = highs.changeColCost(7, HIGHS_CONST_INF);
   REQUIRE(!return_bool);
@@ -1022,6 +1021,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
          after_num_col);
   REQUIRE(after_num_col == before_num_col - 1);
 
+  /*
   before_num_row = highs.getNumRows();
   rm_row = 0;
   return_bool = highs.deleteRows(rm_row, rm_row);
