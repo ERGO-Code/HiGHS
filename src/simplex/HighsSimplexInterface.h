@@ -54,9 +54,9 @@ class HighsSimplexInterface {
                          int* col_mask);
 
   HighsStatus deleteCols(const HighsIndexCollection& index_collection,
-                                bool interval, int from_col, int to_col,
-                                bool set, int num_set_entries,
-                                const int* col_set, bool mask, int* col_mask);
+                         bool interval, int from_col, int to_col, bool set,
+                         int num_set_entries, const int* col_set, bool mask,
+                         int* col_mask);
 
   HighsStatus getCols(const HighsIndexCollection& index_collection,
                       const int from_col, const int to_col, int& num_col,
@@ -77,14 +77,12 @@ class HighsSimplexInterface {
                       double* col_matrix_value);
 
   HighsStatus getCols(const HighsIndexCollection& index_collection,
-                             const bool interval, const int from_col,
-                             const int to_col, const bool set,
-                             const int num_set_entries, const int* col_set,
-                             const bool mask, const int* col_mask, int& num_col,
-                             double* col_cost, double* col_lower,
-                             double* col_upper, int& num_nz,
-                             int* col_matrix_start, int* col_matrix_index,
-                             double* col_matrix_value);
+                      const bool interval, const int from_col, const int to_col,
+                      const bool set, const int num_set_entries,
+                      const int* col_set, const bool mask, const int* col_mask,
+                      int& num_col, double* col_cost, double* col_lower,
+                      double* col_upper, int& num_nz, int* col_matrix_start,
+                      int* col_matrix_index, double* col_matrix_value);
 
   HighsStatus getRows(const HighsIndexCollection& index_collection,
                       const int from_row, const int to_row, int& num_row,
@@ -104,13 +102,12 @@ class HighsSimplexInterface {
                       int* row_matrix_index, double* row_matrix_value);
 
   HighsStatus getRows(const HighsIndexCollection& index_collection,
-                             const bool interval, const int from_row,
-                             const int to_row, const bool set,
-                             const int num_set_entries, const int* row_set,
-                             const bool mask, const int* row_mask, int& num_row,
-                             double* row_lower, double* row_upper, int& num_nz,
-                             int* row_matrix_start, int* row_matrix_index,
-                             double* row_matrix_value);
+                      const bool interval, const int from_row, const int to_row,
+                      const bool set, const int num_set_entries,
+                      const int* row_set, const bool mask, const int* row_mask,
+                      int& num_row, double* row_lower, double* row_upper,
+                      int& num_nz, int* row_matrix_start, int* row_matrix_index,
+                      double* row_matrix_value);
 
   HighsStatus getCoefficient(const int Xrow, const int Xcol, double& value);
 
@@ -132,9 +129,9 @@ class HighsSimplexInterface {
                          int* row_mask);
 
   HighsStatus deleteRows(const HighsIndexCollection& index_collection,
-                                bool interval, int from_row, int to_row,
-                                bool set, int num_set_entries,
-                                const int* row_set, bool mask, int* row_mask);
+                         bool interval, int from_row, int to_row, bool set,
+                         int num_set_entries, const int* row_set, bool mask,
+                         int* row_mask);
 
   HighsStatus changeCoefficient(const int Xrow, const int Xcol,
                                 const double XnewValue);
@@ -157,11 +154,9 @@ class HighsSimplexInterface {
                           const int* col_mask, const double* usr_col_cost);
 
   HighsStatus changeCosts(const HighsIndexCollection& index_collection,
-                                 bool interval, int from_col, int to_col,
-                                 bool set, int num_set_entries,
-                                 const int* col_set, bool mask,
-                                 const int* col_mask,
-                                 const double* usr_col_cost);
+                          bool interval, int from_col, int to_col, bool set,
+                          int num_set_entries, const int* col_set, bool mask,
+                          const int* col_mask, const double* usr_col_cost);
 
   // Change the bounds for an interval of columns
   HighsStatus changeColBounds(const HighsIndexCollection& index_collection,
@@ -180,11 +175,12 @@ class HighsSimplexInterface {
                               const int* col_mask, const double* usr_col_lower,
                               const double* usr_col_upper);
 
-  HighsStatus changeColBounds(
-      const HighsIndexCollection& index_collection, bool interval, int from_col,
-      int to_col, bool set, int num_set_entries, const int* col_set, bool mask,
-      const int* col_mask, const double* usr_col_lower,
-      const double* usr_col_upper);
+  HighsStatus changeColBounds(const HighsIndexCollection& index_collection,
+                              bool interval, int from_col, int to_col, bool set,
+                              int num_set_entries, const int* col_set,
+                              bool mask, const int* col_mask,
+                              const double* usr_col_lower,
+                              const double* usr_col_upper);
 
   // Change the bounds for an interval of rows
   HighsStatus changeRowBounds(const HighsIndexCollection& index_collection,
@@ -203,11 +199,12 @@ class HighsSimplexInterface {
                               const int* row_mask, const double* usr_row_lower,
                               const double* usr_row_upper);
 
-  HighsStatus changeRowBounds(
-      const HighsIndexCollection& index_collection, bool interval, int from_row,
-      int to_row, bool set, int num_set_entries, const int* row_set, bool mask,
-      const int* row_mask, const double* usr_row_lower,
-      const double* usr_row_upper);
+  HighsStatus changeRowBounds(const HighsIndexCollection& index_collection,
+                              bool interval, int from_row, int to_row, bool set,
+                              int num_set_entries, const int* row_set,
+                              bool mask, const int* row_mask,
+                              const double* usr_row_lower,
+                              const double* usr_row_upper);
 
   HighsStatus basisSolve(const vector<double>& rhs, double* solution,
                          int* solution_num_nz, int* solution_nz_indices,

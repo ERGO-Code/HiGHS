@@ -147,19 +147,18 @@ HighsStatus Highs::resetHighsOptions() {
 HighsStatus Highs::writeHighsOptions(
     const std::string filename, const bool report_only_non_default_values) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   HighsLp lp = this->lp_;
   FILE* file;
   bool html;
-  call_status = openWriteFile(filename, "writeHighsOptions", file, html);
-  return_status =
-      interpretCallStatus(call_status, return_status, "openWriteFile");
+  return_status = interpretCallStatus(
+      openWriteFile(filename, "writeHighsOptions", file, html), return_status,
+      "openWriteFile");
   if (return_status == HighsStatus::Error) return return_status;
 
-  call_status = writeOptionsToFile(file, options_.records,
-                                   report_only_non_default_values, html);
-  return_status =
-      interpretCallStatus(call_status, return_status, "writeOptionsToFile");
+  return_status = interpretCallStatus(
+      writeOptionsToFile(file, options_.records, report_only_non_default_values,
+                         html),
+      return_status, "writeOptionsToFile");
   return return_status;
 }
 
@@ -182,18 +181,17 @@ HighsStatus Highs::getHighsInfoValue(const std::string& info,
 
 HighsStatus Highs::writeHighsInfo(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   HighsLp lp = this->lp_;
   FILE* file;
   bool html;
-  call_status = openWriteFile(filename, "writeHighsInfo", file, html);
   return_status =
-      interpretCallStatus(call_status, return_status, "openWriteFile");
+      interpretCallStatus(openWriteFile(filename, "writeHighsInfo", file, html),
+                          return_status, "openWriteFile");
   if (return_status == HighsStatus::Error) return return_status;
 
-  call_status = writeInfoToFile(file, info_.records, html);
   return_status =
-      interpretCallStatus(call_status, return_status, "writeInfoToFile");
+      interpretCallStatus(writeInfoToFile(file, info_.records, html),
+                          return_status, "writeInfoToFile");
   return return_status;
 }
 
@@ -201,10 +199,8 @@ HighsStatus Highs::reset() {
   HighsStatus return_status = HighsStatus::OK;
   // Clear the status, solution, basis and info associated with any previous
   // model
-  HighsStatus call_status = clearSolver();
   return_status =
-      interpretCallStatus(call_status, return_status, "clearSolver");
-
+      interpretCallStatus(clearSolver(), return_status, "clearSolver");
   if (return_status == HighsStatus::Error) return return_status;
   // Clear any HiGHS model object
   hmos_.clear();
@@ -220,8 +216,8 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   // Copy the LP to the internal LP
   lp_ = lp;
   // Check validity of the LP, normalising its values
-  HighsStatus call_status = assessLp(lp_, options_);
-  return_status = interpretCallStatus(call_status, return_status, "assessLp");
+  return_status =
+      interpretCallStatus(assessLp(lp_, options_), return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
 
   return_status = reset();
@@ -231,7 +227,6 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
 
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   Filereader* reader = Filereader::getFilereader(filename);
   if (reader == NULL) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
@@ -248,34 +243,30 @@ HighsStatus Highs::readModel(const std::string filename) {
   if (call_code != FilereaderRetcode::OK) {
     interpretFilereaderRetcode(this->options_.logfile, filename.c_str(),
                                call_code);
-    call_status = HighsStatus::Error;
-    return_status =
-        interpretCallStatus(call_status, return_status, "readModelFromFile");
+    return_status = interpretCallStatus(HighsStatus::Error, return_status,
+                                        "readModelFromFile");
     if (return_status == HighsStatus::Error) return return_status;
   }
   model.model_name_ = extractModelName(filename);
-  call_status = this->passModel(model);
-  return_status = interpretCallStatus(call_status, return_status, "passModel");
+  return_status =
+      interpretCallStatus(this->passModel(model), return_status, "passModel");
   return return_status;
 }
 
 HighsStatus Highs::clearModel() {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   hmos_.clear();
   HighsLp empty_lp;
   lp_ = empty_lp;
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
-  call_status = this->clearSolver();
   return_status =
-      interpretCallStatus(call_status, return_status, "clearSolver");
+      interpretCallStatus(this->clearSolver(), return_status, "clearSolver");
   if (return_status == HighsStatus::Error) return return_status;
   return return_status;
 }
 
 HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   HighsLp model = this->lp_;
 
   if (filename == "") {
@@ -289,10 +280,10 @@ HighsStatus Highs::writeModel(const std::string filename) {
                       "Model file %s not supported", filename.c_str());
       return HighsStatus::Error;
     }
-    call_status = writer->writeModelToFile(options_, filename, model);
-    delete writer;
     return_status =
-        interpretCallStatus(call_status, return_status, "writeModelToFile");
+        interpretCallStatus(writer->writeModelToFile(options_, filename, model),
+                            return_status, "writeModelToFile");
+    delete writer;
   }
   return return_status;
 }
@@ -1028,7 +1019,6 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
 
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   underDevelopmentLogMessage("setSolution");
   // Check if solution is valid.
   assert((int)solution_.col_value.size() != 0 ||
@@ -1043,15 +1033,13 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   if (solution.row_dual.size()) solution_.row_dual = solution.row_dual;
 
   if (solution.col_value.size() > 0) {
-    call_status = calculateRowValues(lp_, solution_);
-    return_status =
-        interpretCallStatus(call_status, return_status, "calculateRowValues");
+    return_status = interpretCallStatus(calculateRowValues(lp_, solution_),
+                                        return_status, "calculateRowValues");
     if (return_status == HighsStatus::Error) return return_status;
   }
   if (solution.row_dual.size() > 0) {
-    call_status = calculateColDuals(lp_, solution_);
-    return_status =
-        interpretCallStatus(call_status, return_status, "calculateColDuals");
+    return_status = interpretCallStatus(calculateColDuals(lp_, solution_),
+                                        return_status, "calculateColDuals");
     if (return_status == HighsStatus::Error) return return_status;
   }
   return return_status;
@@ -1100,8 +1088,8 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
   if (!haveHmo("addRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interpretCallStatus(
-      interface.addRows(num_new_row, lower_bounds, upper_bounds,
-			num_new_nz, starts, indices, values),
+      interface.addRows(num_new_row, lower_bounds, upper_bounds, num_new_nz,
+                        starts, indices, values),
       return_status, "addRows");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
@@ -1138,9 +1126,8 @@ bool Highs::changeObjectiveSense(const ObjSense sense) {
   underDevelopmentLogMessage("changeObjectiveSense");
   if (!haveHmo("changeObjectiveSense")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  return_status = interpretCallStatus(
-      interface.changeObjectiveSense(sense),
-      return_status, "changeObjectiveSense");
+  return_status = interpretCallStatus(interface.changeObjectiveSense(sense),
+                                      return_status, "changeObjectiveSense");
   if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }

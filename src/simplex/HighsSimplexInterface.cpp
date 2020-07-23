@@ -87,21 +87,22 @@ HighsStatus HighsSimplexInterface::addCols(
   // There are sure to be new columns since XnumNewCol <= 0 is handled above
   // Assess the column costs
   assert(XnumNewCol > 0);
-  interpretCallStatus(
+  return_status = interpretCallStatus(
       assessCosts(options, lp.numCol_, index_collection, XnumNewCol, true, 0,
                   XnumNewCol - 1, false, 0, NULL, false, NULL,
                   &local_colCost[0], options.infinite_cost),
       return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the column bounds
-  interpretCallStatus(assessBounds(options, "Col", lp.numCol_, index_collection,
-                                   XnumNewCol, true, 0, XnumNewCol - 1, false,
-                                   0, NULL, false, NULL, &local_colLower[0],
-                                   &local_colUpper[0], options.infinite_bound),
-                      return_status, "assessBounds");
+  return_status = interpretCallStatus(
+      assessBounds(options, "Col", lp.numCol_, index_collection, XnumNewCol,
+                   true, 0, XnumNewCol - 1, false, 0, NULL, false, NULL,
+                   &local_colLower[0], &local_colUpper[0],
+                   options.infinite_bound),
+      return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
   // Append the columns to the LP vectors and matrix
-  interpretCallStatus(
+  return_status = interpretCallStatus(
       appendColsToLpVectors(lp, XnumNewCol, &local_colCost[0],
                             &local_colLower[0], &local_colUpper[0]),
       return_status, "appendColsToLpVectors");
@@ -109,7 +110,7 @@ HighsStatus HighsSimplexInterface::addCols(
 
   if (valid_simplex_lp) {
     // Append the columns to the Simplex LP vectors and matrix
-    interpretCallStatus(
+    return_status = interpretCallStatus(
         appendColsToLpVectors(simplex_lp, XnumNewCol, &local_colCost[0],
                               &local_colLower[0], &local_colUpper[0]),
         return_status, "appendColsToLpVectors");
@@ -124,7 +125,7 @@ HighsStatus HighsSimplexInterface::addCols(
     std::vector<int> local_Aindex{XAindex, XAindex + XnumNewNZ};
     std::vector<double> local_Avalue{XAvalue, XAvalue + XnumNewNZ};
     // Assess the matrix columns
-    interpretCallStatus(
+    return_status = interpretCallStatus(
         assessMatrix(options, lp.numRow_, 0, XnumNewCol - 1, XnumNewCol,
                      local_num_new_nz, &local_Astart[0], &local_Aindex[0],
                      &local_Avalue[0], options.small_matrix_value,
@@ -132,14 +133,14 @@ HighsStatus HighsSimplexInterface::addCols(
         return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     // Append the columns to the LP matrix
-    interpretCallStatus(
+    return_status = interpretCallStatus(
         appendColsToLpMatrix(lp, XnumNewCol, local_num_new_nz, &local_Astart[0],
                              &local_Aindex[0], &local_Avalue[0]),
         return_status, "appendColsToLpMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     if (valid_simplex_lp) {
       // Append the columns to the Simplex LP matrix
-      interpretCallStatus(
+      return_status = interpretCallStatus(
           appendColsToLpMatrix(simplex_lp, XnumNewCol, local_num_new_nz,
                                &local_Astart[0], &local_Aindex[0],
                                &local_Avalue[0]),
@@ -201,21 +202,21 @@ HighsStatus HighsSimplexInterface::addCols(
 
 HighsStatus HighsSimplexInterface::deleteCols(
     const HighsIndexCollection& index_collection, int from_col, int to_col) {
-  return deleteCols(index_collection, true, from_col, to_col, false, 0,
-                           NULL, false, NULL);
+  return deleteCols(index_collection, true, from_col, to_col, false, 0, NULL,
+                    false, NULL);
 }
 
 HighsStatus HighsSimplexInterface::deleteCols(
     const HighsIndexCollection& index_collection, int num_set_entries,
     const int* col_set) {
   return deleteCols(index_collection, false, 0, 0, true, num_set_entries,
-                           col_set, false, NULL);
+                    col_set, false, NULL);
 }
 
 HighsStatus HighsSimplexInterface::deleteCols(
     const HighsIndexCollection& index_collection, int* col_mask) {
   return deleteCols(index_collection, false, 0, 0, false, 0, NULL, true,
-                           col_mask);
+                    col_mask);
 }
 
 HighsStatus HighsSimplexInterface::deleteCols(
@@ -374,7 +375,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // Append the rows to the LP vectors
   return_status = interpretCallStatus(
       appendRowsToLpVectors(lp, XnumNewRow, &local_rowLower[0],
-			    &local_rowUpper[0]),
+                            &local_rowUpper[0]),
       return_status, "appendRowsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
@@ -466,21 +467,21 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
 HighsStatus HighsSimplexInterface::deleteRows(
     const HighsIndexCollection& index_collection, int from_row, int to_row) {
-  return deleteRows(index_collection, true, from_row, to_row, false, 0,
-                           NULL, false, NULL);
+  return deleteRows(index_collection, true, from_row, to_row, false, 0, NULL,
+                    false, NULL);
 }
 
 HighsStatus HighsSimplexInterface::deleteRows(
     const HighsIndexCollection& index_collection, int num_set_entries,
     const int* row_set) {
   return deleteRows(index_collection, false, 0, 0, true, num_set_entries,
-                           row_set, false, NULL);
+                    row_set, false, NULL);
 }
 
 HighsStatus HighsSimplexInterface::deleteRows(
     const HighsIndexCollection& index_collection, int* row_mask) {
   return deleteRows(index_collection, false, 0, 0, false, 0, NULL, true,
-                           row_mask);
+                    row_mask);
 }
 
 HighsStatus HighsSimplexInterface::deleteRows(
@@ -554,10 +555,9 @@ HighsStatus HighsSimplexInterface::getCols(
     const int to_col, int& num_col, double* col_cost, double* col_lower,
     double* col_upper, int& num_nz, int* col_matrix_start,
     int* col_matrix_index, double* col_matrix_value) {
-  return getCols(index_collection, true, from_col, to_col, false, 0,
-                        NULL, false, NULL, num_col, col_cost, col_lower,
-                        col_upper, num_nz, col_matrix_start, col_matrix_index,
-                        col_matrix_value);
+  return getCols(index_collection, true, from_col, to_col, false, 0, NULL,
+                 false, NULL, num_col, col_cost, col_lower, col_upper, num_nz,
+                 col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getCols(
@@ -565,10 +565,9 @@ HighsStatus HighsSimplexInterface::getCols(
     const int* col_set, int& num_col, double* col_cost, double* col_lower,
     double* col_upper, int& num_nz, int* col_matrix_start,
     int* col_matrix_index, double* col_matrix_value) {
-  return getCols(index_collection, false, 0, 0, true, num_set_entries,
-                        col_set, false, NULL, num_col, col_cost, col_lower,
-                        col_upper, num_nz, col_matrix_start, col_matrix_index,
-                        col_matrix_value);
+  return getCols(index_collection, false, 0, 0, true, num_set_entries, col_set,
+                 false, NULL, num_col, col_cost, col_lower, col_upper, num_nz,
+                 col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getCols(
@@ -576,10 +575,9 @@ HighsStatus HighsSimplexInterface::getCols(
     int& num_col, double* col_cost, double* col_lower, double* col_upper,
     int& num_nz, int* col_matrix_start, int* col_matrix_index,
     double* col_matrix_value) {
-  return getCols(index_collection, false, 0, 0, false, 0, NULL, true,
-                        col_mask, num_col, col_cost, col_lower, col_upper,
-                        num_nz, col_matrix_start, col_matrix_index,
-                        col_matrix_value);
+  return getCols(index_collection, false, 0, 0, false, 0, NULL, true, col_mask,
+                 num_col, col_cost, col_lower, col_upper, num_nz,
+                 col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getCols(
@@ -615,16 +613,14 @@ HighsStatus HighsSimplexInterface::getCols(
 
   if (from_k < 0 || to_k > lp.numCol_) {
     call_status = HighsStatus::Error;
-    return_status =
-        interpretCallStatus(call_status, return_status, "getCols");
+    return_status = interpretCallStatus(call_status, return_status, "getCols");
     return return_status;
   }
   num_col = 0;
   num_nz = 0;
   if (from_k > to_k) {
     call_status = HighsStatus::Error;
-    return_status =
-        interpretCallStatus(call_status, return_status, "getCols");
+    return_status = interpretCallStatus(call_status, return_status, "getCols");
     return return_status;
   }
   int out_from_col;
@@ -684,10 +680,9 @@ HighsStatus HighsSimplexInterface::getRows(
     const int to_row, int& num_row, double* row_lower, double* row_upper,
     int& num_nz, int* row_matrix_start, int* row_matrix_index,
     double* row_matrix_value) {
-  return getRows(index_collection, true, from_row, to_row, false, 0,
-                        NULL, false, NULL, num_row, row_lower, row_upper,
-                        num_nz, row_matrix_start, row_matrix_index,
-                        row_matrix_value);
+  return getRows(index_collection, true, from_row, to_row, false, 0, NULL,
+                 false, NULL, num_row, row_lower, row_upper, num_nz,
+                 row_matrix_start, row_matrix_index, row_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getRows(
@@ -695,19 +690,18 @@ HighsStatus HighsSimplexInterface::getRows(
     const int* row_set, int& num_row, double* row_lower, double* row_upper,
     int& num_nz, int* row_matrix_start, int* row_matrix_index,
     double* row_matrix_value) {
-  return getRows(index_collection, false, 0, 0, true, num_set_entries,
-                        row_set, false, NULL, num_row, row_lower, row_upper,
-                        num_nz, row_matrix_start, row_matrix_index,
-                        row_matrix_value);
+  return getRows(index_collection, false, 0, 0, true, num_set_entries, row_set,
+                 false, NULL, num_row, row_lower, row_upper, num_nz,
+                 row_matrix_start, row_matrix_index, row_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getRows(
     const HighsIndexCollection& index_collection, const int* row_mask,
     int& num_row, double* row_lower, double* row_upper, int& num_nz,
     int* row_matrix_start, int* row_matrix_index, double* row_matrix_value) {
-  return getRows(index_collection, false, 0, 0, false, 0, NULL, true,
-                        row_mask, num_row, row_lower, row_upper, num_nz,
-                        row_matrix_start, row_matrix_index, row_matrix_value);
+  return getRows(index_collection, false, 0, 0, false, 0, NULL, true, row_mask,
+                 num_row, row_lower, row_upper, num_nz, row_matrix_start,
+                 row_matrix_index, row_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getRows(
@@ -743,16 +737,14 @@ HighsStatus HighsSimplexInterface::getRows(
 
   if (from_k < 0 || to_k > lp.numRow_) {
     call_status = HighsStatus::Error;
-    return_status =
-        interpretCallStatus(call_status, return_status, "getCols");
+    return_status = interpretCallStatus(call_status, return_status, "getCols");
     return return_status;
   }
   num_row = 0;
   num_nz = 0;
   if (from_k > to_k) {
     call_status = HighsStatus::Error;
-    return_status =
-        interpretCallStatus(call_status, return_status, "getCols");
+    return_status = interpretCallStatus(call_status, return_status, "getCols");
     return return_status;
   }
   // "Out" means not in the set to be extrated
@@ -962,23 +954,22 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
 HighsStatus HighsSimplexInterface::changeCosts(
     const HighsIndexCollection& index_collection, int from_col, int to_col,
     const double* usr_col_cost) {
-  return changeCosts(index_collection, true, from_col, to_col, false, 0,
-                            NULL, false, NULL, usr_col_cost);
+  return changeCosts(index_collection, true, from_col, to_col, false, 0, NULL,
+                     false, NULL, usr_col_cost);
 }
 
 HighsStatus HighsSimplexInterface::changeCosts(
     const HighsIndexCollection& index_collection, int num_set_entries,
     const int* col_set, const double* usr_col_cost) {
-  return changeCosts(index_collection, false, 0, 0, true,
-                            num_set_entries, col_set, false, NULL,
-                            usr_col_cost);
+  return changeCosts(index_collection, false, 0, 0, true, num_set_entries,
+                     col_set, false, NULL, usr_col_cost);
 }
 
 HighsStatus HighsSimplexInterface::changeCosts(
     const HighsIndexCollection& index_collection, const int* col_mask,
     const double* usr_col_cost) {
   return changeCosts(index_collection, false, 0, 0, false, 0, NULL, true,
-                            col_mask, usr_col_cost);
+                     col_mask, usr_col_cost);
 }
 
 HighsStatus HighsSimplexInterface::changeCosts(
@@ -993,7 +984,8 @@ HighsStatus HighsSimplexInterface::changeCosts(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
-  HighsIndexCollection local_index_collection = (HighsIndexCollection)index_collection;
+  HighsIndexCollection local_index_collection =
+      (HighsIndexCollection)index_collection;
   int* pointer_use_set;
   double* pointer_use_cost;
   std::vector<int> use_set;
@@ -1006,16 +998,17 @@ HighsStatus HighsSimplexInterface::changeCosts(
     pointer_use_set = &use_set[0];
     pointer_use_cost = &use_cost[0];
     local_index_collection.set_ = pointer_use_set;
-    sortSetData(num_set_entries, col_set, usr_col_cost, NULL, NULL, pointer_use_set,
-                pointer_use_cost, NULL, NULL);
+    sortSetData(num_set_entries, col_set, usr_col_cost, NULL, NULL,
+                pointer_use_set, pointer_use_cost, NULL, NULL);
   } else {
     pointer_use_set = (int*)col_set;
     pointer_use_cost = (double*)usr_col_cost;
   }
   HighsStatus call_status = changeLpCosts(
-      highs_model_object.options_, highs_model_object.lp_, local_index_collection,
-      interval, from_col, to_col, set, num_set_entries, pointer_use_set, mask, col_mask,
-      pointer_use_cost, highs_model_object.options_.infinite_cost);
+      highs_model_object.options_, highs_model_object.lp_,
+      local_index_collection, interval, from_col, to_col, set, num_set_entries,
+      pointer_use_set, mask, col_mask, pointer_use_cost,
+      highs_model_object.options_.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -1027,14 +1020,16 @@ HighsStatus HighsSimplexInterface::changeCosts(
 
     call_status = changeLpCosts(
         highs_model_object.options_, highs_model_object.simplex_lp_,
-        local_index_collection, interval, from_col, to_col, set, num_set_entries, pointer_use_set, mask, col_mask,
-      pointer_use_cost, highs_model_object.options_.infinite_cost);
+        local_index_collection, interval, from_col, to_col, set,
+        num_set_entries, pointer_use_set, mask, col_mask, pointer_use_cost,
+        highs_model_object.options_.infinite_cost);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpColCosts(
-          highs_model_object.options_, highs_model_object.simplex_lp_,
-          highs_model_object.scale_.col_, local_index_collection, interval, from_col,
-          to_col, set, num_set_entries, pointer_use_set, mask, col_mask);
+      scaleLpColCosts(highs_model_object.options_,
+                      highs_model_object.simplex_lp_,
+                      highs_model_object.scale_.col_, local_index_collection,
+                      interval, from_col, to_col, set, num_set_entries,
+                      pointer_use_set, mask, col_mask);
     }
   }
   // Deduce the consequences of new costs
@@ -1049,25 +1044,23 @@ HighsStatus HighsSimplexInterface::changeCosts(
 HighsStatus HighsSimplexInterface::changeColBounds(
     const HighsIndexCollection& index_collection, int from_col, int to_col,
     const double* usr_col_lower, const double* usr_col_upper) {
-  return changeColBounds(index_collection, true, from_col, to_col, false,
-                                0, NULL, false, NULL, usr_col_lower,
-                                usr_col_upper);
+  return changeColBounds(index_collection, true, from_col, to_col, false, 0,
+                         NULL, false, NULL, usr_col_lower, usr_col_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeColBounds(
     const HighsIndexCollection& index_collection, int num_set_entries,
     const int* col_set, const double* usr_col_lower,
     const double* usr_col_upper) {
-  return changeColBounds(index_collection, false, 0, 0, true,
-                                num_set_entries, col_set, false, NULL,
-                                usr_col_lower, usr_col_upper);
+  return changeColBounds(index_collection, false, 0, 0, true, num_set_entries,
+                         col_set, false, NULL, usr_col_lower, usr_col_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeColBounds(
     const HighsIndexCollection& index_collection, const int* col_mask,
     const double* usr_col_lower, const double* usr_col_upper) {
-  return changeColBounds(index_collection, false, 0, 0, false, 0, NULL,
-                                true, col_mask, usr_col_lower, usr_col_upper);
+  return changeColBounds(index_collection, false, 0, 0, false, 0, NULL, true,
+                         col_mask, usr_col_lower, usr_col_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeColBounds(
@@ -1089,7 +1082,8 @@ HighsStatus HighsSimplexInterface::changeColBounds(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
-  HighsIndexCollection local_index_collection = (HighsIndexCollection)index_collection;
+  HighsIndexCollection local_index_collection =
+      (HighsIndexCollection)index_collection;
   int* pointer_use_set;
   double* pointer_use_lower;
   double* pointer_use_upper;
@@ -1114,9 +1108,10 @@ HighsStatus HighsSimplexInterface::changeColBounds(
     pointer_use_upper = (double*)usr_col_upper;
   }
   HighsStatus call_status = changeLpColBounds(
-      highs_model_object.options_, highs_model_object.lp_, local_index_collection,
-      interval, from_col, to_col, set, num_set_entries, pointer_use_set, mask, col_mask,
-      pointer_use_lower, pointer_use_upper, highs_model_object.options_.infinite_bound);
+      highs_model_object.options_, highs_model_object.lp_,
+      local_index_collection, interval, from_col, to_col, set, num_set_entries,
+      pointer_use_set, mask, col_mask, pointer_use_lower, pointer_use_upper,
+      highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -1128,48 +1123,47 @@ HighsStatus HighsSimplexInterface::changeColBounds(
 
     call_status = changeLpColBounds(
         highs_model_object.options_, highs_model_object.simplex_lp_,
-        local_index_collection, interval, from_col, to_col, set, num_set_entries,
-        pointer_use_set, mask, col_mask, pointer_use_lower, pointer_use_upper,
-        highs_model_object.options_.infinite_bound);
+        local_index_collection, interval, from_col, to_col, set,
+        num_set_entries, pointer_use_set, mask, col_mask, pointer_use_lower,
+        pointer_use_upper, highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpColBounds(
-          highs_model_object.options_, highs_model_object.simplex_lp_,
-          highs_model_object.scale_.col_, local_index_collection, interval, from_col,
-          to_col, set, num_set_entries, pointer_use_set, mask, col_mask);
+      scaleLpColBounds(highs_model_object.options_,
+                       highs_model_object.simplex_lp_,
+                       highs_model_object.scale_.col_, local_index_collection,
+                       interval, from_col, to_col, set, num_set_entries,
+                       pointer_use_set, mask, col_mask);
     }
   }
   // Deduce the consequences of new col bounds
   highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
   highs_model_object.unscaled_model_status_ =
-    highs_model_object.scaled_model_status_;
+      highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
-                          LpAction::NEW_BOUNDS);
+                        LpAction::NEW_BOUNDS);
   return HighsStatus::OK;
 }
 
 HighsStatus HighsSimplexInterface::changeRowBounds(
     const HighsIndexCollection& index_collection, int from_row, int to_row,
     const double* usr_row_lower, const double* usr_row_upper) {
-  return changeRowBounds(index_collection, true, from_row, to_row, false,
-                                0, NULL, false, NULL, usr_row_lower,
-                                usr_row_upper);
+  return changeRowBounds(index_collection, true, from_row, to_row, false, 0,
+                         NULL, false, NULL, usr_row_lower, usr_row_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeRowBounds(
     const HighsIndexCollection& index_collection, int num_set_entries,
     const int* row_set, const double* usr_row_lower,
     const double* usr_row_upper) {
-  return changeRowBounds(index_collection, false, 0, 0, true,
-                                num_set_entries, row_set, false, NULL,
-                                usr_row_lower, usr_row_upper);
+  return changeRowBounds(index_collection, false, 0, 0, true, num_set_entries,
+                         row_set, false, NULL, usr_row_lower, usr_row_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeRowBounds(
     const HighsIndexCollection& index_collection, const int* row_mask,
     const double* usr_row_lower, const double* usr_row_upper) {
-  return changeRowBounds(index_collection, false, 0, 0, false, 0, NULL,
-                                true, row_mask, usr_row_lower, usr_row_upper);
+  return changeRowBounds(index_collection, false, 0, 0, false, 0, NULL, true,
+                         row_mask, usr_row_lower, usr_row_upper);
 }
 
 HighsStatus HighsSimplexInterface::changeRowBounds(
