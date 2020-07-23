@@ -1095,14 +1095,14 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
                     const int* starts, const int* indices,
                     const double* values) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   underDevelopmentLogMessage("addRows");
   // Check that there is a HighsModelObject
   if (!haveHmo("addRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
-                                  num_new_nz, starts, indices, values);
-  return_status = interpretCallStatus(call_status, return_status, "addRows");
+  return_status = interpretCallStatus(
+      interface.addRows(num_new_row, lower_bounds, upper_bounds,
+			num_new_nz, starts, indices, values),
+      return_status, "addRows");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
@@ -1121,14 +1121,13 @@ bool Highs::addCols(const int num_new_col, const double* costs,
                     const int num_new_nz, const int* starts, const int* indices,
                     const double* values) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   underDevelopmentLogMessage("addCols");
   if (!haveHmo("addCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status =
+  return_status = interpretCallStatus(
       interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
-                        num_new_nz, starts, indices, values);
-  return_status = interpretCallStatus(call_status, return_status, "addCols");
+                        num_new_nz, starts, indices, values),
+      return_status, "addCols");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
   return return_status != HighsStatus::Error;
@@ -1136,13 +1135,12 @@ bool Highs::addCols(const int num_new_col, const double* costs,
 
 bool Highs::changeObjectiveSense(const ObjSense sense) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   underDevelopmentLogMessage("changeObjectiveSense");
   if (!haveHmo("changeObjectiveSense")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.changeObjectiveSense(sense);
-  return_status =
-      interpretCallStatus(call_status, return_status, "changeObjectiveSense");
+  return_status = interpretCallStatus(
+      interface.changeObjectiveSense(sense),
+      return_status, "changeObjectiveSense");
   if (return_status == HighsStatus::Error) return false;
   return return_status != HighsStatus::Error;
 }
