@@ -195,6 +195,9 @@ HighsStatus Highs::writeHighsInfo(const std::string filename) {
   return return_status;
 }
 
+// Methods below change the incumbent model or solver infomation
+// associated with it. Hence returnFromHighs is called at the end of
+// each
 HighsStatus Highs::reset() {
   HighsStatus return_status = HighsStatus::OK;
   // Clear the status, solution, basis and info associated with any previous
@@ -208,7 +211,8 @@ HighsStatus Highs::reset() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 
   presolve_.clear();
-  return HighsStatus::OK;
+  
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::passModel(const HighsLp& lp) {
@@ -219,10 +223,12 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   return_status =
       interpretCallStatus(assessLp(lp_, options_), return_status, "assessLp");
   if (return_status == HighsStatus::Error) return return_status;
-
-  return_status = reset();
-
-  return return_status;
+  // Clear solver status, solution, basis and info associated with any
+  // previous model; clear any HiGHS model object; create a HiGHS
+  // model object for this LP
+  return_status =
+      interpretCallStatus(reset(), return_status, "reset");
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::readModel(const std::string filename) {
@@ -250,7 +256,7 @@ HighsStatus Highs::readModel(const std::string filename) {
   model.model_name_ = extractModelName(filename);
   return_status =
       interpretCallStatus(this->passModel(model), return_status, "passModel");
-  return return_status;
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::clearModel() {
@@ -262,7 +268,7 @@ HighsStatus Highs::clearModel() {
   return_status =
       interpretCallStatus(this->clearSolver(), return_status, "clearSolver");
   if (return_status == HighsStatus::Error) return return_status;
-  return return_status;
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::writeModel(const std::string filename) {
@@ -285,7 +291,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
                             return_status, "writeModelToFile");
     delete writer;
   }
-  return return_status;
+  return returnFromHighs(return_status);
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -340,17 +346,14 @@ basis_.valid_, hmos_[0].basis_.valid_);
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                       "No model can be loaded in run()");
       return_status = HighsStatus::Error;
-      beforeReturnFromRun(return_status);
-      return return_status;
+      return returnFromRun(return_status);
     } else {
       std::string model_file = options_.model_file;
       call_status = readModel(model_file);
       return_status =
           interpretCallStatus(call_status, return_status, "readModel");
-      if (return_status == HighsStatus::Error) {
-        beforeReturnFromRun(return_status);
-        return return_status;
-      }
+      if (return_status == HighsStatus::Error)
+        return returnFromRun(return_status);
     }
   }
   // Ensure that there is exactly one Highs model object
@@ -370,10 +373,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // call_status will be ERROR or WARNING, so only valid return is OK.
   assert(call_status == HighsStatus::OK);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
-  if (return_status == HighsStatus::Error) {
-    beforeReturnFromRun(return_status);
-    return return_status;
-  }
+  if (return_status == HighsStatus::Error)
+    return returnFromRun(return_status);
 #endif
 
   // Return immediately if the LP has no columns
@@ -383,16 +384,14 @@ basis_.valid_, hmos_[0].basis_.valid_);
     hmos_[0].unscaled_model_status_ = model_status_;
     hmos_[0].scaled_model_status_ = model_status_;
     return_status = highsStatusFromHighsModelStatus(model_status_);
-    beforeReturnFromRun(return_status);
-    return return_status;
+    return returnFromRun(return_status);
   }
 
   HighsSetIO(options_);
 #ifdef HiGHSDEV
   if (checkOptions(options_.logfile, options_.records) != OptionStatus::OK) {
     return_status = HighsStatus::Error;
-    beforeReturnFromRun(return_status);
-    return return_status;
+    return returnFromRun(return_status);
   }
 #endif
   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
@@ -462,10 +461,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
-        if (return_status == HighsStatus::Error) {
-          beforeReturnFromRun(return_status);
-          return return_status;
-        }
+        if (return_status == HighsStatus::Error)
+          return returnFromRun(return_status);
         break;
       }
       case HighsPresolveStatus::NotReduced: {
@@ -481,10 +478,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
-        if (return_status == HighsStatus::Error) {
-          beforeReturnFromRun(return_status);
-          return return_status;
-        }
+        if (return_status == HighsStatus::Error)
+          return returnFromRun(return_status);
         break;
       }
       case HighsPresolveStatus::Reduced: {
@@ -523,10 +518,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
             save_dual_objective_value_upper_bound;
         return_status =
             interpretCallStatus(call_status, return_status, "runLpSolver");
-        if (return_status == HighsStatus::Error) {
-          beforeReturnFromRun(return_status);
-          return return_status;
-        }
+        if (return_status == HighsStatus::Error)
+          return returnFromRun(return_status);
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
@@ -563,8 +556,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         hmos_[original_hmo].unscaled_model_status_ = model_status_;
         hmos_[original_hmo].scaled_model_status_ = model_status_;
         return_status = HighsStatus::OK;
-        beforeReturnFromRun(return_status);
-        return return_status;
+        return returnFromRun(return_status);
       }
       case HighsPresolveStatus::Timeout: {
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
@@ -592,8 +584,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
         hmos_[original_hmo].unscaled_model_status_ = model_status_;
         hmos_[original_hmo].scaled_model_status_ = model_status_;
         return_status = HighsStatus::Error;
-        beforeReturnFromRun(return_status);
-        return return_status;
+        return returnFromRun(return_status);
       }
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
@@ -677,10 +668,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
               interpretCallStatus(call_status, return_status, "runLpSolver");
           // Recover the options
           options = save_options;
-          if (return_status == HighsStatus::Error) {
-            beforeReturnFromRun(return_status);
-            return return_status;
-          }
+          if (return_status == HighsStatus::Error)
+            return returnFromRun(return_status);
           postsolve_iteration_count =
               info_.simplex_iteration_count - iteration_count0;
         } else {
@@ -692,8 +681,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
           hmos_[0].unscaled_model_status_ = model_status_;
           hmos_[0].scaled_model_status_ = model_status_;
           return_status = HighsStatus::Error;
-          beforeReturnFromRun(return_status);
-          return return_status;
+          return returnFromRun(return_status);
         }
       }
     } else {
@@ -719,10 +707,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
     this_solve_original_lp_time += timer_.read(timer_.solve_clock);
     return_status =
         interpretCallStatus(call_status, return_status, "runLpSolver");
-    if (return_status == HighsStatus::Error) {
-      beforeReturnFromRun(return_status);
-      return return_status;
-    }
+    if (return_status == HighsStatus::Error)
+      return returnFromRun(return_status);
   }
   // else if (reduced problem failed to solve) {
   //   todo: handle case when presolved problem failed to solve. Try to solve
@@ -735,8 +721,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
 
   if (!getHighsModelStatusAndInfo(solved_hmo)) {
     return_status = HighsStatus::Error;
-    beforeReturnFromRun(return_status);
-    return return_status;
+    return returnFromRun(return_status);
   }
 
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and
@@ -815,8 +800,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // something worse has happened earlier
   call_status = highsStatusFromHighsModelStatus(scaled_model_status_);
   return_status = interpretCallStatus(call_status, return_status);
-  beforeReturnFromRun(return_status);
-  return return_status;
+  return returnFromRun(return_status);
 }
 
 const HighsLp& Highs::getLp() const { return lp_; }
@@ -1042,7 +1026,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
                                         return_status, "calculateColDuals");
     if (return_status == HighsStatus::Error) return return_status;
   }
-  return return_status;
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
@@ -1118,7 +1102,7 @@ bool Highs::addCols(const int num_new_col, const double* costs,
       return_status, "addCols");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeObjectiveSense(const ObjSense sense) {
@@ -1129,7 +1113,7 @@ bool Highs::changeObjectiveSense(const ObjSense sense) {
   return_status = interpretCallStatus(interface.changeObjectiveSense(sense),
                                       return_status, "changeObjectiveSense");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeColCost(const int col, const double cost) {
@@ -1153,7 +1137,7 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeColsCost(const int* mask, const double* cost) {
@@ -1170,7 +1154,7 @@ bool Highs::changeColsCost(const int* mask, const double* cost) {
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeColBounds(const int col, const double lower,
@@ -1195,7 +1179,7 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeColsBounds(const int num_set_entries, const int* set,
@@ -1215,7 +1199,7 @@ bool Highs::changeColsBounds(const int num_set_entries, const int* set,
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeColsBounds(const int* mask, const double* lower,
@@ -1233,7 +1217,7 @@ bool Highs::changeColsBounds(const int* mask, const double* lower,
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeRowBounds(const int row, const double lower,
@@ -1258,7 +1242,7 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeRowsBounds(const int* mask, const double* lower,
@@ -1276,7 +1260,7 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::changeCoeff(const int row, const int col, const double value) {
@@ -1289,7 +1273,7 @@ bool Highs::changeCoeff(const int row, const int col, const double value) {
   return_status =
       interpretCallStatus(call_status, return_status, "changeCoefficient");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::getObjectiveSense(ObjSense& sense) {
@@ -1317,7 +1301,7 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
                         lower, upper, num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::getCols(const int num_set_entries, const int* set, int& num_col,
@@ -1338,7 +1322,7 @@ bool Highs::getCols(const int num_set_entries, const int* set, int& num_col,
                         lower, upper, num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::getCols(const int* mask, int& num_col, double* costs, double* lower,
@@ -1357,7 +1341,7 @@ bool Highs::getCols(const int* mask, int& num_col, double* costs, double* lower,
                                   upper, num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::getRows(const int from_row, const int to_row, int& num_row,
@@ -1377,7 +1361,7 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
                                   lower, upper, num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
@@ -1398,7 +1382,7 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
                         upper, num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
@@ -1416,7 +1400,7 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
                                   num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::getCoeff(const int row, const int col, double& value) {
@@ -1430,7 +1414,7 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
   return_status =
       interpretCallStatus(call_status, return_status, "getCoefficient");
   if (return_status == HighsStatus::Error) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::deleteCols(const int from_col, const int to_col) {
@@ -1448,7 +1432,7 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::deleteCols(const int num_set_entries, const int* set) {
@@ -1466,7 +1450,7 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::deleteCols(int* mask) {
@@ -1483,7 +1467,7 @@ bool Highs::deleteCols(int* mask) {
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::deleteRows(const int from_row, const int to_row) {
@@ -1501,7 +1485,7 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::deleteRows(const int num_set_entries, const int* set) {
@@ -1519,7 +1503,7 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 bool Highs::deleteRows(int* mask) {
@@ -1536,7 +1520,7 @@ bool Highs::deleteRows(int* mask) {
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   if (!updateHighsSolutionBasis()) return false;
-  return return_status != HighsStatus::Error;
+  return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
 double Highs::getHighsInfinity() { return HIGHS_CONST_INF; }
@@ -1733,7 +1717,7 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
   // Transfer this model's LP solver iteration counts to HiGHS
   copyHighsIterationCounts(iteration_counts, info_);
 
-  return return_status;
+  return returnFromHighs(return_status);
 }
 
 HighsStatus Highs::writeSolution(const std::string filename,
@@ -1919,13 +1903,15 @@ void Highs::clearBasis() { clearBasisUtil(basis_); }
 
 void Highs::clearInfo() { info_.clear(); }
 
-void Highs::beforeReturnFromRun(HighsStatus& return_status) {
+// Applies checks before returning from run()
+HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
   bool have_solution = false;
+  HighsStatus return_status = run_return_status;
   if (hmos_.size() == 0) {
     // No model has been loaded: ensure that the status, solution,
     // basis and info associated with any previous model are cleared
     clearSolver();
-    return;
+    return returnFromHighs(return_status);
   } else {
     // A model has been loaded: remove any additional HMO created when solving
     if (hmos_.size() > 1) hmos_.pop_back();
@@ -1934,8 +1920,8 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
     // Make sure that the unscaled status, solution, basis and info
     // are consistent with the scaled status
 #ifdef HiGHSDEV
-    reportModelStatusSolutionBasis("beforeReturnFromRun(HiGHS)");
-    reportModelStatusSolutionBasis("beforeReturnFromRun(HMO_0)", 0);
+    reportModelStatusSolutionBasis("returnFromRun(HiGHS)");
+    reportModelStatusSolutionBasis("returnFromRun(HMO_0)", 0);
 #endif
     switch (scaled_model_status_) {
       // First consider the error returns
@@ -2013,11 +1999,17 @@ void Highs::beforeReturnFromRun(HighsStatus& return_status) {
     assert(have_basis);
   }
   if (have_solution && have_basis) {
-    debugHighsBasicSolution("Before return from run()", options_, lp_, basis_,
+    debugHighsBasicSolution("Return from run()", options_, lp_, basis_,
                             solution_, info_, model_status_);
   }
+  return returnFromHighs(return_status);
 }
 
+// Applies checks before returning from HiGHS
+HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
+  HighsStatus return_status = highs_return_status;
+  return return_status;
+}
 void Highs::underDevelopmentLogMessage(const string method_name) {
   HighsLogMessage(
       options_.logfile, HighsMessageType::WARNING,

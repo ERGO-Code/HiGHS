@@ -774,7 +774,8 @@ class Highs {
   void clearInfo();
 
   void underDevelopmentLogMessage(const string method_name);
-  void beforeReturnFromRun(HighsStatus& return_status);
+  HighsStatus returnFromRun(const HighsStatus return_status);
+  HighsStatus returnFromHighs(const HighsStatus return_status);
 
   friend class HighsMipSolver;
 };
