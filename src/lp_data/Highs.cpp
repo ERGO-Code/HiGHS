@@ -211,7 +211,7 @@ HighsStatus Highs::reset() {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
 
   presolve_.clear();
-  
+
   return returnFromHighs(return_status);
 }
 
@@ -226,8 +226,7 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   // Clear solver status, solution, basis and info associated with any
   // previous model; clear any HiGHS model object; create a HiGHS
   // model object for this LP
-  return_status =
-      interpretCallStatus(reset(), return_status, "reset");
+  return_status = interpretCallStatus(reset(), return_status, "reset");
   return returnFromHighs(return_status);
 }
 
@@ -373,8 +372,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // call_status will be ERROR or WARNING, so only valid return is OK.
   assert(call_status == HighsStatus::OK);
   return_status = interpretCallStatus(call_status, return_status, "assessLp");
-  if (return_status == HighsStatus::Error)
-    return returnFromRun(return_status);
+  if (return_status == HighsStatus::Error) return returnFromRun(return_status);
 #endif
 
   // Return immediately if the LP has no columns
