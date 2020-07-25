@@ -598,6 +598,17 @@ void Presolve::removeDoubletonEquations() {
           caseTwoSingletonsDoubletonEquation(row, x, y);
           continue;
         }
+        
+        // singleton rows only in y column which is present in fewer constraints and eliminated.
+        bool rs_only = true;
+        for (int k = Astart.at(y); k < Aend.at(y); ++k)
+          if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
+            if (nzRow[row]  > 1) {
+              rs_only = false;
+              break;
+            }
+          }
+        if (rs_only) continue;
 
         const double akx = getaij(row, x);
         const double aky = getaij(row, y);
