@@ -70,4 +70,11 @@ HighsDebugStatus debugSimplexBasicSolution(
 
 HighsDebugStatus debugSimplexInfoBasisConsistent(
     const HighsModelObject& highs_model_object);
+
+HighsDebugStatus debugSimplexHighsSolutionDifferences(
+    const HighsModelObject& highs_model_object);
+
+HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
+                                                   const std::string type,
+                                                   const double difference);
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_

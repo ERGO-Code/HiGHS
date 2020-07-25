@@ -60,6 +60,10 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                int phase = 2);
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
+
+int setSourceOutFmBd(const HighsModelObject& highs_model_object,
+                     const int column_out);
+
 #ifdef HiGHSDEV
 void getPrimalValue(const HighsModelObject& highs_model_object,
                     vector<double>& primal_value);
@@ -181,6 +185,7 @@ void computeDual(HighsModelObject& highs_model_object);
 
 void correctDual(HighsModelObject& highs_model_object,
                  int* free_infeasibility_count);
+void correctDual(HighsModelObject& highs_model_object);
 
 // Record the shift in the cost of a particular column
 void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount);

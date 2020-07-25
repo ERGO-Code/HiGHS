@@ -448,7 +448,6 @@ void singularStartingBasis(Highs& highs) {
   status = highs.setBasis(basis);
   REQUIRE(status == HighsStatus::OK);
 
-  /*
   status = highs.run();
   REQUIRE(status == HighsStatus::OK);
 
@@ -465,7 +464,6 @@ void singularStartingBasis(Highs& highs) {
   REQUIRE(status == HighsStatus::OK);
 
   reportSolution(highs);
-  */
 }
 TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;

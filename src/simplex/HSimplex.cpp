@@ -105,6 +105,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   const HighsOptions& options = highs_model_object.options_;
   const HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
+  HighsScale& scale = highs_model_object.scale_;
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -344,11 +345,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // start
   bool reinvert = !simplex_lp_status.has_fresh_invert;
   if (reinvert) {
-    int rankDeficiency = computeFactor(highs_model_object);
-    if (rankDeficiency) {
-      // ToDo Handle rank deficiency by replacing singular columns with logicals
-      throw runtime_error("Transition has singular basis matrix");
-    }
+    computeFactor(highs_model_object);
     simplex_lp_status.has_fresh_invert = true;
   }
   // Possibly check for basis condition. ToDo Override this for MIP hot start
@@ -439,6 +436,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Don't have a simplex basis since nonbasicMove is not set up.
   const int illegal_move_value = -99;
 
+  // Assign nonbasic values and status using as much information as is available
   for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
     if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
       // Nonbasic variable
@@ -454,30 +452,26 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
         // Finite lower bound so boxed or lower
         if (!highs_isInfinity(upper)) {
           // Finite upper bound so boxed
+          //
           // Determine the bound to set the value to according to, in order of
           // priority
+          //
           // 1. Any valid HiGHS basis status
           if (have_highs_basis) {
             if (iVar < simplex_lp.numCol_) {
-              // Column
               if (basis.col_status[iVar] == HighsBasisStatus::LOWER) {
-                // Set to lower bound
                 move = NONBASIC_MOVE_UP;
                 value = lower;
               } else if (basis.col_status[iVar] == HighsBasisStatus::UPPER) {
-                // Set to upper bound
                 move = NONBASIC_MOVE_DN;
                 value = upper;
               }
             } else {
-              // Row
               int iRow = iVar - simplex_lp.numCol_;
               if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
-                // Set to upper bound
                 move = NONBASIC_MOVE_DN;
                 value = upper;
               } else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
-                // Set to lower bound
                 move = NONBASIC_MOVE_UP;
                 value = lower;
               }
@@ -485,58 +479,53 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
           }
           // 2. Any HiGHS solution value
           if (move == illegal_move_value && have_highs_solution) {
+            // Reach here if there is no HiGHS basis or the HiGHS
+            // nonbasic status is just NONBASIC.
             double midpoint = 0.5 * (lower + upper);
+            double value_from_highs_solution;
             if (iVar < simplex_lp.numCol_) {
-              // Column
-              if (solution.col_value[iVar] < midpoint) {
-                // Set to lower bound
-                move = NONBASIC_MOVE_UP;
-                value = lower;
-              } else {
-                // Set to upper bound
-                move = NONBASIC_MOVE_DN;
-                value = upper;
-              }
+              assert(!have_highs_basis ||
+                     basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
+              value_from_highs_solution =
+                  solution.col_value[iVar] / scale.col_[iVar];
             } else {
-              // Row
               int iRow = iVar - simplex_lp.numCol_;
-              if (solution.row_value[iRow] < midpoint) {
-                // Set to upper bound
-                move = NONBASIC_MOVE_DN;
-                value = upper;
-              } else {
-                // Set to lower bound
-                move = NONBASIC_MOVE_UP;
-                value = lower;
-              }
+              assert(!have_highs_basis ||
+                     basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
+              value_from_highs_solution =
+                  -solution.row_value[iRow] * scale.row_[iRow];
             }
-          }
-          // 3. Lower bound for original LP
-          if (move == illegal_move_value) {
-            if (iVar < simplex_lp.numCol_) {
-              // Set to lower bound
+            if (value_from_highs_solution < midpoint) {
               move = NONBASIC_MOVE_UP;
               value = lower;
             } else {
-              // Row
-              // Set to upper bound
+              move = NONBASIC_MOVE_DN;
+              value = upper;
+            }
+          }
+          // 3. Bound of original LP that is closer to zero
+          if (move == illegal_move_value) {
+            if (fabs(lower) < fabs(upper)) {
+              move = NONBASIC_MOVE_UP;
+              value = lower;
+            } else {
               move = NONBASIC_MOVE_DN;
               value = upper;
             }
           }
         } else {
           // Lower (since upper bound is infinite)
-          value = lower;
           move = NONBASIC_MOVE_UP;
+          value = lower;
         }
       } else if (!highs_isInfinity(upper)) {
         // Upper
-        value = upper;
         move = NONBASIC_MOVE_DN;
+        value = upper;
       } else {
         // FREE
-        value = 0;
         move = NONBASIC_MOVE_ZE;
+        value = 0;
       }
       assert(move != illegal_move_value);
       simplex_info.workValue_[iVar] = value;
@@ -561,9 +550,15 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   computeDual(highs_model_object);
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
-  computeDualObjectiveValue(highs_model_object);
-  computePrimalObjectiveValue(highs_model_object);
-  simplex_lp_status.valid = true;
+
+  // If there is a HiGHS solution then determine the changes in basic
+  // and nonbasic values and duals for columns and rows
+  if (have_highs_solution) {
+    //    analyseSimplexAndHighsSolutionDifferences(highs_model_object);
+    if (debugSimplexHighsSolutionDifferences(highs_model_object) ==
+        HighsDebugStatus::LOGICAL_ERROR)
+      return HighsStatus::Error;
+  }
 
   // Store, analyse and possibly report the number of primal and dual
   // infeasiblities and the simplex status
@@ -572,6 +567,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 
   HighsSolutionParams& scaled_solution_params =
       highs_model_object.scaled_solution_params_;
+  computeDualObjectiveValue(highs_model_object);
+  computePrimalObjectiveValue(highs_model_object);
+  simplex_lp_status.valid = true;
+
   bool primal_feasible = scaled_solution_params.num_primal_infeasibilities == 0;
   bool dual_feasible = scaled_solution_params.num_dual_infeasibilities == 0;
   if (primal_feasible && dual_feasible) {
@@ -584,13 +583,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 
   scaled_solution_params.objective_function_value =
       simplex_info.primal_objective_value;
-
-#ifdef HiGHSDEV
-  // If there is a HiGHS solution then determine the changes in basic
-  // and nonbasic values and duals for columns and rows
-  if (have_highs_solution)
-    analyseSimplexAndHighsSolutionDifferences(highs_model_object);
-#endif
 
   if (debugSimplexBasicSolution("After transition", highs_model_object) ==
       HighsDebugStatus::LOGICAL_ERROR)
@@ -924,6 +916,30 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
   simplex_lp_status.has_dual_objective_value = true;
 }
 
+int setSourceOutFmBd(const HighsModelObject& highs_model_object,
+                     const int columnOut) {
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  int sourceOut = 0;
+  if (simplex_info.workLower_[columnOut] !=
+      simplex_info.workUpper_[columnOut]) {
+    if (!highs_isInfinity(-simplex_info.workLower_[columnOut])) {
+      // Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
+      sourceOut = -1;
+      //      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g]
+      //      so setting sourceOut = -1\n", columnOut,
+      //      simplex_info.workLower_[columnOut],
+      //      simplex_info.workUpper_[columnOut]);
+    } else {
+      // Infinite LB so sourceOut = 1 ensures value set to UB
+      sourceOut = 1;
+      if (!highs_isInfinity(simplex_info.workUpper_[columnOut])) {
+        // Free variable => trouble!
+        printf("TROUBLE: variable %d leaving the basis is free!\n", columnOut);
+      }
+    }
+  }
+  return sourceOut;
+}
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -2816,15 +2832,16 @@ int simplexHandleRankDeficiency(HighsModelObject& highs_model_object) {
     //      %11.4g]\n", columnIn, columnOut, rowOut,
     //      simplex_info.workLower_[columnOut],
     //      simplex_info.workUpper_[columnOut]);
-    if (simplex_basis.basicIndex_[rowOut] != columnOut) {
-      printf("%d = simplex_basis.basicIndex_[rowOut] != noPvC[k] = %d\n",
-             simplex_basis.basicIndex_[rowOut], columnOut);
-      fflush(stdout);
+    assert(simplex_basis.basicIndex_[rowOut] == columnOut);
+    if (highs_model_object.simplex_info_.initialised) {
+      int sourceOut = setSourceOutFmBd(highs_model_object, columnOut);
+      update_pivots(highs_model_object, columnIn, rowOut, sourceOut);
+      update_matrix(highs_model_object, columnIn, columnOut);
+    } else {
+      simplex_basis.basicIndex_[rowOut] = columnIn;
+      simplex_basis.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+      simplex_basis.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
     }
-    // 29.06.20 Need to fix the following 3 lines
-    //    int sourceOut = setSourceOutFmBd(columnOut);
-    //    updatePivots(columnIn, rowOut, sourceOut);
-    //    updateMatrix(columnIn, columnOut);
   }
   //    printf("After  - simplex_basis.basicIndex_:");
   // for (int iRow=0; iRow<simplex_lp.numRow_; iRow++)
@@ -2864,7 +2881,6 @@ int computeFactor(HighsModelObject& highs_model_object) {
   if (rankDeficiency) {
     // 29.06.20: Following three lines previously commented out
     simplexHandleRankDeficiency(highs_model_object);
-    highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
     return rankDeficiency;
   }
 #ifdef HiGHSDEV
