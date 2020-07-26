@@ -815,6 +815,19 @@ const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
   }
 }
 
+/*
+double Highs::getObjectiveValue() {
+  double objective_value = 0;
+  if (hmos_.size() == 0)
+    return 0;
+}
+
+int Highs::getSimplexIterationCount() {
+  int  = 0;
+  return 0;
+}
+*/
+
 HighsStatus Highs::getBasicVariables(int* basic_variables) {
   if (!haveHmo("getBasicVariables")) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_basis) {

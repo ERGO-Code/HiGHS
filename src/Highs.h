@@ -192,6 +192,16 @@ class Highs {
    */
   const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
 
+  /**
+   * @brief Returns the objective function value (if known)
+   */
+  double getObjectiveValue() { return info_.objective_function_value; }
+
+  /**
+   * @brief Returns the simplex iteration count (if known)
+   */
+  int getSimplexIterationCount() { return info_.simplex_iteration_count; }
+
   // todo: getRangingInformation(..)
 
   /**
