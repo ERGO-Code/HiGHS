@@ -1154,10 +1154,14 @@ bool Highs::changeColsCost(const int* mask, const double* cost) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("changeColsCost");
+  // Create a local mask that is not const since
+  // index_collection.mask_ cannot be const as it changes when
+  // deleting rows/columns
+  vector<int> local_mask{mask, mask+lp_.numCol_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_mask_ = true;
-  index_collection.mask_ = &mask[0];
+  index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeColsCost")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeCosts(index_collection, mask, cost);
@@ -1217,10 +1221,14 @@ bool Highs::changeColsBounds(const int* mask, const double* lower,
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("changeColsBounds");
+  // Create a local mask that is not const since
+  // index_collection.mask_ cannot be const as it changes when
+  // deleting rows/columns
+  vector<int> local_mask{mask, mask+lp_.numCol_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_mask_ = true;
-  index_collection.mask_ = &mask[0];
+  index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeColsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeColBounds(index_collection, mask, lower, upper);
@@ -1260,10 +1268,14 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("changeRowsBounds");
+  // Create a local mask that is not const since
+  // index_collection.mask_ cannot be const as it changes when
+  // deleting rows/columns
+  vector<int> local_mask{mask, mask+lp_.numRow_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_mask_ = true;
-  index_collection.mask_ = &mask[0];
+  index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeRowsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeRowBounds(index_collection, mask, lower, upper);
@@ -1341,10 +1353,14 @@ bool Highs::getCols(const int* mask, int& num_col, double* costs, double* lower,
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("getCols");
+  // Create a local mask that is not const since
+  // index_collection.mask_ cannot be const as it changes when
+  // deleting rows/columns
+  vector<int> local_mask{mask, mask+lp_.numCol_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_mask_ = true;
-  index_collection.mask_ = &mask[0];
+  index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getCols(index_collection, mask, num_col, costs, lower,
@@ -1400,10 +1416,14 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("getRows");
+  // Create a local mask that is not const since
+  // index_collection.mask_ cannot be const as it changes when
+  // deleting rows/columns
+  vector<int> local_mask{mask, mask+lp_.numRow_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_mask_ = true;
-  index_collection.mask_ = &mask[0];
+  index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getRows(index_collection, mask, num_row, lower, upper,
@@ -1438,7 +1458,7 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
   index_collection.to_ = to_col;
   if (!haveHmo("deleteCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteCols(index_collection, from_col, to_col);
+  call_status = interface.deleteCols(index_collection);
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1455,7 +1475,7 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("deleteCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteCols(index_collection, num_set_entries, set);
+  call_status = interface.deleteCols(index_collection);
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1471,7 +1491,7 @@ bool Highs::deleteCols(int* mask) {
   index_collection.mask_ = &mask[0];
   if (!haveHmo("deleteCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteCols(index_collection, mask);
+  call_status = interface.deleteCols(index_collection);
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;

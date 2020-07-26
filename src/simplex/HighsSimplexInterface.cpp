@@ -200,29 +200,7 @@ HighsStatus HighsSimplexInterface::addCols(
   return return_status;
 }
 
-HighsStatus HighsSimplexInterface::deleteCols(
-    const HighsIndexCollection& index_collection, int from_col, int to_col) {
-  return deleteCols(index_collection, true, from_col, to_col, false, 0, NULL,
-                    false, NULL);
-}
-
-HighsStatus HighsSimplexInterface::deleteCols(
-    const HighsIndexCollection& index_collection, int num_set_entries,
-    const int* col_set) {
-  return deleteCols(index_collection, false, 0, 0, true, num_set_entries,
-                    col_set, false, NULL);
-}
-
-HighsStatus HighsSimplexInterface::deleteCols(
-    const HighsIndexCollection& index_collection, int* col_mask) {
-  return deleteCols(index_collection, false, 0, 0, false, 0, NULL, true,
-                    col_mask);
-}
-
-HighsStatus HighsSimplexInterface::deleteCols(
-    const HighsIndexCollection& index_collection, bool interval, int from_col,
-    int to_col, bool set, int num_set_entries, const int* col_set, bool mask,
-    int* col_mask) {
+HighsStatus HighsSimplexInterface::deleteCols(HighsIndexCollection& index_collection) {
   HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;
   HighsBasis& basis = highs_model_object.basis_;
@@ -261,14 +239,16 @@ HighsStatus HighsSimplexInterface::deleteCols(
       invalidateSimplexLpBasis(simplex_lp_status);
     }
   }
-  if (mask) {
+  if (index_collection.is_mask_) {
+    // Set the mask values to indicate the new index value of the
+    // remaining columns
     int new_col = 0;
     for (int col = 0; col < original_num_col; col++) {
-      if (!col_mask[col]) {
-        col_mask[col] = new_col;
+      if (!index_collection.mask_[col]) {
+        index_collection.mask_[col] = new_col;
         new_col++;
       } else {
-        col_mask[col] = -1;
+        index_collection.mask_[col] = -1;
       }
     }
     assert(new_col == lp.numCol_);

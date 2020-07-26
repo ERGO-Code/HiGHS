@@ -44,19 +44,7 @@ class HighsSimplexInterface {
                       int XnumNZ, const int* XAstart, const int* XAindex,
                       const double* XAvalue);
 
-  HighsStatus deleteCols(const HighsIndexCollection& index_collection,
-                         int from_col, int to_col);
-
-  HighsStatus deleteCols(const HighsIndexCollection& index_collection,
-                         int num_set_entries, const int* col_set);
-
-  HighsStatus deleteCols(const HighsIndexCollection& index_collection,
-                         int* col_mask);
-
-  HighsStatus deleteCols(const HighsIndexCollection& index_collection,
-                         bool interval, int from_col, int to_col, bool set,
-                         int num_set_entries, const int* col_set, bool mask,
-                         int* col_mask);
+  HighsStatus deleteCols(HighsIndexCollection& index_collection);
 
   HighsStatus getCols(const HighsIndexCollection& index_collection,
                       const int from_col, const int to_col, int& num_col,

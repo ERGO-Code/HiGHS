@@ -29,7 +29,7 @@ struct HighsIndexCollection {
   int set_num_entries_ = -1;
   const int* set_ = NULL;
   bool is_mask_ = false;
-  const int* mask_ = NULL;
+  int* mask_ = NULL;
 };
 
 #ifdef HiGHSDEV
