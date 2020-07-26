@@ -123,10 +123,7 @@ HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp,
 
 HighsStatus deleteColsFromLpVectors(
     const HighsOptions& options, HighsLp& lp, int& new_num_col,
-    const HighsIndexCollection& index_collection, const bool interval,
-    const int from_col, const int to_col, const bool set,
-    const int num_set_entries, const int* col_set, const bool mask,
-    const int* col_mask);
+    const HighsIndexCollection& index_collection);
 
 HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
                                    const HighsIndexCollection& index_collection,

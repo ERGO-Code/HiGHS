@@ -21,15 +21,15 @@
 #include "lp_data/HighsOptions.h"
 
 struct HighsIndexCollection {
-  int dimension_;
+  int dimension_ = -1;
   bool is_interval_ = false;
-  int from_;
-  int to_;
+  int from_ = -1;
+  int to_ = -2;
   bool is_set_ = false;
-  int set_num_entries_;
-  const int* set_;
+  int set_num_entries_ = -1;
+  const int* set_ = NULL;
   bool is_mask_ = false;
-  const int* mask_;
+  const int* mask_ = NULL;
 };
 
 #ifdef HiGHSDEV
