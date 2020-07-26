@@ -114,11 +114,7 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
                                  const int* XARindex, const double* XARvalue);
 
 HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
-                         const bool interval, const int from_col,
-                         const int to_col, const bool set,
-                         const int num_set_entries, const int* col_set,
-                         const bool mask, int* col_mask);
+                         const HighsIndexCollection& index_collection);
 
 HighsStatus deleteColsFromLpVectors(const HighsOptions& options,
 				    HighsLp& lp,
@@ -130,26 +126,15 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options,
                                    const HighsIndexCollection& index_collection);
 
 HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
-                         const HighsIndexCollection& index_collection,
-                         const bool interval, const int from_row,
-                         const int to_row, const bool set,
-                         const int num_set_entries, const int* row_set,
-                         const bool mask, int* row_mask);
+                         const HighsIndexCollection& index_collection);
 
-HighsStatus deleteRowsFromLpVectors(
-    const HighsOptions& options, HighsLp& lp, int& new_num_row,
-    const HighsIndexCollection& index_collection, const bool interval,
-    const int from_row, const int to_row, const bool set,
-    const int num_set_entries, const int* row_set, const bool mask,
-    const int* row_mask);
+HighsStatus deleteRowsFromLpVectors(const HighsOptions& options,
+				    HighsLp& lp,
+				    int& new_num_row,
+				    const HighsIndexCollection& index_collection);
 
 HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const HighsIndexCollection& index_collection,
-                                   const bool interval, const int from_row,
-                                   const int to_row, const bool set,
-                                   const int num_set_entries,
-                                   const int* row_set, const bool mask,
-                                   int* row_mask);
+                                   const HighsIndexCollection& index_collection);
 
 HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
                                       const double new_value);
