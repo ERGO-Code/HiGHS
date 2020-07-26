@@ -120,17 +120,14 @@ HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp,
                          const int num_set_entries, const int* col_set,
                          const bool mask, int* col_mask);
 
-HighsStatus deleteColsFromLpVectors(
-    const HighsOptions& options, HighsLp& lp, int& new_num_col,
-    const HighsIndexCollection& index_collection);
+HighsStatus deleteColsFromLpVectors(const HighsOptions& options,
+				    HighsLp& lp,
+				    int& new_num_col,
+				    const HighsIndexCollection& index_collection);
 
-HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const HighsIndexCollection& index_collection,
-                                   const bool interval, const int from_col,
-                                   const int to_col, const bool set,
-                                   const int num_set_entries,
-                                   const int* col_set, const bool mask,
-                                   int* col_mask);
+HighsStatus deleteColsFromLpMatrix(const HighsOptions& options,
+				   HighsLp& lp,
+                                   const HighsIndexCollection& index_collection);
 
 HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
                          const HighsIndexCollection& index_collection,

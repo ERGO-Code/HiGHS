@@ -1353,9 +1353,7 @@ HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp,
   call_status =
       deleteColsFromLpVectors(options, lp, new_num_col, index_collection);
   if (call_status != HighsStatus::OK) return call_status;
-  call_status = deleteColsFromLpMatrix(options, lp, index_collection, interval,
-                                       from_col, to_col, set, num_set_entries,
-                                       col_set, mask, col_mask);
+  call_status = deleteColsFromLpMatrix(options, lp, index_collection);
   if (call_status != HighsStatus::OK) return call_status;
   lp.numCol_ = new_num_col;
   return HighsStatus::OK;
@@ -1365,12 +1363,11 @@ HighsStatus deleteColsFromLpVectors(
     const HighsOptions& options, HighsLp& lp, int& new_num_col,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  int from_k;
-  int to_k;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
-
+  int from_k;
+  int to_k;
   if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
@@ -1416,39 +1413,24 @@ HighsStatus deleteColsFromLpVectors(
   return HighsStatus::OK;
 }
 
-HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const HighsIndexCollection& index_collection,
-                                   const bool interval, const int from_col,
-                                   const int to_col, const bool set,
-                                   const int num_set_entries,
-                                   const int* col_set, const bool mask,
-                                   int* col_mask) {
+HighsStatus deleteColsFromLpMatrix(const HighsOptions& options,
+				   HighsLp& lp,
+                                   const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
-  int from_k;
-  int to_k;
-  call_status = assessIntervalSetMask(options, lp.numCol_, interval, from_col,
-                                      to_col, set, num_set_entries, col_set,
-                                      mask, col_mask, from_k, to_k);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
-  if (return_status == HighsStatus::Error) return return_status;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
-
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
-  if (col_set != NULL) {
+  if (index_collection.is_set_) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteColsFromLpMatrix\n");
-    if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_ - 1, true))
+    if (!increasing_set_ok(index_collection.set_,
+                           index_collection.set_num_entries_, 0, lp.numCol_ - 1,
+			   true))
       return HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;
@@ -1459,27 +1441,13 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
   int keep_to_col = -1;
   int current_set_entry = 0;
 
-  int delete_from_col1;
-  int delete_to_col1;
-  int keep_from_col1;
-  int keep_to_col1 = -1;
-  int current_set_entry1 = 0;
-
   int col_dim = lp.numCol_;
   int new_num_col = 0;
   int new_num_nz = 0;
   for (int k = from_k; k <= to_k; k++) {
-    updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
-                  col_set, mask, col_mask, delete_from_col, delete_to_col,
-                  keep_from_col, keep_to_col, current_set_entry);
-    updateIndexCollectionOutInIndex(index_collection, delete_from_col1,
-                                    delete_to_col1, keep_from_col1,
-                                    keep_to_col1, current_set_entry1);
-    assert(delete_from_col1 == delete_from_col);
-    assert(delete_to_col1 == delete_to_col);
-    assert(keep_from_col1 == keep_from_col);
-    assert(keep_to_col1 == keep_to_col);
-    assert(current_set_entry1 == current_set_entry);
+    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
+                                    delete_to_col, keep_from_col,
+                                    keep_to_col, current_set_entry);
     if (k == from_k) {
       // Account for the initial columns being kept
       new_num_col = delete_from_col;
