@@ -460,6 +460,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   Highs highs(options);
+  return_status = highs.setHighsOptionValue("highs_debug_level", 2);
+  REQUIRE(return_status == HighsStatus::OK);
+
   return_status = highs.passModel(lp);
   //  printf("passModel: return_status = %s\n",
   //  HighsStatusToString(return_status).c_str());

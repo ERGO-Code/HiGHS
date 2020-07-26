@@ -26,6 +26,7 @@
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "simplex/HSimplexDebug.h"
 #include "simplex/HighsSimplexInterface.h"
 
 #ifdef OPENMP
@@ -2016,6 +2017,10 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   HighsStatus return_status = highs_return_status;
 
   updateHighsSolutionBasis();
+  if (hmos_.size()) {
+    if (debugSimplexLp(hmos_[0]) == HighsDebugStatus::LOGICAL_ERROR)
+      return HighsStatus::Error;
+  }
 
   return return_status;
 }

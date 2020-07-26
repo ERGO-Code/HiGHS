@@ -1027,8 +1027,7 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
 }
 
 HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
-
-                            vector<double>& colScale,
+                            const vector<double>& colScale,
                             const HighsIndexCollection& index_collection,
                             const bool interval, const int from_col,
                             const int to_col, const bool set,
@@ -1078,7 +1077,7 @@ HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus scaleLpColBounds(const HighsOptions& options, HighsLp& lp,
-                             vector<double>& colScale,
+                             const vector<double>& colScale,
                              const HighsIndexCollection& index_collection,
                              const bool interval, const int from_col,
                              const int to_col, const bool set,
@@ -1131,7 +1130,7 @@ HighsStatus scaleLpColBounds(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
-                             vector<double>& rowScale,
+                             const vector<double>& rowScale,
                              const HighsIndexCollection& index_collection,
                              const bool interval, const int from_row,
                              const int to_row, const bool set,
@@ -1180,6 +1179,27 @@ HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
       lp.rowUpper_[ml_row] *= rowScale[ml_row];
   }
 
+  return HighsStatus::OK;
+}
+
+HighsStatus scaleLpMatrix(const HighsOptions& options, HighsLp& lp,
+                          const vector<double>& colScale,
+                          const vector<double>& rowScale, const int from_col,
+                          const int to_col, const int from_row,
+                          const int to_row) {
+  if (from_col < 0) return HighsStatus::Error;
+  if (to_col >= lp.numCol_) return HighsStatus::Error;
+  if (from_row < 0) return HighsStatus::Error;
+  if (to_row >= lp.numRow_) return HighsStatus::Error;
+  for (int iCol = from_col; iCol <= to_col; iCol++) {
+    for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++) {
+      int iRow = lp.Aindex_[iEl];
+      if (iRow < from_row || iRow > to_row) {
+        continue;
+      }
+      lp.Avalue_[iEl] *= (colScale[iCol] * rowScale[iRow]);
+    }
+  }
   return HighsStatus::OK;
 }
 
