@@ -48,8 +48,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   index_collection.is_interval_ = true;
   index_collection.from_ = 0;
   index_collection.to_ = lp.numCol_ - 1;
-  call_status = assessCosts(options, 0, index_collection, lp.numCol_, true, 0,
-                            lp.numCol_ - 1, false, 0, NULL, false, NULL,
+  call_status = assessCosts(options, 0, index_collection,
                             &lp.colCost_[0], options.infinite_cost);
   return_status =
       interpretCallStatus(call_status, return_status, "assessCosts");
@@ -231,34 +230,17 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
 
 HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
                         const HighsIndexCollection& index_collection,
-                        const int col_dim, const bool interval,
-                        const int from_col, const int to_col, const bool set,
-                        const int num_set_entries, const int* col_set,
-                        const bool mask, const int* col_mask,
                         const double* col_cost, const double infinite_cost) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   // Check parameters for technique and, if OK set the loop limits
-  int from_k;
-  int to_k;
-  call_status = assessIntervalSetMask(options, col_dim, interval, from_col,
-                                      to_col, set, num_set_entries, col_set,
-                                      mask, col_mask, from_k, to_k);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
-  if (return_status == HighsStatus::Error) return return_status;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
-
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
   if (from_k > to_k) return return_status;
 
   return_status = HighsStatus::OK;
@@ -288,15 +270,15 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
   int data_col;
   int ml_col;
   for (int k = from_k; k < to_k + 1; k++) {
-    if (interval || mask) {
+    if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_col = k;
       data_col = k;
     } else {
-      local_col = col_set[k];
+      local_col = index_collection.set_[k];
       data_col = k;
     }
     ml_col = ml_col_os + local_col;
-    if (mask && !col_mask[local_col]) continue;
+    if (index_collection.is_mask_ && !index_collection.mask_[local_col]) continue;
     double abs_cost = fabs(col_cost[data_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
@@ -1699,9 +1681,7 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
   if (usr_col_cost == NULL) return HighsStatus::Error;
 
   // Assess the user costs and return on error
-  call_status = assessCosts(options, 0, index_collection, lp.numCol_, interval,
-                            from_col, to_col, set, num_set_entries, col_set,
-                            mask, col_mask, usr_col_cost, infinite_cost);
+  call_status = assessCosts(options, 0, index_collection, usr_col_cost, infinite_cost);
   if (call_status != HighsStatus::OK) {
     return_status = call_status;
     return return_status;

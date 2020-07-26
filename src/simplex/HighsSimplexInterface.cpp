@@ -88,8 +88,7 @@ HighsStatus HighsSimplexInterface::addCols(
   // Assess the column costs
   assert(XnumNewCol > 0);
   return_status = interpretCallStatus(
-      assessCosts(options, lp.numCol_, index_collection, XnumNewCol, true, 0,
-                  XnumNewCol - 1, false, 0, NULL, false, NULL,
+      assessCosts(options, lp.numCol_, index_collection, 
                   &local_colCost[0], options.infinite_cost),
       return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;

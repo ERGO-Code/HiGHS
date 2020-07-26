@@ -36,10 +36,6 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);
 
 HighsStatus assessCosts(const HighsOptions& options, const int col_ix_os,
                         const HighsIndexCollection& index_collection,
-                        const int mask_num_col, const bool interval,
-                        const int from_col, const int to_col, const bool set,
-                        const int num_set_entries, const int* col_set,
-                        const bool mask, const int* col_mask,
                         const double* usr_col_cost, const double infinite_cost);
 
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
