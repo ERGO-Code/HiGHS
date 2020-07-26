@@ -763,7 +763,7 @@ class Highs {
 
   bool haveHmo(const string method_name);
 
-  bool updateHighsSolutionBasis();
+  void updateHighsSolutionBasis();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
   HighsStatus reset();

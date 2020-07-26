@@ -1074,7 +1074,6 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
                         starts, indices, values),
       return_status, "addRows");
   if (return_status == HighsStatus::Error) return false;
-  // Was updateHighsSolutionBasis call
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
@@ -1099,7 +1098,6 @@ bool Highs::addCols(const int num_new_col, const double* costs,
                         num_new_nz, starts, indices, values),
       return_status, "addCols");
   if (return_status == HighsStatus::Error) return false;
-  // Was updateHighsSolutionBasis call
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
@@ -1429,7 +1427,6 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
   call_status = interface.deleteCols(index_collection, from_col, to_col);
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
-  // Was updateHighsSolutionBasis call
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
@@ -1447,7 +1444,6 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
   call_status = interface.deleteCols(index_collection, num_set_entries, set);
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
-  // Was updateHighsSolutionBasis call
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
@@ -1464,7 +1460,6 @@ bool Highs::deleteCols(int* mask) {
   call_status = interface.deleteCols(index_collection, mask);
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
-  // Was updateHighsSolutionBasis call
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
@@ -1482,7 +1477,6 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
   call_status = interface.deleteRows(index_collection, from_row, to_row);
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
-  // Was updateHighsSolutionBasis call
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
@@ -1500,7 +1494,6 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
   call_status = interface.deleteRows(index_collection, num_set_entries, set);
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
-  // Was updateHighsSolutionBasis call
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
@@ -1517,7 +1510,6 @@ bool Highs::deleteRows(int* mask) {
   call_status = interface.deleteRows(index_collection, mask);
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
-  // Was updateHighsSolutionBasis call
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
@@ -1739,7 +1731,10 @@ HighsStatus Highs::writeSolution(const std::string filename,
   // return HighsStatus::OK;
 }
 
-bool Highs::updateHighsSolutionBasis() {
+// Ensure that the HiGHS solution and basis have the same size as the
+// model, and that the HiGHS basis is kept up-to-date with any solved
+// basis
+void Highs::updateHighsSolutionBasis() {
   solution_.col_value.resize(lp_.numCol_);
   solution_.row_value.resize(lp_.numRow_);
   solution_.col_dual.resize(lp_.numCol_);
@@ -1751,13 +1746,13 @@ bool Highs::updateHighsSolutionBasis() {
     hmos_[0].solution_.row_value.resize(lp_.numRow_);
     hmos_[0].solution_.col_dual.resize(lp_.numCol_);
     hmos_[0].solution_.row_dual.resize(lp_.numRow_);
+    // ToDo Should only copy the basis
     basis_ = hmos_[0].basis_;
   } else {
     basis_.valid_ = false;
     basis_.col_status.resize(lp_.numCol_);
     basis_.row_status.resize(lp_.numRow_);
   }
-  return true;
 }
 
 bool Highs::getHighsModelStatusAndInfo(const int solved_hmo) {
@@ -2007,7 +2002,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   HighsStatus return_status = highs_return_status;
 
-  if (!updateHighsSolutionBasis()) return HighsStatus::Error;
+  updateHighsSolutionBasis();
 
   return return_status;
 }
