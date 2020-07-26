@@ -104,49 +104,20 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
       highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
+  const HighsOptions& options = highs_model_object.options_;
   const HighsLp& lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsScale& scale = highs_model_object.scale_;
-  const HighsOptions& options = highs_model_object.options_;
   // Take a copy of the original LP
   HighsLp check_lp = lp;
-  if (scale.is_scaled_) {
-    bool scale_error = false;
-    // Set up column and row index collections for scaling
-    HighsIndexCollection all_cols;
-    all_cols.is_interval_ = true;
-    all_cols.dimension_ = lp.numCol_;
-    all_cols.from_ = 0;
-    all_cols.to_ = lp.numCol_ - 1;
-    HighsIndexCollection all_rows;
-    all_rows.is_interval_ = true;
-    all_rows.dimension_ = lp.numRow_;
-    all_rows.from_ = 0;
-    all_rows.to_ = lp.numRow_ - 1;
-    scale_error = scaleLpColCosts(options, check_lp, scale.col_, all_cols, true,
-                                  0, lp.numCol_ - 1, false, 0, NULL, false,
-                                  NULL) != HighsStatus::OK ||
-                  scale_error;
-    scale_error = scaleLpColBounds(options, check_lp, scale.col_, all_cols,
-                                   true, 0, lp.numCol_ - 1, false, 0, NULL,
-                                   false, NULL) != HighsStatus::OK ||
-                  scale_error;
-    scale_error = scaleLpRowBounds(options, check_lp, scale.row_, all_rows,
-                                   true, 0, lp.numRow_ - 1, false, 0, NULL,
-                                   false, NULL) != HighsStatus::OK ||
-                  scale_error;
-
-    scale_error =
-        scaleLpMatrix(options, check_lp, scale.col_, scale.row_, 0,
-                      lp.numCol_ - 1, 0, lp.numRow_ - 1) != HighsStatus::OK ||
-        scale_error;
-    if (scale_error) {
-      printf("Error scaling check LP\n");
-      return_status = HighsDebugStatus::LOGICAL_ERROR;
-    }
+  if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+		      "debugSimplexLp: Error scaling check LP\n");
+    return HighsDebugStatus::LOGICAL_ERROR;
   }
   if (!check_lp.equalButForNames(simplex_lp)) {
-    printf("LP and Check LP not equal\n");
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+		      "debugSimplexLp: LP and Check LP not equal\n");
     /*
     for(int iEl = 0; iEl < simplex_lp.Astart_[simplex_lp.numCol_]; iEl++) {
       double v0 = simplex_lp.Avalue_[iEl];
@@ -158,7 +129,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
       }
     }
     */
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    return HighsDebugStatus::LOGICAL_ERROR;
   }
   return return_status;
 }

@@ -21,6 +21,7 @@
 #include "util/HighsUtils.h"
 
 class HighsLp;
+struct HighsScale;
 struct HighsBasis;
 struct HighsSolution;
 class HighsOptions;
@@ -74,31 +75,23 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLp(const HighsOptions& options,
+			     HighsLp& lp,
+			     const HighsScale& scale);
+
+HighsStatus applyScalingToLpColCosts(const HighsOptions& options, HighsLp& lp,
                             const vector<double>& colScale,
-                            const HighsIndexCollection& index_collection,
-                            const bool interval, const int from_col,
-                            const int to_col, const bool set,
-                            const int num_set_entries, const int* col_set,
-                            const bool mask, const int* col_mask);
+                            const HighsIndexCollection& index_collection);
 
-HighsStatus scaleLpColBounds(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLpColBounds(const HighsOptions& options, HighsLp& lp,
                              const vector<double>& colScale,
-                             const HighsIndexCollection& index_collection,
-                             const bool interval, const int from_col,
-                             const int to_col, const bool set,
-                             const int num_set_entries, const int* col_set,
-                             const bool mask, const int* col_mask);
+                             const HighsIndexCollection& index_collection);
 
-HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLpRowBounds(const HighsOptions& options, HighsLp& lp,
                              const vector<double>& rowScale,
-                             const HighsIndexCollection& index_collection,
-                             const bool interval, const int from_row,
-                             const int to_row, const bool set,
-                             const int num_set_entries, const int* row_set,
-                             const bool mask, const int* row_mask);
+                             const HighsIndexCollection& index_collection);
 
-HighsStatus scaleLpMatrix(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
                           const vector<double>& colScale,
                           const vector<double>& rowScale, const int from_col,
                           const int to_col, const int from_row,

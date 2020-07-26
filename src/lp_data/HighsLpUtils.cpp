@@ -24,7 +24,6 @@
 #include "lp_data/HighsStatus.h"
 #include "util/HighsSort.h"
 #include "util/HighsTimer.h"
-//#include "util/HighsUtils.h"
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::OK;
@@ -1026,38 +1025,59 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::OK;
 }
 
-HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLp(const HighsOptions& options,
+			     HighsLp& lp,
+			     const HighsScale& scale) {
+  if (!scale.is_scaled_) return HighsStatus::OK;
+  if ((int)scale.col_.size() < lp.numCol_) return HighsStatus::Error;
+  if ((int)scale.row_.size() < lp.numRow_) return HighsStatus::Error;
+  bool scale_error = false;
+  // Set up column and row index collections for scaling
+  HighsIndexCollection all_cols;
+  all_cols.is_interval_ = true;
+  all_cols.dimension_ = lp.numCol_;
+  all_cols.from_ = 0;
+  all_cols.to_ = lp.numCol_ - 1;
+  HighsIndexCollection all_rows;
+  all_rows.is_interval_ = true;
+  all_rows.dimension_ = lp.numRow_;
+  all_rows.from_ = 0;
+  all_rows.to_ = lp.numRow_ - 1;
+  
+  scale_error = applyScalingToLpColCosts(options, lp, scale.col_, all_cols) != HighsStatus::OK ||
+    scale_error;
+  scale_error = applyScalingToLpColBounds(options, lp, scale.col_, all_cols) != HighsStatus::OK ||
+    scale_error;
+  scale_error = applyScalingToLpRowBounds(options, lp, scale.row_, all_rows) != HighsStatus::OK ||
+    scale_error;
+  scale_error =
+    applyScalingToLpMatrix(options, lp, scale.col_, scale.row_, 0,
+			   lp.numCol_ - 1, 0, lp.numRow_ - 1) != HighsStatus::OK ||
+    scale_error;
+  if (scale_error) return HighsStatus::Error;
+  return HighsStatus::OK;
+}
+
+HighsStatus applyScalingToLpColCosts(const HighsOptions& options, HighsLp& lp,
                             const vector<double>& colScale,
-                            const HighsIndexCollection& index_collection,
-                            const bool interval, const int from_col,
-                            const int to_col, const bool set,
-                            const int num_set_entries, const int* col_set,
-                            const bool mask, const int* col_mask) {
+                            const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   // Check parameters for technique and, if OK set the loop limits
-  int col_dim = lp.numCol_;
-  int from_k;
-  int to_k;
-  call_status = assessIntervalSetMask(options, col_dim, interval, from_col,
-                                      to_col, set, num_set_entries, col_set,
-                                      mask, col_mask, from_k, to_k);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
-  if (return_status == HighsStatus::Error) return return_status;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
 
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
   if (from_k > to_k) return HighsStatus::OK;
+
+  const bool& interval = index_collection.is_interval_;
+  const bool& mask = index_collection.is_mask_;
+  const int* col_set = index_collection.set_;
+  const int* col_mask = index_collection.mask_;
 
   int local_col;
   int ml_col;
@@ -1076,38 +1096,26 @@ HighsStatus scaleLpColCosts(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus scaleLpColBounds(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLpColBounds(const HighsOptions& options, HighsLp& lp,
                              const vector<double>& colScale,
-                             const HighsIndexCollection& index_collection,
-                             const bool interval, const int from_col,
-                             const int to_col, const bool set,
-                             const int num_set_entries, const int* col_set,
-                             const bool mask, const int* col_mask) {
+                             const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   // Check parameters for technique and, if OK set the loop limits
-  int col_dim = lp.numCol_;
-  int from_k;
-  int to_k;
-  call_status = assessIntervalSetMask(options, col_dim, interval, from_col,
-                                      to_col, set, num_set_entries, col_set,
-                                      mask, col_mask, from_k, to_k);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
-  if (return_status == HighsStatus::Error) return return_status;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
 
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
   if (from_k > to_k) return HighsStatus::OK;
+
+  const bool& interval = index_collection.is_interval_;
+  const bool& mask = index_collection.is_mask_;
+  const int* col_set = index_collection.set_;
+  const int* col_mask = index_collection.mask_;
 
   int local_col;
   int ml_col;
@@ -1129,38 +1137,26 @@ HighsStatus scaleLpColBounds(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLpRowBounds(const HighsOptions& options, HighsLp& lp,
                              const vector<double>& rowScale,
-                             const HighsIndexCollection& index_collection,
-                             const bool interval, const int from_row,
-                             const int to_row, const bool set,
-                             const int num_set_entries, const int* row_set,
-                             const bool mask, const int* row_mask) {
+                             const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   // Check parameters for technique and, if OK set the loop limits
-  int row_dim = lp.numRow_;
-  int from_k;
-  int to_k;
-  call_status = assessIntervalSetMask(options, row_dim, interval, from_row,
-                                      to_row, set, num_set_entries, row_set,
-                                      mask, row_mask, from_k, to_k);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
-  if (return_status == HighsStatus::Error) return return_status;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
 
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
   if (from_k > to_k) return HighsStatus::OK;
+
+  const bool& interval = index_collection.is_interval_;
+  const bool& mask = index_collection.is_mask_;
+  const int* row_set = index_collection.set_;
+  const int* row_mask = index_collection.mask_;
 
   int local_row;
   int ml_row;
@@ -1182,7 +1178,7 @@ HighsStatus scaleLpRowBounds(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus scaleLpMatrix(const HighsOptions& options, HighsLp& lp,
+HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
                           const vector<double>& colScale,
                           const vector<double>& rowScale, const int from_col,
                           const int to_col, const int from_row,

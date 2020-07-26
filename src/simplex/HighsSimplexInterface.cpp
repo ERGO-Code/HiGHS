@@ -1025,11 +1025,9 @@ HighsStatus HighsSimplexInterface::changeCosts(
         highs_model_object.options_.infinite_cost);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpColCosts(highs_model_object.options_,
+      applyScalingToLpColCosts(highs_model_object.options_,
                       highs_model_object.simplex_lp_,
-                      highs_model_object.scale_.col_, local_index_collection,
-                      interval, from_col, to_col, set, num_set_entries,
-                      pointer_use_set, mask, col_mask);
+                      highs_model_object.scale_.col_, local_index_collection);
     }
   }
   // Deduce the consequences of new costs
@@ -1128,11 +1126,9 @@ HighsStatus HighsSimplexInterface::changeColBounds(
         pointer_use_upper, highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpColBounds(highs_model_object.options_,
+      applyScalingToLpColBounds(highs_model_object.options_,
                        highs_model_object.simplex_lp_,
-                       highs_model_object.scale_.col_, local_index_collection,
-                       interval, from_col, to_col, set, num_set_entries,
-                       pointer_use_set, mask, col_mask);
+                       highs_model_object.scale_.col_, local_index_collection);
     }
   }
   // Deduce the consequences of new col bounds
@@ -1219,10 +1215,9 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
         highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      scaleLpRowBounds(
+      applyScalingToLpRowBounds(
           highs_model_object.options_, highs_model_object.simplex_lp_,
-          highs_model_object.scale_.row_, index_collection, interval, from_row,
-          to_row, set, num_set_entries, row_set, mask, row_mask);
+          highs_model_object.scale_.row_, index_collection);
     }
     // Deduce the consequences of new row bounds
     highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
