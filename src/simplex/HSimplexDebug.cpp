@@ -115,7 +115,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
 		      "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
-  if (!check_lp.equalButForNames(simplex_lp)) {
+  if (!(check_lp == simplex_lp)) {
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
 		      "debugSimplexLp: LP and Check LP not equal\n");
     /*
