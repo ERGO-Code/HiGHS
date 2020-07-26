@@ -75,27 +75,26 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
-HighsStatus applyScalingToLp(const HighsOptions& options,
-			     HighsLp& lp,
-			     const HighsScale& scale);
+HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
+                             const HighsScale& scale);
 
-HighsStatus applyScalingToLpColCosts(const HighsOptions& options, HighsLp& lp,
-                            const vector<double>& colScale,
-                            const HighsIndexCollection& index_collection);
+HighsStatus applyScalingToLpColCosts(
+    const HighsOptions& options, HighsLp& lp, const vector<double>& colScale,
+    const HighsIndexCollection& index_collection);
 
-HighsStatus applyScalingToLpColBounds(const HighsOptions& options, HighsLp& lp,
-                             const vector<double>& colScale,
-                             const HighsIndexCollection& index_collection);
+HighsStatus applyScalingToLpColBounds(
+    const HighsOptions& options, HighsLp& lp, const vector<double>& colScale,
+    const HighsIndexCollection& index_collection);
 
-HighsStatus applyScalingToLpRowBounds(const HighsOptions& options, HighsLp& lp,
-                             const vector<double>& rowScale,
-                             const HighsIndexCollection& index_collection);
+HighsStatus applyScalingToLpRowBounds(
+    const HighsOptions& options, HighsLp& lp, const vector<double>& rowScale,
+    const HighsIndexCollection& index_collection);
 
 HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
-                          const vector<double>& colScale,
-                          const vector<double>& rowScale, const int from_col,
-                          const int to_col, const int from_row,
-                          const int to_row);
+                                   const vector<double>& colScale,
+                                   const vector<double>& rowScale,
+                                   const int from_col, const int to_col,
+                                   const int from_row, const int to_row);
 
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
                                   const double* XcolCost,

@@ -1025,9 +1025,9 @@ HighsStatus HighsSimplexInterface::changeCosts(
         highs_model_object.options_.infinite_cost);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      applyScalingToLpColCosts(highs_model_object.options_,
-                      highs_model_object.simplex_lp_,
-                      highs_model_object.scale_.col_, local_index_collection);
+      applyScalingToLpColCosts(
+          highs_model_object.options_, highs_model_object.simplex_lp_,
+          highs_model_object.scale_.col_, local_index_collection);
     }
   }
   // Deduce the consequences of new costs
@@ -1126,9 +1126,9 @@ HighsStatus HighsSimplexInterface::changeColBounds(
         pointer_use_upper, highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      applyScalingToLpColBounds(highs_model_object.options_,
-                       highs_model_object.simplex_lp_,
-                       highs_model_object.scale_.col_, local_index_collection);
+      applyScalingToLpColBounds(
+          highs_model_object.options_, highs_model_object.simplex_lp_,
+          highs_model_object.scale_.col_, local_index_collection);
     }
   }
   // Deduce the consequences of new col bounds

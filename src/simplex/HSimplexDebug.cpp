@@ -112,12 +112,12 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   HighsLp check_lp = lp;
   if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-		      "debugSimplexLp: Error scaling check LP\n");
+                      "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   if (!(check_lp == simplex_lp)) {
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-		      "debugSimplexLp: LP and Check LP not equal\n");
+                      "debugSimplexLp: LP and Check LP not equal\n");
     /*
     for(int iEl = 0; iEl < simplex_lp.Astart_[simplex_lp.numCol_]; iEl++) {
       double v0 = simplex_lp.Avalue_[iEl];

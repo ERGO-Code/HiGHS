@@ -1025,9 +1025,8 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   return HighsStatus::OK;
 }
 
-HighsStatus applyScalingToLp(const HighsOptions& options,
-			     HighsLp& lp,
-			     const HighsScale& scale) {
+HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
+                             const HighsScale& scale) {
   if (!scale.is_scaled_) return HighsStatus::OK;
   if ((int)scale.col_.size() < lp.numCol_) return HighsStatus::Error;
   if ((int)scale.row_.size() < lp.numRow_) return HighsStatus::Error;
@@ -1043,24 +1042,27 @@ HighsStatus applyScalingToLp(const HighsOptions& options,
   all_rows.dimension_ = lp.numRow_;
   all_rows.from_ = 0;
   all_rows.to_ = lp.numRow_ - 1;
-  
-  scale_error = applyScalingToLpColCosts(options, lp, scale.col_, all_cols) != HighsStatus::OK ||
-    scale_error;
-  scale_error = applyScalingToLpColBounds(options, lp, scale.col_, all_cols) != HighsStatus::OK ||
-    scale_error;
-  scale_error = applyScalingToLpRowBounds(options, lp, scale.row_, all_rows) != HighsStatus::OK ||
-    scale_error;
-  scale_error =
-    applyScalingToLpMatrix(options, lp, scale.col_, scale.row_, 0,
-			   lp.numCol_ - 1, 0, lp.numRow_ - 1) != HighsStatus::OK ||
-    scale_error;
+
+  scale_error = applyScalingToLpColCosts(options, lp, scale.col_, all_cols) !=
+                    HighsStatus::OK ||
+                scale_error;
+  scale_error = applyScalingToLpColBounds(options, lp, scale.col_, all_cols) !=
+                    HighsStatus::OK ||
+                scale_error;
+  scale_error = applyScalingToLpRowBounds(options, lp, scale.row_, all_rows) !=
+                    HighsStatus::OK ||
+                scale_error;
+  scale_error = applyScalingToLpMatrix(options, lp, scale.col_, scale.row_, 0,
+                                       lp.numCol_ - 1, 0,
+                                       lp.numRow_ - 1) != HighsStatus::OK ||
+                scale_error;
   if (scale_error) return HighsStatus::Error;
   return HighsStatus::OK;
 }
 
-HighsStatus applyScalingToLpColCosts(const HighsOptions& options, HighsLp& lp,
-                            const vector<double>& colScale,
-                            const HighsIndexCollection& index_collection) {
+HighsStatus applyScalingToLpColCosts(
+    const HighsOptions& options, HighsLp& lp, const vector<double>& colScale,
+    const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))
@@ -1096,9 +1098,9 @@ HighsStatus applyScalingToLpColCosts(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus applyScalingToLpColBounds(const HighsOptions& options, HighsLp& lp,
-                             const vector<double>& colScale,
-                             const HighsIndexCollection& index_collection) {
+HighsStatus applyScalingToLpColBounds(
+    const HighsOptions& options, HighsLp& lp, const vector<double>& colScale,
+    const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))
@@ -1137,9 +1139,9 @@ HighsStatus applyScalingToLpColBounds(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus applyScalingToLpRowBounds(const HighsOptions& options, HighsLp& lp,
-                             const vector<double>& rowScale,
-                             const HighsIndexCollection& index_collection) {
+HighsStatus applyScalingToLpRowBounds(
+    const HighsOptions& options, HighsLp& lp, const vector<double>& rowScale,
+    const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))
@@ -1179,10 +1181,10 @@ HighsStatus applyScalingToLpRowBounds(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
-                          const vector<double>& colScale,
-                          const vector<double>& rowScale, const int from_col,
-                          const int to_col, const int from_row,
-                          const int to_row) {
+                                   const vector<double>& colScale,
+                                   const vector<double>& rowScale,
+                                   const int from_col, const int to_col,
+                                   const int from_row, const int to_row) {
   if (from_col < 0) return HighsStatus::Error;
   if (to_col >= lp.numCol_) return HighsStatus::Error;
   if (from_row < 0) return HighsStatus::Error;
@@ -1348,7 +1350,8 @@ HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp,
                          const bool mask, int* col_mask) {
   int new_num_col;
   HighsStatus call_status;
-  call_status = deleteColsFromLpVectors(options, lp, new_num_col, index_collection);
+  call_status =
+      deleteColsFromLpVectors(options, lp, new_num_col, index_collection);
   if (call_status != HighsStatus::OK) return call_status;
   call_status = deleteColsFromLpMatrix(options, lp, index_collection, interval,
                                        from_col, to_col, set, num_set_entries,
@@ -1374,8 +1377,8 @@ HighsStatus deleteColsFromLpVectors(
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
     if (!increasing_set_ok(index_collection.set_,
-			   index_collection.set_num_entries_,
-			   0, lp.numCol_-1, true))
+                           index_collection.set_num_entries_, 0, lp.numCol_ - 1,
+                           true))
       return HighsStatus::Error;
   }
   // Initialise new_num_col in case none is removed due to from_k > to_k
@@ -1393,8 +1396,8 @@ HighsStatus deleteColsFromLpVectors(
   bool have_names = lp.col_names_.size();
   for (int k = from_k; k <= to_k; k++) {
     updateIndexCollectionOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col,
-                                    keep_to_col, current_set_entry);
+                                    delete_to_col, keep_from_col, keep_to_col,
+                                    current_set_entry);
     if (k == from_k) {
       // Account for the initial columns being kept
       new_num_col = delete_from_col;
