@@ -1157,7 +1157,7 @@ bool Highs::changeColsCost(const int* mask, const double* cost) {
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<int> local_mask{mask, mask+lp_.numCol_};
+  vector<int> local_mask{mask, mask + lp_.numCol_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_mask_ = true;
@@ -1224,7 +1224,7 @@ bool Highs::changeColsBounds(const int* mask, const double* lower,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<int> local_mask{mask, mask+lp_.numCol_};
+  vector<int> local_mask{mask, mask + lp_.numCol_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_mask_ = true;
@@ -1271,7 +1271,7 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<int> local_mask{mask, mask+lp_.numRow_};
+  vector<int> local_mask{mask, mask + lp_.numRow_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_mask_ = true;
@@ -1356,7 +1356,7 @@ bool Highs::getCols(const int* mask, int& num_col, double* costs, double* lower,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<int> local_mask{mask, mask+lp_.numCol_};
+  vector<int> local_mask{mask, mask + lp_.numCol_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_mask_ = true;
@@ -1419,7 +1419,7 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
-  vector<int> local_mask{mask, mask+lp_.numRow_};
+  vector<int> local_mask{mask, mask + lp_.numRow_};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_mask_ = true;

@@ -87,10 +87,10 @@ HighsStatus HighsSimplexInterface::addCols(
   // There are sure to be new columns since XnumNewCol <= 0 is handled above
   // Assess the column costs
   assert(XnumNewCol > 0);
-  return_status = interpretCallStatus(
-      assessCosts(options, lp.numCol_, index_collection, 
-                  &local_colCost[0], options.infinite_cost),
-      return_status, "assessCosts");
+  return_status =
+      interpretCallStatus(assessCosts(options, lp.numCol_, index_collection,
+                                      &local_colCost[0], options.infinite_cost),
+                          return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the column bounds
   return_status = interpretCallStatus(
@@ -199,7 +199,8 @@ HighsStatus HighsSimplexInterface::addCols(
   return return_status;
 }
 
-HighsStatus HighsSimplexInterface::deleteCols(HighsIndexCollection& index_collection) {
+HighsStatus HighsSimplexInterface::deleteCols(
+    HighsIndexCollection& index_collection) {
   HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;
   HighsBasis& basis = highs_model_object.basis_;

@@ -112,25 +112,24 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
 HighsStatus deleteLpCols(const HighsOptions& options, HighsLp& lp,
                          const HighsIndexCollection& index_collection);
 
-HighsStatus deleteColsFromLpVectors(const HighsOptions& options,
-				    HighsLp& lp,
-				    int& new_num_col,
-				    const HighsIndexCollection& index_collection);
+HighsStatus deleteColsFromLpVectors(
+    const HighsOptions& options, HighsLp& lp, int& new_num_col,
+    const HighsIndexCollection& index_collection);
 
-HighsStatus deleteColsFromLpMatrix(const HighsOptions& options,
-				   HighsLp& lp,
-                                   const HighsIndexCollection& index_collection);
+HighsStatus deleteColsFromLpMatrix(
+    const HighsOptions& options, HighsLp& lp,
+    const HighsIndexCollection& index_collection);
 
 HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
                          const HighsIndexCollection& index_collection);
 
-HighsStatus deleteRowsFromLpVectors(const HighsOptions& options,
-				    HighsLp& lp,
-				    int& new_num_row,
-				    const HighsIndexCollection& index_collection);
+HighsStatus deleteRowsFromLpVectors(
+    const HighsOptions& options, HighsLp& lp, int& new_num_row,
+    const HighsIndexCollection& index_collection);
 
-HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const HighsIndexCollection& index_collection);
+HighsStatus deleteRowsFromLpMatrix(
+    const HighsOptions& options, HighsLp& lp,
+    const HighsIndexCollection& index_collection);
 
 HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
                                       const double new_value);

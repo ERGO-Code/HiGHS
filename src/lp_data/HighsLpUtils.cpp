@@ -48,8 +48,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   index_collection.is_interval_ = true;
   index_collection.from_ = 0;
   index_collection.to_ = lp.numCol_ - 1;
-  call_status = assessCosts(options, 0, index_collection,
-                            &lp.colCost_[0], options.infinite_cost);
+  call_status = assessCosts(options, 0, index_collection, &lp.colCost_[0],
+                            options.infinite_cost);
   return_status =
       interpretCallStatus(call_status, return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
@@ -278,7 +278,8 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
       data_col = k;
     }
     ml_col = ml_col_os + local_col;
-    if (index_collection.is_mask_ && !index_collection.mask_[local_col]) continue;
+    if (index_collection.is_mask_ && !index_collection.mask_[local_col])
+      continue;
     double abs_cost = fabs(col_cost[data_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
@@ -1389,9 +1390,9 @@ HighsStatus deleteColsFromLpVectors(
   return HighsStatus::OK;
 }
 
-HighsStatus deleteColsFromLpMatrix(const HighsOptions& options,
-				   HighsLp& lp,
-                                   const HighsIndexCollection& index_collection) {
+HighsStatus deleteColsFromLpMatrix(
+    const HighsOptions& options, HighsLp& lp,
+    const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
@@ -1405,7 +1406,7 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options,
     // For deletion by set it must be increasing
     if (!increasing_set_ok(index_collection.set_,
                            index_collection.set_num_entries_, 0, lp.numCol_ - 1,
-			   true))
+                           true))
       return HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;
@@ -1421,8 +1422,8 @@ HighsStatus deleteColsFromLpMatrix(const HighsOptions& options,
   int new_num_nz = 0;
   for (int k = from_k; k <= to_k; k++) {
     updateIndexCollectionOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col,
-                                    keep_to_col, current_set_entry);
+                                    delete_to_col, keep_from_col, keep_to_col,
+                                    current_set_entry);
     if (k == from_k) {
       // Account for the initial columns being kept
       new_num_col = delete_from_col;
@@ -1463,7 +1464,8 @@ HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   int new_num_row;
-  call_status = deleteRowsFromLpVectors(options, lp, new_num_row, index_collection);
+  call_status =
+      deleteRowsFromLpVectors(options, lp, new_num_row, index_collection);
   return_status = interpretCallStatus(call_status, return_status,
                                       "deleteRowsFromLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
@@ -1490,7 +1492,8 @@ HighsStatus deleteRowsFromLpVectors(
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
     if (!increasing_set_ok(index_collection.set_,
-                           index_collection.set_num_entries_, 0, lp.numRow_ - 1, true))
+                           index_collection.set_num_entries_, 0, lp.numRow_ - 1,
+                           true))
       return HighsStatus::Error;
   }
   // Initialise new_num_row in case none is removed due to from_k > to_k
@@ -1508,8 +1511,8 @@ HighsStatus deleteRowsFromLpVectors(
   bool have_names = lp.row_names_.size();
   for (int k = from_k; k <= to_k; k++) {
     updateIndexCollectionOutInIndex(index_collection, delete_from_row,
-                                    delete_to_row, keep_from_row,
-                                    keep_to_row, current_set_entry);
+                                    delete_to_row, keep_from_row, keep_to_row,
+                                    current_set_entry);
     if (k == from_k) {
       // Account for the initial rows being kept
       new_num_row = delete_from_row;
@@ -1527,8 +1530,9 @@ HighsStatus deleteRowsFromLpVectors(
   return HighsStatus::OK;
 }
 
-HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const HighsIndexCollection& index_collection) {
+HighsStatus deleteRowsFromLpMatrix(
+    const HighsOptions& options, HighsLp& lp,
+    const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
@@ -1541,7 +1545,8 @@ HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
     if (!increasing_set_ok(index_collection.set_,
-                           index_collection.set_num_entries_, 0, lp.numRow_ - 1, true))
+                           index_collection.set_num_entries_, 0, lp.numRow_ - 1,
+                           true))
       return HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;
@@ -1565,8 +1570,8 @@ HighsStatus deleteRowsFromLpMatrix(const HighsOptions& options, HighsLp& lp,
     current_set_entry = 0;
     for (int k = from_k; k <= to_k; k++) {
       updateIndexCollectionOutInIndex(index_collection, delete_from_row,
-                                      delete_to_row, keep_from_row,
-                                      keep_to_row, current_set_entry);
+                                      delete_to_row, keep_from_row, keep_to_row,
+                                      current_set_entry);
       if (k == from_k) {
         // Account for any initial rows being kept
         for (int row = 0; row < delete_from_row; row++) {
@@ -1681,7 +1686,8 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
   if (usr_col_cost == NULL) return HighsStatus::Error;
 
   // Assess the user costs and return on error
-  call_status = assessCosts(options, 0, index_collection, usr_col_cost, infinite_cost);
+  call_status =
+      assessCosts(options, 0, index_collection, usr_col_cost, infinite_cost);
   if (call_status != HighsStatus::OK) {
     return_status = call_status;
     return return_status;
