@@ -47,52 +47,11 @@ class HighsSimplexInterface {
   HighsStatus deleteCols(HighsIndexCollection& index_collection);
 
   HighsStatus getCols(const HighsIndexCollection& index_collection,
-                      const int from_col, const int to_col, int& num_col,
-                      double* col_cost, double* col_lower, double* col_upper,
-                      int& num_nz, int* col_matrix_start, int* col_matrix_index,
-                      double* col_matrix_value);
-
-  HighsStatus getCols(const HighsIndexCollection& index_collection,
-                      const int num_set_entries, const int* col_set,
-                      int& num_col, double* col_cost, double* col_lower,
-                      double* col_upper, int& num_nz, int* col_matrix_start,
-                      int* col_matrix_index, double* col_matrix_value);
-
-  HighsStatus getCols(const HighsIndexCollection& index_collection,
-                      const int* col_mask, int& num_col, double* col_cost,
-                      double* col_lower, double* col_upper, int& num_nz,
-                      int* col_matrix_start, int* col_matrix_index,
-                      double* col_matrix_value);
-
-  HighsStatus getCols(const HighsIndexCollection& index_collection,
-                      const bool interval, const int from_col, const int to_col,
-                      const bool set, const int num_set_entries,
-                      const int* col_set, const bool mask, const int* col_mask,
                       int& num_col, double* col_cost, double* col_lower,
                       double* col_upper, int& num_nz, int* col_matrix_start,
                       int* col_matrix_index, double* col_matrix_value);
 
   HighsStatus getRows(const HighsIndexCollection& index_collection,
-                      const int from_row, const int to_row, int& num_row,
-                      double* row_lower, double* row_upper, int& num_nz,
-                      int* row_matrix_start, int* row_matrix_index,
-                      double* row_matrix_value);
-
-  HighsStatus getRows(const HighsIndexCollection& index_collection,
-                      const int num_set_entries, const int* row_set,
-                      int& num_row, double* row_lower, double* row_upper,
-                      int& num_nz, int* row_matrix_start, int* row_matrix_index,
-                      double* row_matrix_value);
-
-  HighsStatus getRows(const HighsIndexCollection& index_collection,
-                      const int* row_mask, int& num_row, double* row_lower,
-                      double* row_upper, int& num_nz, int* row_matrix_start,
-                      int* row_matrix_index, double* row_matrix_value);
-
-  HighsStatus getRows(const HighsIndexCollection& index_collection,
-                      const bool interval, const int from_row, const int to_row,
-                      const bool set, const int num_set_entries,
-                      const int* row_set, const bool mask, const int* row_mask,
                       int& num_row, double* row_lower, double* row_upper,
                       int& num_nz, int* row_matrix_start, int* row_matrix_index,
                       double* row_matrix_value);

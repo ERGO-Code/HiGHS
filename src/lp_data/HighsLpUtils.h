@@ -48,12 +48,6 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                          const int from_ix, const int to_ix, const int num_vec,
                          int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
                          const double small_matrix_value,
-                         const double large_matrix_value, bool normalise);
-
-HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
-                         const int from_ix, const int to_ix, const int num_vec,
-                         int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
-                         const double small_matrix_value,
                          const double large_matrix_value);
 
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
@@ -223,13 +217,6 @@ HighsBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis);
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
 double calculateObjective(const HighsLp& lp, HighsSolution& solution);
-
-HighsStatus assessIntervalSetMask(const HighsOptions& options, const int max_ix,
-                                  const bool interval, const int from_ix,
-                                  const int to_ix, const bool set,
-                                  const int num_set_entries, const int* ix_set,
-                                  const bool mask, const int* ix_mask,
-                                  int& from_k, int& to_k);
 
 void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
                    const int to_ix, const bool set, const int num_set_entries,
