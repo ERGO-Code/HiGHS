@@ -1653,45 +1653,25 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
 
 HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
                           const HighsIndexCollection& index_collection,
-                          const bool interval, const int from_col,
-                          const int to_col, const bool set,
-                          const int num_set_entries, const int* col_set,
-                          const bool mask, const int* col_mask,
-                          const double* usr_col_cost,
-                          const double infinite_cost) {
-  // Check parameters for technique and, if OK set the loop limits
-  int from_k;
-  int to_k;
-  HighsStatus call_status = assessIntervalSetMask(
-      options, lp.numCol_, interval, from_col, to_col, set, num_set_entries,
-      col_set, mask, col_mask, from_k, to_k);
+                          const double* usr_col_cost) {
   HighsStatus return_status = HighsStatus::OK;
-  if (call_status != HighsStatus::OK) {
-    return_status = call_status;
-    return return_status;
-  }
+  // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
-
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
   if (from_k > to_k) return HighsStatus::OK;
   if (usr_col_cost == NULL) return HighsStatus::Error;
 
-  // Assess the user costs and return on error
-  call_status =
-      assessCosts(options, 0, index_collection, usr_col_cost, infinite_cost);
-  if (call_status != HighsStatus::OK) {
-    return_status = call_status;
-    return return_status;
-  }
+  const bool& interval = index_collection.is_interval_;
+  const bool& mask = index_collection.is_mask_;
+  const int* col_set = index_collection.set_;
+  const int* col_mask = index_collection.mask_;
+
   // Change the costs to the user-supplied costs, according to the technique
   int usr_col;
   for (int k = from_k; k < to_k + 1; k++) {

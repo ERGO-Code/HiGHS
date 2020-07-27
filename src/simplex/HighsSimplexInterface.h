@@ -125,26 +125,9 @@ class HighsSimplexInterface {
                                 const double XnewValue);
 
   // Utilities to get/change costs and bounds
-  // Change the objective sense
   HighsStatus changeObjectiveSense(const ObjSense Xsense);
 
-  // Change the costs for an interval of columns
-  HighsStatus changeCosts(const HighsIndexCollection& index_collection,
-                          int from_col, int to_col, const double* usr_col_cost);
-
-  // Change the costs from an ordered set of indices
-  HighsStatus changeCosts(const HighsIndexCollection& index_collection,
-                          int num_set_entries, const int* col_set,
-                          const double* usr_col_cost);
-
-  // Change the costs with a mask
-  HighsStatus changeCosts(const HighsIndexCollection& index_collection,
-                          const int* col_mask, const double* usr_col_cost);
-
-  HighsStatus changeCosts(const HighsIndexCollection& index_collection,
-                          bool interval, int from_col, int to_col, bool set,
-                          int num_set_entries, const int* col_set, bool mask,
-                          const int* col_mask, const double* usr_col_cost);
+  HighsStatus changeCosts(HighsIndexCollection& index_collection, const double* usr_col_cost);
 
   // Change the bounds for an interval of columns
   HighsStatus changeColBounds(const HighsIndexCollection& index_collection,

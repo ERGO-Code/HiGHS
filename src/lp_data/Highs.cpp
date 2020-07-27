@@ -1146,8 +1146,7 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("changeColsCost")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status =
-      interface.changeCosts(index_collection, num_set_entries, set, cost);
+  call_status = interface.changeCosts(index_collection, cost);
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::Error) return false;
@@ -1168,7 +1167,7 @@ bool Highs::changeColsCost(const int* mask, const double* cost) {
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeColsCost")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.changeCosts(index_collection, mask, cost);
+  call_status = interface.changeCosts(index_collection, cost);
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::Error) return false;

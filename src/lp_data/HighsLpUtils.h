@@ -136,12 +136,7 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
 
 HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
                           const HighsIndexCollection& index_collection,
-                          const bool interval, const int from_col,
-                          const int to_col, const bool set,
-                          const int num_set_entries, const int* col_set,
-                          const bool mask, const int* col_mask,
-                          const double* usr_col_cost,
-                          const double infinite_cost);
+                          const double* usr_col_cost);
 
 HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
