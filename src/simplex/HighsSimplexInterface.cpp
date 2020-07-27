@@ -973,24 +973,13 @@ HighsStatus HighsSimplexInterface::changeCosts(
   // Take a copy of the cost that can be normalised
   std::vector<double> local_colCost{usr_col_cost, usr_col_cost + num_usr_col_cost};
   // 
-  HighsIndexCollection local_index_collection =
-      (HighsIndexCollection)index_collection;
-  int* pointer_use_set;
-  std::vector<int> use_set;
-  std::vector<double> use_cost;
-
   if (set) {
     // Changing the costs for a set of columns, so ensure that the
     // set and data are in ascending order
-    use_set.resize(num_set_entries);
-    use_cost.resize(num_set_entries);
-    pointer_use_set = &use_set[0];
-    local_index_collection.set_ = pointer_use_set;
-    sortSetData(num_set_entries, col_set, usr_col_cost, NULL, NULL,
-                pointer_use_set, &local_colCost[0], NULL, NULL);
-  } else {
-    pointer_use_set = (int*)col_set;
+    //    sortSetData(num_set_entries, col_set, usr_col_cost, NULL, NULL,
+    //                &local_colCost[0], NULL, NULL);
   }
+  int* pointer_use_set=NULL;
   HighsStatus return_status = HighsStatus::OK;
   return_status =
       interpretCallStatus(assessCosts(options, lp.numCol_, index_collection,
@@ -1000,7 +989,7 @@ HighsStatus HighsSimplexInterface::changeCosts(
 
   HighsStatus call_status = changeLpCosts(
       options, lp,
-      local_index_collection, interval, from_col, to_col, set, num_set_entries,
+      index_collection, interval, from_col, to_col, set, num_set_entries,
       pointer_use_set, mask, col_mask, &local_colCost[0],
       options.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
@@ -1014,14 +1003,14 @@ HighsStatus HighsSimplexInterface::changeCosts(
 
     call_status = changeLpCosts(
         options, highs_model_object.simplex_lp_,
-        local_index_collection, interval, from_col, to_col, set,
+        index_collection, interval, from_col, to_col, set,
         num_set_entries, pointer_use_set, mask, col_mask, &local_colCost[0],
         options.infinite_cost);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
       applyScalingToLpColCosts(
           options, highs_model_object.simplex_lp_,
-          highs_model_object.scale_.col_, local_index_collection);
+          highs_model_object.scale_.col_, index_collection);
     }
   }
   // Deduce the consequences of new costs
