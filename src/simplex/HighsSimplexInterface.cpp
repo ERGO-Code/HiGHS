@@ -521,10 +521,9 @@ HighsStatus HighsSimplexInterface::deleteRows(
 }
 
 HighsStatus HighsSimplexInterface::getCols(
-    const HighsIndexCollection& index_collection,
-    int& num_col, double* col_cost, double* col_lower,
-    double* col_upper, int& num_nz, int* col_matrix_start,
-    int* col_matrix_index, double* col_matrix_value) {
+    const HighsIndexCollection& index_collection, int& num_col,
+    double* col_cost, double* col_lower, double* col_upper, int& num_nz,
+    int* col_matrix_start, int* col_matrix_index, double* col_matrix_value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   HighsLp& lp = highs_model_object.lp_;
@@ -557,9 +556,8 @@ HighsStatus HighsSimplexInterface::getCols(
   int col_dim = lp.numCol_;
 
   for (int k = from_k; k <= to_k; k++) {
-    updateIndexCollectionOutInIndex(index_collection,
-                                    out_from_col, out_to_col, in_from_col,
-                                    in_to_col, current_set_entry);
+    updateIndexCollectionOutInIndex(index_collection, out_from_col, out_to_col,
+                                    in_from_col, in_to_col, current_set_entry);
     assert(out_to_col < col_dim);
     assert(in_to_col < col_dim);
     for (int col = out_from_col; col <= out_to_col; col++) {
@@ -585,10 +583,9 @@ HighsStatus HighsSimplexInterface::getCols(
 }
 
 HighsStatus HighsSimplexInterface::getRows(
-    const HighsIndexCollection& index_collection,
-    int& num_row, double* row_lower, double* row_upper,
-    int& num_nz, int* row_matrix_start, int* row_matrix_index,
-    double* row_matrix_value) {
+    const HighsIndexCollection& index_collection, int& num_row,
+    double* row_lower, double* row_upper, int& num_nz, int* row_matrix_start,
+    int* row_matrix_index, double* row_matrix_value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   HighsLp& lp = highs_model_object.lp_;
@@ -630,8 +627,8 @@ HighsStatus HighsSimplexInterface::getRows(
     out_to_row = -1;
     current_set_entry = 0;
     for (int k = from_k; k <= to_k; k++) {
-      updateIndexCollectionOutInIndex(index_collection, in_from_row,
-                                      in_to_row, out_from_row, out_to_row,
+      updateIndexCollectionOutInIndex(index_collection, in_from_row, in_to_row,
+                                      out_from_row, out_to_row,
                                       current_set_entry);
       if (k == from_k) {
         // Account for any initial rows not being extracted
@@ -802,7 +799,8 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
 HighsStatus HighsSimplexInterface::changeCosts(
     HighsIndexCollection& index_collection, const double* usr_col_cost) {
   HighsOptions& options = highs_model_object.options_;
-  bool null_data = doubleUserDataNotNull(options.logfile, usr_col_cost, "column costs");
+  bool null_data =
+      doubleUserDataNotNull(options.logfile, usr_col_cost, "column costs");
   if (null_data) return HighsStatus::Error;
   int num_usr_col_cost = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
@@ -856,8 +854,12 @@ HighsStatus HighsSimplexInterface::changeColBounds(
     const double* usr_col_upper) {
   HighsOptions& options = highs_model_object.options_;
   bool null_data = false;
-  null_data = doubleUserDataNotNull(options.logfile, usr_col_lower, "column lower bounds") || null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_col_upper, "column upper bounds") || null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_col_lower,
+                                    "column lower bounds") ||
+              null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_col_upper,
+                                    "column upper bounds") ||
+              null_data;
   if (null_data) return HighsStatus::Error;
   int num_usr_col_bounds = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
@@ -915,8 +917,12 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
     const double* usr_row_upper) {
   HighsOptions& options = highs_model_object.options_;
   bool null_data = false;
-  null_data = doubleUserDataNotNull(options.logfile, usr_row_lower, "row lower bounds") || null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_row_upper, "row upper bounds") || null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_row_lower,
+                                    "row lower bounds") ||
+              null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_row_upper,
+                                    "row upper bounds") ||
+              null_data;
   if (null_data) return HighsStatus::Error;
   int num_usr_row_bounds = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be

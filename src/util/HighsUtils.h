@@ -14,9 +14,9 @@
 #ifndef UTIL_HIGHSUTILS_H_
 #define UTIL_HIGHSUTILS_H_
 
+#include <cassert>
 #include <string>
 #include <vector>
-#include <cassert>
 
 #include "HConfig.h"
 #include "lp_data/HighsOptions.h"
@@ -89,8 +89,10 @@ void updateIndexCollectionOutInIndex(
 
 int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
 
-bool intUserDataNotNull(FILE* logfile, const int* user_data, const std::string name);
-bool doubleUserDataNotNull(FILE* logfile, const double* user_data, const std::string name);
+bool intUserDataNotNull(FILE* logfile, const int* user_data,
+                        const std::string name);
+bool doubleUserDataNotNull(FILE* logfile, const double* user_data,
+                           const std::string name);
 
 double getNorm2(const std::vector<double> values);
 

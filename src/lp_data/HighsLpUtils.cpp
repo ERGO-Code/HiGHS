@@ -1813,16 +1813,27 @@ double calculateObjective(const HighsLp& lp, HighsSolution& solution) {
 bool isColDataNull(const HighsOptions& options, const double* usr_col_cost,
                    const double* usr_col_lower, const double* usr_col_upper) {
   bool null_data = false;
-  null_data = doubleUserDataNotNull(options.logfile, usr_col_cost, "column costs") || null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_col_lower, "column lower bounds") || null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_col_upper, "column upper bounds") || null_data;
+  null_data =
+      doubleUserDataNotNull(options.logfile, usr_col_cost, "column costs") ||
+      null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_col_lower,
+                                    "column lower bounds") ||
+              null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_col_upper,
+                                    "column upper bounds") ||
+              null_data;
   return null_data;
 }
 
-bool isRowDataNull(const HighsOptions& options, const double* usr_row_lower, const double* usr_row_upper) {
+bool isRowDataNull(const HighsOptions& options, const double* usr_row_lower,
+                   const double* usr_row_upper) {
   bool null_data = false;
-  null_data = doubleUserDataNotNull(options.logfile, usr_row_lower, "row lower bounds") || null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_row_upper, "row upper bounds") || null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_row_lower,
+                                    "row lower bounds") ||
+              null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_row_upper,
+                                    "row upper bounds") ||
+              null_data;
   return null_data;
 }
 
@@ -1830,9 +1841,15 @@ bool isMatrixDataNull(const HighsOptions& options, const int* usr_matrix_start,
                       const int* usr_matrix_index,
                       const double* usr_matrix_value) {
   bool null_data = false;
-  null_data = intUserDataNotNull(options.logfile, usr_matrix_start, "matrix starts") || null_data;
-  null_data = intUserDataNotNull(options.logfile, usr_matrix_index, "matrix indices") || null_data;
-  null_data = doubleUserDataNotNull(options.logfile, usr_matrix_value, "matrix values") || null_data;
+  null_data =
+      intUserDataNotNull(options.logfile, usr_matrix_start, "matrix starts") ||
+      null_data;
+  null_data =
+      intUserDataNotNull(options.logfile, usr_matrix_index, "matrix indices") ||
+      null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_matrix_value,
+                                    "matrix values") ||
+              null_data;
   return null_data;
 }
 

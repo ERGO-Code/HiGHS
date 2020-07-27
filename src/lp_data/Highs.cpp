@@ -1326,9 +1326,8 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
   index_collection.to_ = to_col;
   if (!haveHmo("getCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status =
-      interface.getCols(index_collection, num_col, costs,
-                        lower, upper, num_nz, start, index, value);
+  call_status = interface.getCols(index_collection, num_col, costs, lower,
+                                  upper, num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1351,9 +1350,8 @@ bool Highs::getCols(const int num_set_entries, const int* set, int& num_col,
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status =
-      interface.getCols(index_collection, num_col, costs,
-                        lower, upper, num_nz, start, index, value);
+  call_status = interface.getCols(index_collection, num_col, costs, lower,
+                                  upper, num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1395,8 +1393,8 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
   index_collection.to_ = to_row;
   if (!haveHmo("getRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.getRows(index_collection, num_row,
-                                  lower, upper, num_nz, start, index, value);
+  call_status = interface.getRows(index_collection, num_row, lower, upper,
+                                  num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1419,9 +1417,8 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status =
-      interface.getRows(index_collection, num_row, lower,
-                        upper, num_nz, start, index, value);
+  call_status = interface.getRows(index_collection, num_row, lower, upper,
+                                  num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;

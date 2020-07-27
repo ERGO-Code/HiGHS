@@ -201,11 +201,11 @@ int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection) {
   }
 }
 
-bool intUserDataNotNull(FILE* logfile, const int* user_data, const std::string name) {
+bool intUserDataNotNull(FILE* logfile, const int* user_data,
+                        const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    HighsLogMessage(logfile,
-                    HighsMessageType::ERROR,
+    HighsLogMessage(logfile, HighsMessageType::ERROR,
                     "User-supplied %s are NULL", name.c_str());
     null_data = true;
   }
@@ -213,11 +213,11 @@ bool intUserDataNotNull(FILE* logfile, const int* user_data, const std::string n
   return null_data;
 }
 
-bool doubleUserDataNotNull(FILE* logfile, const double* user_data, const std::string name) {
+bool doubleUserDataNotNull(FILE* logfile, const double* user_data,
+                           const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    HighsLogMessage(logfile,
-                    HighsMessageType::ERROR,
+    HighsLogMessage(logfile, HighsMessageType::ERROR,
                     "User-supplied %s are NULL", name.c_str());
     null_data = true;
   }
