@@ -217,8 +217,8 @@ bool increasing_set_ok(const double* set, const int set_num_entries,
   return true;
 }
 
-void sortSetData(const int num_entries, const int* set, const double* data0,
-                 const double* data1, const double* data2, int* sorted_set,
+void sortSetData(const int num_entries, int* set, const double* data0,
+                 const double* data1, const double* data2, 
                  double* sorted_data0, double* sorted_data1,
                  double* sorted_data2) {
   std::vector<int> sort_set_vec(1 + num_entries);
@@ -233,7 +233,7 @@ void sortSetData(const int num_entries, const int* set, const double* data0,
   }
   maxheapsort(sort_set, perm, num_entries);
   for (int ix = 0; ix < num_entries; ix++) {
-    sorted_set[ix] = set[perm[1 + ix]];
+    set[ix] = sort_set[1 + ix];
     if (data0 != NULL) sorted_data0[ix] = data0[perm[1 + ix]];
     if (data1 != NULL) sorted_data1[ix] = data1[perm[1 + ix]];
     if (data2 != NULL) sorted_data2[ix] = data2[perm[1 + ix]];

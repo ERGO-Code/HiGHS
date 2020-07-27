@@ -1081,8 +1081,8 @@ HighsStatus HighsSimplexInterface::changeColBounds(
     pointer_use_lower = &use_lower[0];
     pointer_use_upper = &use_upper[0];
     local_index_collection.set_ = pointer_use_set;
-    sortSetData(num_set_entries, col_set, usr_col_lower, usr_col_upper, NULL,
-                pointer_use_set, pointer_use_lower, pointer_use_upper, NULL);
+    //    sortSetData(num_set_entries, col_set, usr_col_lower, usr_col_upper, NULL,
+    //                pointer_use_set, pointer_use_lower, pointer_use_upper, NULL);
   } else {
     pointer_use_set = (int*)col_set;
     pointer_use_lower = (double*)usr_col_lower;
@@ -1173,8 +1173,8 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
     use_set = (int*)malloc(sizeof(int) * num_set_entries);
     use_lower = (double*)malloc(sizeof(double) * num_set_entries);
     use_upper = (double*)malloc(sizeof(double) * num_set_entries);
-    sortSetData(num_set_entries, row_set, usr_row_lower, usr_row_upper, NULL,
-                use_set, use_lower, use_upper, NULL);
+    //    sortSetData(num_set_entries, row_set, usr_row_lower, usr_row_upper, NULL,
+    //                use_set, use_lower, use_upper, NULL);
   } else {
     use_set = (int*)row_set;
     use_lower = (double*)usr_row_lower;

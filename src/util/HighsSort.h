@@ -108,8 +108,8 @@ bool increasing_set_ok(const double* set, const int set_num_entries,
                        const double set_entry_lower,
                        const double set_entry_upper, bool strict);
 
-void sortSetData(const int num_set_entries, const int* set, const double* data0,
-                 const double* data1, const double* data2, int* sorted_set,
+void sortSetData(const int num_set_entries, int* set, const double* data0,
+                 const double* data1, const double* data2, 
                  double* sorted_data0, double* sorted_data1,
                  double* sorted_data2);
 
