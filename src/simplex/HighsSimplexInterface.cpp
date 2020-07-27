@@ -956,49 +956,71 @@ HighsStatus HighsSimplexInterface::changeCosts(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
+  HighsOptions& options = highs_model_object.options_;
+  HighsLp& lp = highs_model_object.lp_;
+  int num_usr_col_cost;
+  if (set) {
+    num_usr_col_cost = num_set_entries;
+  } else {
+    if (interval) {
+      num_usr_col_cost = to_col - from_col + 1;
+    } else {
+      num_usr_col_cost = lp.numCol_;
+    }
+  }
+  // If a non-positive number of costs (may) need changing nothing needs to be done
+  if (num_usr_col_cost <= 0) return HighsStatus::OK;
+  // Take a copy of the cost that can be normalised
+  std::vector<double> local_colCost{usr_col_cost, usr_col_cost + num_usr_col_cost};
+  // 
   HighsIndexCollection local_index_collection =
       (HighsIndexCollection)index_collection;
   int* pointer_use_set;
-  double* pointer_use_cost;
   std::vector<int> use_set;
   std::vector<double> use_cost;
+
   if (set) {
     // Changing the costs for a set of columns, so ensure that the
     // set and data are in ascending order
     use_set.resize(num_set_entries);
     use_cost.resize(num_set_entries);
     pointer_use_set = &use_set[0];
-    pointer_use_cost = &use_cost[0];
     local_index_collection.set_ = pointer_use_set;
     sortSetData(num_set_entries, col_set, usr_col_cost, NULL, NULL,
-                pointer_use_set, pointer_use_cost, NULL, NULL);
+                pointer_use_set, &local_colCost[0], NULL, NULL);
   } else {
     pointer_use_set = (int*)col_set;
-    pointer_use_cost = (double*)usr_col_cost;
   }
+  HighsStatus return_status = HighsStatus::OK;
+  return_status =
+      interpretCallStatus(assessCosts(options, lp.numCol_, index_collection,
+                                      &local_colCost[0], options.infinite_cost),
+                          return_status, "assessCosts");
+  if (return_status == HighsStatus::Error) return return_status;
+
   HighsStatus call_status = changeLpCosts(
-      highs_model_object.options_, highs_model_object.lp_,
+      options, lp,
       local_index_collection, interval, from_col, to_col, set, num_set_entries,
-      pointer_use_set, mask, col_mask, pointer_use_cost,
-      highs_model_object.options_.infinite_cost);
+      pointer_use_set, mask, col_mask, &local_colCost[0],
+      options.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
     // Also change the simplex LP's costs
-    assert(highs_model_object.lp_.numCol_ ==
+    assert(lp.numCol_ ==
            highs_model_object.simplex_lp_.numCol_);
-    assert(highs_model_object.lp_.numRow_ ==
+    assert(lp.numRow_ ==
            highs_model_object.simplex_lp_.numRow_);
 
     call_status = changeLpCosts(
-        highs_model_object.options_, highs_model_object.simplex_lp_,
+        options, highs_model_object.simplex_lp_,
         local_index_collection, interval, from_col, to_col, set,
-        num_set_entries, pointer_use_set, mask, col_mask, pointer_use_cost,
-        highs_model_object.options_.infinite_cost);
+        num_set_entries, pointer_use_set, mask, col_mask, &local_colCost[0],
+        options.infinite_cost);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
       applyScalingToLpColCosts(
-          highs_model_object.options_, highs_model_object.simplex_lp_,
+          options, highs_model_object.simplex_lp_,
           highs_model_object.scale_.col_, local_index_collection);
     }
   }
