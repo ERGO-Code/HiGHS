@@ -127,33 +127,14 @@ class HighsSimplexInterface {
   // Utilities to get/change costs and bounds
   HighsStatus changeObjectiveSense(const ObjSense Xsense);
 
-  HighsStatus changeCosts(HighsIndexCollection& index_collection, const double* usr_col_cost);
+  HighsStatus changeCosts(HighsIndexCollection& index_collection,
+                          const double* usr_col_cost);
 
   HighsStatus changeColBounds(HighsIndexCollection& index_collection,
                               const double* usr_col_lower,
                               const double* usr_col_upper);
 
-  // Change the bounds for an interval of rows
-  HighsStatus changeRowBounds(const HighsIndexCollection& index_collection,
-                              int from_row, int to_row,
-                              const double* usr_row_lower,
-                              const double* usr_row_upper);
-
-  // Change the bounds from an ordered set of indices
-  HighsStatus changeRowBounds(const HighsIndexCollection& index_collection,
-                              int num_set_entries, const int* row_set,
-                              const double* usr_row_lower,
-                              const double* usr_row_upper);
-
-  // Change the bounds with a mask
-  HighsStatus changeRowBounds(const HighsIndexCollection& index_collection,
-                              const int* row_mask, const double* usr_row_lower,
-                              const double* usr_row_upper);
-
-  HighsStatus changeRowBounds(const HighsIndexCollection& index_collection,
-                              bool interval, int from_row, int to_row, bool set,
-                              int num_set_entries, const int* row_set,
-                              bool mask, const int* row_mask,
+  HighsStatus changeRowBounds(HighsIndexCollection& index_collection,
                               const double* usr_row_lower,
                               const double* usr_row_upper);
 

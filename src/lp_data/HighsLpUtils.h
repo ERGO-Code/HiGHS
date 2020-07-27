@@ -34,19 +34,15 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
 HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);
 
-HighsStatus assessCosts(const HighsOptions& options,
-			const int col_ix_os,
+HighsStatus assessCosts(const HighsOptions& options, const int col_ix_os,
                         const HighsIndexCollection& index_collection,
-                        const double* usr_col_cost,
-			const double infinite_cost);
+                        const double* usr_col_cost, const double infinite_cost);
 
-HighsStatus assessBounds(const HighsOptions& options,
-			 const char* type,
+HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const int ix_os,
                          const HighsIndexCollection& index_collection,
-			 double* usr_lower,
-			 double* usr_upper,
-			 const double infinite_bound);
+                         double* usr_lower, double* usr_upper,
+                         const double infinite_bound);
 
 HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                          const int from_ix, const int to_ix, const int num_vec,

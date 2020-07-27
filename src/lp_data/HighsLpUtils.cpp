@@ -55,8 +55,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the LP column bounds
   call_status =
-      assessBounds(options, "Col", 0, index_collection,
-                   &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound);
+      assessBounds(options, "Col", 0, index_collection, &lp.colLower_[0],
+                   &lp.colUpper_[0], options.infinite_bound);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -66,9 +66,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.is_interval_ = true;
     index_collection.from_ = 0;
     index_collection.to_ = lp.numRow_ - 1;
-    call_status = assessBounds(options, "Row", 0, index_collection,
-                               &lp.rowLower_[0], &lp.rowUpper_[0],
-                               options.infinite_bound);
+    call_status =
+        assessBounds(options, "Row", 0, index_collection, &lp.rowLower_[0],
+                     &lp.rowUpper_[0], options.infinite_bound);
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::Error) return return_status;
@@ -351,7 +351,8 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
       data_ix = k;
     }
     ml_ix = ml_ix_os + local_ix;
-    if (index_collection.is_mask_ && !index_collection.mask_[local_ix]) continue;
+    if (index_collection.is_mask_ && !index_collection.mask_[local_ix])
+      continue;
 
     if (!highs_isInfinity(-lower_bounds[data_ix])) {
       // Check whether a finite lower bound will be treated as -Infinity
@@ -1524,8 +1525,8 @@ HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const double* usr_col_lower,
                               const double* usr_col_upper) {
   return changeBounds(options, "col", &lp.colLower_[0], &lp.colUpper_[0],
-                      lp.numCol_, index_collection, 
-                      usr_col_lower, usr_col_upper);
+                      lp.numCol_, index_collection, usr_col_lower,
+                      usr_col_upper);
 }
 
 HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
@@ -1533,8 +1534,8 @@ HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
                               const double* usr_row_lower,
                               const double* usr_row_upper) {
   return changeBounds(options, "row", &lp.rowLower_[0], &lp.rowUpper_[0],
-                      lp.numRow_, index_collection, 
-                      usr_row_lower, usr_row_upper);
+                      lp.numRow_, index_collection, usr_row_lower,
+                      usr_row_upper);
 }
 
 HighsStatus changeBounds(const HighsOptions& options, const char* type,

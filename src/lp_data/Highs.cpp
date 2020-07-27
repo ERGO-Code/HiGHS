@@ -1264,8 +1264,7 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("changeRowsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.changeRowBounds(index_collection, num_set_entries,
-                                          set, lower, upper);
+  call_status = interface.changeRowBounds(index_collection, lower, upper);
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::Error) return false;
@@ -1287,7 +1286,7 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeRowsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.changeRowBounds(index_collection, mask, lower, upper);
+  call_status = interface.changeRowBounds(index_collection, lower, upper);
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::Error) return false;

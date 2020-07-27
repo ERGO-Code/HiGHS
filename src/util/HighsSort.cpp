@@ -218,9 +218,8 @@ bool increasing_set_ok(const double* set, const int set_num_entries,
 }
 
 void sortSetData(const int num_entries, int* set, const double* data0,
-                 const double* data1, const double* data2, 
-                 double* sorted_data0, double* sorted_data1,
-                 double* sorted_data2) {
+                 const double* data1, const double* data2, double* sorted_data0,
+                 double* sorted_data1, double* sorted_data2) {
   std::vector<int> sort_set_vec(1 + num_entries);
   std::vector<int> perm_vec(1 + num_entries);
 

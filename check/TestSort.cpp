@@ -122,9 +122,8 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   sorted_lb.resize(num_values);
   sorted_ub.resize(num_values);
 
-  sortSetData(num_values, &sorted_set[0],
-	      &lb[0], &ub[0], NULL, 
-              &sorted_lb[0], &sorted_ub[0], NULL);
+  sortSetData(num_values, &sorted_set[0], &lb[0], &ub[0], NULL, &sorted_lb[0],
+              &sorted_ub[0], NULL);
 
   int prev_ix = -HIGHS_CONST_I_INF;
   for (int k0 = 0; k0 < num_values; k0++) {
