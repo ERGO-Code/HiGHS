@@ -27,7 +27,7 @@ struct HighsIndexCollection {
   int to_ = -2;
   bool is_set_ = false;
   int set_num_entries_ = -1;
-  const int* set_ = NULL;
+  int* set_ = NULL;
   bool is_mask_ = false;
   int* mask_ = NULL;
 };

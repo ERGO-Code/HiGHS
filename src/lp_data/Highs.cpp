@@ -1132,13 +1132,17 @@ bool Highs::changeColCost(const int col, const double cost) {
 
 bool Highs::changeColsCost(const int num_set_entries, const int* set,
                            const double* cost) {
+  if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("changeColsCost");
+  // Create a local set that is not const since index_collection.set_
+  // cannot be const as it may change if the set is not ordered
+  vector<int> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_set_ = true;
-  index_collection.set_ = &set[0];
+  index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("changeColsCost")) return false;
   HighsSimplexInterface interface(hmos_[0]);
@@ -1198,13 +1202,17 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
 
 bool Highs::changeColsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
+  if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("changeColsBounds");
+  // Create a local set that is not const since index_collection.set_
+  // cannot be const as it may change if the set is not ordered
+  vector<int> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_set_ = true;
-  index_collection.set_ = &set[0];
+  index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("changeColsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
@@ -1245,13 +1253,17 @@ bool Highs::changeRowBounds(const int row, const double lower,
 
 bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
+  if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("changeRowsBounds");
+  // Create a local set that is not const since index_collection.set_
+  // cannot be const as it may change if the set is not ordered
+  vector<int> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_set_ = true;
-  index_collection.set_ = &set[0];
+  index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("changeRowsBounds")) return false;
   HighsSimplexInterface interface(hmos_[0]);
@@ -1329,13 +1341,17 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
 bool Highs::getCols(const int num_set_entries, const int* set, int& num_col,
                     double* costs, double* lower, double* upper, int& num_nz,
                     int* start, int* index, double* value) {
+  if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("getCols");
+  // Create a local set that is not const since index_collection.set_
+  // cannot be const as it may change if the set is not ordered
+  vector<int> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_set_ = true;
-  index_collection.set_ = &set[0];
+  index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
@@ -1393,13 +1409,17 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
 bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
+  if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("getRows");
+  // Create a local set that is not const since index_collection.set_
+  // cannot be const as it may change if the set is not ordered
+  vector<int> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_set_ = true;
-  index_collection.set_ = &set[0];
+  index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
@@ -1465,13 +1485,17 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
 }
 
 bool Highs::deleteCols(const int num_set_entries, const int* set) {
+  if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("deleteCols");
+  // Create a local set that is not const since index_collection.set_
+  // cannot be const as it may change if the set is not ordered
+  vector<int> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_set_ = true;
-  index_collection.set_ = &set[0];
+  index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("deleteCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
@@ -1515,13 +1539,17 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
 }
 
 bool Highs::deleteRows(const int num_set_entries, const int* set) {
+  if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   underDevelopmentLogMessage("deleteRows");
+  // Create a local set that is not const since index_collection.set_
+  // cannot be const as it may change if the set is not ordered
+  vector<int> local_set{set, set + num_set_entries};
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_set_ = true;
-  index_collection.set_ = &set[0];
+  index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("deleteRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
