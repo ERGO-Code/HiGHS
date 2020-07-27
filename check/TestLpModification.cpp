@@ -159,109 +159,6 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
   return return_bool;
 }
 
-void test_delete_keep(const int row_dim, const bool interval,
-                      const int from_row, const int to_row, const bool set,
-                      const int num_set_entries, const int* row_set,
-                      const bool mask, const int* row_mask) {
-  int delete_from_row;
-  int delete_to_row;
-  int keep_from_row;
-  int keep_to_row;
-  int current_set_entry;
-  if (interval) {
-    printf("With index interval [%d, %d] in [%d, %d]\n", from_row, to_row, 0,
-           row_dim - 1);
-  } else if (set) {
-    printf("With index set\n");
-    for (int set = 0; set < num_set_entries; set++) printf(" %2d", set);
-    printf("\n");
-    for (int set = 0; set < num_set_entries; set++)
-      printf(" %2d", row_set[set]);
-    printf("\n");
-  } else {
-    printf("With index mask\n");
-    for (int row = 0; row < row_dim; row++) printf(" %2d", row);
-    printf("\n");
-    for (int row = 0; row < row_dim; row++) printf(" %2d", row_mask[row]);
-    printf("\n");
-  }
-
-  keep_from_row = 0;
-  if (interval) {
-    keep_to_row = from_row - 1;
-  } else if (set) {
-    current_set_entry = 0;
-    keep_to_row = row_set[0] - 1;
-  } else {
-    keep_to_row = row_dim;
-    for (int row = 0; row < row_dim; row++) {
-      if (row_mask[row]) {
-        keep_to_row = row - 1;
-        break;
-      }
-    }
-  }
-  printf("Keep   [%2d, %2d]\n", 0, keep_to_row);
-  if (keep_to_row >= row_dim - 1) return;
-  for (int k = 0; k < row_dim; k++) {
-    updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
-                  row_set, mask, row_mask, delete_from_row, delete_to_row,
-                  keep_from_row, keep_to_row, current_set_entry);
-    printf("Delete [%2d, %2d]; keep [%2d, %2d]\n", delete_from_row,
-           delete_to_row, keep_from_row, keep_to_row);
-    if (delete_to_row >= row_dim - 1 || keep_to_row >= row_dim - 1) break;
-  }
-}
-
-bool test_all_delete_keep(int num_row) {
-  // Test the extraction of intervals from interval, set and mask
-  bool interval = false;
-  bool set = false;
-  bool mask = false;
-  int row_dim = num_row;
-
-  int from_row = 3;
-  int to_row = 6;
-  int num_set_entries = 4;
-  int row_set[] = {1, 4, 5, 8};
-  int row_mask[] = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
-  int save_from_row = from_row;
-  int save_row_set_0 = row_set[0];
-  int save_row_mask_0 = row_mask[0];
-
-  int to_pass = 2;  // 2
-  for (int pass = 0; pass <= to_pass; pass++) {
-    printf("\nTesting delete-keep: pass %d\n", pass);
-    if (pass == 1) {
-      // Mods to test LH limit behaviour
-      from_row = 0;
-      row_set[0] = 0;
-      row_mask[0] = 1;
-    } else if (pass == 2) {
-      // Mods to test RH limit behaviour
-      from_row = save_from_row;
-      to_row = 9;
-      row_set[0] = save_row_set_0;
-      row_set[3] = 9;
-      row_mask[0] = save_row_mask_0;
-      row_mask[9] = 1;
-    }
-
-    interval = true;
-    test_delete_keep(row_dim, interval, from_row, to_row, set, num_set_entries,
-                     row_set, mask, row_mask);
-    interval = false;
-    set = true;
-    test_delete_keep(row_dim, interval, from_row, to_row, set, num_set_entries,
-                     row_set, mask, row_mask);
-    set = false;
-    mask = true;
-    test_delete_keep(row_dim, interval, from_row, to_row, set, num_set_entries,
-                     row_set, mask, row_mask);
-  }
-  return true;
-}
-
 void testDeleteKeep(const HighsIndexCollection& index_collection) {
   int delete_from_index;
   int delete_to_index;
@@ -392,8 +289,6 @@ void messageReportMatrix(const char* message, const int num_col,
 
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
-  printf("test_all_delete_keep\n");
-  test_all_delete_keep(10);
   printf("testAllDeleteKeep\n");
   testAllDeleteKeep(10);
 

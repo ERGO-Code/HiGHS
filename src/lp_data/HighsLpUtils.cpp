@@ -1810,58 +1810,6 @@ double calculateObjective(const HighsLp& lp, HighsSolution& solution) {
   return sum;
 }
 
-void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
-                   const int to_ix, const bool set, const int num_set_entries,
-                   const int* ix_set, const bool mask, const int* ix_mask,
-                   int& out_from_ix, int& out_to_ix, int& in_from_ix,
-                   int& in_to_ix, int& current_set_entry) {
-  if (interval) {
-    out_from_ix = from_ix;
-    out_to_ix = to_ix;
-    in_from_ix = to_ix + 1;
-    in_to_ix = ix_dim - 1;
-  } else if (set) {
-    out_from_ix = ix_set[current_set_entry];
-    out_to_ix = out_from_ix;  //+1;
-    current_set_entry++;
-    int current_set_entry0 = current_set_entry;
-    for (int set_entry = current_set_entry0; set_entry < num_set_entries;
-         set_entry++) {
-      int ix = ix_set[set_entry];
-      if (ix > out_to_ix + 1) break;
-      out_to_ix = ix_set[current_set_entry];
-      current_set_entry++;
-    }
-    in_from_ix = out_to_ix + 1;
-    if (current_set_entry < num_set_entries) {
-      in_to_ix = ix_set[current_set_entry] - 1;
-    } else {
-      // Account for getting to the end of the set
-      in_to_ix = ix_dim - 1;
-    }
-  } else {
-    out_from_ix = in_to_ix + 1;
-    out_to_ix = ix_dim - 1;
-    for (int ix = in_to_ix + 1; ix < ix_dim; ix++) {
-      if (!ix_mask[ix]) {
-        out_to_ix = ix - 1;
-        break;
-      }
-    }
-    in_from_ix = out_to_ix + 1;
-    in_to_ix = ix_dim - 1;
-    for (int ix = out_to_ix + 1; ix < ix_dim; ix++) {
-      if (ix_mask[ix]) {
-        in_to_ix = ix - 1;
-        break;
-      }
-    }
-  }
-
-  if (mask) {
-  }  // surpress warning.
-}
-
 bool isColDataNull(const HighsOptions& options, const double* usr_col_cost,
                    const double* usr_col_lower, const double* usr_col_upper) {
   bool null_data = false;

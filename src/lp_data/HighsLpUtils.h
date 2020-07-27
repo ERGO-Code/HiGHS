@@ -218,12 +218,6 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
 double calculateObjective(const HighsLp& lp, HighsSolution& solution);
 
-void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
-                   const int to_ix, const bool set, const int num_set_entries,
-                   const int* ix_set, const bool mask, const int* ix_mask,
-                   int& out_from_ix, int& out_to_ix, int& in_from_ix,
-                   int& in_to_ix, int& current_set_entry);
-
 bool isColDataNull(const HighsOptions& options, const double* usr_col_cost,
                    const double* usr_col_lower, const double* usr_col_upper);
 bool isRowDataNull(const HighsOptions& options, const double* usr_row_lower,
