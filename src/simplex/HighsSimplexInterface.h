@@ -129,27 +129,7 @@ class HighsSimplexInterface {
 
   HighsStatus changeCosts(HighsIndexCollection& index_collection, const double* usr_col_cost);
 
-  // Change the bounds for an interval of columns
-  HighsStatus changeColBounds(const HighsIndexCollection& index_collection,
-                              int from_col, int to_col,
-                              const double* usr_col_lower,
-                              const double* usr_col_upper);
-
-  // Change the bounds from an ordered set of indices
-  HighsStatus changeColBounds(const HighsIndexCollection& index_collection,
-                              int num_set_entries, const int* col_set,
-                              const double* usr_col_lower,
-                              const double* usr_col_upper);
-
-  // Change the bounds with a mask
-  HighsStatus changeColBounds(const HighsIndexCollection& index_collection,
-                              const int* col_mask, const double* usr_col_lower,
-                              const double* usr_col_upper);
-
-  HighsStatus changeColBounds(const HighsIndexCollection& index_collection,
-                              bool interval, int from_col, int to_col, bool set,
-                              int num_set_entries, const int* col_set,
-                              bool mask, const int* col_mask,
+  HighsStatus changeColBounds(HighsIndexCollection& index_collection,
                               const double* usr_col_lower,
                               const double* usr_col_upper);
 

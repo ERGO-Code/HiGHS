@@ -987,31 +987,7 @@ HighsStatus HighsSimplexInterface::changeCosts(
 }
 
 HighsStatus HighsSimplexInterface::changeColBounds(
-    const HighsIndexCollection& index_collection, int from_col, int to_col,
-    const double* usr_col_lower, const double* usr_col_upper) {
-  return changeColBounds(index_collection, true, from_col, to_col, false, 0,
-                         NULL, false, NULL, usr_col_lower, usr_col_upper);
-}
-
-HighsStatus HighsSimplexInterface::changeColBounds(
-    const HighsIndexCollection& index_collection, int num_set_entries,
-    const int* col_set, const double* usr_col_lower,
-    const double* usr_col_upper) {
-  return changeColBounds(index_collection, false, 0, 0, true, num_set_entries,
-                         col_set, false, NULL, usr_col_lower, usr_col_upper);
-}
-
-HighsStatus HighsSimplexInterface::changeColBounds(
-    const HighsIndexCollection& index_collection, const int* col_mask,
-    const double* usr_col_lower, const double* usr_col_upper) {
-  return changeColBounds(index_collection, false, 0, 0, false, 0, NULL, true,
-                         col_mask, usr_col_lower, usr_col_upper);
-}
-
-HighsStatus HighsSimplexInterface::changeColBounds(
-    const HighsIndexCollection& index_collection, bool interval, int from_col,
-    int to_col, bool set, int num_set_entries, const int* col_set, bool mask,
-    const int* col_mask, const double* usr_col_lower,
+    HighsIndexCollection& index_collection, const double* usr_col_lower,
     const double* usr_col_upper) {
   bool null_data = false;
   if (usr_col_lower == NULL) {
@@ -1027,55 +1003,52 @@ HighsStatus HighsSimplexInterface::changeColBounds(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
-  HighsIndexCollection local_index_collection =
-      (HighsIndexCollection)index_collection;
-  int* pointer_use_set;
-  double* pointer_use_lower;
-  double* pointer_use_upper;
-  std::vector<int> use_set;
-  std::vector<double> use_lower;
-  std::vector<double> use_upper;
-  if (set) {
-    // Changing the bounds for a set of columns, so ensure that the set
-    // and data are in ascending order
-    use_set.resize(num_set_entries);
-    use_lower.resize(num_set_entries);
-    use_upper.resize(num_set_entries);
-    pointer_use_set = &use_set[0];
-    pointer_use_lower = &use_lower[0];
-    pointer_use_upper = &use_upper[0];
-    local_index_collection.set_ = pointer_use_set;
-    //    sortSetData(num_set_entries, col_set, usr_col_lower, usr_col_upper, NULL,
-    //                pointer_use_set, pointer_use_lower, pointer_use_upper, NULL);
+  HighsOptions& options = highs_model_object.options_;
+  HighsLp& lp = highs_model_object.lp_;
+  int num_usr_col_bounds;
+  if (index_collection.is_set_) {
+    num_usr_col_bounds = index_collection.set_num_entries_;
   } else {
-    pointer_use_set = (int*)col_set;
-    pointer_use_lower = (double*)usr_col_lower;
-    pointer_use_upper = (double*)usr_col_upper;
+    if (index_collection.is_interval_) {
+      num_usr_col_bounds = index_collection.to_ - index_collection.from_ + 1;
+    } else {
+      num_usr_col_bounds = lp.numCol_;
+    }
   }
+  // If a non-positive number of costs (may) need changing nothing needs to be done
+  if (num_usr_col_bounds <= 0) return HighsStatus::OK;
+  // Take a copy of the cost that can be normalised
+  std::vector<double> local_colLower{usr_col_lower, usr_col_lower + num_usr_col_bounds};
+  std::vector<double> local_colUpper{usr_col_upper, usr_col_upper + num_usr_col_bounds};
+  // If changing the bounds for a set of columns, ensure that the
+  // set and data are in ascending order
+  if (index_collection.is_set_)
+    sortSetData(index_collection.set_num_entries_,
+		index_collection.set_,
+		usr_col_lower, usr_col_upper, NULL,
+		&local_colLower[0], &local_colUpper[0], NULL);
+  HighsStatus return_status = HighsStatus::OK;
+  return_status =
+    interpretCallStatus(assessBounds(options, "col", lp.numCol_, index_collection,
+                                      &local_colLower[0], &local_colUpper[0], options.infinite_bound),
+                          return_status, "assessBounds");
+  if (return_status == HighsStatus::Error) return return_status;
+
   HighsStatus call_status = changeLpColBounds(
-      highs_model_object.options_, highs_model_object.lp_,
-      local_index_collection, interval, from_col, to_col, set, num_set_entries,
-      pointer_use_set, mask, col_mask, pointer_use_lower, pointer_use_upper,
-      highs_model_object.options_.infinite_bound);
+      options, lp, index_collection, &local_colLower[0], &local_colUpper[0]);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
     // Also change the simplex LP's column bounds
-    assert(highs_model_object.lp_.numCol_ ==
-           highs_model_object.simplex_lp_.numCol_);
-    assert(highs_model_object.lp_.numRow_ ==
-           highs_model_object.simplex_lp_.numRow_);
-
-    call_status = changeLpColBounds(
-        highs_model_object.options_, highs_model_object.simplex_lp_,
-        local_index_collection, interval, from_col, to_col, set,
-        num_set_entries, pointer_use_set, mask, col_mask, pointer_use_lower,
-        pointer_use_upper, highs_model_object.options_.infinite_bound);
+    HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+    assert(lp.numCol_ == simplex_lp.numCol_);
+    assert(lp.numRow_ == simplex_lp.numRow_);
+    call_status = changeLpColBounds(options, simplex_lp, index_collection, &local_colLower[0], &local_colUpper[0]);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
       applyScalingToLpColBounds(
-          highs_model_object.options_, highs_model_object.simplex_lp_,
-          highs_model_object.scale_.col_, local_index_collection);
+          options, simplex_lp,
+          highs_model_object.scale_.col_, index_collection);
     }
   }
   // Deduce the consequences of new col bounds
@@ -1146,8 +1119,7 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
   }
   HighsStatus call_status = changeLpRowBounds(
       highs_model_object.options_, highs_model_object.lp_, index_collection,
-      interval, from_row, to_row, set, num_set_entries, use_set, mask, row_mask,
-      use_lower, use_upper, highs_model_object.options_.infinite_bound);
+      use_lower, use_upper);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   if (highs_model_object.simplex_lp_status_.valid) {
     // Also change the simplex LP's column bounds
@@ -1157,9 +1129,7 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
            highs_model_object.simplex_lp_.numRow_);
     call_status = changeLpRowBounds(
         highs_model_object.options_, highs_model_object.simplex_lp_,
-        index_collection, interval, from_row, to_row, set, num_set_entries,
-        use_set, mask, row_mask, use_lower, use_upper,
-        highs_model_object.options_.infinite_bound);
+        index_collection, use_lower, use_upper);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
       applyScalingToLpRowBounds(

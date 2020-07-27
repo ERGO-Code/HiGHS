@@ -1521,69 +1521,44 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
 
 HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
-                              const bool interval, const int from_col,
-                              const int to_col, const bool set,
-                              const int num_set_entries, const int* col_set,
-                              const bool mask, const int* col_mask,
                               const double* usr_col_lower,
-                              const double* usr_col_upper,
-                              const double infinite_bound) {
+                              const double* usr_col_upper) {
   return changeBounds(options, "col", &lp.colLower_[0], &lp.colUpper_[0],
-                      lp.numCol_, index_collection, interval, from_col, to_col,
-                      set, num_set_entries, col_set, mask, col_mask,
-                      usr_col_lower, usr_col_upper, infinite_bound);
+                      lp.numCol_, index_collection, 
+                      usr_col_lower, usr_col_upper);
 }
 
 HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
-                              const bool interval, const int from_row,
-                              const int to_row, const bool set,
-                              const int num_set_entries, const int* row_set,
-                              const bool mask, const int* row_mask,
                               const double* usr_row_lower,
-                              const double* usr_row_upper,
-                              const double infinite_bound) {
+                              const double* usr_row_upper) {
   return changeBounds(options, "row", &lp.rowLower_[0], &lp.rowUpper_[0],
-                      lp.numRow_, index_collection, interval, from_row, to_row,
-                      set, num_set_entries, row_set, mask, row_mask,
-                      usr_row_lower, usr_row_upper, infinite_bound);
+                      lp.numRow_, index_collection, 
+                      usr_row_lower, usr_row_upper);
 }
 
 HighsStatus changeBounds(const HighsOptions& options, const char* type,
                          double* lower, double* upper, const int ix_dim,
                          const HighsIndexCollection& index_collection,
-                         const bool interval, const int from_ix,
-                         const int to_ix, const bool set,
-                         const int num_set_entries, const int* ix_set,
-                         const bool mask, const int* ix_mask,
-                         const double* usr_lower, const double* usr_upper,
-                         const double infinite_bound) {
-  // Check parameters for technique and, if OK set the loop limits
-  int from_k;
-  int to_k;
-  HighsStatus call_status = assessIntervalSetMask(
-      options, ix_dim, interval, from_ix, to_ix, set, num_set_entries, ix_set,
-      mask, ix_mask, from_k, to_k);
+                         const double* usr_lower, const double* usr_upper) {
   HighsStatus return_status = HighsStatus::OK;
-  if (call_status != HighsStatus::OK) {
-    return_status = call_status;
-    return return_status;
-  }
+  // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
-
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
   if (from_k > to_k) return HighsStatus::OK;
   if (usr_lower == NULL) return HighsStatus::Error;
   if (usr_upper == NULL) return HighsStatus::Error;
+
+  const bool& interval = index_collection.is_interval_;
+  const bool& mask = index_collection.is_mask_;
+  const int* ix_set = index_collection.set_;
+  const int* ix_mask = index_collection.mask_;
 
   // Change the bounds to the user-supplied bounds, according to the technique
   int usr_ix;

@@ -131,33 +131,18 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
 
 HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
-                              const bool interval, const int from_col,
-                              const int to_col, const bool set,
-                              const int num_set_entries, const int* col_set,
-                              const bool mask, const int* col_mask,
                               const double* usr_col_lower,
-                              const double* usr_col_upper,
-                              const double infinite_bound);
+                              const double* usr_col_upper);
 
 HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
-                              const bool interval, const int from_row,
-                              const int to_row, const bool set,
-                              const int num_set_entries, const int* row_set,
-                              const bool mask, const int* row_mask,
                               const double* usr_row_lower,
-                              const double* usr_row_upper,
-                              const double infinite_bound);
+                              const double* usr_row_upper);
 
 HighsStatus changeBounds(const HighsOptions& options, const char* type,
                          double* lower, double* upper, const int mask_num_ix,
                          const HighsIndexCollection& index_collection,
-                         const bool interval, const int from_ix,
-                         const int to_ix, const bool set,
-                         const int num_set_entries, const int* ix_set,
-                         const bool mask, const int* ix_mask,
-                         const double* usr_lower, const double* usr_upper,
-                         const double infinite_bound);
+                         const double* usr_lower, const double* usr_upper);
 
 /**
  * @brief Report the data of an LP
