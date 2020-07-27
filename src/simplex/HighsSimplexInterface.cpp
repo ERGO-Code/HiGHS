@@ -94,8 +94,7 @@ HighsStatus HighsSimplexInterface::addCols(
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the column bounds
   return_status = interpretCallStatus(
-      assessBounds(options, "Col", lp.numCol_, index_collection, XnumNewCol,
-                   true, 0, XnumNewCol - 1, false, 0, NULL, false, NULL,
+      assessBounds(options, "Col", lp.numCol_, index_collection, 
                    &local_colLower[0], &local_colUpper[0],
                    options.infinite_bound),
       return_status, "assessBounds");
@@ -341,8 +340,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   std::vector<double> local_rowUpper{XrowUpper, XrowUpper + XnumNewRow};
 
   return_status = interpretCallStatus(
-      assessBounds(options, "Row", lp.numRow_, index_collection, XnumNewRow,
-                   true, 0, XnumNewRow - 1, false, 0, NULL, false, NULL,
+      assessBounds(options, "Row", lp.numRow_, index_collection, 
                    &local_rowLower[0], &local_rowUpper[0],
                    options.infinite_bound),
       return_status, "assessBounds");

@@ -55,8 +55,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the LP column bounds
   call_status =
-      assessBounds(options, "Col", 0, index_collection, lp.numCol_, true, 0,
-                   lp.numCol_ - 1, false, 0, NULL, false, NULL,
+      assessBounds(options, "Col", 0, index_collection,
                    &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
@@ -67,9 +66,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.is_interval_ = true;
     index_collection.from_ = 0;
     index_collection.to_ = lp.numRow_ - 1;
-    call_status = assessBounds(options, "Row", 0, index_collection, lp.numRow_,
-                               true, 0, lp.numRow_ - 1, false, 0, NULL, false,
-                               NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
+    call_status = assessBounds(options, "Row", 0, index_collection,
+                               &lp.rowLower_[0], &lp.rowUpper_[0],
                                options.infinite_bound);
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
@@ -300,184 +298,18 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const int ml_ix_os,
                          const HighsIndexCollection& index_collection,
-                         const int ix_dim, const bool interval,
-                         const int from_ix, const int to_ix, const bool set,
-                         const int num_set_entries, const int* ix_set,
-                         const bool mask, const int* ix_mask,
-                         double* lower_bounds, double* upper_bounds,
-                         const double infinite_bound, bool normalise) {
-  HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
-  // Check parameters for technique and, if OK set the loop limits
-  int from_k;
-  int to_k;
-  call_status = assessIntervalSetMask(options, ix_dim, interval, from_ix, to_ix,
-                                      set, num_set_entries, ix_set, mask,
-                                      ix_mask, from_k, to_k);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
-  if (return_status == HighsStatus::Error) return return_status;
-  if (!assessIndexCollection(options, index_collection))
-    return interpretCallStatus(HighsStatus::Error, return_status,
-                               "assessIndexCollection");
-
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
-    return interpretCallStatus(HighsStatus::Error, return_status,
-                               "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
-  if (from_k > to_k) return HighsStatus::OK;
-
-  return_status = HighsStatus::OK;
-  bool error_found = false;
-  bool warning_found = false;
-  // Work through the data to be assessed.
-  //
-  // Loop is k \in [from_k...to_k) covering the entries in the
-  // interval, set or mask to be considered.
-  //
-  // For an interval or mask, these values of k are the row/column
-  // indices to be considered in a local sense, as well as the entries
-  // in the lower and upper bound data to be assessed
-  //
-  // For a set, these values of k are the indices in the set, from
-  // which the indices to be considered in a local sense are
-  // drawn. When not normalising data, the entries in the lower and
-  // upper bound data to be assessed correspond to the values of
-  // k. When normalising data, these values are assumed to have been
-  // distributed, so lower_bounds and upper_bounds are full
-  // length. Hence the entries to be assessed correspond to the local
-  // indices
-  //
-  // Adding the value of ml_ix_os to local_ix yields the value of
-  // ml_ix, being the index in a global (whole-model) sense. This is
-  // necessary when assessing the bounds of rows/columns being added
-  // to a model, since they are specified using an interval
-  // [0...num_new_row/col) which must be offset by the current number
-  // of rows/columns (generically indices) in the model.
-  //
-  int num_infinite_lower_bound = 0;
-  int num_infinite_upper_bound = 0;
-  int local_ix;
-  int data_ix;
-  int ml_ix;
-  for (int k = from_k; k < to_k + 1; k++) {
-    if (interval || mask) {
-      local_ix = k;
-      data_ix = k;
-    } else {
-      local_ix = ix_set[k];
-      if (normalise) {
-        data_ix = local_ix;
-      } else {
-        data_ix = k;
-      }
-    }
-    ml_ix = ml_ix_os + local_ix;
-    if (mask && !ix_mask[local_ix]) continue;
-
-    if (!highs_isInfinity(-lower_bounds[data_ix])) {
-      // Check whether a finite lower bound will be treated as -Infinity
-      bool infinite_lower_bound = lower_bounds[data_ix] <= -infinite_bound;
-      if (infinite_lower_bound) {
-        if (normalise) lower_bounds[data_ix] = -HIGHS_CONST_INF;
-        num_infinite_lower_bound++;
-      }
-    }
-    if (!highs_isInfinity(upper_bounds[data_ix])) {
-      // Check whether a finite upper bound will be treated as Infinity
-      bool infinite_upper_bound = upper_bounds[data_ix] >= infinite_bound;
-      if (infinite_upper_bound) {
-        if (normalise) upper_bounds[data_ix] = HIGHS_CONST_INF;
-        num_infinite_upper_bound++;
-      }
-    }
-    // Check that the lower bound does not exceed the upper bound
-    bool legalLowerUpperBound = lower_bounds[data_ix] <= upper_bounds[data_ix];
-    if (!legalLowerUpperBound) {
-      // Leave inconsistent bounds to be used to deduce infeasibility
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                      "%3s  %12d has inconsistent bounds [%12g, %12g]", type,
-                      ml_ix, lower_bounds[data_ix], upper_bounds[data_ix]);
-      warning_found = true;
-    }
-    // Check that the lower bound is not as much as +Infinity
-    bool legalLowerBound = lower_bounds[data_ix] < infinite_bound;
-    if (!legalLowerBound) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "%3s  %12d has lower bound of %12g >= %12g", type, ml_ix,
-                      lower_bounds[data_ix], infinite_bound);
-      error_found = true;
-    }
-    // Check that the upper bound is not as little as -Infinity
-    bool legalUpperBound = upper_bounds[data_ix] > -infinite_bound;
-    if (!legalUpperBound) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "%3s  %12d has upper bound of %12g <= %12g", type, ml_ix,
-                      upper_bounds[data_ix], -infinite_bound);
-      error_found = true;
-    }
-  }
-  if (normalise) {
-    if (num_infinite_lower_bound) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::INFO,
-          "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity",
-          type, num_infinite_lower_bound, -infinite_bound);
-    }
-    if (num_infinite_upper_bound) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::INFO,
-          "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity",
-          type, num_infinite_upper_bound, infinite_bound);
-    }
-  }
-
-  if (error_found)
-    return_status = HighsStatus::Error;
-  else if (warning_found)
-    return_status = HighsStatus::Warning;
-  else
-    return_status = HighsStatus::OK;
-
-  return return_status;
-}
-
-HighsStatus assessBounds(const HighsOptions& options, const char* type,
-                         const int ml_ix_os,
-                         const HighsIndexCollection& index_collection,
-                         const int ix_dim, const bool interval,
-                         const int from_ix, const int to_ix, const bool set,
-                         const int num_set_entries, const int* ix_set,
-                         const bool mask, const int* ix_mask,
                          double* lower_bounds, double* upper_bounds,
                          const double infinite_bound) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
   // Check parameters for technique and, if OK set the loop limits
-  int from_k;
-  int to_k;
-  call_status = assessIntervalSetMask(options, ix_dim, interval, from_ix, to_ix,
-                                      set, num_set_entries, ix_set, mask,
-                                      ix_mask, from_k, to_k);
-  return_status =
-      interpretCallStatus(call_status, return_status, "assessIntervalSetMask");
-  if (return_status == HighsStatus::Error) return return_status;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
-
-  int from_k1;
-  int to_k1;
-  if (!limitsForIndexCollection(options, index_collection, from_k1, to_k1))
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
-  assert(from_k1 == from_k);
-  assert(to_k1 == to_k);
-
   if (from_k > to_k) return HighsStatus::OK;
 
   return_status = HighsStatus::OK;
@@ -511,15 +343,15 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   int data_ix;
   int ml_ix;
   for (int k = from_k; k < to_k + 1; k++) {
-    if (interval || mask) {
+    if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_ix = k;
       data_ix = k;
     } else {
-      local_ix = ix_set[k];
+      local_ix = index_collection.set_[k];
       data_ix = k;
     }
     ml_ix = ml_ix_os + local_ix;
-    if (mask && !ix_mask[local_ix]) continue;
+    if (index_collection.is_mask_ && !index_collection.mask_[local_ix]) continue;
 
     if (!highs_isInfinity(-lower_bounds[data_ix])) {
       // Check whether a finite lower bound will be treated as -Infinity
@@ -1753,16 +1585,6 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
   if (usr_lower == NULL) return HighsStatus::Error;
   if (usr_upper == NULL) return HighsStatus::Error;
 
-  // Assess the user bounds and return on error
-  bool normalise = false;
-  call_status = assessBounds(options, type, 0, index_collection, ix_dim,
-                             interval, from_ix, to_ix, set, num_set_entries,
-                             ix_set, mask, ix_mask, (double*)usr_lower,
-                             (double*)usr_upper, infinite_bound, normalise);
-  if (call_status != HighsStatus::OK) {
-    return_status = call_status;
-    return return_status;
-  }
   // Change the bounds to the user-supplied bounds, according to the technique
   int usr_ix;
   for (int k = from_k; k < to_k + 1; k++) {
@@ -1775,15 +1597,6 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
     if (mask && !ix_mask[ix]) continue;
     lower[ix] = usr_lower[k];
     upper[ix] = usr_upper[k];
-  }
-  normalise = true;
-  call_status =
-      assessBounds(options, type, 0, index_collection, ix_dim, interval,
-                   from_ix, to_ix, set, num_set_entries, ix_set, mask, ix_mask,
-                   lower, upper, infinite_bound, normalise);
-  if (call_status != HighsStatus::OK) {
-    return_status = call_status;
-    return return_status;
   }
   return HighsStatus::OK;
 }
