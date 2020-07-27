@@ -410,7 +410,7 @@ void checkBasicFeasibleSolution(const State& state,
     if (state.flagRow[i]) current_n_rows ++;
 
     if (state.flagRow[i] && (state.row_status[i] == HighsBasisStatus::BASIC || state.row_status[i] == HighsBasisStatus::SUPER))
-      int current_n_rows_basic = 0;
+      current_n_rows_basic++;
   }
 
   for (int i = 0; i < state.numCol; i++) {
