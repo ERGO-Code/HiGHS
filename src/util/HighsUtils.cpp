@@ -189,6 +189,42 @@ void updateIndexCollectionOutInIndex(
   }
 }
 
+int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection) {
+  if (index_collection.is_set_) {
+    return index_collection.set_num_entries_;
+  } else {
+    if (index_collection.is_interval_) {
+      return index_collection.to_ - index_collection.from_ + 1;
+    } else {
+      return index_collection.dimension_;
+    }
+  }
+}
+
+bool intUserDataNotNull(FILE* logfile, const int* user_data, const std::string name) {
+  bool null_data = false;
+  if (user_data == NULL) {
+    HighsLogMessage(logfile,
+                    HighsMessageType::ERROR,
+                    "User-supplied %s are NULL", name.c_str());
+    null_data = true;
+  }
+  assert(!null_data);
+  return null_data;
+}
+
+bool doubleUserDataNotNull(FILE* logfile, const double* user_data, const std::string name) {
+  bool null_data = false;
+  if (user_data == NULL) {
+    HighsLogMessage(logfile,
+                    HighsMessageType::ERROR,
+                    "User-supplied %s are NULL", name.c_str());
+    null_data = true;
+  }
+  assert(!null_data);
+  return null_data;
+}
+
 double getNorm2(const std::vector<double> values) {
   double sum = 0;
   int values_size = values.size();

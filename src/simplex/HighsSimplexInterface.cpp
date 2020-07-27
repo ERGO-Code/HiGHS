@@ -801,26 +801,10 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
 
 HighsStatus HighsSimplexInterface::changeCosts(
     HighsIndexCollection& index_collection, const double* usr_col_cost) {
-  bool null_data = false;
-  if (usr_col_cost == NULL) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::ERROR,
-                    "User-supplied column costs are NULL");
-    null_data = true;
-  }
-  if (null_data) return HighsStatus::Error;
   HighsOptions& options = highs_model_object.options_;
-  HighsLp& lp = highs_model_object.lp_;
-  int num_usr_col_cost;
-  if (index_collection.is_set_) {
-    num_usr_col_cost = index_collection.set_num_entries_;
-  } else {
-    if (index_collection.is_interval_) {
-      num_usr_col_cost = index_collection.to_ - index_collection.from_ + 1;
-    } else {
-      num_usr_col_cost = lp.numCol_;
-    }
-  }
+  bool null_data = doubleUserDataNotNull(options.logfile, usr_col_cost, "column costs");
+  if (null_data) return HighsStatus::Error;
+  int num_usr_col_cost = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
   // done
   if (num_usr_col_cost <= 0) return HighsStatus::OK;
@@ -832,6 +816,7 @@ HighsStatus HighsSimplexInterface::changeCosts(
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
                 usr_col_cost, NULL, NULL, &local_colCost[0], NULL, NULL);
+  HighsLp& lp = highs_model_object.lp_;
   HighsStatus return_status = HighsStatus::OK;
   return_status =
       interpretCallStatus(assessCosts(options, lp.numCol_, index_collection,
@@ -869,32 +854,12 @@ HighsStatus HighsSimplexInterface::changeCosts(
 HighsStatus HighsSimplexInterface::changeColBounds(
     HighsIndexCollection& index_collection, const double* usr_col_lower,
     const double* usr_col_upper) {
-  bool null_data = false;
-  if (usr_col_lower == NULL) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::ERROR,
-                    "User-supplied column lower bounds are NULL");
-    null_data = true;
-  }
-  if (usr_col_upper == NULL) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::ERROR,
-                    "User-supplied column upper bounds are NULL");
-    null_data = true;
-  }
-  if (null_data) return HighsStatus::Error;
   HighsOptions& options = highs_model_object.options_;
-  HighsLp& lp = highs_model_object.lp_;
-  int num_usr_col_bounds;
-  if (index_collection.is_set_) {
-    num_usr_col_bounds = index_collection.set_num_entries_;
-  } else {
-    if (index_collection.is_interval_) {
-      num_usr_col_bounds = index_collection.to_ - index_collection.from_ + 1;
-    } else {
-      num_usr_col_bounds = lp.numCol_;
-    }
-  }
+  bool null_data = false;
+  null_data = doubleUserDataNotNull(options.logfile, usr_col_lower, "column lower bounds") || null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_col_upper, "column upper bounds") || null_data;
+  if (null_data) return HighsStatus::Error;
+  int num_usr_col_bounds = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
   // done
   if (num_usr_col_bounds <= 0) return HighsStatus::OK;
@@ -909,6 +874,7 @@ HighsStatus HighsSimplexInterface::changeColBounds(
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
                 usr_col_lower, usr_col_upper, NULL, &local_colLower[0],
                 &local_colUpper[0], NULL);
+  HighsLp& lp = highs_model_object.lp_;
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
       assessBounds(options, "col", lp.numCol_, index_collection,
@@ -947,32 +913,12 @@ HighsStatus HighsSimplexInterface::changeColBounds(
 HighsStatus HighsSimplexInterface::changeRowBounds(
     HighsIndexCollection& index_collection, const double* usr_row_lower,
     const double* usr_row_upper) {
-  bool null_data = false;
-  if (usr_row_lower == NULL) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::ERROR,
-                    "User-supplied row lower bounds are NULL");
-    null_data = true;
-  }
-  if (usr_row_upper == NULL) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::ERROR,
-                    "User-supplied row upper bounds are NULL");
-    null_data = true;
-  }
-  if (null_data) return HighsStatus::Error;
   HighsOptions& options = highs_model_object.options_;
-  HighsLp& lp = highs_model_object.lp_;
-  int num_usr_row_bounds;
-  if (index_collection.is_set_) {
-    num_usr_row_bounds = index_collection.set_num_entries_;
-  } else {
-    if (index_collection.is_interval_) {
-      num_usr_row_bounds = index_collection.to_ - index_collection.from_ + 1;
-    } else {
-      num_usr_row_bounds = lp.numRow_;
-    }
-  }
+  bool null_data = false;
+  null_data = doubleUserDataNotNull(options.logfile, usr_row_lower, "row lower bounds") || null_data;
+  null_data = doubleUserDataNotNull(options.logfile, usr_row_upper, "row upper bounds") || null_data;
+  if (null_data) return HighsStatus::Error;
+  int num_usr_row_bounds = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
   // done
   if (num_usr_row_bounds <= 0) return HighsStatus::OK;
@@ -987,6 +933,7 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
                 usr_row_lower, usr_row_upper, NULL, &local_rowLower[0],
                 &local_rowUpper[0], NULL);
+  HighsLp& lp = highs_model_object.lp_;
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
       assessBounds(options, "row", lp.numRow_, index_collection,

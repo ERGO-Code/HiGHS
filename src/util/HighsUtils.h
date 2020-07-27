@@ -16,6 +16,7 @@
 
 #include <string>
 #include <vector>
+#include <cassert>
 
 #include "HConfig.h"
 #include "lp_data/HighsOptions.h"
@@ -85,6 +86,11 @@ bool limitsForIndexCollection(const HighsOptions& options,
 void updateIndexCollectionOutInIndex(
     const HighsIndexCollection& index_collection, int& out_from_ix,
     int& out_to_ix, int& in_from_ix, int& in_to_ix, int& current_set_entry);
+
+int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
+
+bool intUserDataNotNull(FILE* logfile, const int* user_data, const std::string name);
+bool doubleUserDataNotNull(FILE* logfile, const double* user_data, const std::string name);
 
 double getNorm2(const std::vector<double> values);
 
