@@ -44,11 +44,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound);
 
-HighsStatus assessMatrix(const HighsOptions& options,
-			 const int vec_dim, const int num_vec,
-                         vector<int>& Astart,
-			 vector<int>& Aindex,
-			 vector<double>& Avalue,
+HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
+                         const int num_vec, vector<int>& Astart,
+                         vector<int>& Aindex, vector<double>& Avalue,
                          const double small_matrix_value,
                          const double large_matrix_value);
 
@@ -70,10 +68,10 @@ HighsStatus applyScalingToLpRowBounds(
     const HighsIndexCollection& index_collection);
 
 HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const vector<double>& colScale,
-                                   const vector<double>& rowScale,
-                                   const int from_col, const int to_col,
-                                   const int from_row, const int to_row);
+                                   const double* colScale,
+                                   const double* rowScale, const int from_col,
+                                   const int to_col, const int from_row,
+                                   const int to_row);
 
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
                                   const vector<double>& colCost,
@@ -131,10 +129,11 @@ HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
                               const vector<double>& new_row_lower,
                               const vector<double>& new_row_upper);
 
-HighsStatus changeBounds(const HighsOptions& options, const char* type,
-                         vector<double>& lower, vector<double>& upper, const int mask_num_ix,
+HighsStatus changeBounds(const HighsOptions& options, vector<double>& lower,
+                         vector<double>& upper,
                          const HighsIndexCollection& index_collection,
-                         const vector<double>& new_lower, const vector<double>& new_upper);
+                         const vector<double>& new_lower,
+                         const vector<double>& new_upper);
 
 /**
  * @brief Report the data of an LP

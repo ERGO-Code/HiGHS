@@ -94,16 +94,15 @@ HighsStatus HighsSimplexInterface::addCols(
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the column bounds
   return_status = interpretCallStatus(
-      assessBounds(options, "Col", lp.numCol_, index_collection,
-                   local_colLower, local_colUpper,
-                   options.infinite_bound),
+      assessBounds(options, "Col", lp.numCol_, index_collection, local_colLower,
+                   local_colUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
   // Append the columns to the LP vectors and matrix
-  return_status = interpretCallStatus(
-      appendColsToLpVectors(lp, XnumNewCol, local_colCost,
-                            local_colLower, local_colUpper),
-      return_status, "appendColsToLpVectors");
+  return_status =
+      interpretCallStatus(appendColsToLpVectors(lp, XnumNewCol, local_colCost,
+                                                local_colLower, local_colUpper),
+                          return_status, "appendColsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
@@ -122,13 +121,13 @@ HighsStatus HighsSimplexInterface::addCols(
     std::vector<int> local_Astart{XAstart, XAstart + XnumNewCol};
     std::vector<int> local_Aindex{XAindex, XAindex + XnumNewNZ};
     std::vector<double> local_Avalue{XAvalue, XAvalue + XnumNewNZ};
-    local_Astart.resize(XnumNewCol+1);
+    local_Astart.resize(XnumNewCol + 1);
     local_Astart[XnumNewCol] = XnumNewNZ;
     // Assess the matrix columns
     return_status = interpretCallStatus(
-        assessMatrix(options, lp.numRow_, XnumNewCol,
-                     local_Astart, local_Aindex, local_Avalue, 
-                     options.small_matrix_value, options.large_matrix_value),
+        assessMatrix(options, lp.numRow_, XnumNewCol, local_Astart,
+                     local_Aindex, local_Avalue, options.small_matrix_value,
+                     options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     local_num_new_nz = local_Astart[XnumNewCol];
@@ -342,9 +341,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   std::vector<double> local_rowUpper{XrowUpper, XrowUpper + XnumNewRow};
 
   return_status = interpretCallStatus(
-      assessBounds(options, "Row", lp.numRow_, index_collection,
-                   local_rowLower, local_rowUpper,
-                   options.infinite_bound),
+      assessBounds(options, "Row", lp.numRow_, index_collection, local_rowLower,
+                   local_rowUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
 
@@ -357,7 +355,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   if (valid_simplex_lp) {
     // Append the rows to the Simplex LP vectors
     return_status = interpretCallStatus(
-	appendRowsToLpVectors(simplex_lp, XnumNewRow, local_rowLower, local_rowUpper),
+        appendRowsToLpVectors(simplex_lp, XnumNewRow, local_rowLower,
+                              local_rowUpper),
         return_status, "appendRowsToLpVectors");
     if (return_status == HighsStatus::Error) return return_status;
   }
@@ -369,12 +368,12 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     std::vector<int> local_ARstart{XARstart, XARstart + XnumNewRow};
     std::vector<int> local_ARindex{XARindex, XARindex + XnumNewNZ};
     std::vector<double> local_ARvalue{XARvalue, XARvalue + XnumNewNZ};
-    local_ARstart.resize(XnumNewRow+1);
+    local_ARstart.resize(XnumNewRow + 1);
     local_ARstart[XnumNewRow] = XnumNewNZ;
     return_status = interpretCallStatus(
-        assessMatrix(options, lp.numCol_, XnumNewRow,
-                     local_ARstart, local_ARindex, local_ARvalue, 
-                     options.small_matrix_value, options.large_matrix_value),
+        assessMatrix(options, lp.numCol_, XnumNewRow, local_ARstart,
+                     local_ARindex, local_ARvalue, options.small_matrix_value,
+                     options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     local_num_new_nz = local_ARstart[XnumNewRow];
@@ -881,14 +880,13 @@ HighsStatus HighsSimplexInterface::changeColBounds(
   HighsLp& lp = highs_model_object.lp_;
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
-      assessBounds(options, "col", lp.numCol_, index_collection,
-                   local_colLower, local_colUpper,
-                   options.infinite_bound),
+      assessBounds(options, "col", lp.numCol_, index_collection, local_colLower,
+                   local_colUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
 
-  HighsStatus call_status = changeLpColBounds(
-      options, lp, index_collection, local_colLower, local_colUpper);
+  HighsStatus call_status = changeLpColBounds(options, lp, index_collection,
+                                              local_colLower, local_colUpper);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -944,15 +942,14 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
   HighsLp& lp = highs_model_object.lp_;
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
-      assessBounds(options, "row", lp.numRow_, index_collection,
-                   local_rowLower, local_rowUpper,
-                   options.infinite_bound),
+      assessBounds(options, "row", lp.numRow_, index_collection, local_rowLower,
+                   local_rowUpper, options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
 
   HighsStatus call_status;
-  call_status = changeLpRowBounds(
-      options, lp, index_collection, local_rowLower, local_rowUpper);
+  call_status = changeLpRowBounds(options, lp, index_collection, local_rowLower,
+                                  local_rowUpper);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -960,8 +957,8 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     assert(lp.numCol_ == simplex_lp.numCol_);
     assert(lp.numRow_ == simplex_lp.numRow_);
-    call_status = changeLpRowBounds(
-	options, simplex_lp, index_collection, local_rowLower, local_rowUpper);
+    call_status = changeLpRowBounds(options, simplex_lp, index_collection,
+                                    local_rowLower, local_rowUpper);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
       applyScalingToLpRowBounds(options, simplex_lp,

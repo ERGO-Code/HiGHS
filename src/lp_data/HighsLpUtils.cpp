@@ -54,10 +54,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
       interpretCallStatus(call_status, return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the LP column bounds
-  call_status =
-      assessBounds(options, "Col", 0, index_collection, 
-                   lp.colLower_, lp.colUpper_,
-		   options.infinite_bound);
+  call_status = assessBounds(options, "Col", 0, index_collection, lp.colLower_,
+                             lp.colUpper_, options.infinite_bound);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -68,9 +66,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.from_ = 0;
     index_collection.to_ = lp.numRow_ - 1;
     call_status =
-        assessBounds(options, "Row", 0, index_collection,
-		     lp.rowLower_, lp.rowUpper_,
-		     options.infinite_bound);
+        assessBounds(options, "Row", 0, index_collection, lp.rowLower_,
+                     lp.rowUpper_, options.infinite_bound);
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::Error) return return_status;
@@ -88,10 +85,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                       lp.Astart_[0]);
       return HighsStatus::Error;
     }
-    call_status =
-        assessMatrix(options, lp.numRow_, lp.numCol_,
-                     lp.Astart_, lp.Aindex_, lp.Avalue_,
-                     options.small_matrix_value, options.large_matrix_value);
+    call_status = assessMatrix(
+        options, lp.numRow_, lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_,
+        options.small_matrix_value, options.large_matrix_value);
     return_status =
         interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
@@ -420,11 +416,9 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
-HighsStatus assessMatrix(const HighsOptions& options, 
-                         const int vec_dim, const int num_vec,
-                         vector<int>& Astart,
-			 vector<int>& Aindex,
-			 vector<double>& Avalue,
+HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
+                         const int num_vec, vector<int>& Astart,
+                         vector<int>& Aindex, vector<double>& Avalue,
                          const double small_matrix_value,
                          const double large_matrix_value) {
   int num_nz = Astart[num_vec];
@@ -646,8 +640,8 @@ HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
   scale_error = applyScalingToLpRowBounds(options, lp, scale.row_, all_rows) !=
                     HighsStatus::OK ||
                 scale_error;
-  scale_error = applyScalingToLpMatrix(options, lp, scale.col_, scale.row_, 0,
-                                       lp.numCol_ - 1, 0,
+  scale_error = applyScalingToLpMatrix(options, lp, &scale.col_[0],
+                                       &scale.row_[0], 0, lp.numCol_ - 1, 0,
                                        lp.numRow_ - 1) != HighsStatus::OK ||
                 scale_error;
   if (scale_error) return HighsStatus::Error;
@@ -775,21 +769,43 @@ HighsStatus applyScalingToLpRowBounds(
 }
 
 HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
-                                   const vector<double>& colScale,
-                                   const vector<double>& rowScale,
-                                   const int from_col, const int to_col,
-                                   const int from_row, const int to_row) {
+                                   const double* colScale,
+                                   const double* rowScale, const int from_col,
+                                   const int to_col, const int from_row,
+                                   const int to_row) {
   if (from_col < 0) return HighsStatus::Error;
   if (to_col >= lp.numCol_) return HighsStatus::Error;
   if (from_row < 0) return HighsStatus::Error;
   if (to_row >= lp.numRow_) return HighsStatus::Error;
-  for (int iCol = from_col; iCol <= to_col; iCol++) {
-    for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++) {
-      int iRow = lp.Aindex_[iEl];
-      if (iRow < from_row || iRow > to_row) {
-        continue;
+  if (colScale != NULL) {
+    if (rowScale != NULL) {
+      for (int iCol = from_col; iCol <= to_col; iCol++) {
+        for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++) {
+          int iRow = lp.Aindex_[iEl];
+          if (iRow < from_row || iRow > to_row) continue;
+          lp.Avalue_[iEl] *= (colScale[iCol] * rowScale[iRow]);
+        }
       }
-      lp.Avalue_[iEl] *= (colScale[iCol] * rowScale[iRow]);
+    } else {
+      // No row scaling
+      for (int iCol = from_col; iCol <= to_col; iCol++) {
+        for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++) {
+          int iRow = lp.Aindex_[iEl];
+          if (iRow < from_row || iRow > to_row) continue;
+          lp.Avalue_[iEl] *= colScale[iCol];
+        }
+      }
+    }
+  } else {
+    // No column scaling
+    if (rowScale != NULL) {
+      for (int iCol = from_col; iCol <= to_col; iCol++) {
+        for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++) {
+          int iRow = lp.Aindex_[iEl];
+          if (iRow < from_row || iRow > to_row) continue;
+          lp.Avalue_[iEl] *= rowScale[iRow];
+        }
+      }
     }
   }
   return HighsStatus::OK;
@@ -1301,24 +1317,23 @@ HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_col_lower,
                               const vector<double>& new_col_upper) {
-  return changeBounds(options, "col", lp.colLower_, lp.colUpper_,
-                      lp.numCol_, index_collection, new_col_lower,
-                      new_col_upper);
+  return changeBounds(options, lp.colLower_, lp.colUpper_, index_collection,
+                      new_col_lower, new_col_upper);
 }
 
 HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
                               const vector<double>& new_row_lower,
                               const vector<double>& new_row_upper) {
-  return changeBounds(options, "row", lp.rowLower_, lp.rowUpper_,
-                      lp.numRow_, index_collection, new_row_lower,
-                      new_row_upper);
+  return changeBounds(options, lp.rowLower_, lp.rowUpper_, index_collection,
+                      new_row_lower, new_row_upper);
 }
 
-HighsStatus changeBounds(const HighsOptions& options, const char* type,
-                         vector<double>& lower, vector<double>& upper, const int ix_dim,
+HighsStatus changeBounds(const HighsOptions& options, vector<double>& lower,
+                         vector<double>& upper,
                          const HighsIndexCollection& index_collection,
-                         const vector<double>& new_lower, const vector<double>& new_upper) {
+                         const vector<double>& new_lower,
+                         const vector<double>& new_upper) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))

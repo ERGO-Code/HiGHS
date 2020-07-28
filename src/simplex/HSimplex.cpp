@@ -1334,8 +1334,8 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
   // std::numeric_limits<double>::infinity(), this Qi-trick doesn't
   // work so, in recognition, use the old value of HIGHS_CONST_INF
   const double finite_infinity = 1e200;
-  max_allow_scale = pow(
-      2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);
+  max_allow_scale =
+      pow(2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);
   min_allow_scale = 1 / max_allow_scale;
 
   double min_allow_col_scale = min_allow_scale;
