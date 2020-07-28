@@ -41,7 +41,7 @@ HighsStatus assessCosts(const HighsOptions& options, const int col_ix_os,
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const int ix_os,
                          const HighsIndexCollection& index_collection,
-                         double* usr_lower, double* usr_upper,
+                         vector<double>& lower, vector<double>& upper,
                          const double infinite_bound);
 
 HighsStatus assessMatrix(const HighsOptions& options,

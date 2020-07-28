@@ -55,8 +55,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the LP column bounds
   call_status =
-      assessBounds(options, "Col", 0, index_collection, &lp.colLower_[0],
-                   &lp.colUpper_[0], options.infinite_bound);
+      assessBounds(options, "Col", 0, index_collection, 
+                   lp.colLower_, lp.colUpper_,
+		   options.infinite_bound);
   return_status =
       interpretCallStatus(call_status, return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -67,8 +68,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     index_collection.from_ = 0;
     index_collection.to_ = lp.numRow_ - 1;
     call_status =
-        assessBounds(options, "Row", 0, index_collection, &lp.rowLower_[0],
-                     &lp.rowUpper_[0], options.infinite_bound);
+        assessBounds(options, "Row", 0, index_collection,
+		     lp.rowLower_, lp.rowUpper_,
+		     options.infinite_bound);
     return_status =
         interpretCallStatus(call_status, return_status, "assessBounds");
     if (return_status == HighsStatus::Error) return return_status;
@@ -297,7 +299,7 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          const int ml_ix_os,
                          const HighsIndexCollection& index_collection,
-                         double* lower_bounds, double* upper_bounds,
+                         vector<double>& lower, vector<double>& upper,
                          const double infinite_bound) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
@@ -353,45 +355,45 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     if (index_collection.is_mask_ && !index_collection.mask_[local_ix])
       continue;
 
-    if (!highs_isInfinity(-lower_bounds[data_ix])) {
+    if (!highs_isInfinity(-lower[data_ix])) {
       // Check whether a finite lower bound will be treated as -Infinity
-      bool infinite_lower_bound = lower_bounds[data_ix] <= -infinite_bound;
+      bool infinite_lower_bound = lower[data_ix] <= -infinite_bound;
       if (infinite_lower_bound) {
-        lower_bounds[data_ix] = -HIGHS_CONST_INF;
+        lower[data_ix] = -HIGHS_CONST_INF;
         num_infinite_lower_bound++;
       }
     }
-    if (!highs_isInfinity(upper_bounds[data_ix])) {
+    if (!highs_isInfinity(upper[data_ix])) {
       // Check whether a finite upper bound will be treated as Infinity
-      bool infinite_upper_bound = upper_bounds[data_ix] >= infinite_bound;
+      bool infinite_upper_bound = upper[data_ix] >= infinite_bound;
       if (infinite_upper_bound) {
-        upper_bounds[data_ix] = HIGHS_CONST_INF;
+        upper[data_ix] = HIGHS_CONST_INF;
         num_infinite_upper_bound++;
       }
     }
     // Check that the lower bound does not exceed the upper bound
-    bool legalLowerUpperBound = lower_bounds[data_ix] <= upper_bounds[data_ix];
+    bool legalLowerUpperBound = lower[data_ix] <= upper[data_ix];
     if (!legalLowerUpperBound) {
       // Leave inconsistent bounds to be used to deduce infeasibility
       HighsLogMessage(options.logfile, HighsMessageType::WARNING,
                       "%3s  %12d has inconsistent bounds [%12g, %12g]", type,
-                      ml_ix, lower_bounds[data_ix], upper_bounds[data_ix]);
+                      ml_ix, lower[data_ix], upper[data_ix]);
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
-    bool legalLowerBound = lower_bounds[data_ix] < infinite_bound;
+    bool legalLowerBound = lower[data_ix] < infinite_bound;
     if (!legalLowerBound) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "%3s  %12d has lower bound of %12g >= %12g", type, ml_ix,
-                      lower_bounds[data_ix], infinite_bound);
+                      lower[data_ix], infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
-    bool legalUpperBound = upper_bounds[data_ix] > -infinite_bound;
+    bool legalUpperBound = upper[data_ix] > -infinite_bound;
     if (!legalUpperBound) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "%3s  %12d has upper bound of %12g <= %12g", type, ml_ix,
-                      upper_bounds[data_ix], -infinite_bound);
+                      upper[data_ix], -infinite_bound);
       error_found = true;
     }
   }

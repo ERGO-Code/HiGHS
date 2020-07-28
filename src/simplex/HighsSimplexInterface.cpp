@@ -95,7 +95,7 @@ HighsStatus HighsSimplexInterface::addCols(
   // Assess the column bounds
   return_status = interpretCallStatus(
       assessBounds(options, "Col", lp.numCol_, index_collection,
-                   &local_colLower[0], &local_colUpper[0],
+                   local_colLower, local_colUpper,
                    options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -343,7 +343,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   return_status = interpretCallStatus(
       assessBounds(options, "Row", lp.numRow_, index_collection,
-                   &local_rowLower[0], &local_rowUpper[0],
+                   local_rowLower, local_rowUpper,
                    options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -884,7 +884,7 @@ HighsStatus HighsSimplexInterface::changeColBounds(
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
       assessBounds(options, "col", lp.numCol_, index_collection,
-                   &local_colLower[0], &local_colUpper[0],
+                   local_colLower, local_colUpper,
                    options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
@@ -947,7 +947,7 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
   HighsStatus return_status = HighsStatus::OK;
   return_status = interpretCallStatus(
       assessBounds(options, "row", lp.numRow_, index_collection,
-                   &local_rowLower[0], &local_rowUpper[0],
+                   local_rowLower, local_rowUpper,
                    options.infinite_bound),
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
