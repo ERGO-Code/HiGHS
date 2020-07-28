@@ -44,9 +44,11 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
                          double* usr_lower, double* usr_upper,
                          const double infinite_bound);
 
-HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
-                         const int from_ix, const int to_ix, const int num_vec,
-                         vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
+HighsStatus assessMatrix(const HighsOptions& options,
+			 const int vec_dim, const int num_vec,
+                         vector<int>& Astart,
+			 vector<int>& Aindex,
+			 vector<double>& Avalue,
                          const double small_matrix_value,
                          const double large_matrix_value);
 

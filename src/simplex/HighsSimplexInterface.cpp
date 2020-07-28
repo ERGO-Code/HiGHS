@@ -126,7 +126,7 @@ HighsStatus HighsSimplexInterface::addCols(
     local_Astart[XnumNewCol] = XnumNewNZ;
     // Assess the matrix columns
     return_status = interpretCallStatus(
-        assessMatrix(options, lp.numRow_, 0, XnumNewCol - 1, XnumNewCol,
+        assessMatrix(options, lp.numRow_, XnumNewCol,
                      local_Astart, local_Aindex, local_Avalue, 
                      options.small_matrix_value, options.large_matrix_value),
         return_status, "assessMatrix");
@@ -374,7 +374,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     local_ARstart.resize(XnumNewRow+1);
     local_ARstart[XnumNewRow] = XnumNewNZ;
     return_status = interpretCallStatus(
-        assessMatrix(options, lp.numCol_, 0, XnumNewRow - 1, XnumNewRow,
+        assessMatrix(options, lp.numCol_, XnumNewRow,
                      local_ARstart, local_ARindex, local_ARvalue, 
                      options.small_matrix_value, options.large_matrix_value),
         return_status, "assessMatrix");

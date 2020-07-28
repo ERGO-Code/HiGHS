@@ -87,7 +87,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
       return HighsStatus::Error;
     }
     call_status =
-        assessMatrix(options, lp.numRow_, 0, lp.numCol_ - 1, lp.numCol_,
+        assessMatrix(options, lp.numRow_, lp.numCol_,
                      lp.Astart_, lp.Aindex_, lp.Avalue_,
                      options.small_matrix_value, options.large_matrix_value);
     return_status =
@@ -418,13 +418,13 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
   return return_status;
 }
 
-HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
-                         const int from_ix, const int to_ix, const int num_vec,
-                         vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
+HighsStatus assessMatrix(const HighsOptions& options, 
+                         const int vec_dim, const int num_vec,
+                         vector<int>& Astart,
+			 vector<int>& Aindex,
+			 vector<double>& Avalue,
                          const double small_matrix_value,
                          const double large_matrix_value) {
-  if (from_ix < 0) return HighsStatus::OK;
-  if (from_ix > to_ix) return HighsStatus::OK;
   int num_nz = Astart[num_vec];
   if (num_nz > 0 && vec_dim <= 0) return HighsStatus::Error;
   if (num_nz <= 0) return HighsStatus::OK;
@@ -433,17 +433,16 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
   bool error_found = false;
   bool warning_found = false;
 
-  // Warn the user if the first start is not zero
-  int fromEl = Astart[0];
-  if (fromEl != 0) {
+  // Return a error if the first start is not zero
+  if (Astart[0]) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
                     "Matrix starts do not begin with 0");
-    warning_found = true;
+    return HighsStatus::Error;
   }
   // Assess the starts
   // Set up previous_start for a fictitious previous empty packed vector
-  int previous_start = std::max(0, Astart[from_ix]);
-  for (int ix = from_ix; ix < to_ix + 1; ix++) {
+  int previous_start = Astart[0];
+  for (int ix = 0; ix < num_vec; ix++) {
     int this_start = Astart[ix];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
@@ -465,25 +464,16 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
 
   // Assess the indices and values
   // Count the number of acceptable indices/values
-  int num_new_nz = Astart[from_ix];
+  int num_new_nz = 0;
   int num_small_values = 0;
   double max_small_value = 0;
   double min_small_value = HIGHS_CONST_INF;
   // Set up a zeroed vector to detect duplicate indices
   vector<int> check_vector;
   if (vec_dim > 0) check_vector.assign(vec_dim, 0);
-  for (int ix = from_ix; ix < to_ix + 1; ix++) {
+  for (int ix = 0; ix < num_vec; ix++) {
     int from_el = Astart[ix];
-    int to_el;
-    if (ix < num_vec - 1) {
-      to_el = Astart[ix + 1];
-    } else {
-      // num_vec is the number of vectors in the whole matrix data
-      // structure. Need to know if only the final columns are being
-      // assessed so that num_nz rather than Astart[num_vec] is
-      // accessed since the latter may not be assigned.
-      to_el = num_nz;
-    }
+    int to_el = Astart[ix + 1];
     // Account for any index-value pairs removed so far
     Astart[ix] = num_new_nz;
     for (int el = from_el; el < to_el; el++) {
@@ -570,25 +560,8 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                     num_small_values, min_small_value, max_small_value,
                     small_matrix_value);
     warning_found = true;
-    // Accommodate the loss of these values in any subsequent packed vectors
-    for (int ix = to_ix + 1; ix < num_vec; ix++) {
-      // int from_el = Astart[ix];
-      Astart[ix] = num_new_nz;
-      int to_el;
-      if (ix < num_vec) {
-        to_el = Astart[ix + 1];
-      } else {
-        to_el = num_nz;
-      }
-      for (int el = Astart[ix]; el < to_el; el++) {
-        Aindex[num_new_nz] = Aindex[el];
-        Avalue[num_new_nz] = Avalue[el];
-        num_new_nz++;
-      }
-    }
-    num_nz = num_new_nz;
   }
-  Astart[num_vec] = num_nz;
+  Astart[num_vec] = num_new_nz;
   if (error_found)
     return_status = HighsStatus::Error;
   else if (warning_found)
