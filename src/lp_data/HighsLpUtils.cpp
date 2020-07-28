@@ -86,19 +86,18 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
                       lp.Astart_[0]);
       return HighsStatus::Error;
     }
-    int lp_num_nz = lp.Astart_[lp.numCol_];
     call_status =
         assessMatrix(options, lp.numRow_, 0, lp.numCol_ - 1, lp.numCol_,
-                     lp_num_nz, lp.Astart_, lp.Aindex_, lp.Avalue_,
+                     lp.Astart_, lp.Aindex_, lp.Avalue_,
                      options.small_matrix_value, options.large_matrix_value);
     return_status =
         interpretCallStatus(call_status, return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
+    int lp_num_nz = lp.Astart_[lp.numCol_];
     // If entries have been removed from the matrix, resize the index
     // and value vectors to prevent bug in presolve
     if ((int)lp.Aindex_.size() > lp_num_nz) lp.Aindex_.resize(lp_num_nz);
     if ((int)lp.Avalue_.size() > lp_num_nz) lp.Avalue_.resize(lp_num_nz);
-    lp.Astart_[lp.numCol_] = lp_num_nz;
   }
   if (return_status == HighsStatus::Error)
     return_status = HighsStatus::Error;
@@ -421,11 +420,12 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                          const int from_ix, const int to_ix, const int num_vec,
-                         int& num_nz, vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
+                         vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
                          const double small_matrix_value,
                          const double large_matrix_value) {
   if (from_ix < 0) return HighsStatus::OK;
   if (from_ix > to_ix) return HighsStatus::OK;
+  int num_nz = Astart[num_vec];
   if (num_nz > 0 && vec_dim <= 0) return HighsStatus::Error;
   if (num_nz <= 0) return HighsStatus::OK;
 
@@ -588,6 +588,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
     }
     num_nz = num_new_nz;
   }
+  Astart[num_vec] = num_nz;
   if (error_found)
     return_status = HighsStatus::Error;
   else if (warning_found)

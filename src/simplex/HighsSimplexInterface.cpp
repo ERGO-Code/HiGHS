@@ -127,11 +127,11 @@ HighsStatus HighsSimplexInterface::addCols(
     // Assess the matrix columns
     return_status = interpretCallStatus(
         assessMatrix(options, lp.numRow_, 0, XnumNewCol - 1, XnumNewCol,
-                     local_num_new_nz, local_Astart, local_Aindex,
-                     local_Avalue, options.small_matrix_value,
-                     options.large_matrix_value),
+                     local_Astart, local_Aindex, local_Avalue, 
+                     options.small_matrix_value, options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
+    local_num_new_nz = local_Astart[XnumNewCol];
     // Append the columns to the LP matrix
     return_status = interpretCallStatus(
         appendColsToLpMatrix(lp, XnumNewCol, local_num_new_nz, &local_Astart[0],
@@ -375,11 +375,11 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     local_ARstart[XnumNewRow] = XnumNewNZ;
     return_status = interpretCallStatus(
         assessMatrix(options, lp.numCol_, 0, XnumNewRow - 1, XnumNewRow,
-                     local_num_new_nz, local_ARstart, local_ARindex,
-                     local_ARvalue, options.small_matrix_value,
-                     options.large_matrix_value),
+                     local_ARstart, local_ARindex, local_ARvalue, 
+                     options.small_matrix_value, options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
+    local_num_new_nz = local_ARstart[XnumNewRow];
     if (local_num_new_nz) {
       // Append the rows to LP matrix
       return_status = interpretCallStatus(
