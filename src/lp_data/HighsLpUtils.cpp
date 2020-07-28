@@ -1264,7 +1264,7 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
 
 HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
                           const HighsIndexCollection& index_collection,
-                          const double* usr_col_cost) {
+                          const vector<double>& new_col_cost) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))
@@ -1276,7 +1276,6 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return HighsStatus::OK;
-  if (usr_col_cost == NULL) return HighsStatus::Error;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
@@ -1293,33 +1292,33 @@ HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
     }
     int col = usr_col;
     if (mask && !col_mask[col]) continue;
-    lp.colCost_[col] = usr_col_cost[k];
+    lp.colCost_[col] = new_col_cost[k];
   }
   return HighsStatus::OK;
 }
 
 HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
-                              const double* usr_col_lower,
-                              const double* usr_col_upper) {
-  return changeBounds(options, "col", &lp.colLower_[0], &lp.colUpper_[0],
-                      lp.numCol_, index_collection, usr_col_lower,
-                      usr_col_upper);
+                              const vector<double>& new_col_lower,
+                              const vector<double>& new_col_upper) {
+  return changeBounds(options, "col", lp.colLower_, lp.colUpper_,
+                      lp.numCol_, index_collection, new_col_lower,
+                      new_col_upper);
 }
 
 HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
-                              const double* usr_row_lower,
-                              const double* usr_row_upper) {
-  return changeBounds(options, "row", &lp.rowLower_[0], &lp.rowUpper_[0],
-                      lp.numRow_, index_collection, usr_row_lower,
-                      usr_row_upper);
+                              const vector<double>& new_row_lower,
+                              const vector<double>& new_row_upper) {
+  return changeBounds(options, "row", lp.rowLower_, lp.rowUpper_,
+                      lp.numRow_, index_collection, new_row_lower,
+                      new_row_upper);
 }
 
 HighsStatus changeBounds(const HighsOptions& options, const char* type,
-                         double* lower, double* upper, const int ix_dim,
+                         vector<double>& lower, vector<double>& upper, const int ix_dim,
                          const HighsIndexCollection& index_collection,
-                         const double* usr_lower, const double* usr_upper) {
+                         const vector<double>& new_lower, const vector<double>& new_upper) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))
@@ -1331,8 +1330,6 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
   if (from_k > to_k) return HighsStatus::OK;
-  if (usr_lower == NULL) return HighsStatus::Error;
-  if (usr_upper == NULL) return HighsStatus::Error;
 
   const bool& interval = index_collection.is_interval_;
   const bool& mask = index_collection.is_mask_;
@@ -1349,8 +1346,8 @@ HighsStatus changeBounds(const HighsOptions& options, const char* type,
     }
     int ix = usr_ix;
     if (mask && !ix_mask[ix]) continue;
-    lower[ix] = usr_lower[k];
-    upper[ix] = usr_upper[k];
+    lower[ix] = new_lower[k];
+    upper[ix] = new_upper[k];
   }
   return HighsStatus::OK;
 }

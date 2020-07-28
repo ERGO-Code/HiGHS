@@ -825,7 +825,7 @@ HighsStatus HighsSimplexInterface::changeCosts(
   if (return_status == HighsStatus::Error) return return_status;
 
   HighsStatus call_status =
-      changeLpCosts(options, lp, index_collection, &local_colCost[0]);
+      changeLpCosts(options, lp, index_collection, local_colCost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -834,7 +834,7 @@ HighsStatus HighsSimplexInterface::changeCosts(
     assert(lp.numCol_ == simplex_lp.numCol_);
     assert(lp.numRow_ == simplex_lp.numRow_);
     call_status =
-        changeLpCosts(options, simplex_lp, index_collection, &local_colCost[0]);
+        changeLpCosts(options, simplex_lp, index_collection, local_colCost);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
       applyScalingToLpColCosts(options, simplex_lp,
@@ -888,7 +888,7 @@ HighsStatus HighsSimplexInterface::changeColBounds(
   if (return_status == HighsStatus::Error) return return_status;
 
   HighsStatus call_status = changeLpColBounds(
-      options, lp, index_collection, &local_colLower[0], &local_colUpper[0]);
+      options, lp, index_collection, local_colLower, local_colUpper);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -897,7 +897,7 @@ HighsStatus HighsSimplexInterface::changeColBounds(
     assert(lp.numCol_ == simplex_lp.numCol_);
     assert(lp.numRow_ == simplex_lp.numRow_);
     call_status = changeLpColBounds(options, simplex_lp, index_collection,
-                                    &local_colLower[0], &local_colUpper[0]);
+                                    local_colLower, local_colUpper);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
       applyScalingToLpColBounds(options, simplex_lp,
@@ -950,8 +950,9 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
       return_status, "assessBounds");
   if (return_status == HighsStatus::Error) return return_status;
 
-  HighsStatus call_status = changeLpRowBounds(
-      options, lp, index_collection, &local_rowLower[0], &local_rowUpper[0]);
+  HighsStatus call_status;
+  call_status = changeLpRowBounds(
+      options, lp, index_collection, local_rowLower, local_rowUpper);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -959,8 +960,8 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     assert(lp.numCol_ == simplex_lp.numCol_);
     assert(lp.numRow_ == simplex_lp.numRow_);
-    call_status = changeLpRowBounds(options, simplex_lp, index_collection,
-                                    &local_rowLower[0], &local_rowUpper[0]);
+    call_status = changeLpRowBounds(
+	options, simplex_lp, index_collection, local_rowLower, local_rowUpper);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
       applyScalingToLpRowBounds(options, simplex_lp,

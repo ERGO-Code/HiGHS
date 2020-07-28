@@ -119,22 +119,22 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
 
 HighsStatus changeLpCosts(const HighsOptions& options, HighsLp& lp,
                           const HighsIndexCollection& index_collection,
-                          const double* usr_col_cost);
+                          const vector<double>& new_col_cost);
 
 HighsStatus changeLpColBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
-                              const double* usr_col_lower,
-                              const double* usr_col_upper);
+                              const vector<double>& new_col_lower,
+                              const vector<double>& new_col_upper);
 
 HighsStatus changeLpRowBounds(const HighsOptions& options, HighsLp& lp,
                               const HighsIndexCollection& index_collection,
-                              const double* usr_row_lower,
-                              const double* usr_row_upper);
+                              const vector<double>& new_row_lower,
+                              const vector<double>& new_row_upper);
 
 HighsStatus changeBounds(const HighsOptions& options, const char* type,
-                         double* lower, double* upper, const int mask_num_ix,
+                         vector<double>& lower, vector<double>& upper, const int mask_num_ix,
                          const HighsIndexCollection& index_collection,
-                         const double* usr_lower, const double* usr_upper);
+                         const vector<double>& new_lower, const vector<double>& new_upper);
 
 /**
  * @brief Report the data of an LP
