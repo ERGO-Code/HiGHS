@@ -1232,10 +1232,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   // Allow a switch to/from the original scaling rules
   int simplex_scale_strategy =
       highs_model_object.options_.simplex_scale_strategy;
-  bool hsol_scaling = simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HSOL;
   bool allow_cost_scaling =
       highs_model_object.options_.allowed_simplex_cost_scale_factor > 0;
-  if (hsol_scaling) allow_cost_scaling = false;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
@@ -1262,7 +1260,6 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
                     no_scaling_original_matrix_max_value);
   } else {
     const bool equilibration_scaling =
-        simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HSOL ||
         simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS ||
         simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
     if (equilibration_scaling) {
@@ -1313,7 +1310,6 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
 
   int simplex_scale_strategy =
       highs_model_object.options_.simplex_scale_strategy;
-  bool hsol_scaling = simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HSOL;
 
   double original_matrix_min_value = HIGHS_CONST_INF;
   double original_matrix_max_value = 0;
@@ -1329,7 +1325,6 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
     if (colCost[i]) min_nonzero_cost = min(fabs(colCost[i]), min_nonzero_cost);
   }
   bool include_cost_in_scaling = false;
-  //  if (hsol_scaling)
   include_cost_in_scaling = min_nonzero_cost < 0.1;
 
   // Limits on scaling factors
@@ -1339,12 +1334,8 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
   // std::numeric_limits<double>::infinity(), this Qi-trick doesn't
   // work so, in recognition, use the old value of HIGHS_CONST_INF
   const double finite_infinity = 1e200;
-  if (hsol_scaling) {
-    max_allow_scale = finite_infinity;
-  } else {
-    max_allow_scale = pow(
-        2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);
-  }
+  max_allow_scale = pow(
+      2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);
   min_allow_scale = 1 / max_allow_scale;
 
   double min_allow_col_scale = min_allow_scale;
@@ -1565,8 +1556,7 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
                   matrix_value_ratio_improvement);
 #endif
   const bool possibly_abandon_scaling =
-      (!hsol_scaling &&
-       simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED);
+      simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
   const double improvement_factor = extreme_equilibration_improvement *
                                     mean_equilibration_improvement *
                                     matrix_value_ratio_improvement;
@@ -1637,8 +1627,8 @@ bool maxValueScaleMatrix(HighsModelObject& highs_model_object) {
 
   int simplex_scale_strategy =
       highs_model_object.options_.simplex_scale_strategy;
-  if (simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_015 &&
-      simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_0157) {
+  if (simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_015 &&
+      simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_0157) {
     printf(
         "STRANGE: called maxValueScaleSimplexLp with simplex_scale_strategy = "
         "%d\n",

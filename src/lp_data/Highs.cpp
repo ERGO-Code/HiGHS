@@ -334,8 +334,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
   }
 }
   */
-  // If running as hsol, reset any changed options
-  if (options_.run_as_hsol) setHsolOptions(options_);
   // Determine whether a model has been loaded.
   assert((int)hmos_.size() <= 1);
   if (hmos_.size() == 0) {
