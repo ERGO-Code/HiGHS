@@ -89,7 +89,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     int lp_num_nz = lp.Astart_[lp.numCol_];
     call_status =
         assessMatrix(options, lp.numRow_, 0, lp.numCol_ - 1, lp.numCol_,
-                     lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+                     lp_num_nz, lp.Astart_, lp.Aindex_, lp.Avalue_,
                      options.small_matrix_value, options.large_matrix_value);
     return_status =
         interpretCallStatus(call_status, return_status, "assessMatrix");
@@ -421,7 +421,7 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
 
 HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                          const int from_ix, const int to_ix, const int num_vec,
-                         int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
+                         int& num_nz, vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
                          const double small_matrix_value,
                          const double large_matrix_value) {
   if (from_ix < 0) return HighsStatus::OK;
@@ -434,7 +434,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
   bool warning_found = false;
 
   // Warn the user if the first start is not zero
-  int fromEl = Xstart[0];
+  int fromEl = Astart[0];
   if (fromEl != 0) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING,
                     "Matrix starts do not begin with 0");
@@ -442,9 +442,9 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
   }
   // Assess the starts
   // Set up previous_start for a fictitious previous empty packed vector
-  int previous_start = std::max(0, Xstart[from_ix]);
+  int previous_start = std::max(0, Astart[from_ix]);
   for (int ix = from_ix; ix < to_ix + 1; ix++) {
-    int this_start = Xstart[ix];
+    int this_start = Astart[ix];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
@@ -465,7 +465,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
 
   // Assess the indices and values
   // Count the number of acceptable indices/values
-  int num_new_nz = Xstart[from_ix];
+  int num_new_nz = Astart[from_ix];
   int num_small_values = 0;
   double max_small_value = 0;
   double min_small_value = HIGHS_CONST_INF;
@@ -473,21 +473,21 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
   vector<int> check_vector;
   if (vec_dim > 0) check_vector.assign(vec_dim, 0);
   for (int ix = from_ix; ix < to_ix + 1; ix++) {
-    int from_el = Xstart[ix];
+    int from_el = Astart[ix];
     int to_el;
     if (ix < num_vec - 1) {
-      to_el = Xstart[ix + 1];
+      to_el = Astart[ix + 1];
     } else {
       // num_vec is the number of vectors in the whole matrix data
       // structure. Need to know if only the final columns are being
-      // assessed so that num_nz rather than Xstart[num_vec] is
+      // assessed so that num_nz rather than Astart[num_vec] is
       // accessed since the latter may not be assigned.
       to_el = num_nz;
     }
     // Account for any index-value pairs removed so far
-    Xstart[ix] = num_new_nz;
+    Astart[ix] = num_new_nz;
     for (int el = from_el; el < to_el; el++) {
-      int component = Xindex[el];
+      int component = Aindex[el];
       // Check that the index is non-negative
       bool legal_component = component >= 0;
       if (!legal_component) {
@@ -518,7 +518,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       // Indicate that the index has occurred
       check_vector[component] = 1;
       // Check that the value is not too large
-      double abs_value = fabs(Xvalue[el]);
+      double abs_value = fabs(Avalue[el]);
       bool large_value = abs_value >= large_matrix_value;
       if (large_value) {
         HighsLogMessage(
@@ -537,8 +537,8 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
         // Shift the index and value of the OK entry to the new
         // position in the index and value vectors, and increment
         // the new number of nonzeros
-        Xindex[num_new_nz] = Xindex[el];
-        Xvalue[num_new_nz] = Xvalue[el];
+        Aindex[num_new_nz] = Aindex[el];
+        Avalue[num_new_nz] = Avalue[el];
         num_new_nz++;
       } else {
         // Zero the check_vector entry since the small value
@@ -547,8 +547,8 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       }
     }
     // Zero check_vector
-    for (int el = Xstart[ix]; el < num_new_nz; el++)
-      check_vector[Xindex[el]] = 0;
+    for (int el = Astart[ix]; el < num_new_nz; el++)
+      check_vector[Aindex[el]] = 0;
 #ifdef HiGHSDEV
     // NB This is very expensive so shouldn't be true
     const bool check_check_vector = false;
@@ -572,17 +572,17 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
     warning_found = true;
     // Accommodate the loss of these values in any subsequent packed vectors
     for (int ix = to_ix + 1; ix < num_vec; ix++) {
-      // int from_el = Xstart[ix];
-      Xstart[ix] = num_new_nz;
+      // int from_el = Astart[ix];
+      Astart[ix] = num_new_nz;
       int to_el;
       if (ix < num_vec) {
-        to_el = Xstart[ix + 1];
+        to_el = Astart[ix + 1];
       } else {
         to_el = num_nz;
       }
-      for (int el = Xstart[ix]; el < to_el; el++) {
-        Xindex[num_new_nz] = Xindex[el];
-        Xvalue[num_new_nz] = Xvalue[el];
+      for (int el = Astart[ix]; el < to_el; el++) {
+        Aindex[num_new_nz] = Aindex[el];
+        Avalue[num_new_nz] = Avalue[el];
         num_new_nz++;
       }
     }

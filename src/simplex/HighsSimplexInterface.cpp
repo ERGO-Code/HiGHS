@@ -122,11 +122,13 @@ HighsStatus HighsSimplexInterface::addCols(
     std::vector<int> local_Astart{XAstart, XAstart + XnumNewCol};
     std::vector<int> local_Aindex{XAindex, XAindex + XnumNewNZ};
     std::vector<double> local_Avalue{XAvalue, XAvalue + XnumNewNZ};
+    local_Astart.resize(XnumNewCol+1);
+    local_Astart[XnumNewCol] = XnumNewNZ;
     // Assess the matrix columns
     return_status = interpretCallStatus(
         assessMatrix(options, lp.numRow_, 0, XnumNewCol - 1, XnumNewCol,
-                     local_num_new_nz, &local_Astart[0], &local_Aindex[0],
-                     &local_Avalue[0], options.small_matrix_value,
+                     local_num_new_nz, local_Astart, local_Aindex,
+                     local_Avalue, options.small_matrix_value,
                      options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
@@ -369,10 +371,12 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     std::vector<int> local_ARstart{XARstart, XARstart + XnumNewRow};
     std::vector<int> local_ARindex{XARindex, XARindex + XnumNewNZ};
     std::vector<double> local_ARvalue{XARvalue, XARvalue + XnumNewNZ};
+    local_ARstart.resize(XnumNewRow+1);
+    local_ARstart[XnumNewRow] = XnumNewNZ;
     return_status = interpretCallStatus(
         assessMatrix(options, lp.numCol_, 0, XnumNewRow - 1, XnumNewRow,
-                     local_num_new_nz, &local_ARstart[0], &local_ARindex[0],
-                     &local_ARvalue[0], options.small_matrix_value,
+                     local_num_new_nz, local_ARstart, local_ARindex,
+                     local_ARvalue, options.small_matrix_value,
                      options.large_matrix_value),
         return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
