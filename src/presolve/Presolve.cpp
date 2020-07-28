@@ -598,10 +598,10 @@ void Presolve::removeDoubletonEquations() {
           caseTwoSingletonsDoubletonEquation(row, x, y);
           continue;
         }
-        
-        // singleton rows only in y column which is present in fewer constraints and eliminated.
-        // bool rs_only = true;
-        // for (int k = Astart.at(y); k < Aend.at(y); ++k)
+
+        // singleton rows only in y column which is present in fewer constraints
+        // and eliminated. bool rs_only = true; for (int k = Astart.at(y); k <
+        // Aend.at(y); ++k)
         //   if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
         //     if (nzRow[row]  > 1) {
         //       rs_only = false;
@@ -2699,11 +2699,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         valueRowDual[c.row] = 0;
         flagRow[c.row] = 1;
         if (iKKTcheck == 1) {
-          if (chk2.print == 1)
-            cout << "----KKT check after empty row " << c.row
-                 << " re-introduced-----\n";
+          // if (chk2.print == 1)
+          //   cout << "----KKT check after empty row " << c.row
+          //        << " re-introduced-----\n";
           chk2.addChange(0, c.row, 0, 0, 0, 0);
-          checkKkt();
+          // checkKkt();
         }
         break;
       }
@@ -2714,12 +2714,12 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         getDualsSingletonRow(c.row, c.col);
 
         if (iKKTcheck == 1) {
-          if (chk2.print == 1)
-            cout << "----KKT check after singleton row " << c.row
-                 << " re-introduced. Variable: " << c.col << " -----\n";
+          // if (chk2.print == 1)
+          //   cout << "----KKT check after singleton row " << c.row
+          //        << " re-introduced. Variable: " << c.col << " -----\n";
           chk2.addChange(1, c.row, c.col, valuePrimal[c.col],
                          valueColDual[c.col], valueRowDual[c.row]);
-          checkKkt();
+          // checkKkt();
         }
         break;
       }
@@ -2733,11 +2733,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         string str = getDualsForcingRow(c.row, fRjs);
 
         if (iKKTcheck == 1) {
-          if (chk2.print == 1)
-            cout << "----KKT check after forcing row " << c.row
-                 << " re-introduced. Variable(s): " << str << " -----\n";
+          // if (chk2.print == 1)
+          //   cout << "----KKT check after forcing row " << c.row
+          //        << " re-introduced. Variable(s): " << str << " -----\n";
           chk2.addChange(3, c.row, 0, 0, 0, valueRowDual[c.row]);
-          checkKkt();
+          // checkKkt();
         }
         fRjs.clear();
         break;
@@ -2750,10 +2750,10 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         flagRow[c.row] = 1;
 
         if (iKKTcheck == 1) {
-          if (chk2.print == 1)
-            cout << "----KKT check after redundant row " << c.row
-                 << " re-introduced.----------------\n";
-          checkKkt();
+          // if (chk2.print == 1)
+          //   cout << "----KKT check after redundant row " << c.row
+          //        << " re-introduced.----------------\n";
+          // checkKkt();
         }
         break;
       }
@@ -2833,15 +2833,16 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
         if (iKKTcheck == 1) {
           chk2.addCost(c.col, costAtTimeOfElimination);
-          if (c.type == FREE_SING_COL && chk2.print == 1)
-            cout << "----KKT check after free col singleton " << c.col
-                 << " re-introduced. Row: " << c.row << " -----\n";
-          else if (c.type == IMPLIED_FREE_SING_COL && chk2.print == 1)
-            cout << "----KKT check after implied free col singleton " << c.col
-                 << " re-introduced. Row: " << c.row << " -----\n";
+          // if (c.type == FREE_SING_COL && chk2.print == 1)
+          //   cout << "----KKT check after free col singleton " << c.col
+          //        << " re-introduced. Row: " << c.row << " -----\n";
+          // else if (c.type == IMPLIED_FREE_SING_COL && chk2.print == 1)
+          //   cout << "----KKT check after implied free col singleton " <<
+          //   c.col
+          //        << " re-introduced. Row: " << c.row << " -----\n";
           chk2.addChange(4, c.row, c.col, valuePrimal[c.col],
                          valueColDual[c.col], valueRowDual[c.row]);
-          checkKkt();
+          // checkKkt();
         }
         break;
       }
@@ -2991,14 +2992,14 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         flagCol[c.col] = 1;
 
         if (iKKTcheck == 1) {
-          if (chk2.print == 1)
-            cout << "----KKT check after col singleton " << c.col
-                 << " in doubleton eq re-introduced. Row: " << c.row
-                 << " -----\n";
+          // if (chk2.print == 1)
+          //   cout << "----KKT check after col singleton " << c.col
+          //        << " in doubleton ineq re-introduced. Row: " << c.row
+          //        << " -----\n";
 
           chk2.addChange(5, c.row, c.col, valuePrimal[c.col],
                          valueColDual[c.col], valueRowDual[c.row]);
-          checkKkt();
+          // checkKkt();
         }
         // exit(2);
         break;
@@ -3017,19 +3018,19 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
         flagCol[c.col] = 1;
         if (iKKTcheck == 1) {
-          if (c.type == EMPTY_COL && chk2.print == 1)
-            cout << "----KKT check after empty column " << c.col
-                 << " re-introduced.-----------\n";
-          else if (c.type == DOMINATED_COLS && chk2.print == 1)
-            cout << "----KKT check after dominated column " << c.col
-                 << " re-introduced.-----------\n";
-          else if (c.type == WEAKLY_DOMINATED_COLS && chk2.print == 1)
-            cout << "----KKT check after weakly dominated column " << c.col
-                 << " re-introduced.-----------\n";
+          // if (c.type == EMPTY_COL && chk2.print == 1)
+          //   cout << "----KKT check after empty column " << c.col
+          //        << " re-introduced.-----------\n";
+          // else if (c.type == DOMINATED_COLS && chk2.print == 1)
+          //   cout << "----KKT check after dominated column " << c.col
+          //        << " re-introduced.-----------\n";
+          // else if (c.type == WEAKLY_DOMINATED_COLS && chk2.print == 1)
+          //   cout << "----KKT check after weakly dominated column " << c.col
+          //        << " re-introduced.-----------\n";
 
           chk2.addChange(6, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
                          0);
-          checkKkt();
+          // checkKkt();
         }
         break;
       }
@@ -3040,12 +3041,12 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
         flagCol[c.col] = 1;
         if (iKKTcheck == 1) {
-          if (chk2.print == 1)
-            cout << "----KKT check after fixed variable " << c.col
-                 << " re-introduced.-----------\n";
+          // if (chk2.print == 1)
+          //   cout << "----KKT check after fixed variable " << c.col
+          //        << " re-introduced.-----------\n";
           chk2.addChange(7, 0, c.col, valuePrimal[c.col], valueColDual[c.col],
                          0);
-          checkKkt();
+          // checkKkt();
         }
         break;
       }
@@ -3583,6 +3584,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
   // eliminated col(k)(c.col) and are left with changed bounds on j and no row.
   //                               y x
 
+  const bool report = true;
+
   pair<int, vector<double>> p = oldBounds.top();
   oldBounds.pop();
   vector<double> v = get<1>(p);
@@ -3637,47 +3640,57 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
     col_status.at(y) = HighsBasisStatus::BASIC;
     row_status.at(row) = HighsBasisStatus::NONBASIC;
 
+    // makeYBasic();
     valueColDual.at(y) = 0;
     valueRowDual.at(row) = getRowDualPost(row, y);
-
-    if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
+    if (report) printf("4.2 : Make column %3d basic\n", y);
     return;
-  } else if (((x_status_reduced == HighsBasisStatus::NONBASIC ||
-               x_status_reduced == HighsBasisStatus::UPPER) &&
-              fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
-             ((x_status_reduced == HighsBasisStatus::NONBASIC ||
-               x_status_reduced == HighsBasisStatus::LOWER) &&
-              fabs(valueX - lbxNew) < tol && lbxNew > lbxOld) ||
-             (fabs(valueX - lbxNew) < tol && fabs(lbxOld - lbxNew) < tol &&
-              (x_status_reduced == HighsBasisStatus::UPPER ||
-               x_status_reduced == HighsBasisStatus::LOWER))) {
+  }
+
+  if (((x_status_reduced == HighsBasisStatus::NONBASIC ||
+        x_status_reduced == HighsBasisStatus::UPPER) &&
+       fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
+      ((x_status_reduced == HighsBasisStatus::NONBASIC ||
+        x_status_reduced == HighsBasisStatus::LOWER) &&
+       fabs(valueX - lbxNew) < tol && lbxNew > lbxOld) ||
+      (fabs(valueX - lbxNew) < tol && fabs(lbxOld - lbxNew) < tol &&
+       (x_status_reduced == HighsBasisStatus::UPPER ||
+        x_status_reduced == HighsBasisStatus::LOWER))) {
     if (ubxNew > lbxNew) {
       // Column x is nonbasic at reduced solution at a reduced bound but needs
       // to be changed to basic since this bound is expanding.
       assert(col_status.at(y) == HighsBasisStatus::NONBASIC);
+
       x_make_basic = true;
+      // makeXBasic()
     }
 
     if (ubxNew == lbxNew) {
-      if (report_postsolve)
+      if (report)
         printf(
             "4.5 : Maybe dual restriction on column x : no longer on feas "
             "side.\n");
-      // if (ubxNew == lbxOld && ubxNew < ubxOld )std::cout << " u.  "  <<
-      // valueColDual[x] << std::endl; if (lbxNew == ubxOld && lbxNew >
-      // lbxOld)std::cout << " l.  "  << valueColDual[x] << std::endl;
+      if (ubxNew == lbxOld && ubxNew < ubxOld)
+        std::cout << " u.  " << valueColDual[x] << std::endl;
+      if (lbxNew == ubxOld && lbxNew > lbxOld)
+        std::cout << " l.  " << valueColDual[x] << std::endl;
 
       if ((ubxNew == lbxOld && ubxNew < ubxOld && valueColDual[x] < tol) ||
           (lbxNew == ubxOld && lbxNew > lbxOld && valueColDual[x] > tol)) {
-        if (report_postsolve) printf("4.6 : Change dual of x to zero.\n");
-        valueColDual[x] = 0;
-        y_make_basic = true;
-        x_make_basic = true;
+        if (report) printf("4.6 : Change dual of x to zero.\n");
+
+        // make x basic.
+        valueColDual.at(x) = 0;
+        valueRowDual.at(row) = getRowDualPost(row, x);
+        valueColDual.at(y) = getColumnDualPost(y);
+        col_status.at(x) = HighsBasisStatus::BASIC;
+        row_status.at(row) = HighsBasisStatus::NONBASIC;
+        if (report) printf("4.77 : Make column %3d basic\n", x);
+        return;
       }
     }
 
     if (x_make_basic) {
-
       // transfer dual of x to dual of row
       valueColDual.at(x) = 0;
       valueRowDual.at(row) = getRowDualPost(row, x);
@@ -3699,10 +3712,11 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
         if (feasible) {
           col_status.at(x) = HighsBasisStatus::BASIC;
           row_status.at(row) = HighsBasisStatus::NONBASIC;
-          if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
+          if (report) printf("4.1 : Make column %3d basic\n", x);
           return;
         }
-        // y_make_basic = true;
+        // Y not dual feasible
+        y_make_basic = true;
       }
       // If not feasble X will remail nonbasic and we will make the
     }
@@ -3714,13 +3728,13 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
              fabs(uby - valuePrimal[y]) < tol);
       // If postsolved column y is at a bound. If lby != uby we have a
       // restriction on the dual sign of y.
-      col_status.at(y) = HighsBasisStatus::BASIC;
-      row_status.at(row) = HighsBasisStatus::NONBASIC;
+      // col_status.at(y) = HighsBasisStatus::BASIC;
+      // row_status.at(row) = HighsBasisStatus::NONBASIC;
 
-      valueColDual.at(y) = 0;
-      valueRowDual.at(row) = getRowDualPost(row, y);
+      // valueColDual.at(y) = 0;
+      // valueRowDual.at(row) = getRowDualPost(row, y);
 
-      if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
+      // if (report) printf("4.2 : Make column %3d basic\n", y);
     } else {
       // Column y is at a bound.
       assert(fabs(uby - valuePrimal[y]) < tol ||
@@ -3734,59 +3748,120 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
         row_basic = true;
       }  // Else Will need to check dual feasibility of y dual.
 
-      // Print & check some info.
-      // if (x_status_reduced == HighsBasisStatus::BASIC)
-      //   std::cout << "BASIC" << std::endl;
-      // else
-      //   std::cout << "NOT BASIC" << std::endl;
-
-      // see if X at a bound
-      if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
-        if ((fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
-            (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
-          // std::cout << "     4.122" << std::endl;
-          if (ubxNew > lbxNew)
-            assert(x_status_reduced == HighsBasisStatus::BASIC);
-          row_basic = false;
-
-        } else {
-          // std::cout << "     4.002" << std::endl;
-        }
-      } else {
-        // X strictly between bounds
-        assert(x_status_reduced == HighsBasisStatus::BASIC);
-        assert(valuePrimal[x] - lbxNew > tol && ubxNew - valuePrimal[x] > tol);
+      if (x_status_reduced != HighsBasisStatus::BASIC) {
+        // make x basic.
+        valueColDual.at(x) = 0;
+        valueRowDual.at(row) = getRowDualPost(row, x);
+        valueColDual.at(y) = getColumnDualPost(y);
+        col_status.at(x) = HighsBasisStatus::BASIC;
+        row_status.at(row) = HighsBasisStatus::NONBASIC;
+        if (report) printf("4.778 : Make column %3d basic\n", x);
+        return;
       }
     }
   }
 
+  // Print & check some info.
+  if (x_status_reduced == HighsBasisStatus::BASIC)
+    std::cout << "BASIC" << std::endl;
+  else
+    std::cout << "NOT BASIC" << std::endl;
+
+  std::cout << "valueXDual " << valueColDual[x] << std::endl;
+
+  // see if X at a bound
+  if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
+    if ((fabs(valueX - ubxNew) < tol && ubxNew < ubxOld) ||
+        (fabs(valueX - lbxNew) < tol && lbxNew > lbxOld)) {
+      std::cout << "     4.122" << std::endl;
+      std::cout << lbxOld << " lbxOld " << std::endl;
+      std::cout << ubxOld << " ubxOld " << std::endl;
+      std::cout << lbxNew << " lbxNew " << std::endl;
+      std::cout << ubxNew << " ubxNew " << std::endl;
+      std::cout << valueX << " val  " << std::endl;
+      if (ubxNew > lbxNew) assert(x_status_reduced == HighsBasisStatus::BASIC);
+
+      // if X was non basic make it basic
+      if (x_status_reduced != HighsBasisStatus::BASIC) {
+        valueColDual.at(x) = 0;
+        valueColDual.at(y) = 0;
+        valueRowDual.at(row) = getRowDualPost(row, x);
+        // valueColDual.at(y) = getColumnDualPost(y);
+        col_status.at(x) = HighsBasisStatus::BASIC;
+        row_status.at(row) = HighsBasisStatus::NONBASIC;
+        if (report) printf("4.122778 : Make column %3d basic\n", x);
+        return;
+      }
+
+      // if X was basic make y basic.
+      valueColDual.at(y) = 0;
+      valueRowDual.at(row) = getRowDualPost(row, x);
+      col_status.at(y) = HighsBasisStatus::BASIC;
+      row_status.at(row) = HighsBasisStatus::NONBASIC;
+      if (report) printf("4.122779 : Make column %3d basic\n", y);
+      return;
+    } else {
+      std::cout << "     4.002" << std::endl;
+    }
+  } else {
+    // X strictly between bounds
+    assert(x_status_reduced == HighsBasisStatus::BASIC);
+    assert(valuePrimal[x] - lbxNew > tol && ubxNew - valuePrimal[x] > tol);
+  }
+
   if (row_basic) {
     assert(col_status.at(y) == HighsBasisStatus::NONBASIC);
+    row_status.at(row) = HighsBasisStatus::BASIC;
 
     valueRowDual.at(row) = 0;
     valueColDual.at(y) = getColumnDualPost(y);
 
-    if (report_postsolve) printf("4.1 : Make row    %3d basic\n", row);
+    if (report) printf("4.1 : Make row    %3d basic\n", row);
   } else {
-    // bool feasible = true;
-    // if (lby > -HIGHS_CONST_INF && lby < uby && fabs(lby - valuePrimal[y])
-    // < tol)
-    //   if (valueColDual[y] < 0) feasible = false;
-    // if (uby < HIGHS_CONST_INF && lby < uby && fabs(uby - valuePrimal[y])
-    // < tol)
-    //   if (valueColDual[y] > 0) feasible = false;
+    // Try Y Basic.
 
-    // if (!feasible)
-
-    // y is at a bound with infeasible dual
-    // : attempt to make basic
     col_status.at(y) = HighsBasisStatus::BASIC;
     row_status.at(row) = HighsBasisStatus::NONBASIC;
 
     valueColDual.at(y) = 0;
     valueRowDual.at(row) = getRowDualPost(row, y);
 
-    if (report_postsolve) printf("4.4 : Make column %3d basic\n", y);
+    if (report) printf("4.4 : Make column %3d basic\n", y);
+
+    // Check complementary slackness on x.
+    if ((valueColDual[x] < 0 && valuePrimal[x] - lbxOld > tol) ||
+        (valueColDual[x] > 0 && ubxOld - valuePrimal[x] > tol)) {
+      // make X basic.
+      valueColDual.at(x) = 0;
+      valueRowDual.at(row) = getRowDualPost(row, x);
+      valueColDual.at(y) = getColumnDualPost(y);
+      col_status.at(x) = HighsBasisStatus::BASIC;
+      col_status.at(y) = HighsBasisStatus::NONBASIC;
+      row_status.at(row) = HighsBasisStatus::NONBASIC;
+      if (report) printf("4.779 : Make column %3d basic\n", x);
+      return;
+    }
+
+    // Check dual feasibility of y.
+    bool feasible = true;
+    if (lby > -HIGHS_CONST_INF && lby < uby && fabs(lby - valuePrimal[y]) < tol)
+      if (valueColDual[y] < 0) feasible = false;
+    if (uby < HIGHS_CONST_INF && lby < uby && fabs(uby - valuePrimal[y]) < tol)
+      if (valueColDual[y] > 0) feasible = false;
+
+    if (!feasible) {
+      // make X basic.
+      valueColDual.at(x) = 0;
+      valueRowDual.at(row) = getRowDualPost(row, x);
+      valueColDual.at(y) = getColumnDualPost(y);
+      col_status.at(x) = HighsBasisStatus::BASIC;
+      col_status.at(y) = HighsBasisStatus::NONBASIC;
+      row_status.at(row) = HighsBasisStatus::NONBASIC;
+      if (report) printf("4.879 : Make column %3d basic\n", x);
+    }
+
+    // y is at a bound with infeasible dual
+    // : attempt to make basic
   }
 }
 
