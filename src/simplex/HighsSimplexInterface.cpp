@@ -89,7 +89,7 @@ HighsStatus HighsSimplexInterface::addCols(
   assert(XnumNewCol > 0);
   return_status =
       interpretCallStatus(assessCosts(options, lp.numCol_, index_collection,
-                                      &local_colCost[0], options.infinite_cost),
+                                      local_colCost, options.infinite_cost),
                           return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
   // Assess the column bounds
@@ -101,16 +101,16 @@ HighsStatus HighsSimplexInterface::addCols(
   if (return_status == HighsStatus::Error) return return_status;
   // Append the columns to the LP vectors and matrix
   return_status = interpretCallStatus(
-      appendColsToLpVectors(lp, XnumNewCol, &local_colCost[0],
-                            &local_colLower[0], &local_colUpper[0]),
+      appendColsToLpVectors(lp, XnumNewCol, local_colCost,
+                            local_colLower, local_colUpper),
       return_status, "appendColsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
     // Append the columns to the Simplex LP vectors and matrix
     return_status = interpretCallStatus(
-        appendColsToLpVectors(simplex_lp, XnumNewCol, &local_colCost[0],
-                              &local_colLower[0], &local_colUpper[0]),
+        appendColsToLpVectors(simplex_lp, XnumNewCol, local_colCost,
+                              local_colLower, local_colUpper),
         return_status, "appendColsToLpVectors");
     if (return_status == HighsStatus::Error) return return_status;
   }
@@ -350,16 +350,14 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   // Append the rows to the LP vectors
   return_status = interpretCallStatus(
-      appendRowsToLpVectors(lp, XnumNewRow, &local_rowLower[0],
-                            &local_rowUpper[0]),
+      appendRowsToLpVectors(lp, XnumNewRow, local_rowLower, local_rowUpper),
       return_status, "appendRowsToLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
     // Append the rows to the Simplex LP vectors
     return_status = interpretCallStatus(
-        appendRowsToLpVectors(simplex_lp, XnumNewRow, &local_rowLower[0],
-                              &local_rowUpper[0]),
+	appendRowsToLpVectors(simplex_lp, XnumNewRow, local_rowLower, local_rowUpper),
         return_status, "appendRowsToLpVectors");
     if (return_status == HighsStatus::Error) return return_status;
   }
@@ -822,7 +820,7 @@ HighsStatus HighsSimplexInterface::changeCosts(
   HighsStatus return_status = HighsStatus::OK;
   return_status =
       interpretCallStatus(assessCosts(options, lp.numCol_, index_collection,
-                                      &local_colCost[0], options.infinite_cost),
+                                      local_colCost, options.infinite_cost),
                           return_status, "assessCosts");
   if (return_status == HighsStatus::Error) return return_status;
 

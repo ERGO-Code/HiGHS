@@ -48,7 +48,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   index_collection.is_interval_ = true;
   index_collection.from_ = 0;
   index_collection.to_ = lp.numCol_ - 1;
-  call_status = assessCosts(options, 0, index_collection, &lp.colCost_[0],
+  call_status = assessCosts(options, 0, index_collection, lp.colCost_,
                             options.infinite_cost);
   return_status =
       interpretCallStatus(call_status, return_status, "assessCosts");
@@ -229,7 +229,7 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
 
 HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
                         const HighsIndexCollection& index_collection,
-                        const double* col_cost, const double infinite_cost) {
+                        vector<double>& cost, const double infinite_cost) {
   HighsStatus return_status = HighsStatus::OK;
   // Check parameters for technique and, if OK set the loop limits
   if (!assessIndexCollection(options, index_collection))
@@ -251,11 +251,11 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
   //
   // For an interval or mask, these values of k are the columns to be
   // considered in a local sense, as well as the entries in the
-  // col_cost data to be assessed
+  // cost data to be assessed
   //
   // For a set, these values of k are the indices in the set, from
   // which the columns to be considered in a local sense are
-  // drawn. The entries in the col_cost data to be assessed correspond
+  // drawn. The entries in the cost data to be assessed correspond
   // to the values of k
   //
   // Adding the value of ml_col_os to local_col yields the value of
@@ -279,7 +279,7 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
     ml_col = ml_col_os + local_col;
     if (index_collection.is_mask_ && !index_collection.mask_[local_col])
       continue;
-    double abs_cost = fabs(col_cost[data_col]);
+    double abs_cost = fabs(cost[data_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
@@ -796,9 +796,9 @@ HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
 }
 
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
-                                  const double* XcolCost,
-                                  const double* XcolLower,
-                                  const double* XcolUpper) {
+                                  const vector<double>& colCost,
+                                  const vector<double>& colLower,
+                                  const vector<double>& colUpper) {
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
   int new_num_col = lp.numCol_ + num_new_col;
@@ -809,9 +809,9 @@ HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
   if (have_names) lp.col_names_.resize(new_num_col);
   for (int new_col = 0; new_col < num_new_col; new_col++) {
     int iCol = lp.numCol_ + new_col;
-    lp.colCost_[iCol] = XcolCost[new_col];
-    lp.colLower_[iCol] = XcolLower[new_col];
-    lp.colUpper_[iCol] = XcolUpper[new_col];
+    lp.colCost_[iCol] = colCost[new_col];
+    lp.colLower_[iCol] = colLower[new_col];
+    lp.colUpper_[iCol] = colUpper[new_col];
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.col_names_[iCol] = "";
   }
@@ -819,8 +819,8 @@ HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
 }
 
 HighsStatus appendRowsToLpVectors(HighsLp& lp, const int num_new_row,
-                                  const double* XrowLower,
-                                  const double* XrowUpper) {
+                                  const vector<double>& rowLower,
+                                  const vector<double>& rowUpper) {
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
   int new_num_row = lp.numRow_ + num_new_row;
@@ -831,8 +831,8 @@ HighsStatus appendRowsToLpVectors(HighsLp& lp, const int num_new_row,
 
   for (int new_row = 0; new_row < num_new_row; new_row++) {
     int iRow = lp.numRow_ + new_row;
-    lp.rowLower_[iRow] = XrowLower[new_row];
-    lp.rowUpper_[iRow] = XrowUpper[new_row];
+    lp.rowLower_[iRow] = rowLower[new_row];
+    lp.rowUpper_[iRow] = rowUpper[new_row];
     // Cannot guarantee to create unique names, so name is blank
     if (have_names) lp.row_names_[iRow] = "";
   }

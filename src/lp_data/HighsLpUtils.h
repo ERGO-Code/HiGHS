@@ -34,12 +34,12 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
 HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp);
 
-HighsStatus assessCosts(const HighsOptions& options, const int col_ix_os,
+HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
                         const HighsIndexCollection& index_collection,
-                        const double* usr_col_cost, const double infinite_cost);
+                        vector<double>& cost, const double infinite_cost);
 
 HighsStatus assessBounds(const HighsOptions& options, const char* type,
-                         const int ix_os,
+                         const int ml_ix_os,
                          const HighsIndexCollection& index_collection,
                          vector<double>& lower, vector<double>& upper,
                          const double infinite_bound);
@@ -76,17 +76,17 @@ HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
                                    const int from_row, const int to_row);
 
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
-                                  const double* XcolCost,
-                                  const double* colLower,
-                                  const double* XcolUpper);
+                                  const vector<double>& colCost,
+                                  const vector<double>& colLower,
+                                  const vector<double>& colUpper);
 
 HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
                                  const int num_new_nz, const int* XAstart,
                                  const int* XAindex, const double* XAvalue);
 
 HighsStatus appendRowsToLpVectors(HighsLp& lp, const int num_new_row,
-                                  const double* XrowLower,
-                                  const double* XrowUpper);
+                                  const vector<double>& rowLower,
+                                  const vector<double>& rowUpper);
 
 HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
                                  const int num_new_nz, const int* XARstart,
