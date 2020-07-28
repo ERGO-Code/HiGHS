@@ -407,17 +407,24 @@ void checkBasicFeasibleSolution(const State& state,
   int current_n_cols_basic = 0;
 
   for (int i = 0; i < state.numRow; i++) {
-    if (state.flagRow[i]) current_n_rows ++;
+    if (state.flagRow[i]) current_n_rows++;
 
-    if (state.flagRow[i] && (state.row_status[i] == HighsBasisStatus::BASIC || state.row_status[i] == HighsBasisStatus::SUPER))
+    if (state.flagRow[i] && (state.row_status[i] == HighsBasisStatus::BASIC ||
+                             state.row_status[i] == HighsBasisStatus::SUPER))
       current_n_rows_basic++;
   }
 
   for (int i = 0; i < state.numCol; i++) {
-    if (state.flagCol[i] && (state.col_status[i] == HighsBasisStatus::BASIC || state.col_status[i] == HighsBasisStatus::SUPER))
+    if (state.flagCol[i] && (state.col_status[i] == HighsBasisStatus::BASIC ||
+                             state.col_status[i] == HighsBasisStatus::SUPER))
       current_n_cols_basic++;
   }
 
+  bool holds = current_n_cols_basic + current_n_rows_basic == current_n_rows;
+  if (!holds)
+    std::cout << "BFS X Violated WRONG basis count: "
+              << current_n_cols_basic + current_n_rows_basic << " "
+              << current_n_rows << std::endl;
   assert(current_n_cols_basic + current_n_rows_basic == current_n_rows);
 }
 
