@@ -54,7 +54,7 @@ HighsStatus HighsSimplexInterface::addCols(
   bool valid_basis = basis.valid_;
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
-  bool apply_row_scaling = scale.is_scaled_;
+  bool scaled_simplex_lp = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of rows
@@ -69,7 +69,7 @@ HighsStatus HighsSimplexInterface::addCols(
   // Check that if there is no simplex LP then there is no basis, matrix or
   // scaling
   if (!valid_simplex_lp) {
-    assert(!apply_row_scaling);
+    assert(!scaled_simplex_lp);
   }
 #endif
 
@@ -114,9 +114,16 @@ HighsStatus HighsSimplexInterface::addCols(
     if (return_status == HighsStatus::Error) return return_status;
   }
 
-  // Now consider the new matrix columns
+  // Now consider scaling. First resize the scaling factors and
+  // initialise the new components
+  scale.col_.resize(newNumCol);
+  for (int col = 0; col < XnumNewCol; col++)
+    scale.col_[simplex_lp.numCol_ + col] = 1.0;
+
+  // Now consider any new matrix columns
   if (XnumNewNZ) {
-    // There are nonzeros, so take a copy of the matrix that can be normalised
+    // There are nonzeros, so take a copy of the matrix that can be
+    // normalised
     int local_num_new_nz = XnumNewNZ;
     std::vector<int> local_Astart{XAstart, XAstart + XnumNewCol};
     std::vector<int> local_Aindex{XAindex, XAindex + XnumNewNZ};
@@ -138,6 +145,15 @@ HighsStatus HighsSimplexInterface::addCols(
         return_status, "appendColsToLpMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     if (valid_simplex_lp) {
+      if (scaled_simplex_lp) {
+        // Apply the row scaling to the new columns
+        applyRowScalingToMatrix(scale.row_, newNumCol, local_Astart,
+                                local_Aindex, local_Avalue);
+        // Determine and apply the column scaling for the new columns
+        colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
+                       &scale.col_[simplex_lp.numCol_], newNumCol, local_Astart,
+                       local_Aindex, local_Avalue);
+      }
       // Append the columns to the Simplex LP matrix
       return_status = interpretCallStatus(
           appendColsToLpMatrix(simplex_lp, XnumNewCol, local_num_new_nz,
@@ -145,6 +161,24 @@ HighsStatus HighsSimplexInterface::addCols(
                                &local_Avalue[0]),
           return_status, "appendColsToLpMatrix");
       if (return_status == HighsStatus::Error) return return_status;
+      if (scaled_simplex_lp) {
+        // Apply the column scaling to the costs and bounds
+        HighsIndexCollection scaling_index_collection;
+        scaling_index_collection.dimension_ = newNumCol;
+        scaling_index_collection.is_interval_ = true;
+        scaling_index_collection.from_ = simplex_lp.numCol_;
+        scaling_index_collection.to_ = newNumCol - 1;
+        return_status = interpretCallStatus(
+            applyScalingToLpColCost(options, simplex_lp, scale.col_,
+                                    scaling_index_collection),
+            return_status, "applyScalingToLpColCost");
+        if (return_status == HighsStatus::Error) return return_status;
+        return_status = interpretCallStatus(
+            applyScalingToLpColBounds(options, simplex_lp, scale.col_,
+                                      scaling_index_collection),
+            return_status, "applyScalingToLpColBounds");
+        if (return_status == HighsStatus::Error) return return_status;
+      }
     }
   } else {
     // There are no nonzeros, so XAstart/XAindex/XAvalue may be null. Have to
@@ -155,18 +189,6 @@ HighsStatus HighsSimplexInterface::addCols(
       appendColsToLpMatrix(simplex_lp, XnumNewCol, 0, NULL, NULL, NULL);
     }
   }
-  // Now consider scaling
-  scale.col_.resize(newNumCol);
-  for (int col = 0; col < XnumNewCol; col++)
-    scale.col_[simplex_lp.numCol_ + col] = 1.0;
-
-  if (apply_row_scaling) {
-    // Determine scaling multipliers for this set of columns
-    // Determine scale factors for this set of columns
-    // Scale the simplex LP vectors for these columns
-    // Scale the simplex LP matrix for these columns
-  }
-
   // Update the basis correponding to new nonbasic columns
   if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, XnumNewCol);
   if (valid_simplex_basis)
@@ -312,7 +334,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   bool valid_basis = basis.valid_;
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
-  bool apply_row_scaling = scale.is_scaled_;
+  bool scaled_simplex_lp = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of columns
@@ -327,7 +349,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // Check that if there is no simplex LP then there is no basis, matrix or
   // scaling
   if (!valid_simplex_lp) {
-    assert(!apply_row_scaling);
+    assert(!scaled_simplex_lp);
   }
 #endif
 
@@ -361,15 +383,23 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     if (return_status == HighsStatus::Error) return return_status;
   }
 
+  // Now consider scaling. First resize the scaling factors and
+  // initialise the new components
+  scale.row_.resize(newNumRow);
+  for (int row = 0; row < XnumNewRow; row++)
+    scale.row_[simplex_lp.numRow_ + row] = 1.0;
+
   // Now consider any new matrix rows
   if (XnumNewNZ) {
-    // Take a copy of the matrix that can be normalised
+    // There are nonzeros, so take a copy of the matrix that can be
+    // normalised
     int local_num_new_nz = XnumNewNZ;
     std::vector<int> local_ARstart{XARstart, XARstart + XnumNewRow};
     std::vector<int> local_ARindex{XARindex, XARindex + XnumNewNZ};
     std::vector<double> local_ARvalue{XARvalue, XARvalue + XnumNewNZ};
     local_ARstart.resize(XnumNewRow + 1);
     local_ARstart[XnumNewRow] = XnumNewNZ;
+    // Assess the matrix columns
     return_status = interpretCallStatus(
         assessMatrix(options, lp.numCol_, XnumNewRow, local_ARstart,
                      local_ARindex, local_ARvalue, options.small_matrix_value,
@@ -377,37 +407,47 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
         return_status, "assessMatrix");
     if (return_status == HighsStatus::Error) return return_status;
     local_num_new_nz = local_ARstart[XnumNewRow];
-    if (local_num_new_nz) {
-      // Append the rows to LP matrix
+    // Append the rows to LP matrix
+    return_status = interpretCallStatus(
+        appendRowsToLpMatrix(lp, XnumNewRow, local_num_new_nz,
+                             &local_ARstart[0], &local_ARindex[0],
+                             &local_ARvalue[0]),
+        return_status, "appendRowsToLpMatrix");
+    if (return_status == HighsStatus::Error) return return_status;
+    if (valid_simplex_lp) {
+      if (scaled_simplex_lp) {
+        // Apply the column scaling to the new rows
+        applyRowScalingToMatrix(scale.col_, newNumRow, local_ARstart,
+                                local_ARindex, local_ARvalue);
+        // Determine and apply the row scaling for the new rows. Using
+        // colScaleMatrix to take the row-wise matrix and then treat
+        // it col-wise
+        colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
+                       &scale.row_[simplex_lp.numRow_], newNumRow,
+                       local_ARstart, local_ARindex, local_ARvalue);
+      }
+      // Append the rows to the Simplex LP matrix
       return_status = interpretCallStatus(
-          appendRowsToLpMatrix(lp, XnumNewRow, local_num_new_nz,
+          appendRowsToLpMatrix(simplex_lp, XnumNewRow, local_num_new_nz,
                                &local_ARstart[0], &local_ARindex[0],
                                &local_ARvalue[0]),
           return_status, "appendRowsToLpMatrix");
       if (return_status == HighsStatus::Error) return return_status;
-      if (valid_simplex_lp) {
-        // Append the rows to the Simplex LP matrix
+      if (scaled_simplex_lp) {
+        // Apply the row scaling to the bounds
+        HighsIndexCollection scaling_index_collection;
+        scaling_index_collection.dimension_ = newNumRow;
+        scaling_index_collection.is_interval_ = true;
+        scaling_index_collection.from_ = simplex_lp.numRow_;
+        scaling_index_collection.to_ = newNumRow - 1;
         return_status = interpretCallStatus(
-            appendRowsToLpMatrix(simplex_lp, XnumNewRow, local_num_new_nz,
-                                 &local_ARstart[0], &local_ARindex[0],
-                                 &local_ARvalue[0]),
-            return_status, "appendRowsToLpMatrix");
+            applyScalingToLpRowBounds(options, simplex_lp, scale.row_,
+                                      scaling_index_collection),
+            return_status, "applyScalingToLpRowBounds");
         if (return_status == HighsStatus::Error) return return_status;
       }
     }
   }
-
-  // Now consider scaling
-  scale.row_.resize(newNumRow);
-  for (int row = 0; row < XnumNewRow; row++) scale.row_[lp.numRow_ + row] = 1.0;
-
-  if (apply_row_scaling) {
-    // Determine scaling multipliers for this set of rows
-    // Determine scale factors for this set of rows
-    // Scale the simplex LP vectors for these rows
-    // Scale the simplex LP matrix for these rows
-  }
-
   // Update the basis correponding to new basic rows
   if (valid_basis) append_basic_rows_to_basis(lp, basis, XnumNewRow);
   if (valid_simplex_basis)
@@ -753,7 +793,7 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
   // Check that if there is no simplex LP then there is no matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_lp_status.has_matrix_col_wise);
-    //    assert(!apply_row_scaling);
+    //    assert(!scaled_simplex_lp);
   }
 #endif
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
@@ -836,9 +876,8 @@ HighsStatus HighsSimplexInterface::changeCosts(
         changeLpCosts(options, simplex_lp, index_collection, local_colCost);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
-      applyScalingToLpColCosts(options, simplex_lp,
-                               highs_model_object.scale_.col_,
-                               index_collection);
+      applyScalingToLpColCost(options, simplex_lp,
+                              highs_model_object.scale_.col_, index_collection);
     }
   }
   // Deduce the consequences of new costs

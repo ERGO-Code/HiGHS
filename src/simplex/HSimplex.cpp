@@ -1271,17 +1271,13 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     if (scaled_matrix) {
       // Matrix is scaled, so scale the bounds and costs
       for (int iCol = 0; iCol < numCol; iCol++) {
-        colLower[iCol] /=
-            colLower[iCol] <= -HIGHS_CONST_INF ? 1 : colScale[iCol];
-        colUpper[iCol] /=
-            colUpper[iCol] >= HIGHS_CONST_INF ? 1 : colScale[iCol];
+        colLower[iCol] /= colScale[iCol];
+        colUpper[iCol] /= colScale[iCol];
         colCost[iCol] *= colScale[iCol];
       }
       for (int iRow = 0; iRow < numRow; iRow++) {
-        rowLower[iRow] *=
-            rowLower[iRow] <= -HIGHS_CONST_INF ? 1 : rowScale[iRow];
-        rowUpper[iRow] *=
-            rowUpper[iRow] >= HIGHS_CONST_INF ? 1 : rowScale[iRow];
+        rowLower[iRow] *= rowScale[iRow];
+        rowUpper[iRow] *= rowScale[iRow];
       }
     }
   }
@@ -1627,15 +1623,8 @@ bool maxValueScaleMatrix(HighsModelObject& highs_model_object) {
 
   int simplex_scale_strategy =
       highs_model_object.options_.simplex_scale_strategy;
-  if (simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_015 &&
-      simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_0157) {
-    printf(
-        "STRANGE: called maxValueScaleSimplexLp with simplex_scale_strategy = "
-        "%d\n",
-        (int)simplex_scale_strategy);
-    return false;
-  }
-
+  assert(simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_015 ||
+         simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_0157);
   const double log2 = log(2.0);
   const double max_allow_scale =
       pow(2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);

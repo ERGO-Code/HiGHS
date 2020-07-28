@@ -49,13 +49,12 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                          vector<int>& Aindex, vector<double>& Avalue,
                          const double small_matrix_value,
                          const double large_matrix_value);
-
 HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp);
 
 HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
                              const HighsScale& scale);
 
-HighsStatus applyScalingToLpColCosts(
+HighsStatus applyScalingToLpColCost(
     const HighsOptions& options, HighsLp& lp, const vector<double>& colScale,
     const HighsIndexCollection& index_collection);
 
@@ -72,6 +71,14 @@ HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
                                    const double* rowScale, const int from_col,
                                    const int to_col, const int from_row,
                                    const int to_row);
+
+void applyRowScalingToMatrix(const vector<double>& rowScale, const int numCol,
+                             const vector<int>& Astart,
+                             const vector<int>& Aindex, vector<double>& Avalue);
+
+void colScaleMatrix(const int max_scale_factor_exponent, double* colScale,
+                    const int numCol, const vector<int>& Astart,
+                    const vector<int>& Aindex, vector<double>& Avalue);
 
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
                                   const vector<double>& colCost,

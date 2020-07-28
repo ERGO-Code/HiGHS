@@ -631,7 +631,7 @@ HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
   all_rows.from_ = 0;
   all_rows.to_ = lp.numRow_ - 1;
 
-  scale_error = applyScalingToLpColCosts(options, lp, scale.col_, all_cols) !=
+  scale_error = applyScalingToLpColCost(options, lp, scale.col_, all_cols) !=
                     HighsStatus::OK ||
                 scale_error;
   scale_error = applyScalingToLpColBounds(options, lp, scale.col_, all_cols) !=
@@ -648,7 +648,7 @@ HighsStatus applyScalingToLp(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus applyScalingToLpColCosts(
+HighsStatus applyScalingToLpColCost(
     const HighsOptions& options, HighsLp& lp, const vector<double>& colScale,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
@@ -811,6 +811,49 @@ HighsStatus applyScalingToLpMatrix(const HighsOptions& options, HighsLp& lp,
   return HighsStatus::OK;
 }
 
+void applyRowScalingToMatrix(const vector<double>& rowScale, const int numCol,
+                             const vector<int>& Astart,
+                             const vector<int>& Aindex,
+                             vector<double>& Avalue) {
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    for (int el = Astart[iCol]; el < Astart[iCol + 1]; el++) {
+      Avalue[el] *= rowScale[Aindex[el]];
+    }
+  }
+}
+
+void colScaleMatrix(const int max_scale_factor_exponent, double* colScale,
+                    const int numCol, const vector<int>& Astart,
+                    const vector<int>& Aindex, vector<double>& Avalue) {
+  const double log2 = log(2.0);
+  const double max_allow_scale = pow(2.0, max_scale_factor_exponent);
+  const double min_allow_scale = 1 / max_allow_scale;
+
+  const double min_allow_col_scale = min_allow_scale;
+  const double max_allow_col_scale = max_allow_scale;
+
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    double col_max_value = 0;
+    for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
+      col_max_value = max(fabs(Avalue[k]), col_max_value);
+    if (col_max_value) {
+      double col_scale_value = 1 / col_max_value;
+      // Convert the col scale factor to the nearest power of two, and
+      // ensure that it is not excessively large or small
+      col_scale_value = pow(2.0, floor(log(col_scale_value) / log2 + 0.5));
+      col_scale_value =
+          min(max(min_allow_col_scale, col_scale_value), max_allow_col_scale);
+      colScale[iCol] = col_scale_value;
+      // Scale the column
+      for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
+        Avalue[k] *= colScale[iCol];
+    } else {
+      // Empty column
+      colScale[iCol] = 1;
+    }
+  }
+}
+
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
                                   const vector<double>& colCost,
                                   const vector<double>& colLower,
@@ -910,7 +953,6 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
   if (num_new_row == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no columns
   if (num_new_nz > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
-  // int new_num_row = lp.numRow_ + num_new_row;
   if (num_new_nz == 0) return HighsStatus::OK;
   int current_num_nz = lp.Astart_[lp.numCol_];
   vector<int> Alength;
