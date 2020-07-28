@@ -3845,8 +3845,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
     if (report) printf("4.4 : Make column %3d basic\n", y);
 
     // Check complementary slackness on x.
-    if ((valueColDual[x] < 0 && valuePrimal[x] - lbxOld > tol) ||
-        (valueColDual[x] > 0 && ubxOld - valuePrimal[x] > tol)) {
+    if ((valueColDual[x] < -tol && fabs(valuePrimal[x] - lbxOld) > tol) ||
+        (valueColDual[x] > tol && fabs(ubxOld - valuePrimal[x]) > tol)) {
       if (x_status_reduced != HighsBasisStatus::BASIC) {
         // make X basic.
         valueColDual.at(x) = 0;
@@ -3858,14 +3858,16 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
         if (report) printf("4.779 : Make column %3d basic\n", x);
         return;
       }
-      // If X already basic and y can not be feasibly made basic then the row remains as the only option.
-      row_status.at(row) = HighsBasisStatus::BASIC;
-      col_status.at(y) = HighsBasisStatus::NONBASIC;
+      // If X already basic and y can not be feasibly made basic then the row remains as the only option. X not working out 
 
-      valueRowDual.at(row) = 0;
-      valueColDual.at(y) = getColumnDualPost(y);
+      // row_status.at(row) = HighsBasisStatus::BASIC;
+      // col_status.at(y) = HighsBasisStatus::NONBASIC;
 
-      if (report) printf("4.7791 : Make row    %3d basic\n", row);
+      // valueRowDual.at(row) = 0;
+      // valueColDual.at(y) = getColumnDualPost(y);
+
+      // if (report) printf("4.7791 : Make row    %3d basic\n", row);
+      if (report) printf("??? 4.7791 : Make row    %3d basic\n", row);
     }
 
     // Check dual feasibility of y.
