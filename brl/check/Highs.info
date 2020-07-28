@@ -1,0 +1,48 @@
+
+# Iteration count for simplex solver
+# [type: int, advanced: false]
+simplex_iteration_count = 0
+
+# Iteration count for IPM solver
+# [type: int, advanced: false]
+ipm_iteration_count = 0
+
+# Iteration count for crossover
+# [type: int, advanced: false]
+crossover_iteration_count = 0
+
+# Primal status of the model: -1 => Not set; 0 => No solution; 1 => Unknown; 2 => Infeasible point; 3 => Feasible point
+# [type: int, advanced: false]
+primal_status = -1
+
+# Dual status of the model: -1 => Not set; 0 => No solution; 1 => Unknown; 2 => Infeasible point; 3 => Feasible point
+# [type: int, advanced: false]
+dual_status = -1
+
+# Objective function value
+# [type: double, advanced: false]
+objective_function_value = 0
+
+# Number of primal infeasibilities
+# [type: int, advanced: false]
+num_primal_infeasibilities = -1
+
+# Maximum primal infeasibility
+# [type: double, advanced: false]
+max_primal_infeasibility = 0
+
+# Sum of primal infeasibilities
+# [type: double, advanced: false]
+sum_primal_infeasibilities = 0
+
+# Number of dual infeasibilities
+# [type: int, advanced: false]
+num_dual_infeasibilities = -1
+
+# Maximum dual infeasibility
+# [type: double, advanced: false]
+max_dual_infeasibility = 0
+
+# Sum of dual infeasibilities
+# [type: double, advanced: false]
+sum_dual_infeasibilities = 0

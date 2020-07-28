@@ -1,0 +1,40 @@
+file(REMOVE_RECURSE
+  "../lib/libipx.dylib"
+  "../lib/libipx.pdb"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/basiclu_kernel.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/basiclu_wrapper.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/basis.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/conjugate_residuals.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/control.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/crossover.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/diagonal_precond.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/forrest_tomlin.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/guess_basis.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/indexed_vector.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/info.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/ipm.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/ipx_c.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/iterate.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/kkt_solver.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/kkt_solver_basis.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/kkt_solver_diag.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/linear_operator.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/lp_solver.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/lu_factorization.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/lu_update.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/maxvolume.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/model.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/normal_matrix.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/sparse_matrix.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/sparse_utils.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/splitted_normal_matrix.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/starting_basis.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/symbolic_invert.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/timer.cc.o"
+  "CMakeFiles/libipx.dir/ipm/ipx/src/utils.cc.o"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/libipx.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../src/interfaces/highs_c_api.h
+
+/Users/mac/projects/HiGHS/check/TestCAPI.c
+interfaces/highs_c_api.h
+/Users/mac/projects/HiGHS/check/interfaces/highs_c_api.h
+stdio.h
+-
+stdlib.h
+-
+assert.h
+-
+
