@@ -111,26 +111,20 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   // Take a copy of the original LP
   HighsLp check_lp = lp;
   if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "debugSimplexLp: Error scaling check LP\n");
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "debugSimplexLp: Error scaling check LP");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   if (!(check_lp == simplex_lp)) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "debugSimplexLp: LP and Check LP not equal\n");
-    /*
-    for(int iEl = 0; iEl < simplex_lp.Astart_[simplex_lp.numCol_]; iEl++) {
-      double v0 = simplex_lp.Avalue_[iEl];
-      double v1 = check_lp.Avalue_[iEl];
-      if (v0 != v1) {
-        printf("El %3d: Row [%3d, %3d] Value [%10.4g, %10.4g] Diff = %g\n",
-               iEl, simplex_lp.Aindex_[iEl], check_lp.Aindex_[iEl],
-               v0, v1, fabs(v1-v0));
-      }
-    }
-    */
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "debugSimplexLp: LP and Check LP not equal");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
+  if (!rightSizeDoubleVector(options.logfile, "debugSimplexLp", "Col scale", scale.col_, lp.numCol_))
+    return HighsDebugStatus::LOGICAL_ERROR;
+  if (!rightSizeDoubleVector(options.logfile, "debugSimplexLp", "Row scale", scale.row_, lp.numRow_))
+    return HighsDebugStatus::LOGICAL_ERROR;
+    
   return return_status;
 }
 
