@@ -1735,9 +1735,31 @@ HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
                            true))
       return HighsStatus::Error;
   }
+  if (from_k > to_k) return HighsStatus::OK;
 
+  int delete_from_col;
+  int delete_to_col;
+  int keep_from_col;
+  int keep_to_col = -1;
+  int current_set_entry = 0;
+
+  int col_dim = index_collection.dimension_;
+  int new_num_col = 0;
+  for (int k = from_k; k <= to_k; k++) {
+    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
+                                    delete_to_col, keep_from_col, keep_to_col,
+                                    current_set_entry);
+    // Account for the initial columns being kept
+    if (k == from_k) new_num_col = delete_from_col;
+    if (delete_to_col >= col_dim - 1) break;
+    assert(delete_to_col < col_dim);
+    for (int col = keep_from_col; col <= keep_to_col; col++) {
+      scale[new_num_col] = scale[col];
+      new_num_col++;
+    }
+    if (keep_to_col >= col_dim - 1) break;
+  }
   return HighsStatus::OK;
-
 }
 
 // PERMUTE:
