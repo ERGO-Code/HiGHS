@@ -282,9 +282,6 @@ HighsStatus HighsSimplexInterface::deleteCols(
 HighsStatus HighsSimplexInterface::getCoefficient(const int Xrow,
                                                   const int Xcol,
                                                   double& value) {
-#ifdef HiGHSDEV
-  printf("Called getCoeff(Xrow=%d, Xcol=%d)\n", Xrow, Xcol);
-#endif
   HighsLp& lp = highs_model_object.lp_;
   if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
   if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
@@ -777,10 +774,6 @@ HighsStatus HighsSimplexInterface::getRows(
 HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
                                                      const int Xcol,
                                                      const double XnewValue) {
-#ifdef HiGHSDEV
-  printf("Called changeCoeff(Xrow=%d, Xcol=%d, XnewValue=%g)\n", Xrow, Xcol,
-         XnewValue);
-#endif
   HighsLp& lp = highs_model_object.lp_;
   if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
   if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
@@ -789,13 +782,12 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   bool valid_simplex_lp = simplex_lp_status.valid;
-#ifdef HiGHSDEV
+  bool scaled_simplex_lp = highs_model_object.scale_.is_scaled_;
   // Check that if there is no simplex LP then there is no matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_lp_status.has_matrix_col_wise);
-    //    assert(!scaled_simplex_lp);
+    assert(!scaled_simplex_lp);
   }
-#endif
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
