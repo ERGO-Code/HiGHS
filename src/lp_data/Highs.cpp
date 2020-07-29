@@ -1526,7 +1526,7 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
   index_collection.to_ = to_row;
   if (!haveHmo("deleteRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteRows(index_collection, from_row, to_row);
+  call_status = interface.deleteRows(index_collection);
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1547,7 +1547,7 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("deleteRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteRows(index_collection, num_set_entries, set);
+  call_status = interface.deleteRows(index_collection);
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1563,7 +1563,7 @@ bool Highs::deleteRows(int* mask) {
   index_collection.mask_ = &mask[0];
   if (!haveHmo("deleteRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteRows(index_collection, mask);
+  call_status = interface.deleteRows(index_collection);
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;

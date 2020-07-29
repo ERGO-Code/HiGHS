@@ -481,33 +481,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   return return_status;
 }
 
-HighsStatus HighsSimplexInterface::deleteRows(
-    const HighsIndexCollection& index_collection, int from_row, int to_row) {
-  return deleteRows(index_collection, true, from_row, to_row, false, 0, NULL,
-                    false, NULL);
-}
-
-HighsStatus HighsSimplexInterface::deleteRows(
-    const HighsIndexCollection& index_collection, int num_set_entries,
-    const int* row_set) {
-  return deleteRows(index_collection, false, 0, 0, true, num_set_entries,
-                    row_set, false, NULL);
-}
-
-HighsStatus HighsSimplexInterface::deleteRows(
-    const HighsIndexCollection& index_collection, int* row_mask) {
-  return deleteRows(index_collection, false, 0, 0, false, 0, NULL, true,
-                    row_mask);
-}
-
-HighsStatus HighsSimplexInterface::deleteRows(
-    const HighsIndexCollection& index_collection, bool interval, int from_row,
-    int to_row, bool set, int num_set_entries, const int* row_set, bool mask,
-    int* row_mask) {
-#ifdef HiGHSDEV
-  printf("Called model.util_deleteRows(from_row=%d, to_row=%d)\n", from_row,
-         to_row);
-#endif
+HighsStatus HighsSimplexInterface::deleteRows(HighsIndexCollection& index_collection) {
   HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;
   HighsBasis& basis = highs_model_object.basis_;
@@ -532,6 +506,10 @@ HighsStatus HighsSimplexInterface::deleteRows(
         highs_model_object.scaled_model_status_;
     basis.valid_ = false;
   }
+  return_status = interpretCallStatus(
+            deleteScale(options, highs_model_object.scale_.row_, index_collection),
+            return_status, "deleteScale");
+  if (return_status == HighsStatus::Error) return return_status;
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -547,14 +525,14 @@ HighsStatus HighsSimplexInterface::deleteRows(
       invalidateSimplexLpBasis(simplex_lp_status);
     }
   }
-  if (mask) {
+  if (index_collection.is_mask_) {
     int new_row = 0;
     for (int row = 0; row < original_num_row; row++) {
-      if (!row_mask[row]) {
-        row_mask[row] = new_row;
+      if (!index_collection.mask_[row]) {
+        index_collection.mask_[row] = new_row;
         new_row++;
       } else {
-        row_mask[row] = -1;
+        index_collection.mask_[row] = -1;
       }
     }
     assert(new_row == lp.numRow_);

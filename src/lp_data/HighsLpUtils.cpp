@@ -1056,6 +1056,10 @@ HighsStatus deleteColsFromLpVectors(
     }
     if (keep_to_col >= col_dim - 1) break;
   }
+  lp.colCost_.resize(new_num_col);
+  lp.colLower_.resize(new_num_col);
+  lp.colUpper_.resize(new_num_col);
+  if (have_names) lp.col_names_.resize(new_num_col);
   return HighsStatus::OK;
 }
 
@@ -1125,6 +1129,9 @@ HighsStatus deleteColsFromLpMatrix(
   // in the LP.
   lp.Astart_[lp.numCol_] = 0;
   lp.Astart_[new_num_col] = new_num_nz;
+  lp.Astart_.resize(new_num_col+1);
+  lp.Aindex_.resize(new_num_nz);
+  lp.Avalue_.resize(new_num_nz);
   return HighsStatus::OK;
 }
 
@@ -1196,6 +1203,9 @@ HighsStatus deleteRowsFromLpVectors(
     }
     if (keep_to_row == row_dim) break;
   }
+  lp.rowLower_.resize(new_num_row);
+  lp.rowUpper_.resize(new_num_row);
+  if (have_names) lp.row_names_.resize(new_num_row);
   return HighsStatus::OK;
 }
 
@@ -1283,6 +1293,9 @@ HighsStatus deleteRowsFromLpMatrix(
   }
   lp.Astart_[lp.numCol_] = new_num_nz;
   free(new_index);
+  lp.Astart_.resize(lp.numCol_+1);
+  lp.Aindex_.resize(new_num_nz);
+  lp.Avalue_.resize(new_num_nz);
   return HighsStatus::OK;
 }
 

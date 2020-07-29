@@ -66,19 +66,7 @@ class HighsSimplexInterface {
                       const int* XARstart, const int* XARindex,
                       const double* XARvalue);
 
-  HighsStatus deleteRows(const HighsIndexCollection& index_collection,
-                         int from_row, int to_row);
-
-  HighsStatus deleteRows(const HighsIndexCollection& index_collection,
-                         int num_set_entries, const int* row_set);
-
-  HighsStatus deleteRows(const HighsIndexCollection& index_collection,
-                         int* row_mask);
-
-  HighsStatus deleteRows(const HighsIndexCollection& index_collection,
-                         bool interval, int from_row, int to_row, bool set,
-                         int num_set_entries, const int* row_set, bool mask,
-                         int* row_mask);
+  HighsStatus deleteRows(HighsIndexCollection& index_collection);
 
   HighsStatus changeCoefficient(const int Xrow, const int Xcol,
                                 const double XnewValue);
