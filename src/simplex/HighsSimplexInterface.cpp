@@ -151,8 +151,8 @@ HighsStatus HighsSimplexInterface::addCols(
                                 local_Aindex, local_Avalue);
         // Determine and apply the column scaling for the new columns
         colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
-                       &scale.col_[simplex_lp.numCol_], XnumNewCol, local_Astart,
-                       local_Aindex, local_Avalue);
+                       &scale.col_[simplex_lp.numCol_], XnumNewCol,
+                       local_Astart, local_Aindex, local_Avalue);
       }
       // Append the columns to the Simplex LP matrix
       return_status = interpretCallStatus(
@@ -247,8 +247,8 @@ HighsStatus HighsSimplexInterface::deleteCols(
     basis.valid_ = false;
   }
   return_status = interpretCallStatus(
-            deleteScale(options, highs_model_object.scale_.col_, index_collection),
-            return_status, "deleteScale");
+      deleteScale(options, highs_model_object.scale_.col_, index_collection),
+      return_status, "deleteScale");
   if (return_status == HighsStatus::Error) return return_status;
   highs_model_object.scale_.col_.resize(lp.numCol_);
   if (valid_simplex_lp) {
@@ -482,7 +482,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   return return_status;
 }
 
-HighsStatus HighsSimplexInterface::deleteRows(HighsIndexCollection& index_collection) {
+HighsStatus HighsSimplexInterface::deleteRows(
+    HighsIndexCollection& index_collection) {
   HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;
   HighsBasis& basis = highs_model_object.basis_;
@@ -508,8 +509,8 @@ HighsStatus HighsSimplexInterface::deleteRows(HighsIndexCollection& index_collec
     basis.valid_ = false;
   }
   return_status = interpretCallStatus(
-            deleteScale(options, highs_model_object.scale_.row_, index_collection),
-            return_status, "deleteScale");
+      deleteScale(options, highs_model_object.scale_.row_, index_collection),
+      return_status, "deleteScale");
   if (return_status == HighsStatus::Error) return return_status;
   highs_model_object.scale_.row_.resize(lp.numRow_);
   if (valid_simplex_lp) {

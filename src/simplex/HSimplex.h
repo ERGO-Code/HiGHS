@@ -88,7 +88,7 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model);
 bool maxValueScaleMatrix(HighsModelObject& highs_model);
 
 HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
-			const HighsIndexCollection& index_collection);
+                        const HighsIndexCollection& index_collection);
 // PERMUTE:
 
 void permuteSimplexLp(HighsModelObject& highs_model);

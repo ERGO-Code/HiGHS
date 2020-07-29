@@ -1249,7 +1249,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  no_scaling = false; printf("!!!! FORCE SCALING !!!!\n");
+  no_scaling = false;
+  printf("!!!! FORCE SCALING !!!!\n");
   bool scaled_matrix = false;
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
@@ -1718,7 +1719,7 @@ bool maxValueScaleMatrix(HighsModelObject& highs_model_object) {
 }
 
 HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
-			const HighsIndexCollection& index_collection) {
+                        const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
@@ -1731,8 +1732,8 @@ HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
     if (!increasing_set_ok(index_collection.set_,
-                           index_collection.set_num_entries_, 0, index_collection.dimension_ - 1,
-                           true))
+                           index_collection.set_num_entries_, 0,
+                           index_collection.dimension_ - 1, true))
       return HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;

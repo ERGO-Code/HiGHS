@@ -630,11 +630,12 @@ basis_.valid_, hmos_[0].basis_.valid_);
           hmos_[original_hmo].basis_.row_status =
               presolve_.data_.recovered_basis_.row_status;
 
-	  //Possibly force debug to perform KKT check on what's
-	  //returned from postsolve
-	  const bool force_debug = false;
+          // Possibly force debug to perform KKT check on what's
+          // returned from postsolve
+          const bool force_debug = false;
           int save_highs_debug_level = options_.highs_debug_level;
-	  if (force_debug) options_.highs_debug_level = HIGHS_DEBUG_LEVEL_COSTLY;
+          if (force_debug)
+            options_.highs_debug_level = HIGHS_DEBUG_LEVEL_COSTLY;
           debugHighsBasicSolution("After returning from postsolve", options_,
                                   lp_, hmos_[original_hmo].basis_,
                                   hmos_[original_hmo].solution_);
