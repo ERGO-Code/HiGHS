@@ -147,11 +147,11 @@ HighsStatus HighsSimplexInterface::addCols(
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
         // Apply the row scaling to the new columns
-        applyRowScalingToMatrix(scale.row_, newNumCol, local_Astart,
+        applyRowScalingToMatrix(scale.row_, XnumNewCol, local_Astart,
                                 local_Aindex, local_Avalue);
         // Determine and apply the column scaling for the new columns
         colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
-                       &scale.col_[simplex_lp.numCol_], newNumCol, local_Astart,
+                       &scale.col_[simplex_lp.numCol_], XnumNewCol, local_Astart,
                        local_Aindex, local_Avalue);
       }
       // Append the columns to the Simplex LP matrix
@@ -250,6 +250,7 @@ HighsStatus HighsSimplexInterface::deleteCols(
             deleteScale(options, highs_model_object.scale_.col_, index_collection),
             return_status, "deleteScale");
   if (return_status == HighsStatus::Error) return return_status;
+  highs_model_object.scale_.col_.resize(lp.numCol_);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -418,13 +419,13 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     if (valid_simplex_lp) {
       if (scaled_simplex_lp) {
         // Apply the column scaling to the new rows
-        applyRowScalingToMatrix(scale.col_, newNumRow, local_ARstart,
+        applyRowScalingToMatrix(scale.col_, XnumNewRow, local_ARstart,
                                 local_ARindex, local_ARvalue);
         // Determine and apply the row scaling for the new rows. Using
         // colScaleMatrix to take the row-wise matrix and then treat
         // it col-wise
         colScaleMatrix(options.allowed_simplex_matrix_scale_factor,
-                       &scale.row_[simplex_lp.numRow_], newNumRow,
+                       &scale.row_[simplex_lp.numRow_], XnumNewRow,
                        local_ARstart, local_ARindex, local_ARvalue);
       }
       // Append the rows to the Simplex LP matrix
@@ -510,6 +511,7 @@ HighsStatus HighsSimplexInterface::deleteRows(HighsIndexCollection& index_collec
             deleteScale(options, highs_model_object.scale_.row_, index_collection),
             return_status, "deleteScale");
   if (return_status == HighsStatus::Error) return return_status;
+  highs_model_object.scale_.row_.resize(lp.numRow_);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
