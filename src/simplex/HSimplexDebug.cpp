@@ -112,19 +112,21 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   HighsLp check_lp = lp;
   if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "debugSimplexLp: Error scaling check LP");
+                    "debugSimplexLp: Error scaling check LP");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   if (!(check_lp == simplex_lp)) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "debugSimplexLp: LP and Check LP not equal");
+                    "debugSimplexLp: LP and Check LP not equal");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
-  if (!rightSizeDoubleVector(options.logfile, "debugSimplexLp", "Col scale", scale.col_, lp.numCol_))
+  if (!rightSizeDoubleVector(options.logfile, "debugSimplexLp", "Col scale",
+                             scale.col_, lp.numCol_))
     return HighsDebugStatus::LOGICAL_ERROR;
-  if (!rightSizeDoubleVector(options.logfile, "debugSimplexLp", "Row scale", scale.row_, lp.numRow_))
+  if (!rightSizeDoubleVector(options.logfile, "debugSimplexLp", "Row scale",
+                             scale.row_, lp.numRow_))
     return HighsDebugStatus::LOGICAL_ERROR;
-    
+
   return return_status;
 }
 

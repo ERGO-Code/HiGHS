@@ -1730,9 +1730,9 @@ HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
-    if (!increasing_set_ok(index_collection.set_,
-                           index_collection.set_num_entries_, 0,
-                           index_collection.dimension_ - 1, true))
+    if (!increasingSetOk(index_collection.set_,
+                         index_collection.set_num_entries_, 0,
+                         index_collection.dimension_ - 1, true))
       return HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;

@@ -1021,9 +1021,9 @@ HighsStatus deleteColsFromLpVectors(
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
-    if (!increasing_set_ok(index_collection.set_,
-                           index_collection.set_num_entries_, 0, lp.numCol_ - 1,
-                           true))
+    if (!increasingSetOk(index_collection.set_,
+                         index_collection.set_num_entries_, 0, lp.numCol_ - 1,
+                         true))
       return HighsStatus::Error;
   }
   // Initialise new_num_col in case none is removed due to from_k > to_k
@@ -1077,9 +1077,9 @@ HighsStatus deleteColsFromLpMatrix(
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
-    if (!increasing_set_ok(index_collection.set_,
-                           index_collection.set_num_entries_, 0, lp.numCol_ - 1,
-                           true))
+    if (!increasingSetOk(index_collection.set_,
+                         index_collection.set_num_entries_, 0, lp.numCol_ - 1,
+                         true))
       return HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;
@@ -1167,9 +1167,9 @@ HighsStatus deleteRowsFromLpVectors(
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
-    if (!increasing_set_ok(index_collection.set_,
-                           index_collection.set_num_entries_, 0, lp.numRow_ - 1,
-                           true))
+    if (!increasingSetOk(index_collection.set_,
+                         index_collection.set_num_entries_, 0, lp.numRow_ - 1,
+                         true))
       return HighsStatus::Error;
   }
   // Initialise new_num_row in case none is removed due to from_k > to_k
@@ -1223,9 +1223,9 @@ HighsStatus deleteRowsFromLpMatrix(
                                "limitsForIndexCollection");
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
-    if (!increasing_set_ok(index_collection.set_,
-                           index_collection.set_num_entries_, 0, lp.numRow_ - 1,
-                           true))
+    if (!increasingSetOk(index_collection.set_,
+                         index_collection.set_num_entries_, 0, lp.numRow_ - 1,
+                         true))
       return HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;

@@ -241,16 +241,27 @@ double highsRelativeDifference(const double v0, const double v1) {
   return fabs(v0 - v1) / std::max(v0, std::max(v1, 1.0));
 }
 
-bool rightSizeDoubleVector(FILE* logfile,
-			  const std::string name0,
-			  const std::string name1,
-			  const std::vector<double> v,
-			  const int right_size) {
+bool rightSizeDoubleVector(FILE* logfile, const std::string name0,
+                           const std::string name1, const std::vector<double> v,
+                           const int right_size) {
   const int v_size = v.size();
   if (v_size != right_size) {
     HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "%s: %s size is %d, not numCol = %d",
-		    name0.c_str(), name1.c_str(), v_size, right_size);
+                    "%s: %s size is %d, not numCol = %d", name0.c_str(),
+                    name1.c_str(), v_size, right_size);
+    return false;
+  }
+  return true;
+}
+
+bool rightSizeIntVector(FILE* logfile, const std::string name0,
+                        const std::string name1, const std::vector<int> v,
+                        const int right_size) {
+  const int v_size = v.size();
+  if (v_size != right_size) {
+    HighsLogMessage(logfile, HighsMessageType::ERROR,
+                    "%s: %s size is %d, not numCol = %d", name0.c_str(),
+                    name1.c_str(), v_size, right_size);
     return false;
   }
   return true;
