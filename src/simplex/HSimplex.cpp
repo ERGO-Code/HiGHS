@@ -28,6 +28,7 @@
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"  // For simplex strategy constants
 #include "simplex/SimplexTimer.h"
+#include "util/HighsSort.h"
 #include "util/HighsUtils.h"
 
 using std::runtime_error;
@@ -1248,7 +1249,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  // no_scaling = false; printf("!!!! FORCE SCALING !!!!\n");
+  no_scaling = false; printf("!!!! FORCE SCALING !!!!\n");
   bool scaled_matrix = false;
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
@@ -1714,6 +1715,29 @@ bool maxValueScaleMatrix(HighsModelObject& highs_model_object) {
       original_matrix_min_value, original_matrix_max_value,
       original_matrix_value_ratio, matrix_value_ratio_improvement);
   return true;
+}
+
+HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
+			const HighsIndexCollection& index_collection) {
+  HighsStatus return_status = HighsStatus::OK;
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  if (index_collection.is_set_) {
+    // For deletion by set it must be increasing
+    if (!increasing_set_ok(index_collection.set_,
+                           index_collection.set_num_entries_, 0, index_collection.dimension_ - 1,
+                           true))
+      return HighsStatus::Error;
+  }
+
+  return HighsStatus::OK;
+
 }
 
 // PERMUTE:

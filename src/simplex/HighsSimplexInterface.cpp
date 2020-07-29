@@ -234,9 +234,9 @@ HighsStatus HighsSimplexInterface::deleteCols(
   // any columns have been removed, and if there is mask to be updated
   int original_num_col = lp.numCol_;
 
-  HighsStatus returnStatus;
-  returnStatus = deleteLpCols(options, lp, index_collection);
-  if (returnStatus != HighsStatus::OK) return returnStatus;
+  HighsStatus return_status;
+  return_status = deleteLpCols(options, lp, index_collection);
+  if (return_status != HighsStatus::OK) return return_status;
   assert(lp.numCol_ <= original_num_col);
   if (lp.numCol_ < original_num_col) {
     // Nontrivial deletion so reset the model_status and invalidate
@@ -246,11 +246,15 @@ HighsStatus HighsSimplexInterface::deleteCols(
         highs_model_object.scaled_model_status_;
     basis.valid_ = false;
   }
+  return_status = interpretCallStatus(
+            deleteScale(options, highs_model_object.scale_.col_, index_collection),
+            return_status, "deleteScale");
+  if (return_status == HighsStatus::Error) return return_status;
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    returnStatus = deleteLpCols(options, simplex_lp, index_collection);
-    if (returnStatus != HighsStatus::OK) return returnStatus;
+    return_status = deleteLpCols(options, simplex_lp, index_collection);
+    if (return_status != HighsStatus::OK) return return_status;
     //    HighsScale& scale = highs_model_object.scale_;
     //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++)
     //    scale.col_[col] = scale.col_[col + numDeleteCol];
@@ -516,9 +520,9 @@ HighsStatus HighsSimplexInterface::deleteRows(
   // any rows have been removed, and if there is mask to be updated
   int original_num_row = lp.numRow_;
 
-  HighsStatus returnStatus;
-  returnStatus = deleteLpRows(options, lp, index_collection);
-  if (returnStatus != HighsStatus::OK) return returnStatus;
+  HighsStatus return_status;
+  return_status = deleteLpRows(options, lp, index_collection);
+  if (return_status != HighsStatus::OK) return return_status;
   assert(lp.numRow_ <= original_num_row);
   if (lp.numRow_ < original_num_row) {
     // Nontrivial deletion so reset the model_status and invalidate
@@ -531,8 +535,8 @@ HighsStatus HighsSimplexInterface::deleteRows(
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    returnStatus = deleteLpRows(options, simplex_lp, index_collection);
-    if (returnStatus != HighsStatus::OK) return returnStatus;
+    return_status = deleteLpRows(options, simplex_lp, index_collection);
+    if (return_status != HighsStatus::OK) return return_status;
     //    HighsScale& scale = highs_model_object.scale_;
     //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++)
     //    scale.row_[row] = scale.row_[row + numDeleteRow];
