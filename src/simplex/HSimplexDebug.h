@@ -73,6 +73,10 @@ HighsDebugStatus debugSimplexBasicSolution(
 HighsDebugStatus debugSimplexInfoBasisConsistent(
     const HighsModelObject& highs_model_object);
 
+HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
+				      const HighsLp lp,
+				      const SimplexBasis& basis);
+
 HighsDebugStatus debugSimplexHighsSolutionDifferences(
     const HighsModelObject& highs_model_object);
 

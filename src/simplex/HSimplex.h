@@ -259,4 +259,7 @@ void updateSimplexLpStatus(
     LpAction action         // !< Action prompting update
 );
 
+bool isBasisSizeConsistent(const HighsLp& lp,
+			   const SimplexBasis& basis
+);
 #endif  // SIMPLEX_HSIMPLEX_H_
