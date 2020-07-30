@@ -102,4 +102,7 @@ void debugReportHighsBasicSolution(const string message,
                                    const HighsSolutionParams& solution_params,
                                    const HighsModelStatus model_status);
 
+HighsDebugStatus debugHighsBasis(const HighsOptions& options,
+				 const HighsBasis& basis);
+
 #endif  // SIMPLEX_HIGHSSOLUTIONDEBUG_H_

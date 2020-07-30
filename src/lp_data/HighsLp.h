@@ -355,10 +355,10 @@ struct HighsRanging {
   std::vector<int> rowBoundRangeDnOutCol_;
 };
 
-// Make sure the dimensions of solution and basis are the same as
-// numRow_ and numCol_
-bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
-bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
+// Make sure the sizes of solution and basis vectors are consistent
+// with numRow_ and numCol_
+bool isSolutionSizeConsistent(const HighsLp& lp, const HighsSolution& solution);
+bool isBasisSizeConsistent(const HighsLp& lp, const HighsBasis& basis);
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.

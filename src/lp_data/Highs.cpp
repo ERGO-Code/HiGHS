@@ -1711,7 +1711,7 @@ HighsPresolveStatus Highs::runPresolve() {
 
 HighsPostsolveStatus Highs::runPostsolve() {
   assert(presolve_.has_run_);
-  bool solution_ok = isSolutionConsistent(presolve_.getReducedProblem(),
+  bool solution_ok = isSolutionSizeConsistent(presolve_.getReducedProblem(),
                                           presolve_.data_.reduced_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
@@ -2042,10 +2042,10 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         break;
     }
   }
-  if (have_solution) assert(isSolutionConsistent(lp_, solution_));
+  if (have_solution) assert(isSolutionSizeConsistent(lp_, solution_));
   bool have_basis = false;
   if (basis_.valid_) {
-    have_basis = isBasisConsistent(lp_, basis_);
+    have_basis = isBasisSizeConsistent(lp_, basis_);
     assert(have_basis);
   }
   if (have_solution && have_basis) {
@@ -2060,6 +2060,8 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   HighsStatus return_status = highs_return_status;
 
   updateHighsSolutionBasis();
+  if (debugHighsBasis(options_, basis_) == HighsDebugStatus::LOGICAL_ERROR)
+      return HighsStatus::Error;
   if (hmos_.size()) {
     if (debugSimplexLp(hmos_[0]) == HighsDebugStatus::LOGICAL_ERROR)
       return HighsStatus::Error;

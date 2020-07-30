@@ -76,8 +76,8 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
-  const bool have_solution = isSolutionConsistent(lp, solution);
-  const bool have_basis = isBasisConsistent(lp, basis) && basis.valid_;
+  const bool have_solution = isSolutionSizeConsistent(lp, solution);
+  const bool have_basis = isBasisSizeConsistent(lp, basis) && basis.valid_;
   assert(have_solution);
   assert(have_basis);
   if (!have_solution) return HighsDebugStatus::LOGICAL_ERROR;
@@ -120,8 +120,8 @@ HighsDebugStatus debugHighsBasicSolution(
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
-  const bool have_solution = isSolutionConsistent(lp, solution);
-  const bool have_basis = isBasisConsistent(lp, basis) && basis.valid_;
+  const bool have_solution = isSolutionSizeConsistent(lp, solution);
+  const bool have_basis = isBasisSizeConsistent(lp, basis) && basis.valid_;
   assert(have_solution);
   assert(have_basis);
   if (!have_solution) return HighsDebugStatus::LOGICAL_ERROR;
@@ -738,4 +738,9 @@ void debugReportHighsBasicSolution(const string message,
       solution_params.max_dual_infeasibility,
       solution_params.sum_dual_infeasibilities,
       utilHighsModelStatusToString(model_status).c_str());
+}
+
+HighsDebugStatus debugHighsBasis(const HighsOptions& options,
+			    const HighsBasis& basis) {
+  return HighsDebugStatus::OK;
 }

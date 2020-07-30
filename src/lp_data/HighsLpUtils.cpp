@@ -1806,7 +1806,7 @@ HighsBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis) {
 
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
   assert(solution.row_dual.size() > 0);
-  if (!isSolutionConsistent(lp, solution)) return HighsStatus::Error;
+  if (!isSolutionSizeConsistent(lp, solution)) return HighsStatus::Error;
 
   solution.col_dual.assign(lp.numCol_, 0);
 
@@ -1826,7 +1826,7 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   assert(solution.col_value.size() > 0);
-  if (!isSolutionConsistent(lp, solution)) return HighsStatus::Error;
+  if (!isSolutionSizeConsistent(lp, solution)) return HighsStatus::Error;
 
   solution.row_value.clear();
   solution.row_value.assign(lp.numRow_, 0);
@@ -1845,7 +1845,7 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
 }
 
 double calculateObjective(const HighsLp& lp, HighsSolution& solution) {
-  assert(isSolutionConsistent(lp, solution));
+  assert(isSolutionSizeConsistent(lp, solution));
   double sum = 0;
   for (int col = 0; col < lp.numCol_; col++)
     sum += lp.colCost_[col] * solution.col_value[col];

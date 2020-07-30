@@ -767,11 +767,10 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool scaled_simplex_lp = highs_model_object.scale_.is_scaled_;
   // Check that if there is no simplex LP then there is no matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_lp_status.has_matrix_col_wise);
-    assert(!scaled_simplex_lp);
+    assert(!highs_model_object.scale_.is_scaled_);
   }
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
   if (valid_simplex_lp) {
