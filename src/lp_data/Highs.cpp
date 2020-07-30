@@ -1711,8 +1711,8 @@ HighsPresolveStatus Highs::runPresolve() {
 
 HighsPostsolveStatus Highs::runPostsolve() {
   assert(presolve_.has_run_);
-  bool solution_ok = isSolutionSizeConsistent(presolve_.getReducedProblem(),
-                                          presolve_.data_.reduced_solution_);
+  bool solution_ok = isSolutionSizeConsistent(
+      presolve_.getReducedProblem(), presolve_.data_.reduced_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
   // Run postsolve
@@ -2060,7 +2060,9 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   HighsStatus return_status = highs_return_status;
 
   updateHighsSolutionBasis();
-  if (debugBasisConsistent(options_, lp_, basis_) == HighsDebugStatus::LOGICAL_ERROR) return HighsStatus::Error;
+  if (debugBasisConsistent(options_, lp_, basis_) ==
+      HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
   if (hmos_.size()) {
     if (debugSimplexLp(hmos_[0]) == HighsDebugStatus::LOGICAL_ERROR)
       return HighsStatus::Error;

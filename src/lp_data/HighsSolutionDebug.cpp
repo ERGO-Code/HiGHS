@@ -17,6 +17,7 @@
 
 #include <vector>
 
+#include "lp_data/HighsDebug.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 
@@ -28,13 +29,13 @@ const double large_residual_error = 1e-12;
 const double excessive_residual_error = sqrt(large_residual_error);
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-				      const HighsLp lp,
-				      const HighsBasis& basis) {
+                                      const HighsLp lp,
+                                      const HighsBasis& basis) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // options, assuming no knowledge of solution parameters or model status
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
-  if (basis.valid_ && !isBasisSizeConsistent(lp, basis)) 
+  if (basis.valid_ && !isBasisSizeConsistent(lp, basis))
     return HighsDebugStatus::LOGICAL_ERROR;
   return HighsDebugStatus::OK;
 }
@@ -88,7 +89,8 @@ HighsDebugStatus debugHighsBasicSolution(const string message,
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
-  if (debugHaveBasisAndSolutionData(lp, basis, solution) != HighsDebugStatus::OK)
+  if (debugHaveBasisAndSolutionData(lp, basis, solution) !=
+      HighsDebugStatus::OK)
     return HighsDebugStatus::LOGICAL_ERROR;
 
   // Extract the solution_params from options
@@ -128,7 +130,8 @@ HighsDebugStatus debugHighsBasicSolution(
     return HighsDebugStatus::NOT_CHECKED;
 
   // Check that there is a solution and valid basis to use
-  if (debugHaveBasisAndSolutionData(lp, basis, solution) != HighsDebugStatus::OK)
+  if (debugHaveBasisAndSolutionData(lp, basis, solution) !=
+      HighsDebugStatus::OK)
     return HighsDebugStatus::LOGICAL_ERROR;
 
   HighsSolutionParams check_solution_params;
@@ -160,10 +163,12 @@ HighsDebugStatus debugHighsBasicSolution(
 }
 
 HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
-					       const HighsBasis& basis,
-					       const HighsSolution& solution) {
-  if (!isSolutionSizeConsistent(lp, solution)) return HighsDebugStatus::LOGICAL_ERROR;
-  if (!isBasisSizeConsistent(lp, basis) && basis.valid_) return HighsDebugStatus::LOGICAL_ERROR;
+                                               const HighsBasis& basis,
+                                               const HighsSolution& solution) {
+  if (!isSolutionSizeConsistent(lp, solution))
+    return HighsDebugStatus::LOGICAL_ERROR;
+  if (!isBasisSizeConsistent(lp, basis) && basis.valid_)
+    return HighsDebugStatus::LOGICAL_ERROR;
   return HighsDebugStatus::OK;
 }
 
@@ -516,7 +521,7 @@ bool debugBasicSolutionVariable(
 }
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-				      const HighsBasis& basis) {
+                                      const HighsBasis& basis) {
   return HighsDebugStatus::OK;
 }
 
@@ -731,11 +736,6 @@ HighsDebugStatus debugCompareSolutionParamInteger(const string name,
                     "SolutionPar:  difference of %d for %s\n", v1 - v0,
                     name.c_str());
   return HighsDebugStatus::LOGICAL_ERROR;
-}
-
-HighsDebugStatus debugWorseStatus(HighsDebugStatus status0,
-                                  HighsDebugStatus status1) {
-  return static_cast<HighsDebugStatus>(std::max((int)status0, (int)status1));
 }
 
 void debugReportHighsBasicSolution(const string message,

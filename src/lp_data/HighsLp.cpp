@@ -13,7 +13,8 @@
  */
 #include "lp_data/HighsLp.h"
 
-bool isSolutionSizeConsistent(const HighsLp& lp, const HighsSolution& solution) {
+bool isSolutionSizeConsistent(const HighsLp& lp,
+                              const HighsSolution& solution) {
   if (solution.col_value.size() == (size_t)lp.numCol_ ||
       solution.col_dual.size() == (size_t)lp.numCol_ ||
       solution.row_value.size() == (size_t)lp.numRow_ ||

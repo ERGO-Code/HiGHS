@@ -36,8 +36,8 @@ struct HighsPrimalDualErrors {
 };
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-				      const HighsLp lp,
-				      const HighsBasis& basis);
+                                      const HighsLp lp,
+                                      const HighsBasis& basis);
 
 HighsDebugStatus debugHighsBasicSolution(
     const string message, const HighsModelObject& highs_model_object);
@@ -60,8 +60,8 @@ HighsDebugStatus debugHighsBasicSolution(
     const HighsModelStatus model_status);
 
 HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
-					       const HighsBasis& basis,
-					       const HighsSolution& solution);
+                                               const HighsBasis& basis,
+                                               const HighsSolution& solution);
 
 void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
     const HighsOptions& options, const HighsLp& lp, const HighsBasis& basis,
@@ -101,9 +101,6 @@ HighsDebugStatus debugCompareSolutionParamValue(const string name,
 HighsDebugStatus debugCompareSolutionParamInteger(const string name,
                                                   const HighsOptions& options,
                                                   const int v0, const int v1);
-
-HighsDebugStatus debugWorseStatus(HighsDebugStatus status0,
-                                  HighsDebugStatus status1);
 
 void debugReportHighsBasicSolution(const string message,
                                    const HighsOptions& options,

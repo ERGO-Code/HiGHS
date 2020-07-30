@@ -1622,8 +1622,10 @@ bool maxValueScaleMatrix(HighsModelObject& highs_model_object) {
   vector<int>& Aindex = highs_model_object.simplex_lp_.Aindex_;
   vector<double>& Avalue = highs_model_object.simplex_lp_.Avalue_;
 
-  assert(highs_model_object.options_.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_015 ||
-         highs_model_object.options_.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_0157);
+  assert(highs_model_object.options_.simplex_scale_strategy ==
+             SIMPLEX_SCALE_STRATEGY_015 ||
+         highs_model_object.options_.simplex_scale_strategy ==
+             SIMPLEX_SCALE_STRATEGY_0157);
   const double log2 = log(2.0);
   const double max_allow_scale =
       pow(2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);

@@ -16,6 +16,7 @@
 
 #include <string>
 
+#include "lp_data/HighsDebug.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HDualRow.h"
@@ -118,14 +119,14 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   if (!(check_lp == simplex_lp)) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "debugSimplexLp: LP and Check LP not equal");
-    return HighsDebugStatus::LOGICAL_ERROR;
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
-  if (!rightSizeDoubleVector(options.logfile, "debugSimplexLp", "Col scale",
-                             scale.col_, lp.numCol_))
-    return HighsDebugStatus::LOGICAL_ERROR;
-  if (!rightSizeDoubleVector(options.logfile, "debugSimplexLp", "Row scale",
-                             scale.row_, lp.numRow_))
-    return HighsDebugStatus::LOGICAL_ERROR;
+  if (!rightSizeVector(options.logfile, "debugSimplexLp", "Col scale",
+                       scale.col_, lp.numCol_))
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  if (!rightSizeVector(options.logfile, "debugSimplexLp", "Row scale",
+                       scale.row_, lp.numRow_))
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
 
   return return_status;
 }
@@ -1094,91 +1095,51 @@ HighsDebugStatus debugSimplexInfoBasisConsistent(
   }
   //  if (!simplex_info.initialised) {printf("SimplexInfo not initialised)\n");
   //  return true;}
-  int workCost_size = simplex_info.workCost_.size();
-  assert(workCost_size == numTot);
-  if (workCost_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "workCost size is %d, not %d\n", workCost_size, numTot);
+
+  if (!rightSizeVector(options.logfile, "", "workCost", simplex_info.workCost_,
+                       numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int workDual_size = simplex_info.workDual_.size();
-  assert(workDual_size == numTot);
-  if (workDual_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "workDual size is %d, not %d\n", workDual_size, numTot);
+  if (!rightSizeVector(options.logfile, "", "workCost", simplex_info.workCost_,
+                       numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int workShift_size = simplex_info.workShift_.size();
-  assert(workShift_size == numTot);
-  if (workShift_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "workShift size is %d, not %d\n", workShift_size, numTot);
+  if (!rightSizeVector(options.logfile, "", "workDual", simplex_info.workDual_,
+                       numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int workLower_size = simplex_info.workLower_.size();
-  assert(workLower_size == numTot);
-  if (workLower_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "workLower size is %d, not %d\n", workLower_size, numTot);
+  if (!rightSizeVector(options.logfile, "", "workShift",
+                       simplex_info.workShift_, numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int workUpper_size = simplex_info.workUpper_.size();
-  assert(workUpper_size == numTot);
-  if (workUpper_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "workUpper size is %d, not %d\n", workUpper_size, numTot);
+  if (!rightSizeVector(options.logfile, "", "workLower",
+                       simplex_info.workLower_, numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int workRange_size = simplex_info.workRange_.size();
-  assert(workRange_size == numTot);
-  if (workRange_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "workRange size is %d, not %d\n", workRange_size, numTot);
+  if (!rightSizeVector(options.logfile, "", "workUpper",
+                       simplex_info.workUpper_, numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int workValue_size = simplex_info.workValue_.size();
-  assert(workValue_size == numTot);
-  if (workValue_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "workValue size is %d, not %d\n", workValue_size, numTot);
+  if (!rightSizeVector(options.logfile, "", "workRange",
+                       simplex_info.workRange_, numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int nonbasicFlag_size = simplex_basis.nonbasicFlag_.size();
-  assert(nonbasicFlag_size == numTot);
-  if (nonbasicFlag_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "nonbasicFlag size is %d, not %d\n", nonbasicFlag_size,
-                      numTot);
+  if (!rightSizeVector(options.logfile, "", "workValue",
+                       simplex_info.workValue_, numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int nonbasicMove_size = simplex_basis.nonbasicMove_.size();
-  assert(nonbasicMove_size == numTot);
-  if (nonbasicMove_size != numTot) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "nonbasicMove size is %d, not %d\n", nonbasicMove_size,
-                      numTot);
+  if (!rightSizeVector(options.logfile, "", "nonbasicFlag",
+                       simplex_basis.nonbasicFlag_, numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int basicIndex_size = simplex_basis.basicIndex_.size();
-  assert(basicIndex_size == numRow);
-  if (basicIndex_size != numRow) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "basicIndex size is %d, not %d\n", basicIndex_size,
-                      numRow);
+  if (!rightSizeVector(options.logfile, "", "nonbasicMove",
+                       simplex_basis.nonbasicMove_, numTot))
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
+  if (!rightSizeVector(options.logfile, "", "basicIndex",
+                       simplex_basis.basicIndex_, numRow))
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
   return return_status;
 }
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-				      const HighsLp lp,
-				      const SimplexBasis& basis) {
+                                      const HighsLp lp,
+                                      const SimplexBasis& basis) {
   // Non-trivially expensive analysis of a HiGHS basic solution, starting from
   // options, assuming no knowledge of solution parameters or model status
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
-  if (!isBasisSizeConsistent(lp, basis)) 
-    return HighsDebugStatus::LOGICAL_ERROR;
+  if (!isBasisSizeConsistent(lp, basis)) return HighsDebugStatus::LOGICAL_ERROR;
   return HighsDebugStatus::OK;
 }
 
