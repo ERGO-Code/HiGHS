@@ -183,8 +183,13 @@ class SimplexTimer {
     for (int en = 0; en < simplex_clock_list_size; en++) {
       clockList[en] = clock[simplex_clock_list[en]];
     }
-    const double ideal_sum_time = timer.read(timer.solve_clock);
-    printf("reportSimplexClockList: ideal_sum_time = %g\n", ideal_sum_time);
+    const double ideal_sum_time0 = timer.read(timer.solve_clock);
+    printf("SimplexTotalClock = %d; clock[SimplexTotalClock] = %d; timer.clock_time[clock[SimplexTotalClock]] = %g\n",
+	   SimplexTotalClock, clock[SimplexTotalClock], timer.clock_time[clock[SimplexTotalClock]]);
+    const double ideal_sum_time = timer.clock_time[clock[SimplexTotalClock]];
+    
+    printf("reportSimplexClockList: ideal_sum_time0 = %g\n", ideal_sum_time0);
+    printf("reportSimplexClockList: ideal_sum_time  = %g\n", ideal_sum_time);
     timer.report_tl(grepStamp, clockList, ideal_sum_time, 1e-8);
   };
 

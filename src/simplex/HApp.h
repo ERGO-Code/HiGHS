@@ -92,6 +92,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
                     highs_model_object.lp_.numRow_);
     return HighsStatus::Error;
   }
+#ifdef HiGHSDEV
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
+  analysis.simplexTimerStart(SimplexTotalClock);
+#endif
   // Set simplex options from HiGHS options.
   // ToDo: Should only be done when not hot-starting since strategy
   // knowledge based on run-time experience should be preserved.
@@ -208,10 +212,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL)
       algorithm = SimplexAlgorithm::PRIMAL;
     reportSimplexPhaseIterations(highs_model_object, algorithm, true);
-#ifdef HiGHSDEV
-    HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
-    analysis.simplexTimerStart(SimplexTotalClock);
-#endif
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
       HighsLogMessage(logfile, HighsMessageType::INFO,
@@ -299,11 +299,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     debugBasisCondition(highs_model_object, "Final");
 
     // Official finish of solver
-#ifdef HiGHSDEV
-    analysis.simplexTimerStop(SimplexTotalClock);
-#endif
     reportSimplexPhaseIterations(highs_model_object, algorithm);
   }
+
+#ifdef HiGHSDEV
+  analysis.simplexTimerStop(SimplexTotalClock);
+#endif
 
   if (debugSimplexBasicSolution("After runSimplexSolver", highs_model_object) ==
       HighsDebugStatus::LOGICAL_ERROR)

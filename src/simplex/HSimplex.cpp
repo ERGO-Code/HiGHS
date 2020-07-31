@@ -66,7 +66,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = useful_analysis;
+  simplex_info.report_simplex_inner_clock =true;  // useful_analysis;
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
   simplex_info.report_HFactor_clock = useful_analysis;  // full_timing;//
@@ -346,8 +346,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // start
   bool reinvert = !simplex_lp_status.has_fresh_invert;
   if (reinvert) {
+    analysis.simplexTimerStart(InvertClock);
     computeFactor(highs_model_object);
-    simplex_lp_status.has_fresh_invert = true;
+    analysis.simplexTimerStop(InvertClock);
+   simplex_lp_status.has_fresh_invert = true;
   }
   // Possibly check for basis condition. ToDo Override this for MIP hot start
   bool basis_condition_ok = true;
@@ -369,7 +371,9 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       simplex_basis.basicIndex_[iRow] = iVar;
     }
     simplex_info.num_basic_logicals = simplex_lp.numRow_;
+    analysis.simplexTimerStart(InvertClock);
     computeFactor(highs_model_object);
+    analysis.simplexTimerStop(InvertClock);
 
     /*
     HCrash crash(highs_model_object);
@@ -544,11 +548,15 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Possibly solve for the basic primal and nonbasic dual values to determine
   // which simplex solver to use, unless it's forced
   //  if (simplex_lp_status.has_basic_primal_values) {
+  analysis.simplexTimerStart(ComputePrimalClock);
   computePrimal(highs_model_object);
+  analysis.simplexTimerStop(ComputePrimalClock);
   simplex_lp_status.has_basic_primal_values = true;
   //}
   //  if (simplex_lp_status.has_basic_dual_values) {
+  analysis.simplexTimerStart(ComputeDualClock);
   computeDual(highs_model_object);
+  analysis.simplexTimerStop(ComputeDualClock);
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
 
@@ -2303,12 +2311,19 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   SimplexTimer simplex_timer;
+  int simplex_strategy_for_profiling = simplex_info.simplex_strategy;
+  if (simplex_strategy_for_profiling == SIMPLEX_STRATEGY_CHOOSE) {
+    // Simplex strategy not chosen - probably due to solution after
+    // postsolve being optimal - so profile as if
+    // SIMPLEX_STRATEGY_DUAL_PLAIN has been used
+    simplex_strategy_for_profiling = SIMPLEX_STRATEGY_DUAL_PLAIN;
+  }
 
-  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
+  if (simplex_strategy_for_profiling == SIMPLEX_STRATEGY_PRIMAL) {
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportSimplexInnerClock(analysis.thread_simplex_clocks[0]);
     }
-  } else if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
+  } else if (simplex_strategy_for_profiling == SIMPLEX_STRATEGY_DUAL_PLAIN) {
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportSimplexInnerClock(analysis.thread_simplex_clocks[0]);
       simplex_timer.reportSimplexChuzc3Clock(analysis.thread_simplex_clocks[0]);
@@ -2321,7 +2336,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
     }
   }
 
-  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+  if (simplex_strategy_for_profiling == SIMPLEX_STRATEGY_DUAL_MULTI) {
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportSimplexMultiInnerClock(
           analysis.thread_simplex_clocks[0]);
