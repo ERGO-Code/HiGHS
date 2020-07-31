@@ -16,6 +16,7 @@
 
 #include <string>
 
+#include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HDualRow.h"
 #include "simplex/HSimplex.h"
@@ -930,6 +931,9 @@ HighsDebugStatus debugSimplexBasicSolution(
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
 
+  if (highsStatusFromHighsModelStatus(
+          highs_model_object.scaled_model_status_) != HighsStatus::OK)
+    return HighsDebugStatus::OK;
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
 
   const HighsLp& lp = highs_model_object.lp_;
