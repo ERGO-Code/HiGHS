@@ -83,4 +83,16 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
 HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
                                                    const std::string type,
                                                    const double difference);
+
+HighsDebugStatus debugOkforSolve(const HighsModelObject& highs_model_object,
+				 const int phase);
+
+bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
+		       const int phase);
+
+bool debugOneNonbasicMoveVsWorkArraysOk(const HighsModelObject& highs_model_object,
+                                        const int var);
+
+bool debugAllNonbasicMoveVsWorkArraysOk(const HighsModelObject& highs_model_object);
+
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_

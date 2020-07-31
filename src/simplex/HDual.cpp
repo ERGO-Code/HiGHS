@@ -189,12 +189,8 @@ HighsStatus HDual::solve() {
   // Level 1 also checks that the basis is OK and that the necessary
   // data in work* is populated.
   //
-  bool ok = ok_to_solve(workHMO, 1, solvePhase);
-  if (!ok) {
-    printf("NOT OK TO SOLVE???\n");
-    cout << flush;
-  }
-  assert(ok);
+  if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
 #ifdef HiGHSDEV
   // reportSimplexLpStatus(simplex_lp_status, "Before HDual major solving
   // loop");
@@ -310,11 +306,8 @@ HighsStatus HDual::solve() {
           (iteration_counts.simplex - it0);
     }
   }
-  ok = ok_to_solve(workHMO, 1, solvePhase);
-#ifdef HiGHSDEV
-  if (!ok) printf("NOT OK After Solve???\n");
-#endif
-  assert(ok);
+  if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
   computePrimalObjectiveValue(workHMO);
   return HighsStatus::OK;
 }

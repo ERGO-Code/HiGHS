@@ -123,9 +123,9 @@ HighsStatus HQPrimal::solve() {
     //
     // ToDo Write primal simplex equivalent
     /*
-    bool ok = ok_to_solve(workHMO, 1, solvePhase);
-    if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
-    assert(ok);
+  // ToDo Adapt debugOkforSolve to be used by primal
+    if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
     */
 #ifdef HiGHSDEV
     //  reportSimplexLpStatus(simplex_lp_status, "Before HQPrimal major solving
@@ -176,10 +176,9 @@ HighsStatus HQPrimal::solve() {
     if (bailout()) return HighsStatus::Warning;
   }
   /*
-  // ToDo Adapt ok_to_solve to be used by primal
-  bool ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1,
-  solvePhase); if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
-  assert(ok);
+  // ToDo Adapt debugOkforSolve to be used by primal
+  if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
   */
   return HighsStatus::OK;
 }

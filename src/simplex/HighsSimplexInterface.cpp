@@ -209,13 +209,13 @@ HighsStatus HighsSimplexInterface::addCols(
     bool basis_ok = basisOk(options.logfile, lp, basis);
     if (!basis_ok) printf("HiGHS basis not OK in addCols\n");
     assert(basis_ok);
-    report_basis(lp, basis);
+    reportBasis(lp, basis);
   }
   if (valid_simplex_basis) {
     bool basis_ok = basisOk(options.logfile, simplex_lp, simplex_basis);
     if (!basis_ok) printf("Simplex basis not OK in addCols\n");
     assert(basis_ok);
-    report_basis(simplex_lp, simplex_basis);
+    reportBasis(simplex_lp, simplex_basis);
   }
 #endif
   return return_status;
@@ -470,13 +470,13 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     bool basis_ok = basisOk(options.logfile, lp, basis);
     if (!basis_ok) printf("HiGHS basis not OK in addRows\n");
     assert(basis_ok);
-    report_basis(lp, basis);
+    reportBasis(lp, basis);
   }
   if (valid_simplex_basis) {
     bool basis_ok = basisOk(options.logfile, simplex_lp, simplex_basis);
     if (!basis_ok) printf("Simplex basis not OK in addRows\n");
     assert(basis_ok);
-    report_basis(simplex_lp, simplex_basis);
+    reportBasis(simplex_lp, simplex_basis);
   }
 #endif
   return return_status;

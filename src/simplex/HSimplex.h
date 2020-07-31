@@ -46,14 +46,15 @@ void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
                                 int XnumNewRow);
 
 bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis);
-bool basisOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis);
+bool basisOk(FILE* logfile, const HighsLp& lp, const SimplexBasis& simplex_basis);
 
-bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
-                    SimplexBasis& simplex_basis);
+bool nonbasicFlagOk(FILE* logfile,
+		    const HighsLp& lp,
+                    const SimplexBasis& simplex_basis);
 
 #ifdef HiGHSDEV
-void report_basis(HighsLp& lp, HighsBasis& basis);
-void report_basis(HighsLp& lp, SimplexBasis& simplex_basis);
+void reportBasis(const HighsLp& lp, const HighsBasis& basis);
+void reportBasis(const HighsLp& lp, const SimplexBasis& simplex_basis);
 #endif
 
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
@@ -145,15 +146,6 @@ void setRunQuiet(HighsModelObject& highs_model_object);
  * model
  */
 double computeBasisCondition(const HighsModelObject& highs_model_object);
-
-bool work_arrays_ok(HighsModelObject& highs_model_object, int phase);
-
-bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object,
-                                         int var);
-
-bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object);
-
-bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase);
 
 void flip_bound(HighsModelObject& highs_model_object, int iCol);
 

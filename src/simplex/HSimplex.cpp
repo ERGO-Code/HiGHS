@@ -791,7 +791,7 @@ bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis) {
   return true;
 }
 
-bool basisOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis) {
+bool basisOk(FILE* logfile, const HighsLp& lp, const SimplexBasis& simplex_basis) {
 #ifdef HiGHSDEV
   printf("!! Don't check if basis is invalid! !!\n");
 #endif
@@ -827,7 +827,7 @@ bool basisOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis) {
 }
 
 bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
-                    SimplexBasis& simplex_basis) {
+                    const SimplexBasis& simplex_basis) {
   int numTot = lp.numCol_ + lp.numRow_;
   assert((int)simplex_basis.nonbasicFlag_.size() == numTot);
   if ((int)simplex_basis.nonbasicFlag_.size() != numTot) {
@@ -841,7 +841,7 @@ bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
     if (simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_FALSE) {
       num_basic_variables++;
     } else {
-      simplex_basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
+      assert(simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_TRUE);
     }
   }
   assert(num_basic_variables == lp.numRow_);
@@ -855,7 +855,7 @@ bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
 }
 
 #ifdef HiGHSDEV
-void report_basis(HighsLp& lp, HighsBasis& basis) {
+void reportBasis(const HighsLp& lp, const HighsBasis& basis) {
   if (lp.numCol_ > 0) printf("HighsBasis\n   Col Status\n");
   for (int col = 0; col < lp.numCol_; col++) {
     printf("%6d %6d\n", col, (int)basis.col_status[col]);
@@ -866,7 +866,7 @@ void report_basis(HighsLp& lp, HighsBasis& basis) {
   }
 }
 
-void report_basis(HighsLp& lp, SimplexBasis& simplex_basis) {
+void reportBasis(const HighsLp& lp, const SimplexBasis& simplex_basis) {
   if (lp.numCol_ > 0) printf("SimplexBasis\n   Var    Col   Flag\n");
   for (int col = 0; col < lp.numCol_; col++) {
     int var = col;
@@ -2492,350 +2492,6 @@ double computeBasisCondition(const HighsModelObject& highs_model_object) {
   }
   double cond_B = norm_Binv * norm_B;
   return cond_B;
-}
-
-bool work_arrays_ok(HighsModelObject& highs_model_object, int phase) {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  //  printf("Called work_arrays_ok(%d)\n", phase);cout << flush;
-  bool ok = true;
-  // Only check phase 2 bounds: others will have been set by solve() so can be
-  // trusted
-  if (phase == 2) {
-    for (int col = 0; col < simplex_lp.numCol_; ++col) {
-      int var = col;
-      if (!highs_isInfinity(-simplex_info.workLower_[var])) {
-        ok = simplex_info.workLower_[var] == simplex_lp.colLower_[col];
-        if (!ok) {
-          printf("For col %d, simplex_info.workLower_ should be %g but is %g\n",
-                 col, simplex_lp.colLower_[col], simplex_info.workLower_[var]);
-          return ok;
-        }
-      }
-      if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-        ok = simplex_info.workUpper_[var] == simplex_lp.colUpper_[col];
-        if (!ok) {
-          printf("For col %d, simplex_info.workUpper_ should be %g but is %g\n",
-                 col, simplex_lp.colUpper_[col], simplex_info.workUpper_[var]);
-          return ok;
-        }
-      }
-    }
-    for (int row = 0; row < simplex_lp.numRow_; ++row) {
-      int var = simplex_lp.numCol_ + row;
-      if (!highs_isInfinity(-simplex_info.workLower_[var])) {
-        ok = simplex_info.workLower_[var] == -simplex_lp.rowUpper_[row];
-        if (!ok) {
-          printf("For row %d, simplex_info.workLower_ should be %g but is %g\n",
-                 row, -simplex_lp.rowUpper_[row], simplex_info.workLower_[var]);
-          return ok;
-        }
-      }
-      if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-        ok = simplex_info.workUpper_[var] == -simplex_lp.rowLower_[row];
-        if (!ok) {
-          printf("For row %d, simplex_info.workUpper_ should be %g but is %g\n",
-                 row, -simplex_lp.rowLower_[row], simplex_info.workUpper_[var]);
-          return ok;
-        }
-      }
-    }
-  }
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  for (int var = 0; var < numTot; ++var) {
-    ok = simplex_info.workRange_[var] ==
-         (simplex_info.workUpper_[var] - simplex_info.workLower_[var]);
-    if (!ok) {
-      printf(
-          "For variable %d, simplex_info.workRange_ should be %g = %g - %g "
-          "but is %g\n",
-          var, simplex_info.workUpper_[var] - simplex_info.workLower_[var],
-          simplex_info.workUpper_[var], simplex_info.workLower_[var],
-          simplex_info.workRange_[var]);
-      return ok;
-    }
-  }
-  // Don't check perturbed costs: these will have been set by solve() so can be
-  // trusted
-  if (!simplex_info.costs_perturbed) {
-    for (int col = 0; col < simplex_lp.numCol_; ++col) {
-      int var = col;
-      ok = simplex_info.workCost_[var] ==
-           (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
-      if (!ok) {
-        printf("For col %d, simplex_info.workLower_ should be %g but is %g\n",
-               col, simplex_lp.colLower_[col], simplex_info.workCost_[var]);
-        return ok;
-      }
-    }
-    for (int row = 0; row < simplex_lp.numRow_; ++row) {
-      int var = simplex_lp.numCol_ + row;
-      ok = simplex_info.workCost_[var] == 0.;
-      if (!ok) {
-        printf("For row %d, simplex_info.workCost_ should be zero but is %g\n",
-               row, simplex_info.workCost_[var]);
-        return ok;
-      }
-    }
-  }
-  // ok must be true if we reach here
-  assert(ok);
-  return ok;
-}
-
-bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object,
-                                         int var) {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  assert(var >= 0);
-  assert(var < simplex_lp.numCol_ + simplex_lp.numRow_);
-  // Make sure we're not checking a basic variable
-  if (!simplex_basis.nonbasicFlag_[var]) return true;
-  bool ok;
-  if (!highs_isInfinity(-simplex_info.workLower_[var])) {
-    if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-      // Finite lower and upper bounds so nonbasic move depends on whether they
-      // are equal
-      if (simplex_info.workLower_[var] == simplex_info.workUpper_[var]) {
-        // Fixed variable
-        ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
-        if (!ok) {
-          printf(
-              "Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
-              "%11g] so nonbasic "
-              "move should be zero but is %d\n",
-              var, simplex_lp.numCol_, simplex_info.workLower_[var],
-              simplex_info.workValue_[var], simplex_info.workUpper_[var],
-              simplex_basis.nonbasicMove_[var]);
-          return ok;
-        }
-        ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
-        if (!ok) {
-          printf(
-              "Fixed variable %d (simplex_lp.numCol_ = %d) so "
-              "simplex_info.work value should be %g but "
-              "is %g\n",
-              var, simplex_lp.numCol_, simplex_info.workLower_[var],
-              simplex_info.workValue_[var]);
-          return ok;
-        }
-      } else {
-        // Boxed variable
-        ok = (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) ||
-             (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN);
-        if (!ok) {
-          printf(
-              "Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
-              "%11g] range %g so "
-              "nonbasic move should be up/down but is  %d\n",
-              var, simplex_lp.numCol_, simplex_info.workLower_[var],
-              simplex_info.workValue_[var], simplex_info.workUpper_[var],
-              simplex_info.workUpper_[var] - simplex_info.workLower_[var],
-              simplex_basis.nonbasicMove_[var]);
-          return ok;
-        }
-        if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
-          ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
-          if (!ok) {
-            printf(
-                "Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                "NONBASIC_MOVE_UP so work "
-                "value should be %g but is %g\n",
-                var, simplex_lp.numCol_, simplex_info.workLower_[var],
-                simplex_info.workValue_[var]);
-            return ok;
-          }
-        } else {
-          ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
-          if (!ok) {
-            printf(
-                "Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                "NONBASIC_MOVE_DN so work "
-                "value should be %g but is %g\n",
-                var, simplex_lp.numCol_, simplex_info.workUpper_[var],
-                simplex_info.workValue_[var]);
-            return ok;
-          }
-        }
-      }
-    } else {
-      // Infinite upper bound
-      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP;
-      if (!ok) {
-        printf(
-            "Finite lower bound and infinite upper bound variable %d "
-            "(simplex_lp.numCol_ = "
-            "%d) [%11g, %11g, %11g] so nonbasic move should be up=%2d but is  "
-            "%d\n",
-            var, simplex_lp.numCol_, simplex_info.workLower_[var],
-            simplex_info.workValue_[var], simplex_info.workUpper_[var],
-            NONBASIC_MOVE_UP, simplex_basis.nonbasicMove_[var]);
-        return ok;
-      }
-      ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
-      if (!ok) {
-        printf(
-            "Finite lower bound and infinite upper bound variable %d "
-            "(simplex_lp.numCol_ = "
-            "%d) so work value should be %g but is %g\n",
-            var, simplex_lp.numCol_, simplex_info.workLower_[var],
-            simplex_info.workValue_[var]);
-        return ok;
-      }
-    }
-  } else {
-    // Infinite lower bound
-    if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
-      if (!ok) {
-        printf(
-            "Finite upper bound and infinite lower bound variable %d "
-            "(simplex_lp.numCol_ = "
-            "%d) [%11g, %11g, %11g] so nonbasic move should be down but is  "
-            "%d\n",
-            var, simplex_lp.numCol_, simplex_info.workLower_[var],
-            simplex_info.workValue_[var], simplex_info.workUpper_[var],
-            simplex_basis.nonbasicMove_[var]);
-        return ok;
-      }
-      ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
-      if (!ok) {
-        printf(
-            "Finite upper bound and infinite lower bound variable %d "
-            "(simplex_lp.numCol_ = "
-            "%d) so work value should be %g but is %g\n",
-            var, simplex_lp.numCol_, simplex_info.workUpper_[var],
-            simplex_info.workValue_[var]);
-        return ok;
-      }
-    } else {
-      // Infinite upper bound
-      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
-      if (!ok) {
-        printf(
-            "Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] "
-            "so nonbasic "
-            "move should be zero but is  %d\n",
-            var, simplex_lp.numCol_, simplex_info.workLower_[var],
-            simplex_info.workValue_[var], simplex_info.workUpper_[var],
-            simplex_basis.nonbasicMove_[var]);
-        return ok;
-      }
-      ok = simplex_info.workValue_[var] == 0.0;
-      if (!ok) {
-        printf(
-            "Free variable %d (simplex_lp.numCol_ = %d) so work value should "
-            "be zero but "
-            "is %g\n",
-            var, simplex_lp.numCol_, simplex_info.workValue_[var]);
-        return ok;
-      }
-    }
-  }
-  // ok must be true if we reach here
-  assert(ok);
-  return ok;
-}
-
-bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object) {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  //    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  bool ok;
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  for (int var = 0; var < numTot; ++var) {
-    printf(
-        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var] "
-        "= %2d\n",
-        var, simplex_basis.nonbasicFlag_[var]);
-    if (!simplex_basis.nonbasicFlag_[var]) continue;
-    ok = one_nonbasic_move_vs_work_arrays_ok(highs_model_object, var);
-    if (!ok) {
-      printf("Error in NonbasicMoveVsWorkArrays for nonbasic variable %d\n",
-             var);
-      assert(ok);
-      return ok;
-    }
-  }
-  // ok must be true if we reach here
-  assert(ok);
-  return ok;
-}
-
-bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase) {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
-  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  //  printf("Called ok_to_solve(%1d, %1d)\n", level, phase);
-  bool ok;
-  // Level 0: Minimal check - just look at flags. This means we trust them!
-  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix_col_wise &&
-       simplex_lp_status.has_matrix_row_wise &&
-       simplex_lp_status.has_factor_arrays &&
-       simplex_lp_status.has_dual_steepest_edge_weights &&
-       simplex_lp_status.has_invert;
-  // TODO: Eliminate the following line ASAP!!!
-  ok = true;
-  if (!ok) {
-    if (!simplex_lp_status.has_basis)
-      printf("Not OK to solve since simplex_lp_status.has_basis = %d\n",
-             simplex_lp_status.has_basis);
-    if (!simplex_lp_status.has_matrix_col_wise)
-      printf(
-          "Not OK to solve since simplex_lp_status.has_matrix_col_wise "
-          "= %d\n",
-          simplex_lp_status.has_matrix_col_wise);
-    if (!simplex_lp_status.has_matrix_row_wise)
-      printf(
-          "Not OK to solve since simplex_lp_status.has_matrix_row_wise "
-          "= %d\n",
-          simplex_lp_status.has_matrix_row_wise);
-    //    if (!simplex_lp_status.has_factor_arrays)
-    //      printf("Not OK to solve since
-    //      simplex_lp_status.has_factor_arrays = %d\n",
-    //             simplex_lp_status.has_factor_arrays);
-    if (!simplex_lp_status.has_dual_steepest_edge_weights)
-      printf(
-          "Not OK to solve since "
-          "simplex_lp_status.has_dual_steepest_edge_weights = %d\n",
-          simplex_lp_status.has_dual_steepest_edge_weights);
-    if (!simplex_lp_status.has_invert)
-      printf("Not OK to solve since simplex_lp_status.has_invert = %d\n",
-             simplex_lp_status.has_invert);
-  }
-  assert(ok);
-  if (level <= 0) return ok;
-  // Level 1: Basis and data check
-  ok = basisOk(highs_model_object.options_.logfile, simplex_lp,
-               highs_model_object.simplex_basis_);
-  if (!ok) {
-    printf("Error in nonbasicFlag and basicIndex\n");
-    assert(ok);
-    return ok;
-  }
-  ok = work_arrays_ok(highs_model_object, phase);
-  if (!ok) {
-    printf("Error in workArrays\n");
-    assert(ok);
-    return ok;
-  }
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  for (int var = 0; var < numTot; ++var) {
-    if (simplex_basis.nonbasicFlag_[var]) {
-      // Nonbasic variable
-      ok = one_nonbasic_move_vs_work_arrays_ok(highs_model_object, var);
-      if (!ok) {
-        printf("Error in nonbasicMoveVsWorkArrays for variable %d of %d\n", var,
-               numTot);
-        assert(ok);
-        return ok;
-      }
-    }
-  }
-  return ok;
 }
 
 void flip_bound(HighsModelObject& highs_model_object, int iCol) {
