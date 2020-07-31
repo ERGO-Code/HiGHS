@@ -1332,7 +1332,8 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
   return return_status;
 }
 
-HighsDebugStatus debugOkforSolve(const HighsModelObject& highs_model_object, const int phase) {
+HighsDebugStatus debugOkforSolve(const HighsModelObject& highs_model_object,
+                                 const int phase) {
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsDebugStatus return_status = HighsDebugStatus::OK;
@@ -1389,13 +1390,14 @@ HighsDebugStatus debugOkforSolve(const HighsModelObject& highs_model_object, con
     if (simplex_basis.nonbasicFlag_[var]) {
       // Nonbasic variable
       if (!debugOneNonbasicMoveVsWorkArraysOk(highs_model_object, var))
-	return HighsDebugStatus::LOGICAL_ERROR;
+        return HighsDebugStatus::LOGICAL_ERROR;
     }
   }
   return return_status;
 }
 
-bool debugWorkArraysOk(const HighsModelObject& highs_model_object, const int phase) {
+bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
+                       const int phase) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   //  printf("Called debugWorkArraysOk(%d)\n", phase);cout << flush;
@@ -1484,8 +1486,8 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object, const int pha
   return ok;
 }
 
-bool debugOneNonbasicMoveVsWorkArraysOk(const HighsModelObject& highs_model_object,
-					const int var) {
+bool debugOneNonbasicMoveVsWorkArraysOk(
+    const HighsModelObject& highs_model_object, const int var) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1639,7 +1641,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(const HighsModelObject& highs_model_obje
   return ok;
 }
 
-bool debugAllNonbasicMoveVsWorkArraysOk(const HighsModelObject& highs_model_object) {
+bool debugAllNonbasicMoveVsWorkArraysOk(
+    const HighsModelObject& highs_model_object) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   //    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1663,4 +1666,3 @@ bool debugAllNonbasicMoveVsWorkArraysOk(const HighsModelObject& highs_model_obje
   assert(ok);
   return ok;
 }
-

@@ -192,8 +192,8 @@ HighsStatus HDual::solve() {
   if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
 #ifdef HiGHSDEV
-  // reportSimplexLpStatus(simplex_lp_status, "Before HDual major solving
-  // loop");
+    // reportSimplexLpStatus(simplex_lp_status, "Before HDual major solving
+    // loop");
 #endif
   //
   // The major solving loop

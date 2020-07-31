@@ -46,10 +46,10 @@ void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
                                 int XnumNewRow);
 
 bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis);
-bool basisOk(FILE* logfile, const HighsLp& lp, const SimplexBasis& simplex_basis);
+bool basisOk(FILE* logfile, const HighsLp& lp,
+             const SimplexBasis& simplex_basis);
 
-bool nonbasicFlagOk(FILE* logfile,
-		    const HighsLp& lp,
+bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
                     const SimplexBasis& simplex_basis);
 
 #ifdef HiGHSDEV

@@ -66,7 +66,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock =true;  // useful_analysis;
+  simplex_info.report_simplex_inner_clock = true;  // useful_analysis;
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
   simplex_info.report_HFactor_clock = useful_analysis;  // full_timing;//
@@ -349,7 +349,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     analysis.simplexTimerStart(InvertClock);
     computeFactor(highs_model_object);
     analysis.simplexTimerStop(InvertClock);
-   simplex_lp_status.has_fresh_invert = true;
+    simplex_lp_status.has_fresh_invert = true;
   }
   // Possibly check for basis condition. ToDo Override this for MIP hot start
   bool basis_condition_ok = true;
@@ -791,7 +791,8 @@ bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis) {
   return true;
 }
 
-bool basisOk(FILE* logfile, const HighsLp& lp, const SimplexBasis& simplex_basis) {
+bool basisOk(FILE* logfile, const HighsLp& lp,
+             const SimplexBasis& simplex_basis) {
 #ifdef HiGHSDEV
   printf("!! Don't check if basis is invalid! !!\n");
 #endif
