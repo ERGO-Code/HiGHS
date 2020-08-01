@@ -1387,6 +1387,7 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
   const HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const HighsOptions& options = highs_model_object.options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
   ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix_col_wise &&
@@ -1398,30 +1399,35 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
   ok = true;
   if (!ok) {
     if (!simplex_lp_status.has_basis)
-      printf("Not OK to solve since simplex_lp_status.has_basis = %d\n",
-             simplex_lp_status.has_basis);
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_basis = %d",
+                      simplex_lp_status.has_basis);
     if (!simplex_lp_status.has_matrix_col_wise)
-      printf(
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
           "Not OK to solve since simplex_lp_status.has_matrix_col_wise "
-          "= %d\n",
+          "= %d",
           simplex_lp_status.has_matrix_col_wise);
     if (!simplex_lp_status.has_matrix_row_wise)
-      printf(
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
           "Not OK to solve since simplex_lp_status.has_matrix_row_wise "
-          "= %d\n",
+          "= %d",
           simplex_lp_status.has_matrix_row_wise);
     //    if (!simplex_lp_status.has_factor_arrays)
-    //      printf("Not OK to solve since
-    //      simplex_lp_status.has_factor_arrays = %d\n",
+    //      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+    //                  "Not OK to solve since
+    //      simplex_lp_status.has_factor_arrays = %d",
     //             simplex_lp_status.has_factor_arrays);
     if (!simplex_lp_status.has_dual_steepest_edge_weights)
-      printf(
-          "Not OK to solve since "
-          "simplex_lp_status.has_dual_steepest_edge_weights = %d\n",
-          simplex_lp_status.has_dual_steepest_edge_weights);
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Not OK to solve since "
+                      "simplex_lp_status.has_dual_steepest_edge_weights = %d",
+                      simplex_lp_status.has_dual_steepest_edge_weights);
     if (!simplex_lp_status.has_invert)
-      printf("Not OK to solve since simplex_lp_status.has_invert = %d\n",
-             simplex_lp_status.has_invert);
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_invert = %d",
+                      simplex_lp_status.has_invert);
   }
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return return_status;
@@ -1448,7 +1454,7 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
                        const int phase) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  //  printf("Called debugWorkArraysOk(%d)\n", phase);cout << flush;
+  const HighsOptions& options = highs_model_object.options_;
   bool ok = true;
   // Only check phase 2 bounds: others will have been set by solve() so can be
   // trusted
@@ -1458,16 +1464,20 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
         ok = simplex_info.workLower_[var] == simplex_lp.colLower_[col];
         if (!ok) {
-          printf("For col %d, simplex_info.workLower_ should be %g but is %g\n",
-                 col, simplex_lp.colLower_[col], simplex_info.workLower_[var]);
+          HighsLogMessage(
+              options.logfile, HighsMessageType::ERROR,
+              "For col %d, simplex_info.workLower_ should be %g but is %g", col,
+              simplex_lp.colLower_[col], simplex_info.workLower_[var]);
           return ok;
         }
       }
       if (!highs_isInfinity(simplex_info.workUpper_[var])) {
         ok = simplex_info.workUpper_[var] == simplex_lp.colUpper_[col];
         if (!ok) {
-          printf("For col %d, simplex_info.workUpper_ should be %g but is %g\n",
-                 col, simplex_lp.colUpper_[col], simplex_info.workUpper_[var]);
+          HighsLogMessage(
+              options.logfile, HighsMessageType::ERROR,
+              "For col %d, simplex_info.workUpper_ should be %g but is %g", col,
+              simplex_lp.colUpper_[col], simplex_info.workUpper_[var]);
           return ok;
         }
       }
@@ -1477,16 +1487,20 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
         ok = simplex_info.workLower_[var] == -simplex_lp.rowUpper_[row];
         if (!ok) {
-          printf("For row %d, simplex_info.workLower_ should be %g but is %g\n",
-                 row, -simplex_lp.rowUpper_[row], simplex_info.workLower_[var]);
+          HighsLogMessage(
+              options.logfile, HighsMessageType::ERROR,
+              "For row %d, simplex_info.workLower_ should be %g but is %g", row,
+              -simplex_lp.rowUpper_[row], simplex_info.workLower_[var]);
           return ok;
         }
       }
       if (!highs_isInfinity(simplex_info.workUpper_[var])) {
         ok = simplex_info.workUpper_[var] == -simplex_lp.rowLower_[row];
         if (!ok) {
-          printf("For row %d, simplex_info.workUpper_ should be %g but is %g\n",
-                 row, -simplex_lp.rowLower_[row], simplex_info.workUpper_[var]);
+          HighsLogMessage(
+              options.logfile, HighsMessageType::ERROR,
+              "For row %d, simplex_info.workUpper_ should be %g but is %g", row,
+              -simplex_lp.rowLower_[row], simplex_info.workUpper_[var]);
           return ok;
         }
       }
@@ -1497,9 +1511,10 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
     ok = simplex_info.workRange_[var] ==
          (simplex_info.workUpper_[var] - simplex_info.workLower_[var]);
     if (!ok) {
-      printf(
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
           "For variable %d, simplex_info.workRange_ should be %g = %g - %g "
-          "but is %g\n",
+          "but is %g",
           var, simplex_info.workUpper_[var] - simplex_info.workLower_[var],
           simplex_info.workUpper_[var], simplex_info.workLower_[var],
           simplex_info.workRange_[var]);
@@ -1514,8 +1529,10 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       ok = simplex_info.workCost_[var] ==
            (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
       if (!ok) {
-        printf("For col %d, simplex_info.workLower_ should be %g but is %g\n",
-               col, simplex_lp.colLower_[col], simplex_info.workCost_[var]);
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "For col %d, simplex_info.workLower_ should be %g but is %g", col,
+            simplex_lp.colLower_[col], simplex_info.workCost_[var]);
         return ok;
       }
     }
@@ -1523,8 +1540,10 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       int var = simplex_lp.numCol_ + row;
       ok = simplex_info.workCost_[var] == 0.;
       if (!ok) {
-        printf("For row %d, simplex_info.workCost_ should be zero but is %g\n",
-               row, simplex_info.workCost_[var]);
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "For row %d, simplex_info.workCost_ should be zero but is %g", row,
+            simplex_info.workCost_[var]);
         return ok;
       }
     }
@@ -1539,6 +1558,7 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const HighsOptions& options = highs_model_object.options_;
   assert(var >= 0);
   assert(var < simplex_lp.numCol_ + simplex_lp.numRow_);
   // Make sure we're not checking a basic variable
@@ -1552,10 +1572,11 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         // Fixed variable
         ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
         if (!ok) {
-          printf(
+          HighsLogMessage(
+              options.logfile, HighsMessageType::ERROR,
               "Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
               "%11g] so nonbasic "
-              "move should be zero but is %d\n",
+              "move should be zero but is %d",
               var, simplex_lp.numCol_, simplex_info.workLower_[var],
               simplex_info.workValue_[var], simplex_info.workUpper_[var],
               simplex_basis.nonbasicMove_[var]);
@@ -1563,12 +1584,12 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         }
         ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
         if (!ok) {
-          printf(
-              "Fixed variable %d (simplex_lp.numCol_ = %d) so "
-              "simplex_info.work value should be %g but "
-              "is %g\n",
-              var, simplex_lp.numCol_, simplex_info.workLower_[var],
-              simplex_info.workValue_[var]);
+          HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                          "Fixed variable %d (simplex_lp.numCol_ = %d) so "
+                          "simplex_info.work value should be %g but "
+                          "is %g",
+                          var, simplex_lp.numCol_, simplex_info.workLower_[var],
+                          simplex_info.workValue_[var]);
           return ok;
         }
       } else {
@@ -1576,10 +1597,11 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         ok = (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) ||
              (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN);
         if (!ok) {
-          printf(
+          HighsLogMessage(
+              options.logfile, HighsMessageType::ERROR,
               "Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
               "%11g] range %g so "
-              "nonbasic move should be up/down but is  %d\n",
+              "nonbasic move should be up/down but is  %d",
               var, simplex_lp.numCol_, simplex_info.workLower_[var],
               simplex_info.workValue_[var], simplex_info.workUpper_[var],
               simplex_info.workUpper_[var] - simplex_info.workLower_[var],
@@ -1589,23 +1611,25 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
           ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
           if (!ok) {
-            printf(
-                "Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                "NONBASIC_MOVE_UP so work "
-                "value should be %g but is %g\n",
-                var, simplex_lp.numCol_, simplex_info.workLower_[var],
-                simplex_info.workValue_[var]);
+            HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                            "Boxed variable %d (simplex_lp.numCol_ = %d) with "
+                            "NONBASIC_MOVE_UP so work "
+                            "value should be %g but is %g",
+                            var, simplex_lp.numCol_,
+                            simplex_info.workLower_[var],
+                            simplex_info.workValue_[var]);
             return ok;
           }
         } else {
           ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
           if (!ok) {
-            printf(
-                "Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                "NONBASIC_MOVE_DN so work "
-                "value should be %g but is %g\n",
-                var, simplex_lp.numCol_, simplex_info.workUpper_[var],
-                simplex_info.workValue_[var]);
+            HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                            "Boxed variable %d (simplex_lp.numCol_ = %d) with "
+                            "NONBASIC_MOVE_DN so work "
+                            "value should be %g but is %g",
+                            var, simplex_lp.numCol_,
+                            simplex_info.workUpper_[var],
+                            simplex_info.workValue_[var]);
             return ok;
           }
         }
@@ -1614,11 +1638,12 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       // Infinite upper bound
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP;
       if (!ok) {
-        printf(
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
             "Finite lower bound and infinite upper bound variable %d "
             "(simplex_lp.numCol_ = "
             "%d) [%11g, %11g, %11g] so nonbasic move should be up=%2d but is  "
-            "%d\n",
+            "%d",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
             simplex_info.workValue_[var], simplex_info.workUpper_[var],
             NONBASIC_MOVE_UP, simplex_basis.nonbasicMove_[var]);
@@ -1626,10 +1651,11 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
       if (!ok) {
-        printf(
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
             "Finite lower bound and infinite upper bound variable %d "
             "(simplex_lp.numCol_ = "
-            "%d) so work value should be %g but is %g\n",
+            "%d) so work value should be %g but is %g",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
             simplex_info.workValue_[var]);
         return ok;
@@ -1640,11 +1666,12 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
     if (!highs_isInfinity(simplex_info.workUpper_[var])) {
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
       if (!ok) {
-        printf(
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
             "Finite upper bound and infinite lower bound variable %d "
             "(simplex_lp.numCol_ = "
             "%d) [%11g, %11g, %11g] so nonbasic move should be down but is  "
-            "%d\n",
+            "%d",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
             simplex_info.workValue_[var], simplex_info.workUpper_[var],
             simplex_basis.nonbasicMove_[var]);
@@ -1652,10 +1679,11 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
       if (!ok) {
-        printf(
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
             "Finite upper bound and infinite lower bound variable %d "
             "(simplex_lp.numCol_ = "
-            "%d) so work value should be %g but is %g\n",
+            "%d) so work value should be %g but is %g",
             var, simplex_lp.numCol_, simplex_info.workUpper_[var],
             simplex_info.workValue_[var]);
         return ok;
@@ -1664,10 +1692,11 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       // Infinite upper bound
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
       if (!ok) {
-        printf(
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
             "Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] "
             "so nonbasic "
-            "move should be zero but is  %d\n",
+            "move should be zero but is  %d",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
             simplex_info.workValue_[var], simplex_info.workUpper_[var],
             simplex_basis.nonbasicMove_[var]);
@@ -1675,10 +1704,11 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == 0.0;
       if (!ok) {
-        printf(
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
             "Free variable %d (simplex_lp.numCol_ = %d) so work value should "
             "be zero but "
-            "is %g\n",
+            "is %g",
             var, simplex_lp.numCol_, simplex_info.workValue_[var]);
         return ok;
       }
@@ -1694,18 +1724,21 @@ bool debugAllNonbasicMoveVsWorkArraysOk(
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   //    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  const HighsOptions& options = highs_model_object.options_;
   bool ok;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int var = 0; var < numTot; ++var) {
-    printf(
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
         "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var] "
-        "= %2d\n",
+        "= %2d",
         var, simplex_basis.nonbasicFlag_[var]);
     if (!simplex_basis.nonbasicFlag_[var]) continue;
     ok = debugOneNonbasicMoveVsWorkArraysOk(highs_model_object, var);
     if (!ok) {
-      printf("Error in NonbasicMoveVsWorkArrays for nonbasic variable %d\n",
-             var);
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "Error in NonbasicMoveVsWorkArrays for nonbasic variable %d", var);
       assert(ok);
       return ok;
     }
