@@ -147,6 +147,113 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   return return_status;
 }
 
+HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
+                                      const HighsLp simplex_lp,
+                                      const SimplexBasis& simplex_basis) {
+  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
+  // of basic/nonbasic variables and non-repetition of basic variables
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
+      HighsDebugStatus::OK)
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  int num_basic_variables = 0;
+  int num_nonbasic_variables = 0;
+  for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
+    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
+      num_basic_variables++;
+    } else if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+      num_nonbasic_variables++;
+    }
+  }
+  bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
+  if (!right_num_basic_variables) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Simplex basis has %d, not %d basic variables",
+                    num_basic_variables, simplex_lp.numRow_);
+    assert(right_num_basic_variables);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  bool right_num_nonbasic_variables =
+      num_nonbasic_variables == simplex_lp.numCol_;
+  if (!right_num_nonbasic_variables) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Simplex basis has %d, not %d nonbasic variables",
+                    num_nonbasic_variables, simplex_lp.numCol_);
+    assert(right_num_nonbasic_variables);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  return return_status;
+}
+
+HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
+                                     const HighsLp& simplex_lp,
+                                     const SimplexBasis& simplex_basis) {
+  // Cheap analysis of a Simplex basis, checking vector sizes
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  bool right_size = isBasisRightSize(simplex_lp, simplex_basis);
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Simplex basis size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  return return_status;
+}
+
+HighsDebugStatus debugSimplexInfoBasisRightSize(
+    const HighsModelObject& highs_model_object) {
+  // Trivially cheap check of dimensions and sizes
+  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  const HighsOptions& options = highs_model_object.options_;
+  const HighsLp& lp = highs_model_object.lp_;
+  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+
+  int numCol = lp.numCol_;
+  int numRow = lp.numRow_;
+  int numTot = numCol + numRow;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  bool dimension_ok =
+      numCol == simplex_lp.numCol_ && numRow == simplex_lp.numRow_;
+  assert(dimension_ok);
+  if (!dimension_ok) {
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
+        "LP-SimplexLP dimension incompatibility (%d, %d) != (%d, %d)", numCol,
+        simplex_lp.numCol_, numRow, simplex_lp.numRow_);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  //  if (!simplex_info.initialised) {printf("SimplexInfo not initialised)\n");
+  //  return true;}
+
+  bool right_size = true;
+  right_size = (int)simplex_info.workCost_.size() == numTot && right_size;
+  right_size = (int)simplex_info.workDual_.size() == numTot && right_size;
+  right_size = (int)simplex_info.workShift_.size() == numTot && right_size;
+  right_size = (int)simplex_info.workLower_.size() == numTot && right_size;
+  right_size = (int)simplex_info.workUpper_.size() == numTot && right_size;
+  right_size = (int)simplex_info.workRange_.size() == numTot && right_size;
+  right_size = (int)simplex_info.workValue_.size() == numTot && right_size;
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "simplex_info work vector size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
+      HighsDebugStatus::OK)
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+
+  return return_status;
+}
+
 HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs) {
   // Non-trivially expensive analysis of computed primal values.
@@ -1083,88 +1190,6 @@ HighsDebugStatus debugSimplexBasicSolution(
       return_status);
 
   // Scaled model
-  return return_status;
-}
-
-HighsDebugStatus debugSimplexInfoBasisRightSize(
-    const HighsModelObject& highs_model_object) {
-  // Trivially cheap check of dimensions and sizes
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-
-  const HighsOptions& options = highs_model_object.options_;
-  const HighsLp& lp = highs_model_object.lp_;
-  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-
-  int numCol = lp.numCol_;
-  int numRow = lp.numRow_;
-  int numTot = numCol + numRow;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  bool dimension_ok =
-      numCol == simplex_lp.numCol_ && numRow == simplex_lp.numRow_;
-  assert(dimension_ok);
-  if (!dimension_ok) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "LP-SimplexLP dimension incompatibility (%d, %d) != (%d, %d)", numCol,
-        simplex_lp.numCol_, numRow, simplex_lp.numRow_);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  //  if (!simplex_info.initialised) {printf("SimplexInfo not initialised)\n");
-  //  return true;}
-
-  bool right_size = true;
-  right_size = (int)simplex_info.workCost_.size() == numTot && right_size;
-  right_size = (int)simplex_info.workDual_.size() == numTot && right_size;
-  right_size = (int)simplex_info.workShift_.size() == numTot && right_size;
-  right_size = (int)simplex_info.workLower_.size() == numTot && right_size;
-  right_size = (int)simplex_info.workUpper_.size() == numTot && right_size;
-  right_size = (int)simplex_info.workRange_.size() == numTot && right_size;
-  right_size = (int)simplex_info.workValue_.size() == numTot && right_size;
-  if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "simplex_info work vector size error");
-    assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
-      HighsDebugStatus::OK)
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-
-  return return_status;
-}
-
-HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp simplex_lp,
-                                      const SimplexBasis& simplex_basis) {
-  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
-  // of basic/nonbasic variables and non-repetition of basic variables
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
-      HighsDebugStatus::OK)
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-
-  return return_status;
-}
-
-HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
-                                     const HighsLp& simplex_lp,
-                                     const SimplexBasis& simplex_basis) {
-  // Cheap analysis of a Simplex basis, checking vector sizes
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  bool right_size = isBasisRightSize(simplex_lp, simplex_basis);
-  if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Simplex basis size error");
-    assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
   return return_status;
 }
 

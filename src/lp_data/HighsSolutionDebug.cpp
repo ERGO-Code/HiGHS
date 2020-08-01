@@ -39,7 +39,33 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   if (!basis.valid_) return return_status;
   if (debugBasisRightSize(options, lp, basis) != HighsDebugStatus::OK)
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-
+  int num_basic_variables = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
+  }
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    if (basis.row_status[iRow] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
+  }
+  const int num_nonbasic_variables =
+      lp.numCol_ + lp.numRow_ - num_basic_variables;
+  bool right_num_basic_variables = num_basic_variables == lp.numRow_;
+  if (!right_num_basic_variables) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "HiGHS basis has %d, not %d basic variables",
+                    num_basic_variables, lp.numRow_);
+    assert(right_num_basic_variables);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  bool right_num_nonbasic_variables = num_nonbasic_variables == lp.numCol_;
+  if (!right_num_nonbasic_variables) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "HiGHS basis has %d, not %d nonbasic variables",
+                    num_nonbasic_variables, lp.numCol_);
+    assert(right_num_nonbasic_variables);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
   return return_status;
 }
 

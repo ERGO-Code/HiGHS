@@ -22,6 +22,17 @@
 
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object);
 
+HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
+                                      const HighsLp simplex_lp,
+                                      const SimplexBasis& simplex_basis);
+
+HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
+                                     const HighsLp& simplex_lp,
+                                     const SimplexBasis& simplex_basis);
+
+HighsDebugStatus debugSimplexInfoBasisRightSize(
+    const HighsModelObject& highs_model_object);
+
 HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
                                     const std::vector<double>& primal_rhs);
 
@@ -69,17 +80,6 @@ HighsDebugStatus debugDualChuzcWorkDataAndGroup(
 
 HighsDebugStatus debugSimplexBasicSolution(
     const string message, const HighsModelObject& highs_model_object);
-
-HighsDebugStatus debugSimplexInfoBasisRightSize(
-    const HighsModelObject& highs_model_object);
-
-HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
-                                     const HighsLp& simplex_lp,
-                                     const SimplexBasis& simplex_basis);
-
-HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp simplex_lp,
-                                      const SimplexBasis& simplex_basis);
 
 HighsDebugStatus debugSimplexHighsSolutionDifferences(
     const HighsModelObject& highs_model_object);
