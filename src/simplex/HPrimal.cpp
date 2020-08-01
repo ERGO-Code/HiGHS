@@ -123,7 +123,7 @@ HighsStatus HPrimal::solve() {
     //
     // ToDo Write primal simplex equivalent
     /*
-  if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
+  if (debugOkForSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
     */
 #ifdef HiGHSDEV
@@ -172,8 +172,8 @@ HighsStatus HPrimal::solve() {
     if (bailout()) return HighsStatus::Warning;
   }
   /*
-  // ToDo Adapt debugOkforSolve to be used by primal
-  if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
+  // ToDo Adapt debugOkForSolve to be used by primal
+  if (debugOkForSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
   */
   return HighsStatus::OK;

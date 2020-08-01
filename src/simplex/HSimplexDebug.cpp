@@ -979,7 +979,7 @@ HighsDebugStatus debugSimplexBasicSolution(
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
-  return_status = debugSimplexInfoBasisConsistent(highs_model_object);
+  return_status = debugSimplexInfoBasisRightSize(highs_model_object);
   if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
 
   // Determine a HiGHS basis from the simplex basis. Only basic/nonbasic is
@@ -1071,7 +1071,7 @@ HighsDebugStatus debugSimplexBasicSolution(
   return return_status;
 }
 
-HighsDebugStatus debugSimplexInfoBasisConsistent(
+HighsDebugStatus debugSimplexInfoBasisRightSize(
     const HighsModelObject& highs_model_object) {
   // Trivially cheap check of dimensions and sizes
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
@@ -1332,7 +1332,7 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
   return return_status;
 }
 
-HighsDebugStatus debugOkforSolve(const HighsModelObject& highs_model_object,
+HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase) {
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;

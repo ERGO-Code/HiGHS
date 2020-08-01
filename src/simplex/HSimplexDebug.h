@@ -70,7 +70,7 @@ HighsDebugStatus debugDualChuzcWorkDataAndGroup(
 HighsDebugStatus debugSimplexBasicSolution(
     const string message, const HighsModelObject& highs_model_object);
 
-HighsDebugStatus debugSimplexInfoBasisConsistent(
+HighsDebugStatus debugSimplexInfoBasisRightSize(
     const HighsModelObject& highs_model_object);
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
@@ -84,7 +84,7 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
                                                    const std::string type,
                                                    const double difference);
 
-HighsDebugStatus debugOkforSolve(const HighsModelObject& highs_model_object,
+HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase);
 
 bool debugWorkArraysOk(const HighsModelObject& highs_model_object,

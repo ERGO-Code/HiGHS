@@ -51,7 +51,7 @@ HighsStatus HDual::solve() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
-  if (debugSimplexInfoBasisConsistent(workHMO) ==
+  if (debugSimplexInfoBasisRightSize(workHMO) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
   // Assumes that the LP has a positive number of rows, since
@@ -189,7 +189,7 @@ HighsStatus HDual::solve() {
   // Level 1 also checks that the basis is OK and that the necessary
   // data in work* is populated.
   //
-  if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
+  if (debugOkForSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
 #ifdef HiGHSDEV
     // reportSimplexLpStatus(simplex_lp_status, "Before HDual major solving
@@ -306,7 +306,7 @@ HighsStatus HDual::solve() {
           (iteration_counts.simplex - it0);
     }
   }
-  if (debugOkforSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
+  if (debugOkForSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
   computePrimalObjectiveValue(workHMO);
   return HighsStatus::OK;
