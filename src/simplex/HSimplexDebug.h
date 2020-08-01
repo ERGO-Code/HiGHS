@@ -73,6 +73,10 @@ HighsDebugStatus debugSimplexBasicSolution(
 HighsDebugStatus debugSimplexInfoBasisRightSize(
     const HighsModelObject& highs_model_object);
 
+HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
+                                     const HighsLp& simplex_lp,
+                                     const SimplexBasis& simplex_basis);
+
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp simplex_lp,
                                       const SimplexBasis& simplex_basis);
@@ -88,10 +92,6 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase);
 
 // Methods below are not called externally
-
-HighsDebugStatus debugBasisRightSize(FILE* logfile,
-				     const HighsLp& simplex_lp,
-				     const SimplexBasis& simplex_basis);
 
 bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
                        const int phase);

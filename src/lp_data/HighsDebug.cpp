@@ -13,8 +13,8 @@
  */
 #include "lp_data/HighsDebug.h"
 
-#include <cassert>  // For std::max
 #include <algorithm>  // For std::max
+#include <cassert>    // For std::max
 
 HighsStatus debugDebugToHighsStatus(const HighsDebugStatus debug_status) {
   switch (debug_status) {
@@ -36,18 +36,16 @@ HighsDebugStatus debugWorseStatus(const HighsDebugStatus status0,
   return static_cast<HighsDebugStatus>(std::max((int)status0, (int)status1));
 }
 
-bool debugVectorRightSize(const std::vector<double> v,
-			  const int right_size) {
+bool debugVectorRightSize(const std::vector<double> v, const int right_size) {
   const int v_size = v.size();
   const bool is_right_size = v_size == right_size;
-  assert (is_right_size);
+  assert(is_right_size);
   return is_right_size;
 }
 
-bool debugVectorRightSize(const std::vector<int> v,
-			  const int right_size) {
+bool debugVectorRightSize(const std::vector<int> v, const int right_size) {
   const int v_size = v.size();
   const bool is_right_size = v_size == right_size;
-  assert (is_right_size);
+  assert(is_right_size);
   return is_right_size;
 }

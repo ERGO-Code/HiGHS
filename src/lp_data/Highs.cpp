@@ -1712,8 +1712,8 @@ HighsPresolveStatus Highs::runPresolve() {
 
 HighsPostsolveStatus Highs::runPostsolve() {
   assert(presolve_.has_run_);
-  bool solution_ok = solutionRightSize(
-      presolve_.getReducedProblem(), presolve_.data_.reduced_solution_);
+  bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
+                                         presolve_.data_.reduced_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
   // Run postsolve
@@ -2043,15 +2043,19 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         break;
     }
   }
-  if (have_solution) assert(solutionRightSize(lp_, solution_));
-  bool have_basis = false;
-  if (basis_.valid_) {
-    have_basis = basisRightSize(lp_, basis_);
-    assert(have_basis);
+  if (have_solution) debugSolutionRightSize(options_, lp_, solution_);
+  bool have_basis = basis_.valid_;
+  if (have_basis) {
+    if (debugBasisRightSize(options_, lp_, basis_) ==
+        HighsDebugStatus::LOGICAL_ERROR)
+      return_status = HighsStatus::Error;
   }
+
   if (have_solution && have_basis) {
-    debugHighsBasicSolution("Return from run()", options_, lp_, basis_,
-                            solution_, info_, model_status_);
+    if (debugHighsBasicSolution("Return from run()", options_, lp_, basis_,
+                                solution_, info_, model_status_) ==
+        HighsDebugStatus::LOGICAL_ERROR)
+      return_status = HighsStatus::Error;
   }
   return returnFromHighs(return_status);
 }

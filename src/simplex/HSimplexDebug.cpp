@@ -118,7 +118,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   right_size = (int)scale.row_.size() == lp.numRow_ && right_size;
   if (!right_size) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "scale size error");
+                    "scale size error");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -136,11 +136,12 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   }
 
   if (simplex_lp_status.has_basis) {
-      if (debugBasisConsistent(options, simplex_lp, simplex_basis) ==
-      HighsDebugStatus::LOGICAL_ERROR)
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Simplex basis inconsistent");
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
+    if (debugBasisConsistent(options, simplex_lp, simplex_basis) ==
+        HighsDebugStatus::LOGICAL_ERROR) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "debugSimplexLp: Simplex basis inconsistent");
+      return_status = HighsDebugStatus::LOGICAL_ERROR;
+    }
   }
 
   return return_status;
@@ -1124,27 +1125,46 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
   right_size = (int)simplex_info.workValue_.size() == numTot && right_size;
   if (!right_size) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "simplex_info work vector size error");
+                    "simplex_info work vector size error");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
-  if (debugBasisRightSize(options.logfile, simplex_lp, simplex_basis) != HighsDebugStatus::OK)
+  if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
+      HighsDebugStatus::OK)
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  
+
   return return_status;
 }
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp simplex_lp,
                                       const SimplexBasis& simplex_basis) {
-  // Cheap analysis of a HiGHS basis, checking vector sizes, numbers
+  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
   // of basic/nonbasic variables and non-repetition of basic variables
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
-  if (debugBasisRightSize(options.logfile, simplex_lp, simplex_basis) != HighsDebugStatus::OK)
+  if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
+      HighsDebugStatus::OK)
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  
+
+  return return_status;
+}
+
+HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
+                                     const HighsLp& simplex_lp,
+                                     const SimplexBasis& simplex_basis) {
+  // Cheap analysis of a Simplex basis, checking vector sizes
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  bool right_size = isBasisRightSize(simplex_lp, simplex_basis);
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Simplex basis size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
   return return_status;
 }
 
@@ -1398,21 +1418,6 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
 }
 
 // Methods below are not called externally
-
-HighsDebugStatus debugBasisRightSize(FILE* logfile,
-				     const HighsLp& simplex_lp,
-				     const SimplexBasis& simplex_basis) {
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  bool right_size = basisRightSize(simplex_lp, simplex_basis);
-  if (!right_size)  {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-		    "Simplex basis size error");
-    assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  return return_status;
-}
-
 
 bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
                        const int phase) {

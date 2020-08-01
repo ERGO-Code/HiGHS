@@ -37,9 +37,41 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (!basis.valid_) return return_status;
-  if (debugBasisRightSize(options.logfile, lp, basis) != HighsDebugStatus::OK)
+  if (debugBasisRightSize(options, lp, basis) != HighsDebugStatus::OK)
     return_status = HighsDebugStatus::LOGICAL_ERROR;
-  
+
+  return return_status;
+}
+
+HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
+                                     const HighsLp lp,
+                                     const HighsBasis& basis) {
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  bool right_size = isBasisRightSize(lp, basis);
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Basis size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  return return_status;
+}
+
+HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
+                                        const HighsLp lp,
+                                        const HighsSolution& solution) {
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  bool right_size = isSolutionRightSize(lp, solution);
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Solution size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
   return return_status;
 }
 
@@ -175,26 +207,12 @@ HighsDebugStatus debugHighsBasicSolution(
 
 // Methods below are not called externally
 
-HighsDebugStatus debugBasisRightSize(FILE* logfile,
-				     const HighsLp lp,
-				     const HighsBasis& basis) {
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  bool right_size = basisRightSize(lp, basis);
-  if (!right_size)  {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-		    "Basis size error");
-    assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  return return_status;
-}
-
 HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
                                                const HighsBasis& basis,
                                                const HighsSolution& solution) {
-  if (!solutionRightSize(lp, solution))
+  if (!isSolutionRightSize(lp, solution))
     return HighsDebugStatus::LOGICAL_ERROR;
-  if (!basisRightSize(lp, basis) && basis.valid_)
+  if (!isBasisRightSize(lp, basis) && basis.valid_)
     return HighsDebugStatus::LOGICAL_ERROR;
   return HighsDebugStatus::OK;
 }

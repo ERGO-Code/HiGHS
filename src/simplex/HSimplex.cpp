@@ -3851,10 +3851,12 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
   }
 }
 
-bool basisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
-  if (basis.nonbasicFlag_.size() == (size_t)lp.numCol_ + (size_t)lp.numRow_ ||
-      basis.nonbasicMove_.size() == (size_t)lp.numCol_ + (size_t)lp.numRow_ ||
-      basis.basicIndex_.size() == (size_t)lp.numRow_)
-    return true;
-  return false;
+bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
+  bool right_size = true;
+  right_size =
+      (int)basis.nonbasicFlag_.size() == lp.numCol_ + lp.numRow_ && right_size;
+  right_size =
+      (int)basis.nonbasicMove_.size() == lp.numCol_ + lp.numRow_ && right_size;
+  right_size = (int)basis.basicIndex_.size() == lp.numRow_ && right_size;
+  return right_size;
 }

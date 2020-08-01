@@ -251,5 +251,5 @@ void updateSimplexLpStatus(
     LpAction action         // !< Action prompting update
 );
 
-bool basisRightSize(const HighsLp& lp, const SimplexBasis& basis);
+bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 #endif  // SIMPLEX_HSIMPLEX_H_

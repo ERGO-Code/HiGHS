@@ -35,6 +35,13 @@ struct HighsPrimalDualErrors {
   double sum_dual_residual;
 };
 
+HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
+                                     const HighsLp lp, const HighsBasis& basis);
+
+HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
+                                        const HighsLp lp,
+                                        const HighsSolution& solution);
+
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp lp,
                                       const HighsBasis& basis);
@@ -60,10 +67,6 @@ HighsDebugStatus debugHighsBasicSolution(
     const HighsModelStatus model_status);
 
 // Methods below are not called externally
-
-HighsDebugStatus debugBasisRightSize(FILE* logfile,
-				     const HighsLp lp,
-				     const HighsBasis& basis);
 
 HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
                                                const HighsBasis& basis,
