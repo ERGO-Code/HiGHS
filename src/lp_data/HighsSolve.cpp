@@ -203,7 +203,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
           interpretCallStatus(call_status, return_status, "solveLpSimplex");
       if (return_status == HighsStatus::Error) return return_status;
 
-      if (!isSolutionSizeConsistent(model.lp_, model.solution_)) {
+      if (!solutionRightSize(model.lp_, model.solution_)) {
         HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                         "Inconsistent solution returned from solver");
         return HighsStatus::Error;
@@ -225,7 +225,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
         interpretCallStatus(call_status, return_status, "solveLpSimplex");
     if (return_status == HighsStatus::Error) return return_status;
 
-    if (!isSolutionSizeConsistent(model.lp_, model.solution_)) {
+    if (!solutionRightSize(model.lp_, model.solution_)) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Inconsistent solution returned from solver");
       return HighsStatus::Error;

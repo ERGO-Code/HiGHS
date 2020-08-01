@@ -1712,7 +1712,7 @@ HighsPresolveStatus Highs::runPresolve() {
 
 HighsPostsolveStatus Highs::runPostsolve() {
   assert(presolve_.has_run_);
-  bool solution_ok = isSolutionSizeConsistent(
+  bool solution_ok = solutionRightSize(
       presolve_.getReducedProblem(), presolve_.data_.reduced_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
@@ -2043,10 +2043,10 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         break;
     }
   }
-  if (have_solution) assert(isSolutionSizeConsistent(lp_, solution_));
+  if (have_solution) assert(solutionRightSize(lp_, solution_));
   bool have_basis = false;
   if (basis_.valid_) {
-    have_basis = isBasisSizeConsistent(lp_, basis_);
+    have_basis = basisRightSize(lp_, basis_);
     assert(have_basis);
   }
   if (have_solution && have_basis) {

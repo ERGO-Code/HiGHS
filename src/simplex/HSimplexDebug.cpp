@@ -1143,7 +1143,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   // options, assuming no knowledge of solution parameters or model status
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
-  if (!isBasisSizeConsistent(lp, basis)) return HighsDebugStatus::LOGICAL_ERROR;
+  if (!basisRightSize(lp, basis)) return HighsDebugStatus::LOGICAL_ERROR;
   return HighsDebugStatus::OK;
 }
 

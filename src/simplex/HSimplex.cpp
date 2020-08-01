@@ -3851,7 +3851,7 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
   }
 }
 
-bool isBasisSizeConsistent(const HighsLp& lp, const SimplexBasis& basis) {
+bool basisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   if (basis.nonbasicFlag_.size() == (size_t)lp.numCol_ + (size_t)lp.numRow_ ||
       basis.nonbasicMove_.size() == (size_t)lp.numCol_ + (size_t)lp.numRow_ ||
       basis.basicIndex_.size() == (size_t)lp.numRow_)

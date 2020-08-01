@@ -357,8 +357,8 @@ struct HighsRanging {
 
 // Make sure the sizes of solution and basis vectors are consistent
 // with numRow_ and numCol_
-bool isSolutionSizeConsistent(const HighsLp& lp, const HighsSolution& solution);
-bool isBasisSizeConsistent(const HighsLp& lp, const HighsBasis& basis);
+bool solutionRightSize(const HighsLp& lp, const HighsSolution& solution);
+bool basisRightSize(const HighsLp& lp, const HighsBasis& basis);
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.

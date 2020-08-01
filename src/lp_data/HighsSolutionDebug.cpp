@@ -35,7 +35,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   // options, assuming no knowledge of solution parameters or model status
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
-  if (basis.valid_ && !isBasisSizeConsistent(lp, basis))
+  if (basis.valid_ && !basisRightSize(lp, basis))
     return HighsDebugStatus::LOGICAL_ERROR;
   return HighsDebugStatus::OK;
 }
@@ -173,9 +173,9 @@ HighsDebugStatus debugHighsBasicSolution(
 HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
                                                const HighsBasis& basis,
                                                const HighsSolution& solution) {
-  if (!isSolutionSizeConsistent(lp, solution))
+  if (!solutionRightSize(lp, solution))
     return HighsDebugStatus::LOGICAL_ERROR;
-  if (!isBasisSizeConsistent(lp, basis) && basis.valid_)
+  if (!basisRightSize(lp, basis) && basis.valid_)
     return HighsDebugStatus::LOGICAL_ERROR;
   return HighsDebugStatus::OK;
 }
