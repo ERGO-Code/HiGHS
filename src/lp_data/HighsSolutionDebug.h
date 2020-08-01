@@ -59,6 +59,12 @@ HighsDebugStatus debugHighsBasicSolution(
     const HighsSolutionParams& solution_params,
     const HighsModelStatus model_status);
 
+// Methods below are not called externally
+
+HighsDebugStatus debugBasisRightSize(FILE* logfile,
+				     const HighsLp lp,
+				     const HighsBasis& basis);
+
 HighsDebugStatus debugHaveBasisAndSolutionData(const HighsLp& lp,
                                                const HighsBasis& basis,
                                                const HighsSolution& solution);

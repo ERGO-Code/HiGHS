@@ -31,13 +31,16 @@ const double excessive_residual_error = sqrt(large_residual_error);
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp lp,
                                       const HighsBasis& basis) {
-  // Non-trivially expensive analysis of a HiGHS basic solution, starting from
-  // options, assuming no knowledge of solution parameters or model status
+  // Cheap analysis of a HiGHS basis, checking vector sizes, numbers
+  // of basic/nonbasic variables
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
-  if (basis.valid_ && !basisRightSize(lp, basis))
-    return HighsDebugStatus::LOGICAL_ERROR;
-  return HighsDebugStatus::OK;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  if (!basis.valid_) return return_status;
+  if (debugBasisRightSize(options.logfile, lp, basis) != HighsDebugStatus::OK)
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  
+  return return_status;
 }
 
 HighsDebugStatus debugHighsBasicSolution(
@@ -167,6 +170,22 @@ HighsDebugStatus debugHighsBasicSolution(
   return_status = debugWorseStatus(
       debugAnalysePrimalDualErrors(options, primal_dual_errors), return_status);
 
+  return return_status;
+}
+
+// Methods below are not called externally
+
+HighsDebugStatus debugBasisRightSize(FILE* logfile,
+				     const HighsLp lp,
+				     const HighsBasis& basis) {
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  bool right_size = basisRightSize(lp, basis);
+  if (!right_size)  {
+    HighsLogMessage(logfile, HighsMessageType::ERROR,
+		    "Basis size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
   return return_status;
 }
 
@@ -526,11 +545,6 @@ bool debugBasicSolutionVariable(
   }
   query = false;
   return query;
-}
-
-HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsBasis& basis) {
-  return HighsDebugStatus::OK;
 }
 
 HighsDebugStatus debugAnalysePrimalDualErrors(
