@@ -13,6 +13,27 @@
  */
 #include "lp_data/HighsLp.h"
 
+bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
+  bool consistent = true;
+  consistent = isBasisRightSize(lp, basis) && consistent;
+  int num_basic_variables = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
+  }
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    if (basis.row_status[iRow] == HighsBasisStatus::BASIC)
+      num_basic_variables++;
+  }
+  const int num_nonbasic_variables =
+      lp.numCol_ + lp.numRow_ - num_basic_variables;
+  bool right_num_basic_variables = num_basic_variables == lp.numRow_;
+  consistent = right_num_basic_variables && consistent;
+  bool right_num_nonbasic_variables = num_nonbasic_variables == lp.numCol_;
+  consistent = right_num_nonbasic_variables && consistent;
+  return consistent;
+}
+
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution) {
   bool right_size = true;
   right_size = (int)solution.col_value.size() == lp.numCol_ && right_size;

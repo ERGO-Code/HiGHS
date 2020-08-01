@@ -37,33 +37,11 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (!basis.valid_) return return_status;
-  if (debugBasisRightSize(options, lp, basis) != HighsDebugStatus::OK)
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  int num_basic_variables = 0;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::BASIC)
-      num_basic_variables++;
-  }
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (basis.row_status[iRow] == HighsBasisStatus::BASIC)
-      num_basic_variables++;
-  }
-  const int num_nonbasic_variables =
-      lp.numCol_ + lp.numRow_ - num_basic_variables;
-  bool right_num_basic_variables = num_basic_variables == lp.numRow_;
-  if (!right_num_basic_variables) {
+  bool consistent = isBasisConsistent(lp, basis);
+  if (!consistent) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HiGHS basis has %d, not %d basic variables",
-                    num_basic_variables, lp.numRow_);
-    assert(right_num_basic_variables);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  bool right_num_nonbasic_variables = num_nonbasic_variables == lp.numCol_;
-  if (!right_num_nonbasic_variables) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HiGHS basis has %d, not %d nonbasic variables",
-                    num_nonbasic_variables, lp.numCol_);
-    assert(right_num_nonbasic_variables);
+                    "HiGHS basis inconsistency");
+    assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   return return_status;
@@ -78,7 +56,7 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
   bool right_size = isBasisRightSize(lp, basis);
   if (!right_size) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Basis size error");
+                    "HiGHS basis size error");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -94,7 +72,7 @@ HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
   bool right_size = isSolutionRightSize(lp, solution);
   if (!right_size) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Solution size error");
+                    "HiGHS solution size error");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }

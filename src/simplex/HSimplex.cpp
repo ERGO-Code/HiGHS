@@ -118,10 +118,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // First determine whether the HiGHS solution space has been
   // allocated, a necessary condition for its values to be used later
   bool have_highs_solution =
-      (int)solution.col_value.size() == highs_model_object.lp_.numCol_ &&
-      (int)solution.col_dual.size() == highs_model_object.lp_.numCol_ &&
-      (int)solution.row_value.size() == highs_model_object.lp_.numRow_ &&
-      (int)solution.row_dual.size() == highs_model_object.lp_.numRow_;
+      isSolutionRightSize(highs_model_object.lp_, solution);
   if (!simplex_lp_status.valid) {
     // Simplex LP is not valid so initialise the simplex LP data
     initialiseSimplexLpDefinition(highs_model_object);
@@ -142,39 +139,34 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     // There is no simplex basis (or it was found to be invalid) so try to
     // identify one
     if (basis.valid_) {
-      // There is is HiGHS basis: use it to construct nonbasicFlag,
-      // checking that it has the right number of basic variables
-      //
+      // There is is HiGHS basis: use it to construct nonbasicFlag
       // Allocate memory for nonbasicFlag
       simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ +
                                          highs_model_object.lp_.numRow_);
-      basis.valid_ = basisOk(highs_model_object.options_.logfile,
-                             highs_model_object.lp_, basis);
-      assert(basis.valid_);
-      if (!basis.valid_) {
+      if (debugBasisConsistent(highs_model_object.options_,
+                               highs_model_object.lp_,
+                               basis) == HighsDebugStatus::LOGICAL_ERROR) {
         HighsLogMessage(highs_model_object.options_.logfile,
                         HighsMessageType::ERROR,
                         "Supposed to be a Highs basis, but not valid");
         highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
         return HighsStatus::Error;
       }
-      if (basis.valid_) {
-        // Highs basis has the right number of nonbasic variables
-        for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-          int iVar = iCol;
-          if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
-            simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-          } else {
-            simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
-          }
+      // Highs basis has the right number of nonbasic variables
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+        int iVar = iCol;
+        if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
+          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+        } else {
+          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
         }
-        for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-          int iVar = simplex_lp.numCol_ + iRow;
-          if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
-            simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-          } else {
-            simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
-          }
+      }
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+        int iVar = simplex_lp.numCol_ + iRow;
+        if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
+          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+        } else {
+          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
         }
       }
     }
@@ -755,42 +747,6 @@ void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
   }
 }
 
-bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis) {
-  int col_status_size = basis.col_status.size();
-  int row_status_size = basis.row_status.size();
-  assert(col_status_size == lp.numCol_);
-  if (col_status_size != lp.numCol_) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "Size of basis.col_status is %d, not %d", col_status_size,
-                    lp.numCol_);
-    return false;
-  }
-  assert(row_status_size == lp.numRow_);
-  if (row_status_size != lp.numRow_) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "Size of basis.row_status is %d, not %d", row_status_size,
-                    lp.numRow_);
-    return false;
-  }
-  int num_basic_variables = 0;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::BASIC)
-      num_basic_variables++;
-  }
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (basis.row_status[iRow] == HighsBasisStatus::BASIC)
-      num_basic_variables++;
-  }
-  assert(num_basic_variables == lp.numRow_);
-  if (num_basic_variables != lp.numRow_) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "HiGHS basis has %d, not %d basic variables",
-                    num_basic_variables, lp.numRow_);
-    return false;
-  }
-  return true;
-}
-
 bool basisOk(FILE* logfile, const HighsLp& lp,
              const SimplexBasis& simplex_basis) {
 #ifdef HiGHSDEV
@@ -855,39 +811,57 @@ bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
   return true;
 }
 
-#ifdef HiGHSDEV
-void reportBasis(const HighsLp& lp, const HighsBasis& basis) {
-  if (lp.numCol_ > 0) printf("HighsBasis\n   Col Status\n");
+void reportBasis(const HighsOptions options, const HighsLp& lp,
+                 const HighsBasis& basis) {
+  if (lp.numCol_ > 0)
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                      "HighsBasis\n   Col Status\n");
   for (int col = 0; col < lp.numCol_; col++) {
-    printf("%6d %6d\n", col, (int)basis.col_status[col]);
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                      "%6d %6d\n", col, (int)basis.col_status[col]);
   }
-  if (lp.numRow_ > 0) printf("   Row Status\n");
+  if (lp.numRow_ > 0)
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                      "   Row Status\n");
   for (int row = 0; row < lp.numRow_; row++) {
-    printf("%6d %6d\n", row, (int)basis.row_status[row]);
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                      "%6d %6d\n", row, (int)basis.row_status[row]);
   }
 }
 
-void reportBasis(const HighsLp& lp, const SimplexBasis& simplex_basis) {
-  if (lp.numCol_ > 0) printf("SimplexBasis\n   Var    Col   Flag\n");
+void reportBasis(const HighsOptions options, const HighsLp& lp,
+                 const SimplexBasis& simplex_basis) {
+  if (lp.numCol_ > 0)
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                      "SimplexBasis\n   Var    Col   Flag\n");
   for (int col = 0; col < lp.numCol_; col++) {
     int var = col;
     if (simplex_basis.nonbasicFlag_[var])
-      printf("%6d %6d %6d\n", var, col, simplex_basis.nonbasicFlag_[var]);
+      HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                        "%6d %6d %6d\n", var, col,
+                        simplex_basis.nonbasicFlag_[var]);
     else
-      printf("%6d %6d %6d\n", var, col, simplex_basis.nonbasicFlag_[var]);
+      HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                        "%6d %6d %6d\n", var, col,
+                        simplex_basis.nonbasicFlag_[var]);
   }
-  if (lp.numRow_ > 0) printf("   Var    Row   Flag  Basic\n");
+  if (lp.numRow_ > 0)
+    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                      "   Var    Row   Flag  Basic\n");
   for (int row = 0; row < lp.numRow_; row++) {
     int var = lp.numCol_ + row;
     if (simplex_basis.nonbasicFlag_[var])
-      printf("%6d %6d %6d %6d\n", var, row, simplex_basis.nonbasicFlag_[var],
-             simplex_basis.basicIndex_[row]);
+      HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                        "%6d %6d %6d %6d\n", var, row,
+                        simplex_basis.nonbasicFlag_[var],
+                        simplex_basis.basicIndex_[row]);
     else
-      printf("%6d %6d %6d %6d\n", var, row, simplex_basis.nonbasicFlag_[var],
-             simplex_basis.basicIndex_[row]);
+      HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                        "%6d %6d %6d %6d\n", var, row,
+                        simplex_basis.nonbasicFlag_[var],
+                        simplex_basis.basicIndex_[row]);
   }
 }
-#endif
 
 /**
  * @brief Simplex utilities

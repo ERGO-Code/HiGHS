@@ -299,10 +299,10 @@ HighsStatus Highs::writeModel(const std::string filename) {
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
   const int min_highs_debug_level =
-    HIGHS_DEBUG_LEVEL_MIN; 
-  //HIGHS_DEBUG_LEVEL_CHEAP; 
-  //HIGHS_DEBUG_LEVEL_COSTLY;
-  //HIGHS_DEBUG_LEVEL_MAX;
+      // HIGHS_DEBUG_LEVEL_MIN;
+      // HIGHS_DEBUG_LEVEL_CHEAP;
+      HIGHS_DEBUG_LEVEL_COSTLY;
+  // HIGHS_DEBUG_LEVEL_MAX;
   if (options_.highs_debug_level < min_highs_debug_level) {
     printf(
         "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
@@ -1048,7 +1048,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   underDevelopmentLogMessage("setBasis");
-  if (!basisOk(options_.logfile, lp_, basis)) {
+  // Check the user-supplied basis
+  if (!isBasisConsistent(lp_, basis)) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "setBasis: invalid basis");
     return HighsStatus::Error;

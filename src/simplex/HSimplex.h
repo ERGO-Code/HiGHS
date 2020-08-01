@@ -30,11 +30,11 @@ HighsStatus transition(HighsModelObject& highs_model_object  //!< Model object
 bool basisConditionOk(HighsModelObject& highs_model_object,
                       const std::string message);
 
+// Methods not requiring HighsModelObject
+
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance);
-
-// Methods not requiring HighsModelObject
 
 void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
                                    int XnumNewCol);
@@ -45,17 +45,16 @@ void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
 void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
                                 int XnumNewRow);
 
-bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis);
 bool basisOk(FILE* logfile, const HighsLp& lp,
              const SimplexBasis& simplex_basis);
 
 bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
                     const SimplexBasis& simplex_basis);
 
-#ifdef HiGHSDEV
-void reportBasis(const HighsLp& lp, const HighsBasis& basis);
-void reportBasis(const HighsLp& lp, const SimplexBasis& simplex_basis);
-#endif
+void reportBasis(const HighsOptions options, const HighsLp& lp,
+                 const HighsBasis& basis);
+void reportBasis(const HighsOptions options, const HighsLp& lp,
+                 const SimplexBasis& simplex_basis);
 
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                int phase = 2);
