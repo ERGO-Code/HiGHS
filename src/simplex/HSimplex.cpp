@@ -145,8 +145,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     // identify one
     if (basis.valid_) {
       // There is is HiGHS basis: use it to construct nonbasicFlag
-      // Allocate memory for nonbasicFlag
-      simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
       if (debugBasisConsistent(options, simplex_lp, basis) ==
 	  HighsDebugStatus::LOGICAL_ERROR) {
         HighsLogMessage(options.logfile,
@@ -155,23 +153,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
         highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
         return HighsStatus::Error;
       }
-      // Highs basis has the right number of nonbasic variables
-      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-        int iVar = iCol;
-        if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
-          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-        } else {
-          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
-        }
-      }
-      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-        int iVar = simplex_lp.numCol_ + iRow;
-        if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
-          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-        } else {
-          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
-        }
-      }
+      // Allocate memory for nonbasicFlag and set it up from the HiGHS basis
+      simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+      setNonbasicFlag(simplex_lp, simplex_basis.nonbasicFlag_,
+		      &basis.col_status[0], &basis.row_status[0]);
     }
     // nonbasicFlag is valid if the HiGHS basis exists and has the correct
     // number of basic variables
@@ -210,16 +195,9 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       if (options.simplex_permute_strategy != OPTION_OFF)
         permuteSimplexLp(highs_model_object);
 
-      // Allocate memory for nonbasicFlag
-      simplex_basis.nonbasicFlag_.resize(
-          highs_model_object.simplex_lp_.numCol_ +
-          highs_model_object.simplex_lp_.numRow_);
-      // Set up nonbasicFlag for a logical basis
-      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
-        simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
-      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-        simplex_basis.nonbasicFlag_[simplex_lp.numCol_ + iRow] =
-            NONBASIC_FLAG_FALSE;
+      // Allocate memory for nonbasicFlag and set it up for a logical basis
+      simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+      setNonbasicFlag(simplex_lp, simplex_basis.nonbasicFlag_);
 
       // Possibly find a crash basis
       if (options.simplex_crash_strategy != SIMPLEX_CRASH_STRATEGY_OFF) {
@@ -249,8 +227,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     }
     // There is now a nonbasicFlag: it should be valid - since it's
     // just been set but check
-    if (debugNonbasicFlagConsistent(options, simplex_lp,
-                                    simplex_basis) ==
+    if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
         HighsDebugStatus::LOGICAL_ERROR) {
       HighsLogMessage(
           options.logfile, HighsMessageType::ERROR,
@@ -587,6 +564,40 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   return return_status;
 }
 
+void setNonbasicFlag(const HighsLp& simplex_lp,
+		     vector<int>& nonbasicFlag,
+		     const HighsBasisStatus* col_status,
+		     const HighsBasisStatus* row_status) {
+  if (col_status == NULL || row_status == NULL) {
+    // Initialise a logical basis
+    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+      int iVar = iCol;
+      nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
+    }
+    for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+      int iVar = simplex_lp.numCol_ + iRow;
+      nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
+    }
+  } else {
+    // Initialise from HiGHS basis
+    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+      int iVar = iCol;
+      if (col_status[iCol] == HighsBasisStatus::BASIC) {
+	nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
+      } else {
+	nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
+      }
+    }
+    for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+      int iVar = simplex_lp.numCol_ + iRow;
+      if (row_status[iRow] == HighsBasisStatus::BASIC) {
+	nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
+      } else {
+	nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
+      }
+    }
+  }
+}
 bool basisConditionOk(HighsModelObject& highs_model_object,
                       const std::string message) {
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
