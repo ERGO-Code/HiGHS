@@ -27,10 +27,16 @@ void setSimplexOptions(
 HighsStatus transition(HighsModelObject& highs_model_object  //!< Model object
 );
 
-void setNonbasicFlag(const HighsLp& simplex_lp,
-		     vector<int>& nonbasicFlag,
-		     const HighsBasisStatus* col_status = NULL,
-		     const HighsBasisStatus* row_status = NULL);
+void setNonbasicFlag(const HighsLp& simplex_lp, vector<int>& nonbasicFlag,
+                     const HighsBasisStatus* col_status = NULL,
+                     const HighsBasisStatus* row_status = NULL);
+
+void setNonbasicMove(const HighsLp& simplex_lp, const HighsScale& scale,
+                     const bool have_highs_basis, const HighsBasis& basis,
+                     const bool have_highs_solution,
+                     const HighsSolution& solution,
+                     HighsSimplexInfo& simplex_info,
+                     SimplexBasis& simplex_basis);
 
 bool basisConditionOk(HighsModelObject& highs_model_object,
                       const std::string message);

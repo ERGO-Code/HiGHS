@@ -149,18 +149,18 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     if (basis.valid_) {
       // There is is HiGHS basis: use it to construct nonbasicFlag
       if (debugBasisConsistent(options, simplex_lp, basis) ==
-	  HighsDebugStatus::LOGICAL_ERROR) {
-        HighsLogMessage(options.logfile,
-                        HighsMessageType::ERROR,
+          HighsDebugStatus::LOGICAL_ERROR) {
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                         "Supposed to be a Highs basis, but not valid");
         highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
         return HighsStatus::Error;
       }
       analysis.simplexTimerStart(setNonbasicFlagClock);
       // Allocate memory for nonbasicFlag and set it up from the HiGHS basis
-      simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+      simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ +
+                                         simplex_lp.numRow_);
       setNonbasicFlag(simplex_lp, simplex_basis.nonbasicFlag_,
-		      &basis.col_status[0], &basis.row_status[0]);
+                      &basis.col_status[0], &basis.row_status[0]);
       analysis.simplexTimerStop(setNonbasicFlagClock);
     }
     // nonbasicFlag is valid if the HiGHS basis exists and has the correct
@@ -202,7 +202,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       }
       analysis.simplexTimerStart(setNonbasicFlagClock);
       // Allocate memory for nonbasicFlag and set it up for a logical basis
-      simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+      simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ +
+                                         simplex_lp.numRow_);
       setNonbasicFlag(simplex_lp, simplex_basis.nonbasicFlag_);
       analysis.simplexTimerStop(setNonbasicFlagClock);
 
@@ -217,8 +218,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
           if (simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_FALSE)
             num_basic_structurals++;
         }
-        HighsLogMessage(options.logfile,
-                        HighsMessageType::INFO,
+        HighsLogMessage(options.logfile, HighsMessageType::INFO,
                         "Crash has created a basis with %d/%d structurals",
                         num_basic_structurals, simplex_lp.numRow_);
       }
@@ -281,8 +281,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       !simplex_lp_status.scaling_tried;
   const bool force_no_scaling = false;  // true;//
   if (force_no_scaling) {
-    HighsLogMessage(options.logfile,
-                    HighsMessageType::WARNING, "Forcing no scaling");
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                    "Forcing no scaling");
     scale_lp = false;
   }
   if (scale_lp) {
@@ -423,6 +423,111 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   analysis.simplexTimerStop(initialiseSimplexCostBoundsClock);
 
   analysis.simplexTimerStart(setNonbasicMoveClock);
+  setNonbasicMove(simplex_lp, scale, have_highs_basis, basis,
+                  have_highs_solution, solution, simplex_info, simplex_basis);
+  analysis.simplexTimerStop(setNonbasicMoveClock);
+  // Simplex basis is now valid
+  simplex_lp_status.has_basis = true;
+
+  // Possibly solve for the basic primal and nonbasic dual values to determine
+  // which simplex solver to use, unless it's forced
+  //  if (simplex_lp_status.has_basic_primal_values) {
+  analysis.simplexTimerStart(ComputePrimalClock);
+  computePrimal(highs_model_object);
+  analysis.simplexTimerStop(ComputePrimalClock);
+  simplex_lp_status.has_basic_primal_values = true;
+  //}
+  //  if (simplex_lp_status.has_basic_dual_values) {
+  analysis.simplexTimerStart(ComputeDualClock);
+  computeDual(highs_model_object);
+  analysis.simplexTimerStop(ComputeDualClock);
+  simplex_lp_status.has_nonbasic_dual_values = true;
+  //}
+
+  // If there is a HiGHS solution then determine the changes in basic
+  // and nonbasic values and duals for columns and rows
+  if (have_highs_solution) {
+    //    analyseSimplexAndHighsSolutionDifferences(highs_model_object);
+    if (debugSimplexHighsSolutionDifferences(highs_model_object) ==
+        HighsDebugStatus::LOGICAL_ERROR)
+      return HighsStatus::Error;
+  }
+
+  // Store, analyse and possibly report the number of primal and dual
+  // infeasiblities and the simplex status
+  computeSimplexInfeasible(highs_model_object);
+  copySimplexInfeasible(highs_model_object);
+
+  HighsSolutionParams& scaled_solution_params =
+      highs_model_object.scaled_solution_params_;
+  analysis.simplexTimerStart(ComputeDuObjClock);
+  computeDualObjectiveValue(highs_model_object);
+  analysis.simplexTimerStop(ComputeDuObjClock);
+  analysis.simplexTimerStart(ComputePrObjClock);
+  computePrimalObjectiveValue(highs_model_object);
+  analysis.simplexTimerStop(ComputePrObjClock);
+  simplex_lp_status.valid = true;
+
+  bool primal_feasible = scaled_solution_params.num_primal_infeasibilities == 0;
+  bool dual_feasible = scaled_solution_params.num_dual_infeasibilities == 0;
+  if (primal_feasible && dual_feasible) {
+    highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+    scaled_solution_params.primal_status =
+        PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    scaled_solution_params.dual_status =
+        PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  }
+
+  scaled_solution_params.objective_function_value =
+      simplex_info.primal_objective_value;
+
+  if (debugSimplexBasicSolution("After transition", highs_model_object) ==
+      HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
+
+  return return_status;
+}
+
+void setNonbasicFlag(const HighsLp& simplex_lp, vector<int>& nonbasicFlag,
+                     const HighsBasisStatus* col_status,
+                     const HighsBasisStatus* row_status) {
+  if (col_status == NULL || row_status == NULL) {
+    // Initialise a logical basis
+    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+      int iVar = iCol;
+      nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
+    }
+    for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+      int iVar = simplex_lp.numCol_ + iRow;
+      nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
+    }
+  } else {
+    // Initialise from HiGHS basis
+    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+      int iVar = iCol;
+      if (col_status[iCol] == HighsBasisStatus::BASIC) {
+        nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
+      } else {
+        nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
+      }
+    }
+    for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+      int iVar = simplex_lp.numCol_ + iRow;
+      if (row_status[iRow] == HighsBasisStatus::BASIC) {
+        nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
+      } else {
+        nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
+      }
+    }
+  }
+}
+
+void setNonbasicMove(const HighsLp& simplex_lp, const HighsScale& scale,
+                     const bool have_highs_basis, const HighsBasis& basis,
+                     const bool have_highs_solution,
+                     const HighsSolution& solution,
+                     HighsSimplexInfo& simplex_info,
+                     SimplexBasis& simplex_basis) {
   // Don't have a simplex basis since nonbasicMove is not set up.
   const int illegal_move_value = -99;
 
@@ -526,103 +631,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     }
   }
   //  } else {}
-  analysis.simplexTimerStop(setNonbasicMoveClock);
-  // Simplex basis is now valid
-  simplex_lp_status.has_basis = true;
-
-  // Possibly solve for the basic primal and nonbasic dual values to determine
-  // which simplex solver to use, unless it's forced
-  //  if (simplex_lp_status.has_basic_primal_values) {
-  analysis.simplexTimerStart(ComputePrimalClock);
-  computePrimal(highs_model_object);
-  analysis.simplexTimerStop(ComputePrimalClock);
-  simplex_lp_status.has_basic_primal_values = true;
-  //}
-  //  if (simplex_lp_status.has_basic_dual_values) {
-  analysis.simplexTimerStart(ComputeDualClock);
-  computeDual(highs_model_object);
-  analysis.simplexTimerStop(ComputeDualClock);
-  simplex_lp_status.has_nonbasic_dual_values = true;
-  //}
-
-  // If there is a HiGHS solution then determine the changes in basic
-  // and nonbasic values and duals for columns and rows
-  if (have_highs_solution) {
-    //    analyseSimplexAndHighsSolutionDifferences(highs_model_object);
-    if (debugSimplexHighsSolutionDifferences(highs_model_object) ==
-        HighsDebugStatus::LOGICAL_ERROR)
-      return HighsStatus::Error;
-  }
-
-  // Store, analyse and possibly report the number of primal and dual
-  // infeasiblities and the simplex status
-  computeSimplexInfeasible(highs_model_object);
-  copySimplexInfeasible(highs_model_object);
-
-  HighsSolutionParams& scaled_solution_params =
-      highs_model_object.scaled_solution_params_;
-  analysis.simplexTimerStart(ComputeDuObjClock);
-  computeDualObjectiveValue(highs_model_object);
-  analysis.simplexTimerStop(ComputeDuObjClock);
-  analysis.simplexTimerStart(ComputePrObjClock);
-  computePrimalObjectiveValue(highs_model_object);
-  analysis.simplexTimerStop(ComputePrObjClock);
-  simplex_lp_status.valid = true;
-
-  bool primal_feasible = scaled_solution_params.num_primal_infeasibilities == 0;
-  bool dual_feasible = scaled_solution_params.num_dual_infeasibilities == 0;
-  if (primal_feasible && dual_feasible) {
-    highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
-    scaled_solution_params.primal_status =
-        PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    scaled_solution_params.dual_status =
-        PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  }
-
-  scaled_solution_params.objective_function_value =
-      simplex_info.primal_objective_value;
-
-  if (debugSimplexBasicSolution("After transition", highs_model_object) ==
-      HighsDebugStatus::LOGICAL_ERROR)
-    return HighsStatus::Error;
-
-  return return_status;
 }
 
-void setNonbasicFlag(const HighsLp& simplex_lp,
-		     vector<int>& nonbasicFlag,
-		     const HighsBasisStatus* col_status,
-		     const HighsBasisStatus* row_status) {
-  if (col_status == NULL || row_status == NULL) {
-    // Initialise a logical basis
-    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-      int iVar = iCol;
-      nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
-    }
-    for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-      int iVar = simplex_lp.numCol_ + iRow;
-      nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
-    }
-  } else {
-    // Initialise from HiGHS basis
-    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-      int iVar = iCol;
-      if (col_status[iCol] == HighsBasisStatus::BASIC) {
-	nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
-      } else {
-	nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
-      }
-    }
-    for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-      int iVar = simplex_lp.numCol_ + iRow;
-      if (row_status[iRow] == HighsBasisStatus::BASIC) {
-	nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
-      } else {
-	nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
-      }
-    }
-  }
-}
 bool basisConditionOk(HighsModelObject& highs_model_object,
                       const std::string message) {
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
