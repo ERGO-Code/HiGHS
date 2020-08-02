@@ -121,9 +121,13 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       isSolutionRightSize(highs_model_object.lp_, solution);
   if (!simplex_lp_status.valid) {
     // Simplex LP is not valid so initialise the simplex LP data
+    analysis.simplexTimerStart(initialiseSimplexLpDefinitionClock);
     initialiseSimplexLpDefinition(highs_model_object);
+    analysis.simplexTimerStop(initialiseSimplexLpDefinitionClock);
     // Initialise the real and integer random vectors
+    analysis.simplexTimerStart(initialiseSimplexLpRandomVectorsClock);
     initialiseSimplexLpRandomVectors(highs_model_object);
+    analysis.simplexTimerStop(initialiseSimplexLpRandomVectorsClock);
   }
   if (simplex_lp_status.has_basis) {
     // There is a simplex basis: it should be valid - since it's set
@@ -141,8 +145,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Now we know whether the simplex basis at least has the right number
   // of basic and nonbasic variables
   if (!simplex_lp_status.has_basis) {
-    // There is no simplex basis (or it was found to be invalid) so try to
-    // identify one
+    // There is no simplex basis so try to identify one
     if (basis.valid_) {
       // There is is HiGHS basis: use it to construct nonbasicFlag
       if (debugBasisConsistent(options, simplex_lp, basis) ==
@@ -153,10 +156,12 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
         highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
         return HighsStatus::Error;
       }
+      analysis.simplexTimerStart(setNonbasicFlagClock);
       // Allocate memory for nonbasicFlag and set it up from the HiGHS basis
       simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
       setNonbasicFlag(simplex_lp, simplex_basis.nonbasicFlag_,
 		      &basis.col_status[0], &basis.row_status[0]);
+      analysis.simplexTimerStop(setNonbasicFlagClock);
     }
     // nonbasicFlag is valid if the HiGHS basis exists and has the correct
     // number of basic variables
@@ -192,12 +197,14 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       }
       */
       // Possibly permute the columns of the LP to be used by the solver.
-      if (options.simplex_permute_strategy != OPTION_OFF)
+      if (options.simplex_permute_strategy != OPTION_OFF) {
         permuteSimplexLp(highs_model_object);
-
+      }
+      analysis.simplexTimerStart(setNonbasicFlagClock);
       // Allocate memory for nonbasicFlag and set it up for a logical basis
       simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
       setNonbasicFlag(simplex_lp, simplex_basis.nonbasicFlag_);
+      analysis.simplexTimerStop(setNonbasicFlagClock);
 
       // Possibly find a crash basis
       if (options.simplex_crash_strategy != SIMPLEX_CRASH_STRATEGY_OFF) {
@@ -237,6 +244,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     }
     // Use nonbasicFlag to form basicIndex
     // Allocate memory for basicIndex
+    analysis.simplexTimerStart(setBasicIndexClock);
     simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
     int num_basic_variables = 0;
     simplex_info.num_basic_logicals = 0;
@@ -247,6 +255,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
         num_basic_variables++;
       }
     }
+    analysis.simplexTimerStop(setBasicIndexClock);
     // Double-check that we have the right number of basic variables
     nonbasicFlag_valid = num_basic_variables == simplex_lp.numRow_;
     assert(nonbasicFlag_valid);
@@ -300,11 +309,13 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   //
   // First setup the factor arrays if they don't exist
   if (!simplex_lp_status.has_factor_arrays) {
+    analysis.simplexTimerStart(factorSetupClock);
     factor.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
                  &simplex_basis.basicIndex_[0], options.highs_debug_level,
                  options.logfile, options.output, options.message_level);
     simplex_lp_status.has_factor_arrays = true;
+    analysis.simplexTimerStop(factorSetupClock);
   }
   // Reinvert if there isn't a fresh INVERT. ToDo Override this for MIP hot
   // start
@@ -388,11 +399,13 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   // Possibly set up the HMatrix column-wise and row-wise copies of the matrix
   if (!simplex_lp_status.has_matrix_col_wise ||
       !simplex_lp_status.has_matrix_row_wise) {
+    analysis.simplexTimerStart(matrixSetupClock);
     matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
                  &simplex_basis.nonbasicFlag_[0]);
     simplex_lp_status.has_matrix_col_wise = true;
     simplex_lp_status.has_matrix_row_wise = true;
+    analysis.simplexTimerStop(matrixSetupClock);
   }
   // Possibly set up the simplex work and base arrays
   // ToDo Stop doing this always
@@ -402,6 +415,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   allocate_work_and_base_arrays(highs_model_object);
   initialise_cost(highs_model_object);
   initialise_bound(highs_model_object);
+
+  analysis.simplexTimerStart(setNonbasicMoveClock);
   // Don't have a simplex basis since nonbasicMove is not set up.
   const int illegal_move_value = -99;
 
@@ -505,7 +520,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     }
   }
   //  } else {}
-
+  analysis.simplexTimerStop(setNonbasicMoveClock);
   // Simplex basis is now valid
   simplex_lp_status.has_basis = true;
 
@@ -540,8 +555,12 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 
   HighsSolutionParams& scaled_solution_params =
       highs_model_object.scaled_solution_params_;
+  analysis.simplexTimerStart(ComputeDuObjClock);
   computeDualObjectiveValue(highs_model_object);
+  analysis.simplexTimerStop(ComputeDuObjClock);
+  analysis.simplexTimerStart(ComputePrObjClock);
   computePrimalObjectiveValue(highs_model_object);
+  analysis.simplexTimerStop(ComputePrObjClock);
   simplex_lp_status.valid = true;
 
   bool primal_feasible = scaled_solution_params.num_primal_infeasibilities == 0;

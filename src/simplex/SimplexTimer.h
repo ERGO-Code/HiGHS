@@ -37,9 +37,18 @@ enum iClockSimplex {
   IterateDevexIzClock,        //!< Second level timing of initialise Devex
   IteratePivotsClock,         //!< Second level timing of pivoting
 
+  initialiseSimplexLpDefinitionClock, //!< initialise Simplex LP definition
+  initialiseSimplexLpRandomVectorsClock, //!< initialise Simplex LP random vectors
+  setNonbasicFlagClock, //!< set nonbasicFlag
+  permuteSimplexLpClock, //!< permute SImplex LP
+  setBasicIndexClock, //!< set basicIndex
   ScaleClock,           //!< Scale
   CrashClock,           //!< Crash
+  factorSetupClock,     //!< HFactor setup
   BasisConditionClock,  //!< Basis condition estimation
+  matrixSetupClock,     //!< HMatrix setup
+  setNonbasicMoveClock, //!< set nonbasicMove
+  
   DseIzClock,           //!< DSE weight initialisation
   InvertClock,          //!< Invert in dual rebuild()
   PermWtClock,       //!< Permutation of SED weights each side of INVERT in dual
@@ -121,9 +130,18 @@ class SimplexTimer {
     clock[IteratePrimalClock] = timer.clock_def("PRIMAL", "UPR");
     clock[IterateDevexIzClock] = timer.clock_def("DEVEX_IZ", "DVI");
     clock[IteratePivotsClock] = timer.clock_def("PIVOTS", "PIV");
+    clock[initialiseSimplexLpDefinitionClock] = timer.clock_def("IZ_SIMPLEX_LP_DEF", "ISD");
+    clock[initialiseSimplexLpRandomVectorsClock] = timer.clock_def("IZ_SIMPLEX_LP_RAND", "ISR");
+    clock[setNonbasicFlagClock] = timer.clock_def("SET_NONBASICFLAG", "SNF");
+    clock[permuteSimplexLpClock] = timer.clock_def("PERM_SIMPLEX_LP", "PLP");
+    clock[setBasicIndexClock] = timer.clock_def("SET_BASICINDEX", "SBI");
     clock[ScaleClock] = timer.clock_def("SCALE", "SCL");
     clock[CrashClock] = timer.clock_def("CRASH", "CSH");
+    clock[factorSetupClock] = timer.clock_def("FACTOR_SETUP", "FST");
     clock[BasisConditionClock] = timer.clock_def("BASIS_CONDITION", "CON");
+    clock[matrixSetupClock] = timer.clock_def("MATRIX_SETUP", "FST");
+    clock[setNonbasicMoveClock] = timer.clock_def("SET_NONBASICMOVE", "SNM");
+    //    clock[] = timer.clock_def("", "");
     clock[DseIzClock] = timer.clock_def("DSE_IZ", "DEI");
     clock[InvertClock] = timer.clock_def("INVERT", "INV");
     clock[PermWtClock] = timer.clock_def("PERM_WT", "PWT");
@@ -242,7 +260,10 @@ class SimplexTimer {
 
   void reportSimplexInnerClock(HighsTimerClock& simplex_timer_clock) {
     std::vector<int> simplex_clock_list{
-        ScaleClock,           CrashClock,        BasisConditionClock,
+      initialiseSimplexLpDefinitionClock, initialiseSimplexLpRandomVectorsClock,
+	setNonbasicFlagClock, permuteSimplexLpClock, setBasicIndexClock,
+        ScaleClock,           CrashClock, factorSetupClock,
+	BasisConditionClock, matrixSetupClock,setNonbasicMoveClock,
         DseIzClock,           InvertClock,       PermWtClock,
         ComputeDualClock,     CorrectDualClock,  ComputePrimalClock,
         CollectPrIfsClock,    ComputePrIfsClock, ComputeDuIfsClock,
