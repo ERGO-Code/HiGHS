@@ -131,7 +131,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     // 2. If re-solving choose the strategy appropriate to primal or
     // dual feasibility
     //
-    int& simplex_strategy = highs_model_object.options_.simplex_strategy;
+    int simplex_strategy = highs_model_object.options_.simplex_strategy;
     if (scaled_solution_params.num_primal_infeasibilities > 0) {
       // Not primal feasible, so use dual simplex if choice is permitted
       if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
@@ -208,6 +208,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
           "to be used: Parallel performance will be less than anticipated",
           omp_max_threads, simplex_info.num_threads);
     }
+    // Simplex strategy is now fixed - so set the value to be referred
+    // to in the simplex solver
+    simplex_info.simplex_strategy = simplex_strategy;
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
     SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
