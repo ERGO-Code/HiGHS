@@ -25,12 +25,8 @@ bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
     if (basis.row_status[iRow] == HighsBasisStatus::BASIC)
       num_basic_variables++;
   }
-  const int num_nonbasic_variables =
-      lp.numCol_ + lp.numRow_ - num_basic_variables;
   bool right_num_basic_variables = num_basic_variables == lp.numRow_;
   consistent = right_num_basic_variables && consistent;
-  bool right_num_nonbasic_variables = num_nonbasic_variables == lp.numCol_;
-  consistent = right_num_nonbasic_variables && consistent;
   return consistent;
 }
 

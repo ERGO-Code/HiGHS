@@ -23,7 +23,7 @@
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object);
 
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp simplex_lp,
+                                      const HighsLp& simplex_lp,
                                       const SimplexBasis& simplex_basis);
 
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
@@ -87,6 +87,10 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
 HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
                                                    const std::string type,
                                                    const double difference);
+
+HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
+                                             const HighsLp& simplex_lp,
+                                             const SimplexBasis& simplex_basis);
 
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase);

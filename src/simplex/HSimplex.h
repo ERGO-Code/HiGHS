@@ -45,12 +45,6 @@ void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
 void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
                                 int XnumNewRow);
 
-bool basisOk(FILE* logfile, const HighsLp& lp,
-             const SimplexBasis& simplex_basis);
-
-bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
-                    const SimplexBasis& simplex_basis);
-
 void reportBasis(const HighsOptions options, const HighsLp& lp,
                  const HighsBasis& basis);
 void reportBasis(const HighsOptions options, const HighsLp& lp,

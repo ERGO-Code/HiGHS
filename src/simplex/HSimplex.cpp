@@ -126,13 +126,19 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     initialiseSimplexLpRandomVectors(highs_model_object);
   }
   if (simplex_lp_status.has_basis) {
-    // There is a simplex basis: it should be valid - since it's set internally
-    // - but check
-    bool nonbasic_flag_ok = nonbasicFlagOk(highs_model_object.options_.logfile,
-                                           simplex_lp, simplex_basis);
-    assert(nonbasic_flag_ok);
-    if (!nonbasic_flag_ok) simplex_lp_status.has_basis = false;
+    // There is a simplex basis: it should be valid - since it's set
+    // internally - but check
+    if (debugNonbasicFlagConsistent(highs_model_object.options_, simplex_lp,
+                                    simplex_basis) ==
+        HighsDebugStatus::LOGICAL_ERROR) {
+      HighsLogMessage(
+          highs_model_object.options_.logfile, HighsMessageType::ERROR,
+          "Supposed to be a Simplex basis, but nonbasicFlag not valid");
+      highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+      return HighsStatus::Error;
+    }
   }
+
   // Now we know whether the simplex basis at least has the right number
   // of basic and nonbasic variables
   if (!simplex_lp_status.has_basis) {
@@ -244,24 +250,16 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
     }
-    // There is now a nonbasicFlag that should be valid - have the
-    // right number of basic variables - so check this
-    nonbasicFlag_valid = nonbasicFlagOk(highs_model_object.options_.logfile,
-                                        simplex_lp, simplex_basis);
-    assert(nonbasicFlag_valid);
-    if (!nonbasicFlag_valid) {
-      // Something's gone wrong: any HiGHS basis has been checked and,
-      // if there isn't one or it's been found to be invalid, a
-      // logical or crash basis has been set up. Both should guarantee
-      // the right number of basic variables
-      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
-        simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
-      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-        simplex_basis.nonbasicFlag_[simplex_lp.numCol_ + iRow] =
-            NONBASIC_FLAG_FALSE;
-      nonbasicFlag_valid = true;
-      // The HiGHS basis shouldn't be valid at this point
-      assert(!basis.valid_);
+    // There is now a nonbasicFlag: it should be valid - since it's
+    // just been set but check
+    if (debugNonbasicFlagConsistent(highs_model_object.options_, simplex_lp,
+                                    simplex_basis) ==
+        HighsDebugStatus::LOGICAL_ERROR) {
+      HighsLogMessage(
+          highs_model_object.options_.logfile, HighsMessageType::ERROR,
+          "Supposed to be a Simplex basis, but nonbasicFlag not valid");
+      highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+      return HighsStatus::Error;
     }
     // Use nonbasicFlag to form basicIndex
     // Allocate memory for basicIndex
@@ -745,70 +743,6 @@ void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
     basis.nonbasicFlag_[lp.numCol_ + row] = NONBASIC_FLAG_FALSE;
     basis.basicIndex_[row] = lp.numCol_ + row;
   }
-}
-
-bool basisOk(FILE* logfile, const HighsLp& lp,
-             const SimplexBasis& simplex_basis) {
-#ifdef HiGHSDEV
-  printf("!! Don't check if basis is invalid! !!\n");
-#endif
-  if (!nonbasicFlagOk(logfile, lp, simplex_basis)) return false;
-  int nonbasicFlag_size = simplex_basis.nonbasicFlag_.size();
-  int basicIndex_size = simplex_basis.basicIndex_.size();
-  int numTot = lp.numCol_ + lp.numRow_;
-  assert(nonbasicFlag_size == numTot);
-  if (nonbasicFlag_size != numTot) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "Size of simplex_basis.nonbasicFlag_ is %d, not %d",
-                    nonbasicFlag_size, numTot);
-    return false;
-  }
-  assert(basicIndex_size == lp.numRow_);
-  if (basicIndex_size != lp.numRow_) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "Size of simplex_basis.basicIndex_ is %d, not %d",
-                    basicIndex_size, lp.numRow_);
-    return false;
-  }
-  for (int row = 0; row < lp.numRow_; row++) {
-    int col = simplex_basis.basicIndex_[row];
-    int flag = simplex_basis.nonbasicFlag_[col];
-    assert(!flag);
-    if (flag) {
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
-                      "Entry basicIndex_[%d] = %d is not basic", row, col);
-      return false;
-    }
-  }
-  return true;
-}
-
-bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
-                    const SimplexBasis& simplex_basis) {
-  int numTot = lp.numCol_ + lp.numRow_;
-  assert((int)simplex_basis.nonbasicFlag_.size() == numTot);
-  if ((int)simplex_basis.nonbasicFlag_.size() != numTot) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "Size of simplex_basis.nonbasicFlag_ is %d, not %d",
-                    (int)simplex_basis.nonbasicFlag_.size(), numTot);
-    return false;
-  }
-  int num_basic_variables = 0;
-  for (int var = 0; var < numTot; var++) {
-    if (simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_FALSE) {
-      num_basic_variables++;
-    } else {
-      assert(simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_TRUE);
-    }
-  }
-  assert(num_basic_variables == lp.numRow_);
-  if (num_basic_variables != lp.numRow_) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "Simplex basis has %d, not %d basic variables",
-                    num_basic_variables, lp.numRow_);
-    return false;
-  }
-  return true;
 }
 
 void reportBasis(const HighsOptions options, const HighsLp& lp,

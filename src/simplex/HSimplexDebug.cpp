@@ -147,46 +147,6 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   return return_status;
 }
 
-HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp simplex_lp,
-                                      const SimplexBasis& simplex_basis) {
-  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
-  // of basic/nonbasic variables and non-repetition of basic variables
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  if (debugBasisRightSize(options, simplex_lp, simplex_basis) !=
-      HighsDebugStatus::OK)
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  int num_basic_variables = 0;
-  int num_nonbasic_variables = 0;
-  for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
-    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
-      num_basic_variables++;
-    } else if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
-      num_nonbasic_variables++;
-    }
-  }
-  bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
-  if (!right_num_basic_variables) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Simplex basis has %d, not %d basic variables",
-                    num_basic_variables, simplex_lp.numRow_);
-    assert(right_num_basic_variables);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  bool right_num_nonbasic_variables =
-      num_nonbasic_variables == simplex_lp.numCol_;
-  if (!right_num_nonbasic_variables) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Simplex basis has %d, not %d nonbasic variables",
-                    num_nonbasic_variables, simplex_lp.numCol_);
-    assert(right_num_nonbasic_variables);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  return return_status;
-}
-
 HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
                                      const HighsLp& simplex_lp,
                                      const SimplexBasis& simplex_basis) {
@@ -1378,6 +1338,91 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
   return return_status;
 }
 
+HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
+                                      const HighsLp& simplex_lp,
+                                      const SimplexBasis& simplex_basis) {
+  // Cheap analysis of a Simplex basis, checking vector sizes, numbers
+  // of basic/nonbasic variables and non-repetition of basic variables
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  // Check consistency of nonbasicFlag
+  if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
+      HighsDebugStatus::LOGICAL_ERROR) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "nonbasicFlag inconsistent");
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  const bool right_size =
+      (int)simplex_basis.basicIndex_.size() == simplex_lp.numRow_;
+  // Check consistency of basicIndex
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "basicIndex size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  // Use localNonbasicFlag so that duplicate entries in basicIndex can
+  // be spotted
+  vector<int> localNonbasicFlag = simplex_basis.nonbasicFlag_;
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+    int iCol = simplex_basis.basicIndex_[iRow];
+    int flag = localNonbasicFlag[iCol];
+    // Indicate that this column has been found in basicIndex
+    localNonbasicFlag[iCol] = -1;
+    if (flag) {
+      // Nonzero value for localNonbasicFlag entry means that column is either
+      if (flag == NONBASIC_FLAG_TRUE) {
+        // Nonbasic...
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Entry basicIndex_[%d] = %d is not basic", iRow, iCol);
+      } else {
+        // .. or is -1 since it has already been found in basicIndex
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Entry basicIndex_[%d] = %d is already basic", iRow,
+                        iCol);
+        assert(flag == -1);
+      }
+      assert(!flag);
+      return_status = HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+  return return_status;
+}
+
+HighsDebugStatus debugNonbasicFlagConsistent(
+    const HighsOptions& options, const HighsLp& simplex_lp,
+    const SimplexBasis& simplex_basis) {
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const bool right_size = (int)simplex_basis.nonbasicFlag_.size() == numTot;
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "nonbasicFlag size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  int num_basic_variables = 0;
+  for (int var = 0; var < numTot; var++) {
+    if (simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_FALSE) {
+      num_basic_variables++;
+    } else {
+      assert(simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_TRUE);
+    }
+  }
+  bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
+  if (!right_num_basic_variables) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "nonbasicFlag has %d, not %d basic variables",
+                    num_basic_variables, simplex_lp.numRow_);
+    assert(right_num_basic_variables);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  return return_status;
+}
+
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase) {
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
@@ -1432,8 +1477,9 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return return_status;
   // Basis and data check
-  if (!basisOk(highs_model_object.options_.logfile, simplex_lp,
-               highs_model_object.simplex_basis_))
+  if (debugBasisConsistent(highs_model_object.options_, simplex_lp,
+                           highs_model_object.simplex_basis_) ==
+      HighsDebugStatus::LOGICAL_ERROR)
     return HighsDebugStatus::LOGICAL_ERROR;
   if (!debugWorkArraysOk(highs_model_object, phase))
     return HighsDebugStatus::LOGICAL_ERROR;
