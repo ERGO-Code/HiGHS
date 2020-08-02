@@ -128,11 +128,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   if (simplex_lp_status.has_basis) {
     // There is a simplex basis: it should be valid - since it's set
     // internally - but check
-    if (debugNonbasicFlagConsistent(highs_model_object.options_, simplex_lp,
-                                    simplex_basis) ==
+    if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
         HighsDebugStatus::LOGICAL_ERROR) {
       HighsLogMessage(
-          highs_model_object.options_.logfile, HighsMessageType::ERROR,
+          options.logfile, HighsMessageType::ERROR,
           "Supposed to be a Simplex basis, but nonbasicFlag not valid");
       highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
@@ -147,12 +146,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     if (basis.valid_) {
       // There is is HiGHS basis: use it to construct nonbasicFlag
       // Allocate memory for nonbasicFlag
-      simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ +
-                                         highs_model_object.lp_.numRow_);
-      if (debugBasisConsistent(highs_model_object.options_,
-                               highs_model_object.lp_,
-                               basis) == HighsDebugStatus::LOGICAL_ERROR) {
-        HighsLogMessage(highs_model_object.options_.logfile,
+      simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+      if (debugBasisConsistent(options, simplex_lp, basis) ==
+	  HighsDebugStatus::LOGICAL_ERROR) {
+        HighsLogMessage(options.logfile,
                         HighsMessageType::ERROR,
                         "Supposed to be a Highs basis, but not valid");
         highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
@@ -235,7 +232,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
           if (simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_FALSE)
             num_basic_structurals++;
         }
-        HighsLogMessage(highs_model_object.options_.logfile,
+        HighsLogMessage(options.logfile,
                         HighsMessageType::INFO,
                         "Crash has created a basis with %d/%d structurals",
                         num_basic_structurals, simplex_lp.numRow_);
@@ -252,18 +249,18 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     }
     // There is now a nonbasicFlag: it should be valid - since it's
     // just been set but check
-    if (debugNonbasicFlagConsistent(highs_model_object.options_, simplex_lp,
+    if (debugNonbasicFlagConsistent(options, simplex_lp,
                                     simplex_basis) ==
         HighsDebugStatus::LOGICAL_ERROR) {
       HighsLogMessage(
-          highs_model_object.options_.logfile, HighsMessageType::ERROR,
+          options.logfile, HighsMessageType::ERROR,
           "Supposed to be a Simplex basis, but nonbasicFlag not valid");
       highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
     }
     // Use nonbasicFlag to form basicIndex
     // Allocate memory for basicIndex
-    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+    simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
     int num_basic_variables = 0;
     simplex_info.num_basic_logicals = 0;
     for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
@@ -298,7 +295,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       !simplex_lp_status.scaling_tried;
   const bool force_no_scaling = false;  // true;//
   if (force_no_scaling) {
-    HighsLogMessage(highs_model_object.options_.logfile,
+    HighsLogMessage(options.logfile,
                     HighsMessageType::WARNING, "Forcing no scaling");
     scale_lp = false;
   }
@@ -309,7 +306,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     // Analyse the scaled LP
     if (simplex_info.analyse_lp) {
-      analyseLp(highs_model_object.lp_, "Unscaled");
+      analyseLp(simplex_lp, "Unscaled");
       HighsScale& scale = highs_model_object.scale_;
       if (scale.is_scaled_) {
         analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
@@ -343,7 +340,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   }
   // Possibly check for basis condition. ToDo Override this for MIP hot start
   bool basis_condition_ok = true;
-  if (highs_model_object.options_.simplex_initial_condition_check) {
+  if (options.simplex_initial_condition_check) {
     basis_condition_ok = basisConditionOk(highs_model_object, "Initial");
   }
   // ToDo Handle ill-conditioned basis with basis crash, in which case
@@ -352,7 +349,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   //  assert(basis_condition_ok);
   if (!basis_condition_ok) {
     // Basis crash really doesn't work, so use logical basis
-    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+    simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
     for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
       simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
     for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
@@ -370,12 +367,12 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     analysis.simplexTimerStart(CrashClock);
     crash.crash(SIMPLEX_CRASH_STRATEGY_BASIC);
     analysis.simplexTimerStop(CrashClock);
-     HighsLogMessage(highs_model_object.options_.logfile,
+     HighsLogMessage(options.logfile,
     HighsMessageType::INFO, "Performed crash to prioritise previously basic
     variables " "in well-conditioned basis");
     // Use nonbasicFlag to form basicIndex
     // Allocate memory for basicIndex
-    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+    simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
     int num_basic_variables = 0;
     simplex_info.num_basic_logicals = 0;
     for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
@@ -391,7 +388,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     // Report on the outcome of crash
     int num_basic_structurals =
         simplex_lp.numRow_ - simplex_info.num_basic_logicals;
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+    HighsLogMessage(options.logfile, HighsMessageType::INFO,
                     "Crash has created a basis with %d/%d structurals",
                     num_basic_structurals, simplex_lp.numRow_);
     // Now reinvert
