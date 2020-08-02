@@ -412,9 +412,15 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   //  if (!simplex_lp_status.has_basis) {
   // Allocate memory for nonbasicMove
   simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+
+  analysis.simplexTimerStart(allocateSimplexArraysClock);
   allocate_work_and_base_arrays(highs_model_object);
+  analysis.simplexTimerStop(allocateSimplexArraysClock);
+
+  analysis.simplexTimerStart(initialiseSimplexCostBoundsClock);
   initialise_cost(highs_model_object);
   initialise_bound(highs_model_object);
+  analysis.simplexTimerStop(initialiseSimplexCostBoundsClock);
 
   analysis.simplexTimerStart(setNonbasicMoveClock);
   // Don't have a simplex basis since nonbasicMove is not set up.

@@ -48,6 +48,8 @@ enum iClockSimplex {
   BasisConditionClock,  //!< Basis condition estimation
   matrixSetupClock,     //!< HMatrix setup
   setNonbasicMoveClock, //!< set nonbasicMove
+  allocateSimplexArraysClock, //!< allocate simplex arrays
+  initialiseSimplexCostBoundsClock, //!< initialise simplex cost and bounds
   
   DseIzClock,           //!< DSE weight initialisation
   InvertClock,          //!< Invert in dual rebuild()
@@ -130,9 +132,10 @@ class SimplexTimer {
     clock[IteratePrimalClock] = timer.clock_def("PRIMAL", "UPR");
     clock[IterateDevexIzClock] = timer.clock_def("DEVEX_IZ", "DVI");
     clock[IteratePivotsClock] = timer.clock_def("PIVOTS", "PIV");
-    clock[initialiseSimplexLpDefinitionClock] = timer.clock_def("IZ_SIMPLEX_LP_DEF", "ISD");
-    clock[initialiseSimplexLpRandomVectorsClock] = timer.clock_def("IZ_SIMPLEX_LP_RAND", "ISR");
     clock[setNonbasicFlagClock] = timer.clock_def("SET_NONBASICFLAG", "SNF");
+    //    clock[] = timer.clock_def("", "");
+    clock[allocateSimplexArraysClock] = timer.clock_def("ALLOC_RSM_ARRAYS", "ISA");
+    clock[initialiseSimplexCostBoundsClock] = timer.clock_def("IZ_RSM_CO_BD", "ISV");
     clock[permuteSimplexLpClock] = timer.clock_def("PERM_SIMPLEX_LP", "PLP");
     clock[setBasicIndexClock] = timer.clock_def("SET_BASICINDEX", "SBI");
     clock[ScaleClock] = timer.clock_def("SCALE", "SCL");
@@ -141,7 +144,8 @@ class SimplexTimer {
     clock[BasisConditionClock] = timer.clock_def("BASIS_CONDITION", "CON");
     clock[matrixSetupClock] = timer.clock_def("MATRIX_SETUP", "FST");
     clock[setNonbasicMoveClock] = timer.clock_def("SET_NONBASICMOVE", "SNM");
-    //    clock[] = timer.clock_def("", "");
+    clock[initialiseSimplexLpDefinitionClock] = timer.clock_def("IZ_SIMPLEX_LP_DEF", "ISD");
+    clock[initialiseSimplexLpRandomVectorsClock] = timer.clock_def("IZ_SIMPLEX_LP_RAND", "ISR");
     clock[DseIzClock] = timer.clock_def("DSE_IZ", "DEI");
     clock[InvertClock] = timer.clock_def("INVERT", "INV");
     clock[PermWtClock] = timer.clock_def("PERM_WT", "PWT");
@@ -151,8 +155,8 @@ class SimplexTimer {
     clock[CollectPrIfsClock] = timer.clock_def("COLLECT_PR_IFS", "IFS");
     clock[ComputePrIfsClock] = timer.clock_def("COMPUTE_PR_IFS", "PIF");
     clock[ComputeDuIfsClock] = timer.clock_def("COMPUTE_DU_IFS", "DIF");
-    clock[ComputeDuObjClock] = timer.clock_def("COMPUTE_DUOBJ", "DOB");
-    clock[ComputePrObjClock] = timer.clock_def("COMPUTE_PROBJ", "POB");
+    clock[ComputeDuObjClock] = timer.clock_def("COMPUTE_DU_OBJ", "DOB");
+    clock[ComputePrObjClock] = timer.clock_def("COMPUTE_PR_OBJ", "POB");
     clock[ReportRebuildClock] = timer.clock_def("REPORT_REBUILD", "RPR");
     clock[ChuzrDualClock] = timer.clock_def("CHUZR_DUAL", "CRD");
     clock[Chuzr1Clock] = timer.clock_def("CHUZR1", "CR1");
@@ -263,7 +267,9 @@ class SimplexTimer {
       initialiseSimplexLpDefinitionClock, initialiseSimplexLpRandomVectorsClock,
 	setNonbasicFlagClock, permuteSimplexLpClock, setBasicIndexClock,
         ScaleClock,           CrashClock, factorSetupClock,
-	BasisConditionClock, matrixSetupClock,setNonbasicMoveClock,
+	BasisConditionClock, matrixSetupClock,
+	allocateSimplexArraysClock, initialiseSimplexCostBoundsClock,
+	setNonbasicMoveClock,
         DseIzClock,           InvertClock,       PermWtClock,
         ComputeDualClock,     CorrectDualClock,  ComputePrimalClock,
         CollectPrIfsClock,    ComputePrIfsClock, ComputeDuIfsClock,
