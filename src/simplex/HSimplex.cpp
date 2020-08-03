@@ -708,8 +708,7 @@ bool dual_infeasible(const double value, const double lower, const double upper,
   return infeasible;
 }
 
-void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
-                                   int XnumNewCol) {
+void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewCol) {
   assert(basis.valid_);
   if (!basis.valid_) {
     printf("\n!!Appending columns to invalid basis!!\n\n");
@@ -733,8 +732,8 @@ void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
   }
 }
 
-void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis,
-                                   int XnumNewCol) {
+void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
+                               int XnumNewCol) {
   // Add nonbasic structurals
   if (XnumNewCol == 0) return;
   int newNumCol = lp.numCol_ + XnumNewCol;
@@ -743,7 +742,7 @@ void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis,
   // Shift the row data in basicIndex and nonbasicFlag if necessary
   for (int row = lp.numRow_ - 1; row >= 0; row--) {
     int col = basis.basicIndex_[row];
-    if (col > lp.numCol_) {
+    if (col >= lp.numCol_) {
       // This basic variable is a row, so shift its index
       basis.basicIndex_[row] += XnumNewCol;
     }
@@ -756,8 +755,7 @@ void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis,
   }
 }
 
-void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis,
-                                int XnumNewRow) {
+void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewRow) {
   assert(basis.valid_);
   if (!basis.valid_) {
     printf("\n!!Appending columns to invalid basis!!\n\n");
@@ -772,8 +770,7 @@ void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis,
   }
 }
 
-void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
-                                int XnumNewRow) {
+void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow) {
   // Add basic logicals
   if (XnumNewRow == 0) return;
 
@@ -1209,7 +1206,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  no_scaling = false; printf("!!!! FORCE SCALING !!!!\n");
+  no_scaling = false;
+  printf("!!!! FORCE SCALING !!!!\n");
   bool scaled_matrix = false;
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling

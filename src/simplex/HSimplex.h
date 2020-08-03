@@ -47,14 +47,12 @@ bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance);
 
-void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
-                                   int XnumNewCol);
-void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis,
-                                   int XnumNewCol);
+void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewCol);
+void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
+                               int XnumNewCol);
 
-void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
-void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
-                                int XnumNewRow);
+void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
+void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow);
 
 void reportBasis(const HighsOptions options, const HighsLp& lp,
                  const HighsBasis& basis);

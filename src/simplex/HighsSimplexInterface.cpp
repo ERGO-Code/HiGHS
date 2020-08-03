@@ -51,11 +51,10 @@ HighsStatus HighsSimplexInterface::addCols(
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
-  // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
-  bool valid_basis = basis.valid_;
-  bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_basis = simplex_lp_status.has_basis;
-  bool scaled_simplex_lp = scale.is_scaled_;
+  bool& valid_basis = basis.valid_;
+  bool& valid_simplex_lp = simplex_lp_status.valid;
+  bool& valid_simplex_basis = simplex_lp_status.has_basis;
+  bool& scaled_simplex_lp = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of rows
@@ -191,9 +190,9 @@ HighsStatus HighsSimplexInterface::addCols(
     }
   }
   // Update the basis correponding to new nonbasic columns
-  if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, XnumNewCol);
+  if (valid_basis) appendNonbasicColsToBasis(lp, basis, XnumNewCol);
   if (valid_simplex_basis)
-    append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, XnumNewCol);
+    appendNonbasicColsToBasis(simplex_lp, simplex_basis, XnumNewCol);
 
   // Deduce the consequences of adding new columns
   highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -234,7 +233,7 @@ HighsStatus HighsSimplexInterface::deleteCols(
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
-  bool valid_simplex_lp = simplex_lp_status.valid;
+  bool& valid_simplex_lp = simplex_lp_status.valid;
   // Keep a copy of the original number of columns to check whether
   // any columns have been removed, and if there is mask to be updated
   int original_num_col = lp.numCol_;
@@ -338,10 +337,10 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
-  bool valid_basis = basis.valid_;
-  bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_basis = simplex_lp_status.has_basis;
-  bool scaled_simplex_lp = scale.is_scaled_;
+  bool& valid_basis = basis.valid_;
+  bool& valid_simplex_lp = simplex_lp_status.valid;
+  bool& valid_simplex_basis = simplex_lp_status.has_basis;
+  bool& scaled_simplex_lp = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of columns
@@ -456,9 +455,9 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     }
   }
   // Update the basis correponding to new basic rows
-  if (valid_basis) append_basic_rows_to_basis(lp, basis, XnumNewRow);
+  if (valid_basis) appendBasicRowsToBasis(lp, basis, XnumNewRow);
   if (valid_simplex_basis)
-    append_basic_rows_to_basis(simplex_lp, simplex_basis, XnumNewRow);
+    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
 
   // Deduce the consequences of adding new rows
   highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
@@ -500,7 +499,7 @@ HighsStatus HighsSimplexInterface::deleteRows(
       highs_model_object.simplex_lp_status_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
-  bool valid_simplex_lp = simplex_lp_status.valid;
+  bool& valid_simplex_lp = simplex_lp_status.valid;
   // Keep a copy of the original number of rows to check whether
   // any rows have been removed, and if there is mask to be updated
   int original_num_row = lp.numRow_;
@@ -775,7 +774,7 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
   //  Xrow, Xcol, XnewValue);
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
-  bool valid_simplex_lp = simplex_lp_status.valid;
+  bool& valid_simplex_lp = simplex_lp_status.valid;
   // Check that if there is no simplex LP then there is no matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_lp_status.has_matrix_col_wise);
