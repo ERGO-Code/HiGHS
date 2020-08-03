@@ -419,6 +419,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   initialiseBound(highs_model_object);
   analysis.simplexTimerStop(initialiseSimplexCostBoundsClock);
 
+  //  setNonbasicWorkValue(simplex_lp, simplex_basis, simplex_info);
+
   // Allocate memory for nonbasicMove
   simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
   analysis.simplexTimerStart(setNonbasicMoveClock);
@@ -638,6 +640,136 @@ void setNonbasicMove(const HighsLp& simplex_lp, const HighsScale& scale,
     assert(move != illegal_move_value);
     simplex_info.workValue_[iVar] = value;
     simplex_basis.nonbasicMove_[iVar] = move;
+  }
+}
+
+void setNonbasicMoveOnly(const HighsLp& simplex_lp, const HighsScale& scale,
+                     const bool have_highs_basis, const HighsBasis& basis,
+                     const bool have_highs_solution,
+                     const HighsSolution& solution,
+                     SimplexBasis& simplex_basis) {
+  // Don't have a simplex basis since nonbasicMove is not set up.
+  const int illegal_move_value = -99;
+
+  // Assign nonbasicMove using as much information as is available
+  double lower;
+  double upper;
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) {
+      // Basic variable
+      simplex_basis.nonbasicMove_[iVar] = 0;
+      continue;
+    }
+    // Nonbasic variable
+    if (iVar < simplex_lp.numCol_) {
+      lower = simplex_lp.colLower_[iVar];
+      upper = simplex_lp.colUpper_[iVar];
+    } else {
+      int iRow = iVar - simplex_lp.numCol_;
+      lower = -simplex_lp.rowUpper_[iRow];
+      upper = -simplex_lp.rowLower_[iRow];
+    }
+    int move = illegal_move_value;
+    if (lower == upper) {
+      // Fixed
+      move = NONBASIC_MOVE_ZE;
+    } else if (!highs_isInfinity(-lower)) {
+      // Finite lower bound so boxed or lower
+      if (!highs_isInfinity(upper)) {
+	// Finite upper bound so boxed
+	//
+	// Determine the bound to set the value to according to, in order of
+	// priority
+	//
+	// 1. Any valid HiGHS basis status
+	if (have_highs_basis) {
+	  if (iVar < simplex_lp.numCol_) {
+	    if (basis.col_status[iVar] == HighsBasisStatus::LOWER) {
+	      move = NONBASIC_MOVE_UP;
+	    } else if (basis.col_status[iVar] == HighsBasisStatus::UPPER) {
+	      move = NONBASIC_MOVE_DN;
+	    }
+	  } else {
+	    int iRow = iVar - simplex_lp.numCol_;
+	    if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
+	      move = NONBASIC_MOVE_DN;
+	    } else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
+	      move = NONBASIC_MOVE_UP;
+	    }
+	  }
+	}
+	// 2. Any HiGHS solution value
+	if (move == illegal_move_value && have_highs_solution) {
+	  // Reach here if there is no HiGHS basis or the HiGHS
+	  // nonbasic status is just NONBASIC.
+	  double midpoint = 0.5 * (lower + upper);
+	  double value_from_highs_solution;
+	  if (iVar < simplex_lp.numCol_) {
+	    assert(!have_highs_basis ||
+		   basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
+	    value_from_highs_solution =
+	      solution.col_value[iVar] / scale.col_[iVar];
+	  } else {
+	    int iRow = iVar - simplex_lp.numCol_;
+	    assert(!have_highs_basis ||
+		   basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
+	    value_from_highs_solution =
+	      -solution.row_value[iRow] * scale.row_[iRow];
+	  }
+	  if (value_from_highs_solution < midpoint) {
+	    move = NONBASIC_MOVE_UP;
+	  } else {
+	    move = NONBASIC_MOVE_DN;
+	  }
+	}
+	// 3. Bound of original LP that is closer to zero
+	if (move == illegal_move_value) {
+	  if (fabs(lower) < fabs(upper)) {
+	    move = NONBASIC_MOVE_UP;
+	  } else {
+	    move = NONBASIC_MOVE_DN;
+	  }
+	}
+      } else {
+	// Lower (since upper bound is infinite)
+	move = NONBASIC_MOVE_UP;
+      }
+    } else if (!highs_isInfinity(upper)) {
+      // Upper
+      move = NONBASIC_MOVE_DN;
+    } else {
+      // FREE
+      move = NONBASIC_MOVE_ZE;
+    }
+    assert(move != illegal_move_value);
+    simplex_basis.nonbasicMove_[iVar] = move;
+  }
+}
+
+void setNonbasicWorkValue(const HighsLp& simplex_lp, 
+			  const SimplexBasis& simplex_basis,
+			  HighsSimplexInfo& simplex_info) {
+  // Assign nonbasic values from bounds and (if necessary) nonbasicMove
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) continue; 
+    // Nonbasic variable
+    const double lower = simplex_info.workLower_[iVar];
+    const double upper = simplex_info.workUpper_[iVar];
+    double value;
+    if (lower == upper) {
+      value = lower;
+    } else if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
+      value = lower;
+    } else if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
+      value = upper;
+    } else {
+      assert(simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE);
+      value = 0;
+    }
+    simplex_info.workValue_[iVar] = value;
   }
 }
 
