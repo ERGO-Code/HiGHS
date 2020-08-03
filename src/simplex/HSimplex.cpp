@@ -718,16 +718,16 @@ void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewCol) {
   int newNumCol = lp.numCol_ + XnumNewCol;
   basis.col_status.resize(newNumCol);
   // Make any new columns nonbasic
-  for (int col = lp.numCol_; col < newNumCol; col++) {
-    if (!highs_isInfinity(-lp.colLower_[col])) {
+  for (int iCol = lp.numCol_; iCol < newNumCol; iCol++) {
+    if (!highs_isInfinity(-lp.colLower_[iCol])) {
       // Has finite lower bound so set it there
-      basis.col_status[col] = HighsBasisStatus::LOWER;
-    } else if (!highs_isInfinity(lp.colUpper_[col])) {
+      basis.col_status[iCol] = HighsBasisStatus::LOWER;
+    } else if (!highs_isInfinity(lp.colUpper_[iCol])) {
       // Has finite upper bound so set it there
-      basis.col_status[col] = HighsBasisStatus::UPPER;
+      basis.col_status[iCol] = HighsBasisStatus::UPPER;
     } else {
       // Free variable so set to zero
-      basis.col_status[col] = HighsBasisStatus::ZERO;
+      basis.col_status[iCol] = HighsBasisStatus::ZERO;
     }
   }
 }
@@ -741,23 +741,23 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
   basis.nonbasicFlag_.resize(newNumTot);
   basis.nonbasicMove_.resize(newNumTot);
   // Shift the row data in basicIndex, nonbasicFlag and nonbasicMove if necessary
-  for (int row = lp.numRow_ - 1; row >= 0; row--) {
-    int col = basis.basicIndex_[row];
-    if (col >= lp.numCol_) {
+  for (int iRow = lp.numRow_ - 1; iRow >= 0; iRow--) {
+    int iCol = basis.basicIndex_[iRow];
+    if (iCol >= lp.numCol_) {
       // This basic variable is a row, so shift its index
-      basis.basicIndex_[row] += XnumNewCol;
+      basis.basicIndex_[iRow] += XnumNewCol;
     }
-    basis.nonbasicFlag_[newNumCol + row] =
-        basis.nonbasicFlag_[lp.numCol_ + row];
-    basis.nonbasicMove_[newNumCol + row] =
-        basis.nonbasicMove_[lp.numCol_ + row];
+    basis.nonbasicFlag_[newNumCol + iRow] =
+        basis.nonbasicFlag_[lp.numCol_ + iRow];
+    basis.nonbasicMove_[newNumCol + iRow] =
+        basis.nonbasicMove_[lp.numCol_ + iRow];
   }
   // Make any new columns nonbasic
   const int illegal_move_value = -99;
-  for (int col = lp.numCol_; col < newNumCol; col++) {
-    basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
-    double lower = lp.colLower_[col];
-    double upper = lp.colUpper_[col];
+  for (int iCol = lp.numCol_; iCol < newNumCol; iCol++) {
+    basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+    double lower = lp.colLower_[iCol];
+    double upper = lp.colUpper_[iCol];
     int move = illegal_move_value;
     if (lower == upper) {
       // Fixed
@@ -783,7 +783,7 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
       move = NONBASIC_MOVE_ZE;
     }
     assert(move != illegal_move_value);
-    basis.nonbasicMove_[col] = move;
+    basis.nonbasicMove_[iCol] = move;
   }
 }
 
@@ -797,8 +797,8 @@ void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewRow) {
   int newNumRow = lp.numRow_ + XnumNewRow;
   basis.row_status.resize(newNumRow);
   // Make the new rows basic
-  for (int row = lp.numRow_; row < newNumRow; row++) {
-    basis.row_status[row] = HighsBasisStatus::BASIC;
+  for (int iRow = lp.numRow_; iRow < newNumRow; iRow++) {
+    basis.row_status[iRow] = HighsBasisStatus::BASIC;
   }
 }
 
@@ -812,10 +812,10 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow) {
   basis.nonbasicMove_.resize(newNumTot);
   basis.basicIndex_.resize(newNumRow);
   // Make the new rows basic
-  for (int row = lp.numRow_; row < newNumRow; row++) {
-    basis.nonbasicFlag_[lp.numCol_ + row] = NONBASIC_FLAG_FALSE;
-    basis.nonbasicMove_[lp.numCol_ + row] = 0;
-    basis.basicIndex_[row] = lp.numCol_ + row;
+  for (int iRow = lp.numRow_; iRow < newNumRow; iRow++) {
+    basis.nonbasicFlag_[lp.numCol_ + iRow] = NONBASIC_FLAG_FALSE;
+    basis.nonbasicMove_[lp.numCol_ + iRow] = 0;
+    basis.basicIndex_[iRow] = lp.numCol_ + iRow;
   }
 }
 
@@ -824,16 +824,16 @@ void reportBasis(const HighsOptions options, const HighsLp& lp,
   if (lp.numCol_ > 0)
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                       "HighsBasis\n   Col Status\n");
-  for (int col = 0; col < lp.numCol_; col++) {
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "%6d %6d\n", col, (int)basis.col_status[col]);
+                      "%6d %6d\n", iCol, (int)basis.col_status[iCol]);
   }
   if (lp.numRow_ > 0)
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                       "   Row Status\n");
-  for (int row = 0; row < lp.numRow_; row++) {
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                      "%6d %6d\n", row, (int)basis.row_status[row]);
+                      "%6d %6d\n", iRow, (int)basis.row_status[iRow]);
   }
 }
 
@@ -842,32 +842,32 @@ void reportBasis(const HighsOptions options, const HighsLp& lp,
   if (lp.numCol_ > 0)
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                       "SimplexBasis\n   Var    Col   Flag\n");
-  for (int col = 0; col < lp.numCol_; col++) {
-    int var = col;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    int var = iCol;
     if (simplex_basis.nonbasicFlag_[var])
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                        "%6d %6d %6d\n", var, col,
+                        "%6d %6d %6d\n", var, iCol,
                         simplex_basis.nonbasicFlag_[var]);
     else
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                        "%6d %6d %6d\n", var, col,
+                        "%6d %6d %6d\n", var, iCol,
                         simplex_basis.nonbasicFlag_[var]);
   }
   if (lp.numRow_ > 0)
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                       "   Var    Row   Flag  Basic\n");
-  for (int row = 0; row < lp.numRow_; row++) {
-    int var = lp.numCol_ + row;
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    int var = lp.numCol_ + iRow;
     if (simplex_basis.nonbasicFlag_[var])
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                        "%6d %6d %6d %6d\n", var, row,
+                        "%6d %6d %6d %6d\n", var, iRow,
                         simplex_basis.nonbasicFlag_[var],
-                        simplex_basis.basicIndex_[row]);
+                        simplex_basis.basicIndex_[iRow]);
     else
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                        "%6d %6d %6d %6d\n", var, row,
+                        "%6d %6d %6d %6d\n", var, iRow,
                         simplex_basis.nonbasicFlag_[var],
-                        simplex_basis.basicIndex_[row]);
+                        simplex_basis.basicIndex_[iRow]);
   }
 }
 
@@ -939,17 +939,17 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   simplex_info.primal_objective_value = 0;
-  for (int row = 0; row < simplex_lp.numRow_; row++) {
-    int var = simplex_basis.basicIndex_[row];
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+    int var = simplex_basis.basicIndex_[iRow];
     if (var < simplex_lp.numCol_) {
       simplex_info.primal_objective_value +=
-          simplex_info.baseValue_[row] * simplex_lp.colCost_[var];
+          simplex_info.baseValue_[iRow] * simplex_lp.colCost_[var];
     }
   }
-  for (int col = 0; col < simplex_lp.numCol_; col++) {
-    if (simplex_basis.nonbasicFlag_[col])
+  for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+    if (simplex_basis.nonbasicFlag_[iCol])
       simplex_info.primal_objective_value +=
-          simplex_info.workValue_[col] * simplex_lp.colCost_[col];
+          simplex_info.workValue_[iCol] * simplex_lp.colCost_[iCol];
   }
   simplex_info.primal_objective_value *= highs_model_object.scale_.cost_;
   // Objective value calculation is done using primal values and
@@ -967,11 +967,11 @@ void getPrimalValue(const HighsModelObject& highs_model_object,
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   // Copy all of workValue to get all the nonbasic values
   primal_value.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
-  for (int col = 0; col < simplex_lp.numCol_ + simplex_lp.numRow_; col++)
-    primal_value[col] = simplex_info.workValue_[col];
+  for (int iCol = 0; iCol < simplex_lp.numCol_ + simplex_lp.numRow_; iCol++)
+    primal_value[iCol] = simplex_info.workValue_[iCol];
   // Over-write the value of the nonbasic variables
-  for (int row = 0; row < simplex_lp.numRow_; row++)
-    primal_value[simplex_basis.basicIndex_[row]] = simplex_info.baseValue_[row];
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
+    primal_value[simplex_basis.basicIndex_[iRow]] = simplex_info.baseValue_[iRow];
 }
 
 void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
@@ -990,9 +990,9 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
                               basic_cost_distribution);
 
   double primal_objective_value = 0;
-  for (int row = 0; row < simplex_lp.numRow_; row++) {
-    int var = simplex_basis.basicIndex_[row];
-    const double value = simplex_info.baseValue_[row];
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+    int var = simplex_basis.basicIndex_[iRow];
+    const double value = simplex_info.baseValue_[iRow];
     updateValueDistribution(value, basic_value_distribution);
     if (var < simplex_lp.numCol_) {
       const double cost = simplex_lp.colCost_[var];
@@ -1011,11 +1011,11 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
                               nonbasic_value_distribution);
   initialiseValueDistribution("Nonzero nonbasic costs", "", 1e-16, 1e16, 10.0,
                               nonbasic_cost_distribution);
-  for (int col = 0; col < simplex_lp.numCol_; col++) {
-    if (simplex_basis.nonbasicFlag_[col]) {
-      const double value = simplex_info.workValue_[col];
+  for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+    if (simplex_basis.nonbasicFlag_[iCol]) {
+      const double value = simplex_info.workValue_[iCol];
       updateValueDistribution(value, nonbasic_value_distribution);
-      const double cost = simplex_lp.colCost_[col];
+      const double cost = simplex_lp.colCost_[iCol];
       if (cost) {
         updateValueDistribution(cost, nonbasic_cost_distribution);
         const double term = value * cost;
@@ -1025,10 +1025,10 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
       }
     }
   }
-  for (int col = simplex_lp.numCol_;
-       col < simplex_lp.numCol_ + simplex_lp.numRow_; col++) {
-    if (simplex_basis.nonbasicFlag_[col]) {
-      const double value = simplex_info.workValue_[col];
+  for (int iCol = simplex_lp.numCol_;
+       iCol < simplex_lp.numCol_ + simplex_lp.numRow_; iCol++) {
+    if (simplex_basis.nonbasicFlag_[iCol]) {
+      const double value = simplex_info.workValue_[iCol];
       updateValueDistribution(value, nonbasic_value_distribution);
     }
   }
