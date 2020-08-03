@@ -136,12 +136,12 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   }
 
   if (simplex_lp_status.has_basis) {
-    const bool simplex_basis_correct = debugSimplexBasisCorrect(highs_model_object) !=
-      HighsDebugStatus::LOGICAL_ERROR;
+    const bool simplex_basis_correct =
+        debugSimplexBasisCorrect(highs_model_object) !=
+        HighsDebugStatus::LOGICAL_ERROR;
     if (!simplex_basis_correct) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Supposed to be a Simplex basis, but incorrect");
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Supposed to be a Simplex basis, but incorrect");
       assert(simplex_basis_correct);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -708,7 +708,7 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   }
   double lower;
   double upper;
-  
+
   for (int iVar = 0; iVar < numTot; iVar++) {
     if (!simplex_basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic variable
@@ -761,7 +761,8 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
       num_fixed_variable_move_errors;
 
   if (num_errors) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
         "There are %d nonbasicMove errors: %d free; %d lower; %d upper; %d "
         "boxed; %d fixed",
         num_errors, num_free_variable_move_errors,
@@ -1357,7 +1358,8 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
   return return_status;
 }
 
-HighsDebugStatus debugSimplexBasisCorrect(const HighsModelObject& highs_model_object) {
+HighsDebugStatus debugSimplexBasisCorrect(
+    const HighsModelObject& highs_model_object) {
   // Nontrivially expensive analysis of a Simplex basis, checking
   // consistency, and then correctness of nonbasicMove
   const HighsOptions& options = highs_model_object.options_;
@@ -1366,22 +1368,23 @@ HighsDebugStatus debugSimplexBasisCorrect(const HighsModelObject& highs_model_ob
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
-  const bool consistent = debugBasisConsistent(options, simplex_lp, simplex_basis) !=
-    HighsDebugStatus::LOGICAL_ERROR;
+  const bool consistent =
+      debugBasisConsistent(options, simplex_lp, simplex_basis) !=
+      HighsDebugStatus::LOGICAL_ERROR;
   if (!consistent) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "Supposed to be a Simplex basis, but not consistent");
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "Supposed to be a Simplex basis, but not consistent");
     assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return return_status;
-  const bool correct_nonbasicMove = debugNonbasicMove(highs_model_object) !=
-    HighsDebugStatus::LOGICAL_ERROR;
+  const bool correct_nonbasicMove =
+      debugNonbasicMove(highs_model_object) != HighsDebugStatus::LOGICAL_ERROR;
   if (!correct_nonbasicMove) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Supposed to be a Simplex basis, but nonbasicMove is incorrect");
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
+        "Supposed to be a Simplex basis, but nonbasicMove is incorrect");
     assert(correct_nonbasicMove);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }

@@ -219,8 +219,9 @@ void reportSimplexLpStatus(
 );
 
 void invalidateSimplexLpBasisArtifacts(
-    HighsSimplexLpStatus& simplex_lp_status  // !< Status of simplex LP whose
-                                             // basis artifacts are to be invalidated
+    HighsSimplexLpStatus&
+        simplex_lp_status  // !< Status of simplex LP whose
+                           // basis artifacts are to be invalidated
 );
 
 void invalidateSimplexLpBasis(
