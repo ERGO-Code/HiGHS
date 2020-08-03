@@ -132,11 +132,11 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   if (simplex_lp_status.has_basis) {
     // There is a simplex basis: it should be valid - since it's set
     // internally - but check
-    if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
+    if (debugSimplexBasisCorrect(highs_model_object) ==
         HighsDebugStatus::LOGICAL_ERROR) {
       HighsLogMessage(
           options.logfile, HighsMessageType::ERROR,
-          "Supposed to be a Simplex basis, but nonbasicFlag not valid");
+          "Supposed to be a Simplex basis, but incorrect");
       highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
     }
@@ -739,7 +739,8 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
   int newNumCol = lp.numCol_ + XnumNewCol;
   int newNumTot = newNumCol + lp.numRow_;
   basis.nonbasicFlag_.resize(newNumTot);
-  // Shift the row data in basicIndex and nonbasicFlag if necessary
+  basis.nonbasicMove_.resize(newNumTot);
+  // Shift the row data in basicIndex, nonbasicFlag and nonbasicMove if necessary
   for (int row = lp.numRow_ - 1; row >= 0; row--) {
     int col = basis.basicIndex_[row];
     if (col >= lp.numCol_) {
@@ -748,10 +749,41 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
     }
     basis.nonbasicFlag_[newNumCol + row] =
         basis.nonbasicFlag_[lp.numCol_ + row];
+    basis.nonbasicMove_[newNumCol + row] =
+        basis.nonbasicMove_[lp.numCol_ + row];
   }
   // Make any new columns nonbasic
+  const int illegal_move_value = -99;
   for (int col = lp.numCol_; col < newNumCol; col++) {
     basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
+    double lower = lp.colLower_[col];
+    double upper = lp.colUpper_[col];
+    int move = illegal_move_value;
+    if (lower == upper) {
+      // Fixed
+      move = NONBASIC_MOVE_ZE;
+    } else if (!highs_isInfinity(-lower)) {
+      // Finite lower bound so boxed or lower
+      if (!highs_isInfinity(upper)) {
+	// Finite upper bound so boxed
+	if (fabs(lower) < fabs(upper)) {
+	  move = NONBASIC_MOVE_UP;
+	} else {
+	  move = NONBASIC_MOVE_DN;
+	}
+      } else {
+	// Lower (since upper bound is infinite)
+	move = NONBASIC_MOVE_UP;
+      }
+    } else if (!highs_isInfinity(upper)) {
+      // Upper
+      move = NONBASIC_MOVE_DN;
+    } else {
+      // FREE
+      move = NONBASIC_MOVE_ZE;
+    }
+    assert(move != illegal_move_value);
+    basis.nonbasicMove_[col] = move;
   }
 }
 
@@ -777,10 +809,12 @@ void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow) {
   int newNumRow = lp.numRow_ + XnumNewRow;
   int newNumTot = lp.numCol_ + newNumRow;
   basis.nonbasicFlag_.resize(newNumTot);
+  basis.nonbasicMove_.resize(newNumTot);
   basis.basicIndex_.resize(newNumRow);
   // Make the new rows basic
   for (int row = lp.numRow_; row < newNumRow; row++) {
     basis.nonbasicFlag_[lp.numCol_ + row] = NONBASIC_FLAG_FALSE;
+    basis.nonbasicMove_[lp.numCol_ + row] = 0;
     basis.basicIndex_[row] = lp.numCol_ + row;
   }
 }
