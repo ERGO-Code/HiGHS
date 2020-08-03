@@ -237,6 +237,11 @@ void reportSimplexLpStatus(
     const char* message = ""  // !< Message to be written in report
 );
 
+void invalidateSimplexLpBasisArtifacts(
+    HighsSimplexLpStatus& simplex_lp_status  // !< Status of simplex LP whose
+                                             // basis artifacts are to be invalidated
+);
+
 void invalidateSimplexLpBasis(
     HighsSimplexLpStatus& simplex_lp_status  // !< Status of simplex LP whose
                                              // basis is to be invalidated

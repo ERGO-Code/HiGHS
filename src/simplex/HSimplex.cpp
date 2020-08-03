@@ -1206,7 +1206,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = false;
+  const bool force_scaling = true;
   if (force_scaling) {
     no_scaling = false;
     printf("!!!! FORCE SCALING !!!!\n");
@@ -3688,10 +3688,8 @@ void reportSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
          simplex_lp_status.has_primal_objective_value);
 }
 
-void invalidateSimplexLpBasis(HighsSimplexLpStatus& simplex_lp_status) {
-  // Invalidate the basis of the simplex LP, and all its other
-  // properties - since they are basis-related
-  simplex_lp_status.has_basis = false;
+void invalidateSimplexLpBasisArtifacts(HighsSimplexLpStatus& simplex_lp_status) {
+  // Invalidate the artifacts of the basis of the simplex LP
   simplex_lp_status.has_matrix_col_wise = false;
   simplex_lp_status.has_matrix_row_wise = false;
   simplex_lp_status.has_factor_arrays = false;
@@ -3703,6 +3701,13 @@ void invalidateSimplexLpBasis(HighsSimplexLpStatus& simplex_lp_status) {
   simplex_lp_status.has_fresh_rebuild = false;
   simplex_lp_status.has_dual_objective_value = false;
   simplex_lp_status.has_primal_objective_value = false;
+}
+
+void invalidateSimplexLpBasis(HighsSimplexLpStatus& simplex_lp_status) {
+  // Invalidate the basis of the simplex LP, and all its other
+  // properties - since they are basis-related
+  simplex_lp_status.has_basis = false;
+  invalidateSimplexLpBasisArtifacts(simplex_lp_status);
 }
 
 void invalidateSimplexLp(HighsSimplexLpStatus& simplex_lp_status) {
@@ -3751,7 +3756,6 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #ifdef HIGHSDEV
       printf(" LpAction::NEW_BOUNDS\n");
 #endif
-      //      simplex_info.simplex_lp_ = true;
       //     initBound();
       //     initValue();
       simplex_lp_status.has_basic_primal_values = false;
@@ -3769,13 +3773,13 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #ifdef HIGHSDEV
       printf(" LpAction::NEW_COLS\n");
 #endif
-      invalidateSimplexLpBasis(simplex_lp_status);
+      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
       break;
     case LpAction::NEW_ROWS:
 #ifdef HIGHSDEV
       printf(" LpAction::NEW_ROWS\n");
 #endif
-      invalidateSimplexLpBasis(simplex_lp_status);
+      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
       break;
     case LpAction::DEL_COLS:
 #ifdef HIGHSDEV
