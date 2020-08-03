@@ -96,47 +96,28 @@ HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
 
 void permuteSimplexLp(HighsModelObject& highs_model);
 
+#ifdef HiGHSDEV
+// Only used to analyse the row and column status after Crash
 void initialise_basic_index(HighsModelObject& highs_model_object);
+#endif
 
-void allocate_work_and_base_arrays(HighsModelObject& highs_model_object);
+void allocateWorkAndBaseArrays(HighsModelObject& highs_model_object);
 
-void initialise_from_nonbasic(HighsModelObject& highs_model_object);
+void initialiseValueAndNonbasicMove(HighsModelObject& highs_model_object);
 
-void replace_from_nonbasic(HighsModelObject& highs_model_object);
+void initialisePhase2ColBound(HighsModelObject& highs_model_object);
 
-void initialise_with_logical_basis(HighsModelObject& highs_model_object);
+void initialisePhase2RowBound(HighsModelObject& highs_model_object);
 
-void initialise_value_from_nonbasic(HighsModelObject& highs_model_object,
-                                    int firstvar, int lastvar);
+void initialiseBound(HighsModelObject& highs_model_object, int phase = 2);
 
-void initialise_value(HighsModelObject& highs_model_object);
+void initialisePhase2ColCost(HighsModelObject& highs_model_object);
 
-void initialise_phase2_col_bound(HighsModelObject& highs_model_object,
-                                 int firstcol, int lastcol);
+void initialisePhase2RowCost(HighsModelObject& highs_model_object);
 
-void initialise_phase2_row_bound(HighsModelObject& highs_model_object,
-                                 int firstrow, int lastrow);
+void initialiseCost(HighsModelObject& highs_model_object, int perturb = 0);
 
-void initialise_bound(HighsModelObject& highs_model_object, int phase = 2);
-
-void initialise_phase2_col_cost(HighsModelObject& highs_model_object,
-                                int firstcol, int lastcol);
-
-void initialise_phase2_row_cost(HighsModelObject& highs_model_object,
-                                int firstrow, int lastrow);
-
-void initialise_cost(HighsModelObject& highs_model_object, int perturb = 0);
-
-int get_nonbasicMove(HighsModelObject& highs_model_object, int var);
-
-void populate_work_arrays(HighsModelObject& highs_model_object);
-
-void replace_with_logical_basis(HighsModelObject& highs_model_object);
-
-void replace_with_new_basis(HighsModelObject& highs_model_object,
-                            const int* XbasicIndex);
-
-void setup_num_basic_logicals(HighsModelObject& highs_model_object);
+void populateWorkArrays(HighsModelObject& highs_model_object);
 
 #ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object);

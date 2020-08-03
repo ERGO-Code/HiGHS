@@ -63,7 +63,7 @@ HighsStatus HQPrimal::solve() {
   // initParallel();
 
   // ToDo primal simplex version
-  // initialise_cost(workHMO, 1); //  model->initCost(1);
+  // initialiseCost(workHMO, 1); //  model->initCost(1);
   assert(simplex_lp_status.has_fresh_invert);
   if (!simplex_lp_status.has_fresh_invert) {
     printf(

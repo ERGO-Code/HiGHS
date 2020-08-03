@@ -1574,8 +1574,6 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
     if (error_found) return;
   }
   assert(num_basic == lp.numRow_);
-  //  populate_work_arrays(highs_model_object); // Why might this have been done
-  //  here?
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
   simplex_lp_status.has_basis = true;
 }
