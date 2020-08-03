@@ -393,7 +393,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   }
 
   // Now there are nonbasicFlag and basicIndex corresponding to a
-  // basis with well-conditioned invertible representation
+  // basis with well-conditioned invertible representation - and
+  // corresponding nonbasicMove if simplex_lp_status.has_basis is true
   //
   // Possibly set up the HMatrix column-wise and row-wise copies of the matrix
   if (!simplex_lp_status.has_matrix_col_wise ||
@@ -406,10 +407,17 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     simplex_lp_status.has_matrix_row_wise = true;
     analysis.simplexTimerStop(matrixSetupClock);
   }
-  // Possibly set up the simplex work and base arrays
-  // ToDo Stop doing this always
-  //  if (!simplex_lp_status.has_basis) {
+  // If simplex basis isn't complete, set up nonbasicMove
+  if (!simplex_lp_status.has_basis) {
+    analysis.simplexTimerStart(setNonbasicMoveClock);
+    simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+    setNonbasicMove(simplex_lp, scale, have_highs_basis, basis,
+                    have_highs_solution, solution, simplex_basis);
+    simplex_lp_status.has_basis = true;
+    analysis.simplexTimerStop(setNonbasicMoveClock);
+  }
 
+  // Set up the simplex work and base arrays
   analysis.simplexTimerStart(allocateSimplexArraysClock);
   allocateWorkAndBaseArrays(highs_model_object);
   analysis.simplexTimerStop(allocateSimplexArraysClock);
@@ -419,20 +427,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   initialiseBound(highs_model_object);
   analysis.simplexTimerStop(initialiseSimplexCostBoundsClock);
 
-  //  setNonbasicWorkValue(simplex_lp, simplex_basis, simplex_info);
-
-  // Allocate memory for nonbasicMove
-  simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
-  analysis.simplexTimerStart(setNonbasicMoveClock);
-  setNonbasicMove(simplex_lp, scale, have_highs_basis, basis,
-                  have_highs_solution, solution, simplex_info, simplex_basis);
-  analysis.simplexTimerStop(setNonbasicMoveClock);
-  // Simplex basis is now valid
-  simplex_lp_status.has_basis = true;
-
   // Possibly solve for the basic primal and nonbasic dual values to determine
   // which simplex solver to use, unless it's forced
   //  if (simplex_lp_status.has_basic_primal_values) {
+  initialiseNonbasicWorkValue(simplex_lp, simplex_basis, simplex_info);
   analysis.simplexTimerStart(ComputePrimalClock);
   computePrimal(highs_model_object);
   analysis.simplexTimerStop(ComputePrimalClock);
@@ -445,10 +443,9 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
 
-  // If there is a HiGHS solution then determine the changes in basic
-  // and nonbasic values and duals for columns and rows
   if (have_highs_solution) {
-    //    analyseSimplexAndHighsSolutionDifferences(highs_model_object);
+    // There is a HiGHS solution so possibly determine the changes in
+    // basic and nonbasic values and duals for columns and rows
     if (debugSimplexHighsSolutionDifferences(highs_model_object) ==
         HighsDebugStatus::LOGICAL_ERROR)
       return HighsStatus::Error;
@@ -527,126 +524,6 @@ void setNonbasicMove(const HighsLp& simplex_lp, const HighsScale& scale,
                      const bool have_highs_basis, const HighsBasis& basis,
                      const bool have_highs_solution,
                      const HighsSolution& solution,
-                     HighsSimplexInfo& simplex_info,
-                     SimplexBasis& simplex_basis) {
-  // Don't have a simplex basis since nonbasicMove is not set up.
-  const int illegal_move_value = -99;
-
-  // Assign nonbasic values and status using as much information as is available
-  double lower;
-  double upper;
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-
-  for (int iVar = 0; iVar < numTot; iVar++) {
-    if (!simplex_basis.nonbasicFlag_[iVar]) {
-      // Basic variable
-      simplex_basis.nonbasicMove_[iVar] = 0;
-      continue;
-    }
-    // Nonbasic variable
-    if (iVar < simplex_lp.numCol_) {
-      lower = simplex_lp.colLower_[iVar];
-      upper = simplex_lp.colUpper_[iVar];
-    } else {
-      int iRow = iVar - simplex_lp.numCol_;
-      lower = -simplex_lp.rowUpper_[iRow];
-      upper = -simplex_lp.rowLower_[iRow];
-    }
-    int move = illegal_move_value;
-    double value;
-    if (lower == upper) {
-      // Fixed
-      value = lower;
-      move = NONBASIC_MOVE_ZE;
-    } else if (!highs_isInfinity(-lower)) {
-      // Finite lower bound so boxed or lower
-      if (!highs_isInfinity(upper)) {
-	// Finite upper bound so boxed
-	//
-	// Determine the bound to set the value to according to, in order of
-	// priority
-	//
-	// 1. Any valid HiGHS basis status
-	if (have_highs_basis) {
-	  if (iVar < simplex_lp.numCol_) {
-	    if (basis.col_status[iVar] == HighsBasisStatus::LOWER) {
-	      move = NONBASIC_MOVE_UP;
-	      value = lower;
-	    } else if (basis.col_status[iVar] == HighsBasisStatus::UPPER) {
-	      move = NONBASIC_MOVE_DN;
-	      value = upper;
-	    }
-	  } else {
-	    int iRow = iVar - simplex_lp.numCol_;
-	    if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
-	      move = NONBASIC_MOVE_DN;
-	      value = upper;
-	    } else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
-	      move = NONBASIC_MOVE_UP;
-	      value = lower;
-	    }
-	  }
-	}
-	// 2. Any HiGHS solution value
-	if (move == illegal_move_value && have_highs_solution) {
-	  // Reach here if there is no HiGHS basis or the HiGHS
-	  // nonbasic status is just NONBASIC.
-	  double midpoint = 0.5 * (lower + upper);
-	  double value_from_highs_solution;
-	  if (iVar < simplex_lp.numCol_) {
-	    assert(!have_highs_basis ||
-		   basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
-	    value_from_highs_solution =
-	      solution.col_value[iVar] / scale.col_[iVar];
-	  } else {
-	    int iRow = iVar - simplex_lp.numCol_;
-	    assert(!have_highs_basis ||
-		   basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
-	    value_from_highs_solution =
-	      -solution.row_value[iRow] * scale.row_[iRow];
-	  }
-	  if (value_from_highs_solution < midpoint) {
-	    move = NONBASIC_MOVE_UP;
-	    value = lower;
-	  } else {
-	    move = NONBASIC_MOVE_DN;
-	    value = upper;
-	  }
-	}
-	// 3. Bound of original LP that is closer to zero
-	if (move == illegal_move_value) {
-	  if (fabs(lower) < fabs(upper)) {
-	    move = NONBASIC_MOVE_UP;
-	    value = lower;
-	  } else {
-	    move = NONBASIC_MOVE_DN;
-	    value = upper;
-	  }
-	}
-      } else {
-	// Lower (since upper bound is infinite)
-	move = NONBASIC_MOVE_UP;
-	value = lower;
-      }
-    } else if (!highs_isInfinity(upper)) {
-      // Upper
-      move = NONBASIC_MOVE_DN;
-      value = upper;
-    } else {
-      // FREE
-      move = NONBASIC_MOVE_ZE;
-      value = 0;
-    }
-    assert(move != illegal_move_value);
-    simplex_info.workValue_[iVar] = value;
-    simplex_basis.nonbasicMove_[iVar] = move;
-  }
-}
-
-void setNonbasicMoveOnly(const HighsLp& simplex_lp, const HighsScale& scale,
-                     const bool have_highs_basis, const HighsBasis& basis,
-                     const bool have_highs_solution,
-                     const HighsSolution& solution,
                      SimplexBasis& simplex_basis) {
   // Don't have a simplex basis since nonbasicMove is not set up.
   const int illegal_move_value = -99;
@@ -678,63 +555,63 @@ void setNonbasicMoveOnly(const HighsLp& simplex_lp, const HighsScale& scale,
     } else if (!highs_isInfinity(-lower)) {
       // Finite lower bound so boxed or lower
       if (!highs_isInfinity(upper)) {
-	// Finite upper bound so boxed
-	//
-	// Determine the bound to set the value to according to, in order of
-	// priority
-	//
-	// 1. Any valid HiGHS basis status
-	if (have_highs_basis) {
-	  if (iVar < simplex_lp.numCol_) {
-	    if (basis.col_status[iVar] == HighsBasisStatus::LOWER) {
-	      move = NONBASIC_MOVE_UP;
-	    } else if (basis.col_status[iVar] == HighsBasisStatus::UPPER) {
-	      move = NONBASIC_MOVE_DN;
-	    }
-	  } else {
-	    int iRow = iVar - simplex_lp.numCol_;
-	    if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
-	      move = NONBASIC_MOVE_DN;
-	    } else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
-	      move = NONBASIC_MOVE_UP;
-	    }
-	  }
-	}
-	// 2. Any HiGHS solution value
-	if (move == illegal_move_value && have_highs_solution) {
-	  // Reach here if there is no HiGHS basis or the HiGHS
-	  // nonbasic status is just NONBASIC.
-	  double midpoint = 0.5 * (lower + upper);
-	  double value_from_highs_solution;
-	  if (iVar < simplex_lp.numCol_) {
-	    assert(!have_highs_basis ||
-		   basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
-	    value_from_highs_solution =
-	      solution.col_value[iVar] / scale.col_[iVar];
-	  } else {
-	    int iRow = iVar - simplex_lp.numCol_;
-	    assert(!have_highs_basis ||
-		   basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
-	    value_from_highs_solution =
-	      -solution.row_value[iRow] * scale.row_[iRow];
-	  }
-	  if (value_from_highs_solution < midpoint) {
-	    move = NONBASIC_MOVE_UP;
-	  } else {
-	    move = NONBASIC_MOVE_DN;
-	  }
-	}
-	// 3. Bound of original LP that is closer to zero
-	if (move == illegal_move_value) {
-	  if (fabs(lower) < fabs(upper)) {
-	    move = NONBASIC_MOVE_UP;
-	  } else {
-	    move = NONBASIC_MOVE_DN;
-	  }
-	}
+        // Finite upper bound so boxed
+        //
+        // Determine the bound to set the value to according to, in order of
+        // priority
+        //
+        // 1. Any valid HiGHS basis status
+        if (have_highs_basis) {
+          if (iVar < simplex_lp.numCol_) {
+            if (basis.col_status[iVar] == HighsBasisStatus::LOWER) {
+              move = NONBASIC_MOVE_UP;
+            } else if (basis.col_status[iVar] == HighsBasisStatus::UPPER) {
+              move = NONBASIC_MOVE_DN;
+            }
+          } else {
+            int iRow = iVar - simplex_lp.numCol_;
+            if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
+              move = NONBASIC_MOVE_DN;
+            } else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
+              move = NONBASIC_MOVE_UP;
+            }
+          }
+        }
+        // 2. Any HiGHS solution value
+        if (move == illegal_move_value && have_highs_solution) {
+          // Reach here if there is no HiGHS basis or the HiGHS
+          // nonbasic status is just NONBASIC.
+          double midpoint = 0.5 * (lower + upper);
+          double value_from_highs_solution;
+          if (iVar < simplex_lp.numCol_) {
+            assert(!have_highs_basis ||
+                   basis.col_status[iVar] == HighsBasisStatus::NONBASIC);
+            value_from_highs_solution =
+                solution.col_value[iVar] / scale.col_[iVar];
+          } else {
+            int iRow = iVar - simplex_lp.numCol_;
+            assert(!have_highs_basis ||
+                   basis.row_status[iRow] == HighsBasisStatus::NONBASIC);
+            value_from_highs_solution =
+                -solution.row_value[iRow] * scale.row_[iRow];
+          }
+          if (value_from_highs_solution < midpoint) {
+            move = NONBASIC_MOVE_UP;
+          } else {
+            move = NONBASIC_MOVE_DN;
+          }
+        }
+        // 3. Bound of original LP that is closer to zero
+        if (move == illegal_move_value) {
+          if (fabs(lower) < fabs(upper)) {
+            move = NONBASIC_MOVE_UP;
+          } else {
+            move = NONBASIC_MOVE_DN;
+          }
+        }
       } else {
-	// Lower (since upper bound is infinite)
-	move = NONBASIC_MOVE_UP;
+        // Lower (since upper bound is infinite)
+        move = NONBASIC_MOVE_UP;
       }
     } else if (!highs_isInfinity(upper)) {
       // Upper
@@ -748,13 +625,13 @@ void setNonbasicMoveOnly(const HighsLp& simplex_lp, const HighsScale& scale,
   }
 }
 
-void setNonbasicWorkValue(const HighsLp& simplex_lp, 
-			  const SimplexBasis& simplex_basis,
-			  HighsSimplexInfo& simplex_info) {
+void initialiseNonbasicWorkValue(const HighsLp& simplex_lp,
+                                 const SimplexBasis& simplex_basis,
+                                 HighsSimplexInfo& simplex_info) {
   // Assign nonbasic values from bounds and (if necessary) nonbasicMove
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int iVar = 0; iVar < numTot; iVar++) {
-    if (!simplex_basis.nonbasicFlag_[iVar]) continue; 
+    if (!simplex_basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic variable
     const double lower = simplex_info.workLower_[iVar];
     const double upper = simplex_info.workUpper_[iVar];
@@ -781,7 +658,7 @@ bool basisConditionOk(HighsModelObject& highs_model_object,
   double basis_condition = computeBasisCondition(highs_model_object);
   analysis.simplexTimerStop(BasisConditionClock);
   double basis_condition_tolerance =
-    highs_model_object.options_.simplex_initial_condition_tolerance;
+      highs_model_object.options_.simplex_initial_condition_tolerance;
   basis_condition_ok = basis_condition < basis_condition_tolerance;
   HighsMessageType message_type = HighsMessageType::INFO;
   std::string condition_comment;
@@ -792,9 +669,9 @@ bool basisConditionOk(HighsModelObject& highs_model_object,
     condition_comment = "exceeds";
   }
   HighsLogMessage(
-		  highs_model_object.options_.logfile, message_type,
-		  "Initial basis condition estimate of %11.4g %s the tolerance of %g",
-		  basis_condition, condition_comment.c_str(), basis_condition_tolerance);
+      highs_model_object.options_.logfile, message_type,
+      "Initial basis condition estimate of %11.4g %s the tolerance of %g",
+      basis_condition, condition_comment.c_str(), basis_condition_tolerance);
   return basis_condition_ok;
 }
 bool dual_infeasible(const double value, const double lower, const double upper,
@@ -889,9 +766,9 @@ void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
       basis.basicIndex_[iRow] += XnumNewCol;
     }
     basis.nonbasicFlag_[newNumCol + iRow] =
-      basis.nonbasicFlag_[lp.numCol_ + iRow];
+        basis.nonbasicFlag_[lp.numCol_ + iRow];
     basis.nonbasicMove_[newNumCol + iRow] =
-      basis.nonbasicMove_[lp.numCol_ + iRow];
+        basis.nonbasicMove_[lp.numCol_ + iRow];
   }
   // Make any new columns nonbasic
   const int illegal_move_value = -99;
@@ -946,7 +823,7 @@ void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewRow) {
 void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow) {
   // Add basic logicals
   if (XnumNewRow == 0) return;
-  
+
   int newNumRow = lp.numRow_ + XnumNewRow;
   int newNumTot = lp.numCol_ + newNumRow;
   basis.nonbasicFlag_.resize(newNumTot);
@@ -1021,17 +898,17 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
-    highs_model_object.simplex_lp_status_;
-  
+      highs_model_object.simplex_lp_status_;
+
   simplex_info.dual_objective_value = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (highs_model_object.simplex_basis_.nonbasicFlag_[i]) {
       const double term =
-	simplex_info.workValue_[i] * simplex_info.workDual_[i];
+          simplex_info.workValue_[i] * simplex_info.workDual_[i];
       if (term) {
         simplex_info.dual_objective_value +=
-	  simplex_info.workValue_[i] * simplex_info.workDual_[i];
+            simplex_info.workValue_[i] * simplex_info.workDual_[i];
       }
     }
   }
@@ -1043,7 +920,7 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
     // shift is subtracted. Hence the shift is added according to the
     // sign implied by sense_
     simplex_info.dual_objective_value +=
-      ((int)simplex_lp.sense_) * simplex_lp.offset_;
+        ((int)simplex_lp.sense_) * simplex_lp.offset_;
   }
   // Now have dual objective value
   simplex_lp_status.has_dual_objective_value = true;
@@ -1078,19 +955,19 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexLpStatus& simplex_lp_status =
-    highs_model_object.simplex_lp_status_;
+      highs_model_object.simplex_lp_status_;
   simplex_info.primal_objective_value = 0;
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
     int iVar = simplex_basis.basicIndex_[iRow];
     if (iVar < simplex_lp.numCol_) {
       simplex_info.primal_objective_value +=
-	simplex_info.baseValue_[iRow] * simplex_lp.colCost_[iVar];
+          simplex_info.baseValue_[iRow] * simplex_lp.colCost_[iVar];
     }
   }
   for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
     if (simplex_basis.nonbasicFlag_[iCol])
       simplex_info.primal_objective_value +=
-	simplex_info.workValue_[iCol] * simplex_lp.colCost_[iCol];
+          simplex_info.workValue_[iCol] * simplex_lp.colCost_[iCol];
   }
   simplex_info.primal_objective_value *= highs_model_object.scale_.cost_;
   // Objective value calculation is done using primal values and
@@ -1113,14 +990,14 @@ void getPrimalValue(const HighsModelObject& highs_model_object,
   // Over-write the value of the nonbasic variables
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
     primal_value[simplex_basis.basicIndex_[iRow]] =
-      simplex_info.baseValue_[iRow];
+        simplex_info.baseValue_[iRow];
 }
 
 void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  
+
   HighsValueDistribution objective_value_term_distribution;
   HighsValueDistribution basic_value_distribution;
   HighsValueDistribution basic_cost_distribution;
@@ -1130,7 +1007,7 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
                               basic_value_distribution);
   initialiseValueDistribution("Nonzero basic costs", "", 1e-16, 1e16, 10.0,
                               basic_cost_distribution);
-  
+
   double primal_objective_value = 0;
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
     int iVar = simplex_basis.basicIndex_[iRow];
@@ -1192,7 +1069,7 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
 
 void initialiseSimplexLpDefinition(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status =
-    highs_model_object.simplex_lp_status_;
+      highs_model_object.simplex_lp_status_;
   // Ensure that the simplex LP is fully invalidated
   invalidateSimplexLp(simplex_lp_status);
   // Copy the LP to the structure to be used by the solver
@@ -1203,7 +1080,7 @@ void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const int numCol = highs_model_object.simplex_lp_.numCol_;
   const int numTot = highs_model_object.simplex_lp_.numCol_ +
-    highs_model_object.simplex_lp_.numRow_;
+                     highs_model_object.simplex_lp_.numRow_;
   // Instantiate and (re-)initialise the random number generator
   HighsRandom& random = highs_model_object.random_;
   random.initialise();
@@ -1216,7 +1093,7 @@ void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
     int j = random.integer() % (i + 1);
     std::swap(numColPermutation[i], numColPermutation[j]);
   }
-  
+
   // Re-initialise the random number generator and generate the
   // random vectors in the same order as hsol to maintain repeatable
   // performance
@@ -1230,7 +1107,7 @@ void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
     int j = random.integer() % (i + 1);
     std::swap(numTotPermutation[i], numTotPermutation[j]);
   }
-  
+
   // Generate a vector of random reals
   simplex_info.numTotRandomValue_.resize(numTot);
   double* numTotRandomValue = &simplex_info.numTotRandomValue_[0];
@@ -1262,14 +1139,14 @@ void scaleHighsModelInit(HighsModelObject& highs_model_object) {
 void scaleCosts(HighsModelObject& highs_model_object) {
   // Scale the costs by no less than minAlwCostScale
   double max_allowed_cost_scale =
-    pow(2.0, highs_model_object.options_.allowed_simplex_cost_scale_factor);
+      pow(2.0, highs_model_object.options_.allowed_simplex_cost_scale_factor);
   double cost_scale;
   double max_nonzero_cost = 0;
   for (int iCol = 0; iCol < highs_model_object.simplex_lp_.numCol_; iCol++) {
     if (highs_model_object.simplex_lp_.colCost_[iCol]) {
       max_nonzero_cost =
-	max(fabs(highs_model_object.simplex_lp_.colCost_[iCol]),
-	    max_nonzero_cost);
+          max(fabs(highs_model_object.simplex_lp_.colCost_[iCol]),
+              max_nonzero_cost);
     }
   }
   // Scaling the costs up effectively increases the dual tolerance to
@@ -1294,7 +1171,7 @@ void scaleCosts(HighsModelObject& highs_model_object) {
     highs_model_object.simplex_lp_.colCost_[iCol] /= cost_scale;
   }
   max_nonzero_cost /= cost_scale;
-  
+
 #ifdef HiGHSDEV
   /*
     bool alwLargeCostScaling = false;
@@ -1345,7 +1222,7 @@ void scaleFactorRanges(HighsModelObject& highs_model_object,
 void scaleSimplexLp(HighsModelObject& highs_model_object) {
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
-    highs_model_object.simplex_lp_status_;
+      highs_model_object.simplex_lp_status_;
   if (simplex_lp_status.scaling_tried) return;
   // Scale the LP highs_model_object.simplex_lp_, assuming all data are in place
   HighsScale& scale = highs_model_object.scale_;
@@ -1362,12 +1239,12 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   double* colUpper = &highs_model_object.simplex_lp_.colUpper_[0];
   double* rowLower = &highs_model_object.simplex_lp_.rowLower_[0];
   double* rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
-  
+
   // Allow a switch to/from the original scaling rules
   int simplex_scale_strategy =
-    highs_model_object.options_.simplex_scale_strategy;
+      highs_model_object.options_.simplex_scale_strategy;
   bool allow_cost_scaling =
-    highs_model_object.options_.allowed_simplex_cost_scale_factor > 0;
+      highs_model_object.options_.allowed_simplex_cost_scale_factor > 0;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
@@ -1380,9 +1257,9 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     original_matrix_max_value = max(original_matrix_max_value, value);
   }
   bool no_scaling =
-    (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
-    (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = true;//  false;  // 
+      (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
+      (original_matrix_max_value <= no_scaling_original_matrix_max_value);
+  const bool force_scaling = false;  // true;  //
   if (force_scaling) {
     no_scaling = false;
     printf("!!!! FORCE SCALING !!!!\n");
@@ -1398,8 +1275,8 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
                     no_scaling_original_matrix_max_value);
   } else {
     const bool equilibration_scaling =
-      simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS ||
-      simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
+        simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS ||
+        simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
     if (equilibration_scaling) {
       scaled_matrix = equilibrationScaleMatrix(highs_model_object);
     } else {
@@ -1421,11 +1298,11 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   }
   // Possibly scale the costs
   if (allow_cost_scaling) scaleCosts(highs_model_object);
-  
+
   // If matrix is unscaled, then LP is only scaled if there is a cost scaling
   // factor
   if (!scaled_matrix) scale.is_scaled_ = scale.cost_ != 1;
-  
+
   // Deduce the consequences of scaling the LP
   if (scale.is_scaled_)
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
@@ -1441,10 +1318,10 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
   int* Aindex = &highs_model_object.simplex_lp_.Aindex_[0];
   double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
   double* colCost = &highs_model_object.simplex_lp_.colCost_[0];
-  
+
   int simplex_scale_strategy =
-    highs_model_object.options_.simplex_scale_strategy;
-  
+      highs_model_object.options_.simplex_scale_strategy;
+
   double original_matrix_min_value = HIGHS_CONST_INF;
   double original_matrix_max_value = 0;
   for (int k = 0, AnX = Astart[numCol]; k < AnX; k++) {
@@ -1452,7 +1329,7 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
     original_matrix_min_value = min(original_matrix_min_value, value);
     original_matrix_max_value = max(original_matrix_max_value, value);
   }
-  
+
   // Include cost in scaling if minimum nonzero cost is less than 0.1
   double min_nonzero_cost = HIGHS_CONST_INF;
   for (int i = 0; i < numCol; i++) {
@@ -1460,7 +1337,7 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
   }
   bool include_cost_in_scaling = false;
   include_cost_in_scaling = min_nonzero_cost < 0.1;
-  
+
   // Limits on scaling factors
   double max_allow_scale;
   double min_allow_scale;
@@ -1469,14 +1346,14 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
   // work so, in recognition, use the old value of HIGHS_CONST_INF
   const double finite_infinity = 1e200;
   max_allow_scale =
-					       pow(2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);
+      pow(2.0, highs_model_object.options_.allowed_simplex_matrix_scale_factor);
   min_allow_scale = 1 / max_allow_scale;
-  
+
   double min_allow_col_scale = min_allow_scale;
   double max_allow_col_scale = max_allow_scale;
   double min_allow_row_scale = min_allow_scale;
   double max_allow_row_scale = max_allow_scale;
-  
+
   // Search up to 6 times
   vector<double> row_min_value(numRow, finite_infinity);
   vector<double> row_max_value(numRow, 1 / finite_infinity);
@@ -1499,7 +1376,7 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
       double col_equilibration = 1 / sqrt(col_min_value * col_max_value);
       // Ensure that column scale factor is not excessively large or small
       colScale[iCol] =
-	min(max(min_allow_col_scale, col_equilibration), max_allow_col_scale);
+          min(max(min_allow_col_scale, col_equilibration), max_allow_col_scale);
       // For row scale (only collect)
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
         int iRow = Aindex[k];
@@ -1511,10 +1388,10 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
     // For row scale (find)
     for (int iRow = 0; iRow < numRow; iRow++) {
       double row_equilibration =
-	1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
+          1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
       // Ensure that row scale factor is not excessively large or small
       rowScale[iRow] =
-	min(max(min_allow_row_scale, row_equilibration), max_allow_row_scale);
+          min(max(min_allow_row_scale, row_equilibration), max_allow_row_scale);
     }
     row_min_value.assign(numRow, finite_infinity);
     row_max_value.assign(numRow, 1 / finite_infinity);
@@ -1566,9 +1443,9 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
       original_col_min_value = min(original_value, original_col_min_value);
       original_col_max_value = max(original_value, original_col_max_value);
       original_row_min_value[iRow] =
-	min(original_row_min_value[iRow], original_value);
+          min(original_row_min_value[iRow], original_value);
       original_row_max_value[iRow] =
-	max(original_row_max_value[iRow], original_value);
+          max(original_row_max_value[iRow], original_value);
       Avalue[k] *= (colScale[iCol] * rowScale[iRow]);
       const double value = fabs(Avalue[k]);
       col_min_value = min(value, col_min_value);
@@ -1578,87 +1455,87 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
     }
     matrix_min_value = min(matrix_min_value, col_min_value);
     matrix_max_value = max(matrix_max_value, col_max_value);
-    
+
     const double original_col_equilibration =
-      1 / sqrt(original_col_min_value * original_col_max_value);
+        1 / sqrt(original_col_min_value * original_col_max_value);
     min_original_col_equilibration =
-      min(original_col_equilibration, min_original_col_equilibration);
+        min(original_col_equilibration, min_original_col_equilibration);
     sum_original_log_col_equilibration += log(original_col_equilibration);
     max_original_col_equilibration =
-      max(original_col_equilibration, max_original_col_equilibration);
+        max(original_col_equilibration, max_original_col_equilibration);
     const double col_equilibration = 1 / sqrt(col_min_value * col_max_value);
     min_col_equilibration = min(col_equilibration, min_col_equilibration);
     sum_log_col_equilibration += log(col_equilibration);
     max_col_equilibration = max(col_equilibration, max_col_equilibration);
   }
-  
+
   for (int iRow = 0; iRow < numRow; iRow++) {
     const double original_row_equilibration =
-      1 / sqrt(original_row_min_value[iRow] * original_row_max_value[iRow]);
+        1 / sqrt(original_row_min_value[iRow] * original_row_max_value[iRow]);
     min_original_row_equilibration =
-      min(original_row_equilibration, min_original_row_equilibration);
+        min(original_row_equilibration, min_original_row_equilibration);
     sum_original_log_row_equilibration += log(original_row_equilibration);
     max_original_row_equilibration =
-      max(original_row_equilibration, max_original_row_equilibration);
+        max(original_row_equilibration, max_original_row_equilibration);
     const double row_equilibration =
-      1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
+        1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
     min_row_equilibration = min(row_equilibration, min_row_equilibration);
     sum_log_row_equilibration += log(row_equilibration);
     max_row_equilibration = max(row_equilibration, max_row_equilibration);
   }
   const double geomean_original_col_equilibration =
-    exp(sum_original_log_col_equilibration / numCol);
+      exp(sum_original_log_col_equilibration / numCol);
   const double geomean_original_row_equilibration =
-    exp(sum_original_log_row_equilibration / numRow);
+      exp(sum_original_log_row_equilibration / numRow);
   const double geomean_col_equilibration =
-    exp(sum_log_col_equilibration / numCol);
+      exp(sum_log_col_equilibration / numCol);
   const double geomean_row_equilibration =
-    exp(sum_log_row_equilibration / numRow);
+      exp(sum_log_row_equilibration / numRow);
 #ifdef HiGHSDEV
   HighsLogMessage(
-		  highs_model_object.options_.logfile, HighsMessageType::INFO,
-		  "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
-		  "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)",
-		  min_original_col_equilibration, geomean_original_col_equilibration,
-		  max_original_col_equilibration, min_original_row_equilibration,
-		  geomean_original_row_equilibration, max_original_row_equilibration);
+      highs_model_object.options_.logfile, HighsMessageType::INFO,
+      "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
+      "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)",
+      min_original_col_equilibration, geomean_original_col_equilibration,
+      max_original_col_equilibration, min_original_row_equilibration,
+      geomean_original_row_equilibration, max_original_row_equilibration);
   HighsLogMessage(
-		  highs_model_object.options_.logfile, HighsMessageType::INFO,
-		  "Scaling: Final    equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
-		  "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)",
-		  min_col_equilibration, geomean_col_equilibration, max_col_equilibration,
-		  min_row_equilibration, geomean_row_equilibration, max_row_equilibration);
+      highs_model_object.options_.logfile, HighsMessageType::INFO,
+      "Scaling: Final    equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
+      "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)",
+      min_col_equilibration, geomean_col_equilibration, max_col_equilibration,
+      min_row_equilibration, geomean_row_equilibration, max_row_equilibration);
 #endif
-  
+
   // Compute the mean equilibration improvement
   const double geomean_original_col =
-    max(geomean_original_col_equilibration,
-	1 / geomean_original_col_equilibration);
+      max(geomean_original_col_equilibration,
+          1 / geomean_original_col_equilibration);
   const double geomean_original_row =
-    max(geomean_original_row_equilibration,
-	1 / geomean_original_row_equilibration);
+      max(geomean_original_row_equilibration,
+          1 / geomean_original_row_equilibration);
   const double geomean_col =
-    max(geomean_col_equilibration, 1 / geomean_col_equilibration);
+      max(geomean_col_equilibration, 1 / geomean_col_equilibration);
   const double geomean_row =
-    max(geomean_row_equilibration, 1 / geomean_row_equilibration);
+      max(geomean_row_equilibration, 1 / geomean_row_equilibration);
   const double mean_equilibration_improvement =
-    (geomean_original_col * geomean_original_row) /
-    (geomean_col * geomean_row);
+      (geomean_original_col * geomean_original_row) /
+      (geomean_col * geomean_row);
   // Compute the extreme equilibration improvement
   const double original_col_ratio =
-    max_original_col_equilibration / min_original_col_equilibration;
+      max_original_col_equilibration / min_original_col_equilibration;
   const double original_row_ratio =
-    max_original_row_equilibration / min_original_row_equilibration;
+      max_original_row_equilibration / min_original_row_equilibration;
   const double col_ratio = max_col_equilibration / min_col_equilibration;
   const double row_ratio = max_row_equilibration / min_row_equilibration;
   const double extreme_equilibration_improvement =
-    (original_col_ratio + original_row_ratio) / (col_ratio + row_ratio);
+      (original_col_ratio + original_row_ratio) / (col_ratio + row_ratio);
   // Compute the max/min matrix value improvement
   const double matrix_value_ratio = matrix_max_value / matrix_min_value;
   const double original_matrix_value_ratio =
-    original_matrix_max_value / original_matrix_min_value;
+      original_matrix_max_value / original_matrix_min_value;
   const double matrix_value_ratio_improvement =
-    original_matrix_value_ratio / matrix_value_ratio;
+      original_matrix_value_ratio / matrix_value_ratio;
 #ifdef HiGHSDEV
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                   "Scaling: Extreme equilibration improvement = ( %11.4g + "
@@ -1673,12 +1550,12 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
                   geomean_row, (geomean_original_col * geomean_original_row),
                   (geomean_col * geomean_row), mean_equilibration_improvement);
   HighsLogMessage(
-		  highs_model_object.options_.logfile, HighsMessageType::INFO,
-		  "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
-		  "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g",
-		  matrix_min_value, matrix_max_value, matrix_value_ratio,
-		  original_matrix_min_value, original_matrix_max_value,
-		  original_matrix_value_ratio, matrix_value_ratio_improvement);
+      highs_model_object.options_.logfile, HighsMessageType::INFO,
+      "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
+      "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g",
+      matrix_min_value, matrix_max_value, matrix_value_ratio,
+      original_matrix_min_value, original_matrix_max_value,
+      original_matrix_value_ratio, matrix_value_ratio_improvement);
   HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                   "Scaling: Improves    mean equilibration by a factor %0.4g",
                   mean_equilibration_improvement);
@@ -1690,14 +1567,14 @@ bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
                   matrix_value_ratio_improvement);
 #endif
   const bool possibly_abandon_scaling =
-    simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
+      simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
   const double improvement_factor = extreme_equilibration_improvement *
-    mean_equilibration_improvement *
-    matrix_value_ratio_improvement;
-  
+                                    mean_equilibration_improvement *
+                                    matrix_value_ratio_improvement;
+
   const double improvement_factor_required = 1.0;
   const bool poor_improvement =
-    improvement_factor < improvement_factor_required;
+      improvement_factor < improvement_factor_required;
 
   // Possibly abandon scaling if it's not improved equlibration significantly
   if (possibly_abandon_scaling && poor_improvement) {
@@ -2009,7 +1886,10 @@ void initialiseValueAndNonbasicMove(HighsModelObject& highs_model_object) {
   const int numTot = highs_model_object.simplex_lp_.numCol_ +
                      highs_model_object.simplex_lp_.numRow_;
   for (int iVar = 0; iVar < numTot; iVar++) {
-    if (simplex_basis.nonbasicFlag_[iVar]) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) {
+      // Basic variable
+      simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+    } else {
       // Nonbasic variable
       if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) {
         // Fixed
@@ -2044,9 +1924,6 @@ void initialiseValueAndNonbasicMove(HighsModelObject& highs_model_object) {
         simplex_info.workValue_[iVar] = 0;
         simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
       }
-    } else {
-      // Basic variable
-      simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
     }
   }
 }

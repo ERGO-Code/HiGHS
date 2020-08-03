@@ -35,18 +35,11 @@ void setNonbasicMove(const HighsLp& simplex_lp, const HighsScale& scale,
                      const bool have_highs_basis, const HighsBasis& basis,
                      const bool have_highs_solution,
                      const HighsSolution& solution,
-                     HighsSimplexInfo& simplex_info,
                      SimplexBasis& simplex_basis);
 
-void setNonbasicMoveOnly(const HighsLp& simplex_lp, const HighsScale& scale,
-                     const bool have_highs_basis, const HighsBasis& basis,
-                     const bool have_highs_solution,
-                     const HighsSolution& solution,
-                     SimplexBasis& simplex_basis);
-
-void setNonbasicWorkValue(const HighsLp& simplex_lp, 
-			  const SimplexBasis& simplex_basis,
-			  HighsSimplexInfo& simplex_info);
+void initialiseNonbasicWorkValue(const HighsLp& simplex_lp,
+                                 const SimplexBasis& simplex_basis,
+                                 HighsSimplexInfo& simplex_info);
 
 bool basisConditionOk(HighsModelObject& highs_model_object,
                       const std::string message);
