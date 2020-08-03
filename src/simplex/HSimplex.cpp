@@ -843,30 +843,30 @@ void reportBasis(const HighsOptions options, const HighsLp& lp,
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                       "SimplexBasis\n   Var    Col   Flag\n");
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    int var = iCol;
-    if (simplex_basis.nonbasicFlag_[var])
+    int iVar = iCol;
+    if (simplex_basis.nonbasicFlag_[iVar])
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                        "%6d %6d %6d\n", var, iCol,
-                        simplex_basis.nonbasicFlag_[var]);
+                        "%6d %6d %6d\n", iVar, iCol,
+                        simplex_basis.nonbasicFlag_[iVar]);
     else
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                        "%6d %6d %6d\n", var, iCol,
-                        simplex_basis.nonbasicFlag_[var]);
+                        "%6d %6d %6d\n", iVar, iCol,
+                        simplex_basis.nonbasicFlag_[iVar]);
   }
   if (lp.numRow_ > 0)
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                       "   Var    Row   Flag  Basic\n");
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    int var = lp.numCol_ + iRow;
-    if (simplex_basis.nonbasicFlag_[var])
+    int iVar = lp.numCol_ + iRow;
+    if (simplex_basis.nonbasicFlag_[iVar])
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                        "%6d %6d %6d %6d\n", var, iRow,
-                        simplex_basis.nonbasicFlag_[var],
+                        "%6d %6d %6d %6d\n", iVar, iRow,
+                        simplex_basis.nonbasicFlag_[iVar],
                         simplex_basis.basicIndex_[iRow]);
     else
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-                        "%6d %6d %6d %6d\n", var, iRow,
-                        simplex_basis.nonbasicFlag_[var],
+                        "%6d %6d %6d %6d\n", iVar, iRow,
+                        simplex_basis.nonbasicFlag_[iVar],
                         simplex_basis.basicIndex_[iRow]);
   }
 }
@@ -940,10 +940,10 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
       highs_model_object.simplex_lp_status_;
   simplex_info.primal_objective_value = 0;
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    int var = simplex_basis.basicIndex_[iRow];
-    if (var < simplex_lp.numCol_) {
+    int iVar = simplex_basis.basicIndex_[iRow];
+    if (iVar < simplex_lp.numCol_) {
       simplex_info.primal_objective_value +=
-          simplex_info.baseValue_[iRow] * simplex_lp.colCost_[var];
+          simplex_info.baseValue_[iRow] * simplex_lp.colCost_[iVar];
     }
   }
   for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
@@ -991,11 +991,11 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
 
   double primal_objective_value = 0;
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-    int var = simplex_basis.basicIndex_[iRow];
+    int iVar = simplex_basis.basicIndex_[iRow];
     const double value = simplex_info.baseValue_[iRow];
     updateValueDistribution(value, basic_value_distribution);
-    if (var < simplex_lp.numCol_) {
-      const double cost = simplex_lp.colCost_[var];
+    if (iVar < simplex_lp.numCol_) {
+      const double cost = simplex_lp.colCost_[iVar];
       if (cost) {
         updateValueDistribution(cost, basic_cost_distribution);
         const double term = value * cost;
@@ -1821,10 +1821,10 @@ void initialise_basic_index(HighsModelObject& highs_model_object) {
 
   int num_basic_variables = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  for (int var = 0; var < numTot; var++) {
-    if (!simplex_basis.nonbasicFlag_[var]) {
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) {
       assert(num_basic_variables < simplex_lp.numRow_);
-      simplex_basis.basicIndex_[num_basic_variables] = var;
+      simplex_basis.basicIndex_[num_basic_variables] = iVar;
       num_basic_variables++;
     }
   }
@@ -1918,61 +1918,47 @@ void initialise_value_from_nonbasic(HighsModelObject& highs_model_object,
   assert(firstvar >= 0);
   assert(lastvar < highs_model_object.simplex_lp_.numCol_ +
                        highs_model_object.simplex_lp_.numRow_);
-  // double dl_pr_act, norm_dl_pr_act;
-  // norm_dl_pr_act = 0.0;
-  for (int var = firstvar; var <= lastvar; var++) {
-    if (simplex_basis.nonbasicFlag_[var]) {
+  for (int iVar = firstvar; iVar <= lastvar; iVar++) {
+    if (simplex_basis.nonbasicFlag_[iVar]) {
       // Nonbasic variable
-      // double prev_pr_act = simplex_info.workValue_[var];
-      if (simplex_info.workLower_[var] == simplex_info.workUpper_[var]) {
+      if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) {
         // Fixed
-        simplex_info.workValue_[var] = simplex_info.workLower_[var];
-        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
-      } else if (!highs_isInfinity(-simplex_info.workLower_[var])) {
+        simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
+        simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+      } else if (!highs_isInfinity(-simplex_info.workLower_[iVar])) {
         // Finite lower bound so boxed or lower
-        if (!highs_isInfinity(simplex_info.workUpper_[var])) {
+        if (!highs_isInfinity(simplex_info.workUpper_[iVar])) {
           // Finite upper bound so boxed
-          if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
+          if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
             // Set at lower
-            simplex_info.workValue_[var] = simplex_info.workLower_[var];
-          } else if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
+            simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
+          } else if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
             // Set at upper
-            simplex_info.workValue_[var] = simplex_info.workUpper_[var];
+            simplex_info.workValue_[iVar] = simplex_info.workUpper_[iVar];
           } else {
             // Invalid nonbasicMove: correct and set value at lower
-            simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
-            simplex_info.workValue_[var] = simplex_info.workLower_[var];
+            simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_UP;
+            simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
           }
         } else {
           // Lower
-          simplex_info.workValue_[var] = simplex_info.workLower_[var];
-          simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+          simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
+          simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_UP;
         }
-      } else if (!highs_isInfinity(simplex_info.workUpper_[var])) {
+      } else if (!highs_isInfinity(simplex_info.workUpper_[iVar])) {
         // Upper
-        simplex_info.workValue_[var] = simplex_info.workUpper_[var];
-        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
+        simplex_info.workValue_[iVar] = simplex_info.workUpper_[iVar];
+        simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_DN;
       } else {
         // FREE
-        simplex_info.workValue_[var] = 0;
-        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+        simplex_info.workValue_[iVar] = 0;
+        simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
       }
-      // dl_pr_act = simplex_info.workValue_[var] - prev_pr_act;
-      // norm_dl_pr_act += dl_pr_act*dl_pr_act;
-      //      if (fabs(dl_pr_act) > 1e-4) printf("Var %5d: [LB; Pr; UB] of [%8g;
-      //      %8g; %8g] Du = %8g; DlPr = %8g\n",
-      //					var,
-      // simplex_info.workLower_[var],
-      // simplex_info.workValue_[var], simplex_info.workUpper_[var],
-      // simplex_info.workDual_[var], dl_pr_act);
     } else {
       // Basic variable
-      simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+      simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
     }
   }
-  //  norm_dl_pr_act = sqrt(norm_dl_pr_act);
-  //  printf("initValueFromNonbasic: ||Change in nonbasic variables||_2 is
-  //  %g\n", norm_dl_pr_act);
 }
 
 void initialise_value(HighsModelObject& highs_model_object) {
