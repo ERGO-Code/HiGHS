@@ -615,7 +615,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
   if (primal_dual_errors.max_primal_residual > excessive_residual_error) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (primal_dual_errors.max_primal_residual > large_residual_error) {
     value_adjective = "Large";
     report_level = ML_DETAILED;
@@ -637,7 +637,7 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
   if (primal_dual_errors.max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (primal_dual_errors.max_dual_residual > large_residual_error) {
     value_adjective = "Large";
     report_level = ML_DETAILED;
@@ -757,7 +757,7 @@ HighsDebugStatus debugCompareSolutionParamValue(const string name,
   if (delta > excessive_relative_solution_param_error) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (delta > large_relative_solution_param_error) {
     value_adjective = "Large";
     report_level = ML_DETAILED;

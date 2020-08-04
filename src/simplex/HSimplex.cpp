@@ -318,12 +318,14 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   }
   // Reinvert if there isn't a fresh INVERT. ToDo Override this for MIP hot
   // start
-  bool reinvert = !simplex_lp_status.has_fresh_invert;
+  //  bool reinvert = !simplex_lp_status.has_fresh_invert;
+  bool reinvert = !simplex_lp_status.has_invert;
   if (reinvert) {
     analysis.simplexTimerStart(InvertClock);
     computeFactor(highs_model_object);
     analysis.simplexTimerStop(InvertClock);
     simplex_lp_status.has_fresh_invert = true;
+    assert(simplex_lp_status.has_invert);
   }
   // Possibly check for basis condition. ToDo Override this for MIP hot start
   bool basis_condition_ok = true;

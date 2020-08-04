@@ -267,7 +267,7 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
       computed_absolute_primal_norm > computed_primal_excessive_absolute_norm) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (computed_relative_primal_norm >
                  computed_primal_large_relative_norm ||
              computed_absolute_primal_norm >
@@ -366,7 +366,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
           computed_dual_excessive_absolute_basic_dual_norm) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (computed_dual_relative_basic_dual_norm >
                  computed_dual_large_relative_basic_dual_norm ||
              computed_dual_absolute_basic_dual_norm >
@@ -400,7 +400,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
           computed_dual_excessive_absolute_nonbasic_dual_norm) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (computed_dual_relative_nonbasic_dual_norm >
                  computed_dual_large_relative_nonbasic_dual_norm ||
              computed_dual_absolute_nonbasic_dual_norm >
@@ -801,7 +801,7 @@ HighsDebugStatus debugBasisCondition(const HighsModelObject& highs_model_object,
   if (basis_condition > excessive_basis_condition) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (basis_condition > large_basis_condition) {
     value_adjective = "Large";
     report_level = ML_DETAILED;
@@ -891,7 +891,7 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
           cleanup_excessive_relative_nonbasic_dual_change_norm) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (cleanup_absolute_nonbasic_dual_change_norm >
                  cleanup_large_absolute_nonbasic_dual_change_norm ||
              cleanup_relative_nonbasic_dual_change_norm >
@@ -1288,7 +1288,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   if (max_nonbasic_col_value_difference > 0) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
     HighsPrintMessage(
         options.output, options.message_level, report_level,
         "HighsSimplexD: %-9s Nonbasic column value difference: %9.4g\n",
@@ -1297,7 +1297,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   if (max_nonbasic_row_value_difference > 0) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
     HighsPrintMessage(
         options.output, options.message_level, report_level,
         "HighsSimplexD: %-9s Nonbasic row    value difference: %9.4g\n",
@@ -1324,7 +1324,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   if (max_basic_col_dual_difference > 0) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
     HighsPrintMessage(
         options.output, options.message_level, report_level,
         "HighsSimplexD: %-9s Basic    column dual difference: %9.4g\n",
@@ -1333,7 +1333,7 @@ HighsDebugStatus debugSimplexHighsSolutionDifferences(
   if (max_basic_row_dual_difference > 0) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
     HighsPrintMessage(
         options.output, options.message_level, report_level,
         "HighsSimplexD: %-9s Basic    row     dual difference: %9.4g\n",
@@ -1357,7 +1357,7 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
   if (difference > excessive_difference) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
-    return_status = HighsDebugStatus::WARNING;
+    return_status = HighsDebugStatus::ERROR;
   } else if (difference > large_difference) {
     value_adjective = "Large";
     report_level = ML_DETAILED;
