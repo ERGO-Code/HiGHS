@@ -1259,7 +1259,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   bool no_scaling =
       (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
       (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = false;  // true;  //
+  const bool force_scaling = true;  // false;  //
   if (force_scaling) {
     no_scaling = false;
     printf("!!!! FORCE SCALING !!!!\n");
@@ -2377,10 +2377,7 @@ int simplexHandleRankDeficiency(HighsModelObject& highs_model_object) {
   //    printf("After  - simplex_basis.basicIndex_:");
   // for (int iRow=0; iRow<simplex_lp.numRow_; iRow++)
   //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
-  debugCheckInvert(highs_model_object.options_.highs_debug_level,
-                   highs_model_object.options_.output,
-                   highs_model_object.options_.message_level,
-                   highs_model_object.factor_);
+  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_);
   return 0;
 }
 
@@ -2463,10 +2460,7 @@ int computeFactor(HighsModelObject& highs_model_object) {
   }
 #endif
   simplex_info.update_count = 0;
-  debugCheckInvert(highs_model_object.options_.highs_debug_level,
-                   highs_model_object.options_.output,
-                   highs_model_object.options_.message_level,
-                   highs_model_object.factor_);
+  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_time) {
@@ -3629,7 +3623,6 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #ifdef HIGHSDEV
       printf(" LpAction::NEW_COSTS\n");
 #endif
-      //      initCost();
       simplex_lp_status.has_nonbasic_dual_values = false;
       simplex_lp_status.has_fresh_rebuild = false;
       simplex_lp_status.has_dual_objective_value = false;
@@ -3639,8 +3632,6 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #ifdef HIGHSDEV
       printf(" LpAction::NEW_BOUNDS\n");
 #endif
-      //     initBound();
-      //     initValue();
       simplex_lp_status.has_basic_primal_values = false;
       simplex_lp_status.has_fresh_rebuild = false;
       simplex_lp_status.has_dual_objective_value = false;

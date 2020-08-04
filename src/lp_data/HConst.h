@@ -39,8 +39,10 @@ enum class HighsDebugStatus {
   NOT_CHECKED = -1,
   OK,
   SMALL_ERROR,
-  LARGE_ERROR,
   WARNING,
+  LARGE_ERROR,
+  ERROR,
+  EXCESSIVE_ERROR,
   LOGICAL_ERROR,
 };
 

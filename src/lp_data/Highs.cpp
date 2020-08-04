@@ -2068,12 +2068,26 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   HighsStatus return_status = highs_return_status;
 
   updateHighsSolutionBasis();
-  if (debugBasisConsistent(options_, lp_, basis_) ==
-      HighsDebugStatus::LOGICAL_ERROR)
-    return HighsStatus::Error;
+
+  const bool consistent = debugBasisConsistent(options_, lp_, basis_) !=
+                          HighsDebugStatus::LOGICAL_ERROR;
+  if (!consistent) {
+    HighsLogMessage(
+        options_.logfile, HighsMessageType::ERROR,
+        "returnFromHighs: Supposed to be a HiGHS basis, but not consistent");
+    assert(consistent);
+    return_status = HighsStatus::Error;
+  }
+
   if (hmos_.size()) {
-    if (debugSimplexLp(hmos_[0]) == HighsDebugStatus::LOGICAL_ERROR)
-      return HighsStatus::Error;
+    const bool simplex_lp_ok =
+        debugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
+    if (!simplex_lp_ok) {
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                      "returnFromHighs: Simplex LP not OK");
+      assert(simplex_lp_ok);
+      return_status = HighsStatus::Error;
+    }
   }
 
   return return_status;

@@ -14,10 +14,10 @@
 #ifndef SIMPLEX_HFACTORDEBUG_H_
 #define SIMPLEX_HFACTORDEBUG_H_
 
+#include "lp_data/HighsOptions.h"
 #include "simplex/HFactor.h"
 
-HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
-                                  const int message_level,
+HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const HFactor& factor);
 
 void debugReportRankDeficiency(const int call_id, const int highs_debug_level,

@@ -204,24 +204,6 @@ HighsStatus HighsSimplexInterface::addCols(
   lp.numCol_ += XnumNewCol;
   if (valid_simplex_lp) simplex_lp.numCol_ += XnumNewCol;
 
-  if (valid_basis) {
-    if (debugBasisConsistent(options, lp, basis) ==
-        HighsDebugStatus::LOGICAL_ERROR) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "HiGHS basis not OK in addCols");
-      reportBasis(options, lp, basis);
-      return_status = HighsStatus::Error;
-    }
-  }
-  if (valid_simplex_basis) {
-    if (debugBasisConsistent(options, simplex_lp, simplex_basis) ==
-        HighsDebugStatus::LOGICAL_ERROR) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "HiGHS basis not OK in addCols");
-      reportBasis(options, simplex_lp, simplex_basis);
-      return_status = HighsStatus::Error;
-    }
-  }
   return return_status;
 }
 
@@ -469,24 +451,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   lp.numRow_ += XnumNewRow;
   if (valid_simplex_lp) simplex_lp.numRow_ += XnumNewRow;
 
-  if (valid_basis) {
-    if (debugBasisConsistent(options, lp, basis) ==
-        HighsDebugStatus::LOGICAL_ERROR) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "HiGHS basis not OK in addRows");
-      reportBasis(options, lp, basis);
-      return_status = HighsStatus::Error;
-    }
-  }
-  if (valid_simplex_basis) {
-    if (debugBasisConsistent(options, simplex_lp, simplex_basis) ==
-        HighsDebugStatus::LOGICAL_ERROR) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "HiGHS basis not OK in addRows");
-      reportBasis(options, simplex_lp, simplex_basis);
-      return_status = HighsStatus::Error;
-    }
-  }
   return return_status;
 }
 

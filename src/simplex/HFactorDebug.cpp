@@ -23,10 +23,9 @@ const double solve_excessive_error = sqrt(solve_large_error);
 const double inverse_large_error = 1e-12;
 const double inverse_excessive_error = sqrt(inverse_large_error);
 
-HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
-                                  const int message_level,
+HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const HFactor& factor) {
-  if (highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
 
@@ -78,7 +77,7 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
     if (solve_error_norm > solve_excessive_error) {
       value_adjective = "Excessive";
       report_level = ML_ALWAYS;
-      return_status = HighsDebugStatus::WARNING;
+      return_status = HighsDebugStatus::ERROR;
     } else if (solve_error_norm > solve_large_error) {
       value_adjective = "Large";
       report_level = ML_DETAILED;
@@ -88,12 +87,13 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
       report_level = ML_VERBOSE;
     }
     HighsPrintMessage(
-        output, message_level, report_level,
+        options.output, options.message_level, report_level,
         "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
         value_adjective.c_str(), solve_error_norm);
   }
 
-  if (highs_debug_level < HIGHS_DEBUG_LEVEL_EXPENSIVE) return return_status;
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_EXPENSIVE)
+    return return_status;
 
   double columnDensity = 0;
   double inverse_error_norm = 0;
@@ -133,7 +133,7 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
     if (inverse_error_norm > inverse_excessive_error) {
       value_adjective = "Excessive";
       report_level = ML_ALWAYS;
-      return_status = HighsDebugStatus::WARNING;
+      return_status = HighsDebugStatus::ERROR;
     } else if (inverse_error_norm > inverse_large_error) {
       value_adjective = "Large";
       report_level = ML_DETAILED;
@@ -142,7 +142,7 @@ HighsDebugStatus debugCheckInvert(const int highs_debug_level, FILE* output,
       value_adjective = "Small";
       report_level = ML_VERBOSE;
     }
-    HighsPrintMessage(output, message_level, report_level,
+    HighsPrintMessage(options.output, options.message_level, report_level,
                       "CheckINVERT:   %-9s (%9.4g) norm for inverse error\n",
                       value_adjective.c_str(), inverse_error_norm);
   }

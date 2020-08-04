@@ -21,6 +21,7 @@
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "simplex/HDualRow.h"
+#include "simplex/HFactorDebug.h"
 #include "simplex/HSimplex.h"
 #include "simplex/SimplexTimer.h"
 
@@ -110,6 +111,7 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   const HighsLp& lp = highs_model_object.lp_;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsScale& scale = highs_model_object.scale_;
+  const HFactor& factor = highs_model_object.factor_;
 
   bool right_size = true;
   right_size = (int)scale.col_.size() == lp.numCol_ && right_size;
@@ -127,22 +129,34 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
                     "debugSimplexLp: Error scaling check LP");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
-  const bool simplex_lp_ok = check_lp == simplex_lp;
-  if (!simplex_lp_ok) {
+  const bool simplex_lp_data_ok = check_lp == simplex_lp;
+  if (!simplex_lp_data_ok) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "debugSimplexLp: Check LP and simplex LP not equal");
-    assert(simplex_lp_ok);
+    assert(simplex_lp_data_ok);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
 
   if (simplex_lp_status.has_basis) {
     const bool simplex_basis_correct =
-        debugSimplexBasisCorrect(highs_model_object) !=
-        HighsDebugStatus::LOGICAL_ERROR;
+        debugDebugToHighsStatus(debugSimplexBasisCorrect(highs_model_object)) !=
+        HighsStatus::Error;
     if (!simplex_basis_correct) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Supposed to be a Simplex basis, but incorrect");
       assert(simplex_basis_correct);
+      return_status = HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+
+  if (simplex_lp_status.has_invert) {
+    const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
+                               options, factor)) != HighsStatus::Error;
+    if (!invert_ok) {
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "Supposed to be a Simplex basis inverse, but too inaccurate");
+      assert(invert_ok);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
   }
