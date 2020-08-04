@@ -41,8 +41,7 @@ void initialiseNonbasicWorkValue(const HighsLp& simplex_lp,
                                  const SimplexBasis& simplex_basis,
                                  HighsSimplexInfo& simplex_info);
 
-bool basisConditionOk(HighsModelObject& highs_model_object,
-                      const std::string message);
+bool basisConditionOk(HighsModelObject& highs_model_object);
 
 // Methods not requiring HighsModelObject
 

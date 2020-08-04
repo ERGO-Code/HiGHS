@@ -154,7 +154,7 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
                                FILE* output, const int message_level,
                                const int numRow, const vector<int>& permute,
                                const vector<int>& iwork, const int* baseIndex,
-                               const int rankDeficiency,
+                               const int rank_deficiency,
                                const vector<int>& noPvR,
                                const vector<int>& noPvC) {
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
@@ -171,14 +171,14 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
     for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
     printf("\n");
   } else if (call_id == 1) {
-    if (rankDeficiency > 100) return;
+    if (rank_deficiency > 100) return;
     printf("buildRankDeficiency1:");
     printf("\nIndex  ");
-    for (int i = 0; i < rankDeficiency; i++) printf(" %2d", i);
+    for (int i = 0; i < rank_deficiency; i++) printf(" %2d", i);
     printf("\nnoPvR  ");
-    for (int i = 0; i < rankDeficiency; i++) printf(" %2d", noPvR[i]);
+    for (int i = 0; i < rank_deficiency; i++) printf(" %2d", noPvR[i]);
     printf("\nnoPvC  ");
-    for (int i = 0; i < rankDeficiency; i++) printf(" %2d", noPvC[i]);
+    for (int i = 0; i < rank_deficiency; i++) printf(" %2d", noPvC[i]);
     if (numRow > 123) {
       printf("\nIndex  ");
       for (int i = 0; i < numRow; i++) printf(" %2d", i);
@@ -201,47 +201,47 @@ void debugReportRankDeficientASM(
     const int highs_debug_level, FILE* output, const int message_level,
     const int numRow, const vector<int>& MCstart, const vector<int>& MCcountA,
     const vector<int>& MCindex, const vector<double>& MCvalue,
-    const vector<int>& iwork, const int rankDeficiency,
+    const vector<int>& iwork, const int rank_deficiency,
     const vector<int>& noPvC, const vector<int>& noPvR) {
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
-  if (rankDeficiency > 10) return;
+  if (rank_deficiency > 10) return;
   double* ASM;
-  ASM = (double*)malloc(sizeof(double) * rankDeficiency * rankDeficiency);
-  for (int i = 0; i < rankDeficiency; i++) {
-    for (int j = 0; j < rankDeficiency; j++) {
-      ASM[i + j * rankDeficiency] = 0;
+  ASM = (double*)malloc(sizeof(double) * rank_deficiency * rank_deficiency);
+  for (int i = 0; i < rank_deficiency; i++) {
+    for (int j = 0; j < rank_deficiency; j++) {
+      ASM[i + j * rank_deficiency] = 0;
     }
   }
-  for (int j = 0; j < rankDeficiency; j++) {
+  for (int j = 0; j < rank_deficiency; j++) {
     int ASMcol = noPvC[j];
     int start = MCstart[ASMcol];
     int end = start + MCcountA[ASMcol];
     for (int en = start; en < end; en++) {
       int ASMrow = MCindex[en];
       int i = -iwork[ASMrow] - 1;
-      if (i < 0 || i >= rankDeficiency) {
-        printf("STRANGE: 0 > i = %d || %d = i >= rankDeficiency = %d\n", i, i,
-               rankDeficiency);
+      if (i < 0 || i >= rank_deficiency) {
+        printf("STRANGE: 0 > i = %d || %d = i >= rank_deficiency = %d\n", i, i,
+               rank_deficiency);
       } else {
         if (noPvR[i] != ASMrow) {
           printf("STRANGE: %d = noPvR[i] != ASMrow = %d\n", noPvR[i], ASMrow);
         }
         printf("Setting ASM(%2d, %2d) = %11.4g\n", i, j, MCvalue[en]);
-        ASM[i + j * rankDeficiency] = MCvalue[en];
+        ASM[i + j * rank_deficiency] = MCvalue[en];
       }
     }
   }
   printf("ASM:                    ");
-  for (int j = 0; j < rankDeficiency; j++) printf(" %11d", j);
+  for (int j = 0; j < rank_deficiency; j++) printf(" %11d", j);
   printf("\n                        ");
-  for (int j = 0; j < rankDeficiency; j++) printf(" %11d", noPvC[j]);
+  for (int j = 0; j < rank_deficiency; j++) printf(" %11d", noPvC[j]);
   printf("\n                        ");
-  for (int j = 0; j < rankDeficiency; j++) printf("------------");
+  for (int j = 0; j < rank_deficiency; j++) printf("------------");
   printf("\n");
-  for (int i = 0; i < rankDeficiency; i++) {
+  for (int i = 0; i < rank_deficiency; i++) {
     printf("%11d %11d|", i, noPvR[i]);
-    for (int j = 0; j < rankDeficiency; j++) {
-      printf(" %11.4g", ASM[i + j * rankDeficiency]);
+    for (int j = 0; j < rank_deficiency; j++) {
+      printf(" %11.4g", ASM[i + j * rank_deficiency]);
     }
     printf("\n");
   }
@@ -273,15 +273,15 @@ void debugReportMarkSingC(const int call_id, const int highs_debug_level,
 }
 
 void debugLogRankDeficiency(const int highs_debug_level, FILE* output,
-                            const int message_level, const int rankDeficiency,
+                            const int message_level, const int rank_deficiency,
                             const int basis_matrix_num_el,
                             const int invert_num_el, const int& kernel_dim,
                             const int kernel_num_el, const int nwork) {
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
-  if (!rankDeficiency) return;
+  if (!rank_deficiency) return;
   printf(  // highsPrintMessage(output, message_level, ML_DETAILED,
       "Rank deficiency %1d: basis_matrix (%d el); INVERT (%d el); kernel (%d "
       "dim; %d el): nwork = %d\n",
-      rankDeficiency, basis_matrix_num_el, invert_num_el, kernel_dim,
+      rank_deficiency, basis_matrix_num_el, invert_num_el, kernel_dim,
       kernel_num_el, nwork);
 }

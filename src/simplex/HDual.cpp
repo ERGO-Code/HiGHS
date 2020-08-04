@@ -747,10 +747,10 @@ void HDual::rebuild() {
     analysis->simplexTimerStart(InvertClock);
 
     // Call computeFactor to perform INVERT
-    int rankDeficiency = computeFactor(workHMO);
+    int rank_deficiency = computeFactor(workHMO);
     analysis->simplexTimerStop(InvertClock);
 
-    if (rankDeficiency)
+    if (rank_deficiency)
       throw runtime_error("Dual reInvert: singular-basis-matrix");
     // Gather the edge weights according to the
     // permutation of baseIndex after INVERT
