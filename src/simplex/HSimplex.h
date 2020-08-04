@@ -27,14 +27,25 @@ void setSimplexOptions(
 HighsStatus transition(HighsModelObject& highs_model_object  //!< Model object
 );
 
+void setNonbasicFlag(const HighsLp& simplex_lp, vector<int>& nonbasicFlag,
+                     const HighsBasisStatus* col_status = NULL,
+                     const HighsBasisStatus* row_status = NULL);
+
+void setNonbasicMove(const HighsLp& simplex_lp, const HighsScale& scale,
+                     const bool have_highs_basis, const HighsBasis& basis,
+                     const bool have_highs_solution,
+                     const HighsSolution& solution,
+                     HighsSimplexInfo& simplex_info,
+                     SimplexBasis& simplex_basis);
+
 bool basisConditionOk(HighsModelObject& highs_model_object,
                       const std::string message);
+
+// Methods not requiring HighsModelObject
 
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance);
-
-// Methods not requiring HighsModelObject
 
 void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
                                    int XnumNewCol);
@@ -45,16 +56,10 @@ void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
 void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
                                 int XnumNewRow);
 
-bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis);
-bool basisOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis);
-
-bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp,
-                    SimplexBasis& simplex_basis);
-
-#ifdef HiGHSDEV
-void report_basis(HighsLp& lp, HighsBasis& basis);
-void report_basis(HighsLp& lp, SimplexBasis& simplex_basis);
-#endif
+void reportBasis(const HighsOptions options, const HighsLp& lp,
+                 const HighsBasis& basis);
+void reportBasis(const HighsOptions options, const HighsLp& lp,
+                 const SimplexBasis& simplex_basis);
 
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                int phase = 2);
@@ -87,6 +92,8 @@ void scaleSimplexLp(HighsModelObject& highs_model);
 bool equilibrationScaleMatrix(HighsModelObject& highs_model);
 bool maxValueScaleMatrix(HighsModelObject& highs_model);
 
+HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
+                        const HighsIndexCollection& index_collection);
 // PERMUTE:
 
 void permuteSimplexLp(HighsModelObject& highs_model);
@@ -143,15 +150,6 @@ void setRunQuiet(HighsModelObject& highs_model_object);
  * model
  */
 double computeBasisCondition(const HighsModelObject& highs_model_object);
-
-bool work_arrays_ok(HighsModelObject& highs_model_object, int phase);
-
-bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object,
-                                         int var);
-
-bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object);
-
-bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase);
 
 void flip_bound(HighsModelObject& highs_model_object, int iCol);
 
@@ -257,4 +255,5 @@ void updateSimplexLpStatus(
     LpAction action         // !< Action prompting update
 );
 
+bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 #endif  // SIMPLEX_HSIMPLEX_H_

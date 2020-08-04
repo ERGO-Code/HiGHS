@@ -2,6 +2,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
+#include "util/HighsUtils.h"
 
 void HighsStatusReport(FILE* logfile, const char* message, HighsStatus status) {
   HighsLogMessage(logfile, HighsMessageType::INFO,
@@ -158,105 +159,110 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1,
   return return_bool;
 }
 
-void test_delete_keep(const int row_dim, const bool interval,
-                      const int from_row, const int to_row, const bool set,
-                      const int num_set_entries, const int* row_set,
-                      const bool mask, const int* row_mask) {
-  int delete_from_row;
-  int delete_to_row;
-  int keep_from_row;
-  int keep_to_row;
+void testDeleteKeep(const HighsIndexCollection& index_collection) {
+  int delete_from_index;
+  int delete_to_index;
+  int keep_from_index;
+  int keep_to_index;
   int current_set_entry;
-  if (interval) {
-    printf("With index interval [%d, %d] in [%d, %d]\n", from_row, to_row, 0,
-           row_dim - 1);
-  } else if (set) {
+  const int* set = index_collection.set_;
+  const int* mask = index_collection.mask_;
+  const int dimension = index_collection.dimension_;
+  if (index_collection.is_interval_) {
+    printf("With index interval [%d, %d] in [%d, %d]\n", index_collection.from_,
+           index_collection.to_, 0, dimension - 1);
+  } else if (index_collection.is_set_) {
     printf("With index set\n");
-    for (int set = 0; set < num_set_entries; set++) printf(" %2d", set);
+    for (int entry = 0; entry < index_collection.set_num_entries_; entry++)
+      printf(" %2d", entry);
     printf("\n");
-    for (int set = 0; set < num_set_entries; set++)
-      printf(" %2d", row_set[set]);
+    for (int entry = 0; entry < index_collection.set_num_entries_; entry++)
+      printf(" %2d", set[entry]);
     printf("\n");
   } else {
     printf("With index mask\n");
-    for (int row = 0; row < row_dim; row++) printf(" %2d", row);
+    for (int index = 0; index < dimension; index++) printf(" %2d", index);
     printf("\n");
-    for (int row = 0; row < row_dim; row++) printf(" %2d", row_mask[row]);
+    for (int index = 0; index < dimension; index++) printf(" %2d", mask[index]);
     printf("\n");
   }
 
-  keep_from_row = 0;
-  if (interval) {
-    keep_to_row = from_row - 1;
-  } else if (set) {
+  keep_from_index = 0;
+  if (index_collection.is_interval_) {
+    keep_to_index = index_collection.from_ - 1;
+  } else if (index_collection.is_set_) {
     current_set_entry = 0;
-    keep_to_row = row_set[0] - 1;
+    keep_to_index = set[0] - 1;
   } else {
-    keep_to_row = row_dim;
-    for (int row = 0; row < row_dim; row++) {
-      if (row_mask[row]) {
-        keep_to_row = row - 1;
+    keep_to_index = dimension;
+    for (int index = 0; index < dimension; index++) {
+      if (mask[index]) {
+        keep_to_index = index - 1;
         break;
       }
     }
   }
-  printf("Keep   [%2d, %2d]\n", 0, keep_to_row);
-  if (keep_to_row >= row_dim - 1) return;
-  for (int k = 0; k < row_dim; k++) {
-    updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
-                  row_set, mask, row_mask, delete_from_row, delete_to_row,
-                  keep_from_row, keep_to_row, current_set_entry);
-    printf("Delete [%2d, %2d]; keep [%2d, %2d]\n", delete_from_row,
-           delete_to_row, keep_from_row, keep_to_row);
-    if (delete_to_row >= row_dim - 1 || keep_to_row >= row_dim - 1) break;
+  printf("Keep   [%2d, %2d]\n", 0, keep_to_index);
+  if (keep_to_index >= dimension - 1) return;
+  for (int k = 0; k < dimension; k++) {
+    updateIndexCollectionOutInIndex(index_collection, delete_from_index,
+                                    delete_to_index, keep_from_index,
+                                    keep_to_index, current_set_entry);
+    printf("Delete [%2d, %2d]; keep [%2d, %2d]\n", delete_from_index,
+           delete_to_index, keep_from_index, keep_to_index);
+    if (delete_to_index >= dimension - 1 || keep_to_index >= dimension - 1)
+      break;
   }
 }
 
-bool test_all_delete_keep(int num_row) {
-  // Test the extraction of intervals from interval, set and mask
-  bool interval = false;
-  bool set = false;
-  bool mask = false;
-  int row_dim = num_row;
+bool testAllDeleteKeep(int num_row) {
+  // Test the extraction of intervals from index collections
+  int set[] = {1, 4, 5, 8};
+  int mask[] = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
 
-  int from_row = 3;
-  int to_row = 6;
-  int num_set_entries = 4;
-  int row_set[] = {1, 4, 5, 8};
-  int row_mask[] = {0, 1, 0, 0, 1, 1, 0, 0, 1, 0};
-  int save_from_row = from_row;
-  int save_row_set_0 = row_set[0];
-  int save_row_mask_0 = row_mask[0];
+  HighsIndexCollection index_collection;
+  index_collection.dimension_ = num_row;
+  index_collection.is_interval_ = false;
+  index_collection.from_ = 3;
+  index_collection.to_ = 6;
+  index_collection.is_set_ = false;
+  index_collection.set_num_entries_ = 4;
+  index_collection.set_ = &set[0];
+  index_collection.is_mask_ = false;
+  index_collection.mask_ = &mask[0];
+
+  int save_from = index_collection.from_;
+  int save_set_0 = set[0];
+  int save_mask_0 = mask[0];
 
   int to_pass = 2;  // 2
   for (int pass = 0; pass <= to_pass; pass++) {
     printf("\nTesting delete-keep: pass %d\n", pass);
     if (pass == 1) {
       // Mods to test LH limit behaviour
-      from_row = 0;
-      row_set[0] = 0;
-      row_mask[0] = 1;
+      index_collection.from_ = 0;
+      set[0] = 0;
+      mask[0] = 1;
     } else if (pass == 2) {
       // Mods to test RH limit behaviour
-      from_row = save_from_row;
-      to_row = 9;
-      row_set[0] = save_row_set_0;
-      row_set[3] = 9;
-      row_mask[0] = save_row_mask_0;
-      row_mask[9] = 1;
+      index_collection.from_ = save_from;
+      index_collection.to_ = 9;
+      set[0] = save_set_0;
+      set[3] = 9;
+      mask[0] = save_mask_0;
+      mask[9] = 1;
     }
 
-    interval = true;
-    test_delete_keep(row_dim, interval, from_row, to_row, set, num_set_entries,
-                     row_set, mask, row_mask);
-    interval = false;
-    set = true;
-    test_delete_keep(row_dim, interval, from_row, to_row, set, num_set_entries,
-                     row_set, mask, row_mask);
-    set = false;
-    mask = true;
-    test_delete_keep(row_dim, interval, from_row, to_row, set, num_set_entries,
-                     row_set, mask, row_mask);
+    index_collection.is_interval_ = true;
+    testDeleteKeep(index_collection);
+    index_collection.is_interval_ = false;
+
+    index_collection.is_set_ = true;
+    testDeleteKeep(index_collection);
+    index_collection.is_set_ = false;
+
+    index_collection.is_mask_ = true;
+    testDeleteKeep(index_collection);
   }
   return true;
 }
@@ -283,7 +289,8 @@ void messageReportMatrix(const char* message, const int num_col,
 
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
-  test_all_delete_keep(10);
+  printf("testAllDeleteKeep\n");
+  testAllDeleteKeep(10);
 
   HighsOptions options;
   options.message_level = ML_ALWAYS;
@@ -348,6 +355,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   Highs highs(options);
+  return_status = highs.setHighsOptionValue("highs_debug_level", 2);
+  REQUIRE(return_status == HighsStatus::OK);
+
   return_status = highs.passModel(lp);
   //  printf("passModel: return_status = %s\n",
   //  HighsStatusToString(return_status).c_str());

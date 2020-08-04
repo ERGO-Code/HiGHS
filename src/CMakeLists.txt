@@ -82,6 +82,7 @@ set(sources
     io/HMpsFF.cpp
     io/LoadOptions.cpp
     lp_data/Highs.cpp
+    lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
@@ -137,6 +138,7 @@ set(headers
     io/LoadOptions.h
     lp_data/HConst.h
     lp_data/HighsAnalysis.h
+    lp_data/HighsDebug.h
     lp_data/HighsInfo.h
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h
