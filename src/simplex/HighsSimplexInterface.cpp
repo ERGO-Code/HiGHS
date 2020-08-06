@@ -536,8 +536,6 @@ HighsStatus HighsSimplexInterface::getCols(
     return_status = interpretCallStatus(call_status, return_status, "getCols");
     return return_status;
   }
-  num_col = 0;
-  num_nz = 0;
   if (from_k > to_k) {
     call_status = HighsStatus::Error;
     return_status = interpretCallStatus(call_status, return_status, "getCols");
@@ -550,6 +548,8 @@ HighsStatus HighsSimplexInterface::getCols(
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
 
+  num_col = 0;
+  num_nz = 0;
   for (int k = from_k; k <= to_k; k++) {
     updateIndexCollectionOutInIndex(index_collection, out_from_col, out_to_col,
                                     in_from_col, in_to_col, current_set_entry);
@@ -890,6 +890,14 @@ HighsStatus HighsSimplexInterface::changeColBounds(
                                 index_collection);
     }
   }
+  if (highs_model_object.basis_.valid_) {
+    // Update status of nonbasic variables whose bounds have changed
+    return_status =
+        interpretCallStatus(setNonbasicStatus(index_collection, true),
+                            return_status, "setNonbasicStatus");
+    if (return_status == HighsStatus::Error) return return_status;
+  }
+
   // Deduce the consequences of new col bounds
   highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
   highs_model_object.unscaled_model_status_ =
@@ -953,6 +961,13 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
                                 index_collection);
     }
   }
+  if (highs_model_object.basis_.valid_) {
+    // Update status of nonbasic variables whose bounds have changed
+    return_status =
+        interpretCallStatus(setNonbasicStatus(index_collection, false),
+                            return_status, "setNonbasicStatus");
+    if (return_status == HighsStatus::Error) return return_status;
+  }
   // Deduce the consequences of new row bounds
   highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
   highs_model_object.unscaled_model_status_ =
@@ -962,6 +977,147 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
   return HighsStatus::OK;
 }
 
+HighsStatus HighsSimplexInterface::setNonbasicStatus(
+    const HighsIndexCollection& index_collection, const bool columns) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HighsLp& lp = highs_model_object.lp_;
+  HighsBasis& basis = highs_model_object.basis_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsOptions& options = highs_model_object.options_;
+
+  assert(basis.valid_);
+  const bool has_simplex_basis =
+      highs_model_object.simplex_lp_status_.has_basis;
+
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  int ix_dim;
+  if (columns) {
+    ix_dim = lp.numCol_;
+  } else {
+    ix_dim = lp.numRow_;
+  }
+  if (from_k < 0 || to_k > ix_dim) {
+    call_status = HighsStatus::Error;
+    return_status =
+        interpretCallStatus(call_status, return_status, "setNonbasicStatus");
+    return return_status;
+  }
+  if (from_k > to_k) {
+    call_status = HighsStatus::Error;
+    return_status =
+        interpretCallStatus(call_status, return_status, "setNonbasicStatus");
+    return return_status;
+  }
+  int set_from_ix;
+  int set_to_ix;
+  int ignore_from_ix;
+  int ignore_to_ix = -1;
+  int current_set_entry = 0;
+  const int illegal_move_value = -99;
+  for (int k = from_k; k <= to_k; k++) {
+    updateIndexCollectionOutInIndex(index_collection, set_from_ix, set_to_ix,
+                                    ignore_from_ix, ignore_to_ix,
+                                    current_set_entry);
+    assert(set_to_ix < ix_dim);
+    assert(ignore_to_ix < ix_dim);
+    if (columns) {
+      for (int iCol = set_from_ix; iCol <= set_to_ix; iCol++) {
+        if (basis.col_status[iCol] == HighsBasisStatus::BASIC) continue;
+        // Nonbasic column
+        double lower = lp.colLower_[iCol];
+        double upper = lp.colUpper_[iCol];
+        if (!highs_isInfinity(-lower)) {
+          basis.col_status[iCol] = HighsBasisStatus::LOWER;
+        } else if (!highs_isInfinity(upper)) {
+          basis.col_status[iCol] = HighsBasisStatus::UPPER;
+        } else {
+          basis.col_status[iCol] = HighsBasisStatus::ZERO;
+        }
+        if (has_simplex_basis) {
+          assert(simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_TRUE);
+          int move = illegal_move_value;
+          if (lower == upper) {
+            move = NONBASIC_MOVE_ZE;
+          } else if (!highs_isInfinity(-lower)) {
+            // Finite lower bound so boxed or lower
+            if (!highs_isInfinity(upper)) {
+              // Finite upper bound so boxed
+              if (fabs(lower) < fabs(upper)) {
+                move = NONBASIC_MOVE_UP;
+              } else {
+                move = NONBASIC_MOVE_DN;
+              }
+            } else {
+              // Lower (since upper bound is infinite)
+              move = NONBASIC_MOVE_UP;
+            }
+          } else if (!highs_isInfinity(upper)) {
+            // Upper
+            move = NONBASIC_MOVE_DN;
+          } else {
+            // FREE
+            move = NONBASIC_MOVE_ZE;
+          }
+          assert(move != illegal_move_value);
+          simplex_basis.nonbasicMove_[iCol] = move;
+        }
+      }
+    } else {
+      for (int iRow = set_from_ix; iRow <= set_to_ix; iRow++) {
+        if (basis.row_status[iRow] == HighsBasisStatus::BASIC) continue;
+        // Nonbasic column
+        double lower = lp.rowLower_[iRow];
+        double upper = lp.rowUpper_[iRow];
+        if (!highs_isInfinity(-lower)) {
+          basis.row_status[iRow] = HighsBasisStatus::LOWER;
+        } else if (!highs_isInfinity(upper)) {
+          basis.row_status[iRow] = HighsBasisStatus::UPPER;
+        } else {
+          basis.row_status[iRow] = HighsBasisStatus::ZERO;
+        }
+        if (has_simplex_basis) {
+          assert(simplex_basis.nonbasicFlag_[lp.numCol_ + iRow] ==
+                 NONBASIC_FLAG_TRUE);
+          int move = illegal_move_value;
+          if (lower == upper) {
+            move = NONBASIC_MOVE_ZE;
+          } else if (!highs_isInfinity(-lower)) {
+            // Finite lower bound so boxed or lower
+            if (!highs_isInfinity(upper)) {
+              // Finite upper bound so boxed
+              if (fabs(lower) < fabs(upper)) {
+                move = NONBASIC_MOVE_DN;
+              } else {
+                move = NONBASIC_MOVE_UP;
+              }
+            } else {
+              // Lower (since upper bound is infinite)
+              move = NONBASIC_MOVE_DN;
+            }
+          } else if (!highs_isInfinity(upper)) {
+            // Upper
+            move = NONBASIC_MOVE_UP;
+          } else {
+            // FREE
+            move = NONBASIC_MOVE_ZE;
+          }
+          assert(move != illegal_move_value);
+          simplex_basis.nonbasicMove_[lp.numCol_ + iRow] = move;
+        }
+      }
+    }
+    if (ignore_to_ix >= ix_dim - 1) break;
+  }
+  return return_status;
+}
 // Solve (transposed) system involving the basis matrix
 
 HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,

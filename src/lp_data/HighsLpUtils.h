@@ -25,7 +25,6 @@ struct HighsScale;
 struct HighsBasis;
 struct HighsSolution;
 class HighsOptions;
-struct SimplexBasis;
 
 using std::vector;
 
@@ -219,8 +218,6 @@ void analyseLp(const HighsLp& lp, const std::string message);
 // void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis&
 // basis,
 //                          const HighsSolution& solution, const bool pretty);
-
-HighsBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);

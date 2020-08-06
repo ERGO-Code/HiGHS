@@ -85,6 +85,9 @@ class HighsSimplexInterface {
                               const double* usr_row_lower,
                               const double* usr_row_upper);
 
+  HighsStatus setNonbasicStatus(const HighsIndexCollection& index_collection,
+                                const bool columns);
+
   HighsStatus basisSolve(const vector<double>& rhs, double* solution,
                          int* solution_num_nz, int* solution_nz_indices,
                          bool transpose = false);

@@ -673,6 +673,7 @@ bool basisConditionOk(HighsModelObject& highs_model_object) {
       basis_condition, condition_comment.c_str(), basis_condition_tolerance);
   return basis_condition_ok;
 }
+
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance) {
@@ -707,16 +708,12 @@ bool dual_infeasible(const double value, const double lower, const double upper,
       // Assumed to be nonbasic at that bound
       assert(fabs(residual) < value_tolerance);
       if (lower < upper) {
-        // Boxed
         if (value < midpoint) {
-          // At lower bound
           infeasible = dual <= -dual_tolerance;
         } else {
-          // At upper bound
           infeasible = dual >= dual_tolerance;
         }
       } else {
-        // Fixed
         infeasible = false;
       }
     }
@@ -736,13 +733,10 @@ void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewCol) {
   // Make any new columns nonbasic
   for (int iCol = lp.numCol_; iCol < newNumCol; iCol++) {
     if (!highs_isInfinity(-lp.colLower_[iCol])) {
-      // Has finite lower bound so set it there
       basis.col_status[iCol] = HighsBasisStatus::LOWER;
     } else if (!highs_isInfinity(lp.colUpper_[iCol])) {
-      // Has finite upper bound so set it there
       basis.col_status[iCol] = HighsBasisStatus::UPPER;
     } else {
-      // Free variable so set to zero
       basis.col_status[iCol] = HighsBasisStatus::ZERO;
     }
   }

@@ -721,6 +721,69 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
+  // Fix columns 1, 3, 5, 7 to check resetting of their nonbasic status
+  col1357_lower[0] = 0;
+  col1357_lower[1] = 0;
+  col1357_lower[2] = 0;
+  col1357_lower[3] = 0;
+  col1357_upper[0] = 0;
+  col1357_upper[1] = 0;
+  col1357_upper[2] = 0;
+  col1357_upper[3] = 0;
+
+  REQUIRE(highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower,
+                                 col1357_upper));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  // Now restore the upper bounds to check resetting of their nonbasic status
+  col1357_upper[0] = 1;
+  col1357_upper[1] = 1;
+  col1357_upper[2] = 1;
+  col1357_upper[3] = 1;
+
+  REQUIRE(highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower,
+                                 col1357_upper));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
+  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+
+  const HighsLp& local_lp = highs.getLp();
+  row0135789_lower[0] = local_lp.rowLower_[0];
+  row0135789_lower[1] = local_lp.rowLower_[1];
+  row0135789_lower[2] = local_lp.rowLower_[3];
+  row0135789_lower[3] = local_lp.rowLower_[5];
+  row0135789_lower[4] = local_lp.rowLower_[7];
+  row0135789_lower[5] = local_lp.rowLower_[8];
+  row0135789_lower[6] = local_lp.rowLower_[9];
+  row0135789_upper[0] = local_lp.rowLower_[0];
+  row0135789_upper[1] = local_lp.rowLower_[1];
+  row0135789_upper[2] = local_lp.rowLower_[3];
+  row0135789_upper[3] = local_lp.rowLower_[5];
+  row0135789_upper[4] = local_lp.rowLower_[7];
+  row0135789_upper[5] = local_lp.rowLower_[8];
+  row0135789_upper[6] = local_lp.rowLower_[9];
+
+  REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
+                                 row0135789_lower, row0135789_upper));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  row0135789_upper[0] = local_lp.rowUpper_[0];
+  row0135789_upper[1] = local_lp.rowUpper_[1];
+  row0135789_upper[2] = local_lp.rowUpper_[3];
+  row0135789_upper[3] = local_lp.rowUpper_[5];
+  row0135789_upper[4] = local_lp.rowUpper_[7];
+  row0135789_upper[5] = local_lp.rowUpper_[8];
+  row0135789_upper[6] = local_lp.rowUpper_[9];
+
+  REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
+                                 row0135789_lower, row0135789_upper));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
   REQUIRE(highs.deleteRows(0, num_row - 1));
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);

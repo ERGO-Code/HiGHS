@@ -2031,9 +2031,10 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         clearSolution();
         clearBasis();
         clearInfo();
-	// Frig objective value to be the dual objective value upper
-	// bound. SCIP seems to expect it
-	info_.objective_function_value = options_.dual_objective_value_upper_bound;
+        // Frig objective value to be the dual objective value upper
+        // bound. SCIP seems to expect it
+        info_.objective_function_value =
+            -2;  // options_.dual_objective_value_upper_bound;
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
