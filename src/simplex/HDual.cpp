@@ -98,11 +98,11 @@ HighsStatus HDual::solve() {
   }
 
   initialiseCost(workHMO, 1);
-  assert(simplex_lp_status.has_fresh_invert);
-  if (!simplex_lp_status.has_fresh_invert) {
-    printf(
-        "ERROR: Should enter with fresh INVERT - unless no_invert_on_optimal "
-        "is set\n");
+  assert(simplex_lp_status.has_invert);
+  if (!simplex_lp_status.has_invert) {
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
+                    "HPrimalDual:: Should enter solve with INVERT");
+    return HighsStatus::Error;
   }
   // Consider initialising edge weights
   //

@@ -2031,10 +2031,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         clearSolution();
         clearBasis();
         clearInfo();
-        // Frig objective value to be the dual objective value upper
-        // bound. SCIP seems to expect it
-        info_.objective_function_value =
-            -2;  // options_.dual_objective_value_upper_bound;
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::OK);
         break;
@@ -2097,10 +2093,12 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   return return_status;
 }
 void Highs::underDevelopmentLogMessage(const string method_name) {
+  /*
   HighsLogMessage(
       options_.logfile, HighsMessageType::WARNING,
       "Method %s is still under development and behaviour may be unpredictable",
       method_name.c_str());
+  */
 }
 
 void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
