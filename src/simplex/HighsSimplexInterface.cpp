@@ -187,6 +187,7 @@ HighsStatus HighsSimplexInterface::addCols(
     appendColsToLpMatrix(lp, XnumNewCol, 0, NULL, NULL, NULL);
     if (valid_simplex_lp) {
       appendColsToLpMatrix(simplex_lp, XnumNewCol, 0, NULL, NULL, NULL);
+      // Should be extendSimplexLpRandomVectors here
     }
   }
   // Update the basis correponding to new nonbasic columns
@@ -202,7 +203,10 @@ HighsStatus HighsSimplexInterface::addCols(
 
   // Increase the number of columns in the LPs
   lp.numCol_ += XnumNewCol;
-  if (valid_simplex_lp) simplex_lp.numCol_ += XnumNewCol;
+  if (valid_simplex_lp) {
+    simplex_lp.numCol_ += XnumNewCol;
+    initialiseSimplexLpRandomVectors(highs_model_object);
+  }
 
   return return_status;
 }
@@ -239,16 +243,13 @@ HighsStatus HighsSimplexInterface::deleteCols(
   highs_model_object.scale_.col_.resize(lp.numCol_);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-    //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
     return_status = deleteLpCols(options, simplex_lp, index_collection);
     if (return_status != HighsStatus::OK) return return_status;
-    //    HighsScale& scale = highs_model_object.scale_;
-    //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++)
-    //    scale.col_[col] = scale.col_[col + numDeleteCol];
     assert(simplex_lp.numCol_ <= original_num_col);
     if (simplex_lp.numCol_ < original_num_col) {
-      // Nontrivial deletion so invalidate all data relating to the simplex
-      // basis
+      // Nontrivial deletion so initialise the random vectors and all
+      // data relating to the simplex basis
+      initialiseSimplexLpRandomVectors(highs_model_object);
       invalidateSimplexLpBasis(simplex_lp_status);
     }
   }
@@ -421,6 +422,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
                                &local_ARvalue[0]),
           return_status, "appendRowsToLpMatrix");
       if (return_status == HighsStatus::Error) return return_status;
+      // Should be extendSimplexLpRandomVectors
+      initialiseSimplexLpRandomVectors(highs_model_object);
       if (scaled_simplex_lp) {
         // Apply the row scaling to the bounds
         HighsIndexCollection scaling_index_collection;
@@ -449,7 +452,10 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   // Increase the number of rows in the LPs
   lp.numRow_ += XnumNewRow;
-  if (valid_simplex_lp) simplex_lp.numRow_ += XnumNewRow;
+  if (valid_simplex_lp) {
+    simplex_lp.numRow_ += XnumNewRow;
+    initialiseSimplexLpRandomVectors(highs_model_object);
+  }
 
   return return_status;
 }
@@ -487,16 +493,13 @@ HighsStatus HighsSimplexInterface::deleteRows(
   highs_model_object.scale_.row_.resize(lp.numRow_);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-    //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
     return_status = deleteLpRows(options, simplex_lp, index_collection);
     if (return_status != HighsStatus::OK) return return_status;
-    //    HighsScale& scale = highs_model_object.scale_;
-    //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++)
-    //    scale.row_[row] = scale.row_[row + numDeleteRow];
     assert(simplex_lp.numRow_ <= original_num_row);
     if (simplex_lp.numRow_ < original_num_row) {
-      // Nontrivial deletion so invalidate all data relating to the simplex
-      // basis
+      // Nontrivial deletion so initialise the random vectors and all
+      // data relating to the simplex basis
+      initialiseSimplexLpRandomVectors(highs_model_object);
       invalidateSimplexLpBasis(simplex_lp_status);
     }
   }
