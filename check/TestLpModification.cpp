@@ -721,7 +721,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
-  /*
   // Fix columns 1, 3, 5, 7 to check resetting of their nonbasic status
   col1357_lower[0] = 0;
   col1357_lower[1] = 0;
@@ -784,7 +783,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
                                  row0135789_lower, row0135789_upper));
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
-  */
+
   REQUIRE(highs.deleteRows(0, num_row - 1));
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
