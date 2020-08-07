@@ -1075,6 +1075,7 @@ void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
   const int numCol = highs_model_object.simplex_lp_.numCol_;
   const int numTot = highs_model_object.simplex_lp_.numCol_ +
                      highs_model_object.simplex_lp_.numRow_;
+  if (!numTot) return;
   // Instantiate and (re-)initialise the random number generator
   HighsRandom& random = highs_model_object.random_;
   random.initialise();
