@@ -1079,14 +1079,16 @@ void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
   // Instantiate and (re-)initialise the random number generator
   HighsRandom& random = highs_model_object.random_;
   random.initialise();
-  //
-  // Generate a random permutation of the column indices
-  simplex_info.numColPermutation_.resize(numCol);
-  int* numColPermutation = &simplex_info.numColPermutation_[0];
-  for (int i = 0; i < numCol; i++) numColPermutation[i] = i;
-  for (int i = numCol - 1; i >= 1; i--) {
-    int j = random.integer() % (i + 1);
-    std::swap(numColPermutation[i], numColPermutation[j]);
+
+  if (numCol) {
+    // Generate a random permutation of the column indices
+    simplex_info.numColPermutation_.resize(numCol);
+    int* numColPermutation = &simplex_info.numColPermutation_[0];
+    for (int i = 0; i < numCol; i++) numColPermutation[i] = i;
+    for (int i = numCol - 1; i >= 1; i--) {
+      int j = random.integer() % (i + 1);
+      std::swap(numColPermutation[i], numColPermutation[j]);
+    }
   }
 
   // Re-initialise the random number generator and generate the
