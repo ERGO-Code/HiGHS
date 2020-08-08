@@ -63,7 +63,8 @@ void testSolver(Highs& highs, const std::string solver,
     printf("IPM: %d; Crossover: %d\n", info.ipm_iteration_count,
            info.crossover_iteration_count);
     REQUIRE(info.ipm_iteration_count == default_iteration_count.ipm);
-    REQUIRE(info.crossover_iteration_count == default_iteration_count.crossover);
+    REQUIRE(info.crossover_iteration_count ==
+            default_iteration_count.crossover);
   }
 
   // Only perform the time limit test if the solve time is large enough
@@ -137,14 +138,17 @@ void testSolver(Highs& highs, const std::string solver,
   const int further_simplex_iterations = 10;
   const int further_ipm_iterations = 5;
   if (use_simplex) {
-    printf("Setting simplex_iteration_limit = %d\n", further_simplex_iterations);
-    return_status = highs.setHighsOptionValue("simplex_iteration_limit", further_simplex_iterations);
+    printf("Setting simplex_iteration_limit = %d\n",
+           further_simplex_iterations);
+    return_status = highs.setHighsOptionValue("simplex_iteration_limit",
+                                              further_simplex_iterations);
     REQUIRE(return_status == HighsStatus::OK);
     return_status = highs.setBasis();
     REQUIRE(return_status == HighsStatus::OK);
   } else {
     printf("Setting ipm_iteration_limit = %d\n", further_ipm_iterations);
-    return_status = highs.setHighsOptionValue("ipm_iteration_limit", further_ipm_iterations);
+    return_status = highs.setHighsOptionValue("ipm_iteration_limit",
+                                              further_ipm_iterations);
     REQUIRE(return_status == HighsStatus::OK);
   }
 
