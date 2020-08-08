@@ -47,6 +47,9 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status);
 
 std::string utilPrimalDualStatusToString(const int primal_dual_status);
 
+void zeroHighsIterationCounts(HighsIterationCounts& iteration_counts);
+void zeroHighsIterationCounts(HighsInfo& info);
+
 void copyHighsIterationCounts(const HighsIterationCounts& iteration_counts,
                               HighsInfo& info);
 void copyHighsIterationCounts(const HighsInfo& info,

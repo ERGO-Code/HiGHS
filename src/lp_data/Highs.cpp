@@ -324,6 +324,8 @@ HighsStatus Highs::run() {
 #endif
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
+  // Zero the HiGHS iteration counts 
+  zeroHighsIterationCounts(info_);
   /*
 if (options_.message_level >= 0) {
   printf("\n!! Actually solving an LP with %d cols, %d rows", lp_.numCol_,
