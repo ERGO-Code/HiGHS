@@ -950,11 +950,9 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getReducedRow(const int row,
-				 double* row_vector,
-                                 int* row_num_nz,
-				 int* row_indices,
-				 const double* pass_basis_inverse_row_vector) {
+HighsStatus Highs::getReducedRow(const int row, double* row_vector,
+                                 int* row_num_nz, int* row_indices,
+                                 const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
   if (row < 0 || row >= hmos_[0].lp_.numRow_) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
@@ -979,8 +977,7 @@ HighsStatus Highs::getReducedRow(const int row,
     basis_inverse_row.resize(numRow, 0);
     HighsSimplexInterface simplex_interface(hmos_[0]);
     // Form B^{-T}e_{row}
-    simplex_interface.basisSolve(rhs, &basis_inverse_row[0], NULL,
-				 NULL, true);
+    simplex_interface.basisSolve(rhs, &basis_inverse_row[0], NULL, NULL, true);
     basis_inverse_row_vector = &basis_inverse_row[0];
   }
   bool return_indices = row_num_nz != NULL;
