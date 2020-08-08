@@ -35,11 +35,13 @@ void setNonbasicMove(const HighsLp& simplex_lp, const HighsScale& scale,
                      const bool have_highs_basis, const HighsBasis& basis,
                      const bool have_highs_solution,
                      const HighsSolution& solution,
-                     HighsSimplexInfo& simplex_info,
                      SimplexBasis& simplex_basis);
 
-bool basisConditionOk(HighsModelObject& highs_model_object,
-                      const std::string message);
+void initialiseNonbasicWorkValue(const HighsLp& simplex_lp,
+                                 const SimplexBasis& simplex_basis,
+                                 HighsSimplexInfo& simplex_info);
+
+bool basisConditionOk(HighsModelObject& highs_model_object);
 
 // Methods not requiring HighsModelObject
 
@@ -47,14 +49,12 @@ bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance);
 
-void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
-                                   int XnumNewCol);
-void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis,
-                                   int XnumNewCol);
+void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewCol);
+void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
+                               int XnumNewCol);
 
-void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
-void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis,
-                                int XnumNewRow);
+void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
+void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow);
 
 void reportBasis(const HighsOptions options, const HighsLp& lp,
                  const HighsBasis& basis);
@@ -98,47 +98,28 @@ HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
 
 void permuteSimplexLp(HighsModelObject& highs_model);
 
+#ifdef HiGHSDEV
+// Only used to analyse the row and column status after Crash
 void initialise_basic_index(HighsModelObject& highs_model_object);
+#endif
 
-void allocate_work_and_base_arrays(HighsModelObject& highs_model_object);
+void allocateWorkAndBaseArrays(HighsModelObject& highs_model_object);
 
-void initialise_from_nonbasic(HighsModelObject& highs_model_object);
+void initialiseValueAndNonbasicMove(HighsModelObject& highs_model_object);
 
-void replace_from_nonbasic(HighsModelObject& highs_model_object);
+void initialisePhase2ColBound(HighsModelObject& highs_model_object);
 
-void initialise_with_logical_basis(HighsModelObject& highs_model_object);
+void initialisePhase2RowBound(HighsModelObject& highs_model_object);
 
-void initialise_value_from_nonbasic(HighsModelObject& highs_model_object,
-                                    int firstvar, int lastvar);
+void initialiseBound(HighsModelObject& highs_model_object, int phase = 2);
 
-void initialise_value(HighsModelObject& highs_model_object);
+void initialisePhase2ColCost(HighsModelObject& highs_model_object);
 
-void initialise_phase2_col_bound(HighsModelObject& highs_model_object,
-                                 int firstcol, int lastcol);
+void initialisePhase2RowCost(HighsModelObject& highs_model_object);
 
-void initialise_phase2_row_bound(HighsModelObject& highs_model_object,
-                                 int firstrow, int lastrow);
+void initialiseCost(HighsModelObject& highs_model_object, int perturb = 0);
 
-void initialise_bound(HighsModelObject& highs_model_object, int phase = 2);
-
-void initialise_phase2_col_cost(HighsModelObject& highs_model_object,
-                                int firstcol, int lastcol);
-
-void initialise_phase2_row_cost(HighsModelObject& highs_model_object,
-                                int firstrow, int lastrow);
-
-void initialise_cost(HighsModelObject& highs_model_object, int perturb = 0);
-
-int get_nonbasicMove(HighsModelObject& highs_model_object, int var);
-
-void populate_work_arrays(HighsModelObject& highs_model_object);
-
-void replace_with_logical_basis(HighsModelObject& highs_model_object);
-
-void replace_with_new_basis(HighsModelObject& highs_model_object,
-                            const int* XbasicIndex);
-
-void setup_num_basic_logicals(HighsModelObject& highs_model_object);
+void populateWorkArrays(HighsModelObject& highs_model_object);
 
 #ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object);
@@ -237,6 +218,12 @@ void reportSimplexLpStatus(
     HighsSimplexLpStatus&
         simplex_lp_status,    // !< Status of simplex LP to be reported
     const char* message = ""  // !< Message to be written in report
+);
+
+void invalidateSimplexLpBasisArtifacts(
+    HighsSimplexLpStatus&
+        simplex_lp_status  // !< Status of simplex LP whose
+                           // basis artifacts are to be invalidated
 );
 
 void invalidateSimplexLpBasis(

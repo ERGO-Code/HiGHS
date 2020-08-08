@@ -22,6 +22,9 @@
 
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object);
 
+HighsDebugStatus debugSimplexBasisCorrect(
+    const HighsModelObject& highs_model_object);
+
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp& simplex_lp,
                                       const SimplexBasis& simplex_basis);

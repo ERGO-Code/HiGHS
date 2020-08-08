@@ -23,12 +23,15 @@ HighsStatus debugDebugToHighsStatus(const HighsDebugStatus debug_status) {
     case HighsDebugStatus::SMALL_ERROR:
       return HighsStatus::OK;
     case HighsDebugStatus::WARNING:
-      return HighsStatus::Warning;
     case HighsDebugStatus::LARGE_ERROR:
+      return HighsStatus::Warning;
+    case HighsDebugStatus::ERROR:
+    case HighsDebugStatus::EXCESSIVE_ERROR:
     case HighsDebugStatus::LOGICAL_ERROR:
       return HighsStatus::Error;
+    default:
+      return HighsStatus::OK;
   }
-  return HighsStatus::OK;
 }
 
 HighsDebugStatus debugWorseStatus(const HighsDebugStatus status0,

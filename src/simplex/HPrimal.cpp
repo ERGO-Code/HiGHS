@@ -63,7 +63,7 @@ HighsStatus HPrimal::solve() {
   // initParallel();
 
   // ToDo primal simplex version
-  // initialise_cost(workHMO, 1); //  model->initCost(1);
+  // initialiseCost(workHMO, 1); //  model->initCost(1);
   assert(simplex_lp_status.has_fresh_invert);
   if (!simplex_lp_status.has_fresh_invert) {
     printf(
@@ -334,9 +334,9 @@ void HPrimal::primalRebuild() {
   }
   if (reInvert) {
     analysis->simplexTimerStart(InvertClock);
-    int rankDeficiency = computeFactor(workHMO);
+    int rank_deficiency = computeFactor(workHMO);
     analysis->simplexTimerStop(InvertClock);
-    if (rankDeficiency) {
+    if (rank_deficiency) {
       throw runtime_error("Primal reInvert: singular-basis-matrix");
     }
     simplex_info.update_count = 0;

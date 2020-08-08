@@ -4,10 +4,20 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
-void HighsStatusReport(FILE* logfile, const char* message, HighsStatus status) {
+void HighsStatusReport(FILE* logfile, std::string message, HighsStatus status) {
   HighsLogMessage(logfile, HighsMessageType::INFO,
-                  "%s: HighsStatus = %d - %s\n", message, (int)status,
+                  "%s: HighsStatus = %d - %s\n", message.c_str(), (int)status,
                   HighsStatusToString(status).c_str());
+}
+
+void callRun(Highs& highs, FILE* logfile, std::string message,
+             const HighsStatus require_return_status) {
+  HighsStatus return_status = highs.run();
+  HighsStatusReport(logfile, message, return_status);
+  REQUIRE(return_status == require_return_status);
+#ifdef HiGHSDEV
+  highs.reportModelStatusSolutionBasis(message);
+#endif
 }
 
 bool areLpColEqual(const int num_col0, const double* colCost0,
@@ -324,10 +334,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
               Aindex, Avalue);
   }
 
-  bool return_bool;
   HighsStatus return_status;
   HighsModelStatus model_status;
-  std::string message;
 
   // Create two empty LPs: one to be initialised as AVGAS by adding
   // all the columns and rows separately, the other to be built by
@@ -337,17 +345,14 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   Highs avgas_highs(options);
   return_status = avgas_highs.passModel(avgas_lp);
-  //  printf("passModel: return_status = %s\n",
-  //  HighsStatusToString(return_status).c_str());
+  HighsStatusReport(options.logfile, "avgas_highs.passModel(avgas_lp)",
+                    return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
-  return_bool = avgas_highs.addCols(num_col, &colCost[0], &colLower[0],
-                                    &colUpper[0], 0, NULL, NULL, NULL);
-  REQUIRE(return_bool);
-  return_bool =
-      avgas_highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                          &ARstart[0], &ARindex[0], &ARvalue[0]);
-  REQUIRE(return_bool);
+  REQUIRE(avgas_highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
+                              0, NULL, NULL, NULL));
+  REQUIRE(avgas_highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
+                              &ARstart[0], &ARindex[0], &ARvalue[0]));
 
   return_status = avgas_highs.writeModel("");
   HighsStatusReport(options.logfile, "avgas_highs.writeModel(\"\")",
@@ -356,56 +361,47 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   Highs highs(options);
   return_status = highs.setHighsOptionValue("highs_debug_level", 2);
+  HighsStatusReport(options.logfile, "\"highs_debug_level\", 2", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   return_status = highs.passModel(lp);
-  //  printf("passModel: return_status = %s\n",
-  //  HighsStatusToString(return_status).c_str());
+  HighsStatusReport(options.logfile, "highs.passModel(lp)", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::NOTSET);
 
-  return_status = highs.run();
-  HighsStatusReport(options.logfile, "highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::MODEL_EMPTY);
 
   // Adding column vectors and matrix to model with no rows returns an error
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-                              num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
-  REQUIRE(!return_bool);
+  REQUIRE(!highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
+                         num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]));
 
   // Adding column vectors to model with no rows returns OK
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-                              0, NULL, NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
+                        NULL, NULL, NULL));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   return_status = highs.writeModel("");
   HighsStatusReport(options.logfile, "highs.writeModel(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   // Adding row vectors and matrix to model with columns returns OK
-  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                              &ARstart[0], &ARindex[0], &ARvalue[0]);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
+                        &ARstart[0], &ARindex[0], &ARvalue[0]));
 
   return_status = highs.writeModel("");
   HighsStatusReport(options.logfile, "highs.writeModel(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
-  //  const HighsLp &reference_avgas = avgas_highs.getLp();
-  //  const HighsLp &reference_lp = highs.getLp();
+  REQUIRE(
+      areLpEqual(highs.getLp(), avgas_highs.getLp(), options.infinite_bound));
 
-  return_bool =
-      areLpEqual(highs.getLp(), avgas_highs.getLp(), options.infinite_bound);
-  REQUIRE(return_bool);
-
-  return_status = highs.run();
-  HighsStatusReport(options.logfile, "highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
@@ -414,12 +410,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.getHighsInfoValue("objective_function_value",
                           avgas_optimal_objective_value);
   double optimal_objective_value;
-
-#ifdef HiGHSDEV
-  //  const HighsSolution& solution = highs.getSolution();
-  //  const HighsBasis& basis = highs.getBasis();
-  highs.reportModelStatusSolutionBasis("After avgas solve");
-#endif
 
   // Getting columns from the LP is OK
   int col1357_col_mask[] = {0, 1, 0, 1, 0, 1, 0, 1};
@@ -435,62 +425,47 @@ TEST_CASE("LP-modification", "[highs_data]") {
   int* col1357_index = (int*)malloc(sizeof(int) * num_col_nz);
   double* col1357_value = (double*)malloc(sizeof(double) * num_col_nz);
 
-  return_bool = highs.getCols(3, 6, col1357_num_col, col1357_cost,
-                              col1357_lower, col1357_upper, col1357_num_nz,
-                              col1357_start, col1357_index, col1357_value);
-  REQUIRE(return_bool == true);
+  REQUIRE(highs.getCols(3, 6, col1357_num_col, col1357_cost, col1357_lower,
+                        col1357_upper, col1357_num_nz, col1357_start,
+                        col1357_index, col1357_value));
 
-  // Calling getCols using an unordered set should be OK but for now HiGHS
-  // returns an error
-  return_bool =
-      highs.getCols(col1357_num_ix, col1357_illegal_col_set, col1357_num_col,
-                    col1357_cost, col1357_lower, col1357_upper, col1357_num_nz,
-                    col1357_start, col1357_index, col1357_value);
-  REQUIRE(!return_bool);
+  REQUIRE(!highs.getCols(col1357_num_ix, col1357_illegal_col_set,
+                         col1357_num_col, col1357_cost, col1357_lower,
+                         col1357_upper, col1357_num_nz, col1357_start,
+                         col1357_index, col1357_value));
 
-  return_bool =
-      highs.getCols(col1357_num_ix, col1357_col_set, col1357_num_col,
-                    col1357_cost, col1357_lower, col1357_upper, col1357_num_nz,
-                    col1357_start, col1357_index, col1357_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.getCols(col1357_num_ix, col1357_col_set, col1357_num_col,
+                        col1357_cost, col1357_lower, col1357_upper,
+                        col1357_num_nz, col1357_start, col1357_index,
+                        col1357_value));
 
-  return_bool = highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost,
-                              col1357_lower, col1357_upper, col1357_num_nz,
-                              col1357_start, col1357_index, col1357_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost,
+                        col1357_lower, col1357_upper, col1357_num_nz,
+                        col1357_start, col1357_index, col1357_value));
 
   // Try to delete an empty range of cols: OK
-  return_bool = highs.deleteCols(0, -1);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteCols(0, -1));
 
   // Try to delete more cols than there are: ERROR
-  return_bool = highs.deleteCols(0, num_col + 1);
-  REQUIRE(!return_bool);
+  REQUIRE(!highs.deleteCols(0, num_col + 1));
 
-  return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteCols(col1357_num_ix, col1357_col_set));
 
 #ifdef HiGHSDEV
-  message = "After deleting columns 1, 3, 5, 7";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  //  printf("%s", message.c_str()); reportLp(highs.getLp(), 2);
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After deleting columns 1, 3, 5, 7");
 #endif
 
-  return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower,
-                              col1357_upper, col1357_num_nz, col1357_start,
-                              col1357_index, col1357_value);
-  REQUIRE(return_bool);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.addCols(col1357_num_col, col1357_cost, col1357_lower,
+                        col1357_upper, col1357_num_nz, col1357_start,
+                        col1357_index, col1357_value));
 
 #ifdef HiGHSDEV
-  message = "After restoring columns 1, 3, 5, 7\n";
-  //  printf("%s", message.c_str()); reportLp(highs.getLp(), 2);
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After restoring columns 1, 3, 5, 7\n");
 #endif
 
-  return_status = highs.run();
-  HighsStatusReport(options.logfile, "highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
@@ -503,42 +478,38 @@ TEST_CASE("LP-modification", "[highs_data]") {
 #endif
 
   // Delete all the columns: OK
-  return_bool = highs.deleteCols(0, num_col - 1);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteCols(0, num_col - 1));
 
 #ifdef HiGHSDEV
-  message = "After deleting all columns";
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After deleting all columns");
 #endif
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Delete all the rows: OK
-  return_bool = highs.deleteRows(0, num_row - 1);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteRows(0, num_row - 1));
 
 #ifdef HiGHSDEV
-  message = "After deleting all rows";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After deleteRows(0, num_row - 1)");
 #endif
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Adding column vectors to model with no rows returns OK
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-                              0, NULL, NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
+                        NULL, NULL, NULL));
 
-  message = "With columns but no rows";
-  //  messageReportLp(message.c_str(), highs.getLp());
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Adding row vectors and matrix to model with columns returns OK
-  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                              &ARstart[0], &ARindex[0], &ARvalue[0]);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
+                        &ARstart[0], &ARindex[0], &ARvalue[0]));
 
 #ifdef HiGHSDEV
-  message = "With columns but and rows";
-  //   messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("With columns but and rows");
 #endif
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Getting rows from the LP is OK
   int from_row_ix = 0;
@@ -556,46 +527,28 @@ TEST_CASE("LP-modification", "[highs_data]") {
   int* row0135789_index = (int*)malloc(sizeof(int) * num_row_nz);
   double* row0135789_value = (double*)malloc(sizeof(double) * num_row_nz);
 
-  return_bool =
-      highs.getRows(from_row_ix, to_row_ix, row0135789_num_row,
-                    row0135789_lower, row0135789_upper, row0135789_num_nz,
-                    row0135789_start, row0135789_index, row0135789_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.getRows(from_row_ix, to_row_ix, row0135789_num_row,
+                        row0135789_lower, row0135789_upper, row0135789_num_nz,
+                        row0135789_start, row0135789_index, row0135789_value));
 
-  //  messageReportMatrix("Get by interval\nRow   ", row0135789_num_row,
-  //  row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
+  REQUIRE(highs.getRows(row0135789_num_ix, row0135789_row_set,
+                        row0135789_num_row, row0135789_lower, row0135789_upper,
+                        row0135789_num_nz, row0135789_start, row0135789_index,
+                        row0135789_value));
 
-  return_bool =
-      highs.getRows(row0135789_num_ix, row0135789_row_set, row0135789_num_row,
-                    row0135789_lower, row0135789_upper, row0135789_num_nz,
-                    row0135789_start, row0135789_index, row0135789_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.getRows(row0135789_row_mask, row0135789_num_row,
+                        row0135789_lower, row0135789_upper, row0135789_num_nz,
+                        row0135789_start, row0135789_index, row0135789_value));
 
-  //  messageReportMatrix("Get by set\nRow   ", row0135789_num_row,
-  //  row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
+  REQUIRE(highs.getRows(row0135789_num_ix, row0135789_row_set,
+                        row0135789_num_row, row0135789_lower, row0135789_upper,
+                        row0135789_num_nz, row0135789_start, row0135789_index,
+                        row0135789_value));
 
-  return_bool =
-      highs.getRows(row0135789_row_mask, row0135789_num_row, row0135789_lower,
-                    row0135789_upper, row0135789_num_nz, row0135789_start,
-                    row0135789_index, row0135789_value);
-  REQUIRE(return_bool);
-
-  //  messageReportMatrix("Get by mask\nRow   ", row0135789_num_row,
-  //  row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
-
-  return_bool =
-      highs.getRows(row0135789_num_ix, row0135789_row_set, row0135789_num_row,
-                    row0135789_lower, row0135789_upper, row0135789_num_nz,
-                    row0135789_start, row0135789_index, row0135789_value);
-  REQUIRE(return_bool);
-
-  return_bool = highs.deleteRows(row0135789_num_ix, row0135789_row_set);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteRows(row0135789_num_ix, row0135789_row_set));
 
 #ifdef HiGHSDEV
-  message = "After deleting rows 0-1, 3, 5, 7-9";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After deleting rows 0-1, 3, 5, 7-9");
 #endif
 
   int row012_row_set[] = {0, 1, 2};
@@ -609,59 +562,55 @@ TEST_CASE("LP-modification", "[highs_data]") {
   int* row012_index = (int*)malloc(sizeof(int) * num_row_nz);
   double* row012_value = (double*)malloc(sizeof(double) * num_row_nz);
 
-  return_bool = highs.getRows(row012_num_ix, row012_row_set, row012_num_row,
-                              row012_lower, row012_upper, row012_num_nz,
-                              row012_start, row012_index, row012_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.getRows(row012_num_ix, row012_row_set, row012_num_row,
+                        row012_lower, row012_upper, row012_num_nz, row012_start,
+                        row012_index, row012_value));
 
-  return_bool = highs.deleteRows(row012_row_mask);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteRows(row012_row_mask));
 
 #ifdef HiGHSDEV
-  message = "After deleting rows 0-2";
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After deleting rows 0-2");
 #endif
 
   // Delete all the columns: OK
-  return_bool = highs.deleteCols(0, num_col - 1);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteCols(0, num_col - 1));
 
 #ifdef HiGHSDEV
-  message = "After deleting all columns";
-  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  messageReportLp("After deleting all columns", highs.getLp());
+  highs.reportModelStatusSolutionBasis("After deleting all columns");
 #endif
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Can't add rows with no columns
-  return_bool = highs.addRows(
-      row0135789_num_row, row0135789_lower, row0135789_upper, row0135789_num_nz,
-      row0135789_start, row0135789_index, row0135789_value);
-  REQUIRE(!return_bool);
+  REQUIRE(!highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
+                         row0135789_num_nz, row0135789_start, row0135789_index,
+                         row0135789_value));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Adding column vectors to model with no rows returns OK
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-                              0, NULL, NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
+                        NULL, NULL, NULL));
 
-  return_bool = highs.addRows(
-      row0135789_num_row, row0135789_lower, row0135789_upper, row0135789_num_nz,
-      row0135789_start, row0135789_index, row0135789_value);
-  REQUIRE(return_bool);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
-  return_bool =
-      highs.addRows(row012_num_row, row012_lower, row012_upper, row012_num_nz,
-                    row012_start, row012_index, row012_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
+                        row0135789_num_nz, row0135789_start, row0135789_index,
+                        row0135789_value));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.addRows(row012_num_row, row012_lower, row012_upper,
+                        row012_num_nz, row012_start, row012_index,
+                        row012_value));
 
 #ifdef HiGHSDEV
-  message = "After restoring all rows";
-  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  messageReportLp("After restoring all rows", highs.getLp());
+  highs.reportModelStatusSolutionBasis("After restoring all rows");
 #endif
 
-  return_status = highs.run();
-  HighsStatusReport(options.logfile, "highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
@@ -670,25 +619,22 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
 #ifdef HiGHSDEV
-  message = "After resolve";
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After resolve");
 #endif
 
   // Try to delete an empty range of rows: OK
-  return_bool = highs.deleteRows(0, -1);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteRows(0, -1));
 
   // Try to delete more rows than there are: ERROR
-  return_bool = highs.deleteRows(0, num_row);
-  REQUIRE(!return_bool);
+  REQUIRE(!highs.deleteRows(0, num_row));
 
-  return_bool = highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost,
-                              col1357_lower, col1357_upper, col1357_num_nz,
-                              col1357_start, col1357_index, col1357_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost,
+                        col1357_lower, col1357_upper, col1357_num_nz,
+                        col1357_start, col1357_index, col1357_value));
 
-  return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteCols(col1357_num_ix, col1357_col_set));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   int col0123_col_mask[] = {1, 1, 1, 1};
   //  int col0123_col_set[] = {0, 1, 2, 3};
@@ -702,85 +648,72 @@ TEST_CASE("LP-modification", "[highs_data]") {
   int* col0123_index = (int*)malloc(sizeof(int) * num_col_nz);
   double* col0123_value = (double*)malloc(sizeof(double) * num_col_nz);
 
-  return_bool = highs.getCols(col0123_col_mask, col0123_num_col, col0123_cost,
-                              col0123_lower, col0123_upper, col0123_num_nz,
-                              col0123_start, col0123_index, col0123_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.getCols(col0123_col_mask, col0123_num_col, col0123_cost,
+                        col0123_lower, col0123_upper, col0123_num_nz,
+                        col0123_start, col0123_index, col0123_value));
   //  messageReportMatrix("Get col1357 by mask\nRow   ", col1357_num_col,
   //  col1357_num_nz, col1357_start, col1357_index, col1357_value);
   //  messageReportMatrix("Get col0123 by mask\nRow   ", col0123_num_col,
   //  col0123_num_nz, col0123_start, col0123_index, col0123_value);
 
-  return_bool = highs.deleteRows(0, num_row - 1);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteRows(0, num_row - 1));
 
-  return_bool = highs.deleteCols(col0123_col_mask);
-  REQUIRE(return_bool);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.deleteCols(col0123_col_mask));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
 #ifdef HiGHSDEV
-  message = "After deleting all rows and columns";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After deleting all rows and columns");
 #endif
 
   // Adding row vectors to model with no columns returns OK
-  return_bool = highs.addRows(row0135789_num_row, row0135789_lower,
-                              row0135789_upper, 0, NULL, NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
+                        0, NULL, NULL, NULL));
 
 #ifdef HiGHSDEV
-  message = "After restoring 7 rows";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After restoring 7 rows");
 #endif
 
-  return_bool = highs.addRows(row012_num_row, row012_lower, row012_upper, 0,
-                              row012_start, row012_index, row012_value);
-  REQUIRE(return_bool);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.addRows(row012_num_row, row012_lower, row012_upper, 0,
+                        row012_start, row012_index, row012_value));
 
 #ifdef HiGHSDEV
-  message = "After restoring all rows";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After restoring all rows");
 #endif
 
-  return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower,
-                              col1357_upper, col1357_num_nz, col1357_start,
-                              col1357_index, col1357_value);
-  REQUIRE(return_bool);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.addCols(col1357_num_col, col1357_cost, col1357_lower,
+                        col1357_upper, col1357_num_nz, col1357_start,
+                        col1357_index, col1357_value));
 
 #ifdef HiGHSDEV
-  message = "After restoring columns 1, 3, 5, 7";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After restoring columns 1, 3, 5, 7");
 #endif
 
-  return_status = highs.run();
-  HighsStatusReport(options.logfile, "highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
 #ifdef HiGHSDEV
-  message = "After solving after restoring all rows and columns 1, 3, 5, 7";
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis(
+      "After solving after restoring all rows and columns 1, 3, 5, 7");
 #endif
 
-  return_bool = highs.addCols(col0123_num_col, col0123_cost, col0123_lower,
-                              col0123_upper, col0123_num_nz, col0123_start,
-                              col0123_index, col0123_value);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addCols(col0123_num_col, col0123_cost, col0123_lower,
+                        col0123_upper, col0123_num_nz, col0123_start,
+                        col0123_index, col0123_value));
 
 #ifdef HiGHSDEV
-  message = "After restoring columns 0-3";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After restoring columns 0-3");
 #endif
 
-  return_status = highs.run();
-  HighsStatusReport(options.logfile, "highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
@@ -788,33 +721,33 @@ TEST_CASE("LP-modification", "[highs_data]") {
   highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
-  return_bool = highs.deleteRows(0, num_row - 1);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteRows(0, num_row - 1));
 
-  return_bool = highs.deleteCols(0, num_col - 1);
-  REQUIRE(return_bool);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.deleteCols(0, num_col - 1));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
 #ifdef HiGHSDEV
-  message = "After deleteing all rows and columns";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("After deleteing all rows and columns");
 #endif
 
   // Adding column vectors to model with no rows returns OK
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-                              0, NULL, NULL, NULL);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
+                        NULL, NULL, NULL));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
 #ifdef HiGHSDEV
-  message = "With columns but no rows";
-  //  messageReportLp(message.c_str(), highs.getLp());
-  highs.reportModelStatusSolutionBasis(message);
+  highs.reportModelStatusSolutionBasis("With columns but no rows");
 #endif
 
   // Adding row vectors and matrix to model with columns returns OK
-  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
-                              &ARstart[0], &ARindex[0], &ARvalue[0]);
-  REQUIRE(return_bool);
+  REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
+                        &ARstart[0], &ARindex[0], &ARvalue[0]));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   col1357_cost[0] = 2.01;
   col1357_cost[1] = 2.31;
@@ -845,63 +778,49 @@ TEST_CASE("LP-modification", "[highs_data]") {
   row0135789_upper[6] = 3.91;
 
   // Attempting to set a cost to infinity returns error
-  return_bool = highs.changeColCost(7, HIGHS_CONST_INF);
-  REQUIRE(!return_bool);
+  REQUIRE(!highs.changeColCost(7, HIGHS_CONST_INF));
 
   // Attempting to set a cost to a finite value returns OK
-  return_bool = highs.changeColCost(7, 77);
-  REQUIRE(return_bool);
+  REQUIRE(highs.changeColCost(7, 77));
 
-  return_bool =
-      highs.changeColsCost(col1357_num_ix, col1357_col_set, col1357_cost);
-  REQUIRE(return_bool);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.changeColsCost(col1357_num_ix, col1357_col_set, col1357_cost));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Attempting to set row bounds with infinite lower bound returns error
-  return_bool = highs.changeRowBounds(2, HIGHS_CONST_INF, 3.21);
-  REQUIRE(!return_bool);
+  REQUIRE(!highs.changeRowBounds(2, HIGHS_CONST_INF, 3.21));
 
-  return_bool = highs.changeRowBounds(2, -HIGHS_CONST_INF, 3.21);
-  REQUIRE(return_bool);
+  REQUIRE(highs.changeRowBounds(2, -HIGHS_CONST_INF, 3.21));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Attempting to set col bounds with -infinite upper bound returns error
-  return_bool = highs.changeColBounds(2, 0.21, -HIGHS_CONST_INF);
-  REQUIRE(!return_bool);
+  REQUIRE(!highs.changeColBounds(2, 0.21, -HIGHS_CONST_INF));
 
-  return_bool = highs.changeColBounds(2, 0.21, HIGHS_CONST_INF);
-  REQUIRE(return_bool);
+  REQUIRE(highs.changeColBounds(2, 0.21, HIGHS_CONST_INF));
 
-  return_bool = highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
-                                       row0135789_lower, row0135789_upper);
-  REQUIRE(return_bool);
+  REQUIRE(highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set,
+                                 row0135789_lower, row0135789_upper));
 
-  return_bool = highs.changeColsBounds(col1357_num_ix, col1357_col_set,
-                                       col1357_lower, col1357_upper);
-  REQUIRE(return_bool);
-
-  //  messageReportLp("After changing costs and bounds", highs.getLp());
+  REQUIRE(highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower,
+                                 col1357_upper));
 
   // Return the LP to its original state with a mask
+  REQUIRE(highs.changeColsCost(col1357_col_mask, &colCost[0]));
 
-  return_bool = highs.changeColsCost(col1357_col_mask, &colCost[0]);
-  REQUIRE(return_bool);
+  REQUIRE(highs.changeColBounds(2, colLower[2], colUpper[2]));
 
-  return_bool = highs.changeColBounds(2, colLower[2], colUpper[2]);
-  REQUIRE(return_bool);
+  REQUIRE(highs.changeColsBounds(col1357_col_mask, &colLower[0], &colUpper[0]));
 
-  return_bool =
-      highs.changeColsBounds(col1357_col_mask, &colLower[0], &colUpper[0]);
-  REQUIRE(return_bool);
+  REQUIRE(
+      highs.changeRowsBounds(row0135789_row_mask, &rowLower[0], &rowUpper[0]));
 
-  return_bool =
-      highs.changeRowsBounds(row0135789_row_mask, &rowLower[0], &rowUpper[0]);
-  REQUIRE(return_bool);
+  REQUIRE(highs.changeRowBounds(2, rowLower[2], rowUpper[2]));
 
-  return_bool = highs.changeRowBounds(2, rowLower[2], rowUpper[2]);
-  REQUIRE(return_bool);
-
-  return_bool =
-      areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound);
-  REQUIRE(return_bool);
+  REQUIRE(
+      areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound));
 
   int before_num_col;
   int after_num_col;
@@ -912,43 +831,41 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   before_num_col = highs.getNumCols();
   rm_col = 0;
-  return_bool = highs.deleteCols(rm_col, rm_col);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteCols(rm_col, rm_col));
   after_num_col = highs.getNumCols();
   printf("After removing col %d / %d have %d cols\n", rm_col, before_num_col,
          after_num_col);
   REQUIRE(after_num_col == before_num_col - 1);
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   before_num_row = highs.getNumRows();
   rm_row = 0;
-  return_bool = highs.deleteRows(rm_row, rm_row);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteRows(rm_row, rm_row));
   after_num_row = highs.getNumRows();
   printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row,
          after_num_row);
   REQUIRE(after_num_row == before_num_row - 1);
 
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
   before_num_col = highs.getNumCols();
   rm_col = before_num_col - 1;
-  return_bool = highs.deleteCols(rm_col, rm_col);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteCols(rm_col, rm_col));
   after_num_col = highs.getNumCols();
   printf("After removing col %d / %d have %d cols\n", rm_col, before_num_col,
          after_num_col);
   REQUIRE(after_num_col == before_num_col - 1);
 
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
   before_num_row = highs.getNumRows();
   rm_row = before_num_row - 1;
-  return_bool = highs.deleteRows(rm_row, rm_row);
-  REQUIRE(return_bool);
+  REQUIRE(highs.deleteRows(rm_row, rm_row));
   after_num_row = highs.getNumRows();
   printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row,
          after_num_row);
   REQUIRE(after_num_row == before_num_row - 1);
 
-  //  messageReportLp("After deleting all rows and columns", highs.getLp());
-
-  //  messageReportLp("After restoring costs and bounds", highs.getLp());
-  printf("Finished successfully\n");
-  fflush(stdout);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 }
