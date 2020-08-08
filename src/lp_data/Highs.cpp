@@ -950,8 +950,11 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getReducedRow(const int row, double* row_vector,
-                                 int* row_num_nz, int* row_indices) {
+HighsStatus Highs::getReducedRow(const int row,
+				 double* row_vector,
+                                 int* row_num_nz,
+				 int* row_indices,
+				 const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
   if (row < 0 || row >= hmos_[0].lp_.numRow_) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
@@ -966,25 +969,27 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
   }
   HighsLp& lp = hmos_[0].lp_;
   int numRow = lp.numRow_;
-  vector<double> rhs;
-  vector<double> col_vector;
-  vector<int> col_indices;
-  int col_num_nz;
-  rhs.assign(numRow, 0);
-  rhs[row] = 1;
-  col_vector.resize(numRow, 0);
-  col_indices.resize(numRow, 0);
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  // Form B^{-T}e_{row}
-  simplex_interface.basisSolve(rhs, &col_vector[0], &col_num_nz,
-                               &col_indices[0], true);
+  vector<double> basis_inverse_row;
+  double* basis_inverse_row_vector = (double*)pass_basis_inverse_row_vector;
+  if (basis_inverse_row_vector == NULL) {
+    vector<double> rhs;
+    vector<int> col_indices;
+    rhs.assign(numRow, 0);
+    rhs[row] = 1;
+    basis_inverse_row.resize(numRow, 0);
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    // Form B^{-T}e_{row}
+    simplex_interface.basisSolve(rhs, &basis_inverse_row[0], NULL,
+				 NULL, true);
+    basis_inverse_row_vector = &basis_inverse_row[0];
+  }
   bool return_indices = row_num_nz != NULL;
   if (return_indices) *row_num_nz = 0;
   for (int col = 0; col < lp.numCol_; col++) {
     double value = 0;
     for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
       int row = lp.Aindex_[el];
-      value += lp.Avalue_[el] * col_vector[row];
+      value += lp.Avalue_[el] * basis_inverse_row_vector[row];
     }
     row_vector[col] = 0;
     if (fabs(value) > HIGHS_CONST_TINY) {

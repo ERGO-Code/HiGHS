@@ -263,16 +263,17 @@ class Highs {
   /**
    * @brief Forms a row of \f$B^{-1}A\f$
    */
-  HighsStatus getReducedRow(const int row,           //!< Index of row required
-                            double* row_vector,      //!< Row required
-                            int* row_num_nz = NULL,  //!< Number of nonzeros
-                            int* row_indices = NULL  //!< Indices of nonzeros
+  HighsStatus getReducedRow(const int row,                                     //!< Index of row required
+                            double* row_vector,                                //!< Row required
+                            int* row_num_nz = NULL,                            //!< Number of nonzeros
+                            int* row_indices = NULL,                           //!< Indices of nonzeros
+                            const double* pass_basis_inverse_row_vector = NULL //!< Necessary row of \f$B^{-1}\f$
   );
 
   /**
    * @brief Forms a column of \f$B^{-1}A\f$
    */
-  HighsStatus getReducedColumn(const int col,  //!< Index of column required
+  HighsStatus getReducedColumn(const int col,           //!< Index of column required
                                double* col_vector,      //!< Column required
                                int* col_num_nz = NULL,  //!< Number of nonzeros
                                int* col_indices = NULL  //!< Indices of nonzeros
