@@ -1110,12 +1110,15 @@ HighsStatus deleteColsFromLpMatrix(
     // number of columns from zero when there are no rows in the LP.
     for (int col = delete_from_col; col <= delete_to_col; col++)
       lp.Astart_[col] = 0;
+    // Shift the starts - both in place and value - to account for the
+    // columns and nonzeros removed
+    const int keep_from_el = lp.Astart_[keep_from_col];
     for (int col = keep_from_col; col <= keep_to_col; col++) {
       lp.Astart_[new_num_col] =
-          new_num_nz + lp.Astart_[col] - lp.Astart_[keep_from_col];
+	new_num_nz + lp.Astart_[col] - keep_from_el;
       new_num_col++;
     }
-    for (int el = lp.Astart_[keep_from_col]; el < lp.Astart_[keep_to_col + 1];
+    for (int el = keep_from_el; el < lp.Astart_[keep_to_col + 1];
          el++) {
       lp.Aindex_[new_num_nz] = lp.Aindex_[el];
       lp.Avalue_[new_num_nz] = lp.Avalue_[el];
@@ -1305,20 +1308,14 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
   if (col < 0 || col > lp.numCol_) return HighsStatus::Error;
   int changeElement = -1;
   for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-    // printf("Column %d: Element %d is row %d. Is it %d?\n", col, el,
-    // lp.Aindex_[el], row);
     if (lp.Aindex_[el] == row) {
       changeElement = el;
       break;
     }
   }
   if (changeElement < 0) {
-    //    printf("changeLpMatrixCoefficient: Cannot find row %d in column %d\n",
-    //    row, col);
     changeElement = lp.Astart_[col + 1];
     int new_num_nz = lp.Astart_[lp.numCol_] + 1;
-    //    printf("changeLpMatrixCoefficient: Increasing Nnonz from %d to %d\n",
-    //    lp.Astart_[lp.numCol_], new_num_nz);
     lp.Aindex_.resize(new_num_nz);
     lp.Avalue_.resize(new_num_nz);
     for (int i = col + 1; i <= lp.numCol_; i++) lp.Astart_[i]++;
@@ -1467,9 +1464,6 @@ HighsStatus getLpRowBounds(const HighsLp& lp, const int from_row,
 // Get a single coefficient from the matrix
 HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
                                    const int Xcol, double* val) {
-#ifdef HiGHSDEV
-  printf("Called getLpMatrixCoefficient(row=%d, col=%d)\n", Xrow, Xcol);
-#endif
   if (Xrow < 0 || Xrow >= lp.numRow_) return HighsStatus::Error;
   if (Xcol < 0 || Xcol >= lp.numCol_) return HighsStatus::Error;
 
