@@ -768,14 +768,15 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
 HighsStatus HighsSimplexInterface::changeObjectiveSense(const ObjSense Xsense) {
   // If the sense doesn't change, just return
   if ((Xsense == ObjSense::MINIMIZE) ==
-      (highs_model_object.lp_.sense_ == ObjSense::MINIMIZE)) return HighsStatus::OK;
+      (highs_model_object.lp_.sense_ == ObjSense::MINIMIZE))
+    return HighsStatus::OK;
   // Assume that objective sense changes
   // Set the LP objective sense
   highs_model_object.lp_.sense_ = Xsense;
   highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
   highs_model_object.unscaled_model_status_ =
-    highs_model_object.scaled_model_status_;
-  // Set the any Simplex LP objective sense 
+      highs_model_object.scaled_model_status_;
+  // Set the any Simplex LP objective sense
   if (highs_model_object.simplex_lp_status_.valid)
     highs_model_object.simplex_lp_.sense_ = Xsense;
   return HighsStatus::OK;

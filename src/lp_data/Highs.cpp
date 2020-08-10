@@ -271,6 +271,14 @@ HighsStatus Highs::clearModel() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::readBasis(const std::string filename) {
+  HighsStatus return_status = HighsStatus::OK;
+  return_status =
+      interpretCallStatus(readBasisFile(options_, this->basis_, filename),
+                          return_status, "readBasis");
+  return returnFromHighs(return_status);
+}
+
 HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   HighsLp model = this->lp_;
@@ -291,6 +299,14 @@ HighsStatus Highs::writeModel(const std::string filename) {
                             return_status, "writeModelToFile");
     delete writer;
   }
+  return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::writeBasis(const std::string filename) {
+  HighsStatus return_status = HighsStatus::OK;
+  return_status =
+      interpretCallStatus(writeBasisFile(options_, this->basis_, filename),
+                          return_status, "writeBasis");
   return returnFromHighs(return_status);
 }
 

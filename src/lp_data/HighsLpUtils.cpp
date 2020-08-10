@@ -1114,12 +1114,10 @@ HighsStatus deleteColsFromLpMatrix(
     // columns and nonzeros removed
     const int keep_from_el = lp.Astart_[keep_from_col];
     for (int col = keep_from_col; col <= keep_to_col; col++) {
-      lp.Astart_[new_num_col] =
-	new_num_nz + lp.Astart_[col] - keep_from_el;
+      lp.Astart_[new_num_col] = new_num_nz + lp.Astart_[col] - keep_from_el;
       new_num_col++;
     }
-    for (int el = keep_from_el; el < lp.Astart_[keep_to_col + 1];
-         el++) {
+    for (int el = keep_from_el; el < lp.Astart_[keep_to_col + 1]; el++) {
       lp.Aindex_[new_num_nz] = lp.Aindex_[el];
       lp.Avalue_[new_num_nz] = lp.Avalue_[el];
       new_num_nz++;
@@ -1738,6 +1736,83 @@ void analyseLp(const HighsLp& lp, const std::string message) {
 //     }
 //   }
 // }
+
+HighsStatus writeBasisFile(const HighsOptions& options, const HighsBasis& basis,
+                           const std::string filename) {
+  HighsStatus return_status = HighsStatus::OK;
+  if (basis.valid_ == false) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "writeBasisFile: Cannot write an invalid basis");
+    return HighsStatus::Error;
+  }
+  std::ofstream outFile(filename);
+  if (outFile.fail()) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "writeBasisFile: Cannot open writeable file \"%s\"",
+                    filename.c_str());
+    return HighsStatus::Error;
+  }
+  outFile << "HiGHS Version " << HIGHS_VERSION_MAJOR << std::endl;
+  outFile << basis.col_status.size() << " " << basis.row_status.size()
+          << std::endl;
+  for (const auto& status : basis.col_status) {
+    outFile << (int)status << " ";
+  }
+  outFile << std::endl;
+  for (const auto& status : basis.row_status) {
+    outFile << (int)status << " ";
+  }
+  outFile << std::endl;
+  outFile << std::endl;
+  outFile.close();
+  return return_status;
+}
+
+HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
+                          const std::string filename) {
+  HighsStatus return_status = HighsStatus::OK;
+  std::ifstream inFile(filename);
+  if (inFile.fail()) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "readBasisFile: Cannot open readable file \"%s\"",
+                    filename.c_str());
+    return HighsStatus::Error;
+  }
+  std::string string_highs, string_version;
+  int highs_version_number;
+  inFile >> string_highs >> string_version >> highs_version_number;
+  if (highs_version_number == 1) {
+    int numCol, numRow;
+    inFile >> numCol >> numRow;
+    int basis_numCol = (int)basis.col_status.size();
+    int basis_numRow = (int)basis.row_status.size();
+    if (numCol != basis_numCol) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "readBasisFile: Basis file is for %d columns but current "
+                      "HIGHS basis is for %d columns",
+                      numCol, basis_numCol);
+      return HighsStatus::Error;
+    }
+    if (numRow != basis_numRow) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "readBasisFile: Basis file is for %d rows but current "
+                      "HIGHS basis is for %d rows",
+                      numRow, basis_numRow);
+      return HighsStatus::Error;
+    }
+    int int_status;
+    for (int iCol = 0; iCol < numCol; iCol++) {
+      inFile >> int_status;
+      basis.col_status[iCol] = (HighsBasisStatus)int_status;
+    }
+    for (int iRow = 0; iRow < numRow; iRow++) {
+      inFile >> int_status;
+      basis.row_status[iRow] = (HighsBasisStatus)int_status;
+    }
+  }
+  inFile.close();
+  return return_status;
+}
 
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
   assert(solution.row_dual.size() > 0);

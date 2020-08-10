@@ -56,6 +56,12 @@ class Highs {
   );
 
   /**
+   * @brief reads in a basis
+   */
+  HighsStatus readBasis(const std::string filename  //!< the filename
+  );
+
+  /**
    * @brief Clears the current model
    */
   HighsStatus clearModel();
@@ -426,6 +432,12 @@ class Highs {
    * @brief writes out current model
    */
   HighsStatus writeModel(const std::string filename  //!< the filename
+  );
+
+  /**
+   * @brief writes out current basis
+   */
+  HighsStatus writeBasis(const std::string filename  //!< the filename
   );
 
   /**
