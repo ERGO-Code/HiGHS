@@ -506,6 +506,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       check_vector[component] = 1;
       // Check the value
       double abs_value = fabs(Avalue[el]);
+      /*
       // Check that the value is not zero
       bool zero_value = abs_value == 0;
       if (zero_value) {
@@ -513,6 +514,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
                         "Matrix packed vector %d, entry %d, is zero", ix, el);
         return HighsStatus::Error;
       }
+      */
       // Check that the value is not too large
       bool large_value = abs_value >= large_matrix_value;
       if (large_value) {
