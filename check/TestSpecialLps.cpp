@@ -207,9 +207,9 @@ void issue295(Highs& highs) {
   lp.colUpper_ = {inf, inf, inf, 1, 1};
   lp.rowLower_ = {-inf, -inf};
   lp.rowUpper_ = {2, -2};
-  lp.Astart_ = {0, 1, 2, 3, 3, 3};
-  lp.Aindex_ = {0, 1, 0};
-  lp.Avalue_ = {1, 1, 0};
+  lp.Astart_ = {0, 1, 2, 2, 2, 2};
+  lp.Aindex_ = {0, 1};
+  lp.Avalue_ = {1, 1};
 
   status = highs.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
