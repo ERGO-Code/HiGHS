@@ -481,7 +481,7 @@ HighsStatus HighsSimplexInterface::deleteRows(
       deleteScale(options, highs_model_object.scale_.row_, index_collection),
       return_status, "deleteScale");
   if (return_status == HighsStatus::Error) return return_status;
-  
+
   highs_model_object.scale_.row_.resize(lp.numRow_);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;

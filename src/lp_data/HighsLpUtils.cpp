@@ -1236,7 +1236,7 @@ HighsStatus deleteRowsFromLpVectors(
 
   int row_dim = lp.numRow_;
   new_num_row = 0;
-  bool have_names = (int)lp.row_names_.size()>0;
+  bool have_names = (int)lp.row_names_.size() > 0;
   for (int k = from_k; k <= to_k; k++) {
     updateIndexCollectionOutInIndex(index_collection, delete_from_row,
                                     delete_to_row, keep_from_row, keep_to_row,
