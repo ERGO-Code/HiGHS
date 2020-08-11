@@ -1292,7 +1292,8 @@ HighsStatus deleteRowsFromLpMatrix(
   // Set up a row mask to indicate the new row index of kept rows and
   // -1 for deleted rows so that the kept entries in the column-wise
   // matrix can be identified and have their correct row index.
-  int* new_index = (int*)malloc(sizeof(int) * lp.numRow_);
+  vector<int> new_index;
+  new_index.resize(lp.numRow_);
   int new_num_row = 0;
   bool mask = index_collection.is_mask_;
   const int* row_mask = index_collection.mask_;
@@ -1344,7 +1345,6 @@ HighsStatus deleteRowsFromLpMatrix(
     }
   }
   lp.Astart_[lp.numCol_] = new_num_nz;
-  free(new_index);
   lp.Astart_.resize(lp.numCol_ + 1);
   lp.Aindex_.resize(new_num_nz);
   lp.Avalue_.resize(new_num_nz);

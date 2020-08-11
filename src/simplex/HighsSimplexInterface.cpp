@@ -618,7 +618,8 @@ HighsStatus HighsSimplexInterface::getRows(
 
   // Set up a row mask so that entries to be got from the column-wise
   // matrix can be identified and have their correct row index.
-  int* new_index = (int*)malloc(sizeof(int) * lp.numRow_);
+  vector<int> new_index;
+  new_index.resize(lp.numRow_);
 
   if (!index_collection.is_mask_) {
     out_to_row = -1;
@@ -654,13 +655,11 @@ HighsStatus HighsSimplexInterface::getRows(
   }
 
   // Bail out if no rows are to be extracted
-  if (num_row == 0) {
-    free(new_index);
-    return HighsStatus::OK;
-  }
+  if (num_row == 0) return HighsStatus::OK;
 
   // Allocate an array of lengths for the row-wise matrix to be extracted
-  int* row_matrix_length = (int*)malloc(sizeof(int) * num_row);
+  vector<int> row_matrix_length;
+  row_matrix_length.resize(num_row);
 
   for (int row = 0; row < lp.numRow_; row++) {
     int new_row = new_index[row];
@@ -688,8 +687,6 @@ HighsStatus HighsSimplexInterface::getRows(
                       HighsMessageType::ERROR,
                       "Cannot supply meaningful row matrix indices/values with "
                       "null starts");
-      free(new_index);
-      free(row_matrix_length);
       return HighsStatus::Error;
     }
   } else {
@@ -724,8 +721,6 @@ HighsStatus HighsSimplexInterface::getRows(
     }
     num_nz += row_matrix_length[num_row - 1];
   }
-  free(new_index);
-  free(row_matrix_length);
   return HighsStatus::OK;
 }
 
