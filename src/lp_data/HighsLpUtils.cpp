@@ -1211,14 +1211,17 @@ HighsStatus deleteRowsFromLpVectors(
     const HighsOptions& options, HighsLp& lp, int& new_num_row,
     const HighsIndexCollection& index_collection) {
   HighsStatus return_status = HighsStatus::OK;
+ printf("deleteRowsFromLpVectors 0\n");fflush(stdout);
   if (!assessIndexCollection(options, index_collection))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "assessIndexCollection");
+ printf("deleteRowsFromLpVectors 1\n");fflush(stdout);
   int from_k;
   int to_k;
   if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
     return interpretCallStatus(HighsStatus::Error, return_status,
                                "limitsForIndexCollection");
+ printf("deleteRowsFromLpVectors 2\n");fflush(stdout);
   if (index_collection.is_set_) {
     // For deletion by set it must be increasing
     if (!increasingSetOk(index_collection.set_,
@@ -1226,6 +1229,7 @@ HighsStatus deleteRowsFromLpVectors(
                          true))
       return HighsStatus::Error;
   }
+ printf("deleteRowsFromLpVectors 3\n");fflush(stdout);
   // Initialise new_num_row in case none is removed due to from_k > to_k
   new_num_row = lp.numRow_;
   if (from_k > to_k) return HighsStatus::OK;
@@ -1238,8 +1242,10 @@ HighsStatus deleteRowsFromLpVectors(
 
   int row_dim = lp.numRow_;
   new_num_row = 0;
-  bool have_names = lp.row_names_.size();
+  printf("deleteRowsFromLpVectors: From %d rows to (now) %d rows\n", row_dim, new_num_row);fflush(stdout);
+  bool have_names = (int)lp.row_names_.size()>0;
   for (int k = from_k; k <= to_k; k++) {
+    printf("deleteRowsFromLpVectors 3.%d/%d\n", k, to_k);fflush(stdout);
     updateIndexCollectionOutInIndex(index_collection, delete_from_row,
                                     delete_to_row, keep_from_row, keep_to_row,
                                     current_set_entry);
@@ -1254,12 +1260,19 @@ HighsStatus deleteRowsFromLpVectors(
       lp.rowUpper_[new_num_row] = lp.rowUpper_[row];
       if (have_names) lp.row_names_[new_num_row] = lp.row_names_[row];
       new_num_row++;
+      printf("deleteRowsFromLpVectors: From %d rows to (now) %d rows\n", row_dim, new_num_row);fflush(stdout);
     }
+    printf("deleteRowsFromLpVectors: keep_to_row %d vs %d = row_dim\n", keep_to_row, row_dim);fflush(stdout);
     if (keep_to_row == row_dim) break;
   }
+  printf("deleteRowsFromLpVectors 4, new_num_row = %d, have_names = %d\n", new_num_row, have_names);fflush(stdout);
+  printf("deleteRowsFromLpVectors 4 lp.rowLower_.size() = %d -> %d\n", (int)lp.rowLower_.size(), new_num_row);fflush(stdout);
   lp.rowLower_.resize(new_num_row);
+  printf("deleteRowsFromLpVectors 4 lp.rowUpper_.size() = %d -> %d\n", (int)lp.rowUpper_.size(), new_num_row);fflush(stdout);
   lp.rowUpper_.resize(new_num_row);
+  printf("deleteRowsFromLpVectors 4 lp.row_names_.size() = %d\n", (int)lp.row_names_.size());fflush(stdout);
   if (have_names) lp.row_names_.resize(new_num_row);
+ printf("deleteRowsFromLpVectors 5\n");fflush(stdout);
   return HighsStatus::OK;
 }
 
