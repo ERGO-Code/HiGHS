@@ -473,6 +473,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
     // Account for any index-value pairs removed so far
     Astart[ix] = num_new_nz;
     for (int el = from_el; el < to_el; el++) {
+      // Check the index
       int component = Aindex[el];
       // Check that the index is non-negative
       bool legal_component = component >= 0;
@@ -503,8 +504,17 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       }
       // Indicate that the index has occurred
       check_vector[component] = 1;
-      // Check that the value is not too large
+      // Check the value
       double abs_value = fabs(Avalue[el]);
+      // Check that the value is not zero
+      bool zero_value = abs_value == 0;
+      if (zero_value) {
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "Matrix packed vector %d, entry %d, is zero", ix, el);
+        return HighsStatus::Error;
+      }
+      // Check that the value is not too large
       bool large_value = abs_value >= large_matrix_value;
       if (large_value) {
         HighsLogMessage(
@@ -882,7 +892,7 @@ HighsStatus applyScalingToLpRow(const HighsOptions& options, HighsLp& lp,
 
   for (int col = 0; col < lp.numCol_; col++) {
     for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-      if (lp.Avalue_[el] == row) lp.Avalue_[el] *= rowScale;
+      if (lp.Aindex_[el] == row) lp.Avalue_[el] *= rowScale;
     }
   }
   if (rowScale > 0) {
