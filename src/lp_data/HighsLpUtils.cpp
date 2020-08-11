@@ -264,6 +264,7 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
   int local_col;
   int data_col;
   int ml_col;
+  const bool allow_infinite_costs = true;
   for (int k = from_k; k < to_k + 1; k++) {
     if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_col = k;
@@ -281,7 +282,7 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Col  %12d has |cost| of %12g >= %12g", ml_col, abs_cost,
                       infinite_cost);
-      error_found = true;
+      error_found = !allow_infinite_costs;
     }
   }
   if (error_found)
