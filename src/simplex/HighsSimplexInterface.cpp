@@ -974,6 +974,105 @@ HighsStatus HighsSimplexInterface::changeRowBounds(
   return HighsStatus::OK;
 }
 
+HighsStatus HighsSimplexInterface::scaleCol(const int col,
+                                            const double scaleval) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsOptions& options = highs_model_object.options_;
+  HighsLp& lp = highs_model_object.lp_;
+  HighsBasis& basis = highs_model_object.basis_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+
+  return_status =
+      interpretCallStatus(applyScalingToLpCol(options, lp, col, scaleval),
+                          return_status, "applyScalingToLpCol");
+  if (return_status == HighsStatus::Error) return return_status;
+
+  if (scaleval < 0 && basis.valid_) {
+    // Negative, so flip any nonbasic status
+    if (basis.col_status[col] == HighsBasisStatus::LOWER) {
+      basis.col_status[col] = HighsBasisStatus::UPPER;
+    } else if (basis.col_status[col] == HighsBasisStatus::UPPER) {
+      basis.col_status[col] = HighsBasisStatus::LOWER;
+    }
+  }
+  if (simplex_lp_status.valid) {
+    // Apply the scaling to the simplex LP
+    return_status = interpretCallStatus(
+        applyScalingToLpCol(options, simplex_lp, col, scaleval), return_status,
+        "applyScalingToLpCol");
+    if (return_status == HighsStatus::Error) return return_status;
+    if (scaleval < 0 && simplex_lp_status.has_basis) {
+      // Negative, so flip any nonbasic status
+      if (simplex_basis.nonbasicMove_[col] == NONBASIC_MOVE_UP) {
+        simplex_basis.nonbasicMove_[col] = NONBASIC_MOVE_DN;
+      } else if (simplex_basis.nonbasicMove_[col] == NONBASIC_MOVE_DN) {
+        simplex_basis.nonbasicMove_[col] = NONBASIC_MOVE_UP;
+      }
+    }
+  }
+
+  // Deduce the consequences of a scaled column
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ =
+      highs_model_object.scaled_model_status_;
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::SCALED_COL);
+  return HighsStatus::OK;
+}
+
+HighsStatus HighsSimplexInterface::scaleRow(const int row,
+                                            const double scaleval) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsOptions& options = highs_model_object.options_;
+  HighsLp& lp = highs_model_object.lp_;
+  HighsBasis& basis = highs_model_object.basis_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+
+  return_status =
+      interpretCallStatus(applyScalingToLpRow(options, lp, row, scaleval),
+                          return_status, "applyScalingToLpRow");
+  if (return_status == HighsStatus::Error) return return_status;
+
+  if (scaleval < 0 && basis.valid_) {
+    // Negative, so flip any nonbasic status
+    if (basis.row_status[row] == HighsBasisStatus::LOWER) {
+      basis.row_status[row] = HighsBasisStatus::UPPER;
+    } else if (basis.row_status[row] == HighsBasisStatus::UPPER) {
+      basis.row_status[row] = HighsBasisStatus::LOWER;
+    }
+  }
+  if (simplex_lp_status.valid) {
+    // Apply the scaling to the simplex LP
+    return_status = interpretCallStatus(
+        applyScalingToLpRow(options, simplex_lp, row, scaleval), return_status,
+        "applyScalingToLpRow");
+    if (return_status == HighsStatus::Error) return return_status;
+    if (scaleval < 0 && simplex_lp_status.has_basis) {
+      // Negative, so flip any nonbasic status
+      const int var = simplex_lp.numCol_ + row;
+      if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
+        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
+      } else if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
+        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+      }
+    }
+  }
+
+  // Deduce the consequences of a scaled row
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ =
+      highs_model_object.scaled_model_status_;
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::SCALED_ROW);
+  return HighsStatus::OK;
+}
+
 HighsStatus HighsSimplexInterface::setNonbasicStatus(
     const HighsIndexCollection& index_collection, const bool columns) {
   HighsStatus return_status = HighsStatus::OK;

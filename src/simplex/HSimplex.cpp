@@ -3718,6 +3718,18 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #endif
       //      simplex_info.simplex_lp_ = true;
       break;
+    case LpAction::SCALED_COL:
+#ifdef HIGHSDEV
+      printf(" LpAction::SCALED_COL\n");
+#endif
+      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
+      break;
+    case LpAction::SCALED_ROW:
+#ifdef HIGHSDEV
+      printf(" LpAction::SCALED_ROW\n");
+#endif
+      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
+      break;
     default:
 #ifdef HIGHSDEV
       printf(" Unrecognised LpAction::%d\n", (int)action);

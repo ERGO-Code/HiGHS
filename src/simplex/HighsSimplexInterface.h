@@ -85,6 +85,10 @@ class HighsSimplexInterface {
                               const double* usr_row_lower,
                               const double* usr_row_upper);
 
+  HighsStatus scaleCol(const int column, const double scaleval);
+
+  HighsStatus scaleRow(const int row, const double scaleval);
+
   HighsStatus setNonbasicStatus(const HighsIndexCollection& index_collection,
                                 const bool columns);
 

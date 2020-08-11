@@ -34,7 +34,9 @@ enum class LpAction {
   NEW_ROWS,
   DEL_COLS,
   DEL_ROWS,
-  DEL_ROWS_BASIS_OK
+  DEL_ROWS_BASIS_OK,
+  SCALED_COL,
+  SCALED_ROW
 };
 
 enum class HighsModelStatus {

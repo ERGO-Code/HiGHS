@@ -840,8 +840,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   row0135789_upper[5] = 3.81;
   row0135789_upper[6] = 3.91;
 
-  // Attempting to set a cost to infinity returns error
-  REQUIRE(!highs.changeColCost(7, HIGHS_CONST_INF));
+  // Attempting to set a cost to infinity may return error
+  REQUIRE(highs.changeColCost(7, HIGHS_CONST_INF) == allow_infinite_costs);
 
   // Attempting to set a cost to a finite value returns OK
   REQUIRE(highs.changeColCost(7, 77));
@@ -929,6 +929,34 @@ TEST_CASE("LP-modification", "[highs_data]") {
   printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row,
          after_num_row);
   REQUIRE(after_num_row == before_num_row - 1);
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(!highs.scaleCol(-1, 2.0));
+
+  REQUIRE(!highs.scaleCol(highs.getNumCols(), 2.0));
+
+  REQUIRE(!highs.scaleCol(0, 0));
+
+  REQUIRE(highs.scaleCol(highs.getNumCols() - 1, 2.0));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.scaleCol(0, -2.0));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(!highs.scaleRow(-1, 2.0));
+
+  REQUIRE(!highs.scaleRow(highs.getNumRows(), 2.0));
+
+  REQUIRE(!highs.scaleRow(0, 0));
+
+  REQUIRE(highs.scaleRow(0, 2.0));
+
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+  REQUIRE(highs.scaleRow(highs.getNumRows() - 1, -2.0));
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 }

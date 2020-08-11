@@ -669,6 +669,22 @@ class Highs {
   );
 
   /**
+   * @brief Scale a matrix column (and cost) by a constant - flipping bounds if
+   * the constant is negative
+   */
+  bool scaleCol(const int col,         //!< Column to change
+                const double scaleval  //!< Scaling value
+  );
+
+  /**
+   * @brief Scale a matrix row by a constant - flipping bounds if the constant
+   * is negative
+   */
+  bool scaleRow(const int row,         //!< Row to change
+                const double scaleval  //!< Scaling value
+  );
+
+  /**
    * Other methods for specialist applications
    */
 

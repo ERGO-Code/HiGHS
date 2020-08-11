@@ -85,6 +85,12 @@ void colScaleMatrix(const int max_scale_factor_exponent, double* colScale,
                     const int numCol, const vector<int>& Astart,
                     const vector<int>& Aindex, vector<double>& Avalue);
 
+HighsStatus applyScalingToLpCol(const HighsOptions& options, HighsLp& lp,
+                                const int col, const double colScale);
+
+HighsStatus applyScalingToLpRow(const HighsOptions& options, HighsLp& lp,
+                                const int row, const double rowScale);
+
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
                                   const vector<double>& colCost,
                                   const vector<double>& colLower,

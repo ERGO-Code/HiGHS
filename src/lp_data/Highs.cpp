@@ -1594,6 +1594,30 @@ bool Highs::deleteRows(int* mask) {
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
+bool Highs::scaleCol(const int col, const double scaleval) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  underDevelopmentLogMessage("scaleCol");
+  if (!haveHmo("scaleCol")) return false;
+  HighsSimplexInterface interface(hmos_[0]);
+  call_status = interface.scaleCol(col, scaleval);
+  return_status = interpretCallStatus(call_status, return_status, "scaleCol");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
+bool Highs::scaleRow(const int row, const double scaleval) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  underDevelopmentLogMessage("scaleRow");
+  if (!haveHmo("scaleRow")) return false;
+  HighsSimplexInterface interface(hmos_[0]);
+  call_status = interface.scaleRow(row, scaleval);
+  return_status = interpretCallStatus(call_status, return_status, "scaleRow");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
 double Highs::getHighsInfinity() { return HIGHS_CONST_INF; }
 
 double Highs::getHighsRunTime() { return timer_.readRunHighsClock(); }

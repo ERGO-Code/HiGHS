@@ -264,7 +264,6 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
   int local_col;
   int data_col;
   int ml_col;
-  const bool allow_infinite_costs = true;
   for (int k = from_k; k < to_k + 1; k++) {
     if (index_collection.is_interval_ || index_collection.is_mask_) {
       local_col = k;
@@ -853,6 +852,48 @@ void colScaleMatrix(const int max_scale_factor_exponent, double* colScale,
       colScale[iCol] = 1;
     }
   }
+}
+
+HighsStatus applyScalingToLpCol(const HighsOptions& options, HighsLp& lp,
+                                const int col, const double colScale) {
+  if (col < 0) return HighsStatus::Error;
+  if (col >= lp.numCol_) return HighsStatus::Error;
+  if (!colScale) return HighsStatus::Error;
+
+  for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++)
+    lp.Avalue_[el] *= colScale;
+  lp.colCost_[col] *= colScale;
+  if (colScale > 0) {
+    lp.colLower_[col] /= colScale;
+    lp.colUpper_[col] /= colScale;
+  } else {
+    const double new_upper = lp.colLower_[col] / colScale;
+    lp.colLower_[col] = lp.colUpper_[col] / colScale;
+    lp.colUpper_[col] = new_upper;
+  }
+  return HighsStatus::OK;
+}
+
+HighsStatus applyScalingToLpRow(const HighsOptions& options, HighsLp& lp,
+                                const int row, const double rowScale) {
+  if (row < 0) return HighsStatus::Error;
+  if (row >= lp.numRow_) return HighsStatus::Error;
+  if (!rowScale) return HighsStatus::Error;
+
+  for (int col = 0; col < lp.numCol_; col++) {
+    for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
+      if (lp.Avalue_[el] == row) lp.Avalue_[el] *= rowScale;
+    }
+  }
+  if (rowScale > 0) {
+    lp.rowLower_[row] /= rowScale;
+    lp.rowUpper_[row] /= rowScale;
+  } else {
+    const double new_upper = lp.rowLower_[row] / rowScale;
+    lp.rowLower_[row] = lp.rowUpper_[row] / rowScale;
+    lp.rowUpper_[row] = new_upper;
+  }
+  return HighsStatus::OK;
 }
 
 HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
