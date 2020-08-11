@@ -509,9 +509,8 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       // Check that the value is not zero
       bool zero_value = abs_value == 0;
       if (zero_value) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Matrix packed vector %d, entry %d, is zero", ix, el);
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Matrix packed vector %d, entry %d, is zero", ix, el);
         return HighsStatus::Error;
       }
       // Check that the value is not too large
