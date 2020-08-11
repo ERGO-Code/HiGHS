@@ -106,15 +106,6 @@ class HighsSimplexInterface {
   );
 
   /**
-   * @brief Convert a HiGHS basis to SCIP baseStat for columns and rows
-   * Postive  return value k implies invalid basis status for column k-1
-   * Negative return value k implies invalid basis status for row   -k-1
-   */
-  int convertHighsBasisToBaseStat(int* cstat,  //!> Column baseStat
-                                  int* rstat   //!> Row baseStat
-  );
-
-  /**
    * @brief Convert a simplex basis to a HiGHS basis
    */
   void convertSimplexToHighsBasis();

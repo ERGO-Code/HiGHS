@@ -28,10 +28,6 @@ HighsStatus HighsSimplexInterface::addCols(
     const double* XcolUpper, int XnumNewNZ, const int* XAstart,
     const int* XAindex, const double* XAvalue) {
   HighsStatus return_status = HighsStatus::OK;
-#ifdef HiGHSDEV
-  printf("Called addCols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol,
-         XnumNewNZ);
-#endif
   HighsOptions& options = highs_model_object.options_;
   if (XnumNewCol < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
@@ -297,10 +293,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // matrix data are held row-wise, so we have to insert data into the
   // column-wise matrix of the LP.
   HighsStatus return_status = HighsStatus::OK;
-#ifdef HiGHSDEV
-  printf("Called addRows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow,
-         XnumNewNZ);
-#endif
   HighsOptions& options = highs_model_object.options_;
   if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
@@ -489,6 +481,7 @@ HighsStatus HighsSimplexInterface::deleteRows(
       deleteScale(options, highs_model_object.scale_.row_, index_collection),
       return_status, "deleteScale");
   if (return_status == HighsStatus::Error) return return_status;
+  
   highs_model_object.scale_.row_.resize(lp.numRow_);
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
@@ -731,8 +724,6 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
   HighsLp& lp = highs_model_object.lp_;
   if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
   if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
-  //  printf("\n\nCalled model.util_changeCoeff(row=%d, col=%d, newval=%g)\n\n",
-  //  Xrow, Xcol, XnewValue);
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   bool& valid_simplex_lp = simplex_lp_status.valid;
@@ -1231,13 +1222,9 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
         double rhs_value = rhs[row];
         int col = highs_model_object.simplex_basis_.basicIndex_[row];
         if (col < numCol) {
-          //	  printf("RHS row %2d: col %2d: scale rhs[row] = %11.4g by
-          //%11.4g\n", row, col, rhs_value, scale.col_[col]);
           rhs_value *= scale.col_[col];
         } else {
           double scale_value = scale.row_[col - numCol];
-          //	  printf("RHS row %2d: row %2d: scale rhs[row] = %11.4g by
-          //%11.4g\n", row, col - numCol, rhs_value, scale_value);
           rhs_value /= scale_value;
         }
         solve_vector.array[row] = rhs_value;
@@ -1247,14 +1234,11 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
     for (int row = 0; row < numRow; row++) {
       if (rhs[row]) {
         solve_vector.index[rhs_num_nz++] = row;
-        //	printf("RHS row %2d: scale rhs[row] = %11.4g by scale.row_[row]
-        //= %11.4g\n", row, rhs[row], scale.row_[row]);
         solve_vector.array[row] = rhs[row] * scale.row_[row];
       }
     }
   }
   solve_vector.count = rhs_num_nz;
-  //  printf("RHS has %d nonzeros\n", rhs_num_nz);
   //
   // Note that solve_vector.count is just used to determine whether
   // hyper-sparse solves should be used. The indices of the nonzeros
@@ -1268,7 +1252,6 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
   } else {
     highs_model_object.factor_.ftran(solve_vector, hist_dsty);
   }
-  //  printf("After solve: solve_vector.count = %d\n", solve_vector.count);
   // Extract the solution
   if (solution_indices == NULL) {
     // Nonzeros in the solution not required
@@ -1276,8 +1259,6 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
       // Solution nonzeros not known
       for (int row = 0; row < numRow; row++) {
         solution_vector[row] = solve_vector.array[row];
-        //	printf("Solution vector[%2d] = solve_vector.array[row] =
-        //%11.4g\n", row, solution_vector[row]);
       }
     } else {
       // Solution nonzeros are known
@@ -1285,8 +1266,6 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
       for (int ix = 0; ix < solve_vector.count; ix++) {
         int row = solve_vector.index[ix];
         solution_vector[row] = solve_vector.array[row];
-        //	printf("Solution vector[%2d] = solve_vector.array[row] = %11.4g
-        // from index %2d\n", row, solution_vector[row], ix);
       }
     }
   } else {
@@ -1299,9 +1278,6 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
         if (solve_vector.array[row]) {
           solution_vector[row] = solve_vector.array[row];
           solution_indices[*solution_num_nz++] = row;
-          //	  printf("Solution vector[%2d] = solve_vector.array[row] =
-          //%11.4g from index %2d\n", row, solution_vector[row],
-          // solution_num_nz-1);
         }
       }
     } else {
@@ -1311,8 +1287,6 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
         int row = solve_vector.index[ix];
         solution_vector[row] = solve_vector.array[row];
         solution_indices[ix] = row;
-        //	printf("Solution vector[%2d] = solve_vector.array[row] = %11.4g
-        // from index %2d\n", row, solution_vector[row], ix);
       }
       *solution_num_nz = solve_vector.count;
     }
@@ -1324,16 +1298,12 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
       for (int row = 0; row < numRow; row++) {
         double scale_value = scale.row_[row];
         solution_vector[row] *= scale_value;
-        //	printf("Row %2d so scale by %11.4g to give %11.4g\n", row,
-        // scale_value, solution_vector[row]);
       }
     } else {
       for (int ix = 0; ix < solve_vector.count; ix++) {
         int row = solve_vector.index[ix];
         double scale_value = scale.row_[row];
         solution_vector[row] *= scale_value;
-        //	printf("Row %2d so scale by %11.4g to give %11.4g\n", row,
-        // scale_value, solution_vector[row]);
       }
     }
   } else {
@@ -1343,13 +1313,9 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
         int col = highs_model_object.simplex_basis_.basicIndex_[row];
         if (col < numCol) {
           solution_vector[row] *= scale.col_[col];
-          //	  printf("Col %2d so scale by %11.4g to give %11.4g\n", col,
-          // scale.col_[col], solution_vector[row]);
         } else {
           double scale_value = scale.row_[col - numCol];
           solution_vector[row] /= scale_value;
-          //	  printf("Row %2d so scale by %11.4g to give %11.4g\n", col -
-          // numCol, scale_value, solution_vector[row]);
         }
       }
     } else {
@@ -1358,19 +1324,13 @@ HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
         int col = highs_model_object.simplex_basis_.basicIndex_[row];
         if (col < numCol) {
           solution_vector[row] *= scale.col_[col];
-          //	  printf("Col %2d so scale by %11.4g to give %11.4g\n", col,
-          // scale.col_[col], solution_vector[row]);
         } else {
           double scale_value = scale.row_[col - numCol];
           solution_vector[row] /= scale_value;
-          //	  printf("Row %2d so scale by %11.4g to give %11.4g\n", col -
-          // numCol, scale_value, solution_vector[row]);
         }
       }
     }
   }
-  //  for (int row = 0; row < numRow; row++) printf("Solution vector[%2d] =
-  //  %11.4g\n", row, solution_vector[row]);
   return HighsStatus::OK;
 }
 
@@ -1455,21 +1415,6 @@ int HighsSimplexInterface::convertBaseStatToHighsBasis(const int* cstat,
   assert(numBasic == lp.numRow_);
   basis.valid_ = true;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
-  return 0;
-}
-
-int HighsSimplexInterface::convertHighsBasisToBaseStat(int* cstat, int* rstat) {
-  HighsBasis& basis = highs_model_object.basis_;
-  HighsLp& lp = highs_model_object.lp_;
-  if (cstat != NULL) {
-    for (int col = 0; col < lp.numCol_; col++)
-      cstat[col] = (int)basis.col_status[col];
-  }
-  printf("NB SCIP has row bounds [-u, -l]\n");
-  if (rstat != NULL) {
-    for (int row = 0; row < lp.numRow_; row++)
-      rstat[row] = (int)basis.row_status[row];
-  }
   return 0;
 }
 

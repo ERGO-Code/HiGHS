@@ -1192,8 +1192,10 @@ HighsStatus deleteLpRows(const HighsOptions& options, HighsLp& lp,
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   int new_num_row;
+  printf("deleteLpRows 0\n");fflush(stdout);
   call_status =
       deleteRowsFromLpVectors(options, lp, new_num_row, index_collection);
+  printf("deleteLpRows 1 - %d\n", (int)call_status);fflush(stdout);
   return_status = interpretCallStatus(call_status, return_status,
                                       "deleteRowsFromLpVectors");
   if (return_status == HighsStatus::Error) return return_status;
