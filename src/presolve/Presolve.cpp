@@ -276,6 +276,10 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
         removeDominatedColumns();
         timer.recordFinish(REMOVE_DOMINATED_COLUMNS);
         break;
+      case Presolver::kMainExp:
+        timer.recordStart(SING_ONLY);
+        removeSingletonsOnly();
+        timer.recordFinish(SING_ONLY);
     }
 
     double time_end = timer.timer_.readRunHighsClock();
@@ -288,6 +292,30 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
 
   //***************** main loop ******************
   return status;
+}
+
+void Presolve::removeSingletonsOnly() {
+  for (int row = 0; row < numRow; row++) {
+    if (!flagRow[row]) continue;
+    bool valid = true;
+    int nz_col = 0;
+    for (int k = ARstart[row]; k < ARstart[row + 1]; k++) { 
+      const int col = ARindex[k];
+      if (!flagCol[col]) continue;
+      if (nzCol[col] != 1) {
+        valid = false;
+        break;
+      }
+      nz_col++;
+    }
+    if (!valid) continue;
+    if (nz_col == 0) {
+      flagRow[row] = false;
+      continue;
+    }
+
+    std::cout << "Singletons only row found! nzcol = " << nz_col << " L = " << rowLower[row] << " U = " << rowUpper[row] << std::endl;
+  }
 }
 
 void Presolve::removeFixed() {
@@ -340,9 +368,12 @@ int Presolve::presolve(int print) {
     order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainColSingletons);
     order.push_back(Presolver::kMainDominatedCols);
+    // order.push_back(Presolver::kMainExp);
   }
+  
+  int prev_cols_rows = 0;
+  double prev_diff = 0;
   // Else: The order has been modified for experiments
-
   while (hasChange == 1) {
     if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
@@ -352,15 +383,34 @@ int Presolve::presolve(int print) {
     int run_status = runPresolvers(order);
     timer.recordFinish(RUN_PRESOLVERS);
     assert(run_status == status);
-    if (run_status != status) {
-    }
     if (status) return status;
 
-    // todo: next
-    // Exit check: less than 10 % of what we had before.
+    // Exit check
+    int current_cols_rows = 0;
+    for (int i=0;i<numRow;i++) if (flagRow[i]) current_cols_rows++;
+    for (int i=0;i<numCol;i++) if (flagCol[i]) current_cols_rows++;
+ 
+    if (current_cols_rows == 0) break;
+
+    if (iter == 1) {
+      prev_cols_rows = current_cols_rows;
+      iter++;
+      continue;
+    } else {
+      double diff = (double) prev_cols_rows - (double) current_cols_rows;
+      if (iter < 10) {
+        prev_diff = diff;
+        iter++;
+        continue;
+      }
+      // iter > 10 : check difference
+      // if (prev_diff * diff / current_cols_rows < 0.05) break;
+    }
 
     iter++;
   }
+
+  std::cout << "   MAIN LOOP ITER = " << iter << std::endl;
 
   reportDevMainLoop();
 

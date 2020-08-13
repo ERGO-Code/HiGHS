@@ -61,6 +61,7 @@ enum class Presolver {
   kMainColSingletons,
   kMainDoubletonEq,
   kMainDominatedCols,
+  kMainExp,
 };
 
 const std::map<Presolver, std::string> kPresolverNames{
@@ -290,6 +291,9 @@ class Presolve : public HPreData {
 
   void caseTwoSingletonsDoubletonEquation(const int row, const int x,
                                           const int y);
+
+  // August 2020
+  void removeSingletonsOnly();
 };
 
 }  // namespace presolve

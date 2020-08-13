@@ -376,11 +376,13 @@ target_sources(libhighs PRIVATE
     io/HMpsFF.cpp
     io/LoadOptions.cpp
     lp_data/Highs.cpp
+    lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
     lp_data/HighsSolution.cpp
+    lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
@@ -397,6 +399,7 @@ target_sources(libhighs PRIVATE
     simplex/HDualRow.cpp
     simplex/HDualMulti.cpp
     simplex/HFactor.cpp
+    simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
