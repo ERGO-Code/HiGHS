@@ -260,7 +260,7 @@ HighsStatus HDual::solve() {
 
   assert(solvePhase == 0 || solvePhase == 1 || solvePhase == 4);
   if (solvePhase == 1) {
-    assert(scaled_model_status = HighsModelStatus::DUAL_INFEASIBLE);
+    assert(scaled_model_status == HighsModelStatus::DUAL_INFEASIBLE);
     // Resolve case of LP that is dual infeasible (and not primal
     // feasible since that would yield solvePhase == 4 Looking to
     // identify primal infeasiblilty or primal unboundedness Cleanup
@@ -277,7 +277,7 @@ HighsStatus HDual::solve() {
       }
     } else {
       // Should only be primal unbounded
-      assert(scaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED);
+      assert(scaled_model_status == HighsModelStatus::PRIMAL_UNBOUNDED);
     }
   }
   if (solvePhase == 4) {
