@@ -49,6 +49,12 @@ class Highs {
   HighsStatus passModel(const HighsLp& lp  //!< The HighsLp instance for this LP
   );
 
+  HighsStatus passModel(const int num_col, const int num_row, const int num_nz,
+                        const double* costs, const double* col_lower,
+                        const double* col_upper, const double* row_lower,
+                        const double* row_upper, const int* astart,
+                        const int* aindex, const double* avalue);
+
   /**
    * @brief reads in a model and initializes the HighsModelObject
    */

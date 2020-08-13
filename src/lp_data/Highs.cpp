@@ -231,6 +231,44 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::passModel(const int num_col, const int num_row,
+                             const int num_nz, const double* costs,
+                             const double* col_lower, const double* col_upper,
+                             const double* row_lower, const double* row_upper,
+                             const int* astart, const int* aindex,
+                             const double* avalue) {
+  HighsLp lp;
+  lp.numCol_ = num_col;
+  lp.numRow_ = num_row;
+  if (num_col > 0) {
+    assert(costs != NULL);
+    assert(col_lower != NULL);
+    assert(col_upper != NULL);
+    lp.colCost_.assign(costs, costs + num_col);
+    lp.colLower_.assign(col_lower, col_lower + num_col);
+    lp.colUpper_.assign(col_upper, col_upper + num_col);
+  }
+  if (num_row > 0) {
+    assert(row_lower != NULL);
+    assert(row_upper != NULL);
+    lp.rowLower_.assign(row_lower, row_lower + num_row);
+    lp.rowUpper_.assign(row_upper, row_upper + num_row);
+  }
+  if (num_nz > 0) {
+    assert(num_col > 0);
+    assert(num_row > 0);
+    assert(astart != NULL);
+    assert(aindex != NULL);
+    assert(avalue != NULL);
+    lp.Astart_.assign(astart, astart + num_col);
+    lp.Aindex_.assign(aindex, aindex + num_nz);
+    lp.Avalue_.assign(avalue, avalue + num_nz);
+  }
+  lp.Astart_.resize(num_col + 1);
+  lp.Astart_[num_col] = num_nz;
+  return this->passModel(lp);
+}
+
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   Filereader* reader = Filereader::getFilereader(filename);
