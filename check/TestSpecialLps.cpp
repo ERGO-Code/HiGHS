@@ -255,16 +255,16 @@ void issue316(Highs& highs) {
   solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
 }
 
-void primalDualInfeasible(Highs& highs) {
-  reportLpName("primalDualInfeasible");
-  // This LP is both primal and dual infeasible. IPX fails to identify
-  // primal infeasibility
+void primalDualInfeasible1(Highs& highs) {
+  reportLpName("primalDualInfeasible1");
+  // This LP is both primal and dual infeasible - from Wikipedia. IPX
+  // fails to identify primal infeasibility
   HighsLp lp;
   const HighsModelStatus require_model_status =
-      HighsModelStatus::PRIMAL_INFEASIBLE;
+      HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
   lp.numCol_ = 2;
   lp.numRow_ = 2;
-  lp.colCost_ = {2, -1};
+  lp.colCost_ = {-2, 1};
   lp.colLower_ = {0, 0};
   lp.colUpper_ = {inf, inf};
   lp.rowLower_ = {-inf, -inf};
@@ -277,6 +277,30 @@ void primalDualInfeasible(Highs& highs) {
   // Presolve doesn't reduce the LP
   solve(highs, "on", "simplex", require_model_status);
   // Don't run the IPX test until it's fixed
+  //  solve(highs, "on", "ipm", require_model_status);
+}
+
+void primalDualInfeasible2(Highs& highs) {
+  reportLpName("primalDualInfeasible2");
+  // This LP is both primal and dual infeasible - scip-lpi4.mps from SCIP LPI
+  // unit test (test4). IPX fails to identify primal infeasibility
+  HighsLp lp;
+  const HighsModelStatus require_model_status =
+      HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+  lp.numCol_ = 2;
+  lp.numRow_ = 2;
+  lp.colCost_ = {1, 1};
+  lp.colLower_ = {-inf, -inf};
+  lp.colUpper_ = {inf, inf};
+  lp.rowLower_ = {-inf, -inf};
+  lp.rowUpper_ = {0, -1};
+  lp.Astart_ = {0, 2, 4};
+  lp.Aindex_ = {0, 1, 0, 1};
+  lp.Avalue_ = {1, -1, -1, 1};
+
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  // Presolve doesn't reduce the LP
+  solve(highs, "on", "simplex", require_model_status);
   //  solve(highs, "on", "ipm", require_model_status);
 }
 
@@ -309,7 +333,7 @@ void mpsGas11(Highs& highs) {
   reportLpName("mpsGas11");
   // Lots of trouble is caused by gas11
   const HighsModelStatus require_model_status =
-      HighsModelStatus::PRIMAL_INFEASIBLE;
+      HighsModelStatus::PRIMAL_UNBOUNDED;
 
   // Unit test fails for IPX with adlittle_max
   std::string model = "gas11";
@@ -467,20 +491,22 @@ TEST_CASE("LP-316", "[highs_test_special_lps]") {
   Highs highs;
   issue316(highs);
 }
-TEST_CASE("LP-primal-dual-infeasible", "[highs_test_special_lps]") {
+TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
   Highs highs;
-  primalDualInfeasible(highs);
+  primalDualInfeasible1(highs);
+}
+TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
+  Highs highs;
+  primalDualInfeasible2(highs);
 }
 TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   Highs highs;
   mpsUnbounded(highs);
 }
-/*
 TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
   Highs highs;
   mpsGas11(highs);
 }
-*/
 TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
   Highs highs;
   almostNotUnbounded(highs);

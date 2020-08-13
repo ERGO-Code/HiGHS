@@ -45,23 +45,29 @@ enum class LpAction {
 // from PRIMAL_UNBOUNDED. If this fails, then HiGHS may just return
 // DUAL_INFEASIBLE
 //
-//                   |        dual infeasible |     dual feasible |   dual unbounbded
-// Primal infeasible | PRIMAL_DUAL_INFEASIBLE | PRIMAL_INFEASIBLE | PRIMAL_INFEASIBLE
-// Primal feasible   | PRIMAL_UNBOUNDED       |     OPTIMAL       | Can't happen!
-// Primal unbounded  | PRIMAL_UNBOUNDED       | Can't happen!     | Can't happen!
+//                   |        dual infeasible |     dual feasible |   dual
+//                   unbounbded
+// Primal infeasible | PRIMAL_DUAL_INFEASIBLE | PRIMAL_INFEASIBLE |
+// PRIMAL_INFEASIBLE Primal feasible   | PRIMAL_UNBOUNDED       |     OPTIMAL |
+// Can't happen! Primal unbounded  | PRIMAL_UNBOUNDED       | Can't happen! |
+// Can't happen!
 //
-// Dual infeasibility is recognised by infeasibility at dual phase 1 optimality (and implied by primal unboundedness)
+// Dual infeasibility is recognised by infeasibility at dual phase 1 optimality
+// (and implied by primal unboundedness)
 //
-// Dual feasibility is recognised by feasibility at dual phase 1 optimality or primal phase 2 optimality
+// Dual feasibility is recognised by feasibility at dual phase 1 optimality or
+// primal phase 2 optimality
 //
 // Dual unboundedness is recognised by unboundedness in dual phase 2
-// 
-// Primal infeasibility is recognised by infeasibility at primal phase 1 optimality (and implied by dual unboundedness)
 //
-// Primal feasibility is recognised by feasibility at primal phase 1 optimality or dual phase 2 optimality
+// Primal infeasibility is recognised by infeasibility at primal phase 1
+// optimality (and implied by dual unboundedness)
+//
+// Primal feasibility is recognised by feasibility at primal phase 1 optimality
+// or dual phase 2 optimality
 //
 // Primal unboundedness is recognised by unboundedness in primal phase 2
-// 
+//
 
 enum class HighsModelStatus {
   // NB Add new status values to the end so that int cast of status

@@ -50,7 +50,8 @@ HighsStatus HDual::solve() {
   HighsIterationCounts& iteration_counts = workHMO.iteration_counts_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
+  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
+  scaled_model_status = HighsModelStatus::NOTSET;
   if (debugSimplexInfoBasisRightSize(workHMO) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
@@ -227,15 +228,57 @@ HighsStatus HDual::solve() {
         break;
     }
     if (solve_bailout) return HighsStatus::Warning;
-    // Jump for primal
-    if (solvePhase == 4) break;
+    assert(solvePhase == -1 || solvePhase == 0 || solvePhase == 1 ||
+           solvePhase == 2 || solvePhase == 4);
+    // solvePhase == -1 =>
+    // solvePhase ==  0 =>
+    // solvePhase ==  1 =>
+    // solvePhase ==  2 =>
+    // solvePhase ==  4 =>
+    //
+
+    // dual infeasible. Phase 2 was only called to see whether a
+    // primal feasible point could be found. If it could, then
+    // solvePhase is 0 (4) if there are no (some) dual
+    // infeasibilities. If a according to whether there are no or is
+    // returned . If it can't No point in calling dual phase 1 again
+    // - and can lead to non-termination.  so break and
+
+    if (solvePhase == 4) {
+      // Jump for primal
+      break;
+    }
+    if (solvePhase == 1 &&
+        scaled_model_status == HighsModelStatus::DUAL_INFEASIBLE) {
+      // Dual infeasibilities after phase 2 for a problem known to be dual
+      // infeasible
+      break;
+    }
   }
   // If bailing out, should have returned already
   assert(!solve_bailout);
 
-  if (solvePhase != 0 && solvePhase != 4) {
-    printf("What ho! HDual::solve() returning with solvePhase = %d\n",
-           solvePhase);
+  assert(solvePhase == 0 || solvePhase == 1 || solvePhase == 4);
+  if (solvePhase == 1) {
+    assert(scaled_model_status = HighsModelStatus::DUAL_INFEASIBLE);
+    // Resolve case of LP that is dual infeasible (and not primal
+    // feasible since that would yield solvePhase == 4 Looking to
+    // identify primal infeasiblilty or primal unboundedness Cleanup
+    // with phase 1 for new primal code
+    computePrimalObjectiveValue(workHMO);
+    HQPrimal hPrimal(workHMO);
+    hPrimal.solve();
+    // Horrible hack until the primal simplex solver is refined
+    if (scaled_model_status == HighsModelStatus::OPTIMAL) {
+      if (workHMO.scaled_solution_params_.num_primal_infeasibilities) {
+        // Optimal with primal infeasibilities => primal infeasible
+        assert(workHMO.scaled_solution_params_.num_primal_infeasibilities > 0);
+        scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+      }
+    } else {
+      // Should only be primal unbounded
+      assert(scaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED);
+    }
   }
   if (solvePhase == 4) {
     computePrimalObjectiveValue(workHMO);
@@ -253,7 +296,7 @@ HighsStatus HDual::solve() {
       // optimally. Optimality (unlikely) for the unscaled LP will
       // still be assessed honestly, so leave it to the user to
       // deceide whether the solution can be accepted.
-      workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+      scaled_model_status = HighsModelStatus::OPTIMAL;
     } else {
       // Use primal to clean up
 #ifdef HiGHSDEV
@@ -476,6 +519,7 @@ void HDual::initSlice(const int initial_num_slice) {
 void HDual::solvePhase1() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
+  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   // When starting a new phase the (updated) dual objective function
   // value isn't known. Indicate this so that when the value computed
   // from scratch in build() isn't checked against the the updated
@@ -532,6 +576,7 @@ void HDual::solvePhase1() {
 
   // If bailing out, should have done so already
   assert(!solve_bailout);
+  // Assess outcome of dual phase 1
   if (rowOut == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_DETAILED, "dual-phase-1-optimal\n");
@@ -566,7 +611,7 @@ void HDual::solvePhase1() {
     solvePhase = -1;
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_MINIMAL, "dual-phase-1-not-solved\n");
-    workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+    scaled_model_status = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
@@ -587,7 +632,7 @@ void HDual::solvePhase1() {
       solvePhase = -1;
       HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                         ML_MINIMAL, "dual-phase-1-not-solved\n");
-      workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+      scaled_model_status = HighsModelStatus::SOLVE_ERROR;
     }
   }
 
@@ -605,6 +650,7 @@ void HDual::solvePhase1() {
 void HDual::solvePhase2() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
+  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   // When starting a new phase the (updated) dual objective function
   // value isn't known. Indicate this so that when the value computed
   // from scratch in build() isn't checked against the the updated
@@ -666,8 +712,12 @@ void HDual::solvePhase2() {
 
   // If bailing out, should have done so already
   assert(!solve_bailout);
+  // Assess outcome of dual phase 2
   if (dualInfeasCount > 0) {
-    // There are dual infeasiblities so switch to Phase 1 and return
+    // There are dual infeasiblities so possibly switch to Phase 1 and
+    // return. "Possibly" because, if dual infeasibility has already
+    // been shown, primal simplex is used to distinguish primal
+    // unboundedness from primal infeasibility
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_DETAILED, "dual-phase-2-found-free\n");
     solvePhase = 1;
@@ -686,7 +736,7 @@ void HDual::solvePhase2() {
       solvePhase = 0;
       HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                         ML_DETAILED, "problem-optimal\n");
-      workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+      scaled_model_status = HighsModelStatus::OPTIMAL;
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
@@ -694,7 +744,7 @@ void HDual::solvePhase2() {
     solvePhase = -1;
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_MINIMAL, "dual-phase-2-not-solved\n");
-    workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+    scaled_model_status = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
@@ -704,11 +754,21 @@ void HDual::solvePhase2() {
       cleanup();
     } else {
       // If the costs have not been perturbed, so dual unbounded---and hence
-      // primal infeasible
+      // primal infeasible (and possibly also dual infeasible)
       solvePhase = -1;
-      HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
-                        ML_MINIMAL, "problem-infeasible\n");
-      workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+      if (scaled_model_status == HighsModelStatus::DUAL_INFEASIBLE) {
+        HighsPrintMessage(workHMO.options_.output,
+                          workHMO.options_.message_level, ML_MINIMAL,
+                          "problem-primal-dual-infeasible\n");
+        scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+      } else {
+        // Model status should be unset?
+        assert(scaled_model_status == HighsModelStatus::NOTSET);
+        HighsPrintMessage(workHMO.options_.output,
+                          workHMO.options_.message_level, ML_MINIMAL,
+                          "problem-primal-infeasible\n");
+        scaled_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+      }
     }
   }
   return;
@@ -1848,6 +1908,7 @@ void HDual::assessPhase1Optimality() {
   assert(rowOut == -1);
   assert(workHMO.simplex_info_.dual_objective_value < 0);
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   // We still have dual infeasibilities, so clean up any perturbations
   // before concluding dual infeasibility
   //
@@ -1864,22 +1925,33 @@ void HDual::assessPhase1Optimality() {
     // If there are now dual infeasibilities with respect to phase 1
     // bounds, have to got back to rebuild()
     if (dualInfeasCount == 0) {
-      // No dual infeasibilities with respect to phase 1 bounds. In
-      // this case, although the LP is dual infeasible if the dual
-      // objective is (sufficiently) positive, no conclusions on the
-      // primal LP can be deduced. Have to shift any dual
-      // infeasibilities and go to dual phase 2 to determine whether
-      // dual unboundedness implies that the LP is primal
-      // infeasible. If dual phase 2 finds a primal feasible point
-      // then the shifts are removed and primal phase 2 will identify
-      // whether the LP is primal unbounded.
-      //
+      // No dual infeasibilities with respect to phase 1 bounds.
       if (simplex_info.dual_objective_value == 0) {
+        // No dual infeasibilities (with respect to phase 2 bounds) so
+        // go to phase 2
         HighsLogMessage(workHMO.options_.logfile, HighsMessageType::INFO,
                         "LP is dual feasible after removing cost perturbations "
                         "so go to phase 2");
       } else {
+        // LP is dual infeasible if the dual objective is sufficiently
+        // positive, so no conclusions on the primal LP can be deduced
+        // - could be primal unbounded or primal infeasible.
+        //
+        // Shift any dual infeasibilities and go to dual phase 2. If a
+        // primal feasible point is found then the shifts are removed
+        // and primal phase 2 will identify whether the LP is primal
+        // unbounded. If dual unboundedness is found, then no
+        // conclusion can be drawn. Have to use primal phase 1 (and
+        // possibly phase 2) to determine whether the LP is primal
+        // infeasible or unbounded.
+        //
+        // What's important is that the solver doesn't go back to dual
+        // phase 1, otherwise it can fail to terminate
+        //
+        // Indicate the conclusion of dual infeasiblility by setting
+        // the scaled model status
         reportOnPossibleLpDualInfeasibility();
+        scaled_model_status = HighsModelStatus::DUAL_INFEASIBLE;
       }
       solvePhase = 2;
     }
@@ -1887,10 +1959,12 @@ void HDual::assessPhase1Optimality() {
     // Phase 1 problem is optimal with original costs and negative
     // dual objective. In this case, hsol deduces dual infeasibility
     // and returns UNBOUNDED as a status, but this is wrong if the LP
-    // is primal infeasible. As discvussed above, this can only be
-    // determined by going to dual phase 2.
+    // is primal infeasible. As discussed above, this can only be
+    // determined by going to dual phase 2, and then primal phase 1,
+    // if necessary.
     //
     reportOnPossibleLpDualInfeasibility();
+    scaled_model_status = HighsModelStatus::DUAL_INFEASIBLE;
     solvePhase = 2;
   }
   if (dualInfeasCount > 0) {
@@ -2013,49 +2087,46 @@ bool HDual::dualInfoOk(const HighsLp& lp) {
 }
 
 bool HDual::bailoutReturn() {
+  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   if (solve_bailout) {
     // If bailout has already been decided: check that it's for one of
     // these reasons
-    assert(workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_TIME_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_ITERATION_LIMIT ||
-           workHMO.scaled_model_status_ ==
+    assert(scaled_model_status == HighsModelStatus::REACHED_TIME_LIMIT ||
+           scaled_model_status == HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           scaled_model_status ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
   }
   return solve_bailout;
 }
 
 bool HDual::bailoutOnTimeIterations() {
+  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   if (solve_bailout) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
-    assert(workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_TIME_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_ITERATION_LIMIT ||
-           workHMO.scaled_model_status_ ==
+    assert(scaled_model_status == HighsModelStatus::REACHED_TIME_LIMIT ||
+           scaled_model_status == HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           scaled_model_status ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
   } else if (workHMO.timer_.readRunHighsClock() > workHMO.options_.time_limit) {
     solve_bailout = true;
-    workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+    scaled_model_status = HighsModelStatus::REACHED_TIME_LIMIT;
   } else if (workHMO.iteration_counts_.simplex >=
              workHMO.options_.simplex_iteration_limit) {
     solve_bailout = true;
-    workHMO.scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+    scaled_model_status = HighsModelStatus::REACHED_ITERATION_LIMIT;
   }
   return solve_bailout;
 }
 
 bool HDual::bailoutOnDualObjective() {
+  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   if (solve_bailout) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
-    assert(workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_TIME_LIMIT ||
-           workHMO.scaled_model_status_ ==
-               HighsModelStatus::REACHED_ITERATION_LIMIT ||
-           workHMO.scaled_model_status_ ==
+    assert(scaled_model_status == HighsModelStatus::REACHED_TIME_LIMIT ||
+           scaled_model_status == HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           scaled_model_status ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
   } else if (workHMO.lp_.sense_ == ObjSense::MINIMIZE && solvePhase == 2) {
     if (workHMO.simplex_info_.updated_dual_objective_value >
