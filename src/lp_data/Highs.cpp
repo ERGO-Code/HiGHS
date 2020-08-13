@@ -2071,6 +2071,15 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         assert(return_status == HighsStatus::OK);
         break;
 
+      case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
+        clearSolution();
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
+        clearInfo();
+        assert(model_status_ == scaled_model_status_);
+        assert(return_status == HighsStatus::OK);
+        break;
+
       case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
         clearSolution();
         clearBasis();
@@ -2084,6 +2093,14 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       case HighsModelStatus::REACHED_ITERATION_LIMIT:
         clearSolution();
         clearBasis();
+        clearInfo();
+        assert(model_status_ == scaled_model_status_);
+        assert(return_status == HighsStatus::Warning);
+        break;
+      case HighsModelStatus::DUAL_INFEASIBLE:
+        clearSolution();
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
         clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::Warning);
