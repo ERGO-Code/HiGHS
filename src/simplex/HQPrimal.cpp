@@ -273,9 +273,8 @@ void HQPrimal::solvePhase2() {
         /* Primal phase 1 choose row */
         phase1ChooseRow();
         if (rowOut == -1) {
-          HighsLogMessage(workHMO.options_.logfile,
-			  HighsMessageType::ERROR,
-			  "Primal phase 1 choose row failed");
+          HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
+                          "Primal phase 1 choose row failed");
           exit(0);
         }
 
