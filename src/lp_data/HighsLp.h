@@ -45,12 +45,10 @@ enum class LpAction {
 // from PRIMAL_UNBOUNDED. If this fails, then HiGHS may just return
 // DUAL_INFEASIBLE
 //
-//                   |        dual infeasible |     dual feasible |   dual
-//                   unbounbded
-// Primal infeasible | PRIMAL_DUAL_INFEASIBLE | PRIMAL_INFEASIBLE |
-// PRIMAL_INFEASIBLE Primal feasible   | PRIMAL_UNBOUNDED       |     OPTIMAL |
-// Can't happen! Primal unbounded  | PRIMAL_UNBOUNDED       | Can't happen! |
-// Can't happen!
+//           |    Du Infeas | Du Feas   | Du UnBd
+// Pr Infeas | PR_DU_INFEAS | PR_INFEAS | PR_INFEAS
+// Pr Feas   | PR_UNBD      | OPTIMAL   |   N/A
+// Pr Unbd   | PR_UNBD      |     N/A   |   N/A
 //
 // Dual infeasibility is recognised by infeasibility at dual phase 1 optimality
 // (and implied by primal unboundedness)
