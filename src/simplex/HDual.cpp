@@ -2087,13 +2087,14 @@ bool HDual::dualInfoOk(const HighsLp& lp) {
 }
 
 bool HDual::bailoutReturn() {
-  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   if (solve_bailout) {
     // If bailout has already been decided: check that it's for one of
     // these reasons
-    assert(scaled_model_status == HighsModelStatus::REACHED_TIME_LIMIT ||
-           scaled_model_status == HighsModelStatus::REACHED_ITERATION_LIMIT ||
-           scaled_model_status ==
+    assert(workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_TIME_LIMIT ||
+           workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           workHMO.scaled_model_status_ ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
   }
   return solve_bailout;
@@ -2120,13 +2121,14 @@ bool HDual::bailoutOnTimeIterations() {
 }
 
 bool HDual::bailoutOnDualObjective() {
-  HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   if (solve_bailout) {
     // Bailout has already been decided: check that it's for one of these
     // reasons
-    assert(scaled_model_status == HighsModelStatus::REACHED_TIME_LIMIT ||
-           scaled_model_status == HighsModelStatus::REACHED_ITERATION_LIMIT ||
-           scaled_model_status ==
+    assert(workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_TIME_LIMIT ||
+           workHMO.scaled_model_status_ ==
+               HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           workHMO.scaled_model_status_ ==
                HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
   } else if (workHMO.lp_.sense_ == ObjSense::MINIMIZE && solvePhase == 2) {
     if (workHMO.simplex_info_.updated_dual_objective_value >
