@@ -45,7 +45,7 @@ enum class LpAction {
 // from PRIMAL_UNBOUNDED. If this fails, then HiGHS may just return
 // DUAL_INFEASIBLE
 //
-//           |    Du Infeas | Du Feas   | Du UnBd
+//           | Du Infeas    | Du Feas   | Du UnBd
 // Pr Infeas | PR_DU_INFEAS | PR_INFEAS | PR_INFEAS
 // Pr Feas   | PR_UNBD      | OPTIMAL   |   N/A
 // Pr Unbd   | PR_UNBD      |     N/A   |   N/A
