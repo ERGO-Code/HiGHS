@@ -61,9 +61,9 @@ void minimal_api() {
   //        8 <= 2x_0 +  x_1
   // 0 <= x_0 <= 3; 1 <= x_1
 
-  int numcol = 2;
-  int numrow = 3;
-  int nnz = 5;
+  const int numcol = 2;
+  const int numrow = 3;
+  const int nnz = 5;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[numcol] = {2.0, 3.0};
@@ -131,9 +131,9 @@ void full_api() {
 
   highs = Highs_create();
 
-  int numcol = 2;
-  int numrow = 3;
-  int nnz = 5;
+  const int numcol = 2;
+  const int numrow = 3;
+  const int nnz = 5;
   int i;
 
   // Define the column costs, lower bounds and upper bounds
