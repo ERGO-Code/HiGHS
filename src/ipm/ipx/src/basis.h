@@ -30,9 +30,9 @@ public:
     Basis(const Basis&) = delete;
     Basis& operator=(const Basis&) = delete;
 
-    // Move is OK.
+    // Move
     Basis(Basis&&) = default;
-    Basis& operator=(Basis&&) = default;
+    Basis& operator=(Basis&&) = delete; // delete: control_ cannot be moved!
 
     ~Basis() = default;
 
