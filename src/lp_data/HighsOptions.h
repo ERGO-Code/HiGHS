@@ -374,14 +374,14 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordDouble("infinite_cost",
                                "Limit on cost coefficient: values larger than "
                                "this will be treated as infinite",
-                               advanced, &infinite_cost, 1e15, 1e20, 1e25);
+                               advanced, &infinite_cost, 1e15, 1e20, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_double =
         new OptionRecordDouble("infinite_bound",
                                "Limit on |constraint bound|: values larger "
                                "than this will be treated as infinite",
-                               advanced, &infinite_bound, 1e15, 1e20, 1e25);
+                               advanced, &infinite_bound, 1e15, 1e20, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -395,7 +395,7 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordDouble("large_matrix_value",
                                "Upper limit on |matrix entries|: values larger "
                                "than this will be treated as infinite",
-                               advanced, &large_matrix_value, 1e0, 1e15, 1e20);
+                               advanced, &large_matrix_value, 1e0, 1e15, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

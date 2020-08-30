@@ -516,7 +516,7 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       }
       */
       // Check that the value is not too large
-      bool large_value = abs_value >= large_matrix_value;
+      bool large_value = abs_value > large_matrix_value;
       if (large_value) {
         HighsLogMessage(
             options.logfile, HighsMessageType::ERROR,
