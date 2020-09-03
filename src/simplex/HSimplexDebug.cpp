@@ -286,12 +286,6 @@ HighsDebugStatus debugComputePrimal(const HighsModelObject& highs_model_object,
       "primal values\n",
       value_adjective.c_str(), computed_absolute_primal_norm,
       computed_relative_primal_norm);
-  if (have_primal_rhs && !primal_rhs_norm) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "ComputePrimal: |PrimalRHS| = %9.4g", primal_rhs_norm);
-    return_status = HighsDebugStatus::WARNING;
-  }
   return return_status;
 }
 HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
@@ -478,10 +472,12 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
 
 HighsDebugStatus debugUpdatedObjectiveValue(
     HighsModelObject& highs_model_object, const SimplexAlgorithm algorithm,
-    const int phase, const std::string message) {
+    const int phase, const std::string message,
+    const bool force) {
   // Non-trivially expensive check of updated objective value. Computes the
   // exact objective value
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY &&
+      !force)
     return HighsDebugStatus::NOT_CHECKED;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
 

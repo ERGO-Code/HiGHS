@@ -46,7 +46,7 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
 
 HighsDebugStatus debugUpdatedObjectiveValue(
     HighsModelObject& highs_model_object, const SimplexAlgorithm algorithm,
-    const int phase, const std::string message);
+    const int phase, const std::string message, const bool force = false);
 
 HighsDebugStatus debugUpdatedObjectiveValue(
     const HighsModelObject& highs_model_object,
