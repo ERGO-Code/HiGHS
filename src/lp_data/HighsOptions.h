@@ -623,9 +623,8 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "start_crossover_tolerance",
-        "Tolerance to be satisfied before IPM crossover will start",
-        advanced, &start_crossover_tolerance, 1e-12, 1e-8,
-        HIGHS_CONST_INF);
+        "Tolerance to be satisfied before IPM crossover will start", advanced,
+        &start_crossover_tolerance, 1e-12, 1e-8, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_bool = new OptionRecordBool(

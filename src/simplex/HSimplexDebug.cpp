@@ -470,16 +470,18 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
   return return_status;
 }
 
-HighsDebugStatus debugSimplexDualFeasibility(const HighsModelObject& highs_model_object,
-					     const std::string message, const bool force) {
+HighsDebugStatus debugSimplexDualFeasibility(
+    const HighsModelObject& highs_model_object, const std::string message,
+    const bool force) {
   // Non-trivially expensive check of dual feasibility.
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY &&
+  if (highs_model_object.options_.highs_debug_level <
+          HIGHS_DEBUG_LEVEL_COSTLY &&
       !force)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  double scaled_dual_feasibility_tolerance = 
+  double scaled_dual_feasibility_tolerance =
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
 
   int num_dual_infeasibilities = 0;
@@ -511,9 +513,10 @@ HighsDebugStatus debugSimplexDualFeasibility(const HighsModelObject& highs_model
   if (num_dual_infeasibilities) {
     HighsPrintMessage(highs_model_object.options_.output,
                       highs_model_object.options_.message_level, ML_ALWAYS,
-                      "SmplxDuFeas:   num/max/sum simplex dual infeasibilities = %d / %g / %g - %s\n",
-                      num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities,
-		      message.c_str());
+                      "SmplxDuFeas:   num/max/sum simplex dual infeasibilities "
+                      "= %d / %g / %g - %s\n",
+                      num_dual_infeasibilities, max_dual_infeasibility,
+                      sum_dual_infeasibilities, message.c_str());
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   return HighsDebugStatus::OK;
@@ -521,11 +524,11 @@ HighsDebugStatus debugSimplexDualFeasibility(const HighsModelObject& highs_model
 
 HighsDebugStatus debugUpdatedObjectiveValue(
     HighsModelObject& highs_model_object, const SimplexAlgorithm algorithm,
-    const int phase, const std::string message,
-    const bool force) {
+    const int phase, const std::string message, const bool force) {
   // Non-trivially expensive check of updated objective value. Computes the
   // exact objective value
-  if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY &&
+  if (highs_model_object.options_.highs_debug_level <
+          HIGHS_DEBUG_LEVEL_COSTLY &&
       !force)
     return HighsDebugStatus::NOT_CHECKED;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -625,10 +628,9 @@ HighsDebugStatus debugUpdatedObjectiveValue(
   std::string error_adjective;
   int report_level;
   bool at_least_small_error =
-    updated_objective_relative_error >
-    updated_objective_small_relative_error ||
-    updated_objective_absolute_error >
-    updated_objective_small_absolute_error;
+      updated_objective_relative_error >
+          updated_objective_small_relative_error ||
+      updated_objective_absolute_error > updated_objective_small_absolute_error;
   if (!at_least_small_error) return return_status;
   if (updated_objective_relative_error >
           updated_objective_large_relative_error ||
