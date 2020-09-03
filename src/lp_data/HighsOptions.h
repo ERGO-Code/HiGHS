@@ -274,6 +274,7 @@ struct HighsOptionsStruct {
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshhold;
   double dual_simplex_cost_perturbation_multiplier;
+  double start_crossover_tolerance;
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
@@ -617,6 +618,13 @@ class HighsOptions : public HighsOptionsStruct {
         "dual_simplex_cost_perturbation_multiplier",
         "Dual simplex cost perturbation multiplier: 0 => no perturbation",
         advanced, &dual_simplex_cost_perturbation_multiplier, 0.0, 1.0,
+        HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "start_crossover_tolerance",
+        "Tolerance to be satisfied before IPM crossover will start",
+        advanced, &start_crossover_tolerance, 1e-12, 1e-8,
         HIGHS_CONST_INF);
     records.push_back(record_double);
 
