@@ -70,6 +70,9 @@ enum PrimalDualStatus {
 
 const std::string FILENAME_DEFAULT = "";
 
+// Need to allow infinite costs to pass SCIP LPI unit tests
+const bool allow_infinite_costs = true;
+
 /** SCIP/CPLEX-like HiGHS basis status for columns and rows. */
 enum class HighsBasisStatus {
   LOWER =

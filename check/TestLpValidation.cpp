@@ -94,16 +94,22 @@ TEST_CASE("LP-validation", "[highs_data]") {
   //  reportLp(lp, 2);
 
   // Try to add a column with illegal cost
+  HighsStatus require_return_status;
+  if (allow_infinite_costs) {
+    require_return_status = HighsStatus::OK;
+  } else {
+    require_return_status = HighsStatus::Error;
+  }
   XcolCost[0] = my_infinity;
   return_status =
       hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == require_return_status);
   XcolCost[0] = -my_infinity;
   return_status =
       hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(return_status == require_return_status);
   XcolCost[0] = 1;
 
   // Add a column with bound inconsistency due to upper

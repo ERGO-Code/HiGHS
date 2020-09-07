@@ -77,6 +77,8 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object);
 
 void initialiseSimplexLpDefinition(HighsModelObject& highs_model);
 void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model);
+void extendSimplexLpRandomVectors(HighsModelObject& highs_model_object,
+                                  const int num_new_col, const int num_new_row);
 
 // SCALE:
 

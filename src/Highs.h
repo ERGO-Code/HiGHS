@@ -49,10 +49,22 @@ class Highs {
   HighsStatus passModel(const HighsLp& lp  //!< The HighsLp instance for this LP
   );
 
+  HighsStatus passModel(const int num_col, const int num_row, const int num_nz,
+                        const double* costs, const double* col_lower,
+                        const double* col_upper, const double* row_lower,
+                        const double* row_upper, const int* astart,
+                        const int* aindex, const double* avalue);
+
   /**
    * @brief reads in a model and initializes the HighsModelObject
    */
   HighsStatus readModel(const std::string filename  //!< the filename
+  );
+
+  /**
+   * @brief reads in a basis
+   */
+  HighsStatus readBasis(const std::string filename  //!< the filename
   );
 
   /**
@@ -263,10 +275,12 @@ class Highs {
   /**
    * @brief Forms a row of \f$B^{-1}A\f$
    */
-  HighsStatus getReducedRow(const int row,           //!< Index of row required
-                            double* row_vector,      //!< Row required
-                            int* row_num_nz = NULL,  //!< Number of nonzeros
-                            int* row_indices = NULL  //!< Indices of nonzeros
+  HighsStatus getReducedRow(const int row,            //!< Index of row required
+                            double* row_vector,       //!< Row required
+                            int* row_num_nz = NULL,   //!< Number of nonzeros
+                            int* row_indices = NULL,  //!< Indices of nonzeros
+                            const double* pass_basis_inverse_row_vector =
+                                NULL  //!< Necessary row of \f$B^{-1}\f$
   );
 
   /**
@@ -424,6 +438,12 @@ class Highs {
    * @brief writes out current model
    */
   HighsStatus writeModel(const std::string filename  //!< the filename
+  );
+
+  /**
+   * @brief writes out current basis
+   */
+  HighsStatus writeBasis(const std::string filename  //!< the filename
   );
 
   /**
@@ -652,6 +672,22 @@ class Highs {
   bool deleteRows(int* mask  //!< Full length array with 1 => delete; 0 => not.
                              //!< The new index of any row not deleted is
                              //!< returned in place of the value 0.
+  );
+
+  /**
+   * @brief Scale a matrix column (and cost) by a constant - flipping bounds if
+   * the constant is negative
+   */
+  bool scaleCol(const int col,         //!< Column to change
+                const double scaleval  //!< Scaling value
+  );
+
+  /**
+   * @brief Scale a matrix row by a constant - flipping bounds if the constant
+   * is negative
+   */
+  bool scaleRow(const int row,         //!< Row to change
+                const double scaleval  //!< Scaling value
   );
 
   /**

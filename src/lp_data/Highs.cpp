@@ -231,6 +231,44 @@ HighsStatus Highs::passModel(const HighsLp& lp) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::passModel(const int num_col, const int num_row,
+                             const int num_nz, const double* costs,
+                             const double* col_lower, const double* col_upper,
+                             const double* row_lower, const double* row_upper,
+                             const int* astart, const int* aindex,
+                             const double* avalue) {
+  HighsLp lp;
+  lp.numCol_ = num_col;
+  lp.numRow_ = num_row;
+  if (num_col > 0) {
+    assert(costs != NULL);
+    assert(col_lower != NULL);
+    assert(col_upper != NULL);
+    lp.colCost_.assign(costs, costs + num_col);
+    lp.colLower_.assign(col_lower, col_lower + num_col);
+    lp.colUpper_.assign(col_upper, col_upper + num_col);
+  }
+  if (num_row > 0) {
+    assert(row_lower != NULL);
+    assert(row_upper != NULL);
+    lp.rowLower_.assign(row_lower, row_lower + num_row);
+    lp.rowUpper_.assign(row_upper, row_upper + num_row);
+  }
+  if (num_nz > 0) {
+    assert(num_col > 0);
+    assert(num_row > 0);
+    assert(astart != NULL);
+    assert(aindex != NULL);
+    assert(avalue != NULL);
+    lp.Astart_.assign(astart, astart + num_col);
+    lp.Aindex_.assign(aindex, aindex + num_nz);
+    lp.Avalue_.assign(avalue, avalue + num_nz);
+  }
+  lp.Astart_.resize(num_col + 1);
+  lp.Astart_[num_col] = num_nz;
+  return this->passModel(lp);
+}
+
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   Filereader* reader = Filereader::getFilereader(filename);
@@ -271,6 +309,14 @@ HighsStatus Highs::clearModel() {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::readBasis(const std::string filename) {
+  HighsStatus return_status = HighsStatus::OK;
+  return_status =
+      interpretCallStatus(readBasisFile(options_, this->basis_, filename),
+                          return_status, "readBasis");
+  return returnFromHighs(return_status);
+}
+
 HighsStatus Highs::writeModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   HighsLp model = this->lp_;
@@ -291,6 +337,14 @@ HighsStatus Highs::writeModel(const std::string filename) {
                             return_status, "writeModelToFile");
     delete writer;
   }
+  return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::writeBasis(const std::string filename) {
+  HighsStatus return_status = HighsStatus::OK;
+  return_status =
+      interpretCallStatus(writeBasisFile(options_, this->basis_, filename),
+                          return_status, "writeBasis");
   return returnFromHighs(return_status);
 }
 
@@ -324,6 +378,8 @@ HighsStatus Highs::run() {
 #endif
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
+  // Zero the HiGHS iteration counts
+  zeroHighsIterationCounts(info_);
   /*
 if (options_.message_level >= 0) {
   printf("\n!! Actually solving an LP with %d cols, %d rows", lp_.numCol_,
@@ -949,7 +1005,8 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
 }
 
 HighsStatus Highs::getReducedRow(const int row, double* row_vector,
-                                 int* row_num_nz, int* row_indices) {
+                                 int* row_num_nz, int* row_indices,
+                                 const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
   if (row < 0 || row >= hmos_[0].lp_.numRow_) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
@@ -964,25 +1021,26 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
   }
   HighsLp& lp = hmos_[0].lp_;
   int numRow = lp.numRow_;
-  vector<double> rhs;
-  vector<double> col_vector;
-  vector<int> col_indices;
-  int col_num_nz;
-  rhs.assign(numRow, 0);
-  rhs[row] = 1;
-  col_vector.resize(numRow, 0);
-  col_indices.resize(numRow, 0);
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  // Form B^{-T}e_{row}
-  simplex_interface.basisSolve(rhs, &col_vector[0], &col_num_nz,
-                               &col_indices[0], true);
+  vector<double> basis_inverse_row;
+  double* basis_inverse_row_vector = (double*)pass_basis_inverse_row_vector;
+  if (basis_inverse_row_vector == NULL) {
+    vector<double> rhs;
+    vector<int> col_indices;
+    rhs.assign(numRow, 0);
+    rhs[row] = 1;
+    basis_inverse_row.resize(numRow, 0);
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    // Form B^{-T}e_{row}
+    simplex_interface.basisSolve(rhs, &basis_inverse_row[0], NULL, NULL, true);
+    basis_inverse_row_vector = &basis_inverse_row[0];
+  }
   bool return_indices = row_num_nz != NULL;
   if (return_indices) *row_num_nz = 0;
   for (int col = 0; col < lp.numCol_; col++) {
     double value = 0;
     for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
       int row = lp.Aindex_[el];
-      value += lp.Avalue_[el] * col_vector[row];
+      value += lp.Avalue_[el] * basis_inverse_row_vector[row];
     }
     row_vector[col] = 0;
     if (fabs(value) > HIGHS_CONST_TINY) {
@@ -1574,6 +1632,30 @@ bool Highs::deleteRows(int* mask) {
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
 
+bool Highs::scaleCol(const int col, const double scaleval) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  underDevelopmentLogMessage("scaleCol");
+  if (!haveHmo("scaleCol")) return false;
+  HighsSimplexInterface interface(hmos_[0]);
+  call_status = interface.scaleCol(col, scaleval);
+  return_status = interpretCallStatus(call_status, return_status, "scaleCol");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
+bool Highs::scaleRow(const int row, const double scaleval) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  underDevelopmentLogMessage("scaleRow");
+  if (!haveHmo("scaleRow")) return false;
+  HighsSimplexInterface interface(hmos_[0]);
+  call_status = interface.scaleRow(row, scaleval);
+  return_status = interpretCallStatus(call_status, return_status, "scaleRow");
+  if (return_status == HighsStatus::Error) return false;
+  return returnFromHighs(return_status) != HighsStatus::Error;
+}
+
 double Highs::getHighsInfinity() { return HIGHS_CONST_INF; }
 
 double Highs::getHighsRunTime() { return timer_.readRunHighsClock(); }
@@ -2027,6 +2109,15 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         assert(return_status == HighsStatus::OK);
         break;
 
+      case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
+        clearSolution();
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
+        clearInfo();
+        assert(model_status_ == scaled_model_status_);
+        assert(return_status == HighsStatus::OK);
+        break;
+
       case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
         clearSolution();
         clearBasis();
@@ -2040,6 +2131,14 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
       case HighsModelStatus::REACHED_ITERATION_LIMIT:
         clearSolution();
         clearBasis();
+        clearInfo();
+        assert(model_status_ == scaled_model_status_);
+        assert(return_status == HighsStatus::Warning);
+        break;
+      case HighsModelStatus::DUAL_INFEASIBLE:
+        clearSolution();
+        // May have a basis, according to whether infeasibility was
+        // detected in presolve or solve
         clearInfo();
         assert(model_status_ == scaled_model_status_);
         assert(return_status == HighsStatus::Warning);
@@ -2093,10 +2192,12 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   return return_status;
 }
 void Highs::underDevelopmentLogMessage(const string method_name) {
+  /*
   HighsLogMessage(
       options_.logfile, HighsMessageType::WARNING,
       "Method %s is still under development and behaviour may be unpredictable",
       method_name.c_str());
+  */
 }
 
 void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
