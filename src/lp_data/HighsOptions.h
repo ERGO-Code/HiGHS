@@ -451,20 +451,20 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_int = new OptionRecordInt(
         "simplex_dual_edge_weight_strategy",
-        "Strategy for simplex dual edge weights: Dantzig / Devex / Steepest "
-        "Edge (0/1/2)",
+        "Strategy for simplex dual edge weights: Choose / Dantzig / Devex / Steepest "
+        "Edge (-1/0/1/2)",
         advanced, &simplex_dual_edge_weight_strategy,
         SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
-        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
+        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE,
         SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "simplex_primal_edge_weight_strategy",
-        "Strategy for simplex primal edge weights: Dantzig / Devex (0/1)",
+        "Strategy for simplex primal edge weights: Choose / Dantzig / Devex (-1/0/1)",
         advanced, &simplex_primal_edge_weight_strategy,
         SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
-        SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
+        SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_CHOOSE,
         SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
