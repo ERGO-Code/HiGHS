@@ -88,8 +88,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   //
   const int dual_edge_weight_strategy =
       options.simplex_dual_edge_weight_strategy;
-  if (dual_edge_weight_strategy ==
-          SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE ||
+  if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE ||
       dual_edge_weight_strategy ==
           SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE ||
       dual_edge_weight_strategy ==
