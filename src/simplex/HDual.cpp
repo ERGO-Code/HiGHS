@@ -1781,7 +1781,12 @@ void HDual::initialiseDevexFramework(const bool parallel) {
 
 void HDual::interpretDualEdgeWeightStrategy(
     const int dual_edge_weight_strategy) {
-  if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
+  if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE) {
+    dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
+    initialise_dual_steepest_edge_weights = true;
+    allow_dual_steepest_edge_to_devex_switch = true;
+  } else if (dual_edge_weight_strategy ==
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
     dual_edge_weight_mode = DualEdgeWeightMode::DANTZIG;
   } else if (dual_edge_weight_strategy ==
              SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX) {
@@ -1796,11 +1801,6 @@ void HDual::interpretDualEdgeWeightStrategy(
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = false;
     allow_dual_steepest_edge_to_devex_switch = false;
-  } else if (dual_edge_weight_strategy ==
-             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
-    dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
-    initialise_dual_steepest_edge_weights = true;
-    allow_dual_steepest_edge_to_devex_switch = true;
   } else {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_MINIMAL,

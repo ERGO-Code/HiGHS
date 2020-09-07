@@ -274,6 +274,7 @@ struct HighsOptionsStruct {
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshhold;
   double dual_simplex_cost_perturbation_multiplier;
+  double start_crossover_tolerance;
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
   bool use_original_HFactor_logic;
@@ -447,23 +448,25 @@ class HighsOptions : public HighsOptionsStruct {
         SIMPLEX_CRASH_STRATEGY_OFF, SIMPLEX_CRASH_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "simplex_dual_edge_weight_strategy",
-        "Strategy for simplex dual edge weights: Dantzig / Devex / Steepest "
-        "Edge (0/1/2)",
-        advanced, &simplex_dual_edge_weight_strategy,
-        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
-        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
-        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
+    record_int =
+        new OptionRecordInt("simplex_dual_edge_weight_strategy",
+                            "Strategy for simplex dual edge weights: Choose / "
+                            "Dantzig / Devex / Steepest "
+                            "Edge (-1/0/1/2)",
+                            advanced, &simplex_dual_edge_weight_strategy,
+                            SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
+                            SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE,
+                            SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt(
-        "simplex_primal_edge_weight_strategy",
-        "Strategy for simplex primal edge weights: Dantzig / Devex (0/1)",
-        advanced, &simplex_primal_edge_weight_strategy,
-        SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
-        SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
-        SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
+    record_int =
+        new OptionRecordInt("simplex_primal_edge_weight_strategy",
+                            "Strategy for simplex primal edge weights: Choose "
+                            "/ Dantzig / Devex (-1/0/1)",
+                            advanced, &simplex_primal_edge_weight_strategy,
+                            SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
+                            SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_CHOOSE,
+                            SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("simplex_iteration_limit",
@@ -618,6 +621,12 @@ class HighsOptions : public HighsOptionsStruct {
         "Dual simplex cost perturbation multiplier: 0 => no perturbation",
         advanced, &dual_simplex_cost_perturbation_multiplier, 0.0, 1.0,
         HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "start_crossover_tolerance",
+        "Tolerance to be satisfied before IPM crossover will start", advanced,
+        &start_crossover_tolerance, 1e-12, 1e-8, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_bool = new OptionRecordBool(
