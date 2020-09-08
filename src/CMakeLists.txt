@@ -168,6 +168,7 @@ set(headers
 #    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
+    simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
