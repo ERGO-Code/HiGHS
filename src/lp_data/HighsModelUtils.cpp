@@ -105,7 +105,7 @@ std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
   return "";
 }
 
-void reportModelBoundSol(FILE* file, const bool columns, const int dim,
+void writeModelBoundSol(FILE* file, const bool columns, const int dim,
                          const std::vector<double>& lower,
                          const std::vector<double>& upper,
                          const std::vector<std::string>& names,
