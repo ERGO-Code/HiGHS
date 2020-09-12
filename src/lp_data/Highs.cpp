@@ -1878,24 +1878,21 @@ HighsStatus Highs::writeSolution(const std::string filename,
 // Ensure that the HiGHS solution and basis have the same size as the
 // model, and that the HiGHS basis is kept up-to-date with any solved
 // basis
-void Highs::updateHighsSolutionBasis() {
+void Highs::forceHighsSolutionBasisSize() {
+  // Ensure that the HiGHS solution vectors are the right size
   solution_.col_value.resize(lp_.numCol_);
   solution_.row_value.resize(lp_.numRow_);
   solution_.col_dual.resize(lp_.numCol_);
   solution_.row_dual.resize(lp_.numRow_);
-  if (hmos_.size() > 0) {
-    // ToDo This resizing should be done within methods where size is
-    // changed, and just be an assert here
-    hmos_[0].solution_.col_value.resize(lp_.numCol_);
-    hmos_[0].solution_.row_value.resize(lp_.numRow_);
-    hmos_[0].solution_.col_dual.resize(lp_.numCol_);
-    hmos_[0].solution_.row_dual.resize(lp_.numRow_);
-    // ToDo Should only copy the basis
-    basis_ = hmos_[0].basis_;
-  } else {
-    basis_.valid_ = false;
+  // Ensure that the HiGHS basis vectors are the right size,
+  // invalidating the basis if they aren't
+  if ((int)basis_.col_status.size() != lp_.numCol_) {
     basis_.col_status.resize(lp_.numCol_);
+    basis_.valid_ = false;
+  }
+  if ((int)basis_.row_status.size() != lp_.numRow_) {
     basis_.row_status.resize(lp_.numRow_);
+    basis_.valid_ = false;
   }
 }
 
@@ -2167,7 +2164,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
 HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   HighsStatus return_status = highs_return_status;
 
-  updateHighsSolutionBasis();
+  forceHighsSolutionBasisSize();
 
   const bool consistent = debugBasisConsistent(options_, lp_, basis_) !=
                           HighsDebugStatus::LOGICAL_ERROR;
