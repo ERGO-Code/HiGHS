@@ -558,8 +558,10 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
   if (!hasChange) hasChange = true;
 }
 
-void Presolve::caseTwoSingletonsDoubletonEquation(const int row, const int x,
-                                                  const int y) {}
+void Presolve::caseTwoSingletonsDoubletonInequality(const int row, const int x,
+                                                  const int y) {
+                                                    std::cout << "Call caseTwoSing..." << std::endl;
+                                                  }
 
 void Presolve::removeDoubletonEquations() {
   if (timer.reachLimit()) {
@@ -595,7 +597,7 @@ void Presolve::removeDoubletonEquations() {
 
         // two singletons case handled elsewhere
         if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) {
-          caseTwoSingletonsDoubletonEquation(row, x, y);
+          caseTwoSingletonsDoubletonInequality(row, x, y);
           continue;
         }
 
