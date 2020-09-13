@@ -228,6 +228,10 @@ struct HighsSimplexInfo {
 
   std::vector<int> devex_index_;
 
+  bool backtracking_ = false;
+  SimplexBasis last_rebuild_basis_;
+  std::vector<double> last_rebuild_edge_weights_;
+
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;
   int dual_edge_weight_strategy;

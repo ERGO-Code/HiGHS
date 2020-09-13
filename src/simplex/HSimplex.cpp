@@ -322,9 +322,14 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   bool reinvert = !simplex_lp_status.has_invert;
   if (reinvert) {
     analysis.simplexTimerStart(InvertClock);
-    computeFactor(highs_model_object);
+    const int rank_deficiency = computeFactor(highs_model_object);
     analysis.simplexTimerStop(InvertClock);
-    simplex_lp_status.has_fresh_invert = true;
+    //    assert(!rank_deficiency);
+    if (rank_deficiency) {
+      simplexHandleRankDeficiency(highs_model_object);
+      simplex_lp_status.has_invert = true;
+      simplex_lp_status.has_fresh_invert = true;
+    }
     assert(simplex_lp_status.has_invert);
   }
   // Possibly check for basis condition. ToDo Override this for MIP hot start
@@ -347,8 +352,9 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     }
     simplex_info.num_basic_logicals = simplex_lp.numRow_;
     analysis.simplexTimerStart(InvertClock);
-    computeFactor(highs_model_object);
+    const int rank_deficiency = computeFactor(highs_model_object);
     analysis.simplexTimerStop(InvertClock);
+    assert(!rank_deficiency);
 
     /*
     HCrash crash(highs_model_object);
@@ -2452,9 +2458,11 @@ int computeFactor(HighsModelObject& highs_model_object) {
       highs_model_object.simplex_analysis_.getThreadFactorTimerClockPtr(
           thread_id);
 #endif
-  int rank_deficiency = factor.build(factor_timer_clock_pointer);
+  const int rank_deficiency = factor.build(factor_timer_clock_pointer);
   if (rank_deficiency) {
-    simplexHandleRankDeficiency(highs_model_object);
+    simplex_lp_status.has_invert = false;
+    simplex_lp_status.has_fresh_invert = false;
+    return rank_deficiency;
   }
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_form) {
