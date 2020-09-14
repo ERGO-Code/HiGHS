@@ -363,7 +363,6 @@ void HDual::options() {
       workHMO.scaled_solution_params_;
 
   interpretDualEdgeWeightStrategy(simplex_info.dual_edge_weight_strategy);
-  //  interpretPriceStrategy(simplex_info.price_strategy);
 
   // Copy values of simplex solver options to dual simplex options
   primal_feasibility_tolerance =
@@ -804,31 +803,7 @@ bool HDual::rebuild() {
     }
   }
   if (reInvert) {
-    const int* baseIndex = &workHMO.simplex_basis_.basicIndex_[0];
-    // Scatter the edge weights so that, after INVERT,
-    // they can be gathered according to the new
-
-    // permutation of baseIndex
-    analysis->simplexTimerStart(PermWtClock);
-    for (int i = 0; i < solver_num_row; i++)
-      dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
-    analysis->simplexTimerStop(PermWtClock);
-
-    analysis->simplexTimerStart(InvertClock);
-
-    // Call computeFactor to perform INVERT
-    int rank_deficiency = computeFactor(workHMO);
-    analysis->simplexTimerStop(InvertClock);
-
-    if (rank_deficiency) {
-      return false;
-    }
-    // Gather the edge weights according to the
-    // permutation of baseIndex after INVERT
-    analysis->simplexTimerStart(PermWtClock);
-    for (int i = 0; i < solver_num_row; i++)
-      dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
-    analysis->simplexTimerStop(PermWtClock);
+    if (!getNonsingularInverse()) return false;
   }
 
   // Record whether the update objective value should be tested. If
@@ -1886,32 +1861,34 @@ void HDual::interpretDualEdgeWeightStrategy(
   }
 }
 
-/*
-void HDual::interpretPriceStrategy(const int price_strategy) {
-  allow_priceByColumn_switch = false;
-  allow_priceByRowSparseResult_switch = false;
-  if (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
-    price_mode = PriceMode::COL;
-  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
-    price_mode = PriceMode::ROW;
-  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
-    price_mode = PriceMode::ROW;
-    allow_priceByRowSparseResult_switch = true;
-  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
-    price_mode = PriceMode::ROW;
-    allow_priceByColumn_switch = true;
-    allow_priceByRowSparseResult_switch = true;
-  } else {
-    HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
-ML_MINIMAL, "HDual::interpretPriceStrategy: unrecognised price_strategy = %d - "
-                      "using row Price with switch or colump price switch\n",
-        price_strategy);
-    price_mode = PriceMode::ROW;
-    allow_priceByColumn_switch = true;
-    allow_priceByRowSparseResult_switch = true;
+bool HDual::getNonsingularInverse() {
+  const int* baseIndex = &workHMO.simplex_basis_.basicIndex_[0];
+  // Scatter the edge weights so that, after INVERT,
+  // they can be gathered according to the new
+
+  // permutation of baseIndex
+  analysis->simplexTimerStart(PermWtClock);
+  for (int i = 0; i < solver_num_row; i++)
+    dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
+  analysis->simplexTimerStop(PermWtClock);
+
+  analysis->simplexTimerStart(InvertClock);
+  
+  // Call computeFactor to perform INVERT
+  int rank_deficiency = computeFactor(workHMO);
+  analysis->simplexTimerStop(InvertClock);
+  
+  if (rank_deficiency) {
+    return false;
   }
+  // Gather the edge weights according to the
+  // permutation of baseIndex after INVERT
+  analysis->simplexTimerStart(PermWtClock);
+  for (int i = 0; i < solver_num_row; i++)
+    dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
+  analysis->simplexTimerStop(PermWtClock);
+  return true;
 }
-*/
 
 void HDual::assessPhase1Optimality() {
   // Should only be called when optimal in phase 1 (rowOut == -1) with negative
