@@ -543,8 +543,13 @@ void HDual::solvePhase1() {
   analysis->simplexTimerStart(IterateClock);
   for (;;) {
     analysis->simplexTimerStart(IterateDualRebuildClock);
-    rebuild();
+    const bool rebuild_ok = rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
+    if (!rebuild_ok) {
+     solvePhase = -1;
+     scaled_model_status = HighsModelStatus::SOLVE_ERROR;
+     return;
+    }
     if (bailoutOnTimeIterations()) break;
     for (;;) {
       switch (simplex_info.simplex_strategy) {
@@ -675,8 +680,13 @@ void HDual::solvePhase2() {
     // Outer loop of solvePhase2()
     // Rebuild all values, reinverting B if updates have been performed
     analysis->simplexTimerStart(IterateDualRebuildClock);
-    rebuild();
+    const bool rebuild_ok = rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
+    if (!rebuild_ok) {
+     solvePhase = -1;
+     scaled_model_status = HighsModelStatus::SOLVE_ERROR;
+     return;
+    }
     if (bailoutOnTimeIterations()) break;
     if (bailoutOnDualObjective()) break;
     if (dualInfeasCount > 0) break;
@@ -774,7 +784,7 @@ void HDual::solvePhase2() {
   return;
 }
 
-void HDual::rebuild() {
+bool HDual::rebuild() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   // Save history information
@@ -810,8 +820,9 @@ void HDual::rebuild() {
     int rank_deficiency = computeFactor(workHMO);
     analysis->simplexTimerStop(InvertClock);
 
-    if (rank_deficiency)
-      throw runtime_error("Dual reInvert: singular-basis-matrix");
+    if (rank_deficiency) {
+      return false;
+    }
     // Gather the edge weights according to the
     // permutation of baseIndex after INVERT
     analysis->simplexTimerStart(PermWtClock);
@@ -907,6 +918,7 @@ void HDual::rebuild() {
 #endif
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
+  return true;
 }
 
 void HDual::cleanup() {

@@ -130,7 +130,7 @@ class HDual {
    * Also collects primal infeasibilities and computes the dual objective value
    */
 
-  void rebuild();
+  bool rebuild();
 
   /**
    * @brief Remove perturbation and recompute the dual solution
