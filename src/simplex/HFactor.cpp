@@ -262,14 +262,10 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   build_syntheticTick = 0;
   factor_timer.start(FactorInvertSimple, factor_timer_clock_pointer);
   // Build the L, U factor
-  const int ck_col = 56;
-  printf("\nA: baseIndex[%d] = %d\n", ck_col, baseIndex[ck_col]);
   buildSimple();
-  printf("B: baseIndex[%d] = %d\n", ck_col, baseIndex[ck_col]);
   factor_timer.stop(FactorInvertSimple, factor_timer_clock_pointer);
   factor_timer.start(FactorInvertKernel, factor_timer_clock_pointer);
   rank_deficiency = buildKernel();
-  printf("C: baseIndex[%d] = %d\n", ck_col, baseIndex[ck_col]);
   factor_timer.stop(FactorInvertKernel, factor_timer_clock_pointer);
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
@@ -280,14 +276,12 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
     // singular columns are in the position corresponding to the
     // logical which replaces them
     buildHandleRankDeficiency();
-    // 29.06.20: buildMarkSingC() previously commented out
-    //    buildMarkSingC();
+    buildMarkSingC();
     factor_timer.stop(FactorInvertDeficient, factor_timer_clock_pointer);
   }
   // Complete INVERT
   factor_timer.start(FactorInvertFinish, factor_timer_clock_pointer);
   buildFinish();
-  printf("D: baseIndex[%d] = %d\n", ck_col, baseIndex[ck_col]);
   factor_timer.stop(FactorInvertFinish, factor_timer_clock_pointer);
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
@@ -877,8 +871,7 @@ void HFactor::buildHandleRankDeficiency() {
       iwork[perm_i] = baseIndex[i];
     } else {
       printf("Singularity for baseIndex[%d] = %d\n", i, baseIndex[i]);
-      noPvC[lc_rank_deficiency] = i;
-      lc_rank_deficiency++;
+      noPvC[lc_rank_deficiency++] = i;
     }
   }
   assert(lc_rank_deficiency == rank_deficiency);
@@ -900,9 +893,7 @@ void HFactor::buildHandleRankDeficiency() {
   for (int k = 0; k < rank_deficiency; k++) {
     int iRow = noPvR[k];
     int iCol = noPvC[k];
-    if (permute[iCol] != -1)
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
-                      "ERROR: permute[iCol] = %d != -1", permute[iCol]);
+    assert(permute[iCol] == -1);
     permute[iCol] = iRow;
     Lstart.push_back(Lindex.size());
     UpivotIndex.push_back(iRow);
@@ -927,18 +918,13 @@ void HFactor::buildMarkSingC() {
   for (int k = 0; k < rank_deficiency; k++) {
     int ASMrow = noPvR[k];
     int ASMcol = noPvC[k];
-    int i = -iwork[ASMrow] - 1;
-    if (i < 0 || i >= rank_deficiency) {
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
-                      "0 > i = %d || %d = i >= rank_deficiency = %d", i, i,
-                      rank_deficiency);
-    } else {
-      // Store negation of 1+ASMcol so that removing column 0 can be
-      // identified!
-      iwork[ASMrow] = -(ASMcol + 1);
-    }
+    assert(-iwork[ASMrow] - 1 >= 0 && -iwork[ASMrow] - 1 < rank_deficiency);
+    // Store negation of 1+ASMcol so that removing column 0 can be
+    // identified!
+    iwork[ASMrow] = -(ASMcol + 1);
+    noPvC[k] = baseIndex[ASMcol];
+    baseIndex[ASMcol] = numCol + ASMrow;
   }
-  for (int i = 0; i < numRow; i++) baseIndex[i] = iwork[i];
   debugReportMarkSingC(1, highs_debug_level, output, message_level, numRow,
                        iwork, baseIndex);
 }

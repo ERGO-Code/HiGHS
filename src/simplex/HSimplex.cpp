@@ -2390,48 +2390,20 @@ void flip_bound(HighsModelObject& highs_model_object, int iCol) {
       move == 1 ? simplex_info.workLower_[iCol] : simplex_info.workUpper_[iCol];
 }
 
-int simplexHandleRankDeficiency(HighsModelObject& highs_model_object) {
+void simplexHandleRankDeficiency(HighsModelObject& highs_model_object) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HFactor& factor = highs_model_object.factor_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   int rank_deficiency = factor.rank_deficiency;
   vector<int>& noPvC = factor.noPvC;
-  printf("Returned %d = factor.build();\n", rank_deficiency);
-  fflush(stdout);
-  vector<int> basicRows;
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  basicRows.resize(numTot);
-  //    printf("Before - simplex_basis.basicIndex_:");
-  // for (int iRow=0; iRow<simplex_lp.numRow_; iRow++)
-  //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
-  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-    basicRows[simplex_basis.basicIndex_[iRow]] = iRow;
+  vector<int>& noPvR = factor.noPvR;
   for (int k = 0; k < rank_deficiency; k++) {
-    //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k],
-    //      k, noPvC[k]);fflush(stdout);
-    int columnIn = simplex_lp.numCol_ + factor.noPvR[k];
+    int columnIn = simplex_lp.numCol_ + noPvR[k];
     int columnOut = noPvC[k];
-    int rowOut = basicRows[columnOut];
-    //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g,
-    //      %11.4g]\n", columnIn, columnOut, rowOut,
-    //      simplex_info.workLower_[columnOut],
-    //      simplex_info.workUpper_[columnOut]);
-    assert(simplex_basis.basicIndex_[rowOut] == columnOut);
-    if (highs_model_object.simplex_info_.initialised) {
-      int sourceOut = setSourceOutFmBd(highs_model_object, columnOut);
-      update_pivots(highs_model_object, columnIn, rowOut, sourceOut);
-      update_matrix(highs_model_object, columnIn, columnOut);
-    } else {
-      simplex_basis.basicIndex_[rowOut] = columnIn;
-      simplex_basis.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
-      simplex_basis.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
-    }
+    simplex_basis.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+    simplex_basis.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
   }
-  //    printf("After  - simplex_basis.basicIndex_:");
-  // for (int iRow=0; iRow<simplex_lp.numRow_; iRow++)
-  //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
-  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_);
-  return 0;
+  highs_model_object.simplex_lp_status_.has_matrix_row_wise = false;
 }
 
 int computeFactor(HighsModelObject& highs_model_object) {
@@ -2524,7 +2496,8 @@ int computeFactor(HighsModelObject& highs_model_object) {
   }
 #endif
 
-  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_);
+  const bool force = rank_deficiency;
+  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_, force);
 
   if (rank_deficiency) {
   // Have an invertible representation, but of B with column(s)

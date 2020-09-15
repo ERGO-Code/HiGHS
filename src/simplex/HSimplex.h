@@ -136,7 +136,7 @@ double computeBasisCondition(const HighsModelObject& highs_model_object);
 
 void flip_bound(HighsModelObject& highs_model_object, int iCol);
 
-int simplexHandleRankDeficiency(HighsModelObject& highs_model_object);
+void simplexHandleRankDeficiency(HighsModelObject& highs_model_object);
 
 int computeFactor(HighsModelObject& highs_model_object);
 
