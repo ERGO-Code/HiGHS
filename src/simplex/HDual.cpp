@@ -1862,7 +1862,9 @@ void HDual::interpretDualEdgeWeightStrategy(
 }
 
 bool HDual::getNonsingularInverse() {
-  const int* baseIndex = &workHMO.simplex_basis_.basicIndex_[0];
+  const vector<int>& baseIndex = workHMO.simplex_basis_.basicIndex_;
+  // Take a copy of baseIndex from before INVERT to be 
+  const vector<int> baseIndex_before_compute_factor = baseIndex;
   // Scatter the edge weights so that, after INVERT,
   // they can be gathered according to the new
 

@@ -262,10 +262,14 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   build_syntheticTick = 0;
   factor_timer.start(FactorInvertSimple, factor_timer_clock_pointer);
   // Build the L, U factor
+  const int ck_col = 56;
+  printf("\nA: baseIndex[%d] = %d\n", ck_col, baseIndex[ck_col]);
   buildSimple();
+  printf("B: baseIndex[%d] = %d\n", ck_col, baseIndex[ck_col]);
   factor_timer.stop(FactorInvertSimple, factor_timer_clock_pointer);
   factor_timer.start(FactorInvertKernel, factor_timer_clock_pointer);
   rank_deficiency = buildKernel();
+  printf("C: baseIndex[%d] = %d\n", ck_col, baseIndex[ck_col]);
   factor_timer.stop(FactorInvertKernel, factor_timer_clock_pointer);
   if (rank_deficiency) {
     factor_timer.start(FactorInvertDeficient, factor_timer_clock_pointer);
@@ -283,6 +287,7 @@ int HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   // Complete INVERT
   factor_timer.start(FactorInvertFinish, factor_timer_clock_pointer);
   buildFinish();
+  printf("D: baseIndex[%d] = %d\n", ck_col, baseIndex[ck_col]);
   factor_timer.stop(FactorInvertFinish, factor_timer_clock_pointer);
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow - 1] + numRow;
@@ -871,6 +876,7 @@ void HFactor::buildHandleRankDeficiency() {
     if (perm_i >= 0) {
       iwork[perm_i] = baseIndex[i];
     } else {
+      printf("Singularity for baseIndex[%d] = %d\n", i, baseIndex[i]);
       noPvC[lc_rank_deficiency] = i;
       lc_rank_deficiency++;
     }

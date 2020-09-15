@@ -2459,11 +2459,6 @@ int computeFactor(HighsModelObject& highs_model_object) {
           thread_id);
 #endif
   const int rank_deficiency = factor.build(factor_timer_clock_pointer);
-  if (rank_deficiency) {
-    simplex_lp_status.has_invert = false;
-    simplex_lp_status.has_fresh_invert = false;
-    return rank_deficiency;
-  }
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_form) {
     const bool report_kernel = false;
@@ -2511,11 +2506,11 @@ int computeFactor(HighsModelObject& highs_model_object) {
     }
     if (report_kernel) printf("\n");
   }
-#endif
-  simplex_info.update_count = 0;
-  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_);
-
-#ifdef HiGHSDEV
+  if (simplex_info.analyse_invert_condition) {
+    analysis.simplexTimerStart(BasisConditionClock);
+    simplex_info.invert_condition = computeBasisCondition(highs_model_object);
+    analysis.simplexTimerStop(BasisConditionClock);
+  }
   if (simplex_info.analyse_invert_time) {
     simplex_info.total_inverts = analysis.simplexTimerNumCall(InvertClock);
     simplex_info.total_invert_time = analysis.simplexTimerRead(InvertClock);
@@ -2529,17 +2524,20 @@ int computeFactor(HighsModelObject& highs_model_object) {
   }
 #endif
 
-  // Now have a representation of B^{-1}, and it is fresh!
-  simplex_lp_status.has_invert = true;
-  simplex_lp_status.has_fresh_invert = true;
+  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_);
 
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_invert_condition) {
-    analysis.simplexTimerStart(BasisConditionClock);
-    simplex_info.invert_condition = computeBasisCondition(highs_model_object);
-    analysis.simplexTimerStop(BasisConditionClock);
+  if (rank_deficiency) {
+  // Have an invertible representation, but of B with column(s)
+  // replacements due to singularity. So no (fresh) representation of
+  // B^{-1}
+    simplex_lp_status.has_invert = false;
+    simplex_lp_status.has_fresh_invert = false;
+  } else {
+    // Now have a representation of B^{-1}, and it is fresh!
+    simplex_lp_status.has_invert = true;
+    simplex_lp_status.has_fresh_invert = true;
+    simplex_info.update_count = 0;
   }
-#endif
 
   return rank_deficiency;
 }
