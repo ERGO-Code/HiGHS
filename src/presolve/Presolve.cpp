@@ -1576,6 +1576,7 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
   // case two singleton columns
   // when we get here bounds on xj are updated so we can choose low/upper one
   // depending on the cost of xj
+  // throw; // does not get triggered by ctest or small.
   flagRow.at(i) = 0;
   double value;
   if (colCost.at(j) > 0) {
@@ -1609,6 +1610,11 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
   // singCol.remove(j);
 }
 
+void Presolve::removeZeroCostColumnSingleton(const int col, const int row,
+                                             const int k) {
+  std::cout << "ZERO COST COL SING" << std::endl;
+}
+
 void Presolve::removeColumnSingletons() {
   list<int>::iterator it = singCol.begin();
 
@@ -1627,6 +1633,14 @@ void Presolve::removeColumnSingletons() {
       }
       assert(k < (int)Aindex.size());
       const int i = Aindex.at(k);
+
+      // zero cost
+      bool on_zero_cost = true;
+      if (on_zero_cost && fabs(colCost.at(col)) < tol) {
+        removeZeroCostColumnSingleton(col, i, k);
+        it = singCol.erase(it);
+        continue;
+      }
 
       // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
@@ -3781,7 +3795,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
       // std::cout << lbxNew << " lbxNew " << std::endl;
       // std::cout << ubxNew << " ubxNew " << std::endl;
       // std::cout << valueX << " val  " << std::endl;
-      if (ubxNew > lbxNew) assert(x_status_reduced == HighsBasisStatus::BASIC);
+      //if (ubxNew > lbxNew) assert(x_status_reduced == HighsBasisStatus::BASIC);
+      // not true.
 
       // if X was non basic make it basic
       if (x_status_reduced != HighsBasisStatus::BASIC) {
