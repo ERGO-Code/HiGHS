@@ -324,9 +324,9 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     analysis.simplexTimerStart(InvertClock);
     const int rank_deficiency = computeFactor(highs_model_object);
     analysis.simplexTimerStop(InvertClock);
-    //    assert(!rank_deficiency);
     if (rank_deficiency) {
       simplexHandleRankDeficiency(highs_model_object);
+      updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
       simplex_lp_status.has_invert = true;
       simplex_lp_status.has_fresh_invert = true;
     }
@@ -334,28 +334,28 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   }
   // Possibly check for basis condition. ToDo Override this for MIP hot start
   bool basis_condition_ok = true;
-  if (options.simplex_initial_condition_check)
+  if (options.simplex_initial_condition_check) {
     basis_condition_ok = basisConditionOk(highs_model_object);
-  // ToDo Handle ill-conditioned basis with basis crash, in which case
-  // ensure that HiGHS and simplex basis are invalidated and simplex
-  // work and base arrays are re-populated
-  //  assert(basis_condition_ok);
-  if (!basis_condition_ok) {
-    // Basis crash really doesn't work, so use logical basis
-    simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
-    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
-      simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
-    for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-      int iVar = simplex_lp.numCol_ + iRow;
-      simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-      simplex_basis.basicIndex_[iRow] = iVar;
-    }
-    simplex_info.num_basic_logicals = simplex_lp.numRow_;
-    analysis.simplexTimerStart(InvertClock);
-    const int rank_deficiency = computeFactor(highs_model_object);
-    analysis.simplexTimerStop(InvertClock);
-    assert(!rank_deficiency);
-
+    // ToDo Handle ill-conditioned basis with basis crash, in which case
+    // ensure that HiGHS and simplex basis are invalidated and simplex
+    // work and base arrays are re-populated
+    //  assert(basis_condition_ok);
+    if (!basis_condition_ok) {
+      // Basis crash really doesn't work, so use logical basis
+      simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
+	simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+	int iVar = simplex_lp.numCol_ + iRow;
+	simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+	simplex_basis.basicIndex_[iRow] = iVar;
+      }
+      simplex_info.num_basic_logicals = simplex_lp.numRow_;
+      analysis.simplexTimerStart(InvertClock);
+      const int rank_deficiency = computeFactor(highs_model_object);
+      analysis.simplexTimerStop(InvertClock);
+      assert(!rank_deficiency);
+      
     /*
     HCrash crash(highs_model_object);
     analysis.simplexTimerStart(CrashClock);
@@ -394,8 +394,10 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     // Check the condition after the basis crash
     basis_condition_ok = basisConditionOk(highs_model_object);
     */
-    updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
-    simplex_lp_status.has_fresh_invert = true;
+      updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
+      simplex_lp_status.has_invert = true;
+      simplex_lp_status.has_fresh_invert = true;
+    }
   }
 
   // Now there are nonbasicFlag and basicIndex corresponding to a

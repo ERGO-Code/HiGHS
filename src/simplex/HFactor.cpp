@@ -870,7 +870,6 @@ void HFactor::buildHandleRankDeficiency() {
     if (perm_i >= 0) {
       iwork[perm_i] = baseIndex[i];
     } else {
-      printf("Singularity for baseIndex[%d] = %d\n", i, baseIndex[i]);
       noPvC[lc_rank_deficiency++] = i;
     }
   }
