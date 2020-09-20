@@ -30,6 +30,7 @@ endif()
 
 # Note: Not ON by default. Still need to fix the exe generation dir: rename from 
 # app/ to bin/
+option(EXP "Experimental mode: run unit tests with doctest." OFF)
 option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
 if (NOT FAST_BUILD)
 
@@ -403,6 +404,13 @@ add_instance_tests(unboundedInstances "Unbounded" " ")
 foreach(setting ${settings})
     add_instance_tests(optionsInstances "Optimal" ${setting})
 endforeach()
+
+if (EXP) 
+    add_executable(doctest)
+    target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
+    target_include_directories(doctest PRIVATE external)
+    target_link_libraries(doctest libhighs)
+endif()
 
 # Dashboards later on.
 # include(CTest)
