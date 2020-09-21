@@ -606,14 +606,14 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
 void Presolve::caseTwoSingletonsDoubletonInequality(const int row, const int x,
                                                   const int y) {
   
-  std::cout << "Call caseTwoSing..." << std::endl;
+  // std::cout << "Call caseTwoSing..." << std::endl;
 
-  std::cout << "Two column singletons: row " << row << ", x = " << x << ", y = " << y << std::endl;
-  std::cout << "                     cx = " << colCost[x] << "  cy = " << colCost[y] << std::endl;
-  std::cout << "                     ax = " << getaij(row, x) << "  ay = " << getaij(row, y) << std::endl;
-  std::cout << "   L = " << rowLower[row] << "  U = " << rowUpper[row] << std::endl;
-  std::cout << "   lx = " << colLower[x] << "  ux = " << colUpper[x] << std::endl;
-  std::cout << "   ly = " << colLower[y] << "  uy = " << colUpper[y] << std::endl;
+  // std::cout << "Two column singletons: row " << row << ", x = " << x << ", y = " << y << std::endl;
+  // std::cout << "                     cx = " << colCost[x] << "  cy = " << colCost[y] << std::endl;
+  // std::cout << "                     ax = " << getaij(row, x) << "  ay = " << getaij(row, y) << std::endl;
+  // std::cout << "   L = " << rowLower[row] << "  U = " << rowUpper[row] << std::endl;
+  // std::cout << "   lx = " << colLower[x] << "  ux = " << colUpper[x] << std::endl;
+  // std::cout << "   ly = " << colLower[y] << "  uy = " << colUpper[y] << std::endl;
   
   assert(nzRow[row] = 2);
   assert(nzCol[x] = 1);
@@ -624,19 +624,19 @@ void Presolve::caseTwoSingletonsDoubletonInequality(const int row, const int x,
   assert(flagRow[row]);
 
   // trivial case
-  if(rowLower[row] == 0 && rowUpper[row] == 0) {
-    if ((colLower[x] <= 0 && colUpper[x] >= 0) && 
-        (colLower[y] <= 0 && colUpper[y] >= 0)) {
+  // if(rowLower[row] == 0 && rowUpper[row] == 0) {
+  //   if ((colLower[x] <= 0 && colUpper[x] >= 0) && 
+  //       (colLower[y] <= 0 && colUpper[y] >= 0)) {
     
-      // primal and dual values set to 0 already. just flagRow
-      flagRow[row] = false;
-      flagCol[x] = false;
-      flagCol[y] = false;
-      postValue.push((double)y);
-      addChange(PresolveRule::TWO_COL_SING_TRIVIAL, row, x);
-      std::cout << "Trivial case row " << row << std::endl;
-    }
-  }
+  //     // primal and dual values set to 0 already. just flagRow
+  //     flagRow[row] = false;
+  //     flagCol[x] = false;
+  //     flagCol[y] = false;
+  //     postValue.push((double)y);
+  //     addChange(PresolveRule::TWO_COL_SING_TRIVIAL, row, x);
+  //     std::cout << "Trivial case row " << row << std::endl;
+  //   }
+  // }
 }
 
 void Presolve::removeDoubletonEquations() {
