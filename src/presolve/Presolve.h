@@ -61,7 +61,7 @@ enum class Presolver {
   kMainColSingletons,
   kMainDoubletonEq,
   kMainDominatedCols,
-  kMainExp,
+  kMainSingletonsOnly,
 };
 
 const std::map<Presolver, std::string> kPresolverNames{

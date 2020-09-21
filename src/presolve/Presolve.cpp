@@ -276,7 +276,7 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
         removeDominatedColumns();
         timer.recordFinish(REMOVE_DOMINATED_COLUMNS);
         break;
-      case Presolver::kMainExp:
+      case Presolver::kMainSingletonsOnly:
         timer.recordStart(SING_ONLY);
         removeSingletonsOnly();
         timer.recordFinish(SING_ONLY);
@@ -368,7 +368,7 @@ int Presolve::presolve(int print) {
     order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainColSingletons);
     order.push_back(Presolver::kMainDominatedCols);
-    // order.push_back(Presolver::kMainExp);
+    // order.push_back(Presolver::kMainSingletonsOnly);
   }
   
   int prev_cols_rows = 0;

@@ -28,16 +28,6 @@ void reportSolvedLpStats(FILE* output, int message_level,
 HighsStatus callLpSolver(HighsOptions& options);
 HighsStatus callMipSolver(HighsOptions& options);
 
-// int main(int argc, char** argv) {
-//   Highs highs;
-//   const int * indices = 10;
-//   const int * indices = 10;
-
-//   highs.addRow(0, 1, 1, indices, values);
-
-//   highs.runPresolve();
-// }
-
 int main(int argc, char** argv) {
   printHighsVersionCopyright(stdout, ML_ALWAYS);
 
