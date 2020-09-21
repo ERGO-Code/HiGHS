@@ -74,7 +74,6 @@ enum PresolveRule {
   FORCING_ROW_VARIABLE,
   TWO_COL_SING_TRIVIAL,
   ZERO_COST_COL_SING,
-  SING_ONLY
 };
 
 enum presolveNumerics {

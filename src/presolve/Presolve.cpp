@@ -2683,6 +2683,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         flagRow[c.row] = true;
         flagCol[x] = true;
         flagCol[y] = true;
+        row_status.at(c.row) = HighsBasisStatus::BASIC;
       }
       case DOUBLETON_EQUATION: {  // Doubleton equation row
         getDualsDoubletonEquation(c.row, c.col);
