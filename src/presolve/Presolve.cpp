@@ -369,11 +369,8 @@ int Presolve::presolve(int print) {
     order.push_back(Presolver::kMainDoubletonEq);
     order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainColSingletons);
-    order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainDominatedCols);
-    order.push_back(Presolver::kMainRowSingletons);
-    order.push_back(Presolver::kMainForcing);
-    order.push_back(Presolver::kMainSingletonsOnly);
+    // order.push_back(Presolver::kMainSingletonsOnly);
   }
   
   int prev_cols_rows = 0;
@@ -388,7 +385,7 @@ int Presolve::presolve(int print) {
     int run_status = runPresolvers(order);
     timer.recordFinish(RUN_PRESOLVERS);
     assert(run_status == status);
-    if (status) return status;
+    if (run_status) return status;
 
     // Exit check
     int current_cols_rows = 0;
@@ -612,12 +609,12 @@ void Presolve::caseTwoSingletonsDoubletonInequality(const int row, const int x,
   
   // std::cout << "Call caseTwoSing..." << std::endl;
 
-  std::cout << "Two column singletons: row " << row << ", x = " << x << ", y = " << y << std::endl;
-  std::cout << "                     cx = " << colCost[x] << "  cy = " << colCost[y] << std::endl;
-  std::cout << "                     ax = " << getaij(row, x) << "  ay = " << getaij(row, y) << std::endl;
-  std::cout << "   L = " << rowLower[row] << "  U = " << rowUpper[row] << std::endl;
-  std::cout << "   lx = " << colLower[x] << "  ux = " << colUpper[x] << std::endl;
-  std::cout << "   ly = " << colLower[y] << "  uy = " << colUpper[y] << std::endl;
+  // std::cout << "Two column singletons: row " << row << ", x = " << x << ", y = " << y << std::endl;
+  // std::cout << "                     cx = " << colCost[x] << "  cy = " << colCost[y] << std::endl;
+  // std::cout << "                     ax = " << getaij(row, x) << "  ay = " << getaij(row, y) << std::endl;
+  // std::cout << "   L = " << rowLower[row] << "  U = " << rowUpper[row] << std::endl;
+  // std::cout << "   lx = " << colLower[x] << "  ux = " << colUpper[x] << std::endl;
+  // std::cout << "   ly = " << colLower[y] << "  uy = " << colUpper[y] << std::endl;
   
   assert(nzRow[row] = 2);
   assert(nzCol[x] = 1);
@@ -2368,6 +2365,10 @@ void Presolve::setPrimalValue(int j, double value) {
 
       // update singleton row list
       if (nzRow.at(row) == 1) singRow.push_back(row);
+      if (nzRow.at(row) == 0) {
+        flagRow[row] = 0;
+        addChange(PresolveRule::EMPTY_ROW, row, j);
+      }
     }
   }
 
@@ -2590,8 +2591,7 @@ int Presolve::getSingRowElementIndexInAR(int i) {
 int Presolve::getSingColElementIndexInA(int j) {
   int k = Astart.at(j);
   assert(k >= 0 && k < (int) Aindex.size());
-  const int row = Aindex[k];
-  assert(row >= 0 && row < numRow);
+  assert(Aindex[k] >= 0 && Aindex[k] < numRow);
   assert(flagRow.size() == (unsigned int)numRow);
 
   while (!flagRow.at(Aindex.at(k))) ++k;
