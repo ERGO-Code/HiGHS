@@ -1714,6 +1714,7 @@ void Presolve::removeColumnSingletons() {
   while (it != singCol.end()) {
     if (flagCol[*it]) {
       const int col = *it;
+      assert(0 <= col && col <= numCol);
       const int k = getSingColElementIndexInA(col);
       if (k < 0) {
         it = singCol.erase(it);
@@ -2525,6 +2526,11 @@ int Presolve::getSingRowElementIndexInAR(int i) {
 
 int Presolve::getSingColElementIndexInA(int j) {
   int k = Astart.at(j);
+  assert(k >= 0 && k < Aindex.size());
+  const int row = Aindex[k];
+  assert(row >= 0 && row < numRow);
+  assert(flagRow.size() == (unsigned int)numRow);
+
   while (!flagRow.at(Aindex.at(k))) ++k;
   if (k >= Aend.at(j)) {
     return -1;
