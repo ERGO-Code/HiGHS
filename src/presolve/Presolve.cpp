@@ -277,9 +277,10 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
         timer.recordFinish(REMOVE_DOMINATED_COLUMNS);
         break;
       case Presolver::kMainSingletonsOnly:
-        timer.recordStart(SING_ONLY);
+        // To implement
+        // timer.recordStart(SING_ONLY);
         removeSingletonsOnly();
-        timer.recordFinish(SING_ONLY);
+        // timer.recordFinish(SING_ONLY);
     }
 
     double time_end = timer.timer_.readRunHighsClock();
@@ -633,6 +634,7 @@ void Presolve::caseTwoSingletonsDoubletonInequality(const int row, const int x,
       flagCol[y] = false;
       postValue.push((double)y);
       addChange(PresolveRule::TWO_COL_SING_TRIVIAL, row, x);
+      std::cout << "Trivial case row " << row << std::endl;
     }
   }
 }
@@ -676,10 +678,10 @@ void Presolve::removeDoubletonEquations() {
         }
 
         // two singletons case handled elsewhere
-        if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) {
-          caseTwoSingletonsDoubletonInequality(row, x, y);
-          continue;
-        }
+        // if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) {
+        //   caseTwoSingletonsDoubletonInequality(row, x, y);
+        //   continue;
+        // }
 
         // singleton rows only in y column which is present in fewer constraints
         // and eliminated. bool rs_only = true; for (int k = Astart.at(y); k <

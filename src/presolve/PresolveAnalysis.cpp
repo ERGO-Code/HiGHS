@@ -57,8 +57,8 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
   //
   rules.push_back(
       PresolveRuleInfo(TOTAL_PRESOLVE_TIME, "Total presolve time", "TPT"));
-  rules.push_back(
-      PresolveRuleInfo(SING_ONLY, "Sing only row", "SOR"));
+//   rules.push_back(
+//       PresolveRuleInfo(SING_ONLY, "Sing only row", "SOR"));
 
   // Plus one for the total resize time.
   assert((int)rules.size() == PRESOLVE_RULES_COUNT);
