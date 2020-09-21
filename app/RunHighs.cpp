@@ -28,42 +28,6 @@ void reportSolvedLpStats(FILE* output, int message_level,
 HighsStatus callLpSolver(HighsOptions& options);
 HighsStatus callMipSolver(HighsOptions& options);
 
-// int main(int argc, char** argv) 
-// {
-//   HighsLp lp;
-//   lp.numCol_ = 2;
-//   lp.numRow_ = 1;
-
-//   lp.Astart_.push_back(0);
-//   lp.Astart_.push_back(1);
-//   lp.Astart_.push_back(2);
-
-//   lp.Aindex_.push_back(0);
-//   lp.Aindex_.push_back(0);
-
-//   lp.Avalue_.push_back(1);
-//   lp.Avalue_.push_back(1);
-
-//   lp.colLower_.push_back(0);
-//   lp.colUpper_.push_back(1);
-  
-//   lp.colLower_.push_back(0);
-//   lp.colUpper_.push_back(1);
-
-//   lp.rowLower_.push_back(1);
-//   lp.rowUpper_.push_back(1);
-
-//   lp.colCost_.push_back(1);
-//   lp.colCost_.push_back(2);
-
-//   Highs highs;
-//   HighsStatus status = highs.passModel(lp);
-//   assert(status == HighsStatus::OK);
-
-//   status = highs.run();
-//   return 0;
-// }
-
 int main(int argc, char** argv) {
   printHighsVersionCopyright(stdout, ML_ALWAYS);
 

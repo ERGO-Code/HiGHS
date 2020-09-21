@@ -292,7 +292,7 @@ class Presolve : public HPreData {
   dev_kkt_check::State initState(const bool intermediate = false);
 
   void caseTwoSingletonsDoubletonInequality(const int row, const int x,
-                                          const int y);
+                                            const int y);
 
   // August 2020
   void removeSingletonsOnly();
