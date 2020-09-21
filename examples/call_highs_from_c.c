@@ -229,6 +229,20 @@ void full_api() {
   free(rowbasisstatus);
 
   Highs_destroy(highs);
+
+  // Define the constraint matrix col-wise to pass to the LP
+  int astart[numcol] = {0, 2};
+  int aindex[nnz] = {1, 2, 0, 1, 2};
+  double avalue[nnz] = {1.0, 2.0, 1.0, 2.0, 1.0};
+  highs = Highs_create();
+  status = Highs_passLp(highs, numcol, numrow, nnz,
+			colcost, collower, colupper,
+			rowlower, rowupper,
+			astart, aindex, avalue);
+  status = Highs_run(highs);
+  modelstatus = Highs_getModelStatus(highs, scaled_model);
+  printf("Run status = %d; Model status = %d = %s\n", status, modelstatus, Highs_highsModelStatusToChar(highs, modelstatus));
+  Highs_destroy(highs);
 }
 
 int main() { 

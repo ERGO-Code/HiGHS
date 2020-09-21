@@ -673,6 +673,7 @@ bool basisConditionOk(HighsModelObject& highs_model_object) {
       basis_condition, condition_comment.c_str(), basis_condition_tolerance);
   return basis_condition_ok;
 }
+
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance) {
@@ -707,16 +708,12 @@ bool dual_infeasible(const double value, const double lower, const double upper,
       // Assumed to be nonbasic at that bound
       assert(fabs(residual) < value_tolerance);
       if (lower < upper) {
-        // Boxed
         if (value < midpoint) {
-          // At lower bound
           infeasible = dual <= -dual_tolerance;
         } else {
-          // At upper bound
           infeasible = dual >= dual_tolerance;
         }
       } else {
-        // Fixed
         infeasible = false;
       }
     }
@@ -736,13 +733,10 @@ void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewCol) {
   // Make any new columns nonbasic
   for (int iCol = lp.numCol_; iCol < newNumCol; iCol++) {
     if (!highs_isInfinity(-lp.colLower_[iCol])) {
-      // Has finite lower bound so set it there
       basis.col_status[iCol] = HighsBasisStatus::LOWER;
     } else if (!highs_isInfinity(lp.colUpper_[iCol])) {
-      // Has finite upper bound so set it there
       basis.col_status[iCol] = HighsBasisStatus::UPPER;
     } else {
-      // Free variable so set to zero
       basis.col_status[iCol] = HighsBasisStatus::ZERO;
     }
   }
@@ -1077,20 +1071,24 @@ void initialiseSimplexLpDefinition(HighsModelObject& highs_model_object) {
 
 void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+
   const int numCol = highs_model_object.simplex_lp_.numCol_;
   const int numTot = highs_model_object.simplex_lp_.numCol_ +
                      highs_model_object.simplex_lp_.numRow_;
+  if (!numTot) return;
   // Instantiate and (re-)initialise the random number generator
   HighsRandom& random = highs_model_object.random_;
   random.initialise();
-  //
-  // Generate a random permutation of the column indices
-  simplex_info.numColPermutation_.resize(numCol);
-  int* numColPermutation = &simplex_info.numColPermutation_[0];
-  for (int i = 0; i < numCol; i++) numColPermutation[i] = i;
-  for (int i = numCol - 1; i >= 1; i--) {
-    int j = random.integer() % (i + 1);
-    std::swap(numColPermutation[i], numColPermutation[j]);
+
+  if (numCol) {
+    // Generate a random permutation of the column indices
+    simplex_info.numColPermutation_.resize(numCol);
+    int* numColPermutation = &simplex_info.numColPermutation_[0];
+    for (int i = 0; i < numCol; i++) numColPermutation[i] = i;
+    for (int i = numCol - 1; i >= 1; i--) {
+      int j = random.integer() % (i + 1);
+      std::swap(numColPermutation[i], numColPermutation[j]);
+    }
   }
 
   // Re-initialise the random number generator and generate the
@@ -1111,6 +1109,56 @@ void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
   simplex_info.numTotRandomValue_.resize(numTot);
   double* numTotRandomValue = &simplex_info.numTotRandomValue_[0];
   for (int i = 0; i < numTot; i++) {
+    numTotRandomValue[i] = random.fraction();
+  }
+}
+
+void extendSimplexLpRandomVectors(HighsModelObject& highs_model_object,
+                                  const int num_new_col,
+                                  const int num_new_row) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+
+  const int numCol = highs_model_object.simplex_lp_.numCol_;
+  const int numTot = highs_model_object.simplex_lp_.numCol_ +
+                     highs_model_object.simplex_lp_.numRow_;
+  assert(num_new_col >= 0);
+  assert(num_new_row >= 0);
+  if (num_new_col + num_new_row == 0) return;
+  const int new_numCol = numCol + num_new_col;
+  const int new_numTot = numTot + num_new_col + num_new_row;
+  // Instantiate and (re-)initialise the random number generator
+  HighsRandom& random = highs_model_object.random_;
+  random.initialise();
+  //
+  // Extend a random permutation of the column indices
+  if (num_new_col) {
+    simplex_info.numColPermutation_.resize(new_numCol);
+    int* numColPermutation = &simplex_info.numColPermutation_[0];
+    for (int i = numCol; i < new_numCol; i++) numColPermutation[i] = i;
+    for (int i = new_numCol - 1; i >= numCol + 1; i--) {
+      int j = random.integer() % (i + 1);
+      std::swap(numColPermutation[i], numColPermutation[j]);
+    }
+  }
+
+  // Re-initialise the random number generator and generate the
+  // random vectors in the same order as hsol to maintain repeatable
+  // performance
+  random.initialise();
+  //
+  // Extend a random permutation of all the indices
+  simplex_info.numTotPermutation_.resize(new_numTot);
+  int* numTotPermutation = &simplex_info.numTotPermutation_[0];
+  for (int i = numTot; i < new_numTot; i++) numTotPermutation[i] = i;
+  for (int i = new_numTot - 1; i >= numTot + 1; i--) {
+    int j = random.integer() % (i + 1);
+    std::swap(numTotPermutation[i], numTotPermutation[j]);
+  }
+
+  // Extend a vector of random reals
+  simplex_info.numTotRandomValue_.resize(new_numTot);
+  double* numTotRandomValue = &simplex_info.numTotRandomValue_[0];
+  for (int i = numTot; i < new_numTot; i++) {
     numTotRandomValue[i] = random.fraction();
   }
 }
@@ -3669,6 +3717,18 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
       printf(" LpAction::DEL_ROWS_BASIS_OK\n");
 #endif
       //      simplex_info.simplex_lp_ = true;
+      break;
+    case LpAction::SCALED_COL:
+#ifdef HIGHSDEV
+      printf(" LpAction::SCALED_COL\n");
+#endif
+      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
+      break;
+    case LpAction::SCALED_ROW:
+#ifdef HIGHSDEV
+      printf(" LpAction::SCALED_ROW\n");
+#endif
+      invalidateSimplexLpBasisArtifacts(simplex_lp_status);
       break;
     default:
 #ifdef HIGHSDEV

@@ -34,10 +34,43 @@ enum class LpAction {
   NEW_ROWS,
   DEL_COLS,
   DEL_ROWS,
-  DEL_ROWS_BASIS_OK
+  DEL_ROWS_BASIS_OK,
+  SCALED_COL,
+  SCALED_ROW
 };
 
+// Primal/dual statuses and corresponding HighsModelStatus
+// values. Note that if dual infeasibility is identified, then the
+// prototype primal code is used to distinguish PRIMAL_DUAL_INFEASIBLE
+// from PRIMAL_UNBOUNDED. If this fails, then HiGHS may just return
+// DUAL_INFEASIBLE
+//
+//           | Du Infeas    | Du Feas   | Du UnBd
+// Pr Infeas | PR_DU_INFEAS | PR_INFEAS | PR_INFEAS
+// Pr Feas   | PR_UNBD      | OPTIMAL   |   N/A
+// Pr Unbd   | PR_UNBD      |     N/A   |   N/A
+//
+// Dual infeasibility is recognised by infeasibility at dual phase 1 optimality
+// (and implied by primal unboundedness)
+//
+// Dual feasibility is recognised by feasibility at dual phase 1 optimality or
+// primal phase 2 optimality
+//
+// Dual unboundedness is recognised by unboundedness in dual phase 2
+//
+// Primal infeasibility is recognised by infeasibility at primal phase 1
+// optimality (and implied by dual unboundedness)
+//
+// Primal feasibility is recognised by feasibility at primal phase 1 optimality
+// or dual phase 2 optimality
+//
+// Primal unboundedness is recognised by unboundedness in primal phase 2
+//
+
 enum class HighsModelStatus {
+  // NB Add new status values to the end so that int cast of status
+  // values is unchanged, since enums are not preserved in some
+  // interfaces
   NOTSET = 0,
   HIGHS_MODEL_STATUS_MIN = NOTSET,
   LOAD_ERROR,
@@ -52,7 +85,9 @@ enum class HighsModelStatus {
   REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
   REACHED_TIME_LIMIT,
   REACHED_ITERATION_LIMIT,
-  HIGHS_MODEL_STATUS_MAX = REACHED_ITERATION_LIMIT
+  PRIMAL_DUAL_INFEASIBLE,
+  DUAL_INFEASIBLE,
+  HIGHS_MODEL_STATUS_MAX = DUAL_INFEASIBLE
 };
 
 /** SCIP/HiGHS Objective sense */

@@ -371,18 +371,18 @@ class HighsOptions : public HighsOptionsStruct {
                                &options_file, FILENAME_DEFAULT);
     records.push_back(record_string);
     // Options read from the file
-    record_double =
-        new OptionRecordDouble("infinite_cost",
-                               "Limit on cost coefficient: values larger than "
-                               "this will be treated as infinite",
-                               advanced, &infinite_cost, 1e15, 1e20, 1e25);
+    record_double = new OptionRecordDouble(
+        "infinite_cost",
+        "Limit on cost coefficient: values larger than "
+        "this will be treated as infinite",
+        advanced, &infinite_cost, 1e15, 1e20, HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_double =
-        new OptionRecordDouble("infinite_bound",
-                               "Limit on |constraint bound|: values larger "
-                               "than this will be treated as infinite",
-                               advanced, &infinite_bound, 1e15, 1e20, 1e25);
+    record_double = new OptionRecordDouble(
+        "infinite_bound",
+        "Limit on |constraint bound|: values larger "
+        "than this will be treated as infinite",
+        advanced, &infinite_bound, 1e15, 1e20, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
@@ -392,11 +392,11 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &small_matrix_value, 1e-12, 1e-9, HIGHS_CONST_INF);
     records.push_back(record_double);
 
-    record_double =
-        new OptionRecordDouble("large_matrix_value",
-                               "Upper limit on |matrix entries|: values larger "
-                               "than this will be treated as infinite",
-                               advanced, &large_matrix_value, 1e0, 1e15, 1e20);
+    record_double = new OptionRecordDouble(
+        "large_matrix_value",
+        "Upper limit on |matrix entries|: values larger "
+        "than this will be treated as infinite",
+        advanced, &large_matrix_value, 1e0, 1e15, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

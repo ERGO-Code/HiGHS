@@ -46,37 +46,28 @@ void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0) {
   const HighsInfo& info = highs.getHighsInfo();
-  HighsStatus status;
-  HighsModelStatus model_status;
 
-  status = highs.setHighsOptionValue("solver", solver);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("solver", solver) == HighsStatus::OK);
 
-  status = highs.setHighsOptionValue("presolve", presolve);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::OK);
 
-  status = highs.setBasis();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::OK);
 
-  status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
 
-  model_status = highs.getModelStatus();
-  REQUIRE(model_status == require_model_status);
+  REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::OPTIMAL) {
     REQUIRE(
         objectiveOk(info.objective_function_value, require_optimal_objective));
   }
 
-  status = highs.resetHighsOptions();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
 }
 
 void issue272(Highs& highs) {
   reportIssue(272);
   // This is the FuOR MIP that presolve failed to handle as a maximization
-  HighsStatus status;
   HighsLp lp;
   const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
   const double optimal_objective = 8.83333333333333;
@@ -92,8 +83,7 @@ void issue272(Highs& highs) {
   lp.Avalue_ = {3, 5, 6, 2};
   lp.sense_ = ObjSense::MAXIMIZE;
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve reduces to empty, so no need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
@@ -104,7 +94,6 @@ void issue272(Highs& highs) {
 void issue280(Highs& highs) {
   reportIssue(280);
   // This is an easy problem from mckib2 that IPX STILL FAILS to handle
-  HighsStatus status;
   HighsLp lp;
   const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
   const double optimal_objective = 1;
@@ -119,8 +108,7 @@ void issue280(Highs& highs) {
   lp.Aindex_ = {0, 1};
   lp.Avalue_ = {1, 1};
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve reduces to empty, so no need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
@@ -134,7 +122,6 @@ void issue282(Highs& highs) {
   reportIssue(282);
   // This is an easy problem from mckib2 on which presolve+simplex
   // failed to give the correct objective
-  HighsStatus status;
   HighsLp lp;
   const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
   const double optimal_objective = -18;
@@ -149,8 +136,7 @@ void issue282(Highs& highs) {
   lp.Aindex_ = {0, 1, 2, 0, 1};
   lp.Avalue_ = {2, 1, 1, 1, 1};
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve reduces to empty, so no real need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
@@ -162,7 +148,6 @@ void issue285(Highs& highs) {
   reportIssue(285);
   // This is an infeasible LP for which HiGHS segfaulted after "Problem
   // status detected on presolve: Infeasible"
-  HighsStatus status;
   HighsLp lp;
   const HighsModelStatus require_model_status =
       HighsModelStatus::PRIMAL_INFEASIBLE;
@@ -177,8 +162,7 @@ void issue285(Highs& highs) {
   lp.Aindex_ = {0, 2, 0, 1, 2};
   lp.Avalue_ = {7, 2, -2, 1, -2};
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve identifies infeasibility, so no need to test presolve+IPX
   solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);
@@ -196,7 +180,6 @@ void issue295(Highs& highs) {
   // The bug in presolve was due to relying on size to get the number
   // of nonzeros. Correct interpretations of IPX inconsistent solution
   // was added
-  HighsStatus status;
   HighsLp lp;
   const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
   const double optimal_objective = -2;
@@ -207,12 +190,11 @@ void issue295(Highs& highs) {
   lp.colUpper_ = {inf, inf, inf, 1, 1};
   lp.rowLower_ = {-inf, -inf};
   lp.rowUpper_ = {2, -2};
-  lp.Astart_ = {0, 1, 2, 3, 3, 3};
-  lp.Aindex_ = {0, 1, 0};
-  lp.Avalue_ = {1, 1, 0};
+  lp.Astart_ = {0, 1, 2, 2, 2, 2};
+  lp.Aindex_ = {0, 1};
+  lp.Avalue_ = {1, 1};
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
@@ -225,7 +207,6 @@ void issue306(Highs& highs) {
   // a bound after presolve, causing an error in IPX
   //
   // Resulted in the introduction of cleanBounds after presolve
-  HighsStatus status;
   HighsLp lp;
   const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
   const double optimal_objective = -1.191;
@@ -242,8 +223,7 @@ void issue306(Highs& highs) {
   lp.Avalue_ = {-1.22, -0.25, 0.93,  1.18, 0.43,  0.65,
                 -2.06, -0.2,  -0.25, 0.83, -0.22, 1.37};
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   solve(highs, "on", "simplex", require_model_status, optimal_objective);
   solve(highs, "off", "simplex", require_model_status, optimal_objective);
   solve(highs, "on", "ipm", require_model_status, optimal_objective);
@@ -255,13 +235,11 @@ void issue316(Highs& highs) {
   // This is a test problem from matbesancon where maximization failed
   //
   // Resulted in fixes being added to unconstrained LP solver
-  HighsStatus status;
   bool bool_status;
   const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
   const double min_optimal_objective = -6;
   const double max_optimal_objective = 12;
-  status = highs.clearModel();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.clearModel() == HighsStatus::OK);
 
   bool_status = highs.addCol(2, -3, 6, 0, NULL, NULL);
   REQUIRE(bool_status);
@@ -277,17 +255,16 @@ void issue316(Highs& highs) {
   solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
 }
 
-void primalDualInfeasible(Highs& highs) {
-  reportLpName("primalDualInfeasible");
-  // This LP is both primal and dual infeasible. IPX fails to identify
-  // primal infeasibility
-  HighsStatus status;
+void primalDualInfeasible1(Highs& highs) {
+  reportLpName("primalDualInfeasible1");
+  // This LP is both primal and dual infeasible - from Wikipedia. IPX
+  // fails to identify primal infeasibility
   HighsLp lp;
   const HighsModelStatus require_model_status =
-      HighsModelStatus::PRIMAL_INFEASIBLE;
+      HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
   lp.numCol_ = 2;
   lp.numRow_ = 2;
-  lp.colCost_ = {2, -1};
+  lp.colCost_ = {-2, 1};
   lp.colLower_ = {0, 0};
   lp.colUpper_ = {inf, inf};
   lp.rowLower_ = {-inf, -inf};
@@ -296,11 +273,34 @@ void primalDualInfeasible(Highs& highs) {
   lp.Aindex_ = {0, 1, 0, 1};
   lp.Avalue_ = {1, -1, -1, 1};
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve doesn't reduce the LP
   solve(highs, "on", "simplex", require_model_status);
   // Don't run the IPX test until it's fixed
+  //  solve(highs, "on", "ipm", require_model_status);
+}
+
+void primalDualInfeasible2(Highs& highs) {
+  reportLpName("primalDualInfeasible2");
+  // This LP is both primal and dual infeasible - scip-lpi4.mps from SCIP LPI
+  // unit test (test4). IPX fails to identify primal infeasibility
+  HighsLp lp;
+  const HighsModelStatus require_model_status =
+      HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+  lp.numCol_ = 2;
+  lp.numRow_ = 2;
+  lp.colCost_ = {1, 1};
+  lp.colLower_ = {-inf, -inf};
+  lp.colUpper_ = {inf, inf};
+  lp.rowLower_ = {-inf, -inf};
+  lp.rowUpper_ = {0, -1};
+  lp.Astart_ = {0, 2, 4};
+  lp.Aindex_ = {0, 1, 0, 1};
+  lp.Avalue_ = {1, -1, -1, 1};
+
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  // Presolve doesn't reduce the LP
+  solve(highs, "on", "simplex", require_model_status);
   //  solve(highs, "on", "ipm", require_model_status);
 }
 
@@ -312,24 +312,35 @@ void mpsUnbounded(Highs& highs) {
   // being negative] resulted in the problem being declared infeasible
   //
   // Resulted in fixes being added to hsol dual
-  HighsStatus status;
-  bool bool_status;
+  const HighsModelStatus require_model_status =
+      HighsModelStatus::PRIMAL_UNBOUNDED;
+
+  // Unit test fails for IPX with adlittle solved as maximization
+  std::string model = "adlittle";
+  std::string model_file;
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+
+  REQUIRE(highs.changeObjectiveSense(ObjSense::MAXIMIZE));
+
+  solve(highs, "on", "simplex", require_model_status);
+  solve(highs, "off", "simplex", require_model_status);
+  //  solve(highs, "on", "ipm", require_model_status);
+  //  solve(highs, "off", "ipm", require_model_status);
+}
+
+void mpsGas11(Highs& highs) {
+  reportLpName("mpsGas11");
+  // Lots of trouble is caused by gas11
   const HighsModelStatus require_model_status =
       HighsModelStatus::PRIMAL_UNBOUNDED;
 
   // Unit test fails for IPX with adlittle_max
-  const bool solve_adlittle_max = false;
-  std::string model = "adlittle";
-  if (!solve_adlittle_max) model = "gas11";
+  std::string model = "gas11";
   std::string model_file;
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
-  status = highs.readModel(model_file);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
 
-  if (solve_adlittle_max) {
-    bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
-    REQUIRE(bool_status);
-  }
   solve(highs, "on", "simplex", require_model_status);
   solve(highs, "off", "simplex", require_model_status);
   solve(highs, "on", "ipm", require_model_status);
@@ -342,7 +353,6 @@ void almostNotUnbounded(Highs& highs) {
   // near-unboundedness. None of the LPs is reduced by presolve
   //
   // No
-  HighsStatus status;
   HighsLp lp;
   const HighsModelStatus require_model_status0 =
       HighsModelStatus::PRIMAL_UNBOUNDED;
@@ -375,9 +385,8 @@ void almostNotUnbounded(Highs& highs) {
   // LP is feasible on [1+alpha, alpha] with objective
   // -1-epsilon*alpha so unbounded
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
-  //  status = highs.writeModel("epsilon_unbounded.mps"); REQUIRE(status ==
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  //  REQUIRE(highs.writeModel("epsilon_unbounded.mps") ==
   //  HighsStatus::WARNING);
   solve(highs, "off", "simplex", require_model_status0);
   solve(highs, "off", "ipm", require_model_status0);
@@ -385,8 +394,7 @@ void almostNotUnbounded(Highs& highs) {
   // LP is feasible on [1+alpha, alpha] with objective -1 so optimal,
   // but has open set of optimal solutions
   lp.colCost_ = {-1, 1};
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
 
   solve(highs, "off", "simplex", require_model_status1, optimal_objective1);
   reportSolution(highs);
@@ -398,8 +406,7 @@ void almostNotUnbounded(Highs& highs) {
   lp.colCost_[1] = 1 - epsilon;
   lp.rowLower_[0] = -1 - epsilon;
   lp.Avalue_[0] = 1 - epsilon;
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
 
   solve(highs, "off", "simplex", require_model_status2, optimal_objective2);
   reportSolution(highs);
@@ -410,7 +417,6 @@ void singularStartingBasis(Highs& highs) {
   reportLpName("singularStartingBasis");
   // This problem tests how well HiGHS handles a singular initial
   // basis
-  HighsStatus status;
   HighsLp lp;
   const HighsModelStatus require_model_status = HighsModelStatus::OPTIMAL;
   const double optimal_objective = -3;
@@ -426,14 +432,11 @@ void singularStartingBasis(Highs& highs) {
   lp.Aindex_ = {0, 1, 0, 1, 0, 1};
   lp.Avalue_ = {1, 2, 2, 4, 1, 3};
 
-  status = highs.passModel(lp);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
 
-  status = highs.setHighsOptionValue("message_level", 6);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("message_level", 6) == HighsStatus::OK);
 
-  status = highs.setHighsOptionValue("highs_debug_level", 3);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("highs_debug_level", 3) == HighsStatus::OK);
 
   HighsBasis basis;
   basis.col_status.resize(lp.numCol_);
@@ -445,23 +448,18 @@ void singularStartingBasis(Highs& highs) {
   basis.row_status[1] = HighsBasisStatus::UPPER;
   basis.valid_ = true;
 
-  status = highs.setBasis(basis);
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.setBasis(basis) == HighsStatus::OK);
 
-  status = highs.run();
-  REQUIRE(status == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
 
   const HighsInfo& info = highs.getHighsInfo();
-  HighsModelStatus model_status;
 
-  model_status = highs.getModelStatus();
-  REQUIRE(model_status == require_model_status);
+  REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::OPTIMAL) {
+  if (require_model_status == HighsModelStatus::OPTIMAL)
     REQUIRE(objectiveOk(info.objective_function_value, optimal_objective));
-  }
-  status = highs.resetHighsOptions();
-  REQUIRE(status == HighsStatus::OK);
+
+  REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
 
   reportSolution(highs);
 }
@@ -493,13 +491,21 @@ TEST_CASE("LP-316", "[highs_test_special_lps]") {
   Highs highs;
   issue316(highs);
 }
-TEST_CASE("LP-primal-dual-infeasible", "[highs_test_special_lps]") {
+TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
   Highs highs;
-  primalDualInfeasible(highs);
+  primalDualInfeasible1(highs);
+}
+TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
+  Highs highs;
+  primalDualInfeasible2(highs);
 }
 TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   Highs highs;
   mpsUnbounded(highs);
+}
+TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
+  Highs highs;
+  mpsGas11(highs);
 }
 TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
   Highs highs;
