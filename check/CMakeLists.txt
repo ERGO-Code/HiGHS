@@ -25,7 +25,6 @@ set(TEST_SOURCES
     TestLpModification.cpp
     TestLpSolvers.cpp
     TestSpecialLps.cpp
-    TestPresolveColumnSingletons.cpp
     Avgas.cpp)
 
 if (IPX_ON)

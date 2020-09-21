@@ -483,12 +483,6 @@ pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
     y = col2;
   }
 
-  // two singletons case handled elsewhere
-  if (nzCol.at(y) == 1 && nzCol.at(x) == 1) {
-    colIndex.second = -1;
-    return colIndex;
-  }
-
   colIndex.first = x;
   colIndex.second = y;
   return colIndex;
@@ -560,8 +554,38 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
 
 void Presolve::caseTwoSingletonsDoubletonInequality(const int row, const int x,
                                                   const int y) {
-                                                    std::cout << "Call caseTwoSing..." << std::endl;
-                                                  }
+  
+  std::cout << "Call caseTwoSing..." << std::endl;
+
+  std::cout << "Two column singletons: row " << row << ", x = " << x << ", y = " << y << std::endl;
+  std::cout << "                     cx = " << colCost[x] << "  cy = " << colCost[y] << std::endl;
+  std::cout << "                     ax = " << getaij(row, x) << "  ay = " << getaij(row, y) << std::endl;
+  std::cout << "   L = " << rowLower[row] << "  U = " << rowUpper[row] << std::endl;
+  std::cout << "   lx = " << colLower[x] << "  ux = " << colUpper[x] << std::endl;
+  std::cout << "   ly = " << colLower[y] << "  uy = " << colUpper[y] << std::endl;
+  
+  assert(nzRow[row] = 2);
+  assert(nzCol[x] = 1);
+  assert(nzCol[y] = 1);
+
+  assert(flagCol[x]);
+  assert(flagCol[y]);
+  assert(flagRow[row]);
+
+  // trivial case
+  if(rowLower[row] == 0 && rowUpper[row] == 0) {
+    if ((colLower[x] <= 0 && colUpper[x] >= 0) && 
+        (colLower[y] <= 0 && colUpper[y] >= 0)) {
+    
+      // primal and dual values set to 0 already. just flagRow
+      flagRow[row] = false;
+      flagCol[x] = false;
+      flagCol[y] = false;
+      postValue.push((double)y);
+      addChange(PresolveRule::TWO_COL_SING_TRIVIAL, row, x);
+    }
+  }
+}
 
 void Presolve::removeDoubletonEquations() {
   if (timer.reachLimit()) {
@@ -594,6 +618,12 @@ void Presolve::removeDoubletonEquations() {
         pair<int, int> colIndex = getXYDoubletonEquations(row);
         const int x = colIndex.first;
         const int y = colIndex.second;
+
+        if (x >= 0 && y == -1) {
+          // no second variable
+          nzRow[row]--;
+          continue;
+        }
 
         // two singletons case handled elsewhere
         if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1))) {
@@ -1612,7 +1642,13 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
 
 void Presolve::removeZeroCostColumnSingleton(const int col, const int row,
                                              const int k) {
-  std::cout << "ZERO COST COL SING" << std::endl;
+  assert(Aindex[k] == row);
+  assert(fabs(colCost[col]) < tol);
+  std::cout << "Zero cost column singleton: col = " << col << ", row " << row << ", coeff = " << Avalue[k] << ", cost = " << colCost[col] << std::endl;
+  std::cout << "   L = " << rowLower[row] << "  U = " << rowUpper[row] << std::endl;
+  std::cout << "   l = " << colLower[col] << "  u = " << colUpper[col] << std::endl;
+
+
 }
 
 void Presolve::removeColumnSingletons() {
@@ -2588,6 +2624,16 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
     setBasisElement(c);
     switch (c.type) {
+      case TWO_COL_SING_TRIVIAL: { 
+        int y = (int) postValue.top();
+        postValue.pop();
+        int x = (int) postValue.top();
+        postValue.pop();
+        assert(x == c.col);
+        flagRow[c.row] = true;
+        flagCol[x] = true;
+        flagCol[y] = true;
+      }
       case DOUBLETON_EQUATION: {  // Doubleton equation row
         getDualsDoubletonEquation(c.row, c.col);
 
