@@ -411,7 +411,7 @@ int Presolve::presolve(int print) {
     iter++;
   }
 
-  std::cout << "   MAIN LOOP ITER = " << iter << std::endl;
+  // std::cout << "   MAIN LOOP ITER = " << iter << std::endl;
 
   reportDevMainLoop();
 
@@ -1723,7 +1723,7 @@ void Presolve::removeColumnSingletons() {
       const int i = Aindex.at(k);
 
       // zero cost
-      bool on_zero_cost = true;
+      bool on_zero_cost = false;
       if (on_zero_cost && fabs(colCost.at(col)) < tol) {
         removeZeroCostColumnSingleton(col, i, k);
         it = singCol.erase(it);
