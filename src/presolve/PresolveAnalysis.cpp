@@ -45,6 +45,7 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
   rules.push_back(
       PresolveRuleInfo(DOMINATED_COL_BOUNDS, "Dom col bounds", "DCB"));
   rules.push_back(PresolveRuleInfo(EMPTY_COL, "Empty col", "EMC"));
+  rules.push_back(PresolveRuleInfo(KNAPSACK, "Knapsack", "KNP"));
   rules.push_back(PresolveRuleInfo(MATRIX_COPY, "Initialize matrix", "INM"));
   rules.push_back(PresolveRuleInfo(RESIZE_MATRIX, "Resize matrix", "RSM"));
   //

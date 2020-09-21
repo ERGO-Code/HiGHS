@@ -69,7 +69,8 @@ const std::map<Presolver, std::string> kPresolverNames{
     {Presolver::kMainForcing, "Forcing rows ()"},
     {Presolver::kMainColSingletons, "Col singletons ()"},
     {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
-    {Presolver::kMainDominatedCols, "Dominated Cols()"}};
+    {Presolver::kMainDominatedCols, "Dominated Cols()"},
+    {Presolver::kMainSingletonsOnly, "Singletons only()"}};
 
 class Presolve : public HPreData {
  public:
@@ -97,7 +98,7 @@ class Presolve : public HPreData {
     timer.time_limit = limit;
   }
 
-  int iPrint = 1;
+  int iPrint = 0;
   int message_level;
   FILE* output;
 
@@ -295,6 +296,8 @@ class Presolve : public HPreData {
 
   // August 2020
   void removeSingletonsOnly();
+  bool isKnapsack(const int col) const;
+  void removeKnapsack(const int col);
 };
 
 }  // namespace presolve
