@@ -19,7 +19,7 @@
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
                                   const HFactor& factor,
-				  const bool force = false);
+                                  const bool force = false);
 
 void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
                                FILE* output, const int message_level,

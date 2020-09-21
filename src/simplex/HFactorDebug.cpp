@@ -24,10 +24,8 @@ const double inverse_large_error = 1e-12;
 const double inverse_excessive_error = sqrt(inverse_large_error);
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
-                                  const HFactor& factor,
-				  const bool force) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY &&
-      !force)
+                                  const HFactor& factor, const bool force) {
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
     return HighsDebugStatus::NOT_CHECKED;
   if (force)
     HighsPrintMessage(options.output, 1, 1, "CheckINVERT:   Forcing debug\n");

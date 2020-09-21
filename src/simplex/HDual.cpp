@@ -545,9 +545,9 @@ void HDual::solvePhase1() {
     const bool rebuild_ok = rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
     if (!rebuild_ok) {
-     solvePhase = -1;
-     scaled_model_status = HighsModelStatus::SOLVE_ERROR;
-     return;
+      solvePhase = -1;
+      scaled_model_status = HighsModelStatus::SOLVE_ERROR;
+      return;
     }
     if (bailoutOnTimeIterations()) break;
     for (;;) {
@@ -682,9 +682,9 @@ void HDual::solvePhase2() {
     const bool rebuild_ok = rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
     if (!rebuild_ok) {
-     solvePhase = -1;
-     scaled_model_status = HighsModelStatus::SOLVE_ERROR;
-     return;
+      solvePhase = -1;
+      scaled_model_status = HighsModelStatus::SOLVE_ERROR;
+      return;
     }
     if (bailoutOnTimeIterations()) break;
     if (bailoutOnDualObjective()) break;
@@ -1863,7 +1863,7 @@ void HDual::interpretDualEdgeWeightStrategy(
 
 bool HDual::getNonsingularInverse() {
   const vector<int>& baseIndex = workHMO.simplex_basis_.basicIndex_;
-  // Take a copy of baseIndex from before INVERT to be 
+  // Take a copy of baseIndex from before INVERT to be
   const vector<int> baseIndex_before_compute_factor = baseIndex;
   // Scatter the edge weights so that, after INVERT,
   // they can be gathered according to the new
@@ -1875,11 +1875,11 @@ bool HDual::getNonsingularInverse() {
   analysis->simplexTimerStop(PermWtClock);
 
   analysis->simplexTimerStart(InvertClock);
-  
+
   // Call computeFactor to perform INVERT
   int rank_deficiency = computeFactor(workHMO);
   analysis->simplexTimerStop(InvertClock);
-  
+
   if (rank_deficiency) {
     return false;
   }

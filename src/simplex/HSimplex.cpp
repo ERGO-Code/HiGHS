@@ -344,56 +344,56 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
       // Basis crash really doesn't work, so use logical basis
       simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
       for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
-	simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+        simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
       for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-	int iVar = simplex_lp.numCol_ + iRow;
-	simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-	simplex_basis.basicIndex_[iRow] = iVar;
+        int iVar = simplex_lp.numCol_ + iRow;
+        simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+        simplex_basis.basicIndex_[iRow] = iVar;
       }
       simplex_info.num_basic_logicals = simplex_lp.numRow_;
       analysis.simplexTimerStart(InvertClock);
       const int rank_deficiency = computeFactor(highs_model_object);
       analysis.simplexTimerStop(InvertClock);
       assert(!rank_deficiency);
-      
-    /*
-    HCrash crash(highs_model_object);
-    analysis.simplexTimerStart(CrashClock);
-    crash.crash(SIMPLEX_CRASH_STRATEGY_BASIC);
-    analysis.simplexTimerStop(CrashClock);
-     HighsLogMessage(options.logfile,
-    HighsMessageType::INFO, "Performed crash to prioritise previously basic
-    variables " "in well-conditioned basis");
-    // Use nonbasicFlag to form basicIndex
-    // Allocate memory for basicIndex
-    simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
-    int num_basic_variables = 0;
-    simplex_info.num_basic_logicals = 0;
-    for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
-      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
-        simplex_basis.basicIndex_[num_basic_variables] = iVar;
-        if (iVar >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
-        num_basic_variables++;
+
+      /*
+      HCrash crash(highs_model_object);
+      analysis.simplexTimerStart(CrashClock);
+      crash.crash(SIMPLEX_CRASH_STRATEGY_BASIC);
+      analysis.simplexTimerStop(CrashClock);
+       HighsLogMessage(options.logfile,
+      HighsMessageType::INFO, "Performed crash to prioritise previously basic
+      variables " "in well-conditioned basis");
+      // Use nonbasicFlag to form basicIndex
+      // Allocate memory for basicIndex
+      simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
+      int num_basic_variables = 0;
+      simplex_info.num_basic_logicals = 0;
+      for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++)
+      { if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
+          simplex_basis.basicIndex_[num_basic_variables] = iVar;
+          if (iVar >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
+          num_basic_variables++;
+        }
       }
-    }
-    // Double-check that we have the right number of basic variables
-    assert(num_basic_variables == simplex_lp.numRow_);
-    updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
-    // Report on the outcome of crash
-    int num_basic_structurals =
-        simplex_lp.numRow_ - simplex_info.num_basic_logicals;
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                    "Crash has created a basis with %d/%d structurals",
-                    num_basic_structurals, simplex_lp.numRow_);
-    // Now reinvert
-    int rank_deficiency = computeFactor(highs_model_object);
-    if (rank_deficiency) {
-      // ToDo Handle rank deficiency by replacing singular columns with logicals
-      throw runtime_error("Transition has singular basis matrix");
-    }
-    // Check the condition after the basis crash
-    basis_condition_ok = basisConditionOk(highs_model_object);
-    */
+      // Double-check that we have the right number of basic variables
+      assert(num_basic_variables == simplex_lp.numRow_);
+      updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
+      // Report on the outcome of crash
+      int num_basic_structurals =
+          simplex_lp.numRow_ - simplex_info.num_basic_logicals;
+      HighsLogMessage(options.logfile, HighsMessageType::INFO,
+                      "Crash has created a basis with %d/%d structurals",
+                      num_basic_structurals, simplex_lp.numRow_);
+      // Now reinvert
+      int rank_deficiency = computeFactor(highs_model_object);
+      if (rank_deficiency) {
+        // ToDo Handle rank deficiency by replacing singular columns with
+      logicals throw runtime_error("Transition has singular basis matrix");
+      }
+      // Check the condition after the basis crash
+      basis_condition_ok = basisConditionOk(highs_model_object);
+      */
       updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
       simplex_lp_status.has_invert = true;
       simplex_lp_status.has_fresh_invert = true;
@@ -2499,12 +2499,13 @@ int computeFactor(HighsModelObject& highs_model_object) {
 #endif
 
   const bool force = rank_deficiency;
-  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_, force);
+  debugCheckInvert(highs_model_object.options_, highs_model_object.factor_,
+                   force);
 
   if (rank_deficiency) {
-  // Have an invertible representation, but of B with column(s)
-  // replacements due to singularity. So no (fresh) representation of
-  // B^{-1}
+    // Have an invertible representation, but of B with column(s)
+    // replacements due to singularity. So no (fresh) representation of
+    // B^{-1}
     simplex_lp_status.has_invert = false;
     simplex_lp_status.has_fresh_invert = false;
   } else {
