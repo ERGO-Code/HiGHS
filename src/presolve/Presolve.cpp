@@ -2753,6 +2753,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     setBasisElement(c);
     switch (c.type) {
       case TWO_COL_SING_TRIVIAL: {
+        // WIP
         int y = (int)postValue.top();
         postValue.pop();
         int x = (int)postValue.top();
