@@ -32,6 +32,13 @@ endif()
 # app/ to bin/
 option(EXP "Experimental mode: run unit tests with doctest." OFF)
 option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+
+# set the correct rpath for OS X
+set(CMAKE_MACOSX_RPATH ON)
+
 if (NOT FAST_BUILD)
 
 set(HIGHS_VERSION_PATCH 0)
@@ -236,8 +243,6 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/src/test
     ${HIGHS_SOURCE_DIR}/src/util)
 
-# set the correct rpath for OS X
-set(CMAKE_MACOSX_RPATH ON)
 
 # explicitly switch on colored output for ninja
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
