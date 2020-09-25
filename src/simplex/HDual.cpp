@@ -1866,18 +1866,16 @@ void HDual::interpretDualEdgeWeightStrategy(
 }
 
 bool HDual::getNonsingularInverse() {
-  const vector<int>& baseIndex = workHMO.simplex_basis_.basicIndex_;
-  // Take a copy of baseIndex from before INVERT to be used as the
+  const vector<int>& basicIndex = workHMO.simplex_basis_.basicIndex_;
+  // Take a copy of basicIndex from before INVERT to be used as the
   // saved ordering of basic variables - so reinvert will run
   // identically.
-  const vector<int> baseIndex_before_compute_factor = baseIndex;
-  // Scatter the edge weights so that, after INVERT, 
-  // they can be gathered according to the new
-
-  // permutation of baseIndex
+  const vector<int> basicIndex_before_compute_factor = basicIndex;
+  // Scatter the edge weights so that, after INVERT, they can be
+  // gathered according to the new permutation of basicIndex
   analysis->simplexTimerStart(PermWtClock);
   for (int i = 0; i < solver_num_row; i++)
-    dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
+    dualRHS.workEdWtFull[basicIndex[i]] = dualRHS.workEdWt[i];
   analysis->simplexTimerStop(PermWtClock);
 
   analysis->simplexTimerStart(InvertClock);
@@ -1885,7 +1883,11 @@ bool HDual::getNonsingularInverse() {
   // Call computeFactor to perform INVERT
   int rank_deficiency = computeFactor(workHMO);
   analysis->simplexTimerStop(InvertClock);
-
+  if (workHMO.iteration_counts_.simplex > 70) {
+    // Claim rank deficiency to test backtracking
+    printf("Claiming rank deficiency to test backtracking\n");
+    rank_deficiency = 1;
+  }
   if (rank_deficiency) {
     // Rank deficient basis, so backtrack to last full rank basis
     //
@@ -1909,16 +1911,16 @@ bool HDual::getNonsingularInverse() {
 		    rank_deficiency, simplex_update_count, use_simplex_update_limit, new_simplex_update_limit);
   } else {
     // Current basis is full rank so save it
-      putSavedNonsingularBasis(baseIndex_before_compute_factor,
+      putSavedNonsingularBasis(basicIndex_before_compute_factor,
 			       dualRHS.workEdWtFull);
     // Indicate that backtracking is not taking place
     workHMO.simplex_info_.backtracking_ = false;
   }
-  // Gather the edge weights according to the
-  // permutation of baseIndex after INVERT
+  // Gather the edge weights according to the permutation of
+  // basicIndex after INVERT
   analysis->simplexTimerStart(PermWtClock);
   for (int i = 0; i < solver_num_row; i++)
-    dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
+    dualRHS.workEdWt[i] = dualRHS.workEdWtFull[basicIndex[i]];
   analysis->simplexTimerStop(PermWtClock);
   return true;
 }
@@ -1931,12 +1933,12 @@ bool HDual::getSavedNonsingularBasis(vector<double>& scattered_edge_weights) {
   return true;
 }
 
-void HDual::putSavedNonsingularBasis(const vector<int>& baseIndex_before_compute_factor,
+void HDual::putSavedNonsingularBasis(const vector<int>& basicIndex_before_compute_factor,
 				     const vector<double>& scattered_edge_weights) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   simplex_info.valid_saved_nonsingular_basis_ = true;
   simplex_info.saved_nonsingular_basis_ = workHMO.simplex_basis_;
-  simplex_info.saved_nonsingular_basis_.basicIndex_ = baseIndex_before_compute_factor;
+  simplex_info.saved_nonsingular_basis_.basicIndex_ = basicIndex_before_compute_factor;
   simplex_info.saved_nonsingular_basis_edge_weights_ = scattered_edge_weights;
 }
 

@@ -378,7 +378,7 @@ class HDual {
 
   bool getNonsingularInverse();
   bool getSavedNonsingularBasis(vector<double>& scattered_edge_weights);
-  void putSavedNonsingularBasis(const vector<int>& baseIndex_before_compute_factor,
+  void putSavedNonsingularBasis(const vector<int>& basicIndex_before_compute_factor,
 				const vector<double>& scattered_edge_weights);
 
   void assessPhase1Optimality();
