@@ -228,9 +228,11 @@ struct HighsSimplexInfo {
 
   std::vector<int> devex_index_;
 
+  // Data for backtracking in the event of a singular basis
   bool backtracking_ = false;
-  SimplexBasis last_rebuild_basis_;
-  std::vector<double> last_rebuild_edge_weights_;
+  bool valid_saved_nonsingular_basis_ = false;
+  SimplexBasis saved_nonsingular_basis_;
+  std::vector<double> saved_nonsingular_basis_edge_weights_;
 
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;

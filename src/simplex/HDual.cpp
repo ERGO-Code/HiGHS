@@ -803,6 +803,10 @@ bool HDual::rebuild() {
     }
   }
   if (reInvert) {
+    // Get a nonsingular inverse if possible. One of three things
+    // happens: Current basis is nonsingular; Current basis is
+    // singular and last nonsingular basis is refactorized as
+    // nonsingular - or found singular. Latter is code failure.
     if (!getNonsingularInverse()) return false;
   }
 
@@ -1863,9 +1867,11 @@ void HDual::interpretDualEdgeWeightStrategy(
 
 bool HDual::getNonsingularInverse() {
   const vector<int>& baseIndex = workHMO.simplex_basis_.basicIndex_;
-  // Take a copy of baseIndex from before INVERT to be
+  // Take a copy of baseIndex from before INVERT to be used as the
+  // saved ordering of basic variables - so reinvert will run
+  // identically.
   const vector<int> baseIndex_before_compute_factor = baseIndex;
-  // Scatter the edge weights so that, after INVERT,
+  // Scatter the edge weights so that, after INVERT, 
   // they can be gathered according to the new
 
   // permutation of baseIndex
@@ -1881,7 +1887,32 @@ bool HDual::getNonsingularInverse() {
   analysis->simplexTimerStop(InvertClock);
 
   if (rank_deficiency) {
-    return false;
+    // Rank deficient basis, so backtrack to last full rank basis
+    //
+    // Get the last nonsingular basis - so long as there is one
+    if (!getSavedNonsingularBasis(dualRHS.workEdWtFull)) return false;
+    analysis->simplexTimerStart(InvertClock);
+    int backtrack_rank_deficiency = computeFactor(workHMO);
+    analysis->simplexTimerStop(InvertClock);
+    // This basis has previously been inverted successfully, so it shouldn't be singular
+    if (backtrack_rank_deficiency) return false;
+    HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+    int simplex_update_count = simplex_info.update_count;
+    // simplex update limit will be half of the number of updates
+    // performed, so make sure that at least one update was performed
+    if (simplex_update_count <= 1) return false;
+    int use_simplex_update_limit = simplex_info.update_limit;
+    int new_simplex_update_limit = simplex_update_count/2;
+    simplex_info.update_limit = new_simplex_update_limit;
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		    "Rank deficiency of %d after %d simplex updates, so backtracking: max updates reduced from %d to %d",
+		    rank_deficiency, simplex_update_count, use_simplex_update_limit, new_simplex_update_limit);
+  } else {
+    // Current basis is full rank so save it
+      putSavedNonsingularBasis(baseIndex_before_compute_factor,
+			       dualRHS.workEdWtFull);
+    // Indicate that backtracking is not taking place
+    workHMO.simplex_info_.backtracking_ = false;
   }
   // Gather the edge weights according to the
   // permutation of baseIndex after INVERT
@@ -1890,6 +1921,23 @@ bool HDual::getNonsingularInverse() {
     dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
   analysis->simplexTimerStop(PermWtClock);
   return true;
+}
+
+bool HDual::getSavedNonsingularBasis(vector<double>& scattered_edge_weights) {
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  if (!simplex_info.valid_saved_nonsingular_basis_) return false;
+  workHMO.simplex_basis_ = simplex_info.saved_nonsingular_basis_;
+  scattered_edge_weights = simplex_info.saved_nonsingular_basis_edge_weights_;
+  return true;
+}
+
+void HDual::putSavedNonsingularBasis(const vector<int>& baseIndex_before_compute_factor,
+				     const vector<double>& scattered_edge_weights) {
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  simplex_info.valid_saved_nonsingular_basis_ = true;
+  simplex_info.saved_nonsingular_basis_ = workHMO.simplex_basis_;
+  simplex_info.saved_nonsingular_basis_.basicIndex_ = baseIndex_before_compute_factor;
+  simplex_info.saved_nonsingular_basis_edge_weights_ = scattered_edge_weights;
 }
 
 void HDual::assessPhase1Optimality() {
