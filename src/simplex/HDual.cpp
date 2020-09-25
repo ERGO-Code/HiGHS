@@ -45,7 +45,8 @@ using std::flush;
 using std::runtime_error;
 
 HighsStatus HDual::solve() {
-  assert(SOLVE_PHASE_ERROR == -2);
+  assert(SOLVE_PHASE_ERROR == -3);
+  assert(SOLVE_PHASE_EXIT == -2);
   assert(SOLVE_PHASE_UNKNOWN == -1);
   assert(SOLVE_PHASE_OPTIMAL == 0);
   assert(SOLVE_PHASE_1 == 1);
@@ -200,6 +201,8 @@ HighsStatus HDual::solve() {
     // computed from scratch in build() isn't checked against the the
     // updated value
     simplex_lp_status.has_dual_objective_value = false;
+    assert(solvePhase == SOLVE_PHASE_1 ||
+	   solvePhase == SOLVE_PHASE_2);
     switch (solvePhase) {
       case SOLVE_PHASE_1:
         analysis->simplexTimerStart(SimplexDualPhase1Clock);
@@ -207,6 +210,10 @@ HighsStatus HDual::solve() {
         analysis->simplexTimerStop(SimplexDualPhase1Clock);
         simplex_info.dual_phase1_iteration_count +=
             (iteration_counts.simplex - it0);
+	assert(solvePhase == SOLVE_PHASE_ERROR ||
+	       solvePhase == SOLVE_PHASE_UNKNOWN ||
+	       solvePhase == SOLVE_PHASE_1 ||
+	       solvePhase == SOLVE_PHASE_2);
         break;
       case SOLVE_PHASE_2:
         analysis->simplexTimerStart(SimplexDualPhase2Clock);
@@ -214,16 +221,29 @@ HighsStatus HDual::solve() {
         analysis->simplexTimerStop(SimplexDualPhase2Clock);
         simplex_info.dual_phase2_iteration_count +=
             (iteration_counts.simplex - it0);
+	assert(solvePhase == SOLVE_PHASE_ERROR ||
+	       solvePhase == SOLVE_PHASE_EXIT ||
+	       solvePhase == SOLVE_PHASE_UNKNOWN ||
+	       solvePhase == SOLVE_PHASE_OPTIMAL ||
+	       solvePhase == SOLVE_PHASE_1 ||
+	       solvePhase == SOLVE_PHASE_2 ||
+	       solvePhase == SOLVE_PHASE_CLEANUP);
         break;
       case SOLVE_PHASE_CLEANUP:
+	// Can it ever reach here?
+	printf("How can case SOLVE_PHASE_CLEANUP be true?\n");
+	assert(1==0);
         break;
       default:
         solvePhase = SOLVE_PHASE_OPTIMAL;
+	printf("How can default case be true?\n");
+	assert(1==0);
         break;
     }
     if (solve_bailout) return HighsStatus::Warning;
     assert(solvePhase == SOLVE_PHASE_ERROR ||
-	   //	   solvePhase == SOLVE_PHASE_UNKNOWN ||
+	   solvePhase == SOLVE_PHASE_EXIT ||
+	   solvePhase == SOLVE_PHASE_UNKNOWN ||
 	   solvePhase == SOLVE_PHASE_OPTIMAL ||
 	   solvePhase == SOLVE_PHASE_1 ||
            solvePhase == SOLVE_PHASE_2 ||
@@ -236,8 +256,15 @@ HighsStatus HDual::solve() {
     // calling dual phase 1 again - and can lead to non-termination.
     // so break and
 
-    if (solvePhase == SOLVE_PHASE_CLEANUP) {
-      // Jump for primal
+    if (solvePhase == SOLVE_PHASE_ERROR) {
+      // Solver error
+      assert(scaled_model_status == HighsModelStatus::SOLVE_ERROR);
+      return HighsStatus::Error;
+    }
+    if (solvePhase == SOLVE_PHASE_EXIT) {
+      // Solver exit - infeasible or unbounded
+      assert(scaled_model_status == HighsModelStatus::PRIMAL_DUAL_INFEASIBLE ||
+	     scaled_model_status == HighsModelStatus::PRIMAL_INFEASIBLE);
       break;
     }
     if (solvePhase == SOLVE_PHASE_1 &&
@@ -246,11 +273,16 @@ HighsStatus HDual::solve() {
       // infeasible
       break;
     }
+    if (solvePhase == SOLVE_PHASE_CLEANUP) {
+      // Jump for primal
+      break;
+    }
   }
   // If bailing out, should have returned already
   assert(!solve_bailout);
 
-  assert(solvePhase == SOLVE_PHASE_OPTIMAL ||
+  assert(solvePhase == SOLVE_PHASE_EXIT ||
+	 solvePhase == SOLVE_PHASE_OPTIMAL ||
 	 solvePhase == SOLVE_PHASE_1 ||
 	 solvePhase == SOLVE_PHASE_CLEANUP);
   if (solvePhase == SOLVE_PHASE_1) {
@@ -758,7 +790,7 @@ void HDual::solvePhase2() {
     } else {
       // If the costs have not been perturbed, so dual unbounded---and hence
       // primal infeasible (and possibly also dual infeasible)
-      solvePhase = SOLVE_PHASE_ERROR;
+      solvePhase = SOLVE_PHASE_EXIT;
       if (scaled_model_status == HighsModelStatus::DUAL_INFEASIBLE) {
         HighsPrintMessage(workHMO.options_.output,
                           workHMO.options_.message_level, ML_MINIMAL,
@@ -1308,12 +1340,6 @@ void HDual::chooseColumn(HVector* row_ep) {
   // Sections 2 and 3: Perform (bound-flipping) ratio test. This can
   // fail if the dual values are excessively large
   bool chooseColumnFail = dualRow.chooseFinal();
-  /*
-  if (workHMO.iteration_counts_.simplex > 20) {
-    printf("Forcing chooseColumnFail = true\n");
-    chooseColumnFail = true;
-  }
-  */
   if (chooseColumnFail) {
     invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
     return;
@@ -1883,7 +1909,6 @@ bool HDual::getNonsingularInverse() {
   // Save the number of updates performed in case it has to be used to determine a limit
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   const int simplex_update_count = simplex_info.update_count;
-  printf("getNonsingularInverse: Simplex max number updates = %d\n", simplex_info.update_limit);
   // Scatter the edge weights so that, after INVERT, they can be
   // gathered according to the new permutation of basicIndex
   analysis->simplexTimerStart(PermWtClock);
