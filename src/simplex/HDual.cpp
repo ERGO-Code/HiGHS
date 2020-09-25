@@ -1943,8 +1943,19 @@ bool HDual::getNonsingularInverse() {
 bool HDual::getSavedNonsingularBasis(vector<double>& scattered_edge_weights) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (!simplex_info.valid_saved_nonsingular_basis_) return false;
+
   workHMO.simplex_basis_ = simplex_info.saved_nonsingular_basis_;
   scattered_edge_weights = simplex_info.saved_nonsingular_basis_edge_weights_;
+  /*
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsSimplexBasis& simplex_basis = workHMO.simplex_basis_;
+  for (int iVar=0; iVar<solver_num_tot; iVar++) {
+    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
+    if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
+      simplex_info.workValue_[iVar] = simplex_info._lp.workLower_[
+    } 
+  }
+  */
   return true;
 }
 
