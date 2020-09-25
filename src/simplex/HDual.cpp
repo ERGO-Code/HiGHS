@@ -228,7 +228,7 @@ HighsStatus HDual::solve() {
 	     solvePhase == SOLVE_PHASE_CLEANUP);
     } else {
       // Should only be SOLVE_PHASE_1 or SOLVE_PHASE_2
-      scaled_model_status == HighsModelStatus::SOLVE_ERROR;
+      scaled_model_status = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
     }
     if (solve_bailout) return HighsStatus::Warning;
