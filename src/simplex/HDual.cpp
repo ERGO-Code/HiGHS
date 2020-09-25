@@ -203,44 +203,36 @@ HighsStatus HDual::solve() {
     simplex_lp_status.has_dual_objective_value = false;
     assert(solvePhase == SOLVE_PHASE_1 ||
 	   solvePhase == SOLVE_PHASE_2);
-    switch (solvePhase) {
-      case SOLVE_PHASE_1:
-        analysis->simplexTimerStart(SimplexDualPhase1Clock);
-        solvePhase1();
-        analysis->simplexTimerStop(SimplexDualPhase1Clock);
-        simplex_info.dual_phase1_iteration_count +=
-            (iteration_counts.simplex - it0);
-	assert(solvePhase == SOLVE_PHASE_ERROR ||
-	       solvePhase == SOLVE_PHASE_UNKNOWN ||
-	       solvePhase == SOLVE_PHASE_1 ||
-	       solvePhase == SOLVE_PHASE_2);
-        break;
-      case SOLVE_PHASE_2:
-        analysis->simplexTimerStart(SimplexDualPhase2Clock);
-        solvePhase2();
-        analysis->simplexTimerStop(SimplexDualPhase2Clock);
-        simplex_info.dual_phase2_iteration_count +=
-            (iteration_counts.simplex - it0);
-	assert(solvePhase == SOLVE_PHASE_ERROR ||
-	       solvePhase == SOLVE_PHASE_EXIT ||
-	       solvePhase == SOLVE_PHASE_UNKNOWN ||
-	       solvePhase == SOLVE_PHASE_OPTIMAL ||
-	       solvePhase == SOLVE_PHASE_1 ||
-	       solvePhase == SOLVE_PHASE_2 ||
-	       solvePhase == SOLVE_PHASE_CLEANUP);
-        break;
-      case SOLVE_PHASE_CLEANUP:
-	// Can it ever reach here?
-	printf("How can case SOLVE_PHASE_CLEANUP be true?\n");
-	assert(1==0);
-        break;
-      default:
-        solvePhase = SOLVE_PHASE_OPTIMAL;
-	printf("How can default case be true?\n");
-	assert(1==0);
-        break;
+    if (solvePhase == SOLVE_PHASE_1) {
+      analysis->simplexTimerStart(SimplexDualPhase1Clock);
+      solvePhase1();
+      analysis->simplexTimerStop(SimplexDualPhase1Clock);
+      simplex_info.dual_phase1_iteration_count +=
+	(iteration_counts.simplex - it0);
+      assert(solvePhase == SOLVE_PHASE_ERROR ||
+	     solvePhase == SOLVE_PHASE_UNKNOWN ||
+	     solvePhase == SOLVE_PHASE_1 ||
+	     solvePhase == SOLVE_PHASE_2);
+    } else if (solvePhase == SOLVE_PHASE_2) {
+      analysis->simplexTimerStart(SimplexDualPhase2Clock);
+      solvePhase2();
+      analysis->simplexTimerStop(SimplexDualPhase2Clock);
+      simplex_info.dual_phase2_iteration_count +=
+	(iteration_counts.simplex - it0);
+      assert(solvePhase == SOLVE_PHASE_ERROR ||
+	     solvePhase == SOLVE_PHASE_EXIT ||
+	     solvePhase == SOLVE_PHASE_UNKNOWN ||
+	     solvePhase == SOLVE_PHASE_OPTIMAL ||
+	     solvePhase == SOLVE_PHASE_1 ||
+	     solvePhase == SOLVE_PHASE_2 ||
+	     solvePhase == SOLVE_PHASE_CLEANUP);
+    } else {
+      // Should only be SOLVE_PHASE_1 or SOLVE_PHASE_2
+      scaled_model_status == HighsModelStatus::SOLVE_ERROR;
+      return HighsStatus::Error;
     }
     if (solve_bailout) return HighsStatus::Warning;
+    // Should only have these cases
     assert(solvePhase == SOLVE_PHASE_ERROR ||
 	   solvePhase == SOLVE_PHASE_EXIT ||
 	   solvePhase == SOLVE_PHASE_UNKNOWN ||
@@ -248,21 +240,11 @@ HighsStatus HDual::solve() {
 	   solvePhase == SOLVE_PHASE_1 ||
            solvePhase == SOLVE_PHASE_2 ||
 	   solvePhase == SOLVE_PHASE_CLEANUP);
-    // dual infeasible. Phase 2 was only called to see whether a
-    // primal feasible point could be found. If it could, then
-    // solvePhase is SOLVE_PHASE_OPTIMAL (SOLVE_PHASE_CLEANUP) if
-    // there are no (some) dual infeasibilities. If a according to
-    // whether there are no or is returned . If it can't No point in
-    // calling dual phase 1 again - and can lead to non-termination.
-    // so break and
-
     if (solvePhase == SOLVE_PHASE_ERROR) {
-      // Solver error
       assert(scaled_model_status == HighsModelStatus::SOLVE_ERROR);
       return HighsStatus::Error;
     }
     if (solvePhase == SOLVE_PHASE_EXIT) {
-      // Solver exit - infeasible or unbounded
       assert(scaled_model_status == HighsModelStatus::PRIMAL_DUAL_INFEASIBLE ||
 	     scaled_model_status == HighsModelStatus::PRIMAL_INFEASIBLE);
       break;
@@ -280,7 +262,7 @@ HighsStatus HDual::solve() {
   }
   // If bailing out, should have returned already
   assert(!solve_bailout);
-
+  // Should only have these cases
   assert(solvePhase == SOLVE_PHASE_EXIT ||
 	 solvePhase == SOLVE_PHASE_OPTIMAL ||
 	 solvePhase == SOLVE_PHASE_1 ||
