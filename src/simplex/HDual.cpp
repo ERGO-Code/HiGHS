@@ -810,6 +810,15 @@ bool HDual::rebuild() {
     if (!getNonsingularInverse()) return false;
   }
 
+  if (!workHMO.simplex_lp_status_.has_matrix_row_wise ||
+      !workHMO.simplex_lp_status_.has_matrix_col_wise) {
+    // Don't have the matrix either row-wise or col-wise, so
+    // reinitialise it
+    HighsLp& simplex_lp = workHMO.simplex_lp_;
+    workHMO.matrix_.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+			 &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
+			 &workHMO.simplex_basis_.nonbasicFlag_[0]);
+  }
   // Record whether the update objective value should be tested. If
   // the objective value is known, then the updated objective value
   // should be correct - once the correction due to recomputing the
@@ -1871,6 +1880,10 @@ bool HDual::getNonsingularInverse() {
   // saved ordering of basic variables - so reinvert will run
   // identically.
   const vector<int> basicIndex_before_compute_factor = basicIndex;
+  // Save the number of updates performed in case it has to be used to determine a limit
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  const int simplex_update_count = simplex_info.update_count;
+  printf("getNonsingularInverse: Simplex max number updates = %d\n", simplex_info.update_limit);
   // Scatter the edge weights so that, after INVERT, they can be
   // gathered according to the new permutation of basicIndex
   analysis->simplexTimerStart(PermWtClock);
@@ -1878,12 +1891,12 @@ bool HDual::getNonsingularInverse() {
     dualRHS.workEdWtFull[basicIndex[i]] = dualRHS.workEdWt[i];
   analysis->simplexTimerStop(PermWtClock);
 
-  analysis->simplexTimerStart(InvertClock);
 
   // Call computeFactor to perform INVERT
+  analysis->simplexTimerStart(InvertClock);
   int rank_deficiency = computeFactor(workHMO);
   analysis->simplexTimerStop(InvertClock);
-  if (workHMO.iteration_counts_.simplex > 70) {
+  if (workHMO.iteration_counts_.simplex > 70 && workHMO.iteration_counts_.simplex < 80) {
     // Claim rank deficiency to test backtracking
     printf("Claiming rank deficiency to test backtracking\n");
     rank_deficiency = 1;
@@ -1893,13 +1906,12 @@ bool HDual::getNonsingularInverse() {
     //
     // Get the last nonsingular basis - so long as there is one
     if (!getSavedNonsingularBasis(dualRHS.workEdWtFull)) return false;
+    updateSimplexLpStatus(workHMO.simplex_lp_status_, LpAction::BACKTRACKING);
     analysis->simplexTimerStart(InvertClock);
     int backtrack_rank_deficiency = computeFactor(workHMO);
     analysis->simplexTimerStop(InvertClock);
     // This basis has previously been inverted successfully, so it shouldn't be singular
     if (backtrack_rank_deficiency) return false;
-    HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-    int simplex_update_count = simplex_info.update_count;
     // simplex update limit will be half of the number of updates
     // performed, so make sure that at least one update was performed
     if (simplex_update_count <= 1) return false;
@@ -1914,7 +1926,10 @@ bool HDual::getNonsingularInverse() {
       putSavedNonsingularBasis(basicIndex_before_compute_factor,
 			       dualRHS.workEdWtFull);
     // Indicate that backtracking is not taking place
-    workHMO.simplex_info_.backtracking_ = false;
+    simplex_info.backtracking_ = false;
+    // Reset the update limit in case this is the first successful
+    // inversion after backtracking
+    simplex_info.update_limit = workHMO.options_.simplex_update_limit;
   }
   // Gather the edge weights according to the permutation of
   // basicIndex after INVERT

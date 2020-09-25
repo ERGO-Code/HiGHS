@@ -3712,6 +3712,17 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #endif
       invalidateSimplexLpBasisArtifacts(simplex_lp_status);
       break;
+    case LpAction::BACKTRACKING:
+#ifdef HIGHSDEV
+      printf(" LpAction::BACKTRACKING\n");
+#endif
+      simplex_lp_status.has_matrix_row_wise = false;
+      simplex_lp_status.has_nonbasic_dual_values = false;
+      simplex_lp_status.has_basic_primal_values = false;
+      simplex_lp_status.has_fresh_rebuild = false;
+      simplex_lp_status.has_dual_objective_value = false;
+      simplex_lp_status.has_primal_objective_value = false;
+      break;
     default:
 #ifdef HIGHSDEV
       printf(" Unrecognised LpAction::%d\n", (int)action);

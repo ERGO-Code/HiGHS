@@ -36,7 +36,8 @@ enum class LpAction {
   DEL_ROWS,
   DEL_ROWS_BASIS_OK,
   SCALED_COL,
-  SCALED_ROW
+  SCALED_ROW,
+  BACKTRACKING
 };
 
 // Primal/dual statuses and corresponding HighsModelStatus
