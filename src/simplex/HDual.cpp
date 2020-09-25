@@ -182,20 +182,8 @@ HighsStatus HDual::solve() {
   computeDualInfeasibleWithFlips(workHMO);
   dualInfeasCount = scaled_solution_params.num_dual_infeasibilities;
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
-  //
-  // Check that the model is OK to solve:
-  //
-  // Level 0 just checks the flags
-  //
-  // Level 1 also checks that the basis is OK and that the necessary
-  // data in work* is populated.
-  //
   if (debugOkForSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
     return HighsStatus::Error;
-#ifdef HiGHSDEV
-    // reportSimplexLpStatus(simplex_lp_status, "Before HDual major solving
-    // loop");
-#endif
   //
   // The major solving loop
   //
@@ -1896,11 +1884,13 @@ bool HDual::getNonsingularInverse() {
   analysis->simplexTimerStart(InvertClock);
   int rank_deficiency = computeFactor(workHMO);
   analysis->simplexTimerStop(InvertClock);
+  /*
   if (workHMO.iteration_counts_.simplex > 70 && workHMO.iteration_counts_.simplex < 80) {
     // Claim rank deficiency to test backtracking
     printf("Claiming rank deficiency to test backtracking\n");
     rank_deficiency = 1;
   }
+  */
   if (rank_deficiency) {
     // Rank deficient basis, so backtrack to last full rank basis
     //

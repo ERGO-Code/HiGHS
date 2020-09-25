@@ -1564,8 +1564,6 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
        simplex_lp_status.has_factor_arrays &&
        simplex_lp_status.has_dual_steepest_edge_weights &&
        simplex_lp_status.has_invert;
-  // TODO: Eliminate the following line ASAP!!!
-  ok = true;
   if (!ok) {
     if (!simplex_lp_status.has_basis)
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
