@@ -61,6 +61,7 @@ enum class Presolver {
   kMainColSingletons,
   kMainDoubletonEq,
   kMainDominatedCols,
+  kMainSingletonsOnly,
 };
 
 const std::map<Presolver, std::string> kPresolverNames{
@@ -68,7 +69,8 @@ const std::map<Presolver, std::string> kPresolverNames{
     {Presolver::kMainForcing, "Forcing rows ()"},
     {Presolver::kMainColSingletons, "Col singletons ()"},
     {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
-    {Presolver::kMainDominatedCols, "Dominated Cols()"}};
+    {Presolver::kMainDominatedCols, "Dominated Cols()"},
+    {Presolver::kMainSingletonsOnly, "Singletons only()"}};
 
 class Presolve : public HPreData {
  public:
@@ -205,6 +207,7 @@ class Presolve : public HPreData {
   void removeColumnSingletons();
   bool removeIfImpliedFree(int col, int i, int k);
   void removeFreeColumnSingleton(const int col, const int row, const int k);
+  void removeZeroCostColumnSingleton(const int col, const int row, const int k);
   bool removeColumnSingletonInDoubletonInequality(const int col, const int i,
                                                   const int k);
   void removeSecondColumnSingletonInDoubletonRow(const int j, const int i);
@@ -288,8 +291,13 @@ class Presolve : public HPreData {
   void checkKkt(const bool final = false);
   dev_kkt_check::State initState(const bool intermediate = false);
 
-  void caseTwoSingletonsDoubletonEquation(const int row, const int x,
-                                          const int y);
+  void caseTwoSingletonsDoubletonInequality(const int row, const int x,
+                                            const int y);
+
+  // August 2020
+  void removeSingletonsOnly();
+  bool isKnapsack(const int col) const;
+  void removeKnapsack(const int col);
 };
 
 }  // namespace presolve
