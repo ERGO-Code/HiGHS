@@ -201,6 +201,14 @@ HighsStatus HDual::solve() {
     // computed from scratch in build() isn't checked against the the
     // updated value
     simplex_lp_status.has_dual_objective_value = false;
+    if (solvePhase == SOLVE_PHASE_UNKNOWN) {
+      // Determine the number of dual infeasibilities, and hence the solve phase
+      computeDualInfeasibleWithFlips(workHMO);
+      dualInfeasCount = scaled_solution_params.num_dual_infeasibilities;
+      solvePhase = dualInfeasCount > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
+      // Can now forget that we might have been backtracking
+      simplex_info.backtracking_ = false;
+    }
     assert(solvePhase == SOLVE_PHASE_1 ||
 	   solvePhase == SOLVE_PHASE_2);
     if (solvePhase == SOLVE_PHASE_1) {
@@ -256,6 +264,7 @@ HighsStatus HDual::solve() {
   assert(!solve_bailout);
   // Should only have these cases
   assert(solvePhase == SOLVE_PHASE_EXIT ||
+	 solvePhase == SOLVE_PHASE_UNKNOWN ||
 	 solvePhase == SOLVE_PHASE_OPTIMAL ||
 	 solvePhase == SOLVE_PHASE_1 ||
 	 solvePhase == SOLVE_PHASE_CLEANUP);
@@ -523,7 +532,8 @@ void HDual::solvePhase1() {
   // SOLVE_PHASE_UNKNOWN => Back-tracking due to singularity
   //
   // SOLVE_PHASE_1 => Dual infeasibility suspected, but have to go out
-  // and back in to solvePhase1 to perform fresh rebuild
+  // and back in to solvePhase1 to perform fresh rebuild. Also if
+  // bailing out due to reaching time/iteration limit.
   //
   // SOLVE_PHASE_2 => Continue with dual phase 2 iterations
   
@@ -557,6 +567,11 @@ void HDual::solvePhase1() {
     analysis->simplexTimerStop(IterateDualRebuildClock);
     if (solvePhase == SOLVE_PHASE_ERROR) {
       scaled_model_status = HighsModelStatus::SOLVE_ERROR;
+      return;
+    }
+    if (solvePhase == SOLVE_PHASE_UNKNOWN) {
+      // If backtracking, may change phase, so drop out
+      analysis->simplexTimerStop(IterateClock);
       return;
     }
     if (bailoutOnTimeIterations()) break;
@@ -677,7 +692,9 @@ void HDual::solvePhase2() {
   // determine primal unboundedness.
   //
   // SOLVE_PHASE_2 => Dual unboundedness suspected, but have to go out
-  // and back in to solvePhase2 to perform fresh rebuild
+  // and back in to solvePhase2 to perform fresh rebuild. Also if
+  // bailing out due to reaching time/iteration limit or dual
+  // objective
   //
   // SOLVE_PHASE_CLEANUP => Contrinue with primal phase 2 iterations to clean up dual infeasibilities
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -711,6 +728,11 @@ void HDual::solvePhase2() {
     analysis->simplexTimerStop(IterateDualRebuildClock);
     if (solvePhase == SOLVE_PHASE_ERROR) {
       scaled_model_status = HighsModelStatus::SOLVE_ERROR;
+      return;
+    }
+    if (solvePhase == SOLVE_PHASE_UNKNOWN) {
+      // If backtracking, may change phase, so drop out
+      analysis->simplexTimerStop(IterateClock);
       return;
     }
     if (bailoutOnTimeIterations()) break;
@@ -844,10 +866,15 @@ void HDual::rebuild() {
       !workHMO.simplex_lp_status_.has_matrix_col_wise) {
     // Don't have the matrix either row-wise or col-wise, so
     // reinitialise it
+    assert(simplex_info.backtracking_);
     HighsLp& simplex_lp = workHMO.simplex_lp_;
+    analysis->simplexTimerStart(matrixSetupClock);
     workHMO.matrix_.setup(simplex_lp.numCol_, simplex_lp.numRow_,
 			 &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
 			 &workHMO.simplex_basis_.nonbasicFlag_[0]);
+    simplex_lp_status.has_matrix_col_wise = true;
+    simplex_lp_status.has_matrix_row_wise = true;
+    analysis->simplexTimerStop(matrixSetupClock);
   }
   // Record whether the update objective value should be tested. If
   // the objective value is known, then the updated objective value
@@ -872,6 +899,11 @@ void HDual::rebuild() {
   computeDual(workHMO);
   analysis->simplexTimerStop(ComputeDualClock);
 
+  if (simplex_info.backtracking_) {
+    // If backtracking, may change phase, so drop out
+    solvePhase = SOLVE_PHASE_UNKNOWN;
+    return;
+  }
   analysis->simplexTimerStart(CorrectDualClock);
   correctDual(workHMO, &dualInfeasCount);
   analysis->simplexTimerStop(CorrectDualClock);
@@ -1936,6 +1968,8 @@ bool HDual::getNonsingularInverse() {
     //
     // Get the last nonsingular basis - so long as there is one
     if (!getSavedNonsingularBasis(dualRHS.workEdWtFull)) return false;
+    // Record that backtracking is taking place
+    simplex_info.backtracking_ = true;
     updateSimplexLpStatus(workHMO.simplex_lp_status_, LpAction::BACKTRACKING);
     analysis->simplexTimerStart(InvertClock);
     int backtrack_rank_deficiency = computeFactor(workHMO);
