@@ -382,6 +382,9 @@ int Presolve::presolve(int print) {
   initializeVectors();
   if (status) return status;
 
+  // removeFixed();
+  // if (status) return status;
+
   int iter = 1;
   if (order.size() == 0) {
     // pre_release_order:
@@ -399,6 +402,7 @@ int Presolve::presolve(int print) {
 
   int prev_cols_rows = 0;
   double prev_diff = 0;
+  // max_iterations = 10;
   // Else: The order has been modified for experiments
   while (hasChange == 1) {
     if (max_iterations > 0 && iter > max_iterations) break;
