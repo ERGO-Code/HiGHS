@@ -42,13 +42,15 @@ enum SimplexStrategy {
 };
 
 enum SimplexSolvePhase {
-  SOLVE_PHASE_ERROR = -3,
+  SOLVE_PHASE_MIN = -3,
+  SOLVE_PHASE_ERROR = SOLVE_PHASE_MIN, // -3
   SOLVE_PHASE_EXIT, // -2,
   SOLVE_PHASE_UNKNOWN, // -1
   SOLVE_PHASE_OPTIMAL, // 0
   SOLVE_PHASE_1, // 1
   SOLVE_PHASE_2, // 2
-  SOLVE_PHASE_CLEANUP = 4
+  SOLVE_PHASE_CLEANUP = 4,
+  SOLVE_PHASE_MAX = SOLVE_PHASE_CLEANUP
 };
 
 enum DualSimplexCleanupStrategy {

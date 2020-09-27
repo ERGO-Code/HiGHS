@@ -204,47 +204,36 @@ HighsStatus HDual::solve() {
     assert(solvePhase == SOLVE_PHASE_1 ||
 	   solvePhase == SOLVE_PHASE_2);
     if (solvePhase == SOLVE_PHASE_1) {
+      // Phase 1
       analysis->simplexTimerStart(SimplexDualPhase1Clock);
       solvePhase1();
       analysis->simplexTimerStop(SimplexDualPhase1Clock);
       simplex_info.dual_phase1_iteration_count +=
 	(iteration_counts.simplex - it0);
-      assert(solvePhase == SOLVE_PHASE_ERROR ||
-	     solvePhase == SOLVE_PHASE_UNKNOWN ||
-	     solvePhase == SOLVE_PHASE_1 ||
-	     solvePhase == SOLVE_PHASE_2);
     } else if (solvePhase == SOLVE_PHASE_2) {
+      // Phase 2
       analysis->simplexTimerStart(SimplexDualPhase2Clock);
       solvePhase2();
       analysis->simplexTimerStop(SimplexDualPhase2Clock);
       simplex_info.dual_phase2_iteration_count +=
 	(iteration_counts.simplex - it0);
-      assert(solvePhase == SOLVE_PHASE_ERROR ||
-	     solvePhase == SOLVE_PHASE_EXIT ||
-	     solvePhase == SOLVE_PHASE_UNKNOWN ||
-	     solvePhase == SOLVE_PHASE_OPTIMAL ||
-	     solvePhase == SOLVE_PHASE_1 ||
-	     solvePhase == SOLVE_PHASE_2 ||
-	     solvePhase == SOLVE_PHASE_CLEANUP);
     } else {
       // Should only be SOLVE_PHASE_1 or SOLVE_PHASE_2
       scaled_model_status = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
     }
+    // Return if bailing out from solve
     if (solve_bailout) return HighsStatus::Warning;
-    // Should only have these cases
-    assert(solvePhase == SOLVE_PHASE_ERROR ||
-	   solvePhase == SOLVE_PHASE_EXIT ||
-	   solvePhase == SOLVE_PHASE_UNKNOWN ||
-	   solvePhase == SOLVE_PHASE_OPTIMAL ||
-	   solvePhase == SOLVE_PHASE_1 ||
-           solvePhase == SOLVE_PHASE_2 ||
-	   solvePhase == SOLVE_PHASE_CLEANUP);
+    // Can have all possible cases of solvePhase
+    assert(solvePhase >= SOLVE_PHASE_MIN && solvePhase <= SOLVE_PHASE_MAX);
+    // Look for scenarios when the major solving loop ends
     if (solvePhase == SOLVE_PHASE_ERROR) {
+      // Solver error so return HighsStatus::Error
       assert(scaled_model_status == HighsModelStatus::SOLVE_ERROR);
       return HighsStatus::Error;
     }
     if (solvePhase == SOLVE_PHASE_EXIT) {
+      // LP identified as not having an optimal solution
       assert(scaled_model_status == HighsModelStatus::PRIMAL_DUAL_INFEASIBLE ||
 	     scaled_model_status == HighsModelStatus::PRIMAL_INFEASIBLE);
       break;
@@ -252,13 +241,16 @@ HighsStatus HDual::solve() {
     if (solvePhase == SOLVE_PHASE_1 &&
         scaled_model_status == HighsModelStatus::DUAL_INFEASIBLE) {
       // Dual infeasibilities after phase 2 for a problem known to be dual
-      // infeasible
+      // infeasible. 
       break;
     }
     if (solvePhase == SOLVE_PHASE_CLEANUP) {
-      // Jump for primal
+      // Dual infeasibilities after phase 2 for a problem not known to be dual
+      // infeasible Primal feasible and dual infeasibilities
       break;
     }
+    // If solvePhase == SOLVE_PHASE_OPTIMAL == 0 then major solving
+    // loop ends naturally since solvePhase is false
   }
   // If bailing out, should have returned already
   assert(!solve_bailout);
@@ -270,9 +262,9 @@ HighsStatus HDual::solve() {
   if (solvePhase == SOLVE_PHASE_1) {
     assert(scaled_model_status == HighsModelStatus::DUAL_INFEASIBLE);
     // Resolve case of LP that is dual infeasible (and not primal
-    // feasible since that would yield solvePhase == SOLVE_PHASE_CLEANUP Looking to
-    // identify primal infeasiblilty or primal unboundedness Cleanup
-    // with phase 1 for new primal code
+    // feasible since that would yield solvePhase ==
+    // SOLVE_PHASE_CLEANUP Looking to identify primal infeasiblilty or
+    // primal unboundedness Cleanup with phase 1 for new primal code
     computePrimalObjectiveValue(workHMO);
     HQPrimal hPrimal(workHMO);
     hPrimal.solve();
@@ -524,6 +516,17 @@ void HDual::initSlice(const int initial_num_slice) {
 }
 
 void HDual::solvePhase1() {
+  // Performs dual phase 1 iterations. Returns solvePhase with value
+  //
+  // SOLVE_PHASE_ERROR => Solver error
+  //
+  // SOLVE_PHASE_UNKNOWN => Back-tracking due to singularity
+  //
+  // SOLVE_PHASE_1 => Dual infeasibility suspected, but have to go out
+  // and back in to solvePhase1 to perform fresh rebuild
+  //
+  // SOLVE_PHASE_2 => Continue with dual phase 2 iterations
+  
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
@@ -550,10 +553,9 @@ void HDual::solvePhase1() {
   analysis->simplexTimerStart(IterateClock);
   for (;;) {
     analysis->simplexTimerStart(IterateDualRebuildClock);
-    const bool rebuild_ok = rebuild();
+    rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
-    if (!rebuild_ok) {
-      solvePhase = SOLVE_PHASE_ERROR;
+    if (solvePhase == SOLVE_PHASE_ERROR) {
       scaled_model_status = HighsModelStatus::SOLVE_ERROR;
       return;
     }
@@ -660,6 +662,24 @@ void HDual::solvePhase1() {
 }
 
 void HDual::solvePhase2() {
+  // Performs dual phase 2 iterations. Returns solvePhase with value
+  //
+  // SOLVE_PHASE_ERROR => Solver error
+  //
+  // SOLVE_PHASE_EXIT => LP identified as not having an optimal solution
+  //
+  // SOLVE_PHASE_UNKNOWN => Back-tracking due to singularity
+  //
+  // SOLVE_PHASE_OPTIMAL => Primal feasible and no dual infeasibilities => Optimal
+  //
+  // SOLVE_PHASE_1 => Primal feasible and dual infeasibilities for a
+  // problem known to be dual infeasible => Use primal phase 2 to
+  // determine primal unboundedness.
+  //
+  // SOLVE_PHASE_2 => Dual unboundedness suspected, but have to go out
+  // and back in to solvePhase2 to perform fresh rebuild
+  //
+  // SOLVE_PHASE_CLEANUP => Contrinue with primal phase 2 iterations to clean up dual infeasibilities
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
@@ -687,10 +707,9 @@ void HDual::solvePhase2() {
     // Outer loop of solvePhase2()
     // Rebuild all values, reinverting B if updates have been performed
     analysis->simplexTimerStart(IterateDualRebuildClock);
-    const bool rebuild_ok = rebuild();
+    rebuild();
     analysis->simplexTimerStop(IterateDualRebuildClock);
-    if (!rebuild_ok) {
-      solvePhase = SOLVE_PHASE_ERROR;
+    if (solvePhase == SOLVE_PHASE_ERROR) {
       scaled_model_status = HighsModelStatus::SOLVE_ERROR;
       return;
     }
@@ -791,7 +810,7 @@ void HDual::solvePhase2() {
   return;
 }
 
-bool HDual::rebuild() {
+void HDual::rebuild() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   // Save history information
@@ -815,7 +834,10 @@ bool HDual::rebuild() {
     // happens: Current basis is nonsingular; Current basis is
     // singular and last nonsingular basis is refactorized as
     // nonsingular - or found singular. Latter is code failure.
-    if (!getNonsingularInverse()) return false;
+    if (!getNonsingularInverse()) {
+      solvePhase = SOLVE_PHASE_ERROR;
+      return;
+    }
   }
 
   if (!workHMO.simplex_lp_status_.has_matrix_row_wise ||
@@ -914,7 +936,6 @@ bool HDual::rebuild() {
 #endif
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
-  return true;
 }
 
 void HDual::cleanup() {
