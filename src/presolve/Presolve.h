@@ -56,6 +56,7 @@ enum class HighsPresolveStatus {
 namespace presolve {
 
 enum class Presolver {
+  kMainEmpty,
   kMainRowSingletons,
   kMainForcing,
   kMainColSingletons,
@@ -65,6 +66,7 @@ enum class Presolver {
 };
 
 const std::map<Presolver, std::string> kPresolverNames{
+    {Presolver::kMainEmpty, "Empty & fixed ()"},
     {Presolver::kMainRowSingletons, "Row singletons ()"},
     {Presolver::kMainForcing, "Forcing rows ()"},
     {Presolver::kMainColSingletons, "Col singletons ()"},
