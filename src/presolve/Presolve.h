@@ -168,6 +168,7 @@ class Presolve : public HPreData {
 
   // easy transformations
   void removeFixedCol(int j);
+  void removeEmpty();
   void removeFixed();
   void removeEmptyRow(int i);
   void removeEmptyColumn(int j);

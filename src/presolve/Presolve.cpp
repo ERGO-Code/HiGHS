@@ -237,10 +237,36 @@ void Presolve::reportDevMainLoop() {
   return;
 }
 
+void Presolve::removeEmpty() {
+  // cols
+  for (int col = 0; col < numCol; col++) {
+    if (flagCol[col])
+      if (nzCol[col] == 0) {
+        removeEmptyColumn(col);
+      }
+  }
+
+  // rows
+  for (int row = 0; row < numRow; row++) {
+    if (flagRow[row])
+      if (nzRow[row] == 0) {
+        removeEmptyRow(row);
+      }
+  }
+}
+
 int Presolve::runPresolvers(const std::vector<Presolver>& order) {
   //***************** main loop ******************
 
   checkBoundsAreConsistent();
+  if (status) return status;
+
+  if (iPrint) std::cout << "----> fixed cols" << std::endl;
+
+  removeEmpty();
+  if (status) return status;
+
+  removeFixed();
   if (status) return status;
 
   for (Presolver main_loop_presolver : order) {
@@ -358,10 +384,6 @@ int Presolve::presolve(int print) {
   if (status) return status;
 
   int iter = 1;
-
-  removeFixed();
-  if (status) return status;
-
   if (order.size() == 0) {
     // pre_release_order:
     order.push_back(Presolver::kMainRowSingletons);
