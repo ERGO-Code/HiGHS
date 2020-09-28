@@ -3121,6 +3121,10 @@ void correctDual(HighsModelObject& highs_model_object,
 void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   simplex_info.costs_perturbed = 1;
+  if (simplex_info.workShift_[iCol] != 0) {
+    printf("Column %d already has nonzero shift of %g\n",
+	   iCol, simplex_info.workShift_[iCol]);
+  }
   assert(simplex_info.workShift_[iCol] == 0);
   simplex_info.workShift_[iCol] = amount;
 }

@@ -206,8 +206,13 @@ HighsStatus HDual::solve() {
       computeDualInfeasibleWithFlips(workHMO);
       dualInfeasCount = scaled_solution_params.num_dual_infeasibilities;
       solvePhase = dualInfeasCount > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
-      // Can now forget that we might have been backtracking
-      simplex_info.backtracking_ = false;
+      if (simplex_info.backtracking_) {
+	// Backtracking, so set the bounds and primal values
+	initialiseBound(workHMO, solvePhase);
+	initialiseValueAndNonbasicMove(workHMO);	
+	// Can now forget that we might have been backtracking
+	simplex_info.backtracking_ = false;
+      }
     }
     assert(solvePhase == SOLVE_PHASE_1 ||
 	   solvePhase == SOLVE_PHASE_2);
@@ -1956,13 +1961,16 @@ bool HDual::getNonsingularInverse() {
   analysis->simplexTimerStart(InvertClock);
   int rank_deficiency = computeFactor(workHMO);
   analysis->simplexTimerStop(InvertClock);
-  /*
-  if (workHMO.iteration_counts_.simplex > 70 && workHMO.iteration_counts_.simplex < 80) {
-    // Claim rank deficiency to test backtracking
-    printf("Claiming rank deficiency to test backtracking\n");
-    rank_deficiency = 1;
+  const bool artificial_rank_deficiency = true;
+  if (artificial_rank_deficiency) {
+    const int iteration_count_lower = 140;
+    if (workHMO.iteration_counts_.simplex > iteration_count_lower &&
+	workHMO.iteration_counts_.simplex < iteration_count_lower + 20) {
+      // Claim rank deficiency to test backtracking
+      printf("Claiming rank deficiency to test backtracking\n");
+      rank_deficiency = 1;
+    }
   }
-  */
   if (rank_deficiency) {
     // Rank deficient basis, so backtrack to last full rank basis
     //
