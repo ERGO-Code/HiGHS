@@ -60,8 +60,8 @@ HighsStatus HDual::solve() {
   HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   scaled_model_status = HighsModelStatus::NOTSET;
   if (debugSimplexInfoBasisRightSize(workHMO) ==
-      HighsDebugStatus::LOGICAL_ERROR)
-    return HighsStatus::Error;
+      HighsDebugStatus::LOGICAL_ERROR) 
+    return returnFromSolve(HighsStatus::Error);
   // Assumes that the LP has a positive number of rows, since
   // unconstrained LPs should be solved in solveLpSimplex
   bool positive_num_row = workHMO.simplex_lp_.numRow_ > 0;
@@ -71,7 +71,7 @@ HighsStatus HDual::solve() {
                     "HPrimal::solve called for LP with non-positive (%d) "
                     "number of constraints",
                     workHMO.simplex_lp_.numRow_);
-    return HighsStatus::Error;
+    return returnFromSolve(HighsStatus::Error);
   }
 
   invertHint = INVERT_HINT_NO;
@@ -79,7 +79,7 @@ HighsStatus HDual::solve() {
   // Set solve_bailout to be true if control is to be returned immediately to
   // calling function
   solve_bailout = false;
-  if (bailoutOnTimeIterations()) return HighsStatus::Warning;
+  if (bailoutOnTimeIterations()) return returnFromSolve(HighsStatus::Warning);
 
   // Initialise working environment. Does LOTS, including
   // initialisation of edge weights to 1s. Should only be called if
@@ -91,7 +91,7 @@ HighsStatus HDual::solve() {
   if (!dual_info_ok) {
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
                     "HPrimalDual::solve has error in dual information");
-    return HighsStatus::Error;
+    return returnFromSolve(HighsStatus::Error);
   }
 
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
@@ -110,7 +110,7 @@ HighsStatus HDual::solve() {
   if (!simplex_lp_status.has_invert) {
     HighsLogMessage(workHMO.options_.logfile, HighsMessageType::ERROR,
                     "HPrimalDual:: Should enter solve with INVERT");
-    return HighsStatus::Error;
+    return returnFromSolve(HighsStatus::Error);
   }
   // Consider initialising edge weights
   //
@@ -190,7 +190,7 @@ HighsStatus HDual::solve() {
   dualInfeasCount = scaled_solution_params.num_dual_infeasibilities;
   solvePhase = dualInfeasCount > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
   if (debugOkForSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
-    return HighsStatus::Error;
+    return returnFromSolve(HighsStatus::Error);
   //
   // The major solving loop
   //
@@ -233,17 +233,17 @@ HighsStatus HDual::solve() {
     } else {
       // Should only be SOLVE_PHASE_1 or SOLVE_PHASE_2
       scaled_model_status = HighsModelStatus::SOLVE_ERROR;
-      return HighsStatus::Error;
+      return returnFromSolve(HighsStatus::Error);
     }
     // Return if bailing out from solve
-    if (solve_bailout) return HighsStatus::Warning;
+    if (solve_bailout) returnFromSolve(HighsStatus::Warning);
     // Can have all possible cases of solvePhase
     assert(solvePhase >= SOLVE_PHASE_MIN && solvePhase <= SOLVE_PHASE_MAX);
     // Look for scenarios when the major solving loop ends
     if (solvePhase == SOLVE_PHASE_ERROR) {
       // Solver error so return HighsStatus::Error
       assert(scaled_model_status == HighsModelStatus::SOLVE_ERROR);
-      return HighsStatus::Error;
+      return returnFromSolve(HighsStatus::Error);
     }
     if (solvePhase == SOLVE_PHASE_EXIT) {
       // LP identified as not having an optimal solution
@@ -364,9 +364,9 @@ HighsStatus HDual::solve() {
     }
   }
   if (debugOkForSolve(workHMO, solvePhase) == HighsDebugStatus::LOGICAL_ERROR)
-    return HighsStatus::Error;
+    return returnFromSolve(HighsStatus::Error);
   computePrimalObjectiveValue(workHMO);
-  return HighsStatus::OK;
+  return returnFromSolve(HighsStatus::OK);
 }
 
 void HDual::options() {
@@ -564,6 +564,10 @@ void HDual::solvePhase1() {
   // Switch to dual phase 1 bounds
   initialiseBound(workHMO, 1);
   initialiseValueAndNonbasicMove(workHMO);
+
+  // If there's no backtracking basis Save the initial basis in case of backtracking
+  if (!simplex_info.valid_backtracking_basis_) putBacktrackingBasis();
+
   // Main solving structure
   analysis->simplexTimerStart(IterateClock);
   for (;;) {
@@ -723,6 +727,10 @@ void HDual::solvePhase2() {
                     ML_DETAILED, "dual-phase-2-start\n");
   // Collect free variables
   dualRow.createFreelist();
+
+  // If there's no backtracking basis Save the initial basis in case of backtracking
+  if (!simplex_info.valid_backtracking_basis_) putBacktrackingBasis();
+
   // Main solving structure
   analysis->simplexTimerStart(IterateClock);
   for (;;) {
@@ -1940,6 +1948,12 @@ void HDual::interpretDualEdgeWeightStrategy(
   }
 }
 
+HighsStatus HDual::returnFromSolve(const HighsStatus return_status) {
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  simplex_info.valid_backtracking_basis_ = false;
+  return return_status;
+}
+
 bool HDual::getNonsingularInverse() {
   const vector<int>& basicIndex = workHMO.simplex_basis_.basicIndex_;
   // Take a copy of basicIndex from before INVERT to be used as the
@@ -1963,19 +1977,25 @@ bool HDual::getNonsingularInverse() {
   analysis->simplexTimerStop(InvertClock);
   const bool artificial_rank_deficiency = true;
   if (artificial_rank_deficiency) {
-    const int iteration_count_lower = 140;
-    if (workHMO.iteration_counts_.simplex > iteration_count_lower &&
-	workHMO.iteration_counts_.simplex < iteration_count_lower + 20) {
+    if (!simplex_info.phase1_backtracking_test_done && solvePhase == SOLVE_PHASE_1) {
       // Claim rank deficiency to test backtracking
-      printf("Claiming rank deficiency to test backtracking\n");
+      printf("Phase1 (Iter %d) Claiming rank deficiency to test backtracking\n",
+	     workHMO.iteration_counts_.simplex);
       rank_deficiency = 1;
+      simplex_info.phase1_backtracking_test_done = true;
+    } else if (!simplex_info.phase2_backtracking_test_done && solvePhase == SOLVE_PHASE_2) {
+      // Claim rank deficiency to test backtracking
+      printf("Phase2 (Iter %d) Claiming rank deficiency to test backtracking\n",
+	     workHMO.iteration_counts_.simplex);
+      rank_deficiency = 1;
+      simplex_info.phase2_backtracking_test_done = true;
     }
   }
   if (rank_deficiency) {
     // Rank deficient basis, so backtrack to last full rank basis
     //
     // Get the last nonsingular basis - so long as there is one
-    if (!getSavedNonsingularBasis(dualRHS.workEdWtFull)) return false;
+    if (!getBacktrackingBasis(dualRHS.workEdWtFull)) return false;
     // Record that backtracking is taking place
     simplex_info.backtracking_ = true;
     updateSimplexLpStatus(workHMO.simplex_lp_status_, LpAction::BACKTRACKING);
@@ -1995,7 +2015,7 @@ bool HDual::getNonsingularInverse() {
 		    rank_deficiency, simplex_update_count, use_simplex_update_limit, new_simplex_update_limit);
   } else {
     // Current basis is full rank so save it
-      putSavedNonsingularBasis(basicIndex_before_compute_factor,
+      putBacktrackingBasis(basicIndex_before_compute_factor,
 			       dualRHS.workEdWtFull);
     // Indicate that backtracking is not taking place
     simplex_info.backtracking_ = false;
@@ -2012,32 +2032,44 @@ bool HDual::getNonsingularInverse() {
   return true;
 }
 
-bool HDual::getSavedNonsingularBasis(vector<double>& scattered_edge_weights) {
+bool HDual::getBacktrackingBasis(vector<double>& scattered_edge_weights) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  if (!simplex_info.valid_saved_nonsingular_basis_) return false;
+  if (!simplex_info.valid_backtracking_basis_) return false;
 
-  workHMO.simplex_basis_ = simplex_info.saved_nonsingular_basis_;
-  scattered_edge_weights = simplex_info.saved_nonsingular_basis_edge_weights_;
-  /*
-  HighsLp& simplex_lp = workHMO.simplex_lp_;
-  HighsSimplexBasis& simplex_basis = workHMO.simplex_basis_;
-  for (int iVar=0; iVar<solver_num_tot; iVar++) {
-    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
-    if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
-      simplex_info.workValue_[iVar] = simplex_info._lp.workLower_[
-    } 
-  }
-  */
+  workHMO.simplex_basis_ =
+    simplex_info.backtracking_basis_;
+  simplex_info.costs_perturbed =
+    simplex_info.backtracking_basis_costs_perturbed_;
+  simplex_info.workShift_ =
+    simplex_info.backtracking_basis_workShift_;
+  scattered_edge_weights =
+    simplex_info.backtracking_basis_edge_weights_;
   return true;
 }
 
-void HDual::putSavedNonsingularBasis(const vector<int>& basicIndex_before_compute_factor,
+void HDual::putBacktrackingBasis() {
+  const vector<int>& basicIndex = workHMO.simplex_basis_.basicIndex_;
+  analysis->simplexTimerStart(PermWtClock);
+  for (int i = 0; i < solver_num_row; i++)
+    dualRHS.workEdWtFull[basicIndex[i]] = dualRHS.workEdWt[i];
+  analysis->simplexTimerStop(PermWtClock);
+  putBacktrackingBasis(basicIndex, dualRHS.workEdWtFull);
+}
+
+void HDual::putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
 				     const vector<double>& scattered_edge_weights) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
-  simplex_info.valid_saved_nonsingular_basis_ = true;
-  simplex_info.saved_nonsingular_basis_ = workHMO.simplex_basis_;
-  simplex_info.saved_nonsingular_basis_.basicIndex_ = basicIndex_before_compute_factor;
-  simplex_info.saved_nonsingular_basis_edge_weights_ = scattered_edge_weights;
+  simplex_info.valid_backtracking_basis_ = true;
+  simplex_info.backtracking_basis_ =
+    workHMO.simplex_basis_;
+  simplex_info.backtracking_basis_.basicIndex_ =
+    basicIndex_before_compute_factor;
+  simplex_info.backtracking_basis_costs_perturbed_ =
+    simplex_info.costs_perturbed;
+  simplex_info.backtracking_basis_workShift_ =
+    simplex_info.workShift_;
+  simplex_info.backtracking_basis_edge_weights_ =
+    scattered_edge_weights;
 }
 
 void HDual::assessPhase1Optimality() {

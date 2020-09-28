@@ -230,10 +230,14 @@ struct HighsSimplexInfo {
   std::vector<int> devex_index_;
 
   // Data for backtracking in the event of a singular basis
+  int phase1_backtracking_test_done = false;
+  int phase2_backtracking_test_done = false;
   bool backtracking_ = false;
-  bool valid_saved_nonsingular_basis_ = false;
-  SimplexBasis saved_nonsingular_basis_;
-  std::vector<double> saved_nonsingular_basis_edge_weights_;
+  bool valid_backtracking_basis_ = false;
+  SimplexBasis backtracking_basis_;
+  int backtracking_basis_costs_perturbed_;
+  std::vector<double> backtracking_basis_workShift_;
+  std::vector<double> backtracking_basis_edge_weights_;
 
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;

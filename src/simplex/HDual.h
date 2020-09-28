@@ -376,10 +376,13 @@ class HDual {
    */
   void majorRollback();
 
+  // private:
+  HighsStatus returnFromSolve(const HighsStatus return_status);
   bool getNonsingularInverse();
-  bool getSavedNonsingularBasis(vector<double>& scattered_edge_weights);
-  void putSavedNonsingularBasis(const vector<int>& basicIndex_before_compute_factor,
-				const vector<double>& scattered_edge_weights);
+  bool getBacktrackingBasis(vector<double>& scattered_edge_weights);
+  void putBacktrackingBasis();
+  void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
+			    const vector<double>& scattered_edge_weights);
 
   void assessPhase1Optimality();
   void exitPhase1ResetDuals();
