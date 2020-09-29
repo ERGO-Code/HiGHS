@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include "HConfig.h"
+#include "util/HighsMatrixPic.h"
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"
@@ -365,6 +366,7 @@ HighsStatus Highs::run() {
     options_.highs_debug_level = min_highs_debug_level;
   }
   writeModel("HighsRunModel.mps");
+  writeLpMatrixPicToFile(options_, "LpMatrix", lp_);
 #endif
 
 #ifdef OPENMP
