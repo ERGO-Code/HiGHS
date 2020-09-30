@@ -2188,13 +2188,6 @@ void initialiseCost(HighsModelObject& highs_model_object, int perturb) {
   }
 }
 
-void populateWorkArrays(HighsModelObject& highs_model_object) {
-  // Initialize the values
-  initialiseCost(highs_model_object);
-  initialiseBound(highs_model_object);
-  initialiseValueAndNonbasicMove(highs_model_object);
-}
-
 #ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   HighsTimer& timer = highs_model_object.timer_;

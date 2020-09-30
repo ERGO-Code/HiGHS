@@ -202,6 +202,9 @@ HighsStatus HDual::solve() {
     // updated value
     simplex_lp_status.has_dual_objective_value = false;
     if (solvePhase == SOLVE_PHASE_UNKNOWN) {
+      // Reset the phase 2 bounds so that true number of dual
+      // infeasibilities canbe determined
+      initialiseBound(workHMO);
       // Determine the number of dual infeasibilities, and hence the solve phase
       computeDualInfeasibleWithFlips(workHMO);
       dualInfeasCount = scaled_solution_params.num_dual_infeasibilities;
