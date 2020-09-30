@@ -382,7 +382,7 @@ class HDual {
   bool getBacktrackingBasis(vector<double>& scattered_edge_weights);
   void putBacktrackingBasis();
   void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
-			    const vector<double>& scattered_edge_weights);
+                            const vector<double>& scattered_edge_weights);
 
   void assessPhase1Optimality();
   void exitPhase1ResetDuals();

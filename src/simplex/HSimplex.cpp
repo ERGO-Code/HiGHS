@@ -63,7 +63,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.store_squared_primal_infeasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = false;  // true;  //
+  bool useful_analysis = true;  // false;  //
   bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = true;  // useful_analysis;
@@ -2911,7 +2911,7 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
 #ifdef HiGHSDEV
   // Possibly analyse the error in the result of PRICE
   const bool analyse_price_error = false;
-  if (analyse_price_error) matrix->price_er_ck(row_ap, row_ep);
+  if (analyse_price_error) matrix->debugPriceResult(row_ap, row_ep);
 #endif
   // Update the record of average row_ap density
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
@@ -3115,8 +3115,8 @@ void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   simplex_info.costs_perturbed = 1;
   if (simplex_info.workShift_[iCol] != 0) {
-    printf("Column %d already has nonzero shift of %g\n",
-	   iCol, simplex_info.workShift_[iCol]);
+    printf("Column %d already has nonzero shift of %g\n", iCol,
+           simplex_info.workShift_[iCol]);
   }
   assert(simplex_info.workShift_[iCol] == 0);
   simplex_info.workShift_[iCol] = amount;
