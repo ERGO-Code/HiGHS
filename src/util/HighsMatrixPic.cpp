@@ -95,6 +95,12 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   assert(num_pixel_wide <= max_num_pixel_wide);
   assert(num_pixel_deep <= max_num_pixel_deep);
 
+  HighsLogMessage(
+      options.logfile, HighsMessageType::INFO,
+      "Representing LP constraint matrix sparsity pattern %dx%d .pbm file,"
+      " mapping entries in square of size %d onto one pixel",
+      num_pixel_wide, num_pixel_deep, dim_per_pixel);
+
   std::vector<int> value;
   value.assign(num_pixel_wide, 0);
   f << "P1" << std::endl;
@@ -104,11 +110,6 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   for (int pixel = 0; pixel < num_pixel_wide; pixel++) f << "1 ";
   f << std::endl;
   pic_num_row++;
-  HighsLogMessage(
-      options.logfile, HighsMessageType::INFO,
-      "Representing LP constraint matrix sparsity pattern %dx%d .pbm file,"
-      " mapping entries in square of size %d onto one pixel",
-      dim_per_pixel);
   int from_row = 0;
   for (;;) {
     int to_row = std::min(from_row + dim_per_pixel, numRow);
