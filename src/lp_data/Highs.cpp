@@ -19,7 +19,6 @@
 #include <sstream>
 
 #include "HConfig.h"
-#include "util/HighsMatrixPic.h"
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
 #include "io/LoadOptions.h"
@@ -29,6 +28,7 @@
 #include "lp_data/HighsSolve.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HighsSimplexInterface.h"
+#include "util/HighsMatrixPic.h"
 
 #ifdef OPENMP
 #include "omp.h"
