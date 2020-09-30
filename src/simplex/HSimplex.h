@@ -121,8 +121,6 @@ void initialisePhase2RowCost(HighsModelObject& highs_model_object);
 
 void initialiseCost(HighsModelObject& highs_model_object, int perturb = 0);
 
-void populateWorkArrays(HighsModelObject& highs_model_object);
-
 #ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object);
 
@@ -136,7 +134,7 @@ double computeBasisCondition(const HighsModelObject& highs_model_object);
 
 void flip_bound(HighsModelObject& highs_model_object, int iCol);
 
-int simplexHandleRankDeficiency(HighsModelObject& highs_model_object);
+void simplexHandleRankDeficiency(HighsModelObject& highs_model_object);
 
 int computeFactor(HighsModelObject& highs_model_object);
 

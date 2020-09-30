@@ -478,6 +478,10 @@ HighsDebugStatus debugSimplexDualFeasibility(
           HIGHS_DEBUG_LEVEL_COSTLY &&
       !force)
     return HighsDebugStatus::NOT_CHECKED;
+  if (force)
+    HighsPrintMessage(highs_model_object.options_.output, 1, 1,
+                      "SmplxDuFeas:   Forcing debug\n");
+
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1560,8 +1564,6 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
        simplex_lp_status.has_factor_arrays &&
        simplex_lp_status.has_dual_steepest_edge_weights &&
        simplex_lp_status.has_invert;
-  // TODO: Eliminate the following line ASAP!!!
-  ok = true;
   if (!ok) {
     if (!simplex_lp_status.has_basis)
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,

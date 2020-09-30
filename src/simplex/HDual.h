@@ -285,15 +285,6 @@ class HDual {
   void interpretDualEdgeWeightStrategy(
       const int simplex_dual_edge_weight_strategy);
 
-  /**
-   * @brief Interpret the PRICE strategy as setting of a mode and other actions
-   */
-  /*
-  void interpretPriceStrategy(
-                              const int simplex_price_strategy
-                              );
-  */
-
   bool reachedExactDualObjectiveValueUpperBound();
   double computeExactDualObjectiveValue();
 
@@ -384,6 +375,14 @@ class HDual {
    * matrix after a set of minor iterations
    */
   void majorRollback();
+
+  // private:
+  HighsStatus returnFromSolve(const HighsStatus return_status);
+  bool getNonsingularInverse();
+  bool getBacktrackingBasis(vector<double>& scattered_edge_weights);
+  void putBacktrackingBasis();
+  void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
+                            const vector<double>& scattered_edge_weights);
 
   void assessPhase1Optimality();
   void exitPhase1ResetDuals();

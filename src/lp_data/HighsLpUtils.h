@@ -227,9 +227,8 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int row,
 void analyseLp(const HighsLp& lp, const std::string message);
 #endif
 
-// void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis&
-// basis,
-//                          const HighsSolution& solution, const bool pretty);
+void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution, const bool pretty);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
