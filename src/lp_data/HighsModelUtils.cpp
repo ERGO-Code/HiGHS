@@ -105,13 +105,13 @@ std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
   return "";
 }
 
-void reportModelBoundSol(FILE* file, const bool columns, const int dim,
-                         const std::vector<double>& lower,
-                         const std::vector<double>& upper,
-                         const std::vector<std::string>& names,
-                         const std::vector<double>& primal,
-                         const std::vector<double>& dual,
-                         const std::vector<HighsBasisStatus>& status) {
+void writeModelBoundSol(FILE* file, const bool columns, const int dim,
+                        const std::vector<double>& lower,
+                        const std::vector<double>& upper,
+                        const std::vector<std::string>& names,
+                        const std::vector<double>& primal,
+                        const std::vector<double>& dual,
+                        const std::vector<HighsBasisStatus>& status) {
   const bool have_names = names.size() > 0;
   const bool have_basis = status.size() > 0;
   const bool have_primal = primal.size() > 0;

@@ -36,7 +36,8 @@ enum class LpAction {
   DEL_ROWS,
   DEL_ROWS_BASIS_OK,
   SCALED_COL,
-  SCALED_ROW
+  SCALED_ROW,
+  BACKTRACKING
 };
 
 // Primal/dual statuses and corresponding HighsModelStatus
@@ -227,6 +228,16 @@ struct HighsSimplexInfo {
   std::vector<int> numColPermutation_;
 
   std::vector<int> devex_index_;
+
+  // Data for backtracking in the event of a singular basis
+  int phase1_backtracking_test_done = false;
+  int phase2_backtracking_test_done = false;
+  bool backtracking_ = false;
+  bool valid_backtracking_basis_ = false;
+  SimplexBasis backtracking_basis_;
+  int backtracking_basis_costs_perturbed_;
+  std::vector<double> backtracking_basis_workShift_;
+  std::vector<double> backtracking_basis_edge_weights_;
 
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;

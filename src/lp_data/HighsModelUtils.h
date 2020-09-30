@@ -24,13 +24,13 @@ void analyseModelBounds(const char* message, int numBd,
                         const std::vector<double>& lower,
                         const std::vector<double>& upper);
 #endif
-void reportModelBoundSol(FILE* file, const bool columns, const int dim,
-                         const std::vector<double>& lower,
-                         const std::vector<double>& upper,
-                         const std::vector<std::string>& names,
-                         const std::vector<double>& primal,
-                         const std::vector<double>& dual,
-                         const std::vector<HighsBasisStatus>& status);
+void writeModelBoundSol(FILE* file, const bool columns, const int dim,
+                        const std::vector<double>& lower,
+                        const std::vector<double>& upper,
+                        const std::vector<std::string>& names,
+                        const std::vector<double>& primal,
+                        const std::vector<double>& dual,
+                        const std::vector<HighsBasisStatus>& status);
 bool namesWithSpaces(const int num_name, const std::vector<std::string>& names,
                      const bool report = false);
 int maxNameLength(const int num_name, const std::vector<std::string>& names);

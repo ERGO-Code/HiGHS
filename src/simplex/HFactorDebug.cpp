@@ -24,11 +24,13 @@ const double inverse_large_error = 1e-12;
 const double inverse_excessive_error = sqrt(inverse_large_error);
 
 HighsDebugStatus debugCheckInvert(const HighsOptions& options,
-                                  const HFactor& factor) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+                                  const HFactor& factor, const bool force) {
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
     return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
+  if (force)
+    HighsPrintMessage(options.output, 1, 1, "CheckINVERT:   Forcing debug\n");
 
+  HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
   return_status = HighsDebugStatus::OK;
   const int numRow = factor.numRow;
   const int numCol = factor.numCol;
@@ -71,6 +73,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   }
   std::string value_adjective;
   int report_level;
+  int message_level;
   return_status = HighsDebugStatus::OK;
 
   if (solve_error_norm) {
@@ -86,8 +89,14 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
       value_adjective = "Small";
       report_level = ML_VERBOSE;
     }
+    if (force) {
+      message_level = 1;
+      report_level = 1;
+    } else {
+      message_level = options.message_level;
+    }
     HighsPrintMessage(
-        options.output, options.message_level, report_level,
+        options.output, message_level, report_level,
         "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
         value_adjective.c_str(), solve_error_norm);
   }
