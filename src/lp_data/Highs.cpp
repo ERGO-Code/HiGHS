@@ -28,6 +28,7 @@
 #include "lp_data/HighsSolve.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HighsSimplexInterface.h"
+#include "util/HighsMatrixPic.h"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -365,6 +366,7 @@ HighsStatus Highs::run() {
     options_.highs_debug_level = min_highs_debug_level;
   }
   writeModel("HighsRunModel.mps");
+  writeLpMatrixPicToFile(options_, "LpMatrix", lp_);
 #endif
 
 #ifdef OPENMP

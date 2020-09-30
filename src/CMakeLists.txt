@@ -120,6 +120,7 @@ set(sources
     test/KktCh2.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
+    util/HighsMatrixPic.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
@@ -184,6 +185,7 @@ set(headers
     util/HighsSort.h
     util/HighsTimer.h
     util/HighsUtils.h
+    util/HighsMatrixPic.h
     Highs.h
     interfaces/highs_c_api.h
 )
@@ -414,6 +416,7 @@ target_sources(libhighs PRIVATE
     test/DevKkt.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
+    util/HighsMatrixPic.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
