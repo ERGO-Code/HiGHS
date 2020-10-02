@@ -20,11 +20,11 @@ set(TEST_SOURCES
     TestSetup.cpp
     TestFilereader.cpp
     TestInfo.cpp
+    TestBasis.cpp
     TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpSolvers.cpp
-    TestBasisIO.cpp
     TestSpecialLps.cpp
     Avgas.cpp)
 

@@ -312,10 +312,26 @@ HighsStatus Highs::clearModel() {
 
 HighsStatus Highs::readBasis(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
+  // Try to read basis file into read_basis
+  HighsBasis read_basis = this->basis_;
   return_status =
-      interpretCallStatus(readBasisFile(options_, this->basis_, filename),
-                          return_status, "readBasis");
-  return returnFromHighs(return_status);
+    interpretCallStatus(readBasisFile(options_, read_basis, filename), return_status, "readBasis");
+  if (return_status != HighsStatus::OK) return return_status;
+  // Basis read OK: check whether it's consistent with the LP
+  if (!isBasisConsistent(lp_, read_basis)) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "readBasis: invalid basis");
+    return HighsStatus::Error;
+  }
+  // Update the HiGHS basis and invalidate any simplex basis for the model
+  this->basis_ = read_basis;
+  this->basis_.valid_ = true;
+  if (hmos_.size() > 0) {
+    HighsSimplexInterface interface(hmos_[0]);
+    interface.clearBasis();
+  }
+  // Can't use returnFromHighs since...
+  return HighsStatus::OK;
 }
 
 HighsStatus Highs::writeModel(const std::string filename) {
@@ -1114,8 +1130,14 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
                     "setBasis: invalid basis");
     return HighsStatus::Error;
   }
-  basis_ = basis;
-  basis_.valid_ = true;
+  // Update the HiGHS basis and invalidate any simplex basis for the model
+  this->basis_ = basis;
+  this->basis_.valid_ = true;
+  if (hmos_.size() > 0) {
+    HighsSimplexInterface interface(hmos_[0]);
+    interface.clearBasis();
+  }
+  // Can't use returnFromHighs since...
   return HighsStatus::OK;
 }
 
@@ -1129,6 +1151,7 @@ HighsStatus Highs::setBasis() {
     HighsSimplexInterface interface(hmos_[0]);
     interface.clearBasis();
   }
+  // Can't use returnFromHighs since...
   return HighsStatus::OK;
 }
 
