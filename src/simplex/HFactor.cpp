@@ -156,11 +156,9 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
                     int highs_debug_level_, FILE* logfile_, FILE* output_,
-                    int message_level_,
-		    double pivot_threshold_,
+                    int message_level_, double pivot_threshold_,
                     double pivot_tolerance_,
-		    const bool use_original_HFactor_logic_,
-                    int updateMethod_) {
+                    const bool use_original_HFactor_logic_, int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;

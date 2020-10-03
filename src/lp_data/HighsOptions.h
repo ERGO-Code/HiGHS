@@ -20,8 +20,8 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
-#include "simplex/SimplexConst.h"
 #include "simplex/HFactor.h"
+#include "simplex/SimplexConst.h"
 
 using std::string;
 
@@ -627,17 +627,15 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "factor_pivot_threshold",
-        "Matrix factorization pivot threshold",
-        advanced, &factor_pivot_threshold, min_pivot_threshold, default_pivot_threshold,
-        max_pivot_threshold);
+        "factor_pivot_threshold", "Matrix factorization pivot threshold",
+        advanced, &factor_pivot_threshold, min_pivot_threshold,
+        default_pivot_threshold, max_pivot_threshold);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "factor_pivot_tolerance",
-        "Matrix factorization pivot tolerance",
-        advanced, &factor_pivot_tolerance, min_pivot_tolerance, default_pivot_tolerance,
-        max_pivot_tolerance);
+        "factor_pivot_tolerance", "Matrix factorization pivot tolerance",
+        advanced, &factor_pivot_tolerance, min_pivot_tolerance,
+        default_pivot_tolerance, max_pivot_tolerance);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
