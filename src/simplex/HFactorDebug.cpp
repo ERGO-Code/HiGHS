@@ -188,12 +188,12 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
     for (int i = 0; i < rank_deficiency; i++) printf(" %2d", noPvR[i]);
     printf("\nnoPvC  ");
     for (int i = 0; i < rank_deficiency; i++) printf(" %2d", noPvC[i]);
-    if (numRow > 123) {
-      printf("\nIndex  ");
-      for (int i = 0; i < numRow; i++) printf(" %2d", i);
-      printf("\nIwork  ");
-      for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
-    }
+    printf("\n");
+    if (numRow > 123) return;
+    printf("Index  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", i);
+    printf("\nIwork  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
     printf("\n");
   } else if (call_id == 2) {
     if (numRow > 123) return;

@@ -877,6 +877,13 @@ void HDual::rebuild() {
       solvePhase = SOLVE_PHASE_ERROR;
       return;
     }
+    // Once bad numerics have been detected, check the condition of
+    // the invert condition from now on
+    if (rebuild_invert_hint == INVERT_HINT_POSSIBLY_SINGULAR_BASIS)
+      check_invert_condition = true;
+    if (check_invert_condition) {
+      basisConditionOk(workHMO, 1e16);
+    }
   }
 
   if (!workHMO.simplex_lp_status_.has_matrix_row_wise ||
