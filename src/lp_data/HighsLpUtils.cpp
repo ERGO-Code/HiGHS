@@ -1863,13 +1863,16 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
       basis.row_status[iRow] = (HighsBasisStatus)int_status;
     }
     if (inFile.eof()) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		      "readBasisFile: Reached end of file before reading complete basis");
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "readBasisFile: Reached end of file before reading complete basis");
       return_status = HighsStatus::Error;
-    } 
+    }
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "readBasisFile: Cannot read basis file for HiGHS version %d", highs_version_number);
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
+        "readBasisFile: Cannot read basis file for HiGHS version %d",
+        highs_version_number);
     return_status = HighsStatus::Error;
   }
   inFile.close();

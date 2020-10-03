@@ -63,10 +63,10 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.store_squared_primal_infeasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = true;  // false;  //
+  bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = true;  // useful_analysis;
+  simplex_info.report_simplex_inner_clock = useful_analysis;  // true;
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
   simplex_info.report_HFactor_clock = useful_analysis;  // full_timing;//
@@ -336,8 +336,9 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   bool basis_condition_ok = true;
   if (options.simplex_initial_condition_check) {
     const double basis_condition_tolerance =
-      highs_model_object.options_.simplex_initial_condition_tolerance;
-    basis_condition_ok = basisConditionOk(highs_model_object, basis_condition_tolerance);
+        highs_model_object.options_.simplex_initial_condition_tolerance;
+    basis_condition_ok =
+        basisConditionOk(highs_model_object, basis_condition_tolerance);
     // ToDo Handle ill-conditioned basis with basis crash, in which case
     // ensure that HiGHS and simplex basis are invalidated and simplex
     // work and base arrays are re-populated
@@ -660,7 +661,8 @@ void initialiseNonbasicWorkValue(const HighsLp& simplex_lp,
   }
 }
 
-bool basisConditionOk(HighsModelObject& highs_model_object, const double tolerance) {
+bool basisConditionOk(HighsModelObject& highs_model_object,
+                      const double tolerance) {
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   bool basis_condition_ok;
   analysis.simplexTimerStart(BasisConditionClock);
@@ -675,10 +677,9 @@ bool basisConditionOk(HighsModelObject& highs_model_object, const double toleran
     message_type = HighsMessageType::WARNING;
     condition_comment = "exceeds";
   }
-  HighsLogMessage(
-      highs_model_object.options_.logfile, message_type,
-      "Basis condition estimate of %11.4g %s the tolerance of %g",
-      basis_condition, condition_comment.c_str(), tolerance);
+  HighsLogMessage(highs_model_object.options_.logfile, message_type,
+                  "Basis condition estimate of %11.4g %s the tolerance of %g",
+                  basis_condition, condition_comment.c_str(), tolerance);
   return basis_condition_ok;
 }
 
@@ -3233,14 +3234,13 @@ bool reinvertOnNumericalTrouble(const std::string method_name,
   const int update_count = highs_model_object.simplex_info_.update_count;
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
-  const bool numerical_trouble = numerical_trouble_measure > numerical_trouble_tolerance;
+  const bool numerical_trouble =
+      numerical_trouble_measure > numerical_trouble_tolerance;
   const bool reinvert = numerical_trouble && update_count > 0;
-  debugReportReinvertOnNumericalTrouble(method_name, highs_model_object,
-					numerical_trouble_measure,
-					alpha_from_col, alpha_from_row,
-					numerical_trouble_tolerance,
-					reinvert);
-  if (reinvert) 
+  debugReportReinvertOnNumericalTrouble(
+      method_name, highs_model_object, numerical_trouble_measure,
+      alpha_from_col, alpha_from_row, numerical_trouble_tolerance, reinvert);
+  if (reinvert)
     HighsLogMessage(highs_model_object.options_.logfile,
                     HighsMessageType::WARNING,
                     "HiGHS has identified numerical trouble so reinvert");

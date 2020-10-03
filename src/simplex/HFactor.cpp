@@ -157,7 +157,8 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
                     int highs_debug_level_, FILE* logfile_, FILE* output_,
                     int message_level_, const bool use_original_HFactor_logic_,
-                    int updateMethod_) {
+                    int updateMethod_, double threshold_,
+                    double min_abs_pivot_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -167,6 +168,8 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   baseIndex = baseIndex_;
   use_original_HFactor_logic = use_original_HFactor_logic_;
   updateMethod = updateMethod_;
+  threshold = threshold_;
+  min_abs_pivot = min_abs_pivot_;
 
   highs_debug_level = highs_debug_level_;
   logfile = logfile_;
@@ -323,6 +326,13 @@ void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
   if (updateMethod == UPDATE_METHOD_PF) updatePF(aq, *iRow, hint);
   if (updateMethod == UPDATE_METHOD_MPF) updateMPF(aq, ep, *iRow, hint);
   if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);
+}
+
+bool HFactor::setThreshold(const double new_threshold) {
+  if (new_threshold < min_threshold) return false;
+  if (new_threshold > max_threshold) return false;
+  threshold = new_threshold;
+  return true;
 }
 
 void HFactor::buildSimple() {
@@ -573,7 +583,7 @@ int HFactor::buildKernel() {
     /**
      * 1. Search for the pivot
      */
-
+    /*
     bool rp_r_k = false;
     if (rp_r_k) {
       printf("Row counts:");
@@ -606,10 +616,9 @@ int HFactor::buildKernel() {
       }
       printf("\n");
     }
-
+    */
     int jColPivot = -1;
     int iRowPivot = -1;
-
     // 1.1. Setup search merits
     int searchLimit = min(nwork, 8);
     int searchCount = 0;
@@ -628,8 +637,9 @@ int HFactor::buildKernel() {
       jColPivot = MRindex[MRstart[iRowPivot]];
       foundPivot = true;
     }
-
+    const bool singleton_pivot = foundPivot;
     // 1.3. Major search loop
+    double candidate_pivot_value = 0;
     for (int count = 2; !foundPivot && count <= numRow; count++) {
       // 1.3.1 Search for columns
       for (int j = clinkFirst[count]; j != -1; j = clinkNext[j]) {
@@ -642,6 +652,7 @@ int HFactor::buildKernel() {
             int rowCount = MRcount[i];
             double meritLocal = 1.0 * (count - 1) * (rowCount - 1);
             if (meritPivot > meritLocal) {
+              candidate_pivot_value = fabs(MCvalue[k]);
               meritPivot = meritLocal;
               jColPivot = j;
               iRowPivot = i;
@@ -669,6 +680,7 @@ int HFactor::buildKernel() {
             int ifind = MCstart[j];
             while (MCindex[ifind] != i) ifind++;
             if (fabs(MCvalue[ifind]) >= MCminpivot[j]) {
+              candidate_pivot_value = fabs(MCvalue[ifind]);
               meritPivot = meritLocal;
               jColPivot = j;
               iRowPivot = i;
@@ -695,6 +707,12 @@ int HFactor::buildKernel() {
      */
     // 2.1. Delete the pivot
     double pivotX = colDelete(jColPivot, iRowPivot);
+    if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
+    if (fabs(pivotX) < min_abs_pivot) {
+      printf("Small |pivot| = %g when nwork = %d\n", fabs(pivotX), nwork);
+      rank_deficiency = nwork + 1;
+      return rank_deficiency;
+    }
     rowDelete(jColPivot, iRowPivot);
     clinkDel(jColPivot);
     rlinkDel(iRowPivot);
@@ -929,6 +947,8 @@ void HFactor::buildMarkSingC() {
 }
 
 void HFactor::buildFinish() {
+  debugPivotValueAnalysis(highs_debug_level, output, message_level, numRow,
+                          UpivotValue);
   // The look up table
   for (int i = 0; i < numRow; i++) UpivotLookup[UpivotIndex[i]] = i;
   LpivotIndex = UpivotIndex;

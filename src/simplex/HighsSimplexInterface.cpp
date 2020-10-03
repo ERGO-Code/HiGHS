@@ -1804,5 +1804,6 @@ int HighsSimplexInterface::get_basic_indices(int* bind) {
 }
 
 void HighsSimplexInterface::clearBasis() {
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::NEW_BASIS);
 }

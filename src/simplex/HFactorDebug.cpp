@@ -294,3 +294,24 @@ void debugLogRankDeficiency(const int highs_debug_level, FILE* output,
       rank_deficiency, basis_matrix_num_el, invert_num_el, kernel_dim,
       kernel_num_el, nwork);
 }
+
+void debugPivotValueAnalysis(const int highs_debug_level, FILE* output,
+                             const int message_level, const int numRow,
+                             const vector<double>& UpivotValue) {
+  if (highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP) return;
+  double min_pivot = HIGHS_CONST_INF;
+  double mean_pivot = 0;
+  double max_pivot = 0;
+  for (int iRow = 0; iRow < numRow; iRow++) {
+    double abs_pivot = fabs(UpivotValue[iRow]);
+    min_pivot = min(abs_pivot, min_pivot);
+    max_pivot = min(abs_pivot, max_pivot);
+    mean_pivot += log(abs_pivot);
+  }
+  mean_pivot = exp(mean_pivot / numRow);
+  if (highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP || min_pivot < 1e-8)
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+                      "InvertPivotAnalysis: %d pivots: Min %g in row %d; Mean "
+                      "%g; Max %g in row %d\n",
+                      numRow, min_pivot, mean_pivot, max_pivot);
+}

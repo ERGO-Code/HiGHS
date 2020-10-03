@@ -315,7 +315,8 @@ HighsStatus Highs::readBasis(const std::string filename) {
   // Try to read basis file into read_basis
   HighsBasis read_basis = this->basis_;
   return_status =
-    interpretCallStatus(readBasisFile(options_, read_basis, filename), return_status, "readBasis");
+      interpretCallStatus(readBasisFile(options_, read_basis, filename),
+                          return_status, "readBasis");
   if (return_status != HighsStatus::OK) return return_status;
   // Basis read OK: check whether it's consistent with the LP
   if (!isBasisConsistent(lp_, read_basis)) {
@@ -370,9 +371,9 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
   const int min_highs_debug_level =
-    //HIGHS_DEBUG_LEVEL_MIN;
+      // HIGHS_DEBUG_LEVEL_MIN;
       HIGHS_DEBUG_LEVEL_CHEAP;
-      //HIGHS_DEBUG_LEVEL_COSTLY;
+  // HIGHS_DEBUG_LEVEL_COSTLY;
   // HIGHS_DEBUG_LEVEL_MAX;
   if (options_.highs_debug_level < min_highs_debug_level) {
     printf(
@@ -382,7 +383,8 @@ HighsStatus Highs::run() {
     options_.highs_debug_level = min_highs_debug_level;
   }
   writeModel("HighsRunModel.mps");
-  writeLpMatrixPicToFile(options_, "LpMatrix", lp_);
+  //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
+  //  "LpMatrix", lp_);
 #endif
 
 #ifdef OPENMP

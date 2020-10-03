@@ -36,6 +36,18 @@ enum UPDATE_METHOD {
   UPDATE_METHOD_APF = 4
 };
 /**
+ * Limits and default value of pivoting threshold
+ */
+const double min_threshold = 1e-6;
+const double default_threshold = 0.1;
+const double max_threshold = 1.0;
+/**
+ * Limits and default value of minimum absolute pivot
+ */
+const double min_min_abs_pivot = 0;
+const double default_min_abs_pivot = 1e-10;
+const double max_min_abs_pivot = 1.0;
+/**
  * Necessary threshholds for historical density to trigger
  * hyper-sparse TRANs,
  */
@@ -99,18 +111,20 @@ class HFactor {
    * factor and Update buffer, allocated space for Markowitz matrices,
    * count-link-list, L factor and U factor
    */
-  void setup(int numCol,            //!< Number of columns
-             int numRow,            //!< Number of rows
-             const int* Astart,     //!< Column starts of constraint matrix
-             const int* Aindex,     //!< Row indices of constraint matrix
-             const double* Avalue,  //!< Row values of constraint matrix
-             int* baseIndex,        //!< Indices of basic variables
-             int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN,
-             FILE* logfile = NULL, FILE* output = NULL,
-             int message_level = ML_NONE,
-             const bool use_original_HFactor_logic = true,
-             int updateMethod =
-                 UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
+  void setup(
+      int numCol,            //!< Number of columns
+      int numRow,            //!< Number of rows
+      const int* Astart,     //!< Column starts of constraint matrix
+      const int* Aindex,     //!< Row indices of constraint matrix
+      const double* Avalue,  //!< Row values of constraint matrix
+      int* baseIndex,        //!< Indices of basic variables
+      int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN, FILE* logfile = NULL,
+      FILE* output = NULL, int message_level = ML_NONE,
+      const bool use_original_HFactor_logic = true,
+      int updateMethod =
+          UPDATE_METHOD_FT,  //!< Default update method is Forrest Tomlin
+      double threshold = default_threshold,         //!< Pivoting threshold
+      double min_abs_pivot = default_min_abs_pivot  //!< Min absolute pivot
   );
 
   /**
@@ -145,6 +159,15 @@ class HFactor {
               int* iRow,    //!< Index of pivotal row
               int* hint     //!< Reinversion status
   );
+
+  /**
+   * @brief Sets threshold
+   */
+  bool setThreshold(const double new_threshold = default_threshold);
+  /**
+   * @brief Sets minimum absolute pivot
+   */
+  bool setMinAbsPivot(const double new_min_abs_pivot = default_min_abs_pivot);
 
   /**
    * @brief Wall clock time for INVERT
@@ -225,6 +248,8 @@ class HFactor {
   FILE* logfile;
   FILE* output;
   int message_level;
+  double threshold;
+  double min_abs_pivot;
 
   // Working buffer
   int nwork;
@@ -354,7 +379,7 @@ class HFactor {
     double maxValue = 0;
     for (int k = MCstart[iCol]; k < MCstart[iCol] + MCcountA[iCol]; k++)
       maxValue = max(maxValue, fabs(MCvalue[k]));
-    MCminpivot[iCol] = maxValue * 0.1;
+    MCminpivot[iCol] = maxValue * threshold;
   }
 
   double colDelete(const int iCol, const int iRow) {

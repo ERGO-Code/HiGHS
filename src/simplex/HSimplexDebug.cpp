@@ -1916,13 +1916,11 @@ bool debugAllNonbasicMoveVsWorkArraysOk(
   return ok;
 }
 
-void debugReportReinvertOnNumericalTrouble(const std::string method_name, 
-					   const HighsModelObject& highs_model_object,
-					   const double numerical_trouble_measure,
-					   const double alpha_from_col,
-					   const double alpha_from_row,
-					   const double numerical_trouble_tolerance,
-					   const bool reinvert) {
+void debugReportReinvertOnNumericalTrouble(
+    const std::string method_name, const HighsModelObject& highs_model_object,
+    const double numerical_trouble_measure, const double alpha_from_col,
+    const double alpha_from_row, const double numerical_trouble_tolerance,
+    const bool reinvert) {
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return;
   const double abs_alpha_from_col = fabs(alpha_from_col);
@@ -1932,8 +1930,10 @@ void debugReportReinvertOnNumericalTrouble(const std::string method_name,
   const int update_count = highs_model_object.simplex_info_.update_count;
   const std::string model_name = highs_model_object.simplex_lp_.model_name_;
 
-  const bool numerical_trouble = numerical_trouble_measure > numerical_trouble_tolerance;
-  const bool near_numerical_trouble = 10*numerical_trouble_measure > numerical_trouble_tolerance;
+  const bool numerical_trouble =
+      numerical_trouble_measure > numerical_trouble_tolerance;
+  const bool near_numerical_trouble =
+      10 * numerical_trouble_measure > numerical_trouble_tolerance;
 
   const bool wrong_sign = alpha_from_col * alpha_from_row <= 0;
   if (!near_numerical_trouble && !wrong_sign) return;
@@ -1946,22 +1946,22 @@ void debugReportReinvertOnNumericalTrouble(const std::string method_name,
     adjective = "clearly satisfies";
   }
   HighsLogMessage(highs_model_object.options_.logfile,
-		  HighsMessageType::WARNING,
-		  "%s (%s) [Iter %d; Update %d] Col: %11.4g; Row: %11.4g; Diff = %11.4g: Measure %11.4g %s %11.4g",
-		  method_name.c_str(), model_name.c_str(),
-		  iteration_count, update_count,
-		  abs_alpha_from_col,
-		  abs_alpha_from_row, abs_alpha_diff,
-		  numerical_trouble_measure, adjective.c_str(), numerical_trouble_tolerance);
+                  HighsMessageType::WARNING,
+                  "%s (%s) [Iter %d; Update %d] Col: %11.4g; Row: %11.4g; Diff "
+                  "= %11.4g: Measure %11.4g %s %11.4g",
+                  method_name.c_str(), model_name.c_str(), iteration_count,
+                  update_count, abs_alpha_from_col, abs_alpha_from_row,
+                  abs_alpha_diff, numerical_trouble_measure, adjective.c_str(),
+                  numerical_trouble_tolerance);
   if (wrong_sign) {
     HighsLogMessage(highs_model_object.options_.logfile,
-		    HighsMessageType::WARNING,
-		    "   Incompatible signs for Col: %11.4g and Row: %11.4g",
-		    alpha_from_col, alpha_from_row);
+                    HighsMessageType::WARNING,
+                    "   Incompatible signs for Col: %11.4g and Row: %11.4g",
+                    alpha_from_col, alpha_from_row);
   }
   if ((numerical_trouble || wrong_sign) && !reinvert) {
     HighsLogMessage(highs_model_object.options_.logfile,
-		    HighsMessageType::WARNING,
-		    "   Numerical trouble or wrong sign and not reinverting");
+                    HighsMessageType::WARNING,
+                    "   Numerical trouble or wrong sign and not reinverting");
   }
 }
