@@ -312,7 +312,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     factor.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
                  &simplex_basis.basicIndex_[0], options.highs_debug_level,
-                 options.logfile, options.output, options.message_level);
+                 options.logfile, options.output, options.message_level,
+		 options.factor_pivot_threshold, options.factor_pivot_tolerance);
     simplex_lp_status.has_factor_arrays = true;
     analysis.simplexTimerStop(factorSetupClock);
   }

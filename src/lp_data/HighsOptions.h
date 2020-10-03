@@ -21,6 +21,7 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/SimplexConst.h"
+#include "simplex/HFactor.h"
 
 using std::string;
 
@@ -274,6 +275,8 @@ struct HighsOptionsStruct {
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshhold;
   double dual_simplex_cost_perturbation_multiplier;
+  double factor_pivot_threshold;
+  double factor_pivot_tolerance;
   double start_crossover_tolerance;
   bool less_infeasible_DSE_check;
   bool less_infeasible_DSE_choose_row;
@@ -621,6 +624,20 @@ class HighsOptions : public HighsOptionsStruct {
         "Dual simplex cost perturbation multiplier: 0 => no perturbation",
         advanced, &dual_simplex_cost_perturbation_multiplier, 0.0, 1.0,
         HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "factor_pivot_threshold",
+        "Matrix factorization pivot threshold",
+        advanced, &factor_pivot_threshold, min_pivot_threshold, default_pivot_threshold,
+        max_pivot_threshold);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "factor_pivot_tolerance",
+        "Matrix factorization pivot tolerance",
+        advanced, &factor_pivot_tolerance, min_pivot_tolerance, default_pivot_tolerance,
+        max_pivot_tolerance);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(

@@ -38,15 +38,15 @@ enum UPDATE_METHOD {
 /**
  * Limits and default value of pivoting threshold
  */
-const double min_threshold = 1e-6;
-const double default_threshold = 0.1;
-const double max_threshold = 1.0;
+const double min_pivot_threshold = 1e-6;
+const double default_pivot_threshold = 0.1;
+const double max_pivot_threshold = 1.0;
 /**
  * Limits and default value of minimum absolute pivot
  */
-const double min_min_abs_pivot = 0;
-const double default_min_abs_pivot = 1e-10;
-const double max_min_abs_pivot = 1.0;
+const double min_pivot_tolerance = 0;
+const double default_pivot_tolerance = 1e-10;
+const double max_pivot_tolerance = 1.0;
 /**
  * Necessary threshholds for historical density to trigger
  * hyper-sparse TRANs,
@@ -120,11 +120,11 @@ class HFactor {
       int* baseIndex,        //!< Indices of basic variables
       int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN, FILE* logfile = NULL,
       FILE* output = NULL, int message_level = ML_NONE,
+      double pivot_threshold = default_pivot_threshold, //!< Pivoting threshold
+      double pivot_tolerance = default_pivot_tolerance, //!< Min absolute pivot
       const bool use_original_HFactor_logic = true,
       int updateMethod =
-          UPDATE_METHOD_FT,  //!< Default update method is Forrest Tomlin
-      double threshold = default_threshold,         //!< Pivoting threshold
-      double min_abs_pivot = default_min_abs_pivot  //!< Min absolute pivot
+          UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
 
   /**
@@ -161,13 +161,13 @@ class HFactor {
   );
 
   /**
-   * @brief Sets threshold
+   * @brief Sets pivoting threshold
    */
-  bool setThreshold(const double new_threshold = default_threshold);
+  bool setPivotThreshold(const double new_pivot_threshold = default_pivot_threshold);
   /**
    * @brief Sets minimum absolute pivot
    */
-  bool setMinAbsPivot(const double new_min_abs_pivot = default_min_abs_pivot);
+  bool setMinAbsPivot(const double new_pivot_tolerance = default_pivot_tolerance);
 
   /**
    * @brief Wall clock time for INVERT
@@ -248,8 +248,8 @@ class HFactor {
   FILE* logfile;
   FILE* output;
   int message_level;
-  double threshold;
-  double min_abs_pivot;
+  double pivot_threshold;
+  double pivot_tolerance;
 
   // Working buffer
   int nwork;
@@ -379,7 +379,7 @@ class HFactor {
     double maxValue = 0;
     for (int k = MCstart[iCol]; k < MCstart[iCol] + MCcountA[iCol]; k++)
       maxValue = max(maxValue, fabs(MCvalue[k]));
-    MCminpivot[iCol] = maxValue * threshold;
+    MCminpivot[iCol] = maxValue * pivot_threshold;
   }
 
   double colDelete(const int iCol, const int iRow) {

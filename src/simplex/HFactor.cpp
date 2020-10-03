@@ -156,9 +156,11 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
                     int highs_debug_level_, FILE* logfile_, FILE* output_,
-                    int message_level_, const bool use_original_HFactor_logic_,
-                    int updateMethod_, double threshold_,
-                    double min_abs_pivot_) {
+                    int message_level_,
+		    double pivot_threshold_,
+                    double pivot_tolerance_,
+		    const bool use_original_HFactor_logic_,
+                    int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -168,8 +170,8 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   baseIndex = baseIndex_;
   use_original_HFactor_logic = use_original_HFactor_logic_;
   updateMethod = updateMethod_;
-  threshold = threshold_;
-  min_abs_pivot = min_abs_pivot_;
+  pivot_threshold = pivot_threshold_;
+  pivot_tolerance = pivot_tolerance_;
 
   highs_debug_level = highs_debug_level_;
   logfile = logfile_;
@@ -328,10 +330,10 @@ void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
   if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);
 }
 
-bool HFactor::setThreshold(const double new_threshold) {
-  if (new_threshold < min_threshold) return false;
-  if (new_threshold > max_threshold) return false;
-  threshold = new_threshold;
+bool HFactor::setPivotThreshold(const double new_pivot_threshold) {
+  if (new_pivot_threshold < min_pivot_threshold) return false;
+  if (new_pivot_threshold > max_pivot_threshold) return false;
+  pivot_threshold = new_pivot_threshold;
   return true;
 }
 
@@ -708,7 +710,7 @@ int HFactor::buildKernel() {
     // 2.1. Delete the pivot
     double pivotX = colDelete(jColPivot, iRowPivot);
     if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
-    if (fabs(pivotX) < min_abs_pivot) {
+    if (fabs(pivotX) < pivot_tolerance) {
       printf("Small |pivot| = %g when nwork = %d\n", fabs(pivotX), nwork);
       rank_deficiency = nwork + 1;
       return rank_deficiency;
