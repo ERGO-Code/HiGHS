@@ -319,7 +319,7 @@ struct HighsSimplexInfo {
   // Analysis of INVERT form
   int num_kernel = 0;
   int num_major_kernel = 0;
-  const double major_kernel_relative_dim_threshhold = 0.1;
+  const double major_kernel_relative_dim_threshold = 0.1;
   double max_kernel_dim = 0;
   double sum_kernel_dim = 0;
   double running_average_kernel_dim = 0;

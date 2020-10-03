@@ -273,7 +273,7 @@ struct HighsOptionsStruct {
   int dual_chuzc_sort_strategy;
   bool simplex_initial_condition_check;
   double simplex_initial_condition_tolerance;
-  double dual_steepest_edge_weight_log_error_threshhold;
+  double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
@@ -613,9 +613,9 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble(
-        "dual_steepest_edge_weight_log_error_threshhold",
-        "Threshhold on dual steepest edge weight errors for Devex switch",
-        advanced, &dual_steepest_edge_weight_log_error_threshhold, 1.0, 1e1,
+        "dual_steepest_edge_weight_log_error_threshold",
+        "Threshold on dual steepest edge weight errors for Devex switch",
+        advanced, &dual_steepest_edge_weight_log_error_threshold, 1.0, 1e1,
         HIGHS_CONST_INF);
     records.push_back(record_double);
 

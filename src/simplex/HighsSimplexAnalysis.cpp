@@ -29,8 +29,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   allow_dual_steepest_edge_to_devex_switch =
       options.simplex_dual_edge_weight_strategy ==
       SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE;
-  dual_steepest_edge_weight_log_error_threshhold =
-      options.dual_steepest_edge_weight_log_error_threshhold;
+  dual_steepest_edge_weight_log_error_threshold =
+      options.dual_steepest_edge_weight_log_error_threshold;
   //
   AnIterIt0 = simplex_iteration_count_;
   AnIterCostlyDseFq = 0;
@@ -276,7 +276,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
 void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
     const double computed_edge_weight, const double updated_edge_weight) {
   const bool accept_weight =
-      updated_edge_weight >= accept_weight_threshhold * computed_edge_weight;
+      updated_edge_weight >= accept_weight_threshold * computed_edge_weight;
   int low_weight_error = 0;
   int high_weight_error = 0;
   double weight_error;
@@ -288,7 +288,7 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
   if (updated_edge_weight < computed_edge_weight) {
     // Updated weight is low
     weight_error = computed_edge_weight / updated_edge_weight;
-    if (weight_error > weight_error_threshhold) {
+    if (weight_error > weight_error_threshold) {
       low_weight_error = 1;
 #ifdef HiGHSDEV
       error_type = " Low";
@@ -300,7 +300,7 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
   } else {
     // Updated weight is correct or high
     weight_error = updated_edge_weight / computed_edge_weight;
-    if (weight_error > weight_error_threshhold) {
+    if (weight_error > weight_error_threshold) {
       high_weight_error = 1;
 #ifdef HiGHSDEV
       error_type = "High";
@@ -338,7 +338,7 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
               average_log_high_dual_steepest_edge_weight_error);
 #ifdef HiGHSDEV
   const bool report_weight_error = false;
-  if (report_weight_error && weight_error > 0.5 * weight_error_threshhold) {
+  if (report_weight_error && weight_error > 0.5 * weight_error_threshold) {
     printf(
         "DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - "
         "%s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g "
@@ -403,16 +403,16 @@ bool HighsSimplexAnalysis::switchToDevex() {
     double dse_weight_error_measure =
         average_log_low_dual_steepest_edge_weight_error +
         average_log_high_dual_steepest_edge_weight_error;
-    double dse_weight_error_threshhold =
-        dual_steepest_edge_weight_log_error_threshhold;
+    double dse_weight_error_threshold =
+        dual_steepest_edge_weight_log_error_threshold;
     switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
-                      dse_weight_error_measure > dse_weight_error_threshhold;
+                      dse_weight_error_measure > dse_weight_error_threshold;
 #ifdef HiGHSDEV
     if (switch_to_devex) {
       HighsLogMessage(logfile, HighsMessageType::INFO,
                       "Switch from DSE to Devex with log error measure of %g > "
-                      "%g = threshhold",
-                      dse_weight_error_measure, dse_weight_error_threshhold);
+                      "%g = threshold",
+                      dse_weight_error_measure, dse_weight_error_threshold);
     }
 #endif
   }

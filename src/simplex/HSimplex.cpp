@@ -2465,7 +2465,7 @@ int computeFactor(HighsModelObject& highs_model_object) {
           0.05 * kernel_fill_factor;
       if (report_kernel) printf("; fill = %6.2f", kernel_fill_factor);
       if (kernel_relative_dim >
-          simplex_info.major_kernel_relative_dim_threshhold) {
+          simplex_info.major_kernel_relative_dim_threshold) {
         simplex_info.num_major_kernel++;
         simplex_info.sum_major_kernel_fill_factor += kernel_fill_factor;
         simplex_info.running_average_major_kernel_fill_factor =

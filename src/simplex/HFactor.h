@@ -48,7 +48,7 @@ const double min_pivot_tolerance = 0;
 const double default_pivot_tolerance = 1e-10;
 const double max_pivot_tolerance = 1.0;
 /**
- * Necessary threshholds for historical density to trigger
+ * Necessary thresholds for historical density to trigger
  * hyper-sparse TRANs,
  */
 const double hyperFTRANL = 0.15;
@@ -56,11 +56,11 @@ const double hyperFTRANU = 0.10;
 const double hyperBTRANL = 0.10;
 const double hyperBTRANU = 0.15;
 /**
- * Necessary threshhold for RHS density to trigger hyper-sparse TRANs,
+ * Necessary threshold for RHS density to trigger hyper-sparse TRANs,
  */
 const double hyperCANCEL = 0.05;
 /**
- * Threshhold for result density for it to be considered as
+ * Threshold for result density for it to be considered as
  * hyper-sparse - only for reporting
  */
 const double hyperRESULT = 0.10;

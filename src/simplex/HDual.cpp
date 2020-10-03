@@ -1315,9 +1315,9 @@ void HDual::chooseRow() {
 bool HDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
   // Accept the updated weight if it is at least a quarter of the
   // computed weight. Excessively large updated weights don't matter!
-  const double accept_weight_threshhold = 0.25;
+  const double accept_weight_threshold = 0.25;
   const bool accept_weight =
-      updated_edge_weight >= accept_weight_threshhold * computed_edge_weight;
+      updated_edge_weight >= accept_weight_threshold * computed_edge_weight;
   analysis->dualSteepestEdgeWeightError(computed_edge_weight,
                                         updated_edge_weight);
   return accept_weight;
@@ -1332,9 +1332,9 @@ bool HDual::newDevexFramework(const double updated_edge_weight) {
   i_te = max(minAbsNumberDevexIterations, i_te);
   // Square maxAllowedDevexWeightRatio due to keeping squared
   // weights
-  const double accept_ratio_threshhold =
+  const double accept_ratio_threshold =
       maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio;
-  const bool accept_ratio = devex_ratio <= accept_ratio_threshhold;
+  const bool accept_ratio = devex_ratio <= accept_ratio_threshold;
   const bool accept_it = num_devex_iterations <= i_te;
   bool return_new_devex_framework;
   return_new_devex_framework = !accept_ratio || !accept_it;
