@@ -217,6 +217,7 @@ const int KEEP_N_ROWS_KEEP_ROWS = 1;
 
 // Strings for command line options
 const string model_file_string = "model_file";
+const string model_file_type_string = "model_file_type";
 const string presolve_string = "presolve";
 const string solver_string = "solver";
 const string parallel_string = "parallel";
@@ -228,6 +229,7 @@ const string options_file_string = "options_file";
 struct HighsOptionsStruct {
   // Options read from the command line
   std::string model_file;
+  std::string model_file_type;
   std::string presolve;
   std::string solver;
   std::string parallel;
@@ -349,6 +351,10 @@ class HighsOptions : public HighsOptionsStruct {
     record_string =
         new OptionRecordString(model_file_string, "Model file", advanced,
                                &model_file, FILENAME_DEFAULT);
+    records.push_back(record_string);
+    record_string =
+        new OptionRecordString(model_file_type_string, "Model type", advanced,
+                               &model_file_type, FILENAME_DEFAULT);
     records.push_back(record_string);
     record_string = new OptionRecordString(
         presolve_string, "Presolve option: \"off\", \"choose\" or \"on\"",
