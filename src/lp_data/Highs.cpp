@@ -370,9 +370,8 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // with runLpSolver(..)
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
-  const int min_highs_debug_level =
-      // HIGHS_DEBUG_LEVEL_MIN;
-      HIGHS_DEBUG_LEVEL_CHEAP;
+  const int min_highs_debug_level = HIGHS_DEBUG_LEVEL_MIN;
+  //      HIGHS_DEBUG_LEVEL_CHEAP;
   // HIGHS_DEBUG_LEVEL_COSTLY;
   // HIGHS_DEBUG_LEVEL_MAX;
   if (options_.highs_debug_level < min_highs_debug_level) {
@@ -526,6 +525,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
     this_presolve_time += to_presolve_time;
     presolve_.info_.presolve_time = this_presolve_time;
 
+    // Set an illegal local pivot threshold value that's updated after
+    // solving the presolved LP
+    double factor_pivot_threshold = 0;
+
     // Run solver.
     switch (presolve_status) {
       case HighsPresolveStatus::NotPresolved: {
@@ -581,6 +584,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
         hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
         // Don't try dual cut-off when solving the presolved LP, as the
         // objective values aren't correct
+        //	HighsOptions& options = hmos_[solved_hmo].options_;
+        //	HighsOptions save_options = options;
         const double save_dual_objective_value_upper_bound =
             options_.dual_objective_value_upper_bound;
         options_.dual_objective_value_upper_bound = HIGHS_CONST_INF;
@@ -589,6 +594,9 @@ basis_.valid_, hmos_[0].basis_.valid_);
         call_status = runLpSolver(solved_hmo, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
+        // Record the pivot threshold resulting from solving the presolved LP
+        factor_pivot_threshold =
+            hmos_[solved_hmo].simplex_info_.factor_pivot_threshold;
         // Restore the dual objective cut-off
         options_.dual_objective_value_upper_bound =
             save_dual_objective_value_upper_bound;
@@ -596,6 +604,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
             interpretCallStatus(call_status, return_status, "runLpSolver");
         if (return_status == HighsStatus::Error)
           return returnFromRun(return_status);
+
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
@@ -735,6 +744,10 @@ basis_.valid_, hmos_[0].basis_.valid_);
           // Ensure that the parallel solver isn't used
           options.highs_min_threads = 1;
           options.highs_max_threads = 1;
+          // Use any pivot threshold resulting from solving the presolved LP
+          if (factor_pivot_threshold)
+            options.factor_pivot_threshold = factor_pivot_threshold;
+
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
           int iteration_count0 = info_.simplex_iteration_count;
           this_solve_original_lp_time = -timer_.read(timer_.solve_clock);

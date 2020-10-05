@@ -184,13 +184,16 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterTraceRec* lcAnIter = &AnIterTrace[0];
   lcAnIter->AnIterTraceIter = AnIterIt0;
   lcAnIter->AnIterTraceTime = timer_->getWallTime();
-
   initialiseValueDistribution("Primal step summary", "", 1e-16, 1e16, 10.0,
                               primal_step_distribution);
   initialiseValueDistribution("Dual step summary", "", 1e-16, 1e16, 10.0,
                               dual_step_distribution);
-  initialiseValueDistribution("Pivot summary summary", "", 1e-8, 1e16, 10.0,
-                              pivot_distribution);
+  initialiseValueDistribution("Simplex pivot summary", "", 1e-8, 1e16, 10.0,
+                              simplex_pivot_distribution);
+  initialiseValueDistribution("Factor pivot threshold summary", "",
+                              min_pivot_threshold, max_pivot_threshold,
+                              pivot_threshold_change_factor,
+                              factor_pivot_threshold_distribution);
   initialiseValueDistribution("Numerical trouble summary", "", 1e-16, 1.0, 10.0,
                               numerical_trouble_distribution);
   initialiseValueDistribution("", "1 ", 1e-16, 1e16, 10.0,
@@ -694,7 +697,9 @@ void HighsSimplexAnalysis::iterationRecord() {
   updateValueDistribution(dual_step, cleanup_dual_step_distribution);
   updateValueDistribution(primal_step, primal_step_distribution);
   updateValueDistribution(dual_step, dual_step_distribution);
-  updateValueDistribution(pivot_value_from_column, pivot_distribution);
+  updateValueDistribution(pivot_value_from_column, simplex_pivot_distribution);
+  updateValueDistribution(factor_pivot_threshold,
+                          factor_pivot_threshold_distribution);
   // Only update the distribution of legal values for
   // numerical_trouble. Illegal values are set in PAMI since it's not
   // known in minor iterations
@@ -899,7 +904,8 @@ void HighsSimplexAnalysis::summaryReport() {
   printValueDistribution(ftran_upper_hyper_density, numRow);
   printValueDistribution(primal_step_distribution);
   printValueDistribution(dual_step_distribution);
-  printValueDistribution(pivot_distribution);
+  printValueDistribution(simplex_pivot_distribution);
+  printValueDistribution(factor_pivot_threshold_distribution);
   printValueDistribution(numerical_trouble_distribution);
   printValueDistribution(cleanup_dual_change_distribution);
   printValueDistribution(cleanup_primal_step_distribution);

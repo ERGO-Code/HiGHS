@@ -246,6 +246,7 @@ struct HighsSimplexInfo {
   int price_strategy;
 
   double dual_simplex_cost_perturbation_multiplier;
+  double factor_pivot_threshold;
   int update_limit;
 
   // Internal options - can't be changed externally

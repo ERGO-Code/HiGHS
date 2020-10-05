@@ -168,8 +168,10 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   baseIndex = baseIndex_;
   use_original_HFactor_logic = use_original_HFactor_logic_;
   updateMethod = updateMethod_;
-  pivot_threshold = pivot_threshold_;
-  pivot_tolerance = pivot_tolerance_;
+  pivot_threshold =
+      max(min_pivot_threshold, min(pivot_threshold_, max_pivot_threshold));
+  pivot_tolerance =
+      max(min_pivot_tolerance, min(pivot_tolerance_, max_pivot_tolerance));
 
   highs_debug_level = highs_debug_level_;
   logfile = logfile_;

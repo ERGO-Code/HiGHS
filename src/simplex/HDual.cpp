@@ -1169,6 +1169,7 @@ void HDual::iterationAnalysisData() {
   analysis->dual_step = thetaDual;
   analysis->pivot_value_from_column = alpha;
   analysis->pivot_value_from_row = alphaRow;
+  analysis->factor_pivot_threshold = simplex_info.factor_pivot_threshold;
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_dual_objective_value;
   // Since maximization is achieved by minimizing the LP with negated

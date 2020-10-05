@@ -38,9 +38,10 @@ enum UPDATE_METHOD {
 /**
  * Limits and default value of pivoting threshold
  */
-const double min_pivot_threshold = 1e-6;
+const double min_pivot_threshold = 8e-4;
 const double default_pivot_threshold = 0.1;
-const double max_pivot_threshold = 1.0;
+const double pivot_threshold_change_factor = 5.0;
+const double max_pivot_threshold = 0.5;
 /**
  * Limits and default value of minimum absolute pivot
  */

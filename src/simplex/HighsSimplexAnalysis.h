@@ -195,6 +195,7 @@ class HighsSimplexAnalysis {
   double dual_step = 0;
   double pivot_value_from_column = 0;
   double pivot_value_from_row = 0;
+  double factor_pivot_threshold = 0;
   double numerical_trouble = 0;
   double objective_value = 0;
   double sum_primal_infeasibilities = 0;
@@ -319,8 +320,9 @@ class HighsSimplexAnalysis {
 
   HighsValueDistribution primal_step_distribution;
   HighsValueDistribution dual_step_distribution;
-  HighsValueDistribution pivot_distribution;
+  HighsValueDistribution simplex_pivot_distribution;
   HighsValueDistribution numerical_trouble_distribution;
+  HighsValueDistribution factor_pivot_threshold_distribution;
 #endif
 };
 

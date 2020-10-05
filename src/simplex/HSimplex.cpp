@@ -57,13 +57,14 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.price_strategy = options.simplex_price_strategy;
   simplex_info.dual_simplex_cost_perturbation_multiplier =
       options.dual_simplex_cost_perturbation_multiplier;
+  simplex_info.factor_pivot_threshold = options.factor_pivot_threshold;
   simplex_info.update_limit = options.simplex_update_limit;
 
   // Set values of internal options
   simplex_info.store_squared_primal_infeasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = false;  // true;  //
+  bool useful_analysis = true;  // false;  //
   bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;  // true;
@@ -73,7 +74,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   // Options for analysing the LP and simplex iterations
   simplex_info.analyse_lp = useful_analysis;  // false;  //
   simplex_info.analyse_iterations = useful_analysis;
-  //  simplex_info.analyse_invert_form = useful_analysis;
+  simplex_info.analyse_invert_form = useful_analysis;
   //  simplex_info.analyse_invert_condition = useful_analysis;
   simplex_info.analyse_invert_time = full_timing;
   simplex_info.analyse_rebuild_time = full_timing;
@@ -308,12 +309,14 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   //
   // First setup the factor arrays if they don't exist
   if (!simplex_lp_status.has_factor_arrays) {
+    assert(simplex_info.factor_pivot_threshold >=
+           options.factor_pivot_threshold);
     analysis.simplexTimerStart(factorSetupClock);
     factor.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
                  &simplex_basis.basicIndex_[0], options.highs_debug_level,
                  options.logfile, options.output, options.message_level,
-                 options.factor_pivot_threshold,
+                 simplex_info.factor_pivot_threshold,
                  options.factor_pivot_tolerance);
     simplex_lp_status.has_factor_arrays = true;
     analysis.simplexTimerStop(factorSetupClock);
@@ -3223,7 +3226,7 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
 }
 
 bool reinvertOnNumericalTrouble(const std::string method_name,
-                                const HighsModelObject& highs_model_object,
+                                HighsModelObject& highs_model_object,
                                 double& numerical_trouble_measure,
                                 const double alpha_from_col,
                                 const double alpha_from_row,
@@ -3242,10 +3245,36 @@ bool reinvertOnNumericalTrouble(const std::string method_name,
   debugReportReinvertOnNumericalTrouble(
       method_name, highs_model_object, numerical_trouble_measure,
       alpha_from_col, alpha_from_row, numerical_trouble_tolerance, reinvert);
-  if (reinvert)
+  if (reinvert) {
     HighsLogMessage(highs_model_object.options_.logfile,
                     HighsMessageType::WARNING,
                     "HiGHS has identified numerical trouble so reinvert");
+    // Consider increasing the Markowitz multiplier
+    const double current_pivot_threshold =
+        highs_model_object.simplex_info_.factor_pivot_threshold;
+    double new_pivot_threshold = 0;
+    if (current_pivot_threshold < default_pivot_threshold) {
+      // Threshold is below default value, so increase it
+      new_pivot_threshold =
+          min(current_pivot_threshold * pivot_threshold_change_factor,
+              default_pivot_threshold);
+    } else if (current_pivot_threshold < max_pivot_threshold) {
+      // Threshold is below max value, so increase it if few updates have been
+      // performed
+      if (update_count < 10)
+        new_pivot_threshold =
+            min(current_pivot_threshold * pivot_threshold_change_factor,
+                max_pivot_threshold);
+    }
+    if (new_pivot_threshold) {
+      HighsLogMessage(
+          highs_model_object.options_.logfile, HighsMessageType::WARNING,
+          "   Increasing Markowitz threshold to %g", new_pivot_threshold);
+      highs_model_object.simplex_info_.factor_pivot_threshold =
+          new_pivot_threshold;
+      highs_model_object.factor_.setPivotThreshold(new_pivot_threshold);
+    }
+  }
   return reinvert;
 }
 
