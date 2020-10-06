@@ -62,8 +62,9 @@ void testSolver(Highs& highs, const std::string solver,
   if (use_simplex) {
     REQUIRE(info.simplex_iteration_count == default_iteration_count.simplex);
   } else {
-    if (dev_run) printf("IPM: %d; Crossover: %d\n", info.ipm_iteration_count,
-           info.crossover_iteration_count);
+    if (dev_run)
+      printf("IPM: %d; Crossover: %d\n", info.ipm_iteration_count,
+             info.crossover_iteration_count);
     REQUIRE(info.ipm_iteration_count == default_iteration_count.ipm);
     REQUIRE(info.crossover_iteration_count ==
             default_iteration_count.crossover);
@@ -92,22 +93,26 @@ void testSolver(Highs& highs, const std::string solver,
     }
     REQUIRE(num_solve < max_num_solve);
     run_time = highs.getHighsRunTime();
-    if (dev_run) printf("Current run time is %g: time limit is %g (difference = %g)\n",
-           run_time, use_time_limit, run_time - use_time_limit);
+    if (dev_run)
+      printf("Current run time is %g: time limit is %g (difference = %g)\n",
+             run_time, use_time_limit, run_time - use_time_limit);
 
-    if (dev_run) printf("Required %d solves (ideally %d - max %d)\n", num_solve,
-           ideal_num_solve, max_num_solve);
+    if (dev_run)
+      printf("Required %d solves (ideally %d - max %d)\n", num_solve,
+             ideal_num_solve, max_num_solve);
   } else {
-    if (dev_run) printf(
-        "Not performed the time limit test since solve time is %g <= %g = "
-        "min_run_time_for_test\n",
-        single_solve_run_time, min_run_time_for_test);
+    if (dev_run)
+      printf(
+          "Not performed the time limit test since solve time is %g <= %g = "
+          "min_run_time_for_test\n",
+          single_solve_run_time, min_run_time_for_test);
   }
   return_status = highs.setHighsOptionValue("time_limit", default_time_limit);
   REQUIRE(return_status == HighsStatus::OK);
   if (!use_simplex) {
-    if (dev_run) printf("IPM: %d; Crossover: %d\n", info.ipm_iteration_count,
-           info.crossover_iteration_count);
+    if (dev_run)
+      printf("IPM: %d; Crossover: %d\n", info.ipm_iteration_count,
+             info.crossover_iteration_count);
   }
   // Solve with iteration limit
   // First of all check that no iterations are performed if the
@@ -125,8 +130,9 @@ void testSolver(Highs& highs, const std::string solver,
 
   return_status = highs.run();
   model_status = highs.getModelStatus();
-  if (dev_run) printf("Returns status = %d; model status = %s\n", (int)return_status,
-         highs.highsModelStatusToString(model_status).c_str());
+  if (dev_run)
+    printf("Returns status = %d; model status = %s\n", (int)return_status,
+           highs.highsModelStatusToString(model_status).c_str());
   REQUIRE(return_status == HighsStatus::Warning);
   REQUIRE(model_status == HighsModelStatus::REACHED_ITERATION_LIMIT);
 
@@ -140,15 +146,17 @@ void testSolver(Highs& highs, const std::string solver,
   const int further_simplex_iterations = 10;
   const int further_ipm_iterations = 5;
   if (use_simplex) {
-    if (dev_run) printf("Setting simplex_iteration_limit = %d\n",
-           further_simplex_iterations);
+    if (dev_run)
+      printf("Setting simplex_iteration_limit = %d\n",
+             further_simplex_iterations);
     return_status = highs.setHighsOptionValue("simplex_iteration_limit",
                                               further_simplex_iterations);
     REQUIRE(return_status == HighsStatus::OK);
     return_status = highs.setBasis();
     REQUIRE(return_status == HighsStatus::OK);
   } else {
-    if (dev_run) printf("Setting ipm_iteration_limit = %d\n", further_ipm_iterations);
+    if (dev_run)
+      printf("Setting ipm_iteration_limit = %d\n", further_ipm_iterations);
     return_status = highs.setHighsOptionValue("ipm_iteration_limit",
                                               further_ipm_iterations);
     REQUIRE(return_status == HighsStatus::OK);
@@ -337,9 +345,11 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::OK);
 
   // Solve again
-  if (dev_run) printf(
-      "\nSolving LP with presolve and dual objective value upper bound of %g\n",
-      larger_min_dual_objective_value_upper_bound);
+  if (dev_run)
+    printf(
+        "\nSolving LP with presolve and dual objective value upper bound of "
+        "%g\n",
+        larger_min_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 
@@ -352,10 +362,11 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
 
   // Solve again
   // This larger dual objective value upper bound is satisfied during phase 2
-  if (dev_run) printf(
-      "\nSolving LP without presolve and larger dual objective value upper "
-      "bound of %g\n",
-      larger_min_dual_objective_value_upper_bound);
+  if (dev_run)
+    printf(
+        "\nSolving LP without presolve and larger dual objective value upper "
+        "bound of %g\n",
+        larger_min_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 
@@ -369,10 +380,11 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   // Solve again
   // This smaller dual objective value upper bound is satisfied at the start of
   // phase 2
-  if (dev_run) printf(
-      "\nSolving LP without presolve and smaller dual objective value upper "
-      "bound of %g\n",
-      smaller_min_dual_objective_value_upper_bound);
+  if (dev_run)
+    printf(
+        "\nSolving LP without presolve and smaller dual objective value upper "
+        "bound of %g\n",
+        smaller_min_dual_objective_value_upper_bound);
   status =
       highs.setHighsOptionValue("dual_objective_value_upper_bound",
                                 smaller_min_dual_objective_value_upper_bound);
@@ -398,10 +410,12 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::OK);
 
   // Solve again
-  if (dev_run) printf(
-      "\nSolving LP as maximization without presolve and dual objective value "
-      "upper bound of %g\n",
-      use_max_dual_objective_value_upper_bound);
+  if (dev_run)
+    printf(
+        "\nSolving LP as maximization without presolve and dual objective "
+        "value "
+        "upper bound of %g\n",
+        use_max_dual_objective_value_upper_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::OK);
 

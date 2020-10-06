@@ -41,6 +41,7 @@ const char constr_type[] = {'<', '<', '=', '<', '<', '=', '<', '<', '<'};
 TEST_CASE("afiro", "[highs_ipx]") {
   ipx::LpSolver lps;
   ipx::Parameters parameters;
+  if (!dev_run) parameters.display = 0;
   lps.SetParameters(parameters);
 
   // Solve the LP.

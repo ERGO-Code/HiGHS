@@ -229,7 +229,8 @@ TEST_CASE("highs-options", "[highs_options]") {
       "allowed_simplex_matrix_scale_factor", "3.14159");
   REQUIRE(return_status == HighsStatus::Error);
 
-  if (dev_run) printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
+  if (dev_run)
+    printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
   return_status = highs.writeHighsOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::OK);
 

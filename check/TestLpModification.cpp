@@ -31,16 +31,18 @@ bool areLpColEqual(const int num_col0, const double* colCost0,
                    const int* Astart1, const int* Aindex1,
                    const double* Avalue1, const double infinite_bound) {
   if (num_col0 != num_col1) {
-    if (dev_run) printf("areLpColEqual: %d = num_col0 != num_col1 = %d\n", num_col0,
-           num_col1);
+    if (dev_run)
+      printf("areLpColEqual: %d = num_col0 != num_col1 = %d\n", num_col0,
+             num_col1);
     return false;
   }
   if (!num_col0) return true;
   int num_col = num_col0;
   for (int col = 0; col < num_col; col++) {
     if (colCost0[col] != colCost1[col]) {
-      if (dev_run) printf("areLpColEqual: %g = colCost0[%d] != colCost1[%d] = %g\n",
-             colCost0[col], col, col, colCost1[col]);
+      if (dev_run)
+        printf("areLpColEqual: %g = colCost0[%d] != colCost1[%d] = %g\n",
+               colCost0[col], col, col, colCost1[col]);
       return false;
     }
   }
@@ -48,40 +50,46 @@ bool areLpColEqual(const int num_col0, const double* colCost0,
     if (colLower0[col] <= -infinite_bound && colLower1[col] <= -infinite_bound)
       continue;
     if (colLower0[col] != colLower1[col]) {
-      if (dev_run) printf("areLpColEqual: %g = colLower0[%d] != colLower1[%d] = %g\n",
-             colLower0[col], col, col, colLower1[col]);
+      if (dev_run)
+        printf("areLpColEqual: %g = colLower0[%d] != colLower1[%d] = %g\n",
+               colLower0[col], col, col, colLower1[col]);
       return false;
     }
     if (colUpper0[col] >= infinite_bound && colUpper1[col] >= infinite_bound)
       continue;
     if (colUpper0[col] != colUpper1[col]) {
-      if (dev_run) printf("areLpColEqual: %g = colUpper0[%d] != colUpper1[%d] = %g\n",
-             colUpper0[col], col, col, colUpper1[col]);
+      if (dev_run)
+        printf("areLpColEqual: %g = colUpper0[%d] != colUpper1[%d] = %g\n",
+               colUpper0[col], col, col, colUpper1[col]);
       return false;
     }
   }
   if (num_nz0 != num_nz1) {
-    if (dev_run) printf("areLpColEqual: %d = num_nz0 != num_nz1 = %d\n", num_nz0, num_nz1);
+    if (dev_run)
+      printf("areLpColEqual: %d = num_nz0 != num_nz1 = %d\n", num_nz0, num_nz1);
     return false;
   }
   if (!num_nz0) return true;
   for (int col = 0; col < num_col; col++) {
     if (Astart0[col] != Astart1[col]) {
-      if (dev_run) printf("areLpColEqual: %d = Astart0[%d] != Astart1[%d] = %d\n",
-             Astart0[col], col, col, Astart1[col]);
+      if (dev_run)
+        printf("areLpColEqual: %d = Astart0[%d] != Astart1[%d] = %d\n",
+               Astart0[col], col, col, Astart1[col]);
       return false;
     }
   }
   int num_nz = num_nz0;
   for (int nz = 0; nz < num_nz; nz++) {
     if (Aindex0[nz] != Aindex1[nz]) {
-      if (dev_run) printf("areLpColEqual: %d = Aindex0[%d] != Aindex1[%d] = %d\n",
-             Aindex0[nz], nz, nz, Aindex1[nz]);
+      if (dev_run)
+        printf("areLpColEqual: %d = Aindex0[%d] != Aindex1[%d] = %d\n",
+               Aindex0[nz], nz, nz, Aindex1[nz]);
       return false;
     }
     if (Avalue0[nz] != Avalue1[nz]) {
-      if (dev_run) printf("areLpColEqual: %g = Avalue0[%d] != Avalue1[%d] = %g\n",
-             Avalue0[nz], nz, nz, Avalue1[nz]);
+      if (dev_run)
+        printf("areLpColEqual: %g = Avalue0[%d] != Avalue1[%d] = %g\n",
+               Avalue0[nz], nz, nz, Avalue1[nz]);
       return false;
     }
   }
@@ -96,8 +104,9 @@ bool areLpRowEqual(const int num_row0, const double* rowLower0,
                    const int num_nz1, const int* ARstart1, const int* ARindex1,
                    const double* ARvalue1, const double infinite_bound) {
   if (num_row0 != num_row1) {
-    if (dev_run) printf("areLpRowEqual: %d = num_row0 != num_row1 = %d\n", num_row0,
-           num_row1);
+    if (dev_run)
+      printf("areLpRowEqual: %d = num_row0 != num_row1 = %d\n", num_row0,
+             num_row1);
     return false;
   }
   if (!num_row0) return true;
@@ -106,40 +115,46 @@ bool areLpRowEqual(const int num_row0, const double* rowLower0,
     if (rowLower0[row] <= -infinite_bound && rowLower1[row] <= -infinite_bound)
       continue;
     if (rowLower0[row] != rowLower1[row]) {
-      if (dev_run) printf("areLpRowEqual: %g = rowLower0[%d] != rowLower1[%d] = %g\n",
-             rowLower0[row], row, row, rowLower1[row]);
+      if (dev_run)
+        printf("areLpRowEqual: %g = rowLower0[%d] != rowLower1[%d] = %g\n",
+               rowLower0[row], row, row, rowLower1[row]);
       return false;
     }
     if (rowUpper0[row] >= infinite_bound && rowUpper1[row] >= infinite_bound)
       continue;
     if (rowUpper0[row] != rowUpper1[row]) {
-      if (dev_run) printf("areLpRowEqual: %g = rowUpper0[%d] != rowUpper1[%d] = %g\n",
-             rowUpper0[row], row, row, rowUpper1[row]);
+      if (dev_run)
+        printf("areLpRowEqual: %g = rowUpper0[%d] != rowUpper1[%d] = %g\n",
+               rowUpper0[row], row, row, rowUpper1[row]);
       return false;
     }
   }
   if (num_nz0 != num_nz1) {
-    if (dev_run) printf("areLpRowEqual: %d = num_nz0 != num_nz1 = %d\n", num_nz0, num_nz1);
+    if (dev_run)
+      printf("areLpRowEqual: %d = num_nz0 != num_nz1 = %d\n", num_nz0, num_nz1);
     return false;
   }
   if (!num_nz0) return true;
   for (int row = 0; row < num_row; row++) {
     if (ARstart0[row] != ARstart1[row]) {
-      if (dev_run) printf("areLpRowEqual: %d = ARstart0[%d] != ARstart1[%d] = %d\n",
-             ARstart0[row], row, row, ARstart1[row]);
+      if (dev_run)
+        printf("areLpRowEqual: %d = ARstart0[%d] != ARstart1[%d] = %d\n",
+               ARstart0[row], row, row, ARstart1[row]);
       return false;
     }
   }
   int num_nz = num_nz0;
   for (int nz = 0; nz < num_nz; nz++) {
     if (ARindex0[nz] != ARindex1[nz]) {
-      if (dev_run) printf("areLpRowEqual: %d = ARindex0[%d] != ARindex1[%d] = %d\n",
-             ARindex0[nz], nz, nz, ARindex1[nz]);
+      if (dev_run)
+        printf("areLpRowEqual: %d = ARindex0[%d] != ARindex1[%d] = %d\n",
+               ARindex0[nz], nz, nz, ARindex1[nz]);
       return false;
     }
     if (ARvalue0[nz] != ARvalue1[nz]) {
-      if (dev_run) printf("areLpRowEqual: %g = ARvalue0[%d] != ARvalue1[%d] = %g\n",
-             ARvalue0[nz], nz, nz, ARvalue1[nz]);
+      if (dev_run)
+        printf("areLpRowEqual: %g = ARvalue0[%d] != ARvalue1[%d] = %g\n",
+               ARvalue0[nz], nz, nz, ARvalue1[nz]);
       return false;
     }
   }
@@ -182,21 +197,22 @@ void testDeleteKeep(const HighsIndexCollection& index_collection) {
   const int dimension = index_collection.dimension_;
   if (dev_run) {
     if (index_collection.is_interval_) {
-      printf("With index interval [%d, %d] in [%d, %d]\n", index_collection.from_,
-	     index_collection.to_, 0, dimension - 1);
+      printf("With index interval [%d, %d] in [%d, %d]\n",
+             index_collection.from_, index_collection.to_, 0, dimension - 1);
     } else if (index_collection.is_set_) {
       printf("With index set\n");
       for (int entry = 0; entry < index_collection.set_num_entries_; entry++)
-	printf(" %2d", entry);
+        printf(" %2d", entry);
       printf("\n");
       for (int entry = 0; entry < index_collection.set_num_entries_; entry++)
-	printf(" %2d", set[entry]);
+        printf(" %2d", set[entry]);
       printf("\n");
     } else {
       printf("With index mask\n");
       for (int index = 0; index < dimension; index++) printf(" %2d", index);
       printf("\n");
-      for (int index = 0; index < dimension; index++) printf(" %2d", mask[index]);
+      for (int index = 0; index < dimension; index++)
+        printf(" %2d", mask[index]);
       printf("\n");
     }
   }
@@ -222,8 +238,9 @@ void testDeleteKeep(const HighsIndexCollection& index_collection) {
     updateIndexCollectionOutInIndex(index_collection, delete_from_index,
                                     delete_to_index, keep_from_index,
                                     keep_to_index, current_set_entry);
-    if (dev_run) printf("Delete [%2d, %2d]; keep [%2d, %2d]\n", delete_from_index,
-           delete_to_index, keep_from_index, keep_to_index);
+    if (dev_run)
+      printf("Delete [%2d, %2d]; keep [%2d, %2d]\n", delete_from_index,
+             delete_to_index, keep_from_index, keep_to_index);
     if (delete_to_index >= dimension - 1 || keep_to_index >= dimension - 1)
       break;
   }
@@ -909,8 +926,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   rm_col = 0;
   REQUIRE(highs.deleteCols(rm_col, rm_col));
   after_num_col = highs.getNumCols();
-  if (dev_run) printf("After removing col %d / %d have %d cols\n", rm_col, before_num_col,
-         after_num_col);
+  if (dev_run)
+    printf("After removing col %d / %d have %d cols\n", rm_col, before_num_col,
+           after_num_col);
   REQUIRE(after_num_col == before_num_col - 1);
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
@@ -919,8 +937,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   rm_row = 0;
   REQUIRE(highs.deleteRows(rm_row, rm_row));
   after_num_row = highs.getNumRows();
-  if (dev_run) printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row,
-         after_num_row);
+  if (dev_run)
+    printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row,
+           after_num_row);
   REQUIRE(after_num_row == before_num_row - 1);
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
@@ -929,8 +948,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   rm_col = before_num_col - 1;
   REQUIRE(highs.deleteCols(rm_col, rm_col));
   after_num_col = highs.getNumCols();
-  if (dev_run) printf("After removing col %d / %d have %d cols\n", rm_col, before_num_col,
-         after_num_col);
+  if (dev_run)
+    printf("After removing col %d / %d have %d cols\n", rm_col, before_num_col,
+           after_num_col);
   REQUIRE(after_num_col == before_num_col - 1);
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
@@ -939,8 +959,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   rm_row = before_num_row - 1;
   REQUIRE(highs.deleteRows(rm_row, rm_row));
   after_num_row = highs.getNumRows();
-  if (dev_run) printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row,
-         after_num_row);
+  if (dev_run)
+    printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row,
+           after_num_row);
   REQUIRE(after_num_row == before_num_row - 1);
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
