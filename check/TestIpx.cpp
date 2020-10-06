@@ -15,6 +15,8 @@
 
 #include "lp_solver.h"
 
+const bool dev_run = false;
+
 using Int = ipxint;
 
 constexpr Int num_var = 12;

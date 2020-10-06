@@ -1,30 +1,36 @@
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HConst.h"
+
+const bool dev_run = false;
+
 const double inf = HIGHS_CONST_INF;
 void reportIssue(const int issue) {
-  printf("\n *************\n * Issue %3d *\n *************\n", issue);
+  if (dev_run) printf("\n *************\n * Issue %3d *\n *************\n", issue);
 }
 void reportLpName(const std::string lp_name) {
-  int lp_name_length = lp_name.length();
-  printf("\n **");
-  for (int i = 0; i < lp_name_length; i++) printf("*");
-  printf("**\n * %s *\n **", lp_name.c_str());
-  for (int i = 0; i < lp_name_length; i++) printf("*");
-  printf("**\n");
+  if (dev_run) {
+    int lp_name_length = lp_name.length();
+    printf("\n **");
+    for (int i = 0; i < lp_name_length; i++) printf("*");
+    printf("**\n * %s *\n **", lp_name.c_str());
+    for (int i = 0; i < lp_name_length; i++) printf("*");
+    printf("**\n");
+  }
 }
 bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective) {
   double error = std::fabs(optimal_objective - require_optimal_objective) /
                  std::max(1.0, std::fabs(require_optimal_objective));
   bool error_ok = error < 1e-10;
-  if (!error_ok)
+  if (!error_ok && dev_run)
     printf("Objective is %g but require %g (error %g)\n", optimal_objective,
            require_optimal_objective, error);
   return error_ok;
 }
 
 void reportSolution(Highs& highs) {
+  if (!dev_run) return;
   const HighsInfo& info = highs.getHighsInfo();
   if (info.primal_status == PrimalDualStatus::STATUS_FEASIBLE_POINT) {
     const HighsSolution& solution = highs.getSolution();
@@ -465,53 +471,105 @@ void singularStartingBasis(Highs& highs) {
 }
 TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   issue272(highs);
 }
 TEST_CASE("LP-280", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   issue280(highs);
 }
 TEST_CASE("LP-282", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   issue282(highs);
 }
 TEST_CASE("LP-285", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   issue285(highs);
 }
 TEST_CASE("LP-295", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   issue295(highs);
 }
 TEST_CASE("LP-306", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   issue306(highs);
 }
 TEST_CASE("LP-316", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   issue316(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   primalDualInfeasible1(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   primalDualInfeasible2(highs);
 }
 TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   mpsUnbounded(highs);
 }
 TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   mpsGas11(highs);
 }
 TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   almostNotUnbounded(highs);
 }
 TEST_CASE("LP-singular-starting-basis", "[highs_test_special_lps]") {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
   singularStartingBasis(highs);
 }

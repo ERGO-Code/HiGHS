@@ -170,6 +170,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   testBasisReloadModel(highs, true);
   
   std::remove(basis_file.c_str());
+  std::remove(invalid_basis_file.c_str());
 }
 
 // No commas in test case name.
