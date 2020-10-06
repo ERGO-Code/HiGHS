@@ -4,10 +4,60 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
-const std::string basis_file = "Highs.bas";
+const std::string basis_file = "adlittle.bas";
+std::string model0_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 HighsBasis basis_data;
 
+void testBasisReloadModel(Highs& highs, const bool from_file) {
+  // Checks that no simplex iterations are required if a saved optimal
+  // basis is used for the original LP after solving a different LP
+  HighsStatus return_status;
+  // Clear the current model
+  highs.clearModel();
+
+  // Cannot load basis without a model
+  if (from_file) {
+    return_status = highs.readBasis(basis_file);
+    REQUIRE(return_status == HighsStatus::Error);
+  } else {
+    highs.setBasis(basis_data);
+    REQUIRE(return_status == HighsStatus::OK);
+  }
+
+  // Read and solve a different model
+  highs.readModel(model1_file);
+  highs.run();
+
+  // Cannot load basis for model of different size
+  if (from_file) {
+    return_status = highs.readBasis(basis_file);
+  } else {
+    return_status = highs.setBasis(basis_data);
+  }
+  REQUIRE(return_status == HighsStatus::Error);
+
+  // Clear and load original model and basis
+  highs.clearModel();
+  highs.readModel(model0_file);
+  if (from_file) {
+    return_status = highs.readBasis(basis_file);
+  } else {
+    return_status = highs.setBasis(basis_data);
+  }
+  REQUIRE(return_status == HighsStatus::OK);
+
+  // Ensure that no simplex iterations are required when solved from
+  // the optimal basis
+  highs.run();
+  REQUIRE(highs.getSimplexIterationCount() == 0);
+  
+}
 void testBasisRestart(Highs& highs, const bool from_file) {
+  // Checks that no simplex iterations are required if a saved optimal
+  // basis is used for the original LP after changing a bound, solving
+  // - so that the internal basis changes - and then restoring the
+  // original LP
   HighsStatus return_status;
   //  highs.writeSolution("", true);
   // Change a bound and resolve
@@ -58,16 +108,8 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
 // No commas in test case name.
 TEST_CASE("Basis-file", "[highs_basis_file]") {
-  std::cout << std::string(HIGHS_DIR) << std::endl;
-
-  std::string model = "";
-  std::string model_file;
-
   HighsOptions options;
-  HighsLp lp;
-  //  HighsStatus run_status;
   HighsStatus return_status;
-  HighsStatus read_status;
 
   Highs highs(options);
 
@@ -75,14 +117,10 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
     highs.setHighsLogfile();
     highs.setHighsOutput();
   }
-  // Read mps
-  model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  assert(model0_file != model1_file);
 
-  return_status = highs.setHighsOptionValue("model_file", model_file);
+  return_status = highs.readModel(model0_file);
   REQUIRE(return_status == HighsStatus::OK);
-
-  read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::OK);
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
@@ -129,42 +167,25 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   REQUIRE(return_status == HighsStatus::Error);
 
   testBasisRestart(highs, true);
-
-  highs.clearModel();
-
-  return_status = highs.readBasis(basis_file);
-  REQUIRE(return_status == HighsStatus::Error);
+  testBasisReloadModel(highs, true);
   
   std::remove(basis_file.c_str());
 }
 
 // No commas in test case name.
-TEST_CASE("Basis-save", "[highs_basis_save]") {
-  std::cout << std::string(HIGHS_DIR) << std::endl;
-
-  std::string model = "";
-  std::string model_file;
-
+TEST_CASE("Basis-data", "[highs_basis_data]") {
   HighsOptions options;
-  HighsLp lp;
-  //  HighsStatus run_status;
   HighsStatus return_status;
-  HighsStatus read_status;
 
   Highs highs(options);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
   }
+  assert(model0_file != model1_file);
 
-  // Read mps
-  model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-
-  return_status = highs.setHighsOptionValue("model_file", model_file);
+  return_status = highs.readModel(model0_file);
   REQUIRE(return_status == HighsStatus::OK);
-
-  read_status = highs.readModel(model_file);
-  REQUIRE(read_status == HighsStatus::OK);
 
   return_status = highs.run();
   REQUIRE(return_status == HighsStatus::OK);
@@ -173,7 +194,5 @@ TEST_CASE("Basis-save", "[highs_basis_save]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   testBasisRestart(highs, false);
-
-  highs.clearModel();
-
+  testBasisReloadModel(highs, false);
 }
