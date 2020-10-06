@@ -21,10 +21,13 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
 
-    std::string presolve, solver, parallel;
+    std::string presolve, solver, parallel, file_type;
 
     cxx_options.add_options()(model_file_string, "File of model to solve.",
                               cxxopts::value<std::vector<std::string>>())(
+        model_file_type_string,
+        "Model type",
+        cxxopts::value<std::string>(file_type))(
         presolve_string,
         "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
         cxxopts::value<std::string>(presolve))(
@@ -66,6 +69,13 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
       } else {
         options.model_file = v[0];
       }
+    }
+
+    if (result.count(model_file_type_string)) {
+      std::string value = result[model_file_type_string].as<std::string>();
+      if (setOptionValue(options.logfile, model_file_type_string, options.records,
+                         value) != OptionStatus::OK)
+        return false;
     }
 
     if (result.count(presolve_string)) {

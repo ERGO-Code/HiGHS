@@ -27,9 +27,8 @@ static const std::string getFilenameExt(const std::string filename) {
   return name;
 }
 
-Filereader* Filereader::getFilereader(const std::string filename) {
+Filereader* Filereader::getFilereaderByExtension(const std::string extension) {
   Filereader* reader;
-  const std::string extension = getFilenameExt(filename);
   if (extension.compare("mps") == 0) {
     reader = new FilereaderMps();
   } else if (extension.compare("lp") == 0) {
@@ -40,6 +39,11 @@ Filereader* Filereader::getFilereader(const std::string filename) {
     reader = NULL;
   }
   return reader;
+}
+
+Filereader* Filereader::getFilereader(const std::string filename) {
+  const std::string extension = getFilenameExt(filename);
+  return getFilereaderByExtension(extension);
 }
 
 void interpretFilereaderRetcode(FILE* logfile, const std::string filename,

@@ -272,7 +272,9 @@ HighsStatus Highs::passModel(const int num_col, const int num_row,
 
 HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
-  Filereader* reader = Filereader::getFilereader(filename);
+  Filereader* reader = this->options_.model_file_type.size()
+	? Filereader::getFilereaderByExtension(this->options_.model_file_type)
+	: Filereader::getFilereader(filename);
   if (reader == NULL) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "Model file %s not supported", filename.c_str());
