@@ -117,10 +117,10 @@ class Highs {
       const char* value           //!< The option value
   );
 
-  HighsStatus setHighsLogfile(FILE* logfile  //!< The log file
+  HighsStatus setHighsLogfile(FILE* logfile = NULL  //!< The log file
   );
 
-  HighsStatus setHighsOutput(FILE* output  //!< The log file
+  HighsStatus setHighsOutput(FILE* output = NULL  //!< The log file
   );
 
   HighsStatus readHighsOptions(const std::string filename  //!< The filename
