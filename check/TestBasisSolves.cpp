@@ -5,7 +5,7 @@
 #include "HighsRandom.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution_vector,
                                 int* solution_num_nz, int* solution_indices) {
@@ -39,8 +39,8 @@ bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution_vector,
   free(solution_vector);
   return solution_nz_ok;
 }
-double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables,
-                                   double* rhs, double* solution,
+double GetBasisSolvesCheckSolution(const HighsLp& lp, int* const basic_variables,
+                                   const double* rhs, const double* solution,
                                    const bool transpose = false) {
   const double residual_tolerance = 1e-8;
   double residual_norm = 0;
@@ -134,19 +134,8 @@ void GetBasisSolvesFormRHS(HighsLp& lp, int* basic_variables, double* solution,
   }
 }
 
-// No commas in test case name.
-TEST_CASE("Basis-solves", "[highs_basis_solves]") {
-  std::string filename;
-  filename = std::string(HIGHS_DIR) + "/check/instances/chip.mps";
-  filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
-
-  Highs highs;
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
+void testBasisSolve(Highs& highs) {
+  HighsStatus highs_status;
 
   int* basic_variables = nullptr;
   double* rhs = nullptr;
@@ -155,42 +144,19 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   int solution_num_nz;
   int* solution_indices = (int*)malloc(sizeof(int) * 1);
 
-  HighsStatus highs_status;
-
-  highs_status = highs.getBasicVariables(basic_variables);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getBasisInverseRow(0, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getBasisInverseCol(0, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getBasisSolve(rhs, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getBasisTransposeSolve(rhs, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getReducedRow(0, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getReducedColumn(0, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.readModel(filename);
-  REQUIRE(highs_status == HighsStatus::OK);
-
-  HighsLp lp = highs.getLp();
-  REQUIRE(highs_status == HighsStatus::OK);
-
-  highs_status = highs.writeModel("");
-  REQUIRE(highs_status == HighsStatus::OK);
-
-  int numRow = lp.numRow_;
-  int numCol = lp.numCol_;
   int check_row = 0;
   int check_col = 0;
+
+  double residual_norm;
+  const double residual_norm_tolerance = 1e-8;
+  const double solution_error_tolerance = 1e-8;
+  HighsRandom random;
+
+  int basic_col;
+
+  HighsLp lp = highs.getLp();
+  int numRow = lp.numRow_;
+  int numCol = lp.numCol_;
 
   basic_variables = (int*)malloc(sizeof(int) * numRow);
   known_solution = (double*)malloc(sizeof(double) * numRow);
@@ -199,38 +165,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   rhs = (double*)malloc(sizeof(double) * numRow);
 
   highs_status = highs.getBasicVariables(basic_variables);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getBasisInverseRow(check_row, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getBasisInverseCol(0, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getBasisSolve(rhs, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getBasisTransposeSolve(rhs, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getReducedRow(0, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.getReducedColumn(0, solution_vector);
-  REQUIRE(highs_status == HighsStatus::Error);
-
-  highs_status = highs.run();
   REQUIRE(highs_status == HighsStatus::OK);
-
-  highs_status = highs.getBasicVariables(basic_variables);
-  REQUIRE(highs_status == HighsStatus::OK);
-
-  double residual_norm;
-  const double residual_norm_tolerance = 1e-8;
-  const double solution_error_tolerance = 1e-8;
-  HighsRandom random;
-
-  int basic_col;
 
   for (int ix = 0; ix < numRow; ix++) known_solution[ix] = 0;
   bool transpose = true;
@@ -478,3 +413,93 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     printf("Test 7: max_residual_norm = %11.4g (getReducedColumn)\n",
            max_residual_norm);
 }
+
+// No commas in test case name.
+TEST_CASE("Basis-solves", "[highs_basis_solves]") {
+  std::string filename;
+  filename = std::string(HIGHS_DIR) + "/check/instances/chip.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
+
+  Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+
+  int* basic_variables = nullptr;
+  double* rhs = nullptr;
+  double* known_solution;
+  double* solution_vector = nullptr;
+  int solution_num_nz;
+  int* solution_indices = (int*)malloc(sizeof(int) * 1);
+
+  HighsStatus highs_status;
+
+  highs_status = highs.getBasicVariables(basic_variables);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getBasisInverseRow(0, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getBasisInverseCol(0, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getBasisSolve(rhs, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getBasisTransposeSolve(rhs, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getReducedRow(0, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getReducedColumn(0, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.readModel(filename);
+  REQUIRE(highs_status == HighsStatus::OK);
+
+  HighsLp lp = highs.getLp();
+  REQUIRE(highs_status == HighsStatus::OK);
+
+  highs_status = highs.writeModel("");
+  REQUIRE(highs_status == HighsStatus::OK);
+
+  int check_row = 0;
+  int numRow = lp.numRow_;
+  int numCol = lp.numCol_;
+
+  basic_variables = (int*)malloc(sizeof(int) * numRow);
+  known_solution = (double*)malloc(sizeof(double) * numRow);
+  solution_vector = (double*)malloc(sizeof(double) * numRow);
+  solution_indices = (int*)malloc(sizeof(int) * numRow);
+  rhs = (double*)malloc(sizeof(double) * numRow);
+
+  highs_status = highs.getBasicVariables(basic_variables);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getBasisInverseRow(check_row, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getBasisInverseCol(0, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getBasisSolve(rhs, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getBasisTransposeSolve(rhs, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getReducedRow(0, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.getReducedColumn(0, solution_vector);
+  REQUIRE(highs_status == HighsStatus::Error);
+
+  highs_status = highs.run();
+  REQUIRE(highs_status == HighsStatus::OK);
+
+  testBasisSolve(highs);
+ }
