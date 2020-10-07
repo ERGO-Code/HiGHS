@@ -5,7 +5,8 @@
 
 const bool dev_run = false;
 const std::string basis_file = "adlittle.bas";
-std::string model0_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+std::string model0_file =
+    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
 std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 HighsBasis basis_data;
 
@@ -51,7 +52,6 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   // the optimal basis
   highs.run();
   REQUIRE(highs.getSimplexIterationCount() == 0);
-  
 }
 void testBasisRestart(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
@@ -72,14 +72,15 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
   if (dev_run) {
     printf(
-	   "After modifying lower bound of column %d from %g to %g, solving the LP "
-	   "requires %d iterations and objective is %g\n",
-	   changeCol, old_lower_bound, new_lower_bound,
-	   highs.getSimplexIterationCount(), highs.getObjectiveValue());
+        "After modifying lower bound of column %d from %g to %g, solving the "
+        "LP "
+        "requires %d iterations and objective is %g\n",
+        changeCol, old_lower_bound, new_lower_bound,
+        highs.getSimplexIterationCount(), highs.getObjectiveValue());
     //  highs.writeSolution("", true);
   }
   // Make sure that the test requires iterations
-  assert(highs.getSimplexIterationCount()>0);
+  assert(highs.getSimplexIterationCount() > 0);
 
   // Recover bound, load optimal basis and resolve
 
@@ -97,10 +98,11 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 
   if (dev_run) {
     printf(
-	   "After restoring lower bound of column %d from %g to %g, solving the LP "
-	   "requires %d iterations and objective is %g\n",
-	   changeCol, new_lower_bound, old_lower_bound,
-	   highs.getSimplexIterationCount(), highs.getObjectiveValue());
+        "After restoring lower bound of column %d from %g to %g, solving the "
+        "LP "
+        "requires %d iterations and objective is %g\n",
+        changeCol, new_lower_bound, old_lower_bound,
+        highs.getSimplexIterationCount(), highs.getObjectiveValue());
   }
 
   REQUIRE(highs.getSimplexIterationCount() == 0);
@@ -168,7 +170,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
 
   testBasisRestart(highs, true);
   testBasisReloadModel(highs, true);
-  
+
   std::remove(basis_file.c_str());
   std::remove(invalid_basis_file.c_str());
 }

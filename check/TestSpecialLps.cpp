@@ -6,7 +6,8 @@ const bool dev_run = false;
 
 const double inf = HIGHS_CONST_INF;
 void reportIssue(const int issue) {
-  if (dev_run) printf("\n *************\n * Issue %3d *\n *************\n", issue);
+  if (dev_run)
+    printf("\n *************\n * Issue %3d *\n *************\n", issue);
 }
 void reportLpName(const std::string lp_name) {
   if (dev_run) {
