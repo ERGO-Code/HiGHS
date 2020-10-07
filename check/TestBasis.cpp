@@ -11,20 +11,20 @@ void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after solving a different LP
   HighsStatus return_status;
-std::string model0_file =
-    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  std::string model0_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  std::string model1_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   // Clear the current model
   highs.clearModel();
 
   // Cannot load basis without a model
   if (from_file) {
     return_status = highs.readBasis(basis_file);
-    REQUIRE(return_status == HighsStatus::Error);
   } else {
-    highs.setBasis(basis_data);
-    REQUIRE(return_status == HighsStatus::OK);
+    return_status = highs.setBasis(basis_data);
   }
+  REQUIRE(return_status == HighsStatus::Error);
 
   // Read and solve a different model
   highs.readModel(model1_file);
@@ -112,9 +112,10 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 TEST_CASE("Basis-file", "[highs_basis_file]") {
   HighsOptions options;
   HighsStatus return_status;
-std::string model0_file =
-    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  std::string model0_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  std::string model1_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs(options);
 
@@ -181,9 +182,10 @@ std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 TEST_CASE("Basis-data", "[highs_basis_data]") {
   HighsOptions options;
   HighsStatus return_status;
-std::string model0_file =
-    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  std::string model0_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  std::string model1_file =
+      std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs(options);
   if (!dev_run) {
