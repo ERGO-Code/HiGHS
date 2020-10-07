@@ -5,15 +5,15 @@
 
 const bool dev_run = false;
 const std::string basis_file = "adlittle.bas";
-std::string model0_file =
-    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 HighsBasis basis_data;
 
 void testBasisReloadModel(Highs& highs, const bool from_file) {
   // Checks that no simplex iterations are required if a saved optimal
   // basis is used for the original LP after solving a different LP
   HighsStatus return_status;
+std::string model0_file =
+    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   // Clear the current model
   highs.clearModel();
 
@@ -112,6 +112,9 @@ void testBasisRestart(Highs& highs, const bool from_file) {
 TEST_CASE("Basis-file", "[highs_basis_file]") {
   HighsOptions options;
   HighsStatus return_status;
+std::string model0_file =
+    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs(options);
 
@@ -178,6 +181,9 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
 TEST_CASE("Basis-data", "[highs_basis_data]") {
   HighsOptions options;
   HighsStatus return_status;
+std::string model0_file =
+    std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+std::string model1_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs(options);
   if (!dev_run) {
