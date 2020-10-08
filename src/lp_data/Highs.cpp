@@ -824,12 +824,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // them to have the right dimension.
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
-  // Report times
-  if (hmos_[original_hmo].report_model_operations_clock) {
-    std::vector<int> clockList{timer_.presolve_clock, timer_.solve_clock,
-                               timer_.postsolve_clock};
-    timer_.report("ModelOperations", clockList);
-  }
   // Stop and read the HiGHS clock, then work out time for this call
   if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
@@ -1184,27 +1178,22 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
                     "setBasis: invalid basis");
     return HighsStatus::Error;
   }
-  // Update the HiGHS basis and invalidate any simplex basis for the model
+  // Update the HiGHS basis
   this->basis_ = basis;
   this->basis_.valid_ = true;
-  if (hmos_.size() > 0) {
-    HighsSimplexInterface interface(hmos_[0]);
-    interface.clearBasis();
-  }
+  // Follow implications of a new HiGHS basis
+  newHighsBasis();
   // Can't use returnFromHighs since...
   return HighsStatus::OK;
 }
 
 HighsStatus Highs::setBasis() {
   underDevelopmentLogMessage("setBasis");
-  // Invalidate the basis for HiGHS
-  basis_.valid_ = false;
-  if (hmos_.size() > 0) {
-    // Invalidate the Highs basis and any simplex basis for the model
-    hmos_[0].basis_.valid_ = false;
-    HighsSimplexInterface interface(hmos_[0]);
-    interface.clearBasis();
-  }
+  // Invalidate the basis for HiGHS Don't set to logical basis since
+  // that causes presolve to be skipped
+  this->basis_.valid_ = false;
+  // Follow implications of a new HiGHS basis
+  newHighsBasis();
   // Can't use returnFromHighs since...
   return HighsStatus::OK;
 }
@@ -1952,6 +1941,16 @@ HighsStatus Highs::writeSolution(const std::string filename,
 
   //  return HighsStatus::Warning;
   return HighsStatus::OK;
+}
+
+// Actions to take if there is a new Highs basis
+void Highs::newHighsBasis() {
+  if (hmos_.size() > 0) {
+    // Copy this basis to the HMO basis and clear any simplex basis
+    hmos_[0].basis_ = this->basis_;
+    HighsSimplexInterface interface(hmos_[0]);
+    interface.clearBasis();
+  }
 }
 
 // Ensure that the HiGHS solution and basis have the same size as the

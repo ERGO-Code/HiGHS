@@ -188,7 +188,8 @@ HighsStatus callLpSolver(HighsOptions& use_options) {
   reportLpStatsOrError(output, message_level, read_status, highs.getLp());
   if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
-  // Run HiGHS.
+  // Run HiGHS. 
+  highs.setBasis();
   HighsStatus run_status = highs.run();
 
   reportSolvedLpStats(output, message_level, run_status, highs);

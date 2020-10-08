@@ -402,6 +402,9 @@ struct HighsRanging {
   std::vector<int> rowBoundRangeDnOutCol_;
 };
 
+// Set a basis to be logical for the LP
+void setLogicalBasis(const HighsLp& lp, HighsBasis& basis);
+
 // Make sure the sizes of solution and basis vectors are consistent
 // with numRow_ and numCol_
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);

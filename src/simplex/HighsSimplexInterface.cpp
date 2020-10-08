@@ -1202,51 +1202,26 @@ HighsStatus HighsSimplexInterface::setNonbasicStatus(
 }
 // Get the basic variables, performing INVERT if necessary
 HighsStatus HighsSimplexInterface::getBasicVariables(int* basic_variables) {
-  HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+
+  const bool only_from_known_basis = true;
+  int return_code;
+  return_code = initialiseSimplexLpBasisAndFactor(highs_model_object, only_from_known_basis);
+  if (return_code) return HighsStatus::Error;
+  assert(simplex_lp_status.has_basis);
 
   int numRow = lp.numRow_;
   int numCol = lp.numCol_;
-  if (simplex_lp_status.has_basis) {
-    // 
-    assert(numRow == highs_model_object.simplex_lp_.numRow_);
-    /*
-    if (!simplex_lp_status.has_matrix_col_wise ||
-	!simplex_lp_status.has_matrix_row_wise) {
-      highs_model_object.matrix_.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
-		   &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-		   &simplex_basis.nonbasicFlag_[0]);
-      simplex_lp_status.has_matrix_col_wise = true;
-      simplex_lp_status.has_matrix_row_wise = true;
+  assert(numRow == highs_model_object.simplex_lp_.numRow_);
+  for (int row = 0; row < numRow; row++) {
+    int var = highs_model_object.simplex_basis_.basicIndex_[row];
+    if (var < numCol) {
+      basic_variables[row] = var;
+    } else {
+      basic_variables[row] = -(1 + var - numCol);
     }
-    if (!simplex_lp_status.has_invert) {
-      if (!simplex_lp_status.has_factor_arrays) {
-	highs_model_object.factor_.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
-		     &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-		     &simplex_basis.basicIndex_[0], options.highs_debug_level,
-		     options.logfile, options.output, options.message_level,
-		     simplex_info.factor_pivot_threshold,
-		     options.factor_pivot_tolerance);
-	simplex_lp_status.has_factor_arrays = true;
-      }
-      if (computeFactor(highs_model_object)) return HighsStatus::Error;
-    }
-    */
-    for (int row = 0; row < numRow; row++) {
-      int var = highs_model_object.simplex_basis_.basicIndex_[row];
-      if (var < numCol) {
-	basic_variables[row] = var;
-      } else {
-	basic_variables[row] = -(1 + var - numCol);
-      }
-    }
-  } else {
-    return HighsStatus::Error;
   }
   return HighsStatus::OK;
 }

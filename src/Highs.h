@@ -809,6 +809,7 @@ class Highs {
 
   bool haveHmo(const string method_name);
 
+  void newHighsBasis();
   void forceHighsSolutionBasisSize();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
