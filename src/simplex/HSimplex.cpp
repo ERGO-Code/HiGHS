@@ -42,9 +42,6 @@ using std::runtime_error;
 void setSimplexOptions(HighsModelObject& highs_model_object) {
   const HighsOptions& options = highs_model_object.options_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  //  HighsSolutionParams& scaled_solution_params =
-  //  highs_model_object.scaled_solution_params_;
-  //
   // Copy values of HighsOptions for the simplex solver
   //
   // Currently most of these options are straight copies, but they
@@ -111,21 +108,20 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
   //
 
   const HighsOptions& options = highs_model_object.options_;
-  //  const HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
-  //  HighsScale& scale = highs_model_object.scale_;
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HFactor& factor = highs_model_object.factor_;
-  //  HMatrix& matrix = highs_model_object.matrix_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
-  // First determine whether the HiGHS solution space has been
-  // allocated, a necessary condition for its values to be used later
   if (!simplex_lp_status.valid) {
-    // Simplex LP is not valid so initialise the simplex LP data
+    // Simplex LP is not valid so
+    //
+    // Set simplex options from HiGHS options.
+    setSimplexOptions(highs_model_object);
+    // Initialise the simplex LP data
     initialiseSimplexLpDefinition(highs_model_object);
     // Initialise the real and integer random vectors
     initialiseSimplexLpRandomVectors(highs_model_object);
@@ -413,7 +409,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   //
   HighsStatus return_status = HighsStatus::OK;
 
-  //  const HighsOptions& options = highs_model_object.options_;
   const HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsScale& scale = highs_model_object.scale_;
@@ -422,7 +417,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  //  HFactor& factor = highs_model_object.factor_;
   HMatrix& matrix = highs_model_object.matrix_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
@@ -465,12 +459,14 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     analysis.simplexTimerStop(matrixSetupClock);
   }
 
-  // If simplex basis isn't complete, set up nonbasicMove
+  // First determine whether the HiGHS solution space has been
+  // allocated, a necessary condition for its values to be used later
   const bool have_highs_solution =
       isSolutionRightSize(highs_model_object.lp_, solution);
   // Note whether a HiGHS basis can be used to (try to) choose the better bound
   // for boxed variables
   const bool have_highs_basis = basis.valid_;
+  // If simplex basis isn't complete, set up nonbasicMove
   if (!simplex_lp_status.has_basis) {
     analysis.simplexTimerStart(setNonbasicMoveClock);
     simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
@@ -2558,8 +2554,11 @@ int computeFactor(HighsModelObject& highs_model_object) {
     // Now have a representation of B^{-1}, and it is fresh!
     simplex_lp_status.has_invert = true;
     simplex_lp_status.has_fresh_invert = true;
-    simplex_info.update_count = 0;
   }
+  // Set the update count to zero since the corrected invertible
+  // representation may be used for an initial basis. In any case the
+  // number of updates shouldn't be positive
+  simplex_info.update_count = 0;
 
   return rank_deficiency;
 }

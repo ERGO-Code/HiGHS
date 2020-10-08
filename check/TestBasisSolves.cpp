@@ -5,7 +5,7 @@
 #include "HighsRandom.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution_vector,
                                 int* solution_num_nz, int* solution_indices) {

@@ -495,9 +495,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // Keep track of the hmo that is the most recently solved. By default it's the
   // original LP
   int solved_hmo = original_hmo;
-  // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
-  //  printf("\nHighs::run() 1: basis_.valid_ = %d\n", basis_.valid_);
-  //  fflush(stdout);
+
   if (!basis_.valid_ && options_.presolve != off_string) {
     // No HiGHS basis so consider presolve
     //
@@ -528,8 +526,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
     presolve_.info_.presolve_time = this_presolve_time;
 
     // Set an illegal local pivot threshold value that's updated after
-    // solving the presolved LP
-    double factor_pivot_threshold = 0;
+    // solving the presolved LP - if simplex is used
+    double factor_pivot_threshold = -1;
 
     // Run solver.
     switch (presolve_status) {
@@ -596,9 +594,11 @@ basis_.valid_, hmos_[0].basis_.valid_);
         call_status = runLpSolver(solved_hmo, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
-        // Record the pivot threshold resulting from solving the presolved LP
-        factor_pivot_threshold =
+	if (hmos_[solved_hmo].simplex_lp_status_.valid) {
+	  // Record the pivot threshold resulting from solving the presolved LP with simplex
+	  factor_pivot_threshold =
             hmos_[solved_hmo].simplex_info_.factor_pivot_threshold;
+	}
         // Restore the dual objective cut-off
         options_.dual_objective_value_upper_bound =
             save_dual_objective_value_upper_bound;
@@ -747,7 +747,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
           options.highs_min_threads = 1;
           options.highs_max_threads = 1;
           // Use any pivot threshold resulting from solving the presolved LP
-          if (factor_pivot_threshold)
+          if (factor_pivot_threshold>0)
             options.factor_pivot_threshold = factor_pivot_threshold;
 
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
