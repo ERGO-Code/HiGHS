@@ -206,9 +206,6 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
         simplex_lp.numCol_, numRow, simplex_lp.numRow_);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
-  //  if (!simplex_info.initialised) {printf("SimplexInfo not initialised)\n");
-  //  return true;}
-
   bool right_size = true;
   right_size = (int)simplex_info.workCost_.size() == numTot && right_size;
   right_size = (int)simplex_info.workDual_.size() == numTot && right_size;

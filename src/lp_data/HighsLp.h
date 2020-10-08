@@ -173,7 +173,6 @@ struct HighsSimplexLpStatus {
 };
 
 struct HighsSimplexInfo {
-  bool initialised = false;
   // Simplex information regarding primal solution, dual solution and
   // objective for this Highs Model Object. This is information which
   // should be retained from one run to the next in order to provide
