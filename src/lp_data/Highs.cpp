@@ -594,11 +594,12 @@ basis_.valid_, hmos_[0].basis_.valid_);
         call_status = runLpSolver(solved_hmo, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
-	if (hmos_[solved_hmo].simplex_lp_status_.valid) {
-	  // Record the pivot threshold resulting from solving the presolved LP with simplex
-	  factor_pivot_threshold =
-            hmos_[solved_hmo].simplex_info_.factor_pivot_threshold;
-	}
+        if (hmos_[solved_hmo].simplex_lp_status_.valid) {
+          // Record the pivot threshold resulting from solving the presolved LP
+          // with simplex
+          factor_pivot_threshold =
+              hmos_[solved_hmo].simplex_info_.factor_pivot_threshold;
+        }
         // Restore the dual objective cut-off
         options_.dual_objective_value_upper_bound =
             save_dual_objective_value_upper_bound;
@@ -747,7 +748,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
           options.highs_min_threads = 1;
           options.highs_max_threads = 1;
           // Use any pivot threshold resulting from solving the presolved LP
-          if (factor_pivot_threshold>0)
+          if (factor_pivot_threshold > 0)
             options.factor_pivot_threshold = factor_pivot_threshold;
 
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";

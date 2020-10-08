@@ -130,8 +130,10 @@ class SimplexTimer {
     clock[IteratePivotsClock] = timer.clock_def("PIVOTS", "PIV");
     clock[initialiseSimplexLpBasisAndFactorClock] =
         timer.clock_def("IZ_SIMPLEX_LP_DEF", "ISD");
-    clock[allocateSimplexArraysClock] = timer.clock_def("ALLOC_SIMPLEX_ARRS", "ASA");
-    clock[initialiseSimplexCostBoundsClock] = timer.clock_def("IZ_SIMPLEX_CO_BD", "ICB");
+    clock[allocateSimplexArraysClock] =
+        timer.clock_def("ALLOC_SIMPLEX_ARRS", "ASA");
+    clock[initialiseSimplexCostBoundsClock] =
+        timer.clock_def("IZ_SIMPLEX_CO_BD", "ICB");
     clock[ScaleClock] = timer.clock_def("SCALE", "SCL");
     clock[CrashClock] = timer.clock_def("CRASH", "CSH");
     clock[BasisConditionClock] = timer.clock_def("BASIS_CONDITION", "CON");
