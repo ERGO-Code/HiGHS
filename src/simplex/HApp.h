@@ -99,7 +99,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // Set simplex options from HiGHS options.
   // ToDo: Should only be done when not hot-starting since strategy
   // knowledge based on run-time experience should be preserved.
-  setSimplexOptions(highs_model_object);
+  //  setSimplexOptions(highs_model_object);
   //
   // Transition to the best possible simplex basis and solution
   call_status = transition(highs_model_object);
