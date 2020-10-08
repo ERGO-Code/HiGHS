@@ -300,7 +300,9 @@ HighsStatus Highs::readModel(const std::string filename) {
 
 HighsStatus Highs::clearModel() {
   HighsStatus return_status = HighsStatus::OK;
+  // Remove all HighsModelObject entries
   hmos_.clear();
+  // Set up with an empty LP so that addrows/cols can be used to build
   HighsLp empty_lp;
   lp_ = empty_lp;
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
@@ -925,34 +927,25 @@ int Highs::getSimplexIterationCount() {
 
 HighsStatus Highs::getBasicVariables(int* basic_variables) {
   if (!haveHmo("getBasicVariables")) return HighsStatus::Error;
-  if (!hmos_[0].simplex_lp_status_.has_basis) {
+  if (basic_variables == NULL) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No basis available in getBasicVariables");
+                    "getBasicVariables: basic_variables is NULL");
     return HighsStatus::Error;
   }
-  int numRow = hmos_[0].lp_.numRow_;
-  int numCol = hmos_[0].lp_.numCol_;
-  if (numRow != hmos_[0].simplex_lp_.numRow_) {
-    HighsLogMessage(
-        options_.logfile, HighsMessageType::ERROR,
-        "Model LP and simplex LP row dimension difference (%d-%d=%d", numRow,
-        hmos_[0].simplex_lp_.numRow_, numRow - hmos_[0].simplex_lp_.numRow_);
-    return HighsStatus::Error;
-  }
-  for (int row = 0; row < numRow; row++) {
-    int var = hmos_[0].simplex_basis_.basicIndex_[row];
-    if (var < numCol) {
-      basic_variables[row] = var;
-    } else {
-      basic_variables[row] = -(1 + var - numCol);
-    }
-  }
-  return HighsStatus::OK;
+  HighsSimplexInterface simplex_interface(hmos_[0]);
+  return simplex_interface.getBasicVariables(basic_variables);
 }
 
 HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
                                       int* row_num_nz, int* row_indices) {
   if (!haveHmo("getBasisInverseRow")) return HighsStatus::Error;
+  if (row_vector == NULL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "getBasisInverseRow: row_vector is NULL");
+    return HighsStatus::Error;
+  }
+  // row_indices can be NULL - it's the trigger that determines
+  // whether they are identified or not
   int numRow = hmos_[0].lp_.numRow_;
   if (row < 0 || row >= numRow) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
@@ -977,6 +970,13 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
 HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
                                       int* col_num_nz, int* col_indices) {
   if (!haveHmo("getBasisInverseCol")) return HighsStatus::Error;
+  if (col_vector == NULL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "getBasisInverseCol: col_vector is NULL");
+    return HighsStatus::Error;
+  }
+  // col_indices can be NULL - it's the trigger that determines
+  // whether they are identified or not
   int numRow = hmos_[0].lp_.numRow_;
   if (col < 0 || col >= numRow) {
     HighsLogMessage(
@@ -1002,6 +1002,18 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
 HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
                                  int* solution_num_nz, int* solution_indices) {
   if (!haveHmo("getBasisSolve")) return HighsStatus::Error;
+  if (Xrhs == NULL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "getBasisSolve: Xrhs is NULL");
+    return HighsStatus::Error;
+  }
+  if (solution_vector == NULL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "getBasisSolve: solution_vector is NULL");
+    return HighsStatus::Error;
+  }
+  // solution_indices can be NULL - it's the trigger that determines
+  // whether they are identified or not
   if (!hmos_[0].simplex_lp_status_.has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisSolve");
@@ -1022,6 +1034,18 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
                                           int* solution_num_nz,
                                           int* solution_indices) {
   if (!haveHmo("getBasisTransposeSolve")) return HighsStatus::Error;
+  if (Xrhs == NULL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "getBasisTransposeSolve: Xrhs is NULL");
+    return HighsStatus::Error;
+  }
+  if (solution_vector == NULL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "getBasisTransposeSolve: solution_vector is NULL");
+    return HighsStatus::Error;
+  }
+  // solution_indices can be NULL - it's the trigger that determines
+  // whether they are identified or not
   if (!hmos_[0].simplex_lp_status_.has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisTransposeSolve");
@@ -1041,6 +1065,14 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                                  int* row_num_nz, int* row_indices,
                                  const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
+  if (row_vector == NULL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "getReducedRow: row_vector is NULL");
+    return HighsStatus::Error;
+  }
+  // row_indices can be NULL - it's the trigger that determines
+  // whether they are identified or not pass_basis_inverse_row_vector
+  // NULL - it's the trigger to determine whether it's computed or not
   if (row < 0 || row >= hmos_[0].lp_.numRow_) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "Row index %d out of range [0, %d] in getReducedRow", row,
@@ -1087,6 +1119,13 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
 HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                                     int* col_num_nz, int* col_indices) {
   if (!haveHmo("getReducedColumn")) return HighsStatus::Error;
+  if (col_vector == NULL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "getReducedColumn: col_vector is NULL");
+    return HighsStatus::Error;
+  }
+  // col_indices can be NULL - it's the trigger that determines
+  // whether they are identified or not
   if (col < 0 || col >= hmos_[0].lp_.numCol_) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "Column index %d out of range [0, %d] in getReducedColumn",
