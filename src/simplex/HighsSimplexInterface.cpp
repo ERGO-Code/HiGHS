@@ -1208,7 +1208,8 @@ HighsStatus HighsSimplexInterface::getBasicVariables(int* basic_variables) {
 
   const bool only_from_known_basis = true;
   int return_code;
-  return_code = initialiseSimplexLpBasisAndFactor(highs_model_object, only_from_known_basis);
+  return_code = initialiseSimplexLpBasisAndFactor(highs_model_object,
+                                                  only_from_known_basis);
   if (return_code) return HighsStatus::Error;
   assert(simplex_lp_status.has_basis);
 

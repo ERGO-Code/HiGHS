@@ -82,7 +82,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
 }
 
 int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
-				      const bool only_from_known_basis) {
+                                      const bool only_from_known_basis) {
   // Perform the transition from whatever information is known about
   // the LP to a status where the LP is scaled and has the inverse of
   // a basis. According to only_from_known_basis, this will be
@@ -104,7 +104,8 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
   // If there is a HiGHS basis: use it to determine what's basic and nonbasic
   // (nonbasicFlag).
   //
-  // If there's no HiGHS basis: generate nonbasicFlag, possibly by performing a crash.
+  // If there's no HiGHS basis: generate nonbasicFlag, possibly by performing a
+  // crash.
   //
   // Use nonbasicFlag to generate basicIndex
   //
@@ -294,16 +295,16 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
     if (rank_deficiency) {
       // Basis is rank deficient
       if (only_from_known_basis) {
-	// If only this basis should be used, then return error
-	HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-			"Supposed to be a full-rank basis, but incorrect");
-	return rank_deficiency;
+        // If only this basis should be used, then return error
+        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                        "Supposed to be a full-rank basis, but incorrect");
+        return rank_deficiency;
       } else {
-	// Account for rank deficiency by correcing nonbasicFlag
-	simplexHandleRankDeficiency(highs_model_object);
-	updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
-	simplex_lp_status.has_invert = true;
-	simplex_lp_status.has_fresh_invert = true;
+        // Account for rank deficiency by correcing nonbasicFlag
+        simplexHandleRankDeficiency(highs_model_object);
+        updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
+        simplex_lp_status.has_invert = true;
+        simplex_lp_status.has_fresh_invert = true;
       }
     }
     assert(simplex_lp_status.has_invert);
@@ -322,9 +323,10 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
     if (!basis_condition_ok) {
       // If only this basis should be used, then return error
       if (only_from_known_basis) {
-	HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-			"Supposed to be a well-conditioned basis, but incorrect");
-	return -(int)HighsStatus::Error;
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "Supposed to be a well-conditioned basis, but incorrect");
+        return -(int)HighsStatus::Error;
       }
       // Basis crash really doesn't work, so use logical basis
       simplex_basis.basicIndex_.resize(simplex_lp.numRow_);
@@ -386,7 +388,7 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
   }
   return 0;
 }
-  
+
 HighsStatus transition(HighsModelObject& highs_model_object) {
   // Perform the transition from whatever information is known about
   // the LP to a status where simplex data are set up for the initial

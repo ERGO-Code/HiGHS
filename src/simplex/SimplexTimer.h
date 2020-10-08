@@ -37,13 +37,14 @@ enum iClockSimplex {
   IterateDevexIzClock,        //!< Second level timing of initialise Devex
   IteratePivotsClock,         //!< Second level timing of pivoting
 
-  initialiseSimplexLpBasisAndFactorClock, //!< initialise Simplex LP, its basis and factor
-  ScaleClock,                             //!< Scale
-  CrashClock,                             //!< Crash
-  BasisConditionClock,                    //!< Basis condition estimation
-  matrixSetupClock,                       //!< HMatrix setup
-  setNonbasicMoveClock,                   //!< set nonbasicMove
-  allocateSimplexArraysClock,             //!< allocate simplex arrays
+  initialiseSimplexLpBasisAndFactorClock,  //!< initialise Simplex LP, its basis
+                                           //!< and factor
+  ScaleClock,                              //!< Scale
+  CrashClock,                              //!< Crash
+  BasisConditionClock,                     //!< Basis condition estimation
+  matrixSetupClock,                        //!< HMatrix setup
+  setNonbasicMoveClock,                    //!< set nonbasicMove
+  allocateSimplexArraysClock,              //!< allocate simplex arrays
   initialiseSimplexCostBoundsClock,  //!< initialise simplex cost and bounds
 
   DseIzClock,        //!< DSE weight initialisation

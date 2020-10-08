@@ -40,7 +40,8 @@ bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution_vector,
   return solution_nz_ok;
 }
 
-double GetBasisSolvesCheckSolution(const HighsLp& lp, int* const basic_variables,
+double GetBasisSolvesCheckSolution(const HighsLp& lp,
+                                   int* const basic_variables,
                                    const double* rhs, const double* solution,
                                    const bool transpose = false) {
   const double residual_tolerance = 1e-8;
@@ -512,7 +513,8 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs_status = highs.getBasisInverseCol(numCol, &solution_col[0]);
   REQUIRE(highs_status == HighsStatus::Error);
 
-  // Check the no INVERSE traps - these should all work, as the first should force inversion!!!
+  // Check the no INVERSE traps - these should all work, as the first should
+  // force inversion!!!
   highs_status = highs.getBasicVariables(&basic_variables[0]);
   REQUIRE(highs_status == HighsStatus::Error);
 
@@ -545,13 +547,12 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   highs.clearModel();
 
-    // Read the LP given by filename
+  // Read the LP given by filename
   highs.readModel(filename);
-  
+
   // Load the optimal basis
   highs_status = highs.setBasis(basis);
   REQUIRE(highs_status == HighsStatus::OK);
 
   //  testBasisSolve(highs);
-
 }
