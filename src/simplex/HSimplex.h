@@ -24,6 +24,9 @@ void setSimplexOptions(
                                           //!< options are to be set
 );
 
+int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
+				      const bool only_from_known_basis = false);
+
 HighsStatus transition(HighsModelObject& highs_model_object  //!< Model object
 );
 
