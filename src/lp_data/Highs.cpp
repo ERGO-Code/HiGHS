@@ -838,13 +838,13 @@ basis_.valid_, hmos_[0].basis_.valid_);
                       "Postsolve  : %d\n", postsolve_iteration_count);
   }
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Time       : %0.3g\n", this_solve_time);
+                    "Time       : %8.2f\n", this_solve_time);
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Time Pre   : %0.3g\n", this_presolve_time);
+                    "Time Pre   : %8.2f\n", this_presolve_time);
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Time PreLP : %0.3g\n", this_solve_presolved_lp_time);
+                    "Time PreLP : %8.2f\n", this_solve_presolved_lp_time);
   HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                    "Time PostLP: %0.3g\n", this_solve_original_lp_time);
+                    "Time PostLP: %8.2f\n", this_solve_original_lp_time);
   if (this_solve_time > 0) {
     HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
                       "For LP %16s",
@@ -854,26 +854,26 @@ basis_.valid_, hmos_[0].basis_.valid_);
       sum_time += this_presolve_time;
       int pct = (100 * this_presolve_time) / this_solve_time;
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        ": Presolve %0.3g (%3d%%)", this_presolve_time, pct);
+                        ": Presolve %8.2f (%3d%%)", this_presolve_time, pct);
     }
     if (this_solve_presolved_lp_time > 0) {
       sum_time += this_solve_presolved_lp_time;
       int pct = (100 * this_solve_presolved_lp_time) / this_solve_time;
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        ": Solve presolved LP %0.3g (%3d%%)",
+                        ": Solve presolved LP %8.2f (%3d%%)",
                         this_solve_presolved_lp_time, pct);
     }
     if (this_postsolve_time > 0) {
       sum_time += this_postsolve_time;
       int pct = (100 * this_postsolve_time) / this_solve_time;
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        ": Postsolve %0.3g (%3d%%)", this_postsolve_time, pct);
+                        ": Postsolve %8.2f (%3d%%)", this_postsolve_time, pct);
     }
     if (this_solve_original_lp_time > 0) {
       sum_time += this_solve_original_lp_time;
       int pct = (100 * this_solve_original_lp_time) / this_solve_time;
       HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
-                        ": Solve original LP %0.3g (%3d%%)",
+                        ": Solve original LP %8.2f (%3d%%)",
                         this_solve_original_lp_time, pct);
     }
     HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,

@@ -167,7 +167,7 @@ void reportSolvedLpStats(FILE* output, int message_level,
     }
     double run_time = highs.getHighsRunTime();
     HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "HiGHS run time      : %13.4e\n", run_time);
+                      "HiGHS run time      : %13.2f\n", run_time);
     // Possibly write the solution to a file
     const HighsOptions& options = highs.getHighsOptions();
     if (options.write_solution_to_file)
