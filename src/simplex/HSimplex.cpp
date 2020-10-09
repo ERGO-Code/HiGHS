@@ -3292,9 +3292,6 @@ bool reinvertOnNumericalTrouble(const std::string method_name,
       method_name, highs_model_object, numerical_trouble_measure,
       alpha_from_col, alpha_from_row, numerical_trouble_tolerance, reinvert);
   if (reinvert) {
-    HighsLogMessage(highs_model_object.options_.logfile,
-                    HighsMessageType::WARNING,
-                    "HiGHS has identified numerical trouble so reinvert");
     // Consider increasing the Markowitz multiplier
     const double current_pivot_threshold =
         highs_model_object.simplex_info_.factor_pivot_threshold;
