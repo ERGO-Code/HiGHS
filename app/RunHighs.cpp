@@ -162,7 +162,7 @@ void reportSolvedLpStats(FILE* output, int message_level,
       highs.getHighsInfoValue("objective_function_value",
                               objective_function_value);
       HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "Objective value     : %13.6e\n",
+                        "Objective value     : %17.10e\n",
                         objective_function_value);
     }
     double run_time = highs.getHighsRunTime();
