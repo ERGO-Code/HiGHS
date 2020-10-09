@@ -108,13 +108,15 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
   //
 
   const HighsOptions& options = highs_model_object.options_;
-  HighsBasis& basis = highs_model_object.basis_;
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  const HighsBasis& basis = highs_model_object.basis_;
+  const HighsSolution& solution = highs_model_object.solution_;
+  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HFactor& factor = highs_model_object.factor_;
+  HighsScale& scale = highs_model_object.scale_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   if (!simplex_lp_status.valid) {
     // Simplex LP is not valid so
@@ -382,6 +384,21 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
       simplex_lp_status.has_fresh_invert = true;
     }
   }
+  // If simplex basis isn't complete, set up nonbasicMove
+  if (!simplex_lp_status.has_basis) {
+    // First determine whether the HiGHS solution space has been
+    // allocated, a necessary condition for its values to be used later
+    const bool have_highs_solution =
+      isSolutionRightSize(highs_model_object.lp_, solution);
+    // Note whether a HiGHS basis can be used to (try to) choose the better bound
+    // for boxed variables
+    const bool have_highs_basis = basis.valid_;
+    simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+    setNonbasicMove(simplex_lp, scale, have_highs_basis, basis,
+                    have_highs_solution, solution, simplex_basis);
+    simplex_lp_status.has_basis = true;
+  }
+  assert(simplex_lp_status.has_basis);
   return 0;
 }
 
@@ -410,8 +427,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
 
   const HighsSolution& solution = highs_model_object.solution_;
-  HighsBasis& basis = highs_model_object.basis_;
-  HighsScale& scale = highs_model_object.scale_;
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -433,6 +448,11 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     return HighsStatus::Error;
   }
 
+  // Now there is a simplex basis corresponding to a well-conditioned
+  // invertible representation
+  assert(simplex_lp_status.has_basis);
+  assert(simplex_lp_status.has_invert);
+
   // Now that the dimensions of the LP to be solved by the simplex
   // method are known, make sure that there is a postive number of
   // rows. ToDo: Ensure that LPs with no rows can still be solved
@@ -443,10 +463,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     return HighsStatus::Error;
   }
 
-  // Now there are nonbasicFlag and basicIndex corresponding to a
-  // basis with well-conditioned invertible representation - and
-  // corresponding nonbasicMove if simplex_lp_status.has_basis is true
-  //
   // Possibly set up the HMatrix column-wise and row-wise copies of the matrix
   if (!simplex_lp_status.has_matrix_col_wise ||
       !simplex_lp_status.has_matrix_row_wise) {
@@ -457,23 +473,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
     simplex_lp_status.has_matrix_col_wise = true;
     simplex_lp_status.has_matrix_row_wise = true;
     analysis.simplexTimerStop(matrixSetupClock);
-  }
-
-  // First determine whether the HiGHS solution space has been
-  // allocated, a necessary condition for its values to be used later
-  const bool have_highs_solution =
-      isSolutionRightSize(highs_model_object.lp_, solution);
-  // Note whether a HiGHS basis can be used to (try to) choose the better bound
-  // for boxed variables
-  const bool have_highs_basis = basis.valid_;
-  // If simplex basis isn't complete, set up nonbasicMove
-  if (!simplex_lp_status.has_basis) {
-    analysis.simplexTimerStart(setNonbasicMoveClock);
-    simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
-    setNonbasicMove(simplex_lp, scale, have_highs_basis, basis,
-                    have_highs_solution, solution, simplex_basis);
-    simplex_lp_status.has_basis = true;
-    analysis.simplexTimerStop(setNonbasicMoveClock);
   }
 
   // Set up the simplex work and base arrays
@@ -502,6 +501,8 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
 
+  const bool have_highs_solution =
+      isSolutionRightSize(highs_model_object.lp_, solution);
   if (have_highs_solution) {
     // There is a HiGHS solution so possibly determine the changes in
     // basic and nonbasic values and duals for columns and rows
