@@ -1206,11 +1206,13 @@ HighsStatus HighsSimplexInterface::getBasicVariables(int* basic_variables) {
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
 
+  if (!simplex_lp_status.valid) 
+    highs_model_object.simplex_analysis_.setup(highs_model_object.lp_,
+					       highs_model_object.options_,
+					       highs_model_object.iteration_counts_.simplex);
   const bool only_from_known_basis = true;
-  int return_code;
-  return_code = initialiseSimplexLpBasisAndFactor(highs_model_object,
-                                                  only_from_known_basis);
-  if (return_code) return HighsStatus::Error;
+  if (initialiseSimplexLpBasisAndFactor(highs_model_object,
+					only_from_known_basis)) return HighsStatus::Error;
   assert(simplex_lp_status.has_basis);
 
   int numRow = lp.numRow_;

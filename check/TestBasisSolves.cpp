@@ -554,5 +554,5 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs_status = highs.setBasis(basis);
   REQUIRE(highs_status == HighsStatus::OK);
 
-  testBasisSolve(highs);
+  //  testBasisSolve(highs);
 }
