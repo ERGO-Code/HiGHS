@@ -8,9 +8,9 @@
 const bool dev_run = false;
 
 bool GetBasisSolvesSolutionNzOk(int numRow,
-				const vector<double>& pass_solution_vector,
+                                const vector<double>& pass_solution_vector,
                                 int* solution_num_nz,
-				vector<int>& solution_indices) {
+                                vector<int>& solution_indices) {
   if (solution_num_nz == NULL) return true;
   vector<double> solution_vector;
   solution_vector.resize(numRow);
@@ -45,7 +45,7 @@ bool GetBasisSolvesSolutionNzOk(int numRow,
 double GetBasisSolvesCheckSolution(const HighsLp& lp,
                                    const vector<int>& basic_variables,
                                    const vector<double>& rhs,
-				   const vector<double>& solution,
+                                   const vector<double>& solution,
                                    const bool transpose = false) {
   const double residual_tolerance = 1e-8;
   double residual_norm = 0;
@@ -99,11 +99,9 @@ double GetBasisSolvesCheckSolution(const HighsLp& lp,
   return residual_norm;
 }
 
-void GetBasisSolvesFormRHS(HighsLp& lp,
-			   vector<int>& basic_variables,
-			   vector<double>& solution,
-                           vector<double>& rhs,
-			   const bool transpose = false) {
+void GetBasisSolvesFormRHS(HighsLp& lp, vector<int>& basic_variables,
+                           vector<double>& solution, vector<double>& rhs,
+                           const bool transpose = false) {
   if (transpose) {
     for (int k = 0; k < lp.numRow_; k++) {
       rhs[k] = 0;
@@ -228,8 +226,9 @@ void testBasisSolve(Highs& highs) {
       for (int el = lp.Astart_[basic_col]; el < lp.Astart_[basic_col + 1]; el++)
         rhs[lp.Aindex_[el]] = lp.Avalue_[el];
 
-      highs_status = highs.getBasisSolve(&rhs[0], &solution_col[0], &solution_num_nz,
-                                         &solution_col_indices[0]);
+      highs_status =
+          highs.getBasisSolve(&rhs[0], &solution_col[0], &solution_num_nz,
+                              &solution_col_indices[0]);
       REQUIRE(highs_status == HighsStatus::OK);
       bool solution_nz_ok = GetBasisSolvesSolutionNzOk(
           numRow, solution_col, &solution_num_nz, solution_col_indices);
@@ -256,8 +255,9 @@ void testBasisSolve(Highs& highs) {
   for (;;) {
     check_row = k;
     // Determine row check_row of B^{-1}
-    highs_status = highs.getBasisInverseRow(check_row, &solution_col[0],
-                                            &solution_num_nz, &solution_col_indices[0]);
+    highs_status =
+        highs.getBasisInverseRow(check_row, &solution_col[0], &solution_num_nz,
+                                 &solution_col_indices[0]);
     REQUIRE(highs_status == HighsStatus::OK);
     bool solution_nz_ok = GetBasisSolvesSolutionNzOk(
         numRow, solution_col, &solution_num_nz, solution_col_indices);
@@ -287,8 +287,9 @@ void testBasisSolve(Highs& highs) {
   for (;;) {
     check_col = k;
     // Determine col check_col of B^{-1}
-    highs_status = highs.getBasisInverseCol(check_col, &solution_col[0],
-                                            &solution_num_nz, &solution_col_indices[0]);
+    highs_status =
+        highs.getBasisInverseCol(check_col, &solution_col[0], &solution_num_nz,
+                                 &solution_col_indices[0]);
     REQUIRE(highs_status == HighsStatus::OK);
     bool solution_nz_ok = GetBasisSolvesSolutionNzOk(
         numRow, solution_col, &solution_num_nz, solution_col_indices);
@@ -365,8 +366,9 @@ void testBasisSolve(Highs& highs) {
   max_k = min(numRow, 9);
   for (;;) {
     check_row = k;
-    highs_status = highs.getReducedRow(check_row, &solution_row[0],
-                                       &solution_num_nz, &solution_row_indices[0]);
+    highs_status =
+        highs.getReducedRow(check_row, &solution_row[0], &solution_num_nz,
+                            &solution_row_indices[0]);
     REQUIRE(highs_status == HighsStatus::OK);
     bool solution_nz_ok = GetBasisSolvesSolutionNzOk(
         numCol, solution_row, &solution_num_nz, solution_row_indices);
@@ -386,8 +388,9 @@ void testBasisSolve(Highs& highs) {
   max_k = min(numCol, 9);
   for (;;) {
     check_col = k;
-    highs_status = highs.getReducedColumn(check_col, &solution_col[0],
-                                          &solution_num_nz, &solution_col_indices[0]);
+    highs_status =
+        highs.getReducedColumn(check_col, &solution_col[0], &solution_num_nz,
+                               &solution_col_indices[0]);
     REQUIRE(highs_status == HighsStatus::OK);
     // Check solution
     for (int row = 0; row < numRow; row++) rhs[row] = 0;
@@ -559,5 +562,4 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   // Solve
   highs.run();
   REQUIRE(highs.getSimplexIterationCount() == 0);
-  
 }

@@ -389,9 +389,9 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
     // First determine whether the HiGHS solution space has been
     // allocated, a necessary condition for its values to be used later
     const bool have_highs_solution =
-      isSolutionRightSize(highs_model_object.lp_, solution);
-    // Note whether a HiGHS basis can be used to (try to) choose the better bound
-    // for boxed variables
+        isSolutionRightSize(highs_model_object.lp_, solution);
+    // Note whether a HiGHS basis can be used to (try to) choose the better
+    // bound for boxed variables
     const bool have_highs_basis = basis.valid_;
     simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
     setNonbasicMove(simplex_lp, scale, have_highs_basis, basis,
