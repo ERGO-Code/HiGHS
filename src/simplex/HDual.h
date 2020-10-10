@@ -378,6 +378,7 @@ class HDual {
 
   // private:
   HighsStatus returnFromSolve(const HighsStatus return_status);
+  void saveDualRay();
   bool getNonsingularInverse();
   bool getBacktrackingBasis(vector<double>& scattered_edge_weights);
   void putBacktrackingBasis();

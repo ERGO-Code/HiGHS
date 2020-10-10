@@ -241,8 +241,8 @@ struct HighsSimplexInfo {
   std::vector<double> backtracking_basis_edge_weights_;
 
   // Dual and primal ray vectors
-  std::vector<double> dual_ray_values;
-  std::vector<double> primal_ray_values;
+  std::vector<double> dual_ray_value_;
+  std::vector<double> primal_ray_value_;
 
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;

@@ -220,14 +220,14 @@ class Highs {
    * it if it does and dual_ray is not NULL
    */
   HighsStatus getDualRay(bool& has_dual_ray,
-                         double* dual_ray_values = NULL) const;
+                         double* dual_ray_value = NULL) const;
 
   /**
    * @brief Indicates whether a primal unbounded ray exdists, and gets
    * it if it does and primal_ray is not NULL
    */
   HighsStatus getPrimalRay(bool& has_primal_ray,
-                           double* primal_ray_values = NULL) const;
+                           double* primal_ray_value = NULL) const;
 
   // todo: getRangingInformation(..)
 
