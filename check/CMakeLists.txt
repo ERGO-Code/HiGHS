@@ -26,6 +26,7 @@ set(TEST_SOURCES
     TestLpModification.cpp
     TestLpSolvers.cpp
     TestSpecialLps.cpp
+    TestRays.cpp
     Avgas.cpp)
 
 if (IPX_ON)

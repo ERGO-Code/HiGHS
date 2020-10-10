@@ -168,6 +168,8 @@ struct HighsSimplexLpStatus {
       false;  // The dual objective function value is known
   bool has_primal_objective_value =
       false;  // The dual objective function value is known
+  bool has_dual_ray = false; // A dual unbounded ray is known
+  bool has_primal_ray = false; // A primal unbounded ray is known
   SimplexSolutionStatus solution_status =
       SimplexSolutionStatus::UNSET;  // The solution status is UNSET
 };
@@ -237,6 +239,10 @@ struct HighsSimplexInfo {
   int backtracking_basis_costs_perturbed_;
   std::vector<double> backtracking_basis_workShift_;
   std::vector<double> backtracking_basis_edge_weights_;
+
+  // Dual and primal ray vectors
+  std::vector<double> dual_ray_values;
+  std::vector<double> primal_ray_values;
 
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;

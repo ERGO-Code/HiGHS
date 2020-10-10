@@ -96,6 +96,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   analysis.simplexTimerStart(SimplexTotalClock);
 #endif
+  // Indicate that dual and primal rays are not known
+  highs_model_object.simplex_lp_status_.has_dual_ray = false;
+  highs_model_object.simplex_lp_status_.has_primal_ray = false;
+
   // Transition to the best possible simplex basis and solution
   call_status = transition(highs_model_object);
   return_status = interpretCallStatus(call_status, return_status, "transition");
