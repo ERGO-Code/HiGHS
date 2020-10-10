@@ -149,6 +149,20 @@ class SpecialLps {
     lp.Avalue_ = {1, -1, -1, 1};
     require_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
   }
+
+  void scipLpi3Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
+    lp.numCol_ = 2;
+    lp.numRow_ = 2;
+    lp.colCost_ = {10, 15};
+    lp.colLower_ = {0, 0};
+    lp.colUpper_ = {inf, inf};
+    lp.rowLower_ = {3, 1};
+    lp.rowUpper_ = {3, 1};
+    lp.Astart_ = {0, 2, 4};
+    lp.Aindex_ = {0, 1, 0, 1};
+    lp.Avalue_ = {2, 1, 1, 3};
+    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+  }
 };
 
 #endif /* SIMPLEX_SPECIALPS_H_ */

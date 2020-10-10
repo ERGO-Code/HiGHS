@@ -243,8 +243,8 @@ struct HighsSimplexInfo {
   // Dual and primal ray vectors
   int dual_ray_row_;
   int primal_ray_col_;
-  std::vector<double> dual_ray_value_;
-  std::vector<double> primal_ray_value_;
+  //  std::vector<double> dual_ray_value_;
+  //  std::vector<double> primal_ray_value_;
 
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;
