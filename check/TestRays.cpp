@@ -23,7 +23,7 @@ TEST_CASE("Dual-ray", "[highs_test_rays]") {
 
   bool has_dual_ray;
   vector<double> dual_ray_values;
-  dual_ray_values.resize(lp.numCol_);
+  dual_ray_values.resize(lp.numCol_+lp.numRow_);
   REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_values[0]) ==
           HighsStatus::OK);
   //  REQUIRE(has_dual_ray==true);

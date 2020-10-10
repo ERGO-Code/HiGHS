@@ -1200,6 +1200,30 @@ HighsStatus HighsSimplexInterface::setNonbasicStatus(
   }
   return return_status;
 }
+
+// Get the dual ray
+HighsStatus HighsSimplexInterface::getDualRay(bool& has_dual_ray,
+					      double* dual_ray_value) {
+  vector<double>& simplex_dual_ray_value = highs_model_object.simplex_info_.dual_ray_value_;
+  HighsLp& lp = highs_model_object.lp_;
+  HighsScale& scale = highs_model_object.scale_;
+  int numRow = lp.numRow_;
+  int numCol = lp.numCol_;
+  has_dual_ray = highs_model_object.simplex_lp_status_.has_dual_ray;
+  if (has_dual_ray && dual_ray_value != NULL) {
+    for (int iVar = 0; iVar < numCol + numRow; iVar++) {
+      double ray_value = simplex_dual_ray_value[iVar];
+      if (iVar < numCol) {
+	ray_value *= scale.col_[iVar];
+      } else {
+	ray_value /= scale.row_[iVar-numCol];
+      }
+      dual_ray_value[iVar] = ray_value;
+    }
+  }
+  return HighsStatus::OK;
+}
+
 // Get the basic variables, performing INVERT if necessary
 HighsStatus HighsSimplexInterface::getBasicVariables(int* basic_variables) {
   HighsLp& lp = highs_model_object.lp_;

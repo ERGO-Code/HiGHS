@@ -908,18 +908,14 @@ const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
 }
 
 HighsStatus Highs::getDualRay(bool& has_dual_ray,
-                              double* dual_ray_value) const {
+                              double* dual_ray_value) {
   if (!haveHmo("getDualRay")) return HighsStatus::Error;
-  has_dual_ray = hmos_[0].simplex_lp_status_.has_dual_ray;
-  if (has_dual_ray && dual_ray_value != NULL) {
-    for (int iCol = 0; iCol < lp_.numCol_; iCol++)
-      dual_ray_value[iCol] = hmos_[0].simplex_info_.dual_ray_value_[iCol];
-  }
-  return HighsStatus::OK;
+  HighsSimplexInterface simplex_interface(hmos_[0]);
+  return simplex_interface.getDualRay(has_dual_ray, dual_ray_value);
 }
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
-                                double* primal_ray_value) const {
+                                double* primal_ray_value) {
   if (!haveHmo("getPrimalRay")) return HighsStatus::Error;
   has_primal_ray = hmos_[0].simplex_lp_status_.has_primal_ray;
   if (has_primal_ray && primal_ray_value != NULL) {

@@ -1969,6 +1969,7 @@ void HDual::saveDualRay() {
   for (int iEl = 0; iEl < dualRow.packCount; iEl++)
     dual_ray_value[dualRow.packIndex[iEl]] = dualRow.packValue[iEl];
   workHMO.simplex_lp_status_.has_dual_ray = true;
+  workHMO.simplex_info_.dual_ray_row_ = rowOut;
 }
 
 bool HDual::getNonsingularInverse() {
