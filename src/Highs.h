@@ -219,13 +219,15 @@ class Highs {
    * @brief Indicates whether a dual unbounded ray exdists, and gets
    * it if it does and dual_ray is not NULL
    */
-  HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_values = NULL) const;
+  HighsStatus getDualRay(bool& has_dual_ray,
+                         double* dual_ray_values = NULL) const;
 
   /**
    * @brief Indicates whether a primal unbounded ray exdists, and gets
    * it if it does and primal_ray is not NULL
    */
-  HighsStatus getPrimalRay(bool& has_primal_ray, double* primal_ray_values = NULL) const;
+  HighsStatus getPrimalRay(bool& has_primal_ray,
+                           double* primal_ray_values = NULL) const;
 
   // todo: getRangingInformation(..)
 
@@ -233,7 +235,7 @@ class Highs {
    * Methods for operations with the invertible representation of the
    * current basis matrix
    */
-  
+
   /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,

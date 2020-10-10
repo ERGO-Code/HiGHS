@@ -167,9 +167,9 @@ struct HighsSimplexLpStatus {
   bool has_dual_objective_value =
       false;  // The dual objective function value is known
   bool has_primal_objective_value =
-      false;  // The dual objective function value is known
-  bool has_dual_ray = false; // A dual unbounded ray is known
-  bool has_primal_ray = false; // A primal unbounded ray is known
+      false;                    // The dual objective function value is known
+  bool has_dual_ray = false;    // A dual unbounded ray is known
+  bool has_primal_ray = false;  // A primal unbounded ray is known
   SimplexSolutionStatus solution_status =
       SimplexSolutionStatus::UNSET;  // The solution status is UNSET
 };
