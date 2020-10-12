@@ -1239,7 +1239,7 @@ HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
     }
     int* column_num_nz = 0;
     basisSolve(rhs, &column[0], column_num_nz, NULL, false);
-    for (int iRow = 0; iRow < numRow; iRow++) 
+    for (int iRow = 0; iRow < numRow; iRow++)
       primal_ray_value[iRow] = column[iRow];
     /*
     // Now scatter the column according to the basic variables. Very

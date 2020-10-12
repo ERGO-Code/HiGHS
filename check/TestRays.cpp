@@ -68,6 +68,4 @@ TEST_CASE("Dual-ray", "[highs_test_rays]") {
       printf("%3d %11.4g %11.4g\n", iRow, primal_ray_values[iRow],
              exp_primalray[iRow]);
   }
-
-
 }
