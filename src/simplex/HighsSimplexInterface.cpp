@@ -1227,6 +1227,7 @@ HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
   has_primal_ray = highs_model_object.simplex_lp_status_.has_primal_ray;
   if (has_primal_ray && primal_ray_value != NULL) {
     int col = highs_model_object.simplex_info_.primal_ray_col_;
+    // Get this pivotal column
     vector<double> rhs;
     vector<double> column;
     column.assign(numRow, 0);
@@ -1239,8 +1240,6 @@ HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
     }
     int* column_num_nz = 0;
     basisSolve(rhs, &column[0], column_num_nz, NULL, false);
-    for (int iRow = 0; iRow < numRow; iRow++)
-      primal_ray_value[iRow] = column[iRow];
     // Now zero primal_ray_value and scatter the column according to
     // the basic variables.
     for (int iCol = 0; iCol < numCol; iCol++) primal_ray_value[iCol] = 0;

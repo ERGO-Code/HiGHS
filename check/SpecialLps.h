@@ -36,6 +36,7 @@ class SpecialLps {
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {3, 5, 6, 2};
     lp.sense_ = ObjSense::MAXIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::OPTIMAL;
     optimal_objective = 8.83333333333333;
   }
@@ -52,6 +53,8 @@ class SpecialLps {
     lp.Astart_ = {0, 1, 2};
     lp.Aindex_ = {0, 1};
     lp.Avalue_ = {1, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::OPTIMAL;
     optimal_objective = 1;
   }
@@ -68,6 +71,8 @@ class SpecialLps {
     lp.Astart_ = {0, 3, 5};
     lp.Aindex_ = {0, 1, 2, 0, 1};
     lp.Avalue_ = {2, 1, 1, 1, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::OPTIMAL;
     optimal_objective = -18;
   }
@@ -83,6 +88,8 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 5};
     lp.Aindex_ = {0, 2, 0, 1, 2};
     lp.Avalue_ = {7, 2, -2, 1, -2};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
   }
 
@@ -98,6 +105,8 @@ class SpecialLps {
     lp.Astart_ = {0, 1, 2, 2, 2, 2};
     lp.Aindex_ = {0, 1};
     lp.Avalue_ = {1, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::OPTIMAL;
     optimal_objective = -2;
   }
@@ -116,6 +125,8 @@ class SpecialLps {
     lp.Aindex_ = {4, 4, 0, 1, 3, 0, 4, 1, 5, 0, 1, 4};
     lp.Avalue_ = {-1.22, -0.25, 0.93,  1.18, 0.43,  0.65,
                   -2.06, -0.2,  -0.25, 0.83, -0.22, 1.37};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::OPTIMAL;
     optimal_objective = -1.191;
   }
@@ -132,6 +143,8 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {1, -1, -1, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
   }
 
@@ -147,6 +160,8 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {1, -1, -1, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
   }
 
@@ -162,6 +177,7 @@ class SpecialLps {
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {2, 1, 1, 3};
     lp.sense_ = ObjSense::MAXIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
   }
 
@@ -176,6 +192,8 @@ class SpecialLps {
     lp.Astart_ = {0, 2, 4};
     lp.Aindex_ = {0, 1, 0, 1};
     lp.Avalue_ = {2, 1, 1, 3};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
     require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
   }
 };

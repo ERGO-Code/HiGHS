@@ -4,20 +4,93 @@
 #include "lp_data/HConst.h"
 
 const bool dev_run = true;
+const double zero_ray_value_tolerance = 1e-8;
 
-void checkPrimalRay(Highs& highs,
-		    const vector<double>& primal_ray_value) {
-  int numCol = highs.getLp().numCol_;
+void checkRayDirection(const int dim,
+		       const vector<double>& ray_value,
+		       const vector<double>& expected_ray_value) {
   bool ray_error = false;
-  double primal_ray_slope = 0;
-  const vector<double>& colCost = highs.getLp().colCost_;
+  int from_ix = -1;
+  for (int ix = 0; ix<dim; ix++) {
+    if (fabs(expected_ray_value[ix]) > zero_ray_value_tolerance) {
+      // Found a nonzero in the expected ray values
+      from_ix = ix;
+      break;
+    } else {
+      // Found a zero in the expected ray values, so make sure that
+      // the ray value is also zero
+      if (fabs(ray_value[ix]) > zero_ray_value_tolerance) {
+	ray_error = true;
+	break;
+      }
+    }
+  }
+  REQUIRE(!ray_error);
+  if (from_ix < 0) return;
+  double scale = ray_value[from_ix] / expected_ray_value[from_ix];
+  for (int ix = from_ix+1; ix<dim; ix++) {
+    double scaled_expected_ray_value = expected_ray_value[ix] * scale;
+    if (fabs(ray_value[ix] - scaled_expected_ray_value) > zero_ray_value_tolerance) {
+      ray_error = true;
+	break;
+      }
+  }
+  REQUIRE(!ray_error);
+}
+
+void checkDualRayValue(Highs& highs,
+		       const vector<double>& dual_ray_value) {
+  const HighsLp& lp = highs.getLp();
+  int numCol = lp.numCol_;
+  bool ray_error = false;
   const vector<double>& colLower = highs.getLp().colLower_;
   const vector<double>& colUpper = highs.getLp().colUpper_;
-  const ObjSense sense = highs.getLp().sense_;
+  const vector<HighsBasisStatus>& col_status = highs.getBasis().col_status;
+  for (int iCol=0; iCol<numCol; iCol++) {
+    // Get the dual step for this column
+    double dual_step = 0;
+    for (int iEl=lp.Astart_[iCol]; iEl<lp.Astart_[iCol+1]; iEl++)
+      dual_step += dual_ray_value[lp.Aindex_[iEl]] * lp.Avalue_[iEl];
+    if (col_status[iCol] == HighsBasisStatus::BASIC) {
+      // Basic, so value should be zero
+      printf("Col %3d is basic so dual step should be zero, and is %g\n", iCol, dual_step);
+    } else {
+      if (colLower[iCol] == colUpper[iCol]) {
+	// Fixed so value can be anything
+      } else if (col_status[iCol] == HighsBasisStatus::LOWER) {
+	// At lower bound so value should be non-negative
+	if (dual_step < -zero_ray_value_tolerance) {
+	  printf("Col %3d is nonbasic at lower bound so dual step should be non-negative, and is %g\n", iCol, dual_step);
+	  ray_error = true;
+	}
+      } else if (col_status[iCol] == HighsBasisStatus::UPPER) {
+	// At upper bound so value should be non-positive
+	if (dual_step > zero_ray_value_tolerance) {
+	  printf("Col %3d is nonbasic at upper bound so dual step should be non-positive, and is %g\n", iCol, dual_step);
+	  ray_error = true;
+	}
+      } else {
+	// Free so value should be zero
+	assert(col_status[iCol] == HighsBasisStatus::ZERO);
+	if (fabs(dual_step) > zero_ray_value_tolerance) {
+	  printf("Col %3d is free so dual step should be zero, and is %g\n", iCol, dual_step);
+	  ray_error = true;
+	}
+      }
+    }
+  }
+  REQUIRE(!ray_error);
+}
+
+void checkPrimalRayValue(Highs& highs,
+			 const vector<double>& primal_ray_value) {
+  int numCol = highs.getLp().numCol_;
+  bool ray_error = false;
+  const vector<double>& colLower = highs.getLp().colLower_;
+  const vector<double>& colUpper = highs.getLp().colUpper_;
   double dual_feasibility_tolerance;
   highs.getHighsOptionValue("dual_feasibility_tolerance", dual_feasibility_tolerance);
   for (int iCol=0; iCol<numCol; iCol++) {
-    primal_ray_slope += primal_ray_value[iCol]*colCost[iCol];
     if (primal_ray_value[iCol] > 0) {
       // Upper bound must be infinite
       if (colUpper[iCol] < HIGHS_CONST_INF) {
@@ -35,9 +108,7 @@ void checkPrimalRay(Highs& highs,
       }
     }
   }
-  primal_ray_slope *= (int)sense;
   REQUIRE(!ray_error);
-  REQUIRE(primal_ray_slope > dual_feasibility_tolerance);
 }
 
 TEST_CASE("Rays", "[highs_test_rays]") {
@@ -50,6 +121,11 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   HighsModelStatus require_model_status;
   double optimal_objective;
   SpecialLps special_lps;
+  bool has_dual_ray;
+  bool has_primal_ray;
+  vector<double> dual_ray_value;
+  vector<double> primal_ray_value;
+
   //  special_lps.issue285Lp(lp, require_model_status);
   REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
 
@@ -60,21 +136,26 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.run() == HighsStatus::OK);
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  bool has_dual_ray;
-  vector<double> dual_ray_value;
+  // Check that there is a dual ray
   dual_ray_value.resize(lp.numRow_);
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(has_dual_ray == true);
+  // Get the dual ray
   REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
           HighsStatus::OK);
-  REQUIRE(has_dual_ray == true);
-  vector<double> exp_dualray = {0.5, -1};
+  vector<double> expected_dual_ray = {0.5, -1}; // From SCIP
   if (dev_run) {
     printf("Dual ray:\nRow    computed    expected\n");
     for (int iRow = 0; iRow < lp.numRow_; iRow++)
       printf("%3d %11.4g %11.4g\n", iRow, dual_ray_value[iRow],
-             exp_dualray[iRow]);
+             expected_dual_ray[iRow]);
   }
+  checkDualRayValue(highs, dual_ray_value);
+  // Check that there is no primal ray
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(has_primal_ray == false);
 
-  // Check that there is no ray for this LP
+  // Check that there are no rays for this LP
   special_lps.issue272Lp(lp, require_model_status, optimal_objective);
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   REQUIRE(highs.setBasis() == HighsStatus::OK);
@@ -83,6 +164,8 @@ TEST_CASE("Rays", "[highs_test_rays]") {
 
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
   REQUIRE(has_dual_ray == false);
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(has_primal_ray == false);
 
   // Test primal ray for unbounded LP
   special_lps.scipLpi2Lp(lp, require_model_status);
@@ -92,19 +175,55 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.getModelStatus() == require_model_status);
   highs.writeSolution("", true);
 
-  bool has_primal_ray;
-  vector<double> primal_ray_value;
-  primal_ray_value.resize(lp.numRow_);
+
+  // Check that there is no dual ray
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(has_dual_ray == false);
+
+  // Check that there is a primal ray
+  primal_ray_value.resize(lp.numCol_);
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(has_primal_ray == true);
   REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
           HighsStatus::OK);
-  REQUIRE(has_primal_ray == true);
-  vector<double> exp_primalray = {0.5, -1};
+  vector<double> expected_primal_ray = {0.5, -1};
   if (dev_run) {
     printf("Primal ray:\nRow    computed    expected\n");
     for (int iRow = 0; iRow < lp.numRow_; iRow++)
       printf("%3d %11.4g %11.4g\n", iRow, primal_ray_value[iRow],
-             exp_primalray[iRow]);
+             expected_primal_ray[iRow]);
   }
+  checkRayDirection(lp.numRow_, dual_ray_value, expected_dual_ray);
+  checkPrimalRayValue(highs, primal_ray_value);
 
-  checkPrimalRay(highs, primal_ray_value);
+  // Test that there's no primal or dual ray for this LP that is both
+  // primal and dual infeasible
+  special_lps.primalDualInfeasible1Lp(lp, require_model_status);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.getModelStatus() == require_model_status);
+
+  // Test primal ray for unbounded LP
+  std::string model_file;
+  model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  require_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+  lp = highs.getLp();
+  REQUIRE(highs.changeObjectiveSense(ObjSense::MAXIMIZE));
+  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.getModelStatus() == require_model_status);
+  // Check that there is no dual ray
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(has_dual_ray == false);
+
+  // Check that there is a primal ray
+  primal_ray_value.resize(lp.numCol_);
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(has_primal_ray == true);
+  REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
+          HighsStatus::OK);
+  checkPrimalRayValue(highs, primal_ray_value);
+
 }
