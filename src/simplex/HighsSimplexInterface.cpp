@@ -1226,9 +1226,10 @@ HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
   int numCol = lp.numCol_;
   has_primal_ray = highs_model_object.simplex_lp_status_.has_primal_ray;
   if (has_primal_ray && primal_ray_value != NULL) {
+    int col = highs_model_object.simplex_info_.primal_ray_col_;
     vector<double> rhs;
     vector<double> column;
-    int col = highs_model_object.simplex_info_.primal_ray_col_;
+    column.assign(numRow, 0);
     rhs.assign(numRow, 0);
     if (col < numCol) {
       for (int iEl = lp.Astart_[col]; iEl < lp.Astart_[col + 1]; iEl++)
@@ -1238,6 +1239,9 @@ HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
     }
     int* column_num_nz = 0;
     basisSolve(rhs, &column[0], column_num_nz, NULL, false);
+    for (int iRow = 0; iRow < numRow; iRow++) 
+      primal_ray_value[iRow] = column[iRow];
+    /*
     // Now scatter the column according to the basic variables. Very
     // strange that SCIP wants something of length equal to the number
     // of columns
@@ -1246,6 +1250,7 @@ HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
       int iCol = highs_model_object.simplex_basis_.basicIndex_[iRow];
       if (iCol < numCol) primal_ray_value[iCol] = column[iRow];
     }
+    */
   }
   return HighsStatus::OK;
 }
