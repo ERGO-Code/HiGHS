@@ -1241,16 +1241,13 @@ HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
     basisSolve(rhs, &column[0], column_num_nz, NULL, false);
     for (int iRow = 0; iRow < numRow; iRow++)
       primal_ray_value[iRow] = column[iRow];
-    /*
-    // Now scatter the column according to the basic variables. Very
-    // strange that SCIP wants something of length equal to the number
-    // of columns
+    // Now zero primal_ray_value and scatter the column according to
+    // the basic variables.
     for (int iCol = 0; iCol < numCol; iCol++) primal_ray_value[iCol] = 0;
     for (int iRow = 0; iRow < numRow; iRow++) {
       int iCol = highs_model_object.simplex_basis_.basicIndex_[iRow];
       if (iCol < numCol) primal_ray_value[iCol] = column[iRow];
     }
-    */
   }
   return HighsStatus::OK;
 }
