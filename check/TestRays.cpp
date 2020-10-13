@@ -6,12 +6,11 @@
 const bool dev_run = true;
 const double zero_ray_value_tolerance = 1e-8;
 
-void checkRayDirection(const int dim,
-		       const vector<double>& ray_value,
-		       const vector<double>& expected_ray_value) {
+void checkRayDirection(const int dim, const vector<double>& ray_value,
+                       const vector<double>& expected_ray_value) {
   bool ray_error = false;
   int from_ix = -1;
-  for (int ix = 0; ix<dim; ix++) {
+  for (int ix = 0; ix < dim; ix++) {
     if (fabs(expected_ray_value[ix]) > zero_ray_value_tolerance) {
       // Found a nonzero in the expected ray values
       from_ix = ix;
@@ -20,95 +19,142 @@ void checkRayDirection(const int dim,
       // Found a zero in the expected ray values, so make sure that
       // the ray value is also zero
       if (fabs(ray_value[ix]) > zero_ray_value_tolerance) {
-	ray_error = true;
-	break;
+        ray_error = true;
+        break;
       }
     }
   }
   REQUIRE(!ray_error);
   if (from_ix < 0) return;
   double scale = ray_value[from_ix] / expected_ray_value[from_ix];
-  for (int ix = from_ix+1; ix<dim; ix++) {
+  for (int ix = from_ix + 1; ix < dim; ix++) {
     double scaled_expected_ray_value = expected_ray_value[ix] * scale;
-    if (fabs(ray_value[ix] - scaled_expected_ray_value) > zero_ray_value_tolerance) {
+    if (fabs(ray_value[ix] - scaled_expected_ray_value) >
+        zero_ray_value_tolerance) {
       ray_error = true;
-	break;
-      }
+      break;
+    }
   }
   REQUIRE(!ray_error);
 }
 
-void checkDualRayValue(Highs& highs,
-		       const vector<double>& dual_ray_value) {
+void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   const HighsLp& lp = highs.getLp();
   int numCol = lp.numCol_;
   bool ray_error = false;
   const vector<double>& colLower = highs.getLp().colLower_;
   const vector<double>& colUpper = highs.getLp().colUpper_;
   const vector<HighsBasisStatus>& col_status = highs.getBasis().col_status;
-  for (int iCol=0; iCol<numCol; iCol++) {
-    // Get the dual step for this column
-    double dual_step = 0;
-    for (int iEl=lp.Astart_[iCol]; iEl<lp.Astart_[iCol+1]; iEl++)
-      dual_step += dual_ray_value[lp.Aindex_[iEl]] * lp.Avalue_[iEl];
-    if (col_status[iCol] == HighsBasisStatus::BASIC) {
-      // Basic, so value should be zero
-      printf("Col %3d is basic so dual step should be zero, and is %g\n", iCol, dual_step);
+  std::vector<double> tableau_row;
+  tableau_row.assign(numCol, 0.0);
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    if (col_status[iCol] == HighsBasisStatus::BASIC) continue;
+    // Get the tableau row entry for this nonbasic column
+    for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
+      tableau_row[iCol] += dual_ray_value[lp.Aindex_[iEl]] * lp.Avalue_[iEl];
+  }
+
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    // Nothing to check if basic or fixed (so value can be anything)
+    if (col_status[iCol] == HighsBasisStatus::BASIC ||
+        colLower[iCol] == colUpper[iCol])
+      continue;
+    if (col_status[iCol] == HighsBasisStatus::LOWER) {
+      // At lower bound so value should be non-positive
+      if (tableau_row[iCol] > zero_ray_value_tolerance) {
+        printf(
+            "Col %3d is nonbasic at lower bound so dual step should be "
+            "non-positive, and is %g\n",
+            iCol, tableau_row[iCol]);
+        ray_error = true;
+      }
+    } else if (col_status[iCol] == HighsBasisStatus::UPPER) {
+      // At upper bound so value should be non-negative
+      if (tableau_row[iCol] < -zero_ray_value_tolerance) {
+        printf(
+            "Col %3d is nonbasic at upper bound so dual step should be "
+            "non-negative, and is %g\n",
+            iCol, tableau_row[iCol]);
+        ray_error = true;
+      }
     } else {
-      if (colLower[iCol] == colUpper[iCol]) {
-	// Fixed so value can be anything
-      } else if (col_status[iCol] == HighsBasisStatus::LOWER) {
-	// At lower bound so value should be non-negative
-	if (dual_step < -zero_ray_value_tolerance) {
-	  printf("Col %3d is nonbasic at lower bound so dual step should be non-negative, and is %g\n", iCol, dual_step);
-	  ray_error = true;
-	}
-      } else if (col_status[iCol] == HighsBasisStatus::UPPER) {
-	// At upper bound so value should be non-positive
-	if (dual_step > zero_ray_value_tolerance) {
-	  printf("Col %3d is nonbasic at upper bound so dual step should be non-positive, and is %g\n", iCol, dual_step);
-	  ray_error = true;
-	}
-      } else {
-	// Free so value should be zero
-	assert(col_status[iCol] == HighsBasisStatus::ZERO);
-	if (fabs(dual_step) > zero_ray_value_tolerance) {
-	  printf("Col %3d is free so dual step should be zero, and is %g\n", iCol, dual_step);
-	  ray_error = true;
-	}
+      // Free so value should be zero
+      assert(col_status[iCol] == HighsBasisStatus::ZERO);
+      if (fabs(tableau_row[iCol]) > zero_ray_value_tolerance) {
+        printf("Col %3d is free so dual step should be zero, and is %g\n", iCol,
+               tableau_row[iCol]);
+        ray_error = true;
       }
     }
   }
   REQUIRE(!ray_error);
 }
 
-void checkPrimalRayValue(Highs& highs,
-			 const vector<double>& primal_ray_value) {
+void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   int numCol = highs.getLp().numCol_;
   bool ray_error = false;
   const vector<double>& colLower = highs.getLp().colLower_;
   const vector<double>& colUpper = highs.getLp().colUpper_;
   double dual_feasibility_tolerance;
-  highs.getHighsOptionValue("dual_feasibility_tolerance", dual_feasibility_tolerance);
-  for (int iCol=0; iCol<numCol; iCol++) {
+  highs.getHighsOptionValue("dual_feasibility_tolerance",
+                            dual_feasibility_tolerance);
+  for (int iCol = 0; iCol < numCol; iCol++) {
     if (primal_ray_value[iCol] > 0) {
       // Upper bound must be infinite
       if (colUpper[iCol] < HIGHS_CONST_INF) {
-	ray_error = true;
-	printf("Column %d has primal ray value %g and finite upper bound of %g\n",
-	       iCol, primal_ray_value[iCol], colUpper[iCol]);
+        ray_error = true;
+        printf(
+            "Column %d has primal ray value %g and finite upper bound of %g\n",
+            iCol, primal_ray_value[iCol], colUpper[iCol]);
       }
-    }
-    else if (primal_ray_value[iCol] < 0) {
+    } else if (primal_ray_value[iCol] < 0) {
       // Lower bound must be infinite
       if (colLower[iCol] > -HIGHS_CONST_INF) {
-	ray_error = true;
-	printf("Column %d has primal ray value %g and finite lower bound of %g\n",
-	       iCol, primal_ray_value[iCol], colLower[iCol]);
+        ray_error = true;
+        printf(
+            "Column %d has primal ray value %g and finite lower bound of %g\n",
+            iCol, primal_ray_value[iCol], colLower[iCol]);
       }
     }
   }
   REQUIRE(!ray_error);
+}
+
+void testInfeasibleMps(const std::string model) {
+  Highs highs;
+  std::string model_file;
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  bool has_dual_ray;
+  bool has_primal_ray;
+  vector<double> dual_ray_value;
+  vector<double> primal_ray_value;
+
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+
+  REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
+
+  // Test dual ray for unbounded LP
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+  lp = highs.getLp();
+  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.getModelStatus() == require_model_status);
+  // Check that there is a dual ray
+  dual_ray_value.resize(lp.numRow_);
+  REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
+  REQUIRE(has_dual_ray == true);
+  REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
+          HighsStatus::OK);
+  checkDualRayValue(highs, dual_ray_value);
+  // Check that there is no primal ray
+  REQUIRE(highs.getPrimalRay(has_primal_ray) == HighsStatus::OK);
+  REQUIRE(has_primal_ray == false);
 }
 
 TEST_CASE("Rays", "[highs_test_rays]") {
@@ -117,6 +163,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
     highs.setHighsLogfile();
     highs.setHighsOutput();
   }
+  std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
@@ -143,7 +190,7 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   // Get the dual ray
   REQUIRE(highs.getDualRay(has_dual_ray, &dual_ray_value[0]) ==
           HighsStatus::OK);
-  vector<double> expected_dual_ray = {0.5, -1}; // From SCIP
+  vector<double> expected_dual_ray = {0.5, -1};  // From SCIP
   if (dev_run) {
     printf("Dual ray:\nRow    computed    expected\n");
     for (int iRow = 0; iRow < lp.numRow_; iRow++)
@@ -175,7 +222,6 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.getModelStatus() == require_model_status);
   highs.writeSolution("", true);
 
-
   // Check that there is no dual ray
   REQUIRE(highs.getDualRay(has_dual_ray) == HighsStatus::OK);
   REQUIRE(has_dual_ray == false);
@@ -205,7 +251,6 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   // Test primal ray for unbounded LP
-  std::string model_file;
   model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   require_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
   REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
@@ -225,5 +270,24 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   REQUIRE(highs.getPrimalRay(has_primal_ray, &primal_ray_value[0]) ==
           HighsStatus::OK);
   checkPrimalRayValue(highs, primal_ray_value);
-
 }
+
+TEST_CASE("Rays-galenet", "[highs_test_rays]") { testInfeasibleMps("galenet"); }
+
+TEST_CASE("Rays-woodinfe", "[highs_test_rays]") {
+  testInfeasibleMps("woodinfe");
+}
+
+TEST_CASE("Rays-klein1", "[highs_test_rays]") { testInfeasibleMps("klein1"); }
+
+TEST_CASE("Rays-gams10am", "[highs_test_rays]") {
+  testInfeasibleMps("gams10am");
+}
+
+TEST_CASE("Rays-ex72a", "[highs_test_rays]") { testInfeasibleMps("ex72a"); }
+
+TEST_CASE("Rays-forest6", "[highs_test_rays]") { testInfeasibleMps("forest6"); }
+
+TEST_CASE("Rays-box1", "[highs_test_rays]") { testInfeasibleMps("box1"); }
+
+TEST_CASE("Rays-bgetam", "[highs_test_rays]") { testInfeasibleMps("bgetam"); }

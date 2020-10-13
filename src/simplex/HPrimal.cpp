@@ -774,6 +774,8 @@ void HPrimal::primalUpdate() {
 void HPrimal::savePrimalRay() {
   workHMO.simplex_lp_status_.has_primal_ray = true;
   workHMO.simplex_info_.primal_ray_col_ = columnIn;
+  workHMO.simplex_info_.primal_ray_sign_ =
+      workHMO.simplex_basis_.nonbasicMove_[columnIn];
 }
 
 void HPrimal::iterationAnalysisData() {

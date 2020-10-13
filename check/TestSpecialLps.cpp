@@ -205,6 +205,22 @@ void issue316(Highs& highs) {
   solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
 }
 
+void mpsGalenet(Highs& highs) {
+  reportLpName("mpsGalenet");
+  const HighsModelStatus require_model_status =
+      HighsModelStatus::PRIMAL_INFEASIBLE;
+
+  std::string model = "galenet";
+  std::string model_file;
+  model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+
+  solve(highs, "on", "simplex", require_model_status);
+  solve(highs, "off", "simplex", require_model_status);
+  solve(highs, "on", "ipm", require_model_status);
+  solve(highs, "off", "ipm", require_model_status);
+}
+
 void primalDualInfeasible1(Highs& highs) {
   reportLpName("primalDualInfeasible1");
   // This LP is both primal and dual infeasible - from Wikipedia. IPX
@@ -265,7 +281,6 @@ void mpsGas11(Highs& highs) {
   const HighsModelStatus require_model_status =
       HighsModelStatus::PRIMAL_UNBOUNDED;
 
-  // Unit test fails for IPX with adlittle_max
   std::string model = "gas11";
   std::string model_file;
   model_file = std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -448,6 +463,14 @@ TEST_CASE("LP-316", "[highs_test_special_lps]") {
     highs.setHighsOutput();
   }
   issue316(highs);
+}
+TEST_CASE("LP-galenet", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+  mpsGalenet(highs);
 }
 TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
   Highs highs;

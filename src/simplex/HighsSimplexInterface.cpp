@@ -1211,7 +1211,7 @@ HighsStatus HighsSimplexInterface::getDualRay(bool& has_dual_ray,
     vector<double> rhs;
     int iRow = highs_model_object.simplex_info_.dual_ray_row_;
     rhs.assign(numRow, 0);
-    rhs[iRow] = 1;
+    rhs[iRow] = highs_model_object.simplex_info_.dual_ray_sign_;
     int* dual_ray_num_nz = 0;
     basisSolve(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
   }
@@ -1232,11 +1232,12 @@ HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
     vector<double> column;
     column.assign(numRow, 0);
     rhs.assign(numRow, 0);
+    int rhs_sign = highs_model_object.simplex_info_.primal_ray_sign_;
     if (col < numCol) {
       for (int iEl = lp.Astart_[col]; iEl < lp.Astart_[col + 1]; iEl++)
-        rhs[lp.Aindex_[iEl]] = lp.Avalue_[iEl];
+        rhs[lp.Aindex_[iEl]] = rhs_sign * lp.Avalue_[iEl];
     } else {
-      rhs[col - numCol] = 1;
+      rhs[col - numCol] = rhs_sign;
     }
     int* column_num_nz = 0;
     basisSolve(rhs, &column[0], column_num_nz, NULL, false);
