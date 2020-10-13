@@ -471,8 +471,6 @@ class HDual {
   // (Local) value of computed weight
   double computed_edge_weight;
 
-  bool check_invert_condition = false;
-
   // Partitioned coefficient matrix
   int slice_num;
   int slice_PRICE;

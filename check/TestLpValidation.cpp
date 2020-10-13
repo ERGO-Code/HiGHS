@@ -9,8 +9,6 @@
 #include "HighsTimer.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
-
 // No commas in test case name.
 TEST_CASE("LP-validation", "[highs_data]") {
   // Create an empty LP
@@ -19,10 +17,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsTimer timer;
   HighsStatus return_status;
   options.message_level = ML_ALWAYS;
-  if (!dev_run) {
-    options.output = NULL;
-    options.logfile = NULL;
-  }
 
   Avgas avgas;
   const int avgas_num_col = 8;
@@ -63,11 +57,17 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   return_status =
       hsi.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
+  //  printf("addRows: return_status = %s\n",
+  //  HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
+  //  reportLp(lp, 2);
 
   return_status = hsi.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
                               num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
+  //  printf("addCols: return_status = %s\n",
+  //  HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
+  //  reportLp(lp, 2);
 
   // Create an empty column
   int XnumNewCol = 1;
@@ -200,10 +200,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
   //  reportLp(lp, 2);
 
   Highs highs(options);
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
 
   HighsStatus init_status = highs.passModel(lp);
   REQUIRE(init_status == HighsStatus::OK);

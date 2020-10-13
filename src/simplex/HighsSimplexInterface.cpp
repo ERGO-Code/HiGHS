@@ -1200,36 +1200,6 @@ HighsStatus HighsSimplexInterface::setNonbasicStatus(
   }
   return return_status;
 }
-// Get the basic variables, performing INVERT if necessary
-HighsStatus HighsSimplexInterface::getBasicVariables(int* basic_variables) {
-  HighsLp& lp = highs_model_object.lp_;
-  HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
-
-  if (!simplex_lp_status.valid)
-    highs_model_object.simplex_analysis_.setup(
-        highs_model_object.lp_, highs_model_object.options_,
-        highs_model_object.iteration_counts_.simplex);
-  const bool only_from_known_basis = true;
-  if (initialiseSimplexLpBasisAndFactor(highs_model_object,
-                                        only_from_known_basis))
-    return HighsStatus::Error;
-  assert(simplex_lp_status.has_basis);
-
-  int numRow = lp.numRow_;
-  int numCol = lp.numCol_;
-  assert(numRow == highs_model_object.simplex_lp_.numRow_);
-  for (int row = 0; row < numRow; row++) {
-    int var = highs_model_object.simplex_basis_.basicIndex_[row];
-    if (var < numCol) {
-      basic_variables[row] = var;
-    } else {
-      basic_variables[row] = -(1 + var - numCol);
-    }
-  }
-  return HighsStatus::OK;
-}
-
 // Solve (transposed) system involving the basis matrix
 
 HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
@@ -1834,6 +1804,5 @@ int HighsSimplexInterface::get_basic_indices(int* bind) {
 }
 
 void HighsSimplexInterface::clearBasis() {
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
-                        LpAction::NEW_BASIS);
+  highs_model_object.simplex_lp_status_.has_basis = false;
 }

@@ -5,31 +5,24 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
-
 TEST_CASE("highs-info", "[highs_info]") {
+  std::cout << std::string(HIGHS_DIR) << std::endl;
+
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
 
   Highs highs;
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
   const HighsInfo& highs_info = highs.getHighsInfo();
 
   HighsStatus return_status = highs.readModel(filename);
   REQUIRE(return_status == HighsStatus::OK);
 
-  if (dev_run) {
-    return_status = highs.writeHighsInfo("");
-    REQUIRE(return_status == HighsStatus::OK);
-  }
+  return_status = highs.writeHighsInfo("");
+  REQUIRE(return_status == HighsStatus::OK);
 
-  std::string highs_info_file = "Highs.info";
-  return_status = highs.writeHighsInfo(highs_info_file);
+  return_status = highs.writeHighsInfo("Highs.info");
   REQUIRE(return_status == HighsStatus::OK);
 
 #ifdef IPX_ON
@@ -49,9 +42,8 @@ TEST_CASE("highs-info", "[highs_info]") {
                                           objective_function_value);
   REQUIRE(return_status == HighsStatus::OK);
 
-  if (dev_run)
-    printf("From getHighsInfoValue: objective_function_value = %g\n",
-           objective_function_value);
+  printf("From getHighsInfoValue: objective_function_value = %g\n",
+         objective_function_value);
 
   int simplex_iteration_count;
   return_status =
@@ -63,18 +55,15 @@ TEST_CASE("highs-info", "[highs_info]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   const HighsModelStatus model_status = highs.getModelStatus();
-  if (dev_run) {
-    printf("From getModelStatus: model_status = %s\n",
-           highs.highsModelStatusToString(model_status).c_str());
-    printf("From getHighsInfo: objective_function_value = %g\n",
-           highs_info.objective_function_value);
+  printf("From getModelStatus: model_status = %s\n",
+         highs.highsModelStatusToString(model_status).c_str());
+  printf("From getHighsInfo: objective_function_value = %g\n",
+         highs_info.objective_function_value);
 #ifdef IPX_ON
-    printf("From getHighsInfo: ipm_iteration_count = %d\n",
-           highs_info.ipm_iteration_count);
+  printf("From getHighsInfo: ipm_iteration_count = %d\n",
+         highs_info.ipm_iteration_count);
 #else
-    printf("From getHighsInfo: simplex_iteration_count = %d\n",
-           highs_info.simplex_iteration_count);
+  printf("From getHighsInfo: simplex_iteration_count = %d\n",
+         highs_info.simplex_iteration_count);
 #endif
-  }
-  std::remove(highs_info_file.c_str());
 }

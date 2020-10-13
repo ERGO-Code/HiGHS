@@ -42,10 +42,9 @@ class Highs {
    */
 
   /**
-   * @brief Every model loading module eventually uses passModel to
-   * communicate the model to HiGHS. It clears the vector of
-   * HighsModelObjects (hmos), creates a HighsModelObject for this LP
-   * and makes it the first of the vector of HighsModelObjects
+   * @brief Clears the vector of HighsModelObjects (hmos), creates a
+   * HighsModelObject for this LP and makes it the first of the vector
+   * of HighsModelObjects
    */
   HighsStatus passModel(const HighsLp& lp  //!< The HighsLp instance for this LP
   );
@@ -118,10 +117,10 @@ class Highs {
       const char* value           //!< The option value
   );
 
-  HighsStatus setHighsLogfile(FILE* logfile = NULL  //!< The log file
+  HighsStatus setHighsLogfile(FILE* logfile  //!< The log file
   );
 
-  HighsStatus setHighsOutput(FILE* output = NULL  //!< The log file
+  HighsStatus setHighsOutput(FILE* output  //!< The log file
   );
 
   HighsStatus readHighsOptions(const std::string filename  //!< The filename
@@ -810,7 +809,6 @@ class Highs {
 
   bool haveHmo(const string method_name);
 
-  void newHighsBasis();
   void forceHighsSolutionBasisSize();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 

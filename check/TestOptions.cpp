@@ -1,15 +1,16 @@
 #include <cstdio>
 
+//#include "FilereaderEms.h"
 #include "HMPSIO.h"
+//#include "HMpsFF.h"
 #include "Highs.h"
+//#include "HighsIO.h"
+//#include "HighsLp.h"
 #include "LoadOptions.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
-
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;
-  options.logfile = NULL;
   OptionStatus return_status = checkOptions(options.logfile, options.records);
   REQUIRE(return_status == OptionStatus::OK);
 
@@ -21,7 +22,7 @@ TEST_CASE("internal-options", "[highs_options]") {
   REQUIRE(options.small_matrix_value == 0.001);
   REQUIRE(options.mps_parser_type_free);
 
-  if (dev_run) reportOptions(stdout, options.records, true);
+  reportOptions(stdout, options.records, true);
 
   return_status = checkOptions(options.logfile, options.records);
   REQUIRE(return_status == OptionStatus::OK);
@@ -76,10 +77,8 @@ TEST_CASE("internal-options", "[highs_options]") {
                      options.records, "3.14159");
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  if (dev_run) {
-    printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
-    reportOptions(stdout, options.records);
-  }
+  printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
+  reportOptions(stdout, options.records);
 
   double allowed_simplex_matrix_scale_factor_double = 1e-7;
   return_status = setOptionValue(
@@ -93,10 +92,8 @@ TEST_CASE("internal-options", "[highs_options]") {
                      options.records, allowed_simplex_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::OK);
 
-  if (dev_run) {
-    printf("\nAfter testing int options\n");
-    reportOptions(stdout, options.records);
-  }
+  printf("\nAfter testing int options\n");
+  reportOptions(stdout, options.records);
 
   // Check setting double options
 
@@ -145,7 +142,7 @@ TEST_CASE("internal-options", "[highs_options]") {
                                  options.records, model_file);
   REQUIRE(return_status == OptionStatus::OK);
 
-  if (dev_run) reportOptions(stdout, options.records);
+  reportOptions(stdout, options.records);
 
   bool get_mps_parser_type_free;
   return_status = getOptionValue(options.logfile, "mps_parser_type_free",
@@ -179,10 +176,6 @@ TEST_CASE("internal-options", "[highs_options]") {
 
 TEST_CASE("highs-options", "[highs_options]") {
   Highs highs;
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
   HighsStatus return_status = highs.writeHighsOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::OK);
 
@@ -229,8 +222,7 @@ TEST_CASE("highs-options", "[highs_options]") {
       "allowed_simplex_matrix_scale_factor", "3.14159");
   REQUIRE(return_status == HighsStatus::Error);
 
-  if (dev_run)
-    printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
+  printf("\nAfter setting allowed_simplex_matrix_scale_factor to 1\n");
   return_status = highs.writeHighsOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::OK);
 
@@ -246,7 +238,7 @@ TEST_CASE("highs-options", "[highs_options]") {
                                 allowed_simplex_matrix_scale_factor);
   REQUIRE(return_status == HighsStatus::OK);
 
-  if (dev_run) printf("\nAfter testing int options\n");
+  printf("\nAfter testing int options\n");
   return_status = highs.writeHighsOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::OK);
 

@@ -92,7 +92,6 @@ class HighsSimplexInterface {
   HighsStatus setNonbasicStatus(const HighsIndexCollection& index_collection,
                                 const bool columns);
 
-  HighsStatus getBasicVariables(int* basic_variables);
   HighsStatus basisSolve(const vector<double>& rhs, double* solution,
                          int* solution_num_nz, int* solution_nz_indices,
                          bool transpose = false);

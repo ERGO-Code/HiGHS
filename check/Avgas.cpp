@@ -16,8 +16,6 @@
 #include <cassert>
 #include <cstdio>  // For printf
 
-const bool dev_run = false;
-
 void Avgas::row(int row, int& num_row, int& num_row_nz,
                 std::vector<double>& rowLower, std::vector<double>& rowUpper,
                 std::vector<int>& ARstart, std::vector<int>& ARindex,
@@ -177,7 +175,7 @@ void Avgas::row(int row, int& num_row, int& num_row_nz,
     ARvalue[num_row_nz] = -2;
     num_row_nz++;
   } else {
-    if (dev_run) printf("Avgas: row %d out of range\n", row);
+    printf("Avgas: row %d out of range\n", row);
   }
   num_row++;
 }
@@ -333,7 +331,7 @@ void Avgas::col(int col, int& num_col, int& num_col_nz,
     Avalue[num_col_nz] = -2;
     num_col_nz++;
   } else {
-    if (dev_run) printf("Avgas: col %d out of range\n", col);
+    printf("Avgas: col %d out of range\n", col);
   }
   num_col++;
 }

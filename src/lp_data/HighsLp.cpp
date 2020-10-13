@@ -13,16 +13,6 @@
  */
 #include "lp_data/HighsLp.h"
 
-void setLogicalBasis(const HighsLp& lp, HighsBasis& basis) {
-  basis.col_status.resize(lp.numCol_);
-  basis.row_status.resize(lp.numRow_);
-  for (int iCol = 0; iCol < lp.numCol_; iCol++)
-    basis.col_status[iCol] = HighsBasisStatus::NONBASIC;
-  for (int iRow = 0; iRow < lp.numRow_; iRow++)
-    basis.row_status[iRow] = HighsBasisStatus::BASIC;
-  basis.valid_ = true;
-}
-
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
   bool consistent = true;
   consistent = isBasisRightSize(lp, basis) && consistent;

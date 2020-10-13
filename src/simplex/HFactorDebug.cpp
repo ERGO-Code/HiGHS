@@ -169,55 +169,40 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
   if (call_id == 0) {
     if (numRow > 123) return;
-    HighsPrintMessage(output, message_level, ML_DETAILED,
-                      "buildRankDeficiency0:");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nPerm   ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", permute[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIwork  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", iwork[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nBaseI  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d",
-                        baseIndex[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+    printf("buildRankDeficiency0:");
+    printf("\nIndex  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", i);
+    printf("\nPerm   ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", permute[i]);
+    printf("\nIwork  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
+    printf("\nBaseI  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
+    printf("\n");
   } else if (call_id == 1) {
     if (rank_deficiency > 100) return;
-    HighsPrintMessage(output, message_level, ML_DETAILED,
-                      "buildRankDeficiency1:");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
-    for (int i = 0; i < rank_deficiency; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nnoPvR  ");
-    for (int i = 0; i < rank_deficiency; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", noPvR[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nnoPvC  ");
-    for (int i = 0; i < rank_deficiency; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", noPvC[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
-    if (numRow > 123) return;
-    HighsPrintMessage(output, message_level, ML_DETAILED, "Index  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIwork  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", iwork[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+    printf("buildRankDeficiency1:");
+    printf("\nIndex  ");
+    for (int i = 0; i < rank_deficiency; i++) printf(" %2d", i);
+    printf("\nnoPvR  ");
+    for (int i = 0; i < rank_deficiency; i++) printf(" %2d", noPvR[i]);
+    printf("\nnoPvC  ");
+    for (int i = 0; i < rank_deficiency; i++) printf(" %2d", noPvC[i]);
+    if (numRow > 123) {
+      printf("\nIndex  ");
+      for (int i = 0; i < numRow; i++) printf(" %2d", i);
+      printf("\nIwork  ");
+      for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
+    }
+    printf("\n");
   } else if (call_id == 2) {
     if (numRow > 123) return;
-    HighsPrintMessage(output, message_level, ML_DETAILED,
-                      "buildRankDeficiency2:");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nPerm   ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", permute[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+    printf("buildRankDeficiency2:");
+    printf("\nIndex  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", i);
+    printf("\nPerm   ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", permute[i]);
+    printf("\n");
   }
 }
 
@@ -244,44 +229,30 @@ void debugReportRankDeficientASM(
       int ASMrow = MCindex[en];
       int i = -iwork[ASMrow] - 1;
       if (i < 0 || i >= rank_deficiency) {
-        HighsPrintMessage(
-            output, message_level, ML_DETAILED,
-            "STRANGE: 0 > i = %d || %d = i >= rank_deficiency = %d\n", i, i,
-            rank_deficiency);
+        printf("STRANGE: 0 > i = %d || %d = i >= rank_deficiency = %d\n", i, i,
+               rank_deficiency);
       } else {
         if (noPvR[i] != ASMrow) {
-          HighsPrintMessage(output, message_level, ML_DETAILED,
-                            "STRANGE: %d = noPvR[i] != ASMrow = %d\n", noPvR[i],
-                            ASMrow);
+          printf("STRANGE: %d = noPvR[i] != ASMrow = %d\n", noPvR[i], ASMrow);
         }
-        HighsPrintMessage(output, message_level, ML_DETAILED,
-                          "Setting ASM(%2d, %2d) = %11.4g\n", i, j,
-                          MCvalue[en]);
+        printf("Setting ASM(%2d, %2d) = %11.4g\n", i, j, MCvalue[en]);
         ASM[i + j * rank_deficiency] = MCvalue[en];
       }
     }
   }
-  HighsPrintMessage(output, message_level, ML_DETAILED,
-                    "ASM:                    ");
-  for (int j = 0; j < rank_deficiency; j++)
-    HighsPrintMessage(output, message_level, ML_DETAILED, " %11d", j);
-  HighsPrintMessage(output, message_level, ML_DETAILED,
-                    "\n                        ");
-  for (int j = 0; j < rank_deficiency; j++)
-    HighsPrintMessage(output, message_level, ML_DETAILED, " %11d", noPvC[j]);
-  HighsPrintMessage(output, message_level, ML_DETAILED,
-                    "\n                        ");
-  for (int j = 0; j < rank_deficiency; j++)
-    HighsPrintMessage(output, message_level, ML_DETAILED, "------------");
-  HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+  printf("ASM:                    ");
+  for (int j = 0; j < rank_deficiency; j++) printf(" %11d", j);
+  printf("\n                        ");
+  for (int j = 0; j < rank_deficiency; j++) printf(" %11d", noPvC[j]);
+  printf("\n                        ");
+  for (int j = 0; j < rank_deficiency; j++) printf("------------");
+  printf("\n");
   for (int i = 0; i < rank_deficiency; i++) {
-    HighsPrintMessage(output, message_level, ML_DETAILED, "%11d %11d|", i,
-                      noPvR[i]);
+    printf("%11d %11d|", i, noPvR[i]);
     for (int j = 0; j < rank_deficiency; j++) {
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %11.4g",
-                        ASM[i + j * rank_deficiency]);
+      printf(" %11.4g", ASM[i + j * rank_deficiency]);
     }
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+    printf("\n");
   }
   free(ASM);
 }
@@ -293,27 +264,20 @@ void debugReportMarkSingC(const int call_id, const int highs_debug_level,
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
   if (numRow > 123) return;
   if (call_id == 0) {
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nMarkSingC1");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\niwork  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", iwork[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nBaseI  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d",
-                        baseIndex[i]);
+    printf("\nMarkSingC1");
+    printf("\nIndex  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", i);
+    printf("\niwork  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
+    printf("\nBaseI  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
   } else if (call_id == 1) {
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nMarkSingC2");
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nIndex  ");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d", i);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\nNwBaseI");
-    for (int i = 0; i < numRow; i++)
-      HighsPrintMessage(output, message_level, ML_DETAILED, " %2d",
-                        baseIndex[i]);
-    HighsPrintMessage(output, message_level, ML_DETAILED, "\n");
+    printf("\nMarkSingC2");
+    printf("\nIndex  ");
+    for (int i = 0; i < numRow; i++) printf(" %2d", i);
+    printf("\nNwBaseI");
+    for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
+    printf("\n");
   }
 }
 
@@ -324,31 +288,9 @@ void debugLogRankDeficiency(const int highs_debug_level, FILE* output,
                             const int kernel_num_el, const int nwork) {
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
   if (!rank_deficiency) return;
-  HighsPrintMessage(
-      output, message_level, ML_DETAILED,
+  printf(  // highsPrintMessage(output, message_level, ML_DETAILED,
       "Rank deficiency %1d: basis_matrix (%d el); INVERT (%d el); kernel (%d "
       "dim; %d el): nwork = %d\n",
       rank_deficiency, basis_matrix_num_el, invert_num_el, kernel_dim,
       kernel_num_el, nwork);
-}
-
-void debugPivotValueAnalysis(const int highs_debug_level, FILE* output,
-                             const int message_level, const int numRow,
-                             const vector<double>& UpivotValue) {
-  if (highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP) return;
-  double min_pivot = HIGHS_CONST_INF;
-  double mean_pivot = 0;
-  double max_pivot = 0;
-  for (int iRow = 0; iRow < numRow; iRow++) {
-    double abs_pivot = fabs(UpivotValue[iRow]);
-    min_pivot = min(abs_pivot, min_pivot);
-    max_pivot = min(abs_pivot, max_pivot);
-    mean_pivot += log(abs_pivot);
-  }
-  mean_pivot = exp(mean_pivot / numRow);
-  if (highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP || min_pivot < 1e-8)
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "InvertPivotAnalysis: %d pivots: Min %g in row %d; Mean "
-                      "%g; Max %g in row %d\n",
-                      numRow, min_pivot, mean_pivot, max_pivot);
 }

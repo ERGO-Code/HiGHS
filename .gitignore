@@ -89,7 +89,6 @@ ml.mps
 ml.lp
 ml.ems
 options_file
-*.pbm
 
 # Visual C++ cache files
 ipch/

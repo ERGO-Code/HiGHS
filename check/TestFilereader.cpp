@@ -9,8 +9,6 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 
-const bool dev_run = false;
-
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   std::string model = "";
   std::string model_file;
@@ -25,10 +23,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   const bool test_garbage_lp = false;
 
   Highs highs(options);
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
   const HighsInfo& info = highs.getHighsInfo();
 
   // Try to run HiGHS with default options. No model loaded so fails
@@ -101,10 +95,6 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   HighsOptions options;
 
   Highs highs(options);
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
 
@@ -133,10 +123,6 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   HighsOptions options;
 
   Highs highs(options);
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
   HighsLp lp_mps = highs.getLp();
@@ -172,7 +158,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   double mps_objective_function_value = info.objective_function_value;
 
   // Read lp and compare objective with mps
-  if (dev_run) std::cout << "Reading " << filename_lp << std::endl;
+  std::cout << "Reading " << filename_lp << std::endl;
   status = highs.readModel(filename_lp);
   REQUIRE(status == HighsStatus::OK);
 
@@ -195,10 +181,6 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   HighsOptions options;
 
   Highs highs(options);
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
 
@@ -241,10 +223,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   REQUIRE(status == HighsStatus::OK);
 
   Highs highs_lp;
-  if (!dev_run) {
-    highs_lp.setHighsLogfile();
-    highs_lp.setHighsOutput();
-  }
   HighsModelStatus model_status;
   status = highs_lp.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
@@ -253,10 +231,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   Highs highs_primal;
-  if (!dev_run) {
-    highs_primal.setHighsLogfile();
-    highs_primal.setHighsOutput();
-  }
   status = highs_primal.passModel(primal);
   REQUIRE(status == HighsStatus::OK);
   status = highs_primal.run();
@@ -275,10 +249,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   status = dualizeEqualityProblem(primal, dual);
   REQUIRE(status == HighsStatus::OK);
   Highs highs_dual;
-  if (!dev_run) {
-    highs_dual.setHighsLogfile();
-    highs_dual.setHighsOutput();
-  }
   status = assessLp(dual, options);
   REQUIRE(status == HighsStatus::OK);
   status = highs_dual.passModel(dual);

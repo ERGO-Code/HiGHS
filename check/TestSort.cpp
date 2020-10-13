@@ -6,8 +6,6 @@
 #include "util/HighsRandom.h"
 #include "util/HighsSort.h"
 
-const bool dev_run = false;
-
 // No commas in test case name.
 TEST_CASE("HiGHS_sort", "[highs_data]") {
   int num_values = 10;
@@ -36,6 +34,8 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   bool error1 = false;
   double previous_double = -1e200;
   for (int ix = 0; ix < num_values; ix++) {
+    //    printf("%2d: %2d %12g %12g\n", ix, indices[1+ix], double_values[1+ix],
+    //    original_double_values[1+ix]);
     error0 = error0 || double_values[1 + ix] < previous_double;
     previous_double = double_values[1 + ix];
     error1 = error1 ||
