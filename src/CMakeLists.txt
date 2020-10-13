@@ -421,6 +421,8 @@ target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/
                            presolve/ util/ test/ interfaces/ ../external/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
+target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
+
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
