@@ -1955,17 +1955,6 @@ void HDual::saveDualRay() {
   workHMO.simplex_lp_status_.has_dual_ray = true;
   workHMO.simplex_info_.dual_ray_row_ = rowOut;
   workHMO.simplex_info_.dual_ray_sign_ = sourceOut;
-  std::string type;
-  int ix;
-  if (columnOut < solver_num_col) {
-    type = "column";
-    ix = columnOut;
-  } else {
-    type = "row";
-    ix = columnOut - solver_num_row;
-  }
-  printf("Saving dual ray info for row %d (variable %s - %d) with sign %d\n",
-	 rowOut, type.c_str(), ix, sourceOut);
 }
 
 bool HDual::getNonsingularInverse() {
