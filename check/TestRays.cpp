@@ -41,11 +41,15 @@ void checkRayDirection(const int dim, const vector<double>& ray_value,
 void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
   const HighsLp& lp = highs.getLp();
   int numCol = lp.numCol_;
+  int numRow = lp.numRow_;
   bool ray_error = false;
-  const vector<double>& colLower = highs.getLp().colLower_;
-  const vector<double>& colUpper = highs.getLp().colUpper_;
+  const vector<double>& colLower = lp.colLower_;
+  const vector<double>& colUpper = lp.colUpper_;
+  const vector<double>& rowLower = lp.rowLower_;
+  const vector<double>& rowUpper = lp.rowUpper_;
   const vector<HighsBasisStatus>& col_status = highs.getBasis().col_status;
-  std::vector<double> tableau_row;
+  const vector<HighsBasisStatus>& row_status = highs.getBasis().row_status;
+  vector<double> tableau_row;
   tableau_row.assign(numCol, 0.0);
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (col_status[iCol] == HighsBasisStatus::BASIC) continue;
@@ -63,7 +67,7 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       // At lower bound so value should be non-positive
       if (tableau_row[iCol] > zero_ray_value_tolerance) {
         printf(
-            "Col %3d is nonbasic at lower bound so dual step should be "
+            "Col %3d is at lower bound so dual step should be "
             "non-positive, and is %g\n",
             iCol, tableau_row[iCol]);
         ray_error = true;
@@ -72,7 +76,7 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       // At upper bound so value should be non-negative
       if (tableau_row[iCol] < -zero_ray_value_tolerance) {
         printf(
-            "Col %3d is nonbasic at upper bound so dual step should be "
+            "Col %3d is at upper bound so dual step should be "
             "non-negative, and is %g\n",
             iCol, tableau_row[iCol]);
         ray_error = true;
@@ -87,17 +91,57 @@ void checkDualRayValue(Highs& highs, const vector<double>& dual_ray_value) {
       }
     }
   }
+  for (int iRow = 0; iRow < numRow; iRow++) {
+    if (row_status[iRow] == HighsBasisStatus::BASIC ||
+        rowLower[iRow] == rowUpper[iRow]) continue;
+    if (row_status[iRow] == HighsBasisStatus::LOWER) {
+      // At lower bound so value should be non-negative
+      if (dual_ray_value[iRow] < -zero_ray_value_tolerance) {
+        printf(
+	       "Row %3d is at lower bound so dual step should be "
+	       "non-negative, and is %g\n",
+	       iRow, dual_ray_value[iRow]);
+        ray_error = true;
+      }
+    } else if (row_status[iRow] == HighsBasisStatus::UPPER) {
+      // At upper bound so value should be non-positive
+      if (dual_ray_value[iRow] > zero_ray_value_tolerance) {
+        printf(
+	       "Row %3d is at upper bound so dual step should be "
+	       "non-positive, and is %g\n",
+	       iRow, dual_ray_value[iRow]);
+        ray_error = true;
+      }
+    } else {
+      // Free so value should be zero
+      assert(row_status[iRow] == HighsBasisStatus::ZERO);
+      if (fabs(dual_ray_value[iRow]) > zero_ray_value_tolerance) {
+        printf("Row %3d is free so dual step should be zero, and is %g\n", iRow,
+               dual_ray_value[iRow]);
+        ray_error = true;
+      }
+    }
+  }
   REQUIRE(!ray_error);
 }
 
 void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
-  int numCol = highs.getLp().numCol_;
+  const HighsLp& lp = highs.getLp();
+  int numCol = lp.numCol_;
+  int numRow = lp.numRow_;
   bool ray_error = false;
-  const vector<double>& colLower = highs.getLp().colLower_;
-  const vector<double>& colUpper = highs.getLp().colUpper_;
+  const vector<double>& colLower = lp.colLower_;
+  const vector<double>& colUpper = lp.colUpper_;
   double dual_feasibility_tolerance;
   highs.getHighsOptionValue("dual_feasibility_tolerance",
                             dual_feasibility_tolerance);
+  vector<double> row_ray_values;
+  row_ray_values.assign(numRow, 0.0);
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
+      row_ray_values[lp.Aindex_[iEl]] += primal_ray_value[iCol] * lp.Avalue_[iEl];
+  }
+    
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (primal_ray_value[iCol] > 0) {
       // Upper bound must be infinite
