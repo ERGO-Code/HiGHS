@@ -132,14 +132,16 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
   bool ray_error = false;
   const vector<double>& colLower = lp.colLower_;
   const vector<double>& colUpper = lp.colUpper_;
+  const vector<double>& rowLower = lp.rowLower_;
+  const vector<double>& rowUpper = lp.rowUpper_;
   double dual_feasibility_tolerance;
   highs.getHighsOptionValue("dual_feasibility_tolerance",
                             dual_feasibility_tolerance);
-  vector<double> row_ray_values;
-  row_ray_values.assign(numRow, 0.0);
+  vector<double> row_ray_value;
+  row_ray_value.assign(numRow, 0.0);
   for (int iCol = 0; iCol < numCol; iCol++) {
     for (int iEl = lp.Astart_[iCol]; iEl < lp.Astart_[iCol + 1]; iEl++)
-      row_ray_values[lp.Aindex_[iEl]] += primal_ray_value[iCol] * lp.Avalue_[iEl];
+      row_ray_value[lp.Aindex_[iEl]] += primal_ray_value[iCol] * lp.Avalue_[iEl];
   }
     
   for (int iCol = 0; iCol < numCol; iCol++) {
@@ -147,17 +149,32 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
       // Upper bound must be infinite
       if (colUpper[iCol] < HIGHS_CONST_INF) {
         ray_error = true;
-        printf(
-            "Column %d has primal ray value %g and finite upper bound of %g\n",
-            iCol, primal_ray_value[iCol], colUpper[iCol]);
+        printf("Column %d has primal ray value %g and finite upper bound of %g\n",
+	       iCol, primal_ray_value[iCol], colUpper[iCol]);
       }
     } else if (primal_ray_value[iCol] < 0) {
       // Lower bound must be infinite
       if (colLower[iCol] > -HIGHS_CONST_INF) {
         ray_error = true;
-        printf(
-            "Column %d has primal ray value %g and finite lower bound of %g\n",
-            iCol, primal_ray_value[iCol], colLower[iCol]);
+        printf("Column %d has primal ray value %g and finite lower bound of %g\n",
+	       iCol, primal_ray_value[iCol], colLower[iCol]);
+      }
+    }
+  }
+  for (int iRow = 0; iRow < numRow; iRow++) {
+    if (row_ray_value[iRow] > 0) {
+      // Lower bound must be infinite
+      if (rowUpper[iRow] > -HIGHS_CONST_INF) {< HIGHS_CONST_INF) {
+        ray_error = true;
+        printf("Row %d has primal ray value %g and finite lower bound of %g\n",
+	       iRow, primal_ray_value[iRow], rowLower[iRow]);
+      }
+    } else if (primal_ray_value[iRow] < 0) {
+      // Upper bound must be infinite
+      if (rowLower[iRow] > -HIGHS_CONST_INF) {
+        ray_error = true;
+        printf("Row %d has primal ray value %g and finite upper bound of %g\n",
+	       iRow, primal_ray_value[iRow], rowUpper[iRow]);
       }
     }
   }
