@@ -24,6 +24,9 @@ void setSimplexOptions(
                                           //!< options are to be set
 );
 
+int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
+                                      const bool only_from_known_basis = false);
+
 HighsStatus transition(HighsModelObject& highs_model_object  //!< Model object
 );
 
@@ -41,7 +44,8 @@ void initialiseNonbasicWorkValue(const HighsLp& simplex_lp,
                                  const SimplexBasis& simplex_basis,
                                  HighsSimplexInfo& simplex_info);
 
-bool basisConditionOk(HighsModelObject& highs_model_object);
+bool basisConditionOk(HighsModelObject& highs_model_object,
+                      const double tolerance);
 
 // Methods not requiring HighsModelObject
 
@@ -185,7 +189,7 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
                    int columnOut);
 
 bool reinvertOnNumericalTrouble(const std::string method_name,
-                                const HighsModelObject& highs_model_object,
+                                HighsModelObject& highs_model_object,
                                 double& numerical_trouble_measure,
                                 const double alpha_from_col,
                                 const double alpha_from_row,

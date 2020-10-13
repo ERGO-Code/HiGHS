@@ -173,7 +173,6 @@ struct HighsSimplexLpStatus {
 };
 
 struct HighsSimplexInfo {
-  bool initialised = false;
   // Simplex information regarding primal solution, dual solution and
   // objective for this Highs Model Object. This is information which
   // should be retained from one run to the next in order to provide
@@ -246,6 +245,7 @@ struct HighsSimplexInfo {
   int price_strategy;
 
   double dual_simplex_cost_perturbation_multiplier;
+  double factor_pivot_threshold;
   int update_limit;
 
   // Internal options - can't be changed externally
@@ -319,7 +319,7 @@ struct HighsSimplexInfo {
   // Analysis of INVERT form
   int num_kernel = 0;
   int num_major_kernel = 0;
-  const double major_kernel_relative_dim_threshhold = 0.1;
+  const double major_kernel_relative_dim_threshold = 0.1;
   double max_kernel_dim = 0;
   double sum_kernel_dim = 0;
   double running_average_kernel_dim = 0;
@@ -400,6 +400,9 @@ struct HighsRanging {
   std::vector<int> rowBoundRangeDnInCol_;
   std::vector<int> rowBoundRangeDnOutCol_;
 };
+
+// Set a basis to be logical for the LP
+void setLogicalBasis(const HighsLp& lp, HighsBasis& basis);
 
 // Make sure the sizes of solution and basis vectors are consistent
 // with numRow_ and numCol_

@@ -20,11 +20,11 @@ set(TEST_SOURCES
     TestSetup.cpp
     TestFilereader.cpp
     TestInfo.cpp
+    TestBasis.cpp
     TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpSolvers.cpp
-    TestBasisIO.cpp
     TestSpecialLps.cpp
     Avgas.cpp)
 
@@ -132,17 +132,17 @@ endif (GAMS_FOUND)
 #
 # define the set of feasible instances
 set(successInstances
-    "25fv47\;2888\; 5.501846\;"
-    "80bau3b\;3760\; 9.872242\;"
-    "adlittle\;81\; 2.254950\;"
-    "afiro\;21\;-4.647531\;"
-    "etamacro\;507\;-7.557152\;"
-    "greenbea\;5249\;-7.255525\;"
-    "shell\;624\; 1.208825\;"
-    "stair\;555\;-2.512670\;"
-    "standata\;74\; 1.257699\;"
-    "standgub\;67\; 1.257699\;"
-    "standmps\;215\; 1.406017\;"
+    "25fv47\;2888\; 5.5018458883\;"
+    "80bau3b\;3760\; 9.8722419241\;"
+    "adlittle\;81\; 2.2549496316\;"
+    "afiro\;21\;-4.6475314286\;"
+    "etamacro\;507\;-7.5571523130\;"
+    "greenbea\;5249\;-7.2555248130\;"
+    "shell\;624\; 1.2088253460\;"
+    "stair\;555\;-2.5126695119\;"
+    "standata\;74\; 1.2576995000\;"
+    "standgub\;67\; 1.2576995000\;"
+    "standmps\;215\; 1.4060175000\;"
     )
 
 set(infeasibleInstances

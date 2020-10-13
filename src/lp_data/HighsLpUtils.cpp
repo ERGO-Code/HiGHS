@@ -1823,6 +1823,8 @@ HighsStatus writeBasisFile(const HighsOptions& options, const HighsBasis& basis,
 
 HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
                           const std::string filename) {
+  // Reads a basis file, returning an error if what's read is
+  // inconsistent with the sizes of the HighsBasis passed in
   HighsStatus return_status = HighsStatus::OK;
   std::ifstream inFile(filename);
   if (inFile.fail()) {
@@ -1841,15 +1843,13 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
     int basis_numRow = (int)basis.row_status.size();
     if (numCol != basis_numCol) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "readBasisFile: Basis file is for %d columns but current "
-                      "HIGHS basis is for %d columns",
+                      "readBasisFile: Basis file is for %d columns, not %d",
                       numCol, basis_numCol);
       return HighsStatus::Error;
     }
     if (numRow != basis_numRow) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "readBasisFile: Basis file is for %d rows but current "
-                      "HIGHS basis is for %d rows",
+                      "readBasisFile: Basis file is for %d rows, not %d",
                       numRow, basis_numRow);
       return HighsStatus::Error;
     }
@@ -1862,6 +1862,18 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
       inFile >> int_status;
       basis.row_status[iRow] = (HighsBasisStatus)int_status;
     }
+    if (inFile.eof()) {
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "readBasisFile: Reached end of file before reading complete basis");
+      return_status = HighsStatus::Error;
+    }
+  } else {
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
+        "readBasisFile: Cannot read basis file for HiGHS version %d",
+        highs_version_number);
+    return_status = HighsStatus::Error;
   }
   inFile.close();
   return return_status;

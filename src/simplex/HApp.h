@@ -96,11 +96,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   analysis.simplexTimerStart(SimplexTotalClock);
 #endif
-  // Set simplex options from HiGHS options.
-  // ToDo: Should only be done when not hot-starting since strategy
-  // knowledge based on run-time experience should be preserved.
-  setSimplexOptions(highs_model_object);
-  //
   // Transition to the best possible simplex basis and solution
   call_status = transition(highs_model_object);
   return_status = interpretCallStatus(call_status, return_status, "transition");
