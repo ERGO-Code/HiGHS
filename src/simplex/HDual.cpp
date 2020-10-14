@@ -2408,9 +2408,9 @@ double HDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      printf(
-          "Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
-          iCol, exact_dual, simplex_info.workDual_[iCol], residual);
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		      "Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g",
+		      iCol, exact_dual, simplex_info.workDual_[iCol], residual);
     dual_objective += simplex_info.workValue_[iCol] * exact_dual;
   }
   for (int iVar = simplex_lp.numCol_; iVar < numTot; iVar++) {
@@ -2421,9 +2421,9 @@ double HDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      printf(
-          "Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
-          iRow, exact_dual, simplex_info.workDual_[iVar], residual);
+      HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+		      "Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g",
+		      iRow, exact_dual, simplex_info.workDual_[iVar], residual);
     dual_objective += simplex_info.workValue_[iVar] * exact_dual;
   }
   double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
