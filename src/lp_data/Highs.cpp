@@ -915,6 +915,7 @@ HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
+  underDevelopmentLogMessage("getPrimalRay");
   if (!haveHmo("getPrimalRay")) return HighsStatus::Error;
   HighsSimplexInterface simplex_interface(hmos_[0]);
   return simplex_interface.getPrimalRay(has_primal_ray, primal_ray_value);
@@ -1145,7 +1146,6 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
 
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsStatus return_status = HighsStatus::OK;
-  underDevelopmentLogMessage("setSolution");
   // Check if solution is valid.
   assert((int)solution_.col_value.size() != 0 ||
          (int)solution_.col_value.size() != lp_.numCol_);
@@ -1172,7 +1172,6 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
-  underDevelopmentLogMessage("setBasis");
   // Check the user-supplied basis
   if (!isBasisConsistent(lp_, basis)) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
@@ -1189,7 +1188,6 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
 }
 
 HighsStatus Highs::setBasis() {
-  underDevelopmentLogMessage("setBasis");
   // Invalidate the basis for HiGHS Don't set to logical basis since
   // that causes presolve to be skipped
   this->basis_.valid_ = false;
@@ -1212,7 +1210,6 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
                     const int* starts, const int* indices,
                     const double* values) {
   HighsStatus return_status = HighsStatus::OK;
-  underDevelopmentLogMessage("addRows");
   // Check that there is a HighsModelObject
   if (!haveHmo("addRows")) return false;
   HighsSimplexInterface interface(hmos_[0]);
@@ -1237,7 +1234,6 @@ bool Highs::addCols(const int num_new_col, const double* costs,
                     const int num_new_nz, const int* starts, const int* indices,
                     const double* values) {
   HighsStatus return_status = HighsStatus::OK;
-  underDevelopmentLogMessage("addCols");
   if (!haveHmo("addCols")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interpretCallStatus(
@@ -1250,7 +1246,6 @@ bool Highs::addCols(const int num_new_col, const double* costs,
 
 bool Highs::changeObjectiveSense(const ObjSense sense) {
   HighsStatus return_status = HighsStatus::OK;
-  underDevelopmentLogMessage("changeObjectiveSense");
   if (!haveHmo("changeObjectiveSense")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interpretCallStatus(interface.changeObjectiveSense(sense),
@@ -1268,7 +1263,6 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
   if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("changeColsCost");
   // Create a local set that is not const since index_collection.set_
   // cannot be const as it may change if the set is not ordered
   vector<int> local_set{set, set + num_set_entries};
@@ -1289,7 +1283,6 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
 bool Highs::changeColsCost(const int* mask, const double* cost) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("changeColsCost");
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
@@ -1316,7 +1309,6 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
                              const double* lower, const double* upper) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("changeColsBounds");
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_interval_ = true;
@@ -1336,7 +1328,6 @@ bool Highs::changeColsBounds(const int num_set_entries, const int* set,
   if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("changeColsBounds");
   // Create a local set that is not const since index_collection.set_
   // cannot be const as it may change if the set is not ordered
   vector<int> local_set{set, set + num_set_entries};
@@ -1358,7 +1349,6 @@ bool Highs::changeColsBounds(const int* mask, const double* lower,
                              const double* upper) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("changeColsBounds");
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
@@ -1386,7 +1376,6 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
   if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("changeRowsBounds");
   // Create a local set that is not const since index_collection.set_
   // cannot be const as it may change if the set is not ordered
   vector<int> local_set{set, set + num_set_entries};
@@ -1408,7 +1397,6 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
                              const double* upper) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("changeRowsBounds");
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
@@ -1429,7 +1417,6 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
 bool Highs::changeCoeff(const int row, const int col, const double value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("changeCoeff");
   if (!haveHmo("changeCoeff")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeCoefficient(row, col, value);
@@ -1440,7 +1427,6 @@ bool Highs::changeCoeff(const int row, const int col, const double value) {
 }
 
 bool Highs::getObjectiveSense(ObjSense& sense) {
-  underDevelopmentLogMessage("getObjectiveSense");
   if (!haveHmo("getObjectiveSense")) return false;
   sense = hmos_[0].lp_.sense_;
   return true;
@@ -1451,7 +1437,6 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
                     int* start, int* index, double* value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("getCols");
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_interval_ = true;
@@ -1472,7 +1457,6 @@ bool Highs::getCols(const int num_set_entries, const int* set, int& num_col,
   if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("getCols");
   // Create a local set that is not const since index_collection.set_
   // cannot be const as it may change if the set is not ordered
   vector<int> local_set{set, set + num_set_entries};
@@ -1495,7 +1479,6 @@ bool Highs::getCols(const int* mask, int& num_col, double* costs, double* lower,
                     double* value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("getCols");
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
@@ -1518,7 +1501,6 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
                     int* index, double* value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("getRows");
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_interval_ = true;
@@ -1539,7 +1521,6 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
   if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("getRows");
   // Create a local set that is not const since index_collection.set_
   // cannot be const as it may change if the set is not ordered
   vector<int> local_set{set, set + num_set_entries};
@@ -1561,7 +1542,6 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
                     int& num_nz, int* start, int* index, double* value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("getRows");
   // Create a local mask that is not const since
   // index_collection.mask_ cannot be const as it changes when
   // deleting rows/columns
@@ -1582,7 +1562,6 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
 bool Highs::getCoeff(const int row, const int col, double& value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("getCoeff");
   if (!haveHmo("getCoeff")) return false;
   HighsSimplexInterface interface(hmos_[0]);
 
@@ -1596,7 +1575,6 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
 bool Highs::deleteCols(const int from_col, const int to_col) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("deleteCols");
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_interval_ = true;
@@ -1614,7 +1592,6 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
   if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("deleteCols");
   // Create a local set that is not const since index_collection.set_
   // cannot be const as it may change if the set is not ordered
   vector<int> local_set{set, set + num_set_entries};
@@ -1634,7 +1611,6 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
 bool Highs::deleteCols(int* mask) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("deleteCols");
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numCol_;
   index_collection.is_mask_ = true;
@@ -1650,7 +1626,6 @@ bool Highs::deleteCols(int* mask) {
 bool Highs::deleteRows(const int from_row, const int to_row) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("deleteRows");
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_interval_ = true;
@@ -1668,7 +1643,6 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
   if (num_set_entries <= 0) return true;
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("deleteRows");
   // Create a local set that is not const since index_collection.set_
   // cannot be const as it may change if the set is not ordered
   vector<int> local_set{set, set + num_set_entries};
@@ -1688,7 +1662,6 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
 bool Highs::deleteRows(int* mask) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("deleteRows");
   HighsIndexCollection index_collection;
   index_collection.dimension_ = lp_.numRow_;
   index_collection.is_mask_ = true;
@@ -1704,7 +1677,6 @@ bool Highs::deleteRows(int* mask) {
 bool Highs::scaleCol(const int col, const double scaleval) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("scaleCol");
   if (!haveHmo("scaleCol")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.scaleCol(col, scaleval);
@@ -1716,7 +1688,6 @@ bool Highs::scaleCol(const int col, const double scaleval) {
 bool Highs::scaleRow(const int row, const double scaleval) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  underDevelopmentLogMessage("scaleRow");
   if (!haveHmo("scaleRow")) return false;
   HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.scaleRow(row, scaleval);
@@ -2269,12 +2240,10 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   return return_status;
 }
 void Highs::underDevelopmentLogMessage(const string method_name) {
-  /*
   HighsLogMessage(
       options_.logfile, HighsMessageType::WARNING,
       "Method %s is still under development and behaviour may be unpredictable",
       method_name.c_str());
-  */
 }
 
 void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {
