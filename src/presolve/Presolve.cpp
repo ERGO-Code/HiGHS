@@ -55,6 +55,7 @@ void Presolve::load(const HighsLp& lp) {
 
   colCost = lp.colCost_;
   if (lp.sense_ == ObjSense::MAXIMIZE) {
+    maximization = true;
     for (unsigned int col = 0; col < lp.colCost_.size(); col++)
       colCost[col] = -colCost[col];
   }
@@ -1025,7 +1026,10 @@ void Presolve::resizeProblem() {
   int k = 0;
   for (int i = 0; i < numColOriginal; ++i)
     if (flagCol.at(i)) {
-      colCost.at(k) = tempCost.at(i);
+      if (maximization)
+        colCost.at(k) = - tempCost.at(i);
+      else
+        colCost.at(k) = tempCost.at(i);
       colLower.at(k) = temp.at(i);
       colUpper.at(k) = teup.at(i);
       k++;

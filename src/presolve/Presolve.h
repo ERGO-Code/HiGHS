@@ -298,6 +298,9 @@ class Presolve : public HPreData {
   void removeSingletonsOnly();
   bool isKnapsack(const int col) const;
   void removeKnapsack(const int col);
+
+  // Late 2020
+  bool maximization = false;
 };
 
 }  // namespace presolve
