@@ -229,7 +229,10 @@ class Highs {
   HighsStatus getPrimalRay(bool& has_primal_ray,
                            double* primal_ray_value = NULL);
 
-  HighsRanging getRanging();
+  /**
+   * @brief Gets the ranging information for the current LP
+   */
+  HighsStatus getRanging(HighsRanging& ranging);
 
   /**
    * Methods for operations with the invertible representation of the
@@ -778,7 +781,6 @@ class Highs {
  private:
   HighsSolution solution_;
   HighsBasis basis_;
-  HighsRanging ranging_;
   HighsLp lp_;
 
   HighsTimer timer_;

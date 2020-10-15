@@ -15,9 +15,8 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
-  double optimal_objective;
 
-  model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   require_model_status = HighsModelStatus::OPTIMAL;
   REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
   lp = highs.getLp();
@@ -25,4 +24,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   REQUIRE(highs.setBasis() == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
   REQUIRE(highs.getModelStatus() == require_model_status);
+  //  double optimal_objective = highs.getObjectiveValue();
+
+  HighsRanging ranging;
+  REQUIRE(highs.getRanging(ranging) == HighsStatus::OK);
+  
 }
