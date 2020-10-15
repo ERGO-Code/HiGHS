@@ -837,6 +837,8 @@ void HDual::solvePhase2() {
                           "problem-primal-dual-infeasible\n");
         scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
       } else {
+        // Dual unbounded, so save dual ray
+        saveDualRay();
         // Model status should be unset?
         assert(scaled_model_status == HighsModelStatus::NOTSET);
         HighsPrintMessage(workHMO.options_.output,
@@ -1048,18 +1050,6 @@ void HDual::iterate() {
   analysis->simplexTimerStart(IterateChuzcClock);
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
-
-#ifdef HiGHSDEV
-  if (rp_iter_da && rowOut >= 0) {
-    // for (int row=0; row < workHMO.lp_.numRow_; row++) printf("Row %2d: Devex
-    // Weight = %11.4g\n", row, dualRHS.workEdWt[row]);
-    printf(
-        "Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = "
-        "%11.4g; alpha = %11.4g; Dvx = %d\n",
-        workHMO.iteration_counts_.simplex, rowOut, columnOut, columnIn,
-        computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
-  }
-#endif
 
   analysis->simplexTimerStart(IterateFtranClock);
   updateFtranBFRT();
@@ -1959,6 +1949,12 @@ HighsStatus HDual::returnFromSolve(const HighsStatus return_status) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   simplex_info.valid_backtracking_basis_ = false;
   return return_status;
+}
+
+void HDual::saveDualRay() {
+  workHMO.simplex_lp_status_.has_dual_ray = true;
+  workHMO.simplex_info_.dual_ray_row_ = rowOut;
+  workHMO.simplex_info_.dual_ray_sign_ = sourceOut;
 }
 
 bool HDual::getNonsingularInverse() {

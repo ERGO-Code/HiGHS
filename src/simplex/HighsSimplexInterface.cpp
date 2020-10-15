@@ -1200,6 +1200,58 @@ HighsStatus HighsSimplexInterface::setNonbasicStatus(
   }
   return return_status;
 }
+
+// Get the dual ray
+HighsStatus HighsSimplexInterface::getDualRay(bool& has_dual_ray,
+                                              double* dual_ray_value) {
+  HighsLp& lp = highs_model_object.lp_;
+  int numRow = lp.numRow_;
+  has_dual_ray = highs_model_object.simplex_lp_status_.has_dual_ray;
+  if (has_dual_ray && dual_ray_value != NULL) {
+    vector<double> rhs;
+    int iRow = highs_model_object.simplex_info_.dual_ray_row_;
+    rhs.assign(numRow, 0);
+    rhs[iRow] = highs_model_object.simplex_info_.dual_ray_sign_;
+    int* dual_ray_num_nz = 0;
+    basisSolve(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
+  }
+  return HighsStatus::OK;
+}
+
+// Get the primal ray
+HighsStatus HighsSimplexInterface::getPrimalRay(bool& has_primal_ray,
+                                                double* primal_ray_value) {
+  HighsLp& lp = highs_model_object.lp_;
+  int numRow = lp.numRow_;
+  int numCol = lp.numCol_;
+  has_primal_ray = highs_model_object.simplex_lp_status_.has_primal_ray;
+  if (has_primal_ray && primal_ray_value != NULL) {
+    int col = highs_model_object.simplex_info_.primal_ray_col_;
+    // Get this pivotal column
+    vector<double> rhs;
+    vector<double> column;
+    column.assign(numRow, 0);
+    rhs.assign(numRow, 0);
+    int rhs_sign = highs_model_object.simplex_info_.primal_ray_sign_;
+    if (col < numCol) {
+      for (int iEl = lp.Astart_[col]; iEl < lp.Astart_[col + 1]; iEl++)
+        rhs[lp.Aindex_[iEl]] = rhs_sign * lp.Avalue_[iEl];
+    } else {
+      rhs[col - numCol] = rhs_sign;
+    }
+    int* column_num_nz = 0;
+    basisSolve(rhs, &column[0], column_num_nz, NULL, false);
+    // Now zero primal_ray_value and scatter the column according to
+    // the basic variables.
+    for (int iCol = 0; iCol < numCol; iCol++) primal_ray_value[iCol] = 0;
+    for (int iRow = 0; iRow < numRow; iRow++) {
+      int iCol = highs_model_object.simplex_basis_.basicIndex_[iRow];
+      if (iCol < numCol) primal_ray_value[iCol] = column[iRow];
+    }
+  }
+  return HighsStatus::OK;
+}
+
 // Get the basic variables, performing INVERT if necessary
 HighsStatus HighsSimplexInterface::getBasicVariables(int* basic_variables) {
   HighsLp& lp = highs_model_object.lp_;
