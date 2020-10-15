@@ -28,5 +28,4 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 
   HighsRanging ranging;
   REQUIRE(highs.getRanging(ranging) == HighsStatus::OK);
-  
 }
