@@ -20,6 +20,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/PresolveComponent.h"
@@ -228,7 +229,7 @@ class Highs {
   HighsStatus getPrimalRay(bool& has_primal_ray,
                            double* primal_ray_value = NULL);
 
-  // todo: getRangingInformation(..)
+  HighsRanging getRanging();
 
   /**
    * Methods for operations with the invertible representation of the
@@ -736,8 +737,6 @@ class Highs {
    */
   HighsStatus setBasis();
 
-  // todo: getRangingInformation(..)
-
   /**
    * @brief Gets the value of infinity used by HiGHS
    */
@@ -779,6 +778,7 @@ class Highs {
  private:
   HighsSolution solution_;
   HighsBasis basis_;
+  HighsRanging ranging_;
   HighsLp lp_;
 
   HighsTimer timer_;

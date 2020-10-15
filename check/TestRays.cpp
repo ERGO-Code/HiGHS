@@ -239,6 +239,11 @@ void testInfeasibleMps(const std::string model) {
 void testUnboundedMps(const std::string model,
                       const ObjSense sense = ObjSense::MINIMIZE) {
   Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+
   std::string model_file;
   HighsLp lp;
   HighsModelStatus require_model_status;
@@ -246,12 +251,6 @@ void testUnboundedMps(const std::string model,
   bool has_primal_ray;
   vector<double> dual_ray_value;
   vector<double> primal_ray_value;
-
-  if (!dev_run) {
-    highs.setHighsLogfile();
-    highs.setHighsOutput();
-  }
-
   REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
 
   // Test dual ray for unbounded LP

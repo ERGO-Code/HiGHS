@@ -29,14 +29,13 @@
 #include "simplex/HDual.h"
 #include "simplex/HPrimal.h"
 #include "simplex/HQPrimal.h"
-#include "util/HighsUtils.h"
-//#include "HRanging.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HSimplexReport.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
+#include "util/HighsUtils.h"
 
 #ifdef OPENMP
 #include "omp.h"
