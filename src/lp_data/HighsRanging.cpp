@@ -328,9 +328,6 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   // Ranging 3.1. non-basic bounds ranging
   //
   for (int j = 0; j < numTotal; j++) {
-    if (j == numCol+9) {
-      printf("Row 9\n");
-    }
     if (Nflag_[j]) {
       // FREE variable
       if (lower_[j] == -H_INF && upper_[j] == H_INF) {
