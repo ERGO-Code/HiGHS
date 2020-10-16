@@ -3664,6 +3664,8 @@ void invalidateSimplexLpBasisArtifacts(
   simplex_lp_status.has_fresh_rebuild = false;
   simplex_lp_status.has_dual_objective_value = false;
   simplex_lp_status.has_primal_objective_value = false;
+  simplex_lp_status.has_dual_ray = false;
+  simplex_lp_status.has_primal_ray = false;
 }
 
 void invalidateSimplexLpBasis(HighsSimplexLpStatus& simplex_lp_status) {

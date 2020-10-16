@@ -215,6 +215,19 @@ class Highs {
    */
   int getSimplexIterationCount() { return info_.simplex_iteration_count; }
 
+  /**
+   * @brief Indicates whether a dual unbounded ray exdists, and gets
+   * it if it does and dual_ray is not NULL
+   */
+  HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = NULL);
+
+  /**
+   * @brief Indicates whether a primal unbounded ray exdists, and gets
+   * it if it does and primal_ray is not NULL
+   */
+  HighsStatus getPrimalRay(bool& has_primal_ray,
+                           double* primal_ray_value = NULL);
+
   // todo: getRangingInformation(..)
 
   /**
@@ -808,7 +821,7 @@ class Highs {
                        const double unscaled_dual_feasibility_tolerance,
                        const bool report = false);
 
-  bool haveHmo(const string method_name);
+  bool haveHmo(const string method_name) const;
 
   void newHighsBasis();
   void forceHighsSolutionBasisSize();

@@ -378,6 +378,7 @@ class HDual {
 
   // private:
   HighsStatus returnFromSolve(const HighsStatus return_status);
+  void saveDualRay();
   bool getNonsingularInverse();
   bool getBacktrackingBasis(vector<double>& scattered_edge_weights);
   void putBacktrackingBasis();
@@ -528,7 +529,6 @@ class HDual {
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
 #ifdef HiGHSDEV
-  const bool rp_iter_da = false;                  // true;//
   const bool rp_reinvert_syntheticClock = false;  // true;//
   const bool rp_numericalTrouble = false;         // true;//
 #endif

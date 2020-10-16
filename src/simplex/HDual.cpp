@@ -837,6 +837,8 @@ void HDual::solvePhase2() {
                           "problem-primal-dual-infeasible\n");
         scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
       } else {
+        // Dual unbounded, so save dual ray
+        saveDualRay();
         // Model status should be unset?
         assert(scaled_model_status == HighsModelStatus::NOTSET);
         HighsPrintMessage(workHMO.options_.output,
@@ -1048,18 +1050,6 @@ void HDual::iterate() {
   analysis->simplexTimerStart(IterateChuzcClock);
   chooseColumn(&row_ep);
   analysis->simplexTimerStop(IterateChuzcClock);
-
-#ifdef HiGHSDEV
-  if (rp_iter_da && rowOut >= 0) {
-    // for (int row=0; row < workHMO.lp_.numRow_; row++) printf("Row %2d: Devex
-    // Weight = %11.4g\n", row, dualRHS.workEdWt[row]);
-    printf(
-        "Iter %4d: rowOut %4d; colOut %4d; colIn %4d; Wt = %11.4g; thetaDual = "
-        "%11.4g; alpha = %11.4g; Dvx = %d\n",
-        workHMO.iteration_counts_.simplex, rowOut, columnOut, columnIn,
-        computed_edge_weight, thetaDual, alphaRow, num_devex_iterations);
-  }
-#endif
 
   analysis->simplexTimerStart(IterateFtranClock);
   updateFtranBFRT();
@@ -1961,6 +1951,12 @@ HighsStatus HDual::returnFromSolve(const HighsStatus return_status) {
   return return_status;
 }
 
+void HDual::saveDualRay() {
+  workHMO.simplex_lp_status_.has_dual_ray = true;
+  workHMO.simplex_info_.dual_ray_row_ = rowOut;
+  workHMO.simplex_info_.dual_ray_sign_ = sourceOut;
+}
+
 bool HDual::getNonsingularInverse() {
   const vector<int>& basicIndex = workHMO.simplex_basis_.basicIndex_;
   // Take a copy of basicIndex from before INVERT to be used as the
@@ -2408,8 +2404,9 @@ double HDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      printf(
-          "Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
+      HighsLogMessage(
+          workHMO.options_.logfile, HighsMessageType::WARNING,
+          "Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g",
           iCol, exact_dual, simplex_info.workDual_[iCol], residual);
     dual_objective += simplex_info.workValue_[iCol] * exact_dual;
   }
@@ -2421,8 +2418,9 @@ double HDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      printf(
-          "Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
+      HighsLogMessage(
+          workHMO.options_.logfile, HighsMessageType::WARNING,
+          "Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g",
           iRow, exact_dual, simplex_info.workDual_[iVar], residual);
     dual_objective += simplex_info.workValue_[iVar] * exact_dual;
   }
