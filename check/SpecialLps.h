@@ -214,6 +214,15 @@ class SpecialLps {
     require_model_status = HighsModelStatus::OPTIMAL;
     optimal_objective = -2850;
   }
+
+  void blendingMaxLp(HighsLp& lp, HighsModelStatus& require_model_status,
+                  double& optimal_objective) {
+    blendingLp(lp, require_model_status, optimal_objective);
+    for (int iCol=0; iCol < lp.numCol_; iCol++)
+      lp.colCost_[iCol] = -lp.colCost_[iCol];
+    lp.sense_ = ObjSense::MAXIMIZE;
+    optimal_objective = -optimal_objective;
+  }
 };
 
 #endif /* SIMPLEX_SPECIALPS_H_ */

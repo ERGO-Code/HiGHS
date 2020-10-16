@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 HighsStatus quietRun(Highs& highs) {
   highs.setHighsLogfile();
@@ -66,20 +66,22 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   HighsModelStatus require_model_status;
   double optimal_objective;
 
-  const bool from_file = true;
+  const bool from_file = false;
   if (from_file) {
     std::string model_file =
-        std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+        std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+    REQUIRE(highs.changeObjectiveSense(ObjSense::MAXIMIZE));
     require_model_status = HighsModelStatus::OPTIMAL;
   } else {
     SpecialLps special_lps;
-    special_lps.blendingLp(lp, require_model_status, optimal_objective);
+    special_lps.blendingMaxLp(lp, require_model_status, optimal_objective);
     highs.passModel(lp);
   }
 
   REQUIRE(highs.setBasis() == HighsStatus::OK);
-  REQUIRE(quietRun(highs) == HighsStatus::OK);
+  //  REQUIRE(quietRun(highs) == HighsStatus::OK);
+  highs.run();
 
   REQUIRE(modelStatusOk(highs));
   optimal_objective = highs.getObjectiveValue();
@@ -122,7 +124,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   bool small_numCol = numCol < small_dim;
   error_report_threshold = initial_error_report_threshold;
   num_lines_printed = 0;
-  const bool test_all = true;
+  const bool test_all = false;
   const bool test_all_col_cost = test_all;
   const bool test_all_col_bound = test_all;
   const bool test_all_row_bound = test_all;
@@ -173,6 +175,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
             i, relative_up_error, relative_error_tolerance, solved_up,
             col_cost_up_objective, error);
       num_relative_error++;
+      if (dev_run) REQUIRE(relative_up_error < relative_error_tolerance);
     }
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
@@ -202,6 +205,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
             i, relative_dn_error, relative_error_tolerance, solved_dn,
             col_cost_dn_objective, error);
       num_relative_error++;
+      if (dev_run) REQUIRE(relative_up_error < relative_error_tolerance);
     }
     max_relative_error = max(max_relative_error, relative_dn_error);
     sum_relative_error += relative_dn_error;
@@ -288,6 +292,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
             i, relative_up_error, relative_error_tolerance, solved_up,
             col_bound_up_objective, error);
       num_relative_error++;
+      if (dev_run) REQUIRE(relative_up_error < relative_error_tolerance);
     }
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
@@ -335,6 +340,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
             i, relative_dn_error, relative_error_tolerance, solved_dn,
             col_bound_dn_objective, error);
       num_relative_error++;
+      if (dev_run) REQUIRE(relative_up_error < relative_error_tolerance);
     }
     max_relative_error = max(max_relative_error, relative_dn_error);
     sum_relative_error += relative_dn_error;
@@ -423,6 +429,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
             i, relative_up_error, relative_error_tolerance, solved_up,
             row_bound_up_objective, error);
       num_relative_error++;
+      if (dev_run) REQUIRE(relative_up_error < relative_error_tolerance);
     }
     max_relative_error = max(max_relative_error, relative_up_error);
     sum_relative_error += relative_up_error;
@@ -470,6 +477,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
             i, relative_dn_error, relative_error_tolerance, solved_dn,
             row_bound_dn_objective, error);
       num_relative_error++;
+      if (dev_run) REQUIRE(relative_up_error < relative_error_tolerance);
     }
     max_relative_error = max(max_relative_error, relative_dn_error);
     sum_relative_error += relative_dn_error;
