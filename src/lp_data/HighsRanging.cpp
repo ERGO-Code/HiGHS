@@ -19,13 +19,21 @@
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 
-double infProduct(double vsign) {
-  if (vsign > 0) {
-    return HIGHS_CONST_INF;
-  } else if (vsign < 0) {
-    return HIGHS_CONST_INF;
-  } else {
+double infProduct(double value) {
+  // Multiplying value and HIGHS_CONST_INF
+  if (value == 0) {
     return 0;
+  } else {
+    return value * HIGHS_CONST_INF;
+  }
+}
+
+double possInfProduct(double poss_inf, double value) {
+  // Multiplying something that could be infinite and value
+  if (value == 0) {
+    return 0;
+  } else {
+    return poss_inf * value;
   }
 }
 
@@ -243,6 +251,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   //
   // Ranging 2.1. non-basic cost ranging
   //
+  //  const int check_col = 2951;
   for (int j = 0; j < numCol; j++) {
     if (Nflag_[j]) {
       // Primal value and its sign
@@ -252,7 +261,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Increase c_j
       if (ddj_inc[j] != H_INF) {
         c_up_c[j] = cost_[j] + ddj_inc[j];
-        c_up_f[j] = objective + value * ddj_inc[j];
+        c_up_f[j] = objective + possInfProduct(ddj_inc[j], value);// value * ddj_inc[j];
         c_up_e[j] = j;
         c_up_l[j] = jxj_dec[j];
       } else {
@@ -265,12 +274,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Decrease c_j
       if (ddj_dec[j] != H_INF) {
         c_dn_c[j] = cost_[j] + ddj_dec[j];
-        c_dn_f[j] = objective + value * ddj_dec[j];
+        c_dn_f[j] = objective + possInfProduct(ddj_dec[j], value);// value * ddj_dec[j];
         c_dn_e[j] = j;
         c_dn_l[j] = jxj_inc[j];
       } else {
         c_up_c[j] = -H_INF;
-        c_up_f[j] = objective - infProduct(vsign);//vsign * H_INF;
+        c_up_f[j] = objective - infProduct(vsign);// vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -291,12 +300,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Increase c_i
       if (jci_inc[i] != -1) {
         c_up_c[j] = cost_[j] + tci_inc[i];
-        c_up_f[j] = objective + value * tci_inc[i];
+        c_up_f[j] = objective + possInfProduct(tci_inc[i], value);// value * tci_inc[i];
         c_up_e[j] = je = jci_inc[i];
         c_up_l[j] = Nmove_[je] > 0 ? jxj_inc[je] : jxj_dec[je];
       } else {
         c_up_c[j] = H_INF;
-        c_up_f[j] = objective + infProduct(vsign);//vsign * H_INF;
+        c_up_f[j] = objective + infProduct(vsign);// vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -304,12 +313,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Decrease c_i
       if (jci_dec[i] != -1) {
         c_dn_c[j] = cost_[j] + tci_dec[i];
-        c_dn_f[j] = objective + value * tci_dec[i];
+        c_dn_f[j] = objective + possInfProduct(tci_dec[i], value);// value * tci_dec[i];
         c_dn_e[j] = je = jci_dec[i];
         c_dn_l[j] = Nmove_[je] > 0 ? jxj_inc[je] : jxj_dec[je];
       } else {
         c_dn_c[j] = -H_INF;
-        c_dn_f[j] = objective - infProduct(vsign);//H_INF * vsign;
+        c_dn_f[j] = objective - infProduct(vsign);// H_INF * vsign;
         c_dn_e[j] = -1;
         c_dn_l[j] = -1;
       }
@@ -350,12 +359,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       if (ixj_inc[j] != -1) {
         int i = ixj_inc[j];
         b_up_b[j] = value_[j] + txj_inc[j];
-        b_up_f[j] = objective + txj_inc[j] * dualv;
+        b_up_f[j] = objective + possInfProduct(txj_inc[j], dualv);// txj_inc[j] * dualv;
         b_up_e[j] = wxj_inc[j] > 0 ? jci_inc[i] : jci_dec[i];
         b_up_l[j] = Bindex_[i];
       } else {
         b_up_b[j] = H_INF;
-        b_up_f[j] = objective + infProduct(dsign);//H_INF * dsign;
+        b_up_f[j] = objective + infProduct(dsign);// H_INF * dsign;
         b_up_e[j] = -1;
         b_up_l[j] = -1;
       }
@@ -373,12 +382,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       if (ixj_dec[j] != -1) {
         int i = ixj_dec[j];
         b_dn_b[j] = value_[j] + txj_dec[j];
-        b_dn_f[j] = objective + txj_dec[j] * dualv;
+        b_dn_f[j] = objective + possInfProduct(txj_dec[j], dualv);// txj_dec[j] * dualv;
         b_dn_e[j] = wxj_dec[j] > 0 ? jci_inc[i] : jci_dec[i];
         b_dn_l[j] = Bindex_[i];
       } else {
         b_dn_b[j] = -H_INF;
-        b_dn_f[j] = objective - infProduct(dsign);//H_INF * dsign;
+        b_dn_f[j] = objective - infProduct(dsign);// H_INF * dsign;
         b_dn_e[j] = -1;
         b_dn_l[j] = -1;
       }

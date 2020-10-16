@@ -32,6 +32,16 @@ void rowBoundColumnHeader() {
 	 "verify^", "error^", "bound_", "object_", "verify_", "error_");
 }
 
+void assessNewBounds(double& lower, double& upper) {
+  double difference = lower - upper;
+  if (difference > 0) {
+    if (dev_run) printf("New bounds [%g, %g] inconsistent with difference %g\n", lower, upper, difference);
+    if (difference > 1e-10) assert(lower < upper);
+    double average = (lower+upper)*0.5;
+    lower = average;
+    upper = average;
+  }
+}
 TEST_CASE("Ranging", "[highs_test_ranging]") {
   Highs highs;
   if (!dev_run) {
@@ -44,8 +54,8 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 
   const bool from_file = true;
   if (from_file) {
-        std::string model_file = std::string(HIGHS_DIR) + "/test/ml.mps";
-	//    std::string model_file = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
+    std::string model_file = std::string(HIGHS_DIR) + "/test/ml.mps";
+    //    std::string model_file = std::string(HIGHS_DIR) + "/check/instances/stair.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
     require_model_status = HighsModelStatus::OPTIMAL;
   } else {
@@ -95,12 +105,13 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   bool small_numCol = numCol< small_dim;
   error_report_threshold = initial_error_report_threshold;
   num_lines_printed = 0;
-  const bool test_all_col_cost = false;
-  const bool test_all_col_bound = false;
-  const bool test_all_row_bound = false;
-  int test_col_cost = 2951;
-  int test_col_bound = 2096;
-  int test_row_bound = 0;
+  const bool test_all = false;
+  const bool test_all_col_cost = test_all;
+  const bool test_all_col_bound = test_all;
+  const bool test_all_row_bound = test_all;
+  int test_col_cost = min(0, numCol-1);
+  int test_col_bound = min(2953, numCol-1);
+  int test_row_bound = min(0, numRow-1);
   int from_i;
   int to_i;
   if (test_all_col_cost) {
@@ -167,6 +178,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 	     col_cost_up_value, col_cost_up_objective, solved_up, relative_up_error,
 	     col_cost_dn_value, col_cost_dn_objective, solved_dn, relative_dn_error);
       error_report_threshold = 10*error_report_threshold;
+      num_lines_printed++;
     }
   }
 
@@ -211,7 +223,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       } else {
 	new_lower = col_bound_up_value;
       }
-      assert(new_lower <= new_upper);
+      assessNewBounds(new_lower, new_upper);
       highs.changeColBounds(i, new_lower, new_upper);
       highs.setBasis(basis);
       quietRun(highs);
@@ -247,7 +259,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       } else {
 	new_upper = col_bound_dn_value;
       }
-      assert(new_lower <= new_upper);
+      assessNewBounds(new_lower, new_upper);
       highs.changeColBounds(i, new_lower, new_upper);
       highs.setBasis(basis);
       quietRun(highs);
@@ -276,6 +288,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 			  col_bound_up_value, col_bound_up_objective, solved_up, relative_up_error,
 			  col_bound_dn_value, col_bound_dn_objective, solved_dn, relative_dn_error);
       error_report_threshold = 10*error_report_threshold;
+      num_lines_printed++;
     }
   }
   if (dev_run) printf(" --- Testing row bounds ranging ---\n");
@@ -320,7 +333,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       } else {
 	new_lower = row_bound_up_value;
       }
-      assert(new_lower <= new_upper);
+      assessNewBounds(new_lower, new_upper);
       highs.changeRowBounds(i, new_lower, new_upper);
       highs.setBasis(basis);
       quietRun(highs);
@@ -356,7 +369,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       } else {
 	new_upper = row_bound_dn_value;
       }
-      assert(new_lower <= new_upper);
+      assessNewBounds(new_lower, new_upper);
       highs.changeRowBounds(i, new_lower, new_upper);
       highs.setBasis(basis);
       quietRun(highs);
@@ -385,6 +398,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 	     row_bound_up_value, row_bound_up_objective, solved_up, relative_up_error,
 	     row_bound_dn_value, row_bound_dn_objective, solved_dn, relative_dn_error);
       error_report_threshold = 10*error_report_threshold;
+      num_lines_printed++;
     }
   }
   if (dev_run) {
