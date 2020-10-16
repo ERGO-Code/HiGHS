@@ -19,6 +19,16 @@
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 
+double infProduct(double vsign) {
+  if (vsign > 0) {
+    return HIGHS_CONST_INF;
+  } else if (vsign < 0) {
+    return HIGHS_CONST_INF;
+  } else {
+    return 0;
+  }
+}
+
 HighsStatus getHighsRanging(HighsRanging& ranging,
                             const HighsModelObject& highs_model_object) {
   if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
@@ -247,7 +257,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
         c_up_l[j] = jxj_dec[j];
       } else {
         c_up_c[j] = H_INF;
-        c_up_f[j] = objective + vsign * H_INF;
+        c_up_f[j] = objective + infProduct(vsign);//vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -260,7 +270,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
         c_dn_l[j] = jxj_inc[j];
       } else {
         c_up_c[j] = -H_INF;
-        c_up_f[j] = objective - vsign * H_INF;
+        c_up_f[j] = objective - infProduct(vsign);//vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -286,7 +296,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
         c_up_l[j] = Nmove_[je] > 0 ? jxj_inc[je] : jxj_dec[je];
       } else {
         c_up_c[j] = H_INF;
-        c_up_f[j] = objective + vsign * H_INF;
+        c_up_f[j] = objective + infProduct(vsign);//vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -299,7 +309,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
         c_dn_l[j] = Nmove_[je] > 0 ? jxj_inc[je] : jxj_dec[je];
       } else {
         c_dn_c[j] = -H_INF;
-        c_dn_f[j] = objective - H_INF * vsign;
+        c_dn_f[j] = objective - infProduct(vsign);//H_INF * vsign;
         c_dn_e[j] = -1;
         c_dn_l[j] = -1;
       }
@@ -318,6 +328,9 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   // Ranging 3.1. non-basic bounds ranging
   //
   for (int j = 0; j < numTotal; j++) {
+    if (j == numCol+9) {
+      printf("Row 9\n");
+    }
     if (Nflag_[j]) {
       // FREE variable
       if (lower_[j] == -H_INF && upper_[j] == H_INF) {
@@ -345,7 +358,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
         b_up_l[j] = Bindex_[i];
       } else {
         b_up_b[j] = H_INF;
-        b_up_f[j] = objective + H_INF * dsign;
+        b_up_f[j] = objective + infProduct(dsign);//H_INF * dsign;
         b_up_e[j] = -1;
         b_up_l[j] = -1;
       }
@@ -353,6 +366,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Check if b_up_b > upper
       if (value_[j] != upper_[j] && b_up_b[j] > upper_[j]) {
         b_up_b[j] = upper_[j];
+	assert(lower_[j] > -HIGHS_CONST_INF);
         b_up_f[j] = objective + (upper_[j] - lower_[j]) * dualv;
         b_up_e[j] = j;
         b_up_l[j] = j;
@@ -367,7 +381,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
         b_dn_l[j] = Bindex_[i];
       } else {
         b_dn_b[j] = -H_INF;
-        b_dn_f[j] = objective - H_INF * dsign;
+        b_dn_f[j] = objective - infProduct(dsign);//H_INF * dsign;
         b_dn_e[j] = -1;
         b_dn_l[j] = -1;
       }
@@ -375,6 +389,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Check if b_dn_b < lower
       if (value_[j] != lower_[j] && b_dn_b[j] < lower_[j]) {
         b_dn_b[j] = lower_[j];
+	assert(upper_[j] < HIGHS_CONST_INF);
         b_dn_f[j] = objective + (lower_[j] - upper_[j]) * dualv;
         b_dn_e[j] = j;
         b_dn_l[j] = j;
@@ -473,21 +488,21 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   ranging.col_cost_dn.value_ = c_dn_c;
   ranging.col_cost_up.objective_ = c_up_f;
   ranging.col_cost_dn.objective_ = c_dn_f;
-  ranging.col_cost_up.in_col_ = c_up_e;
-  ranging.col_cost_dn.in_col_ = c_dn_e;
-  ranging.col_cost_up.ou_col_ = c_up_l;
-  ranging.col_cost_dn.ou_col_ = c_dn_l;
+  ranging.col_cost_up.in_var_ = c_up_e;
+  ranging.col_cost_dn.in_var_ = c_dn_e;
+  ranging.col_cost_up.ou_var_ = c_up_l;
+  ranging.col_cost_dn.ou_var_ = c_dn_l;
 
   ranging.col_bound_up.value_ = {b_up_b.begin(), b_up_b.begin()+numCol};
   ranging.col_bound_dn.value_ = {b_dn_b.begin(), b_dn_b.begin()+numCol};
   ranging.col_bound_up.objective_ = {b_up_f.begin(), b_up_f.begin()+numCol};
   ranging.col_bound_dn.objective_ = {b_dn_f.begin(), b_dn_f.begin()+numCol};
-  ranging.col_bound_up.in_col_ = {b_up_e.begin(), b_up_e.begin()+numCol};
-  ranging.col_bound_dn.in_col_ = {b_dn_e.begin(), b_dn_e.begin()+numCol};
-  ranging.col_bound_up.ou_col_ = {b_up_l.begin(), b_up_l.begin()+numCol};
-  ranging.col_bound_dn.ou_col_ = {b_dn_l.begin(), b_dn_l.begin()+numCol};
+  ranging.col_bound_up.in_var_ = {b_up_e.begin(), b_up_e.begin()+numCol};
+  ranging.col_bound_dn.in_var_ = {b_dn_e.begin(), b_dn_e.begin()+numCol};
+  ranging.col_bound_up.ou_var_ = {b_up_l.begin(), b_up_l.begin()+numCol};
+  ranging.col_bound_dn.ou_var_ = {b_dn_l.begin(), b_dn_l.begin()+numCol};
 
-  // Flip and negate the row bound values
+  // Flip all data and negate the row bound values
   ranging.row_bound_up.value_ = {b_dn_b.begin()+numCol, b_dn_b.begin()+numTotal};
   std::transform(ranging.row_bound_up.value_.cbegin(),
 		 ranging.row_bound_up.value_.cend(),
@@ -500,12 +515,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
 		 ranging.row_bound_dn.value_.begin(),
 		 std::negate<double>());
 
-  ranging.row_bound_up.objective_ = {b_up_f.begin()+numCol, b_up_f.begin()+numTotal};
-  ranging.row_bound_dn.objective_ = {b_dn_f.begin()+numCol, b_dn_f.begin()+numTotal};
-  ranging.row_bound_up.in_col_ = {b_up_e.begin()+numCol, b_up_e.begin()+numTotal};
-  ranging.row_bound_dn.in_col_ = {b_dn_e.begin()+numCol, b_dn_e.begin()+numTotal};
-  ranging.row_bound_up.ou_col_ = {b_up_l.begin()+numCol, b_up_l.begin()+numTotal};
-  ranging.row_bound_dn.ou_col_ = {b_dn_l.begin()+numCol, b_dn_l.begin()+numTotal};
+  ranging.row_bound_up.objective_ = {b_dn_f.begin()+numCol, b_dn_f.begin()+numTotal};
+  ranging.row_bound_dn.objective_ = {b_up_f.begin()+numCol, b_up_f.begin()+numTotal};
+  ranging.row_bound_up.in_var_ = {b_dn_e.begin()+numCol, b_dn_e.begin()+numTotal};
+  ranging.row_bound_dn.in_var_ = {b_up_e.begin()+numCol, b_up_e.begin()+numTotal};
+  ranging.row_bound_up.ou_var_ = {b_dn_l.begin()+numCol, b_dn_l.begin()+numTotal};
+  ranging.row_bound_dn.ou_var_ = {b_up_l.begin()+numCol, b_up_l.begin()+numTotal};
 
   return HighsStatus::OK;
 }

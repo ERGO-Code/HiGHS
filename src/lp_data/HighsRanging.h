@@ -21,8 +21,8 @@
 struct HighsRangingRecord {
   std::vector<double> value_;
   std::vector<double> objective_;
-  std::vector<int> in_col_;
-  std::vector<int> ou_col_;
+  std::vector<int> in_var_;
+  std::vector<int> ou_var_;
 };
 
 struct HighsRanging {

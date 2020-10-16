@@ -5,11 +5,6 @@
 
 const bool dev_run = true;
 
-void columnHeader() {
-  printf("Row %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
-	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
-	 "verify^", "error^", "bound_", "object_", "verify_", "error_");
-}
 void quietRun(Highs& highs) {
   highs.setHighsLogfile();
   highs.setHighsOutput();
@@ -17,6 +12,13 @@ void quietRun(Highs& highs) {
   highs.setHighsLogfile(stdout);
   highs.setHighsOutput(stdout);
 }
+
+void columnHeader() {
+  printf("Row %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
+	 "verify^", "error^", "bound_", "object_", "verify_", "error_");
+}
+
 TEST_CASE("Ranging", "[highs_test_ranging]") {
   Highs highs;
   if (!dev_run) {
@@ -26,20 +28,23 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   HighsLp lp;
   HighsModelStatus require_model_status;
   double optimal_objective;
-  /*
-  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
-  require_model_status = HighsModelStatus::OPTIMAL;
-  */
-  SpecialLps special_lps;
-  special_lps.blendingLp(lp, require_model_status, optimal_objective);
-  highs.passModel(lp);
+
+  const bool from_file = false;
+  if (from_file) {
+    std::string model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+    REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+    require_model_status = HighsModelStatus::OPTIMAL;
+  } else {
+    SpecialLps special_lps;
+    special_lps.blendingLp(lp, require_model_status, optimal_objective);
+    highs.passModel(lp);
+  }
 
   REQUIRE(highs.setBasis() == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
 
   REQUIRE(highs.getModelStatus() == require_model_status);
-  REQUIRE(highs.getObjectiveValue() == optimal_objective);
+  optimal_objective = highs.getObjectiveValue();
 
   highs.writeSolution("", true);
 
@@ -57,34 +62,68 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   int numRow = lp.numRow_;
 
   double total_error = 0;
-  const double total_relative_error_tolerance = 1e-15;
-  const double realtive_error_tolerance = total_relative_error_tolerance;
+  const double total_relative_error_tolerance = 1e0;//1e-15;
+  const double relative_error_tolerance = total_relative_error_tolerance;
   const double relative_error_denominator = max(1.0, fabs(optimal_objective));
   
+  double max_col_cost_relative_error = 1e-10;
+  int max_col_cost_relative_error_col = -1;
+  double max_col_bound_relative_error = 1e-10;
+  int max_col_bound_relative_error_col = -1;
+  double max_row_bound_relative_error = 1e-10;
+  int max_row_bound_relative_error_row = -1;
 
 
-  // Show all rowwise data
   printf(" --- Row bounds ranging ---\n");
-  int to_row = 1;
-  for (int i = 0; i < to_row; i++) {
-    double solved_up = 0;
-    double solved_dn = 0;
+  for (int i = 0; i < numRow; i++) {
+    if (i % 50 == 0)   columnHeader();
     double row_bound_up_value = ranging.row_bound_up.value_[i];
     double row_bound_up_objective = ranging.row_bound_up.objective_[i];
-    int row_bound_up_in_col = ranging.row_bound_up.in_col_[i];
-    int row_bound_up_ou_col = ranging.row_bound_up.ou_col_[i];
     double row_bound_dn_value = ranging.row_bound_dn.value_[i];
     double row_bound_dn_objective = ranging.row_bound_dn.objective_[i];
-    int row_bound_dn_in_col = ranging.row_bound_dn.in_col_[i];
-    int row_bound_dn_ou_col = ranging.row_bound_dn.ou_col_[i];
     double lower = lp.rowLower_[i];
     double upper = lp.rowUpper_[i];
     double new_lower = lower;
     double new_upper = upper;
-    if (row_bound_dn_value > -HIGHS_CONST_INF) {
-      if (row_status[i] == HighsBasisStatus::ZERO) {
-	printf("What to do if row is free??\n");
+    double solved_up = 0;
+    double solved_dn = 0;
+    double error;
+    // Row bound up ranging
+    if (row_bound_up_value > -HIGHS_CONST_INF) {
+      // Free rows should not have a finite row_bound_up_value
+      assert(row_status[i] != HighsBasisStatus::ZERO);
+      if (row_status[i] != HighsBasisStatus::BASIC) {
+	// Nonbasic
+	if (lower == upper) {
+	  new_lower = row_bound_up_value;
+	  new_upper = row_bound_up_value;
+	} else if (row_status[i] == HighsBasisStatus::LOWER) {
+	  new_lower = row_bound_up_value;
+	} else {
+	  new_upper = row_bound_up_value;
+	}
+      } else {
+	new_upper = row_bound_up_value;
       }
+      highs.changeRowBounds(i, new_lower, new_upper);
+      highs.setBasis(basis);
+      quietRun(highs);
+      REQUIRE(highs.getModelStatus() == require_model_status);
+      solved_up = highs.getObjectiveValue();
+      highs.changeRowBounds(i, lower, upper);
+      error = fabs(solved_up-row_bound_up_objective);
+    } else {
+      solved_up = row_bound_up_objective;
+      error = 0;
+    }
+    error = fabs(solved_up-row_bound_up_objective);
+    total_error += error;
+    double relative_up_error = error/relative_error_denominator;
+    REQUIRE(relative_up_error < relative_error_tolerance);
+    // Row bound down ranging
+    if (row_bound_dn_value > -HIGHS_CONST_INF) {
+      // Free rows should not have a finite row_bound_dn_value
+      assert(row_status[i] != HighsBasisStatus::ZERO);
       if (row_status[i] != HighsBasisStatus::BASIC) {
 	// Nonbasic
 	if (lower == upper) {
@@ -103,23 +142,36 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       quietRun(highs);
       REQUIRE(highs.getModelStatus() == require_model_status);
       solved_dn = highs.getObjectiveValue();
-      highs.writeSolution("", true);
-
+      highs.changeRowBounds(i, lower, upper);
+      error = fabs(solved_dn-row_bound_dn_objective);
     } else {
       solved_dn = row_bound_dn_objective;
+      error = 0;
     }
-    double error = abs(solved_dn-row_bound_dn_objective);
     total_error += error;
     double relative_dn_error = error/relative_error_denominator;
-    double relative_up_error = 0;
-    columnHeader();
+    REQUIRE(relative_dn_error < relative_error_tolerance);
+    double relative_error = max(relative_up_error, relative_dn_error);
+    if (relative_error > max_row_bound_relative_error) {
+      max_row_bound_relative_error = relative_error;
+      max_row_bound_relative_error_row = i;
+    }
     printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
 	   i, lower, upper, row_value[i], 0.0, row_dual[i],
 	   row_bound_up_value, row_bound_up_objective, solved_up, relative_up_error,
 	   row_bound_dn_value, row_bound_dn_objective, solved_dn, relative_dn_error);
-    highs.changeRowBounds(i, lower, upper);
   }
   printf("\n\n");
-  
+
+
+  if (max_col_cost_relative_error_col >= 0) 
+    printf("\nMax col cost  relative objective error = %g in col %d\n", max_col_cost_relative_error,
+	   max_col_cost_relative_error_col);
+  if (max_col_bound_relative_error_col >= 0) 
+    printf("\nMax col bound relative objective error = %g in col %d\n", max_col_bound_relative_error,
+	   max_col_bound_relative_error_col);
+  if (max_row_bound_relative_error_row >= 0) 
+    printf("\nMax row bound relative objective error = %g in row %d\n", max_row_bound_relative_error,
+	   max_row_bound_relative_error_row);
  
 }
