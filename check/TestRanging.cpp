@@ -44,7 +44,8 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 
   const bool from_file = true;
   if (from_file) {
-    std::string model_file = std::string(HIGHS_DIR) + "/check/instances/shell.mps";
+        std::string model_file = std::string(HIGHS_DIR) + "/test/ml.mps";
+	//    std::string model_file = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
     require_model_status = HighsModelStatus::OPTIMAL;
   } else {
@@ -76,11 +77,11 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   int numRow = lp.numRow_;
   int numCol = lp.numCol_;
 
-  const double relative_error_tolerance = 1e-12;
+  const double relative_error_tolerance = 1e-10;
   const double relative_error_denominator = max(1.0, fabs(optimal_objective));
-  const double initial_error_report_threshold = relative_error_tolerance;
+  const double initial_error_report_threshold = relative_error_tolerance/1e6;
   double error_report_threshold;
-  bool header_printed;
+  int num_lines_printed;
 
   double max_col_cost_relative_error = 0;
   int max_col_cost_relative_error_col = -1;
@@ -88,12 +89,28 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   int max_col_bound_relative_error_col = -1;
   double max_row_bound_relative_error = 0;
   int max_row_bound_relative_error_row = -1;
+  const int small_dim = 10000;
 
   if (dev_run) printf(" --- Testing cost ranging ---\n");
-  bool small_numCol = numCol<10;
+  bool small_numCol = numCol< small_dim;
   error_report_threshold = initial_error_report_threshold;
-  header_printed = false;
-  for (int i = 0; i < numCol; i++) {
+  num_lines_printed = 0;
+  const bool test_all_col_cost = false;
+  const bool test_all_col_bound = false;
+  const bool test_all_row_bound = false;
+  int test_col_cost = 2951;
+  int test_col_bound = 2096;
+  int test_row_bound = 0;
+  int from_i;
+  int to_i;
+  if (test_all_col_cost) {
+    from_i = 0;
+    to_i = numCol;
+  } else {
+    from_i = test_col_cost;
+    to_i = from_i+1;
+  }
+  for (int i = from_i; i < to_i; i++) {
     double col_cost_up_value = ranging.col_cost_up.value_[i];
     double col_cost_up_objective = ranging.col_cost_up.objective_[i];
     double col_cost_dn_value = ranging.col_cost_dn.value_[i];
@@ -116,6 +133,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       error = 0;
     }
     double relative_up_error = error/relative_error_denominator;
+    if (relative_up_error >= relative_error_tolerance)
+      printf("Col %d: %g = relative_up_error >= relative_error_tolerance = %g\n", 
+	     i, relative_up_error, relative_error_tolerance);
     REQUIRE(relative_up_error < relative_error_tolerance);
     // Col cost down ranging
     if (col_cost_dn_value > -HIGHS_CONST_INF) {
@@ -131,6 +151,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       error = 0;
     }
     double relative_dn_error = error/relative_error_denominator;
+    if (relative_dn_error >= relative_error_tolerance)
+      printf("Col %d: %g = relative_dn_error >= relative_error_tolerance = %g\n", 
+	     i, relative_dn_error, relative_error_tolerance);
     REQUIRE(relative_dn_error < relative_error_tolerance);
     double relative_error = max(relative_up_error, relative_dn_error);
     if (relative_error > max_col_cost_relative_error) {
@@ -138,10 +161,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       max_col_cost_relative_error_col = i;
     }
     if (small_numCol || relative_error > error_report_threshold) {
-      if (!header_printed) {
-	header_printed = true;
-	colCostColumnHeader();
-      }
+      if (num_lines_printed % 50 == 0) colCostColumnHeader();
       if (dev_run) printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
 	     i, cost, col_dual[i],
 	     col_cost_up_value, col_cost_up_objective, solved_up, relative_up_error,
@@ -152,8 +172,15 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 
   if (dev_run) printf(" --- Testing column bounds ranging ---\n");
   error_report_threshold = initial_error_report_threshold;
-  header_printed = false;
-  for (int i = 0; i < numCol; i++) {
+  num_lines_printed = 0;
+  if (test_all_col_bound) {
+    from_i = 0;
+    to_i = numCol;
+  } else {
+    from_i = test_col_bound;
+    to_i = from_i+1;    
+  }
+  for (int i = from_i; i < to_i; i++) {
     double col_bound_up_value = ranging.col_bound_up.value_[i];
     double col_bound_up_objective = ranging.col_bound_up.objective_[i];
     double col_bound_dn_value = ranging.col_bound_dn.value_[i];
@@ -197,6 +224,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       error = 0;
     }
     double relative_up_error = error/relative_error_denominator;
+    if (relative_up_error >= relative_error_tolerance)
+      printf("Col %d: %g = relative_up_error >= relative_error_tolerance = %g\n", 
+	     i, relative_up_error, relative_error_tolerance);
     REQUIRE(relative_up_error < relative_error_tolerance);
     // Col bound down ranging
     if (col_bound_dn_value > -HIGHS_CONST_INF) {
@@ -230,6 +260,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       error = 0;
     }
     double relative_dn_error = error/relative_error_denominator;
+    if (relative_dn_error >= relative_error_tolerance)
+      printf("Col %d: %g = relative_dn_error >= relative_error_tolerance = %g\n", 
+	     i, relative_dn_error, relative_error_tolerance);
     REQUIRE(relative_dn_error < relative_error_tolerance);
     double relative_error = max(relative_up_error, relative_dn_error);
     if (relative_error > max_col_bound_relative_error) {
@@ -237,10 +270,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       max_col_bound_relative_error_col = i;
     }
     if (small_numCol || relative_error > error_report_threshold) { 
-      if (!header_printed) {
-	header_printed = true;
-	colBoundcolumnHeader();
-      }
+      if (num_lines_printed % 50 == 0) colBoundcolumnHeader();
       if (dev_run) printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
 			  i, lower, upper, col_value[i], col_dual[i],
 			  col_bound_up_value, col_bound_up_objective, solved_up, relative_up_error,
@@ -249,10 +279,17 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
     }
   }
   if (dev_run) printf(" --- Testing row bounds ranging ---\n");
-  bool small_numRow = numRow <10;
+  bool small_numRow = numRow < small_dim;
   error_report_threshold = initial_error_report_threshold;
-  header_printed = false;
-  for (int i = 0; i < numRow; i++) {
+  num_lines_printed = 0;
+  if (test_all_row_bound) {
+    from_i = 0;
+    to_i = numRow;
+  } else {
+    from_i = test_row_bound;
+    to_i = from_i+1;    
+  }
+  for (int i = from_i; i < to_i; i++) {
     double row_bound_up_value = ranging.row_bound_up.value_[i];
     double row_bound_up_objective = ranging.row_bound_up.objective_[i];
     double row_bound_dn_value = ranging.row_bound_dn.value_[i];
@@ -296,6 +333,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       error = 0;
     }
     double relative_up_error = error/relative_error_denominator;
+    if (relative_up_error >= relative_error_tolerance)
+      printf("Row %d: %g = relative_up_error >= relative_error_tolerance = %g\n", 
+	     i, relative_up_error, relative_error_tolerance);
     REQUIRE(relative_up_error < relative_error_tolerance);
     // Row bound down ranging
     if (row_bound_dn_value > -HIGHS_CONST_INF) {
@@ -329,6 +369,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       error = 0;
     }
     double relative_dn_error = error/relative_error_denominator;
+    if (relative_dn_error >= relative_error_tolerance)
+      printf("Row %d: %g = relative_dn_error >= relative_error_tolerance = %g\n", 
+	     i, relative_dn_error, relative_error_tolerance);
     REQUIRE(relative_dn_error < relative_error_tolerance);
     double relative_error = max(relative_up_error, relative_dn_error);
     if (relative_error > max_row_bound_relative_error) {
@@ -336,10 +379,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       max_row_bound_relative_error_row = i;
     }
     if (small_numRow || relative_error > error_report_threshold) {
-      if (!header_printed) {
-	header_printed = true;
-	rowBoundColumnHeader();
-      }
+      if (num_lines_printed % 50 == 0) rowBoundColumnHeader();
       if (dev_run) printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
 	     i, lower, upper, row_value[i], row_dual[i],
 	     row_bound_up_value, row_bound_up_objective, solved_up, relative_up_error,
