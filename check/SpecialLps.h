@@ -214,8 +214,6 @@ class SpecialLps {
     require_model_status = HighsModelStatus::OPTIMAL;
     optimal_objective = -2850;
   }
-
-
 };
 
 #endif /* SIMPLEX_SPECIALPS_H_ */
