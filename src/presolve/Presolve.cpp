@@ -1027,7 +1027,7 @@ void Presolve::resizeProblem() {
   for (int i = 0; i < numColOriginal; ++i)
     if (flagCol.at(i)) {
       if (maximization)
-        colCost.at(k) = - tempCost.at(i);
+        colCost.at(k) = -tempCost.at(i);
       else
         colCost.at(k) = tempCost.at(i);
       colLower.at(k) = temp.at(i);
