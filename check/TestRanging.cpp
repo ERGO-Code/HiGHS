@@ -5,7 +5,12 @@
 
 const bool dev_run = true;
 
-void quiet_run(Highs& highs) {
+void columnHeader() {
+  printf("Row %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
+	 "verify^", "error^", "bound_", "object_", "verify_", "error_");
+}
+void quietRun(Highs& highs) {
   highs.setHighsLogfile();
   highs.setHighsOutput();
   highs.run();
@@ -18,21 +23,25 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
     highs.setHighsLogfile();
     highs.setHighsOutput();
   }
-
-  std::string model_file;
+  HighsLp lp;
   HighsModelStatus require_model_status;
-
-  model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
-  require_model_status = HighsModelStatus::OPTIMAL;
+  double optimal_objective;
+  /*
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
+  require_model_status = HighsModelStatus::OPTIMAL;
+  */
+  SpecialLps special_lps;
+  special_lps.blendingLp(lp, require_model_status, optimal_objective);
+  highs.passModel(lp);
 
   REQUIRE(highs.setBasis() == HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::OK);
+
   REQUIRE(highs.getModelStatus() == require_model_status);
+  REQUIRE(highs.getObjectiveValue() == optimal_objective);
 
   highs.writeSolution("", true);
-
-  double optimal_objective = highs.getObjectiveValue();
 
   HighsRanging ranging;
   REQUIRE(highs.getRanging(ranging) == HighsStatus::OK);
@@ -44,7 +53,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   vector<double>& row_value = solution.row_value;
   vector<double>& row_dual = solution.row_dual;
 
-  HighsLp lp = highs.getLp();
+  lp = highs.getLp();
   int numRow = lp.numRow_;
 
   double total_error = 0;
@@ -56,10 +65,8 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 
   // Show all rowwise data
   printf(" --- Row bounds ranging ---\n");
-  printf("Row %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
-	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
-	 "verify^", "error^", "bound_", "object_", "verify_", "error_");
-  for (int i = 0; i < numRow; i++) {
+  int to_row = 1;
+  for (int i = 0; i < to_row; i++) {
     double solved_up = 0;
     double solved_down = 0;
     double row_bound_up_value = ranging.rowBoundUp.Value_[i];
@@ -93,8 +100,11 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       }
       highs.changeRowBounds(i, new_lower, new_upper);
       highs.setBasis(basis);
-      quiet_run(highs);
+      quietRun(highs);
+      REQUIRE(highs.getModelStatus() == require_model_status);
       solved_down = highs.getObjectiveValue();
+      highs.writeSolution("", true);
+
     } else {
       solved_down = row_bound_down_objective;
     }
@@ -102,6 +112,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
     total_error += error;
     double relative_down_error = error/relative_error_denominator;
     double relative_up_error = 0;
+    columnHeader();
     printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
 	   i, lower, upper, row_value[i], 0.0, row_dual[i],
 	   row_bound_up_value, row_bound_up_objective, solved_up, relative_up_error,
