@@ -75,7 +75,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
     require_model_status = HighsModelStatus::OPTIMAL;
   } else {
     SpecialLps special_lps;
-    special_lps.blendingMaxLp(lp, require_model_status, optimal_objective);
+    //    special_lps.blendingMaxLp(lp, require_model_status,
+    //    optimal_objective);
+    special_lps.blendingLp(lp, require_model_status, optimal_objective);
     highs.passModel(lp);
   }
 

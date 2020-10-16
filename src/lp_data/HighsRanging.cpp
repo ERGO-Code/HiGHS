@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>  // for negate
 
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
