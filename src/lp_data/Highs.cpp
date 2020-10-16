@@ -1816,8 +1816,10 @@ HighsPresolveStatus Highs::runPresolve() {
 
   // Handle max case.
   if (presolve_return_status == HighsPresolveStatus::Reduced &&
-      lp_.sense_ == ObjSense::MAXIMIZE)
+      lp_.sense_ == ObjSense::MAXIMIZE) {
     presolve_.negateReducedLpCost();
+    presolve_.data_.reduced_lp_.sense_ = ObjSense::MAXIMIZE;
+  }
 
   // Update reduction counts.
   switch (presolve_.presolve_status_) {
