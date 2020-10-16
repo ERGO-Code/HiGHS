@@ -113,4 +113,9 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
 bool debugAllNonbasicMoveVsWorkArraysOk(
     const HighsModelObject& highs_model_object);
 
+void debugReportReinvertOnNumericalTrouble(
+    const std::string method_name, const HighsModelObject& highs_model_object,
+    const double numerical_trouble_measure, const double alpha_from_col,
+    const double alpha_from_row, const double numerical_trouble_tolerance,
+    const bool reinvert);
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_

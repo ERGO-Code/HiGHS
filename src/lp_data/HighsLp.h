@@ -36,7 +36,8 @@ enum class LpAction {
   DEL_ROWS,
   DEL_ROWS_BASIS_OK,
   SCALED_COL,
-  SCALED_ROW
+  SCALED_ROW,
+  BACKTRACKING
 };
 
 // Primal/dual statuses and corresponding HighsModelStatus
@@ -166,13 +167,14 @@ struct HighsSimplexLpStatus {
   bool has_dual_objective_value =
       false;  // The dual objective function value is known
   bool has_primal_objective_value =
-      false;  // The dual objective function value is known
+      false;                    // The dual objective function value is known
+  bool has_dual_ray = false;    // A dual unbounded ray is known
+  bool has_primal_ray = false;  // A primal unbounded ray is known
   SimplexSolutionStatus solution_status =
       SimplexSolutionStatus::UNSET;  // The solution status is UNSET
 };
 
 struct HighsSimplexInfo {
-  bool initialised = false;
   // Simplex information regarding primal solution, dual solution and
   // objective for this Highs Model Object. This is information which
   // should be retained from one run to the next in order to provide
@@ -228,6 +230,22 @@ struct HighsSimplexInfo {
 
   std::vector<int> devex_index_;
 
+  // Data for backtracking in the event of a singular basis
+  int phase1_backtracking_test_done = false;
+  int phase2_backtracking_test_done = false;
+  bool backtracking_ = false;
+  bool valid_backtracking_basis_ = false;
+  SimplexBasis backtracking_basis_;
+  int backtracking_basis_costs_perturbed_;
+  std::vector<double> backtracking_basis_workShift_;
+  std::vector<double> backtracking_basis_edge_weights_;
+
+  // Dual and primal ray vectors
+  int dual_ray_row_;
+  int dual_ray_sign_;
+  int primal_ray_col_;
+  int primal_ray_sign_;
+
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;
   int dual_edge_weight_strategy;
@@ -235,6 +253,7 @@ struct HighsSimplexInfo {
   int price_strategy;
 
   double dual_simplex_cost_perturbation_multiplier;
+  double factor_pivot_threshold;
   int update_limit;
 
   // Internal options - can't be changed externally
@@ -308,7 +327,7 @@ struct HighsSimplexInfo {
   // Analysis of INVERT form
   int num_kernel = 0;
   int num_major_kernel = 0;
-  const double major_kernel_relative_dim_threshhold = 0.1;
+  const double major_kernel_relative_dim_threshold = 0.1;
   double max_kernel_dim = 0;
   double sum_kernel_dim = 0;
   double running_average_kernel_dim = 0;
@@ -389,6 +408,9 @@ struct HighsRanging {
   std::vector<int> rowBoundRangeDnInCol_;
   std::vector<int> rowBoundRangeDnOutCol_;
 };
+
+// Set a basis to be logical for the LP
+void setLogicalBasis(const HighsLp& lp, HighsBasis& basis);
 
 // Make sure the sizes of solution and basis vectors are consistent
 // with numRow_ and numCol_
