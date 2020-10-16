@@ -487,8 +487,19 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   ranging.col_bound_up.ou_col_ = {b_up_l.begin(), b_up_l.begin()+numCol};
   ranging.col_bound_dn.ou_col_ = {b_dn_l.begin(), b_dn_l.begin()+numCol};
 
-  ranging.row_bound_up.value_ = {b_up_b.begin()+numCol, b_up_b.begin()+numTotal};
-  ranging.row_bound_dn.value_ = {b_dn_b.begin()+numCol, b_dn_b.begin()+numTotal};
+  // Flip and negate the row bound values
+  ranging.row_bound_up.value_ = {b_dn_b.begin()+numCol, b_dn_b.begin()+numTotal};
+  std::transform(ranging.row_bound_up.value_.cbegin(),
+		 ranging.row_bound_up.value_.cend(),
+		 ranging.row_bound_up.value_.begin(),
+		 std::negate<double>());
+
+  ranging.row_bound_dn.value_ = {b_up_b.begin()+numCol, b_up_b.begin()+numTotal};
+  std::transform(ranging.row_bound_dn.value_.cbegin(),
+		 ranging.row_bound_dn.value_.cend(),
+		 ranging.row_bound_dn.value_.begin(),
+		 std::negate<double>());
+
   ranging.row_bound_up.objective_ = {b_up_f.begin()+numCol, b_up_f.begin()+numTotal};
   ranging.row_bound_dn.objective_ = {b_dn_f.begin()+numCol, b_dn_f.begin()+numTotal};
   ranging.row_bound_up.in_col_ = {b_up_e.begin()+numCol, b_up_e.begin()+numTotal};
