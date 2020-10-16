@@ -5,12 +5,13 @@
 
 const bool dev_run = true;
 
-void quietRun(Highs& highs) {
+HighsStatus quietRun(Highs& highs) {
   highs.setHighsLogfile();
   highs.setHighsOutput();
-  highs.run();
+  HighsStatus call_status = highs.run();
   highs.setHighsLogfile(stdout);
   highs.setHighsOutput(stdout);
+  return call_status;
 }
 
 void colCostColumnHeader() {
@@ -43,7 +44,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
 
   const bool from_file = true;
   if (from_file) {
-    std::string model_file = std::string(HIGHS_DIR) + "/check/instances/stair.mps";
+    std::string model_file = std::string(HIGHS_DIR) + "/check/instances/shell.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
     require_model_status = HighsModelStatus::OPTIMAL;
   } else {
@@ -53,7 +54,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   }
 
   REQUIRE(highs.setBasis() == HighsStatus::OK);
-  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(quietRun(highs) == HighsStatus::OK);
 
   REQUIRE(highs.getModelStatus() == require_model_status);
   optimal_objective = highs.getObjectiveValue();
@@ -75,12 +76,11 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   int numRow = lp.numRow_;
   int numCol = lp.numCol_;
 
-  double total_error = 0;
-  const double total_relative_error_tolerance = 1e-12;
-  const double relative_error_tolerance = total_relative_error_tolerance;
+  const double relative_error_tolerance = 1e-12;
   const double relative_error_denominator = max(1.0, fabs(optimal_objective));
-  const double initial_error_report_threshold = 1e-16;//relative_error_tolerance;
+  const double initial_error_report_threshold = relative_error_tolerance;
   double error_report_threshold;
+  bool header_printed;
 
   double max_col_cost_relative_error = 0;
   int max_col_cost_relative_error_col = -1;
@@ -89,24 +89,22 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   double max_row_bound_relative_error = 0;
   int max_row_bound_relative_error_row = -1;
 
-  if (dev_run) printf(" --- Col cost ranging ---\n");
+  if (dev_run) printf(" --- Testing cost ranging ---\n");
   bool small_numCol = numCol<10;
   error_report_threshold = initial_error_report_threshold;
-  colCostColumnHeader();
+  header_printed = false;
   for (int i = 0; i < numCol; i++) {
     double col_cost_up_value = ranging.col_cost_up.value_[i];
     double col_cost_up_objective = ranging.col_cost_up.objective_[i];
     double col_cost_dn_value = ranging.col_cost_dn.value_[i];
     double col_cost_dn_objective = ranging.col_cost_dn.objective_[i];
     double cost = lp.colCost_[i];
-    double new_cost;
     double solved_up = 0;
     double solved_dn = 0;
     double error;
     // Col cost up ranging
     if (col_cost_up_value < HIGHS_CONST_INF) {
-      new_cost = col_cost_up_value;
-      highs.changeColCost(i, new_cost);
+      highs.changeColCost(i, col_cost_up_value);
       highs.setBasis(basis);
       quietRun(highs);
       REQUIRE(highs.getModelStatus() == require_model_status);
@@ -117,14 +115,11 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       solved_up = col_cost_up_objective;
       error = 0;
     }
-    error = fabs(solved_up-col_cost_up_objective);
-    total_error += error;
     double relative_up_error = error/relative_error_denominator;
     REQUIRE(relative_up_error < relative_error_tolerance);
     // Col cost down ranging
     if (col_cost_dn_value > -HIGHS_CONST_INF) {
-      new_cost = col_cost_dn_value;
-      highs.changeColCost(i, new_cost);
+      highs.changeColCost(i, col_cost_dn_value);
       highs.setBasis(basis);
       quietRun(highs);
       REQUIRE(highs.getModelStatus() == require_model_status);
@@ -135,7 +130,6 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       solved_dn = col_cost_dn_objective;
       error = 0;
     }
-    total_error += error;
     double relative_dn_error = error/relative_error_denominator;
     REQUIRE(relative_dn_error < relative_error_tolerance);
     double relative_error = max(relative_up_error, relative_dn_error);
@@ -144,6 +138,10 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       max_col_cost_relative_error_col = i;
     }
     if (small_numCol || relative_error > error_report_threshold) {
+      if (!header_printed) {
+	header_printed = true;
+	colCostColumnHeader();
+      }
       if (dev_run) printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
 	     i, cost, col_dual[i],
 	     col_cost_up_value, col_cost_up_objective, solved_up, relative_up_error,
@@ -152,9 +150,9 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
     }
   }
 
-  if (dev_run) printf(" --- Col bounds ranging ---\n");
+  if (dev_run) printf(" --- Testing column bounds ranging ---\n");
   error_report_threshold = initial_error_report_threshold;
-  colBoundcolumnHeader();
+  header_printed = false;
   for (int i = 0; i < numCol; i++) {
     double col_bound_up_value = ranging.col_bound_up.value_[i];
     double col_bound_up_objective = ranging.col_bound_up.objective_[i];
@@ -198,8 +196,6 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       solved_up = col_bound_up_objective;
       error = 0;
     }
-    error = fabs(solved_up-col_bound_up_objective);
-    total_error += error;
     double relative_up_error = error/relative_error_denominator;
     REQUIRE(relative_up_error < relative_error_tolerance);
     // Col bound down ranging
@@ -233,7 +229,6 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       solved_dn = col_bound_dn_objective;
       error = 0;
     }
-    total_error += error;
     double relative_dn_error = error/relative_error_denominator;
     REQUIRE(relative_dn_error < relative_error_tolerance);
     double relative_error = max(relative_up_error, relative_dn_error);
@@ -241,18 +236,22 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       max_col_bound_relative_error = relative_error;
       max_col_bound_relative_error_col = i;
     }
-    if (small_numCol || relative_error > error_report_threshold) {
+    if (small_numCol || relative_error > error_report_threshold) { 
+      if (!header_printed) {
+	header_printed = true;
+	colBoundcolumnHeader();
+      }
       if (dev_run) printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-	     i, lower, upper, col_value[i], col_dual[i],
-	     col_bound_up_value, col_bound_up_objective, solved_up, relative_up_error,
-	     col_bound_dn_value, col_bound_dn_objective, solved_dn, relative_dn_error);
+			  i, lower, upper, col_value[i], col_dual[i],
+			  col_bound_up_value, col_bound_up_objective, solved_up, relative_up_error,
+			  col_bound_dn_value, col_bound_dn_objective, solved_dn, relative_dn_error);
       error_report_threshold = 10*error_report_threshold;
     }
   }
-  if (dev_run) printf(" --- Row bounds ranging ---\n");
+  if (dev_run) printf(" --- Testing row bounds ranging ---\n");
   bool small_numRow = numRow <10;
   error_report_threshold = initial_error_report_threshold;
-  rowBoundColumnHeader();
+  header_printed = false;
   for (int i = 0; i < numRow; i++) {
     double row_bound_up_value = ranging.row_bound_up.value_[i];
     double row_bound_up_objective = ranging.row_bound_up.objective_[i];
@@ -296,8 +295,6 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       solved_up = row_bound_up_objective;
       error = 0;
     }
-    error = fabs(solved_up-row_bound_up_objective);
-    total_error += error;
     double relative_up_error = error/relative_error_denominator;
     REQUIRE(relative_up_error < relative_error_tolerance);
     // Row bound down ranging
@@ -331,7 +328,6 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       solved_dn = row_bound_dn_objective;
       error = 0;
     }
-    total_error += error;
     double relative_dn_error = error/relative_error_denominator;
     REQUIRE(relative_dn_error < relative_error_tolerance);
     double relative_error = max(relative_up_error, relative_dn_error);
@@ -340,6 +336,10 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
       max_row_bound_relative_error_row = i;
     }
     if (small_numRow || relative_error > error_report_threshold) {
+      if (!header_printed) {
+	header_printed = true;
+	rowBoundColumnHeader();
+      }
       if (dev_run) printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
 	     i, lower, upper, row_value[i], row_dual[i],
 	     row_bound_up_value, row_bound_up_objective, solved_up, relative_up_error,
@@ -349,13 +349,13 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   }
   if (dev_run) {
     if (max_col_cost_relative_error_col >= 0) 
-      printf("\nMax col cost  relative objective error = %g in col %d\n", max_col_cost_relative_error,
+      printf("Max col cost  relative objective error = %g in col %d\n", max_col_cost_relative_error,
 			  max_col_cost_relative_error_col);
     if (max_col_bound_relative_error_col >= 0) 
-      printf("\nMax col bound relative objective error = %g in col %d\n", max_col_bound_relative_error,
+      printf("Max col bound relative objective error = %g in col %d\n", max_col_bound_relative_error,
 			  max_col_bound_relative_error_col);
     if (max_row_bound_relative_error_row >= 0) 
-      printf("\nMax row bound relative objective error = %g in row %d\n", max_row_bound_relative_error,
+      printf("Max row bound relative objective error = %g in row %d\n", max_row_bound_relative_error,
 			  max_row_bound_relative_error_row);
   }
  
