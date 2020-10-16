@@ -19,17 +19,19 @@
 #include "lp_data/HighsModelObject.h"
 
 struct HighsRangingRecord {
-  std::vector<double> Value_;
-  std::vector<double> Objective_;
-  std::vector<int> InCol_;
-  std::vector<int> OutCol_;
+  std::vector<double> value_;
+  std::vector<double> objective_;
+  std::vector<int> in_col_;
+  std::vector<int> ou_col_;
 };
 
 struct HighsRanging {
-  HighsRangingRecord colCostUp;
-  HighsRangingRecord colCostDown;
-  HighsRangingRecord rowBoundUp;
-  HighsRangingRecord rowBoundDown;
+  HighsRangingRecord col_cost_up;
+  HighsRangingRecord col_cost_dn;
+  HighsRangingRecord col_bound_up;
+  HighsRangingRecord col_bound_dn;
+  HighsRangingRecord row_bound_up;
+  HighsRangingRecord row_bound_dn;
 };
 
 HighsStatus getHighsRanging(HighsRanging& ranging,
