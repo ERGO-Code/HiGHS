@@ -81,6 +81,16 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   const double objective =
       highs_model_object.unscaled_solution_params_.objective_function_value;
 
+  // Code written for minimization problems. Maximization problems are
+  // solved by using negated costs in the simplex solver and
+  // minimizing. Thus dual information in the simplex solver is
+  // negated for maximization problems. The objective has the right
+  // sign, though. Maximization problems are, thus, accommodated by
+  // applying the sign multiplier to dual information.
+  int sense = 1;
+  if (highs_model_object.lp_.sense_ == ObjSense::MAXIMIZE) sense = -1;
+  
+
   vector<int> iWork_(numTotal);
   vector<double> dWork_(numTotal);
   HVector column;
@@ -262,13 +272,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Increase c_j
       if (ddj_inc[j] != H_INF) {
         c_up_c[j] = cost_[j] + ddj_inc[j];
-        c_up_f[j] = objective +
-                    possInfProduct(ddj_inc[j], value);  // value * ddj_inc[j];
+        c_up_f[j] = objective + sense * possInfProduct(ddj_inc[j], value);  // value * ddj_inc[j];
         c_up_e[j] = j;
         c_up_l[j] = jxj_dec[j];
       } else {
         c_up_c[j] = H_INF;
-        c_up_f[j] = objective + infProduct(vsign);  // vsign * H_INF;
+        c_up_f[j] = objective + sense * infProduct(vsign);  // vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -276,13 +285,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Decrease c_j
       if (ddj_dec[j] != H_INF) {
         c_dn_c[j] = cost_[j] + ddj_dec[j];
-        c_dn_f[j] = objective +
-                    possInfProduct(ddj_dec[j], value);  // value * ddj_dec[j];
+        c_dn_f[j] = objective + sense * possInfProduct(ddj_dec[j], value);  // value * ddj_dec[j];
         c_dn_e[j] = j;
         c_dn_l[j] = jxj_inc[j];
       } else {
         c_up_c[j] = -H_INF;
-        c_up_f[j] = objective - infProduct(vsign);  // vsign * H_INF;
+        c_up_f[j] = objective - sense * infProduct(vsign);  // vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -303,13 +311,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Increase c_i
       if (jci_inc[i] != -1) {
         c_up_c[j] = cost_[j] + tci_inc[i];
-        c_up_f[j] = objective +
-                    possInfProduct(tci_inc[i], value);  // value * tci_inc[i];
+        c_up_f[j] = objective + sense * possInfProduct(tci_inc[i], value);  // value * tci_inc[i];
         c_up_e[j] = je = jci_inc[i];
         c_up_l[j] = Nmove_[je] > 0 ? jxj_inc[je] : jxj_dec[je];
       } else {
         c_up_c[j] = H_INF;
-        c_up_f[j] = objective + infProduct(vsign);  // vsign * H_INF;
+        c_up_f[j] = objective + sense * infProduct(vsign);  // vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -317,13 +324,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       // Decrease c_i
       if (jci_dec[i] != -1) {
         c_dn_c[j] = cost_[j] + tci_dec[i];
-        c_dn_f[j] = objective +
-                    possInfProduct(tci_dec[i], value);  // value * tci_dec[i];
+        c_dn_f[j] = objective + sense * possInfProduct(tci_dec[i], value);  // value * tci_dec[i];
         c_dn_e[j] = je = jci_dec[i];
         c_dn_l[j] = Nmove_[je] > 0 ? jxj_inc[je] : jxj_dec[je];
       } else {
         c_dn_c[j] = -H_INF;
-        c_dn_f[j] = objective - infProduct(vsign);  // H_INF * vsign;
+        c_dn_f[j] = objective - sense * infProduct(vsign);  // H_INF * vsign;
         c_dn_e[j] = -1;
         c_dn_l[j] = -1;
       }
@@ -364,13 +370,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       if (ixj_inc[j] != -1) {
         int i = ixj_inc[j];
         b_up_b[j] = value_[j] + txj_inc[j];
-        b_up_f[j] = objective +
-                    possInfProduct(txj_inc[j], dualv);  // txj_inc[j] * dualv;
+        b_up_f[j] = objective + sense * possInfProduct(txj_inc[j], dualv);  // txj_inc[j] * dualv;
         b_up_e[j] = wxj_inc[j] > 0 ? jci_inc[i] : jci_dec[i];
         b_up_l[j] = Bindex_[i];
       } else {
         b_up_b[j] = H_INF;
-        b_up_f[j] = objective + infProduct(dsign);  // H_INF * dsign;
+        b_up_f[j] = objective + sense*infProduct(dsign);  // H_INF * dsign;
         b_up_e[j] = -1;
         b_up_l[j] = -1;
       }
@@ -379,7 +384,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       if (value_[j] != upper_[j] && b_up_b[j] > upper_[j]) {
         b_up_b[j] = upper_[j];
         assert(lower_[j] > -HIGHS_CONST_INF);
-        b_up_f[j] = objective + (upper_[j] - lower_[j]) * dualv;
+        b_up_f[j] = objective + sense * (upper_[j] - lower_[j]) * dualv;
         b_up_e[j] = j;
         b_up_l[j] = j;
       }
@@ -388,13 +393,12 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       if (ixj_dec[j] != -1) {
         int i = ixj_dec[j];
         b_dn_b[j] = value_[j] + txj_dec[j];
-        b_dn_f[j] = objective +
-                    possInfProduct(txj_dec[j], dualv);  // txj_dec[j] * dualv;
+        b_dn_f[j] = objective + sense * possInfProduct(txj_dec[j], dualv);  // txj_dec[j] * dualv;
         b_dn_e[j] = wxj_dec[j] > 0 ? jci_inc[i] : jci_dec[i];
         b_dn_l[j] = Bindex_[i];
       } else {
         b_dn_b[j] = -H_INF;
-        b_dn_f[j] = objective - infProduct(dsign);  // H_INF * dsign;
+        b_dn_f[j] = objective - sense * infProduct(dsign);  // H_INF * dsign;
         b_dn_e[j] = -1;
         b_dn_l[j] = -1;
       }
@@ -403,7 +407,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
       if (value_[j] != lower_[j] && b_dn_b[j] < lower_[j]) {
         b_dn_b[j] = lower_[j];
         assert(upper_[j] < HIGHS_CONST_INF);
-        b_dn_f[j] = objective + (lower_[j] - upper_[j]) * dualv;
+        b_dn_f[j] = objective + sense * (lower_[j] - upper_[j]) * dualv;
         b_dn_e[j] = j;
         b_dn_l[j] = j;
       }
@@ -433,7 +437,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
           // Bound flip
           double delta = jmove * (upper_[j_in] - lower_[j_in]);
           newx = xi[i] - delta * a_in;
-          newf = objective + delta * dual_[j_in];
+          newf = objective + sense * delta * dual_[j_in];
           j_enter = j_in;
           j_leave = j_out;
         } else if (j_out != -1) {
@@ -441,7 +445,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
           double delta = w_out > 0 ? dxi_inc[i_out] : dxi_dec[i_out];
           double a_out = jmove > 0 ? axj_inc[j_in] : axj_dec[j_in];
           newx = xi[i] + delta * a_in / a_out;
-          newf = objective + tt * dual_[j_in];
+          newf = objective + sense * tt * dual_[j_in];
           j_enter = j_in;
           j_leave = j_out;
         } else {
@@ -497,14 +501,32 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   // Ranging 4.2. Put to output buffer
   //
 
-  ranging.col_cost_up.value_ = c_up_c;
-  ranging.col_cost_dn.value_ = c_dn_c;
-  ranging.col_cost_up.objective_ = c_up_f;
-  ranging.col_cost_dn.objective_ = c_dn_f;
-  ranging.col_cost_up.in_var_ = c_up_e;
-  ranging.col_cost_dn.in_var_ = c_dn_e;
-  ranging.col_cost_up.ou_var_ = c_up_l;
-  ranging.col_cost_dn.ou_var_ = c_dn_l;
+  if (sense > 0) {
+    ranging.col_cost_up.value_ = c_up_c;
+    ranging.col_cost_dn.value_ = c_dn_c;
+    ranging.col_cost_up.objective_ = c_up_f;
+    ranging.col_cost_dn.objective_ = c_dn_f;
+    ranging.col_cost_up.in_var_ = c_up_e;
+    ranging.col_cost_dn.in_var_ = c_dn_e;
+    ranging.col_cost_up.ou_var_ = c_up_l;
+    ranging.col_cost_dn.ou_var_ = c_dn_l;
+  } else {
+    // For maximization problems, flip data and negate the cost values
+    ranging.col_cost_up.value_ = c_dn_c;
+    ranging.col_cost_dn.value_ = c_up_c;
+    ranging.col_cost_up.objective_ = c_dn_f;
+    ranging.col_cost_dn.objective_ = c_up_f;
+    ranging.col_cost_up.in_var_ = c_dn_e;
+    ranging.col_cost_dn.in_var_ = c_up_e;
+    ranging.col_cost_up.ou_var_ = c_dn_l;
+    ranging.col_cost_dn.ou_var_ = c_up_l;
+    std::transform(ranging.col_cost_up.value_.cbegin(),
+		   ranging.col_cost_up.value_.cend(),
+		   ranging.col_cost_up.value_.begin(), std::negate<double>());
+    std::transform(ranging.col_cost_dn.value_.cbegin(),
+		   ranging.col_cost_dn.value_.cend(),
+		   ranging.col_cost_dn.value_.begin(), std::negate<double>());
+  }
 
   ranging.col_bound_up.value_ = {b_up_b.begin(), b_up_b.begin() + numCol};
   ranging.col_bound_dn.value_ = {b_dn_b.begin(), b_dn_b.begin() + numCol};

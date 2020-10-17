@@ -66,7 +66,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   HighsModelStatus require_model_status;
   double optimal_objective;
 
-  const bool from_file = false;
+  const bool from_file = true;
   if (from_file) {
     std::string model_file =
         std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
@@ -75,9 +75,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
     require_model_status = HighsModelStatus::OPTIMAL;
   } else {
     SpecialLps special_lps;
-    //    special_lps.blendingMaxLp(lp, require_model_status,
-    //    optimal_objective);
-    special_lps.blendingLp(lp, require_model_status, optimal_objective);
+    special_lps.blendingMaxLp(lp, require_model_status, optimal_objective);
     highs.passModel(lp);
   }
 
@@ -126,7 +124,7 @@ TEST_CASE("Ranging", "[highs_test_ranging]") {
   bool small_numCol = numCol < small_dim;
   error_report_threshold = initial_error_report_threshold;
   num_lines_printed = 0;
-  const bool test_all = false;
+  const bool test_all = true;
   const bool test_all_col_cost = test_all;
   const bool test_all_col_bound = test_all;
   const bool test_all_row_bound = test_all;
