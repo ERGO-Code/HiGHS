@@ -13,6 +13,7 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 
 # Make test executable
 set(TEST_SOURCES
+    TestEkk.cpp
     TestMain.cpp
     TestOptions.cpp
     TestIO.cpp
