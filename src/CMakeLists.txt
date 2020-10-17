@@ -105,6 +105,7 @@ set(sources
     simplex/HDualRHS.cpp
     simplex/HDualRow.cpp
     simplex/HDualMulti.cpp
+    simplex/HEkk.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
@@ -160,6 +161,7 @@ set(headers
     simplex/HDual.h
     simplex/HDualRow.h
     simplex/HDualRHS.h
+    simplex/HEkk.h
     simplex/HFactor.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h

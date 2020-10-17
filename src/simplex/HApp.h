@@ -27,6 +27,7 @@
 #include "lp_data/HighsSolve.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/HDual.h"
+#include "simplex/HEkk.h"
 #include "simplex/HPrimal.h"
 #include "simplex/HQPrimal.h"
 #include "simplex/HSimplex.h"
@@ -223,6 +224,13 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       call_status = primal_solver.solve();
       return_status =
           interpretCallStatus(call_status, return_status, "HQPrimal::solve");
+      if (return_status == HighsStatus::Error) return return_status;
+    } else if (simplex_strategy == SIMPLEX_STRATEGY_EKK) {
+      // Use EKK solver
+      HEkk ekk_solver(highs_model_object.simplex_lp_);
+      call_status = ekk_solver.solve();
+      return_status =
+          interpretCallStatus(call_status, return_status, "HEkk::solve");
       if (return_status == HighsStatus::Error) return return_status;
     } else {
       // Use dual simplex solver
