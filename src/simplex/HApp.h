@@ -227,7 +227,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       if (return_status == HighsStatus::Error) return return_status;
     } else if (simplex_strategy == SIMPLEX_STRATEGY_EKK) {
       // Use EKK solver
-      HEkk ekk_solver(highs_model_object.simplex_lp_);
+      HEkk ekk_solver(highs_model_object.simplex_lp_, highs_model_object.options_);
       call_status = ekk_solver.solve();
       return_status =
           interpretCallStatus(call_status, return_status, "HEkk::solve");
