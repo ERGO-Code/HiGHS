@@ -107,16 +107,16 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   if (return_status == HighsStatus::Error) return return_status;
 
   if (highs_model_object.options_.simplex_strategy == SIMPLEX_STRATEGY_EKK) {
-    // Use EKK 
+    // Use EKK
     HEkk ekk(highs_model_object.simplex_lp_, highs_model_object.options_);
     call_status = ekk.solve();
     return_status =
-      interpretCallStatus(call_status, return_status, "HEkk::solve");
+        interpretCallStatus(call_status, return_status, "HEkk::solve");
     return return_status;
   }
 
 #ifdef HiGHSDEV
-    // reportSimplexLpStatus(simplex_lp_status, "After transition");
+  // reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
   HighsSolutionParams& scaled_solution_params =
       highs_model_object.scaled_solution_params_;

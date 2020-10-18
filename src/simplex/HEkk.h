@@ -54,7 +54,7 @@ struct HighsEkkStatus {
 
 class HEkk {
  public:
- HEkk(HighsLp& lp, HighsOptions& options) : lp_(lp), options_(options){}
+  HEkk(HighsLp& lp, HighsOptions& options) : lp_(lp), options_(options) {}
   /**
    * @brief Solve a model instance
    */
@@ -75,7 +75,6 @@ class HEkk {
   // LP to be solved, HiGHS options to be used
   HighsLp& lp_;
   HighsOptions& options_;
-
 };
 
 #endif /* SIMPLEX_HEKK_H_ */

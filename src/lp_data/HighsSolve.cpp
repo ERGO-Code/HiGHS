@@ -208,7 +208,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       // Use the simplex method to clean up
       call_status = solveLpSimplex(model);
       return_status =
-	   interpretCallStatus(call_status, return_status, "solveLpSimplex");
+          interpretCallStatus(call_status, return_status, "solveLpSimplex");
       if (return_status == HighsStatus::Error) return return_status;
       if (!isSolutionRightSize(model.lp_, model.solution_)) {
         HighsLogMessage(options.logfile, HighsMessageType::ERROR,

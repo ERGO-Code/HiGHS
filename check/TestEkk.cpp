@@ -25,7 +25,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     special_lps.blendingLp(lp, require_model_status, optimal_objective);
     highs.passModel(lp);
   }
-  REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_EKK) == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_EKK) ==
+          HighsStatus::OK);
   REQUIRE(highs.run() == HighsStatus::Error);
-  
 }
