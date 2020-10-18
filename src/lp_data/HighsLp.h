@@ -390,25 +390,6 @@ struct HighsBasis {
   std::vector<HighsBasisStatus> row_status;
 };
 
-struct HighsRanging {
-  std::vector<double> colCostRangeUpValue_;
-  std::vector<double> colCostRangeUpObjective_;
-  std::vector<int> colCostRangeUpInCol_;
-  std::vector<int> colCostRangeUpOutCol_;
-  std::vector<double> colCostRangeDnValue_;
-  std::vector<double> colCostRangeDnObjective_;
-  std::vector<int> colCostRangeDnInCol_;
-  std::vector<int> colCostRangeDnOutCol_;
-  std::vector<double> rowBoundRangeUpValue_;
-  std::vector<double> rowBoundRangeUpObjective_;
-  std::vector<int> rowBoundRangeUpInCol_;
-  std::vector<int> rowBoundRangeUpOutCol_;
-  std::vector<double> rowBoundRangeDnValue_;
-  std::vector<double> rowBoundRangeDnObjective_;
-  std::vector<int> rowBoundRangeDnInCol_;
-  std::vector<int> rowBoundRangeDnOutCol_;
-};
-
 // Set a basis to be logical for the LP
 void setLogicalBasis(const HighsLp& lp, HighsBasis& basis);
 
