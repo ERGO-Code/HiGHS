@@ -96,6 +96,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   analysis.simplexTimerStart(SimplexTotalClock);
 #endif
+
   // Indicate that dual and primal rays are not known
   highs_model_object.simplex_lp_status_.has_dual_ray = false;
   highs_model_object.simplex_lp_status_.has_primal_ray = false;
@@ -104,6 +105,16 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   call_status = transition(highs_model_object);
   return_status = interpretCallStatus(call_status, return_status, "transition");
   if (return_status == HighsStatus::Error) return return_status;
+
+  if (highs_model_object.options_.simplex_strategy == SIMPLEX_STRATEGY_EKK) {
+    // Use EKK 
+    HEkk ekk(highs_model_object.simplex_lp_, highs_model_object.options_);
+    call_status = ekk.solve();
+    return_status =
+      interpretCallStatus(call_status, return_status, "HEkk::solve");
+    return return_status;
+  }
+
 #ifdef HiGHSDEV
     // reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
@@ -224,13 +235,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       call_status = primal_solver.solve();
       return_status =
           interpretCallStatus(call_status, return_status, "HQPrimal::solve");
-      if (return_status == HighsStatus::Error) return return_status;
-    } else if (simplex_strategy == SIMPLEX_STRATEGY_EKK) {
-      // Use EKK solver
-      HEkk ekk_solver(highs_model_object.simplex_lp_, highs_model_object.simplex_basis_, highs_model_object.options_);
-      call_status = ekk_solver.solve();
-      return_status =
-          interpretCallStatus(call_status, return_status, "HEkk::solve");
       if (return_status == HighsStatus::Error) return return_status;
     } else {
       // Use dual simplex solver
