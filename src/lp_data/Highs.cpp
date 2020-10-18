@@ -921,6 +921,12 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   return simplex_interface.getPrimalRay(has_primal_ray, primal_ray_value);
 }
 
+HighsStatus Highs::getRanging(HighsRanging& ranging) {
+  underDevelopmentLogMessage("getRanging");
+  if (!haveHmo("getRanging")) return HighsStatus::Error;
+  return getHighsRanging(ranging, hmos_[0]);
+}
+
 HighsStatus Highs::getBasicVariables(int* basic_variables) {
   if (!haveHmo("getBasicVariables")) return HighsStatus::Error;
   if (basic_variables == NULL) {
