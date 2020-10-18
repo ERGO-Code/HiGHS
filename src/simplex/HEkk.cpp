@@ -31,9 +31,9 @@ using std::endl;
 HighsStatus HEkk::init() { return HighsStatus::OK; }
 HighsStatus HEkk::solve() {
   HighsLogMessage(
-      options_.logfile, HighsMessageType::INFO,
+      options.logfile, HighsMessageType::INFO,
       "HEkk::solve called for LP with %d columns, %d rows and %d entries",
-      lp_.numCol_, lp_.numRow_, lp_.Astart_[lp_.numCol_]);
+      simplex_lp.numCol_, simplex_lp.numRow_, simplex_lp.Astart_[simplex_lp.numCol_]);
 
   return HighsStatus::Error;
 }
