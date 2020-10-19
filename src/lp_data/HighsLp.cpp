@@ -13,6 +13,13 @@
  */
 #include "lp_data/HighsLp.h"
 
+bool HighsLp::operator==(const HighsLp& lp) {
+  bool equal = equalButForNames(lp);
+  equal = this->row_names_ == lp.row_names_ && equal;
+  equal = this->col_names_ == lp.col_names_ && equal;
+  return equal;
+}
+
 bool HighsLp::equalButForNames(const HighsLp& lp) {
   bool equal = true;
   equal = this->numCol_ == lp.numCol_ && equal;
@@ -31,34 +38,27 @@ bool HighsLp::equalButForNames(const HighsLp& lp) {
   return equal;
 }
 
-bool HighsLp::operator==(const HighsLp& lp) {
-  bool equal = equalButForNames(lp);
-  equal = this->row_names_ == lp.row_names_ && equal;
-  equal = this->col_names_ == lp.col_names_ && equal;
-  return equal;
-}
+void HighsLp::clear() {
+  this->numCol_ = 0;
+  this->numRow_ = 0;
 
-void clearLp(HighsLp& lp) {
-  lp.numCol_ = 0;
-  lp.numRow_ = 0;
+  this->Astart_.clear();
+  this->Aindex_.clear();
+  this->Avalue_.clear();
+  this->colCost_.clear();
+  this->colLower_.clear();
+  this->colUpper_.clear();
+  this->rowLower_.clear();
+  this->rowUpper_.clear();
 
-  lp.Astart_.clear();
-  lp.Aindex_.clear();
-  lp.Avalue_.clear();
-  lp.colCost_.clear();
-  lp.colLower_.clear();
-  lp.colUpper_.clear();
-  lp.rowLower_.clear();
-  lp.rowUpper_.clear();
+  this->sense_ = ObjSense::MINIMIZE;
+  this->offset_ = 0;
 
-  lp.sense_ = ObjSense::MINIMIZE;
-  lp.offset_ = 0;
+  this->model_name_ = "";
+  this->lp_name_ = "";
 
-  lp.model_name_ = "";
-  lp.lp_name_ = "";
+  this->col_names_.clear();
+  this->row_names_.clear();
 
-  lp.col_names_.clear();
-  lp.row_names_.clear();
-
-  lp.integrality_.clear();
+  this->integrality_.clear();
 }

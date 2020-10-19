@@ -47,10 +47,9 @@ class HighsLp {
 
   std::vector<int> integrality_;
 
-  bool equalButForNames(const HighsLp& lp);
   bool operator==(const HighsLp& lp);
+  bool equalButForNames(const HighsLp& lp);
+  void clear();
 };
-
-void clearLp(HighsLp& lp);
 
 #endif
