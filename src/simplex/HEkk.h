@@ -15,8 +15,11 @@
 #define SIMPLEX_HEKK_H_
 
 #include "HConfig.h"
-#include "simplex/HSimplex.h"
-#include "simplex/HVector.h"
+#include "lp_data/HighsOptions.h"
+#include "simplex/HFactor.h"
+#include "simplex/HMatrix.h"
+#include "simplex/SimplexConst.h"
+#include "simplex/HighsSimplexAnalysis.h"
 
 /**
  * @brief Primal simplex solver for HiGHS
@@ -124,7 +127,7 @@ struct EkkInfo {
   int phase2_backtracking_test_done = false;
   bool backtracking_ = false;
   bool valid_backtracking_basis_ = false;
-  SimplexBasis backtracking_basis_;
+  EkkBasis backtracking_basis_;
   int backtracking_basis_costs_perturbed_;
   std::vector<double> backtracking_basis_workShift_;
   std::vector<double> backtracking_basis_edge_weights_;
@@ -253,14 +256,17 @@ class HEkk {
   HMatrix matrix;
   HFactor factor;
 
+  // References:
+  //
+  // LP to be solved, HiGHS options to be used
   HighsLp& simplex_lp;
   HighsOptions& options;
   HighsTimer& timer;
   HighsSimplexAnalysis analysis;
  private:
-  // References:
-  //
-  // LP to be solved, HiGHS options to be used
+
+  void setSimplexOptions();
+
 };
 
 #endif /* SIMPLEX_HEKK_H_ */
