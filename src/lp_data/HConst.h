@@ -52,6 +52,9 @@ enum class HighsInfoType { INT = 1, DOUBLE };
 
 enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 
+/** SCIP/HiGHS Objective sense */
+enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
+
 enum SolverOption {
   SOLVER_OPTION_SIMPLEX = -1,
   SOLVER_OPTION_CHOOSE,

@@ -91,9 +91,6 @@ enum class HighsModelStatus {
   HIGHS_MODEL_STATUS_MAX = DUAL_INFEASIBLE
 };
 
-/** SCIP/HiGHS Objective sense */
-enum class ObjSense { MINIMIZE = 1, MAXIMIZE = -1 };
-
 class HighsLp;
 
 class HighsLp {
