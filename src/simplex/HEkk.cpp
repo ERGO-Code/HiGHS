@@ -11,13 +11,13 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "simplex/HEkk.h"
-
-#include <cassert>
-#include <iostream>
+//#include <cassert>
+//#include <iostream>
 
 #include "io/HighsIO.h"
-#include "lp_data/HConst.h"
+#include "simplex/HEkk.h"
+
+//#include "lp_data/HConst.h"
 //#include "simplex/HSimplex.h"
 //#include "simplex/HSimplexDebug.h"
 //#include "simplex/HFactorDebug.h"
