@@ -21,6 +21,7 @@
 
 #include "HConfig.h"
 #include "lp_data/HConst.h"        // For HiGHS strategy options
+#include "lp_data/HStruct.h"        // For HighsBasis and HighsSolution
 #include "simplex/SimplexConst.h"  // For simplex strategy options
 #include "simplex/SimplexStruct.h"  // For SimplexBasis
 
@@ -81,55 +82,11 @@ struct HighsScale {
   std::vector<double> row_;
 };
 
-struct HighsSolutionParams {
-  // Input to solution analysis method
-  double primal_feasibility_tolerance;
-  double dual_feasibility_tolerance;
-  int primal_status = PrimalDualStatus::STATUS_NOTSET;
-  int dual_status = PrimalDualStatus::STATUS_NOTSET;
-  // Output from solution analysis method
-  double objective_function_value;
-  int num_primal_infeasibilities;
-  double sum_primal_infeasibilities;
-  double max_primal_infeasibility;
-  int num_dual_infeasibilities;
-  double sum_dual_infeasibilities;
-  double max_dual_infeasibility;
-};
-
-struct HighsIterationCounts {
-  int simplex = 0;
-  int ipm = 0;
-  int crossover = 0;
-};
-
-struct HighsSolution {
-  std::vector<double> col_value;
-  std::vector<double> col_dual;
-  std::vector<double> row_value;
-  std::vector<double> row_dual;
-};
-
-// To be the basis representation given back to the user. Values of
-// HighsBasisStatus are defined in HConst.h
-struct HighsBasis {
-  bool valid_ = false;
-  std::vector<HighsBasisStatus> col_status;
-  std::vector<HighsBasisStatus> row_status;
-};
-
-// Set a basis to be logical for the LP
-void setLogicalBasis(const HighsLp& lp, HighsBasis& basis);
-
 // Make sure the sizes of solution and basis vectors are consistent
 // with numRow_ and numCol_
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
-
-// If debug this method terminates the program when the status is not OK. If
-// standard build it only prints a message.
-// void checkStatus(HighsStatus status);
 
 void clearSolutionUtil(HighsSolution& solution);
 void clearBasisUtil(HighsBasis& solution);
