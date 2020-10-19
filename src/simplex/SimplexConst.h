@@ -154,6 +154,17 @@ const int DUAL_MULTI_MIN_THREADS = 1;  // 2;
 // phase 2
 const bool invert_if_row_out_negative = true;
 
+struct SimplexBasis {
+  // The basis for the simplex method consists of basicIndex,
+  // nonbasicFlag and nonbasicMove. If HighsSimplexLpStatus has_basis
+  // is true then it is assumed that basicIndex_ and nonbasicFlag_ are
+  // self-consistent and correpond to the dimensions of an associated
+  // HighsLp, but the basis matrix B is not necessarily nonsingular.
+  std::vector<int> basicIndex_;
+  std::vector<int> nonbasicFlag_;
+  std::vector<int> nonbasicMove_;
+};
+
 /** Simplex nonbasicFlag status for columns and rows. Don't use enum
     class since they are used as int to replace conditional statements
     by multiplication */

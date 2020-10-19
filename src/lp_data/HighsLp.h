@@ -80,17 +80,6 @@ struct HighsScale {
   std::vector<double> row_;
 };
 
-struct SimplexBasis {
-  // The basis for the simplex method consists of basicIndex,
-  // nonbasicFlag and nonbasicMove. If HighsSimplexLpStatus has_basis
-  // is true then it is assumed that basicIndex_ and nonbasicFlag_ are
-  // self-consistent and correpond to the dimensions of an associated
-  // HighsLp, but the basis matrix B is not necessarily nonsingular.
-  std::vector<int> basicIndex_;
-  std::vector<int> nonbasicFlag_;
-  std::vector<int> nonbasicMove_;
-};
-
 struct HighsSimplexLpStatus {
   // Status of LP solved by the simplex method and its data
   bool valid = false;
