@@ -74,14 +74,6 @@ class HighsLp {
   bool operator==(const HighsLp& lp);
 };
 
-// Cost, column and row scaling factors
-struct HighsScale {
-  bool is_scaled_ = false;
-  double cost_;
-  std::vector<double> col_;
-  std::vector<double> row_;
-};
-
 // Make sure the sizes of solution and basis vectors are consistent
 // with numRow_ and numCol_
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);

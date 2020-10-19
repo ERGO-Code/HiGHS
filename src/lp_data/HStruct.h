@@ -20,6 +20,13 @@ struct HighsIterationCounts {
   int crossover = 0;
 };
 
+struct HighsScale {
+  bool is_scaled_ = false;
+  double cost_;
+  std::vector<double> col_;
+  std::vector<double> row_;
+};
+
 struct HighsSolution {
   std::vector<double> col_value;
   std::vector<double> col_dual;
