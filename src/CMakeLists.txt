@@ -138,6 +138,7 @@ set(headers
     io/HighsIO.h
     io/LoadOptions.h
     lp_data/HConst.h
+    lp_data/HStruct.h
     lp_data/HighsAnalysis.h
     lp_data/HighsDebug.h
     lp_data/HighsInfo.h
@@ -171,6 +172,7 @@ set(headers
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
+    simplex/SimplexStruct.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h

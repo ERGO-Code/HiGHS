@@ -14,10 +14,24 @@
 #ifndef SIMPLEX_HSIMPLEX_H_
 #define SIMPLEX_HSIMPLEX_H_
 
-#include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsStatus.h"
+
+enum class LpAction {
+  DUALISE = 0,
+  PERMUTE,
+  SCALE,
+  NEW_COSTS,
+  NEW_BOUNDS,
+  NEW_BASIS,
+  NEW_COLS,
+  NEW_ROWS,
+  DEL_COLS,
+  DEL_ROWS,
+  DEL_ROWS_BASIS_OK,
+  SCALED_COL,
+  SCALED_ROW,
+  BACKTRACKING
+};
 
 void setSimplexOptions(
     HighsModelObject& highs_model_object  //!< Model object in which simplex
