@@ -14,6 +14,10 @@
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
 
+#include <vector>
+
+#include "lp_data/HConst.h"
+
 struct HighsIterationCounts {
   int simplex = 0;
   int ipm = 0;
@@ -34,8 +38,6 @@ struct HighsSolution {
   std::vector<double> row_dual;
 };
 
-// To be the basis representation given back to the user. Values of
-// HighsBasisStatus are defined in HConst.h
 struct HighsBasis {
   bool valid_ = false;
   std::vector<HighsBasisStatus> col_status;
