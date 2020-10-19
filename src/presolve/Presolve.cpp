@@ -263,7 +263,6 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
 
   if (iPrint) std::cout << "----> fixed cols" << std::endl;
 
-
   for (Presolver main_loop_presolver : order) {
     double time_start = timer.timer_.readRunHighsClock();
     if (iPrint) std::cout << "----> ";
