@@ -10,8 +10,8 @@
 #ifndef LP_DATA_HIGHS_MODEL_OBJECT_H_
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
-#include "lp_data/HighsLp.h"
 #include "lp_data/HStruct.h"
+#include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"

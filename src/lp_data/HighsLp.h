@@ -20,9 +20,9 @@
 #include <vector>
 
 #include "HConfig.h"
-#include "lp_data/HConst.h"        // For HiGHS strategy options
+#include "lp_data/HConst.h"         // For HiGHS strategy options
 #include "lp_data/HStruct.h"        // For HighsBasis and HighsSolution
-#include "simplex/SimplexConst.h"  // For simplex strategy options
+#include "simplex/SimplexConst.h"   // For simplex strategy options
 #include "simplex/SimplexStruct.h"  // For SimplexBasis
 
 enum class LpAction {
