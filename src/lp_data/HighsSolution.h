@@ -72,4 +72,8 @@ void copySolutionObjectiveParams(
 void copyFromSolutionParams(HighsInfo& highs_info,
                             const HighsSolutionParams& solution_params);
 
+bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
+bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
+bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
+
 #endif  // LP_DATA_HIGHSSOLUTION_H_

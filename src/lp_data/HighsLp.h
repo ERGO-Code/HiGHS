@@ -59,10 +59,6 @@ class HighsLp {
 
 // Make sure the sizes of solution and basis vectors are consistent
 // with numRow_ and numCol_
-bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
-bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
-bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
-
 void clearSolutionUtil(HighsSolution& solution);
 void clearBasisUtil(HighsBasis& solution);
 void clearLp(HighsLp& lp);
