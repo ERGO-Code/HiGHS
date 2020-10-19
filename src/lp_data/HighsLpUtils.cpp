@@ -1757,38 +1757,38 @@ void analyseLp(const HighsLp& lp, const std::string message) {
 }
 #endif
 
-// void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis&
-// basis,
-//                          const HighsSolution& solution, const bool pretty) {
-//   if (pretty) {
-//     reportModelBoundSol(file, true, lp.numCol_, lp.colLower_, lp.colUpper_,
-//                         lp.col_names_, solution.col_value, solution.col_dual,
-//                         basis.col_status);
-//     reportModelBoundSol(file, false, lp.numRow_, lp.rowLower_, lp.rowUpper_,
-//                         lp.row_names_, solution.row_value, solution.row_dual,
-//                         basis.row_status);
-//   } else {
-//     fprintf(file,
-//             "%d %d : Number of columns and rows for primal and dual solution
-//             " "and basis\n", lp.numCol_, lp.numRow_);
-//     const bool with_basis = basis.valid_;
-//     if (with_basis) {
-//       fprintf(file, "T\n");
-//     } else {
-//       fprintf(file, "F\n");
-//     }
-//     for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-//       fprintf(file, "%g %g", solution.col_value[iCol],
-//       solution.col_dual[iCol]); if (with_basis) fprintf(file, " %d",
-//       (int)basis.col_status[iCol]); fprintf(file, " \n");
-//     }
-//     for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-//       fprintf(file, "%g %g", solution.row_value[iRow],
-//       solution.row_dual[iRow]); if (with_basis) fprintf(file, " %d",
-//       (int)basis.row_status[iRow]); fprintf(file, " \n");
-//     }
-//   }
-// }
+void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
+                         const HighsSolution& solution, const bool pretty) {
+  if (pretty) {
+    writeModelBoundSol(file, true, lp.numCol_, lp.colLower_, lp.colUpper_,
+                       lp.col_names_, solution.col_value, solution.col_dual,
+                       basis.col_status);
+    writeModelBoundSol(file, false, lp.numRow_, lp.rowLower_, lp.rowUpper_,
+                       lp.row_names_, solution.row_value, solution.row_dual,
+                       basis.row_status);
+  } else {
+    fprintf(file,
+            "%d %d : Number of columns and rows for primal and dual solution "
+            "and basis\n",
+            lp.numCol_, lp.numRow_);
+    const bool with_basis = basis.valid_;
+    if (with_basis) {
+      fprintf(file, "T\n");
+    } else {
+      fprintf(file, "F\n");
+    }
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+      fprintf(file, "%g %g", solution.col_value[iCol], solution.col_dual[iCol]);
+      if (with_basis) fprintf(file, " %d", (int)basis.col_status[iCol]);
+      fprintf(file, " \n");
+    }
+    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+      fprintf(file, "%g %g", solution.row_value[iRow], solution.row_dual[iRow]);
+      if (with_basis) fprintf(file, " %d", (int)basis.row_status[iRow]);
+      fprintf(file, " \n");
+    }
+  }
+}
 
 HighsStatus writeBasisFile(const HighsOptions& options, const HighsBasis& basis,
                            const std::string filename) {
@@ -1823,6 +1823,8 @@ HighsStatus writeBasisFile(const HighsOptions& options, const HighsBasis& basis,
 
 HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
                           const std::string filename) {
+  // Reads a basis file, returning an error if what's read is
+  // inconsistent with the sizes of the HighsBasis passed in
   HighsStatus return_status = HighsStatus::OK;
   std::ifstream inFile(filename);
   if (inFile.fail()) {
@@ -1841,15 +1843,13 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
     int basis_numRow = (int)basis.row_status.size();
     if (numCol != basis_numCol) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "readBasisFile: Basis file is for %d columns but current "
-                      "HIGHS basis is for %d columns",
+                      "readBasisFile: Basis file is for %d columns, not %d",
                       numCol, basis_numCol);
       return HighsStatus::Error;
     }
     if (numRow != basis_numRow) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "readBasisFile: Basis file is for %d rows but current "
-                      "HIGHS basis is for %d rows",
+                      "readBasisFile: Basis file is for %d rows, not %d",
                       numRow, basis_numRow);
       return HighsStatus::Error;
     }
@@ -1862,6 +1862,18 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
       inFile >> int_status;
       basis.row_status[iRow] = (HighsBasisStatus)int_status;
     }
+    if (inFile.eof()) {
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "readBasisFile: Reached end of file before reading complete basis");
+      return_status = HighsStatus::Error;
+    }
+  } else {
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
+        "readBasisFile: Cannot read basis file for HiGHS version %d",
+        highs_version_number);
+    return_status = HighsStatus::Error;
   }
   inFile.close();
   return return_status;

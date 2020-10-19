@@ -87,6 +87,7 @@ set(sources
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
+    lp_data/HighsRanging.cpp
     lp_data/HighsSolution.cpp
     lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
@@ -111,7 +112,6 @@ set(sources
     simplex/HMatrix.cpp
     simplex/HPrimal.cpp
     simplex/HQPrimal.cpp
-#    simplex/HRanging.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexReport.cpp
@@ -120,6 +120,7 @@ set(sources
     test/KktCh2.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
+    util/HighsMatrixPic.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
@@ -146,6 +147,7 @@ set(headers
     lp_data/HighsModelObject.h
     lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
+    lp_data/HighsRanging.h
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
@@ -165,7 +167,6 @@ set(headers
     simplex/HMatrix.h
     simplex/HPrimal.h
     simplex/HQPrimal.h
-#    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
@@ -184,6 +185,7 @@ set(headers
     util/HighsSort.h
     util/HighsTimer.h
     util/HighsUtils.h
+    util/HighsMatrixPic.h
     Highs.h
     interfaces/highs_c_api.h
 )
@@ -414,12 +416,15 @@ target_sources(libhighs PRIVATE
     test/DevKkt.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
+    util/HighsMatrixPic.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
 target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
                            presolve/ util/ test/ interfaces/ ../external/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
+
+target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
 
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"

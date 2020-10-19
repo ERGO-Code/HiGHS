@@ -17,7 +17,6 @@
 #include "simplex/HighsSimplexAnalysis.h"
 #include "util/HighsRandom.h"
 #include "util/HighsTimer.h"
-// include Sensitivity(or Ranging) header
 
 // Class to communicate data between the simplex solver and the class
 // Highs below. Sensitivity data structure would be added here. Only
@@ -44,14 +43,11 @@ class HighsModelObject {
   SimplexBasis simplex_basis_;
   HighsSimplexInfo simplex_info_;
   HighsSimplexLpStatus simplex_lp_status_;
-  //  HighsRanging ranging_;
   HighsScale scale_;
   HMatrix matrix_;
   HFactor factor_;
   HighsSimplexAnalysis simplex_analysis_;
   HighsRandom random_;
-
-  bool report_model_operations_clock = false;
 };
 
 #endif  // LP_DATA_HIGHS_MODEL_OBJECT_H_

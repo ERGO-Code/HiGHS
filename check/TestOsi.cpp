@@ -20,6 +20,8 @@
 #include "OsiHiGHSSolverInterface.hpp"
 #include "OsiUnitTests.hpp"
 
+const bool dev_run = false;
+
 using namespace OsiUnitTest;
 
 int main(int argc, const char* argv[]) {
