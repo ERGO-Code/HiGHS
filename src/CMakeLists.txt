@@ -171,6 +171,7 @@ set(headers
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
+    simplex/SimplexStruct.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
