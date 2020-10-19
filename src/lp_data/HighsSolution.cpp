@@ -800,7 +800,6 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
   return right_size;
 }
 
-/*
 void clearSolutionUtil(HighsSolution& solution) {
   solution.col_dual.clear();
   solution.col_value.clear();
@@ -814,4 +813,3 @@ void clearBasisUtil(HighsBasis& basis) {
   basis.valid_ = false;
 }
 
-*/
