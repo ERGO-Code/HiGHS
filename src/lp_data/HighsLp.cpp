@@ -39,19 +39,26 @@ bool HighsLp::operator==(const HighsLp& lp) {
 }
 
 void clearLp(HighsLp& lp) {
+  lp.numCol_ = 0;
+  lp.numRow_ = 0;
+
   lp.Astart_.clear();
   lp.Aindex_.clear();
   lp.Avalue_.clear();
+  lp.colCost_.clear();
+  lp.colLower_.clear();
+  lp.colUpper_.clear();
+  lp.rowLower_.clear();
+  lp.rowUpper_.clear();
+
+  lp.sense_ = ObjSense::MINIMIZE;
+  lp.offset_ = 0;
+
+  lp.model_name_ = "";
+  lp.lp_name_ = "";
 
   lp.col_names_.clear();
   lp.row_names_.clear();
 
-  lp.sense_ = ObjSense::MINIMIZE;
-
-  lp.colCost_.clear();
-  lp.colLower_.clear();
-  lp.colUpper_.clear();
-
   lp.integrality_.clear();
 }
-

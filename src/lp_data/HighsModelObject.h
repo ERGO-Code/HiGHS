@@ -17,6 +17,7 @@
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "simplex/SimplexStruct.h"
 #include "util/HighsRandom.h"
 #include "util/HighsTimer.h"
 

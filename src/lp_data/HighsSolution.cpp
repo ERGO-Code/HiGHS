@@ -812,4 +812,3 @@ void clearBasisUtil(HighsBasis& basis) {
   basis.col_status.clear();
   basis.valid_ = false;
 }
-

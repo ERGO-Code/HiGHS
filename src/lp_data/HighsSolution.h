@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "lp_data/HStruct.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"

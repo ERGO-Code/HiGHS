@@ -14,16 +14,10 @@
 #ifndef LP_DATA_HIGHS_LP_H_
 #define LP_DATA_HIGHS_LP_H_
 
-#include <cassert>
-#include <iostream>
 #include <string>
 #include <vector>
 
-#include "HConfig.h"
-#include "lp_data/HConst.h"         // For HiGHS strategy options
-#include "lp_data/HStruct.h"        // For HighsBasis and HighsSolution
-#include "simplex/SimplexConst.h"   // For simplex strategy options
-#include "simplex/SimplexStruct.h"  // For SimplexBasis
+#include "lp_data/HConst.h"
 
 class HighsLp;
 
@@ -48,8 +42,8 @@ class HighsLp {
   std::string model_name_ = "";
   std::string lp_name_ = "";
 
-  std::vector<std::string> row_names_;
   std::vector<std::string> col_names_;
+  std::vector<std::string> row_names_;
 
   std::vector<int> integrality_;
 

@@ -14,6 +14,9 @@
 #ifndef SIMPLEX_SIMPLEXSTRUCT_H_
 #define SIMPLEX_SIMPLEXSTRUCT_H_
 
+#include "HConfig.h"
+#include "simplex/SimplexConst.h"
+
 struct SimplexBasis {
   // The basis for the simplex method consists of basicIndex,
   // nonbasicFlag and nonbasicMove. If HighsSimplexLpStatus has_basis
