@@ -25,23 +25,6 @@
 #include "simplex/SimplexConst.h"   // For simplex strategy options
 #include "simplex/SimplexStruct.h"  // For SimplexBasis
 
-enum class LpAction {
-  DUALISE = 0,
-  PERMUTE,
-  SCALE,
-  NEW_COSTS,
-  NEW_BOUNDS,
-  NEW_BASIS,
-  NEW_COLS,
-  NEW_ROWS,
-  DEL_COLS,
-  DEL_ROWS,
-  DEL_ROWS_BASIS_OK,
-  SCALED_COL,
-  SCALED_ROW,
-  BACKTRACKING
-};
-
 class HighsLp;
 
 class HighsLp {
