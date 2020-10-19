@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "lp_data/HighsLp.h"
-//#include "lp_data/HStruct.h"
 #include "lp_data/HighsSolution.h"
 #include "presolve/HPreData.h"
 #include "presolve/PresolveAnalysis.h"
