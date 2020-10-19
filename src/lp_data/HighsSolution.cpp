@@ -800,3 +800,18 @@ bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis) {
   return right_size;
 }
 
+/*
+void clearSolutionUtil(HighsSolution& solution) {
+  solution.col_dual.clear();
+  solution.col_value.clear();
+  solution.row_dual.clear();
+  solution.row_value.clear();
+}
+
+void clearBasisUtil(HighsBasis& basis) {
+  basis.row_status.clear();
+  basis.col_status.clear();
+  basis.valid_ = false;
+}
+
+*/

@@ -75,5 +75,7 @@ void copyFromSolutionParams(HighsInfo& highs_info,
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis);
 bool isSolutionRightSize(const HighsLp& lp, const HighsSolution& solution);
 bool isBasisRightSize(const HighsLp& lp, const HighsBasis& basis);
+//void clearSolutionUtil(HighsSolution& solution);
+//void clearBasisUtil(HighsBasis& solution);
 
 #endif  // LP_DATA_HIGHSSOLUTION_H_
