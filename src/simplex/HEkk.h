@@ -42,6 +42,7 @@ class HEkk {
 
   double cost_scale_ = 1;
   int iteration_count_ = 0;
+  bool solve_bailout_ = false;
 
   HighsSimplexLpStatus simplex_lp_status_;
   HighsSimplexInfo simplex_info_;
@@ -79,8 +80,14 @@ class HEkk {
   void computeSimplexLpDualInfeasible();
   void copySimplexInfeasible();
 
+  bool bailoutReturn();
+  bool bailoutOnTimeIterations();
+  HighsStatus returnFromSolve(const HighsStatus return_status);
+
   double computeBasisCondition();
   void initialiseAnalysis();
+
+  friend class HEkkPrimal;
 };
 
 #endif /* SIMPLEX_HEKK_H_ */

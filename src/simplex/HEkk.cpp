@@ -12,7 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 //#include <cassert>
-//#include <iostream>
+////#include <iostream>
 
 #include "simplex/HEkk.h"
 
@@ -88,12 +88,10 @@ HighsStatus HEkk::initialise() {
   computePrimalObjectiveValue();
   simplex_lp_status_.valid = true;
 
-  bool primal_feasible = scaled_solution_params_.num_primal_infeasibilities == 0;
-  bool dual_feasible = scaled_solution_params_.num_dual_infeasibilities == 0;
+  bool primal_feasible = simplex_info_.num_primal_infeasibilities == 0;
+  bool dual_feasible = simplex_info_.num_dual_infeasibilities == 0;
   if (primal_feasible && dual_feasible)
     scaled_model_status_ = HighsModelStatus::OPTIMAL;
-  scaled_solution_params_.objective_function_value =
-      simplex_info_.primal_objective_value;
 
   //  if (debugSimplexBasicSolution("After transition", highs_model_object) ==
   //  HighsDebugStatus::LOGICAL_ERROR) return HighsStatus::Error;
@@ -102,7 +100,9 @@ HighsStatus HEkk::initialise() {
 
 void HEkk::setSimplexOptions() {
   // Copy values of HighsOptions for the simplex solver
-  //
+
+  scaled_solution_params_.primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
+  scaled_solution_params_.dual_feasibility_tolerance = options_.dual_feasibility_tolerance;
   // Currently most of these options are straight copies, but they
   // will become valuable when "choose" becomes a HiGHS strategy value
   // that will need converting into a specific simplex strategy value.
@@ -992,6 +992,45 @@ void HEkk::computeSimplexLpDualInfeasible() {
     }
   }
 }
+
+bool HEkk::bailoutReturn() {
+  if (solve_bailout_) {
+    // If bailout has already been decided: check that it's for one of
+    // these reasons
+    assert(scaled_model_status_ ==
+               HighsModelStatus::REACHED_TIME_LIMIT ||
+           scaled_model_status_ ==
+               HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           scaled_model_status_ ==
+               HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+  }
+  return solve_bailout_;
+}
+
+bool HEkk::bailoutOnTimeIterations() {
+  if (solve_bailout_) {
+    // Bailout has already been decided: check that it's for one of these
+    // reasons
+    assert(scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+           scaled_model_status_ == HighsModelStatus::REACHED_ITERATION_LIMIT ||
+           scaled_model_status_ ==
+               HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+  } else if (timer_.readRunHighsClock() > options_.time_limit) {
+    solve_bailout_ = true;
+    scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+  } else if (iteration_count_ >= options_.simplex_iteration_limit) {
+    solve_bailout_ = true;
+    scaled_model_status_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
+  }
+  return solve_bailout_;
+}
+
+HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
+  simplex_info_.valid_backtracking_basis_ = false;
+  return return_status;
+}
+
+
 
 double HEkk::computeBasisCondition() {
   int solver_num_row = simplex_lp_.numRow_;
