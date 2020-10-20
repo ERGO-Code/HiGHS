@@ -12,7 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HEkkPrimal.h"
-//#include "simplex/HEkkDebug.h"
+#include "simplex/HEkkDebug.h"
 
 //#include <cassert>
 //#include <cstdio>
@@ -69,7 +69,7 @@ HighsStatus HEkkPrimal::solve() {
   }
   solvePhase = ekk_instance_.simplex_info_.num_primal_infeasibilities > 0 ? 1 : 2;
 
-  //  if (debugOkForSolve(ekk_instance_, algorithm, solvePhase, use_bound_perturbation) == HighsDebugStatus::LOGICAL_ERROR) return ekk_instance_.returnFromSolve(HighsStatus::Error);
+  if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase, use_bound_perturbation) == HighsDebugStatus::LOGICAL_ERROR) return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
   // The major solving loop
   // Initialise the iteration analysis. Necessary for strategy, but

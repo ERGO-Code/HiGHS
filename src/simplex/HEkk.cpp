@@ -189,7 +189,7 @@ bool HEkk::setBasis() {
     simplex_basis_.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
   for (int iRow = 0; iRow < num_row; iRow++) {
     int iVar = num_col + iRow;
-    simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+    simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
     simplex_basis_.basicIndex_[iRow] = iVar;
   }
   simplex_info_.num_basic_logicals = num_row;
