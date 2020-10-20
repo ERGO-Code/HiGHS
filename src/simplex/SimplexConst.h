@@ -154,4 +154,87 @@ const int DUAL_MULTI_MIN_THREADS = 1;  // 2;
 // phase 2
 const bool invert_if_row_out_negative = true;
 
+/** Simplex nonbasicFlag status for columns and rows. Don't use enum
+    class since they are used as int to replace conditional statements
+    by multiplication */
+const int NONBASIC_FLAG_TRUE = 1;   // Nonbasic
+const int NONBASIC_FLAG_FALSE = 0;  // Basic
+
+/** Simplex nonbasicMove status for columns and rows. Don't use enum
+    class since they are used in conditional statements */
+const int NONBASIC_MOVE_UP = 1;   // Free to move (only) up
+const int NONBASIC_MOVE_DN = -1;  // Free to move (only) down
+const int NONBASIC_MOVE_ZE = 0;   // Fixed or free to move up and down
+//
+// Relation between HiGHS basis and Simplex basis
+//
+// Data structures
+// ===============
+//
+// HiGHS basis consists of vectors
+//
+// * col_status[numCol]
+// * row_status[numRow]
+//
+// Simplex basis consists of vectors
+//
+// * nonbasicMove[numTot]
+// * basicIndex[numRow]
+// * nonbasicFlag[numTot]
+//
+// where nonbasicFlag is duplicate information but is used to identify
+// whether a particular variable is basic or nonbasic.
+//
+// Basic variables
+// ===============
+//
+// Highs: *_status value of BASIC
+//
+// <=>
+//
+// Simplex: nonbasicFlag value of NONBASIC_FLAG_FALSE
+//
+// Nonbasic variables
+// ==================
+//
+// Relations complicated by the fact that
+//
+// * HiGHS   rows have bounds [ l,  u]
+// * Simplex rows have bounds [-u, -l]
+//
+// Nonbasic columns
+// ================
+//
+// Highs: col_status value of LOWER - at lower bound
+// <=>
+// Simplex: nonbasicMove value of NONBASIC_MOVE_UP - [l, Inf] column free to
+// move up and negative dual
+//
+// Highs: col_status value of ZERO - at zero
+// =>
+// Simplex: nonbasicMove value of NONBASIC_MOVE_ZE - free variable treated
+// specially in simplex
+//
+// Highs: col_status value of UPPER - at upper bound
+// =>
+// Simplex: Either
+// * nonbasicMove value of NONBASIC_MOVE_DN - [-Inf, u] column free to move down
+// and positive dual
+// * nonbasicMove value of NONBASIC_MOVE_ZE - [   l, u] column ?? and free dual
+//
+// Simplex: nonbasicMove value of NONBASIC_MOVE_DN - [-Inf, u] column free to
+// move down and positive dual
+// =>
+// Highs: col_status value of UPPER - at upper bound
+//
+// Simplex: nonbasicMove value of NONBASIC_MOVE_ZE - [l, u] column ?? and free
+// dual
+// =>
+// Highs: Either
+// * col_status value of UPPER - at upper bound
+// * col_status value of ZERO - at zero
+//
+// Nonbasic rows
+// =============
+//
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

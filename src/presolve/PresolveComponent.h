@@ -38,7 +38,7 @@ struct PresolveComponentData : public HighsComponentData {
     is_valid = false;
 
     presolve_.clear();
-    clearLp(reduced_lp_);
+    reduced_lp_.clear();
     clearSolutionUtil(reduced_solution_);
     clearSolutionUtil(recovered_solution_);
     clearBasisUtil(reduced_basis_);
