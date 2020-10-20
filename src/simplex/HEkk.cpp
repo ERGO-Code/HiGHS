@@ -21,6 +21,7 @@
 //#include "lp_data/HConst.h"
 //#include "simplex/HSimplex.h"
 //#include "simplex/HSimplexDebug.h"
+#include "simplex/HEkkPrimal.h"
 #include "simplex/HFactorDebug.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"
@@ -65,7 +66,8 @@ HighsStatus HEkk::solve() {
                   simplex_info.num_dual_infeasibilities,
                   simplex_info.max_dual_infeasibility,
                   simplex_info.sum_dual_infeasibilities);
-
+  HEkkPrimal primal(*this);
+  primal.solve();
   return HighsStatus::Error;
 }
 
