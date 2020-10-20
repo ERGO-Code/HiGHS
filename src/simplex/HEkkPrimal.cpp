@@ -29,8 +29,8 @@ using std::runtime_error;
 
 HighsStatus HEkkPrimal::solve() {
 
-  HighsOptions& options = ekk_instance.options;
-  HighsLp& simplex_lp = ekk_instance.simplex_lp;
+  HighsOptions& options = ekk_instance.options_;
+  HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   HighsLogMessage(options.logfile, HighsMessageType::INFO,
                     "HEkkPrimal::solve called for LP with %d columns, %d rows and %d entries",
       simplex_lp.numCol_, simplex_lp.numRow_,

@@ -23,7 +23,7 @@
 class HEkk {
  public:
   HEkk(HighsLp& lp, HighsOptions& options, HighsTimer& timer)
-      : simplex_lp(lp), options(options), timer(timer), analysis(timer) {
+      : simplex_lp_(lp), options_(options), timer_(timer), analysis_(timer) {
     initialise();
   }
   /**
@@ -32,25 +32,25 @@ class HEkk {
   // References:
   //
   // LP to be solved, HiGHS options to be used
-  HighsLp& simplex_lp;
-  HighsOptions& options;
-  HighsTimer& timer;
-  HighsSimplexAnalysis analysis;
+  HighsLp& simplex_lp_;
+  HighsOptions& options_;
+  HighsTimer& timer_;
+  HighsSimplexAnalysis analysis_;
 
   HighsStatus initialiseSimplexLpBasisAndFactor();
   HighsStatus solve();
 
-  double cost_scale = 1;
-  int iteration_count = 0;
+  double cost_scale_ = 1;
+  int iteration_count_ = 0;
 
-  HighsSimplexLpStatus simplex_lp_status;
-  HighsSimplexInfo simplex_info;
-  HighsModelStatus scaled_model_status;
-  SimplexBasis simplex_basis;
-  HighsSolutionParams scaled_solution_params;
+  HighsSimplexLpStatus simplex_lp_status_;
+  HighsSimplexInfo simplex_info_;
+  HighsModelStatus scaled_model_status_;
+  SimplexBasis simplex_basis_;
+  HighsSolutionParams scaled_solution_params_;
 
-  HMatrix matrix;
-  HFactor factor;
+  HMatrix matrix_;
+  HFactor factor_;
 
  private:
   HighsStatus initialise();
