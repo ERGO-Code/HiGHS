@@ -17,9 +17,6 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-//#include "lp_data/HighsAnalysis.h"
-//#include "simplex/SimplexConst.h"
-//#include "simplex/HFactor.h"
 #include "simplex/HVector.h"
 #include "simplex/SimplexConst.h"
 #include "util/HighsTimer.h"
