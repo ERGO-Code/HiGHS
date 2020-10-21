@@ -71,6 +71,7 @@ HighsStatus HEkkPrimal::solve() {
 
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase, use_bound_perturbation) == HighsDebugStatus::LOGICAL_ERROR) return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
+  if (ekkDebugSimplex(ekk_instance_, algorithm, solvePhase) == HighsDebugStatus::LOGICAL_ERROR) return ekk_instance_.returnFromSolve(HighsStatus::Error);
   // The major solving loop
   // Initialise the iteration analysis. Necessary for strategy, but
   // much is for development and only switched on with HiGHSDEV

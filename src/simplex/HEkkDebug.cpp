@@ -12,9 +12,257 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
+#include <math.h>
 #include <string>
+#include <cassert>
 
+#include "lp_data/HighsDebug.h"
 #include "simplex/HEkkDebug.h"
+
+using std::max;
+using std::fabs;
+
+const double large_residual_error = 1e-12;
+const double excessive_residual_error = sqrt(large_residual_error);
+
+HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
+				 const SimplexAlgorithm algorithm,
+				 const int phase) {
+  if (ekk_instance.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
+  const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
+  //  const HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
+  const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
+  const HighsOptions& options = ekk_instance.options_;
+
+  const int num_col = simplex_lp.numCol_;
+  const int num_row = simplex_lp.numRow_;
+  const int num_tot = num_col + num_row;
+
+  // Check the nonbasic flags are all NONBASIC_FLAG_TRUE or NONBASIC_FLAG_FALSE
+  for (int iVar = 0; iVar < num_tot; iVar++) {
+    int flag = simplex_basis.nonbasicFlag_[iVar];
+    bool flag_error = flag != NONBASIC_FLAG_TRUE && flag != NONBASIC_FLAG_FALSE;
+    if (flag_error) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex: Variable %d has nonbasic flag = %d",
+		      iVar, flag);
+      assert(!flag_error);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+  const double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  int num_dual_infeasibility = 0;
+  double max_dual_infeasibility = 0;
+  double sum_dual_infeasibility = 0;
+  int num_primal_infeasibility = 0;
+  double max_primal_infeasibility = 0;
+  double sum_primal_infeasibility = 0;
+  // Check the nonbasic variables
+  for (int iVar = 0; iVar < num_tot; iVar++) {
+    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
+    // For nonbasic variables, check that they are on a bound (or free
+    // at 0 with correct nonbasic move. Determine dual infeasibilities
+    double dual = simplex_info.workDual_[iVar];
+    double lower = simplex_info.workLower_[iVar];
+    double upper = simplex_info.workUpper_[iVar];
+    double value = simplex_info.workValue_[iVar];
+    double primal_error = 0;
+    double dual_infeasibility = 0;
+    int move;
+    if (lower == upper) {
+      primal_error = fabs(lower-value);
+      move = NONBASIC_MOVE_ZE;
+    } else if (value == lower) {
+      move = NONBASIC_MOVE_UP;
+      dual_infeasibility = max(-dual, 0.);
+    } else if (value == upper) {
+      move = NONBASIC_MOVE_DN;
+      dual_infeasibility = max(dual, 0.);
+    } else {
+      // If not fixed or at a bound, only valid status can be zero and free
+      primal_error = fabs(value);
+      move = NONBASIC_MOVE_ZE;
+      dual_infeasibility = fabs(dual);
+    }	
+    if (dual_infeasibility > dual_feasibility_tolerance) num_dual_infeasibility++;
+    max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
+    sum_dual_infeasibility += dual_infeasibility;
+    if (primal_error) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex: Nonbasic variable %d has primal error = %g for [%g, %g, %g]",
+		      iVar, primal_error, lower, value, upper);
+      assert(!primal_error);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+    bool move_error = move != simplex_basis.nonbasicMove_[iVar];
+    if (move_error) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex: Nonbasic variable %d has move error [%d <> %d] for [%g, %g, %g]",
+		      iVar, move, simplex_basis.nonbasicMove_[iVar], lower, value, upper);
+      assert(!move_error);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+  // Check the basic variables
+  for (int iRow = 0; iRow < num_row; iRow++) {
+    int iVar = simplex_basis.basicIndex_[iRow];
+    // For basic variables, check that the nonbasic flag isn't set,
+    // that baseLower/Upper are correct, that the dual is zero and, in
+    // primal phase 1, that the cost is correct. Determine primal
+    // infeasibilities
+    bool nonbasicFlag_error = simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE;
+    if (nonbasicFlag_error) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex: Basic variable %d has nonbasicFlag = %d",
+		      iVar, simplex_basis.nonbasicFlag_[iVar]);
+      assert(!nonbasicFlag_error);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+    double workLower = simplex_info.workLower_[iVar];
+    double workUpper = simplex_info.workUpper_[iVar];
+    double cost = simplex_info.workCost_[iVar];
+    double dual = simplex_info.workDual_[iVar];
+    double lower = simplex_info.baseLower_[iRow];
+    double upper = simplex_info.baseUpper_[iRow];
+    double value = simplex_info.baseValue_[iRow];
+    double primal_infeasibility = 0;
+    double primal_phase1_cost = 0;
+    bool baseBound_error = workLower != lower || workUpper != upper;
+    if (baseBound_error) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex: Basic variable %d (in row %d) has baseBound [%g, %g] and workBound [%g, %g]",
+		      iVar, iRow, lower, upper, workLower, workUpper);
+      assert(!baseBound_error);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+    bool dual_error = fabs(dual);
+    if (dual_error) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex: Basic variable %d (in row %d) has dual %g",
+		      iVar, iRow, dual);
+      assert(!dual_error);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+    
+    if (value < lower) {
+      primal_infeasibility = value - lower;
+      primal_phase1_cost = 1;
+    } else if (value > upper) {
+      primal_infeasibility = upper - value;
+      primal_phase1_cost = -1;
+    }
+    if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
+      bool primal_phase1_cost_error = fabs(cost - primal_phase1_cost);
+      if (primal_phase1_cost_error) {
+	HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+			"ekkDebugSimplex: Basic variable %d (in row %d) has primal phase 1 cost %g for [%g, %g, %g]",
+			iVar, iRow, cost, lower, value, upper);
+	assert(!primal_phase1_cost_error);
+	return HighsDebugStatus::LOGICAL_ERROR;
+      }
+    }
+    if (primal_infeasibility > primal_feasibility_tolerance) num_primal_infeasibility++;
+    max_primal_infeasibility = max(primal_infeasibility, max_primal_infeasibility);
+    sum_primal_infeasibility += primal_infeasibility;
+  }
+  bool require_primal_feasible_in_primal_simplex = algorithm == SimplexAlgorithm::PRIMAL && (phase == 0 || phase == 2);
+  bool require_primal_feasible_in_dual_simplex = algorithm == SimplexAlgorithm::DUAL && phase == 0;
+  bool require_primal_feasible = require_primal_feasible_in_primal_simplex || require_primal_feasible_in_dual_simplex;
+  bool illegal_primal_infeasibility = require_primal_feasible && num_primal_infeasibility > 0;
+  if (illegal_primal_infeasibility) {
+    // Should be primal feasible, but isn't
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "ekkDebugSimplex: Should be primal feasible, but num / max / sum primal infeasibility is %g / %g / %g",
+		    num_primal_infeasibility, max_primal_infeasibility, sum_primal_infeasibility);
+    assert(!illegal_primal_infeasibility);
+    return HighsDebugStatus::LOGICAL_ERROR;
+  }
+    
+  bool illegal_dual_infeasibility = (algorithm == SimplexAlgorithm::DUAL || phase == 0) && num_dual_infeasibility > 0;
+  if (illegal_dual_infeasibility) {
+    // Dual simplex or optimal but has dual infeasibilities
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "ekkDebugSimplex: Should be dual feasible, but num / max / sum dual infeasibility is %g / %g / %g",
+		    num_dual_infeasibility, max_dual_infeasibility, sum_dual_infeasibility);
+    assert(!illegal_dual_infeasibility);
+    return HighsDebugStatus::LOGICAL_ERROR;
+  }
+    
+  if (ekk_instance.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    return return_status;
+  // Now determine the primal and dual residuals.
+  vector<double> primal_value(num_tot);
+  for (int iVar=0; iVar < num_tot; iVar ++)
+    primal_value[iVar] = simplex_info.workValue_[iVar];
+  for (int iRow=0; iRow < num_row; iRow ++) {
+    int iVar = simplex_basis.basicIndex_[iRow];
+    primal_value[iVar] = simplex_info.baseValue_[iRow];
+  }
+  // Accumulate primal_activities
+  double max_dual_residual = 0;
+  vector<double> primal_activity(num_row, 0);
+  for (int iCol=0; iCol < num_col; iCol ++) {
+    double dual = simplex_info.workCost_[iCol];
+    double value = primal_value[iCol];
+    for (int iEl = simplex_lp.Astart_[iCol]; iEl < simplex_lp.Astart_[iCol+1]; iEl++) {
+      int iRow = simplex_lp.Aindex_[iEl];
+      int iVar = num_col + iRow;
+      double Avalue = simplex_lp.Avalue_[iEl];
+      primal_activity[iRow] += value * Avalue;
+      dual += simplex_info.workDual_[iVar] * Avalue;	
+    }
+    double dual_residual = fabs(dual - simplex_info.workDual_[iCol]);
+    max_dual_residual = max(dual_residual, max_dual_residual);
+  }
+  double max_primal_residual = 0;
+  for (int iRow=0; iRow < num_row; iRow ++) {
+    int iVar = num_col + iRow;
+    double primal_residual = fabs(primal_activity[iRow] - primal_value[iVar]);
+    max_primal_residual = max(primal_residual, max_primal_residual);
+  }
+  std::string value_adjective;
+  int report_level;
+  if (max_primal_residual > excessive_residual_error) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+  } else if (max_primal_residual > large_residual_error) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+  } else {
+    value_adjective = "";
+    report_level = ML_VERBOSE;
+    return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
+  }
+  HighsPrintMessage(options.output, options.message_level, report_level,
+                    "ekkDebugSimplex: %-9s max primal residual = %9.4g\n",
+                    value_adjective.c_str(), max_primal_residual);
+
+  if (max_dual_residual > excessive_residual_error) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+  } else if (max_dual_residual > large_residual_error) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+  } else {
+    value_adjective = "";
+    report_level = ML_VERBOSE;
+    return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
+  }
+  HighsPrintMessage(options.output, options.message_level, report_level,
+                    "ekkDebugSimplex: %-9s max dual residual = %9.4g\n",
+                    value_adjective.c_str(), max_dual_residual);
+
+  return return_status;
+
+}
 
 HighsDebugStatus ekkDebugBasisConsistent(const HighsOptions& options,
                                       const HighsLp& simplex_lp,
@@ -102,9 +350,9 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(
 }
 
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
-				 const SimplexAlgorithm algorithm,
-                                 const int phase,
-				 const bool perturbed) {
+				    const SimplexAlgorithm algorithm,
+				    const int phase,
+				    const bool perturbed) {
   if (ekk_instance.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsDebugStatus return_status = HighsDebugStatus::OK;
@@ -118,7 +366,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
   ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix_col_wise &&
        simplex_lp_status.has_matrix_row_wise &&
        simplex_lp_status.has_factor_arrays &&
-       simplex_lp_status.has_dual_steepest_edge_weights &&
+    //       simplex_lp_status.has_dual_steepest_edge_weights &&
        simplex_lp_status.has_invert;
   if (!ok) {
     if (!simplex_lp_status.has_basis)
@@ -137,11 +385,11 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
           "Not OK to solve since simplex_lp_status.has_matrix_row_wise "
           "= %d",
           simplex_lp_status.has_matrix_row_wise);
-    //    if (!simplex_lp_status.has_factor_arrays)
-    //      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-    //                  "Not OK to solve since
-    //      simplex_lp_status.has_factor_arrays = %d",
-    //             simplex_lp_status.has_factor_arrays);
+    if (!simplex_lp_status.has_factor_arrays)
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_factor_arrays "
+		      "= %d",
+		      simplex_lp_status.has_factor_arrays);
     if (!simplex_lp_status.has_dual_steepest_edge_weights)
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Not OK to solve since "
@@ -159,9 +407,11 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                            ekk_instance.simplex_basis_) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return HighsDebugStatus::LOGICAL_ERROR;
-  if (!ekkDebugWorkArraysOk(ekk_instance, phase))
+  // Check initial work cost, lower, upper and range
+  if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase, perturbed))
     return HighsDebugStatus::LOGICAL_ERROR;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  // Check initial work cost, lower, upper and range
   for (int var = 0; var < numTot; ++var) {
     if (simplex_basis.nonbasicFlag_[var]) {
       // Nonbasic variable
@@ -175,7 +425,9 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
 // Methods below are not called externally
 
 bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-                       const int phase) {
+			  const SimplexAlgorithm algorithm,
+			  const int phase,
+			  const bool perturbed) {
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
   const HighsOptions& options = ekk_instance.options_;
@@ -436,35 +688,6 @@ bool ekkDebugOneNonbasicMoveVsWorkArraysOk(
             var, simplex_lp.numCol_, simplex_info.workValue_[var]);
         return ok;
       }
-    }
-  }
-  // ok must be true if we reach here
-  assert(ok);
-  return ok;
-}
-
-bool ekkDebugAllNonbasicMoveVsWorkArraysOk(
-    const HEkk& ekk_instance) {
-  const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
-  //    HighsSimplexInfo &simplex_info = ekk_instance.simplex_info_;
-  const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
-  const HighsOptions& options = ekk_instance.options_;
-  bool ok;
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  for (int var = 0; var < numTot; ++var) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var] "
-        "= %2d",
-        var, simplex_basis.nonbasicFlag_[var]);
-    if (!simplex_basis.nonbasicFlag_[var]) continue;
-    ok = ekkDebugOneNonbasicMoveVsWorkArraysOk(ekk_instance, var);
-    if (!ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Error in NonbasicMoveVsWorkArrays for nonbasic variable %d", var);
-      assert(ok);
-      return ok;
     }
   }
   // ok must be true if we reach here
