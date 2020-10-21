@@ -22,8 +22,8 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
   } else {
     SpecialLps special_lps;
-    //    special_lps.blendingLp(lp, require_model_status, optimal_objective);
-    special_lps.distillationLp(lp, require_model_status, optimal_objective);
+        special_lps.blendingLp(lp, require_model_status, optimal_objective);
+	//special_lps.distillationLp(lp, require_model_status, optimal_objective);
     highs.passModel(lp);
   }
   REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_EKK) ==

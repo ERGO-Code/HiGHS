@@ -434,7 +434,6 @@ void HEkkPrimal::primalChooseColumn() {
     }
   }
   analysis->simplexTimerStop(ChuzcPrimalClock);
-  columnIn = -1;
 }
 
 void HEkkPrimal::primalChooseRow() {
@@ -843,7 +842,6 @@ void HEkkPrimal::phase1ChooseColumn() {
     }
   }
   analysis->simplexTimerStop(ChuzcPrimalClock);
-  columnIn = -1;
 }
 
 void HEkkPrimal::phase1ChooseRow() {
@@ -1021,7 +1019,146 @@ void HEkkPrimal::phase1ChooseRow() {
   analysis->simplexTimerStop(Chuzr2Clock);
 }
 
-void HEkkPrimal::phase1Update() {}
+void HEkkPrimal::phase1Update() {
+  /* Alias to bounds arrays */
+  const double* workLower = &ekk_instance_.simplex_info_.workLower_[0];
+  const double* workUpper = &ekk_instance_.simplex_info_.workUpper_[0];
+  const double* baseLower = &ekk_instance_.simplex_info_.baseLower_[0];
+  const double* baseUpper = &ekk_instance_.simplex_info_.baseUpper_[0];
+  double* workValue = &ekk_instance_.simplex_info_.workValue_[0];
+  double* baseValue = &ekk_instance_.simplex_info_.baseValue_[0];
+  const int iMoveIn = ekk_instance_.simplex_basis_.nonbasicMove_[columnIn];
+  const double dFeasTol = primal_feasibility_tolerance;
+
+  /* Compute the primal theta and see if we should have do bound flip instead */
+  alpha = col_aq.array[rowOut];
+  thetaPrimal = 0.0;
+  if (phase1OutBnd == 1) {
+    thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alpha;
+  } else {
+    thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alpha;
+  }
+
+  double lowerIn = workLower[columnIn];
+  double upperIn = workUpper[columnIn];
+  double valueIn = workValue[columnIn] + thetaPrimal;
+  int ifFlip = 0;
+  if (iMoveIn == +1 && valueIn > upperIn + dFeasTol) {
+    workValue[columnIn] = upperIn;
+    thetaPrimal = upperIn - lowerIn;
+    ifFlip = 1;
+    ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = -1;
+  }
+  if (iMoveIn == -1 && valueIn < lowerIn - dFeasTol) {
+    workValue[columnIn] = lowerIn;
+    thetaPrimal = lowerIn - upperIn;
+    ifFlip = 1;
+    ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = +1;
+  }
+
+  /* Update for the flip case */
+  if (ifFlip) {
+    /* Recompute things on flip */
+    if (invertHint == 0) {
+      ekk_instance_.computePrimal();
+      ekk_instance_.computeSimplexPrimalInfeasible();
+      // Assumes that only simplex_info_.*_primal_infeasibilities is
+      // needed - probably only num_primal_infeasibilities
+      //
+      //      copySimplexPrimalInfeasible();
+      if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
+        isPrimalPhase1 = 1;
+        analysis->simplexTimerStart(ComputeDualClock);
+        phase1ComputeDual();
+        analysis->simplexTimerStop(ComputeDualClock);
+      } else {
+        invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+      }
+    }
+    return;
+  }
+
+  /* Compute BTran for update LU */
+  analysis->simplexTimerStart(BtranClock);
+  row_ep.clear();
+  row_ep.count = 1;
+  row_ep.index[0] = rowOut;
+  row_ep.array[rowOut] = 1;
+  row_ep.packFlag = true;
+#ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
+                                    analysis->row_ep_density);
+#endif
+  ekk_instance_.factor_.btran(row_ep, analysis->row_ep_density,
+                        analysis->pointer_serial_factor_clocks);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
+#endif
+  analysis->simplexTimerStop(BtranClock);
+
+  const double local_row_ep_density = (double)row_ep.count / num_row;
+  analysis->updateOperationResultDensity(local_row_ep_density,
+                                         analysis->row_ep_density);
+
+  /* Compute the whole pivot row for updating the devex weight */
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations) {
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
+                                    analysis->row_ap_density);
+    analysis->num_row_price++;
+  }
+#endif
+  analysis->simplexTimerStart(PriceClock);
+  row_ap.clear();
+  ekk_instance_.matrix_.priceByRowSparseResult(row_ap, row_ep);
+  analysis->simplexTimerStop(PriceClock);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
+#endif
+
+  /* Update the devex weight */
+  devexUpdate();
+
+  /* Update other things */
+  ekk_instance_.updatePivots(columnIn, rowOut, phase1OutBnd);
+  ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &invertHint);
+  ekk_instance_.updateMatrix(columnIn, columnOut);
+  if (ekk_instance_.simplex_info_.update_count >=
+      ekk_instance_.simplex_info_.update_limit) {
+    invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+  }
+
+  /* Recompute dual and primal */
+  if (invertHint == 0) {
+    ekk_instance_.computePrimal();
+    ekk_instance_.computeSimplexPrimalInfeasible();
+    // Assumes that only simplex_info_.*_primal_infeasibilities is
+    // needed - probably only num_primal_infeasibilities
+    //
+    //      copySimplexPrimalInfeasible();
+    if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
+      isPrimalPhase1 = 1;
+      analysis->simplexTimerStart(ComputeDualClock);
+      phase1ComputeDual();
+      analysis->simplexTimerStop(ComputeDualClock);
+    } else {
+      invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+    }
+  }
+
+  /* Reset the devex framework when necessary */
+  if (num_bad_devex_weight > 3) {
+    devexReset();
+  }
+
+  // Move this to Simplex class once it's created
+  // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  ekk_instance_.iteration_count_++;
+}
 
 void HEkkPrimal::devexReset() {
   devex_weight.assign(num_tot, 1.0);
@@ -1034,7 +1171,54 @@ void HEkkPrimal::devexReset() {
   num_bad_devex_weight = 0;
 }
 
-void HEkkPrimal::devexUpdate() {}
+void HEkkPrimal::devexUpdate() {
+  /* Compute the pivot weight from the reference set */
+  analysis->simplexTimerStart(DevexUpdateWeightClock);
+  double dPivotWeight = 0.0;
+  for (int i = 0; i < col_aq.count; i++) {
+    int iRow = col_aq.index[i];
+    int iSeq = ekk_instance_.simplex_basis_.basicIndex_[iRow];
+    double dAlpha = devex_index[iSeq] * col_aq.array[iRow];
+    dPivotWeight += dAlpha * dAlpha;
+  }
+  dPivotWeight += devex_index[columnIn] * 1.0;
+  dPivotWeight = sqrt(dPivotWeight);
+
+  /* Check if the saved weight is too large */
+  if (devex_weight[columnIn] > 3.0 * dPivotWeight) {
+    num_bad_devex_weight++;
+  }
+
+  /* Update the devex weight for all */
+  double dPivot = col_aq.array[rowOut];
+  dPivotWeight /= fabs(dPivot);
+
+  for (int i = 0; i < row_ap.count; i++) {
+    int iSeq = row_ap.index[i];
+    double alpha = row_ap.array[iSeq];
+    double devex = dPivotWeight * fabs(alpha);
+    devex += devex_index[iSeq] * 1.0;
+    if (devex_weight[iSeq] < devex) {
+      devex_weight[iSeq] = devex;
+    }
+  }
+  for (int i = 0; i < row_ep.count; i++) {
+    int iPtr = row_ep.index[i];
+    int iSeq = row_ep.index[i] + num_col;
+    double alpha = row_ep.array[iPtr];
+    double devex = dPivotWeight * fabs(alpha);
+    devex += devex_index[iSeq] * 1.0;
+    if (devex_weight[iSeq] < devex) {
+      devex_weight[iSeq] = devex;
+    }
+  }
+
+  /* Update devex weight for the pivots */
+  devex_weight[columnOut] = max(1.0, dPivotWeight);
+  devex_weight[columnIn] = 1.0;
+  num_devex_iterations++;
+  analysis->simplexTimerStop(DevexUpdateWeightClock);
+}
 
 void HEkkPrimal::iterationAnalysisData() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
