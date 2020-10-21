@@ -93,7 +93,7 @@ HighsStatus HEkk::initialise() {
   if (primal_feasible && dual_feasible)
     scaled_model_status_ = HighsModelStatus::OPTIMAL;
 
-  //  if (debugSimplexBasicSolution("After transition", highs_model_object) ==
+  //  if (debugSimplexBasicSolution("After transition", ekk_instance_) ==
   //  HighsDebugStatus::LOGICAL_ERROR) return HighsStatus::Error;
   return HighsStatus::OK;
 }
@@ -226,7 +226,7 @@ int HEkk::getFactor() {
           return rank_deficiency;
         } else {
           // Account for rank deficiency by correcing nonbasicFlag
-          simplexHandleRankDeficiency(highs_model_object);
+          simplexHandleRankDeficiency();
           updateSimplexLpStatus(simplex_lp_status_, LpAction::NEW_BASIS);
           simplex_lp_status_.has_invert = true;
           simplex_lp_status_.has_fresh_invert = true;
@@ -697,6 +697,126 @@ void HEkk::initialiseNonbasicWorkValue() {
   }
 }
 
+void HEkk::choosePriceTechnique(const int price_strategy,
+                                const double row_ep_density,
+                                bool& use_col_price,
+                                bool& use_row_price_w_switch) {
+  // By default switch to column PRICE when pi_p has at least this
+  // density
+  const double density_for_column_price_switch = 0.75;
+  use_col_price =
+      (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) ||
+      (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH &&
+       row_ep_density > density_for_column_price_switch);
+  use_row_price_w_switch =
+      price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH ||
+      price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
+}
+
+void HEkk::computeTableauRowFromPiP(const HVector& row_ep, HVector& row_ap) {
+  const int solver_num_row = simplex_lp_.numRow_;
+  const double local_density = 1.0 * row_ep.count / solver_num_row;
+  bool use_col_price;
+  bool use_row_price_w_switch;
+  choosePriceTechnique(simplex_info_.price_strategy, local_density,
+                       use_col_price, use_row_price_w_switch);
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations) {
+    if (use_col_price) {
+      analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
+                                      0.0);
+      analysis_.num_col_price++;
+    } else if (use_row_price_w_switch) {
+      analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
+                                      analysis_.row_ep_density);
+      analysis_.num_row_price_with_switch++;
+    } else {
+      analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
+                                      analysis_.row_ep_density);
+      analysis_.num_row_price++;
+    }
+  }
+#endif
+  analysis_.simplexTimerStart(PriceClock);
+  row_ap.clear();
+  if (use_col_price) {
+    // Perform column-wise PRICE
+    matrix_.priceByColumn(row_ap, row_ep);
+  } else if (use_row_price_w_switch) {
+    // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap
+    // becomes extreme
+    const double switch_density = matrix_.hyperPRICE;
+    matrix_.priceByRowSparseResultWithSwitch(
+        row_ap, row_ep, analysis_.row_ap_density, 0, switch_density);
+  } else {
+    // Perform hyper-sparse row-wise PRICE
+    matrix_.priceByRowSparseResult(row_ap, row_ep);
+  }
+
+  const int solver_num_col = simplex_lp_.numCol_;
+  if (use_col_price) {
+    // Column-wise PRICE computes components of row_ap corresponding
+    // to basic variables, so zero these by exploiting the fact that,
+    // for basic variables, nonbasicFlag[*]=0
+    const int* nonbasicFlag = &simplex_basis_.nonbasicFlag_[0];
+    for (int col = 0; col < solver_num_col; col++)
+      row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
+  }
+#ifdef HiGHSDEV
+  // Possibly analyse the error in the result of PRICE
+  const bool analyse_price_error = false;
+  if (analyse_price_error) matrix_.debugPriceResult(row_ap, row_ep);
+#endif
+  // Update the record of average row_ap density
+  const double local_row_ap_density = (double)row_ap.count / solver_num_col;
+  analysis_.updateOperationResultDensity(local_row_ap_density,
+                                         analysis_.row_ap_density);
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations)
+    analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
+#endif
+  analysis_.simplexTimerStop(PriceClock);
+}
+
+void HEkk::computePrimal() {
+  analysis_.simplexTimerStart(ComputePrimalClock);
+  // Setup a local buffer for the values of basic variables
+  HVector primal_col;
+  primal_col.setup(simplex_lp_.numRow_);
+  primal_col.clear();
+  for (int i = 0; i < simplex_lp_.numCol_ + simplex_lp_.numRow_; i++) {
+    if (simplex_basis_.nonbasicFlag_[i] && simplex_info_.workValue_[i] != 0) {
+      matrix_.collect_aj(primal_col, i, simplex_info_.workValue_[i]);
+    }
+  }
+  // If debugging, take a copy of the RHS
+  vector<double> debug_primal_rhs;
+  if (options_.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY)
+    debug_primal_rhs = primal_col.array;
+
+  // It's possible that the buffer has no nonzeros, so performing
+  // FTRAN is unnecessary. Not much of a saving, but the zero density
+  // looks odd in the analysis!
+  if (primal_col.count) {
+    factor_.ftran(primal_col, analysis_.primal_col_density,
+                  analysis_.pointer_serial_factor_clocks);
+    const double local_primal_col_density =
+        (double)primal_col.count / simplex_lp_.numRow_;
+    analysis_.updateOperationResultDensity(local_primal_col_density,
+                                           analysis_.primal_col_density);
+  }
+  for (int i = 0; i < simplex_lp_.numRow_; i++) {
+    int iCol = simplex_basis_.basicIndex_[i];
+    simplex_info_.baseValue_[i] = -primal_col.array[i];
+    simplex_info_.baseLower_[i] = simplex_info_.workLower_[iCol];
+    simplex_info_.baseUpper_[i] = simplex_info_.workUpper_[iCol];
+  }
+  //  debugComputePrimal(ekk_instance_, debug_primal_rhs);
+  // Now have basic primals
+  simplex_lp_status_.has_basic_primal_values = true;
+  analysis_.simplexTimerStop(ComputePrimalClock);
+}
+
 void HEkk::computeDual() {
   analysis_.simplexTimerStart(ComputeDualClock);
   // Create a local buffer for the pi vector
@@ -764,7 +884,7 @@ void HEkk::computeDual() {
     for (int i = simplex_lp_.numCol_; i < numTot; i++)
       simplex_info_.workDual_[i] -= dual_col.array[i - simplex_lp_.numCol_];
     // Possibly analyse the computed dual values
-    //    debugComputeDual(highs_model_object, debug_previous_workDual,
+    //    debugComputeDual(ekk_instance_, debug_previous_workDual,
     //                     debug_basic_costs, dual_col.array);
   }
   // Now have nonbasic duals
@@ -772,43 +892,67 @@ void HEkk::computeDual() {
   analysis_.simplexTimerStop(ComputeDualClock);
 }
 
-void HEkk::computePrimal() {
-  analysis_.simplexTimerStart(ComputePrimalClock);
-  // Setup a local buffer for the values of basic variables
-  HVector primal_col;
-  primal_col.setup(simplex_lp_.numRow_);
-  primal_col.clear();
-  for (int i = 0; i < simplex_lp_.numCol_ + simplex_lp_.numRow_; i++) {
-    if (simplex_basis_.nonbasicFlag_[i] && simplex_info_.workValue_[i] != 0) {
-      matrix_.collect_aj(primal_col, i, simplex_info_.workValue_[i]);
-    }
-  }
-  // If debugging, take a copy of the RHS
-  vector<double> debug_primal_rhs;
-  if (options_.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY)
-    debug_primal_rhs = primal_col.array;
+// The major model updates. Factor calls factor_.update; Matrix
+// calls matrix_.update; updatePivots does everything---and is
+// called from the likes of HDual::updatePivots
+void HEkk::updateFactor(HVector* column, HVector* row_ep, int* iRow,
+                        int* hint) {
+  analysis_.simplexTimerStart(UpdateFactorClock);
+  factor_.update(column, row_ep, iRow, hint);
+  // Now have a representation of B^{-1}, but it is not fresh
+  simplex_lp_status_.has_invert = true;
+  if (simplex_info_.update_count >= simplex_info_.update_limit)
+    *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+  analysis_.simplexTimerStop(UpdateFactorClock);
+}
 
-  // It's possible that the buffer has no nonzeros, so performing
-  // FTRAN is unnecessary. Not much of a saving, but the zero density
-  // looks odd in the analysis!
-  if (primal_col.count) {
-    factor_.ftran(primal_col, analysis_.primal_col_density,
-                  analysis_.pointer_serial_factor_clocks);
-    const double local_primal_col_density =
-        (double)primal_col.count / simplex_lp_.numRow_;
-    analysis_.updateOperationResultDensity(local_primal_col_density,
-                                           analysis_.primal_col_density);
+void HEkk::updatePivots(const int columnIn, const int rowOut,
+                        const int sourceOut) {
+  analysis_.simplexTimerStart(UpdatePivotsClock);
+  int columnOut = simplex_basis_.basicIndex_[rowOut];
+
+  // Incoming variable
+  simplex_basis_.basicIndex_[rowOut] = columnIn;
+  simplex_basis_.nonbasicFlag_[columnIn] = 0;
+  simplex_basis_.nonbasicMove_[columnIn] = 0;
+  simplex_info_.baseLower_[rowOut] = simplex_info_.workLower_[columnIn];
+  simplex_info_.baseUpper_[rowOut] = simplex_info_.workUpper_[columnIn];
+
+  // Outgoing variable
+  simplex_basis_.nonbasicFlag_[columnOut] = 1;
+  if (simplex_info_.workLower_[columnOut] ==
+      simplex_info_.workUpper_[columnOut]) {
+    simplex_info_.workValue_[columnOut] = simplex_info_.workLower_[columnOut];
+    simplex_basis_.nonbasicMove_[columnOut] = 0;
+  } else if (sourceOut == -1) {
+    simplex_info_.workValue_[columnOut] = simplex_info_.workLower_[columnOut];
+    simplex_basis_.nonbasicMove_[columnOut] = 1;
+  } else {
+    simplex_info_.workValue_[columnOut] = simplex_info_.workUpper_[columnOut];
+    simplex_basis_.nonbasicMove_[columnOut] = -1;
   }
-  for (int i = 0; i < simplex_lp_.numRow_; i++) {
-    int iCol = simplex_basis_.basicIndex_[i];
-    simplex_info_.baseValue_[i] = -primal_col.array[i];
-    simplex_info_.baseLower_[i] = simplex_info_.workLower_[iCol];
-    simplex_info_.baseUpper_[i] = simplex_info_.workUpper_[iCol];
-  }
-  //  debugComputePrimal(highs_model_object, debug_primal_rhs);
-  // Now have basic primals
-  simplex_lp_status_.has_basic_primal_values = true;
-  analysis_.simplexTimerStop(ComputePrimalClock);
+  // Update the dual objective value
+  double nwValue = simplex_info_.workValue_[columnOut];
+  double vrDual = simplex_info_.workDual_[columnOut];
+  double dl_dual_objective_value = nwValue * vrDual;
+  simplex_info_.updated_dual_objective_value += dl_dual_objective_value;
+  simplex_info_.update_count++;
+  // Update the number of basic logicals
+  if (columnOut < simplex_lp_.numCol_) simplex_info_.num_basic_logicals -= 1;
+  if (columnIn < simplex_lp_.numCol_) simplex_info_.num_basic_logicals += 1;
+  // No longer have a representation of B^{-1}, and certainly not
+  // fresh!
+  simplex_lp_status_.has_invert = false;
+  simplex_lp_status_.has_fresh_invert = false;
+  // Data are no longer fresh from rebuild
+  simplex_lp_status_.has_fresh_rebuild = false;
+  analysis_.simplexTimerStop(UpdatePivotsClock);
+}
+
+void HEkk::updateMatrix(const int columnIn, const int columnOut) {
+  analysis_.simplexTimerStart(UpdateMatrixClock);
+  matrix_.update(columnIn, columnOut);
+  analysis_.simplexTimerStop(UpdateMatrixClock);
 }
 
 void HEkk::computeSimplexInfeasible() {

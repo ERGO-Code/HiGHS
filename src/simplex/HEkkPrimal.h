@@ -85,12 +85,12 @@ class HEkkPrimal {
   int columnIn;
   int rowOut;
   int columnOut;
-  //  int phase1OutBnd;
-  //  double thetaDual;
-  //  double thetaPrimal;
-  //  double alpha;
-  //  //  double alphaRow;
-  //  double numericalTrouble;
+  int phase1OutBnd;
+  double thetaDual;
+  double thetaPrimal;
+  double alpha;
+  double alphaRow;
+  double numericalTrouble;
   int num_flip_since_rebuild;
   //
   //  Primal phase 1 tools

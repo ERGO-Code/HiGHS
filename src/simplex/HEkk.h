@@ -19,6 +19,7 @@
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
+#include "util/HighsRandom.h"
 
 class HEkk {
  public:
@@ -49,6 +50,7 @@ class HEkk {
   HighsModelStatus scaled_model_status_;
   SimplexBasis simplex_basis_;
   HighsSolutionParams scaled_solution_params_;
+  HighsRandom random_;
 
   HMatrix matrix_;
   HFactor factor_;
@@ -72,8 +74,15 @@ class HEkk {
   void initialisePhase2RowBound();
   void initialiseBound(const int phase = 2);
   void initialiseNonbasicWorkValue();
+  void choosePriceTechnique(const int price_strategy,
+                            const double row_ep_density, bool& use_col_price,
+                            bool& use_row_price_w_switch);
+  void computeTableauRowFromPiP(const HVector& row_ep, HVector& row_ap);
   void computePrimal();
   void computeDual();
+  void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
+  void updatePivots(const int columnIn, const int rowOut, const int sourceOut);
+  void updateMatrix(const int columnIn, const int columnOut);
   void computeSimplexInfeasible();
   void computeSimplexPrimalInfeasible();
   void computeSimplexDualInfeasible();
