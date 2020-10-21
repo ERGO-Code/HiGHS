@@ -197,6 +197,24 @@ class SpecialLps {
     require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
   }
 
+  void distillationLp(HighsLp& lp, HighsModelStatus& require_model_status,
+                      double& optimal_objective) {
+    lp.numCol_ = 2;
+    lp.numRow_ = 3;
+    lp.colCost_ = {8, 10};
+    lp.colLower_ = {0, 0};
+    lp.colUpper_ = {inf, inf};
+    lp.rowLower_ = {7, 12, 6};
+    lp.rowUpper_ = {inf, inf, inf};
+    lp.Astart_ = {0, 3, 6};
+    lp.Aindex_ = {0, 1, 2, 0, 1, 2};
+    lp.Avalue_ = {2, 3, 2, 2, 4, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
+    require_model_status = HighsModelStatus::OPTIMAL;
+    optimal_objective = 31.2;
+  }
+
   void blendingLp(HighsLp& lp, HighsModelStatus& require_model_status,
                   double& optimal_objective) {
     lp.numCol_ = 2;

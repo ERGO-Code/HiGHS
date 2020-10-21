@@ -73,6 +73,20 @@ void solve(Highs& highs, std::string presolve, std::string solver,
   REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
 }
 
+void distillation(Highs& highs) {
+  reportLpName("distillation");
+  // This LP is not primal feasible at the origin
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  double optimal_objective;
+  SpecialLps special_lps;
+  special_lps.distillationLp(lp, require_model_status, optimal_objective);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  // Presolve doesn't reduce the LP
+  solve(highs, "on", "simplex", require_model_status, optimal_objective);
+  solve(highs, "on", "ipm", require_model_status, optimal_objective);
+}
+
 void issue272(Highs& highs) {
   reportIssue(272);
   // This is the FuOR MIP that presolve failed to handle as a maximization
@@ -408,6 +422,15 @@ void singularStartingBasis(Highs& highs) {
 
   reportSolution(highs);
 }
+TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+  distillation(highs);
+}
+
 TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {

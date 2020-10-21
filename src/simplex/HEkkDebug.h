@@ -17,31 +17,30 @@
 #include "simplex/HEkk.h"
 
 HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
-				 const SimplexAlgorithm algorithm,
-				 const int phase);
+                                 const SimplexAlgorithm algorithm,
+                                 const int phase);
 
 HighsDebugStatus ekkDebugBasisConsistent(const HighsOptions& options,
-                                      const HighsLp& simplex_lp,
-                                      const SimplexBasis& simplex_basis);
+                                         const HighsLp& simplex_lp,
+                                         const SimplexBasis& simplex_basis);
 
-HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HighsOptions& options,
-						const HighsLp& simplex_lp,
-						const SimplexBasis& simplex_basis);
+HighsDebugStatus ekkDebugNonbasicFlagConsistent(
+    const HighsOptions& options, const HighsLp& simplex_lp,
+    const SimplexBasis& simplex_basis);
 
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
-				    const SimplexAlgorithm algorithm,
-				    const int phase,
-				    const bool perturbed = false);
+                                    const SimplexAlgorithm algorithm,
+                                    const int phase,
+                                    const bool perturbed = false);
 
 // Methods below are not called externally
 
 bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-			  const SimplexAlgorithm algorithm,
-			  const int phase,
-			  const bool perturbed);
+                          const SimplexAlgorithm algorithm, const int phase,
+                          const bool perturbed);
 
-bool ekkDebugOneNonbasicMoveVsWorkArraysOk(
-    const HEkk& ekk_instance, const int var);
+bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
+                                           const int var);
 
 void ekkDebugReportReinvertOnNumericalTrouble(
     const std::string method_name, const HEkk& ekk_instance,
