@@ -34,9 +34,6 @@
 #include "omp.h"
 #endif
 
-// until add_row_.. functions are moved to HighsLpUtils.h
-#include "simplex/HSimplex.h"
-
 Highs::Highs() {
   hmos_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
@@ -303,8 +300,8 @@ HighsStatus Highs::clearModel() {
   // Remove all HighsModelObject entries
   hmos_.clear();
   // Set up with an empty LP so that addrows/cols can be used to build
-  HighsLp empty_lp;
-  lp_ = empty_lp;
+  //  HighsLp empty_lp; lp_ = empty_lp;
+  lp_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   return_status =
       interpretCallStatus(this->clearSolver(), return_status, "clearSolver");

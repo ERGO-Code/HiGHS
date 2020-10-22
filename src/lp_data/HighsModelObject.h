@@ -10,11 +10,14 @@
 #ifndef LP_DATA_HIGHS_MODEL_OBJECT_H_
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
+#include "HConfig.h"
+#include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
+#include "simplex/SimplexStruct.h"
 #include "util/HighsRandom.h"
 #include "util/HighsTimer.h"
 
