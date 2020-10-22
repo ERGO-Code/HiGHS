@@ -14,6 +14,7 @@
 #include "lp_data/HStruct.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
+#include "simplex/HEkk.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
@@ -27,7 +28,11 @@
 class HighsModelObject {
  public:
   HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer)
-      : lp_(lp), options_(options), timer_(timer), simplex_analysis_(timer) {}
+      : lp_(lp),
+        options_(options),
+        timer_(timer),
+        simplex_analysis_(timer),
+        ekk_instance_(options, timer) {}
 
   HighsLp& lp_;
   HighsOptions& options_;
@@ -51,6 +56,7 @@ class HighsModelObject {
   HFactor factor_;
   HighsSimplexAnalysis simplex_analysis_;
   HighsRandom random_;
+  HEkk ekk_instance_;
 };
 
 #endif  // LP_DATA_HIGHS_MODEL_OBJECT_H_

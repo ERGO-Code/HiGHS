@@ -196,18 +196,17 @@ void HEkkPrimal::solvePhase1() {
     analysis->simplexTimerStop(IteratePrimalRebuildClock);
 
     if (!isPrimalPhase1) {
-      // Primal infeasibilities found in rebuild() Should be
-      // shifted but, for now, break and return to phase 1
+      // No primal infeasibilities found in rebuild() so break and
+      // return to phase 2
       solvePhase = SOLVE_PHASE_2;
       break;
     }
 
     for (;;) {
-
       if (ekkDebugSimplex(ekk_instance_, algorithm, solvePhase) ==
-	  HighsDebugStatus::LOGICAL_ERROR) {
-	solvePhase = SOLVE_PHASE_ERROR;
-	return;
+          HighsDebugStatus::LOGICAL_ERROR) {
+        solvePhase = SOLVE_PHASE_ERROR;
+        return;
       }
       // Primal phase 1 choose column
       phase1ChooseColumn();
@@ -283,9 +282,9 @@ void HEkkPrimal::solvePhase2() {
 
     for (;;) {
       if (ekkDebugSimplex(ekk_instance_, algorithm, solvePhase) ==
-	  HighsDebugStatus::LOGICAL_ERROR) {
-	solvePhase = SOLVE_PHASE_ERROR;
-	return;
+          HighsDebugStatus::LOGICAL_ERROR) {
+        solvePhase = SOLVE_PHASE_ERROR;
+        return;
       }
       chooseColumn();
       if (columnIn == -1) {
@@ -432,14 +431,13 @@ void HEkkPrimal::rebuild() {
     simplex_info.update_count = 0;
   }
   ekk_instance_.computePrimal();
+  ekk_instance_.computeDual();
   ekk_instance_.computeSimplexInfeasible();
-  // Whether to switch to primal phase 1
   isPrimalPhase1 = 0;
   if (simplex_info.num_primal_infeasibilities > 0) {
+    // Whether to switch to primal phase 1
     isPrimalPhase1 = 1;
     phase1ComputeDual();
-  } else {
-    ekk_instance_.computeDual();
   }
 
   ekk_instance_.computePrimalObjectiveValue();
@@ -1222,10 +1220,6 @@ void HEkkPrimal::phase1Update() {
   if (invertHint == 0) {
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();
-    // Assumes that only simplex_info_.*_primal_infeasibilities is
-    // needed - probably only num_primal_infeasibilities
-    //
-    //      copySimplexPrimalInfeasible();
     if (simplex_info.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
       analysis->simplexTimerStart(ComputeDualClock);

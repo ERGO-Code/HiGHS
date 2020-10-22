@@ -23,21 +23,19 @@
 
 class HEkk {
  public:
-  HEkk(HighsLp& lp, HighsOptions& options, HighsTimer& timer)
-      : simplex_lp_(lp), options_(options), timer_(timer), analysis_(timer) {
-    initialise();
-  }
+  HEkk(HighsOptions& options, HighsTimer& timer)
+      : options_(options), timer_(timer), analysis_(timer) {}
   /**
    * @brief Interface to simplex solvers
    */
   // References:
   //
   // LP to be solved, HiGHS options to be used
-  HighsLp& simplex_lp_;
   HighsOptions& options_;
   HighsTimer& timer_;
   HighsSimplexAnalysis analysis_;
 
+  HighsStatus passLp(const HighsLp& lp);
   HighsStatus initialiseSimplexLpBasisAndFactor();
   HighsStatus solve();
   HighsSolutionParams getSolutionParams();
@@ -46,6 +44,7 @@ class HEkk {
   int iteration_count_ = 0;
   bool solve_bailout_ = false;
 
+  HighsLp simplex_lp_;
   HighsSimplexLpStatus simplex_lp_status_;
   HighsSimplexInfo simplex_info_;
   HighsModelStatus scaled_model_status_;

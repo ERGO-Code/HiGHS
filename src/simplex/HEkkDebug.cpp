@@ -92,10 +92,12 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
       move = NONBASIC_MOVE_ZE;
       dual_infeasibility = fabs(dual);
     }
-    if (dual_infeasibility > dual_feasibility_tolerance)
-      num_dual_infeasibility++;
-    max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-    sum_dual_infeasibility += dual_infeasibility;
+    if (dual_infeasibility > 0) {
+      if (dual_infeasibility > dual_feasibility_tolerance)
+        num_dual_infeasibility++;
+      max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
+      sum_dual_infeasibility += dual_infeasibility;
+    }
     if (primal_error) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "ekkDebugSimplex: Nonbasic variable %d has primal error "
@@ -161,10 +163,10 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
       return HighsDebugStatus::LOGICAL_ERROR;
     }
 
-    if (value < lower-primal_feasibility_tolerance) {
+    if (value < lower - primal_feasibility_tolerance) {
       primal_infeasibility = value - lower;
       primal_phase1_cost = 1;
-    } else if (value > upper+primal_feasibility_tolerance) {
+    } else if (value > upper + primal_feasibility_tolerance) {
       primal_infeasibility = upper - value;
       primal_phase1_cost = -1;
     }
@@ -182,11 +184,13 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
       }
     }
     */
-    if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibility++;
-    max_primal_infeasibility =
-        max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibility += primal_infeasibility;
+    if (primal_infeasibility > 0) {
+      if (primal_infeasibility > primal_feasibility_tolerance)
+        num_primal_infeasibility++;
+      max_primal_infeasibility =
+          max(primal_infeasibility, max_primal_infeasibility);
+      sum_primal_infeasibility += primal_infeasibility;
+    }
   }
   bool require_primal_feasible_in_primal_simplex =
       algorithm == SimplexAlgorithm::PRIMAL && (phase == 0 || phase == 2);
@@ -251,14 +255,14 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
       double lower = simplex_info.baseLower_[iRow];
       double upper = simplex_info.baseUpper_[iRow];
       double dual = 0;
-      if (value < lower-primal_feasibility_tolerance) {
-	dual = 1;
-      } else if (value > upper+primal_feasibility_tolerance) {
-	dual = -1;
+      if (value < lower - primal_feasibility_tolerance) {
+        dual = 1;
+      } else if (value > upper + primal_feasibility_tolerance) {
+        dual = -1;
       }
       dual_value[iVar] = dual;
     }
-  }  
+  }
   // Accumulate primal_activities
   double max_dual_residual = 0;
   vector<double> primal_activity(num_row, 0);
@@ -270,10 +274,10 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
       double lower = simplex_info.workLower_[iCol];
       double upper = simplex_info.workUpper_[iCol];
       dual = 0;
-      if (value < lower-primal_feasibility_tolerance) {
-	dual = 1;
-      } else if (value > upper+primal_feasibility_tolerance) {
-	dual = -1;
+      if (value < lower - primal_feasibility_tolerance) {
+        dual = 1;
+      } else if (value > upper + primal_feasibility_tolerance) {
+        dual = -1;
       }
     }
     for (int iEl = simplex_lp.Astart_[iCol]; iEl < simplex_lp.Astart_[iCol + 1];

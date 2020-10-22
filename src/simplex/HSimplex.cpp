@@ -64,7 +64,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = useful_analysis;//true;  // 
+  simplex_info.report_simplex_inner_clock = useful_analysis;  // true;  //
   simplex_info.report_simplex_outer_clock = full_timing;
   simplex_info.report_simplex_phases_clock = full_timing;
   simplex_info.report_HFactor_clock = useful_analysis;  // full_timing;//
@@ -3462,9 +3462,8 @@ HighsStatus getInfeasibilitiesAndNewTolerances(
       unscaled_dual_infeasibility = -basis.nonbasicMove_[iVar] * unscaled_dual;
     }
     if (scaled_dual_infeasibility > 0) {
-      if (scaled_dual_infeasibility >= scaled_dual_feasibility_tolerance) {
+      if (scaled_dual_infeasibility >= scaled_dual_feasibility_tolerance)
         num_scaled_dual_infeasibilities++;
-      }
       max_scaled_dual_infeasibility =
           max(scaled_dual_infeasibility, max_scaled_dual_infeasibility);
       sum_scaled_dual_infeasibilities += scaled_dual_infeasibility;

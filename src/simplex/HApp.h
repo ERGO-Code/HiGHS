@@ -108,8 +108,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 
   if (highs_model_object.options_.simplex_strategy == SIMPLEX_STRATEGY_EKK) {
     // Use EKK
-    HEkk ekk(highs_model_object.simplex_lp_, highs_model_object.options_,
-             highs_model_object.timer_);
+    //    HEkk ekk(highs_model_object.simplex_lp_, highs_model_object.options_,
+    //             highs_model_object.timer_);
+    HEkk& ekk = highs_model_object.ekk_instance_;
+    ekk.passLp(highs_model_object.simplex_lp_);
     call_status = ekk.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkk::solve");
@@ -119,6 +121,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     highs_model_object.simplex_basis_ = ekk.simplex_basis_;
     //    highs_model_object.matrix_ = ekk.matrix_;
     highs_model_object.factor_ = ekk.factor_;
+    highs_model_object.iteration_counts_.simplex = ekk.iteration_count_;
     return return_status;
   }
 

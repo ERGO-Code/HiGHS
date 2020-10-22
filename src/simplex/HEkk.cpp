@@ -17,15 +17,21 @@
 #include "simplex/HEkk.h"
 
 #include "io/HighsIO.h"
-#include "util/HighsRandom.h"
+#include "lp_data/HighsModelUtils.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HFactorDebug.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"
-#include "lp_data/HighsModelUtils.h"
+#include "util/HighsRandom.h"
 
 using std::cout;
 using std::endl;
+
+HighsStatus HEkk::passLp(const HighsLp& lp) {
+  simplex_lp_ = lp;
+  initialise();
+  return HighsStatus::OK;
+}
 
 HighsStatus HEkk::initialiseSimplexLpBasisAndFactor() {
   setSimplexOptions();
@@ -70,8 +76,10 @@ HighsStatus HEkk::solve() {
 
 HighsSolutionParams HEkk::getSolutionParams() {
   HighsSolutionParams solution_params;
-  solution_params.primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance = options_.dual_feasibility_tolerance;
+  solution_params.primal_feasibility_tolerance =
+      options_.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance =
+      options_.dual_feasibility_tolerance;
   if (scaled_model_status_ == HighsModelStatus::OPTIMAL) {
     solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
     solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
@@ -80,17 +88,21 @@ HighsSolutionParams HEkk::getSolutionParams() {
     solution_params.dual_status = PrimalDualStatus::STATUS_NOTSET;
   }
   // Output from solution analysis method
-  solution_params.objective_function_value = simplex_info_.primal_objective_value;
-  solution_params.num_primal_infeasibilities = simplex_info_.num_primal_infeasibilities;
-  solution_params.max_primal_infeasibility = simplex_info_.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibilities = simplex_info_.sum_primal_infeasibilities;
-  solution_params.num_dual_infeasibilities = simplex_info_.num_dual_infeasibilities;
+  solution_params.objective_function_value =
+      simplex_info_.primal_objective_value;
+  solution_params.num_primal_infeasibilities =
+      simplex_info_.num_primal_infeasibilities;
+  solution_params.max_primal_infeasibility =
+      simplex_info_.max_primal_infeasibility;
+  solution_params.sum_primal_infeasibilities =
+      simplex_info_.sum_primal_infeasibilities;
+  solution_params.num_dual_infeasibilities =
+      simplex_info_.num_dual_infeasibilities;
   solution_params.max_dual_infeasibility = simplex_info_.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibilities = simplex_info_.sum_dual_infeasibilities;
+  solution_params.sum_dual_infeasibilities =
+      simplex_info_.sum_dual_infeasibilities;
   return solution_params;
 }
-
-
 
 // Private methods
 
@@ -146,7 +158,7 @@ void HEkk::setSimplexOptions() {
   bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info_.report_simplex_inner_clock = useful_analysis;//true;  // 
+  simplex_info_.report_simplex_inner_clock = useful_analysis;  // true;  //
   simplex_info_.report_simplex_outer_clock = full_timing;
   simplex_info_.report_simplex_phases_clock = full_timing;
   simplex_info_.report_HFactor_clock = useful_analysis;  // full_timing;//
@@ -1198,9 +1210,10 @@ bool HEkk::bailoutOnTimeIterations() {
 HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   simplex_info_.valid_backtracking_basis_ = false;
   HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-		  "HEkk: Returning from solver with HighsModelStatus = %s and HighsStatus = %s",
-		  utilHighsModelStatusToString(scaled_model_status_).c_str(),
-		  HighsStatusToString(return_status).c_str());
+                  "HEkk: Returning from solver with HighsModelStatus = %s and "
+                  "HighsStatus = %s",
+                  utilHighsModelStatusToString(scaled_model_status_).c_str(),
+                  HighsStatusToString(return_status).c_str());
   return return_status;
 }
 
