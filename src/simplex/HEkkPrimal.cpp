@@ -830,13 +830,12 @@ void HEkkPrimal::phase1ChooseColumn() {
 }
 
 void HEkkPrimal::phase1ChooseRow() {
-  /* Alias to work arrays */
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& baseValue = simplex_info.baseValue_;
 
-  /* Compute the transformed pivot column and update its density */
+  // Compute the transformed pivot column and update its density
   analysis->simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
@@ -858,8 +857,8 @@ void HEkkPrimal::phase1ChooseRow() {
   analysis->updateOperationResultDensity(local_col_aq_density,
                                          analysis->col_aq_density);
 
-  /* Compute the reduced cost for the pivot column and compare it with the kept
-   * value */
+  // Compute the reduced cost for the pivot column and compare it with
+  // the kept value
   double dCompDual = 0.0;
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
@@ -877,7 +876,7 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   analysis->simplexTimerStart(Chuzr1Clock);
-  /* Collect phase 1 theta lists */
+  // Collect phase 1 theta lists
   const int iMoveIn = ekk_instance_.simplex_basis_.nonbasicMove_[columnIn];
   const double dPivotTol = simplex_info.update_count < 10
                                ? 1e-9
@@ -888,9 +887,9 @@ void HEkkPrimal::phase1ChooseRow() {
     int iRow = col_aq.index[i];
     double dAlpha = col_aq.array[iRow] * iMoveIn;
 
-    /* When the basic variable x[i] decrease */
+    // When the basic variable x[i] decrease
     if (dAlpha > +dPivotTol) {
-      /* Whether it can become feasible by going below its upper bound */
+      // Whether it can become feasible by going below its upper bound
       if (baseValue[iRow] > baseUpper[iRow] + primal_feasibility_tolerance) {
         double dFeasTheta =
             (baseValue[iRow] - baseUpper[iRow] - primal_feasibility_tolerance) /
@@ -898,8 +897,8 @@ void HEkkPrimal::phase1ChooseRow() {
         ph1SorterR.push_back(std::make_pair(dFeasTheta, iRow));
         ph1SorterT.push_back(std::make_pair(dFeasTheta, iRow));
       }
-      /* Whether it can become infeasible (again) by going below its lower bound
-       */
+      // Whether it can become infeasible (again) by going below its
+      // lower bound
       if (baseValue[iRow] > baseLower[iRow] - primal_feasibility_tolerance &&
           baseLower[iRow] > -HIGHS_CONST_INF) {
         double dRelaxTheta =
@@ -911,9 +910,9 @@ void HEkkPrimal::phase1ChooseRow() {
       }
     }
 
-    /* When the basic variable x[i] increase */
+    // When the basic variable x[i] increase
     if (dAlpha < -dPivotTol) {
-      /* Whether it can become feasible by going above its lower bound */
+      // Whether it can become feasible by going above its lower bound
       if (baseValue[iRow] < baseLower[iRow] - primal_feasibility_tolerance) {
         double dFeasTheta =
             (baseValue[iRow] - baseLower[iRow] + primal_feasibility_tolerance) /
@@ -922,8 +921,8 @@ void HEkkPrimal::phase1ChooseRow() {
         ph1SorterT.push_back(std::make_pair(dFeasTheta, iRow - num_row));
       }
 
-      /* Whether it can become infeasible (again) by going above its upper bound
-       */
+      // Whether it can become infeasible (again) by going above its
+      // upper bound
       if (baseValue[iRow] < baseUpper[iRow] + primal_feasibility_tolerance &&
           baseUpper[iRow] < +HIGHS_CONST_INF) {
         double dRelaxTheta =
@@ -937,18 +936,17 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   analysis->simplexTimerStop(Chuzr1Clock);
-  /* When there is no candidates at all, we can leave it here */
+  // When there is no candidates at all, we can leave it here
   if (ph1SorterR.empty()) {
     rowOut = -1;
     columnOut = -1;
     return;
   }
 
-  /*
-   * Now sort the relaxed theta to find the final break point.
-   * TODO: Consider partial sort.
-   *       Or heapify [O(n)] and then pop k points [kO(log(n))].
-   */
+  // Now sort the relaxed theta to find the final break point. TODO:
+  // Consider partial sort. Or heapify [O(n)] and then pop k points
+  // [kO(log(n))].
+  
   analysis->simplexTimerStart(Chuzr2Clock);
   std::sort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
@@ -958,14 +956,14 @@ void HEkkPrimal::phase1ChooseRow() {
     int index = ph1SorterR.at(i).second;
     int iRow = index >= 0 ? index : index + num_row;
     dGradient -= fabs(col_aq.array[iRow]);
-    /* Stop when the gradient start to decrease */
+    // Stop when the gradient start to decrease
     if (dGradient <= 0) {
       break;
     }
     dMaxTheta = dMyTheta;
   }
 
-  /* Find out the biggest possible alpha for pivot */
+  // Find out the biggest possible alpha for pivot
   std::sort(ph1SorterT.begin(), ph1SorterT.end());
   double dMaxAlpha = 0.0;
   unsigned int iLast = ph1SorterT.size();
@@ -974,18 +972,18 @@ void HEkkPrimal::phase1ChooseRow() {
     int index = ph1SorterT.at(i).second;
     int iRow = index >= 0 ? index : index + num_row;
     double dAbsAlpha = fabs(col_aq.array[iRow]);
-    /* Stop when the theta is too large */
+    // Stop when the theta is too large
     if (dMyTheta > dMaxTheta) {
       iLast = i;
       break;
     }
-    /* Update the maximal possible alpha */
+    // Update the maximal possible alpha
     if (dMaxAlpha < dAbsAlpha) {
       dMaxAlpha = dAbsAlpha;
     }
   }
 
-  /* Finally choose a pivot with good enough alpha, backwardly */
+  // Finally choose a pivot with good enough alpha, working backwards
   rowOut = -1;
   columnOut = -1;
   phase1OutBnd = 0;
@@ -995,7 +993,7 @@ void HEkkPrimal::phase1ChooseRow() {
     double dAbsAlpha = fabs(col_aq.array[iRow]);
     if (dAbsAlpha > dMaxAlpha * 0.1) {
       rowOut = iRow;
-      phase1OutBnd = index > 0 ? 1 : -1;
+      phase1OutBnd = index >= 0 ? 1 : -1;
       break;
     }
   }
