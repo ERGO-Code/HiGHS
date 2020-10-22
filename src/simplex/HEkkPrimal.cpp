@@ -65,8 +65,9 @@ HighsStatus HEkkPrimal::solve() {
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();
   }
-  solvePhase =
-      ekk_instance_.simplex_info_.num_primal_infeasibilities > 0 ? 1 : 2;
+  int num_primal_infeasibilities =
+      ekk_instance_.simplex_info_.num_primal_infeasibilities;
+  solvePhase = num_primal_infeasibilities > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
 
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
                          use_bound_perturbation) ==
@@ -83,53 +84,168 @@ HighsStatus HEkkPrimal::solve() {
   // ToDo Move to simplex and adapt so it's OK for primal and dual
   //  iterationAnalysisInitialise();
 
-  //  while (solvePhase) {
-  //    int it0 = ekk_instance_.iteration_count_;
-  //    switch (solvePhase) {
-  //      case 1:
-  //        analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
-  //        solvePhase1();
-  //        analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
-  //        simplex_info.primal_phase1_iteration_count +=
-  //        (ekk_instance_.iteration_count_ - it0);
-  //	break;
-  //    case 2:
-  //      analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
-  //      solvePhase2();
-  //      analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-  //      simplex_info.primal_phase2_iteration_count +=
-  //      (ekk_instance_.iteration_count_ - it0); break;
-  //    case 4:
-  //      break;
-  //    default:
-  //      solvePhase = 0;
-  //      break;
-  //    }
-  //    // Jump for primal
-  //    if (solvePhase == 4) break;
-  //    // Possibly bail out
-  //    if (SolveBailout) break;
-  //  }
-
-  solvePhase = 2;
-  assert(ekk_instance_.solve_bailout_ == false);
-  //  HighsSimplexAnalysis& analysis = ekk_instance_.simplex_analysis_;
-  if (solvePhase == 2) {
+  while (solvePhase) {
     int it0 = ekk_instance_.iteration_count_;
-
-    analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
-    solvePhase2();
-    analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-
-    simplex_info.primal_phase2_iteration_count +=
-        (ekk_instance_.iteration_count_ - it0);
-    if (ekk_instance_.bailoutReturn()) return HighsStatus::Warning;
+    // When starting a new phase the (updated) primal objective function
+    // value isn't known. Indicate this so that when the value
+    // computed from scratch in rebuild() isn't checked against the the
+    // updated value
+    simplex_lp_status.has_primal_objective_value = false;
+    if (solvePhase == SOLVE_PHASE_UNKNOWN) {
+      // Reset the phase 2 bounds so that true number of dual
+      // infeasibilities canbe determined
+      ekk_instance_.initialiseBound();
+      // Determine the number of primal infeasibilities, and hence the solve
+      // phase
+      ekk_instance_.computeSimplexPrimalInfeasible();
+      num_primal_infeasibilities =
+          ekk_instance_.simplex_info_.num_primal_infeasibilities;
+      solvePhase =
+          num_primal_infeasibilities > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
+      /*
+      if (simplex_info.backtracking_) {
+        // Backtracking, so set the bounds and primal values
+        ekk_instance_.initialiseBound(solvePhase);
+        ekk_instance_.initialiseValueAndNonbasicMove();
+        // Can now forget that we might have been backtracking
+        simplex_info.backtracking_ = false;
+      }
+      */
+    }
+    assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
+    if (solvePhase == SOLVE_PHASE_1) {
+      // Phase 1
+      analysis->simplexTimerStart(SimplexPrimalPhase1Clock);
+      solvePhase1();
+      analysis->simplexTimerStop(SimplexPrimalPhase1Clock);
+      simplex_info.primal_phase1_iteration_count +=
+          (ekk_instance_.iteration_count_ - it0);
+    } else if (solvePhase == SOLVE_PHASE_2) {
+      // Phase 2
+      analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
+      solvePhase2();
+      analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
+      simplex_info.primal_phase2_iteration_count +=
+          (ekk_instance_.iteration_count_ - it0);
+    } else {
+      // Should only be SOLVE_PHASE_1 or SOLVE_PHASE_2
+      ekk_instance_.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+      return ekk_instance_.returnFromSolve(HighsStatus::Error);
+    }
+    // Return if bailing out from solve
+    if (ekk_instance_.solve_bailout_)
+      return ekk_instance_.returnFromSolve(HighsStatus::Warning);
+    // Can have all possible cases of solvePhase
+    assert(solvePhase >= SOLVE_PHASE_MIN && solvePhase <= SOLVE_PHASE_MAX);
+    // Look for scenarios when the major solving loop ends
+    if (solvePhase == SOLVE_PHASE_ERROR) {
+      // Solver error so return HighsStatus::Error
+      assert(ekk_instance_.scaled_model_status_ ==
+             HighsModelStatus::SOLVE_ERROR);
+      return ekk_instance_.returnFromSolve(HighsStatus::Error);
+    }
+    if (solvePhase == SOLVE_PHASE_EXIT) {
+      // LP identified as not having an optimal solution
+      assert(ekk_instance_.scaled_model_status_ ==
+                 HighsModelStatus::PRIMAL_DUAL_INFEASIBLE ||
+             ekk_instance_.scaled_model_status_ ==
+                 HighsModelStatus::PRIMAL_INFEASIBLE);
+      break;
+    }
+    if (solvePhase == SOLVE_PHASE_1 && ekk_instance_.scaled_model_status_ ==
+                                           HighsModelStatus::DUAL_INFEASIBLE) {
+      // Dual infeasibilities after phase 2 for a problem known to be dual
+      // infeasible.
+      break;
+    }
+    if (solvePhase == SOLVE_PHASE_CLEANUP) {
+      // Primal infeasibilities after phase 2 for a problem not known
+      // to be primal infeasible. Dual feasible with primal
+      // infeasibilities so use dual simplex to clean up
+      break;
+    }
+    // If solvePhase == SOLVE_PHASE_OPTIMAL == 0 then major solving
+    // loop ends naturally since solvePhase is false
   }
+  // If bailing out, should have returned already
+  assert(!ekk_instance_.solve_bailout_);
+  // Should only have these cases
+  assert(solvePhase == SOLVE_PHASE_EXIT || solvePhase == SOLVE_PHASE_UNKNOWN ||
+         solvePhase == SOLVE_PHASE_OPTIMAL || solvePhase == SOLVE_PHASE_1 ||
+         solvePhase == SOLVE_PHASE_CLEANUP);
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
                          use_bound_perturbation) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   return HighsStatus::OK;
+}
+
+void HEkkPrimal::solvePhase1() {
+  HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
+  // When starting a new phase the (updated) primal objective function
+  // value isn't known. Indicate this so that when the value
+  // computed from scratch in build() isn't checked against the the
+  // updated value
+  simplex_lp_status.has_primal_objective_value = false;
+  simplex_lp_status.has_dual_objective_value = false;
+  // Possibly bail out immediately if iteration limit is current value
+  if (ekk_instance_.bailoutReturn()) return;
+  HighsPrintMessage(ekk_instance_.options_.output,
+                    ekk_instance_.options_.message_level, ML_DETAILED,
+                    "primal-phase2-start\n");
+  // Main solving structure
+  for (;;) {
+    analysis->simplexTimerStart(IteratePrimalRebuildClock);
+    rebuild();
+    analysis->simplexTimerStop(IteratePrimalRebuildClock);
+
+    if (!isPrimalPhase1) {
+      // Primal infeasibilities found in rebuild() Should be
+      // shifted but, for now, break and return to phase 1
+      solvePhase = SOLVE_PHASE_2;
+      break;
+    }
+
+    for (;;) {
+      // Primal phase 1 choose column
+      phase1ChooseColumn();
+      if (columnIn == -1) {
+        invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
+        break;
+      }
+
+      // Primal phase 1 choose row
+      phase1ChooseRow();
+      if (rowOut == -1) {
+        HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+                        "Primal phase 1 choose row failed");
+        exit(0);
+      }
+
+      // Primal phase 1 update
+      phase1Update();
+      if (invertHint) {
+        break;
+      }
+      if (ekk_instance_.bailoutReturn()) return;
+    }
+    // Go to the next rebuild
+    if (invertHint) {
+      // Stop when the invert is new
+      if (simplex_lp_status.has_fresh_rebuild) {
+        break;
+      }
+      continue;
+    }
+    // If the data are fresh from rebuild() and no flips have occurred, break
+    // out of the outer loop to see what's ocurred
+    if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
+      break;
+  }
+  if (ekk_instance_.simplex_info_.num_primal_infeasibilities == 0)
+    solvePhase = SOLVE_PHASE_2;
+  // If bailing out, should have returned already
+  assert(!ekk_instance_.solve_bailout_);
 }
 
 void HEkkPrimal::solvePhase2() {
@@ -140,10 +256,6 @@ void HEkkPrimal::solvePhase2() {
   // updated value
   simplex_lp_status.has_primal_objective_value = false;
   simplex_lp_status.has_dual_objective_value = false;
-  // Set invertHint so that it's assigned when first tested
-  invertHint = INVERT_HINT_NO;
-  // Set solvePhase=2 so it's set if solvePhase2() is called directly
-  solvePhase = 2;
   // Possibly bail out immediately if iteration limit is current value
   if (ekk_instance_.bailoutReturn()) return;
   HighsPrintMessage(ekk_instance_.options_.output,
@@ -152,55 +264,28 @@ void HEkkPrimal::solvePhase2() {
   // Main solving structure
   for (;;) {
     analysis->simplexTimerStart(IteratePrimalRebuildClock);
-    primalRebuild();
+    rebuild();
     analysis->simplexTimerStop(IteratePrimalRebuildClock);
 
     if (isPrimalPhase1) {
-      for (;;) {
-        // Primal phase 1 choose column
-        phase1ChooseColumn();
-        if (columnIn == -1) {
-          invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
-          break;
-        }
-
-        // Primal phase 1 choose row
-        phase1ChooseRow();
-        if (rowOut == -1) {
-          HighsLogMessage(ekk_instance_.options_.logfile,
-                          HighsMessageType::ERROR,
-                          "Primal phase 1 choose row failed");
-          exit(0);
-        }
-
-        // Primal phase 1 update
-        phase1Update();
-        if (invertHint) {
-          break;
-        }
-        if (ekk_instance_.bailoutReturn()) return;
-      }
-      // Go to the next rebuild
-      if (invertHint) {
-        // Stop when the invert is new
-        if (simplex_lp_status.has_fresh_rebuild) {
-          break;
-        }
-        continue;
-      }
+      // Primal infeasibilities found in rebuild() Should be
+      // shifted but, for now, break and return to phase 1
+      solvePhase = SOLVE_PHASE_1;
+      break;
     }
+
     for (;;) {
-      primalChooseColumn();
+      chooseColumn();
       if (columnIn == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
         break;
       }
-      primalChooseRow();
+      chooseRow();
       if (rowOut == -1) {
         invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
         break;
       }
-      primalUpdate();
+      phase2Update();
       if (ekk_instance_.bailoutReturn()) return;
       if (invertHint) {
         break;
@@ -214,18 +299,25 @@ void HEkkPrimal::solvePhase2() {
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
 
-  if (columnIn == -1) {
+  if (isPrimalPhase1) {
     HighsPrintMessage(ekk_instance_.options_.output,
                       ekk_instance_.options_.message_level, ML_DETAILED,
-                      "primal-optimal\n");
-    ekk_instance_.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+                      "primal-return-phase1\n");
   } else {
-    HighsPrintMessage(ekk_instance_.options_.output,
-                      ekk_instance_.options_.message_level, ML_MINIMAL,
-                      "primal-unbounded\n");
-    ekk_instance_.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+    if (columnIn == -1) {
+      HighsPrintMessage(ekk_instance_.options_.output,
+                        ekk_instance_.options_.message_level, ML_DETAILED,
+                        "primal-optimal\n");
+      ekk_instance_.scaled_model_status_ = HighsModelStatus::OPTIMAL;
+      solvePhase = SOLVE_PHASE_OPTIMAL;
+    } else {
+      HighsPrintMessage(ekk_instance_.options_.output,
+                        ekk_instance_.options_.message_level, ML_MINIMAL,
+                        "primal-unbounded\n");
+      ekk_instance_.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+    }
+    ekk_instance_.computeDualObjectiveValue();
   }
-  ekk_instance_.computeDualObjectiveValue();
 }
 
 void HEkkPrimal::initialise() {
@@ -240,6 +332,8 @@ void HEkkPrimal::initialise() {
       ekk_instance_.scaled_solution_params_.primal_feasibility_tolerance;
   dual_feasibility_tolerance =
       ekk_instance_.scaled_solution_params_.dual_feasibility_tolerance;
+
+  invertHint = INVERT_HINT_NO;
 
   ekk_instance_.simplex_lp_status_.has_primal_objective_value = false;
   ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
@@ -270,7 +364,7 @@ void HEkkPrimal::initialise() {
                     "HEkkPrimal:: LP has free columns");
 }
 
-void HEkkPrimal::primalRebuild() {
+void HEkkPrimal::rebuild() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
 
@@ -320,8 +414,17 @@ void HEkkPrimal::primalRebuild() {
     }
     simplex_info.update_count = 0;
   }
-  ekk_instance_.computeDual();
   ekk_instance_.computePrimal();
+  ekk_instance_.computeSimplexInfeasible();
+  // Whether to switch to primal phase 1
+  isPrimalPhase1 = 0;
+  if (simplex_info.num_primal_infeasibilities > 0) {
+    isPrimalPhase1 = 1;
+    phase1ComputeDual();
+  } else {
+    ekk_instance_.computeDual();
+  }
+
   ekk_instance_.computePrimalObjectiveValue();
   if (check_updated_objective_value) {
     // Apply the objective value correction due to computing primal
@@ -337,25 +440,13 @@ void HEkkPrimal::primalRebuild() {
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 
-  ekk_instance_.computeSimplexInfeasible();
-  // Determine whether simplex_info.num_primal_infeasibilities and
-  // simplex_info.num_dual_infeasibilities can be used
-  //  ekk_instance_.copySimplexInfeasible();
-
-  // Whether to switch to primal phase 1
-  isPrimalPhase1 = 0;
-  if (simplex_info.num_primal_infeasibilities > 0) {
-    isPrimalPhase1 = 1;
-    phase1ComputeDual();
-  }
-
   reportRebuild(sv_invertHint);
   num_flip_since_rebuild = 0;
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
 }
 
-void HEkkPrimal::primalChooseColumn() {
+void HEkkPrimal::chooseColumn() {
   HighsRandom& random = ekk_instance_.random_;
   const vector<int>& nonbasicFlag_ = ekk_instance_.simplex_basis_.nonbasicFlag_;
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
@@ -425,7 +516,7 @@ void HEkkPrimal::primalChooseColumn() {
   analysis->simplexTimerStop(ChuzcPrimalClock);
 }
 
-void HEkkPrimal::primalChooseRow() {
+void HEkkPrimal::chooseRow() {
   const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
   const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
@@ -537,7 +628,7 @@ void HEkkPrimal::primalChooseRow() {
   analysis->simplexTimerStop(Chuzr2Clock);
 }
 
-void HEkkPrimal::primalUpdate() {
+void HEkkPrimal::phase2Update() {
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   const vector<double>& workLower = ekk_instance_.simplex_info_.workLower_;
@@ -946,7 +1037,7 @@ void HEkkPrimal::phase1ChooseRow() {
   // Now sort the relaxed theta to find the final break point. TODO:
   // Consider partial sort. Or heapify [O(n)] and then pop k points
   // [kO(log(n))].
-  
+
   analysis->simplexTimerStart(Chuzr2Clock);
   std::sort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;

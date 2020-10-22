@@ -198,8 +198,8 @@ HighsStatus HDual::solve() {
     int it0 = iteration_counts.simplex;
     // When starting a new phase the (updated) dual objective function
     // value isn't known. Indicate this so that when the value
-    // computed from scratch in build() isn't checked against the the
-    // updated value
+    // computed from scratch in rebuild() isn't checked against the
+    // the updated value
     simplex_lp_status.has_dual_objective_value = false;
     if (solvePhase == SOLVE_PHASE_UNKNOWN) {
       // Reset the phase 2 bounds so that true number of dual
@@ -260,8 +260,9 @@ HighsStatus HDual::solve() {
       break;
     }
     if (solvePhase == SOLVE_PHASE_CLEANUP) {
-      // Dual infeasibilities after phase 2 for a problem not known to be dual
-      // infeasible Primal feasible and dual infeasibilities
+      // Dual infeasibilities after phase 2 for a problem not known to
+      // be dual infeasible. Primal feasible with dual infeasibilities
+      // so use primal simplex to clean up
       break;
     }
     // If solvePhase == SOLVE_PHASE_OPTIMAL == 0 then major solving
