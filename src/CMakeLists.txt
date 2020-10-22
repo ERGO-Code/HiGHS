@@ -1,12 +1,5 @@
-# Define library.
-# Outdated CMake approach: update in progress
-if (NOT FAST_BUILD)
-include_directories(ipm/ipx/src)
-include_directories(ipm/ipx/include)
-include_directories(ipm/basiclu/src)
-include_directories(ipm/basiclu/include)
+# Source files for ipx, available in both pre-release CMake and FAST_BUILD.
 
-if (IPX_ON)
 set(basiclu_sources
     ipm/basiclu/src/basiclu_factorize.c
     ipm/basiclu/src/basiclu_solve_dense.c
@@ -69,7 +62,14 @@ set(ipx_sources
     ipm/ipx/src/symbolic_invert.cc
     ipm/ipx/src/timer.cc
     ipm/ipx/src/utils.cc)
-endif()
+
+# Define library.
+# Outdated CMake approach: update in progress
+if (NOT FAST_BUILD)
+include_directories(ipm/ipx/src)
+include_directories(ipm/ipx/include)
+include_directories(ipm/basiclu/src)
+include_directories(ipm/basiclu/include)
 
 set(sources
     ../external/filereaderlp/reader.cpp
@@ -370,6 +370,7 @@ else()
 # Define library in modern CMake using target_*()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
+
 target_sources(libhighs PRIVATE 
     ../external/filereaderlp/reader.cpp
     io/Filereader.cpp
@@ -431,6 +432,21 @@ target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
 
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+
+if (true)
+#kif (IPX_ON)
+    add_library(ipx OBJECT ${basiclu_sources} ${ipx_sources})
+    target_include_directories(ipx PRIVATE ipm/ipx/src ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
+    #target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
+
+set_target_properties(ipx PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+
+    target_link_libraries(libhighs PRIVATE ipx)
+endif()
 
 endif()

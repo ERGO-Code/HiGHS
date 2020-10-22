@@ -28,18 +28,17 @@ endif()
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
 
-# Note: Not ON by default. Still need to fix the exe generation dir: rename from 
-# app/ to bin/
-option(EXP "Experimental mode: run unit tests with doctest." OFF)
+# Note: Not ON by default yet
 option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
+option(EXP "Experimental mode: run unit tests with doctest." OFF)
+option(IPX "Use interior point solver" OFF)
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+
+
+if (NOT FAST_BUILD)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
-
-if (NOT FAST_BUILD)
 
 set(HIGHS_VERSION_PATCH 0)
 
@@ -419,6 +418,10 @@ endif()
 
 # Dashboards later on.
 # include(CTest)
+
+if (IPX)
+    set(IPX_ON ON)
+endif()
 
 endif()
 

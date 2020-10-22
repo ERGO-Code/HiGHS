@@ -10,6 +10,5 @@ set_target_properties(highs PROPERTIES
 )
 
 # install the binary
-# so it is generated in build/bin/ rather than build/app
 install(TARGETS highs EXPORT highs-targets
         RUNTIME DESTINATION bin)
