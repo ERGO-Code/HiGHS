@@ -113,6 +113,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     call_status = ekk.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkk::solve");
+    highs_model_object.scaled_model_status_ = ekk.scaled_model_status_;
+    highs_model_object.scaled_solution_params_ = ekk.getSolutionParams();
+    simplex_info = ekk.simplex_info_;
+    highs_model_object.simplex_basis_ = ekk.simplex_basis_;
+    //    highs_model_object.matrix_ = ekk.matrix_;
+    highs_model_object.factor_ = ekk.factor_;
     return return_status;
   }
 

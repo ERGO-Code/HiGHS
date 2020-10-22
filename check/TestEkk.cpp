@@ -15,7 +15,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
   HighsModelStatus require_model_status;
   double optimal_objective;
 
-  const bool from_file = true;
+  const bool from_file = false;
   if (from_file) {
     std::string model_file =
         std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";

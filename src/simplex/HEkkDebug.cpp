@@ -150,7 +150,8 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
       assert(!baseBound_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
-    bool dual_error = fabs(dual);
+    // Until basic duals are zeroed
+    bool dual_error = fabs(dual) > 1e-6;
     if (dual_error) {
       HighsLogMessage(
           options.logfile, HighsMessageType::ERROR,
@@ -160,13 +161,15 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
       return HighsDebugStatus::LOGICAL_ERROR;
     }
 
-    if (value < lower) {
+    if (value < lower-primal_feasibility_tolerance) {
       primal_infeasibility = value - lower;
       primal_phase1_cost = 1;
-    } else if (value > upper) {
+    } else if (value > upper+primal_feasibility_tolerance) {
       primal_infeasibility = upper - value;
       primal_phase1_cost = -1;
     }
+    /*
+      // Until workCost_ is correct for primal phase 1
     if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
       bool primal_phase1_cost_error = fabs(cost - primal_phase1_cost);
       if (primal_phase1_cost_error) {
@@ -178,6 +181,7 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
         return HighsDebugStatus::LOGICAL_ERROR;
       }
     }
+    */
     if (primal_infeasibility > primal_feasibility_tolerance)
       num_primal_infeasibility++;
     max_primal_infeasibility =
@@ -220,34 +224,74 @@ HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
   if (ekk_instance.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return return_status;
   // Now determine the primal and dual residuals.
+  //
+  // This uses the primal values for the columns to determine row
+  // activities that are checked against the primal values for the
+  // rows. It uses the pi vector to determine column duals. The
+  // entries of the pi vector are the duals for nonbasic rows, and
+  // costs for basic rows. The latter are normally zero, but will be
+  // nonzero if the constraint is violated in primal phase 1, or if
+  // the row cost is a perturbed zero in dual simplex.
   vector<double> primal_value(num_tot);
-  for (int iVar = 0; iVar < num_tot; iVar++)
+  vector<double> dual_value(num_tot);
+  for (int iVar = 0; iVar < num_tot; iVar++) {
     primal_value[iVar] = simplex_info.workValue_[iVar];
+    dual_value[iVar] = simplex_info.workDual_[iVar];
+  }
   for (int iRow = 0; iRow < num_row; iRow++) {
     int iVar = simplex_basis.basicIndex_[iRow];
     primal_value[iVar] = simplex_info.baseValue_[iRow];
+    dual_value[iVar] = simplex_info.workCost_[iVar];
   }
+  if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
+    // Until workCost_ is correct for primal phase 1
+    for (int iRow = 0; iRow < num_row; iRow++) {
+      int iVar = simplex_basis.basicIndex_[iRow];
+      double value = simplex_info.baseValue_[iRow];
+      double lower = simplex_info.baseLower_[iRow];
+      double upper = simplex_info.baseUpper_[iRow];
+      double dual = 0;
+      if (value < lower-primal_feasibility_tolerance) {
+	dual = 1;
+      } else if (value > upper+primal_feasibility_tolerance) {
+	dual = -1;
+      }
+      dual_value[iVar] = dual;
+    }
+  }  
   // Accumulate primal_activities
   double max_dual_residual = 0;
   vector<double> primal_activity(num_row, 0);
   for (int iCol = 0; iCol < num_col; iCol++) {
     double dual = simplex_info.workCost_[iCol];
     double value = primal_value[iCol];
+    if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
+      // Until workCost_ is correct for primal phase 1
+      double lower = simplex_info.workLower_[iCol];
+      double upper = simplex_info.workUpper_[iCol];
+      dual = 0;
+      if (value < lower-primal_feasibility_tolerance) {
+	dual = 1;
+      } else if (value > upper+primal_feasibility_tolerance) {
+	dual = -1;
+      }
+    }
     for (int iEl = simplex_lp.Astart_[iCol]; iEl < simplex_lp.Astart_[iCol + 1];
          iEl++) {
       int iRow = simplex_lp.Aindex_[iEl];
       int iVar = num_col + iRow;
       double Avalue = simplex_lp.Avalue_[iEl];
       primal_activity[iRow] += value * Avalue;
-      dual += simplex_info.workDual_[iVar] * Avalue;
+      dual += dual_value[iVar] * Avalue;
     }
     double dual_residual = fabs(dual - simplex_info.workDual_[iCol]);
     max_dual_residual = max(dual_residual, max_dual_residual);
   }
+  // Remember tha simplex row values are the negated row activities
   double max_primal_residual = 0;
   for (int iRow = 0; iRow < num_row; iRow++) {
     int iVar = num_col + iRow;
-    double primal_residual = fabs(primal_activity[iRow] - primal_value[iVar]);
+    double primal_residual = fabs(primal_activity[iRow] + primal_value[iVar]);
     max_primal_residual = max(primal_residual, max_primal_residual);
   }
   std::string value_adjective;

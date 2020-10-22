@@ -74,10 +74,6 @@ HighsStatus HEkkPrimal::solve() {
       HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
-  //  if (ekkDebugSimplex(ekk_instance_, algorithm, solvePhase) ==
-  //  HighsDebugStatus::LOGICAL_ERROR) return
-  //  ekk_instance_.returnFromSolve(HighsStatus::Error);
-
   // The major solving loop
   // Initialise the iteration analysis. Necessary for strategy, but
   // much is for development and only switched on with HiGHSDEV
@@ -177,7 +173,7 @@ HighsStatus HEkkPrimal::solve() {
                          use_bound_perturbation) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
-  return HighsStatus::OK;
+  return ekk_instance_.returnFromSolve(HighsStatus::OK);
 }
 
 void HEkkPrimal::solvePhase1() {
@@ -207,6 +203,12 @@ void HEkkPrimal::solvePhase1() {
     }
 
     for (;;) {
+
+      if (ekkDebugSimplex(ekk_instance_, algorithm, solvePhase) ==
+	  HighsDebugStatus::LOGICAL_ERROR) {
+	solvePhase = SOLVE_PHASE_ERROR;
+	return;
+      }
       // Primal phase 1 choose column
       phase1ChooseColumn();
       if (columnIn == -1) {
@@ -242,6 +244,11 @@ void HEkkPrimal::solvePhase1() {
     if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
   }
+  if (ekkDebugSimplex(ekk_instance_, algorithm, solvePhase) ==
+      HighsDebugStatus::LOGICAL_ERROR) {
+    solvePhase = SOLVE_PHASE_ERROR;
+    return;
+  }
   if (ekk_instance_.simplex_info_.num_primal_infeasibilities == 0)
     solvePhase = SOLVE_PHASE_2;
   // If bailing out, should have returned already
@@ -275,6 +282,11 @@ void HEkkPrimal::solvePhase2() {
     }
 
     for (;;) {
+      if (ekkDebugSimplex(ekk_instance_, algorithm, solvePhase) ==
+	  HighsDebugStatus::LOGICAL_ERROR) {
+	solvePhase = SOLVE_PHASE_ERROR;
+	return;
+      }
       chooseColumn();
       if (columnIn == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
@@ -295,6 +307,11 @@ void HEkkPrimal::solvePhase2() {
     // out of the outer loop to see what's ocurred
     if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
+  }
+  if (ekkDebugSimplex(ekk_instance_, algorithm, solvePhase) ==
+      HighsDebugStatus::LOGICAL_ERROR) {
+    solvePhase = SOLVE_PHASE_ERROR;
+    return;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);

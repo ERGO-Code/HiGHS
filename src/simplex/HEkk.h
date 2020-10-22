@@ -40,6 +40,7 @@ class HEkk {
 
   HighsStatus initialiseSimplexLpBasisAndFactor();
   HighsStatus solve();
+  HighsSolutionParams getSolutionParams();
 
   double cost_scale_ = 1;
   int iteration_count_ = 0;
