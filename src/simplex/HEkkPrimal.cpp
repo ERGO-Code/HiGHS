@@ -585,9 +585,11 @@ void HEkkPrimal::sectionalChooseColumn() {
 }
 
 void HEkkPrimal::chooseRow() {
-  const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
-  const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
-  vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
+  const HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  const vector<double>& baseValue = simplex_info.baseValue_;
+  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
   // Compute pivot column
   analysis->simplexTimerStart(FtranClock);
@@ -595,7 +597,6 @@ void HEkkPrimal::chooseRow() {
   col_aq.packFlag = true;
   ekk_instance_.matrix_.collect_aj(col_aq, columnIn, 1);
 #ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   if (simplex_info.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
                                     analysis->col_aq_density);
@@ -624,11 +625,9 @@ void HEkkPrimal::chooseRow() {
   rowOut = -1;
 
   // Choose row pass 1
-  double alphaTol =
-      ekk_instance_.simplex_info_.update_count < 10
-          ? 1e-9
-          : ekk_instance_.simplex_info_.update_count < 20 ? 1e-8 : 1e-7;
-  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  double alphaTol = simplex_info.update_count < 10
+                        ? 1e-9
+                        : simplex_info.update_count < 20 ? 1e-8 : 1e-7;
   int moveIn = nonbasicMove[columnIn];
   // Can't handle free columns yet
   assert(moveIn);
