@@ -1092,8 +1092,7 @@ void HEkk::computeSimplexLpDualInfeasible() {
   // bounds of the simplex LP. Assumes that boxed variables have
   // primal variable at the bound corresponding to the sign of the
   // dual so should only be used in dual phase 1 - where it's only
-  // used for reporting after rebuilds and to determine whether the LP
-  // is dual infeasible and, hence, primal unbounded.
+  // used for reporting after rebuilds.
   // Possibly verify that nonbasicMove is correct for fixed variables
   //
   //  debugFixedNonbasicMove();

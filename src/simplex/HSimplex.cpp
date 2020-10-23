@@ -2727,8 +2727,7 @@ void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
   // bounds of the simplex LP. Assumes that boxed variables have
   // primal variable at the bound corresponding to the sign of the
   // dual so should only be used in dual phase 1 - where it's only
-  // used for reporting after rebuilds and to determine whether the LP
-  // is dual infeasible and, hence, primal unbounded.
+  // used for reporting after rebuilds.
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;

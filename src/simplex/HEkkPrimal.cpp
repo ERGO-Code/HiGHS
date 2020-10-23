@@ -136,8 +136,7 @@ HighsStatus HEkkPrimal::solve() {
     // Look for scenarios when the major solving loop ends
     if (solvePhase == SOLVE_PHASE_ERROR) {
       // Solver error so return HighsStatus::Error
-      assert(ekk_instance_.scaled_model_status_ ==
-             HighsModelStatus::SOLVE_ERROR);
+      ekk_instance_.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
       return ekk_instance_.returnFromSolve(HighsStatus::Error);
     }
     if (solvePhase == SOLVE_PHASE_EXIT) {
@@ -145,7 +144,9 @@ HighsStatus HEkkPrimal::solve() {
       assert(ekk_instance_.scaled_model_status_ ==
                  HighsModelStatus::PRIMAL_DUAL_INFEASIBLE ||
              ekk_instance_.scaled_model_status_ ==
-                 HighsModelStatus::PRIMAL_INFEASIBLE);
+                 HighsModelStatus::PRIMAL_INFEASIBLE ||
+             ekk_instance_.scaled_model_status_ ==
+                 HighsModelStatus::PRIMAL_UNBOUNDED);
       break;
     }
     if (solvePhase == SOLVE_PHASE_1 && ekk_instance_.scaled_model_status_ ==
@@ -169,6 +170,8 @@ HighsStatus HEkkPrimal::solve() {
   assert(solvePhase == SOLVE_PHASE_EXIT || solvePhase == SOLVE_PHASE_UNKNOWN ||
          solvePhase == SOLVE_PHASE_OPTIMAL || solvePhase == SOLVE_PHASE_1 ||
          solvePhase == SOLVE_PHASE_CLEANUP);
+  if (solvePhase == SOLVE_PHASE_OPTIMAL)
+    ekk_instance_.scaled_model_status_ = HighsModelStatus::OPTIMAL;
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
                          use_bound_perturbation) ==
       HighsDebugStatus::LOGICAL_ERROR)
@@ -194,7 +197,7 @@ void HEkkPrimal::solvePhase1() {
     analysis->simplexTimerStart(IteratePrimalRebuildClock);
     rebuild();
     analysis->simplexTimerStop(IteratePrimalRebuildClock);
-
+    if (solvePhase == SOLVE_PHASE_ERROR) return;
     if (!isPrimalPhase1) {
       // No primal infeasibilities found in rebuild() so break and
       // return to phase 2
@@ -220,7 +223,8 @@ void HEkkPrimal::solvePhase1() {
       if (rowOut == -1) {
         HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
                         "Primal phase 1 choose row failed");
-        exit(0);
+        solvePhase = SOLVE_PHASE_ERROR;
+        return;
       }
 
       // Primal phase 1 update
@@ -272,6 +276,7 @@ void HEkkPrimal::solvePhase2() {
     analysis->simplexTimerStart(IteratePrimalRebuildClock);
     rebuild();
     analysis->simplexTimerStop(IteratePrimalRebuildClock);
+    if (solvePhase == SOLVE_PHASE_ERROR) return;
 
     if (isPrimalPhase1) {
       // Primal infeasibilities found in rebuild() Should be
@@ -324,12 +329,12 @@ void HEkkPrimal::solvePhase2() {
       HighsPrintMessage(ekk_instance_.options_.output,
                         ekk_instance_.options_.message_level, ML_DETAILED,
                         "primal-optimal\n");
-      ekk_instance_.scaled_model_status_ = HighsModelStatus::OPTIMAL;
       solvePhase = SOLVE_PHASE_OPTIMAL;
     } else {
       HighsPrintMessage(ekk_instance_.options_.output,
                         ekk_instance_.options_.message_level, ML_MINIMAL,
                         "primal-unbounded\n");
+      solvePhase = SOLVE_PHASE_EXIT;
       ekk_instance_.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
     }
     ekk_instance_.computeDualObjectiveValue();
@@ -344,10 +349,8 @@ void HEkkPrimal::initialise() {
   num_tot = num_col + num_row;
 
   // Copy values of simplex solver options to dual simplex options
-  primal_feasibility_tolerance =
-      ekk_instance_.scaled_solution_params_.primal_feasibility_tolerance;
-  dual_feasibility_tolerance =
-      ekk_instance_.scaled_solution_params_.dual_feasibility_tolerance;
+  primal_feasibility_tolerance = ekk_instance_.options_.primal_feasibility_tolerance;
+  dual_feasibility_tolerance = ekk_instance_.options_.dual_feasibility_tolerance;
 
   invertHint = INVERT_HINT_NO;
 
@@ -760,25 +763,6 @@ void HEkkPrimal::phase2Update() {
   // PRICE
   //
   ekk_instance_.computeTableauRowFromPiP(row_ep, row_ap);
-  /*
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations) {
-  analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
-analysis->row_ap_density); analysis->num_row_price++;
-  }
-#endif
-  analysis->simplexTimerStart(PriceClock);
-  ekk_instance_.matrix_.priceByRowSparseResult(row_ap, row_ep);
-  analysis->simplexTimerStop(PriceClock);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-  analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
-#endif
-
-  const double local_row_ep_density = (double)row_ep.count / num_row;
-  analysis->updateOperationResultDensity(local_row_ep_density,
-analysis->row_ep_density);
-  */
   analysis->simplexTimerStart(UpdateDualClock);
   //  double
   thetaDual = workDual[columnIn] / alpha;
