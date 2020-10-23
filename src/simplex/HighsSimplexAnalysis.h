@@ -183,6 +183,7 @@ class HighsSimplexAnalysis {
   int entering_variable = 0;
   int num_primal_infeasibilities = 0;
   int num_dual_infeasibilities = 0;
+  int num_dual_phase_1_lp_dual_infeasibility = 0;
   int invert_hint = 0;
   double reduced_rhs_value = 0;
   double reduced_cost_value = 0;
@@ -197,6 +198,8 @@ class HighsSimplexAnalysis {
   double objective_value = 0;
   double sum_primal_infeasibilities = 0;
   double sum_dual_infeasibilities = 0;
+  double max_dual_phase_1_lp_dual_infeasibility = 0;
+  double sum_dual_phase_1_lp_dual_infeasibility = 0;
   double basis_condition = 0;
   int num_devex_framework = 0;
 

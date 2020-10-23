@@ -1141,7 +1141,6 @@ void HDual::iterateTasks() {
 }
 
 void HDual::iterationAnalysisData() {
-  HighsSolutionParams& scaled_solution_params = workHMO.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   analysis->simplex_strategy = simplex_info.simplex_strategy;
   analysis->edge_weight_mode = dual_edge_weight_mode;
@@ -1173,10 +1172,8 @@ void HDual::iterationAnalysisData() {
   analysis->sum_primal_infeasibilities =
       simplex_info.sum_primal_infeasibilities;
   if (solvePhase == SOLVE_PHASE_1) {
-    analysis->num_dual_infeasibilities =
-        scaled_solution_params.num_dual_infeasibilities;
-    analysis->sum_dual_infeasibilities =
-        scaled_solution_params.sum_dual_infeasibilities;
+    analysis->num_dual_infeasibilities = analysis->num_dual_phase_1_lp_dual_infeasibility;
+    analysis->sum_dual_infeasibilities = analysis->sum_dual_phase_1_lp_dual_infeasibility;
   } else {
     analysis->num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
     analysis->sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;
@@ -2216,18 +2213,13 @@ void HDual::exitPhase1ResetDuals() {
 
 void HDual::reportOnPossibleLpDualInfeasibility() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  HighsSimplexAnalysis& analysis = workHMO.simplex_analysis_;
   assert(solvePhase == SOLVE_PHASE_1);
   assert(rowOut == -1);
   assert(simplex_info.dual_objective_value < 0);
   assert(!simplex_info.costs_perturbed);
-  const int num_lp_dual_infeasibilities =
-      workHMO.scaled_solution_params_.num_dual_infeasibilities;
-  const double max_lp_dual_infeasibility =
-      workHMO.scaled_solution_params_.max_dual_infeasibility;
-  const double sum_lp_dual_infeasibilities =
-      workHMO.scaled_solution_params_.sum_dual_infeasibilities;
   std::string lp_dual_status;
-  if (num_lp_dual_infeasibilities) {
+  if (analysis.num_dual_phase_1_lp_dual_infeasibility) {
     lp_dual_status = "infeasible";
   } else {
     lp_dual_status = "feasible";
@@ -2236,8 +2228,9 @@ void HDual::reportOnPossibleLpDualInfeasibility() {
                   "LP is dual %s with dual phase 1 objective %10.4g and num / "
                   "max / sum dual infeasibilities = %d / %9.4g / %9.4g",
                   lp_dual_status.c_str(), simplex_info.dual_objective_value,
-                  num_lp_dual_infeasibilities, max_lp_dual_infeasibility,
-                  sum_lp_dual_infeasibilities);
+                  analysis.num_dual_phase_1_lp_dual_infeasibility,
+                  analysis.max_dual_phase_1_lp_dual_infeasibility,
+                  analysis.sum_dual_phase_1_lp_dual_infeasibility);
 }
 
 bool HDual::dualInfoOk(const HighsLp& lp) {

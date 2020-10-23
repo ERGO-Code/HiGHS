@@ -49,7 +49,6 @@ class HEkk {
   HighsSimplexInfo simplex_info_;
   HighsModelStatus scaled_model_status_;
   SimplexBasis simplex_basis_;
-  HighsSolutionParams scaled_solution_params_;
   HighsRandom random_;
 
   HMatrix matrix_;

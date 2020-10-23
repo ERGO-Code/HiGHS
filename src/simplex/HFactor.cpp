@@ -949,8 +949,7 @@ void HFactor::buildMarkSingC() {
 }
 
 void HFactor::buildFinish() {
-  debugPivotValueAnalysis(highs_debug_level, output, message_level, numRow,
-                          UpivotValue);
+  //  debugPivotValueAnalysis(highs_debug_level, output, message_level, numRow, UpivotValue);
   // The look up table
   for (int i = 0; i < numRow; i++) UpivotLookup[UpivotIndex[i]] = i;
   LpivotIndex = UpivotIndex;
