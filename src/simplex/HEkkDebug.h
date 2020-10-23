@@ -37,7 +37,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
 // Methods below are not called externally
 
 bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-                          const SimplexAlgorithm algorithm, const int phase,
+                          const int phase,
                           const bool perturbed);
 
 bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,

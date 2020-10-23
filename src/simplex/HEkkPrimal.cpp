@@ -191,7 +191,7 @@ void HEkkPrimal::solvePhase1() {
   if (ekk_instance_.bailoutReturn()) return;
   HighsPrintMessage(ekk_instance_.options_.output,
                     ekk_instance_.options_.message_level, ML_DETAILED,
-                    "primal-phase2-start\n");
+                    "primal-phase1-start\n");
   // Main solving structure
   for (;;) {
     analysis->simplexTimerStart(IteratePrimalRebuildClock);
@@ -212,7 +212,7 @@ void HEkkPrimal::solvePhase1() {
         return;
       }
       // Primal phase 1 choose column
-      phase1ChooseColumn();
+      simpleChooseColumn();
       if (columnIn == -1) {
         invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
         break;
@@ -293,7 +293,7 @@ void HEkkPrimal::solvePhase2() {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
-      chooseColumn();
+      simpleChooseColumn();
       if (columnIn == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
         break;
@@ -474,9 +474,51 @@ void HEkkPrimal::rebuild() {
   simplex_lp_status.has_fresh_rebuild = true;
 }
 
-void HEkkPrimal::chooseColumn() {
+void HEkkPrimal::simpleChooseColumn() {
+  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  const vector<int>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
+  const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
+  const vector<double>& workLower = ekk_instance_.simplex_info_.workLower_;
+  const vector<double>& workUpper = ekk_instance_.simplex_info_.workUpper_;
+  const double dDualTol = dual_feasibility_tolerance;
+  analysis->simplexTimerStart(ChuzcPrimalClock);
+  double dBestScore = 0;
+  columnIn = -1;
+
+  if (no_free_columns) {
+    for (int iCol = 0; iCol < num_tot; iCol++) {
+      double dMyDual = nonbasicMove[iCol] * workDual[iCol];
+      double dMyScore = dMyDual / devex_weight[iCol];
+      if (dMyDual < -dDualTol && dMyScore < dBestScore) {
+	dBestScore = dMyScore;
+	columnIn = iCol;
+      }
+    }
+  } else {
+    for (int iCol = 0; iCol < num_tot; iCol++) {
+      if (nonbasicFlag[iCol] &&
+          fabs(workDual[iCol]) > dual_feasibility_tolerance) {
+        if (workLower[iCol] <= -HIGHS_CONST_INF &&
+            workUpper[iCol] >= HIGHS_CONST_INF) {
+          columnIn = iCol;
+          break;
+        }
+        // Then look at dual infeasible
+	double dMyDual = nonbasicMove[iCol] * workDual[iCol];
+	double dMyScore = dMyDual / devex_weight[iCol];
+        if (dMyDual < -dual_feasibility_tolerance && dMyScore < dBestScore) {
+	  dBestScore = dMyScore;
+	  columnIn = iCol;
+        }
+      }
+    }
+  }
+  analysis->simplexTimerStop(ChuzcPrimalClock);
+}
+
+void HEkkPrimal::sectionalChooseColumn() {
   HighsRandom& random = ekk_instance_.random_;
-  const vector<int>& nonbasicFlag_ = ekk_instance_.simplex_basis_.nonbasicFlag_;
+  const vector<int>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   const vector<double>& workLower = ekk_instance_.simplex_info_.workLower_;
@@ -492,11 +534,7 @@ void HEkkPrimal::chooseColumn() {
     int fromCol = startSection * deltaCol;
     int toCol = min(fromCol + deltaCol, num_tot);
     int numPass = 1;
-    //    printf("\nstartSection = %1d; deltaCol = %d\n", startSection,
-    //    deltaCol);
     for (;;) {
-      //      printf("CHUZC: %1d [%6d, %6d] %6d\n", numPass, fromCol, toCol,
-      //      num_tot);
       for (int iCol = fromCol; iCol < toCol; iCol++) {
         // Then look at dual infeasible
         if (nonbasicMove[iCol] * workDual[iCol] < -dual_feasibility_tolerance) {
@@ -507,7 +545,6 @@ void HEkkPrimal::chooseColumn() {
         }
       }
       if (columnIn >= 0 || numPass == numSection) {
-        //	printf("Break from CHUZC after %d passes\n", numPass);
         break;
       }
       if (toCol == num_tot) {
@@ -521,7 +558,7 @@ void HEkkPrimal::chooseColumn() {
     }
   } else {
     for (int iCol = 0; iCol < num_tot; iCol++) {
-      if (nonbasicFlag_[iCol] &&
+      if (nonbasicFlag[iCol] &&
           fabs(workDual[iCol]) > dual_feasibility_tolerance) {
         // Always take free
         // TODO: if we found free,
@@ -574,8 +611,9 @@ void HEkkPrimal::chooseRow() {
 
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
+  thetaDual = simplex_info.workDual_[columnIn];
   analysis->dualValueSignOk(ekk_instance_.options_,
-			    simplex_info.workDual_[columnIn],
+			    thetaDual,
 			    columnIn,
 			    col_aq, 
 			    simplex_info.workCost_,
@@ -592,11 +630,8 @@ void HEkkPrimal::chooseRow() {
           : ekk_instance_.simplex_info_.update_count < 20 ? 1e-8 : 1e-7;
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   int moveIn = nonbasicMove[columnIn];
-  if (moveIn == 0) {
-    // If there's still free in the N
-    // We would report not-solved
-    // Need to handle free
-  }
+  // Can't handle free columns yet
+  assert(moveIn);
   double relaxTheta = 1e100;
   double relaxSpace;
   for (int i = 0; i < col_aq.count; i++) {
@@ -655,11 +690,10 @@ void HEkkPrimal::phase2Update() {
 
   // Compute thetaPrimal
   int moveIn = nonbasicMove[columnIn];
-  //  int
+  // Can't handle free columns yet
+  assert(moveIn);
   columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
-  //  double
   alpha = col_aq.array[rowOut];
-  //  double
   thetaPrimal = 0;
   if (alpha * moveIn > 0) {
     // Lower bound
@@ -704,13 +738,11 @@ void HEkkPrimal::phase2Update() {
 
   // Why is the detailed primal infeasibility information needed?
   ekk_instance_.computeSimplexPrimalInfeasible();
-  // copySimplexPrimalInfeasible();
 
   // If flipped, then no need touch the pivots
   if (flipped) {
     rowOut = -1;
     numericalTrouble = 0;
-    thetaDual = workDual[columnIn];
     iterationAnalysis();
     num_flip_since_rebuild++;
     return;
@@ -810,22 +842,16 @@ void HEkkPrimal::phase2Update() {
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
-  // Move this to Simplex class once it's created
-  // simplex_method.record_pivots(columnIn, columnOut, alpha);
   ekk_instance_.iteration_count_++;
 
   /* Reset the devex when there are too many errors */
-  if (num_bad_devex_weight > 3) {
-    devexReset();
-  }
+  if (num_bad_devex_weight > 3) devexReset();
 
   // Report on the iteration
   iterationAnalysis();
 }
 
 void HEkkPrimal::phase1ComputeDual() {
-  /* Alias to problem size, tolerance and work arrays */
-  const int nCol = num_col;
   const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
   const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
   const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
@@ -835,7 +861,6 @@ void HEkkPrimal::phase1ComputeDual() {
   workCost.assign(num_tot, 0);
 
   analysis->simplexTimerStart(BtranClock);
-  /* Setup artificial cost and compute pi with BTran */
   HVector buffer;
   buffer.setup(num_row);
   buffer.clear();
@@ -865,9 +890,8 @@ void HEkkPrimal::phase1ComputeDual() {
   analysis->simplexTimerStop(BtranClock);
 
   analysis->simplexTimerStart(PriceClock);
-  /* The compute the phase 1 reduced cost for all variables by SpMV */
   HVector bufferLong;
-  bufferLong.setup(nCol);
+  bufferLong.setup(num_col);
   bufferLong.clear();
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
@@ -883,41 +907,19 @@ void HEkkPrimal::phase1ComputeDual() {
 #endif
   analysis->simplexTimerStop(PriceClock);
 
-  const vector<int>& nbFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
+  const vector<int>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-  for (int iSeq = 0; iSeq < nCol + num_row; iSeq++) {
+  for (int iSeq = 0; iSeq < num_tot; iSeq++) {
     workDual[iSeq] = 0.0;
   }
-  for (int iSeq = 0; iSeq < nCol; iSeq++) {
-    if (nbFlag[iSeq]) workDual[iSeq] = -bufferLong.array[iSeq];
+  for (int iSeq = 0; iSeq < num_col; iSeq++) {
+    if (nonbasicFlag[iSeq]) workDual[iSeq] = -bufferLong.array[iSeq];
   }
-  for (int iRow = 0, iSeq = nCol; iRow < num_row; iRow++, iSeq++) {
-    if (nbFlag[iSeq]) workDual[iSeq] = -buffer.array[iRow];
+  for (int iRow = 0, iSeq = num_col; iRow < num_row; iRow++, iSeq++) {
+    if (nonbasicFlag[iSeq]) workDual[iSeq] = -buffer.array[iRow];
   }
 
-  /* Recompute number of dual infeasible variables with the phase 1 cost */
   ekk_instance_.computeSimplexDualInfeasible();
-  // Determine whether simplex_info.num_dual_infeasibilities can be used
-  //  copySimplexDualInfeasible();
-}
-
-void HEkkPrimal::phase1ChooseColumn() {
-  const int nSeq = num_col + num_row;
-  const vector<int>& nbMove = ekk_instance_.simplex_basis_.nonbasicMove_;
-  const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-  const double dDualTol = dual_feasibility_tolerance;
-  analysis->simplexTimerStart(ChuzcPrimalClock);
-  double dBestScore = 0;
-  columnIn = -1;
-  for (int iSeq = 0; iSeq < nSeq; iSeq++) {
-    double dMyDual = nbMove[iSeq] * workDual[iSeq];
-    double dMyScore = dMyDual / devex_weight[iSeq];
-    if (dMyDual < -dDualTol && dMyScore < dBestScore) {
-      dBestScore = dMyScore;
-      columnIn = iSeq;
-    }
-  }
-  analysis->simplexTimerStop(ChuzcPrimalClock);
 }
 
 void HEkkPrimal::phase1ChooseRow() {
@@ -950,32 +952,21 @@ void HEkkPrimal::phase1ChooseRow() {
 
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
+  thetaDual = simplex_info.workDual_[columnIn];
   analysis->dualValueSignOk(ekk_instance_.options_,
-			    simplex_info.workDual_[columnIn],
+			    thetaDual,
 			    columnIn,
 			    col_aq, 
 			    simplex_info.workCost_,
 			    ekk_instance_.simplex_basis_.basicIndex_);
 
-  double dCompDual = 0.0;
-  for (int i = 0; i < col_aq.count; i++) {
-    int iRow = col_aq.index[i];
-    if (baseValue[iRow] < baseLower[iRow] - primal_feasibility_tolerance) {
-      dCompDual -= col_aq.array[iRow] * -1.0;
-    } else if (baseValue[iRow] >
-               baseUpper[iRow] + primal_feasibility_tolerance) {
-      dCompDual -= col_aq.array[iRow] * +1.0;
-    }
-  }
-  if (fabs(simplex_info.workDual_[columnIn] - dCompDual) >
-      (fabs(dCompDual) + 1.0) * 1e-9) {
-    printf("==> Phase 1 reduced cost. Updated %g, Computed %g\n",
-           simplex_info.workDual_[columnIn], dCompDual);
-  }
-
   analysis->simplexTimerStart(Chuzr1Clock);
   // Collect phase 1 theta lists
-  const int iMoveIn = ekk_instance_.simplex_basis_.nonbasicMove_[columnIn];
+  //
+  // Determine the move direction - can't use nonbasicMove_[columnIn]
+  // due to free columns
+  const int iMoveIn = thetaDual > 0 ? -1 : 1;
+  
   const double dPivotTol = simplex_info.update_count < 10
                                ? 1e-9
                                : simplex_info.update_count < 20 ? 1e-8 : 1e-7;
@@ -1018,7 +1009,6 @@ void HEkkPrimal::phase1ChooseRow() {
         ph1SorterR.push_back(std::make_pair(dFeasTheta, iRow - num_row));
         ph1SorterT.push_back(std::make_pair(dFeasTheta, iRow - num_row));
       }
-
       // Whether it can become infeasible (again) by going above its
       // upper bound
       if (baseValue[iRow] < baseUpper[iRow] + primal_feasibility_tolerance &&
@@ -1034,7 +1024,7 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   analysis->simplexTimerStop(Chuzr1Clock);
-  // When there is no candidates at all, we can leave it here
+  // When there are no candidates at all, we can leave it here
   if (ph1SorterR.empty()) {
     rowOut = -1;
     columnOut = -1;
@@ -1048,7 +1038,7 @@ void HEkkPrimal::phase1ChooseRow() {
   analysis->simplexTimerStart(Chuzr2Clock);
   std::sort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
-  double dGradient = fabs(simplex_info.workDual_[columnIn]);
+  double dGradient = fabs(thetaDual);
   for (unsigned int i = 0; i < ph1SorterR.size(); i++) {
     double dMyTheta = ph1SorterR.at(i).first;
     int index = ph1SorterR.at(i).second;
@@ -1109,9 +1099,8 @@ void HEkkPrimal::phase1Update() {
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   vector<double>& workValue = simplex_info.workValue_;
-  vector<double>& workDual = simplex_info.workDual_;
   vector<double>& baseValue = simplex_info.baseValue_;
-  const int iMoveIn = ekk_instance_.simplex_basis_.nonbasicMove_[columnIn];
+  const int iMoveIn = thetaDual > 0 ? -1 : 1; // ekk_instance_.simplex_basis_.nonbasicMove_[columnIn];
 
   /* Compute the primal theta and see if we should have do bound flip instead */
   alpha = col_aq.array[rowOut];
@@ -1143,7 +1132,6 @@ void HEkkPrimal::phase1Update() {
   if (ifFlip) {
     rowOut = -1;
     numericalTrouble = 0;
-    thetaDual = workDual[columnIn];
     iterationAnalysis();
     num_flip_since_rebuild++;
     /* Recompute things on flip */
@@ -1161,9 +1149,6 @@ void HEkkPrimal::phase1Update() {
     }
     return;
   }
-
-  // Should be using thetaDual to update duals
-  thetaDual = workDual[columnIn];
 
   /* Compute BTran for update LU */
   analysis->simplexTimerStart(BtranClock);
@@ -1232,9 +1217,7 @@ void HEkkPrimal::phase1Update() {
   }
 
   /* Reset the devex framework when necessary */
-  if (num_bad_devex_weight > 3) {
-    devexReset();
-  }
+  if (num_bad_devex_weight > 3) devexReset();
 
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
@@ -1257,7 +1240,7 @@ void HEkkPrimal::devexReset() {
 }
 
 void HEkkPrimal::devexUpdate() {
-  /* Compute the pivot weight from the reference set */
+  // Compute the pivot weight from the reference set
   analysis->simplexTimerStart(DevexUpdateWeightClock);
   double dPivotWeight = 0.0;
   for (int i = 0; i < col_aq.count; i++) {
@@ -1269,12 +1252,10 @@ void HEkkPrimal::devexUpdate() {
   dPivotWeight += devex_index[columnIn] * 1.0;
   dPivotWeight = sqrt(dPivotWeight);
 
-  /* Check if the saved weight is too large */
-  if (devex_weight[columnIn] > 3.0 * dPivotWeight) {
-    num_bad_devex_weight++;
-  }
+  // Check if the saved weight is too large
+  if (devex_weight[columnIn] > 3.0 * dPivotWeight) num_bad_devex_weight++;
 
-  /* Update the devex weight for all */
+  // Update the devex weight for all
   double dPivot = col_aq.array[rowOut];
   dPivotWeight /= fabs(dPivot);
 
@@ -1298,7 +1279,7 @@ void HEkkPrimal::devexUpdate() {
     }
   }
 
-  /* Update devex weight for the pivots */
+  // Update devex weight for the pivots
   devex_weight[columnOut] = max(1.0, dPivotWeight);
   devex_weight[columnIn] = 1.0;
   num_devex_iterations++;

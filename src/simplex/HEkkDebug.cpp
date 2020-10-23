@@ -43,8 +43,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
-  //  const HighsSimplexLpStatus& simplex_lp_status =
-  //  ekk_instance.simplex_lp_status_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
   const HighsOptions& options = ekk_instance.options_;
 
@@ -237,9 +235,9 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   // This uses the primal values for the columns to determine row
   // activities that are checked against the primal values for the
   // rows. It uses the pi vector to determine column duals. The
-  // entries of the pi vector are the duals for nonbasic rows, and
-  // costs for basic rows. The latter are normally zero, but will be
-  // nonzero if the constraint is violated in primal phase 1, or if
+  // entries of the pi vector are the negated duals for nonbasic rows,
+  // and costs for basic rows. The latter are normally zero, but will
+  // be nonzero if the constraint is violated in primal phase 1, or if
   // the row cost is a perturbed zero in dual simplex.
   vector<double> primal_value(num_tot);
   vector<double> dual_value(num_tot);
@@ -250,66 +248,23 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   for (int iRow = 0; iRow < num_row; iRow++) {
     int iVar = simplex_basis.basicIndex_[iRow];
     primal_value[iVar] = simplex_info.baseValue_[iRow];
-    dual_value[iVar] = simplex_info.workCost_[iVar];
-  }
-  if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
-    // Until workCost_ is correct for primal phase 1
-    for (int iRow = 0; iRow < num_row; iRow++) {
-      int iVar = simplex_basis.basicIndex_[iRow];
-      double value = simplex_info.baseValue_[iRow];
-      double lower = simplex_info.baseLower_[iRow];
-      double upper = simplex_info.baseUpper_[iRow];
-      double dual = 0;
-      if (value < lower - primal_feasibility_tolerance) {
-        dual = 1;
-      } else if (value > upper + primal_feasibility_tolerance) {
-        dual = -1;
-      }
-      dual_value[iVar] = dual;
-      assert(dual == -simplex_info.workCost_[iVar]);
-    }
+    dual_value[iVar] = -simplex_info.workCost_[iVar];
   }
   // Accumulate primal_activities
   double max_dual_residual = 0;
-  int check_col = -1;
-  const int check_iteration_count = 55;
-  if (ekk_instance.iteration_count_ == check_iteration_count) check_col = 92;
   vector<double> primal_activity(num_row, 0);
   for (int iCol = 0; iCol < num_col; iCol++) {
     double dual = simplex_info.workCost_[iCol];
     double value = primal_value[iCol];
-    if (iCol == check_col) {
-      printf(" iCol = %d: (flag, move) = (%d, %d)\n",
-	     iCol, simplex_basis.nonbasicFlag_[iCol], simplex_basis.nonbasicMove_[iCol]);
-      printf(" Work [%g, %g, %g]\n",
-	     simplex_info.workLower_[iCol], primal_value[iCol],
-	     simplex_info.workUpper_[iCol]);
-    }
-    if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
-      // Until workCost_ is correct for primal phase 1
-      double lower = simplex_info.workLower_[iCol];
-      double upper = simplex_info.workUpper_[iCol];
-      dual = 0;
-      if (value < lower - primal_feasibility_tolerance) {
-        dual = -1;
-      } else if (value > upper + primal_feasibility_tolerance) {
-        dual = 1;
-      }
-    }
-    assert(simplex_info.workCost_[iCol] == dual);
     for (int iEl = simplex_lp.Astart_[iCol]; iEl < simplex_lp.Astart_[iCol + 1];
          iEl++) {
       int iRow = simplex_lp.Aindex_[iEl];
       int iVar = num_col + iRow;
       double Avalue = simplex_lp.Avalue_[iEl];
       primal_activity[iRow] += value * Avalue;
-      if (iCol == check_col) printf("%g += (%g = %g * %g)\n",  dual , dual_value[iVar] * Avalue, dual_value[iVar], Avalue);
       dual += dual_value[iVar] * Avalue;
     }
     double dual_residual = fabs(dual - simplex_info.workDual_[iCol]);
-    if (dual_residual > 1) {
-      printf("dual_residual = %g for iCol = %d on iteration %d\n", dual_residual, iCol, ekk_instance.iteration_count_);
-    }
     max_dual_residual = max(dual_residual, max_dual_residual);
   }
   // Remember that simplex row values are the negated row activities
@@ -503,7 +458,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
       HighsDebugStatus::LOGICAL_ERROR)
     return HighsDebugStatus::LOGICAL_ERROR;
   // Check initial work cost, lower, upper and range
-  if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase, perturbed))
+  if (!ekkDebugWorkArraysOk(ekk_instance, phase, perturbed))
     return HighsDebugStatus::LOGICAL_ERROR;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   // Check initial work cost, lower, upper and range
@@ -520,7 +475,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
 // Methods below are not called externally
 
 bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-                          const SimplexAlgorithm algorithm, const int phase,
+                          const int phase,
                           const bool perturbed) {
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
