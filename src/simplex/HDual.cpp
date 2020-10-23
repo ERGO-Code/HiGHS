@@ -1172,8 +1172,10 @@ void HDual::iterationAnalysisData() {
   analysis->sum_primal_infeasibilities =
       simplex_info.sum_primal_infeasibilities;
   if (solvePhase == SOLVE_PHASE_1) {
-    analysis->num_dual_infeasibilities = analysis->num_dual_phase_1_lp_dual_infeasibility;
-    analysis->sum_dual_infeasibilities = analysis->sum_dual_phase_1_lp_dual_infeasibility;
+    analysis->num_dual_infeasibilities =
+        analysis->num_dual_phase_1_lp_dual_infeasibility;
+    analysis->sum_dual_infeasibilities =
+        analysis->sum_dual_phase_1_lp_dual_infeasibility;
   } else {
     analysis->num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
     analysis->sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;

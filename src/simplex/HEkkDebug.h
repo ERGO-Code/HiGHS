@@ -17,7 +17,7 @@
 #include "simplex/HEkk.h"
 
 HighsDebugStatus ekkDebugSimplex(const std::string message,
-				 const HEkk& ekk_instance,
+                                 const HEkk& ekk_instance,
                                  const SimplexAlgorithm algorithm,
                                  const int phase);
 
@@ -36,8 +36,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
 
 // Methods below are not called externally
 
-bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-                          const int phase,
+bool ekkDebugWorkArraysOk(const HEkk& ekk_instance, const int phase,
                           const bool perturbed);
 
 bool ekkDebugOneNonbasicMoveVsWorkArraysOk(const HEkk& ekk_instance,
@@ -50,7 +49,7 @@ void ekkDebugReportReinvertOnNumericalTrouble(
     const bool reinvert);
 
 HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
-				     const double updated_dual,
-				     const double computed_dual);
+                                     const double updated_dual,
+                                     const double computed_dual);
 
 #endif  // SIMPLEX_HEKKDEBUG_H_

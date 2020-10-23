@@ -2736,9 +2736,12 @@ void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object) {
   const double scaled_dual_feasibility_tolerance =
       highs_model_object.scaled_solution_params_.dual_feasibility_tolerance;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
-  int& num_dual_infeasibilities = analysis.num_dual_phase_1_lp_dual_infeasibility;
-  double& max_dual_infeasibility = analysis.max_dual_phase_1_lp_dual_infeasibility;
-  double& sum_dual_infeasibilities = analysis.sum_dual_phase_1_lp_dual_infeasibility;
+  int& num_dual_infeasibilities =
+      analysis.num_dual_phase_1_lp_dual_infeasibility;
+  double& max_dual_infeasibility =
+      analysis.max_dual_phase_1_lp_dual_infeasibility;
+  double& sum_dual_infeasibilities =
+      analysis.sum_dual_phase_1_lp_dual_infeasibility;
   num_dual_infeasibilities = 0;
   max_dual_infeasibility = 0;
   sum_dual_infeasibilities = 0;

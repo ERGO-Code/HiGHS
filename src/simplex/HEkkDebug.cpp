@@ -35,7 +35,7 @@ const double updated_dual_large_absolute_error =
     sqrt(updated_dual_small_absolute_error);
 
 HighsDebugStatus ekkDebugSimplex(const std::string message,
-				 const HEkk& ekk_instance,
+                                 const HEkk& ekk_instance,
                                  const SimplexAlgorithm algorithm,
                                  const int phase) {
   if (ekk_instance.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
@@ -55,9 +55,10 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     int flag = simplex_basis.nonbasicFlag_[iVar];
     bool flag_error = flag != NONBASIC_FLAG_TRUE && flag != NONBASIC_FLAG_FALSE;
     if (flag_error) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "ekkDebugSimplex - %s: Variable %d has nonbasic flag = %d",
-                      message.c_str(), iVar, flag);
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "ekkDebugSimplex - %s: Variable %d has nonbasic flag = %d",
+          message.c_str(), iVar, flag);
       assert(!flag_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -105,20 +106,22 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       sum_dual_infeasibility += dual_infeasibility;
     }
     if (primal_error) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "ekkDebugSimplex - %s: Nonbasic variable %d has primal error "
-                      "= %g for [%g, %g, %g]",
-                      message.c_str(), iVar, primal_error, lower, value, upper);
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "ekkDebugSimplex - %s: Nonbasic variable %d has primal error "
+          "= %g for [%g, %g, %g]",
+          message.c_str(), iVar, primal_error, lower, value, upper);
       assert(!primal_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
     bool move_error = move != simplex_basis.nonbasicMove_[iVar];
     if (move_error) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "ekkDebugSimplex - %s: Nonbasic variable %d has move error "
-                      "[%d <> %d] for [%g, %g, %g]",
-                      message.c_str(), iVar, move, simplex_basis.nonbasicMove_[iVar], lower,
-                      value, upper);
+      HighsLogMessage(
+          options.logfile, HighsMessageType::ERROR,
+          "ekkDebugSimplex - %s: Nonbasic variable %d has move error "
+          "[%d <> %d] for [%g, %g, %g]",
+          message.c_str(), iVar, move, simplex_basis.nonbasicMove_[iVar], lower,
+          value, upper);
       assert(!move_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -135,8 +138,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     if (nonbasicFlag_error) {
       HighsLogMessage(
           options.logfile, HighsMessageType::ERROR,
-          "ekkDebugSimplex - %s: Basic variable %d has nonbasicFlag = %d", message.c_str(), iVar,
-          simplex_basis.nonbasicFlag_[iVar]);
+          "ekkDebugSimplex - %s: Basic variable %d has nonbasicFlag = %d",
+          message.c_str(), iVar, simplex_basis.nonbasicFlag_[iVar]);
       assert(!nonbasicFlag_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -154,7 +157,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "ekkDebugSimplex - %s: Basic variable %d (in row %d) has "
                       "baseBound [%g, %g] and workBound [%g, %g]",
-                      message.c_str(), iVar, iRow, lower, upper, workLower, workUpper);
+                      message.c_str(), iVar, iRow, lower, upper, workLower,
+                      workUpper);
       assert(!baseBound_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -163,8 +167,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     if (dual_error) {
       HighsLogMessage(
           options.logfile, HighsMessageType::ERROR,
-          "ekkDebugSimplex - %s: Basic variable %d (in row %d) has dual %g", message.c_str(), iVar,
-          iRow, dual);
+          "ekkDebugSimplex - %s: Basic variable %d (in row %d) has dual %g",
+          message.c_str(), iVar, iRow, dual);
       assert(!dual_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -179,10 +183,11 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
       bool primal_phase1_cost_error = fabs(cost - primal_phase1_cost);
       if (primal_phase1_cost_error) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "ekkDebugSimplex - %s: Basic variable %d (in row %d) has "
-                        "primal phase 1 cost %g for [%g, %g, %g]",
-                        message.c_str(), iVar, iRow, cost, lower, value, upper);
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "ekkDebugSimplex - %s: Basic variable %d (in row %d) has "
+            "primal phase 1 cost %g for [%g, %g, %g]",
+            message.c_str(), iVar, iRow, cost, lower, value, upper);
         assert(!primal_phase1_cost_error);
         return HighsDebugStatus::LOGICAL_ERROR;
       }
@@ -205,11 +210,12 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       require_primal_feasible && num_primal_infeasibility > 0;
   if (illegal_primal_infeasibility) {
     // Should be primal feasible, but isn't
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "ekkDebugSimplex - %s: Should be primal feasible, but num / max "
-                    "/ sum primal infeasibility is %g / %g / %g",
-                    message.c_str(), num_primal_infeasibility, max_primal_infeasibility,
-                    sum_primal_infeasibility);
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
+        "ekkDebugSimplex - %s: Should be primal feasible, but num / max "
+        "/ sum primal infeasibility is %g / %g / %g",
+        message.c_str(), num_primal_infeasibility, max_primal_infeasibility,
+        sum_primal_infeasibility);
     assert(!illegal_primal_infeasibility);
     return HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -219,11 +225,12 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       num_dual_infeasibility > 0;
   if (illegal_dual_infeasibility) {
     // Dual simplex or optimal but has dual infeasibilities
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "ekkDebugSimplex - %s: Should be dual feasible, but num / max / "
-                    "sum dual infeasibility is %g / %g / %g",
-                    message.c_str(), num_dual_infeasibility, max_dual_infeasibility,
-                    sum_dual_infeasibility);
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
+        "ekkDebugSimplex - %s: Should be dual feasible, but num / max / "
+        "sum dual infeasibility is %g / %g / %g",
+        message.c_str(), num_dual_infeasibility, max_dual_infeasibility,
+        sum_dual_infeasibility);
     assert(!illegal_dual_infeasibility);
     return HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -291,7 +298,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   HighsPrintMessage(options.output, options.message_level, report_level,
                     "ekkDebugSimplex - %s: %-9s max primal residual = %9.4g\n",
-                    message.c_str(), value_adjective.c_str(), max_primal_residual);
+                    message.c_str(), value_adjective.c_str(),
+                    max_primal_residual);
 
   if (max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
@@ -308,7 +316,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   HighsPrintMessage(options.output, options.message_level, report_level,
                     "ekkDebugSimplex - %s: %-9s max   dual residual = %9.4g\n",
-                    message.c_str(), value_adjective.c_str(), max_dual_residual);
+                    message.c_str(), value_adjective.c_str(),
+                    max_dual_residual);
   assert(max_dual_residual < excessive_residual_error);
 
   return return_status;
@@ -474,8 +483,7 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
 
 // Methods below are not called externally
 
-bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
-                          const int phase,
+bool ekkDebugWorkArraysOk(const HEkk& ekk_instance, const int phase,
                           const bool perturbed) {
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
@@ -791,32 +799,30 @@ void ekkDebugReportReinvertOnNumericalTrouble(
 }
 
 HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
-				     const double updated_dual,
-				     const double computed_dual) {
+                                     const double updated_dual,
+                                     const double computed_dual) {
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   std::string error_adjective;
   int report_level;
   double updated_dual_absolute_error = fabs(updated_dual - computed_dual);
-  double updated_dual_relative_error = updated_dual_absolute_error / max(abs(computed_dual), 1.0);
+  double updated_dual_relative_error =
+      updated_dual_absolute_error / max(abs(computed_dual), 1.0);
   bool sign_error = updated_dual * computed_dual < 0;
-  bool at_least_small_error = sign_error ||
-    updated_dual_absolute_error > updated_dual_small_absolute_error ||
-    updated_dual_relative_error > updated_dual_small_relative_error;
+  bool at_least_small_error =
+      sign_error ||
+      updated_dual_absolute_error > updated_dual_small_absolute_error ||
+      updated_dual_relative_error > updated_dual_small_relative_error;
   if (!at_least_small_error) return return_status;
-  
-  if (updated_dual_relative_error >
-      updated_dual_large_relative_error ||
-      updated_dual_absolute_error >
-      updated_dual_large_absolute_error) {
+
+  if (updated_dual_relative_error > updated_dual_large_relative_error ||
+      updated_dual_absolute_error > updated_dual_large_absolute_error) {
     error_adjective = "Large";
     report_level = ML_ALWAYS;
     return_status = HighsDebugStatus::LARGE_ERROR;
-  } else if (updated_dual_relative_error >
-	     updated_dual_small_relative_error ||
-             updated_dual_absolute_error >
-	     updated_dual_small_absolute_error) {
+  } else if (updated_dual_relative_error > updated_dual_small_relative_error ||
+             updated_dual_absolute_error > updated_dual_small_absolute_error) {
     error_adjective = "Small";
     report_level = ML_DETAILED;
     return_status = HighsDebugStatus::SMALL_ERROR;
@@ -829,19 +835,19 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
     report_level = ML_ALWAYS;
     return_status = HighsDebugStatus::LARGE_ERROR;
   }
-  HighsPrintMessage(options.output,
-      options.message_level, report_level,
+  HighsPrintMessage(
+      options.output, options.message_level, report_level,
       "UpdatedDual:  %-9s absolute (%9.4g) or relative (%9.4g) error in "
       "updated dual value",
       error_adjective.c_str(), updated_dual_absolute_error,
       updated_dual_relative_error);
   if (sign_error) {
-    HighsPrintMessage(options.output,
-		      options.message_level, report_level,
-		      ": Also sign error with (%9.4g, %9.4g)\n",
-		      updated_dual, computed_dual);
+    HighsPrintMessage(options.output, options.message_level, report_level,
+                      ": Also sign error with (%9.4g, %9.4g)\n", updated_dual,
+                      computed_dual);
   } else {
-    HighsPrintMessage(options.output, options.message_level, report_level, "\n");
-  }    
+    HighsPrintMessage(options.output, options.message_level, report_level,
+                      "\n");
+  }
   return return_status;
 }

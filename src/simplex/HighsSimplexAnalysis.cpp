@@ -15,10 +15,10 @@
 //#include <cstdio>
 #include "HConfig.h"
 #include "simplex/FactorTimer.h"
+#include "simplex/HEkkDebug.h"
 #include "simplex/HFactor.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexTimer.h"
-#include "simplex/HEkkDebug.h"
 
 void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
                                  const int simplex_iteration_count_) {
@@ -424,11 +424,11 @@ bool HighsSimplexAnalysis::switchToDevex() {
 }
 
 bool HighsSimplexAnalysis::dualValueSignOk(const HighsOptions& options,
-					   const double updated_dual,
-					   const int col_q,
-					   const HVector& col_aq,
-					   const vector<double>& workCost,
-					   const vector<int>& basicIndex) {
+                                           const double updated_dual,
+                                           const int col_q,
+                                           const HVector& col_aq,
+                                           const vector<double>& workCost,
+                                           const vector<int>& basicIndex) {
   double computed_dual = workCost[col_q];
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];

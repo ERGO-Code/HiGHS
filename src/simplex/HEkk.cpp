@@ -996,7 +996,8 @@ void HEkk::computeSimplexPrimalInfeasible() {
   // phase 1 and dual phase 2, albeit using different bounds in
   // workLower/Upper.
   analysis_.simplexTimerStart(ComputePrIfsClock);
-  const double scaled_primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
+  const double scaled_primal_feasibility_tolerance =
+      options_.primal_feasibility_tolerance;
   int& num_primal_infeasibilities = simplex_info_.num_primal_infeasibilities;
   double& max_primal_infeasibility = simplex_info_.max_primal_infeasibility;
   double& sum_primal_infeasibilities = simplex_info_.sum_primal_infeasibilities;
@@ -1043,7 +1044,8 @@ void HEkk::computeSimplexDualInfeasible() {
   // 2 according to nonbasicMove. The bounds are only used to identify
   // free variables. Fixed variables are assumed to have
   // nonbasicMove=0 so that no dual infeasibility is counted for them.
-  const double scaled_dual_feasibility_tolerance = options_.dual_feasibility_tolerance;
+  const double scaled_dual_feasibility_tolerance =
+      options_.dual_feasibility_tolerance;
   // Possibly verify that nonbasicMove is correct for fixed variables
   //
   //  debugFixedNonbasicMove();
@@ -1090,10 +1092,14 @@ void HEkk::computeSimplexLpDualInfeasible() {
   // Possibly verify that nonbasicMove is correct for fixed variables
   //
   //  debugFixedNonbasicMove();
-  const double scaled_dual_feasibility_tolerance = options_.dual_feasibility_tolerance;
-  int& num_dual_infeasibilities = analysis_.num_dual_phase_1_lp_dual_infeasibility;
-  double& max_dual_infeasibility = analysis_.max_dual_phase_1_lp_dual_infeasibility;
-  double& sum_dual_infeasibilities = analysis_.sum_dual_phase_1_lp_dual_infeasibility;
+  const double scaled_dual_feasibility_tolerance =
+      options_.dual_feasibility_tolerance;
+  int& num_dual_infeasibilities =
+      analysis_.num_dual_phase_1_lp_dual_infeasibility;
+  double& max_dual_infeasibility =
+      analysis_.max_dual_phase_1_lp_dual_infeasibility;
+  double& sum_dual_infeasibilities =
+      analysis_.sum_dual_phase_1_lp_dual_infeasibility;
   num_dual_infeasibilities = 0;
   max_dual_infeasibility = 0;
   sum_dual_infeasibilities = 0;
