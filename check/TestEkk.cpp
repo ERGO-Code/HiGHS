@@ -18,7 +18,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
   const bool from_file = true;
   if (from_file) {
     std::string model_file =
-        std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+        std::string(HIGHS_DIR) + "/check/instances/stair.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
   } else {
     SpecialLps special_lps;
@@ -28,5 +28,6 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
   }
   REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_EKK) ==
           HighsStatus::OK);
+  highs.setHighsOptionValue("message_level", 6);
   REQUIRE(highs.run() == HighsStatus::OK);
 }

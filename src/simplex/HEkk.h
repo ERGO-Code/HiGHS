@@ -86,7 +86,6 @@ class HEkk {
   void computeSimplexPrimalInfeasible();
   void computeSimplexDualInfeasible();
   void computeSimplexLpDualInfeasible();
-  void copySimplexInfeasible();
 
   bool bailoutReturn();
   bool bailoutOnTimeIterations();

@@ -16,7 +16,8 @@
 
 #include "simplex/HEkk.h"
 
-HighsDebugStatus ekkDebugSimplex(const HEkk& ekk_instance,
+HighsDebugStatus ekkDebugSimplex(const std::string message,
+				 const HEkk& ekk_instance,
                                  const SimplexAlgorithm algorithm,
                                  const int phase);
 
@@ -47,4 +48,9 @@ void ekkDebugReportReinvertOnNumericalTrouble(
     const double numerical_trouble_measure, const double alpha_from_col,
     const double alpha_from_row, const double numerical_trouble_tolerance,
     const bool reinvert);
+
+HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
+				     const double updated_dual,
+				     const double computed_dual);
+
 #endif  // SIMPLEX_HEKKDEBUG_H_

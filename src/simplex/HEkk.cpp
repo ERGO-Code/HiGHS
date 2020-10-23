@@ -69,6 +69,7 @@ HighsStatus HEkk::solve() {
                   simplex_info_.num_dual_infeasibilities,
                   simplex_info_.max_dual_infeasibility,
                   simplex_info_.sum_dual_infeasibilities);
+  if (scaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
   HEkkPrimal primal(*this);
   HighsStatus return_status = primal.solve();
   return return_status;
@@ -123,6 +124,7 @@ HighsStatus HEkk::initialise() {
 
   bool primal_feasible = simplex_info_.num_primal_infeasibilities == 0;
   bool dual_feasible = simplex_info_.num_dual_infeasibilities == 0;
+  scaled_model_status_ = HighsModelStatus::NOTSET;
   if (primal_feasible && dual_feasible)
     scaled_model_status_ = HighsModelStatus::OPTIMAL;
 
@@ -984,13 +986,8 @@ void HEkk::updateMatrix(const int columnIn, const int columnOut) {
 }
 
 void HEkk::computeSimplexInfeasible() {
-  analysis_.simplexTimerStart(ComputePrIfsClock);
   computeSimplexPrimalInfeasible();
-  analysis_.simplexTimerStop(ComputePrIfsClock);
-
-  analysis_.simplexTimerStart(ComputeDuIfsClock);
   computeSimplexDualInfeasible();
-  analysis_.simplexTimerStop(ComputeDuIfsClock);
 }
 
 void HEkk::computeSimplexPrimalInfeasible() {
@@ -998,6 +995,7 @@ void HEkk::computeSimplexPrimalInfeasible() {
   // simplex bounds. This is used to determine optimality in dual
   // phase 1 and dual phase 2, albeit using different bounds in
   // workLower/Upper.
+  analysis_.simplexTimerStart(ComputePrIfsClock);
   const double scaled_primal_feasibility_tolerance = options_.primal_feasibility_tolerance;
   int& num_primal_infeasibilities = simplex_info_.num_primal_infeasibilities;
   double& max_primal_infeasibility = simplex_info_.max_primal_infeasibility;
@@ -1036,9 +1034,11 @@ void HEkk::computeSimplexPrimalInfeasible() {
       sum_primal_infeasibilities += primal_infeasibility;
     }
   }
+  analysis_.simplexTimerStop(ComputePrIfsClock);
 }
 
 void HEkk::computeSimplexDualInfeasible() {
+  analysis_.simplexTimerStart(ComputeDuIfsClock);
   // Computes num/max/sum of dual infeasibilities in phase 1 and phase
   // 2 according to nonbasicMove. The bounds are only used to identify
   // free variables. Fixed variables are assumed to have
@@ -1078,6 +1078,7 @@ void HEkk::computeSimplexDualInfeasible() {
       sum_dual_infeasibilities += dual_infeasibility;
     }
   }
+  analysis_.simplexTimerStop(ComputeDuIfsClock);
 }
 
 void HEkk::computeSimplexLpDualInfeasible() {
