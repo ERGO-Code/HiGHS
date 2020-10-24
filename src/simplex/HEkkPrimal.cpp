@@ -61,6 +61,16 @@ HighsStatus HEkkPrimal::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
 
+  // Set up the nonabsic free column data structure
+  if (num_free_col) setNonbasicFreeColumnData();
+  if (ekkDebugNonbasicFreeColumnData(options, ekk_instance_,
+				     num_free_col,
+				     num_nonbasic_free_col,
+				     nonbasic_free_col_pointer,
+				     nonbasic_free_col_list ) ==
+      HighsDebugStatus::LOGICAL_ERROR)
+    return ekk_instance_.returnFromSolve(HighsStatus::Error);
+
   if (use_bound_perturbation) {
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();
@@ -373,18 +383,17 @@ void HEkkPrimal::initialise() {
 
   devexReset();
 
-  no_free_columns = true;
+  num_free_col = 0;
   for (int iCol = 0; iCol < num_tot; iCol++) {
     if (ekk_instance_.simplex_info_.workLower_[iCol] == -HIGHS_CONST_INF &&
         ekk_instance_.simplex_info_.workUpper_[iCol] == HIGHS_CONST_INF) {
       // Free column
-      no_free_columns = false;
-      break;
+      num_free_col++;
     }
   }
-  if (!no_free_columns)
+  if (num_free_col > 0)
     HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
-                    "HEkkPrimal:: LP has free columns");
+                    "HEkkPrimal:: LP has %d free columns", num_free_col);
 }
 
 void HEkkPrimal::rebuild() {
@@ -488,7 +497,7 @@ void HEkkPrimal::simpleChooseColumn() {
   double dBestScore = 0;
   columnIn = -1;
 
-  if (no_free_columns) {
+  if (!num_free_col) {
     for (int iCol = 0; iCol < num_tot; iCol++) {
       double dMyDual = nonbasicMove[iCol] * workDual[iCol];
       double dMyScore = dMyDual / devex_weight[iCol];
@@ -530,7 +539,7 @@ void HEkkPrimal::sectionalChooseColumn() {
   analysis->simplexTimerStart(ChuzcPrimalClock);
   columnIn = -1;
   double bestInfeas = 0;
-  if (no_free_columns) {
+  if (!num_free_col) {
     const int numSection = 1;
     int startSection = random.integer() % numSection;
     int deltaCol = (num_tot + numSection - 1) / numSection;
@@ -1333,4 +1342,23 @@ void HEkkPrimal::reportRebuild(const int rebuild_invert_hint) {
   analysis->invert_hint = rebuild_invert_hint;
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
+}
+
+void HEkkPrimal::setNonbasicFreeColumnData() {
+
+  if (!num_free_col) return;
+  assert(num_free_col>0);
+  nonbasic_free_col_pointer.assign(num_tot, -1);
+  nonbasic_free_col_list.resize(num_free_col);
+  num_nonbasic_free_col = 0;
+  /*
+   for (int iVar = 0; iVar < num_tot; iVar++) {
+     bool nonbasic_free = simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
+       simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
+       simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
+     if (nonbasic_free) {
+       nonbasic_free_col_list[num_nonbasic_free_col] = iVar;
+       nonbasic_free_col_pointer[iVar] = num_nonbasic_free_col;
+	 num_nonbasic_free_col++;
+  */   
 }

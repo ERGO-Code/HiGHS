@@ -52,7 +52,7 @@ class HEkkPrimal {
   void iterationAnalysisData();
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint = -1);
-
+  void setNonbasicFreeColumnData();
   // References:
   HEkk& ekk_instance_;
 
@@ -63,7 +63,6 @@ class HEkkPrimal {
   int num_col;
   int num_row;
   int num_tot;
-  bool no_free_columns;
   int isPrimalPhase1;
   int solvePhase;
   double primal_feasibility_tolerance;
@@ -88,6 +87,11 @@ class HEkkPrimal {
   int num_bad_devex_weight;
   vector<double> devex_weight;
   vector<int> devex_index;
+  // Nonbasic free column data. 
+  int num_free_col;
+  int num_nonbasic_free_col;
+  vector<int> nonbasic_free_col_pointer;
+  vector<int> nonbasic_free_col_list;
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
