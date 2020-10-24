@@ -15,8 +15,8 @@
 
 #include <cassert>
 
-bool HSet::setup(const int size, const int max_value, const bool debug,
-                 const bool allow_assert, FILE* output) {
+bool HSet::setup(const int size, const int max_value, FILE* output, const bool debug,
+                 const bool allow_assert) {
   setup_ = false;
   if (size <= 0) return false;
   if (max_value < min_value) return false;

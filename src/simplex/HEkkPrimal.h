@@ -17,6 +17,7 @@
 #include <utility>
 
 #include "simplex/HEkk.h"
+#include "util/HSet.h"
 
 using std::pair;
 
@@ -89,9 +90,7 @@ class HEkkPrimal {
   vector<int> devex_index;
   // Nonbasic free column data.
   int num_free_col;
-  int num_nonbasic_free_col;
-  vector<int> nonbasic_free_col_pointer;
-  vector<int> nonbasic_free_col_list;
+  HSet nonbasic_free_col;
   // Solve buffer
   HVector row_ep;
   HVector row_ap;

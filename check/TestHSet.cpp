@@ -16,7 +16,7 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   bool allow_assert = false;
   FILE* output = NULL;
   if (dev_run) output = stdout;
-  REQUIRE(set.setup(size, max_value, debug, allow_assert, output));
+  REQUIRE(set.setup(size, max_value, output, debug, allow_assert));
   //  set.print();
   REQUIRE(!set.add(-1));
   REQUIRE(set.add(0));

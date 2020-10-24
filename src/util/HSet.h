@@ -37,9 +37,9 @@ class HSet {
    */
   bool setup(const int size,       //!< Dimension of the set to be initialised
              const int max_value,  //!< Maximum value to be in the set.
+             FILE* output = NULL,              //!< File for output
              const bool debug = false,        //!< Debug mode
-             const bool allow_assert = true,  //!< Allow asserts in debug
-             FILE* output = NULL              //!< File for output
+             const bool allow_assert = true  //!< Allow asserts in debug
   );
 
   /**

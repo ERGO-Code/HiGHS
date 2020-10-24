@@ -15,6 +15,7 @@
 #define SIMPLEX_HEKKDEBUG_H_
 
 #include "simplex/HEkk.h"
+#include "util/HSet.h"
 
 HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const HEkk& ekk_instance,
@@ -53,9 +54,8 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
                                      const double computed_dual);
 
 HighsDebugStatus ekkDebugNonbasicFreeColumnData(
-    const HighsOptions& options, const HEkk& ekk_instance,
-    const int num_free_col, const int num_nonbasic_free_col,
-    const vector<int>& nonbasic_free_col_pointer,
-    const vector<int>& nonbasic_free_col_list);
-
+    const HighsOptions& options,
+    const HEkk& ekk_instance,
+    const int num_free_col,
+    const HSet nonbasic_free_col);
 #endif  // SIMPLEX_HEKKDEBUG_H_
