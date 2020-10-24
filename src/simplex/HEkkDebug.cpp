@@ -852,9 +852,10 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
   return return_status;
 }
 
-HighsDebugStatus ekkDebugNonbasicFreeColumnData(
-    const HighsOptions& options, const HEkk& ekk_instance,
-    const int num_free_col, const HSet nonbasic_free_col) {
+HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
+    const HEkk& ekk_instance, const int num_free_col,
+    const HSet nonbasic_free_col_set) {
+  const HighsOptions& options = ekk_instance.options_;
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsLp& lp = ekk_instance.simplex_lp_;
@@ -866,32 +867,33 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnData(
   int check_num_free_col = 0;
   for (int iVar = 0; iVar < num_tot; iVar++) {
     if (simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-	simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF)
+        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF)
       check_num_free_col++;
   }
   if (check_num_free_col != num_free_col) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-		      "NonbasicFreeColumnData: Number of free columns should be %d, not %d\n",
-		      check_num_free_col, num_free_col);
+    HighsPrintMessage(
+        options.output, options.message_level, ML_ALWAYS,
+        "NonbasicFreeColumnData: Number of free columns should be %d, not %d\n",
+        check_num_free_col, num_free_col);
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   if (!num_free_col) return HighsDebugStatus::OK;
   // Debug HSet nonbasic_free_col
-  bool nonbasic_free_col_ok = nonbasic_free_col.debug();
+  bool nonbasic_free_col_ok = nonbasic_free_col_set.debug();
   if (!nonbasic_free_col_ok) {
     HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-		      "NonbasicFreeColumnData: HSet error\n");
+                      "NonbasicFreeColumnData: HSet error\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
 
   // Check that we have the right number of nonbasic free columns
-  const int& num_nonbasic_free_col = nonbasic_free_col.count();
+  const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
   int check_num_nonbasic_free_col = 0;
   for (int iVar = 0; iVar < num_tot; iVar++) {
     bool nonbasic_free =
-      simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
-      simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-      simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
+        simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
+        simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
+        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
     if (nonbasic_free) check_num_nonbasic_free_col++;
   }
   if (check_num_nonbasic_free_col != num_nonbasic_free_col) {
@@ -902,19 +904,21 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnData(
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   // Check that all in the set are nonbasic free columns
-  const vector<int>& nonbasic_free_col_entry = nonbasic_free_col.value();
-  for (int ix=0; ix < num_nonbasic_free_col; ix++) {
-    int iVar = nonbasic_free_col_entry[ix];
+  const vector<int>& nonbasic_free_col_set_entry =
+      nonbasic_free_col_set.entry();
+  for (int ix = 0; ix < num_nonbasic_free_col; ix++) {
+    int iVar = nonbasic_free_col_set_entry[ix];
     bool nonbasic_free =
-      simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
-      simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-      simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
+        simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
+        simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
+        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
     if (!nonbasic_free) {
       HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			"NonbasicFreeColumnData: Variable %d in nonbasic free set has nonbasicFlag = %d and bounds [%g, %g]\n",
-			iVar, simplex_basis.nonbasicFlag_[iVar],
-			simplex_info.workLower_[iVar],
-			simplex_info.workUpper_[iVar]);
+                        "NonbasicFreeColumnData: Variable %d in nonbasic free "
+                        "set has nonbasicFlag = %d and bounds [%g, %g]\n",
+                        iVar, simplex_basis.nonbasicFlag_[iVar],
+                        simplex_info.workLower_[iVar],
+                        simplex_info.workUpper_[iVar]);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
   }

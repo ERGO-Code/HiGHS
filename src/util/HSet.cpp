@@ -15,17 +15,17 @@
 
 #include <cassert>
 
-bool HSet::setup(const int size, const int max_value, FILE* output, const bool debug,
-                 const bool allow_assert) {
+bool HSet::setup(const int size, const int max_entry, FILE* output,
+                 const bool debug, const bool allow_assert) {
   setup_ = false;
   if (size <= 0) return false;
-  if (max_value < min_value) return false;
-  max_value_ = max_value;
+  if (max_entry < min_entry) return false;
+  max_entry_ = max_entry;
   debug_ = debug;
   allow_assert_ = allow_assert;
   output_ = output;
-  value_.resize(size);
-  pointer_.assign(max_value_ + 1, no_pointer);
+  entry_.resize(size);
+  pointer_.assign(max_entry_ + 1, no_pointer);
   count_ = 0;
   setup_ = true;
   return true;
@@ -33,51 +33,51 @@ bool HSet::setup(const int size, const int max_value, FILE* output, const bool d
 
 void HSet::clear() {
   if (!setup_) setup(1, 0);
-  pointer_.assign(max_value_ + 1, no_pointer);
+  pointer_.assign(max_entry_ + 1, no_pointer);
   count_ = 0;
   if (debug_) debug();
 }
 
-bool HSet::add(const int value) {
-  if (value < min_value) return false;
-  if (!setup_) setup(1, value);
-  if (value > max_value_) {
-    // Value exceeds what's allowable so far so can't be in the list
-    pointer_.resize(value + 1);
-    for (int ix = max_value_ + 1; ix < value; ix++) pointer_[ix] = no_pointer;
-    max_value_ = value;
-  } else if (pointer_[value] > no_pointer) {
+bool HSet::add(const int entry) {
+  if (entry < min_entry) return false;
+  if (!setup_) setup(1, entry);
+  if (entry > max_entry_) {
+    // Entry exceeds what's allowable so far so can't be in the list
+    pointer_.resize(entry + 1);
+    for (int ix = max_entry_ + 1; ix < entry; ix++) pointer_[ix] = no_pointer;
+    max_entry_ = entry;
+  } else if (pointer_[entry] > no_pointer) {
     // Duplicate
     if (debug_) debug();
     return false;
   }
   // New entry
-  int size = value_.size();
+  int size = entry_.size();
   if (count_ == size) {
     size++;
-    value_.resize(size);
+    entry_.resize(size);
   }
-  pointer_[value] = count_;
-  value_[count_++] = value;
+  pointer_[entry] = count_;
+  entry_[count_++] = entry;
   if (debug_) debug();
   return true;
 }
 
-bool HSet::remove(const int value) {
+bool HSet::remove(const int entry) {
   if (!setup_) {
     setup(1, 0);
     if (debug_) debug();
     return false;
   }
-  if (value < min_value) return false;
-  if (value > max_value_) return false;
-  int pointer = pointer_[value];
+  if (entry < min_entry) return false;
+  if (entry > max_entry_) return false;
+  int pointer = pointer_[entry];
   if (pointer == no_pointer) return false;
-  pointer_[value] = no_pointer;
+  pointer_[entry] = no_pointer;
   if (pointer < count_ - 1) {
-    int last_value = value_[count_ - 1];
-    value_[pointer] = last_value;
-    pointer_[last_value] = pointer;
+    int last_entry = entry_[count_ - 1];
+    entry_[pointer] = last_entry;
+    pointer_[last_entry] = pointer;
   }
   count_--;
   if (debug_) debug();
@@ -90,31 +90,31 @@ bool HSet::debug() const {
     if (allow_assert_) assert(setup_);
     return false;
   }
-  bool max_value_ok = max_value_ >= min_value;
-  if (!max_value_ok) {
+  bool max_entry_ok = max_entry_ >= min_entry;
+  if (!max_entry_ok) {
     if (output_ != NULL) {
-      fprintf(output_, "HSet: ERROR max_value_ = %d < %d\n", max_value_,
-              min_value);
+      fprintf(output_, "HSet: ERROR max_entry_ = %d < %d\n", max_entry_,
+              min_entry);
       print();
     }
-    if (allow_assert_) assert(max_value_ok);
+    if (allow_assert_) assert(max_entry_ok);
     return false;
   }
-  int size = value_.size();
+  int size = entry_.size();
   bool size_count_ok = size >= count_;
   if (!size_count_ok) {
     if (output_ != NULL) {
       fprintf(output_,
-              "HSet: ERROR value_.size() = %d is less than count_ = %d\n", size,
+              "HSet: ERROR entry_.size() = %d is less than count_ = %d\n", size,
               count_);
       print();
     }
     if (allow_assert_) assert(size_count_ok);
     return false;
   }
-  // Check pointer_ is consistent with count_ and value_
+  // Check pointer_ is consistent with count_ and entry_
   int count = 0;
-  for (int ix = 0; ix <= max_value_; ix++) {
+  for (int ix = 0; ix <= max_entry_; ix++) {
     int pointer = pointer_[ix];
     if (pointer == no_pointer) continue;
     bool pointer_ok = pointer >= 0 && pointer < count_;
@@ -128,15 +128,15 @@ bool HSet::debug() const {
       return false;
     }
     count++;
-    int value = value_[pointer];
-    bool value_ok = value == ix;
-    if (!value_ok) {
+    int entry = entry_[pointer];
+    bool entry_ok = entry == ix;
+    if (!entry_ok) {
       if (output_ != NULL) {
-        fprintf(output_, "HSet: ERROR value_[%d] is %d, not %d\n", pointer,
-                value, ix);
+        fprintf(output_, "HSet: ERROR entry_[%d] is %d, not %d\n", pointer,
+                entry, ix);
         print();
       }
-      if (allow_assert_) assert(value_ok);
+      if (allow_assert_) assert(entry_ok);
       return false;
     }
   }
@@ -156,22 +156,22 @@ bool HSet::debug() const {
 void HSet::print() const {
   if (!setup_) return;
   if (output_ == NULL) return;
-  int size = value_.size();
-  fprintf(output_, "\nSet(%d, %d):\n", size, max_value_);
+  int size = entry_.size();
+  fprintf(output_, "\nSet(%d, %d):\n", size, max_entry_);
   fprintf(output_, "Pointers: Pointers|");
-  for (int ix = 0; ix <= max_value_; ix++) {
-    if (pointer_[ix] != no_pointer) fprintf(output_, " %2d", pointer_[ix]);
+  for (int ix = 0; ix <= max_entry_; ix++) {
+    if (pointer_[ix] != no_pointer) fprintf(output_, " %4d", pointer_[ix]);
   }
   fprintf(output_, "\n");
-  fprintf(output_, "          Values  |");
-  for (int ix = 0; ix <= max_value_; ix++) {
-    if (pointer_[ix] != no_pointer) fprintf(output_, " %2d", ix);
+  fprintf(output_, "          Entries |");
+  for (int ix = 0; ix <= max_entry_; ix++) {
+    if (pointer_[ix] != no_pointer) fprintf(output_, " %4d", ix);
   }
   fprintf(output_, "\n");
-  fprintf(output_, "Values:   Indices |");
-  for (int ix = 0; ix < count_; ix++) fprintf(output_, " %2d", ix);
+  fprintf(output_, "Entries:  Indices |");
+  for (int ix = 0; ix < count_; ix++) fprintf(output_, " %4d", ix);
   fprintf(output_, "\n");
-  fprintf(output_, "          Values  |");
-  for (int ix = 0; ix < count_; ix++) fprintf(output_, " %2d", value_[ix]);
+  fprintf(output_, "          Entries |");
+  for (int ix = 0; ix < count_; ix++) fprintf(output_, " %4d", entry_[ix]);
   fprintf(output_, "\n");
 }

@@ -1,14 +1,14 @@
 #include "catch.hpp"
 #include "util/HSet.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 TEST_CASE("HSet", "[highs_test_hset]") {
   const int size = 5;
-  const int max_value = 10;
+  const int max_entry = 10;
   HSet set;
-  REQUIRE(!set.setup(-1, max_value));
-  REQUIRE(!set.setup(0, max_value));
+  REQUIRE(!set.setup(-1, max_entry));
+  REQUIRE(!set.setup(0, max_entry));
   REQUIRE(!set.setup(size, -1));
   bool debug = true;
   // Don't allow asserts so that debugging can be tested without
@@ -16,7 +16,7 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   bool allow_assert = false;
   FILE* output = NULL;
   if (dev_run) output = stdout;
-  REQUIRE(set.setup(size, max_value, output, debug, allow_assert));
+  REQUIRE(set.setup(size, max_entry, output, debug, allow_assert));
   //  set.print();
   REQUIRE(!set.add(-1));
   REQUIRE(set.add(0));
@@ -48,19 +48,19 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   REQUIRE(set.add(8));
   REQUIRE(set.add(7));
   REQUIRE(set.add(5));
-  //  set.print();
+  set.print();
   const int& count = set.count();
-  const vector<int>& value = set.value();
-  int value_size = value.size();
+  const vector<int>& entry = set.entry();
+  int entry_size = entry.size();
   REQUIRE(count == 4);
-  REQUIRE(value_size == 8);
-  REQUIRE(value[0] == 3);
-  REQUIRE(value[1] == 8);
-  REQUIRE(value[2] == 7);
-  REQUIRE(value[3] == 5);
+  REQUIRE(entry_size == 8);
+  REQUIRE(entry[0] == 3);
+  REQUIRE(entry[1] == 8);
+  REQUIRE(entry[2] == 7);
+  REQUIRE(entry[3] == 5);
   if (dev_run) {
-    printf("Set(%d, %d)\nValues: ", value_size, count);
-    for (int ix = 0; ix < count; ix++) printf(" %d", value[ix]);
+    printf("Set(%d, %d)\nEntries: ", entry_size, count);
+    for (int ix = 0; ix < count; ix++) printf(" %d", entry[ix]);
     printf("\n");
   }
 }

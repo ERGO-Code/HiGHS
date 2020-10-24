@@ -12,7 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-// Maintains an unordered set of distinct non-negative integer values,
+// Maintains an unordered set of distinct non-negative integer entries,
 // allowing entries to be removed from the set at cost O(1)
 #ifndef UTIL_HSET_H_
 #define UTIL_HSET_H_
@@ -24,8 +24,8 @@
 
 using std::vector;
 
-const int min_value = 0;
-const int no_pointer = min_value - 1;
+const int min_entry = 0;
+const int no_pointer = min_entry - 1;
 /**
  * @brief Class for the set structure for HiGHS
  */
@@ -36,9 +36,9 @@ class HSet {
    * efficient memory-wise if known in advance
    */
   bool setup(const int size,       //!< Dimension of the set to be initialised
-             const int max_value,  //!< Maximum value to be in the set.
-             FILE* output = NULL,              //!< File for output
-             const bool debug = false,        //!< Debug mode
+             const int max_entry,  //!< Maximum entry to be in the set.
+             FILE* output = NULL,  //!< File for output
+             const bool debug = false,       //!< Debug mode
              const bool allow_assert = true  //!< Allow asserts in debug
   );
 
@@ -47,21 +47,21 @@ class HSet {
    */
   void clear();
   /**
-   * @brief Add value to the set
+   * @brief Add entry to the set
    */
-  bool add(const int value);
+  bool add(const int entry);
   /**
-   * @brief Remove value from the set
+   * @brief Remove entry from the set
    */
-  bool remove(const int value);
+  bool remove(const int entry);
   /**
    * @brief Returns the number of entries in the set
    */
   const int& count() const { return count_; }
   /**
-   * @brief Returns the values in the set
+   * @brief Returns the entries in the set
    */
-  const vector<int>& value() const { return value_; }
+  const vector<int>& entry() const { return entry_; }
   /**
    * @brief Print out the set and pointer entries not set to no_pointer
    */
@@ -72,13 +72,13 @@ class HSet {
   bool debug() const;
 
  private:
-  int count_;          //!< Number of values
-  vector<int> value_;  //!< Values
+  int count_;          //!< Number of entries
+  vector<int> entry_;  //!< Entries
   bool setup_ = false;
   bool debug_ = false;
   bool allow_assert_ = true;
   FILE* output_;
-  int max_value_;        //!< Maximum value to be in the set.
+  int max_entry_;        //!< Maximum entry to be in the set.
   vector<int> pointer_;  //!< Set of pointers into the set
 };
 #endif /* UTIL_HSET_H_ */

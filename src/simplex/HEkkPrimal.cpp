@@ -61,11 +61,8 @@ HighsStatus HEkkPrimal::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
 
-  // Set up the nonabsic free column data structure
-  if (num_free_col) setNonbasicFreeColumnData();
-  if (ekkDebugNonbasicFreeColumnData(
-          options, ekk_instance_, num_free_col, nonbasic_free_col) == HighsDebugStatus::LOGICAL_ERROR)
-    return ekk_instance_.returnFromSolve(HighsStatus::Error);
+  // Get the nonabsic free column set
+  getNonbasicFreeColumnSet();
 
   if (use_bound_perturbation) {
     ekk_instance_.computePrimal();
@@ -212,8 +209,8 @@ void HEkkPrimal::solvePhase1() {
     }
 
     for (;;) {
-      if (ekkDebugSimplex("Before phase 1 iteration", ekk_instance_, algorithm,
-                          solvePhase) == HighsDebugStatus::LOGICAL_ERROR) {
+      if (debugPrimalSimplex("Before phase 1 iteration") ==
+          HighsDebugStatus::LOGICAL_ERROR) {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
@@ -253,8 +250,8 @@ void HEkkPrimal::solvePhase1() {
     if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
   }
-  if (ekkDebugSimplex("End of solvePhase1", ekk_instance_, algorithm,
-                      solvePhase) == HighsDebugStatus::LOGICAL_ERROR) {
+  if (debugPrimalSimplex("End of solvePhase1") ==
+      HighsDebugStatus::LOGICAL_ERROR) {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
@@ -294,8 +291,8 @@ void HEkkPrimal::solvePhase2() {
     }
 
     for (;;) {
-      if (ekkDebugSimplex("Before phase 2 iteration", ekk_instance_, algorithm,
-                          solvePhase) == HighsDebugStatus::LOGICAL_ERROR) {
+      if (debugPrimalSimplex("Before phase 2 iteration") ==
+          HighsDebugStatus::LOGICAL_ERROR) {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
@@ -320,8 +317,8 @@ void HEkkPrimal::solvePhase2() {
     if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
   }
-  if (ekkDebugSimplex("End of solvePhase2", ekk_instance_, algorithm,
-                      solvePhase) == HighsDebugStatus::LOGICAL_ERROR) {
+  if (debugPrimalSimplex("End of solvePhase2") ==
+      HighsDebugStatus::LOGICAL_ERROR) {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
@@ -390,8 +387,10 @@ void HEkkPrimal::initialise() {
   if (num_free_col > 0) {
     HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
                     "HEkkPrimal:: LP has %d free columns", num_free_col);
-    bool debug = ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
-    nonbasic_free_col.setup(num_free_col, num_tot, ekk_instance_.options_.output, debug);
+    bool debug =
+        ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
+    nonbasic_free_col_set.setup(num_free_col, num_tot,
+                                ekk_instance_.options_.output, debug);
   }
 }
 
@@ -1343,18 +1342,28 @@ void HEkkPrimal::reportRebuild(const int rebuild_invert_hint) {
   analysis->simplexTimerStop(ReportRebuildClock);
 }
 
-void HEkkPrimal::setNonbasicFreeColumnData() {
+void HEkkPrimal::getNonbasicFreeColumnSet() {
   if (!num_free_col) return;
   assert(num_free_col > 0);
   const HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const SimplexBasis& simplex_basis = ekk_instance_.simplex_basis_;
-  nonbasic_free_col.clear();
+  nonbasic_free_col_set.clear();
   for (int iVar = 0; iVar < num_tot; iVar++) {
-    bool nonbasic_free = simplex_basis.nonbasicFlag_[iVar] ==
-      NONBASIC_FLAG_TRUE &&
-      simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-      simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
-    if (nonbasic_free) nonbasic_free_col.add(iVar);
+    bool nonbasic_free =
+        simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
+        simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
+        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
+    if (nonbasic_free) nonbasic_free_col_set.add(iVar);
   }
-  nonbasic_free_col.print();
+  if (ekk_instance_.options_.output != NULL) nonbasic_free_col_set.print();
+}
+
+HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message) {
+  HighsDebugStatus return_status =
+      ekkDebugSimplex(message, ekk_instance_, algorithm, solvePhase);
+  if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
+  return_status = ekkDebugNonbasicFreeColumnSet(ekk_instance_, num_free_col,
+                                                nonbasic_free_col_set);
+  if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
+  return HighsDebugStatus::OK;
 }

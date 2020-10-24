@@ -53,9 +53,7 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
                                      const double updated_dual,
                                      const double computed_dual);
 
-HighsDebugStatus ekkDebugNonbasicFreeColumnData(
-    const HighsOptions& options,
-    const HEkk& ekk_instance,
-    const int num_free_col,
-    const HSet nonbasic_free_col);
+HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
+    const HEkk& ekk_instance, const int num_free_col,
+    const HSet nonbasic_free_col_set);
 #endif  // SIMPLEX_HEKKDEBUG_H_
