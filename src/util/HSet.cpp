@@ -12,9 +12,11 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "util/HSet.h"
+
 #include <cassert>
 
-bool HSet::setup(const int size, const int max_value, const bool debug, const bool allow_assert, FILE* output) {
+bool HSet::setup(const int size, const int max_value, const bool debug,
+                 const bool allow_assert, FILE* output) {
   setup_ = false;
   if (size <= 0) return false;
   if (max_value < min_value) return false;
@@ -89,132 +91,64 @@ bool HSet::debug() const {
     return false;
   }
   bool max_value_ok = max_value_ >= min_value;
-  if (allow_assert_) assert(max_value_ok);
   if (!max_value_ok) {
     if (output_ != NULL) {
-      fprintf(output_, "HSet: ERROR max_value_ = %d < %d\n", max_value_, min_value);
+      fprintf(output_, "HSet: ERROR max_value_ = %d < %d\n", max_value_,
+              min_value);
       print();
     }
+    if (allow_assert_) assert(max_value_ok);
     return false;
   }
-
-  // Since pointer_ is private, it's take as being correct. If count_
-  // and value_ are inconsistent with it, then they are assumed to
-  // have been changed illegally.
-
-  // Check whether count_ has been changed
-  int count = 0;
   int size = value_.size();
+  bool size_count_ok = size >= count_;
+  if (!size_count_ok) {
+    if (output_ != NULL) {
+      fprintf(output_,
+              "HSet: ERROR value_.size() = %d is less than count_ = %d\n", size,
+              count_);
+      print();
+    }
+    if (allow_assert_) assert(size_count_ok);
+    return false;
+  }
+  // Check pointer_ is consistent with count_ and value_
+  int count = 0;
   for (int ix = 0; ix <= max_value_; ix++) {
     int pointer = pointer_[ix];
     if (pointer == no_pointer) continue;
-    // The following would be an error in HList rather than external,
-    // but check, nonetheless
-    bool pointer_ok = pointer >= 0 && pointer < size;
+    bool pointer_ok = pointer >= 0 && pointer < count_;
     if (!pointer_ok) {
       if (output_ != NULL) {
-	fprintf(output_, "HSet: ERROR pointer_[%d] = %d is not in [0, %d]\n", ix, pointer, size);
-	print();
+        fprintf(output_, "HSet: ERROR pointer_[%d] = %d is not in [0, %d]\n",
+                ix, pointer, count_);
+        print();
       }
       if (allow_assert_) assert(pointer_ok);
       return false;
     }
     count++;
-  }
-  bool count_ok = count == count_;
-  if (!count_ok) {
-    if (output_ != NULL) {
-      fprintf(output_, "HSet: ERROR count_ changed illegally from %d to %d\n", count, count_);
-      print();
-    }
-    if (allow_assert_) assert(count_ok);
-    return false;
-  }    
-  // By checking that count_ is equal to something non-negative, it
-  // follows that count_ is non-negative. This is an OK assert!
-  assert(count_>=0);
-  
-  // Check that count_ is not excessive. This could be an error in
-  // HList, but most likely due to value_ being resized externally.
-  bool size_ok = size >= count_;
-  if (!size_ok) {
-    if (output_ != NULL) {
-      fprintf(output_, "HSet: ERROR value_ size %d has been changed illegally to be less than value count = %d\n", size, count_);
-      print();
-    }
-    if (allow_assert_) assert(size_ok);
-    return false;
-  }
-
-  for (int ix = 0; ix <= max_value_; ix++) {
-    int pointer = pointer_[ix];
-    if (pointer == no_pointer) continue;
     int value = value_[pointer];
     bool value_ok = value == ix;
     if (!value_ok) {
       if (output_ != NULL) {
-	fprintf(output_, "HSet: ERROR value_[%d] is %d, not %d\n", pointer, value, ix);
-	print();
+        fprintf(output_, "HSet: ERROR value_[%d] is %d, not %d\n", pointer,
+                value, ix);
+        print();
       }
       if (allow_assert_) assert(value_ok);
       return false;
     }
   }
-
-
-  // Look for any pointers that don't point back to the entry that
-  // points to them. It could be an error in HList, but much more
-  // likely to be due to a duplicate entry being added to the set
-  // externally. 
-  bool pointer_error = false;
-  for (int ix = 0; ix < count_; ix++) {
-    int value = value_[ix];
-    bool value_ok = value >= min_value && value <= max_value_;
-    if (!value_ok) {
-      if (output_ != NULL) {
-	fprintf(output_, "HSet: ERROR value_[%d] = %d is not in [%d, %d]\n", ix, value, min_value, max_value_);
-	print();
-      }
-      if (allow_assert_) assert(value_ok);
-      return false;
+  bool count_ok = count == count_;
+  if (!count_ok) {
+    if (output_ != NULL) {
+      fprintf(output_, "HSet: ERROR pointer_ has %d pointers, not %d\n", count,
+              count_);
+      print();
     }
-    int pointer = pointer_[value];
-    bool pointer_ok = pointer == ix;
-    if (!pointer_ok) pointer_error = true;
-  }
-  if (pointer_error) {
-    // To look for duplicates requires a vector of size max_value_ + 1
-    vector<int> previous_pointer(max_value_+1, no_pointer);
-    for (int ix = 0; ix < count_; ix++) {
-      int value = value_[ix];
-      int pointer = previous_pointer[value];
-      bool new_value = pointer == no_pointer;
-      if (!new_value) {
-	if (output_ != NULL) {
-	  fprintf(output_, "HSet: ERROR value_[%d] = %d = value_[%d]\n", ix, value, pointer);
-	  print();
-	}
-	if (allow_assert_) assert(new_value);
-	return false;
-      }
-      previous_pointer[value] = ix;
-    }
-    if (output_ != NULL)
-      fprintf(output_, "HSet: Pointer error is not due to duplicate value\n");
-    // Error must be in pointers themselves - could be permuted, for example
-    for (int ix = 0; ix < count_; ix++) {
-      int value = value_[ix];
-      int pointer = pointer_[value];
-      bool pointer_ok = pointer == ix;
-      if (!pointer_ok) {
-	if (output_ != NULL) {
-	  fprintf(output_, "HSet: ERROR pointer_[%d] is %d, not %d\n", value, pointer, ix);
-	  print();
-	}
-	if (allow_assert_) assert(pointer_ok);
-	return false;
-      }
-    }
+    if (allow_assert_) assert(count_ok);
+    return false;
   }
   return true;
 }

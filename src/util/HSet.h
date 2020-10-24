@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HSet.h
- * @brief Set structure for HiGHS. 
+ * @brief Set structure for HiGHS.
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
@@ -17,8 +17,8 @@
 #ifndef UTIL_HSET_H_
 #define UTIL_HSET_H_
 
-#include <vector>
 #include <cstdio>
+#include <vector>
 
 //#include <iostream>
 
@@ -35,11 +35,11 @@ class HSet {
    * @brief Initialise a set. Neither limit is binding, but more
    * efficient memory-wise if known in advance
    */
-  bool setup(const int size,           //!< Dimension of the set to be initialised
-             const int max_value,      //!< Maximum value to be in the set.
-	     const bool debug = false, //!< Debug mode
-	     const bool allow_assert = true, //!< Allow asserts in debug
-	     FILE* output = NULL //!< File for output
+  bool setup(const int size,       //!< Dimension of the set to be initialised
+             const int max_value,  //!< Maximum value to be in the set.
+             const bool debug = false,        //!< Debug mode
+             const bool allow_assert = true,  //!< Allow asserts in debug
+             FILE* output = NULL              //!< File for output
   );
 
   /**
@@ -59,7 +59,7 @@ class HSet {
    */
   const int& count() const { return count_; }
   /**
-   * @brief Returns the set
+   * @brief Returns the values in the set
    */
   const vector<int>& value() const { return value_; }
   /**
@@ -67,7 +67,7 @@ class HSet {
    */
   void print() const;
   /**
-   * @brief Remove value from the set
+   * @brief Debug the set
    */
   bool debug() const;
 

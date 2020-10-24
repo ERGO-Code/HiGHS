@@ -52,16 +52,15 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   const int& count = set.count();
   const vector<int>& value = set.value();
   int value_size = value.size();
-  REQUIRE(count==4);
-  REQUIRE(value_size==8);
-  REQUIRE(value[0]==3);
-  REQUIRE(value[1]==8);
-  REQUIRE(value[2]==7);
-  REQUIRE(value[3]==5);
+  REQUIRE(count == 4);
+  REQUIRE(value_size == 8);
+  REQUIRE(value[0] == 3);
+  REQUIRE(value[1] == 8);
+  REQUIRE(value[2] == 7);
+  REQUIRE(value[3] == 5);
   if (dev_run) {
     printf("Set(%d, %d)\nValues: ", value_size, count);
-    for (int ix=0; ix < count; ix++) printf(" %d", value[ix]);
+    for (int ix = 0; ix < count; ix++) printf(" %d", value[ix]);
     printf("\n");
   }
-
 }
