@@ -43,49 +43,25 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   REQUIRE(set.remove(1));
   REQUIRE(set.remove(7));
   //  set.print();
+  set.clear();
   REQUIRE(set.add(3));
   REQUIRE(set.add(8));
   REQUIRE(set.add(7));
   REQUIRE(set.add(5));
   //  set.print();
-  set.clear();
-  //  set.print();
-
-  if (dev_run) printf("\nChange count illegally\n");
-  REQUIRE(set.add(3));
-  REQUIRE(set.add(8));
-  REQUIRE(set.add(7));
-  REQUIRE(set.add(5));
-  set.count_ = 1;
-  //  set.print();
-  REQUIRE(!set.debug());
-  set.clear();
-  
-  REQUIRE(set.add(3));
-  REQUIRE(set.add(8));
-  REQUIRE(set.add(7));
-  REQUIRE(set.add(5));
-  //  set.print();
-  REQUIRE(set.debug());
-
-  if (dev_run) printf("\nChange entry illegally\n");
-  set.value_[0] = 1;  
-  //  set.print();
-  REQUIRE(!set.debug());
-  set.clear();
-
-  REQUIRE(set.add(3));
-  REQUIRE(set.add(8));
-  REQUIRE(set.add(7));
-  REQUIRE(set.add(5));
-  //  set.print();
-
-  if (dev_run) printf("\nCreate duplicate\n");
-  set.value_[1] = 3;  
-  //  set.print();
-  REQUIRE(!set.debug());
-  set.clear();
-
-
+  const int& count = set.count();
+  const vector<int>& value = set.value();
+  int value_size = value.size();
+  REQUIRE(count==4);
+  REQUIRE(value_size==8);
+  REQUIRE(value[0]==3);
+  REQUIRE(value[1]==8);
+  REQUIRE(value[2]==7);
+  REQUIRE(value[3]==5);
+  if (dev_run) {
+    printf("Set(%d, %d)\nValues: ", value_size, count);
+    for (int ix=0; ix < count; ix++) printf(" %d", value[ix]);
+    printf("\n");
+  }
 
 }

@@ -183,17 +183,17 @@ class Highs {
    * @brief Returns the HighsLp instance for the LP of the (first?)
    * HighsModelObject
    */
-  const HighsLp& getLp() const;
+  const HighsLp& getLp() const { return lp_; }
 
   /**
    * @brief Returns the HighsSolution
    */
-  const HighsSolution& getSolution() const;
+  const HighsSolution& getSolution() const { return solution_; }
 
   /**
    * @brief Returns the HighsBasis
    */
-  const HighsBasis& getBasis() const;
+  const HighsBasis& getBasis() const { return basis_; }
 
   /**
    * @brief Returns the current model status

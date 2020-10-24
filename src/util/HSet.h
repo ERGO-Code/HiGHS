@@ -44,33 +44,36 @@ class HSet {
 
   /**
    * @brief Clear the set
-   *
    */
   void clear();
   /**
    * @brief Add value to the set
-   *
    */
   bool add(const int value);
   /**
    * @brief Remove value from the set
-   *
    */
   bool remove(const int value);
   /**
+   * @brief Returns the number of entries in the set
+   */
+  const int& count() const { return count_; }
+  /**
+   * @brief Returns the set
+   */
+  const vector<int>& value() const { return value_; }
+  /**
    * @brief Print out the set and pointer entries not set to no_pointer
-   *
    */
   void print() const;
   /**
    * @brief Remove value from the set
-   *
    */
   bool debug() const;
 
+ private:
   int count_;          //!< Number of values
   vector<int> value_;  //!< Values
- private:
   bool setup_ = false;
   bool debug_ = false;
   bool allow_assert_ = true;

@@ -892,12 +892,6 @@ basis_.valid_, hmos_[0].basis_.valid_);
   return returnFromRun(return_status);
 }
 
-const HighsLp& Highs::getLp() const { return lp_; }
-
-const HighsSolution& Highs::getSolution() const { return solution_; }
-
-const HighsBasis& Highs::getBasis() const { return basis_; }
-
 const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
   if (scaled_model) {
     return scaled_model_status_;
