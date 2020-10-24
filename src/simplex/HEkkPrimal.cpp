@@ -63,12 +63,10 @@ HighsStatus HEkkPrimal::solve() {
 
   // Set up the nonabsic free column data structure
   if (num_free_col) setNonbasicFreeColumnData();
-  if (ekkDebugNonbasicFreeColumnData(options, ekk_instance_,
-				     num_free_col,
-				     num_nonbasic_free_col,
-				     nonbasic_free_col_pointer,
-				     nonbasic_free_col_list ) ==
-      HighsDebugStatus::LOGICAL_ERROR)
+  if (ekkDebugNonbasicFreeColumnData(
+          options, ekk_instance_, num_free_col, num_nonbasic_free_col,
+          nonbasic_free_col_pointer,
+          nonbasic_free_col_list) == HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
   if (use_bound_perturbation) {
@@ -1345,20 +1343,19 @@ void HEkkPrimal::reportRebuild(const int rebuild_invert_hint) {
 }
 
 void HEkkPrimal::setNonbasicFreeColumnData() {
-
   if (!num_free_col) return;
-  assert(num_free_col>0);
+  assert(num_free_col > 0);
   nonbasic_free_col_pointer.assign(num_tot, -1);
   nonbasic_free_col_list.resize(num_free_col);
   num_nonbasic_free_col = 0;
   /*
    for (int iVar = 0; iVar < num_tot; iVar++) {
-     bool nonbasic_free = simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
-       simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
+     bool nonbasic_free = simplex_basis.nonbasicFlag_[iVar] ==
+   NONBASIC_FLAG_TRUE && simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
      if (nonbasic_free) {
        nonbasic_free_col_list[num_nonbasic_free_col] = iVar;
        nonbasic_free_col_pointer[iVar] = num_nonbasic_free_col;
-	 num_nonbasic_free_col++;
-  */   
+         num_nonbasic_free_col++;
+  */
 }

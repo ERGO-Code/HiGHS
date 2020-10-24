@@ -87,7 +87,7 @@ class HEkkPrimal {
   int num_bad_devex_weight;
   vector<double> devex_weight;
   vector<int> devex_index;
-  // Nonbasic free column data. 
+  // Nonbasic free column data.
   int num_free_col;
   int num_nonbasic_free_col;
   vector<int> nonbasic_free_col_pointer;

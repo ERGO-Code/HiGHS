@@ -21,13 +21,13 @@ bool HSet::setup(const int size, const int max_value) {
   size_ = size;
   max_value_ = max_value;
   value_.resize(size_);
-  pointer_.assign(max_value_+1, no_pointer);
+  pointer_.assign(max_value_ + 1, no_pointer);
   count_ = 0;
   return true;
 }
 
 void HSet::clear() {
-  pointer_.assign(max_value_+1, no_pointer);
+  pointer_.assign(max_value_ + 1, no_pointer);
   count_ = 0;
 }
 
@@ -35,9 +35,8 @@ bool HSet::add(const int value) {
   if (value < min_value) return false;
   if (value > max_value_) {
     // Value exceeds what's allowable so far so can't be in the list
-    pointer_.resize(value+1);
-    for (int ix = max_value_+1; ix < value; ix++)
-      pointer_[ix] = no_pointer;
+    pointer_.resize(value + 1);
+    for (int ix = max_value_ + 1; ix < value; ix++) pointer_[ix] = no_pointer;
     max_value_ = value;
   } else if (pointer_[value] > no_pointer) {
     // Duplicate
@@ -59,8 +58,8 @@ bool HSet::remove(const int value) {
   int pointer = pointer_[value];
   if (pointer == no_pointer) return false;
   pointer_[value] = no_pointer;
-  if (pointer < count_-1) {
-    int last_value = value_[count_-1];
+  if (pointer < count_ - 1) {
+    int last_value = value_[count_ - 1];
     value_[pointer] = last_value;
     pointer_[last_value] = pointer;
   }
@@ -81,11 +80,9 @@ void HSet::print() {
   }
   printf("\n");
   printf("Values:   Indices |");
-  for (int ix = 0; ix < count_; ix++)
-    printf(" %2d", ix);
+  for (int ix = 0; ix < count_; ix++) printf(" %2d", ix);
   printf("\n");
   printf("          Values  |");
-  for (int ix = 0; ix < count_; ix++)
-    printf(" %2d", value_[ix]);
+  for (int ix = 0; ix < count_; ix++) printf(" %2d", value_[ix]);
   printf("\n");
 }

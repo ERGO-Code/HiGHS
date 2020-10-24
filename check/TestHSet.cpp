@@ -41,5 +41,4 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   set.print();
   set.clear();
   set.print();
-  
 }

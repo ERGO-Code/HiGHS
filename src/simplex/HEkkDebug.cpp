@@ -852,12 +852,11 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
   return return_status;
 }
 
-HighsDebugStatus ekkDebugNonbasicFreeColumnData(const HighsOptions& options,
-						const HEkk& ekk_instance,
-						const int num_free_col,
-						const int num_nonbasic_free_col,
-						const vector<int>& nonbasic_free_col_pointer,
-						const vector<int>& nonbasic_free_col_list) {
+HighsDebugStatus ekkDebugNonbasicFreeColumnData(
+    const HighsOptions& options, const HEkk& ekk_instance,
+    const int num_free_col, const int num_nonbasic_free_col,
+    const vector<int>& nonbasic_free_col_pointer,
+    const vector<int>& nonbasic_free_col_list) {
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsLp& lp = ekk_instance.simplex_lp_;
@@ -869,13 +868,14 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnData(const HighsOptions& options,
   int check_num_free_col = 0;
   for (int iVar = 0; iVar < num_tot; iVar++) {
     if (simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-	simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF)
+        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF)
       check_num_free_col++;
   }
   if (check_num_free_col != num_free_col) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-		      "NonbasicFreeColumnData: Number of free columns should be %d, not %d\n",
-		      check_num_free_col, num_free_col);
+    HighsPrintMessage(
+        options.output, options.message_level, ML_ALWAYS,
+        "NonbasicFreeColumnData: Number of free columns should be %d, not %d\n",
+        check_num_free_col, num_free_col);
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   if (!num_free_col) return HighsDebugStatus::OK;
@@ -885,48 +885,52 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnData(const HighsOptions& options,
   int list_size = nonbasic_free_col_list.size();
   if (pointer_size != num_tot || list_size != num_free_col) {
     HighsPrintMessage(
-      options.output, options.message_level, ML_ALWAYS,
-      "NonbasicFreeColumnData: Pointer size %d <> %d or list size %d <> %d\n",
-      pointer_size, num_tot, list_size, num_nonbasic_free_col);
+        options.output, options.message_level, ML_ALWAYS,
+        "NonbasicFreeColumnData: Pointer size %d <> %d or list size %d <> %d\n",
+        pointer_size, num_tot, list_size, num_nonbasic_free_col);
     return HighsDebugStatus::LOGICAL_ERROR;
   }
 
   int check_num_nonbasic_free_col = 0;
   for (int iVar = 0; iVar < num_tot; iVar++) {
-    bool nonbasic_free = simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
-      simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
-      simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
+    bool nonbasic_free =
+        simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE &&
+        simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
+        simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
     int pointer = nonbasic_free_col_pointer[iVar];
     if (nonbasic_free) {
       check_num_nonbasic_free_col++;
       if (pointer < 0) {
-	HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			  "NonbasicFreeColumnData: Nonbasic free variable %d has pointer %d\n",
-			  iVar, pointer);
-	return HighsDebugStatus::LOGICAL_ERROR;
+        HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                          "NonbasicFreeColumnData: Nonbasic free variable %d "
+                          "has pointer %d\n",
+                          iVar, pointer);
+        return HighsDebugStatus::LOGICAL_ERROR;
       }
       int entry = nonbasic_free_col_list[pointer];
       if (entry < 0) {
-	HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			  "NonbasicFreeColumnData: Nonbasic free variable %d has pointer %d to %d\n",
-			  iVar, pointer, entry);
-	return HighsDebugStatus::LOGICAL_ERROR;
+        HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                          "NonbasicFreeColumnData: Nonbasic free variable %d "
+                          "has pointer %d to %d\n",
+                          iVar, pointer, entry);
+        return HighsDebugStatus::LOGICAL_ERROR;
       }
     } else {
       if (pointer >= 0) {
-	HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-			  "NonbasicFreeColumnData: Variable %d is not nonbasic free but has pointer %d\n",
-			  iVar, pointer);
-	return HighsDebugStatus::LOGICAL_ERROR;
+        HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+                          "NonbasicFreeColumnData: Variable %d is not nonbasic "
+                          "free but has pointer %d\n",
+                          iVar, pointer);
+        return HighsDebugStatus::LOGICAL_ERROR;
       }
     }
   }
   if (check_num_nonbasic_free_col != num_nonbasic_free_col) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
-		      "NonbasicFreeColumnData: List should have %d entries, not %d\n",
-		      check_num_nonbasic_free_col, num_nonbasic_free_col);
+    HighsPrintMessage(
+        options.output, options.message_level, ML_ALWAYS,
+        "NonbasicFreeColumnData: List should have %d entries, not %d\n",
+        check_num_nonbasic_free_col, num_nonbasic_free_col);
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   return HighsDebugStatus::OK;
-  
 }
