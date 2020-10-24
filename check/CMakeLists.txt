@@ -23,6 +23,7 @@ set(TEST_SOURCES
     TestInfo.cpp
     TestBasis.cpp
     TestBasisSolves.cpp
+    TestHSet.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
     TestLpSolvers.cpp

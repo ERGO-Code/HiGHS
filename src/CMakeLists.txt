@@ -124,6 +124,7 @@ set(sources
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/HighsMatrixPic.cpp
+    util/HSet.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
@@ -194,6 +195,7 @@ set(headers
     util/HighsTimer.h
     util/HighsUtils.h
     util/HighsMatrixPic.h
+    util/HSet.h
     Highs.h
     interfaces/highs_c_api.h
 )
