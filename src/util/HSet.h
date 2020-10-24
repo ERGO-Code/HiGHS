@@ -8,18 +8,22 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file util/HSet.h
- * @brief Set structure for HiGHS
+ * @brief Set structure for HiGHS. 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+
+// Maintains an unordered set of distinct non-negative integer values,
+// allowing entries to be removed from the set at cost O(1)
 #ifndef UTIL_HSET_H_
 #define UTIL_HSET_H_
 
 #include <vector>
+#include <cstdio>
+
+//#include <iostream>
 
 using std::vector;
 
-// Commentary on actions
-const bool commentary = true;
 const int min_value = 0;
 const int no_pointer = min_value - 1;
 /**
@@ -31,8 +35,11 @@ class HSet {
    * @brief Initialise a set. Neither limit is binding, but more
    * efficient memory-wise if known in advance
    */
-  bool setup(const int size,      //!< Dimension of the set to be initialised
-             const int max_value  //!< Maximum value to be in the set.
+  bool setup(const int size,           //!< Dimension of the set to be initialised
+             const int max_value,      //!< Maximum value to be in the set.
+	     const bool debug = false, //!< Debug mode
+	     const bool allow_assert = true, //!< Allow asserts in debug
+	     FILE* output = NULL //!< File for output
   );
 
   /**
@@ -54,17 +61,20 @@ class HSet {
    * @brief Print out the set and pointer entries not set to no_pointer
    *
    */
-  void print();
+  void print() const;
   /**
    * @brief Remove value from the set
    *
    */
-  bool debug();
+  bool debug() const;
 
   int count_;          //!< Number of values
   vector<int> value_;  //!< Values
  private:
-  int size_;             //!< Dimension of the set
+  bool setup_ = false;
+  bool debug_ = false;
+  bool allow_assert_ = true;
+  FILE* output_;
   int max_value_;        //!< Maximum value to be in the set.
   vector<int> pointer_;  //!< Set of pointers into the set
 };
