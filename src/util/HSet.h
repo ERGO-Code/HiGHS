@@ -72,7 +72,7 @@ class HSet {
   bool debug() const;
 
  private:
-  int count_;          //!< Number of entries
+  int count_ = 0;      //!< Number of entries
   vector<int> entry_;  //!< Entries
   bool setup_ = false;
   bool debug_ = false;

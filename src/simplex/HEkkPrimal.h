@@ -41,8 +41,7 @@ class HEkkPrimal {
   void solvePhase1();
   void solvePhase2();
   void rebuild();
-  void simpleChooseColumn();
-  void sectionalChooseColumn();
+  void chooseColumn();
   void chooseRow();
   void phase2Update();
   void phase1ComputeDual();
