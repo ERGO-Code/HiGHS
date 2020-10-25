@@ -17,9 +17,10 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 
   const bool from_file = true;
   if (from_file) {
-    std::string model_file =
-        std::string(HIGHS_DIR) + "/check/instances/stair.mps";
-    //        std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+    std::string model_file = std::string(HIGHS_DIR) +
+                             // "/check/instances/stair.mps";
+                             // "/check/instances/adlittle.mps";
+                             "/check/instances/cycle.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
   } else {
     SpecialLps special_lps;

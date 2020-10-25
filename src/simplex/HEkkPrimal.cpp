@@ -563,9 +563,9 @@ void HEkkPrimal::chooseRow() {
   double alphaTol = simplex_info.update_count < 10
                         ? 1e-9
                         : simplex_info.update_count < 20 ? 1e-8 : 1e-7;
-  int moveIn = nonbasicMove[columnIn];
-  // Can't handle free columns yet
-  assert(moveIn);
+  const int moveIn = thetaDual > 0 ? -1 : 1;
+  if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
+
   double relaxTheta = 1e100;
   double relaxSpace;
   for (int i = 0; i < col_aq.count; i++) {
@@ -623,14 +623,9 @@ void HEkkPrimal::phase2Update() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
 
   // Compute thetaPrimal
-  int moveIn = nonbasicMove[columnIn];
-  if (!moveIn) {
-    // Can't handle free columns yet
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-                    "HEkkPrimal::phase2Update cannot handle nonbasic free "
-                    "columns entering the basis");
-    assert(moveIn);
-  }
+  int moveIn = thetaDual > 0 ? -1 : 1;
+  if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
+
   columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
   alpha = col_aq.array[rowOut];
   thetaPrimal = 0;
@@ -685,6 +680,18 @@ void HEkkPrimal::phase2Update() {
     iterationAnalysis();
     num_flip_since_rebuild++;
     return;
+  }
+
+  bool remove_nonbasic_free_column = nonbasicMove[columnIn] == 0;
+  if (remove_nonbasic_free_column) {
+    bool removed_nonbasic_free_column = nonbasic_free_col_set.remove(columnIn);
+    if (!removed_nonbasic_free_column) {
+      assert(removed_nonbasic_free_column);
+      HighsLogMessage(
+          ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+          "HEkkPrimal::phase2update failed to remove Nonbasic free column %d",
+          columnIn);
+    }
   }
 
   // Pivot in
@@ -866,6 +873,7 @@ void HEkkPrimal::phase1ChooseRow() {
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& baseValue = simplex_info.baseValue_;
+  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
   // Compute the transformed pivot column and update its density
   analysis->simplexTimerStart(FtranClock);
@@ -901,7 +909,8 @@ void HEkkPrimal::phase1ChooseRow() {
   //
   // Determine the move direction - can't use nonbasicMove_[columnIn]
   // due to free columns
-  const int iMoveIn = thetaDual > 0 ? -1 : 1;
+  const int moveIn = thetaDual > 0 ? -1 : 1;
+  if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
 
   const double dPivotTol = simplex_info.update_count < 10
                                ? 1e-9
@@ -910,7 +919,7 @@ void HEkkPrimal::phase1ChooseRow() {
   ph1SorterT.clear();
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
-    double dAlpha = col_aq.array[iRow] * iMoveIn;
+    double dAlpha = col_aq.array[iRow] * moveIn;
 
     // When the basic variable x[i] decrease
     if (dAlpha > +dPivotTol) {
@@ -1036,9 +1045,11 @@ void HEkkPrimal::phase1Update() {
   vector<double>& workDual = simplex_info.workDual_;
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
+  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
   // Identify the direction of movement
-  const int iMoveIn = thetaDual > 0 ? -1 : 1;
+  const int moveIn = thetaDual > 0 ? -1 : 1;
+  if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
 
   // Compute the primal theta and see if we should have done a bound
   // flip instead
@@ -1054,13 +1065,13 @@ void HEkkPrimal::phase1Update() {
   double upperIn = workUpper[columnIn];
   double valueIn = workValue[columnIn] + thetaPrimal;
   int ifFlip = 0;
-  if (iMoveIn == +1 && valueIn > upperIn + primal_feasibility_tolerance) {
+  if (moveIn == +1 && valueIn > upperIn + primal_feasibility_tolerance) {
     workValue[columnIn] = upperIn;
     thetaPrimal = upperIn - lowerIn;
     ifFlip = 1;
     ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = -1;
   }
-  if (iMoveIn == -1 && valueIn < lowerIn - primal_feasibility_tolerance) {
+  if (moveIn == -1 && valueIn < lowerIn - primal_feasibility_tolerance) {
     workValue[columnIn] = lowerIn;
     thetaPrimal = lowerIn - upperIn;
     ifFlip = 1;
@@ -1139,10 +1150,8 @@ void HEkkPrimal::phase1Update() {
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
 
-  bool remove_nonbasic_free_column =
-      ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] == 0;
+  bool remove_nonbasic_free_column = nonbasicMove[columnIn] == 0;
   if (remove_nonbasic_free_column) {
-    printf("Nonbasic free column %d becomes basic\n", columnIn);
     bool removed_nonbasic_free_column = nonbasic_free_col_set.remove(columnIn);
     if (!removed_nonbasic_free_column) {
       assert(removed_nonbasic_free_column);
