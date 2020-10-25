@@ -304,10 +304,6 @@ void HEkkPrimal::solvePhase2() {
         break;
       }
       chooseRow();
-      if (rowOut == -1) {
-        invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
-        break;
-      }
       phase2Update();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (invertHint) {
@@ -626,15 +622,20 @@ void HEkkPrimal::phase2Update() {
   int moveIn = thetaDual > 0 ? -1 : 1;
   if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
 
-  columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
-  alpha = col_aq.array[rowOut];
-  thetaPrimal = 0;
-  if (alpha * moveIn > 0) {
-    // Lower bound
-    thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alpha;
+  if (rowOut < 0) {
+    // No binding ratio in CHUZR, so flip or unbounded
+    thetaPrimal = moveIn * HIGHS_CONST_INF;
   } else {
-    // Upper bound
-    thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alpha;
+    columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
+    alpha = col_aq.array[rowOut];
+    thetaPrimal = 0;
+    if (alpha * moveIn > 0) {
+      // Lower bound
+      thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alpha;
+    } else {
+      // Upper bound
+      thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alpha;
+    }
   }
 
   // 1. Make sure it is inside bounds or just flip bound
@@ -642,22 +643,27 @@ void HEkkPrimal::phase2Update() {
   double upperIn = workUpper[columnIn];
   double valueIn = workValue[columnIn] + thetaPrimal;
   bool flipped = false;
-  if (nonbasicMove[columnIn] == 1) {
+  if (moveIn > 0) {
     if (valueIn > upperIn + primal_feasibility_tolerance) {
       // Flip to upper
       workValue[columnIn] = upperIn;
       thetaPrimal = upperIn - lowerIn;
       flipped = true;
-      nonbasicMove[columnIn] = -1;
+      nonbasicMove[columnIn] = NONBASIC_MOVE_DN;
     }
-  } else if (nonbasicMove[columnIn] == -1) {
+  } else {
     if (valueIn < lowerIn - primal_feasibility_tolerance) {
       // Flip to lower
       workValue[columnIn] = lowerIn;
       thetaPrimal = lowerIn - upperIn;
       flipped = true;
-      nonbasicMove[columnIn] = 1;
+      nonbasicMove[columnIn] = NONBASIC_MOVE_UP;
     }
+  }
+
+  if (rowOut < 0 && !flipped) {
+    invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
+    return;
   }
 
   analysis->simplexTimerStart(UpdatePrimalClock);
@@ -676,6 +682,7 @@ void HEkkPrimal::phase2Update() {
   // If flipped, then no need touch the pivots
   if (flipped) {
     rowOut = -1;
+    columnOut = columnIn;
     numericalTrouble = 0;
     iterationAnalysis();
     num_flip_since_rebuild++;
@@ -1081,6 +1088,7 @@ void HEkkPrimal::phase1Update() {
   // Update for the flip case
   if (ifFlip) {
     rowOut = -1;
+    columnOut = columnIn;
     numericalTrouble = 0;
     iterationAnalysis();
     num_flip_since_rebuild++;

@@ -1064,7 +1064,7 @@ void HighsSimplexAnalysis::summaryReport() {
 
 void HighsSimplexAnalysis::iterationReport(const bool header) {
   if (!(iteration_report_message_level & message_level)) return;
-  if (!header && (pivotal_row_index < 0 || entering_variable < 0)) return;
+  if (!header && entering_variable < 0) return;
   reportAlgorithmPhaseIterationObjective(header,
                                          iteration_report_message_level);
 #ifdef HiGHSDEV
@@ -1211,18 +1211,33 @@ void HighsSimplexAnalysis::reportCondition(const bool header,
 }
 #endif
 
+// Primal:
+// * primal_delta - 0
+// * dual_step    - thetaDual
+// * primal_step  - thetaPrimal
+//
+// Dual:
+// * primal_delta - deltaPrimal
+// * dual_step    - thetaDual
+// * primal_step  - thetaPrimal
 void HighsSimplexAnalysis::reportIterationData(const bool header,
                                                const int this_message_level) {
   if (header) {
     HighsPrintMessage(output, message_level, this_message_level,
-                      "       NumCk     LvR     LvC     EnC        DlPr    "
-                      "    ThDu        ThPr          Aa");
-  } else {
+                      "     EnC     LvC     LvR        ThDu        ThPr        "
+                      "DlPr       NumCk          Aa");
+  } else if (pivotal_row_index >= 0) {
     HighsPrintMessage(output, message_level, this_message_level,
-                      " %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g",
-                      numerical_trouble, pivotal_row_index, leaving_variable,
-                      entering_variable, primal_delta, dual_step, primal_step,
+                      " %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %11.4g",
+                      entering_variable, leaving_variable, pivotal_row_index,
+                      dual_step, primal_step, primal_delta, numerical_trouble,
                       pivot_value_from_column);
+  } else {
+    HighsPrintMessage(
+        output, message_level, this_message_level,
+        " %7d %7d %7d %11.4g %11.4g                                    ",
+        entering_variable, leaving_variable, pivotal_row_index, dual_step,
+        primal_step);
   }
 }
 
