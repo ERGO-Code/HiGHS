@@ -1795,7 +1795,8 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
     // Pivotal row is for the current basis: weights are required for
     // the next basis so have to divide the current (exact) weight by
     // the pivotal value
-    double new_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alphaCol * alphaCol);
+    double new_pivotal_edge_weight =
+        dualRHS.workEdWt[rowOut] / (alphaCol * alphaCol);
     new_pivotal_edge_weight = max(1.0, new_pivotal_edge_weight);
     // nw_wt is max(workEdWt[iRow], NewExactWeight*columnArray[iRow]^2);
     //

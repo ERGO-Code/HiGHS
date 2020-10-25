@@ -478,7 +478,8 @@ void HEkkPrimal::rebuild() {
 
   reportRebuild(sv_invertHint);
 
-  ekk_instance_.build_syntheticTick_ = ekk_instance_.factor_.build_syntheticTick;
+  ekk_instance_.build_syntheticTick_ =
+      ekk_instance_.factor_.build_syntheticTick;
   ekk_instance_.total_syntheticTick_ = 0;
 
   num_flip_since_rebuild = 0;
@@ -794,7 +795,6 @@ void HEkkPrimal::phase2Update() {
   // Update the synthetic clock
   ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
   ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
-
 }
 
 void HEkkPrimal::phase1ComputeDual() {
@@ -1279,13 +1279,17 @@ void HEkkPrimal::updateVerify() {
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
   numericalTrouble = abs_alpha_diff / min_abs_alpha;
   if (numericalTrouble > 1e-7)
-    printf("Numerical check: Iter %4d: alphaCol = %12g, (From %3s alphaRow = %12g), aDiff = %12g: measure = %12g\n",
-	   ekk_instance_.iteration_count_,
-	   alphaCol, alphaRow_source.c_str(), alphaRow, abs_alpha_diff, numericalTrouble);
-  assert(numericalTrouble<1e-3);
-  // Reinvert if the relative difference is large enough, and updates have been performed
+    printf(
+        "Numerical check: Iter %4d: alphaCol = %12g, (From %3s alphaRow = "
+        "%12g), aDiff = %12g: measure = %12g\n",
+        ekk_instance_.iteration_count_, alphaCol, alphaRow_source.c_str(),
+        alphaRow, abs_alpha_diff, numericalTrouble);
+  assert(numericalTrouble < 1e-3);
+  // Reinvert if the relative difference is large enough, and updates have been
+  // performed
   //
-  //  if (numericalTrouble > 1e-7 && ekk_instance_.simplex_info_.update_count > 0) invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+  //  if (numericalTrouble > 1e-7 && ekk_instance_.simplex_info_.update_count >
+  //  0) invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
 }
 
 void HEkkPrimal::iterationAnalysisData() {
@@ -1363,4 +1367,3 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message) {
   if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
   return HighsDebugStatus::OK;
 }
-
