@@ -437,8 +437,7 @@ set_target_properties(libhighs PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
-if (true)
-#kif (IPX_ON)
+if (IPX_ON)
     add_library(ipx OBJECT ${basiclu_sources} ${ipx_sources})
     target_include_directories(ipx PRIVATE ipm/ipx/src ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
     #target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})

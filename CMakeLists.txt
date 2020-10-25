@@ -305,13 +305,14 @@ message(STATUS "FAST BUILD set to on.
 # todo: remove patch once release is official. 
 # add here to avoid compile errors.
 set(HIGHS_VERSION_PATCH 0)
-configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 # todo: ig wip building but not running, add headers? see install first since we want
 # a single library object installed, not three like so far
 if (IPX)
     set(IPX_ON ON)
 endif()
+
+configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 # condition added to src/CMakeLists.txt
 add_subdirectory(src)
