@@ -758,33 +758,16 @@ void HEkkPrimal::phase2Update() {
   }
   analysis->simplexTimerStop(UpdateDualClock);
 
+  // Checks row-wise pivot against column-wise pivot for
+  // numerical trouble
+  updateVerify();
+
   /* Update the devex weight */
   devexUpdate();
 
   // After dual update in primal simplex the dual objective value is not known
   ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
 
-  // updateVerify for primal
-  numericalTrouble = 0;
-  /*
-  double aCol = fabs(alpha);
-  double alphaRow;
-  if (columnIn < ekk_instance_.simplex_lp_.numCol_) {
-    alphaRow = row_ap.array[columnIn];
-  } else {
-    alphaRow = row_ep.array[rowOut];
-  }
-  double aRow = fabs(alphaRow);
-  double aDiff = fabs(aCol - aRow);
-  numericalTrouble = aDiff / min(aCol, aRow);
-  if (numericalTrouble > 1e-7)
-    printf("Numerical check: alphaCol = %12g, alphaRow = a%12g, aDiff = a%12g:
-  measure = %12g\n", alpha, alphaRow, aDiff, numericalTrouble);
-  // Reinvert if the relative difference is large enough, and updates have been
-  performed
-  //  if (numericalTrouble > 1e-7 && ekk_instance_.simplex_info_.update_count >
-  0) invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
-  */
   // Dual for the pivot
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
@@ -1149,11 +1132,13 @@ void HEkkPrimal::phase1Update() {
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
 #endif
 
+  // Checks row-wise pivot against column-wise pivot for
+  // numerical trouble
+  updateVerify();
+
   // Update the devex weight
   devexUpdate();
 
-  // updateVerify for primal
-  numericalTrouble = 0;
   // Dual for the pivot
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
@@ -1257,6 +1242,33 @@ void HEkkPrimal::devexUpdate() {
   devex_weight[columnIn] = 1.0;
   num_devex_iterations++;
   analysis->simplexTimerStop(DevexUpdateWeightClock);
+}
+
+void HEkkPrimal::updateVerify() {
+  // updateVerify for primal
+  numericalTrouble = 0;
+  double aCol = fabs(alpha);
+  double alphaRow;
+  bool column_in = columnIn < ekk_instance_.simplex_lp_.numCol_;
+  std::string alphaRow_source;
+  if (column_in) {
+    alphaRow = row_ap.array[columnIn];
+    alphaRow_source = "Col";
+  } else {
+    alphaRow = row_ep.array[rowOut];
+    alphaRow_source = "Row";
+  }
+  double aRow = fabs(alphaRow);
+  double aDiff = fabs(aCol - aRow);
+  numericalTrouble = aDiff / min(aCol, aRow);
+  //  if (numericalTrouble > 1e-7)
+    printf("Numerical check: Iter %4d: alphaCol = %12g, (From %3s alphaRow = %12g), aDiff = %12g: measure = %12g\n",
+	   ekk_instance_.iteration_count_,
+	   alpha, alphaRow_source.c_str(), alphaRow, aDiff, numericalTrouble);
+  assert(numericalTrouble<1);
+  // Reinvert if the relative difference is large enough, and updates have been performed
+  //
+  //  if (numericalTrouble > 1e-7 && ekk_instance_.simplex_info_.update_count > 0) invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
 }
 
 void HEkkPrimal::iterationAnalysisData() {

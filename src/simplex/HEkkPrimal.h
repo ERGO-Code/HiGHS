@@ -49,6 +49,7 @@ class HEkkPrimal {
   void phase1Update();
   void devexReset();
   void devexUpdate();
+  void updateVerify();
   void iterationAnalysisData();
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint = -1);
