@@ -310,6 +310,8 @@ set(HIGHS_VERSION_PATCH 0)
 # a single library object installed, not three like so far
 if (IPX)
     set(IPX_ON ON)
+else()
+    set(IPX_ON OFF)
 endif()
 
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
