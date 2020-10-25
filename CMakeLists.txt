@@ -425,10 +425,6 @@ endif()
 # Dashboards later on.
 # include(CTest)
 
-add_library(highsapi INTERFACE)
-target_sources(highsapi INTERFACE src/interface/highs_api.cpp)
-target_link_libraries(highsapi INTERFACE libhighs)
-
 install(TARGETS libhighs EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
