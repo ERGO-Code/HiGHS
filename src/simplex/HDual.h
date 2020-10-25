@@ -466,7 +466,7 @@ class HDual {
   double deltaPrimal;
   double thetaDual;
   double thetaPrimal;
-  double alpha;
+  double alphaCol;
   double alphaRow;
   double numericalTrouble;
   // (Local) value of computed weight

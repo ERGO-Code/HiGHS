@@ -957,7 +957,7 @@ void HDual::iterationAnalysisMinorData() {
 void HDual::iterationAnalysisMinor() {
   // Possibly report on the iteration
   // PAMI uses alphaRow but serial solver uses alpha
-  alpha = alphaRow;
+  alphaCol = alphaRow;
   iterationAnalysisData();
   iterationAnalysisMinorData();
   analysis->iterationReport();

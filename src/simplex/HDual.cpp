@@ -1157,7 +1157,7 @@ void HDual::iterationAnalysisData() {
   analysis->primal_delta = deltaPrimal;
   analysis->primal_step = thetaPrimal;
   analysis->dual_step = thetaDual;
-  analysis->pivot_value_from_column = alpha;
+  analysis->pivot_value_from_column = alphaCol;
   analysis->pivot_value_from_row = alphaRow;
   analysis->factor_pivot_threshold = simplex_info.factor_pivot_threshold;
   analysis->numerical_trouble = numericalTrouble;
@@ -1608,7 +1608,7 @@ void HDual::updateFtran() {
   analysis->updateOperationResultDensity(local_col_aq_density,
                                          analysis->col_aq_density);
   // Save the pivot value computed column-wise - used for numerical checking
-  alpha = col_aq.array[rowOut];
+  alphaCol = col_aq.array[rowOut];
   analysis->simplexTimerStop(FtranClock);
 }
 
@@ -1694,7 +1694,7 @@ void HDual::updateVerify() {
 
   // Use the two pivot values to identify numerical trouble
   if (reinvertOnNumericalTrouble("HDual::updateVerify", workHMO,
-                                 numericalTrouble, alpha, alphaRow,
+                                 numericalTrouble, alphaCol, alphaRow,
                                  numerical_trouble_tolerance)) {
     invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
   }
@@ -1782,12 +1782,12 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   double x_out = baseValue[rowOut];
   double l_out = baseLower[rowOut];
   double u_out = baseUpper[rowOut];
-  thetaPrimal = (x_out - (deltaPrimal < 0 ? l_out : u_out)) / alpha;
+  thetaPrimal = (x_out - (deltaPrimal < 0 ? l_out : u_out)) / alphaCol;
   dualRHS.updatePrimal(&col_aq, thetaPrimal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     const double new_pivotal_edge_weight =
-        dualRHS.workEdWt[rowOut] / (alpha * alpha);
-    const double Kai = -2 / alpha;
+        dualRHS.workEdWt[rowOut] / (alphaCol * alphaCol);
+    const double Kai = -2 / alphaCol;
     dualRHS.updateWeightDualSteepestEdge(&col_aq, new_pivotal_edge_weight, Kai,
                                          &DSE_Vector->array[0]);
     dualRHS.workEdWt[rowOut] = new_pivotal_edge_weight;
@@ -1795,7 +1795,7 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
     // Pivotal row is for the current basis: weights are required for
     // the next basis so have to divide the current (exact) weight by
     // the pivotal value
-    double new_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alpha * alpha);
+    double new_pivotal_edge_weight = dualRHS.workEdWt[rowOut] / (alphaCol * alphaCol);
     new_pivotal_edge_weight = max(1.0, new_pivotal_edge_weight);
     // nw_wt is max(workEdWt[iRow], NewExactWeight*columnArray[iRow]^2);
     //
