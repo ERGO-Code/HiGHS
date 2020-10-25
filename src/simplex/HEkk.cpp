@@ -770,18 +770,15 @@ void HEkk::computeTableauRowFromPiP(const HVector& row_ep, HVector& row_ap) {
   analysis_.simplexTimerStart(PriceClock);
   row_ap.clear();
   if (use_col_price) {
-    printf("priceByColumn\n");
     // Perform column-wise PRICE
     matrix_.priceByColumn(row_ap, row_ep);
   } else if (use_row_price_w_switch) {
-    printf("priceByRowSparseResultWithSwitch\n");
     // Perform hyper-sparse row-wise PRICE, but switch if the density of row_ap
     // becomes extreme
     const double switch_density = matrix_.hyperPRICE;
     matrix_.priceByRowSparseResultWithSwitch(
         row_ap, row_ep, analysis_.row_ap_density, 0, switch_density);
   } else {
-    printf("priceByRowSparseResult\n");
     // Perform hyper-sparse row-wise PRICE
     matrix_.priceByRowSparseResult(row_ap, row_ep);
   }

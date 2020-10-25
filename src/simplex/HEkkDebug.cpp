@@ -325,8 +325,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       "ekkDebugSimplex - %s: Iteration %d %-9s max   dual residual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_dual_residual);
-  assert(max_dual_residual < excessive_residual_error);
-
   return return_status;
 }
 

@@ -298,10 +298,6 @@ void HEkkPrimal::solvePhase2() {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
-      const int ck_iter = 76;
-      if (ekk_instance_.iteration_count_ >= ck_iter) {
-	printf("Iteration %d\n", ck_iter);
-      }
       chooseColumn();
       if (columnIn == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
@@ -706,10 +702,6 @@ void HEkkPrimal::phase2Update() {
     }
   }
 
-  // Pivot in
-  int sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
-  ekk_instance_.updatePivots(columnIn, rowOut, sourceOut);
-
   baseValue[rowOut] = valueIn;
 
   analysis->simplexTimerStart(CollectPrIfsClock);
@@ -750,7 +742,6 @@ void HEkkPrimal::phase2Update() {
   //
   ekk_instance_.computeTableauRowFromPiP(row_ep, row_ap);
   analysis->simplexTimerStart(UpdateDualClock);
-  //  double
   thetaDual = workDual[columnIn] / alphaCol;
   for (int i = 0; i < row_ap.count; i++) {
     int iCol = row_ap.index[i];
@@ -765,9 +756,9 @@ void HEkkPrimal::phase2Update() {
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
-  //  updateVerify();
+  updateVerify();
 
-  /* Update the devex weight */
+  // Update the devex weight
   devexUpdate();
 
   // After dual update in primal simplex the dual objective value is not known
@@ -778,6 +769,9 @@ void HEkkPrimal::phase2Update() {
   workDual[columnOut] = -thetaDual;
 
   // Update ekk_instance_.factor_ basis
+  // Pivot in
+  int sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
+  ekk_instance_.updatePivots(columnIn, rowOut, sourceOut);
   ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &invertHint);
   ekk_instance_.updateMatrix(columnIn, columnOut);
   if (simplex_info.update_count >= simplex_info.update_limit) {
@@ -785,7 +779,7 @@ void HEkkPrimal::phase2Update() {
   }
   ekk_instance_.iteration_count_++;
 
-  /* Reset the devex when there are too many errors */
+  // Reset the devex when there are too many errors
   if (num_bad_devex_weight > 3) devexReset();
 
   // Report on the iteration
@@ -1140,7 +1134,7 @@ void HEkkPrimal::phase1Update() {
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
-  //  updateVerify();
+  updateVerify();
 
   // Update the devex weight
   devexUpdate();
@@ -1168,6 +1162,13 @@ void HEkkPrimal::phase1Update() {
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
+  ekk_instance_.iteration_count_++;
+
+  // Reset the devex framework when necessary
+  if (num_bad_devex_weight > 3) devexReset();
+
+  // Report on the iteration
+  iterationAnalysis();
 
   // Recompute dual and primal
   if (invertHint == 0) {
@@ -1179,17 +1180,10 @@ void HEkkPrimal::phase1Update() {
       phase1ComputeDual();
       analysis->simplexTimerStop(ComputeDualClock);
     } else {
+      // Crude way to force rebuild
       invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
     }
   }
-
-  // Reset the devex framework when necessary
-  if (num_bad_devex_weight > 3) devexReset();
-
-  ekk_instance_.iteration_count_++;
-
-  // Report on the iteration
-  iterationAnalysis();
 }
 
 void HEkkPrimal::devexReset() {
@@ -1341,7 +1335,6 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
         simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
     if (nonbasic_free) nonbasic_free_col_set.add(iVar);
   }
-  if (ekk_instance_.options_.output != NULL) nonbasic_free_col_set.print();
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message) {
