@@ -443,8 +443,8 @@ if (true)
     target_include_directories(ipx PRIVATE ipm/ipx/src ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
     #target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
 
-set_target_properties(ipx PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+    set_target_properties(ipx PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
     target_link_libraries(libhighs PRIVATE ipx)
 endif()

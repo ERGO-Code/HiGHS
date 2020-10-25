@@ -307,6 +307,12 @@ message(STATUS "FAST BUILD set to on.
 set(HIGHS_VERSION_PATCH 0)
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
+# todo: ig wip building but not running, add headers? see install first since we want
+# a single library object installed, not three like so far
+if (IPX)
+    set(IPX_ON ON)
+endif()
+
 # condition added to src/CMakeLists.txt
 add_subdirectory(src)
 
@@ -419,9 +425,23 @@ endif()
 # Dashboards later on.
 # include(CTest)
 
-if (IPX)
-    set(IPX_ON ON)
-endif()
+add_library(highsapi INTERFACE)
+target_sources(highsapi INTERFACE src/interface/highs_api.cpp)
+target_link_libraries(highsapi INTERFACE libhighs)
+
+install(TARGETS libhighs EXPORT highs-targets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        INCLUDES DESTINATION include)
+
+# if (IPX_ON)
+#     install(TARGETS ipx EXPORT highs-targets
+#             LIBRARY DESTINATION lib
+#             ARCHIVE DESTINATION lib
+#             INCLUDES DESTINATION include)
+# endif()
+
+
 
 endif()
 
