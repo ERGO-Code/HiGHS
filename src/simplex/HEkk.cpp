@@ -933,6 +933,15 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, int* iRow,
   simplex_lp_status_.has_invert = true;
   if (simplex_info_.update_count >= simplex_info_.update_limit)
     *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+
+  // Determine whether to reinvert based on the synthetic clock
+  bool reinvert_syntheticClock = total_syntheticTick_ >= build_syntheticTick_;
+  const bool performed_min_updates =
+      simplex_info_.update_count >=
+      synthetic_tick_reinversion_min_update_count;
+  if (reinvert_syntheticClock && performed_min_updates)
+    *hint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
+
   analysis_.simplexTimerStop(UpdateFactorClock);
 }
 

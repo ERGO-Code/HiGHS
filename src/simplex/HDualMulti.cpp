@@ -884,6 +884,7 @@ void HDual::majorUpdateFactor() {
   if (multi_nFinish > 0)
     update_factor(workHMO, multi_finish[0].col_aq, multi_finish[0].row_ep,
                   iRows, &invertHint);
+
   // Determine whether to reinvert based on the synthetic clock
   const double use_build_syntheticTick =
       build_syntheticTick * multi_build_syntheticTick_mu;
@@ -892,16 +893,9 @@ void HDual::majorUpdateFactor() {
   const bool performed_min_updates =
       workHMO.simplex_info_.update_count >=
       multi_synthetic_tick_reinversion_min_update_count;
-#ifdef HiGHSDEV
-  if (rp_reinvert_syntheticClock && multi_build_syntheticTick_mu == 1.0)
-    printf(
-        "Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = "
-        "build_syntheticTick: (%1d, %4d)\n",
-        total_syntheticTick, build_syntheticTick, reinvert_syntheticClock,
-        workHMO.simplex_info_.update_count);
-#endif
   if (reinvert_syntheticClock && performed_min_updates)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
+
   delete[] iRows;
 }
 

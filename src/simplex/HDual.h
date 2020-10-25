@@ -528,24 +528,6 @@ class HDual {
   MChoice multi_choice[HIGHS_THREAD_LIMIT];
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
-#ifdef HiGHSDEV
-  const bool rp_reinvert_syntheticClock = false;  // true;//
-  const bool rp_numericalTrouble = false;         // true;//
-#endif
-  const double original_multi_build_syntheticTick_mu = 1.5;
-  const double multi_build_syntheticTick_mu = 1.0;
-  // original_multi_build_syntheticTick_mu;//
-  const double numerical_trouble_tolerance = 1e-7;
-  const double original_multi_numerical_trouble_tolerance = 1e-8;
-  const double multi_numerical_trouble_tolerance = 1e-7;
-  // original_multi_numerical_trouble_tolerance;
-
-  const int synthetic_tick_reinversion_min_update_count = 50;
-  const int original_multi_synthetic_tick_reinversion_min_update_count = 201;
-  const int multi_synthetic_tick_reinversion_min_update_count =
-      synthetic_tick_reinversion_min_update_count;
-  // original_multi_synthetic_tick_reinversion_min_update_count;
-
   double build_syntheticTick;
   double total_syntheticTick;
 };

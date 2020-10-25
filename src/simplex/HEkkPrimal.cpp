@@ -477,6 +477,10 @@ void HEkkPrimal::rebuild() {
       simplex_info.primal_objective_value;
 
   reportRebuild(sv_invertHint);
+
+  ekk_instance_.build_syntheticTick_ = ekk_instance_.factor_.build_syntheticTick;
+  ekk_instance_.total_syntheticTick_ = 0;
+
   num_flip_since_rebuild = 0;
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
@@ -687,6 +691,8 @@ void HEkkPrimal::phase2Update() {
     numericalTrouble = 0;
     iterationAnalysis();
     num_flip_since_rebuild++;
+    // Update the synthetic clock
+    ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
     return;
   }
 
@@ -784,6 +790,11 @@ void HEkkPrimal::phase2Update() {
 
   // Report on the iteration
   iterationAnalysis();
+
+  // Update the synthetic clock
+  ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
+  ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
+
 }
 
 void HEkkPrimal::phase1ComputeDual() {
@@ -1088,6 +1099,8 @@ void HEkkPrimal::phase1Update() {
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
     }
+    // Update the synthetic clock
+    ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
     return;
   }
 
@@ -1169,6 +1182,10 @@ void HEkkPrimal::phase1Update() {
 
   // Report on the iteration
   iterationAnalysis();
+
+  // Update the synthetic clock
+  ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
+  ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
 
   // Recompute dual and primal
   if (invertHint == 0) {

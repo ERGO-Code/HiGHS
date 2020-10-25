@@ -1863,19 +1863,12 @@ void HDual::updatePivots() {
   // dualRHS.work_infeasibility
   dualRHS.updatePivots(
       rowOut, workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal);
+
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick;
   const bool performed_min_updates =
       workHMO.simplex_info_.update_count >=
       synthetic_tick_reinversion_min_update_count;
-#ifdef HiGHSDEV
-  if (rp_reinvert_syntheticClock)
-    printf(
-        "Synth Reinversion: total_syntheticTick = %11.4g >=? %11.4g = "
-        "build_syntheticTick: (%1d, %4d)\n",
-        total_syntheticTick, build_syntheticTick, reinvert_syntheticClock,
-        workHMO.simplex_info_.update_count);
-#endif
   if (reinvert_syntheticClock && performed_min_updates)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
 }

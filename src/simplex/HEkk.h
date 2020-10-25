@@ -54,6 +54,9 @@ class HEkk {
   HMatrix matrix_;
   HFactor factor_;
 
+  double build_syntheticTick_;
+  double total_syntheticTick_;
+
  private:
   HighsStatus initialise();
   void setSimplexOptions();
