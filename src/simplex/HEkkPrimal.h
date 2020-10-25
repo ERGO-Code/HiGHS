@@ -77,8 +77,8 @@ class HEkkPrimal {
   int phase1OutBnd;
   double thetaDual;
   double thetaPrimal;
-  double alpha;
-  //  double alphaRow;
+  double alphaCol;
+  double alphaRow;
   double numericalTrouble;
   int num_flip_since_rebuild;
   // Primal phase 1 tools

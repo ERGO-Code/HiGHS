@@ -298,6 +298,10 @@ void HEkkPrimal::solvePhase2() {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
+      const int ck_iter = 76;
+      if (ekk_instance_.iteration_count_ >= ck_iter) {
+	printf("Iteration %d\n", ck_iter);
+      }
       chooseColumn();
       if (columnIn == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
@@ -566,7 +570,7 @@ void HEkkPrimal::chooseRow() {
   double relaxSpace;
   for (int i = 0; i < col_aq.count; i++) {
     int index = col_aq.index[i];
-    alpha = col_aq.array[index] * moveIn;
+    double alpha = col_aq.array[index] * moveIn;
     if (alpha > alphaTol) {
       relaxSpace =
           baseValue[index] - baseLower[index] + primal_feasibility_tolerance;
@@ -583,7 +587,7 @@ void HEkkPrimal::chooseRow() {
   double bestAlpha = 0;
   for (int i = 0; i < col_aq.count; i++) {
     int index = col_aq.index[i];
-    alpha = col_aq.array[index] * moveIn;
+    double alpha = col_aq.array[index] * moveIn;
     if (alpha > alphaTol) {
       // Positive pivotal column entry
       double tightSpace = baseValue[index] - baseLower[index];
@@ -627,14 +631,14 @@ void HEkkPrimal::phase2Update() {
     thetaPrimal = moveIn * HIGHS_CONST_INF;
   } else {
     columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
-    alpha = col_aq.array[rowOut];
+    alphaCol = col_aq.array[rowOut];
     thetaPrimal = 0;
-    if (alpha * moveIn > 0) {
+    if (alphaCol * moveIn > 0) {
       // Lower bound
-      thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alpha;
+      thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
     } else {
       // Upper bound
-      thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alpha;
+      thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
     }
   }
 
@@ -682,6 +686,7 @@ void HEkkPrimal::phase2Update() {
   // If flipped, then no need touch the pivots
   if (flipped) {
     rowOut = -1;
+    alphaCol = 0;
     columnOut = columnIn;
     numericalTrouble = 0;
     iterationAnalysis();
@@ -702,7 +707,7 @@ void HEkkPrimal::phase2Update() {
   }
 
   // Pivot in
-  int sourceOut = alpha * moveIn > 0 ? -1 : 1;
+  int sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
   ekk_instance_.updatePivots(columnIn, rowOut, sourceOut);
 
   baseValue[rowOut] = valueIn;
@@ -746,7 +751,7 @@ void HEkkPrimal::phase2Update() {
   ekk_instance_.computeTableauRowFromPiP(row_ep, row_ap);
   analysis->simplexTimerStart(UpdateDualClock);
   //  double
-  thetaDual = workDual[columnIn] / alpha;
+  thetaDual = workDual[columnIn] / alphaCol;
   for (int i = 0; i < row_ap.count; i++) {
     int iCol = row_ap.index[i];
     workDual[iCol] -= thetaDual * row_ap.array[iCol];
@@ -760,7 +765,7 @@ void HEkkPrimal::phase2Update() {
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
-  updateVerify();
+  //  updateVerify();
 
   /* Update the devex weight */
   devexUpdate();
@@ -1043,12 +1048,12 @@ void HEkkPrimal::phase1Update() {
 
   // Compute the primal theta and see if we should have done a bound
   // flip instead
-  alpha = col_aq.array[rowOut];
+  alphaCol = col_aq.array[rowOut];
   thetaPrimal = 0.0;
   if (phase1OutBnd == 1) {
-    thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alpha;
+    thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
   } else {
-    thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alpha;
+    thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
   }
   assert(thetaPrimal > -HIGHS_CONST_INF && thetaPrimal < HIGHS_CONST_INF);
   double lowerIn = workLower[columnIn];
@@ -1059,18 +1064,19 @@ void HEkkPrimal::phase1Update() {
     workValue[columnIn] = upperIn;
     thetaPrimal = upperIn - lowerIn;
     ifFlip = 1;
-    ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = -1;
+    ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = NONBASIC_MOVE_DN;
   }
   if (moveIn == -1 && valueIn < lowerIn - primal_feasibility_tolerance) {
     workValue[columnIn] = lowerIn;
     thetaPrimal = lowerIn - upperIn;
     ifFlip = 1;
-    ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = +1;
+    ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = NONBASIC_MOVE_UP;
   }
 
   // Update for the flip case
   if (ifFlip) {
     rowOut = -1;
+    alphaCol = 0;
     columnOut = columnIn;
     numericalTrouble = 0;
     iterationAnalysis();
@@ -1134,7 +1140,7 @@ void HEkkPrimal::phase1Update() {
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
-  updateVerify();
+  //  updateVerify();
 
   // Update the devex weight
   devexUpdate();
@@ -1247,25 +1253,25 @@ void HEkkPrimal::devexUpdate() {
 void HEkkPrimal::updateVerify() {
   // updateVerify for primal
   numericalTrouble = 0;
-  double aCol = fabs(alpha);
-  double alphaRow;
-  bool column_in = columnIn < ekk_instance_.simplex_lp_.numCol_;
+  double abs_alpha_from_col = fabs(alphaCol);
+  bool column_in = columnIn < num_col;
   std::string alphaRow_source;
   if (column_in) {
     alphaRow = row_ap.array[columnIn];
     alphaRow_source = "Col";
   } else {
-    alphaRow = row_ep.array[rowOut];
+    alphaRow = row_ep.array[columnIn - num_col];
     alphaRow_source = "Row";
   }
-  double aRow = fabs(alphaRow);
-  double aDiff = fabs(aCol - aRow);
-  numericalTrouble = aDiff / min(aCol, aRow);
-  //  if (numericalTrouble > 1e-7)
+  double abs_alpha_from_row = fabs(alphaRow);
+  double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
+  double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
+  numericalTrouble = abs_alpha_diff / min_abs_alpha;
+  if (numericalTrouble > 1e-7)
     printf("Numerical check: Iter %4d: alphaCol = %12g, (From %3s alphaRow = %12g), aDiff = %12g: measure = %12g\n",
 	   ekk_instance_.iteration_count_,
-	   alpha, alphaRow_source.c_str(), alphaRow, aDiff, numericalTrouble);
-  assert(numericalTrouble<1);
+	   alphaCol, alphaRow_source.c_str(), alphaRow, abs_alpha_diff, numericalTrouble);
+  assert(numericalTrouble<1e-3);
   // Reinvert if the relative difference is large enough, and updates have been performed
   //
   //  if (numericalTrouble > 1e-7 && ekk_instance_.simplex_info_.update_count > 0) invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
@@ -1288,8 +1294,8 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->primal_delta = 0;
   analysis->primal_step = thetaPrimal;
   analysis->dual_step = thetaDual;
-  analysis->pivot_value_from_column = alpha;
-  analysis->pivot_value_from_row = alpha;
+  analysis->pivot_value_from_column = alphaCol;
+  analysis->pivot_value_from_row = alphaRow;
   analysis->numerical_trouble = 0;  // numericalTrouble;
   analysis->objective_value = simplex_info.updated_primal_objective_value;
   analysis->num_primal_infeasibilities =
@@ -1347,3 +1353,4 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message) {
   if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
   return HighsDebugStatus::OK;
 }
+
