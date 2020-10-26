@@ -700,30 +700,16 @@ void HEkkPrimal::phase2Update() {
   analysis->simplexTimerStop(CollectPrIfsClock);
 
   // 2. Now we can update the dual
-
-  analysis->simplexTimerStart(BtranClock);
-  row_ep.clear();
-  row_ap.clear();
-  row_ep.count = 1;
-  row_ep.index[0] = rowOut;
-  row_ep.array[rowOut] = 1;
-  row_ep.packFlag = true;
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
-                                    analysis->row_ep_density);
-#endif
-  ekk_instance_.factor_.btran(row_ep, analysis->row_ep_density,
-                              analysis->pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
-#endif
-  analysis->simplexTimerStop(BtranClock);
+  //
+  // BTRAN
+  //
+  // Compute unit BTran for tableau row and FT update
+  ekk_instance_.unitBtran(rowOut, row_ep);
   //
   // PRICE
   //
   ekk_instance_.computeTableauRowFromPiP(row_ep, row_ap);
+  // Now update the dual values
   analysis->simplexTimerStart(UpdateDualClock);
   thetaDual = workDual[columnIn] / alphaCol;
   for (int i = 0; i < row_ap.count; i++) {
@@ -800,14 +786,14 @@ void HEkkPrimal::phase1ComputeDual() {
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, buffer,
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer,
                                     analysis->row_ep_density);
 #endif
   ekk_instance_.factor_.btran(buffer, 1,
                               analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, buffer);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
 #endif
   analysis->simplexTimerStop(BtranClock);
 
@@ -817,7 +803,7 @@ void HEkkPrimal::phase1ComputeDual() {
   bufferLong.clear();
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, buffer,
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, buffer,
                                     0.0);
     analysis->num_col_price++;
   }
@@ -825,7 +811,7 @@ void HEkkPrimal::phase1ComputeDual() {
   ekk_instance_.matrix_.priceByColumn(bufferLong, buffer);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL, row_ap);
 #endif
   analysis->simplexTimerStop(PriceClock);
 
@@ -855,31 +841,6 @@ void HEkkPrimal::phase1ChooseRow() {
   //
   // Compute pivot column
   ekk_instance_.pivotColumnFtran(columnIn, col_aq);
-
-  /*
-  // Compute the transformed pivot column and update its density
-  analysis->simplexTimerStart(FtranClock);
-  col_aq.clear();
-  col_aq.packFlag = true;
-  ekk_instance_.matrix_.collect_aj(col_aq, columnIn, 1);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
-                                    analysis->col_aq_density);
-#endif
-  ekk_instance_.factor_.ftran(col_aq, analysis->col_aq_density,
-                              analysis->pointer_serial_factor_clocks);
-  analysis->simplexTimerStop(FtranClock);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
-#endif
-
-  const double local_col_aq_density = (double)col_aq.count / num_row;
-  analysis->updateOperationResultDensity(local_col_aq_density,
-                                         analysis->col_aq_density);
-  */
-
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
   thetaDual = simplex_info.workDual_[columnIn];

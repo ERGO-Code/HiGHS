@@ -715,7 +715,6 @@ void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
 #endif
   factor_.ftran(col_aq, analysis_.col_aq_density,
 		analysis_.pointer_serial_factor_clocks);
-  analysis_.simplexTimerStop(FtranClock);
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
@@ -724,6 +723,7 @@ void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
   const double local_col_aq_density = (double)col_aq.count / num_row;
   analysis_.updateOperationResultDensity(local_col_aq_density,
                                          analysis_.col_aq_density);
+  analysis_.simplexTimerStop(FtranClock);
 }
 
 void HEkk::unitBtran(const int iRow, HVector& row_ep) {
@@ -749,7 +749,6 @@ void HEkk::unitBtran(const int iRow, HVector& row_ep) {
   analysis_.updateOperationResultDensity(local_row_ep_density,
                                          analysis_.row_ep_density);
   analysis_.simplexTimerStop(BtranClock);
-
 }
 
 void HEkk::choosePriceTechnique(const int price_strategy,
