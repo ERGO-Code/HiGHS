@@ -2358,9 +2358,8 @@ double computeBasisCondition(const HighsModelObject& highs_model_object) {
   for (int r_n = 0; r_n < solver_num_row; r_n++) {
     double value = bs_cond_x[r_n];
     if (value) {
-      row_ep.index[row_ep.count] = r_n;
       row_ep.array[r_n] = value;
-      row_ep.count++;
+      row_ep.index[row_ep.count++] = r_n;
     }
   }
   for (int ps_n = 1; ps_n <= 5; ps_n++) {
@@ -2381,9 +2380,8 @@ double computeBasisCondition(const HighsModelObject& highs_model_object) {
     for (int r_n = 0; r_n < solver_num_row; r_n++) {
       double value = bs_cond_w[r_n];
       if (value) {
-        row_ep.index[row_ep.count] = r_n;
         row_ep.array[r_n] = value;
-        row_ep.count++;
+        row_ep.index[row_ep.count++] = r_n;
       }
     }
     row_ep.packFlag = false;
@@ -2996,9 +2994,8 @@ void computeDual(HighsModelObject& highs_model_object) {
         simplex_info.workCost_[simplex_basis.basicIndex_[iRow]] +
         simplex_info.workShift_[simplex_basis.basicIndex_[iRow]];
     if (value) {
-      dual_col.count++;
-      dual_col.index[iRow] = iRow;
       dual_col.array[iRow] = value;
+      dual_col.index[dual_col.count++] = iRow;
     }
   }
   // If debugging, take a copy of the basic costs and any previous duals

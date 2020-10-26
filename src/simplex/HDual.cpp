@@ -2368,9 +2368,8 @@ double HDual::computeExactDualObjectiveValue() {
     if (iVar < simplex_lp.numCol_) {
       const double value = simplex_lp.colCost_[iVar];
       if (value) {
-        dual_col.count++;
-        dual_col.index[iRow] = iRow;
         dual_col.array[iRow] = value;
+        dual_col.index[dual_col.count++] = iRow;
       }
     }
   }

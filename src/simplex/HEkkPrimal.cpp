@@ -589,7 +589,7 @@ void HEkkPrimal::phase2Update() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
 
   const int check_iter = -1;
-  if (ekk_instance_.iteration_count_ >= check_iter) {
+  if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Iter %d\n", check_iter);
   }
 
