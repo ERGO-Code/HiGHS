@@ -924,8 +924,7 @@ void HEkk::computeDual() {
         simplex_info_.workCost_[simplex_basis_.basicIndex_[iRow]] +
         simplex_info_.workShift_[simplex_basis_.basicIndex_[iRow]];
     if (value) {
-      dual_col.count++;
-      dual_col.index[iRow] = iRow;
+      dual_col.index[dual_col.count++] = iRow;
       dual_col.array[iRow] = value;
     }
   }

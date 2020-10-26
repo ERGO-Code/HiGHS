@@ -588,6 +588,11 @@ void HEkkPrimal::phase2Update() {
   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
 
+  const int check_iter = -1;
+  if (ekk_instance_.iteration_count_ >= check_iter) {
+    printf("Iter %d\n", check_iter);
+  }
+
   // Compute thetaPrimal
   int moveIn = thetaDual > 0 ? -1 : 1;
   if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
