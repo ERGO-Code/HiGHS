@@ -768,7 +768,6 @@ void HEkkPrimal::phase1ComputeDual() {
   vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
   workCost.assign(num_tot, 0);
 
-  analysis->simplexTimerStart(BtranClock);
   HVector buffer;
   buffer.setup(num_row);
   buffer.clear();
@@ -783,25 +782,17 @@ void HEkkPrimal::phase1ComputeDual() {
     buffer.array[iRow] = cost;
     workCost[ekk_instance_.simplex_basis_.basicIndex_[iRow]] = cost;
   }
-#ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer,
-                                    analysis->row_ep_density);
-#endif
-  ekk_instance_.factor_.btran(buffer, 1,
-                              analysis->pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
-#endif
-  analysis->simplexTimerStop(BtranClock);
+  // 
+  // Full BTRAN
+  // 
+  ekk_instance_.fullBtran(buffer);
 
   analysis->simplexTimerStart(PriceClock);
   HVector bufferLong;
   bufferLong.setup(num_col);
   bufferLong.clear();
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   if (simplex_info.analyse_iterations) {
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL, buffer,
                                     0.0);

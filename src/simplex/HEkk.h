@@ -80,6 +80,7 @@ class HEkk {
   void initialiseNonbasicWorkValue();
   void pivotColumnFtran(const int iCol, HVector& col_aq);
   void unitBtran(const int iRow, HVector& row_ep);
+  void fullBtran(HVector& buffer);
   void choosePriceTechnique(const int price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);

@@ -751,6 +751,26 @@ void HEkk::unitBtran(const int iRow, HVector& row_ep) {
   analysis_.simplexTimerStop(BtranClock);
 }
 
+void HEkk::fullBtran(HVector& buffer) {
+  analysis_.simplexTimerStart(BtranFullClock);
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations)
+    analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer,
+                                    analysis_.dual_col_density);
+#endif
+  factor_.btran(buffer, analysis_.dual_col_density,
+		analysis_.pointer_serial_factor_clocks);
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations)
+    analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
+#endif
+  const double local_dual_col_density =
+    (double)buffer.count / simplex_lp_.numRow_;
+  analysis_.updateOperationResultDensity(local_dual_col_density,
+					 analysis_.dual_col_density);
+  analysis_.simplexTimerStop(BtranFullClock);
+}
+
 void HEkk::choosePriceTechnique(const int price_strategy,
                                 const double row_ep_density,
                                 bool& use_col_price,

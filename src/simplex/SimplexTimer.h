@@ -81,9 +81,11 @@ enum iClockSimplex {
 
   Chuzc4Clock,             //!< CHUZC - Dual stage 4
   DevexWtClock,            //!< Calculation of Devex weight of entering variable
+  BtranClock,              //!< BTRAN - row p of inverse
+  BtranFullClock,          //!< BTRAN - full RHS
+  PriceClock,              //!< PRICE - row p of tableau
+  PriceFullClock,          //!< PRICE - full
   FtranClock,              //!< FTRAN - pivotal column
-  BtranClock,              //!< BTRAN
-  PriceClock,              //!< PRICE
   FtranDseClock,           //!< FTRAN for DSE weights
   FtranMixParClock,        //!< FTRAN for PAMI - parallel
   FtranMixFinalClock,      //!< FTRAN for PAMI - final
@@ -168,9 +170,11 @@ class SimplexTimer {
     clock[Chuzc3eClock] = timer.clock_def("CHUZC3e", "C3e");
     clock[Chuzc4Clock] = timer.clock_def("CHUZC4", "CC4");
     clock[DevexWtClock] = timer.clock_def("DEVEX_WT", "DWT");
-    clock[FtranClock] = timer.clock_def("FTRAN", "COL");
     clock[BtranClock] = timer.clock_def("BTRAN", "REP");
+    clock[BtranFullClock] = timer.clock_def("BTRAN_FULL", "BTF");
     clock[PriceClock] = timer.clock_def("PRICE", "RAP");
+    clock[PriceFullClock] = timer.clock_def("PRICE_FULL", "PCF");
+    clock[FtranClock] = timer.clock_def("FTRAN", "COL");
     clock[FtranDseClock] = timer.clock_def("FTRAN_DSE", "DSE");
     clock[FtranMixParClock] = timer.clock_def("FTRAN_MIX_PAR", "FMP");
     clock[FtranMixFinalClock] = timer.clock_def("FTRAN_MIX_FINAL", "FMF");
@@ -267,7 +271,9 @@ class SimplexTimer {
                                         Chuzr1Clock,
                                         Chuzr2Clock,
                                         BtranClock,
+                                        BtranFullClock,
                                         PriceClock,
+                                        PriceFullClock,
                                         ChuzcPrimalClock,
                                         Chuzc0Clock,
                                         Chuzc1Clock,
@@ -317,7 +323,9 @@ class SimplexTimer {
                                         Chuzr1Clock,
                                         Chuzr2Clock,
                                         BtranClock,
+                                        BtranFullClock,
                                         PriceClock,
+                                        PriceFullClock,
                                         ChuzcPrimalClock,
                                         Chuzc0Clock,
                                         PriceChuzc1Clock,
