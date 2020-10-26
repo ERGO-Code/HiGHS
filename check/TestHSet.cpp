@@ -37,7 +37,15 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   //  set.print();
   REQUIRE(set.remove(11));
   REQUIRE(set.remove(0));
+  // Confirm that 8 is in the set
+  REQUIRE(set.in(8));
   REQUIRE(set.remove(8));
+  // Confirm that 8 is not in the set
+  REQUIRE(!set.in(8));
+  // Confirm that entry too small is not in the set
+  REQUIRE(!set.in(-1));
+  // Confirm that entry too big is not in the set
+  REQUIRE(!set.in(999));
   REQUIRE(set.remove(5));
   REQUIRE(set.remove(99));
   REQUIRE(set.remove(1));

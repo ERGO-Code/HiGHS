@@ -133,7 +133,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     if (simplex_info.report_simplex_inner_clock) {
       SimplexTimer simplex_timer;
-      simplex_timer.reportSimplexInnerClock(ekk.analysis_.thread_simplex_clocks[0]);
+      simplex_timer.reportSimplexInnerClock(
+          ekk.analysis_.thread_simplex_clocks[0]);
     }
     analysis.simplexTimerStop(SimplexTotalClock);
 #endif

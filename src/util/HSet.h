@@ -55,6 +55,10 @@ class HSet {
    */
   bool remove(const int entry);
   /**
+   * @brief Returns whether entry is in the set
+   */
+  bool in(const int entry) const;
+  /**
    * @brief Returns the number of entries in the set
    */
   const int& count() const { return count_; }

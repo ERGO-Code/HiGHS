@@ -89,16 +89,16 @@ HighsSolutionParams HEkk::getSolutionParams() {
 HighsStatus HEkk::initialise() {
   if (initialiseSimplexLpBasisAndFactor() == HighsStatus::Error)
     return HighsStatus::Error;
-  initialiseMatrix(); // Timed
+  initialiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
   initialiseCost();
   initialiseBound();
   initialiseNonbasicWorkValue();
-  computePrimal(); // Timed
-  computeDual(); // Timed
-  computeSimplexInfeasible(); // Timed
-  computeDualObjectiveValue(); // Timed
-  computePrimalObjectiveValue(); // Timed
+  computePrimal();                // Timed
+  computeDual();                  // Timed
+  computeSimplexInfeasible();     // Timed
+  computeDualObjectiveValue();    // Timed
+  computePrimalObjectiveValue();  // Timed
   simplex_lp_status_.valid = true;
 
   bool primal_feasible = simplex_info_.num_primal_infeasibilities == 0;
@@ -131,7 +131,7 @@ void HEkk::setSimplexOptions() {
   bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info_.report_simplex_inner_clock = true;  //useful_analysis;  // 
+  simplex_info_.report_simplex_inner_clock = true;  // useful_analysis;  //
   simplex_info_.report_simplex_outer_clock = full_timing;
   simplex_info_.report_simplex_phases_clock = full_timing;
   simplex_info_.report_HFactor_clock = useful_analysis;  // full_timing;//
@@ -218,9 +218,7 @@ int HEkk::getFactor() {
     simplex_lp_status_.has_factor_arrays = true;
   }
   if (!simplex_lp_status_.has_invert) {
-    analysis_.simplexTimerStart(InvertClock);
     const int rank_deficiency = computeFactor();
-    analysis_.simplexTimerStop(InvertClock);
     if (rank_deficiency) {
       // Basis is rank deficient
       return rank_deficiency;
@@ -298,6 +296,7 @@ void HEkk::computeDualObjectiveValue(const int phase) {
 }
 
 int HEkk::computeFactor() {
+  analysis_.simplexTimerStart(InvertClock);
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -384,6 +383,7 @@ int HEkk::computeFactor() {
   // number of updates shouldn't be positive
   simplex_info_.update_count = 0;
 
+  analysis_.simplexTimerStop(InvertClock);
   return rank_deficiency;
 }
 
@@ -714,7 +714,7 @@ void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
                                     analysis_.col_aq_density);
 #endif
   factor_.ftran(col_aq, analysis_.col_aq_density,
-		analysis_.pointer_serial_factor_clocks);
+                analysis_.pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
@@ -739,7 +739,7 @@ void HEkk::unitBtran(const int iRow, HVector& row_ep) {
                                     analysis_.row_ep_density);
 #endif
   factor_.btran(row_ep, analysis_.row_ep_density,
-		analysis_.pointer_serial_factor_clocks);
+                analysis_.pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
@@ -759,15 +759,15 @@ void HEkk::fullBtran(HVector& buffer) {
                                     analysis_.dual_col_density);
 #endif
   factor_.btran(buffer, analysis_.dual_col_density,
-		analysis_.pointer_serial_factor_clocks);
+                analysis_.pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
 #endif
   const double local_dual_col_density =
-    (double)buffer.count / simplex_lp_.numRow_;
+      (double)buffer.count / simplex_lp_.numRow_;
   analysis_.updateOperationResultDensity(local_dual_col_density,
-					 analysis_.dual_col_density);
+                                         analysis_.dual_col_density);
   analysis_.simplexTimerStop(BtranFullClock);
 }
 
@@ -787,7 +787,8 @@ void HEkk::choosePriceTechnique(const int price_strategy,
       price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
 }
 
-void HEkk::computeTableauRowFromPiP(const HVector& row_ep, HVector& row_ap) {
+void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
+  analysis_.simplexTimerStart(PriceClock);
   const int solver_num_row = simplex_lp_.numRow_;
   const double local_density = 1.0 * row_ep.count / solver_num_row;
   bool use_col_price;
@@ -811,7 +812,6 @@ void HEkk::computeTableauRowFromPiP(const HVector& row_ep, HVector& row_ap) {
     }
   }
 #endif
-  analysis_.simplexTimerStart(PriceClock);
   row_ap.clear();
   if (use_col_price) {
     // Perform column-wise PRICE
@@ -850,6 +850,24 @@ void HEkk::computeTableauRowFromPiP(const HVector& row_ep, HVector& row_ap) {
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
 #endif
   analysis_.simplexTimerStop(PriceClock);
+}
+
+void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
+  analysis_.simplexTimerStart(PriceFullClock);
+  full_row.clear();
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations) {
+    analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
+                                    full_col, 0.0);
+  }
+#endif
+  matrix_.priceByColumn(full_row, full_col);
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations)
+    analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
+                                   full_row);
+#endif
+  analysis_.simplexTimerStop(PriceFullClock);
 }
 
 void HEkk::computePrimal() {

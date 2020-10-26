@@ -84,7 +84,8 @@ class HEkk {
   void choosePriceTechnique(const int price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);
-  void computeTableauRowFromPiP(const HVector& row_ep, HVector& row_ap);
+  void tableauRowPrice(const HVector& row_ep, HVector& row_ap);
+  void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
   void computeDual();
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);

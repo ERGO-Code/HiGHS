@@ -84,6 +84,12 @@ bool HSet::remove(const int entry) {
   return true;
 }
 
+bool HSet::in(const int entry) const {
+  if (entry < min_entry) return false;
+  if (entry > max_entry_) return false;
+  return pointer_[entry] != no_pointer;
+}
+
 bool HSet::debug() const {
   if (!setup_) {
     if (output_ != NULL) fprintf(output_, "HSet: ERROR setup_ not called\n");
