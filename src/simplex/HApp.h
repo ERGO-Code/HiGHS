@@ -111,10 +111,18 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     //    HEkk ekk(highs_model_object.simplex_lp_, highs_model_object.options_,
     //             highs_model_object.timer_);
     HEkk& ekk = highs_model_object.ekk_instance_;
+#ifdef HiGHSDEV
+    ekk.analysis_.simplexTimerStart(SimplexTotalClock);
+#endif
+    // Include the time for passLp since it includes timed simplex
+    // components called by ekk.initialise()
     ekk.passLp(highs_model_object.simplex_lp_);
     call_status = ekk.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkk::solve");
+#ifdef HiGHSDEV
+    ekk.analysis_.simplexTimerStop(SimplexTotalClock);
+#endif
     highs_model_object.scaled_model_status_ = ekk.scaled_model_status_;
     highs_model_object.scaled_solution_params_ = ekk.getSolutionParams();
     simplex_info = ekk.simplex_info_;
@@ -122,6 +130,13 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     //    highs_model_object.matrix_ = ekk.matrix_;
     highs_model_object.factor_ = ekk.factor_;
     highs_model_object.iteration_counts_.simplex = ekk.iteration_count_;
+#ifdef HiGHSDEV
+    if (simplex_info.report_simplex_inner_clock) {
+      SimplexTimer simplex_timer;
+      simplex_timer.reportSimplexInnerClock(ekk.analysis_.thread_simplex_clocks[0]);
+    }
+    analysis.simplexTimerStop(SimplexTotalClock);
+#endif
     return return_status;
   }
 

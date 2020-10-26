@@ -29,14 +29,13 @@ using std::endl;
 
 HighsStatus HEkk::passLp(const HighsLp& lp) {
   simplex_lp_ = lp;
-  initialise();
+  if (initialise() == HighsStatus::Error) return HighsStatus::Error;
   return HighsStatus::OK;
 }
 
 HighsStatus HEkk::initialiseSimplexLpBasisAndFactor() {
   setSimplexOptions();
   initialiseSimplexLpRandomVectors();
-  initialiseAnalysis();
   setBasis();
   const int rank_deficiency = getFactor();
   if (rank_deficiency) return HighsStatus::Error;
@@ -46,29 +45,9 @@ HighsStatus HEkk::initialiseSimplexLpBasisAndFactor() {
 }
 
 HighsStatus HEkk::solve() {
-  HighsLogMessage(
-      options_.logfile, HighsMessageType::INFO,
-      "HEkk::solve called for LP with %d columns, %d rows and %d entries",
-      simplex_lp_.numCol_, simplex_lp_.numRow_,
-      simplex_lp_.Astart_[simplex_lp_.numCol_]);
-
-  if (initialise() == HighsStatus::Error) return HighsStatus::Error;
   assert(simplex_lp_status_.has_basis);
   assert(simplex_lp_status_.has_invert);
   assert(simplex_lp_status_.valid);
-
-  HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                  "Initial basis has"
-                  " Primal: objective = %g; Infeasibilities %d / %g /%g;"
-                  " Dual: objective = %g; Infeasibilities %d / %g /%g",
-                  simplex_info_.primal_objective_value,
-                  simplex_info_.num_primal_infeasibilities,
-                  simplex_info_.max_primal_infeasibility,
-                  simplex_info_.sum_primal_infeasibilities,
-                  simplex_info_.dual_objective_value,
-                  simplex_info_.num_dual_infeasibilities,
-                  simplex_info_.max_dual_infeasibility,
-                  simplex_info_.sum_dual_infeasibilities);
   if (scaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
   HEkkPrimal primal(*this);
   HighsStatus return_status = primal.solve();
@@ -110,16 +89,16 @@ HighsSolutionParams HEkk::getSolutionParams() {
 HighsStatus HEkk::initialise() {
   if (initialiseSimplexLpBasisAndFactor() == HighsStatus::Error)
     return HighsStatus::Error;
-  initialiseMatrix();
+  initialiseMatrix(); // Timed
   allocateWorkAndBaseArrays();
   initialiseCost();
   initialiseBound();
   initialiseNonbasicWorkValue();
-  computePrimal();
-  computeDual();
-  computeSimplexInfeasible();
-  computeDualObjectiveValue();
-  computePrimalObjectiveValue();
+  computePrimal(); // Timed
+  computeDual(); // Timed
+  computeSimplexInfeasible(); // Timed
+  computeDualObjectiveValue(); // Timed
+  computePrimalObjectiveValue(); // Timed
   simplex_lp_status_.valid = true;
 
   bool primal_feasible = simplex_info_.num_primal_infeasibilities == 0;
@@ -127,9 +106,6 @@ HighsStatus HEkk::initialise() {
   scaled_model_status_ = HighsModelStatus::NOTSET;
   if (primal_feasible && dual_feasible)
     scaled_model_status_ = HighsModelStatus::OPTIMAL;
-
-  //  if (debugSimplexBasicSolution("After transition", ekk_instance_) ==
-  //  HighsDebugStatus::LOGICAL_ERROR) return HighsStatus::Error;
   return HighsStatus::OK;
 }
 
@@ -155,7 +131,7 @@ void HEkk::setSimplexOptions() {
   bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info_.report_simplex_inner_clock = useful_analysis;  // true;  //
+  simplex_info_.report_simplex_inner_clock = true;  //useful_analysis;  // 
   simplex_info_.report_simplex_outer_clock = full_timing;
   simplex_info_.report_simplex_phases_clock = full_timing;
   simplex_info_.report_HFactor_clock = useful_analysis;  // full_timing;//
@@ -727,6 +703,55 @@ void HEkk::initialiseNonbasicWorkValue() {
   }
 }
 
+void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
+  analysis_.simplexTimerStart(FtranClock);
+  col_aq.clear();
+  col_aq.packFlag = true;
+  matrix_.collect_aj(col_aq, iCol, 1);
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations)
+    analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
+                                    analysis_.col_aq_density);
+#endif
+  factor_.ftran(col_aq, analysis_.col_aq_density,
+		analysis_.pointer_serial_factor_clocks);
+  analysis_.simplexTimerStop(FtranClock);
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations)
+    analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
+#endif
+  int num_row = simplex_lp_.numRow_;
+  const double local_col_aq_density = (double)col_aq.count / num_row;
+  analysis_.updateOperationResultDensity(local_col_aq_density,
+                                         analysis_.col_aq_density);
+}
+
+void HEkk::unitBtran(const int iRow, HVector& row_ep) {
+  analysis_.simplexTimerStart(BtranClock);
+  row_ep.clear();
+  row_ep.count = 1;
+  row_ep.index[0] = iRow;
+  row_ep.array[iRow] = 1;
+  row_ep.packFlag = true;
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations)
+    analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
+                                    analysis_.row_ep_density);
+#endif
+  factor_.btran(row_ep, analysis_.row_ep_density,
+		analysis_.pointer_serial_factor_clocks);
+#ifdef HiGHSDEV
+  if (simplex_info_.analyse_iterations)
+    analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
+#endif
+  int num_row = simplex_lp_.numRow_;
+  const double local_row_ep_density = (double)row_ep.count / num_row;
+  analysis_.updateOperationResultDensity(local_row_ep_density,
+                                         analysis_.row_ep_density);
+  analysis_.simplexTimerStop(BtranClock);
+
+}
+
 void HEkk::choosePriceTechnique(const int price_strategy,
                                 const double row_ep_density,
                                 bool& use_col_price,
@@ -1212,11 +1237,6 @@ bool HEkk::bailoutOnTimeIterations() {
 
 HighsStatus HEkk::returnFromSolve(const HighsStatus return_status) {
   simplex_info_.valid_backtracking_basis_ = false;
-  HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                  "HEkk: Returning from solver with HighsModelStatus = %s and "
-                  "HighsStatus = %s",
-                  utilHighsModelStatusToString(scaled_model_status_).c_str(),
-                  HighsStatusToString(return_status).c_str());
   return return_status;
 }
 

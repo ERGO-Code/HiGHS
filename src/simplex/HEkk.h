@@ -24,7 +24,9 @@
 class HEkk {
  public:
   HEkk(HighsOptions& options, HighsTimer& timer)
-      : options_(options), timer_(timer), analysis_(timer) {}
+      : options_(options), timer_(timer), analysis_(timer) {
+    initialiseAnalysis();
+  }
   /**
    * @brief Interface to simplex solvers
    */
@@ -76,6 +78,8 @@ class HEkk {
   void initialisePhase2RowBound();
   void initialiseBound(const int phase = 2);
   void initialiseNonbasicWorkValue();
+  void pivotColumnFtran(const int iCol, HVector& col_aq);
+  void unitBtran(const int iRow, HVector& row_ep);
   void choosePriceTechnique(const int price_strategy,
                             const double row_ep_density, bool& use_col_price,
                             bool& use_row_price_w_switch);

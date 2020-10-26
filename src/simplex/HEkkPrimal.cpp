@@ -27,12 +27,6 @@ using std::runtime_error;
 
 HighsStatus HEkkPrimal::solve() {
   HighsOptions& options = ekk_instance_.options_;
-  HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
-  HighsLogMessage(
-      options.logfile, HighsMessageType::INFO,
-      "HEkkPrimal::solve called for LP with %d columns, %d rows and %d entries",
-      simplex_lp.numCol_, simplex_lp.numRow_,
-      simplex_lp.Astart_[simplex_lp.numCol_]);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
   // Assumes that the LP has a positive number of rows, since
@@ -92,7 +86,7 @@ HighsStatus HEkkPrimal::solve() {
     simplex_lp_status.has_primal_objective_value = false;
     if (solvePhase == SOLVE_PHASE_UNKNOWN) {
       // Reset the phase 2 bounds so that true number of dual
-      // infeasibilities canbe determined
+      // infeasibilities can be determined
       ekk_instance_.initialiseBound();
       // Determine the number of primal infeasibilities, and hence the solve
       // phase
@@ -528,6 +522,8 @@ void HEkkPrimal::chooseRow() {
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
   // Compute pivot column
+  ekk_instance_.pivotColumnFtran(columnIn, col_aq);
+  /*
   analysis->simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
@@ -548,7 +544,7 @@ void HEkkPrimal::chooseRow() {
   const double local_col_aq_density = (double)col_aq.count / num_row;
   analysis->updateOperationResultDensity(local_col_aq_density,
                                          analysis->col_aq_density);
-
+  */
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
   thetaDual = simplex_info.workDual_[columnIn];
@@ -1045,7 +1041,7 @@ void HEkkPrimal::phase1Update() {
   vector<double>& workDual = simplex_info.workDual_;
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
-  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
   // Identify the direction of movement
   const int moveIn = thetaDual > 0 ? -1 : 1;
@@ -1069,13 +1065,13 @@ void HEkkPrimal::phase1Update() {
     workValue[columnIn] = upperIn;
     thetaPrimal = upperIn - lowerIn;
     ifFlip = 1;
-    ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = NONBASIC_MOVE_DN;
+    nonbasicMove[columnIn] = NONBASIC_MOVE_DN;
   }
   if (moveIn == -1 && valueIn < lowerIn - primal_feasibility_tolerance) {
     workValue[columnIn] = lowerIn;
     thetaPrimal = lowerIn - upperIn;
     ifFlip = 1;
-    ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] = NONBASIC_MOVE_UP;
+    nonbasicMove[columnIn] = NONBASIC_MOVE_UP;
   }
 
   // Update for the flip case
@@ -1092,9 +1088,7 @@ void HEkkPrimal::phase1Update() {
       ekk_instance_.computeSimplexPrimalInfeasible();
       if (simplex_info.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
-        analysis->simplexTimerStart(ComputeDualClock);
         phase1ComputeDual();
-        analysis->simplexTimerStop(ComputeDualClock);
       } else {
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
@@ -1104,46 +1098,15 @@ void HEkkPrimal::phase1Update() {
     return;
   }
 
-  // Compute BTran for update LU
-  analysis->simplexTimerStart(BtranClock);
-  row_ep.clear();
-  row_ep.count = 1;
-  row_ep.index[0] = rowOut;
-  row_ep.array[rowOut] = 1;
-  row_ep.packFlag = true;
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
-                                    analysis->row_ep_density);
-#endif
-  ekk_instance_.factor_.btran(row_ep, analysis->row_ep_density,
-                              analysis->pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
-#endif
-  analysis->simplexTimerStop(BtranClock);
-
-  const double local_row_ep_density = (double)row_ep.count / num_row;
-  analysis->updateOperationResultDensity(local_row_ep_density,
-                                         analysis->row_ep_density);
-
-  // Compute the whole pivot row for updating the devex weight
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations) {
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
-                                    analysis->row_ap_density);
-    analysis->num_row_price++;
-  }
-#endif
-  analysis->simplexTimerStart(PriceClock);
-  row_ap.clear();
-  ekk_instance_.matrix_.priceByRowSparseResult(row_ap, row_ep);
-  analysis->simplexTimerStop(PriceClock);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep);
-#endif
+  //
+  // BTRAN
+  //
+  // Compute unit BTran for tableau row and FT update
+  ekk_instance_.unitBtran(rowOut, row_ep);
+  //
+  // PRICE
+  //
+  ekk_instance_.computeTableauRowFromPiP(row_ep, row_ap);
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
@@ -1193,9 +1156,7 @@ void HEkkPrimal::phase1Update() {
     ekk_instance_.computeSimplexPrimalInfeasible();
     if (simplex_info.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
-      analysis->simplexTimerStart(ComputeDualClock);
       phase1ComputeDual();
-      analysis->simplexTimerStop(ComputeDualClock);
     } else {
       // Crude way to force rebuild
       invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
