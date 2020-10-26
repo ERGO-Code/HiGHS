@@ -725,8 +725,8 @@ void HEkkPrimal::phase1ComputeDual() {
   HVector buffer;
   buffer.setup(num_row);
   buffer.clear();
+  buffer.count = 0;
   for (int iRow = 0; iRow < num_row; iRow++) {
-    buffer.index[iRow] = iRow;
     double cost = 0;
     if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
       cost = -1.0;
@@ -734,6 +734,7 @@ void HEkkPrimal::phase1ComputeDual() {
       cost = 1.0;
     }
     buffer.array[iRow] = cost;
+    if (cost) buffer.index[buffer.count++] = iRow;
     workCost[ekk_instance_.simplex_basis_.basicIndex_[iRow]] = cost;
   }
   //
@@ -922,6 +923,11 @@ void HEkkPrimal::phase1Update() {
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+
+  const int check_iter = -1;
+  if (ekk_instance_.iteration_count_ == check_iter) {
+    printf("Iter %d\n", check_iter);
+  }
 
   // Identify the direction of movement
   const int moveIn = thetaDual > 0 ? -1 : 1;

@@ -306,7 +306,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       "ekkDebugSimplex - %s: Iteration %d %-9s max primal residual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_primal_residual);
-
+  assert(max_primal_residual < excessive_residual_error);
   if (max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;

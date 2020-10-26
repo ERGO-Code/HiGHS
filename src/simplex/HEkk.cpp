@@ -752,6 +752,10 @@ void HEkk::unitBtran(const int iRow, HVector& row_ep) {
 }
 
 void HEkk::fullBtran(HVector& buffer) {
+  // Performs BTRAN on the buffer supplied. Make sure that
+  // buffer.count is large (>simplex_lp_.numRow_ to be sure) rather
+  // than 0 if the indices of the RHS (and true value of buffer.count)
+  // isn't known.
   analysis_.simplexTimerStart(BtranFullClock);
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations)
