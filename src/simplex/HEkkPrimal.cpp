@@ -520,31 +520,11 @@ void HEkkPrimal::chooseRow() {
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& baseValue = simplex_info.baseValue_;
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
-
+  //
+  // FTRAN
+  //
   // Compute pivot column
   ekk_instance_.pivotColumnFtran(columnIn, col_aq);
-  /*
-  analysis->simplexTimerStart(FtranClock);
-  col_aq.clear();
-  col_aq.packFlag = true;
-  ekk_instance_.matrix_.collect_aj(col_aq, columnIn, 1);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
-                                    analysis->col_aq_density);
-#endif
-  ekk_instance_.factor_.ftran(col_aq, analysis->col_aq_density,
-                              analysis->pointer_serial_factor_clocks);
-  analysis->simplexTimerStop(FtranClock);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
-#endif
-
-  const double local_col_aq_density = (double)col_aq.count / num_row;
-  analysis->updateOperationResultDensity(local_col_aq_density,
-                                         analysis->col_aq_density);
-  */
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
   thetaDual = simplex_info.workDual_[columnIn];
@@ -870,7 +850,13 @@ void HEkkPrimal::phase1ChooseRow() {
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& baseValue = simplex_info.baseValue_;
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  //
+  // FTRAN
+  //
+  // Compute pivot column
+  ekk_instance_.pivotColumnFtran(columnIn, col_aq);
 
+  /*
   // Compute the transformed pivot column and update its density
   analysis->simplexTimerStart(FtranClock);
   col_aq.clear();
@@ -892,6 +878,7 @@ void HEkkPrimal::phase1ChooseRow() {
   const double local_col_aq_density = (double)col_aq.count / num_row;
   analysis->updateOperationResultDensity(local_col_aq_density,
                                          analysis->col_aq_density);
+  */
 
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
