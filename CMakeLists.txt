@@ -431,7 +431,7 @@ endif()
 install(TARGETS libhighs EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include)
+        PUBLIC_HEADER DESTINATION include)
 
 # if (IPX_ON)
 #     install(TARGETS ipx EXPORT highs-targets

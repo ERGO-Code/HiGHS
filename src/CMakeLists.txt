@@ -424,18 +424,18 @@ target_sources(libhighs PRIVATE
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
+
 target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
                            presolve/ util/ test/ interfaces/ ../external/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
+
+set_target_properties(libhighs PROPERTIES PUBLIC_HEADER src/Highs.h)
 
 target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
 
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 if (IPX_ON)
     add_library(ipx OBJECT ${basiclu_sources} ${ipx_sources})
