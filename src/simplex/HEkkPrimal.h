@@ -44,18 +44,23 @@ class HEkkPrimal {
   void chooseColumn();
   void chooseRow();
   void phase2Update();
-  void phase1ComputeDual();
+  void phase1ComputeDual(const bool check_altWorkDual=false);
+  void primalPhase1Btran();
+  void primalPhase1Price();
   void phase1ChooseRow();
   void phase1Update();
+  void phase1UpdateDual();
   void devexReset();
   void devexUpdate();
   void updateVerify();
   void updatePrimal();
+  void phase2UpdatePrimal();
   void updateDual();
   void iterationAnalysisData();
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint = -1);
   void getNonbasicFreeColumnSet();
+  void getBasicPrimalInfeasibleSet();
   HighsDebugStatus debugPrimalSimplex(const std::string message);
   // References:
   HEkk& ekk_instance_;

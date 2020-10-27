@@ -429,7 +429,7 @@ void HEkkPrimal::rebuild() {
     simplex_info.update_count = 0;
   }
   ekk_instance_.computePrimal();
-  ekk_instance_.computeSimplexPrimalInfeasible();
+  getBasicPrimalInfeasibleSet();
   isPrimalPhase1 = 0;
   if (simplex_info.num_primal_infeasibilities > 0) {
     // Primal infeasibilities so in phase 1
@@ -590,7 +590,7 @@ void HEkkPrimal::phase2Update() {
   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
 
-  const int check_iter = 64;
+  const int check_iter = -1;
   if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Iter %d\n", check_iter);
   }
@@ -652,7 +652,7 @@ void HEkkPrimal::phase2Update() {
   //
   // Update primal values, and identify any infeasibilities
   //
-  updatePrimal();
+  phase2UpdatePrimal();
 
   // Why is the detailed primal infeasibility information needed?
   ekk_instance_.computeSimplexPrimalInfeasible();
@@ -720,10 +720,60 @@ void HEkkPrimal::phase2Update() {
   ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
 }
 
-void HEkkPrimal::phase1ComputeDual() {
+void HEkkPrimal::phase1UpdateDual() {
+  analysis->simplexTimerStart(UpdateDualPrimalPhase1Clock);
   const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
   const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
   const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
+  //  const vector<int>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
+  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
+  vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
+  // Identify all the feasibility changes, giving a value to
+  // col_primal_phase1 so that the duals can be updated and updating
+  // the set of basic primal infeasibilities,
+  col_primal_phase1.clear();
+  //  const int& num_basic_primal_infeasible = basic_primal_infeasible_set.count();
+  //  const vector<int>& basic_primal_infeasible_set_entry = basic_primal_infeasible_set.entry();
+
+  //  for (int ix = 0; ix < col_aq.count; ix++) {
+  //    int iRow = col_aq.index[ix];
+  for (int iRow=0; iRow < num_row; iRow++) {
+    int iCol = basicIndex[iRow];
+    double was_cost = workCost[iCol];
+    // Find the new cost
+    double cost = 0;
+    if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
+      cost = -1.0;
+    } else if (baseValue[iRow] > baseUpper[iRow] + dual_feasibility_tolerance) {
+      cost = 1.0;
+    }
+    workCost[iCol] = cost;
+    // Find the change in cost 
+    double delta_cost = cost - was_cost;
+    if (delta_cost) {
+      col_primal_phase1.array[iRow] = delta_cost;
+      col_primal_phase1.index[col_primal_phase1.count++] = iRow;
+    }
+  }
+  primalPhase1Btran();
+  primalPhase1Price();
+  vector<double>& workDualUpdated = ekk_instance_.simplex_info_.workDualUpdated_;
+  //  for (int ix=0; ix < row_primal_phase1.count; ix++) {
+  //    int iCol = row_primal_phase1.index[ix];
+  for (int iCol = 0; iCol < num_col; iCol++) 
+    workDualUpdated[iCol] -= row_primal_phase1.array[iCol];
+  for (int iCol = num_col; iCol < num_tot; iCol++)
+    workDualUpdated[iCol] -= col_primal_phase1.array[iCol - num_col];
+
+  analysis->simplexTimerStop(UpdateDualPrimalPhase1Clock);
+}
+
+void HEkkPrimal::phase1ComputeDual(const bool check_altWorkDual) {
+  const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
+  const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
+  const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
+  const vector<int>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
+  vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
 
   // Accumulate costs for checking
   vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
@@ -755,8 +805,6 @@ void HEkkPrimal::phase1ComputeDual() {
   bufferLong.setup(num_col);
   ekk_instance_.fullPrice(buffer, bufferLong);
 
-  const vector<int>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
-  vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   for (int iSeq = 0; iSeq < num_tot; iSeq++) {
     workDual[iSeq] = 0.0;
   }
@@ -767,7 +815,159 @@ void HEkkPrimal::phase1ComputeDual() {
     if (nonbasicFlag[iSeq]) workDual[iSeq] = -buffer.array[iRow];
   }
 
+
+  if (check_altWorkDual) {
+    vector<double>& workDualUpdated = ekk_instance_.simplex_info_.workDualUpdated_;
+    // Check
+    printf("Check updated dual: rowOut = %d; columnIn = %d\n", rowOut, columnIn);
+    double max_dual_error = 0;
+    for (int iCol=0; iCol<num_tot; iCol++) {
+      double dual_error = fabs(workDualUpdated[iCol] - workDual[iCol]);
+      //      if (dual_error>1e-10)
+	printf("Flag %d: dual_error[%d] = %9.4g from [Updated = %9.4g, True = %9.4g]\n",
+				   nonbasicFlag[iCol],
+				   iCol,dual_error,workDualUpdated[iCol], workDual[iCol]);
+      max_dual_error = max(dual_error, max_dual_error);
+    }
+    printf("Iteration %d: max_dual_error = %g\n", ekk_instance_.iteration_count_, max_dual_error);
+    assert(max_dual_error < 1e-10);
+  }
+
+
+
+  buffer.clear();
+  buffer.count = 0;
+  const int& num_basic_primal_infeasible = basic_primal_infeasible_set.count();
+  const vector<int>& basic_primal_infeasible_set_entry = basic_primal_infeasible_set.entry();
+  for (int ix = 0; ix < num_basic_primal_infeasible; ix++) {
+    int iRow = basic_primal_infeasible_set_entry[ix];
+    double cost;
+    if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
+      cost = -1.0;
+    } else {
+      // Must be above upper bound if not below lower
+      cost = 1.0;
+    }
+    int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
+    assert(cost == workCost[iCol]);
+    workCost[iCol] = cost;
+    buffer.array[iRow] = cost;
+    buffer.index[buffer.count++] = iRow;
+  }
+
+  for (int iRow = 0; iRow < num_row; iRow++) {
+    int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
+    double cost_error = fabs(workCost[iCol]-buffer.array[iRow]);
+    assert(!cost_error);
+  }
+  //
+  // Full BTRAN
+  //
+  ekk_instance_.fullBtran(buffer);
+  //
+  // Full PRICE
+  //
+  bufferLong.setup(num_col);
+  ekk_instance_.fullPrice(buffer, bufferLong);
+  vector<double>& workDualUpdated = ekk_instance_.simplex_info_.workDualUpdated_;
+  for (int iCol = 0; iCol < num_col; iCol++) {
+    workDualUpdated[iCol] = -nonbasicFlag[iCol]*bufferLong.array[iCol];
+  }
+  for (int iRow = 0, iCol = num_col; iRow < num_row; iRow++, iCol++) {
+    workDualUpdated[iCol] = -nonbasicFlag[iCol]*buffer.array[iRow];
+  }
+  for (int iCol = 0; iCol < num_tot; iCol++)
+    assert(workDualUpdated[iCol] == workDual[iCol]);
+
   ekk_instance_.computeSimplexDualInfeasible();
+}
+
+void HEkkPrimal::primalPhase1Btran() {
+  // Performs BTRAN on col_primal_phase1. Make sure that
+  // col_primal_phase1.count is large (>simplex_lp_.numRow_ to be
+  // sure) rather than 0 if the indices of the RHS (and true value of
+  // col_primal_phase1.count) isn't known.
+  analysis->simplexTimerStart(BtranPrimalPhase1Clock);
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const int solver_num_row = ekk_instance_.simplex_lp_.numRow_;
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_PRIMAL_PHASE1, col_primal_phase1,
+                                    analysis->col_primal_phase1_density);
+#endif
+  ekk_instance_.factor_.btran(col_primal_phase1, analysis->col_primal_phase1_density,
+			      analysis->pointer_serial_factor_clocks);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_PRIMAL_PHASE1, col_primal_phase1);
+#endif
+  const double local_col_primal_phase1_density =
+    (double)col_primal_phase1.count / solver_num_row;
+  analysis->updateOperationResultDensity(local_col_primal_phase1_density,
+                                         analysis->col_primal_phase1_density);
+  analysis->simplexTimerStop(BtranPrimalPhase1Clock);
+}
+
+void HEkkPrimal::primalPhase1Price() {
+  analysis->simplexTimerStart(PricePrimalPhase1Clock);
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const int solver_num_row = ekk_instance_.simplex_lp_.numRow_;
+  const int solver_num_col = ekk_instance_.simplex_lp_.numCol_;
+  const double local_density = 1.0 * col_primal_phase1.count / solver_num_row;
+  bool use_col_price;
+  bool use_row_price_w_switch;
+  ekk_instance_.choosePriceTechnique(simplex_info.price_strategy, local_density,
+				     use_col_price, use_row_price_w_switch);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations) {
+    if (use_col_price) {
+      const double historical_density_for_non_hypersparse_operation = 1;
+      analysis->operationRecordBefore(
+          ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1, col_primal_phase1,
+          historical_density_for_non_hypersparse_operation);
+      analysis->num_col_price++;
+    } else if (use_row_price_w_switch) {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1, col_primal_phase1,
+                                      analysis->col_primal_phase1_density);
+      analysis->num_row_price_with_switch++;
+    } else {
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1, col_primal_phase1,
+                                      analysis->col_primal_phase1_density);
+      analysis->num_row_price++;
+    }
+  }
+#endif
+  row_primal_phase1.clear();
+  if (use_col_price) {
+    // Perform column-wise PRICE
+    ekk_instance_.matrix_.priceByColumn(row_primal_phase1, col_primal_phase1);
+  } else if (use_row_price_w_switch) {
+    // Perform hyper-sparse row-wise PRICE, but switch if the density of row_primal_phase1
+    // becomes extreme
+    const double switch_density = ekk_instance_.matrix_.hyperPRICE;
+    ekk_instance_.matrix_.priceByRowSparseResultWithSwitch(
+        row_primal_phase1, col_primal_phase1, analysis->row_primal_phase1_density, 0, switch_density);
+  } else {
+    // Perform hyper-sparse row-wise PRICE
+    ekk_instance_.matrix_.priceByRowSparseResult(row_primal_phase1, col_primal_phase1);
+  }
+  if (use_col_price) {
+    // Column-wise PRICE computes components corresponding to basic
+    // variables, so zero these by exploiting the fact that, for basic
+    // variables, nonbasicFlag[*]=0
+    const int* nonbasicFlag = &ekk_instance_.simplex_basis_.nonbasicFlag_[0];
+    for (int col = 0; col < solver_num_col; col++)
+      row_primal_phase1.array[col] *= nonbasicFlag[col];
+  }
+  // Update the record of average row_primal_phase1 density
+  const double local_row_primal_phase1_density = (double)row_primal_phase1.count / solver_num_col;
+  analysis->updateOperationResultDensity(local_row_primal_phase1_density,
+                                         analysis->row_primal_phase1_density);
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_iterations)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1, row_primal_phase1);
+#endif
+  analysis->simplexTimerStop(PricePrimalPhase1Clock);
 }
 
 void HEkkPrimal::phase1ChooseRow() {
@@ -978,10 +1178,12 @@ void HEkkPrimal::phase1Update() {
     // Recompute things on flip
     if (invertHint == 0) {
       ekk_instance_.computePrimal();
-      ekk_instance_.computeSimplexPrimalInfeasible();
+      getBasicPrimalInfeasibleSet();
       if (simplex_info.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
-        phase1ComputeDual();
+	printf("phase1UpdateDual for flip in iteration %d\n", ekk_instance_.iteration_count_);
+        phase1UpdateDual();
+        phase1ComputeDual(); //true
       } else {
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
@@ -1046,10 +1248,12 @@ void HEkkPrimal::phase1Update() {
   // Recompute dual and primal
   if (invertHint == 0) {
     ekk_instance_.computePrimal();
-    ekk_instance_.computeSimplexPrimalInfeasible();
+    getBasicPrimalInfeasibleSet();
     if (simplex_info.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
-      phase1ComputeDual();
+      printf("phase1UpdateDual for basis change in iteration %d\n", ekk_instance_.iteration_count_);
+      phase1UpdateDual();
+      phase1ComputeDual(); //true
     } else {
       // Crude way to force rebuild
       invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
@@ -1147,6 +1351,23 @@ void HEkkPrimal::updateVerify() {
 }
 
 void HEkkPrimal::updatePrimal() {
+   analysis->simplexTimerStart(UpdatePrimalClock);
+   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
+   vector<double>& baseValueUpdated = ekk_instance_.simplex_info_.baseValueUpdated_;
+   const vector<double>& workValue = ekk_instance_.simplex_info_.workValue_;
+   for (int i = 0; i < col_aq.count; i++) {
+     int index = col_aq.index[i];
+     baseValueUpdated[index] = baseValue[index];
+     baseValueUpdated[index] -= thetaPrimal * col_aq.array[index];
+   }
+   if (rowOut >= 0) {
+    double valueIn = workValue[columnIn] + thetaPrimal;
+    baseValueUpdated[rowOut] = valueIn;
+   }   
+   analysis->simplexTimerStop(UpdatePrimalClock);
+}
+
+void HEkkPrimal::phase2UpdatePrimal() {
   analysis->simplexTimerStart(UpdatePrimalClock);
   const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
   const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
@@ -1278,6 +1499,43 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
         simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
     if (nonbasic_free) nonbasic_free_col_set.add(iVar);
   }
+}
+
+void HEkkPrimal::getBasicPrimalInfeasibleSet() {
+  // Gets the num/max/sum of basic primal infeasibliities,
+  // accumulating the indices of basic primal infeasibilities in
+  // basic_primal_infeasible_set
+  analysis->simplexTimerStart(ComputePrIfsClock);
+  basic_primal_infeasible_set.clear();
+  const double primal_feasibility_tolerance =
+      ekk_instance_.options_.primal_feasibility_tolerance;
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  const vector<double>& baseValue = simplex_info.baseValue_;
+  int& num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
+  double& max_primal_infeasibility = simplex_info.max_primal_infeasibility;
+  double& sum_primal_infeasibilities = simplex_info.sum_primal_infeasibilities;
+  num_primal_infeasibilities = 0;
+  max_primal_infeasibility = 0;
+  sum_primal_infeasibilities = 0;
+
+  for (int i = 0; i < num_row; i++) {
+    double value = baseValue[i];
+    double lower = baseLower[i];
+    double upper = baseUpper[i];
+    double primal_infeasibility = max(lower - value, value - upper);
+    if (primal_infeasibility > 0) {
+      if (primal_infeasibility > primal_feasibility_tolerance) {
+        num_primal_infeasibilities++;
+	basic_primal_infeasible_set.add(i);
+      }
+      max_primal_infeasibility =
+          std::max(primal_infeasibility, max_primal_infeasibility);
+      sum_primal_infeasibilities += primal_infeasibility;
+    }
+  }
+  analysis->simplexTimerStop(ComputePrIfsClock);
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message) {

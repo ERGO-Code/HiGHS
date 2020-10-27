@@ -103,6 +103,9 @@ struct HighsSimplexInfo {
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
+
+  std::vector<double> workDualUpdated_;
+  std::vector<double> baseValueUpdated_;
   //
   // Vectors of random reals for column cost perturbation, a random
   // permutation of all indices for CHUZR and a random permutation of

@@ -82,8 +82,10 @@ enum iClockSimplex {
   Chuzc4Clock,             //!< CHUZC - Dual stage 4
   DevexWtClock,            //!< Calculation of Devex weight of entering variable
   BtranClock,              //!< BTRAN - row p of inverse
+  BtranPrimalPhase1Clock,  //!< BTRAN - primal simplex phase 1
   BtranFullClock,          //!< BTRAN - full RHS
   PriceClock,              //!< PRICE - row p of tableau
+  PricePrimalPhase1Clock,  //!< PRICE - primal simplex phase 1
   PriceFullClock,          //!< PRICE - full
   FtranClock,              //!< FTRAN - pivotal column
   FtranDseClock,           //!< FTRAN for DSE weights
@@ -92,6 +94,7 @@ enum iClockSimplex {
   FtranBfrtClock,          //!< FTRAN for BFRT
   UpdateRowClock,          //!< Update of dual values
   UpdateDualClock,         //!< Update of dual values
+  UpdateDualPrimalPhase1Clock,         //!< Update of dual values in primal phase 1
   UpdatePrimalClock,       //!< Update of primal values
   DevexIzClock,            //!< Initialisation of new Devex framework
   DevexUpdateWeightClock,  //!< Update Devex weights
@@ -171,8 +174,10 @@ class SimplexTimer {
     clock[Chuzc4Clock] = timer.clock_def("CHUZC4", "CC4");
     clock[DevexWtClock] = timer.clock_def("DEVEX_WT", "DWT");
     clock[BtranClock] = timer.clock_def("BTRAN", "REP");
+    clock[BtranPrimalPhase1Clock] = timer.clock_def("BTRAN_PR_PH1", "BT1");
     clock[BtranFullClock] = timer.clock_def("BTRAN_FULL", "BTF");
     clock[PriceClock] = timer.clock_def("PRICE", "RAP");
+    clock[PricePrimalPhase1Clock] = timer.clock_def("PRICE_PR_PH1", "PC1");
     clock[PriceFullClock] = timer.clock_def("PRICE_FULL", "PCF");
     clock[FtranClock] = timer.clock_def("FTRAN", "COL");
     clock[FtranDseClock] = timer.clock_def("FTRAN_DSE", "DSE");
@@ -181,6 +186,7 @@ class SimplexTimer {
     clock[FtranBfrtClock] = timer.clock_def("FTRAN_BFRT", "BFR");
     clock[UpdateRowClock] = timer.clock_def("UPDATE_ROW", "UPR");
     clock[UpdateDualClock] = timer.clock_def("UPDATE_DUAL", "UPD");
+    clock[UpdateDualPrimalPhase1Clock] = timer.clock_def("UPDATE_DUAL_PRPH1", "UD1");
     clock[UpdatePrimalClock] = timer.clock_def("UPDATE_PRIMAL", "UPP");
     clock[DevexIzClock] = timer.clock_def("DEVEX_IZ", "DIZ");
     clock[DevexUpdateWeightClock] = timer.clock_def("DVX_UPDATE_WEIGHT", "UWS");
@@ -271,8 +277,10 @@ class SimplexTimer {
                                         Chuzr1Clock,
                                         Chuzr2Clock,
                                         BtranClock,
+                                        BtranPrimalPhase1Clock,
                                         BtranFullClock,
                                         PriceClock,
+                                        PricePrimalPhase1Clock,
                                         PriceFullClock,
                                         ChuzcPrimalClock,
                                         Chuzc0Clock,
@@ -285,6 +293,7 @@ class SimplexTimer {
                                         FtranBfrtClock,
                                         FtranDseClock,
                                         UpdateDualClock,
+                                        UpdateDualPrimalPhase1Clock,
                                         UpdatePrimalClock,
                                         DevexUpdateWeightClock,
                                         DseUpdateWeightClock,
@@ -311,13 +320,13 @@ class SimplexTimer {
         CollectPrIfsClock,    ComputePrIfsClock,  ComputeDuIfsClock,
         ComputeDuObjClock,    ComputePrObjClock,  ReportRebuildClock,
         ChuzrDualClock,       Chuzr1Clock,        Chuzr2Clock,
-        BtranClock,           BtranFullClock,     PriceClock,
-        PriceFullClock,       ChuzcPrimalClock,   Chuzc0Clock,
+        BtranClock,           BtranPrimalPhase1Clock,     BtranFullClock,     PriceClock,
+        PricePrimalPhase1Clock,       PriceFullClock,     ChuzcPrimalClock,   Chuzc0Clock,
         PriceChuzc1Clock,     Chuzc1Clock,        Chuzc2Clock,
         Chuzc3Clock,          Chuzc4Clock,        DevexWtClock,
         FtranClock,           FtranBfrtClock,     FtranDseClock,
         FtranMixParClock,     FtranMixFinalClock, UpdateRowClock,
-        UpdateDualClock,      UpdatePrimalClock,  DevexUpdateWeightClock,
+        UpdateDualClock,      UpdateDualPrimalPhase1Clock,      UpdatePrimalClock,  DevexUpdateWeightClock,
         DseUpdateWeightClock, DevexIzClock,       UpdatePivotsClock,
         UpdateFactorClock,    UpdateMatrixClock};
     reportSimplexClockList("SimplexMultiInner", simplex_clock_list,

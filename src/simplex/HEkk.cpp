@@ -478,6 +478,7 @@ void HEkk::allocateWorkAndBaseArrays() {
   simplex_info_.workCost_.resize(numTot);
   simplex_info_.workDual_.resize(numTot);
   simplex_info_.workShift_.resize(numTot);
+  simplex_info_.workDualUpdated_.resize(numTot);
 
   simplex_info_.workLower_.resize(numTot);
   simplex_info_.workUpper_.resize(numTot);
@@ -492,6 +493,7 @@ void HEkk::allocateWorkAndBaseArrays() {
   simplex_info_.baseLower_.resize(simplex_lp_.numRow_);
   simplex_info_.baseUpper_.resize(simplex_lp_.numRow_);
   simplex_info_.baseValue_.resize(simplex_lp_.numRow_);
+  simplex_info_.baseValueUpdated_.resize(simplex_lp_.numRow_);
 }
 
 void HEkk::initialisePhase2ColBound() {
