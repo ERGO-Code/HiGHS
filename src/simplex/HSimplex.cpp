@@ -2920,8 +2920,9 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
   if (simplex_info.analyse_iterations) {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
-      analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
-                                     historical_density_for_non_hypersparse_operation);
+      analysis.operationRecordBefore(
+          ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
+          historical_density_for_non_hypersparse_operation);
       analysis.num_col_price++;
     } else if (use_row_price_w_switch) {
       analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
@@ -3032,8 +3033,9 @@ void computeDual(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     const double historical_density_for_non_hypersparse_operation = 1;
     if (simplex_info.analyse_iterations)
-      analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-                                     dual_row, historical_density_for_non_hypersparse_operation);
+      analysis.operationRecordBefore(
+          ANALYSIS_OPERATION_TYPE_PRICE_FULL, dual_row,
+          historical_density_for_non_hypersparse_operation);
 #endif
     matrix.priceByColumn(dual_row, dual_col);
 #ifdef HiGHSDEV

@@ -221,7 +221,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_basic_dual);
   assert(max_basic_dual < excessive_basic_dual);
-  // Check any assumed feasibility 
+  // Check any assumed feasibility
   bool require_primal_feasible_in_primal_simplex =
       algorithm == SimplexAlgorithm::PRIMAL && (phase == 0 || phase == 2);
   bool require_primal_feasible_in_dual_simplex =
@@ -970,5 +970,4 @@ HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance) {
   }
   */
   return HighsDebugStatus::OK;
-
 }

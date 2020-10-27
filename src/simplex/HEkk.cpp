@@ -804,8 +804,9 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   if (simplex_info_.analyse_iterations) {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
-      analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
-                                      historical_density_for_non_hypersparse_operation);
+      analysis_.operationRecordBefore(
+          ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
+          historical_density_for_non_hypersparse_operation);
       analysis_.num_col_price++;
     } else if (use_row_price_w_switch) {
       analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
@@ -857,8 +858,9 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations) {
     const double historical_density_for_non_hypersparse_operation = 1;
-    analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-                                    full_col, historical_density_for_non_hypersparse_operation);
+    analysis_.operationRecordBefore(
+        ANALYSIS_OPERATION_TYPE_PRICE_FULL, full_col,
+        historical_density_for_non_hypersparse_operation);
   }
 #endif
   matrix_.priceByColumn(full_row, full_col);
@@ -934,9 +936,9 @@ void HEkk::computeDual() {
     HVector dual_row;
     dual_row.setup(simplex_lp_.numCol_);
     fullPrice(dual_col, dual_row);
-    for (int i = 0; i < simplex_lp_.numCol_; i++) 
+    for (int i = 0; i < simplex_lp_.numCol_; i++)
       simplex_info_.workDual_[i] -= dual_row.array[i];
-    for (int i = simplex_lp_.numCol_; i < numTot; i++) 
+    for (int i = simplex_lp_.numCol_; i < numTot; i++)
       simplex_info_.workDual_[i] -= dual_col.array[i - simplex_lp_.numCol_];
   }
   // Now have nonbasic duals
