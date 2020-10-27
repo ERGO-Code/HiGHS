@@ -2379,8 +2379,8 @@ double HDual::computeExactDualObjectiveValue() {
   dual_row.setup(simplex_lp.numCol_);
   dual_row.clear();
   if (dual_col.count) {
-    const double NoDensity = 1;
-    factor.btran(dual_col, NoDensity);
+    const double historical_density_for_non_hypersparse_operation = 1;
+    factor.btran(dual_col, historical_density_for_non_hypersparse_operation);
     matrix.priceByColumn(dual_row, dual_col);
   }
   double dual_objective = simplex_lp.offset_;

@@ -803,8 +803,9 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations) {
     if (use_col_price) {
+      const double historical_density_for_non_hypersparse_operation = 1;
       analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
-                                      0.0);
+                                      historical_density_for_non_hypersparse_operation);
       analysis_.num_col_price++;
     } else if (use_row_price_w_switch) {
       analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
@@ -839,11 +840,6 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
     for (int col = 0; col < solver_num_col; col++)
       row_ap.array[col] *= nonbasicFlag[col];
   }
-#ifdef HiGHSDEV
-  // Possibly analyse the error in the result of PRICE
-  const bool analyse_price_error = false;
-  if (analyse_price_error) matrix_.debugPriceResult(row_ap, row_ep);
-#endif
   // Update the record of average row_ap density
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
   analysis_.updateOperationResultDensity(local_row_ap_density,
@@ -859,9 +855,11 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   analysis_.simplexTimerStart(PriceFullClock);
   full_row.clear();
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (simplex_info_.analyse_iterations) {
+    const double historical_density_for_non_hypersparse_operation = 1;
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-                                    full_col, 0.0);
+                                    full_col, historical_density_for_non_hypersparse_operation);
+  }
 #endif
   matrix_.priceByColumn(full_row, full_col);
   // Column-wise PRICE computes components corresponding to basic
@@ -888,11 +886,6 @@ void HEkk::computePrimal() {
       matrix_.collect_aj(primal_col, i, simplex_info_.workValue_[i]);
     }
   }
-  // If debugging, take a copy of the RHS
-  vector<double> debug_primal_rhs;
-  if (options_.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY)
-    debug_primal_rhs = primal_col.array;
-
   // It's possible that the buffer has no nonzeros, so performing
   // FTRAN is unnecessary. Not much of a saving, but the zero density
   // looks odd in the analysis!
@@ -910,7 +903,6 @@ void HEkk::computePrimal() {
     simplex_info_.baseLower_[i] = simplex_info_.workLower_[iCol];
     simplex_info_.baseUpper_[i] = simplex_info_.workUpper_[iCol];
   }
-  //  debugComputePrimal(ekk_instance_, debug_primal_rhs);
   // Now have basic primals
   simplex_lp_status_.has_basic_primal_values = true;
   analysis_.simplexTimerStop(ComputePrimalClock);
@@ -931,64 +923,21 @@ void HEkk::computeDual() {
       dual_col.array[iRow] = value;
     }
   }
-  // If debugging, take a copy of the basic costs and any previous duals
-  vector<double> debug_previous_workDual;
-  vector<double> debug_basic_costs;
-  if (options_.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY) {
-    debug_basic_costs = dual_col.array;
-    if (simplex_lp_status_.has_nonbasic_dual_values)
-      debug_previous_workDual = simplex_info_.workDual_;
-  }
   // Copy the costs in case the basic costs are all zero
   const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   for (int i = 0; i < numTot; i++)
     simplex_info_.workDual_[i] = simplex_info_.workCost_[i];
+
   if (dual_col.count) {
-    // RHS of row dual calculation is nonzero
-#ifdef HiGHSDEV
-    if (simplex_info_.analyse_iterations)
-      analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL,
-                                      dual_col, analysis_.dual_col_density);
-#endif
-    factor_.btran(dual_col, analysis_.dual_col_density,
-                  analysis_.pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
-    if (simplex_info_.analyse_iterations)
-      analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL,
-                                     dual_col);
-#endif
-    const double local_dual_col_density =
-        (double)dual_col.count / simplex_lp_.numRow_;
-    analysis_.updateOperationResultDensity(local_dual_col_density,
-                                           analysis_.dual_col_density);
+    fullBtran(dual_col);
     // Create a local buffer for the values of reduced costs
     HVector dual_row;
     dual_row.setup(simplex_lp_.numCol_);
-    dual_row.clear();
-#ifdef HiGHSDEV
-    double price_full_historical_density = 1;
-    if (simplex_info_.analyse_iterations)
-      analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-                                      dual_row, price_full_historical_density);
-#endif
-    matrix_.priceByColumn(dual_row, dual_col);
-#ifdef HiGHSDEV
-    if (simplex_info_.analyse_iterations)
-      analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-                                     dual_row);
-#endif
+    fullPrice(dual_col, dual_row);
     for (int i = 0; i < simplex_lp_.numCol_; i++) 
       simplex_info_.workDual_[i] -= dual_row.array[i];
-    //      simplex_info_.workDual_[i] *= simplex_basis_.nonbasicFlag_[i]; 
-    //    }
     for (int i = simplex_lp_.numCol_; i < numTot; i++) 
       simplex_info_.workDual_[i] -= dual_col.array[i - simplex_lp_.numCol_];
-    //      simplex_info_.workDual_[i] *= simplex_basis_.nonbasicFlag_[i]; 
-    //    }
-
-    // Possibly analyse the computed dual values
-    //    debugComputeDual(ekk_instance_, debug_previous_workDual,
-    //                     debug_basic_costs, dual_col.array);
   }
   // Now have nonbasic duals
   simplex_lp_status_.has_nonbasic_dual_values = true;
@@ -1127,10 +1076,6 @@ void HEkk::computeSimplexDualInfeasible() {
   // nonbasicMove=0 so that no dual infeasibility is counted for them.
   const double scaled_dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
-  // Possibly verify that nonbasicMove is correct for fixed variables
-  //
-  //  debugFixedNonbasicMove();
-
   int& num_dual_infeasibilities = simplex_info_.num_dual_infeasibilities;
   double& max_dual_infeasibility = simplex_info_.max_dual_infeasibility;
   double& sum_dual_infeasibilities = simplex_info_.sum_dual_infeasibilities;
@@ -1170,9 +1115,6 @@ void HEkk::computeSimplexLpDualInfeasible() {
   // primal variable at the bound corresponding to the sign of the
   // dual so should only be used in dual phase 1 - where it's only
   // used for reporting after rebuilds.
-  // Possibly verify that nonbasicMove is correct for fixed variables
-  //
-  //  debugFixedNonbasicMove();
   const double scaled_dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
   int& num_dual_infeasibilities =

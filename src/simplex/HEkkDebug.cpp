@@ -201,7 +201,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       sum_primal_infeasibility += primal_infeasibility;
     }
   }
-
+  // Report on basic dual values
   if (max_basic_dual > excessive_basic_dual) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
@@ -215,17 +215,13 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     report_level = ML_VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
-
   HighsPrintMessage(
       options.output, options.message_level, report_level,
       "ekkDebugSimplex - %s: Iteration %d %-9s max   basic dual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_basic_dual);
   assert(max_basic_dual < excessive_basic_dual);
-
-
-
-
+  // Check any assumed feasibility 
   bool require_primal_feasible_in_primal_simplex =
       algorithm == SimplexAlgorithm::PRIMAL && (phase == 0 || phase == 2);
   bool require_primal_feasible_in_dual_simplex =
@@ -948,4 +944,31 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
     }
   }
   return HighsDebugStatus::OK;
+}
+
+HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance) {
+  /*
+  printf("Checking row-wise matrix\n");
+  for (int row = 0; row < numRow; row++) {
+    for (int el = ARstart[row]; el < AR_Nend[row]; el++) {
+      int col = ARindex[el];
+      if (!nonbasicFlag_[col]) {
+        printf("Row-wise matrix error: col %d, (el = %d for row %d) is basic\n",
+               col, el, row);
+        return false;
+      }
+    }
+    for (int el = AR_Nend[row]; el < ARstart[row + 1]; el++) {
+      int col = ARindex[el];
+      if (nonbasicFlag_[col]) {
+        printf(
+            "Row-wise matrix error: col %d, (el = %d for row %d) is nonbasic\n",
+            col, el, row);
+        return false;
+      }
+    }
+  }
+  */
+  return HighsDebugStatus::OK;
+
 }

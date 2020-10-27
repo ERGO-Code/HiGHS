@@ -17,8 +17,6 @@
 
 #include <vector>
 
-#include "HConfig.h"
-
 class HVector;
 
 /**
@@ -134,12 +132,6 @@ class HMatrix {
    * @brief Get the pointer to the values of the column-wise matrix
    */
   const double* getAvalue() const { return &Avalue[0]; }
-
-#ifdef HiGHSDEV
-  bool debugRowMatrix(const int* nonbasicFlag);
-  bool debugPriceResult(HVector& row_ap, const HVector& row_ep) const;
-  bool debugPriceResultCore(HVector& row_ap, const HVector& row_ep) const;
-#endif
 
   /**
    * @brief Density of result at which it is not worth maintaing

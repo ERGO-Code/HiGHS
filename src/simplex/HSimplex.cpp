@@ -2919,8 +2919,9 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     if (use_col_price) {
+      const double historical_density_for_non_hypersparse_operation = 1;
       analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
-                                     0.0);
+                                     historical_density_for_non_hypersparse_operation);
       analysis.num_col_price++;
     } else if (use_row_price_w_switch) {
       analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ep,
@@ -2959,11 +2960,6 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
     for (int col = 0; col < solver_num_col; col++)
       row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
   }
-#ifdef HiGHSDEV
-  // Possibly analyse the error in the result of PRICE
-  const bool analyse_price_error = false;
-  if (analyse_price_error) matrix->debugPriceResult(row_ap, row_ep);
-#endif
   // Update the record of average row_ap density
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
   analysis.updateOperationResultDensity(local_row_ap_density,
@@ -3034,10 +3030,10 @@ void computeDual(HighsModelObject& highs_model_object) {
     dual_row.setup(simplex_lp.numCol_);
     dual_row.clear();
 #ifdef HiGHSDEV
-    double price_full_historical_density = 1;
+    const double historical_density_for_non_hypersparse_operation = 1;
     if (simplex_info.analyse_iterations)
       analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
-                                     dual_row, price_full_historical_density);
+                                     dual_row, historical_density_for_non_hypersparse_operation);
 #endif
     matrix.priceByColumn(dual_row, dual_col);
 #ifdef HiGHSDEV
