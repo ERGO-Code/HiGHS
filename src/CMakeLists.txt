@@ -386,6 +386,7 @@ target_sources(libhighs PRIVATE
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
+    lp_data/HighsRanging.cpp
     lp_data/HighsSolution.cpp
     lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
