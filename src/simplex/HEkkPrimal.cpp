@@ -12,16 +12,13 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HEkkPrimal.h"
-
 #include "simplex/HEkkDebug.h"
 
 //#include <cassert>
 //#include <cstdio>
 //#include <iostream>
 
-//#include "simplex/HSimplexDebug.h"
 #include "simplex/SimplexTimer.h"
-//#include "util/HighsUtils.h"
 
 using std::runtime_error;
 
@@ -588,7 +585,7 @@ void HEkkPrimal::phase2Update() {
   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
 
-  const int check_iter = -1;
+  const int check_iter = 64;
   if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Iter %d\n", check_iter);
   }
@@ -1202,6 +1199,7 @@ void HEkkPrimal::updateDual() {
     int iGet = row_ep.index[i];
     int iCol = iGet + num_col;
     workDual[iCol] -= thetaDual * row_ep.array[iGet];
+    //    workDual[iCol] *= ekk_instance_.simplex_basis_.nonbasicFlag_[iCol];
   }
   // Dual for the pivot
   workDual[columnIn] = 0;

@@ -24,6 +24,9 @@
 using std::fabs;
 using std::max;
 
+const double large_basic_dual = 1e-12;
+const double excessive_basic_dual = sqrt(large_basic_dual);
+
 const double large_residual_error = 1e-12;
 const double excessive_residual_error = sqrt(large_residual_error);
 
@@ -50,6 +53,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   const int num_row = simplex_lp.numRow_;
   const int num_tot = num_col + num_row;
   const int iteration_count = ekk_instance.iteration_count_;
+  std::string value_adjective;
+  int report_level;
 
   // Check the nonbasic flags are all NONBASIC_FLAG_TRUE or NONBASIC_FLAG_FALSE
   for (int iVar = 0; iVar < num_tot; iVar++) {
@@ -129,6 +134,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
   }
   // Check the basic variables
+  double max_basic_dual = 0;
   for (int iRow = 0; iRow < num_row; iRow++) {
     int iVar = simplex_basis.basicIndex_[iRow];
     // For basic variables, check that the nonbasic flag isn't set,
@@ -166,17 +172,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       assert(!baseBound_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
-    // Until basic duals are zeroed
-    bool dual_error = fabs(dual) > 1e-6;
-    if (dual_error) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "ekkDebugSimplex - %s: Iteration %d Basic variable %d "
-                      "(in row %d) has dual %g",
-                      message.c_str(), iteration_count, iVar, iRow, dual);
-      assert(!dual_error);
-      return HighsDebugStatus::LOGICAL_ERROR;
-    }
-
+    max_basic_dual = max(fabs(dual), max_basic_dual);
     if (value < lower - primal_feasibility_tolerance) {
       primal_infeasibility = value - lower;
       primal_phase1_cost = -1;
@@ -205,6 +201,31 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       sum_primal_infeasibility += primal_infeasibility;
     }
   }
+
+  if (max_basic_dual > excessive_basic_dual) {
+    value_adjective = "Excessive";
+    report_level = ML_ALWAYS;
+    return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
+  } else if (max_basic_dual > large_basic_dual) {
+    value_adjective = "Large";
+    report_level = ML_DETAILED;
+    return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
+  } else {
+    value_adjective = "OK";
+    report_level = ML_VERBOSE;
+    return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
+  }
+
+  HighsPrintMessage(
+      options.output, options.message_level, report_level,
+      "ekkDebugSimplex - %s: Iteration %d %-9s max   basic dual = %9.4g\n",
+      message.c_str(), iteration_count, value_adjective.c_str(),
+      max_basic_dual);
+  assert(max_basic_dual < excessive_basic_dual);
+
+
+
+
   bool require_primal_feasible_in_primal_simplex =
       algorithm == SimplexAlgorithm::PRIMAL && (phase == 0 || phase == 2);
   bool require_primal_feasible_in_dual_simplex =
@@ -286,8 +307,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     double primal_residual = fabs(primal_activity[iRow] + primal_value[iVar]);
     max_primal_residual = max(primal_residual, max_primal_residual);
   }
-  std::string value_adjective;
-  int report_level;
   if (max_primal_residual > excessive_residual_error) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
@@ -297,7 +316,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     report_level = ML_DETAILED;
     return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
   } else {
-    value_adjective = "";
+    value_adjective = "OK";
     report_level = ML_VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
@@ -316,7 +335,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     report_level = ML_DETAILED;
     return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
   } else {
-    value_adjective = "";
+    value_adjective = "OK";
     report_level = ML_VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
@@ -325,6 +344,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       "ekkDebugSimplex - %s: Iteration %d %-9s max   dual residual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_dual_residual);
+  assert(max_dual_residual < excessive_residual_error);
   return return_status;
 }
 

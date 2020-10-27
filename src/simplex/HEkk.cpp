@@ -794,6 +794,7 @@ void HEkk::choosePriceTechnique(const int price_strategy,
 void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   analysis_.simplexTimerStart(PriceClock);
   const int solver_num_row = simplex_lp_.numRow_;
+  const int solver_num_col = simplex_lp_.numCol_;
   const double local_density = 1.0 * row_ep.count / solver_num_row;
   bool use_col_price;
   bool use_row_price_w_switch;
@@ -830,15 +831,13 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
     // Perform hyper-sparse row-wise PRICE
     matrix_.priceByRowSparseResult(row_ap, row_ep);
   }
-
-  const int solver_num_col = simplex_lp_.numCol_;
   if (use_col_price) {
-    // Column-wise PRICE computes components of row_ap corresponding
-    // to basic variables, so zero these by exploiting the fact that,
-    // for basic variables, nonbasicFlag[*]=0
+    // Column-wise PRICE computes components corresponding to basic
+    // variables, so zero these by exploiting the fact that, for basic
+    // variables, nonbasicFlag[*]=0
     const int* nonbasicFlag = &simplex_basis_.nonbasicFlag_[0];
     for (int col = 0; col < solver_num_col; col++)
-      row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
+      row_ap.array[col] *= nonbasicFlag[col];
   }
 #ifdef HiGHSDEV
   // Possibly analyse the error in the result of PRICE
@@ -860,12 +859,16 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   analysis_.simplexTimerStart(PriceFullClock);
   full_row.clear();
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations) {
+  if (simplex_info_.analyse_iterations)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
                                     full_col, 0.0);
-  }
 #endif
   matrix_.priceByColumn(full_row, full_col);
+  // Column-wise PRICE computes components corresponding to basic
+  // variables, so zero these by exploiting the fact that, for basic
+  // variables, nonbasicFlag[*]=0
+  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++)
+    full_row.array[iCol] *= simplex_basis_.nonbasicFlag_[iCol];
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
@@ -974,10 +977,15 @@ void HEkk::computeDual() {
       analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
                                      dual_row);
 #endif
-    for (int i = 0; i < simplex_lp_.numCol_; i++)
+    for (int i = 0; i < simplex_lp_.numCol_; i++) 
       simplex_info_.workDual_[i] -= dual_row.array[i];
-    for (int i = simplex_lp_.numCol_; i < numTot; i++)
+    //      simplex_info_.workDual_[i] *= simplex_basis_.nonbasicFlag_[i]; 
+    //    }
+    for (int i = simplex_lp_.numCol_; i < numTot; i++) 
       simplex_info_.workDual_[i] -= dual_col.array[i - simplex_lp_.numCol_];
+    //      simplex_info_.workDual_[i] *= simplex_basis_.nonbasicFlag_[i]; 
+    //    }
+
     // Possibly analyse the computed dual values
     //    debugComputeDual(ekk_instance_, debug_previous_workDual,
     //                     debug_basic_costs, dual_col.array);
