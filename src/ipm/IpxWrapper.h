@@ -191,32 +191,32 @@ HighsStatus reportIpxSolveStatus(const HighsOptions& options,
   } else if (solve_status == IPX_STATUS_stopped) {
     HighsLogMessage(options.logfile, HighsMessageType::WARNING, "Ipx: Stopped");
     return HighsStatus::Warning;
-  } else if (solve_status == IPX_STATUS_invalid_input) {
-    if (error_flag == IPX_ERROR_argument_null) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - argument_null");
-      return HighsStatus::Error;
-    } else if (error_flag == IPX_ERROR_invalid_dimension) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - invalid dimension");
-      return HighsStatus::Error;
-    } else if (error_flag == IPX_ERROR_invalid_matrix) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - invalid matrix");
-      return HighsStatus::Error;
-    } else if (error_flag == IPX_ERROR_invalid_vector) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - invalid vector");
-      return HighsStatus::Error;
-    } else if (error_flag == IPX_ERROR_invalid_basis) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - invalid basis");
-      return HighsStatus::Error;
-    } else {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - unrecognised error");
-      return HighsStatus::Error;
-    }
+  // } else if (solve_status == IPX_STATUS_invalid_input) {
+  //   if (error_flag == IPX_ERROR_argument_null) {
+  //     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+  //                     "Ipx: Invalid input - argument_null");
+  //     return HighsStatus::Error;
+  //   } else if (error_flag == IPX_ERROR_invalid_dimension) {
+  //     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+  //                     "Ipx: Invalid input - invalid dimension");
+  //     return HighsStatus::Error;
+  //   } else if (error_flag == IPX_ERROR_invalid_matrix) {
+  //     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+  //                     "Ipx: Invalid input - invalid matrix");
+  //     return HighsStatus::Error;
+  //   } else if (error_flag == IPX_ERROR_invalid_vector) {
+  //     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+  //                     "Ipx: Invalid input - invalid vector");
+  //     return HighsStatus::Error;
+  //   } else if (error_flag == IPX_ERROR_invalid_basis) {
+  //     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+  //                     "Ipx: Invalid input - invalid basis");
+  //     return HighsStatus::Error;
+  //   } else {
+  //     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+  //                     "Ipx: Invalid input - unrecognised error");
+  //     return HighsStatus::Error;
+  //   }
   } else if (solve_status == IPX_STATUS_out_of_memory) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "Ipx: Out of memory");
@@ -584,16 +584,22 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                   "IPX model has %d rows, %d columns and %d nonzeros",
                   (int)num_row, (int)num_col, (int)Ap[num_col]);
 
-  ipx::Int solve_status =
-      lps.Solve(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
+  ipx::Int load_status =
+      lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
                 &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
+          
+  // todo: handle load error
+  ipx::Int solve_status =
+      lps.Solve();
 
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h
   ipx::Info ipx_info = lps.GetInfo();
   iteration_counts.ipm += (int)ipx_info.iter;
-  //  iteration_counts.crossover += (int)ipx_info.updates_crossover;
-  iteration_counts.crossover += (int)ipx_info.pushes_crossover;
+
+  // todo: IG double check iteration counts with J
+  iteration_counts.crossover += (int)ipx_info.updates_crossover;
+  // iteration_counts.crossover += (int)ipx_info.pushes_crossover;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
