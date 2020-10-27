@@ -237,11 +237,31 @@ void Presolve::reportDevMainLoop() {
   return;
 }
 
+void Presolve::removeEmpty() {
+  // cols
+  for (int col = 0; col < numCol; col++) {
+    if (flagCol[col])
+      if (nzCol[col] == 0) {
+        removeEmptyColumn(col);
+      }
+  }
+
+  // rows
+  for (int row = 0; row < numRow; row++) {
+    if (flagRow[row])
+      if (nzRow[row] == 0) {
+        removeEmptyRow(row);
+      }
+  }
+}
+
 int Presolve::runPresolvers(const std::vector<Presolver>& order) {
   //***************** main loop ******************
 
   checkBoundsAreConsistent();
   if (status) return status;
+
+  if (iPrint) std::cout << "----> fixed cols" << std::endl;
 
   for (Presolver main_loop_presolver : order) {
     double time_start = timer.timer_.readRunHighsClock();
@@ -251,6 +271,10 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
     if (iPrint) std::cout << (*it).second << std::endl;
 
     switch (main_loop_presolver) {
+      case Presolver::kMainEmpty:
+        removeEmpty();
+        removeFixed();
+        break;
       case Presolver::kMainRowSingletons:
         timer.recordStart(REMOVE_ROW_SINGLETONS);
         removeRowSingletons();
@@ -357,13 +381,13 @@ int Presolve::presolve(int print) {
   initializeVectors();
   if (status) return status;
 
+  // removeFixed();
+  // if (status) return status;
+
   int iter = 1;
-
-  removeFixed();
-  if (status) return status;
-
   if (order.size() == 0) {
     // pre_release_order:
+    order.push_back(Presolver::kMainEmpty);
     order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainForcing);
     order.push_back(Presolver::kMainRowSingletons);
@@ -371,11 +395,13 @@ int Presolve::presolve(int print) {
     order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainColSingletons);
     order.push_back(Presolver::kMainDominatedCols);
+    // wip
     // order.push_back(Presolver::kMainSingletonsOnly);
   }
 
   int prev_cols_rows = 0;
   double prev_diff = 0;
+  // max_iterations = 10;
   // Else: The order has been modified for experiments
   while (hasChange == 1) {
     if (max_iterations > 0 && iter > max_iterations) break;
@@ -1724,6 +1750,7 @@ void Presolve::removeColumnSingletons() {
       const int k = getSingColElementIndexInA(col);
       if (k < 0) {
         it = singCol.erase(it);
+        if (k == -2) flagCol[col] = 0;
         continue;
       }
       assert(k < (int)Aindex.size());
@@ -2603,7 +2630,8 @@ int Presolve::getSingColElementIndexInA(int j) {
 
   while (!flagRow.at(Aindex.at(k))) ++k;
   if (k >= Aend.at(j)) {
-    return -1;
+    assert(nzCol[j] == 0);
+    return -2;
   }
   int rest = k + 1;
   while (rest < Aend.at(j) && !flagRow.at(Aindex.at(rest))) ++rest;
