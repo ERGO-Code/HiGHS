@@ -30,6 +30,8 @@
 enum ANALYSIS_OPERATION_TYPE {
   ANALYSIS_OPERATION_TYPE_BTRAN_FULL = 0,
   ANALYSIS_OPERATION_TYPE_PRICE_FULL,
+  ANALYSIS_OPERATION_TYPE_BTRAN_PRIMAL_PHASE1,
+  ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1,
   ANALYSIS_OPERATION_TYPE_BTRAN_EP,
   ANALYSIS_OPERATION_TYPE_PRICE_AP,
   ANALYSIS_OPERATION_TYPE_FTRAN,
@@ -166,6 +168,8 @@ class HighsSimplexAnalysis {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
+  double col_primal_phase1_density;
+  double row_primal_phase1_density;
   double col_BFRT_density;
   double primal_col_density;
   double dual_col_density;

@@ -864,11 +864,6 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   }
 #endif
   matrix_.priceByColumn(full_row, full_col);
-  // Column-wise PRICE computes components corresponding to basic
-  // variables, so zero these by exploiting the fact that, for basic
-  // variables, nonbasicFlag[*]=0
-  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++)
-    full_row.array[iCol] *= simplex_basis_.nonbasicFlag_[iCol];
 #ifdef HiGHSDEV
   if (simplex_info_.analyse_iterations)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL,

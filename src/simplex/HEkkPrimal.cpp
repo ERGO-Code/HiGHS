@@ -352,6 +352,8 @@ void HEkkPrimal::initialise() {
   col_aq.setup(num_row);
   row_ep.setup(num_row);
   row_ap.setup(num_col);
+  col_primal_phase1.setup(num_row);
+  row_primal_phase1.setup(num_col);
 
   ph1SorterR.reserve(num_row);
   ph1SorterT.reserve(num_row);
@@ -366,14 +368,16 @@ void HEkkPrimal::initialise() {
       num_free_col++;
     }
   }
+  // Set up the HSet instances, possibly using the internal error reporting and debug option
+  const bool debug =
+        ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
+  FILE* output = ekk_instance_.options_.output;
   if (num_free_col) {
     HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
                     "HEkkPrimal:: LP has %d free columns", num_free_col);
-    bool debug =
-        ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
-    nonbasic_free_col_set.setup(num_free_col, num_tot,
-                                ekk_instance_.options_.output, debug);
+    nonbasic_free_col_set.setup(num_free_col, num_tot, output, debug);
   }
+  basic_primal_infeasible_set.setup(num_row, num_row, output, debug);
 }
 
 void HEkkPrimal::rebuild() {
