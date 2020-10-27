@@ -86,7 +86,7 @@ class HEkk {
                             bool& use_row_price_w_switch);
   void tableauRowPrice(const HVector& row_ep, HVector& row_ap);
   void fullPrice(const HVector& full_col, HVector& full_row);
-  void computePrimal();
+  void computePrimal(const bool check = false);
   void computeDual();
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
   void updatePivots(const int columnIn, const int rowOut, const int sourceOut);

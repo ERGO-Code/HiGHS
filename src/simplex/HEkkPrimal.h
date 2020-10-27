@@ -44,7 +44,7 @@ class HEkkPrimal {
   void chooseColumn();
   void chooseRow();
   void phase2Update();
-  void phase1ComputeDual(const bool check_altWorkDual=false);
+  void phase1ComputeDual(const bool check_altWorkDual = false);
   void primalPhase1Btran();
   void primalPhase1Price();
   void phase1ChooseRow();
@@ -53,7 +53,7 @@ class HEkkPrimal {
   void devexReset();
   void devexUpdate();
   void updateVerify();
-  void updatePrimal();
+  void phase1UpdatePrimal();
   void phase2UpdatePrimal();
   void updateDual();
   void iterationAnalysisData();
@@ -84,6 +84,7 @@ class HEkkPrimal {
   int phase1OutBnd;
   double thetaDual;
   double thetaPrimal;
+  double valueIn;
   double alphaCol;
   double alphaRow;
   double numericalTrouble;

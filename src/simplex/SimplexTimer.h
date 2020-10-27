@@ -94,14 +94,14 @@ enum iClockSimplex {
   FtranBfrtClock,          //!< FTRAN for BFRT
   UpdateRowClock,          //!< Update of dual values
   UpdateDualClock,         //!< Update of dual values
-  UpdateDualPrimalPhase1Clock,         //!< Update of dual values in primal phase 1
-  UpdatePrimalClock,       //!< Update of primal values
-  DevexIzClock,            //!< Initialisation of new Devex framework
-  DevexUpdateWeightClock,  //!< Update Devex weights
-  DseUpdateWeightClock,    //!< Update DSE weights
-  UpdatePivotsClock,       //!< Update indices of basic and nonbasic after basis
-                           //!< change
-  UpdateFactorClock,       //!< Update the representation of \f$B^{-1}\f$
+  UpdateDualPrimalPhase1Clock,  //!< Update of dual values in primal phase 1
+  UpdatePrimalClock,            //!< Update of primal values
+  DevexIzClock,                 //!< Initialisation of new Devex framework
+  DevexUpdateWeightClock,       //!< Update Devex weights
+  DseUpdateWeightClock,         //!< Update DSE weights
+  UpdatePivotsClock,  //!< Update indices of basic and nonbasic after basis
+                      //!< change
+  UpdateFactorClock,  //!< Update the representation of \f$B^{-1}\f$
   UpdateMatrixClock,  //!< Update the row-wise copy of the constraint matrix for
                       //!< nonbasic columns
   UpdateRowEpClock,   //!< Update the tableau rows in PAMI
@@ -186,7 +186,8 @@ class SimplexTimer {
     clock[FtranBfrtClock] = timer.clock_def("FTRAN_BFRT", "BFR");
     clock[UpdateRowClock] = timer.clock_def("UPDATE_ROW", "UPR");
     clock[UpdateDualClock] = timer.clock_def("UPDATE_DUAL", "UPD");
-    clock[UpdateDualPrimalPhase1Clock] = timer.clock_def("UPDATE_DUAL_PRPH1", "UD1");
+    clock[UpdateDualPrimalPhase1Clock] =
+        timer.clock_def("UPDATE_DUAL_PRPH1", "UD1");
     clock[UpdatePrimalClock] = timer.clock_def("UPDATE_PRIMAL", "UPP");
     clock[DevexIzClock] = timer.clock_def("DEVEX_IZ", "DIZ");
     clock[DevexUpdateWeightClock] = timer.clock_def("DVX_UPDATE_WEIGHT", "UWS");
@@ -313,22 +314,53 @@ class SimplexTimer {
   };
 
   void reportSimplexMultiInnerClock(HighsTimerClock& simplex_timer_clock) {
-    std::vector<int> simplex_clock_list{
-        ScaleClock,           CrashClock,         BasisConditionClock,
-        DseIzClock,           InvertClock,        PermWtClock,
-        ComputeDualClock,     CorrectDualClock,   ComputePrimalClock,
-        CollectPrIfsClock,    ComputePrIfsClock,  ComputeDuIfsClock,
-        ComputeDuObjClock,    ComputePrObjClock,  ReportRebuildClock,
-        ChuzrDualClock,       Chuzr1Clock,        Chuzr2Clock,
-        BtranClock,           BtranPrimalPhase1Clock,     BtranFullClock,     PriceClock,
-        PricePrimalPhase1Clock,       PriceFullClock,     ChuzcPrimalClock,   Chuzc0Clock,
-        PriceChuzc1Clock,     Chuzc1Clock,        Chuzc2Clock,
-        Chuzc3Clock,          Chuzc4Clock,        DevexWtClock,
-        FtranClock,           FtranBfrtClock,     FtranDseClock,
-        FtranMixParClock,     FtranMixFinalClock, UpdateRowClock,
-        UpdateDualClock,      UpdateDualPrimalPhase1Clock,      UpdatePrimalClock,  DevexUpdateWeightClock,
-        DseUpdateWeightClock, DevexIzClock,       UpdatePivotsClock,
-        UpdateFactorClock,    UpdateMatrixClock};
+    std::vector<int> simplex_clock_list{ScaleClock,
+                                        CrashClock,
+                                        BasisConditionClock,
+                                        DseIzClock,
+                                        InvertClock,
+                                        PermWtClock,
+                                        ComputeDualClock,
+                                        CorrectDualClock,
+                                        ComputePrimalClock,
+                                        CollectPrIfsClock,
+                                        ComputePrIfsClock,
+                                        ComputeDuIfsClock,
+                                        ComputeDuObjClock,
+                                        ComputePrObjClock,
+                                        ReportRebuildClock,
+                                        ChuzrDualClock,
+                                        Chuzr1Clock,
+                                        Chuzr2Clock,
+                                        BtranClock,
+                                        BtranPrimalPhase1Clock,
+                                        BtranFullClock,
+                                        PriceClock,
+                                        PricePrimalPhase1Clock,
+                                        PriceFullClock,
+                                        ChuzcPrimalClock,
+                                        Chuzc0Clock,
+                                        PriceChuzc1Clock,
+                                        Chuzc1Clock,
+                                        Chuzc2Clock,
+                                        Chuzc3Clock,
+                                        Chuzc4Clock,
+                                        DevexWtClock,
+                                        FtranClock,
+                                        FtranBfrtClock,
+                                        FtranDseClock,
+                                        FtranMixParClock,
+                                        FtranMixFinalClock,
+                                        UpdateRowClock,
+                                        UpdateDualClock,
+                                        UpdateDualPrimalPhase1Clock,
+                                        UpdatePrimalClock,
+                                        DevexUpdateWeightClock,
+                                        DseUpdateWeightClock,
+                                        DevexIzClock,
+                                        UpdatePivotsClock,
+                                        UpdateFactorClock,
+                                        UpdateMatrixClock};
     reportSimplexClockList("SimplexMultiInner", simplex_clock_list,
                            simplex_timer_clock);
   };

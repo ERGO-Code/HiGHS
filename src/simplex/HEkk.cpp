@@ -874,13 +874,15 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   analysis_.simplexTimerStop(PriceFullClock);
 }
 
-void HEkk::computePrimal() {
+void HEkk::computePrimal(const bool check) {
   analysis_.simplexTimerStart(ComputePrimalClock);
+  const int num_row = simplex_lp_.numRow_;
+  const int num_col = simplex_lp_.numCol_;
   // Setup a local buffer for the values of basic variables
   HVector primal_col;
-  primal_col.setup(simplex_lp_.numRow_);
+  primal_col.setup(num_row);
   primal_col.clear();
-  for (int i = 0; i < simplex_lp_.numCol_ + simplex_lp_.numRow_; i++) {
+  for (int i = 0; i < num_col + num_row; i++) {
     if (simplex_basis_.nonbasicFlag_[i] && simplex_info_.workValue_[i] != 0) {
       matrix_.collect_aj(primal_col, i, simplex_info_.workValue_[i]);
     }
@@ -891,17 +893,41 @@ void HEkk::computePrimal() {
   if (primal_col.count) {
     factor_.ftran(primal_col, analysis_.primal_col_density,
                   analysis_.pointer_serial_factor_clocks);
-    const double local_primal_col_density =
-        (double)primal_col.count / simplex_lp_.numRow_;
+    const double local_primal_col_density = (double)primal_col.count / num_row;
     analysis_.updateOperationResultDensity(local_primal_col_density,
                                            analysis_.primal_col_density);
   }
-  for (int i = 0; i < simplex_lp_.numRow_; i++) {
+  for (int i = 0; i < num_row; i++) {
     int iCol = simplex_basis_.basicIndex_[i];
     simplex_info_.baseValue_[i] = -primal_col.array[i];
     simplex_info_.baseLower_[i] = simplex_info_.workLower_[iCol];
     simplex_info_.baseUpper_[i] = simplex_info_.workUpper_[iCol];
   }
+  vector<double>& baseValue = simplex_info_.baseValue_;
+  vector<double>& baseValueUpdated = simplex_info_.baseValueUpdated_;
+  if (check) {
+    // Check the updated primal value
+    double max_primal_error = 0;
+    const double primal_error_tolerance = 1e-6;
+    for (int iRow = 0; iRow < num_row; iRow++) {
+      double primal_error = fabs(baseValueUpdated[iRow] - baseValue[iRow]);
+      if (primal_error > primal_error_tolerance)
+        printf(
+            "Iteration %d: primal_error[%4d] = %9.4g from [Updated = %9.4g, "
+            "True = %9.4g]\n",
+            iteration_count_, iRow, primal_error, baseValueUpdated[iRow],
+            baseValue[iRow]);
+      max_primal_error = max(primal_error, max_primal_error);
+    }
+    bool fatal_max_primal_error = max_primal_error > primal_error_tolerance;
+    if (fatal_max_primal_error)
+      printf("Iteration %d: max_primal_error = %g\n", iteration_count_,
+             max_primal_error);
+    assert(!fatal_max_primal_error);
+  }
+  for (int iRow = 0; iRow < num_row; iRow++)
+    baseValueUpdated[iRow] = baseValue[iRow];
+
   // Now have basic primals
   simplex_lp_status_.has_basic_primal_values = true;
   analysis_.simplexTimerStop(ComputePrimalClock);
