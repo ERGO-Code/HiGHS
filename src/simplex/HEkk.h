@@ -21,6 +21,10 @@
 #include "simplex/SimplexStruct.h"
 #include "util/HighsRandom.h"
 
+// Parameter to decide whether to use just the values in a HVector, or
+// use the indices of their nonzeros
+const double density_for_no_indexing = 0.4;
+
 class HEkk {
  public:
   HEkk(HighsOptions& options, HighsTimer& timer)

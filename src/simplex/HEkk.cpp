@@ -24,8 +24,8 @@
 #include "simplex/SimplexTimer.h"
 #include "util/HighsRandom.h"
 
-using std::cout;
-using std::endl;
+//using std::cout;
+//using std::endl;
 
 HighsStatus HEkk::passLp(const HighsLp& lp) {
   simplex_lp_ = lp;
