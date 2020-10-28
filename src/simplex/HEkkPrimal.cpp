@@ -1096,11 +1096,42 @@ void HEkkPrimal::phase1ChooseRow() {
 
 void HEkkPrimal::phase1UpdatePrimal() {
   analysis->simplexTimerStart(UpdatePrimalClock);
-  vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
+  vector<double>& workCost = simplex_info.workCost_;
+  vector<double>& workDual = simplex_info.workDual_;
+  vector<double>& baseValue = simplex_info.baseValue_;
+  col_primal_phase1.clear();
+  //
+  // Update basic primal values, identifying all the feasibility
+  // changes giving a value to col_primal_phase1 so that the duals can
+  // be updated.
   //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
   for (int iEl = 0; iEl < col_aq.count; iEl++) {
     int iRow = col_aq.index[iEl];
     baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
+    int iCol = basicIndex[iRow];
+    double was_cost = workCost[iCol];
+    double cost = 0;
+    if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
+      cost = -1.0;
+    } else if (baseValue[iRow] > baseUpper[iRow] + dual_feasibility_tolerance) {
+      cost = 1.0;
+    }
+    workCost[iCol] = cost;
+    if (was_cost) {
+      if (!cost) simplex_info.num_primal_infeasibilities--;
+    } else {
+      if (cost) simplex_info.num_primal_infeasibilities++;
+    }
+    double delta_cost = cost - was_cost;
+    if (delta_cost) {
+      col_primal_phase1.array[iRow] = delta_cost;
+      col_primal_phase1.index[col_primal_phase1.count++] = iRow;
+      if (iCol >= num_col) workDual[iCol] += delta_cost;
+    }
   }
   // Don't set baseValue[rowOut] yet so that dual update due to
   // feasibility changes is done correctly
@@ -1110,18 +1141,7 @@ void HEkkPrimal::phase1UpdatePrimal() {
 
 void HEkkPrimal::phase1UpdateDual() {
   analysis->simplexTimerStart(UpdateDualPrimalPhase1Clock);
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<double>& baseLower = simplex_info.baseLower_;
-  const vector<double>& baseUpper = simplex_info.baseUpper_;
-  const vector<double>& baseValue = simplex_info.baseValue_;
-  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
-  vector<double>& workCost = simplex_info.workCost_;
-  vector<double>& workDual = simplex_info.workDual_;
-  //
-  // Identify all the feasibility changes, giving a value to
-  // col_primal_phase1 so that the duals can be updated and updating
-  // the set of basic primal infeasibilities,
-  //
+  vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   // For basic logicals, the change in the basic cost will be a
   // component in col_primal_phase1. This will lead to it being
   // subtracted from workDual in the loop below over the
@@ -1133,32 +1153,10 @@ void HEkkPrimal::phase1UpdateDual() {
   // subtraction in the loop below over the nonzeros in
   // row_primal_phase1. Hence, only add in the basic cost change
   // for logicals.
-  col_primal_phase1.clear();
-  //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
-  //  for (int iEl = 0; iEl < col_aq.count; iEl++) {
-    //    int iRow = col_aq.index[iEl];
-    for (int iRow = 0; iRow < num_row; iRow++) {
-      int iCol = basicIndex[iRow];
-      double was_cost = workCost[iCol];
-      double cost = 0;
-      if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
-	cost = -1.0;
-      } else if (baseValue[iRow] > baseUpper[iRow] + dual_feasibility_tolerance) {
-	cost = 1.0;
-      }
-      workCost[iCol] = cost;
-      if (was_cost) {
-	if (!cost) simplex_info.num_primal_infeasibilities--;
-      } else {
-	if (cost) simplex_info.num_primal_infeasibilities++;
-      }
-      double delta_cost = cost - was_cost;
-      if (delta_cost) {
-	col_primal_phase1.array[iRow] = delta_cost;
-	col_primal_phase1.index[col_primal_phase1.count++] = iRow;
-	if (iCol >= num_col) workDual[iCol] += delta_cost;
-      }
-    }
+  //
+  // Assumes that row_primal_phase1 has been set up in
+  // phase1UpdatePrimal()
+
   primalPhase1Btran();
   primalPhase1Price();
   if (ekk_instance_.useIndices(row_primal_phase1.count, num_col)) {
@@ -1180,7 +1178,6 @@ void HEkkPrimal::phase1UpdateDual() {
     for (int iCol = num_col; iCol < num_tot; iCol++)
       workDual[iCol] -= col_primal_phase1.array[iCol - num_col];
   }
-  ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
   ekk_instance_.invalidateDualInfeasibilityRecord();
   analysis->simplexTimerStop(UpdateDualPrimalPhase1Clock);
 }
