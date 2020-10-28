@@ -492,7 +492,6 @@ void HEkk::allocateWorkAndBaseArrays() {
   simplex_info_.baseLower_.resize(simplex_lp_.numRow_);
   simplex_info_.baseUpper_.resize(simplex_lp_.numRow_);
   simplex_info_.baseValue_.resize(simplex_lp_.numRow_);
-  simplex_info_.baseValueUpdated_.resize(simplex_lp_.numRow_);
 }
 
 void HEkk::initialisePhase2ColBound() {
@@ -873,7 +872,7 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   analysis_.simplexTimerStop(PriceFullClock);
 }
 
-void HEkk::computePrimal(const bool check) {
+void HEkk::computePrimal() {
   analysis_.simplexTimerStart(ComputePrimalClock);
   const int num_row = simplex_lp_.numRow_;
   const int num_col = simplex_lp_.numCol_;
@@ -902,31 +901,6 @@ void HEkk::computePrimal(const bool check) {
     simplex_info_.baseLower_[i] = simplex_info_.workLower_[iCol];
     simplex_info_.baseUpper_[i] = simplex_info_.workUpper_[iCol];
   }
-  vector<double>& baseValue = simplex_info_.baseValue_;
-  vector<double>& baseValueUpdated = simplex_info_.baseValueUpdated_;
-  if (check) {
-    // Check the updated primal value
-    double max_primal_error = 0;
-    const double primal_error_tolerance = 1e-6;
-    for (int iRow = 0; iRow < num_row; iRow++) {
-      double primal_error = fabs(baseValueUpdated[iRow] - baseValue[iRow]);
-      if (primal_error > primal_error_tolerance)
-        printf(
-            "Iteration %d: primal_error[%4d] = %9.4g from [Updated = %9.4g, "
-            "True = %9.4g]\n",
-            iteration_count_, iRow, primal_error, baseValueUpdated[iRow],
-            baseValue[iRow]);
-      max_primal_error = max(primal_error, max_primal_error);
-    }
-    bool fatal_max_primal_error = max_primal_error > primal_error_tolerance;
-    if (fatal_max_primal_error)
-      printf("Iteration %d: max_primal_error = %g\n", iteration_count_,
-             max_primal_error);
-    assert(!fatal_max_primal_error);
-  }
-  for (int iRow = 0; iRow < num_row; iRow++)
-    baseValueUpdated[iRow] = baseValue[iRow];
-
   // Now have basic primals
   simplex_lp_status_.has_basic_primal_values = true;
   analysis_.simplexTimerStop(ComputePrimalClock);

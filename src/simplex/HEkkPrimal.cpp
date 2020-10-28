@@ -439,7 +439,7 @@ void HEkkPrimal::rebuild() {
       HighsLogMessage(
           ekk_instance_.options_.logfile, HighsMessageType::WARNING,
           "HEkkPrimal::rebuild switching back to phase 1 from phase 2");
-    phase1ComputeDual(ekk_instance_.simplex_info_.baseValue_);
+    phase1ComputeDual();
   } else {
     // No primal infeasibilities so in phase 2. Reset costs if was
     // previously in phase 1
@@ -483,7 +483,6 @@ void HEkkPrimal::phase1Update() {
   vector<double>& workDual = simplex_info.workDual_;
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
-  vector<double>& baseValueUpdated = simplex_info.baseValueUpdated_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
   const int check_iter = -1;
@@ -540,8 +539,6 @@ void HEkkPrimal::phase1Update() {
 
   // Update the duals with respect to feasibility changes
   phase1UpdateDual();
-  const bool check_dual = true;
-  if (check_dual) phase1ComputeDual(baseValueUpdated, true);
 
   // Update for the flip case
   if (flipped) {
@@ -549,11 +546,11 @@ void HEkkPrimal::phase1Update() {
     num_flip_since_rebuild++;
     // Recompute things on flip
     if (invertHint == 0) {
-      ekk_instance_.computePrimal(true);
+      ekk_instance_.computePrimal();
       getBasicPrimalInfeasibleSet();
       if (simplex_info.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
-        phase1ComputeDual(baseValue, true);
+        phase1ComputeDual();
       } else {
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
@@ -565,7 +562,7 @@ void HEkkPrimal::phase1Update() {
 
   // Now set the value of the entering variable
   assert(rowOut >= 0);
-  baseValueUpdated[rowOut] = valueIn;
+  baseValue[rowOut] = valueIn;
 
   // Compute and use the tableau row
   //
@@ -585,7 +582,7 @@ void HEkkPrimal::phase1Update() {
   // Use the tableau row to update the duals with respect to the basis
   // change
   thetaDual = workDual[columnIn];
-  updateDual(workDual);
+  updateDual();
 
   // Dual for the pivot
   workDual[columnIn] = 0;
@@ -627,11 +624,11 @@ void HEkkPrimal::phase1Update() {
 
   // Recompute dual and primal
   if (invertHint == 0) {
-    ekk_instance_.computePrimal(true);
+    ekk_instance_.computePrimal();
     getBasicPrimalInfeasibleSet();
     if (simplex_info.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
-      phase1ComputeDual(baseValue, true);
+      phase1ComputeDual();
     } else {
       // Crude way to force rebuild
       invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
@@ -750,7 +747,7 @@ void HEkkPrimal::phase2Update() {
   ekk_instance_.tableauRowPrice(row_ep, row_ap);
 
   // Update the dual values
-  updateDual(ekk_instance_.simplex_info_.workDual_);
+  updateDual();
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
@@ -888,11 +885,11 @@ void HEkkPrimal::chooseRow() {
   analysis->simplexTimerStop(Chuzr2Clock);
 }
 
-void HEkkPrimal::updateDual(vector<double>& workDual) {
+void HEkkPrimal::updateDual() {
   analysis->simplexTimerStart(UpdateDualClock);
   assert(alphaCol);
   assert(rowOut >= 0);
-  //  vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
+  vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
 
   thetaDual = workDual[columnIn] / alphaCol;
   for (int i = 0; i < row_ap.count; i++) {
@@ -912,16 +909,14 @@ void HEkkPrimal::updateDual(vector<double>& workDual) {
   analysis->simplexTimerStop(UpdateDualClock);
 }
 
-void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue,
-                                   const bool check) {
+void HEkkPrimal::phase1ComputeDual() {
   const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
   const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
-  //  const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
+  const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   const vector<int>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
 
   vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
-  vector<double> workCostCheck = workCost;
   // Accumulate costs for checking
   workCost.assign(num_tot, 0);
 
@@ -940,17 +935,6 @@ void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue,
     if (cost) buffer.index[buffer.count++] = iRow;
     workCost[ekk_instance_.simplex_basis_.basicIndex_[iRow]] = cost;
   }
-  if (check) {
-    for (int iCol = 0; iCol < num_tot; iCol++) {
-      bool cost_error = workCost[iCol] != workCostCheck[iCol];
-      if (cost_error)
-        printf("Iteration %d cost error %g != %g\n",
-               ekk_instance_.iteration_count_, workCost[iCol],
-               workCostCheck[iCol]);
-      assert(!cost_error);
-    }
-  }
-
   //
   // Full BTRAN
   //
@@ -1128,14 +1112,11 @@ void HEkkPrimal::phase1ChooseRow() {
 void HEkkPrimal::phase1UpdatePrimal() {
   analysis->simplexTimerStart(UpdatePrimalClock);
   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
-  vector<double>& baseValueUpdated =
-      ekk_instance_.simplex_info_.baseValueUpdated_;
   for (int i = 0; i < col_aq.count; i++) {
     int index = col_aq.index[i];
-    baseValueUpdated[index] = baseValue[index];
-    baseValueUpdated[index] -= thetaPrimal * col_aq.array[index];
+    baseValue[index] -= thetaPrimal * col_aq.array[index];
   }
-  // Don't set baseValueUpdated[rowOut] yet so that dual update due to
+  // Don't set baseValue[rowOut] yet so that dual update due to
   // feasibility changes is done correctly
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
@@ -1144,9 +1125,7 @@ void HEkkPrimal::phase1UpdateDual() {
   analysis->simplexTimerStart(UpdateDualPrimalPhase1Clock);
   const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
   const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
-  const vector<double>& baseValue =
-      ekk_instance_.simplex_info_
-          .baseValueUpdated_;  // !! Using updated baseValue
+  const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
   vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;

@@ -94,7 +94,7 @@ struct HighsSimplexInfo {
   std::vector<double> workUpper_;
   std::vector<double> workRange_;
   std::vector<double> workValue_;
-
+  //
   // baseLower/baseUpper/baseValue: Lower and upper bounds on the
   // basic variables and their values. Latter not known until solve()
   // is called since B^{-1} is required to compute them. Knowledge of
@@ -103,8 +103,6 @@ struct HighsSimplexInfo {
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
-
-  std::vector<double> baseValueUpdated_;
   //
   // Vectors of random reals for column cost perturbation, a random
   // permutation of all indices for CHUZR and a random permutation of
