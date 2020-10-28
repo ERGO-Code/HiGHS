@@ -221,29 +221,85 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_basic_dual);
   assert(max_basic_dual < excessive_basic_dual);
-  // Check that the numbers of primal and dual infeasibilities are correct
-  const bool illegal_num_primal_infeasibility =
-    num_primal_infeasibility != ekk_instance.simplex_info_.num_primal_infeasibilities;
-  if (illegal_num_primal_infeasibility) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "ekkDebugSimplex - %s: Iteration %d Should have %d not %d primal infeasibilities",
-                    message.c_str(), iteration_count, num_primal_infeasibility,
-                    ekk_instance.simplex_info_.num_primal_infeasibilities);
-    assert(!illegal_num_primal_infeasibility);
-    return HighsDebugStatus::LOGICAL_ERROR;
+  // Check that the number, max and sums of primal and dual infeasibilities (if known) are correct
+  const int info_num_primal_infeasibilities = ekk_instance.simplex_info_.num_primal_infeasibilities;
+  if (info_num_primal_infeasibilities>=0) {
+    const bool illegal_num_primal_infeasibility =
+      num_primal_infeasibility != info_num_primal_infeasibilities;
+    if (illegal_num_primal_infeasibility) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex - %s: Iteration %d Should have %d not %d primal infeasibilities",
+		      message.c_str(), iteration_count, num_primal_infeasibility,
+		      info_num_primal_infeasibilities);
+      assert(!illegal_num_primal_infeasibility);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
   }
-  /*
-  const bool illegal_num_dual_infeasibility =
-    num_dual_infeasibility != ekk_instance.simplex_info_.num_dual_infeasibilities;
-  if (illegal_num_dual_infeasibility) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "ekkDebugSimplex - %s: Iteration %d Should have %d not %d dual infeasibilities",
-                    message.c_str(), iteration_count, num_dual_infeasibility,
-                    ekk_instance.simplex_info_.num_dual_infeasibilities);
-    assert(!illegal_num_dual_infeasibility);
-    return HighsDebugStatus::LOGICAL_ERROR;
+  const double info_max_primal_infeasibility = ekk_instance.simplex_info_.max_primal_infeasibility;
+  if (info_max_primal_infeasibility>=0) {
+    const bool illegal_max_primal_infeasibility =
+      max_primal_infeasibility != info_max_primal_infeasibility;
+    if (illegal_max_primal_infeasibility) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex - %s: Iteration %d Should have %g not %g max primal infeasibility",
+		      message.c_str(), iteration_count, max_primal_infeasibility,
+		      info_max_primal_infeasibility);
+      assert(!illegal_max_primal_infeasibility);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
   }
-  */
+  const double info_sum_primal_infeasibilities = ekk_instance.simplex_info_.sum_primal_infeasibilities;
+  if (info_sum_primal_infeasibilities>=0) {
+    const bool illegal_sum_primal_infeasibility =
+      sum_primal_infeasibility != info_sum_primal_infeasibilities;
+    if (illegal_sum_primal_infeasibility) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex - %s: Iteration %d Should have %g not %g sum primal infeasibilities",
+		      message.c_str(), iteration_count, sum_primal_infeasibility,
+		      info_sum_primal_infeasibilities);
+      assert(!illegal_sum_primal_infeasibility);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+  const int info_num_dual_infeasibilities = ekk_instance.simplex_info_.num_dual_infeasibilities;
+  if (info_num_dual_infeasibilities>=0) {
+    const bool illegal_num_dual_infeasibility =
+      num_dual_infeasibility != info_num_dual_infeasibilities;
+    if (illegal_num_dual_infeasibility) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex - %s: Iteration %d Should have %d not %d dual infeasibilities",
+		      message.c_str(), iteration_count, num_dual_infeasibility,
+		      info_num_dual_infeasibilities);
+      assert(!illegal_num_dual_infeasibility);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+  const double info_max_dual_infeasibility = ekk_instance.simplex_info_.max_dual_infeasibility;
+  if (info_max_dual_infeasibility>=0) {
+    const bool illegal_max_dual_infeasibility =
+      max_dual_infeasibility != info_max_dual_infeasibility;
+    if (illegal_max_dual_infeasibility) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex - %s: Iteration %d Should have %g not %g max dual infeasibility",
+		      message.c_str(), iteration_count, max_dual_infeasibility,
+		      info_max_dual_infeasibility);
+      assert(!illegal_max_dual_infeasibility);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
+  const double info_sum_dual_infeasibilities = ekk_instance.simplex_info_.sum_dual_infeasibilities;
+  if (info_sum_dual_infeasibilities>=0) {
+    const bool illegal_sum_dual_infeasibility =
+      sum_dual_infeasibility != info_sum_dual_infeasibilities;
+    if (illegal_sum_dual_infeasibility) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		      "ekkDebugSimplex - %s: Iteration %d Should have %g not %g sum dual infeasibilities",
+		      message.c_str(), iteration_count, sum_dual_infeasibility,
+		      info_sum_dual_infeasibilities);
+      assert(!illegal_sum_dual_infeasibility);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+  }
   // Check any assumed feasibility
   bool require_primal_feasible_in_primal_simplex =
       algorithm == SimplexAlgorithm::PRIMAL && (phase == 0 || phase == 2);
