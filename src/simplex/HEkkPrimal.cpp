@@ -481,7 +481,6 @@ void HEkkPrimal::phase1Update() {
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   vector<double>& workDual = simplex_info.workDual_;
-  vector<double>& workDualUpdated = simplex_info.workDualUpdated_;
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<double>& baseValueUpdated = simplex_info.baseValueUpdated_;
@@ -585,8 +584,8 @@ void HEkkPrimal::phase1Update() {
 
   // Use the tableau row to update the duals with respect to the basis
   // change
-  thetaDual = workDualUpdated[columnIn];
-  updateDual(workDualUpdated);
+  thetaDual = workDual[columnIn];
+  updateDual(workDual);
 
   // Dual for the pivot
   workDual[columnIn] = 0;
@@ -973,31 +972,6 @@ void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue,
     if (nonbasicFlag[iSeq]) workDual[iSeq] = -buffer.array[iRow];
   }
 
-  vector<double>& workDualUpdated =
-      ekk_instance_.simplex_info_.workDualUpdated_;
-  if (check) {
-    // Check the updated primal value
-    double max_dual_error = 0;
-    const double dual_error_tolerance = 1e-6;
-    for (int iCol = 0; iCol < num_tot; iCol++) {
-      double dual_error = fabs(workDualUpdated[iCol] - workDual[iCol]);
-      if (dual_error > dual_error_tolerance)
-        printf(
-            "Flag %d: dual_error[%d] = %9.4g from [Updated = %9.4g, True = "
-            "%9.4g]\n",
-            nonbasicFlag[iCol], iCol, dual_error, workDualUpdated[iCol],
-            workDual[iCol]);
-      max_dual_error = max(dual_error, max_dual_error);
-    }
-    bool fatal_max_dual_error = max_dual_error > dual_error_tolerance;
-    if (fatal_max_dual_error)
-      printf("Iteration %d: max_dual_error = %g\n",
-             ekk_instance_.iteration_count_, max_dual_error);
-    assert(!fatal_max_dual_error);
-  }
-
-  workDualUpdated = workDual;
-
   ekk_instance_.computeSimplexDualInfeasible();
 }
 
@@ -1175,8 +1149,7 @@ void HEkkPrimal::phase1UpdateDual() {
           .baseValueUpdated_;  // !! Using updated baseValue
   const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
   vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
-  vector<double>& workDualUpdated =
-      ekk_instance_.simplex_info_.workDualUpdated_;
+  vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   // Identify all the feasibility changes, giving a value to
   // col_primal_phase1 so that the duals can be updated and updating
   // the set of basic primal infeasibilities,
@@ -1205,7 +1178,7 @@ void HEkkPrimal::phase1UpdateDual() {
       col_primal_phase1.index[col_primal_phase1.count++] = iRow;
       // For basic logicals, the change in the basic cost will be a
       // component in col_primal_phase1. This will lead to it being
-      // subtracted from workDualUpdated in the loop below over the
+      // subtracted from workDual in the loop below over the
       // nonzeros in col_primal_phase1, so add it in now. For basic
       // structurals, there will be no corresponding component in
       // row_primal_phase1, since only the nonbasic components are
@@ -1214,7 +1187,7 @@ void HEkkPrimal::phase1UpdateDual() {
       // subtraction in the loop below over the nonzeros in
       // row_primal_phase1. Hence, only add in the basic cost change
       // for logicals.
-      if (iCol >= num_col) workDualUpdated[iCol] += delta_cost;
+      if (iCol >= num_col) workDual[iCol] += delta_cost;
     }
   }
   primalPhase1Btran();
@@ -1222,9 +1195,9 @@ void HEkkPrimal::phase1UpdateDual() {
   //  for (int ix=0; ix < row_primal_phase1.count; ix++) {
   //    int iCol = row_primal_phase1.index[ix];
   for (int iCol = 0; iCol < num_col; iCol++)
-    workDualUpdated[iCol] -= row_primal_phase1.array[iCol];
+    workDual[iCol] -= row_primal_phase1.array[iCol];
   for (int iCol = num_col; iCol < num_tot; iCol++)
-    workDualUpdated[iCol] -= col_primal_phase1.array[iCol - num_col];
+    workDual[iCol] -= col_primal_phase1.array[iCol - num_col];
 
   analysis->simplexTimerStop(UpdateDualPrimalPhase1Clock);
 }

@@ -478,7 +478,6 @@ void HEkk::allocateWorkAndBaseArrays() {
   simplex_info_.workCost_.resize(numTot);
   simplex_info_.workDual_.resize(numTot);
   simplex_info_.workShift_.resize(numTot);
-  simplex_info_.workDualUpdated_.resize(numTot);
 
   simplex_info_.workLower_.resize(numTot);
   simplex_info_.workUpper_.resize(numTot);
