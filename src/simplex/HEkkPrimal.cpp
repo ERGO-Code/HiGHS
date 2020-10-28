@@ -534,6 +534,7 @@ void HEkkPrimal::phase1Update() {
 
   // Update for the flip case
   if (flipped) {
+    ekk_instance_.invalidateDualInfeasibilityRecord();
     iterationAnalysis();
     num_flip_since_rebuild++;
     // Recompute things on flip
@@ -633,7 +634,7 @@ void HEkkPrimal::phase2Update() {
   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
 
-  const int check_iter = -1;
+  const int check_iter = 843;
   if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Iter %d\n", check_iter);
   }
@@ -704,6 +705,7 @@ void HEkkPrimal::phase2Update() {
 
   // If flipped, then no need touch the pivots
   if (flipped) {
+    ekk_instance_.invalidateDualInfeasibilityRecord();
     iterationAnalysis();
     num_flip_since_rebuild++;
     // Update the synthetic clock
@@ -891,10 +893,7 @@ void HEkkPrimal::updateDual() {
   // Dual for the pivot
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
-  // Indicate that the dual infeasiblility information isn't known
-  ekk_instance_.simplex_info_.num_dual_infeasibilities = illegal_infeasibility_count;
-  ekk_instance_.simplex_info_.max_dual_infeasibility = illegal_infeasibility_measure;
-  ekk_instance_.simplex_info_.sum_dual_infeasibilities = illegal_infeasibility_measure;
+  ekk_instance_.invalidateDualInfeasibilityRecord();
   // After dual update in primal simplex the dual objective value is not known
   ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
   analysis->simplexTimerStop(UpdateDualClock);
@@ -1098,16 +1097,14 @@ void HEkkPrimal::phase1ChooseRow() {
 void HEkkPrimal::phase1UpdatePrimal() {
   analysis->simplexTimerStart(UpdatePrimalClock);
   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
+  //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
   for (int iEl = 0; iEl < col_aq.count; iEl++) {
     int iRow = col_aq.index[iEl];
     baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
   }
   // Don't set baseValue[rowOut] yet so that dual update due to
   // feasibility changes is done correctly
-  // Indicate that the primal infeasiblility information isn't known
-  //  ekk_instance_.simplex_info_.num_primal_infeasibilities = illegal_infeasibility_count;
-  ekk_instance_.simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
-  ekk_instance_.simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
+  ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
@@ -1137,7 +1134,9 @@ void HEkkPrimal::phase1UpdateDual() {
   // row_primal_phase1. Hence, only add in the basic cost change
   // for logicals.
   col_primal_phase1.clear();
-  //  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
+  //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
+  //  for (int iEl = 0; iEl < col_aq.count; iEl++) {
+    //    int iRow = col_aq.index[iEl];
     for (int iRow = 0; iRow < num_row; iRow++) {
       int iCol = basicIndex[iRow];
       double was_cost = workCost[iCol];
@@ -1162,32 +1161,27 @@ void HEkkPrimal::phase1UpdateDual() {
     }
   primalPhase1Btran();
   primalPhase1Price();
-  if (ekk_instance_.ignoreIndices(row_primal_phase1.count, num_col)) {
-    for (int iCol = 0; iCol < num_col; iCol++)
-      workDual[iCol] -= row_primal_phase1.array[iCol];
-  } else {
+  if (ekk_instance_.useIndices(row_primal_phase1.count, num_col)) {
     for (int iEl = 0; iEl < row_primal_phase1.count; iEl++) {
       int iCol = row_primal_phase1.index[iEl];
       workDual[iCol] -= row_primal_phase1.array[iCol];
     }
-  }
-  if (ekk_instance_.ignoreIndices(col_primal_phase1.count, num_row)) {
-    for (int iCol = num_col; iCol < num_tot; iCol++)
-      workDual[iCol] -= col_primal_phase1.array[iCol - num_col];
   } else {
+    for (int iCol = 0; iCol < num_col; iCol++)
+      workDual[iCol] -= row_primal_phase1.array[iCol];
+  }
+  if (ekk_instance_.useIndices(col_primal_phase1.count, num_row)) {
     for (int iEl = 0; iEl < col_primal_phase1.count; iEl++) {
       int iRow = col_primal_phase1.index[iEl];
       int iCol = num_col + iRow;
       workDual[iCol] -= col_primal_phase1.array[iRow];
     }
+  } else {
+    for (int iCol = num_col; iCol < num_tot; iCol++)
+      workDual[iCol] -= col_primal_phase1.array[iCol - num_col];
   }
-  // Indicate that the max/sum_primal_infeasibility information isn't known
-  simplex_info.max_primal_infeasibility = illegal_infeasibility_measure;
-  simplex_info.sum_primal_infeasibilities = illegal_infeasibility_measure;
-  // Indicate that the dual infeasiblility information isn't known
-  simplex_info.num_dual_infeasibilities = illegal_infeasibility_count;
-  simplex_info.max_dual_infeasibility = illegal_infeasibility_measure;
-  simplex_info.sum_dual_infeasibilities = illegal_infeasibility_measure;
+  ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
+  ekk_instance_.invalidateDualInfeasibilityRecord();
   analysis->simplexTimerStop(UpdateDualPrimalPhase1Clock);
 }
 
@@ -1299,7 +1293,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
   const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& baseValue = simplex_info.baseValue_;
 
-  //  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
+  //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
   bool primal_infeasible = false;
     for (int iRow = 0; iRow < num_row; iRow++) {
       baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
@@ -1333,9 +1327,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
   simplex_info.updated_primal_objective_value +=
     workDual[columnIn] * thetaPrimal;
 
-  // Indicate that the max/sum_primal_infeasibility information isn't known
-  ekk_instance_.simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
-  ekk_instance_.simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
+  ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
@@ -1354,15 +1346,15 @@ void HEkkPrimal::updateDevex() {
   // Compute the pivot weight from the reference set
   analysis->simplexTimerStart(DevexUpdateWeightClock);
   double dPivotWeight = 0.0;
-  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
-    for (int iRow = 0; iRow < num_row; iRow++) {
+  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
+    for (int iEl = 0; iEl < col_aq.count; iEl++) {
+      int iRow = col_aq.index[iEl];
       int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
       double dAlpha = devex_index[iCol] * col_aq.array[iRow];
       dPivotWeight += dAlpha * dAlpha;
     }
   } else {
-    for (int iEl = 0; iEl < col_aq.count; iEl++) {
-      int iRow = col_aq.index[iEl];
+    for (int iRow = 0; iRow < num_row; iRow++) {
       int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
       double dAlpha = devex_index[iCol] * col_aq.array[iRow];
       dPivotWeight += dAlpha * dAlpha;

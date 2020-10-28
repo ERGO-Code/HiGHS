@@ -96,7 +96,11 @@ class HEkk {
   void computeSimplexDualInfeasible();
   void computeSimplexLpDualInfeasible();
 
-  bool ignoreIndices(const int cout, const int dim);
+  bool useIndices(const int cout, const int dim);
+  void invalidatePrimalInfeasibilityRecord();
+  void invalidatePrimalMaxSumInfeasibilityRecord();
+  void invalidateDualInfeasibilityRecord();
+  void invalidateDualMaxSumInfeasibilityRecord();
   bool bailoutReturn();
   bool bailoutOnTimeIterations();
   HighsStatus returnFromSolve(const HighsStatus return_status);

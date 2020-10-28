@@ -1201,11 +1201,31 @@ void HEkk::computeSimplexLpDualInfeasible() {
   }
 }
 
-bool HEkk::ignoreIndices(const int count, const int dim) {
+bool HEkk::useIndices(const int count, const int dim) {
   // Parameter to decide whether to use just the values in a HVector, or
   // use the indices of their nonzeros
-  const double density_for_no_indexing = 0.4;
-  return count < 0 || count > density_for_no_indexing * dim;
+  const double density_for_indexing = 0.4;
+  return count >=0 && count < density_for_indexing * dim;
+}
+
+void HEkk::invalidatePrimalMaxSumInfeasibilityRecord() {
+  simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
+  simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
+}
+
+void HEkk::invalidatePrimalInfeasibilityRecord() {
+  simplex_info_.num_primal_infeasibilities = illegal_infeasibility_count;
+  invalidatePrimalMaxSumInfeasibilityRecord();
+}
+
+void HEkk::invalidateDualMaxSumInfeasibilityRecord() {
+  simplex_info_.max_dual_infeasibility = illegal_infeasibility_measure;
+  simplex_info_.sum_dual_infeasibilities = illegal_infeasibility_measure;
+}
+
+void HEkk::invalidateDualInfeasibilityRecord() {
+  simplex_info_.num_dual_infeasibilities = illegal_infeasibility_count;
+  invalidateDualMaxSumInfeasibilityRecord();
 }
 
 bool HEkk::bailoutReturn() {

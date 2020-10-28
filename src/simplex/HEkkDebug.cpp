@@ -24,6 +24,8 @@
 using std::fabs;
 using std::max;
 
+const double ok_feasibility_difference = 1e-3;
+
 const double large_basic_dual = 1e-12;
 const double excessive_basic_dual = sqrt(large_basic_dual);
 
@@ -238,7 +240,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   const double info_max_primal_infeasibility = ekk_instance.simplex_info_.max_primal_infeasibility;
   if (info_max_primal_infeasibility>=0) {
     const bool illegal_max_primal_infeasibility =
-      max_primal_infeasibility != info_max_primal_infeasibility;
+      fabs(max_primal_infeasibility - info_max_primal_infeasibility) > ok_feasibility_difference;
     if (illegal_max_primal_infeasibility) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
 		      "ekkDebugSimplex - %s: Iteration %d Should have %g not %g max primal infeasibility",
@@ -251,7 +253,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   const double info_sum_primal_infeasibilities = ekk_instance.simplex_info_.sum_primal_infeasibilities;
   if (info_sum_primal_infeasibilities>=0) {
     const bool illegal_sum_primal_infeasibility =
-      sum_primal_infeasibility != info_sum_primal_infeasibilities;
+      fabs(sum_primal_infeasibility - info_sum_primal_infeasibilities) > ok_feasibility_difference;
     if (illegal_sum_primal_infeasibility) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
 		      "ekkDebugSimplex - %s: Iteration %d Should have %g not %g sum primal infeasibilities",
@@ -277,7 +279,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   const double info_max_dual_infeasibility = ekk_instance.simplex_info_.max_dual_infeasibility;
   if (info_max_dual_infeasibility>=0) {
     const bool illegal_max_dual_infeasibility =
-      max_dual_infeasibility != info_max_dual_infeasibility;
+      fabs(max_dual_infeasibility - info_max_dual_infeasibility) > ok_feasibility_difference;
     if (illegal_max_dual_infeasibility) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
 		      "ekkDebugSimplex - %s: Iteration %d Should have %g not %g max dual infeasibility",
@@ -290,7 +292,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   const double info_sum_dual_infeasibilities = ekk_instance.simplex_info_.sum_dual_infeasibilities;
   if (info_sum_dual_infeasibilities>=0) {
     const bool illegal_sum_dual_infeasibility =
-      sum_dual_infeasibility != info_sum_dual_infeasibilities;
+      fabs(sum_dual_infeasibility - info_sum_dual_infeasibilities) > ok_feasibility_difference;
     if (illegal_sum_dual_infeasibility) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
 		      "ekkDebugSimplex - %s: Iteration %d Should have %g not %g sum dual infeasibilities",
