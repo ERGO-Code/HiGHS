@@ -57,8 +57,8 @@ class HEkkPrimal {
 
   void phase2UpdatePrimal();
 
-  void devexReset();
-  void devexUpdate();
+  void resetDevex();
+  void updateDevex();
   void updateVerify();
 
   void iterationAnalysisData();

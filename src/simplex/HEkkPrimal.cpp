@@ -1,7 +1,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
-/*                                                                       */
+/*      <                                                                 */
 /*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -194,7 +194,7 @@ void HEkkPrimal::initialise() {
   ph1SorterR.reserve(num_row);
   ph1SorterT.reserve(num_row);
 
-  devexReset();
+  resetDevex();
 
   num_free_col = 0;
   for (int iCol = 0; iCol < num_tot; iCol++) {
@@ -583,7 +583,7 @@ void HEkkPrimal::phase1Update() {
   workDual[columnOut] = -thetaDual;
 
   // Use the tableau row to update the devex weight
-  devexUpdate();
+  updateDevex();
 
   bool remove_nonbasic_free_column = nonbasicMove[columnIn] == 0;
   if (remove_nonbasic_free_column) {
@@ -607,7 +607,7 @@ void HEkkPrimal::phase1Update() {
   ekk_instance_.iteration_count_++;
 
   // Reset the devex framework when necessary
-  if (num_bad_devex_weight > 3) devexReset();
+  if (num_bad_devex_weight > 3) resetDevex();
 
   // Report on the iteration
   iterationAnalysis();
@@ -707,7 +707,7 @@ void HEkkPrimal::phase2Update() {
   phase2UpdatePrimal();
 
   // Why is the detailed primal infeasibility information needed?
-  ekk_instance_.computeSimplexPrimalInfeasible();
+  //  ekk_instance_.computeSimplexPrimalInfeasible();
 
   // If flipped, then no need touch the pivots
   if (flipped) {
@@ -748,7 +748,7 @@ void HEkkPrimal::phase2Update() {
   updateVerify();
 
   // Update the devex weight
-  devexUpdate();
+  updateDevex();
 
   // Perform pivoting
   int sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
@@ -762,7 +762,7 @@ void HEkkPrimal::phase2Update() {
   ekk_instance_.iteration_count_++;
 
   // Reset the devex when there are too many errors
-  if (num_bad_devex_weight > 3) devexReset();
+  if (num_bad_devex_weight > 3) resetDevex();
 
   // Report on the iteration
   iterationAnalysis();
@@ -1348,7 +1348,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
-void HEkkPrimal::devexReset() {
+void HEkkPrimal::resetDevex() {
   devex_weight.assign(num_tot, 1.0);
   devex_index.assign(num_tot, 0);
   for (int iCol = 0; iCol < num_tot; iCol++) {
@@ -1359,7 +1359,7 @@ void HEkkPrimal::devexReset() {
   num_bad_devex_weight = 0;
 }
 
-void HEkkPrimal::devexUpdate() {
+void HEkkPrimal::updateDevex() {
   // Compute the pivot weight from the reference set
   analysis->simplexTimerStart(DevexUpdateWeightClock);
   double dPivotWeight = 0.0;
