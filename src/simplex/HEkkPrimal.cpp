@@ -214,7 +214,6 @@ void HEkkPrimal::initialise() {
                     "HEkkPrimal:: LP has %d free columns", num_free_col);
     nonbasic_free_col_set.setup(num_free_col, num_tot, output, debug);
   }
-  basic_primal_infeasible_set.setup(num_row, num_row, output, debug);
 }
 
 void HEkkPrimal::solvePhase1() {
@@ -424,7 +423,7 @@ void HEkkPrimal::rebuild() {
     simplex_info.update_count = 0;
   }
   ekk_instance_.computePrimal();
-  getBasicPrimalInfeasibleSet();
+  getBasicPrimalInfeasibility();
   isPrimalPhase1 = 0;
   if (simplex_info.num_primal_infeasibilities > 0) {
     // Primal infeasibilities so in phase 1
@@ -540,12 +539,12 @@ void HEkkPrimal::phase1Update() {
     num_flip_since_rebuild++;
     // Recompute things on flip
     if (invertHint == 0) {
-      ekk_instance_.computePrimal();
-      getBasicPrimalInfeasibleSet();
+      printf("FLIP\n");
+      getBasicPrimalInfeasibility();
       if (simplex_info.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
-        phase1ComputeDual();
       } else {
+     // Crude way to force rebuild
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
     }
@@ -618,11 +617,9 @@ void HEkkPrimal::phase1Update() {
 
   // Recompute dual and primal
   if (invertHint == 0) {
-    ekk_instance_.computePrimal();
-    getBasicPrimalInfeasibleSet();
+    getBasicPrimalInfeasibility();
     if (simplex_info.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
-      phase1ComputeDual();
     } else {
       // Crude way to force rebuild
       invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
@@ -1511,12 +1508,9 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
   }
 }
 
-void HEkkPrimal::getBasicPrimalInfeasibleSet() {
+void HEkkPrimal::getBasicPrimalInfeasibility() {
   // Gets the num/max/sum of basic primal infeasibliities,
-  // accumulating the indices of basic primal infeasibilities in
-  // basic_primal_infeasible_set
   analysis->simplexTimerStart(ComputePrIfsClock);
-  basic_primal_infeasible_set.clear();
   const double primal_feasibility_tolerance =
       ekk_instance_.options_.primal_feasibility_tolerance;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
@@ -1536,10 +1530,8 @@ void HEkkPrimal::getBasicPrimalInfeasibleSet() {
     double upper = baseUpper[iRow];
     double primal_infeasibility = max(lower - value, value - upper);
     if (primal_infeasibility > 0) {
-      if (primal_infeasibility > primal_feasibility_tolerance) {
+      if (primal_infeasibility > primal_feasibility_tolerance)
         num_primal_infeasibilities++;
-        basic_primal_infeasible_set.add(iRow);
-      }
       max_primal_infeasibility =
           std::max(primal_infeasibility, max_primal_infeasibility);
       sum_primal_infeasibilities += primal_infeasibility;

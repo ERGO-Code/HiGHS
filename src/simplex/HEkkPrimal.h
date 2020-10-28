@@ -65,7 +65,7 @@ class HEkkPrimal {
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint = -1);
   void getNonbasicFreeColumnSet();
-  void getBasicPrimalInfeasibleSet();
+  void getBasicPrimalInfeasibility();
   HighsDebugStatus debugPrimalSimplex(const std::string message);
   // References:
   HEkk& ekk_instance_;
@@ -105,8 +105,6 @@ class HEkkPrimal {
   // Nonbasic free column data.
   int num_free_col;
   HSet nonbasic_free_col_set;
-  // Basic primal infeasibility data
-  HSet basic_primal_infeasible_set;
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
