@@ -487,7 +487,7 @@ void HEkkPrimal::phase1Update() {
   vector<double>& baseValueUpdated = simplex_info.baseValueUpdated_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
-  const int check_iter = -1;
+  const int check_iter = 11;
   if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Iter %d\n", check_iter);
   }
@@ -913,16 +913,18 @@ void HEkkPrimal::updateDual(vector<double>& workDual) {
   analysis->simplexTimerStop(UpdateDualClock);
 }
 
-void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue, const bool check_altWorkDual) {
+void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue, const bool check) {
   const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
   const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
   //  const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   const vector<int>& nonbasicFlag = ekk_instance_.simplex_basis_.nonbasicFlag_;
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
 
-  // Accumulate costs for checking
   vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
+  vector<double> workCostCheck = workCost;
+  // Accumulate costs for checking
   workCost.assign(num_tot, 0);
+
 
   HVector buffer;
   buffer.setup(num_row);
@@ -939,6 +941,15 @@ void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue, const bool c
     if (cost) buffer.index[buffer.count++] = iRow;
     workCost[ekk_instance_.simplex_basis_.basicIndex_[iRow]] = cost;
   }
+  if (check) {
+    for (int iCol = 0; iCol < num_tot; iCol++) {
+      bool cost_error = workCost[iCol] != workCostCheck[iCol];
+      if (cost_error) printf("Iteration %d cost error %g != %g\n",
+			     ekk_instance_.iteration_count_, workCost[iCol], workCostCheck[iCol]);
+      assert(!cost_error);
+    }
+  }
+    
   //
   // Full BTRAN
   //
@@ -962,7 +973,7 @@ void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue, const bool c
 
   vector<double>& workDualUpdated =
     ekk_instance_.simplex_info_.workDualUpdated_;
-  if (check_altWorkDual) {
+  if (check) {
     // Check the updated primal value
     double max_dual_error = 0;
     const double dual_error_tolerance = 1e-6;
@@ -1187,7 +1198,18 @@ void HEkkPrimal::phase1UpdateDual() {
     if (delta_cost) {
       col_primal_phase1.array[iRow] = delta_cost;
       col_primal_phase1.index[col_primal_phase1.count++] = iRow;
-      workDualUpdated[iCol] += delta_cost;
+      // For basic logicals, the change in the basic cost will be a
+      // component in col_primal_phase1. This will lead to it being
+      // subtracted from workDualUpdated in the loop below over the
+      // nonzeros in col_primal_phase1, so add it in now. For basic
+      // structurals, there will be no corresponding component in
+      // row_primal_phase1, since only the nonbasic components are
+      // computed (avoided using row pricing, and basic components
+      // zeroed after column pricing). Hence there will be no
+      // subtraction in the loop below over the nonzeros in
+      // row_primal_phase1. Hence, only add in the basic cost change
+      // for logicals.
+      if (iCol>=num_col) workDualUpdated[iCol] += delta_cost;
     }
   }
   primalPhase1Btran();
