@@ -190,8 +190,8 @@ class SimplexTimer {
         timer.clock_def("UPDATE_DUAL_PRPH1", "UD1");
     clock[UpdatePrimalClock] = timer.clock_def("UPDATE_PRIMAL", "UPP");
     clock[DevexIzClock] = timer.clock_def("DEVEX_IZ", "DIZ");
-    clock[DevexUpdateWeightClock] = timer.clock_def("DVX_UPDATE_WEIGHT", "UWS");
-    clock[DseUpdateWeightClock] = timer.clock_def("DSE_UPDATE_WEIGHT", "UWD");
+    clock[DevexUpdateWeightClock] = timer.clock_def("UPDATE_DVX_WEIGHT", "UDW");
+    clock[DseUpdateWeightClock] = timer.clock_def("UPDATE_DSE_WEIGHT", "USW");
     clock[UpdatePivotsClock] = timer.clock_def("UPDATE_PIVOTS", "UPP");
     clock[UpdateFactorClock] = timer.clock_def("UPDATE_FACTOR", "UPF");
     clock[UpdateMatrixClock] = timer.clock_def("UPDATE_MATRIX", "UPM");
@@ -262,9 +262,8 @@ class SimplexTimer {
                                         allocateSimplexArraysClock,
                                         initialiseSimplexCostBoundsClock,
                                         setNonbasicMoveClock,
+                                        DevexIzClock,
                                         DseIzClock,
-                                        InvertClock,
-                                        PermWtClock,
                                         ComputeDualClock,
                                         CorrectDualClock,
                                         ComputePrimalClock,
@@ -273,32 +272,33 @@ class SimplexTimer {
                                         ComputeDuIfsClock,
                                         ComputeDuObjClock,
                                         ComputePrObjClock,
+                                        InvertClock,
                                         ReportRebuildClock,
-                                        ChuzrDualClock,
-                                        Chuzr1Clock,
-                                        Chuzr2Clock,
-                                        BtranClock,
-                                        BtranPrimalPhase1Clock,
-                                        BtranFullClock,
-                                        PriceClock,
-                                        PricePrimalPhase1Clock,
-                                        PriceFullClock,
+                                        PermWtClock,
                                         ChuzcPrimalClock,
                                         Chuzc0Clock,
                                         Chuzc1Clock,
                                         Chuzc2Clock,
                                         Chuzc3Clock,
                                         Chuzc4Clock,
-                                        DevexWtClock,
                                         FtranClock,
-                                        FtranBfrtClock,
-                                        FtranDseClock,
+                                        ChuzrDualClock,
+                                        Chuzr1Clock,
+                                        Chuzr2Clock,
+                                        BtranClock,
+                                        PriceClock,
+                                        UpdatePrimalClock,
                                         UpdateDualClock,
                                         UpdateDualPrimalPhase1Clock,
-                                        UpdatePrimalClock,
+                                        BtranPrimalPhase1Clock,
+                                        BtranFullClock,
+                                        PricePrimalPhase1Clock,
+                                        DevexWtClock,
                                         DevexUpdateWeightClock,
                                         DseUpdateWeightClock,
-                                        DevexIzClock,
+                                        FtranBfrtClock,
+                                        FtranDseClock,
+                                        PriceFullClock,
                                         UpdatePivotsClock,
                                         UpdateFactorClock,
                                         UpdateMatrixClock};

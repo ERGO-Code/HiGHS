@@ -477,7 +477,7 @@ void HEkkPrimal::phase1Update() {
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
-  const int check_iter = 53;
+  const int check_iter = 156;
   if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Iter %d\n", check_iter);
   }
@@ -634,7 +634,7 @@ void HEkkPrimal::phase2Update() {
   vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
 
-  const int check_iter = 843;
+  const int check_iter = -156;
   if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Iter %d\n", check_iter);
   }
@@ -1286,32 +1286,31 @@ void HEkkPrimal::phase2UpdatePrimal() {
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& workLower = simplex_info.workLower_;
   const vector<double>& workUpper = simplex_info.workUpper_;
-  const vector<double>& workValue = simplex_info.workValue_;
   const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& baseValue = simplex_info.baseValue_;
 
-  //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
   bool primal_infeasible = false;
-    for (int iRow = 0; iRow < num_row; iRow++) {
-      baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
-      double primal_infeasibility = max(baseLower[iRow] - baseValue[iRow],
-					baseValue[iRow] - baseUpper[iRow]);
-      if (primal_infeasibility > primal_feasibility_tolerance) {
-	simplex_info.num_primal_infeasibilities++;
-	primal_infeasible = true;
-      }
+  //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
+  for (int iEl = 0; iEl < col_aq.count; iEl++) {
+    int iRow = col_aq.index[iEl];
+    baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
+    double primal_infeasibility = max(baseLower[iRow] - baseValue[iRow],
+				      baseValue[iRow] - baseUpper[iRow]);
+    if (primal_infeasibility > primal_feasibility_tolerance) {
+      simplex_info.num_primal_infeasibilities++;
+      primal_infeasible = true;
     }
+  }
 
   if (rowOut >= 0) {
     // Check the feasibility of the entering variable - using work
     // vector values since its base vector values haven't been updated
     baseValue[rowOut] = valueIn;
     double primal_infeasibility =
-      max(workLower[columnIn] - workValue[columnIn],
-	  workValue[columnIn] - workUpper[columnIn]);
+      max(workLower[columnIn] - valueIn, valueIn - workUpper[columnIn]);
     if (primal_infeasibility > primal_feasibility_tolerance) {
       printf("Entering varible has primal infeasibility of %g for [%g, %g, %g]\n",
-	     primal_infeasibility, workLower[columnIn], workValue[columnIn],
+	     primal_infeasibility, workLower[columnIn], valueIn,
 	     workUpper[columnIn]);
       simplex_info.num_primal_infeasibilities++;
       primal_infeasible = true;
@@ -1340,8 +1339,8 @@ void HEkkPrimal::resetDevex() {
 }
 
 void HEkkPrimal::updateDevex() {
-  // Compute the pivot weight from the reference set
   analysis->simplexTimerStart(DevexUpdateWeightClock);
+  // Compute the pivot weight from the reference set
   double dPivotWeight = 0.0;
   if (ekk_instance_.useIndices(col_aq.count, num_row)) {
     for (int iEl = 0; iEl < col_aq.count; iEl++) {
