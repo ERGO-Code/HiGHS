@@ -912,8 +912,7 @@ void HEkk::computePrimal(const bool check) {
     for (int iRow = 0; iRow < num_row; iRow++) {
       double primal_error = fabs(baseValueUpdated[iRow] - baseValue[iRow]);
       if (primal_error > primal_error_tolerance)
-        printf(
-            "Iteration %d: primal_error[%4d] = %9.4g from [Updated = %9.4g, "
+        printf("Iteration %d: primal_error[%4d] = %9.4g from [Updated = %9.4g, "
             "True = %9.4g]\n",
             iteration_count_, iRow, primal_error, baseValueUpdated[iRow],
             baseValue[iRow]);

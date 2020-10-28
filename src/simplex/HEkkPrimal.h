@@ -41,21 +41,26 @@ class HEkkPrimal {
   void solvePhase1();
   void solvePhase2();
   void rebuild();
+  void phase1Update();
+  void phase2Update();
+
   void chooseColumn();
   void chooseRow();
-  void phase2Update();
-  void phase1ComputeDual(const bool check_altWorkDual = false);
+  void updateDual(vector<double>& workDual);
+
+  void phase1ComputeDual(const vector<double>& baseValue, const bool check_altWorkDual = false);
+  void phase1ChooseRow();
+  void phase1UpdatePrimal();
+  void phase1UpdateDual();
   void primalPhase1Btran();
   void primalPhase1Price();
-  void phase1ChooseRow();
-  void phase1Update();
-  void phase1UpdateDual();
+
+  void phase2UpdatePrimal();
+
   void devexReset();
   void devexUpdate();
   void updateVerify();
-  void phase1UpdatePrimal();
-  void phase2UpdatePrimal();
-  void updateDual();
+
   void iterationAnalysisData();
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint = -1);
