@@ -14,16 +14,12 @@
 #ifndef SIMPLEX_HEKK_H_
 #define SIMPLEX_HEKK_H_
 
-#include "lp_data/HStruct.h"  //For HighsSolutionParams
+#include "lp_data/HStruct.h"
 #include "simplex/HFactor.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HighsSimplexAnalysis.h"
 #include "simplex/SimplexStruct.h"
 #include "util/HighsRandom.h"
-
-// Parameter to decide whether to use just the values in a HVector, or
-// use the indices of their nonzeros
-const double density_for_no_indexing = 0.4;
 
 class HEkk {
  public:
@@ -100,6 +96,7 @@ class HEkk {
   void computeSimplexDualInfeasible();
   void computeSimplexLpDualInfeasible();
 
+  bool ignoreIndices(const int cout, const int dim);
   bool bailoutReturn();
   bool bailoutOnTimeIterations();
   HighsStatus returnFromSolve(const HighsStatus return_status);

@@ -270,13 +270,13 @@ void HEkk::computeDualObjectiveValue(const int phase) {
   analysis_.simplexTimerStart(ComputeDuObjClock);
   simplex_info_.dual_objective_value = 0;
   const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int i = 0; i < numTot; i++) {
-    if (simplex_basis_.nonbasicFlag_[i]) {
+  for (int iCol = 0; iCol < numTot; iCol++) {
+    if (simplex_basis_.nonbasicFlag_[iCol]) {
       const double term =
-          simplex_info_.workValue_[i] * simplex_info_.workDual_[i];
+          simplex_info_.workValue_[iCol] * simplex_info_.workDual_[iCol];
       if (term) {
         simplex_info_.dual_objective_value +=
-            simplex_info_.workValue_[i] * simplex_info_.workDual_[i];
+            simplex_info_.workValue_[iCol] * simplex_info_.workDual_[iCol];
       }
     }
   }
@@ -528,46 +528,45 @@ void HEkk::initialiseBound(const int phase) {
   // free In Phase 1: change to dual phase 1 bound.
   const double inf = HIGHS_CONST_INF;
   const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int i = 0; i < numTot; i++) {
-    if (simplex_info_.workLower_[i] == -inf &&
-        simplex_info_.workUpper_[i] == inf) {
+  for (int iCol = 0; iCol < numTot; iCol++) {
+    if (simplex_info_.workLower_[iCol] == -inf &&
+        simplex_info_.workUpper_[iCol] == inf) {
       // Don't change for row variables: they should never become
       // nonbasic when starting from a logical basis, and no crash
       // should make a free row nonbasic, but could an advanced basis
       // make a free row nonbasic.
       // But what it it happened?
-      if (i >= simplex_lp_.numCol_) continue;
-      simplex_info_.workLower_[i] = -1000,
-      simplex_info_.workUpper_[i] = 1000;  // FREE
-    } else if (simplex_info_.workLower_[i] == -inf) {
-      simplex_info_.workLower_[i] = -1,
-      simplex_info_.workUpper_[i] = 0;  // UPPER
-    } else if (simplex_info_.workUpper_[i] == inf) {
-      simplex_info_.workLower_[i] = 0,
-      simplex_info_.workUpper_[i] = 1;  // LOWER
+      if (iCol >= simplex_lp_.numCol_) continue;
+      simplex_info_.workLower_[iCol] = -1000,
+      simplex_info_.workUpper_[iCol] = 1000;  // FREE
+    } else if (simplex_info_.workLower_[iCol] == -inf) {
+      simplex_info_.workLower_[iCol] = -1,
+      simplex_info_.workUpper_[iCol] = 0;  // UPPER
+    } else if (simplex_info_.workUpper_[iCol] == inf) {
+      simplex_info_.workLower_[iCol] = 0,
+      simplex_info_.workUpper_[iCol] = 1;  // LOWER
     } else {
-      simplex_info_.workLower_[i] = 0,
-      simplex_info_.workUpper_[i] = 0;  // BOXED or FIXED
+      simplex_info_.workLower_[iCol] = 0,
+      simplex_info_.workUpper_[iCol] = 0;  // BOXED or FIXED
     }
-    simplex_info_.workRange_[i] =
-        simplex_info_.workUpper_[i] - simplex_info_.workLower_[i];
+    simplex_info_.workRange_[iCol] =
+        simplex_info_.workUpper_[iCol] - simplex_info_.workLower_[iCol];
   }
 }
 
 void HEkk::initialisePhase2ColCost() {
-  for (int col = 0; col < simplex_lp_.numCol_; col++) {
-    int var = col;
-    simplex_info_.workCost_[var] =
-        (int)simplex_lp_.sense_ * simplex_lp_.colCost_[col];
-    simplex_info_.workShift_[var] = 0;
+  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+    simplex_info_.workCost_[iCol] =
+        (int)simplex_lp_.sense_ * simplex_lp_.colCost_[iCol];
+    simplex_info_.workShift_[iCol] = 0;
   }
 }
 
 void HEkk::initialisePhase2RowCost() {
-  for (int iVar = simplex_lp_.numCol_;
-       iVar < simplex_lp_.numCol_ + simplex_lp_.numRow_; iVar++) {
-    simplex_info_.workCost_[iVar] = 0;
-    simplex_info_.workShift_[iVar] = 0;
+  for (int iCol = simplex_lp_.numCol_;
+       iCol < simplex_lp_.numCol_ + simplex_lp_.numRow_; iCol++) {
+    simplex_info_.workCost_[iCol] = 0;
+    simplex_info_.workShift_[iCol] = 0;
   }
 }
 
@@ -683,23 +682,23 @@ void HEkk::initialiseCost(const int perturb) {
 void HEkk::initialiseNonbasicWorkValue() {
   // Assign nonbasic values from bounds and (if necessary) nonbasicMove
   const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int iVar = 0; iVar < numTot; iVar++) {
-    if (!simplex_basis_.nonbasicFlag_[iVar]) continue;
+  for (int iCol = 0; iCol < numTot; iCol++) {
+    if (!simplex_basis_.nonbasicFlag_[iCol]) continue;
     // Nonbasic variable
-    const double lower = simplex_info_.workLower_[iVar];
-    const double upper = simplex_info_.workUpper_[iVar];
+    const double lower = simplex_info_.workLower_[iCol];
+    const double upper = simplex_info_.workUpper_[iCol];
     double value;
     if (lower == upper) {
       value = lower;
-    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
+    } else if (simplex_basis_.nonbasicMove_[iCol] == NONBASIC_MOVE_UP) {
       value = lower;
-    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
+    } else if (simplex_basis_.nonbasicMove_[iCol] == NONBASIC_MOVE_DN) {
       value = upper;
     } else {
-      assert(simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE);
+      assert(simplex_basis_.nonbasicMove_[iCol] == NONBASIC_MOVE_ZE);
       value = 0;
     }
-    simplex_info_.workValue_[iVar] = value;
+    simplex_info_.workValue_[iCol] = value;
   }
 }
 
@@ -838,8 +837,8 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
     // variables, so zero these by exploiting the fact that, for basic
     // variables, nonbasicFlag[*]=0
     const int* nonbasicFlag = &simplex_basis_.nonbasicFlag_[0];
-    for (int col = 0; col < solver_num_col; col++)
-      row_ap.array[col] *= nonbasicFlag[col];
+    for (int iCol = 0; iCol < solver_num_col; iCol++)
+      row_ap.array[iCol] *= nonbasicFlag[iCol];
   }
   // Update the record of average row_ap density
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
@@ -1081,12 +1080,12 @@ void HEkk::computeSimplexDualInfeasible() {
   max_dual_infeasibility = 0;
   sum_dual_infeasibilities = 0;
 
-  for (int iVar = 0; iVar < simplex_lp_.numCol_ + simplex_lp_.numRow_; iVar++) {
-    if (!simplex_basis_.nonbasicFlag_[iVar]) continue;
+  for (int iCol = 0; iCol < simplex_lp_.numCol_ + simplex_lp_.numRow_; iCol++) {
+    if (!simplex_basis_.nonbasicFlag_[iCol]) continue;
     // Nonbasic column
-    const double dual = simplex_info_.workDual_[iVar];
-    const double lower = simplex_info_.workLower_[iVar];
-    const double upper = simplex_info_.workUpper_[iVar];
+    const double dual = simplex_info_.workDual_[iCol];
+    const double lower = simplex_info_.workLower_[iCol];
+    const double upper = simplex_info_.workUpper_[iCol];
     double dual_infeasibility = 0;
     if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
       // Free: any nonzero dual value is infeasible
@@ -1094,7 +1093,7 @@ void HEkk::computeSimplexDualInfeasible() {
     } else {
       // Not free: any dual infeasibility is given by the dual value
       // signed by nonbasicMove
-      dual_infeasibility = -simplex_basis_.nonbasicMove_[iVar] * dual;
+      dual_infeasibility = -simplex_basis_.nonbasicMove_[iCol] * dual;
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
@@ -1191,6 +1190,13 @@ void HEkk::computeSimplexLpDualInfeasible() {
       sum_dual_infeasibilities += dual_infeasibility;
     }
   }
+}
+
+bool HEkk::ignoreIndices(const int count, const int dim) {
+  // Parameter to decide whether to use just the values in a HVector, or
+  // use the indices of their nonzeros
+  const double density_for_no_indexing = 0.4;
+  return count < 0 || count > density_for_no_indexing * dim;
 }
 
 bool HEkk::bailoutReturn() {

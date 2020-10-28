@@ -1118,49 +1118,64 @@ void HEkkPrimal::phase1UpdateDual() {
   const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
   vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
+  //
   // Identify all the feasibility changes, giving a value to
   // col_primal_phase1 so that the duals can be updated and updating
   // the set of basic primal infeasibilities,
+  //
+  // For basic logicals, the change in the basic cost will be a
+  // component in col_primal_phase1. This will lead to it being
+  // subtracted from workDual in the loop below over the
+  // nonzeros in col_primal_phase1, so add it in now. For basic
+  // structurals, there will be no corresponding component in
+  // row_primal_phase1, since only the nonbasic components are
+  // computed (avoided using row pricing, and basic components
+  // zeroed after column pricing). Hence there will be no
+  // subtraction in the loop below over the nonzeros in
+  // row_primal_phase1. Hence, only add in the basic cost change
+  // for logicals.
   col_primal_phase1.clear();
-  //  const int& num_basic_primal_infeasible =
-  //  basic_primal_infeasible_set.count(); const vector<int>&
-  //  basic_primal_infeasible_set_entry = basic_primal_infeasible_set.entry();
-
-  //  for (int ix = 0; ix < col_aq.count; ix++) {
-  //    int iRow = col_aq.index[ix];
-  for (int iRow = 0; iRow < num_row; iRow++) {
-    int iCol = basicIndex[iRow];
-    double was_cost = workCost[iCol];
-    // Find the new cost
-    double cost = 0;
-    if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
-      cost = -1.0;
-    } else if (baseValue[iRow] > baseUpper[iRow] + dual_feasibility_tolerance) {
-      cost = 1.0;
+  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
+    for (int iRow = 0; iRow < num_row; iRow++) {
+      int iCol = basicIndex[iRow];
+      double was_cost = workCost[iCol];
+      double cost = 0;
+      if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
+	cost = -1.0;
+      } else if (baseValue[iRow] > baseUpper[iRow] + dual_feasibility_tolerance) {
+	cost = 1.0;
+      }
+      workCost[iCol] = cost;
+      double delta_cost = cost - was_cost;
+      if (delta_cost) {
+	col_primal_phase1.array[iRow] = delta_cost;
+	col_primal_phase1.index[col_primal_phase1.count++] = iRow;
+	if (iCol >= num_col) workDual[iCol] += delta_cost;
+      }
     }
-    workCost[iCol] = cost;
-    // Find the change in cost
-    double delta_cost = cost - was_cost;
-    if (delta_cost) {
-      col_primal_phase1.array[iRow] = delta_cost;
-      col_primal_phase1.index[col_primal_phase1.count++] = iRow;
-      // For basic logicals, the change in the basic cost will be a
-      // component in col_primal_phase1. This will lead to it being
-      // subtracted from workDual in the loop below over the
-      // nonzeros in col_primal_phase1, so add it in now. For basic
-      // structurals, there will be no corresponding component in
-      // row_primal_phase1, since only the nonbasic components are
-      // computed (avoided using row pricing, and basic components
-      // zeroed after column pricing). Hence there will be no
-      // subtraction in the loop below over the nonzeros in
-      // row_primal_phase1. Hence, only add in the basic cost change
-      // for logicals.
-      if (iCol >= num_col) workDual[iCol] += delta_cost;
+  } else {
+    for (int iEl = 0; iEl < col_aq.count; iEl++) {
+      int iRow = col_aq.index[iEl];
+      int iCol = basicIndex[iRow];
+      double was_cost = workCost[iCol];
+      double cost = 0;
+      if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
+	cost = -1.0;
+      } else if (baseValue[iRow] > baseUpper[iRow] + dual_feasibility_tolerance) {
+	cost = 1.0;
+      }
+      workCost[iCol] = cost;
+      double delta_cost = cost - was_cost;
+      if (delta_cost) {
+	col_primal_phase1.array[iRow] = delta_cost;
+	col_primal_phase1.index[col_primal_phase1.count++] = iRow;
+	if (iCol >= num_col) workDual[iCol] += delta_cost;
+      }
     }
   }
   primalPhase1Btran();
   primalPhase1Price();
-  if (row_primal_phase1.count < 0 || row_primal_phase1.count > density_for_no_indexing * num_col) {
+  if (ekk_instance_.ignoreIndices(row_primal_phase1.count, num_col)) {
     for (int iCol = 0; iCol < num_col; iCol++)
       workDual[iCol] -= row_primal_phase1.array[iCol];
   } else {
@@ -1169,7 +1184,7 @@ void HEkkPrimal::phase1UpdateDual() {
       workDual[iCol] -= row_primal_phase1.array[iCol];
     }
   }
-  if (col_primal_phase1.count < 0 || col_primal_phase1.count > density_for_no_indexing * num_row) {
+  if (ekk_instance_.ignoreIndices(col_primal_phase1.count, num_row)) {
     for (int iCol = num_col; iCol < num_tot; iCol++)
       workDual[iCol] -= col_primal_phase1.array[iCol - num_col];
   } else {
@@ -1179,7 +1194,6 @@ void HEkkPrimal::phase1UpdateDual() {
       workDual[iCol] -= col_primal_phase1.array[iRow];
     }
   }
-
   analysis->simplexTimerStop(UpdateDualPrimalPhase1Clock);
 }
 
@@ -1291,7 +1305,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
   const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& baseValue = simplex_info.baseValue_;
 
-  if (col_aq.count < 0 || col_aq.count > density_for_no_indexing * num_row) {
+  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
     for (int iRow = 0; iRow < num_row; iRow++) {
       baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
       double primal_infeasibility = max(baseLower[iRow] - baseValue[iRow],
@@ -1349,7 +1363,7 @@ void HEkkPrimal::devexUpdate() {
   // Compute the pivot weight from the reference set
   analysis->simplexTimerStart(DevexUpdateWeightClock);
   double dPivotWeight = 0.0;
-  if (col_aq.count < 0 || col_aq.count > density_for_no_indexing * num_row) {
+  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
     for (int iRow = 0; iRow < num_row; iRow++) {
       int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
       double dAlpha = devex_index[iCol] * col_aq.array[iRow];
