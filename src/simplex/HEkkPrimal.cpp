@@ -554,7 +554,7 @@ void HEkkPrimal::phase1Update() {
       getBasicPrimalInfeasibleSet();
       if (simplex_info.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
-        phase1ComputeDual(baseValue);  // true
+        phase1ComputeDual(baseValue, true);
       } else {
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
@@ -563,6 +563,10 @@ void HEkkPrimal::phase1Update() {
     ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
     return;
   }
+
+  // Now set the value of the entering variable
+  assert(rowOut>=0);
+  baseValueUpdated[rowOut] = valueIn;
 
   // Compute and use the tableau row
   //
@@ -628,7 +632,7 @@ void HEkkPrimal::phase1Update() {
     getBasicPrimalInfeasibleSet();
     if (simplex_info.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
-      phase1ComputeDual(baseValue);  // true
+      phase1ComputeDual(baseValue, true);
     } else {
       // Crude way to force rebuild
       invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
@@ -956,10 +960,10 @@ void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue, const bool c
     if (nonbasicFlag[iSeq]) workDual[iSeq] = -buffer.array[iRow];
   }
 
+  vector<double>& workDualUpdated =
+    ekk_instance_.simplex_info_.workDualUpdated_;
   if (check_altWorkDual) {
     // Check the updated primal value
-    vector<double>& workDualUpdated =
-      ekk_instance_.simplex_info_.workDualUpdated_;
     double max_dual_error = 0;
     const double dual_error_tolerance = 1e-6;
     for (int iCol = 0; iCol < num_tot; iCol++) {
@@ -978,50 +982,7 @@ void HEkkPrimal::phase1ComputeDual(const vector<double>& baseValue, const bool c
     assert(!fatal_max_dual_error);
   }
 
-  buffer.clear();
-  buffer.count = 0;
-  const int& num_basic_primal_infeasible = basic_primal_infeasible_set.count();
-  const vector<int>& basic_primal_infeasible_set_entry =
-      basic_primal_infeasible_set.entry();
-  for (int ix = 0; ix < num_basic_primal_infeasible; ix++) {
-    int iRow = basic_primal_infeasible_set_entry[ix];
-    double cost;
-    if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
-      cost = -1.0;
-    } else {
-      // Must be above upper bound if not below lower
-      cost = 1.0;
-    }
-    int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
-    assert(cost == workCost[iCol]);
-    workCost[iCol] = cost;
-    buffer.array[iRow] = cost;
-    buffer.index[buffer.count++] = iRow;
-  }
-
-  for (int iRow = 0; iRow < num_row; iRow++) {
-    int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
-    assert(!fabs(workCost[iCol] - buffer.array[iRow]));
-  }
-  //
-  // Full BTRAN
-  //
-  ekk_instance_.fullBtran(buffer);
-  //
-  // Full PRICE
-  //
-  bufferLong.setup(num_col);
-  ekk_instance_.fullPrice(buffer, bufferLong);
-  vector<double>& workDualUpdated =
-      ekk_instance_.simplex_info_.workDualUpdated_;
-  for (int iCol = 0; iCol < num_col; iCol++) {
-    workDualUpdated[iCol] = -nonbasicFlag[iCol] * bufferLong.array[iCol];
-  }
-  for (int iRow = 0, iCol = num_col; iRow < num_row; iRow++, iCol++) {
-    workDualUpdated[iCol] = -nonbasicFlag[iCol] * buffer.array[iRow];
-  }
-  for (int iCol = 0; iCol < num_tot; iCol++)
-    assert(workDualUpdated[iCol] == workDual[iCol]);
+  workDualUpdated = workDual;
 
   ekk_instance_.computeSimplexDualInfeasible();
 }
@@ -1186,7 +1147,8 @@ void HEkkPrimal::phase1UpdatePrimal() {
     baseValueUpdated[index] = baseValue[index];
     baseValueUpdated[index] -= thetaPrimal * col_aq.array[index];
   }
-  if (rowOut >= 0) baseValueUpdated[rowOut] = valueIn;
+  // Don't set baseValueUpdated[rowOut] yet so that dual update due to
+  // feasibility changes is done correctly
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
@@ -1197,6 +1159,8 @@ void HEkkPrimal::phase1UpdateDual() {
   const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValueUpdated_; // !! Using updated baseValue
   const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
   vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
+  vector<double>& workDualUpdated =
+      ekk_instance_.simplex_info_.workDualUpdated_;
   // Identify all the feasibility changes, giving a value to
   // col_primal_phase1 so that the duals can be updated and updating
   // the set of basic primal infeasibilities,
@@ -1223,12 +1187,11 @@ void HEkkPrimal::phase1UpdateDual() {
     if (delta_cost) {
       col_primal_phase1.array[iRow] = delta_cost;
       col_primal_phase1.index[col_primal_phase1.count++] = iRow;
+      workDualUpdated[iCol] += delta_cost;
     }
   }
   primalPhase1Btran();
   primalPhase1Price();
-  vector<double>& workDualUpdated =
-      ekk_instance_.simplex_info_.workDualUpdated_;
   //  for (int ix=0; ix < row_primal_phase1.count; ix++) {
   //    int iCol = row_primal_phase1.index[ix];
   for (int iCol = 0; iCol < num_col; iCol++)

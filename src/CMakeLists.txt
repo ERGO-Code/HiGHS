@@ -114,7 +114,6 @@ set(sources
     simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
     simplex/HPrimal.cpp
-    simplex/HQPrimal.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexReport.cpp
@@ -174,7 +173,6 @@ set(headers
     simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
     simplex/HPrimal.h
-    simplex/HQPrimal.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
@@ -412,13 +410,15 @@ target_sources(libhighs PRIVATE
     simplex/HDualRHS.cpp
     simplex/HDualRow.cpp
     simplex/HDualMulti.cpp
+    simplex/HEkk.cpp
+    simplex/HEkkDebug.cpp
+    simplex/HEkkPrimal.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
     simplex/HPrimal.cpp
-    simplex/HQPrimal.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexReport.cpp
