@@ -1105,7 +1105,7 @@ void HEkkPrimal::phase1UpdatePrimal() {
   // Don't set baseValue[rowOut] yet so that dual update due to
   // feasibility changes is done correctly
   // Indicate that the primal infeasiblility information isn't known
-  ekk_instance_.simplex_info_.num_primal_infeasibilities = illegal_infeasibility_count;
+  //  ekk_instance_.simplex_info_.num_primal_infeasibilities = illegal_infeasibility_count;
   ekk_instance_.simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
   ekk_instance_.simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
   analysis->simplexTimerStop(UpdatePrimalClock);
@@ -1532,11 +1532,14 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
       sum_primal_infeasibilities += primal_infeasibility;
     }
   }
-  bool num_primal_infeasibilities_ok = num_primal_infeasibilities == updated_num_primal_infeasibilities;
-  if (!num_primal_infeasibilities_ok) {
-    printf("In iteration %d: num_primal_infeasibilities = %d != %d = updated_num_primal_infeasibilities\n",
-	   ekk_instance_.iteration_count_, num_primal_infeasibilities, updated_num_primal_infeasibilities);
-    assert(num_primal_infeasibilities_ok);
+  if (updated_num_primal_infeasibilities >= 0) {
+    // The number of primal infeasibliities should be correct
+    bool num_primal_infeasibilities_ok = num_primal_infeasibilities == updated_num_primal_infeasibilities;
+    if (!num_primal_infeasibilities_ok) {
+      printf("In iteration %d: num_primal_infeasibilities = %d != %d = updated_num_primal_infeasibilities\n",
+	     ekk_instance_.iteration_count_, num_primal_infeasibilities, updated_num_primal_infeasibilities);
+      assert(num_primal_infeasibilities_ok);
+    }
   }
   analysis->simplexTimerStop(ComputePrIfsClock);
 }
