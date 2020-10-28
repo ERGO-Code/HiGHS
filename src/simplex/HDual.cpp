@@ -28,7 +28,6 @@
 #include "lp_data/HighsModelObject.h"
 #include "simplex/HCrash.h"
 #include "simplex/HPrimal.h"
-#include "simplex/HQPrimal.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/SimplexTimer.h"
@@ -281,19 +280,20 @@ HighsStatus HDual::solve() {
     // SOLVE_PHASE_CLEANUP Looking to identify primal infeasiblilty or
     // primal unboundedness Cleanup with phase 1 for new primal code
     computePrimalObjectiveValue(workHMO);
-    HQPrimal hPrimal(workHMO);
-    hPrimal.solve();
-    // Horrible hack until the primal simplex solver is refined
-    if (scaled_model_status == HighsModelStatus::OPTIMAL) {
-      if (workHMO.scaled_solution_params_.num_primal_infeasibilities) {
-        // Optimal with primal infeasibilities => primal infeasible
-        assert(workHMO.scaled_solution_params_.num_primal_infeasibilities > 0);
-        scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
-      }
-    } else {
-      // Should only be primal unbounded
-      assert(scaled_model_status == HighsModelStatus::PRIMAL_UNBOUNDED);
-    }
+
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+		    "Primal simplex solver unavailable");
+    //    if (scaled_model_status == HighsModelStatus::OPTIMAL) {
+    //      if (workHMO.scaled_solution_params_.num_primal_infeasibilities) {
+    //        // Optimal with primal infeasibilities => primal infeasible
+    //        assert(workHMO.scaled_solution_params_.num_primal_infeasibilities > 0);
+    //        scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+    //      }
+    //    } else {
+    //      // Should only be primal unbounded
+    //      assert(scaled_model_status == HighsModelStatus::PRIMAL_UNBOUNDED);
+    //    }
+      return returnFromSolve(HighsStatus::Error);
   }
   if (solvePhase == SOLVE_PHASE_CLEANUP) {
     computePrimalObjectiveValue(workHMO);
@@ -334,8 +334,10 @@ HighsStatus HDual::solve() {
         hPrimal.solvePhase2();
       } else {
         // Cleanup with phase 2 for new primal code
-        HQPrimal hPrimal(workHMO);
-        hPrimal.solvePhase2();
+	HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+			"Cleanup with phase 2 for new primal code is unavailable");
+	analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
+	return returnFromSolve(HighsStatus::Error);
       }
       analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
 #ifdef HiGHSDEV

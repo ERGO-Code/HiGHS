@@ -29,7 +29,6 @@
 #include "simplex/HDual.h"
 #include "simplex/HEkk.h"
 #include "simplex/HPrimal.h"
-#include "simplex/HQPrimal.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HSimplexReport.h"
@@ -255,13 +254,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     reportSimplexPhaseIterations(highs_model_object, algorithm, true);
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
-      HighsLogMessage(logfile, HighsMessageType::INFO,
-                      "Using primal simplex solver");
-      HQPrimal primal_solver(highs_model_object);
-      call_status = primal_solver.solve();
-      return_status =
-          interpretCallStatus(call_status, return_status, "HQPrimal::solve");
-      if (return_status == HighsStatus::Error) return return_status;
+      HighsLogMessage(logfile, HighsMessageType::ERROR,
+                      "Primal simplex solver unavailable");
+      return HighsStatus::Error;
     } else {
       // Use dual simplex solver
       HDual dual_solver(highs_model_object);

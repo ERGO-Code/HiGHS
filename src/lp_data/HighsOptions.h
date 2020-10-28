@@ -580,7 +580,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int =
         new OptionRecordInt("dual_simplex_cleanup_strategy",
                             "Strategy for cleanup in dual simplex solver: none "
-                            "/ HPrimal / HQPrimal (0/1/2)",
+                            "/ HPrimal / HEkk (0/1/2)",
                             advanced, &dual_simplex_cleanup_strategy,
                             DUAL_SIMPLEX_CLEANUP_STRATEGY_MIN,
                             DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL,
