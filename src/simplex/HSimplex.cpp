@@ -3393,9 +3393,17 @@ HighsStatus getInfeasibilitiesAndNewTolerances(
   invalidateSolutionInfeasibilityParams(get_scaled_solution_params);
   // Zero the counts of unscaled and scaled primal and dual infeasibilities
   num_unscaled_primal_infeasibilities = 0;
+  max_unscaled_primal_infeasibility = 0;
+  sum_unscaled_primal_infeasibilities = 0;
   num_unscaled_dual_infeasibilities = 0;
+  max_unscaled_dual_infeasibility = 0;
+  sum_unscaled_dual_infeasibilities = 0;
   num_scaled_primal_infeasibilities = 0;
+  max_scaled_primal_infeasibility = 0;
+  sum_scaled_primal_infeasibilities = 0;
   num_scaled_dual_infeasibilities = 0;
+  max_scaled_dual_infeasibility = 0;
+  sum_scaled_dual_infeasibilities = 0;
 
   // If the scaled LP has beeen solved to optimality, look at the
   // scaled solution and, if there are infeasibilities, identify new

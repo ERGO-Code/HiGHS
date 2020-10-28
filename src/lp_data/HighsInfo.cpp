@@ -19,12 +19,12 @@ void HighsInfo::clear() {
   primal_status = (int)PrimalDualStatus::STATUS_NOTSET;
   dual_status = (int)PrimalDualStatus::STATUS_NOTSET;
   objective_function_value = 0;
-  num_primal_infeasibilities = -1;
-  max_primal_infeasibility = 0;
-  sum_primal_infeasibilities = 0;
-  num_dual_infeasibilities = -1;
-  max_dual_infeasibility = 0;
-  sum_dual_infeasibilities = 0;
+  num_primal_infeasibilities = illegal_infeasibility_count;
+  max_primal_infeasibility = illegal_infeasibility_measure;
+  sum_primal_infeasibilities = illegal_infeasibility_measure;
+  num_dual_infeasibilities = illegal_infeasibility_count;
+  max_dual_infeasibility = illegal_infeasibility_measure;
+  sum_dual_infeasibilities = illegal_infeasibility_measure;
 }
 
 inline const char* bool2string(bool b) { return b ? "true" : "false"; }

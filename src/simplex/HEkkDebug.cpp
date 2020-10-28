@@ -174,10 +174,10 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     }
     max_basic_dual = max(fabs(dual), max_basic_dual);
     if (value < lower - primal_feasibility_tolerance) {
-      primal_infeasibility = value - lower;
+      primal_infeasibility = lower - value;
       primal_phase1_cost = -1;
     } else if (value > upper + primal_feasibility_tolerance) {
-      primal_infeasibility = upper - value;
+      primal_infeasibility = value - upper;
       primal_phase1_cost = 1;
     }
     if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
@@ -221,6 +221,29 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_basic_dual);
   assert(max_basic_dual < excessive_basic_dual);
+  // Check that the numbers of primal and dual infeasibilities are correct
+  const bool illegal_num_primal_infeasibility =
+    num_primal_infeasibility != ekk_instance.simplex_info_.num_primal_infeasibilities;
+  if (illegal_num_primal_infeasibility) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "ekkDebugSimplex - %s: Iteration %d Should have %d not %d primal infeasibilities",
+                    message.c_str(), iteration_count, num_primal_infeasibility,
+                    ekk_instance.simplex_info_.num_primal_infeasibilities);
+    assert(!illegal_num_primal_infeasibility);
+    return HighsDebugStatus::LOGICAL_ERROR;
+  }
+  /*
+  const bool illegal_num_dual_infeasibility =
+    num_dual_infeasibility != ekk_instance.simplex_info_.num_dual_infeasibilities;
+  if (illegal_num_dual_infeasibility) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "ekkDebugSimplex - %s: Iteration %d Should have %d not %d dual infeasibilities",
+                    message.c_str(), iteration_count, num_dual_infeasibility,
+                    ekk_instance.simplex_info_.num_dual_infeasibilities);
+    assert(!illegal_num_dual_infeasibility);
+    return HighsDebugStatus::LOGICAL_ERROR;
+  }
+  */
   // Check any assumed feasibility
   bool require_primal_feasible_in_primal_simplex =
       algorithm == SimplexAlgorithm::PRIMAL && (phase == 0 || phase == 2);

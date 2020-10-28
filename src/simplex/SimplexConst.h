@@ -166,6 +166,7 @@ const int NONBASIC_FLAG_FALSE = 0;  // Basic
 const int NONBASIC_MOVE_UP = 1;   // Free to move (only) up
 const int NONBASIC_MOVE_DN = -1;  // Free to move (only) down
 const int NONBASIC_MOVE_ZE = 0;   // Fixed or free to move up and down
+const int illegal_move_value = -99; // Used to see whether valid move value has been set
 //
 // Relation between HiGHS basis and Simplex basis
 //

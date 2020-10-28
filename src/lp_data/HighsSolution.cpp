@@ -729,16 +729,15 @@ void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
 }
 
 // Invalidate the infeasibility values in a HighsSolutionParams
-// instance. Setting the number of infeasibilities to negative values
-// indicates that they aren't known
+// instance. 
 void invalidateSolutionInfeasibilityParams(
     HighsSolutionParams& solution_params) {
-  solution_params.num_primal_infeasibilities = -1;
-  solution_params.sum_primal_infeasibilities = 0;
-  solution_params.max_primal_infeasibility = 0;
-  solution_params.num_dual_infeasibilities = -1;
-  solution_params.sum_dual_infeasibilities = 0;
-  solution_params.max_dual_infeasibility = 0;
+  solution_params.num_primal_infeasibilities = illegal_infeasibility_count;
+  solution_params.max_primal_infeasibility = illegal_infeasibility_measure;
+  solution_params.sum_primal_infeasibilities = illegal_infeasibility_measure;
+  solution_params.num_dual_infeasibilities = illegal_infeasibility_count;
+  solution_params.max_dual_infeasibility = illegal_infeasibility_measure;
+  solution_params.sum_dual_infeasibilities = illegal_infeasibility_measure;
 }
 
 void copySolutionObjectiveParams(

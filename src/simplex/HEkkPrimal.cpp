@@ -438,9 +438,8 @@ void HEkkPrimal::rebuild() {
     // previously in phase 1
     if (solvePhase == SOLVE_PHASE_1) ekk_instance_.initialiseCost();
     ekk_instance_.computeDual();
+    ekk_instance_.computeSimplexDualInfeasible();
   }
-  ekk_instance_.computeSimplexDualInfeasible();
-
   ekk_instance_.computePrimalObjectiveValue();
   if (check_updated_objective_value) {
     // Apply the objective value correction due to computing primal
@@ -478,7 +477,7 @@ void HEkkPrimal::phase1Update() {
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
-  const int check_iter = -1;
+  const int check_iter = 53;
   if (ekk_instance_.iteration_count_ == check_iter) {
     printf("Iter %d\n", check_iter);
   }
@@ -539,9 +538,7 @@ void HEkkPrimal::phase1Update() {
     num_flip_since_rebuild++;
     // Recompute things on flip
     if (invertHint == 0) {
-      printf("FLIP\n");
-      getBasicPrimalInfeasibility();
-      if (simplex_info.num_primal_infeasibilities > 0) {
+      if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
       } else {
      // Crude way to force rebuild
@@ -617,8 +614,7 @@ void HEkkPrimal::phase1Update() {
 
   // Recompute dual and primal
   if (invertHint == 0) {
-    getBasicPrimalInfeasibility();
-    if (simplex_info.num_primal_infeasibilities > 0) {
+    if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
     } else {
       // Crude way to force rebuild
@@ -895,6 +891,10 @@ void HEkkPrimal::updateDual() {
   // Dual for the pivot
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
+  // Indicate that the dual infeasiblility information isn't known
+  ekk_instance_.simplex_info_.num_dual_infeasibilities = illegal_infeasibility_count;
+  ekk_instance_.simplex_info_.max_dual_infeasibility = illegal_infeasibility_measure;
+  ekk_instance_.simplex_info_.sum_dual_infeasibilities = illegal_infeasibility_measure;
   // After dual update in primal simplex the dual objective value is not known
   ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
   analysis->simplexTimerStop(UpdateDualClock);
@@ -1104,17 +1104,22 @@ void HEkkPrimal::phase1UpdatePrimal() {
   }
   // Don't set baseValue[rowOut] yet so that dual update due to
   // feasibility changes is done correctly
+  // Indicate that the primal infeasiblility information isn't known
+  ekk_instance_.simplex_info_.num_primal_infeasibilities = illegal_infeasibility_count;
+  ekk_instance_.simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
+  ekk_instance_.simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
 void HEkkPrimal::phase1UpdateDual() {
   analysis->simplexTimerStart(UpdateDualPrimalPhase1Clock);
-  const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
-  const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
-  const vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  const vector<double>& baseValue = simplex_info.baseValue_;
   const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
-  vector<double>& workCost = ekk_instance_.simplex_info_.workCost_;
-  vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
+  vector<double>& workCost = simplex_info.workCost_;
+  vector<double>& workDual = simplex_info.workDual_;
   //
   // Identify all the feasibility changes, giving a value to
   // col_primal_phase1 so that the duals can be updated and updating
@@ -1132,7 +1137,7 @@ void HEkkPrimal::phase1UpdateDual() {
   // row_primal_phase1. Hence, only add in the basic cost change
   // for logicals.
   col_primal_phase1.clear();
-  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
+  //  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
     for (int iRow = 0; iRow < num_row; iRow++) {
       int iCol = basicIndex[iRow];
       double was_cost = workCost[iCol];
@@ -1143,6 +1148,11 @@ void HEkkPrimal::phase1UpdateDual() {
 	cost = 1.0;
       }
       workCost[iCol] = cost;
+      if (was_cost) {
+	if (!cost) simplex_info.num_primal_infeasibilities--;
+      } else {
+	if (cost) simplex_info.num_primal_infeasibilities++;
+      }
       double delta_cost = cost - was_cost;
       if (delta_cost) {
 	col_primal_phase1.array[iRow] = delta_cost;
@@ -1150,26 +1160,6 @@ void HEkkPrimal::phase1UpdateDual() {
 	if (iCol >= num_col) workDual[iCol] += delta_cost;
       }
     }
-  } else {
-    for (int iEl = 0; iEl < col_aq.count; iEl++) {
-      int iRow = col_aq.index[iEl];
-      int iCol = basicIndex[iRow];
-      double was_cost = workCost[iCol];
-      double cost = 0;
-      if (baseValue[iRow] < baseLower[iRow] - dual_feasibility_tolerance) {
-	cost = -1.0;
-      } else if (baseValue[iRow] > baseUpper[iRow] + dual_feasibility_tolerance) {
-	cost = 1.0;
-      }
-      workCost[iCol] = cost;
-      double delta_cost = cost - was_cost;
-      if (delta_cost) {
-	col_primal_phase1.array[iRow] = delta_cost;
-	col_primal_phase1.index[col_primal_phase1.count++] = iRow;
-	if (iCol >= num_col) workDual[iCol] += delta_cost;
-      }
-    }
-  }
   primalPhase1Btran();
   primalPhase1Price();
   if (ekk_instance_.ignoreIndices(row_primal_phase1.count, num_col)) {
@@ -1191,6 +1181,13 @@ void HEkkPrimal::phase1UpdateDual() {
       workDual[iCol] -= col_primal_phase1.array[iRow];
     }
   }
+  // Indicate that the max/sum_primal_infeasibility information isn't known
+  simplex_info.max_primal_infeasibility = illegal_infeasibility_measure;
+  simplex_info.sum_primal_infeasibilities = illegal_infeasibility_measure;
+  // Indicate that the dual infeasiblility information isn't known
+  simplex_info.num_dual_infeasibilities = illegal_infeasibility_count;
+  simplex_info.max_dual_infeasibility = illegal_infeasibility_measure;
+  simplex_info.sum_dual_infeasibilities = illegal_infeasibility_measure;
   analysis->simplexTimerStop(UpdateDualPrimalPhase1Clock);
 }
 
@@ -1302,46 +1299,43 @@ void HEkkPrimal::phase2UpdatePrimal() {
   const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& baseValue = simplex_info.baseValue_;
 
-  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
+  //  if (ekk_instance_.ignoreIndices(col_aq.count, num_row)) {
+  bool primal_infeasible = false;
     for (int iRow = 0; iRow < num_row; iRow++) {
       baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
       double primal_infeasibility = max(baseLower[iRow] - baseValue[iRow],
 					baseValue[iRow] - baseUpper[iRow]);
-      bool primal_infeasible =
-        primal_infeasibility > primal_feasibility_tolerance;
-      if (primal_infeasible)
-	invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
+      if (primal_infeasibility > primal_feasibility_tolerance) {
+	simplex_info.num_primal_infeasibilities++;
+	primal_infeasible = true;
+      }
     }
-  } else {
-    for (int iEl = 0; iEl < col_aq.count; iEl++) {
-      int iRow = col_aq.index[iEl];
-      baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
-      double primal_infeasibility = max(baseLower[iRow] - baseValue[iRow],
-					baseValue[iRow] - baseUpper[iRow]);
-      bool primal_infeasible =
-        primal_infeasibility > primal_feasibility_tolerance;
-      if (primal_infeasible)
-	invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
-    }
-  }
+
   if (rowOut >= 0) {
     // Check the feasibility of the entering variable - using work
     // vector values since its base vector values haven't been updated
     baseValue[rowOut] = valueIn;
     double primal_infeasibility =
-        max(workLower[columnIn] - workValue[columnIn],
-            workValue[columnIn] - workUpper[columnIn]);
-    bool primal_infeasible =
-        primal_infeasibility > primal_feasibility_tolerance;
-    if (primal_infeasible)
-      printf(
-          "Entering varible has primal infeasibility of %g for [%g, %g, %g]\n",
-          primal_infeasibility, workLower[columnIn], workValue[columnIn],
-          workUpper[columnIn]);
+      max(workLower[columnIn] - workValue[columnIn],
+	  workValue[columnIn] - workUpper[columnIn]);
+    if (primal_infeasibility > primal_feasibility_tolerance) {
+      printf("Entering varible has primal infeasibility of %g for [%g, %g, %g]\n",
+	     primal_infeasibility, workLower[columnIn], workValue[columnIn],
+	     workUpper[columnIn]);
+      simplex_info.num_primal_infeasibilities++;
+      primal_infeasible = true;
+    }
   }
-  simplex_info.updated_primal_objective_value +=
-      workDual[columnIn] * thetaPrimal;
 
+  if (primal_infeasible)
+    invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
+
+  simplex_info.updated_primal_objective_value +=
+    workDual[columnIn] * thetaPrimal;
+
+  // Indicate that the max/sum_primal_infeasibility information isn't known
+  ekk_instance_.simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
+  ekk_instance_.simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
@@ -1520,6 +1514,7 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
   int& num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
   double& max_primal_infeasibility = simplex_info.max_primal_infeasibility;
   double& sum_primal_infeasibilities = simplex_info.sum_primal_infeasibilities;
+  const int updated_num_primal_infeasibilities = num_primal_infeasibilities;
   num_primal_infeasibilities = 0;
   max_primal_infeasibility = 0;
   sum_primal_infeasibilities = 0;
@@ -1536,6 +1531,12 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
           std::max(primal_infeasibility, max_primal_infeasibility);
       sum_primal_infeasibilities += primal_infeasibility;
     }
+  }
+  bool num_primal_infeasibilities_ok = num_primal_infeasibilities == updated_num_primal_infeasibilities;
+  if (!num_primal_infeasibilities_ok) {
+    printf("In iteration %d: num_primal_infeasibilities = %d != %d = updated_num_primal_infeasibilities\n",
+	   ekk_instance_.iteration_count_, num_primal_infeasibilities, updated_num_primal_infeasibilities);
+    assert(num_primal_infeasibilities_ok);
   }
   analysis->simplexTimerStop(ComputePrIfsClock);
 }

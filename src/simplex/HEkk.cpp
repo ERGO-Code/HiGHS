@@ -405,7 +405,6 @@ void HEkk::setNonbasicMove() {
                                       simplex_lp_.numRow_);
   const bool have_solution = false;
   // Don't have a simplex basis since nonbasicMove is not set up.
-  const int illegal_move_value = -99;
 
   // Assign nonbasicMove using as much information as is available
   double lower;
@@ -900,6 +899,11 @@ void HEkk::computePrimal() {
     simplex_info_.baseLower_[i] = simplex_info_.workLower_[iCol];
     simplex_info_.baseUpper_[i] = simplex_info_.workUpper_[iCol];
   }
+  // Indicate that the primal infeasiblility information isn't known
+  simplex_info_.num_primal_infeasibilities = illegal_infeasibility_count;
+  simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
+  simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
+  
   // Now have basic primals
   simplex_lp_status_.has_basic_primal_values = true;
   analysis_.simplexTimerStop(ComputePrimalClock);
@@ -936,6 +940,11 @@ void HEkk::computeDual() {
     for (int i = simplex_lp_.numCol_; i < numTot; i++)
       simplex_info_.workDual_[i] -= dual_col.array[i - simplex_lp_.numCol_];
   }
+  // Indicate that the dual infeasiblility information isn't known
+  simplex_info_.num_dual_infeasibilities = illegal_infeasibility_count;
+  simplex_info_.max_dual_infeasibility = illegal_infeasibility_measure;
+  simplex_info_.sum_dual_infeasibilities = illegal_infeasibility_measure;
+  
   // Now have nonbasic duals
   simplex_lp_status_.has_nonbasic_dual_values = true;
   analysis_.simplexTimerStop(ComputeDualClock);
