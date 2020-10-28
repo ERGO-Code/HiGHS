@@ -282,18 +282,19 @@ HighsStatus HDual::solve() {
     computePrimalObjectiveValue(workHMO);
 
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-		    "Primal simplex solver unavailable");
+                    "Primal simplex solver unavailable");
     //    if (scaled_model_status == HighsModelStatus::OPTIMAL) {
     //      if (workHMO.scaled_solution_params_.num_primal_infeasibilities) {
     //        // Optimal with primal infeasibilities => primal infeasible
-    //        assert(workHMO.scaled_solution_params_.num_primal_infeasibilities > 0);
-    //        scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
+    //        assert(workHMO.scaled_solution_params_.num_primal_infeasibilities
+    //        > 0); scaled_model_status =
+    //        HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
     //      }
     //    } else {
     //      // Should only be primal unbounded
     //      assert(scaled_model_status == HighsModelStatus::PRIMAL_UNBOUNDED);
     //    }
-      return returnFromSolve(HighsStatus::Error);
+    return returnFromSolve(HighsStatus::Error);
   }
   if (solvePhase == SOLVE_PHASE_CLEANUP) {
     computePrimalObjectiveValue(workHMO);
@@ -334,10 +335,11 @@ HighsStatus HDual::solve() {
         hPrimal.solvePhase2();
       } else {
         // Cleanup with phase 2 for new primal code
-	HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-			"Cleanup with phase 2 for new primal code is unavailable");
-	analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-	return returnFromSolve(HighsStatus::Error);
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "Cleanup with phase 2 for new primal code is unavailable");
+        analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
+        return returnFromSolve(HighsStatus::Error);
       }
       analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
 #ifdef HiGHSDEV

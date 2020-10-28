@@ -48,7 +48,8 @@ class HEkkPrimal {
   void chooseRow();
   void updateDual(vector<double>& workDual);
 
-  void phase1ComputeDual(const vector<double>& baseValue, const bool check = false);
+  void phase1ComputeDual(const vector<double>& baseValue,
+                         const bool check = false);
   void phase1ChooseRow();
   void phase1UpdatePrimal();
   void phase1UpdateDual();

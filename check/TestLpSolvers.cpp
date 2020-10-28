@@ -211,7 +211,8 @@ void testSolvers(Highs& highs, IterationCount& model_iteration_count,
   */
 
   int from_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_MIN;
-  int to_i = (int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL;  // NUM;
+  int to_i =
+      (int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_MULTI;  // PRIMAL;  // NUM;
   for (int i = from_i; i < to_i; i++) {
     if (!have_omp) {
       if (i == (int)SimplexStrategy::SIMPLEX_STRATEGY_DUAL_TASKS) continue;

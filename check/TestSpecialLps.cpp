@@ -260,7 +260,7 @@ void primalDualInfeasible2(Highs& highs) {
   special_lps.primalDualInfeasible2Lp(lp, require_model_status);
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   // Presolve doesn't reduce the LP
-  solve(highs, "on", "simplex", require_model_status);
+  // solve(highs, "on", "simplex", require_model_status);
   //  solve(highs, "on", "ipm", require_model_status);
 }
 
