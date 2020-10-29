@@ -215,6 +215,15 @@ void HEkkPrimal::initialise() {
                     "HEkkPrimal:: LP has %d free columns", num_free_col);
     nonbasic_free_col_set.setup(num_free_col, num_tot, output, debug);
   }
+  // Set up the hyper-sparse CHUZC data
+  use_hyper_sparse_chuzc = false;
+  initialise_hyper_sparse_chuzc = initialise_hyper_sparse_chuzc;
+  const int max_num_hyper_sparse_chuzc_candidates = 50;
+  hyper_sparse_chuzc_candidate.resize(1+max_num_hyper_sparse_chuzc_candidates);
+  hyper_sparse_chuzc_measure.resize(1+max_num_hyper_sparse_chuzc_candidates);
+  hyper_sparse_chuzc_candidate_set.setup(max_num_hyper_sparse_chuzc_candidates, num_tot, output, debug);
+  max_hyper_sparse_chuzc_non_candidate_measure = -1;
+  
 }
 
 void HEkkPrimal::solvePhase1() {
@@ -781,27 +790,59 @@ void HEkkPrimal::chooseColumn() {
   double dBestScore = 0;
   columnIn = -1;
 
-  // Choose any attractive nonbasic free column
+  // Consider nonbasic free columns first
   const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
-  if (num_nonbasic_free_col) {
-    const vector<int>& nonbasic_free_col_set_entry =
+  if (use_hyper_sparse_chuzc) {
+    if (initialise_hyper_sparse_chuzc) {
+      int num_candidates = 0;
+      if (num_nonbasic_free_col) {
+	const vector<int>& nonbasic_free_col_set_entry =
+	  nonbasic_free_col_set.entry();
+	for (int ix = 0; ix < num_nonbasic_free_col; ix++) {
+	  int iCol = nonbasic_free_col_set_entry[ix];
+	  /*
+	  if (fabs(workDual[iCol]) > dual_feasibility_tolerance) {
+	    num_candidates
+	  columnIn = iCol;
+	  analysis->simplexTimerStop(ChuzcPrimalClock);
+	  return;
+	  */
+	}
+      }
+      // Now look at other columns
+      for (int iCol = 0; iCol < num_tot; iCol++) {
+	double dMyDual = nonbasicMove[iCol] * workDual[iCol];
+	double dMyScore = dMyDual / devex_weight[iCol];
+	if (dMyDual < -dual_feasibility_tolerance && dMyScore < dBestScore) {
+	  dBestScore = dMyScore;
+	  columnIn = iCol;
+	}
+      }
+      initialise_hyper_sparse_chuzc = false;
+    }
+
+  } else {
+    // Choose any attractive nonbasic free column
+    if (num_nonbasic_free_col) {
+      const vector<int>& nonbasic_free_col_set_entry =
         nonbasic_free_col_set.entry();
-    for (int ix = 0; ix < num_nonbasic_free_col; ix++) {
-      int iCol = nonbasic_free_col_set_entry[ix];
-      if (fabs(workDual[iCol]) > dual_feasibility_tolerance) {
-        columnIn = iCol;
-        analysis->simplexTimerStop(ChuzcPrimalClock);
-        return;
+      for (int ix = 0; ix < num_nonbasic_free_col; ix++) {
+	int iCol = nonbasic_free_col_set_entry[ix];
+	if (fabs(workDual[iCol]) > dual_feasibility_tolerance) {
+	  columnIn = iCol;
+	  analysis->simplexTimerStop(ChuzcPrimalClock);
+	  return;
+	}
       }
     }
-  }
-  // Now look at other columns
-  for (int iCol = 0; iCol < num_tot; iCol++) {
-    double dMyDual = nonbasicMove[iCol] * workDual[iCol];
-    double dMyScore = dMyDual / devex_weight[iCol];
-    if (dMyDual < -dual_feasibility_tolerance && dMyScore < dBestScore) {
-      dBestScore = dMyScore;
-      columnIn = iCol;
+    // Now look at other columns
+    for (int iCol = 0; iCol < num_tot; iCol++) {
+      double dMyDual = nonbasicMove[iCol] * workDual[iCol];
+      double dMyScore = dMyDual / devex_weight[iCol];
+      if (dMyDual < -dual_feasibility_tolerance && dMyScore < dBestScore) {
+	dBestScore = dMyScore;
+	columnIn = iCol;
+      }
     }
   }
   analysis->simplexTimerStop(ChuzcPrimalClock);

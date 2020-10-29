@@ -107,6 +107,14 @@ class HEkkPrimal {
   // Nonbasic free column data.
   int num_free_col;
   HSet nonbasic_free_col_set;
+  // Hyper-sparse CHUZC data
+  bool use_hyper_sparse_chuzc;
+  bool initialise_hyper_sparse_chuzc;
+  const int max_num_hyper_sparse_chuzc_candidates = 50;
+  vector<int> hyper_sparse_chuzc_candidate;
+  vector<double> hyper_sparse_chuzc_measure;
+  HSet hyper_sparse_chuzc_candidate_set;
+  double max_hyper_sparse_chuzc_non_candidate_measure;
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
