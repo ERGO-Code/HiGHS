@@ -94,6 +94,8 @@ struct HighsSimplexInfo {
   std::vector<double> workUpper_;
   std::vector<double> workRange_;
   std::vector<double> workValue_;
+  std::vector<double> workLowerShift_;
+  std::vector<double> workUpperShift_;
   //
   // baseLower/baseUpper/baseValue: Lower and upper bounds on the
   // basic variables and their values. Latter not known until solve()
@@ -176,6 +178,7 @@ struct HighsSimplexInfo {
   int dual_phase2_iteration_count = 0;
   int primal_phase1_iteration_count = 0;
   int primal_phase2_iteration_count = 0;
+  int primal_bound_swap = 0;
 
   int min_threads = 1;
   int num_threads = 1;

@@ -482,6 +482,8 @@ void HEkk::allocateWorkAndBaseArrays() {
   simplex_info_.workUpper_.resize(numTot);
   simplex_info_.workRange_.resize(numTot);
   simplex_info_.workValue_.resize(numTot);
+  simplex_info_.workLowerShift_.resize(numTot);
+  simplex_info_.workUpperShift_.resize(numTot);
 
   // Feel that it should be possible to resize this with in dual
   // solver, and only if Devex is being used, but a pointer to it
@@ -499,16 +501,20 @@ void HEkk::initialisePhase2ColBound() {
     simplex_info_.workUpper_[iCol] = simplex_lp_.colUpper_[iCol];
     simplex_info_.workRange_[iCol] =
         simplex_info_.workUpper_[iCol] - simplex_info_.workLower_[iCol];
+    simplex_info_.workLowerShift_[iCol] = 0;
+    simplex_info_.workUpperShift_[iCol] = 0;
   }
 }
 
 void HEkk::initialisePhase2RowBound() {
-  for (int row = 0; row < simplex_lp_.numRow_; row++) {
-    int var = simplex_lp_.numCol_ + row;
-    simplex_info_.workLower_[var] = -simplex_lp_.rowUpper_[row];
-    simplex_info_.workUpper_[var] = -simplex_lp_.rowLower_[row];
-    simplex_info_.workRange_[var] =
-        simplex_info_.workUpper_[var] - simplex_info_.workLower_[var];
+  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
+    int iCol = simplex_lp_.numCol_ + iRow;
+    simplex_info_.workLower_[iCol] = -simplex_lp_.rowUpper_[iRow];
+    simplex_info_.workUpper_[iCol] = -simplex_lp_.rowLower_[iRow];
+    simplex_info_.workRange_[iCol] =
+        simplex_info_.workUpper_[iCol] - simplex_info_.workLower_[iCol];
+    simplex_info_.workLowerShift_[iCol] = 0;
+    simplex_info_.workUpperShift_[iCol] = 0;
   }
 }
 

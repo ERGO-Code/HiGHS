@@ -536,6 +536,7 @@ void HEkkPrimal::phase1Update() {
 
   // Update for the flip case
   if (flipped) {
+    simplex_info.primal_bound_swap++;
     ekk_instance_.invalidateDualInfeasibilityRecord();
     iterationAnalysis();
     num_flip_since_rebuild++;
@@ -710,6 +711,7 @@ void HEkkPrimal::phase2Update() {
 
   // If flipped, then no need touch the pivots
   if (flipped) {
+    simplex_info.primal_bound_swap++;
     ekk_instance_.invalidateDualInfeasibilityRecord();
     iterationAnalysis();
     num_flip_since_rebuild++;

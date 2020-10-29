@@ -106,10 +106,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   if (return_status == HighsStatus::Error) return return_status;
 
   if (highs_model_object.options_.simplex_strategy == SIMPLEX_STRATEGY_EKK) {
-    // Use EKK
-    //    HEkk ekk(highs_model_object.simplex_lp_, highs_model_object.options_,
-    //             highs_model_object.timer_);
     HEkk& ekk = highs_model_object.ekk_instance_;
+    reportSimplexPhaseIterations(logfile, ekk.iteration_count_,
+				 ekk.simplex_info_, SimplexAlgorithm::PRIMAL, true);
 #ifdef HiGHSDEV
     ekk.analysis_.simplexTimerStart(SimplexTotalClock);
 #endif
@@ -122,6 +121,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     ekk.analysis_.simplexTimerStop(SimplexTotalClock);
 #endif
+    reportSimplexPhaseIterations(logfile, ekk.iteration_count_,
+				 ekk.simplex_info_, SimplexAlgorithm::PRIMAL);
     highs_model_object.scaled_model_status_ = ekk.scaled_model_status_;
     highs_model_object.scaled_solution_params_ = ekk.getSolutionParams();
     simplex_info = ekk.simplex_info_;
@@ -251,7 +252,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL)
       algorithm = SimplexAlgorithm::PRIMAL;
-    reportSimplexPhaseIterations(highs_model_object, algorithm, true);
+    reportSimplexPhaseIterations(logfile,
+				 highs_model_object.iteration_counts_.simplex,
+				 highs_model_object.simplex_info_,
+				 algorithm, true);
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
       HighsLogMessage(logfile, HighsMessageType::ERROR,
@@ -335,7 +339,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     debugBasisCondition(highs_model_object, "Final");
 
     // Official finish of solver
-    reportSimplexPhaseIterations(highs_model_object, algorithm);
+    reportSimplexPhaseIterations(logfile,
+				 highs_model_object.iteration_counts_.simplex,
+				 highs_model_object.simplex_info_,
+				 algorithm);
   }
 
 #ifdef HiGHSDEV
