@@ -729,7 +729,7 @@ void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
 }
 
 // Invalidate the infeasibility values in a HighsSolutionParams
-// instance. 
+// instance.
 void invalidateSolutionInfeasibilityParams(
     HighsSolutionParams& solution_params) {
   solution_params.num_primal_infeasibilities = illegal_infeasibility_count;

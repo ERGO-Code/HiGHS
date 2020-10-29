@@ -140,9 +140,9 @@ enum class HighsBasisStatus {
              // nonzero or not at a bound. No SCIP equivalent
 };
 
-// Illegal values of num/max/sum infeasibility - used to indicate that true values aren't known
+// Illegal values of num/max/sum infeasibility - used to indicate that true
+// values aren't known
 const int illegal_infeasibility_count = -1;
 const double illegal_infeasibility_measure = -1;
-
 
 #endif /* LP_DATA_HCONST_H_ */

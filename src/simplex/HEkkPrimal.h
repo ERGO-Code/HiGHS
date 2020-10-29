@@ -57,6 +57,8 @@ class HEkkPrimal {
 
   void phase2UpdatePrimal();
 
+  void considerInfeasibleValueIn();
+
   void resetDevex();
   void updateDevex();
   void updateVerify();
