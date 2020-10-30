@@ -15,9 +15,8 @@
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 
-void reportSimplexPhaseIterations(FILE* logfile,
-				  const int iteration_count,
-				  const HighsSimplexInfo& simplex_info,
+void reportSimplexPhaseIterations(FILE* logfile, const int iteration_count,
+                                  const HighsSimplexInfo& simplex_info,
                                   const SimplexAlgorithm algorithm,
                                   const bool initialise) {
   if (simplex_info.run_quiet) return;
@@ -36,8 +35,7 @@ void reportSimplexPhaseIterations(FILE* logfile,
     primal_bound_swap0 = simplex_info.primal_bound_swap;
     return;
   }
-  const int delta_iteration_count =
-      iteration_count - iteration_count0;
+  const int delta_iteration_count = iteration_count - iteration_count0;
   const int delta_dual_phase1_iteration_count =
       simplex_info.dual_phase1_iteration_count - dual_phase1_iteration_count0;
   const int delta_dual_phase2_iteration_count =
@@ -49,8 +47,7 @@ void reportSimplexPhaseIterations(FILE* logfile,
       simplex_info.primal_phase2_iteration_count -
       primal_phase2_iteration_count0;
   const int delta_primal_bound_swap =
-      simplex_info.primal_bound_swap -
-      primal_bound_swap0;
+      simplex_info.primal_bound_swap - primal_bound_swap0;
 
   if (delta_dual_phase1_iteration_count + delta_dual_phase2_iteration_count +
           delta_primal_phase1_iteration_count +
@@ -62,11 +59,12 @@ void reportSimplexPhaseIterations(FILE* logfile,
            delta_primal_phase2_iteration_count, delta_iteration_count);
   }
   if (algorithm == SimplexAlgorithm::PRIMAL) {
-    HighsLogMessage(logfile, HighsMessageType::INFO,
-                    "Primal simplex iterations [Ph1 %d; Ph2 %d; Swaps %d] Total %d",
-                    delta_primal_phase1_iteration_count,
-                    delta_primal_phase2_iteration_count,
-		    delta_primal_bound_swap, delta_iteration_count);
+    HighsLogMessage(
+        logfile, HighsMessageType::INFO,
+        "Primal simplex iterations [Ph1 %d; Ph2 %d; Swaps %d] Total %d",
+        delta_primal_phase1_iteration_count,
+        delta_primal_phase2_iteration_count, delta_primal_bound_swap,
+        delta_iteration_count);
   } else {
     HighsLogMessage(logfile, HighsMessageType::INFO,
                     "Dual simplex iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d",

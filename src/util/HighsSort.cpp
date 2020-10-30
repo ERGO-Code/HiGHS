@@ -11,34 +11,33 @@
  * @brief Sorting routines for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include <cstddef>
-#include "lp_data/HConst.h"
 #include "util/HighsSort.h"
+
+#include <cstddef>
+
+#include "lp_data/HConst.h"
 
 using std::vector;
 
-void addToDecreasingHeap(int& n, int mx_n,
-			 vector<double>& heap_v,
-			 vector<int>& heap_ix,
-			 const double v,
-			 const int ix) {
+void addToDecreasingHeap(int& n, int mx_n, vector<double>& heap_v,
+                         vector<int>& heap_ix, const double v, const int ix) {
   int cd_p, pa_p;
   if (n < mx_n) {
     // The heap is not full so put the new value at the bottom of the
     // heap and let it rise up to its correct level.
     n++;
     cd_p = n;
-    pa_p = cd_p/2;
+    pa_p = cd_p / 2;
     // 10
     for (;;) {
       if (pa_p > 0) {
-	if (v < heap_v[pa_p]) {
-	  heap_v[cd_p] = heap_v[pa_p];
-	  heap_ix[cd_p] = heap_ix[pa_p];
-	  cd_p = pa_p;
-	  pa_p = pa_p/2;
-	  continue;
-	}
+        if (v < heap_v[pa_p]) {
+          heap_v[cd_p] = heap_v[pa_p];
+          heap_ix[cd_p] = heap_ix[pa_p];
+          cd_p = pa_p;
+          pa_p = pa_p / 2;
+          continue;
+        }
       }
       break;
     }
@@ -52,16 +51,16 @@ void addToDecreasingHeap(int& n, int mx_n,
     // 20
     for (;;) {
       if (cd_p <= n) {
-	if (cd_p < n) {
-	  if (heap_v[cd_p] > heap_v[cd_p+1]) cd_p++;
-	}
-	if (v > heap_v[cd_p]) {
-	  heap_v[pa_p] = heap_v[cd_p];
-	  heap_ix[pa_p] = heap_ix[cd_p];
-	  pa_p = cd_p;
-	  cd_p = cd_p + cd_p;
-	  continue;
-	}
+        if (cd_p < n) {
+          if (heap_v[cd_p] > heap_v[cd_p + 1]) cd_p++;
+        }
+        if (v > heap_v[cd_p]) {
+          heap_v[pa_p] = heap_v[cd_p];
+          heap_ix[pa_p] = heap_ix[cd_p];
+          pa_p = cd_p;
+          cd_p = cd_p + cd_p;
+          continue;
+        }
       }
       break;
     }
@@ -73,15 +72,17 @@ void addToDecreasingHeap(int& n, int mx_n,
   return;
 }
 
-void sortDecreasingHeap(const int n, vector<double>& heap_v, vector<int>& heap_ix) {
+void sortDecreasingHeap(const int n, vector<double>& heap_v,
+                        vector<int>& heap_ix) {
   int fo_p, srt_p;
   int cd_p, pa_p;
   int ix;
   double v;
   if (n <= 1) return;
   if (heap_ix[0] != 1) {
-    // The data are assumed to be completely unordered. A heap will be formed and { sorted.
-    fo_p = n/2 + 1;
+    // The data are assumed to be completely unordered. A heap will be formed
+    // and { sorted.
+    fo_p = n / 2 + 1;
     srt_p = n;
   } else {
     // The data are assumed to form a heap which is to be sorted.
@@ -101,32 +102,32 @@ void sortDecreasingHeap(const int n, vector<double>& heap_v, vector<int>& heap_i
       heap_ix[srt_p] = heap_ix[1];
       srt_p--;
       if (srt_p == 1) {
-	heap_v[1] = v;
-	heap_ix[1] = ix;
-	return;
+        heap_v[1] = v;
+        heap_ix[1] = ix;
+        return;
       }
     }
     pa_p = fo_p;
     cd_p = fo_p + fo_p;
     for (;;) {
       if (cd_p <= srt_p) {
-	if (cd_p < srt_p) {
-	  if (heap_v[cd_p] > heap_v[cd_p+1]) cd_p = cd_p + 1;
-	}
-	if (v > heap_v[cd_p]) {
-	  heap_v[pa_p] = heap_v[cd_p];
-	  heap_ix[pa_p] = heap_ix[cd_p];
-	  pa_p = cd_p;
-	  cd_p = cd_p + cd_p;
-	  continue;
-	}
+        if (cd_p < srt_p) {
+          if (heap_v[cd_p] > heap_v[cd_p + 1]) cd_p = cd_p + 1;
+        }
+        if (v > heap_v[cd_p]) {
+          heap_v[pa_p] = heap_v[cd_p];
+          heap_ix[pa_p] = heap_ix[cd_p];
+          pa_p = cd_p;
+          cd_p = cd_p + cd_p;
+          continue;
+        }
       }
       break;
     }
-      heap_v[pa_p] = v;
-      heap_ix[pa_p] = ix;
+    heap_v[pa_p] = v;
+    heap_ix[pa_p] = ix;
   }
-    return;
+  return;
 }
 
 void maxheapsort(int* heap_v, int n) {

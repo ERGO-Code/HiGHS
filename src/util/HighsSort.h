@@ -18,8 +18,10 @@
 
 using std::vector;
 
-void addToDecreasingHeap(int& n, int mx_n, vector<double>& heap_v, vector<int>& heap_ix, double v, int ix);
-void sortDecreasingHeap(const int n, vector<double>& heap_v, vector<int>& heap_ix);
+void addToDecreasingHeap(int& n, int mx_n, vector<double>& heap_v,
+                         vector<int>& heap_ix, double v, int ix);
+void sortDecreasingHeap(const int n, vector<double>& heap_v,
+                        vector<int>& heap_ix);
 /**
  * @brief Sort values[1..n] of an array by increasing value
  */

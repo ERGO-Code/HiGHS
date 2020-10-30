@@ -11,9 +11,8 @@ using std::vector;
 const bool dev_run = false;
 
 // No commas in test case name.
-void getRandomValues(const int num_values,
-		     vector<double>& values,
-		     vector<int>& indices) {
+void getRandomValues(const int num_values, vector<double>& values,
+                     vector<int>& indices) {
   // Set up a vector of random number and their corresponding indices
   HighsRandom random;
   for (int ix = 0; ix < num_values; ix++) {
@@ -22,41 +21,37 @@ void getRandomValues(const int num_values,
   }
 }
 
-void doFullSort(const int num_values,
-		vector<double>& values,
-		vector<int>& indices) {
+void doFullSort(const int num_values, vector<double>& values,
+                vector<int>& indices) {
   // Sort the vector of random number and their corresponding indices
   maxheapsort(&values[0], &indices[0], num_values);
 }
 
-void doAddSort(int& num_values_sorted,
-	       const int& max_num_values_sorted,
-	       vector<double>& best_double_values,
-	       vector<int>& best_indices,
-	       const int num_values,
-	       const vector<double>& values,
-	       const vector<int>& indices) {
+void doAddSort(int& num_values_sorted, const int& max_num_values_sorted,
+               vector<double>& best_double_values, vector<int>& best_indices,
+               const int num_values, const vector<double>& values,
+               const vector<int>& indices) {
   num_values_sorted = 0;
   for (int ix = 1; ix <= num_values; ix++) {
-    addToDecreasingHeap(num_values_sorted, max_num_values_sorted, best_double_values, best_indices, values[ix], indices[ix]);
+    addToDecreasingHeap(num_values_sorted, max_num_values_sorted,
+                        best_double_values, best_indices, values[ix],
+                        indices[ix]);
   }
   sortDecreasingHeap(num_values_sorted, best_double_values, best_indices);
 }
 
-void reportValuesIndices(const int num_values,
-			 const vector<double>& values,
-			 const vector<int>& indices) {
+void reportValuesIndices(const int num_values, const vector<double>& values,
+                         const vector<int>& indices) {
   if (!dev_run) return;
   printf("\n  Ix      Value Index\n");
-  for (int ix = 1; ix<=num_values; ix++) {
+  for (int ix = 1; ix <= num_values; ix++) {
     printf("%4d %10.8f  %4d\n", ix, values[ix], indices[ix]);
   }
 }
 
-void checkIncreasingSort(const int num_sorted,
-			 const vector<double>& values,
-			 const vector<int>& indices,
-			 const vector<double>& original_values) {
+void checkIncreasingSort(const int num_sorted, const vector<double>& values,
+                         const vector<int>& indices,
+                         const vector<double>& original_values) {
   // Check that the random numbers are ascending and that the indices
   // point from the original values to their new positions
   bool error0 = false;
@@ -64,26 +59,25 @@ void checkIncreasingSort(const int num_sorted,
   double previous = -HIGHS_CONST_INF;
   for (int ix = 0; ix < num_sorted; ix++) {
     if (values[1 + ix] < previous) {
-      printf("Values[%2d] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix], previous);
+      printf("Values[%2d] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
+             previous);
       error0 = true;
     }
     previous = values[1 + ix];
-    if (values[1 + ix] != original_values[1+indices[1 + ix]]) {
+    if (values[1 + ix] != original_values[1 + indices[1 + ix]]) {
       printf("Values[%2d] = %f5.4 != %f5.4 = original_values[indices[%2d]]\n",
-	     1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
+             1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
       error1 = true;
     }
   }
 
   REQUIRE(error0 == false);
   REQUIRE(error1 == false);
-
 }
 
-void checkDecreasingSort(const int num_sorted,
-			 const vector<double>& values,
-			 const vector<int>& indices,
-			 const vector<double>& original_values) {
+void checkDecreasingSort(const int num_sorted, const vector<double>& values,
+                         const vector<int>& indices,
+                         const vector<double>& original_values) {
   // Check that the random numbers are ascending and that the indices
   // point from the original values to their new positions
   bool error0 = false;
@@ -91,20 +85,20 @@ void checkDecreasingSort(const int num_sorted,
   double previous = HIGHS_CONST_INF;
   for (int ix = 0; ix < num_sorted; ix++) {
     if (values[1 + ix] > previous) {
-      printf("Values[%2d] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix], previous);
+      printf("Values[%2d] = %f5.4 < %f5.4 = previous\n", 1 + ix, values[1 + ix],
+             previous);
       error0 = true;
     }
     previous = values[1 + ix];
-    if (values[1 + ix] != original_values[1+indices[1 + ix]]) {
+    if (values[1 + ix] != original_values[1 + indices[1 + ix]]) {
       printf("Values[%2d] = %f5.4 != %f5.4 = original_values[indices[%2d]]\n",
-	     1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
+             1 + ix, values[1 + ix], original_values[indices[1 + ix]], 1 + ix);
       error1 = true;
     }
   }
 
   REQUIRE(error0 == false);
   REQUIRE(error1 == false);
-
 }
 
 TEST_CASE("HiGHS_sort", "[highs_data]") {
@@ -123,7 +117,8 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   original_double_values = double_values;
   doFullSort(num_values, double_values, indices);
   reportValuesIndices(num_values, double_values, indices);
-  checkIncreasingSort(num_values, double_values, indices, original_double_values);
+  checkIncreasingSort(num_values, double_values, indices,
+                      original_double_values);
 
   // Use the indices of the previous sort as a vector of integers to sort
   for (int ix = 0; ix < num_values; ix++) {
@@ -232,8 +227,9 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   int num_values_sorted;
   getRandomValues(num_values, double_values, indices);
   reportValuesIndices(num_values, double_values, indices);
-  doAddSort(num_values_sorted, max_num_values_sorted, best_double_values, best_indices, num_values, double_values, indices);
+  doAddSort(num_values_sorted, max_num_values_sorted, best_double_values,
+            best_indices, num_values, double_values, indices);
   reportValuesIndices(num_values_sorted, best_double_values, best_indices);
-  checkDecreasingSort(num_values_sorted, best_double_values, best_indices, double_values);
-
+  checkDecreasingSort(num_values_sorted, best_double_values, best_indices,
+                      double_values);
 }
