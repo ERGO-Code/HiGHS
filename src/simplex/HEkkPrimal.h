@@ -111,6 +111,7 @@ class HEkkPrimal {
   bool use_hyper_sparse_chuzc;
   bool initialise_hyper_sparse_chuzc;
   const int max_num_hyper_sparse_chuzc_candidates = 50;
+  int num_hyper_sparse_chuzc_candidates;
   vector<int> hyper_sparse_chuzc_candidate;
   vector<double> hyper_sparse_chuzc_measure;
   HSet hyper_sparse_chuzc_candidate_set;

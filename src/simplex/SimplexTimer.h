@@ -66,6 +66,8 @@ enum iClockSimplex {
   Chuzr1Clock,         //!< CHUZR - Primal stage 1
   Chuzr2Clock,         //!< CHUZR - Primal stage 2
   ChuzcPrimalClock,    //!< CHUZC - Primal
+  ChuzcHyperInitialiselClock,    //!< CHUZC - Hyper-sparse initialisation
+  ChuzcHyperClock,    //!< CHUZC - Hyper-sparse
   Chuzc0Clock,         //!< CHUZC - Dual stage 0
   PriceChuzc1Clock,    //!< PRICE + CHUZC - Dual stage 1: parallel
   Chuzc1Clock,         //!< CHUZC - Dual stage 1
@@ -160,6 +162,8 @@ class SimplexTimer {
     clock[Chuzr1Clock] = timer.clock_def("CHUZR1", "CR1");
     clock[Chuzr2Clock] = timer.clock_def("CHUZR2", "CR2");
     clock[ChuzcPrimalClock] = timer.clock_def("CHUZC_PRIMAL", "CCP");
+    clock[ChuzcHyperInitialiselClock] = timer.clock_def("CHUZC_HYPER_IZ", "CHI");
+    clock[ChuzcHyperClock] = timer.clock_def("CHUZC_HYPER", "CHC");
     clock[Chuzc0Clock] = timer.clock_def("CHUZC0", "CC0");
     clock[PriceChuzc1Clock] = timer.clock_def("PRICE_CHUZC1", "PC1");
     clock[Chuzc1Clock] = timer.clock_def("CHUZC1", "CC1");
@@ -276,6 +280,8 @@ class SimplexTimer {
                                         ReportRebuildClock,
                                         PermWtClock,
                                         ChuzcPrimalClock,
+                                   	ChuzcHyperInitialiselClock,
+                                	ChuzcHyperClock,
                                         Chuzc0Clock,
                                         Chuzc1Clock,
                                         Chuzc2Clock,
@@ -339,6 +345,8 @@ class SimplexTimer {
                                         PricePrimalPhase1Clock,
                                         PriceFullClock,
                                         ChuzcPrimalClock,
+                                   	ChuzcHyperInitialiselClock,
+                                	ChuzcHyperClock,
                                         Chuzc0Clock,
                                         PriceChuzc1Clock,
                                         Chuzc1Clock,

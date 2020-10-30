@@ -15,6 +15,7 @@
 
 #include "simplex/HEkkDebug.h"
 #include "simplex/SimplexTimer.h"
+#include "util/HighsSort.h"
 
 using std::runtime_error;
 
@@ -216,8 +217,8 @@ void HEkkPrimal::initialise() {
     nonbasic_free_col_set.setup(num_free_col, num_tot, output, debug);
   }
   // Set up the hyper-sparse CHUZC data
-  use_hyper_sparse_chuzc = false;
-  initialise_hyper_sparse_chuzc = initialise_hyper_sparse_chuzc;
+  use_hyper_sparse_chuzc = false;//true;//
+  initialise_hyper_sparse_chuzc = use_hyper_sparse_chuzc;
   const int max_num_hyper_sparse_chuzc_candidates = 50;
   hyper_sparse_chuzc_candidate.resize(1 +
                                       max_num_hyper_sparse_chuzc_candidates);
@@ -787,42 +788,54 @@ void HEkkPrimal::phase2Update() {
 void HEkkPrimal::chooseColumn() {
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-  analysis->simplexTimerStart(ChuzcPrimalClock);
-  double dBestScore = 0;
+  double best_measure = 0;
   columnIn = -1;
 
   // Consider nonbasic free columns first
   const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
   if (use_hyper_sparse_chuzc) {
     if (initialise_hyper_sparse_chuzc) {
-      int num_candidates = 0;
+      analysis->simplexTimerStart(ChuzcHyperInitialiselClock);
+      num_hyper_sparse_chuzc_candidates = 0;
       if (num_nonbasic_free_col) {
         const vector<int>& nonbasic_free_col_set_entry =
             nonbasic_free_col_set.entry();
         for (int ix = 0; ix < num_nonbasic_free_col; ix++) {
           int iCol = nonbasic_free_col_set_entry[ix];
-          /*
-          if (fabs(workDual[iCol]) > dual_feasibility_tolerance) {
-            num_candidates
-          columnIn = iCol;
-          analysis->simplexTimerStop(ChuzcPrimalClock);
-          return;
-          */
+	  double dual_infeasibility = fabs(workDual[iCol]);
+          if (dual_infeasibility > dual_feasibility_tolerance) {
+	    double measure = dual_infeasibility / devex_weight[iCol];
+	    addToDecreasingHeap(num_hyper_sparse_chuzc_candidates,
+				max_num_hyper_sparse_chuzc_candidates,
+				hyper_sparse_chuzc_measure,
+				hyper_sparse_chuzc_candidate, measure, iCol);
+	  }
         }
       }
       // Now look at other columns
       for (int iCol = 0; iCol < num_tot; iCol++) {
-        double dMyDual = nonbasicMove[iCol] * workDual[iCol];
-        double dMyScore = dMyDual / devex_weight[iCol];
-        if (dMyDual < -dual_feasibility_tolerance && dMyScore < dBestScore) {
-          dBestScore = dMyScore;
-          columnIn = iCol;
+        double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
+        if (dual_infeasibility > dual_feasibility_tolerance) {
+	  double measure = dual_infeasibility / devex_weight[iCol];
+	  addToDecreasingHeap(num_hyper_sparse_chuzc_candidates, max_num_hyper_sparse_chuzc_candidates,
+			      hyper_sparse_chuzc_measure,
+			      hyper_sparse_chuzc_candidate, measure, iCol);
         }
       }
+      // Sort the heap
+      sortDecreasingHeap(num_hyper_sparse_chuzc_candidates,
+			 hyper_sparse_chuzc_measure,
+			 hyper_sparse_chuzc_candidate);
       initialise_hyper_sparse_chuzc = false;
+      analysis->simplexTimerStop(ChuzcHyperInitialiselClock);
     }
-
+    // Choose the first entry - if there is one
+    if (num_hyper_sparse_chuzc_candidates) {
+      columnIn = hyper_sparse_chuzc_candidate[1];
+      best_measure = hyper_sparse_chuzc_measure[1];
+    }
   } else {
+    analysis->simplexTimerStart(ChuzcPrimalClock);
     // Choose any attractive nonbasic free column
     if (num_nonbasic_free_col) {
       const vector<int>& nonbasic_free_col_set_entry =
@@ -838,15 +851,17 @@ void HEkkPrimal::chooseColumn() {
     }
     // Now look at other columns
     for (int iCol = 0; iCol < num_tot; iCol++) {
-      double dMyDual = nonbasicMove[iCol] * workDual[iCol];
-      double dMyScore = dMyDual / devex_weight[iCol];
-      if (dMyDual < -dual_feasibility_tolerance && dMyScore < dBestScore) {
-        dBestScore = dMyScore;
+      double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
+      double measure = dual_infeasibility / devex_weight[iCol];
+      if (dual_infeasibility > dual_feasibility_tolerance && measure > best_measure) {
         columnIn = iCol;
+        best_measure = measure;
       }
     }
+    analysis->simplexTimerStop(ChuzcPrimalClock);
   }
-  analysis->simplexTimerStop(ChuzcPrimalClock);
+  printf("ChooseColumn: Iteration %d, choose column %d with measure %g\n",
+	 ekk_instance_.iteration_count_, columnIn, best_measure);
 }
 
 void HEkkPrimal::chooseRow() {
