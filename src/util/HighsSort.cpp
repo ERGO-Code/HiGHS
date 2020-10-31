@@ -28,7 +28,6 @@ void addToDecreasingHeap(int& n, int mx_n, vector<double>& heap_v,
     n++;
     cd_p = n;
     pa_p = cd_p / 2;
-    // 10
     for (;;) {
       if (pa_p > 0) {
         if (v < heap_v[pa_p]) {
@@ -48,7 +47,6 @@ void addToDecreasingHeap(int& n, int mx_n, vector<double>& heap_v,
     // and let it sink down to its correct level.
     pa_p = 1;
     cd_p = pa_p + pa_p;
-    // 20
     for (;;) {
       if (cd_p <= n) {
         if (cd_p < n) {
@@ -66,8 +64,8 @@ void addToDecreasingHeap(int& n, int mx_n, vector<double>& heap_v,
     }
     heap_v[pa_p] = v;
     heap_ix[pa_p] = ix;
-    // Set heap_ix(0)=1 to indicate that the values form a heap.
   }
+  // Set heap_ix[0]=1 to indicate that the values form a heap.
   heap_ix[0] = 1;
   return;
 }
@@ -81,7 +79,7 @@ void sortDecreasingHeap(const int n, vector<double>& heap_v,
   if (n <= 1) return;
   if (heap_ix[0] != 1) {
     // The data are assumed to be completely unordered. A heap will be formed
-    // and { sorted.
+    // and sorted.
     fo_p = n / 2 + 1;
     srt_p = n;
   } else {
@@ -89,7 +87,6 @@ void sortDecreasingHeap(const int n, vector<double>& heap_v,
     fo_p = 1;
     srt_p = n;
   }
-  // 10   continue
   for (;;) {
     if (fo_p > 1) {
       fo_p = fo_p - 1;

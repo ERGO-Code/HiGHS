@@ -68,6 +68,8 @@ class HEkkPrimal {
 
   void iterationAnalysisData();
   void iterationAnalysis();
+  void localReportIterHeader();
+  void localReportIter(const bool header = false);
   void reportRebuild(const int rebuild_invert_hint = -1);
   void getNonbasicFreeColumnSet();
   void removeNonbasicFreeColumn();
