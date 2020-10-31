@@ -499,7 +499,7 @@ void HEkkPrimal::phase1Update() {
   const vector<double>& workUpper = simplex_info.workUpper_;
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
-  vector<double>& workDual = simplex_info.workDual_;
+  const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
@@ -587,7 +587,11 @@ void HEkkPrimal::phase1Update() {
   // action
   considerInfeasibleValueIn();
   //
+  sourceOut = phase1OutBnd;
+  // From here on it's as phase 2...
+  //
   // Compute and use the tableau row
+  //  commonUpdateSection();
   //
   // BTRAN
   //
@@ -607,32 +611,22 @@ void HEkkPrimal::phase1Update() {
   thetaDual = workDual[columnIn];
   updateDual();
 
-  // Dual for the pivot
-  workDual[columnIn] = 0;
-  workDual[columnOut] = -thetaDual;
-
   // Use the tableau row to update the devex weight
   updateDevex();
 
-  bool remove_nonbasic_free_column = nonbasicMove[columnIn] == 0;
-  if (remove_nonbasic_free_column) {
-    bool removed_nonbasic_free_column = nonbasic_free_col_set.remove(columnIn);
-    if (!removed_nonbasic_free_column) {
-      assert(removed_nonbasic_free_column);
-      HighsLogMessage(
-          ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-          "HEkkPrimal::phase1update failed to remove Nonbasic free column %d",
-          columnIn);
-    }
-  }
+  // If entering column was nonbasic free, remove it from the set
+  removeNonbasicFreeColumn();
 
   // Update other things
-  ekk_instance_.updatePivots(columnIn, rowOut, phase1OutBnd);
+  
+  ekk_instance_.updatePivots(columnIn, rowOut, sourceOut);
   ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &invertHint);
   ekk_instance_.updateMatrix(columnIn, columnOut);
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
+
+  // Update the iteration count
   ekk_instance_.iteration_count_++;
 
   // Reset the devex framework when necessary
@@ -645,7 +639,9 @@ void HEkkPrimal::phase1Update() {
   ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
   ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
 
-  // Recompute dual and primal
+  // ... until here
+  // Possibly rebuild if not already doing it and there are primal
+  // infeasibilities
   if (invertHint == 0) {
     if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
@@ -657,14 +653,15 @@ void HEkkPrimal::phase1Update() {
 }
 
 void HEkkPrimal::phase2Update() {
-  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
-  const vector<double>& workLower = ekk_instance_.simplex_info_.workLower_;
-  const vector<double>& workUpper = ekk_instance_.simplex_info_.workUpper_;
-  const vector<double>& baseLower = ekk_instance_.simplex_info_.baseLower_;
-  const vector<double>& baseUpper = ekk_instance_.simplex_info_.baseUpper_;
-  vector<double>& workValue = ekk_instance_.simplex_info_.workValue_;
-  vector<double>& baseValue = ekk_instance_.simplex_info_.baseValue_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& workLower = simplex_info.workLower_;
+  const vector<double>& workUpper = simplex_info.workUpper_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  const vector<double>& workDual = simplex_info.workDual_;
+  vector<double>& workValue = simplex_info.workValue_;
+  const vector<double>& baseValue = simplex_info.baseValue_;
+  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
   const int check_iter = -156;
   if (ekk_instance_.iteration_count_ == check_iter) {
@@ -745,18 +742,6 @@ void HEkkPrimal::phase2Update() {
     ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
     return;
   }
-
-  bool remove_nonbasic_free_column = nonbasicMove[columnIn] == 0;
-  if (remove_nonbasic_free_column) {
-    bool removed_nonbasic_free_column = nonbasic_free_col_set.remove(columnIn);
-    if (!removed_nonbasic_free_column) {
-      assert(removed_nonbasic_free_column);
-      HighsLogMessage(
-          ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-          "HEkkPrimal::phase2update failed to remove Nonbasic free column %d",
-          columnIn);
-    }
-  }
   // 2. Now we can update the dual
   //
   // BTRAN
@@ -773,13 +758,17 @@ void HEkkPrimal::phase2Update() {
   updateVerify();
 
   // Update the dual values
+  thetaDual = workDual[columnIn];
   updateDual();
 
   // Update the devex weight
   updateDevex();
 
+  // If entering column was nonbasic free, remove it from the set
+  removeNonbasicFreeColumn();
+
   // Perform pivoting
-  int sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
+  sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
   ekk_instance_.updatePivots(columnIn, rowOut, sourceOut);
   ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &invertHint);
   ekk_instance_.updateMatrix(columnIn, columnOut);
@@ -790,7 +779,7 @@ void HEkkPrimal::phase2Update() {
   ekk_instance_.iteration_count_++;
 
   // Reset the devex when there are too many errors
-  if (num_bad_devex_weight > 3) resetDevex();
+  if (num_bad_devex_weight > allowed_num_bad_devex_weight) resetDevex();
 
   // Report on the iteration
   iterationAnalysis();
@@ -1240,8 +1229,8 @@ void HEkkPrimal::phase1UpdatePrimal() {
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
-  vector<double>& workCost = simplex_info.workCost_;
   vector<double>& workDual = simplex_info.workDual_;
+  vector<double>& workCost = simplex_info.workCost_;
   vector<double>& baseValue = simplex_info.baseValue_;
   col_primal_phase1.clear();
   //
@@ -1520,7 +1509,7 @@ void HEkkPrimal::updateDevex() {
   dPivotWeight = sqrt(dPivotWeight);
 
   // Check if the saved weight is too large
-  if (devex_weight[columnIn] > 3.0 * dPivotWeight) num_bad_devex_weight++;
+  if (devex_weight[columnIn] > bad_devex_weight_factor * dPivotWeight) num_bad_devex_weight++;
 
   // Update the devex weight for all
   double dPivot = col_aq.array[rowOut];
@@ -1650,6 +1639,18 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
   }
 }
 
+void HEkkPrimal::removeNonbasicFreeColumn() {
+  bool remove_nonbasic_free_column = ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] == 0;
+  if (remove_nonbasic_free_column) {
+    bool removed_nonbasic_free_column = nonbasic_free_col_set.remove(columnIn);
+    if (!removed_nonbasic_free_column) {
+      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+		      "HEkkPrimal::phase1update failed to remove nonbasic free column %d",
+		      columnIn);
+     assert(removed_nonbasic_free_column);
+    }
+  }
+}
 void HEkkPrimal::getBasicPrimalInfeasibility() {
   // Gets the num/max/sum of basic primal infeasibliities,
   analysis->simplexTimerStart(ComputePrIfsClock);

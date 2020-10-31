@@ -67,6 +67,7 @@ class HEkkPrimal {
   void iterationAnalysis();
   void reportRebuild(const int rebuild_invert_hint = -1);
   void getNonbasicFreeColumnSet();
+  void removeNonbasicFreeColumn();
   void getBasicPrimalInfeasibility();
   HighsDebugStatus debugPrimalSimplex(const std::string message);
   // References:
@@ -89,6 +90,7 @@ class HEkkPrimal {
   int rowOut;
   int columnOut;
   int phase1OutBnd;
+  int sourceOut;
   double thetaDual;
   double thetaPrimal;
   double valueIn;
@@ -104,6 +106,8 @@ class HEkkPrimal {
   int num_bad_devex_weight;
   vector<double> devex_weight;
   vector<int> devex_index;
+  const int allowed_num_bad_devex_weight = 3;
+  const double bad_devex_weight_factor = 3;
   // Nonbasic free column data.
   int num_free_col;
   HSet nonbasic_free_col_set;
