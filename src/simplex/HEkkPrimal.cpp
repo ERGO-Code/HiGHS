@@ -218,7 +218,7 @@ void HEkkPrimal::initialise() {
   }
   // Set up the hyper-sparse CHUZC data
   use_hyper_sparse_chuzc = false;//true;//
-  initialise_hyper_sparse_chuzc = use_hyper_sparse_chuzc;
+  initialise_hyper_sparse_chuzc = true;//use_hyper_sparse_chuzc;
   const int max_num_hyper_sparse_chuzc_candidates = 50;
   hyper_sparse_chuzc_candidate.resize(1 +
                                       max_num_hyper_sparse_chuzc_candidates);
@@ -340,7 +340,22 @@ void HEkkPrimal::solvePhase2() {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
-      chooseColumn();
+      //      chooseColumn(true);
+      //      int hyper_sparse_columnIn = columnIn;
+      chooseColumn(false);
+      /*
+      HighsSimplexInfo& info = ekk_instance_.simplex_info_;
+      double hyper_sparse_measure = 0;
+      if (hyper_sparse_columnIn >= 0) 
+	hyper_sparse_measure = fabs(info.workDual_[hyper_sparse_columnIn]) / devex_weight[hyper_sparse_columnIn];
+      double measure = 0;
+      if (columnIn >= 0) 
+	measure = fabs(info.workDual_[columnIn]) / devex_weight[columnIn];
+      if (hyper_sparse_measure < measure) {
+	printf("Iteration %d: Hyper-sparse CHUZC measure %g < %g = Full CHUZC measure (%d, %d)\n",
+	       ekk_instance_.iteration_count_, hyper_sparse_measure, measure, hyper_sparse_columnIn, columnIn);
+      }
+      */
       if (columnIn == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
         break;
@@ -753,12 +768,12 @@ void HEkkPrimal::phase2Update() {
   //
   ekk_instance_.tableauRowPrice(row_ep, row_ap);
 
-  // Update the dual values
-  updateDual();
-
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
   updateVerify();
+
+  // Update the dual values
+  updateDual();
 
   // Update the devex weight
   updateDevex();
@@ -785,15 +800,16 @@ void HEkkPrimal::phase2Update() {
   ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
 }
 
-void HEkkPrimal::chooseColumn() {
+void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   double best_measure = 0;
   columnIn = -1;
 
+  const bool local_use_hyper_sparse_chuzc = hyper_sparse;
   // Consider nonbasic free columns first
   const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
-  if (use_hyper_sparse_chuzc) {
+  if (local_use_hyper_sparse_chuzc) {
     if (initialise_hyper_sparse_chuzc) {
       analysis->simplexTimerStart(ChuzcHyperInitialiselClock);
       num_hyper_sparse_chuzc_candidates = 0;
@@ -860,8 +876,11 @@ void HEkkPrimal::chooseColumn() {
     }
     analysis->simplexTimerStop(ChuzcPrimalClock);
   }
-  printf("ChooseColumn: Iteration %d, choose column %d with measure %g\n",
-	 ekk_instance_.iteration_count_, columnIn, best_measure);
+  done_next_chuzc = false;
+  max_changed_measure_value = 0;
+  max_changed_measure_column = -1;
+  //  printf("ChooseColumn: Iteration %d, choose column %d with measure %g\n",
+  //	 ekk_instance_.iteration_count_, columnIn, best_measure);
 }
 
 void HEkkPrimal::chooseRow() {
@@ -943,20 +962,77 @@ void HEkkPrimal::updateDual() {
   assert(alphaCol);
   assert(rowOut >= 0);
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-
+  //  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  // Update the duals
   thetaDual = workDual[columnIn] / alphaCol;
   for (int iEl = 0; iEl < row_ap.count; iEl++) {
     int iCol = row_ap.index[iEl];
     workDual[iCol] -= thetaDual * row_ap.array[iCol];
+    /*
+    // Assess any dual infeasibility
+    double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
+    if (dual_infeasibility > dual_feasibility_tolerance) {
+      if (dual_infeasibility > max_changed_measure_value * devex_weight[iCol]) {
+	max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
+	max_changed_measure_column = iCol;
+      }
+    }
+    */
   }
   for (int iEl = 0; iEl < row_ep.count; iEl++) {
     int iRow = row_ep.index[iEl];
     int iCol = iRow + num_col;
     workDual[iCol] -= thetaDual * row_ep.array[iRow];
+    /*
+    // Assess any dual infeasibility
+    double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
+    if (dual_infeasibility > dual_feasibility_tolerance) {
+      if (dual_infeasibility > max_changed_measure_value * devex_weight[iCol]) {
+	max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
+	max_changed_measure_column = iCol;
+      }
+    }
+    */
   }
+    /*
+  // Look for measure changes in nonbasic free columns
+  const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
+  if (num_nonbasic_free_col) {
+    const vector<int>& nonbasic_free_col_set_entry =
+      nonbasic_free_col_set.entry();
+    for (int ix = 0; ix < num_nonbasic_free_col; ix++) {
+      int iCol = nonbasic_free_col_set_entry[ix];
+      // Assess any dual infeasibility
+      double dual_infeasibility = fabs(workDual[iCol]);
+      if (dual_infeasibility > dual_feasibility_tolerance) {
+	if (dual_infeasibility > max_changed_measure_value * devex_weight[iCol]) {
+	  max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
+	  max_changed_measure_column = iCol;
+	}
+      }
+    }
+  }
+    */
   // Dual for the pivot
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
+
+    /*
+  // Assess any dual infeasibility - should be dual feasible!
+  int iCol = columnOut;
+  double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
+  if (dual_infeasibility > dual_feasibility_tolerance) {
+    printf("Dual infeasibility %g for leaving column \n", dual_infeasibility);
+    assert(dual_infeasibility <= dual_feasibility_tolerance);
+    if (dual_infeasibility > max_changed_measure_value * devex_weight[iCol]) {
+      max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
+      max_changed_measure_column = iCol;
+    }
+  }
+
+  printf("Biggest measure for changed duals is %g for column %d\n",
+	 max_changed_measure_value, max_changed_measure_column);
+    */
   ekk_instance_.invalidateDualInfeasibilityRecord();
   // After dual update in primal simplex the dual objective value is not known
   ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;

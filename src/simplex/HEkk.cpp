@@ -131,7 +131,7 @@ void HEkk::setSimplexOptions() {
   bool useful_analysis = false;  // true;  //
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info_.report_simplex_inner_clock = true;  // useful_analysis;  //
+  simplex_info_.report_simplex_inner_clock = false;//true;  // useful_analysis;  //
   simplex_info_.report_simplex_outer_clock = full_timing;
   simplex_info_.report_simplex_phases_clock = full_timing;
   simplex_info_.report_HFactor_clock = useful_analysis;  // full_timing;//
