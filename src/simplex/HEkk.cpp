@@ -1207,11 +1207,17 @@ void HEkk::computeSimplexLpDualInfeasible() {
   }
 }
 
-bool HEkk::useIndices(const int count, const int dim) {
+bool HEkk::sparseLoopStyle(const int count, const int dim, int& to_entry) {
   // Parameter to decide whether to use just the values in a HVector, or
   // use the indices of their nonzeros
   const double density_for_indexing = 0.4;
-  return count >= 0 && count < density_for_indexing * dim;
+  const bool use_indices = count >= 0 && count < density_for_indexing * dim;
+  if (use_indices) {
+    to_entry = count;
+  } else {
+    to_entry = dim;
+  }
+  return use_indices;
 }
 
 void HEkk::invalidatePrimalMaxSumInfeasibilityRecord() {

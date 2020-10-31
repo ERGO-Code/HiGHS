@@ -1201,7 +1201,7 @@ void HEkkPrimal::phase1UpdatePrimal() {
   // Update basic primal values, identifying all the feasibility
   // changes giving a value to col_primal_phase1 so that the duals can
   // be updated.
-  //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
+  //  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
   for (int iEl = 0; iEl < col_aq.count; iEl++) {
     int iRow = col_aq.index[iEl];
     baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
@@ -1253,24 +1253,27 @@ void HEkkPrimal::phase1UpdateDual() {
 
   primalPhase1Btran();
   primalPhase1Price();
-  if (ekk_instance_.useIndices(row_primal_phase1.count, num_col)) {
-    for (int iEl = 0; iEl < row_primal_phase1.count; iEl++) {
-      int iCol = row_primal_phase1.index[iEl];
-      workDual[iCol] -= row_primal_phase1.array[iCol];
+  int to_entry;
+  const bool use_row_indices = ekk_instance_.sparseLoopStyle(row_primal_phase1.count, num_col, to_entry);
+  for (int iEntry = 0; iEntry < to_entry; iEntry++) {
+    int iCol;
+    if (use_row_indices) {
+      iCol = row_primal_phase1.index[iEntry];
+    } else {
+      iCol = iEntry;
     }
-  } else {
-    for (int iCol = 0; iCol < num_col; iCol++)
-      workDual[iCol] -= row_primal_phase1.array[iCol];
+    workDual[iCol] -= row_primal_phase1.array[iCol];
   }
-  if (ekk_instance_.useIndices(col_primal_phase1.count, num_row)) {
-    for (int iEl = 0; iEl < col_primal_phase1.count; iEl++) {
-      int iRow = col_primal_phase1.index[iEl];
-      int iCol = num_col + iRow;
-      workDual[iCol] -= col_primal_phase1.array[iRow];
+  const bool use_col_indices = ekk_instance_.sparseLoopStyle(col_primal_phase1.count, num_row, to_entry);
+  for (int iEntry = 0; iEntry < to_entry; iEntry++) {
+    int iRow;
+    if (use_col_indices) {
+      iRow = col_primal_phase1.index[iEntry];
+    } else {
+      iRow = iEntry;
     }
-  } else {
-    for (int iCol = num_col; iCol < num_tot; iCol++)
-      workDual[iCol] -= col_primal_phase1.array[iCol - num_col];
+    int iCol = num_col + iRow;
+    workDual[iCol] -= col_primal_phase1.array[iRow];
   }
   ekk_instance_.invalidateDualInfeasibilityRecord();
   analysis->simplexTimerStop(UpdateDualPrimalPhase1Clock);
@@ -1384,7 +1387,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
   vector<double>& baseValue = simplex_info.baseValue_;
 
   bool primal_infeasible = false;
-  //  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
+  //  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
   for (int iEl = 0; iEl < col_aq.count; iEl++) {
     int iRow = col_aq.index[iEl];
     baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
@@ -1455,7 +1458,8 @@ void HEkkPrimal::updateDevex() {
   analysis->simplexTimerStart(DevexUpdateWeightClock);
   // Compute the pivot weight from the reference set
   double dPivotWeight = 0.0;
-  if (ekk_instance_.useIndices(col_aq.count, num_row)) {
+  int to_entry;
+  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
     for (int iEl = 0; iEl < col_aq.count; iEl++) {
       int iRow = col_aq.index[iEl];
       int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
