@@ -499,7 +499,6 @@ void HEkkPrimal::phase1Update() {
   const vector<double>& workUpper = simplex_info.workUpper_;
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
-  const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
@@ -587,59 +586,10 @@ void HEkkPrimal::phase1Update() {
   // action
   considerInfeasibleValueIn();
   //
+  // Remaining update operations are independent of phase
   sourceOut = phase1OutBnd;
-  // From here on it's as phase 2...
-  //
-  // Compute and use the tableau row
-  //  commonUpdateSection();
-  //
-  // BTRAN
-  //
-  // Compute unit Btran for tableau row and FT update
-  ekk_instance_.unitBtran(rowOut, row_ep);
-  //
-  // PRICE
-  //
-  ekk_instance_.tableauRowPrice(row_ep, row_ap);
+  commonUpdateSection();
 
-  // Checks row-wise pivot against column-wise pivot for
-  // numerical trouble
-  updateVerify();
-
-  // Use the tableau row to update the duals with respect to the basis
-  // change
-  thetaDual = workDual[columnIn];
-  updateDual();
-
-  // Use the tableau row to update the devex weight
-  updateDevex();
-
-  // If entering column was nonbasic free, remove it from the set
-  removeNonbasicFreeColumn();
-
-  // Update other things
-  
-  ekk_instance_.updatePivots(columnIn, rowOut, sourceOut);
-  ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &invertHint);
-  ekk_instance_.updateMatrix(columnIn, columnOut);
-  if (simplex_info.update_count >= simplex_info.update_limit) {
-    invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
-  }
-
-  // Update the iteration count
-  ekk_instance_.iteration_count_++;
-
-  // Reset the devex framework when necessary
-  if (num_bad_devex_weight > 3) resetDevex();
-
-  // Report on the iteration
-  iterationAnalysis();
-
-  // Update the synthetic clock
-  ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
-  ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
-
-  // ... until here
   // Possibly rebuild if not already doing it and there are primal
   // infeasibilities
   if (invertHint == 0) {
@@ -658,7 +608,6 @@ void HEkkPrimal::phase2Update() {
   const vector<double>& workUpper = simplex_info.workUpper_;
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
-  const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& workValue = simplex_info.workValue_;
   const vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
@@ -742,7 +691,16 @@ void HEkkPrimal::phase2Update() {
     ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
     return;
   }
-  // 2. Now we can update the dual
+  // Remaining update operations are independent of phase
+  sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
+  commonUpdateSection();
+}
+
+void HEkkPrimal::commonUpdateSection() {
+  // Perform update operations that are independent of phase
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& workDual = simplex_info.workDual_;
+  // Compute the tableau row
   //
   // BTRAN
   //
@@ -764,11 +722,13 @@ void HEkkPrimal::phase2Update() {
   // Update the devex weight
   updateDevex();
 
+  // Determine the most attractive colum of those whose dual and weight have just changed
+  getBestChangedMeasure();
+
   // If entering column was nonbasic free, remove it from the set
   removeNonbasicFreeColumn();
 
   // Perform pivoting
-  sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
   ekk_instance_.updatePivots(columnIn, rowOut, sourceOut);
   ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &invertHint);
   ekk_instance_.updateMatrix(columnIn, columnOut);
@@ -870,6 +830,10 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
   max_changed_measure_column = -1;
   //  printf("ChooseColumn: Iteration %d, choose column %d with measure %g\n",
   //	 ekk_instance_.iteration_count_, columnIn, best_measure);
+}
+
+void HEkkPrimal::getBestChangedMeasure() {
+
 }
 
 void HEkkPrimal::chooseRow() {

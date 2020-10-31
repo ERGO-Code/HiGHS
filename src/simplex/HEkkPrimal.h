@@ -43,8 +43,10 @@ class HEkkPrimal {
   void rebuild();
   void phase1Update();
   void phase2Update();
+  void commonUpdateSection();
 
   void chooseColumn(const bool hyper_sparse=false);
+  void getBestChangedMeasure();
   void chooseRow();
   void updateDual();
 
