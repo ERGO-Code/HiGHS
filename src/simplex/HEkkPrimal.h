@@ -46,7 +46,8 @@ class HEkkPrimal {
   void commonUpdateSection();
 
   void chooseColumn(const bool hyper_sparse=false);
-  void getBestChangedMeasure();
+  void hyperSparseChooseColumn();
+  void getMaxChangedMeasure();
   void chooseRow();
   void updateDual();
 
