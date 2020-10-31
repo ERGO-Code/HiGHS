@@ -1459,19 +1459,17 @@ void HEkkPrimal::updateDevex() {
   // Compute the pivot weight from the reference set
   double dPivotWeight = 0.0;
   int to_entry;
-  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
-    for (int iEl = 0; iEl < col_aq.count; iEl++) {
-      int iRow = col_aq.index[iEl];
-      int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
-      double dAlpha = devex_index[iCol] * col_aq.array[iRow];
-      dPivotWeight += dAlpha * dAlpha;
+  const bool use_col_indices = ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry);
+  for (int iEntry = 0; iEntry < to_entry; iEntry++) {
+    int iRow;
+    if (use_col_indices) {
+      iRow = col_aq.index[iEntry];
+    } else {
+      iRow = iEntry;
     }
-  } else {
-    for (int iRow = 0; iRow < num_row; iRow++) {
-      int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
-      double dAlpha = devex_index[iCol] * col_aq.array[iRow];
-      dPivotWeight += dAlpha * dAlpha;
-    }
+    int iCol = ekk_instance_.simplex_basis_.basicIndex_[iRow];
+    double dAlpha = devex_index[iCol] * col_aq.array[iRow];
+    dPivotWeight += dAlpha * dAlpha;
   }
   dPivotWeight += devex_index[columnIn] * 1.0;
   dPivotWeight = sqrt(dPivotWeight);
