@@ -45,7 +45,7 @@ class HEkkPrimal {
   void phase2Update();
   void commonUpdateSection();
 
-  void chooseColumn(const bool hyper_sparse=false);
+  void chooseColumn(const bool hyper_sparse = false);
   void hyperSparseChooseColumn();
   void hyperSparseChooseColumnStart();
   void hyperSparseChooseColumnClear();
@@ -140,7 +140,6 @@ class HEkkPrimal {
 
   const int check_iter = 999999;
   const int check_column = -1;
-
 };
 
 #endif /* SIMPLEX_HEKKPRIMAL_H_ */

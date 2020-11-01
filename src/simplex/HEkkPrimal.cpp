@@ -218,7 +218,7 @@ void HEkkPrimal::initialise() {
     nonbasic_free_col_set.setup(num_free_col, num_tot, output, debug);
   }
   // Set up the hyper-sparse CHUZC data
-  use_hyper_sparse_chuzc = false;//true;//
+  use_hyper_sparse_chuzc = false;  // true;//
   hyperSparseChooseColumnClear();
   hyper_sparse_chuzc_candidate.resize(1 +
                                       max_num_hyper_sparse_chuzc_candidates);
@@ -345,21 +345,25 @@ void HEkkPrimal::solvePhase2() {
       if (!done_next_chuzc) chooseColumn(true);
       const bool check_hyper_sparse_chuzc = false;
       if (check_hyper_sparse_chuzc) {
-	int hyper_sparse_columnIn = columnIn;
-	chooseColumn(false);
-	HighsSimplexInfo& info = ekk_instance_.simplex_info_;
-	double hyper_sparse_measure = 0;
-	if (hyper_sparse_columnIn >= 0) 
-	  hyper_sparse_measure = fabs(info.workDual_[hyper_sparse_columnIn]) / devex_weight[hyper_sparse_columnIn];
-	double measure = 0;
-	if (columnIn >= 0) 
-	  measure = fabs(info.workDual_[columnIn]) / devex_weight[columnIn];
-	if (hyper_sparse_measure != measure) {
-	  if (report_hyper_sparse_chuzc)
-	    printf("Iteration %d: Hyper-sparse CHUZC measure %g != %g = Full CHUZC measure (%d, %d)\n",
-		   ekk_instance_.iteration_count_, hyper_sparse_measure, measure, hyper_sparse_columnIn, columnIn);
-	  assert(hyper_sparse_measure == measure);
-	}
+        int hyper_sparse_columnIn = columnIn;
+        chooseColumn(false);
+        HighsSimplexInfo& info = ekk_instance_.simplex_info_;
+        double hyper_sparse_measure = 0;
+        if (hyper_sparse_columnIn >= 0)
+          hyper_sparse_measure = fabs(info.workDual_[hyper_sparse_columnIn]) /
+                                 devex_weight[hyper_sparse_columnIn];
+        double measure = 0;
+        if (columnIn >= 0)
+          measure = fabs(info.workDual_[columnIn]) / devex_weight[columnIn];
+        if (hyper_sparse_measure != measure) {
+          if (report_hyper_sparse_chuzc)
+            printf(
+                "Iteration %d: Hyper-sparse CHUZC measure %g != %g = Full "
+                "CHUZC measure (%d, %d)\n",
+                ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
+                hyper_sparse_columnIn, columnIn);
+          assert(hyper_sparse_measure == measure);
+        }
       }
       if (columnIn == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
@@ -739,7 +743,8 @@ void HEkkPrimal::commonUpdateSection() {
   // If entering column was nonbasic free, remove it from the set
   removeNonbasicFreeColumn();
 
-  // Determine the most attractive column of those whose dual and weight have just changed
+  // Determine the most attractive column of those whose dual and weight have
+  // just changed
   getMaxChangedMeasure();
 
   // Perform pivoting
@@ -787,43 +792,47 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
             nonbasic_free_col_set.entry();
         for (int ix = 0; ix < num_nonbasic_free_col; ix++) {
           int iCol = nonbasic_free_col_set_entry[ix];
-	  double dual_infeasibility = fabs(workDual[iCol]);
+          double dual_infeasibility = fabs(workDual[iCol]);
           if (dual_infeasibility > dual_feasibility_tolerance) {
-	    double measure = dual_infeasibility / devex_weight[iCol];
-	    addToDecreasingHeap(num_hyper_sparse_chuzc_candidates,
-				max_num_hyper_sparse_chuzc_candidates,
-				hyper_sparse_chuzc_measure,
-				hyper_sparse_chuzc_candidate, measure, iCol);
-	  }
+            double measure = dual_infeasibility / devex_weight[iCol];
+            addToDecreasingHeap(num_hyper_sparse_chuzc_candidates,
+                                max_num_hyper_sparse_chuzc_candidates,
+                                hyper_sparse_chuzc_measure,
+                                hyper_sparse_chuzc_candidate, measure, iCol);
+          }
         }
       }
       // Now look at other columns
       for (int iCol = 0; iCol < num_tot; iCol++) {
         double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
         if (dual_infeasibility > dual_feasibility_tolerance) {
-	  double measure = dual_infeasibility / devex_weight[iCol];
-	  addToDecreasingHeap(num_hyper_sparse_chuzc_candidates, max_num_hyper_sparse_chuzc_candidates,
-			      hyper_sparse_chuzc_measure,
-			      hyper_sparse_chuzc_candidate, measure, iCol);
+          double measure = dual_infeasibility / devex_weight[iCol];
+          addToDecreasingHeap(num_hyper_sparse_chuzc_candidates,
+                              max_num_hyper_sparse_chuzc_candidates,
+                              hyper_sparse_chuzc_measure,
+                              hyper_sparse_chuzc_candidate, measure, iCol);
         }
       }
       // Sort the heap
       sortDecreasingHeap(num_hyper_sparse_chuzc_candidates,
-			 hyper_sparse_chuzc_measure,
-			 hyper_sparse_chuzc_candidate);
+                         hyper_sparse_chuzc_measure,
+                         hyper_sparse_chuzc_candidate);
       initialise_hyper_sparse_chuzc = false;
       analysis->simplexTimerStop(ChuzcHyperInitialiselClock);
       // Choose the first entry - if there is one
       if (num_hyper_sparse_chuzc_candidates) {
-	columnIn = hyper_sparse_chuzc_candidate[1];
-	best_measure = hyper_sparse_chuzc_measure[1];
-	max_hyper_sparse_chuzc_non_candidate_measure =
-	  hyper_sparse_chuzc_measure[num_hyper_sparse_chuzc_candidates];
-	if (report_hyper_sparse_chuzc)
-	  printf("Full CHUZC: Max         measure is %9.4g for column %4d, and max non-candiate measure of  %9.4g\n",
-		 best_measure, columnIn, max_hyper_sparse_chuzc_non_candidate_measure);
+        columnIn = hyper_sparse_chuzc_candidate[1];
+        best_measure = hyper_sparse_chuzc_measure[1];
+        max_hyper_sparse_chuzc_non_candidate_measure =
+            hyper_sparse_chuzc_measure[num_hyper_sparse_chuzc_candidates];
+        if (report_hyper_sparse_chuzc)
+          printf(
+              "Full CHUZC: Max         measure is %9.4g for column %4d, and "
+              "max non-candiate measure of  %9.4g\n",
+              best_measure, columnIn,
+              max_hyper_sparse_chuzc_non_candidate_measure);
       }
-    }     
+    }
   } else {
     analysis->simplexTimerStart(ChuzcPrimalClock);
     // Choose any attractive nonbasic free column
@@ -843,7 +852,8 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
     for (int iCol = 0; iCol < num_tot; iCol++) {
       double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
       double measure = dual_infeasibility / devex_weight[iCol];
-      if (dual_infeasibility > dual_feasibility_tolerance && measure > best_measure) {
+      if (dual_infeasibility > dual_feasibility_tolerance &&
+          measure > best_measure) {
         columnIn = iCol;
         best_measure = measure;
       }
@@ -863,41 +873,42 @@ void HEkkPrimal::hyperSparseChooseColumn() {
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   if (report_hyper_sparse_chuzc)
     printf("H-S  CHUZC: Max changed measure is %9.4g for column %4d",
-	   max_changed_measure_value, max_changed_measure_column);
+           max_changed_measure_value, max_changed_measure_column);
   double best_measure = max_changed_measure_value;
   columnIn = max_changed_measure_column;
   const bool consider_nonbasic_free_column = nonbasic_free_col_set.count();
   if (num_hyper_sparse_chuzc_candidates) {
-    for (int iEntry = 1; iEntry <= num_hyper_sparse_chuzc_candidates; iEntry++) {
+    for (int iEntry = 1; iEntry <= num_hyper_sparse_chuzc_candidates;
+         iEntry++) {
       int iCol = hyper_sparse_chuzc_candidate[iEntry];
       if (nonbasicFlag[iCol] == NONBASIC_FLAG_FALSE) {
-	assert(!nonbasicMove[iCol]);
-	continue;
+        assert(!nonbasicMove[iCol]);
+        continue;
       }
       // Assess any dual infeasibility
       double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
       if (consider_nonbasic_free_column) {
-	if (nonbasic_free_col_set.in(iCol)) dual_infeasibility = fabs(workDual[iCol]);
+        if (nonbasic_free_col_set.in(iCol))
+          dual_infeasibility = fabs(workDual[iCol]);
       }
       if (dual_infeasibility > dual_feasibility_tolerance) {
-	if (dual_infeasibility > best_measure * devex_weight[iCol]) {
-	  max_hyper_sparse_chuzc_non_candidate_measure = max(best_measure, 
-							     max_hyper_sparse_chuzc_non_candidate_measure);	  
-	  best_measure = dual_infeasibility / devex_weight[iCol];
-	  columnIn = iCol;
-	}
+        if (dual_infeasibility > best_measure * devex_weight[iCol]) {
+          max_hyper_sparse_chuzc_non_candidate_measure =
+              max(best_measure, max_hyper_sparse_chuzc_non_candidate_measure);
+          best_measure = dual_infeasibility / devex_weight[iCol];
+          columnIn = iCol;
+        }
       }
     }
   }
   if (columnIn != max_changed_measure_column)
     if (report_hyper_sparse_chuzc)
-    printf(", and after HS CHUZC set it is now %9.4g for column %4d",
-	   best_measure, columnIn);
+      printf(", and after HS CHUZC set it is now %9.4g for column %4d",
+             best_measure, columnIn);
   if (best_measure >= max_hyper_sparse_chuzc_non_candidate_measure) {
     // Candidate is at least as good as any unknown column, so accept it
     done_next_chuzc = true;
-    if (report_hyper_sparse_chuzc)
-    printf("\n");
+    if (report_hyper_sparse_chuzc) printf("\n");
   } else {
     // Candidate isn't as good as best unknown column, so do a full CHUZC
     // Shouldn't claim to have done the next CHUZC
@@ -905,8 +916,8 @@ void HEkkPrimal::hyperSparseChooseColumn() {
     done_next_chuzc = false;
     initialise_hyper_sparse_chuzc = true;
     if (report_hyper_sparse_chuzc)
-    printf(", but some column may have measure %9.4g\n",
-	   max_hyper_sparse_chuzc_non_candidate_measure);
+      printf(", but some column may have measure %9.4g\n",
+             max_hyper_sparse_chuzc_non_candidate_measure);
   }
   analysis->simplexTimerStop(ChuzcHyperClock);
 }
@@ -929,7 +940,8 @@ void HEkkPrimal::getMaxChangedMeasure() {
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   int to_entry;
   // Look at changes in the columns
-  const bool use_row_indices = ekk_instance_.sparseLoopStyle(row_ap.count, num_col, to_entry);
+  const bool use_row_indices =
+      ekk_instance_.sparseLoopStyle(row_ap.count, num_col, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
     int iCol;
     if (use_row_indices) {
@@ -940,23 +952,28 @@ void HEkkPrimal::getMaxChangedMeasure() {
     // Assess any dual infeasibility
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
-      double measure = dual_infeasibility /  devex_weight[iCol];
+      double measure = dual_infeasibility / devex_weight[iCol];
       if (report_hyper_sparse_chuzc)
-	printf("Changing column %d: measure = %g \n", check_column, measure);
+        printf("Changing column %d: measure = %g \n", check_column, measure);
     }
     if (dual_infeasibility > dual_feasibility_tolerance) {
       if (dual_infeasibility > max_changed_measure_value * devex_weight[iCol]) {
-	max_hyper_sparse_chuzc_non_candidate_measure = max(max_changed_measure_value, 
-							   max_hyper_sparse_chuzc_non_candidate_measure);
-	max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
-	max_changed_measure_column = iCol;
-      } else if (dual_infeasibility > max_hyper_sparse_chuzc_non_candidate_measure * devex_weight[iCol]) {
-	max_hyper_sparse_chuzc_non_candidate_measure = dual_infeasibility / devex_weight[iCol];
+        max_hyper_sparse_chuzc_non_candidate_measure =
+            max(max_changed_measure_value,
+                max_hyper_sparse_chuzc_non_candidate_measure);
+        max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
+        max_changed_measure_column = iCol;
+      } else if (dual_infeasibility >
+                 max_hyper_sparse_chuzc_non_candidate_measure *
+                     devex_weight[iCol]) {
+        max_hyper_sparse_chuzc_non_candidate_measure =
+            dual_infeasibility / devex_weight[iCol];
       }
     }
   }
   // Look at changes in the rows
-  const bool use_col_indices = ekk_instance_.sparseLoopStyle(row_ep.count, num_row, to_entry);
+  const bool use_col_indices =
+      ekk_instance_.sparseLoopStyle(row_ep.count, num_row, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
     int iRow;
     if (use_col_indices) {
@@ -969,12 +986,16 @@ void HEkkPrimal::getMaxChangedMeasure() {
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (dual_infeasibility > dual_feasibility_tolerance) {
       if (dual_infeasibility > max_changed_measure_value * devex_weight[iCol]) {
-	max_hyper_sparse_chuzc_non_candidate_measure = max(max_changed_measure_value, 
-							   max_hyper_sparse_chuzc_non_candidate_measure);
-	max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
-	max_changed_measure_column = iCol;
-      } else if (dual_infeasibility > max_hyper_sparse_chuzc_non_candidate_measure * devex_weight[iCol]) {
-	max_hyper_sparse_chuzc_non_candidate_measure = dual_infeasibility / devex_weight[iCol];
+        max_hyper_sparse_chuzc_non_candidate_measure =
+            max(max_changed_measure_value,
+                max_hyper_sparse_chuzc_non_candidate_measure);
+        max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
+        max_changed_measure_column = iCol;
+      } else if (dual_infeasibility >
+                 max_hyper_sparse_chuzc_non_candidate_measure *
+                     devex_weight[iCol]) {
+        max_hyper_sparse_chuzc_non_candidate_measure =
+            dual_infeasibility / devex_weight[iCol];
       }
     }
   }
@@ -982,36 +1003,46 @@ void HEkkPrimal::getMaxChangedMeasure() {
   const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
   if (num_nonbasic_free_col) {
     const vector<int>& nonbasic_free_col_set_entry =
-      nonbasic_free_col_set.entry();
+        nonbasic_free_col_set.entry();
     for (int iEntry = 0; iEntry < num_nonbasic_free_col; iEntry++) {
       int iCol = nonbasic_free_col_set_entry[iEntry];
       // Assess any dual infeasibility
       double dual_infeasibility = fabs(workDual[iCol]);
       if (dual_infeasibility > dual_feasibility_tolerance) {
-	if (dual_infeasibility > max_changed_measure_value * devex_weight[iCol]) {
-	max_hyper_sparse_chuzc_non_candidate_measure = max(max_changed_measure_value, 
-							   max_hyper_sparse_chuzc_non_candidate_measure);
-	  max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
-	  max_changed_measure_column = iCol;
-      } else if (dual_infeasibility > max_hyper_sparse_chuzc_non_candidate_measure * devex_weight[iCol]) {
-	  max_hyper_sparse_chuzc_non_candidate_measure = dual_infeasibility / devex_weight[iCol];
-	}
+        if (dual_infeasibility >
+            max_changed_measure_value * devex_weight[iCol]) {
+          max_hyper_sparse_chuzc_non_candidate_measure =
+              max(max_changed_measure_value,
+                  max_hyper_sparse_chuzc_non_candidate_measure);
+          max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
+          max_changed_measure_column = iCol;
+        } else if (dual_infeasibility >
+                   max_hyper_sparse_chuzc_non_candidate_measure *
+                       devex_weight[iCol]) {
+          max_hyper_sparse_chuzc_non_candidate_measure =
+              dual_infeasibility / devex_weight[iCol];
+        }
       }
     }
   }
-  // Assess any dual infeasibility for the leaving column - should be dual feasible!
+  // Assess any dual infeasibility for the leaving column - should be dual
+  // feasible!
   int iCol = columnOut;
   double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
   if (dual_infeasibility > dual_feasibility_tolerance) {
     printf("Dual infeasibility %g for leaving column!\n", dual_infeasibility);
     assert(dual_infeasibility <= dual_feasibility_tolerance);
     if (dual_infeasibility > max_changed_measure_value * devex_weight[iCol]) {
-      max_hyper_sparse_chuzc_non_candidate_measure = max(max_changed_measure_value, 
-							 max_hyper_sparse_chuzc_non_candidate_measure);
+      max_hyper_sparse_chuzc_non_candidate_measure =
+          max(max_changed_measure_value,
+              max_hyper_sparse_chuzc_non_candidate_measure);
       max_changed_measure_value = dual_infeasibility / devex_weight[iCol];
       max_changed_measure_column = iCol;
-    } else if (dual_infeasibility > max_hyper_sparse_chuzc_non_candidate_measure * devex_weight[iCol]) {
-      max_hyper_sparse_chuzc_non_candidate_measure = dual_infeasibility / devex_weight[iCol];
+    } else if (dual_infeasibility >
+               max_hyper_sparse_chuzc_non_candidate_measure *
+                   devex_weight[iCol]) {
+      max_hyper_sparse_chuzc_non_candidate_measure =
+          dual_infeasibility / devex_weight[iCol];
     }
   }
 }
@@ -1095,7 +1126,8 @@ void HEkkPrimal::updateDual() {
   assert(alphaCol);
   assert(rowOut >= 0);
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
-  //  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  //  const vector<int>& nonbasicMove =
+  //  ekk_instance_.simplex_basis_.nonbasicMove_;
   // Update the duals
   thetaDual = workDual[columnIn] / alphaCol;
   for (int iEl = 0; iEl < row_ap.count; iEl++) {
@@ -1379,7 +1411,8 @@ void HEkkPrimal::phase1UpdateDual() {
   primalPhase1Btran();
   primalPhase1Price();
   int to_entry;
-  const bool use_row_indices = ekk_instance_.sparseLoopStyle(row_primal_phase1.count, num_col, to_entry);
+  const bool use_row_indices =
+      ekk_instance_.sparseLoopStyle(row_primal_phase1.count, num_col, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
     int iCol;
     if (use_row_indices) {
@@ -1389,7 +1422,8 @@ void HEkkPrimal::phase1UpdateDual() {
     }
     workDual[iCol] -= row_primal_phase1.array[iCol];
   }
-  const bool use_col_indices = ekk_instance_.sparseLoopStyle(col_primal_phase1.count, num_row, to_entry);
+  const bool use_col_indices =
+      ekk_instance_.sparseLoopStyle(col_primal_phase1.count, num_row, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
     int iRow;
     if (use_col_indices) {
@@ -1577,10 +1611,8 @@ void HEkkPrimal::resetDevex() {
   }
   num_devex_iterations = 0;
   num_bad_devex_weight = 0;
-  if (report_hyper_sparse_chuzc)
-    printf("resetDevex\n");
+  if (report_hyper_sparse_chuzc) printf("resetDevex\n");
   hyperSparseChooseColumnClear();
-  
 }
 
 void HEkkPrimal::updateDevex() {
@@ -1588,7 +1620,8 @@ void HEkkPrimal::updateDevex() {
   // Compute the pivot weight from the reference set
   double dPivotWeight = 0.0;
   int to_entry;
-  const bool use_col_indices = ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry);
+  const bool use_col_indices =
+      ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
     int iRow;
     if (use_col_indices) {
@@ -1604,7 +1637,8 @@ void HEkkPrimal::updateDevex() {
   dPivotWeight = sqrt(dPivotWeight);
 
   // Check if the saved weight is too large
-  if (devex_weight[columnIn] > bad_devex_weight_factor * dPivotWeight) num_bad_devex_weight++;
+  if (devex_weight[columnIn] > bad_devex_weight_factor * dPivotWeight)
+    num_bad_devex_weight++;
 
   // Update the devex weight for all
   double dPivot = col_aq.array[rowOut];
@@ -1664,8 +1698,8 @@ void HEkkPrimal::updateVerify() {
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
   //
-  //  if (numericalTrouble > 1e-7 && ekk_instance_.simplex_info_.update_count >
-  //  0) invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+  if (numericalTrouble > 1e-7 && ekk_instance_.simplex_info_.update_count > 0)
+    invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
 }
 
 void HEkkPrimal::iterationAnalysisData() {
@@ -1724,23 +1758,22 @@ void HEkkPrimal::localReportIter(const bool header) {
     localReportIterHeader();
     last_header_iteration_count = iteration_count;
   } else {
-    if (ekk_instance_.iteration_count_ > last_header_iteration_count+10) {
+    if (ekk_instance_.iteration_count_ > last_header_iteration_count + 10) {
       localReportIterHeader();
       last_header_iteration_count = iteration_count;
     }
-    if (rowOut>=0) {
+    if (rowOut >= 0) {
       printf("%5d %5d  %5d  %5d", iteration_count, columnIn, rowOut, columnOut);
     } else {
       printf("%5d %5d Bound flip   ", iteration_count, columnIn);
     }
-    if (check_column>=0) {
+    if (check_column >= 0) {
       printf(": Var %2d (%1d, %2d) - Du = %9.4g; Wt = %9.4g; Ms = %9.4g",
-	     check_column,
-	     ekk_instance_.simplex_basis_.nonbasicFlag_[check_column],
-	     ekk_instance_.simplex_basis_.nonbasicMove_[check_column],
-	     simplex_info.workDual_[check_column],
-	     devex_weight[check_column],
-	     simplex_info.workDual_[check_column] / devex_weight[check_column]);	   
+             check_column,
+             ekk_instance_.simplex_basis_.nonbasicFlag_[check_column],
+             ekk_instance_.simplex_basis_.nonbasicMove_[check_column],
+             simplex_info.workDual_[check_column], devex_weight[check_column],
+             simplex_info.workDual_[check_column] / devex_weight[check_column]);
     }
     printf("\n");
   }
@@ -1770,14 +1803,16 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
 }
 
 void HEkkPrimal::removeNonbasicFreeColumn() {
-  bool remove_nonbasic_free_column = ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] == 0;
+  bool remove_nonbasic_free_column =
+      ekk_instance_.simplex_basis_.nonbasicMove_[columnIn] == 0;
   if (remove_nonbasic_free_column) {
     bool removed_nonbasic_free_column = nonbasic_free_col_set.remove(columnIn);
     if (!removed_nonbasic_free_column) {
-      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-		      "HEkkPrimal::phase1update failed to remove nonbasic free column %d",
-		      columnIn);
-     assert(removed_nonbasic_free_column);
+      HighsLogMessage(
+          ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+          "HEkkPrimal::phase1update failed to remove nonbasic free column %d",
+          columnIn);
+      assert(removed_nonbasic_free_column);
     }
   }
 }
