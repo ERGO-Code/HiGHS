@@ -46,10 +46,12 @@ class HEkkPrimal {
   void commonUpdateSection();
 
   void chooseColumn(const bool hyper_sparse = false);
-  void hyperSparseChooseColumn();
-  void hyperSparseChooseColumnStart();
-  void hyperSparseChooseColumnClear();
-  void getMaxChangedMeasure();
+  void hyperChooseColumn();
+  void hyperChooseColumnStart();
+  void hyperChooseColumnClear();
+  void hyperChooseColumnChangedInfeasibility(const double infeasibility, const int iCol);
+  void hyperChooseColumnPhase1Change();
+  void hyperChooseColumnDualChange();
   void chooseRow();
   void updateDual();
 
@@ -119,18 +121,18 @@ class HEkkPrimal {
   int num_free_col;
   HSet nonbasic_free_col_set;
   // Hyper-sparse CHUZC data
-  bool use_hyper_sparse_chuzc;
-  bool initialise_hyper_sparse_chuzc;
+  bool use_hyper_chuzc;
+  bool initialise_hyper_chuzc;
   bool done_next_chuzc;
-  const int max_num_hyper_sparse_chuzc_candidates = 50;
-  int num_hyper_sparse_chuzc_candidates;
-  vector<int> hyper_sparse_chuzc_candidate;
-  vector<double> hyper_sparse_chuzc_measure;
-  HSet hyper_sparse_chuzc_candidate_set;
-  double max_hyper_sparse_chuzc_non_candidate_measure;
+  const int max_num_hyper_chuzc_candidates = 50;
+  int num_hyper_chuzc_candidates;
+  vector<int> hyper_chuzc_candidate;
+  vector<double> hyper_chuzc_measure;
+  HSet hyper_chuzc_candidate_set;
+  double max_hyper_chuzc_non_candidate_measure;
   double max_changed_measure_value;
   int max_changed_measure_column;
-  const bool report_hyper_sparse_chuzc = false;
+  const bool report_hyper_chuzc = false;
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
