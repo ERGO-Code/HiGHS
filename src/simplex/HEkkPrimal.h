@@ -47,6 +47,8 @@ class HEkkPrimal {
 
   void chooseColumn(const bool hyper_sparse=false);
   void hyperSparseChooseColumn();
+  void hyperSparseChooseColumnStart();
+  void hyperSparseChooseColumnClear();
   void getMaxChangedMeasure();
   void chooseRow();
   void updateDual();
@@ -128,12 +130,17 @@ class HEkkPrimal {
   double max_hyper_sparse_chuzc_non_candidate_measure;
   double max_changed_measure_value;
   int max_changed_measure_column;
+  const bool report_hyper_sparse_chuzc = false;
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
   HVector col_aq;
   HVector col_primal_phase1;
   HVector row_primal_phase1;
+
+  const int check_iter = 999999;
+  const int check_column = -1;
+
 };
 
 #endif /* SIMPLEX_HEKKPRIMAL_H_ */
