@@ -43,8 +43,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   row_ep_density = 0;
   row_ap_density = 0;
   row_DSE_density = 0;
-  col_primal_phase1_density = 0;
-  row_primal_phase1_density = 0;
+  col_basic_feasibility_change_density = 0;
+  row_basic_feasibility_change_density = 0;
   col_BFRT_density = 0;
   primal_col_density = 0;
   // Set the row_dual_density to 1 since it's assumed all costs are at
@@ -153,14 +153,14 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
     AnIter = &AnIterOp[k];
     if ((k == ANALYSIS_OPERATION_TYPE_PRICE_AP) ||
-        (k == ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1) ||
+        (k == ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE) ||
         (k == ANALYSIS_OPERATION_TYPE_PRICE_FULL)) {
       AnIter->AnIterOpHyperCANCEL = 1.0;
       AnIter->AnIterOpHyperTRAN = 1.0;
       AnIter->AnIterOpRsDim = numCol;
     } else {
       if ((k == ANALYSIS_OPERATION_TYPE_BTRAN_EP) ||
-          (k == ANALYSIS_OPERATION_TYPE_BTRAN_PRIMAL_PHASE1) ||
+          (k == ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE) ||
           (k == ANALYSIS_OPERATION_TYPE_BTRAN_FULL)) {
         AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
         AnIter->AnIterOpHyperTRAN = hyperBTRANU;

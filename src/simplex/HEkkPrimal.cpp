@@ -191,8 +191,8 @@ void HEkkPrimal::initialise() {
   col_aq.setup(num_row);
   row_ep.setup(num_row);
   row_ap.setup(num_col);
-  col_primal_phase1.setup(num_row);
-  row_primal_phase1.setup(num_col);
+  col_basic_feasibility_change.setup(num_row);
+  row_basic_feasibility_change.setup(num_col);
 
   ph1SorterR.reserve(num_row);
   ph1SorterT.reserve(num_row);
@@ -218,8 +218,6 @@ void HEkkPrimal::initialise() {
     nonbasic_free_col_set.setup(num_free_col, num_tot, output, debug);
   }
   // Set up the hyper-sparse CHUZC data
-  use_hyper_chuzc = false;  // true;//
-  hyperChooseColumnClear();
   hyper_chuzc_candidate.resize(1 + max_num_hyper_chuzc_candidates);
   hyper_chuzc_measure.resize(1 + max_num_hyper_chuzc_candidates);
   hyper_chuzc_candidate_set.setup(max_num_hyper_chuzc_candidates,
@@ -320,9 +318,6 @@ void HEkkPrimal::solvePhase2() {
                     ekk_instance_.options_.message_level, ML_DETAILED,
                     "primal-phase2-start\n");
   // Main solving structure
-  // Over-ride HS CHUZC
-  use_hyper_chuzc = true;
-  initialise_hyper_chuzc = true;
   for (;;) {
     rebuild();
     if (solvePhase == SOLVE_PHASE_ERROR) return;
@@ -341,28 +336,7 @@ void HEkkPrimal::solvePhase2() {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
-      if (!done_next_chuzc) chooseColumn(true);
-      const bool check_hyper_chuzc = false;
-      if (check_hyper_chuzc) {
-        int hyper_sparse_columnIn = columnIn;
-        chooseColumn(false);
-        HighsSimplexInfo& info = ekk_instance_.simplex_info_;
-        double hyper_sparse_measure = 0;
-        if (hyper_sparse_columnIn >= 0)
-          hyper_sparse_measure = fabs(info.workDual_[hyper_sparse_columnIn]) /
-                                 devex_weight[hyper_sparse_columnIn];
-        double measure = 0;
-        if (columnIn >= 0)
-          measure = fabs(info.workDual_[columnIn]) / devex_weight[columnIn];
-        if (hyper_sparse_measure != measure) {
-          if (report_hyper_chuzc) printf(
-                "Iteration %d: Hyper-sparse CHUZC measure %g != %g = Full "
-                "CHUZC measure (%d, %d)\n",
-                ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
-                hyper_sparse_columnIn, columnIn);
-          assert(hyper_sparse_measure == measure);
-        }
-      }
+      chuzc();
       if (columnIn == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
         break;
@@ -495,7 +469,15 @@ void HEkkPrimal::rebuild() {
       ekk_instance_.factor_.build_syntheticTick;
   ekk_instance_.total_syntheticTick_ = 0;
 
+  // Determine whether to use hyper-sparse CHUZC
+
+  if (solvePhase == SOLVE_PHASE_1) {
+    use_hyper_chuzc = false;
+  } else {
+    use_hyper_chuzc = true;
+  }
   hyperChooseColumnClear();
+
 
   num_flip_since_rebuild = 0;
   // Data are fresh from rebuild
@@ -562,13 +544,15 @@ void HEkkPrimal::phase1Update() {
   }
   // Check for possible error
   assert(rowOut >= 0 || flipped);
-  //
+
   // Update primal values
-  //
   phase1UpdatePrimal();
 
   // Update the duals with respect to feasibility changes
-  phase1UpdateDual();
+  basicFeasibilityChangeUpdateDual();
+
+  // For hyper-sparse CHUZC, analyse the duals that have just changed
+  hyperChooseColumnBasicFeasibilityChange();
 
   // Update for the flip case
   if (flipped) {
@@ -741,7 +725,7 @@ void HEkkPrimal::commonUpdateSection() {
   // If entering column was nonbasic free, remove it from the set
   removeNonbasicFreeColumn();
 
-  // Determine the most attractive column of those whose dual and weight have
+  // For hyper-sparse CHUZC, analyse the duals and weights that have
   // just changed
   hyperChooseColumnDualChange();
 
@@ -768,6 +752,34 @@ void HEkkPrimal::commonUpdateSection() {
 
   // Perform hyper-sparse CHUZC
   hyperChooseColumn();
+}
+
+void HEkkPrimal::chuzc() {
+  if (done_next_chuzc) assert(use_hyper_chuzc);
+  if (!done_next_chuzc) chooseColumn(true);
+  if (use_hyper_chuzc) {
+    const bool check_hyper_chuzc = false;
+    if (check_hyper_chuzc) {
+      int hyper_sparse_columnIn = columnIn;
+      chooseColumn(false);
+      HighsSimplexInfo& info = ekk_instance_.simplex_info_;
+      double hyper_sparse_measure = 0;
+      if (hyper_sparse_columnIn >= 0)
+	hyper_sparse_measure = fabs(info.workDual_[hyper_sparse_columnIn]) /
+	  devex_weight[hyper_sparse_columnIn];
+      double measure = 0;
+      if (columnIn >= 0)
+	measure = fabs(info.workDual_[columnIn]) / devex_weight[columnIn];
+      if (hyper_sparse_measure != measure) {
+	if (report_hyper_chuzc) printf(
+				       "Iteration %d: Hyper-sparse CHUZC measure %g != %g = Full "
+				       "CHUZC measure (%d, %d)\n",
+				       ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
+				       hyper_sparse_columnIn, columnIn);
+	assert(hyper_sparse_measure == measure);
+      }
+    }
+  }
 }
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
@@ -941,15 +953,63 @@ void HEkkPrimal::hyperChooseColumnChangedInfeasibility(const double infeasibilit
   }
 }
 
-void HEkkPrimal::hyperChooseColumnPhase1Change() {
+void HEkkPrimal::hyperChooseColumnBasicFeasibilityChange() {
+  if (!use_hyper_chuzc) return;
+  analysis->simplexTimerStart(ChuzcHyperBasicFeasibilityChangeClock);
+  const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
+  const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  int to_entry;
+  const bool use_row_indices =
+      ekk_instance_.sparseLoopStyle(row_basic_feasibility_change.count, num_col, to_entry);
+  for (int iEntry = 0; iEntry < to_entry; iEntry++) {
+    int iCol;
+    if (use_row_indices) {
+      iCol = row_basic_feasibility_change.index[iEntry];
+    } else {
+      iCol = iEntry;
+    }
+    double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
+    if (dual_infeasibility > dual_feasibility_tolerance) 
+	hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
+  }
+  const bool use_col_indices =
+      ekk_instance_.sparseLoopStyle(col_basic_feasibility_change.count, num_row, to_entry);
+  for (int iEntry = 0; iEntry < to_entry; iEntry++) {
+    int iRow;
+    if (use_col_indices) {
+      iRow = col_basic_feasibility_change.index[iEntry];
+    } else {
+      iRow = iEntry;
+    }
+    int iCol = num_col + iRow;
+    double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
+    if (dual_infeasibility > dual_feasibility_tolerance) 
+	hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
+  }
+  // Any nonbasic free columns will be handled explicitly in
+  // hyperChooseColumnDualChange, so only look at them here if not
+  // flipping
+  const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
+  if (rowOut<0 && num_nonbasic_free_col) {
+    const vector<int>& nonbasic_free_col_set_entry =
+      nonbasic_free_col_set.entry();
+    for (int iEntry = 0; iEntry < num_nonbasic_free_col; iEntry++) {
+      int iCol = nonbasic_free_col_set_entry[iEntry];
+      double dual_infeasibility = fabs(workDual[iCol]);
+      if (dual_infeasibility > dual_feasibility_tolerance)
+	hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
+    }
+  }
+  analysis->simplexTimerStop(ChuzcHyperBasicFeasibilityChangeClock);
 }
 
 void HEkkPrimal::hyperChooseColumnDualChange() {
   if (!use_hyper_chuzc) return;
+  analysis->simplexTimerStart(ChuzcHyperDualClock);
   const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   int to_entry;
-  // Look at changes in the columns
+  // Look at changes in the columns and assess any dual infeasibility
   const bool use_row_indices =
       ekk_instance_.sparseLoopStyle(row_ap.count, num_col, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
@@ -959,7 +1019,6 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     } else {
       iCol = iEntry;
     }
-    // Assess any dual infeasibility
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
       double measure = dual_infeasibility / devex_weight[iCol];
@@ -969,7 +1028,7 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     if (dual_infeasibility > dual_feasibility_tolerance) 
 	hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
   }
-  // Look at changes in the rows
+  // Look at changes in the rows and assess any dual infeasibility
   const bool use_col_indices =
       ekk_instance_.sparseLoopStyle(row_ep.count, num_row, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
@@ -980,19 +1039,18 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
       iRow = iEntry;
     }
     int iCol = iRow + num_col;
-    // Assess any dual infeasibility
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (dual_infeasibility > dual_feasibility_tolerance) 
       hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
   }
-  // Look for measure changes in any nonbasic free columns
+  // Look for measure changes in any nonbasic free columns and assess
+  // any dual infeasibility
   const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
   if (num_nonbasic_free_col) {
     const vector<int>& nonbasic_free_col_set_entry =
         nonbasic_free_col_set.entry();
     for (int iEntry = 0; iEntry < num_nonbasic_free_col; iEntry++) {
       int iCol = nonbasic_free_col_set_entry[iEntry];
-      // Assess any dual infeasibility
       double dual_infeasibility = fabs(workDual[iCol]);
       if (dual_infeasibility > dual_feasibility_tolerance)
 	hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
@@ -1007,6 +1065,7 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     assert(dual_infeasibility <= dual_feasibility_tolerance);
     hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
   }
+  analysis->simplexTimerStop(ChuzcHyperDualClock);
 }
 
 void HEkkPrimal::chooseRow() {
@@ -1315,10 +1374,10 @@ void HEkkPrimal::phase1UpdatePrimal() {
   vector<double>& workDual = simplex_info.workDual_;
   vector<double>& workCost = simplex_info.workCost_;
   vector<double>& baseValue = simplex_info.baseValue_;
-  col_primal_phase1.clear();
+  col_basic_feasibility_change.clear();
   //
   // Update basic primal values, identifying all the feasibility
-  // changes giving a value to col_primal_phase1 so that the duals can
+  // changes giving a value to col_basic_feasibility_change so that the duals can
   // be updated.
   //  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
   for (int iEl = 0; iEl < col_aq.count; iEl++) {
@@ -1341,8 +1400,8 @@ void HEkkPrimal::phase1UpdatePrimal() {
     }
     double delta_cost = cost - was_cost;
     if (delta_cost) {
-      col_primal_phase1.array[iRow] = delta_cost;
-      col_primal_phase1.index[col_primal_phase1.count++] = iRow;
+      col_basic_feasibility_change.array[iRow] = delta_cost;
+      col_basic_feasibility_change.index[col_basic_feasibility_change.count++] = iRow;
       if (iCol >= num_col) workDual[iCol] += delta_cost;
     }
   }
@@ -1352,89 +1411,89 @@ void HEkkPrimal::phase1UpdatePrimal() {
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
-void HEkkPrimal::phase1UpdateDual() {
-  analysis->simplexTimerStart(UpdateDualPrimalPhase1Clock);
+void HEkkPrimal::basicFeasibilityChangeUpdateDual() {
+  analysis->simplexTimerStart(UpdateDualBasicFeasibilityChangeClock);
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   // For basic logicals, the change in the basic cost will be a
-  // component in col_primal_phase1. This will lead to it being
+  // component in col_basic_feasibility_change. This will lead to it being
   // subtracted from workDual in the loop below over the
-  // nonzeros in col_primal_phase1, so add it in now. For basic
+  // nonzeros in col_basic_feasibility_change, so add it in now. For basic
   // structurals, there will be no corresponding component in
-  // row_primal_phase1, since only the nonbasic components are
+  // row_basic_feasibility_change, since only the nonbasic components are
   // computed (avoided using row pricing, and basic components
   // zeroed after column pricing). Hence there will be no
   // subtraction in the loop below over the nonzeros in
-  // row_primal_phase1. Hence, only add in the basic cost change
+  // row_basic_feasibility_change. Hence, only add in the basic cost change
   // for logicals.
   //
-  // Assumes that row_primal_phase1 has been set up in
+  // Assumes that row_basic_feasibility_change has been set up in
   // phase1UpdatePrimal()
 
-  primalPhase1Btran();
-  primalPhase1Price();
+  basicFeasibilityChangeBtran();
+  basicFeasibilityChangePrice();
   int to_entry;
   const bool use_row_indices =
-      ekk_instance_.sparseLoopStyle(row_primal_phase1.count, num_col, to_entry);
+      ekk_instance_.sparseLoopStyle(row_basic_feasibility_change.count, num_col, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
     int iCol;
     if (use_row_indices) {
-      iCol = row_primal_phase1.index[iEntry];
+      iCol = row_basic_feasibility_change.index[iEntry];
     } else {
       iCol = iEntry;
     }
-    workDual[iCol] -= row_primal_phase1.array[iCol];
+    workDual[iCol] -= row_basic_feasibility_change.array[iCol];
   }
   const bool use_col_indices =
-      ekk_instance_.sparseLoopStyle(col_primal_phase1.count, num_row, to_entry);
+      ekk_instance_.sparseLoopStyle(col_basic_feasibility_change.count, num_row, to_entry);
   for (int iEntry = 0; iEntry < to_entry; iEntry++) {
     int iRow;
     if (use_col_indices) {
-      iRow = col_primal_phase1.index[iEntry];
+      iRow = col_basic_feasibility_change.index[iEntry];
     } else {
       iRow = iEntry;
     }
     int iCol = num_col + iRow;
-    workDual[iCol] -= col_primal_phase1.array[iRow];
+    workDual[iCol] -= col_basic_feasibility_change.array[iRow];
   }
   ekk_instance_.invalidateDualInfeasibilityRecord();
-  analysis->simplexTimerStop(UpdateDualPrimalPhase1Clock);
+  analysis->simplexTimerStop(UpdateDualBasicFeasibilityChangeClock);
 }
 
-void HEkkPrimal::primalPhase1Btran() {
-  // Performs BTRAN on col_primal_phase1. Make sure that
-  // col_primal_phase1.count is large (>simplex_lp_.numRow_ to be
+void HEkkPrimal::basicFeasibilityChangeBtran() {
+  // Performs BTRAN on col_basic_feasibility_change. Make sure that
+  // col_basic_feasibility_change.count is large (>simplex_lp_.numRow_ to be
   // sure) rather than 0 if the indices of the RHS (and true value of
-  // col_primal_phase1.count) isn't known.
-  analysis->simplexTimerStart(BtranPrimalPhase1Clock);
+  // col_basic_feasibility_change.count) isn't known.
+  analysis->simplexTimerStart(BtranBasicFeasibilityChangeClock);
   const int solver_num_row = ekk_instance_.simplex_lp_.numRow_;
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_PRIMAL_PHASE1,
-                                    col_primal_phase1,
-                                    analysis->col_primal_phase1_density);
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
+                                    col_basic_feasibility_change,
+                                    analysis->col_basic_feasibility_change_density);
 #endif
-  ekk_instance_.factor_.btran(col_primal_phase1,
-                              analysis->col_primal_phase1_density,
+  ekk_instance_.factor_.btran(col_basic_feasibility_change,
+                              analysis->col_basic_feasibility_change_density,
                               analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_PRIMAL_PHASE1,
-                                   col_primal_phase1);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
+                                   col_basic_feasibility_change);
 #endif
-  const double local_col_primal_phase1_density =
-      (double)col_primal_phase1.count / solver_num_row;
-  analysis->updateOperationResultDensity(local_col_primal_phase1_density,
-                                         analysis->col_primal_phase1_density);
-  analysis->simplexTimerStop(BtranPrimalPhase1Clock);
+  const double local_col_basic_feasibility_change_density =
+      (double)col_basic_feasibility_change.count / solver_num_row;
+  analysis->updateOperationResultDensity(local_col_basic_feasibility_change_density,
+                                         analysis->col_basic_feasibility_change_density);
+  analysis->simplexTimerStop(BtranBasicFeasibilityChangeClock);
 }
 
-void HEkkPrimal::primalPhase1Price() {
-  analysis->simplexTimerStart(PricePrimalPhase1Clock);
+void HEkkPrimal::basicFeasibilityChangePrice() {
+  analysis->simplexTimerStart(PriceBasicFeasibilityChangeClock);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const int solver_num_row = ekk_instance_.simplex_lp_.numRow_;
   const int solver_num_col = ekk_instance_.simplex_lp_.numCol_;
-  const double local_density = 1.0 * col_primal_phase1.count / solver_num_row;
+  const double local_density = 1.0 * col_basic_feasibility_change.count / solver_num_row;
   bool use_col_price;
   bool use_row_price_w_switch;
   ekk_instance_.choosePriceTechnique(simplex_info.price_strategy, local_density,
@@ -1444,37 +1503,37 @@ void HEkkPrimal::primalPhase1Price() {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
       analysis->operationRecordBefore(
-          ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1, col_primal_phase1,
+          ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE, col_basic_feasibility_change,
           historical_density_for_non_hypersparse_operation);
       analysis->num_col_price++;
     } else if (use_row_price_w_switch) {
       analysis->operationRecordBefore(
-          ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1, col_primal_phase1,
-          analysis->col_primal_phase1_density);
+          ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE, col_basic_feasibility_change,
+          analysis->col_basic_feasibility_change_density);
       analysis->num_row_price_with_switch++;
     } else {
       analysis->operationRecordBefore(
-          ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1, col_primal_phase1,
-          analysis->col_primal_phase1_density);
+          ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE, col_basic_feasibility_change,
+          analysis->col_basic_feasibility_change_density);
       analysis->num_row_price++;
     }
   }
 #endif
-  row_primal_phase1.clear();
+  row_basic_feasibility_change.clear();
   if (use_col_price) {
     // Perform column-wise PRICE
-    ekk_instance_.matrix_.priceByColumn(row_primal_phase1, col_primal_phase1);
+    ekk_instance_.matrix_.priceByColumn(row_basic_feasibility_change, col_basic_feasibility_change);
   } else if (use_row_price_w_switch) {
     // Perform hyper-sparse row-wise PRICE, but switch if the density of
-    // row_primal_phase1 becomes extreme
+    // row_basic_feasibility_change becomes extreme
     const double switch_density = ekk_instance_.matrix_.hyperPRICE;
     ekk_instance_.matrix_.priceByRowSparseResultWithSwitch(
-        row_primal_phase1, col_primal_phase1,
-        analysis->row_primal_phase1_density, 0, switch_density);
+        row_basic_feasibility_change, col_basic_feasibility_change,
+        analysis->row_basic_feasibility_change_density, 0, switch_density);
   } else {
     // Perform hyper-sparse row-wise PRICE
-    ekk_instance_.matrix_.priceByRowSparseResult(row_primal_phase1,
-                                                 col_primal_phase1);
+    ekk_instance_.matrix_.priceByRowSparseResult(row_basic_feasibility_change,
+                                                 col_basic_feasibility_change);
   }
   if (use_col_price) {
     // Column-wise PRICE computes components corresponding to basic
@@ -1482,19 +1541,19 @@ void HEkkPrimal::primalPhase1Price() {
     // variables, nonbasicFlag[*]=0
     const int* nonbasicFlag = &ekk_instance_.simplex_basis_.nonbasicFlag_[0];
     for (int iCol = 0; iCol < solver_num_col; iCol++)
-      row_primal_phase1.array[iCol] *= nonbasicFlag[iCol];
+      row_basic_feasibility_change.array[iCol] *= nonbasicFlag[iCol];
   }
-  // Update the record of average row_primal_phase1 density
-  const double local_row_primal_phase1_density =
-      (double)row_primal_phase1.count / solver_num_col;
-  analysis->updateOperationResultDensity(local_row_primal_phase1_density,
-                                         analysis->row_primal_phase1_density);
+  // Update the record of average row_basic_feasibility_change density
+  const double local_row_basic_feasibility_change_density =
+      (double)row_basic_feasibility_change.count / solver_num_col;
+  analysis->updateOperationResultDensity(local_row_basic_feasibility_change_density,
+                                         analysis->row_basic_feasibility_change_density);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_PRIMAL_PHASE1,
-                                   row_primal_phase1);
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE,
+                                   row_basic_feasibility_change);
 #endif
-  analysis->simplexTimerStop(PricePrimalPhase1Clock);
+  analysis->simplexTimerStop(PriceBasicFeasibilityChangeClock);
 }
 
 void HEkkPrimal::phase2UpdatePrimal() {
