@@ -366,7 +366,8 @@ install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
 else() 
 
 # FAST_BUILD is set to on.
-# At the moment used only for gradually updating the CMake targets build and install / export.
+# At the moment used only for gradually updating the CMake targets build and
+# install / export.
 # Define library in modern CMake using target_*()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
@@ -433,14 +434,22 @@ set_target_properties(libhighs PROPERTIES PUBLIC_HEADER src/Highs.h)
 
 target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
 
+# two warnings in ipx/src/basis.h
+target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 if (IPX_ON)
     add_library(ipx OBJECT ${basiclu_sources} ${ipx_sources})
-    target_include_directories(ipx PUBLIC ipm/ipx/src ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
+    target_include_directories(ipx PUBLIC ipm/ipx/src
+        ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
     #target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
+
+    target_compile_options(ipx PRIVATE "-Wno-return-type-c-linkage")
+    target_compile_options(ipx PRIVATE "-Wno-defaulted-function-deleted")
+    target_compile_options(ipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
     set_target_properties(ipx PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
