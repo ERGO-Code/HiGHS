@@ -141,8 +141,8 @@ class HEkkPrimal {
   HVector col_basic_feasibility_change;
   HVector row_basic_feasibility_change;
 
-  const int check_iter = 999999;
-  const int check_column = -1;
+  const int check_iter = 99999;
+  const int check_column = -2133;
 };
 
 #endif /* SIMPLEX_HEKKPRIMAL_H_ */

@@ -465,14 +465,14 @@ void HEkkPrimal::rebuild() {
 
   reportRebuild(sv_invertHint);
 
+  // Record the synthetic clock for INVERT, and zero it for UPDATE
   ekk_instance_.build_syntheticTick_ =
       ekk_instance_.factor_.build_syntheticTick;
   ekk_instance_.total_syntheticTick_ = 0;
 
   // Determine whether to use hyper-sparse CHUZC
-
   if (solvePhase == SOLVE_PHASE_1) {
-    use_hyper_chuzc = false;
+    use_hyper_chuzc = true;
   } else {
     use_hyper_chuzc = true;
   }
@@ -570,7 +570,7 @@ void HEkkPrimal::phase1Update() {
         invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
       }
     }
-    // Update the synthetic clock
+    // Update the synthetic clock for UPDATE
     ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
     return;
   }
@@ -687,7 +687,7 @@ void HEkkPrimal::phase2Update() {
     iterationAnalysis();
     localReportIter();
     num_flip_since_rebuild++;
-    // Update the synthetic clock
+    // Update the synthetic clock for UPDATE
     ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
     return;
   }
@@ -746,7 +746,7 @@ void HEkkPrimal::commonUpdateSection() {
   iterationAnalysis();
   localReportIter();
 
-  // Update the synthetic clock
+  // Update the synthetic clock for UPDATE
   ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
   ekk_instance_.total_syntheticTick_ += row_ep.syntheticTick;
 
@@ -758,7 +758,7 @@ void HEkkPrimal::chuzc() {
   if (done_next_chuzc) assert(use_hyper_chuzc);
   if (!done_next_chuzc) chooseColumn(true);
   if (use_hyper_chuzc) {
-    const bool check_hyper_chuzc = false;
+    const bool check_hyper_chuzc = true;
     if (check_hyper_chuzc) {
       int hyper_sparse_columnIn = columnIn;
       chooseColumn(false);
@@ -771,13 +771,13 @@ void HEkkPrimal::chuzc() {
       if (columnIn >= 0)
 	measure = fabs(info.workDual_[columnIn]) / devex_weight[columnIn];
       if (hyper_sparse_measure != measure) {
-	if (report_hyper_chuzc) printf(
-				       "Iteration %d: Hyper-sparse CHUZC measure %g != %g = Full "
-				       "CHUZC measure (%d, %d)\n",
-				       ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
-				       hyper_sparse_columnIn, columnIn);
+	printf("Iteration %d: Hyper-sparse CHUZC measure %g != %g = Full "
+	       "CHUZC measure (%d, %d)\n",
+	       ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
+	       hyper_sparse_columnIn, columnIn);
 	assert(hyper_sparse_measure == measure);
       }
+      columnIn = hyper_sparse_columnIn;
     }
   }
 }
@@ -851,21 +851,21 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
           nonbasic_free_col_set.entry();
       for (int ix = 0; ix < num_nonbasic_free_col; ix++) {
         int iCol = nonbasic_free_col_set_entry[ix];
-        if (fabs(workDual[iCol]) > dual_feasibility_tolerance) {
-          columnIn = iCol;
-          analysis->simplexTimerStop(ChuzcPrimalClock);
-          return;
-        }
+	double dual_infeasibility = fabs(workDual[iCol]);
+	if (dual_infeasibility > dual_feasibility_tolerance &&
+	    dual_infeasibility > best_measure * devex_weight[iCol]) {
+	  columnIn = iCol;
+	  best_measure = dual_infeasibility / devex_weight[iCol];
+	}
       }
     }
     // Now look at other columns
     for (int iCol = 0; iCol < num_tot; iCol++) {
       double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
-      double measure = dual_infeasibility / devex_weight[iCol];
       if (dual_infeasibility > dual_feasibility_tolerance &&
-          measure > best_measure) {
-        columnIn = iCol;
-        best_measure = measure;
+	  dual_infeasibility > best_measure * devex_weight[iCol]) {
+	columnIn = iCol;
+	best_measure = dual_infeasibility / devex_weight[iCol];
       }
     }
     analysis->simplexTimerStop(ChuzcPrimalClock);
@@ -909,14 +909,19 @@ void HEkkPrimal::hyperChooseColumn() {
       }
     }
   }
-  if (columnIn != max_changed_measure_column)
+  if (columnIn != max_changed_measure_column) {
     if (report_hyper_chuzc)
       printf(", and after HS CHUZC set it is now %9.4g for column %4d",
              best_measure, columnIn);
+    max_hyper_chuzc_non_candidate_measure =
+      max(max_changed_measure_value, max_hyper_chuzc_non_candidate_measure);
+  }
   if (best_measure >= max_hyper_chuzc_non_candidate_measure) {
     // Candidate is at least as good as any unknown column, so accept it
     done_next_chuzc = true;
-    if (report_hyper_chuzc) printf("\n");
+    if (report_hyper_chuzc)
+      printf(", and no       has  measure >  %9.4g\n",
+             max_hyper_chuzc_non_candidate_measure);
   } else {
     // Candidate isn't as good as best unknown column, so do a full CHUZC
     // Shouldn't claim to have done the next CHUZC
@@ -924,7 +929,7 @@ void HEkkPrimal::hyperChooseColumn() {
     done_next_chuzc = false;
     initialise_hyper_chuzc = true;
     if (report_hyper_chuzc)
-      printf(", but some column may have measure %9.4g\n",
+      printf(", but some may have measure >= %9.4g\n",
              max_hyper_chuzc_non_candidate_measure);
   }
   analysis->simplexTimerStop(ChuzcHyperClock);
@@ -1022,8 +1027,9 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
     if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
       double measure = dual_infeasibility / devex_weight[iCol];
-      if (report_hyper_chuzc)
+      if (report_hyper_chuzc) {
         printf("Changing column %d: measure = %g \n", check_column, measure);
+      }
     }
     if (dual_infeasibility > dual_feasibility_tolerance) 
 	hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
@@ -1040,6 +1046,12 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
     }
     int iCol = iRow + num_col;
     double dual_infeasibility = -nonbasicMove[iCol] * workDual[iCol];
+    if (iCol == check_column && ekk_instance_.iteration_count_ >= check_iter) {
+      double measure = dual_infeasibility / devex_weight[iCol];
+      if (report_hyper_chuzc) {
+        printf("Changing column %d: measure = %g \n", check_column, measure);
+      }
+    }
     if (dual_infeasibility > dual_feasibility_tolerance) 
       hyperChooseColumnChangedInfeasibility(dual_infeasibility, iCol);
   }
@@ -1788,13 +1800,34 @@ void HEkkPrimal::localReportIter(const bool header) {
     } else {
       printf("%5d %5d Bound flip   ", iteration_count, columnIn);
     }
-    if (check_column >= 0) {
-      printf(": Var %2d (%1d, %2d) - Du = %9.4g; Wt = %9.4g; Ms = %9.4g",
-             check_column,
-             ekk_instance_.simplex_basis_.nonbasicFlag_[check_column],
-             ekk_instance_.simplex_basis_.nonbasicMove_[check_column],
-             simplex_info.workDual_[check_column], devex_weight[check_column],
-             simplex_info.workDual_[check_column] / devex_weight[check_column]);
+    if (check_column >= 0 && iteration_count >= check_iter) {
+      int flag = ekk_instance_.simplex_basis_.nonbasicFlag_[check_column];
+      int move = ekk_instance_.simplex_basis_.nonbasicMove_[check_column];
+      double lower = simplex_info.workLower_[check_column];
+      double upper = simplex_info.workUpper_[check_column];
+      double value;
+      if (flag == NONBASIC_FLAG_TRUE) {
+	value = simplex_info.workValue_[check_column];
+      } else {
+	int iRow;
+	for (iRow=0; iRow < num_row; iRow++) {
+	  if (ekk_instance_.simplex_basis_.basicIndex_[iRow] == check_column) break;
+	}
+	assert(iRow<num_row);
+	value = simplex_info.baseValue_[iRow];
+      }
+      printf(": Var %2d (%1d, %2d) [%9.4g, %9.4g, %9.4g]",
+             check_column, flag, move, lower, value, upper);
+      if (flag == NONBASIC_FLAG_TRUE) {
+	double dual = simplex_info.workDual_[check_column];
+	double weight = devex_weight[check_column];
+	double infeasibility = -move * dual;
+	if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF)
+	  infeasibility = fabs(dual);
+	if (infeasibility < dual_feasibility_tolerance) infeasibility = 0;
+	double measure = infeasibility / weight;
+	printf(" Du = %9.4g; Wt = %9.4g; Ms = %9.4g", dual, weight, measure);
+      }
     }
     printf("\n");
   }
@@ -1821,6 +1854,7 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
         simplex_info.workUpper_[iCol] >= HIGHS_CONST_INF;
     if (nonbasic_free) nonbasic_free_col_set.add(iCol);
   }
+  nonbasic_free_col_set.print();
 }
 
 void HEkkPrimal::removeNonbasicFreeColumn() {
