@@ -29,9 +29,9 @@ endif()
 # targets build and install / export.
 
 # Note: Not ON by default yet
-option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
+option(FAST_BUILD "Fast build: only build static lib and exe and quick test." ON)
 option(EXP "Experimental mode: run unit tests with doctest." OFF)
-option(IPX "Use interior point solver" OFF)
+option(IPX "Use interior point solver" ON)
 
 
 
