@@ -50,7 +50,8 @@ class HEkkPrimal {
   void hyperChooseColumn();
   void hyperChooseColumnStart();
   void hyperChooseColumnClear();
-  void hyperChooseColumnChangedInfeasibility(const double infeasibility, const int iCol);
+  void hyperChooseColumnChangedInfeasibility(const double infeasibility,
+                                             const int iCol);
   void hyperChooseColumnBasicFeasibilityChange();
   void hyperChooseColumnDualChange();
   void chooseRow();
@@ -141,7 +142,7 @@ class HEkkPrimal {
   HVector col_basic_feasibility_change;
   HVector row_basic_feasibility_change;
 
-  const int check_iter = 99999;
+  const int check_iter = 9999999;
   const int check_column = -2133;
 };
 

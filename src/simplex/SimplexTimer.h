@@ -67,14 +67,15 @@ enum iClockSimplex {
   Chuzr2Clock,                 //!< CHUZR - Primal stage 2
   ChuzcPrimalClock,            //!< CHUZC - Primal
   ChuzcHyperInitialiselClock,  //!< CHUZC - Hyper-sparse initialisation
-  ChuzcHyperBasicFeasibilityChangeClock,       //!< CHUZC - Hyper-sparse after phase 1 basic feasibility changes
-  ChuzcHyperDualClock,         //!< CHUZC - Hyper-sparse after dual update
-  ChuzcHyperClock,             //!< CHUZC - Hyper-sparse
-  Chuzc0Clock,                 //!< CHUZC - Dual stage 0
-  PriceChuzc1Clock,            //!< PRICE + CHUZC - Dual stage 1: parallel
-  Chuzc1Clock,                 //!< CHUZC - Dual stage 1
-  Chuzc2Clock,                 //!< CHUZC - Dual stage 2
-  Chuzc3Clock,                 //!< CHUZC - Dual stage 3
+  ChuzcHyperBasicFeasibilityChangeClock,  //!< CHUZC - Hyper-sparse after phase
+                                          //!< 1 basic feasibility changes
+  ChuzcHyperDualClock,  //!< CHUZC - Hyper-sparse after dual update
+  ChuzcHyperClock,      //!< CHUZC - Hyper-sparse
+  Chuzc0Clock,          //!< CHUZC - Dual stage 0
+  PriceChuzc1Clock,     //!< PRICE + CHUZC - Dual stage 1: parallel
+  Chuzc1Clock,          //!< CHUZC - Dual stage 1
+  Chuzc2Clock,          //!< CHUZC - Dual stage 2
+  Chuzc3Clock,          //!< CHUZC - Dual stage 3
 
   Chuzc3a0Clock,  //!< CHUZC - Dual stage 3a0
   Chuzc3a1Clock,  //!< CHUZC - Dual stage 3a1
@@ -83,29 +84,30 @@ enum iClockSimplex {
   Chuzc3dClock,   //!< CHUZC - Dual stage 3d
   Chuzc3eClock,   //!< CHUZC - Dual stage 3e
 
-  Chuzc4Clock,             //!< CHUZC - Dual stage 4
-  DevexWtClock,            //!< Calculation of Devex weight of entering variable
-  BtranClock,              //!< BTRAN - row p of inverse
-  BtranBasicFeasibilityChangeClock,  //!< BTRAN - primal simplex phase 1
-  BtranFullClock,          //!< BTRAN - full RHS
-  PriceClock,              //!< PRICE - row p of tableau
-  PriceBasicFeasibilityChangeClock,  //!< PRICE - primal simplex phase 1
-  PriceFullClock,          //!< PRICE - full
-  FtranClock,              //!< FTRAN - pivotal column
-  FtranDseClock,           //!< FTRAN for DSE weights
-  FtranMixParClock,        //!< FTRAN for PAMI - parallel
-  FtranMixFinalClock,      //!< FTRAN for PAMI - final
-  FtranBfrtClock,          //!< FTRAN for BFRT
-  UpdateRowClock,          //!< Update of dual values
-  UpdateDualClock,         //!< Update of dual values
-  UpdateDualBasicFeasibilityChangeClock,  //!< Update of dual values in primal phase 1
-  UpdatePrimalClock,            //!< Update of primal values
-  DevexIzClock,                 //!< Initialisation of new Devex framework
-  DevexUpdateWeightClock,       //!< Update Devex weights
-  DseUpdateWeightClock,         //!< Update DSE weights
-  UpdatePivotsClock,  //!< Update indices of basic and nonbasic after basis
-                      //!< change
-  UpdateFactorClock,  //!< Update the representation of \f$B^{-1}\f$
+  Chuzc4Clock,   //!< CHUZC - Dual stage 4
+  DevexWtClock,  //!< Calculation of Devex weight of entering variable
+  BtranClock,    //!< BTRAN - row p of inverse
+  BtranBasicFeasibilityChangeClock,       //!< BTRAN - primal simplex phase 1
+  BtranFullClock,                         //!< BTRAN - full RHS
+  PriceClock,                             //!< PRICE - row p of tableau
+  PriceBasicFeasibilityChangeClock,       //!< PRICE - primal simplex phase 1
+  PriceFullClock,                         //!< PRICE - full
+  FtranClock,                             //!< FTRAN - pivotal column
+  FtranDseClock,                          //!< FTRAN for DSE weights
+  FtranMixParClock,                       //!< FTRAN for PAMI - parallel
+  FtranMixFinalClock,                     //!< FTRAN for PAMI - final
+  FtranBfrtClock,                         //!< FTRAN for BFRT
+  UpdateRowClock,                         //!< Update of dual values
+  UpdateDualClock,                        //!< Update of dual values
+  UpdateDualBasicFeasibilityChangeClock,  //!< Update of dual values in primal
+                                          //!< phase 1
+  UpdatePrimalClock,                      //!< Update of primal values
+  DevexIzClock,            //!< Initialisation of new Devex framework
+  DevexUpdateWeightClock,  //!< Update Devex weights
+  DseUpdateWeightClock,    //!< Update DSE weights
+  UpdatePivotsClock,       //!< Update indices of basic and nonbasic after basis
+                           //!< change
+  UpdateFactorClock,       //!< Update the representation of \f$B^{-1}\f$
   UpdateMatrixClock,  //!< Update the row-wise copy of the constraint matrix for
                       //!< nonbasic columns
   UpdateRowEpClock,   //!< Update the tableau rows in PAMI
@@ -166,7 +168,8 @@ class SimplexTimer {
     clock[ChuzcPrimalClock] = timer.clock_def("CHUZC_PRIMAL", "CCP");
     clock[ChuzcHyperInitialiselClock] =
         timer.clock_def("CHUZC_HYPER_IZ", "CHI");
-    clock[ChuzcHyperBasicFeasibilityChangeClock] = timer.clock_def("CHUZC_HYPER_FEAS", "CHF");
+    clock[ChuzcHyperBasicFeasibilityChangeClock] =
+        timer.clock_def("CHUZC_HYPER_FEAS", "CHF");
     clock[ChuzcHyperDualClock] = timer.clock_def("CHUZC_HYPER_DUAL", "CHD");
     clock[ChuzcHyperClock] = timer.clock_def("CHUZC_HYPER", "CHC");
     clock[Chuzc0Clock] = timer.clock_def("CHUZC0", "CC0");
@@ -183,10 +186,12 @@ class SimplexTimer {
     clock[Chuzc4Clock] = timer.clock_def("CHUZC4", "CC4");
     clock[DevexWtClock] = timer.clock_def("DEVEX_WT", "DWT");
     clock[BtranClock] = timer.clock_def("BTRAN", "REP");
-    clock[BtranBasicFeasibilityChangeClock] = timer.clock_def("BTRAN_FEAS", "BT1");
+    clock[BtranBasicFeasibilityChangeClock] =
+        timer.clock_def("BTRAN_FEAS", "BT1");
     clock[BtranFullClock] = timer.clock_def("BTRAN_FULL", "BTF");
     clock[PriceClock] = timer.clock_def("PRICE", "RAP");
-    clock[PriceBasicFeasibilityChangeClock] = timer.clock_def("PRICE_FEAS", "PC1");
+    clock[PriceBasicFeasibilityChangeClock] =
+        timer.clock_def("PRICE_FEAS", "PC1");
     clock[PriceFullClock] = timer.clock_def("PRICE_FULL", "PCF");
     clock[FtranClock] = timer.clock_def("FTRAN", "COL");
     clock[FtranDseClock] = timer.clock_def("FTRAN_DSE", "DSE");

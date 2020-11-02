@@ -1053,7 +1053,12 @@ void HEkk::computeSimplexPrimalInfeasible() {
       double value = simplex_info_.workValue_[i];
       double lower = simplex_info_.workLower_[i];
       double upper = simplex_info_.workUpper_[i];
-      double primal_infeasibility = max(lower - value, value - upper);
+      double primal_infeasibility = 0;
+      if (value < lower - scaled_primal_feasibility_tolerance) {
+        primal_infeasibility = lower - value;
+      } else if (value > upper + scaled_primal_feasibility_tolerance) {
+        primal_infeasibility = value - upper;
+      }
       if (primal_infeasibility > 0) {
         if (primal_infeasibility > scaled_primal_feasibility_tolerance)
           num_primal_infeasibilities++;
@@ -1068,7 +1073,12 @@ void HEkk::computeSimplexPrimalInfeasible() {
     double value = simplex_info_.baseValue_[i];
     double lower = simplex_info_.baseLower_[i];
     double upper = simplex_info_.baseUpper_[i];
-    double primal_infeasibility = max(lower - value, value - upper);
+    double primal_infeasibility = 0;
+    if (value < lower - scaled_primal_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + scaled_primal_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    }
     if (primal_infeasibility > 0) {
       if (primal_infeasibility > scaled_primal_feasibility_tolerance)
         num_primal_infeasibilities++;

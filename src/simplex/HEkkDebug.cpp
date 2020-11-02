@@ -161,8 +161,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     double lower = simplex_info.baseLower_[iRow];
     double upper = simplex_info.baseUpper_[iRow];
     double value = simplex_info.baseValue_[iRow];
-    double primal_infeasibility = 0;
-    double primal_phase1_cost = 0;
     bool baseBound_error = workLower != lower || workUpper != upper;
     if (baseBound_error) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
@@ -175,6 +173,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       return HighsDebugStatus::LOGICAL_ERROR;
     }
     max_basic_dual = max(fabs(dual), max_basic_dual);
+    double primal_infeasibility = 0;
+    double primal_phase1_cost = 0;
     if (value < lower - primal_feasibility_tolerance) {
       primal_infeasibility = lower - value;
       primal_phase1_cost = -1;
