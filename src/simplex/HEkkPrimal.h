@@ -92,9 +92,6 @@ class HEkkPrimal {
   int num_col;
   int num_row;
   int num_tot;
-
-  const bool use_iterate = true;
-
   int isPrimalPhase1;
   int solvePhase;
   double primal_feasibility_tolerance;
