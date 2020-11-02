@@ -451,9 +451,6 @@ if (IPX_ON)
     target_compile_options(ipx PRIVATE "-Wno-defaulted-function-deleted")
     target_compile_options(ipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
-    set_target_properties(ipx PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-
     target_link_libraries(libhighs PRIVATE ipx)
 endif()
 
