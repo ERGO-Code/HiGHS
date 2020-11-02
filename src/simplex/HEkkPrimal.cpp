@@ -180,7 +180,7 @@ void HEkkPrimal::initialise() {
   dual_feasibility_tolerance =
       ekk_instance_.options_.dual_feasibility_tolerance;
 
-  invertHint = INVERT_HINT_NO;
+  rebuild_reason = REBUILD_REASON_NO;
 
   ekk_instance_.simplex_lp_status_.has_primal_objective_value = false;
   ekk_instance_.simplex_lp_status_.has_dual_objective_value = false;
@@ -258,7 +258,7 @@ void HEkkPrimal::solvePhase1() {
       // Primal phase 1 choose column
       chooseColumn();
       if (columnIn == -1) {
-        invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
+        rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
         break;
       }
 
@@ -273,13 +273,13 @@ void HEkkPrimal::solvePhase1() {
 
       // Primal phase 1 update
       phase1Update();
-      if (invertHint) {
+      if (rebuild_reason) {
         break;
       }
       if (ekk_instance_.bailoutOnTimeIterations()) return;
     }
     // Go to the next rebuild
-    if (invertHint) {
+    if (rebuild_reason) {
       // Stop when the invert is new
       if (simplex_lp_status.has_fresh_rebuild) {
         break;
@@ -338,13 +338,13 @@ void HEkkPrimal::solvePhase2() {
       }
       chuzc();
       if (columnIn == -1) {
-        invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
+        rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
         break;
       }
       chooseRow();
       phase2Update();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
-      if (invertHint) {
+      if (rebuild_reason) {
         break;
       }
     }
@@ -411,14 +411,14 @@ void HEkkPrimal::rebuild() {
   }
 
   // Rebuild ekk_instance_.factor_ - only if we got updates
-  int sv_invertHint = invertHint;
-  invertHint = INVERT_HINT_NO;
+  int sv_rebuild_reason = rebuild_reason;
+  rebuild_reason = REBUILD_REASON_NO;
   // Possibly Rebuild factor
   bool reInvert = simplex_info.update_count > 0;
   if (!invert_if_row_out_negative) {
-    // Don't reinvert if columnIn is negative [equivalently, if sv_invertHint ==
-    // INVERT_HINT_POSSIBLY_OPTIMAL]
-    if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {
+    // Don't reinvert if columnIn is negative [equivalently, if sv_rebuild_reason ==
+    // REBUILD_REASON_POSSIBLY_OPTIMAL]
+    if (sv_rebuild_reason == REBUILD_REASON_POSSIBLY_OPTIMAL) {
       assert(columnIn == -1);
       reInvert = false;
     }
@@ -463,7 +463,7 @@ void HEkkPrimal::rebuild() {
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 
-  reportRebuild(sv_invertHint);
+  reportRebuild(sv_rebuild_reason);
 
   // Record the synthetic clock for INVERT, and zero it for UPDATE
   ekk_instance_.build_syntheticTick_ =
@@ -562,12 +562,12 @@ void HEkkPrimal::phase1Update() {
     localReportIter();
     num_flip_since_rebuild++;
     // Recompute things on flip
-    if (invertHint == 0) {
+    if (rebuild_reason == 0) {
       if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
         isPrimalPhase1 = 1;
       } else {
         // Crude way to force rebuild
-        invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+        rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
       }
     }
     // Update the synthetic clock for UPDATE
@@ -588,12 +588,12 @@ void HEkkPrimal::phase1Update() {
 
   // Possibly rebuild if not already doing it and there are primal
   // infeasibilities
-  if (invertHint == 0) {
+  if (rebuild_reason == 0) {
     if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
       isPrimalPhase1 = 1;
     } else {
       // Crude way to force rebuild
-      invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+      rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
     }
   }
 }
@@ -670,7 +670,7 @@ void HEkkPrimal::phase2Update() {
 
   // Check for possible unboundedness
   if (rowOut < 0 && !flipped) {
-    invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
+    rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED;
     return;
   }
   //
@@ -732,10 +732,10 @@ void HEkkPrimal::commonUpdateSection() {
 
   // Perform pivoting
   ekk_instance_.updatePivots(columnIn, rowOut, sourceOut);
-  ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &invertHint);
+  ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &rebuild_reason);
   ekk_instance_.updateMatrix(columnIn, columnOut);
   if (simplex_info.update_count >= simplex_info.update_limit)
-    invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+    rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
 
   // Update the iteration count
   ekk_instance_.iteration_count_++;
@@ -1080,7 +1080,7 @@ void HEkkPrimal::hyperChooseColumnDualChange() {
 }
 
 void HEkkPrimal::chooseRow() {
-  const HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& baseValue = simplex_info.baseValue_;
@@ -1093,9 +1093,17 @@ void HEkkPrimal::chooseRow() {
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
   thetaDual = simplex_info.workDual_[columnIn];
-  analysis->dualValueSignOk(ekk_instance_.options_, thetaDual, columnIn, col_aq,
-                            simplex_info.workCost_,
-                            ekk_instance_.simplex_basis_.basicIndex_);
+  double computed_thetaDual;
+  bool thetaDual_sign_ok = 
+    analysis->dualValueSignOk(ekk_instance_.options_, thetaDual, columnIn, col_aq,
+			      simplex_info.workCost_,
+			      ekk_instance_.simplex_basis_.basicIndex_,
+			      computed_thetaDual);
+  // Really should do something if thetaDual_sign_ok is false
+  assert(thetaDual_sign_ok);
+  // Feed in the computed dual value
+  //  simplex_info.workDual_[columnIn] = computed_thetaDual;
+  //  thetaDual = simplex_info.workDual_[columnIn];
 
   analysis->simplexTimerStart(Chuzr1Clock);
   // Initialize
@@ -1240,9 +1248,17 @@ void HEkkPrimal::phase1ChooseRow() {
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
   thetaDual = simplex_info.workDual_[columnIn];
-  analysis->dualValueSignOk(ekk_instance_.options_, thetaDual, columnIn, col_aq,
-                            simplex_info.workCost_,
-                            ekk_instance_.simplex_basis_.basicIndex_);
+  double computed_thetaDual;
+  bool thetaDual_sign_ok = 
+    analysis->dualValueSignOk(ekk_instance_.options_, thetaDual, columnIn, col_aq,
+			      simplex_info.workCost_,
+			      ekk_instance_.simplex_basis_.basicIndex_,
+			      computed_thetaDual);
+  // Really should do something if thetaDual_sign_ok is false
+  assert(thetaDual_sign_ok);
+  // Feed in the computed dual value
+  //  simplex_info.workDual_[columnIn] = computed_thetaDual;
+  //  thetaDual = simplex_info.workDual_[columnIn];
 
   analysis->simplexTimerStart(Chuzr1Clock);
   // Collect phase 1 theta lists
@@ -1631,7 +1647,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
   }
 
   if (primal_infeasible)
-    invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
+    rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
 
   simplex_info.updated_primal_objective_value +=
       workDual[columnIn] * thetaPrimal;
@@ -1729,6 +1745,7 @@ void HEkkPrimal::updateDevex() {
 
 void HEkkPrimal::updateVerify() {
   // updateVerify for primal
+  const double numerical_trouble_tolerance = 1e-7;
   numericalTrouble = 0;
   double abs_alpha_from_col = fabs(alphaCol);
   bool column_in = columnIn < num_col;
@@ -1744,7 +1761,7 @@ void HEkkPrimal::updateVerify() {
   double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
   numericalTrouble = abs_alpha_diff / min_abs_alpha;
-  if (numericalTrouble > 1e-7)
+  if (numericalTrouble > numerical_trouble_tolerance)
     printf(
         "Numerical check: Iter %4d: alphaCol = %12g, (From %3s alphaRow = "
         "%12g), aDiff = %12g: measure = %12g\n",
@@ -1755,7 +1772,7 @@ void HEkkPrimal::updateVerify() {
   // performed
   //
   if (numericalTrouble > 1e-7 && ekk_instance_.simplex_info_.update_count > 0)
-    invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+    rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
 }
 
 void HEkkPrimal::iterationAnalysisData() {
@@ -1768,7 +1785,7 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->pivotal_row_index = rowOut;
   analysis->leaving_variable = columnOut;
   analysis->entering_variable = columnIn;
-  analysis->invert_hint = invertHint;
+  analysis->invert_hint = rebuild_reason;
   analysis->reduced_rhs_value = 0;
   analysis->reduced_cost_value = 0;
   analysis->edge_weight = 0;

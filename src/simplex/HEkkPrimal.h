@@ -95,8 +95,8 @@ class HEkkPrimal {
   int solvePhase;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
+  int rebuild_reason;
   // Pivot related
-  int invertHint;
   int columnIn;
   int rowOut;
   int columnOut;

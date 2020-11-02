@@ -222,7 +222,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       "ekkDebugSimplex - %s: Iteration %d %-9s max   basic dual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_basic_dual);
-  assert(max_basic_dual < excessive_basic_dual);
   // Check that the number, max and sums of primal and dual infeasibilities (if
   // known) are correct
   const int info_num_primal_infeasibilities =
@@ -421,7 +420,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       "ekkDebugSimplex - %s: Iteration %d %-9s max primal residual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_primal_residual);
-  assert(max_primal_residual < excessive_residual_error);
   if (max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
@@ -440,7 +438,6 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       "ekkDebugSimplex - %s: Iteration %d %-9s max   dual residual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_dual_residual);
-  assert(max_dual_residual < excessive_residual_error);
   return return_status;
 }
 

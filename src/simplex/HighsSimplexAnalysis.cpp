@@ -432,8 +432,9 @@ bool HighsSimplexAnalysis::dualValueSignOk(const HighsOptions& options,
                                            const int col_q,
                                            const HVector& col_aq,
                                            const vector<double>& workCost,
-                                           const vector<int>& basicIndex) {
-  double computed_dual = workCost[col_q];
+                                           const vector<int>& basicIndex,
+					   double& computed_dual) {
+  computed_dual = workCost[col_q];
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
     int iVar = basicIndex[iRow];
