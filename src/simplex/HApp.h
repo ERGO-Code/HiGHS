@@ -131,6 +131,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     //    highs_model_object.matrix_ = ekk.matrix_;
     highs_model_object.factor_ = ekk.factor_;
     highs_model_object.iteration_counts_.simplex = ekk.iteration_count_;
+    // Use this since data in Ekk now computed without max function
+    computeSimplexInfeasible(highs_model_object);
+    copySimplexInfeasible(highs_model_object);
 #ifdef HiGHSDEV
     if (simplex_info.report_simplex_inner_clock) {
       SimplexTimer simplex_timer;

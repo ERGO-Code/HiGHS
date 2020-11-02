@@ -255,35 +255,35 @@ void HEkkPrimal::solvePhase1() {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
-      // Primal phase 1 choose column
-      chooseColumn();
-      if (columnIn == -1) {
-        rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
-        break;
+      if (use_iterate) {
+	iterate();
+      } else {
+	// Primal phase 1 choose column
+	chooseColumn();
+	if (columnIn == -1) {
+	  rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
+	  break;
+	}
+	// Primal phase 1 choose row
+	phase1ChooseRow();
+	if (rowOut == -1) {
+	  HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+			  "Primal phase 1 choose row failed");
+	  solvePhase = SOLVE_PHASE_ERROR;
+	  return;
+	}
+	// Primal phase 1 update
+	phase1Update();
       }
 
-      // Primal phase 1 choose row
-      phase1ChooseRow();
-      if (rowOut == -1) {
-        HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-                        "Primal phase 1 choose row failed");
-        solvePhase = SOLVE_PHASE_ERROR;
-        return;
-      }
-
-      // Primal phase 1 update
-      phase1Update();
-      if (rebuild_reason) {
-        break;
-      }
       if (ekk_instance_.bailoutOnTimeIterations()) return;
+      if (solvePhase == SOLVE_PHASE_ERROR) return;
+      if (rebuild_reason) break;
     }
     // Go to the next rebuild
     if (rebuild_reason) {
       // Stop when the invert is new
-      if (simplex_lp_status.has_fresh_rebuild) {
-        break;
-      }
+      if (simplex_lp_status.has_fresh_rebuild) break;
       continue;
     }
     // If the data are fresh from rebuild() and no flips have occurred, break
@@ -320,8 +320,8 @@ void HEkkPrimal::solvePhase2() {
   // Main solving structure
   for (;;) {
     rebuild();
-    if (solvePhase == SOLVE_PHASE_ERROR) return;
     if (ekk_instance_.bailoutOnTimeIterations()) return;
+    if (solvePhase == SOLVE_PHASE_ERROR) return;
 
     if (isPrimalPhase1) {
       // Primal infeasibilities found in rebuild() Should be
@@ -336,31 +336,33 @@ void HEkkPrimal::solvePhase2() {
         solvePhase = SOLVE_PHASE_ERROR;
         return;
       }
-      chuzc();
-      if (columnIn == -1) {
-        rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
-        break;
+      if (use_iterate) {
+	iterate();
+      } else {
+	chuzc();
+	if (columnIn == -1) {
+	  rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
+	  break;
+	}
+	chooseRow();
+	phase2Update();
       }
-      chooseRow();
-      phase2Update();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
-      if (rebuild_reason) {
-        break;
-      }
+      if (solvePhase == SOLVE_PHASE_ERROR) return;
+      if (rebuild_reason) break;
     }
     // If the data are fresh from rebuild() and no flips have occurred, break
     // out of the outer loop to see what's ocurred
     if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
       break;
   }
+  // If bailing out, should have returned already
+  assert(!ekk_instance_.solve_bailout_);
   if (debugPrimalSimplex("End of solvePhase2") ==
       HighsDebugStatus::LOGICAL_ERROR) {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
-  // If bailing out, should have returned already
-  assert(!ekk_instance_.solve_bailout_);
-
   if (isPrimalPhase1) {
     HighsPrintMessage(ekk_instance_.options_.output,
                       ekk_instance_.options_.message_level, ML_DETAILED,
@@ -481,6 +483,42 @@ void HEkkPrimal::rebuild() {
   num_flip_since_rebuild = 0;
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
+}
+
+void HEkkPrimal::iterate() {
+  /*
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& workLower = simplex_info.workLower_;
+  const vector<double>& workUpper = simplex_info.workUpper_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  vector<double>& workValue = simplex_info.workValue_;
+  vector<double>& baseValue = simplex_info.baseValue_;
+  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+  */
+  if (solvePhase == SOLVE_PHASE_1) {
+    chooseColumn();
+    if (columnIn == -1) {
+      rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
+      return;
+    }
+    phase1ChooseRow();
+    if (rowOut == -1) {
+      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+		      "Primal phase 1 choose row failed");
+      solvePhase = SOLVE_PHASE_ERROR;
+      return;
+    }
+    phase1Update();
+  } else {
+    chuzc();
+    if (columnIn == -1) {
+      rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
+      return;
+    }
+    chooseRow();
+    phase2Update();
+  }
 }
 
 void HEkkPrimal::phase1Update() {
