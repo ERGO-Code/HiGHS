@@ -70,9 +70,9 @@ class HPrimal {
   int solvePhase;
   // Pivot related
   int invertHint;
-  int columnIn;
+  int variable_in;
   int rowOut;
-  int columnOut;
+  int variable_out;
   double thetaDual;
   double thetaPrimal;
   double alpha;

@@ -255,7 +255,7 @@ void HPrimal::solvePhase2() {
 
     for (;;) {
       primalChooseColumn();
-      if (columnIn == -1) {
+      if (variable_in == -1) {
         invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
         break;
       }
@@ -278,7 +278,7 @@ void HPrimal::solvePhase2() {
   // If bailing out, should have returned already
   assert(!solve_bailout);
 
-  if (columnIn == -1) {
+  if (variable_in == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_DETAILED, "primal-optimal\n");
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
@@ -326,10 +326,10 @@ void HPrimal::primalRebuild() {
   // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
   if (!invert_if_row_out_negative) {
-    // Don't reinvert if columnIn is negative [equivalently, if sv_invertHint ==
+    // Don't reinvert if variable_in is negative [equivalently, if sv_invertHint ==
     // INVERT_HINT_POSSIBLY_OPTIMAL]
     if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {
-      assert(columnIn == -1);
+      assert(variable_in == -1);
       reInvert = false;
     }
   }
@@ -405,7 +405,7 @@ void HPrimal::primalChooseColumn() {
       workHMO.scaled_solution_params_.dual_feasibility_tolerance;
 
   analysis->simplexTimerStart(ChuzcPrimalClock);
-  columnIn = -1;
+  variable_in = -1;
   double bestInfeas = 0;
   if (no_free_columns) {
     const int numSection = 1;
@@ -424,11 +424,11 @@ void HPrimal::primalChooseColumn() {
         if (jMove[iCol] * workDual[iCol] < -dualTolerance) {
           if (bestInfeas < fabs(workDual[iCol])) {
             bestInfeas = fabs(workDual[iCol]);
-            columnIn = iCol;
+            variable_in = iCol;
           }
         }
       }
-      if (columnIn >= 0 || numPass == numSection) {
+      if (variable_in >= 0 || numPass == numSection) {
         //	printf("Break from CHUZC after %d passes\n", numPass);
         break;
       }
@@ -449,14 +449,14 @@ void HPrimal::primalChooseColumn() {
         // Then deal with it in dual phase 1
         if (workLower[iCol] <= -HIGHS_CONST_INF &&
             workUpper[iCol] >= HIGHS_CONST_INF) {
-          columnIn = iCol;
+          variable_in = iCol;
           break;
         }
         // Then look at dual infeasible
         if (jMove[iCol] * workDual[iCol] < -dualTolerance) {
           if (bestInfeas < fabs(workDual[iCol])) {
             bestInfeas = fabs(workDual[iCol]);
-            columnIn = iCol;
+            variable_in = iCol;
           }
         }
       }
@@ -476,7 +476,7 @@ void HPrimal::primalChooseRow() {
   analysis->simplexTimerStart(FtranClock);
   col_aq.clear();
   col_aq.packFlag = true;
-  workHMO.matrix_.collect_aj(col_aq, columnIn, 1);
+  workHMO.matrix_.collect_aj(col_aq, variable_in, 1);
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations)
@@ -500,7 +500,7 @@ void HPrimal::primalChooseRow() {
     const double* workCost = &workHMO.simplex_info_.workCost_[0];
     const double* workDual = &workHMO.simplex_info_.workDual_[0];
     const int* basicIndex = &workHMO.simplex_basis_.basicIndex_[0];
-    double check_dual_value = workCost[columnIn];
+    double check_dual_value = workCost[variable_in];
     for (int i = 0; i < col_aq.count; i++) {
       int row = col_aq.index[i];
       int col = basicIndex[row];
@@ -510,7 +510,7 @@ void HPrimal::primalChooseRow() {
       //    printf("Entry %2d: [%2d, %12g] Cost = %12g; check_dual_value =
       //    %12g\n", i, row, value, cost, check_dual_value);
     }
-    thetaDual = workDual[columnIn];
+    thetaDual = workDual[variable_in];
     double dual_error =
         fabs(check_dual_value - thetaDual) / max(1.0, fabs(thetaDual));
     if (dual_error > 1e-8)
@@ -527,7 +527,7 @@ void HPrimal::primalChooseRow() {
                         ? 1e-9
                         : workHMO.simplex_info_.update_count < 20 ? 1e-8 : 1e-7;
   const int* jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
-  int moveIn = jMove[columnIn];
+  int moveIn = jMove[variable_in];
   if (moveIn == 0) {
     // If there's still free in the N
     // We would report not-solved
@@ -590,9 +590,9 @@ void HPrimal::primalUpdate() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
 
   // Compute thetaPrimal
-  int moveIn = jMove[columnIn];
+  int moveIn = jMove[variable_in];
   //  int
-  columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
+  variable_out = workHMO.simplex_basis_.basicIndex_[rowOut];
   //  double
   alpha = col_aq.array[rowOut];
   //  double
@@ -606,25 +606,25 @@ void HPrimal::primalUpdate() {
   }
 
   // 1. Make sure it is inside bounds or just flip bound
-  double lowerIn = workLower[columnIn];
-  double upperIn = workUpper[columnIn];
-  double valueIn = workValue[columnIn] + thetaPrimal;
+  double lowerIn = workLower[variable_in];
+  double upperIn = workUpper[variable_in];
+  double valueIn = workValue[variable_in] + thetaPrimal;
   bool flipped = false;
-  if (jMove[columnIn] == 1) {
+  if (jMove[variable_in] == 1) {
     if (valueIn > upperIn + primalTolerance) {
       // Flip to upper
-      workValue[columnIn] = upperIn;
+      workValue[variable_in] = upperIn;
       thetaPrimal = upperIn - lowerIn;
       flipped = true;
-      jMove[columnIn] = -1;
+      jMove[variable_in] = -1;
     }
-  } else if (jMove[columnIn] == -1) {
+  } else if (jMove[variable_in] == -1) {
     if (valueIn < lowerIn - primalTolerance) {
       // Flip to lower
-      workValue[columnIn] = lowerIn;
+      workValue[variable_in] = lowerIn;
       thetaPrimal = lowerIn - upperIn;
       flipped = true;
-      jMove[columnIn] = 1;
+      jMove[variable_in] = 1;
     }
   }
 
@@ -636,7 +636,7 @@ void HPrimal::primalUpdate() {
   analysis->simplexTimerStop(UpdatePrimalClock);
 
   simplex_info.updated_primal_objective_value +=
-      workDual[columnIn] * thetaPrimal;
+      workDual[variable_in] * thetaPrimal;
 
   // Why is the detailed primal infeasibility information needed?
   computeSimplexPrimalInfeasible(workHMO);
@@ -646,7 +646,7 @@ void HPrimal::primalUpdate() {
   if (flipped) {
     rowOut = -1;
     numericalTrouble = 0;
-    thetaDual = workDual[columnIn];
+    thetaDual = workDual[variable_in];
     iterationAnalysis();
     num_flip_since_rebuild++;
     return;
@@ -655,7 +655,7 @@ void HPrimal::primalUpdate() {
   // Pivot in
   int sourceOut = alpha * moveIn > 0 ? -1 : 1;
   analysis->simplexTimerStart(IteratePivotsClock);
-  update_pivots(workHMO, columnIn, rowOut, sourceOut);
+  update_pivots(workHMO, variable_in, rowOut, sourceOut);
   analysis->simplexTimerStop(IteratePivotsClock);
 
   baseValue[rowOut] = valueIn;
@@ -717,7 +717,7 @@ void HPrimal::primalUpdate() {
   */
   analysis->simplexTimerStart(UpdateDualClock);
   //  double
-  thetaDual = workDual[columnIn] / alpha;
+  thetaDual = workDual[variable_in] / alpha;
   for (int i = 0; i < row_ap.count; i++) {
     int iCol = row_ap.index[i];
     workDual[iCol] -= thetaDual * row_ap.array[iCol];
@@ -737,8 +737,8 @@ void HPrimal::primalUpdate() {
   /*
   double aCol = fabs(alpha);
   double alphaRow;
-  if (columnIn < workHMO.simplex_lp_.numCol_) {
-    alphaRow = row_ap.array[columnIn];
+  if (variable_in < workHMO.simplex_lp_.numCol_) {
+    alphaRow = row_ap.array[variable_in];
   } else {
     alphaRow = row_ep.array[rowOut];
   }
@@ -754,17 +754,17 @@ void HPrimal::primalUpdate() {
   invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
   */
   // Dual for the pivot
-  workDual[columnIn] = 0;
-  workDual[columnOut] = -thetaDual;
+  workDual[variable_in] = 0;
+  workDual[variable_out] = -thetaDual;
 
   // Update workHMO.factor_ basis
   update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
-  update_matrix(workHMO, columnIn, columnOut);
+  update_matrix(workHMO, variable_in, variable_out);
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
   // Move this to Simplex class once it's created
-  // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  // simplex_method.record_pivots(variable_in, variable_out, alpha);
   workHMO.iteration_counts_.simplex++;
 
   // Report on the iteration
@@ -773,9 +773,9 @@ void HPrimal::primalUpdate() {
 
 void HPrimal::savePrimalRay() {
   workHMO.simplex_lp_status_.has_primal_ray = true;
-  workHMO.simplex_info_.primal_ray_col_ = columnIn;
+  workHMO.simplex_info_.primal_ray_col_ = variable_in;
   workHMO.simplex_info_.primal_ray_sign_ =
-      workHMO.simplex_basis_.nonbasicMove_[columnIn];
+      workHMO.simplex_basis_.nonbasicMove_[variable_in];
 }
 
 void HPrimal::iterationAnalysisData() {
@@ -786,8 +786,8 @@ void HPrimal::iterationAnalysisData() {
   analysis->simplex_iteration_count = workHMO.iteration_counts_.simplex;
   analysis->devex_iteration_count = 0;
   analysis->pivotal_row_index = rowOut;
-  analysis->leaving_variable = columnOut;
-  analysis->entering_variable = columnIn;
+  analysis->leaving_variable = variable_out;
+  analysis->entering_variable = variable_in;
   analysis->invert_hint = invertHint;
   analysis->reduced_rhs_value = 0;
   analysis->reduced_cost_value = 0;

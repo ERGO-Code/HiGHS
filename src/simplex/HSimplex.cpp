@@ -978,24 +978,24 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
 }
 
 int setSourceOutFmBd(const HighsModelObject& highs_model_object,
-                     const int columnOut) {
+                     const int variable_out) {
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   int sourceOut = 0;
-  if (simplex_info.workLower_[columnOut] !=
-      simplex_info.workUpper_[columnOut]) {
-    if (!highs_isInfinity(-simplex_info.workLower_[columnOut])) {
+  if (simplex_info.workLower_[variable_out] !=
+      simplex_info.workUpper_[variable_out]) {
+    if (!highs_isInfinity(-simplex_info.workLower_[variable_out])) {
       // Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
       sourceOut = -1;
       //      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g]
-      //      so setting sourceOut = -1\n", columnOut,
-      //      simplex_info.workLower_[columnOut],
-      //      simplex_info.workUpper_[columnOut]);
+      //      so setting sourceOut = -1\n", variable_out,
+      //      simplex_info.workLower_[variable_out],
+      //      simplex_info.workUpper_[variable_out]);
     } else {
       // Infinite LB so sourceOut = 1 ensures value set to UB
       sourceOut = 1;
-      if (!highs_isInfinity(simplex_info.workUpper_[columnOut])) {
+      if (!highs_isInfinity(simplex_info.workUpper_[variable_out])) {
         // Free variable => trouble!
-        printf("TROUBLE: variable %d leaving the basis is free!\n", columnOut);
+        printf("TROUBLE: variable %d leaving the basis is free!\n", variable_out);
       }
     }
   }
@@ -2441,10 +2441,10 @@ void simplexHandleRankDeficiency(HighsModelObject& highs_model_object) {
   vector<int>& noPvC = factor.noPvC;
   vector<int>& noPvR = factor.noPvR;
   for (int k = 0; k < rank_deficiency; k++) {
-    int columnIn = simplex_lp.numCol_ + noPvR[k];
-    int columnOut = noPvC[k];
-    simplex_basis.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
-    simplex_basis.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
+    int variable_in = simplex_lp.numCol_ + noPvR[k];
+    int variable_out = noPvC[k];
+    simplex_basis.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
+    simplex_basis.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
   }
   highs_model_object.simplex_lp_status_.has_matrix_row_wise = false;
 }
@@ -3207,7 +3207,7 @@ void update_factor(HighsModelObject& highs_model_object, HVector* column,
   analysis.simplexTimerStop(UpdateFactorClock);
 }
 
-void update_pivots(HighsModelObject& highs_model_object, int columnIn,
+void update_pivots(HighsModelObject& highs_model_object, int variable_in,
                    int rowOut, int sourceOut) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -3217,37 +3217,37 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   analysis.simplexTimerStart(UpdatePivotsClock);
-  int columnOut = simplex_basis.basicIndex_[rowOut];
+  int variable_out = simplex_basis.basicIndex_[rowOut];
 
   // Incoming variable
-  simplex_basis.basicIndex_[rowOut] = columnIn;
-  simplex_basis.nonbasicFlag_[columnIn] = 0;
-  simplex_basis.nonbasicMove_[columnIn] = 0;
-  simplex_info.baseLower_[rowOut] = simplex_info.workLower_[columnIn];
-  simplex_info.baseUpper_[rowOut] = simplex_info.workUpper_[columnIn];
+  simplex_basis.basicIndex_[rowOut] = variable_in;
+  simplex_basis.nonbasicFlag_[variable_in] = 0;
+  simplex_basis.nonbasicMove_[variable_in] = 0;
+  simplex_info.baseLower_[rowOut] = simplex_info.workLower_[variable_in];
+  simplex_info.baseUpper_[rowOut] = simplex_info.workUpper_[variable_in];
 
   // Outgoing variable
-  simplex_basis.nonbasicFlag_[columnOut] = 1;
-  if (simplex_info.workLower_[columnOut] ==
-      simplex_info.workUpper_[columnOut]) {
-    simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
-    simplex_basis.nonbasicMove_[columnOut] = 0;
+  simplex_basis.nonbasicFlag_[variable_out] = 1;
+  if (simplex_info.workLower_[variable_out] ==
+      simplex_info.workUpper_[variable_out]) {
+    simplex_info.workValue_[variable_out] = simplex_info.workLower_[variable_out];
+    simplex_basis.nonbasicMove_[variable_out] = 0;
   } else if (sourceOut == -1) {
-    simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
-    simplex_basis.nonbasicMove_[columnOut] = 1;
+    simplex_info.workValue_[variable_out] = simplex_info.workLower_[variable_out];
+    simplex_basis.nonbasicMove_[variable_out] = 1;
   } else {
-    simplex_info.workValue_[columnOut] = simplex_info.workUpper_[columnOut];
-    simplex_basis.nonbasicMove_[columnOut] = -1;
+    simplex_info.workValue_[variable_out] = simplex_info.workUpper_[variable_out];
+    simplex_basis.nonbasicMove_[variable_out] = -1;
   }
   // Update the dual objective value
-  double nwValue = simplex_info.workValue_[columnOut];
-  double vrDual = simplex_info.workDual_[columnOut];
+  double nwValue = simplex_info.workValue_[variable_out];
+  double vrDual = simplex_info.workDual_[variable_out];
   double dl_dual_objective_value = nwValue * vrDual;
   simplex_info.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info.update_count++;
   // Update the number of basic logicals
-  if (columnOut < simplex_lp.numCol_) simplex_info.num_basic_logicals -= 1;
-  if (columnIn < simplex_lp.numCol_) simplex_info.num_basic_logicals += 1;
+  if (variable_out < simplex_lp.numCol_) simplex_info.num_basic_logicals -= 1;
+  if (variable_in < simplex_lp.numCol_) simplex_info.num_basic_logicals += 1;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
   simplex_lp_status.has_invert = false;
@@ -3257,13 +3257,13 @@ void update_pivots(HighsModelObject& highs_model_object, int columnIn,
   analysis.simplexTimerStop(UpdatePivotsClock);
 }
 
-void update_matrix(HighsModelObject& highs_model_object, int columnIn,
-                   int columnOut) {
+void update_matrix(HighsModelObject& highs_model_object, int variable_in,
+                   int variable_out) {
   HMatrix& matrix = highs_model_object.matrix_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   analysis.simplexTimerStart(UpdateMatrixClock);
-  matrix.update(columnIn, columnOut);
+  matrix.update(variable_in, variable_out);
   analysis.simplexTimerStop(UpdateMatrixClock);
 }
 

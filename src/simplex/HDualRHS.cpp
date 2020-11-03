@@ -320,7 +320,7 @@ void HDualRHS::updatePrimal(HVector* column, double theta) {
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
-  const int* columnIndex = &column->index[0];
+  const int* variable_index = &column->index[0];
   const double* columnArray = &column->array[0];
 
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
@@ -346,7 +346,7 @@ void HDualRHS::updatePrimal(HVector* column, double theta) {
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
-      int iRow = columnIndex[i];
+      int iRow = variable_index[i];
       baseValue[iRow] -= theta * columnArray[iRow];
       const double value = baseValue[iRow];
       const double less = baseLower[iRow] - value;
@@ -370,7 +370,7 @@ void HDualRHS::updateWeightDualSteepestEdge(
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
-  const int* columnIndex = &column->index[0];
+  const int* variable_index = &column->index[0];
   const double* columnArray = &column->array[0];
 
   bool updateWeight_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
@@ -384,7 +384,7 @@ void HDualRHS::updateWeightDualSteepestEdge(
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
-      const int iRow = columnIndex[i];
+      const int iRow = variable_index[i];
       const double aa_iRow = columnArray[iRow];
       workEdWt[iRow] +=
           aa_iRow * (new_pivotal_edge_weight * aa_iRow + Kai * dseArray[iRow]);
@@ -401,7 +401,7 @@ void HDualRHS::updateWeightDevex(HVector* column,
 
   const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
-  const int* columnIndex = &column->index[0];
+  const int* variable_index = &column->index[0];
   const double* columnArray = &column->array[0];
 
   bool updateWeight_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
@@ -413,7 +413,7 @@ void HDualRHS::updateWeightDevex(HVector* column,
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
-      int iRow = columnIndex[i];
+      int iRow = variable_index[i];
       double aa_iRow = columnArray[iRow];
       workEdWt[iRow] =
           max(workEdWt[iRow], new_pivotal_edge_weight * aa_iRow * aa_iRow);
@@ -447,7 +447,7 @@ void HDualRHS::updatePivots(int iRow, double value) {
 
 void HDualRHS::updateInfeasList(HVector* column) {
   const int columnCount = column->count;
-  const int* columnIndex = &column->index[0];
+  const int* variable_index = &column->index[0];
 
   // DENSE mode: disabled
   if (workCount < 0) return;
@@ -457,7 +457,7 @@ void HDualRHS::updateInfeasList(HVector* column) {
   if (workCutoff <= 0) {
     // The regular sparse way
     for (int i = 0; i < columnCount; i++) {
-      int iRow = columnIndex[i];
+      int iRow = variable_index[i];
       if (workMark[iRow] == 0) {
         if (work_infeasibility[iRow]) {
           workIndex[workCount++] = iRow;
@@ -468,7 +468,7 @@ void HDualRHS::updateInfeasList(HVector* column) {
   } else {
     // The hyper sparse way
     for (int i = 0; i < columnCount; i++) {
-      int iRow = columnIndex[i];
+      int iRow = variable_index[i];
       if (workMark[iRow] == 0) {
         if (work_infeasibility[iRow] > workEdWt[iRow] * workCutoff) {
           workIndex[workCount++] = iRow;

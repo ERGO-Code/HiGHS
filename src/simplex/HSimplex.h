@@ -196,11 +196,11 @@ void shift_back(HighsModelObject& highs_model_object, int iCol);
 void update_factor(HighsModelObject& highs_model_object, HVector* column,
                    HVector* row_ep, int* iRow, int* hint);
 
-void update_pivots(HighsModelObject& highs_model_object, int columnIn,
+void update_pivots(HighsModelObject& highs_model_object, int variable_in,
                    int rowOut, int sourceOut);
 
-void update_matrix(HighsModelObject& highs_model_object, int columnIn,
-                   int columnOut);
+void update_matrix(HighsModelObject& highs_model_object, int variable_in,
+                   int variable_out);
 
 bool reinvertOnNumericalTrouble(const std::string method_name,
                                 HighsModelObject& highs_model_object,

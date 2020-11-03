@@ -101,8 +101,8 @@ class HMatrix {
    * variables
    */
   void update(
-      int columnIn,  //!< Column entering the set of indices of basic variables
-      int columnOut  //!< Column leaving the set of indices of basic variables
+      int variable_in,  //!< Column entering the set of indices of basic variables
+      int variable_out  //!< Column leaving the set of indices of basic variables
   );
   /**
    * @brief Compute the dot product between a vector and particular

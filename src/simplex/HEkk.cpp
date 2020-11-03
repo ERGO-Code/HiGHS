@@ -978,40 +978,40 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, int* iRow,
   analysis_.simplexTimerStop(UpdateFactorClock);
 }
 
-void HEkk::updatePivots(const int columnIn, const int rowOut,
+void HEkk::updatePivots(const int variable_in, const int rowOut,
                         const int sourceOut) {
   analysis_.simplexTimerStart(UpdatePivotsClock);
-  int columnOut = simplex_basis_.basicIndex_[rowOut];
+  int variable_out = simplex_basis_.basicIndex_[rowOut];
 
   // Incoming variable
-  simplex_basis_.basicIndex_[rowOut] = columnIn;
-  simplex_basis_.nonbasicFlag_[columnIn] = 0;
-  simplex_basis_.nonbasicMove_[columnIn] = 0;
-  simplex_info_.baseLower_[rowOut] = simplex_info_.workLower_[columnIn];
-  simplex_info_.baseUpper_[rowOut] = simplex_info_.workUpper_[columnIn];
+  simplex_basis_.basicIndex_[rowOut] = variable_in;
+  simplex_basis_.nonbasicFlag_[variable_in] = 0;
+  simplex_basis_.nonbasicMove_[variable_in] = 0;
+  simplex_info_.baseLower_[rowOut] = simplex_info_.workLower_[variable_in];
+  simplex_info_.baseUpper_[rowOut] = simplex_info_.workUpper_[variable_in];
 
   // Outgoing variable
-  simplex_basis_.nonbasicFlag_[columnOut] = 1;
-  if (simplex_info_.workLower_[columnOut] ==
-      simplex_info_.workUpper_[columnOut]) {
-    simplex_info_.workValue_[columnOut] = simplex_info_.workLower_[columnOut];
-    simplex_basis_.nonbasicMove_[columnOut] = 0;
+  simplex_basis_.nonbasicFlag_[variable_out] = 1;
+  if (simplex_info_.workLower_[variable_out] ==
+      simplex_info_.workUpper_[variable_out]) {
+    simplex_info_.workValue_[variable_out] = simplex_info_.workLower_[variable_out];
+    simplex_basis_.nonbasicMove_[variable_out] = 0;
   } else if (sourceOut == -1) {
-    simplex_info_.workValue_[columnOut] = simplex_info_.workLower_[columnOut];
-    simplex_basis_.nonbasicMove_[columnOut] = 1;
+    simplex_info_.workValue_[variable_out] = simplex_info_.workLower_[variable_out];
+    simplex_basis_.nonbasicMove_[variable_out] = 1;
   } else {
-    simplex_info_.workValue_[columnOut] = simplex_info_.workUpper_[columnOut];
-    simplex_basis_.nonbasicMove_[columnOut] = -1;
+    simplex_info_.workValue_[variable_out] = simplex_info_.workUpper_[variable_out];
+    simplex_basis_.nonbasicMove_[variable_out] = -1;
   }
   // Update the dual objective value
-  double nwValue = simplex_info_.workValue_[columnOut];
-  double vrDual = simplex_info_.workDual_[columnOut];
+  double nwValue = simplex_info_.workValue_[variable_out];
+  double vrDual = simplex_info_.workDual_[variable_out];
   double dl_dual_objective_value = nwValue * vrDual;
   simplex_info_.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info_.update_count++;
   // Update the number of basic logicals
-  if (columnOut < simplex_lp_.numCol_) simplex_info_.num_basic_logicals -= 1;
-  if (columnIn < simplex_lp_.numCol_) simplex_info_.num_basic_logicals += 1;
+  if (variable_out < simplex_lp_.numCol_) simplex_info_.num_basic_logicals -= 1;
+  if (variable_in < simplex_lp_.numCol_) simplex_info_.num_basic_logicals += 1;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
   simplex_lp_status_.has_invert = false;
@@ -1021,9 +1021,9 @@ void HEkk::updatePivots(const int columnIn, const int rowOut,
   analysis_.simplexTimerStop(UpdatePivotsClock);
 }
 
-void HEkk::updateMatrix(const int columnIn, const int columnOut) {
+void HEkk::updateMatrix(const int variable_in, const int variable_out) {
   analysis_.simplexTimerStart(UpdateMatrixClock);
-  matrix_.update(columnIn, columnOut);
+  matrix_.update(variable_in, variable_out);
   analysis_.simplexTimerStop(UpdateMatrixClock);
 }
 

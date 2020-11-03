@@ -111,7 +111,7 @@ class HDualRow {
    */
   void updateDual(
       double theta  //!< Multiple of pivotal row to add int to duals
-                    //      int columnOut  //!< Index of leaving column
+                    //      int variable_out  //!< Index of leaving column
   );
   /**
    * @brief Create a list of nonbasic free columns

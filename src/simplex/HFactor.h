@@ -302,9 +302,9 @@ class HFactor {
   vector<int> MRindex;
 
   // Kernel column buffer
-  vector<int> McolumnIndex;
-  vector<char> McolumnMark;
-  vector<double> McolumnArray;
+  vector<int> mwz_column_index;
+  vector<char> mwz_column_mark;
+  vector<double> mwz_column_array;
 
   // Count link list
   vector<int> clinkFirst;

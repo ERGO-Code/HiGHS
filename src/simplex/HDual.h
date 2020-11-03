@@ -460,9 +460,9 @@ class HDual {
 
   // Simplex pivotal information
   int rowOut;
-  int columnOut;
+  int variable_out;
   int sourceOut;  // -1 from small to lower, +1 to upper
-  int columnIn;
+  int variable_in;
   double deltaPrimal;
   double thetaDual;
   double thetaPrimal;
@@ -507,8 +507,8 @@ class HDual {
     std::vector<int> flipList;
 
     int rowOut;
-    int columnOut;
-    int columnIn;
+    int variable_out;
+    int variable_in;
     double alphaRow;
     double thetaPrimal;
     double basicBound;

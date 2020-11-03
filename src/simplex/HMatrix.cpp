@@ -128,24 +128,24 @@ void HMatrix::setup_lgBs(int numCol_, int numRow_, const int* Astart_,
   //  row_apDensity = 0;
 }
 
-void HMatrix::update(int columnIn, int columnOut) {
-  if (columnIn < numCol) {
-    for (int k = Astart[columnIn]; k < Astart[columnIn + 1]; k++) {
+void HMatrix::update(int variable_in, int variable_out) {
+  if (variable_in < numCol) {
+    for (int k = Astart[variable_in]; k < Astart[variable_in + 1]; k++) {
       int iRow = Aindex[k];
       int iFind = ARstart[iRow];
       int iSwap = --AR_Nend[iRow];
-      while (ARindex[iFind] != columnIn) iFind++;
+      while (ARindex[iFind] != variable_in) iFind++;
       swap(ARindex[iFind], ARindex[iSwap]);
       swap(ARvalue[iFind], ARvalue[iSwap]);
     }
   }
 
-  if (columnOut < numCol) {
-    for (int k = Astart[columnOut]; k < Astart[columnOut + 1]; k++) {
+  if (variable_out < numCol) {
+    for (int k = Astart[variable_out]; k < Astart[variable_out + 1]; k++) {
       int iRow = Aindex[k];
       int iFind = AR_Nend[iRow];
       int iSwap = AR_Nend[iRow]++;
-      while (ARindex[iFind] != columnOut) iFind++;
+      while (ARindex[iFind] != variable_out) iFind++;
       swap(ARindex[iFind], ARindex[iSwap]);
       swap(ARvalue[iFind], ARvalue[iSwap]);
     }

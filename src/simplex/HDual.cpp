@@ -656,7 +656,7 @@ void HDual::solvePhase1() {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_MINIMAL, "dual-phase-1-not-solved\n");
     scaled_model_status = HighsModelStatus::SOLVE_ERROR;
-  } else if (columnIn == -1) {
+  } else if (variable_in == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_MINIMAL, "dual-phase-1-unbounded\n");
@@ -825,7 +825,7 @@ void HDual::solvePhase2() {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_MINIMAL, "dual-phase-2-not-solved\n");
     scaled_model_status = HighsModelStatus::SOLVE_ERROR;
-  } else if (columnIn == -1) {
+  } else if (variable_in == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_MINIMAL, "dual-phase-2-unbounded\n");
@@ -1047,7 +1047,7 @@ void HDual::iterate() {
   // solve_phase% and, hence, a call to rebuild()
 
   // Reporting:
-  // Row-wise matrix after update in updateMatrix(columnIn, columnOut);
+  // Row-wise matrix after update in updateMatrix(variable_in, variable_out);
   analysis->simplexTimerStart(IterateChuzrClock);
   chooseRow();
   analysis->simplexTimerStop(IterateChuzrClock);
@@ -1152,8 +1152,8 @@ void HDual::iterationAnalysisData() {
   analysis->simplex_iteration_count = workHMO.iteration_counts_.simplex;
   analysis->devex_iteration_count = num_devex_iterations;
   analysis->pivotal_row_index = rowOut;
-  analysis->leaving_variable = columnOut;
-  analysis->entering_variable = columnIn;
+  analysis->leaving_variable = variable_out;
+  analysis->entering_variable = variable_in;
   analysis->invert_hint = invertHint;
   analysis->reduced_rhs_value = 0;
   analysis->reduced_cost_value = 0;
@@ -1288,7 +1288,7 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
+  variable_out = workHMO.simplex_basis_.basicIndex_[rowOut];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[rowOut] < baseLower[rowOut]) {
@@ -1380,7 +1380,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   //
   // Take action if the step to an expanded bound is not positive, or
   // there are no candidates for CHUZC
-  columnIn = -1;
+  variable_in = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
     invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;
     return;
@@ -1400,7 +1400,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   analysis->simplexTimerStop(Chuzc4Clock);
   // Record values for basis change, checking for numerical problems and update
   // of dual variables
-  columnIn = dualRow.workPivot;   // Index of the column entering the basis
+  variable_in = dualRow.workPivot;   // Index of the column entering the basis
   alphaRow = dualRow.workAlpha;   // Pivot value computed row-wise - used for
                                   // numerical checking
   thetaDual = dualRow.workTheta;  // Dual step length
@@ -1536,7 +1536,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   analysis->simplexTimerStop(PriceChuzc1Clock);
 
   // Infeasible we created before
-  columnIn = -1;
+  variable_in = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
     invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;
     return;
@@ -1553,7 +1553,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   dualRow.deleteFreemove();
   analysis->simplexTimerStop(Chuzc4Clock);
 
-  columnIn = dualRow.workPivot;
+  variable_in = dualRow.workPivot;
   alphaRow = dualRow.workAlpha;
   thetaDual = dualRow.workTheta;
 
@@ -1594,7 +1594,7 @@ void HDual::updateFtran() {
   col_aq.packFlag = true;
   // Get the constraint matrix column by combining just one column
   // with unit multiplier
-  matrix->collect_aj(col_aq, columnIn, 1);
+  matrix->collect_aj(col_aq, variable_in, 1);
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (simplex_info.analyse_iterations)
@@ -1715,7 +1715,7 @@ void HDual::updateDual() {
     // Little to do if thetaDual is zero
     debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "Before shift_cost");
-    shift_cost(workHMO, columnIn, -workDual[columnIn]);
+    shift_cost(workHMO, variable_in, -workDual[variable_in]);
     debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "After shift_cost");
   } else {
@@ -1734,35 +1734,35 @@ void HDual::updateDual() {
   }
   // Identify the changes in the dual objective
   double dual_objective_value_change;
-  const double columnIn_delta_dual = workDual[columnIn];
-  const double columnIn_value = workValue[columnIn];
-  const int columnIn_nonbasicFlag =
-      workHMO.simplex_basis_.nonbasicFlag_[columnIn];
+  const double variable_in_delta_dual = workDual[variable_in];
+  const double variable_in_value = workValue[variable_in];
+  const int variable_in_nonbasicFlag =
+      workHMO.simplex_basis_.nonbasicFlag_[variable_in];
   dual_objective_value_change =
-      columnIn_nonbasicFlag * (-columnIn_value * columnIn_delta_dual);
+      variable_in_nonbasicFlag * (-variable_in_value * variable_in_delta_dual);
   dual_objective_value_change *= workHMO.scale_.cost_;
   workHMO.simplex_info_.updated_dual_objective_value +=
       dual_objective_value_change;
-  // Surely columnOut_nonbasicFlag is always 0 since it's basic - so there's no
+  // Surely variable_out_nonbasicFlag is always 0 since it's basic - so there's no
   // dual objective change
-  const int columnOut_nonbasicFlag =
-      workHMO.simplex_basis_.nonbasicFlag_[columnOut];
-  assert(columnOut_nonbasicFlag == 0);
-  if (columnOut_nonbasicFlag) {
-    const double columnOut_delta_dual = workDual[columnOut] - thetaDual;
-    const double columnOut_value = workValue[columnOut];
+  const int variable_out_nonbasicFlag =
+      workHMO.simplex_basis_.nonbasicFlag_[variable_out];
+  assert(variable_out_nonbasicFlag == 0);
+  if (variable_out_nonbasicFlag) {
+    const double variable_out_delta_dual = workDual[variable_out] - thetaDual;
+    const double variable_out_value = workValue[variable_out];
     dual_objective_value_change =
-        columnOut_nonbasicFlag * (-columnOut_value * columnOut_delta_dual);
+        variable_out_nonbasicFlag * (-variable_out_value * variable_out_delta_dual);
     dual_objective_value_change *= workHMO.scale_.cost_;
     workHMO.simplex_info_.updated_dual_objective_value +=
         dual_objective_value_change;
   }
-  workDual[columnIn] = 0;
-  workDual[columnOut] = -thetaDual;
+  workDual[variable_in] = 0;
+  workDual[variable_out] = -thetaDual;
 
   debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before shift_back");
-  shift_back(workHMO, columnOut);
+  shift_back(workHMO, variable_out);
   debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "After shift_back");
 }
@@ -1844,30 +1844,30 @@ void HDual::updatePivots() {
   // Update the sets of indices of basic and nonbasic variables
   debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before update_pivots");
-  update_pivots(workHMO, columnIn, rowOut, sourceOut);
+  update_pivots(workHMO, variable_in, rowOut, sourceOut);
   debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "After update_pivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
   // Move this to Simplex class once it's created
-  // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  // simplex_method.record_pivots(variable_in, variable_out, alpha);
   workHMO.iteration_counts_.simplex++;
   //
   // Update the invertible representation of the basis matrix
   update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
   //
   // Update the row-wise representation of the nonbasic columns
-  update_matrix(workHMO, columnIn, columnOut);
+  update_matrix(workHMO, variable_in, variable_out);
   //
-  // Delete Freelist entry for columnIn
-  dualRow.deleteFreelist(columnIn);
+  // Delete Freelist entry for variable_in
+  dualRow.deleteFreelist(variable_in);
   //
   // Update the primal value for the row where the basis change has
   // occurred, and set the corresponding primal infeasibility value in
   // dualRHS.work_infeasibility
   dualRHS.updatePivots(
-      rowOut, workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal);
+      rowOut, workHMO.simplex_info_.workValue_[variable_in] + thetaPrimal);
 
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick;

@@ -259,7 +259,7 @@ void HDual::minorChooseRow() {
 
     // Assign useful variables
     rowOut = workChoice->rowOut;
-    columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
+    variable_out = workHMO.simplex_basis_.basicIndex_[rowOut];
     double valueOut = workChoice->baseValue;
     double lowerOut = workChoice->baseLower;
     double upperOut = workChoice->baseUpper;
@@ -269,7 +269,7 @@ void HDual::minorChooseRow() {
     // Assign buffers
     MFinish* finish = &multi_finish[multi_nFinish];
     finish->rowOut = rowOut;
-    finish->columnOut = columnOut;
+    finish->variable_out = variable_out;
     finish->row_ep = &workChoice->row_ep;
     finish->col_aq = &workChoice->col_aq;
     finish->col_BFRT = &workChoice->col_BFRT;
@@ -284,8 +284,8 @@ void HDual::minorChooseRow() {
 void HDual::minorUpdate() {
   // Minor update - store roll back data
   MFinish* finish = &multi_finish[multi_nFinish];
-  finish->moveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
-  finish->shiftOut = workHMO.simplex_info_.workShift_[columnOut];
+  finish->moveIn = workHMO.simplex_basis_.nonbasicMove_[variable_in];
+  finish->shiftOut = workHMO.simplex_info_.workShift_[variable_out];
   finish->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
     finish->flipList.push_back(dualRow.workData[i].first);
@@ -325,7 +325,7 @@ void HDual::minorUpdateDual() {
    *    XXX Data parallel (depends on the ap partition before)
    */
   if (thetaDual == 0) {
-    shift_cost(workHMO, columnIn, -workDual[columnIn]);
+    shift_cost(workHMO, variable_in, -workDual[variable_in]);
   } else {
     dualRow.updateDual(thetaDual);
     if (slice_PRICE) {
@@ -333,9 +333,9 @@ void HDual::minorUpdateDual() {
         slice_dualRow[i].updateDual(thetaDual);
     }
   }
-  workDual[columnIn] = 0;
-  workDual[columnOut] = -thetaDual;
-  shift_back(workHMO, columnOut);
+  workDual[variable_in] = 0;
+  workDual[variable_out] = -thetaDual;
+  shift_back(workHMO, variable_out);
 
   /**
    * 2. Apply global bound flip
@@ -397,7 +397,7 @@ void HDual::minorUpdatePrimal() {
   for (int ich = 0; ich < multi_num; ich++) {
     if (multi_choice[ich].rowOut >= 0) {
       HVector* this_ep = &multi_choice[ich].row_ep;
-      double dot = matrix->compute_dot(*this_ep, columnIn);
+      double dot = matrix->compute_dot(*this_ep, variable_in);
       multi_choice[ich].baseValue -= thetaPrimal * dot;
       double value = multi_choice[ich].baseValue;
       double lower = multi_choice[ich].baseLower;
@@ -420,22 +420,22 @@ void HDual::minorUpdatePrimal() {
 }
 void HDual::minorUpdatePivots() {
   MFinish* finish = &multi_finish[multi_nFinish];
-  update_pivots(workHMO, columnIn, rowOut, sourceOut);
+  update_pivots(workHMO, variable_in, rowOut, sourceOut);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     // Transform the edge weight of the pivotal row according to the
     // simplex update
     finish->EdWt /= (alphaRow * alphaRow);
   }
-  finish->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
-  update_matrix(workHMO, columnIn, columnOut);
-  finish->columnIn = columnIn;
+  finish->basicValue = workHMO.simplex_info_.workValue_[variable_in] + thetaPrimal;
+  update_matrix(workHMO, variable_in, variable_out);
+  finish->variable_in = variable_in;
   finish->alphaRow = alphaRow;
   // numericalTrouble is not set in minor iterations, only in
   // majorUpdate, so set it to an illegal value so that its
   // distribution is not updated
   numericalTrouble = -1;
   // Move thisTo Simplex class once it's created
-  // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
+  // simplex_method.record_pivots(variable_in, variable_out, alphaRow);
   workHMO.iteration_counts_.simplex++;
 }
 
@@ -460,7 +460,7 @@ void HDual::minorUpdateRows() {
     for (int ich = 0; ich < multi_num; ich++) {
       if (multi_choice[ich].rowOut >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
-        double pivotX = matrix->compute_dot(*next_ep, columnIn);
+        double pivotX = matrix->compute_dot(*next_ep, variable_in);
         if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
         multi_vector[multi_nTasks] = next_ep;
         multi_xpivot[multi_nTasks] = -pivotX / alphaRow;
@@ -491,7 +491,7 @@ void HDual::minorUpdateRows() {
     for (int ich = 0; ich < multi_num; ich++) {
       if (multi_choice[ich].rowOut >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
-        double pivotX = matrix->compute_dot(*next_ep, columnIn);
+        double pivotX = matrix->compute_dot(*next_ep, variable_in);
         if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
         next_ep->saxpy(-pivotX / alphaRow, Row);
         next_ep->tight();
@@ -561,7 +561,7 @@ void HDual::majorUpdateFtranPrepare() {
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
     HVector* Vec = finish->col_BFRT;
-    matrix->collect_aj(*Vec, finish->columnIn, finish->thetaPrimal);
+    matrix->collect_aj(*Vec, finish->variable_in, finish->thetaPrimal);
 
     // Update this buffer by previous Row_ep
     for (int jFn = iFn - 1; jFn >= 0; jFn--) {
@@ -574,8 +574,8 @@ void HDual::majorUpdateFtranPrepare() {
       }
       if (fabs(pivotX) > HIGHS_CONST_TINY) {
         pivotX /= jFinish->alphaRow;
-        matrix->collect_aj(*Vec, jFinish->columnIn, -pivotX);
-        matrix->collect_aj(*Vec, jFinish->columnOut, pivotX);
+        matrix->collect_aj(*Vec, jFinish->variable_in, -pivotX);
+        matrix->collect_aj(*Vec, jFinish->variable_out, pivotX);
       }
     }
     col_BFRT.saxpy(1, Vec);
@@ -587,7 +587,7 @@ void HDual::majorUpdateFtranPrepare() {
     HVector* iColumn = iFinish->col_aq;
     iColumn->clear();
     iColumn->packFlag = true;
-    matrix->collect_aj(*iColumn, iFinish->columnIn, 1);
+    matrix->collect_aj(*iColumn, iFinish->variable_in, 1);
   }
 }
 
@@ -904,14 +904,14 @@ void HDual::majorRollback() {
     MFinish* finish = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    workHMO.simplex_basis_.nonbasicMove_[finish->columnIn] = finish->moveIn;
-    workHMO.simplex_basis_.nonbasicFlag_[finish->columnIn] = 1;
-    workHMO.simplex_basis_.nonbasicMove_[finish->columnOut] = 0;
-    workHMO.simplex_basis_.nonbasicFlag_[finish->columnOut] = 0;
-    workHMO.simplex_basis_.basicIndex_[finish->rowOut] = finish->columnOut;
+    workHMO.simplex_basis_.nonbasicMove_[finish->variable_in] = finish->moveIn;
+    workHMO.simplex_basis_.nonbasicFlag_[finish->variable_in] = 1;
+    workHMO.simplex_basis_.nonbasicMove_[finish->variable_out] = 0;
+    workHMO.simplex_basis_.nonbasicFlag_[finish->variable_out] = 0;
+    workHMO.simplex_basis_.basicIndex_[finish->rowOut] = finish->variable_out;
 
     // 2. Roll back matrix
-    update_matrix(workHMO, finish->columnOut, finish->columnIn);
+    update_matrix(workHMO, finish->variable_out, finish->variable_in);
 
     // 3. Roll back flips
     for (unsigned i = 0; i < finish->flipList.size(); i++) {
@@ -919,8 +919,8 @@ void HDual::majorRollback() {
     }
 
     // 4. Roll back cost
-    workHMO.simplex_info_.workShift_[finish->columnIn] = 0;
-    workHMO.simplex_info_.workShift_[finish->columnOut] = finish->shiftOut;
+    workHMO.simplex_info_.workShift_[finish->variable_in] = 0;
+    workHMO.simplex_info_.workShift_[finish->variable_out] = finish->shiftOut;
 
     // 5. The iteration count
     workHMO.iteration_counts_.simplex--;

@@ -233,8 +233,8 @@ struct HighsSimplexInfo {
   /*
 #ifdef HiGHSDEV
   // Move this to Simplex class once it's created
-  vector<int> historyColumnIn;
-  vector<int> historyColumnOut;
+  vector<int> historyVariable_In;
+  vector<int> historyVariable_Out;
   vector<double> historyAlpha;
 #endif
   */

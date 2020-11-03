@@ -90,15 +90,15 @@ class HEkkPrimal {
   int num_col;
   int num_row;
   int num_tot;
-  int isPrimalPhase1;
+  bool is_primal_phase1_;
   int solvePhase;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   int rebuild_reason;
   // Pivot related
-  int columnIn;
+  int variable_in;
   int rowOut;
-  int columnOut;
+  int variable_out;
   int phase1OutBnd;
   int sourceOut;
   double thetaDual;
