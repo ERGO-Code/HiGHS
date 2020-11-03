@@ -446,14 +446,6 @@ void HEkkPrimal::rebuild() {
 }
 
 void HEkkPrimal::iterate() {
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<double>& workLower = simplex_info.workLower_;
-  const vector<double>& workUpper = simplex_info.workUpper_;
-  const vector<double>& baseLower = simplex_info.baseLower_;
-  const vector<double>& baseUpper = simplex_info.baseUpper_;
-  vector<double>& workValue = simplex_info.workValue_;
-  vector<double>& baseValue = simplex_info.baseValue_;
-  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   //
   bool check = ekk_instance_.iteration_count_ >= check_iter;
   if (check) {
@@ -493,19 +485,34 @@ void HEkkPrimal::iterate() {
   } else {
     chooseRow();
   }
+  update();
+}
+
+void HEkkPrimal::update() {
+  // Perform update operations that are independent of phase
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& workDual = simplex_info.workDual_;
+  const vector<double>& workLower = simplex_info.workLower_;
+  const vector<double>& workUpper = simplex_info.workUpper_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  vector<double>& workValue = simplex_info.workValue_;
+  vector<double>& baseValue = simplex_info.baseValue_;
+  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   //
   // UPDATE
-  if (solvePhase == SOLVE_PHASE_1) {
-    // Phase 1
-    // Start hyper-sparse CHUZC, that takes place through phase1Update()
-    hyperChooseColumnStart();
-    
-    // Identify the direction of movement
-    const int moveIn = thetaDual > 0 ? -1 : 1;
-    if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
+
+  // Start hyper-sparse CHUZC, that takes place through phase1Update()
+  hyperChooseColumnStart();
+
+  // Identify the direction of movement
+  const int moveIn = thetaDual > 0 ? -1 : 1;
+  if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
     
     // Compute the primal theta and see if we should have done a bound
     // flip instead
+  if (solvePhase == SOLVE_PHASE_1) {
+    // Phase 1
     alphaCol = col_aq.array[rowOut];
     thetaPrimal = 0.0;
     if (phase1OutBnd == 1) {
@@ -514,12 +521,32 @@ void HEkkPrimal::iterate() {
       thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
     }
     assert(thetaPrimal > -HIGHS_CONST_INF && thetaPrimal < HIGHS_CONST_INF);
-    
-    // Look to see if there is a bound flip
-    bool flipped = false;
-    double lowerIn = workLower[columnIn];
-    double upperIn = workUpper[columnIn];
-    valueIn = workValue[columnIn] + thetaPrimal;
+  } else {
+    // Phase 2
+    if (rowOut < 0) {
+      // No binding ratio in CHUZR, so flip or unbounded
+      thetaPrimal = moveIn * HIGHS_CONST_INF;
+    } else {
+      columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
+      alphaCol = col_aq.array[rowOut];
+      thetaPrimal = 0;
+      if (alphaCol * moveIn > 0) {
+	// Lower bound
+	thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
+      } else {
+	// Upper bound
+	thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
+      }
+    }
+  }   
+
+
+  // Look to see if there is a bound flip
+  bool flipped = false;
+  double lowerIn = workLower[columnIn];
+  double upperIn = workUpper[columnIn];
+  valueIn = workValue[columnIn] + thetaPrimal;
+  if (solvePhase == SOLVE_PHASE_1) {
     if (moveIn == +1 && valueIn > upperIn + primal_feasibility_tolerance) {
       valueIn = upperIn;
       workValue[columnIn] = valueIn;
@@ -582,48 +609,9 @@ void HEkkPrimal::iterate() {
     //
     // Remaining update operations are independent of phase
     sourceOut = phase1OutBnd;
-    commonUpdateSection();
     
-    // Possibly rebuild if not already doing it and there are primal
-    // infeasibilities
-    if (rebuild_reason == 0) {
-      if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
-	isPrimalPhase1 = 1;
-      } else {
-	// Crude way to force rebuild
-	rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
-      }
-    }
   } else {
     // Phase 2
-    // Start hyper-sparse CHUZC, that takes place through phase2Update()
-    hyperChooseColumnStart();
-    
-    // Compute thetaPrimal
-    int moveIn = thetaDual > 0 ? -1 : 1;
-    if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
-    
-    if (rowOut < 0) {
-      // No binding ratio in CHUZR, so flip or unbounded
-      thetaPrimal = moveIn * HIGHS_CONST_INF;
-    } else {
-      columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
-      alphaCol = col_aq.array[rowOut];
-      thetaPrimal = 0;
-      if (alphaCol * moveIn > 0) {
-	// Lower bound
-	thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
-      } else {
-	// Upper bound
-	thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
-      }
-    }
-    
-    // Look to see if there is a bound flip
-    bool flipped = false;
-    double lowerIn = workLower[columnIn];
-    double upperIn = workUpper[columnIn];
-    valueIn = workValue[columnIn] + thetaPrimal;
     if (moveIn > 0) {
       if (valueIn > upperIn + primal_feasibility_tolerance) {
 	// Flip to upper
@@ -676,218 +664,8 @@ void HEkkPrimal::iterate() {
     }
     // Remaining update operations are independent of phase
     sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
-    commonUpdateSection();
   }
-}
 
-/*
-  void HEkkPrimal::phase1Update() {
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<double>& workLower = simplex_info.workLower_;
-  const vector<double>& workUpper = simplex_info.workUpper_;
-  const vector<double>& baseLower = simplex_info.baseLower_;
-  const vector<double>& baseUpper = simplex_info.baseUpper_;
-  vector<double>& workValue = simplex_info.workValue_;
-  vector<double>& baseValue = simplex_info.baseValue_;
-  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
-  
-  // Start hyper-sparse CHUZC, that takes place through phase1Update()
-  hyperChooseColumnStart();
-  
-  // Identify the direction of movement
-  const int moveIn = thetaDual > 0 ? -1 : 1;
-  if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
-  
-  // Compute the primal theta and see if we should have done a bound
-  // flip instead
-  alphaCol = col_aq.array[rowOut];
-  thetaPrimal = 0.0;
-  if (phase1OutBnd == 1) {
-  thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
-  } else {
-  thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
-  }
-  assert(thetaPrimal > -HIGHS_CONST_INF && thetaPrimal < HIGHS_CONST_INF);
-  
-  // Look to see if there is a bound flip
-  bool flipped = false;
-  double lowerIn = workLower[columnIn];
-  double upperIn = workUpper[columnIn];
-  valueIn = workValue[columnIn] + thetaPrimal;
-  if (moveIn == +1 && valueIn > upperIn + primal_feasibility_tolerance) {
-  valueIn = upperIn;
-  workValue[columnIn] = valueIn;
-  thetaPrimal = upperIn - lowerIn;
-  flipped = true;
-  nonbasicMove[columnIn] = NONBASIC_MOVE_DN;
-  }
-  if (moveIn == -1 && valueIn < lowerIn - primal_feasibility_tolerance) {
-  valueIn = lowerIn;
-  workValue[columnIn] = valueIn;
-  thetaPrimal = lowerIn - upperIn;
-  flipped = true;
-  nonbasicMove[columnIn] = NONBASIC_MOVE_UP;
-  }
-  if (flipped) {
-  rowOut = -1;
-  columnOut = columnIn;
-  alphaCol = 0;
-  numericalTrouble = 0;
-  }
-  // Check for possible error
-  assert(rowOut >= 0 || flipped);
-  
-  // Update primal values
-  phase1UpdatePrimal();
-  
-  // Update the duals with respect to feasibility changes
-  basicFeasibilityChangeUpdateDual();
-  
-  // For hyper-sparse CHUZC, analyse the duals that have just changed
-  hyperChooseColumnBasicFeasibilityChange();
-  
-  // Update for the flip case
-  if (flipped) {
-  simplex_info.primal_bound_swap++;
-  ekk_instance_.invalidateDualInfeasibilityRecord();
-  iterationAnalysis();
-  localReportIter();
-  num_flip_since_rebuild++;
-  // Recompute things on flip
-  if (rebuild_reason == 0) {
-  if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
-  isPrimalPhase1 = 1;
-  } else {
-  // Crude way to force rebuild
-  rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
-  }
-  }
-  // Update the synthetic clock for UPDATE
-  ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
-  return;
-  }
-  
-  // Now set the value of the entering variable
-  assert(rowOut >= 0);
-  baseValue[rowOut] = valueIn;
-  // Consider whether the entering value is feasible and, if not, take
-  // action
-  considerInfeasibleValueIn();
-  //
-  // Remaining update operations are independent of phase
-  sourceOut = phase1OutBnd;
-  commonUpdateSection();
-  
-  // Possibly rebuild if not already doing it and there are primal
-  // infeasibilities
-  if (rebuild_reason == 0) {
-  if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
-  isPrimalPhase1 = 1;
-  } else {
-  // Crude way to force rebuild
-  rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
-  }
-  }
-  }
-  
-  void HEkkPrimal::phase2Update() {
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<double>& workLower = simplex_info.workLower_;
-  const vector<double>& workUpper = simplex_info.workUpper_;
-  const vector<double>& baseLower = simplex_info.baseLower_;
-  const vector<double>& baseUpper = simplex_info.baseUpper_;
-  vector<double>& workValue = simplex_info.workValue_;
-  const vector<double>& baseValue = simplex_info.baseValue_;
-  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
-  
-  // Start hyper-sparse CHUZC, that takes place through phase2Update()
-  hyperChooseColumnStart();
-  
-  // Compute thetaPrimal
-  int moveIn = thetaDual > 0 ? -1 : 1;
-  if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
-  
-  if (rowOut < 0) {
-  // No binding ratio in CHUZR, so flip or unbounded
-  thetaPrimal = moveIn * HIGHS_CONST_INF;
-  } else {
-  columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
-  alphaCol = col_aq.array[rowOut];
-  thetaPrimal = 0;
-  if (alphaCol * moveIn > 0) {
-  // Lower bound
-  thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
-  } else {
-  // Upper bound
-  thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
-  }
-  }
-  
-  // Look to see if there is a bound flip
-  bool flipped = false;
-  double lowerIn = workLower[columnIn];
-  double upperIn = workUpper[columnIn];
-  valueIn = workValue[columnIn] + thetaPrimal;
-  if (moveIn > 0) {
-  if (valueIn > upperIn + primal_feasibility_tolerance) {
-  // Flip to upper
-  valueIn = upperIn;
-  workValue[columnIn] = valueIn;
-  thetaPrimal = upperIn - lowerIn;
-  flipped = true;
-  nonbasicMove[columnIn] = NONBASIC_MOVE_DN;
-  }
-  } else {
-  if (valueIn < lowerIn - primal_feasibility_tolerance) {
-  // Flip to lower
-  valueIn = lowerIn;
-  workValue[columnIn] = valueIn;
-  thetaPrimal = lowerIn - upperIn;
-  flipped = true;
-  nonbasicMove[columnIn] = NONBASIC_MOVE_UP;
-  }
-  }
-  if (flipped) {
-  rowOut = -1;
-  columnOut = columnIn;
-  alphaCol = 0;
-  numericalTrouble = 0;
-  }
-  
-  // Check for possible unboundedness
-  if (rowOut < 0 && !flipped) {
-  rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED;
-  return;
-  }
-  //
-  // Update primal values, and identify any infeasibilities
-  //
-  phase2UpdatePrimal();
-  
-  // Why is the detailed primal infeasibility information needed?
-  //  ekk_instance_.computeSimplexPrimalInfeasible();
-  
-  // If flipped, then no need touch the pivots
-  if (flipped) {
-  simplex_info.primal_bound_swap++;
-  ekk_instance_.invalidateDualInfeasibilityRecord();
-  iterationAnalysis();
-  localReportIter();
-  num_flip_since_rebuild++;
-  // Update the synthetic clock for UPDATE
-  ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
-  return;
-  }
-  // Remaining update operations are independent of phase
-  sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
-  commonUpdateSection();
-  }
-*/
-
-void HEkkPrimal::commonUpdateSection() {
-  // Perform update operations that are independent of phase
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<double>& workDual = simplex_info.workDual_;
   // Compute the tableau row
   //
   // BTRAN
@@ -940,6 +718,19 @@ void HEkkPrimal::commonUpdateSection() {
   
   // Perform hyper-sparse CHUZC
   hyperChooseColumn();
+
+  if (solvePhase == SOLVE_PHASE_1) {
+    // Possibly rebuild if not already doing it and there are primal
+    // infeasibilities
+    if (!rebuild_reason) {
+      if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
+	isPrimalPhase1 = 1;
+      } else {
+	// Crude way to force rebuild
+	rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+      }
+    }
+  }
 }
 
 void HEkkPrimal::chuzc() {

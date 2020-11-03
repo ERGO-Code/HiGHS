@@ -369,11 +369,11 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // with runLpSolver(..)
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
-  const int min_highs_debug_level =   HIGHS_DEBUG_LEVEL_MIN;
+  const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
                                      // HIGHS_DEBUG_LEVEL_CHEAP;
                                      // HIGHS_DEBUG_LEVEL_COSTLY;
                                      // HIGHS_DEBUG_LEVEL_EXPENSIVE;
-                                     // HIGHS_DEBUG_LEVEL_MAX;
+                                      HIGHS_DEBUG_LEVEL_MAX;
   if (options_.highs_debug_level < min_highs_debug_level) {
     printf(
         "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
@@ -399,19 +399,6 @@ HighsStatus Highs::run() {
   HighsStatus call_status;
   // Zero the HiGHS iteration counts
   zeroHighsIterationCounts(info_);
-  /*
-if (options_.message_level >= 0) {
-  printf("\n!! Actually solving an LP with %d cols, %d rows", lp_.numCol_,
-lp_.numRow_); if (lp_.numCol_) printf(" and %d nonzeros",
-lp_.Astart_[lp_.numCol_]); printf(":basis.valid_ = %d: basis_.valid_ = %d:
-simplex_lp_status_.has_basis = %d!!\n\n", basis_.valid_, hmos_[0].basis_.valid_,
-         hmos_[0].simplex_lp_status_.has_basis);
-  if (basis_.valid_ != hmos_[0].basis_.valid_) {
-    printf("NB %d = basis_.valid_ != hmos_[0].basis_.valid_ = %d\n",
-basis_.valid_, hmos_[0].basis_.valid_);
-  }
-}
-  */
   // Determine whether a model has been loaded.
   assert((int)hmos_.size() <= 1);
   if (hmos_.size() == 0) {

@@ -40,11 +40,9 @@ class HEkkPrimal {
   void initialise();
   void solvePhase1();
   void solvePhase2();
-  void iterate();
   void rebuild();
-  void phase1Update();
-  void phase2Update();
-  void commonUpdateSection();
+  void iterate();
+  void update();
 
   void chuzc();
   void chooseColumn(const bool hyper_sparse = false);
