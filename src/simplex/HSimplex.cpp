@@ -3206,13 +3206,16 @@ void update_pivots(HighsModelObject& highs_model_object, int variable_in,
   simplex_basis.nonbasicFlag_[variable_out] = 1;
   if (simplex_info.workLower_[variable_out] ==
       simplex_info.workUpper_[variable_out]) {
-    simplex_info.workValue_[variable_out] = simplex_info.workLower_[variable_out];
+    simplex_info.workValue_[variable_out] =
+        simplex_info.workLower_[variable_out];
     simplex_basis.nonbasicMove_[variable_out] = 0;
   } else if (move_out == -1) {
-    simplex_info.workValue_[variable_out] = simplex_info.workLower_[variable_out];
+    simplex_info.workValue_[variable_out] =
+        simplex_info.workLower_[variable_out];
     simplex_basis.nonbasicMove_[variable_out] = 1;
   } else {
-    simplex_info.workValue_[variable_out] = simplex_info.workUpper_[variable_out];
+    simplex_info.workValue_[variable_out] =
+        simplex_info.workUpper_[variable_out];
     simplex_basis.nonbasicMove_[variable_out] = -1;
   }
   // Update the dual objective value

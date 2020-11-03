@@ -994,13 +994,16 @@ void HEkk::updatePivots(const int variable_in, const int row_out,
   simplex_basis_.nonbasicFlag_[variable_out] = 1;
   if (simplex_info_.workLower_[variable_out] ==
       simplex_info_.workUpper_[variable_out]) {
-    simplex_info_.workValue_[variable_out] = simplex_info_.workLower_[variable_out];
+    simplex_info_.workValue_[variable_out] =
+        simplex_info_.workLower_[variable_out];
     simplex_basis_.nonbasicMove_[variable_out] = 0;
   } else if (move_out == -1) {
-    simplex_info_.workValue_[variable_out] = simplex_info_.workLower_[variable_out];
+    simplex_info_.workValue_[variable_out] =
+        simplex_info_.workLower_[variable_out];
     simplex_basis_.nonbasicMove_[variable_out] = 1;
   } else {
-    simplex_info_.workValue_[variable_out] = simplex_info_.workUpper_[variable_out];
+    simplex_info_.workValue_[variable_out] =
+        simplex_info_.workUpper_[variable_out];
     simplex_basis_.nonbasicMove_[variable_out] = -1;
   }
   // Update the dual objective value

@@ -375,7 +375,8 @@ void HDual::minorUpdatePrimal() {
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
       !new_devex_framework) {
     assert(row_out >= 0);
-    if (row_out < 0) printf("ERROR: row_out = %d in minorUpdatePrimal\n", row_out);
+    if (row_out < 0)
+      printf("ERROR: row_out = %d in minorUpdatePrimal\n", row_out);
     const double updated_edge_weight = dualRHS.workEdWt[row_out];
     new_devex_framework = newDevexFramework(updated_edge_weight);
     minor_new_devex_framework = new_devex_framework;
@@ -426,7 +427,8 @@ void HDual::minorUpdatePivots() {
     // simplex update
     finish->EdWt /= (alpha_row * alpha_row);
   }
-  finish->basicValue = workHMO.simplex_info_.workValue_[variable_in] + theta_primal;
+  finish->basicValue =
+      workHMO.simplex_info_.workValue_[variable_in] + theta_primal;
   update_matrix(workHMO, variable_in, variable_out);
   finish->variable_in = variable_in;
   finish->alpha_row = alpha_row;

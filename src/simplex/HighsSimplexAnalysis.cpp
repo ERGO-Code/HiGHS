@@ -427,13 +427,10 @@ bool HighsSimplexAnalysis::switchToDevex() {
   return switch_to_devex;
 }
 
-bool HighsSimplexAnalysis::dualValueSignOk(const HighsOptions& options,
-                                           const double updated_dual,
-                                           const int col_q,
-                                           const HVector& col_aq,
-                                           const vector<double>& workCost,
-                                           const vector<int>& basicIndex,
-					   double& computed_dual) {
+bool HighsSimplexAnalysis::dualValueSignOk(
+    const HighsOptions& options, const double updated_dual, const int col_q,
+    const HVector& col_aq, const vector<double>& workCost,
+    const vector<int>& basicIndex, double& computed_dual) {
   computed_dual = workCost[col_q];
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
@@ -844,7 +841,8 @@ void HighsSimplexAnalysis::summaryReport() {
   int NumInvert = 0;
 
   int last_rebuild_reason = REBUILD_REASON_Count - 1;
-  for (int k = 1; k <= last_rebuild_reason; k++) NumInvert += AnIterNumInvert[k];
+  for (int k = 1; k <= last_rebuild_reason; k++)
+    NumInvert += AnIterNumInvert[k];
   if (NumInvert > 0) {
     int lcNumInvert = 0;
     printf("\nInvert    performed %d times: average frequency = %d\n",

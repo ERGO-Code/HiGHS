@@ -842,7 +842,8 @@ int HFactor::buildKernel() {
       }
 
       // 2.4.5. Reset pivot column mark
-      for (int i = 0; i < mwz_column_count; i++) mwz_column_mark[mwz_column_index[i]] = 1;
+      for (int i = 0; i < mwz_column_count; i++)
+        mwz_column_mark[mwz_column_index[i]] = 1;
 
       // 2.4.6. Fix max value and link list
       colFixMax(iCol);
@@ -853,7 +854,8 @@ int HFactor::buildKernel() {
     }
 
     // 2.5. Clear pivot column buffer
-    for (int i = 0; i < mwz_column_count; i++) mwz_column_mark[mwz_column_index[i]] = 0;
+    for (int i = 0; i < mwz_column_count; i++)
+      mwz_column_mark[mwz_column_index[i]] = 0;
 
     // 2.6. Correct row links for the remain active part
     for (int i = start_A; i < end_A; i++) {

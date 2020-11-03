@@ -89,7 +89,8 @@ class HEkk {
   void computePrimal();
   void computeDual();
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
-  void updatePivots(const int variable_in, const int row_out, const int move_out);
+  void updatePivots(const int variable_in, const int row_out,
+                    const int move_out);
   void updateMatrix(const int variable_in, const int variable_out);
   void computeSimplexInfeasible();
   void computeSimplexPrimalInfeasible();

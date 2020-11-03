@@ -326,8 +326,8 @@ void HPrimal::primalRebuild() {
   // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
   if (!invert_if_row_out_negative) {
-    // Don't reinvert if variable_in is negative [equivalently, if sv_rebuild_reason ==
-    // REBUILD_REASON_POSSIBLY_OPTIMAL]
+    // Don't reinvert if variable_in is negative [equivalently, if
+    // sv_rebuild_reason == REBUILD_REASON_POSSIBLY_OPTIMAL]
     if (sv_rebuild_reason == REBUILD_REASON_POSSIBLY_OPTIMAL) {
       assert(variable_in == -1);
       reInvert = false;

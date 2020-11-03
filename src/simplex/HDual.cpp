@@ -1298,7 +1298,8 @@ void HDual::chooseRow() {
     // Above the upper bound so set delta_primal = value - UB > 0
     delta_primal = baseValue[row_out] - baseUpper[row_out];
   }
-  // Set move_out to be -1 if delta_primal<0, otherwise +1 (since delta_primal>0)
+  // Set move_out to be -1 if delta_primal<0, otherwise +1 (since
+  // delta_primal>0)
   move_out = delta_primal < 0 ? -1 : 1;
   // Update the record of average row_ep (pi_p) density. This ignores
   // any BTRANs done for skipped candidates
@@ -1400,10 +1401,10 @@ void HDual::chooseColumn(HVector* row_ep) {
   analysis->simplexTimerStop(Chuzc4Clock);
   // Record values for basis change, checking for numerical problems and update
   // of dual variables
-  variable_in = dualRow.workPivot;   // Index of the column entering the basis
-  alpha_row = dualRow.workAlpha;   // Pivot value computed row-wise - used for
-                                  // numerical checking
-  theta_dual = dualRow.workTheta;  // Dual step length
+  variable_in = dualRow.workPivot;  // Index of the column entering the basis
+  alpha_row = dualRow.workAlpha;    // Pivot value computed row-wise - used for
+                                    // numerical checking
+  theta_dual = dualRow.workTheta;   // Dual step length
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
       !new_devex_framework) {
@@ -1743,8 +1744,8 @@ void HDual::updateDual() {
   dual_objective_value_change *= workHMO.scale_.cost_;
   workHMO.simplex_info_.updated_dual_objective_value +=
       dual_objective_value_change;
-  // Surely variable_out_nonbasicFlag is always 0 since it's basic - so there's no
-  // dual objective change
+  // Surely variable_out_nonbasicFlag is always 0 since it's basic - so there's
+  // no dual objective change
   const int variable_out_nonbasicFlag =
       workHMO.simplex_basis_.nonbasicFlag_[variable_out];
   assert(variable_out_nonbasicFlag == 0);
@@ -1752,7 +1753,8 @@ void HDual::updateDual() {
     const double variable_out_delta_dual = workDual[variable_out] - theta_dual;
     const double variable_out_value = workValue[variable_out];
     dual_objective_value_change =
-        variable_out_nonbasicFlag * (-variable_out_value * variable_out_delta_dual);
+        variable_out_nonbasicFlag *
+        (-variable_out_value * variable_out_delta_dual);
     dual_objective_value_change *= workHMO.scale_.cost_;
     workHMO.simplex_info_.updated_dual_objective_value +=
         dual_objective_value_change;
