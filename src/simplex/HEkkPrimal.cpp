@@ -485,6 +485,7 @@ void HEkkPrimal::iterate() {
   } else {
     chooseRow();
   }
+
   update();
 }
 
@@ -499,8 +500,12 @@ void HEkkPrimal::update() {
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
-  //
-  // UPDATE
+
+  if (rowOut >= 0) {
+    columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
+  } else {
+    columnOut = -1;
+  }
 
   // Start hyper-sparse CHUZC, that takes place through phase1Update()
   hyperChooseColumnStart();
@@ -509,12 +514,13 @@ void HEkkPrimal::update() {
   const int moveIn = thetaDual > 0 ? -1 : 1;
   if (nonbasicMove[columnIn]) assert(nonbasicMove[columnIn] == moveIn);
     
-    // Compute the primal theta and see if we should have done a bound
-    // flip instead
+  // Compute the primal theta and see if we should have done a bound
+  // flip instead
   if (solvePhase == SOLVE_PHASE_1) {
     // Phase 1
+    assert(rowOut>=0);
     alphaCol = col_aq.array[rowOut];
-    thetaPrimal = 0.0;
+    thetaPrimal = 0;
     if (phase1OutBnd == 1) {
       thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
     } else {
@@ -527,7 +533,6 @@ void HEkkPrimal::update() {
       // No binding ratio in CHUZR, so flip or unbounded
       thetaPrimal = moveIn * HIGHS_CONST_INF;
     } else {
-      columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
       alphaCol = col_aq.array[rowOut];
       thetaPrimal = 0;
       if (alphaCol * moveIn > 0) {
@@ -537,36 +542,42 @@ void HEkkPrimal::update() {
 	// Upper bound
 	thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
       }
+      assert(thetaPrimal > -HIGHS_CONST_INF && thetaPrimal < HIGHS_CONST_INF);
     }
   }   
-
 
   // Look to see if there is a bound flip
   bool flipped = false;
   double lowerIn = workLower[columnIn];
   double upperIn = workUpper[columnIn];
   valueIn = workValue[columnIn] + thetaPrimal;
-  if (solvePhase == SOLVE_PHASE_1) {
-    if (moveIn == +1 && valueIn > upperIn + primal_feasibility_tolerance) {
+  if (moveIn > 0) {
+    if (valueIn > upperIn + primal_feasibility_tolerance) {
+      // Flip to upper
       valueIn = upperIn;
       workValue[columnIn] = valueIn;
       thetaPrimal = upperIn - lowerIn;
       flipped = true;
       nonbasicMove[columnIn] = NONBASIC_MOVE_DN;
     }
-    if (moveIn == -1 && valueIn < lowerIn - primal_feasibility_tolerance) {
+  } else {
+    if (valueIn < lowerIn - primal_feasibility_tolerance) {
+      // Flip to lower
       valueIn = lowerIn;
       workValue[columnIn] = valueIn;
       thetaPrimal = lowerIn - upperIn;
       flipped = true;
       nonbasicMove[columnIn] = NONBASIC_MOVE_UP;
     }
-    if (flipped) {
-      rowOut = -1;
-      columnOut = columnIn;
-      alphaCol = 0;
-      numericalTrouble = 0;
-    }
+  }
+  if (flipped) {
+    rowOut = -1;
+    columnOut = columnIn;
+    alphaCol = 0;
+    numericalTrouble = 0;
+  }
+
+  if (solvePhase == SOLVE_PHASE_1) {
     // Check for possible error
     assert(rowOut >= 0 || flipped);
     
@@ -612,31 +623,6 @@ void HEkkPrimal::update() {
     
   } else {
     // Phase 2
-    if (moveIn > 0) {
-      if (valueIn > upperIn + primal_feasibility_tolerance) {
-	// Flip to upper
-	valueIn = upperIn;
-	workValue[columnIn] = valueIn;
-	thetaPrimal = upperIn - lowerIn;
-	flipped = true;
-	nonbasicMove[columnIn] = NONBASIC_MOVE_DN;
-      }
-    } else {
-      if (valueIn < lowerIn - primal_feasibility_tolerance) {
-	// Flip to lower
-	valueIn = lowerIn;
-	workValue[columnIn] = valueIn;
-	thetaPrimal = lowerIn - upperIn;
-	flipped = true;
-	nonbasicMove[columnIn] = NONBASIC_MOVE_UP;
-      }
-    }
-    if (flipped) {
-      rowOut = -1;
-      columnOut = columnIn;
-      alphaCol = 0;
-      numericalTrouble = 0;
-    }
     
     // Check for possible unboundedness
     if (rowOut < 0 && !flipped) {
@@ -1363,9 +1349,6 @@ void HEkkPrimal::phase1ChooseRow() {
       phase1OutBnd = index >= 0 ? 1 : -1;
       break;
     }
-  }
-  if (rowOut != -1) {
-    columnOut = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
   }
   analysis->simplexTimerStop(Chuzr2Clock);
 }
