@@ -54,6 +54,7 @@ class HEkkPrimal {
   void hyperChooseColumnBasicFeasibilityChange();
   void hyperChooseColumnDualChange();
   void assessVariableIn();
+  const bool use_assessPivot = true;
   void assessPivot();
   void chooseRow();
   void updateDual();

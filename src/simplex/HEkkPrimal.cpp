@@ -458,7 +458,7 @@ void HEkkPrimal::iterate() {
     return;
   }
 
-  // CHUZC
+  // Perform CHUZC
   if (solvePhase == SOLVE_PHASE_1) {
     chooseColumn();
     if (variable_in == -1) {
@@ -472,11 +472,12 @@ void HEkkPrimal::iterate() {
       return;
     }
   }
-  // FTRAN - and dual value cross-check
+
+  // Perform FTRAN - and dual value cross-check
   assessVariableIn();
   if (solvePhase == SOLVE_PHASE_ERROR) return;
-  //
-  // CHUZR
+
+  // Perform CHUZR
   if (solvePhase == SOLVE_PHASE_1) {
     phase1ChooseRow();
     if (row_out == -1) {
@@ -488,17 +489,39 @@ void HEkkPrimal::iterate() {
   } else {
     chooseRow();
   }
-  // Unit BTRAN and PRICE to get pivotal row - and numerical check
-  assessPivot();
-  if (rebuild_reason) {
-    assert(rebuild_reason==REBUILD_REASON_POSSIBLY_SINGULAR_BASIS);
-    return;
+
+  // If pivoting, perform unit BTRAN and PRICE to get pivotal row - and do numerical check
+  if (use_assessPivot && row_out >= 0) {
+    assessPivot();
+    if (rebuild_reason) {
+      assert(rebuild_reason==REBUILD_REASON_POSSIBLY_SINGULAR_BASIS);
+      return;
+    }
   }
 
   update();
 }
 
 void HEkkPrimal::assessPivot() {
+  assert(row_out >= 0);
+  // Record the pivot entry
+  alpha_col = col_aq.array[row_out];
+  
+  // Compute the tableau row
+  //
+  // BTRAN
+  //
+  // Compute unit BTran for tableau row and FT update
+  ekk_instance_.unitBtran(row_out, row_ep);
+  //
+  // PRICE
+  //
+  ekk_instance_.tableauRowPrice(row_ep, row_ap);
+  
+  // Checks row-wise pivot against column-wise pivot for
+  // numerical trouble
+  updateVerify();
+  
 }
 
 void HEkkPrimal::assessVariableIn() {
@@ -570,7 +593,7 @@ void HEkkPrimal::update() {
     // Determine the step to the leaving bound
     //
     // Record the pivot entry
-    alpha_col = col_aq.array[row_out];
+    if (!use_assessPivot) alpha_col = col_aq.array[row_out];
     // In Phase 1, move_out depends on whether the leaving variable is
     // becoming feasible - moves up to lower (down to upper) - or
     // remaining feasible - moves down to lower (up to upper) - so
@@ -688,20 +711,22 @@ void HEkkPrimal::update() {
     // Remaining update operations are independent of phase
   }
 
-  // Compute the tableau row
-  //
-  // BTRAN
-  //
-  // Compute unit BTran for tableau row and FT update
-  ekk_instance_.unitBtran(row_out, row_ep);
-  //
-  // PRICE
-  //
-  ekk_instance_.tableauRowPrice(row_ep, row_ap);
-  
-  // Checks row-wise pivot against column-wise pivot for
-  // numerical trouble
-  updateVerify();
+  if (!use_assessPivot) {
+    // Compute the tableau row
+    //
+    // BTRAN
+    //
+    // Compute unit BTran for tableau row and FT update
+    ekk_instance_.unitBtran(row_out, row_ep);
+    //
+    // PRICE
+    //
+    ekk_instance_.tableauRowPrice(row_ep, row_ap);
+    
+    // Checks row-wise pivot against column-wise pivot for
+    // numerical trouble
+    updateVerify();
+  }
   
   // Update the dual values
   theta_dual = workDual[variable_in];
