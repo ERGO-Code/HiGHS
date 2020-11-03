@@ -41,11 +41,21 @@ class HEkkPrimal {
   void solvePhase1();
   void solvePhase2();
   void rebuild();
-  void iterate();
-  void update();
 
+  void iterate();
   void chuzc();
   void chooseColumn(const bool hyper_sparse = false);
+  void assessVariableIn();
+  void phase1ChooseRow();
+  void chooseRow();
+
+  void considerBoundSwap();
+  void assessPivot();
+
+  void update();
+
+  void updateDual();
+
   void hyperChooseColumn();
   void hyperChooseColumnStart();
   void hyperChooseColumnClear();
@@ -53,15 +63,8 @@ class HEkkPrimal {
                                              const int iCol);
   void hyperChooseColumnBasicFeasibilityChange();
   void hyperChooseColumnDualChange();
-  void assessVariableIn();
-  const bool use_considerBoundSwap = true;
-  void considerBoundSwap();
-  void assessPivot();
-  void chooseRow();
-  void updateDual();
 
   void phase1ComputeDual();
-  void phase1ChooseRow();
   void phase1UpdatePrimal();
   void basicFeasibilityChangeBtran();
   void basicFeasibilityChangePrice();
