@@ -284,7 +284,7 @@ void HDual::minorChooseRow() {
 void HDual::minorUpdate() {
   // Minor update - store roll back data
   MFinish* finish = &multi_finish[multi_nFinish];
-  finish->moveIn = workHMO.simplex_basis_.nonbasicMove_[variable_in];
+  finish->move_in = workHMO.simplex_basis_.nonbasicMove_[variable_in];
   finish->shiftOut = workHMO.simplex_info_.workShift_[variable_out];
   finish->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
@@ -904,7 +904,7 @@ void HDual::majorRollback() {
     MFinish* finish = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    workHMO.simplex_basis_.nonbasicMove_[finish->variable_in] = finish->moveIn;
+    workHMO.simplex_basis_.nonbasicMove_[finish->variable_in] = finish->move_in;
     workHMO.simplex_basis_.nonbasicFlag_[finish->variable_in] = 1;
     workHMO.simplex_basis_.nonbasicMove_[finish->variable_out] = 0;
     workHMO.simplex_basis_.nonbasicFlag_[finish->variable_out] = 0;

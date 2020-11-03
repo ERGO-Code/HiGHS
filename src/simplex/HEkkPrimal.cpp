@@ -511,8 +511,8 @@ void HEkkPrimal::update() {
   hyperChooseColumnStart();
 
   // Identify the direction of movement
-  const int moveIn = theta_dual > 0 ? -1 : 1;
-  if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == moveIn);
+  const int move_in = theta_dual > 0 ? -1 : 1;
+  if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == move_in);
     
   // Compute the primal theta and see if we should have done a bound
   // flip instead
@@ -531,11 +531,11 @@ void HEkkPrimal::update() {
     // Phase 2
     if (row_out < 0) {
       // No binding ratio in CHUZR, so flip or unbounded
-      theta_primal = moveIn * HIGHS_CONST_INF;
+      theta_primal = move_in * HIGHS_CONST_INF;
     } else {
       alpha_col = col_aq.array[row_out];
       theta_primal = 0;
-      if (alpha_col * moveIn > 0) {
+      if (alpha_col * move_in > 0) {
 	// Lower bound
 	theta_primal = (baseValue[row_out] - baseLower[row_out]) / alpha_col;
       } else {
@@ -551,7 +551,7 @@ void HEkkPrimal::update() {
   double lower_in = workLower[variable_in];
   double upper_in = workUpper[variable_in];
   value_in = workValue[variable_in] + theta_primal;
-  if (moveIn > 0) {
+  if (move_in > 0) {
     if (value_in > upper_in + primal_feasibility_tolerance) {
       // Flip to upper
       value_in = upper_in;
@@ -649,7 +649,7 @@ void HEkkPrimal::update() {
       return;
     }
     // Remaining update operations are independent of phase
-    move_out = alpha_col * moveIn > 0 ? -1 : 1;
+    move_out = alpha_col * move_in > 0 ? -1 : 1;
   }
 
   // Compute the tableau row
@@ -1077,14 +1077,14 @@ void HEkkPrimal::chooseRow() {
   double alphaTol = simplex_info.update_count < 10
 						? 1e-9
 						: simplex_info.update_count < 20 ? 1e-8 : 1e-7;
-  const int moveIn = theta_dual > 0 ? -1 : 1;
-  if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == moveIn);
+  const int move_in = theta_dual > 0 ? -1 : 1;
+  if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == move_in);
   
   double relaxTheta = 1e100;
   double relaxSpace;
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
-    double alpha = col_aq.array[iRow] * moveIn;
+    double alpha = col_aq.array[iRow] * move_in;
     if (alpha > alphaTol) {
       relaxSpace =
 	baseValue[iRow] - baseLower[iRow] + primal_feasibility_tolerance;
@@ -1101,7 +1101,7 @@ void HEkkPrimal::chooseRow() {
   double bestAlpha = 0;
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
-    double alpha = col_aq.array[iRow] * moveIn;
+    double alpha = col_aq.array[iRow] * move_in;
     if (alpha > alphaTol) {
       // Positive pivotal column entry
       double tightSpace = baseValue[iRow] - baseLower[iRow];
@@ -1229,8 +1229,8 @@ void HEkkPrimal::phase1ChooseRow() {
   //
   // Determine the move direction - can't use nonbasicMove_[variable_in]
   // due to free columns
-  const int moveIn = theta_dual > 0 ? -1 : 1;
-  if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == moveIn);
+  const int move_in = theta_dual > 0 ? -1 : 1;
+  if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == move_in);
   
   const double dPivotTol = simplex_info.update_count < 10
 						       ? 1e-9
@@ -1239,7 +1239,7 @@ void HEkkPrimal::phase1ChooseRow() {
   ph1SorterT.clear();
   for (int i = 0; i < col_aq.count; i++) {
     int iRow = col_aq.index[i];
-    double dAlpha = col_aq.array[iRow] * moveIn;
+    double dAlpha = col_aq.array[iRow] * move_in;
     
     // When the basic variable x[i] decrease
     if (dAlpha > +dPivotTol) {

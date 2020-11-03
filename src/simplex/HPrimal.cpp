@@ -527,8 +527,8 @@ void HPrimal::primalChooseRow() {
                         ? 1e-9
                         : workHMO.simplex_info_.update_count < 20 ? 1e-8 : 1e-7;
   const int* jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
-  int moveIn = jMove[variable_in];
-  if (moveIn == 0) {
+  int move_in = jMove[variable_in];
+  if (move_in == 0) {
     // If there's still free in the N
     // We would report not-solved
     // Need to handle free
@@ -537,7 +537,7 @@ void HPrimal::primalChooseRow() {
   double relaxSpace;
   for (int i = 0; i < col_aq.count; i++) {
     int index = col_aq.index[i];
-    alpha = col_aq.array[index] * moveIn;
+    alpha = col_aq.array[index] * move_in;
     if (alpha > alphaTol) {
       relaxSpace = baseValue[index] - baseLower[index] + primalTolerance;
       if (relaxSpace < relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
@@ -552,7 +552,7 @@ void HPrimal::primalChooseRow() {
   double bestAlpha = 0;
   for (int i = 0; i < col_aq.count; i++) {
     int index = col_aq.index[i];
-    alpha = col_aq.array[index] * moveIn;
+    alpha = col_aq.array[index] * move_in;
     if (alpha > alphaTol) {
       // Positive pivotal column entry
       double tightSpace = baseValue[index] - baseLower[index];
@@ -590,14 +590,14 @@ void HPrimal::primalUpdate() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
 
   // Compute theta_primal
-  int moveIn = jMove[variable_in];
+  int move_in = jMove[variable_in];
   //  int
   variable_out = workHMO.simplex_basis_.basicIndex_[row_out];
   //  double
   alpha = col_aq.array[row_out];
   //  double
   theta_primal = 0;
-  if (alpha * moveIn > 0) {
+  if (alpha * move_in > 0) {
     // Lower bound
     theta_primal = (baseValue[row_out] - baseLower[row_out]) / alpha;
   } else {
@@ -653,7 +653,7 @@ void HPrimal::primalUpdate() {
   }
 
   // Pivot in
-  int move_out = alpha * moveIn > 0 ? -1 : 1;
+  int move_out = alpha * move_in > 0 ? -1 : 1;
   analysis->simplexTimerStart(IteratePivotsClock);
   update_pivots(workHMO, variable_in, row_out, move_out);
   analysis->simplexTimerStop(IteratePivotsClock);

@@ -502,7 +502,7 @@ class HDual {
    * @brief Multiple minor iteration data
    */
   struct MFinish {
-    int moveIn;
+    int move_in;
     double shiftOut;
     std::vector<int> flipList;
 
