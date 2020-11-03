@@ -52,7 +52,7 @@ class HPrimal {
 
   void iterationAnalysisData();
   void iterationAnalysis();
-  void reportRebuild(const int rebuild_invert_hint = -1);
+  void reportRebuild(const int reason_for_rebuild = -1);
   bool bailout();
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
                        //!< calling function
@@ -69,14 +69,14 @@ class HPrimal {
 
   int solvePhase;
   // Pivot related
-  int invertHint;
+  int rebuild_reason;
   int variable_in;
-  int rowOut;
+  int row_out;
   int variable_out;
-  double thetaDual;
-  double thetaPrimal;
+  double theta_dual;
+  double theta_primal;
   double alpha;
-  //  double alphaRow;
+  //  double alpha_row;
   double numericalTrouble;
   int num_flip_since_rebuild;
 

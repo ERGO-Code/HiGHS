@@ -84,9 +84,6 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
 
-int setSourceOutFmBd(const HighsModelObject& highs_model_object,
-                     const int column_out);
-
 #ifdef HiGHSDEV
 void getPrimalValue(const HighsModelObject& highs_model_object,
                     vector<double>& primal_value);
@@ -197,7 +194,7 @@ void update_factor(HighsModelObject& highs_model_object, HVector* column,
                    HVector* row_ep, int* iRow, int* hint);
 
 void update_pivots(HighsModelObject& highs_model_object, int variable_in,
-                   int rowOut, int sourceOut);
+                   int row_out, int move_out);
 
 void update_matrix(HighsModelObject& highs_model_object, int variable_in,
                    int variable_out);

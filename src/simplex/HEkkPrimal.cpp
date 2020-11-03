@@ -476,7 +476,7 @@ void HEkkPrimal::iterate() {
   // CHUZR
   if (solvePhase == SOLVE_PHASE_1) {
     phase1ChooseRow();
-    if (rowOut == -1) {
+    if (row_out == -1) {
       HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
 		      "Primal phase 1 choose row failed");
       solvePhase = SOLVE_PHASE_ERROR;
@@ -501,8 +501,8 @@ void HEkkPrimal::update() {
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
 
-  if (rowOut >= 0) {
-    variable_out = ekk_instance_.simplex_basis_.basicIndex_[rowOut];
+  if (row_out >= 0) {
+    variable_out = ekk_instance_.simplex_basis_.basicIndex_[row_out];
   } else {
     variable_out = -1;
   }
@@ -511,75 +511,75 @@ void HEkkPrimal::update() {
   hyperChooseColumnStart();
 
   // Identify the direction of movement
-  const int moveIn = thetaDual > 0 ? -1 : 1;
+  const int moveIn = theta_dual > 0 ? -1 : 1;
   if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == moveIn);
     
   // Compute the primal theta and see if we should have done a bound
   // flip instead
   if (solvePhase == SOLVE_PHASE_1) {
     // Phase 1
-    assert(rowOut>=0);
-    alphaCol = col_aq.array[rowOut];
-    thetaPrimal = 0;
+    assert(row_out>=0);
+    alpha_col = col_aq.array[row_out];
+    theta_primal = 0;
     if (phase1OutBnd == 1) {
-      thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
+      theta_primal = (baseValue[row_out] - baseUpper[row_out]) / alpha_col;
     } else {
-      thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
+      theta_primal = (baseValue[row_out] - baseLower[row_out]) / alpha_col;
     }
-    assert(thetaPrimal > -HIGHS_CONST_INF && thetaPrimal < HIGHS_CONST_INF);
+    assert(theta_primal > -HIGHS_CONST_INF && theta_primal < HIGHS_CONST_INF);
   } else {
     // Phase 2
-    if (rowOut < 0) {
+    if (row_out < 0) {
       // No binding ratio in CHUZR, so flip or unbounded
-      thetaPrimal = moveIn * HIGHS_CONST_INF;
+      theta_primal = moveIn * HIGHS_CONST_INF;
     } else {
-      alphaCol = col_aq.array[rowOut];
-      thetaPrimal = 0;
-      if (alphaCol * moveIn > 0) {
+      alpha_col = col_aq.array[row_out];
+      theta_primal = 0;
+      if (alpha_col * moveIn > 0) {
 	// Lower bound
-	thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alphaCol;
+	theta_primal = (baseValue[row_out] - baseLower[row_out]) / alpha_col;
       } else {
 	// Upper bound
-	thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alphaCol;
+	theta_primal = (baseValue[row_out] - baseUpper[row_out]) / alpha_col;
       }
-      assert(thetaPrimal > -HIGHS_CONST_INF && thetaPrimal < HIGHS_CONST_INF);
+      assert(theta_primal > -HIGHS_CONST_INF && theta_primal < HIGHS_CONST_INF);
     }
   }   
 
   // Look to see if there is a bound flip
   bool flipped = false;
-  double lowerIn = workLower[variable_in];
-  double upperIn = workUpper[variable_in];
-  valueIn = workValue[variable_in] + thetaPrimal;
+  double lower_in = workLower[variable_in];
+  double upper_in = workUpper[variable_in];
+  value_in = workValue[variable_in] + theta_primal;
   if (moveIn > 0) {
-    if (valueIn > upperIn + primal_feasibility_tolerance) {
+    if (value_in > upper_in + primal_feasibility_tolerance) {
       // Flip to upper
-      valueIn = upperIn;
-      workValue[variable_in] = valueIn;
-      thetaPrimal = upperIn - lowerIn;
+      value_in = upper_in;
+      workValue[variable_in] = value_in;
+      theta_primal = upper_in - lower_in;
       flipped = true;
       nonbasicMove[variable_in] = NONBASIC_MOVE_DN;
     }
   } else {
-    if (valueIn < lowerIn - primal_feasibility_tolerance) {
+    if (value_in < lower_in - primal_feasibility_tolerance) {
       // Flip to lower
-      valueIn = lowerIn;
-      workValue[variable_in] = valueIn;
-      thetaPrimal = lowerIn - upperIn;
+      value_in = lower_in;
+      workValue[variable_in] = value_in;
+      theta_primal = lower_in - upper_in;
       flipped = true;
       nonbasicMove[variable_in] = NONBASIC_MOVE_UP;
     }
   }
   if (flipped) {
-    rowOut = -1;
+    row_out = -1;
     variable_out = variable_in;
-    alphaCol = 0;
+    alpha_col = 0;
     numericalTrouble = 0;
   }
 
   if (solvePhase == SOLVE_PHASE_1) {
     // Check for possible error
-    assert(rowOut >= 0 || flipped);
+    assert(row_out >= 0 || flipped);
     
     // Update primal values
     phase1UpdatePrimal();
@@ -612,20 +612,20 @@ void HEkkPrimal::update() {
     }
     
     // Now set the value of the entering variable
-    assert(rowOut >= 0);
-    baseValue[rowOut] = valueIn;
+    assert(row_out >= 0);
+    baseValue[row_out] = value_in;
     // Consider whether the entering value is feasible and, if not, take
     // action
     considerInfeasibleValueIn();
     //
     // Remaining update operations are independent of phase
-    sourceOut = phase1OutBnd;
+    move_out = phase1OutBnd;
     
   } else {
     // Phase 2
     
     // Check for possible unboundedness
-    if (rowOut < 0 && !flipped) {
+    if (row_out < 0 && !flipped) {
       rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED;
       return;
     }
@@ -649,7 +649,7 @@ void HEkkPrimal::update() {
       return;
     }
     // Remaining update operations are independent of phase
-    sourceOut = alphaCol * moveIn > 0 ? -1 : 1;
+    move_out = alpha_col * moveIn > 0 ? -1 : 1;
   }
 
   // Compute the tableau row
@@ -657,7 +657,7 @@ void HEkkPrimal::update() {
   // BTRAN
   //
   // Compute unit BTran for tableau row and FT update
-  ekk_instance_.unitBtran(rowOut, row_ep);
+  ekk_instance_.unitBtran(row_out, row_ep);
   //
   // PRICE
   //
@@ -668,7 +668,7 @@ void HEkkPrimal::update() {
   updateVerify();
   
   // Update the dual values
-  thetaDual = workDual[variable_in];
+  theta_dual = workDual[variable_in];
   updateDual();
   
   // Update the devex weight
@@ -682,8 +682,8 @@ void HEkkPrimal::update() {
   hyperChooseColumnDualChange();
   
   // Perform pivoting
-  ekk_instance_.updatePivots(variable_in, rowOut, sourceOut);
-  ekk_instance_.updateFactor(&col_aq, &row_ep, &rowOut, &rebuild_reason);
+  ekk_instance_.updatePivots(variable_in, row_out, move_out);
+  ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
   ekk_instance_.updateMatrix(variable_in, variable_out);
   if (simplex_info.update_count >= simplex_info.update_limit)
     rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
@@ -958,7 +958,7 @@ void HEkkPrimal::hyperChooseColumnBasicFeasibilityChange() {
   // hyperChooseColumnDualChange, so only look at them here if not
   // flipping
   const int& num_nonbasic_free_col = nonbasic_free_col_set.count();
-  if (rowOut < 0 && num_nonbasic_free_col) {
+  if (row_out < 0 && num_nonbasic_free_col) {
     const vector<int>& nonbasic_free_col_set_entry =
       nonbasic_free_col_set.entry();
     for (int iEntry = 0; iEntry < num_nonbasic_free_col; iEntry++) {
@@ -1056,28 +1056,28 @@ void HEkkPrimal::chooseRow() {
   ekk_instance_.pivotColumnFtran(variable_in, col_aq);
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
-  thetaDual = simplex_info.workDual_[variable_in];
-  double computed_thetaDual;
-  bool thetaDual_sign_ok = 
-    analysis->dualValueSignOk(ekk_instance_.options_, thetaDual, variable_in, col_aq,
+  theta_dual = simplex_info.workDual_[variable_in];
+  double computed_theta_dual;
+  bool theta_dual_sign_ok = 
+    analysis->dualValueSignOk(ekk_instance_.options_, theta_dual, variable_in, col_aq,
 			      simplex_info.workCost_,
 			      ekk_instance_.simplex_basis_.basicIndex_,
-			      computed_thetaDual);
-  // Really should do something if thetaDual_sign_ok is false
-  assert(thetaDual_sign_ok);
+			      computed_theta_dual);
+  // Really should do something if theta_dual_sign_ok is false
+  assert(theta_dual_sign_ok);
   // Feed in the computed dual value
-  //  simplex_info.workDual_[variable_in] = computed_thetaDual;
-  //  thetaDual = simplex_info.workDual_[variable_in];
+  //  simplex_info.workDual_[variable_in] = computed_theta_dual;
+  //  theta_dual = simplex_info.workDual_[variable_in];
   
   analysis->simplexTimerStart(Chuzr1Clock);
   // Initialize
-  rowOut = -1;
+  row_out = -1;
   
   // Choose row pass 1
   double alphaTol = simplex_info.update_count < 10
 						? 1e-9
 						: simplex_info.update_count < 20 ? 1e-8 : 1e-7;
-  const int moveIn = thetaDual > 0 ? -1 : 1;
+  const int moveIn = theta_dual > 0 ? -1 : 1;
   if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == moveIn);
   
   double relaxTheta = 1e100;
@@ -1108,7 +1108,7 @@ void HEkkPrimal::chooseRow() {
       if (tightSpace < relaxTheta * alpha) {
         if (bestAlpha < alpha) {
           bestAlpha = alpha;
-          rowOut = iRow;
+          row_out = iRow;
         }
       }
     } else if (alpha < -alphaTol) {
@@ -1117,7 +1117,7 @@ void HEkkPrimal::chooseRow() {
       if (tightSpace > relaxTheta * alpha) {
         if (bestAlpha < -alpha) {
           bestAlpha = -alpha;
-          rowOut = iRow;
+          row_out = iRow;
         }
       }
     }
@@ -1127,25 +1127,25 @@ void HEkkPrimal::chooseRow() {
 
 void HEkkPrimal::updateDual() {
   analysis->simplexTimerStart(UpdateDualClock);
-  assert(alphaCol);
-  assert(rowOut >= 0);
+  assert(alpha_col);
+  assert(row_out >= 0);
   vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
   //  const vector<int>& nonbasicMove =
   //  ekk_instance_.simplex_basis_.nonbasicMove_;
   // Update the duals
-  thetaDual = workDual[variable_in] / alphaCol;
+  theta_dual = workDual[variable_in] / alpha_col;
   for (int iEl = 0; iEl < row_ap.count; iEl++) {
     int iCol = row_ap.index[iEl];
-    workDual[iCol] -= thetaDual * row_ap.array[iCol];
+    workDual[iCol] -= theta_dual * row_ap.array[iCol];
   }
   for (int iEl = 0; iEl < row_ep.count; iEl++) {
     int iRow = row_ep.index[iEl];
     int iCol = iRow + num_col;
-    workDual[iCol] -= thetaDual * row_ep.array[iRow];
+    workDual[iCol] -= theta_dual * row_ep.array[iRow];
   }
   // Dual for the pivot
   workDual[variable_in] = 0;
-  workDual[variable_out] = -thetaDual;
+  workDual[variable_out] = -theta_dual;
   
   ekk_instance_.invalidateDualInfeasibilityRecord();
   // After dual update in primal simplex the dual objective value is not known
@@ -1211,25 +1211,25 @@ void HEkkPrimal::phase1ChooseRow() {
   ekk_instance_.pivotColumnFtran(variable_in, col_aq);
   // Compute the reduced cost for the pivot column and compare it with
   // the kept value
-  thetaDual = simplex_info.workDual_[variable_in];
-  double computed_thetaDual;
-  bool thetaDual_sign_ok = 
-    analysis->dualValueSignOk(ekk_instance_.options_, thetaDual, variable_in, col_aq,
+  theta_dual = simplex_info.workDual_[variable_in];
+  double computed_theta_dual;
+  bool theta_dual_sign_ok = 
+    analysis->dualValueSignOk(ekk_instance_.options_, theta_dual, variable_in, col_aq,
 			      simplex_info.workCost_,
 			      ekk_instance_.simplex_basis_.basicIndex_,
-			      computed_thetaDual);
-  // Really should do something if thetaDual_sign_ok is false
-  assert(thetaDual_sign_ok);
+			      computed_theta_dual);
+  // Really should do something if theta_dual_sign_ok is false
+  assert(theta_dual_sign_ok);
   // Feed in the computed dual value
-  //  simplex_info.workDual_[variable_in] = computed_thetaDual;
-  //  thetaDual = simplex_info.workDual_[variable_in];
+  //  simplex_info.workDual_[variable_in] = computed_theta_dual;
+  //  theta_dual = simplex_info.workDual_[variable_in];
   
   analysis->simplexTimerStart(Chuzr1Clock);
   // Collect phase 1 theta lists
   //
   // Determine the move direction - can't use nonbasicMove_[variable_in]
   // due to free columns
-  const int moveIn = thetaDual > 0 ? -1 : 1;
+  const int moveIn = theta_dual > 0 ? -1 : 1;
   if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == moveIn);
   
   const double dPivotTol = simplex_info.update_count < 10
@@ -1291,7 +1291,7 @@ void HEkkPrimal::phase1ChooseRow() {
   analysis->simplexTimerStop(Chuzr1Clock);
   // When there are no candidates at all, we can leave it here
   if (ph1SorterR.empty()) {
-    rowOut = -1;
+    row_out = -1;
     variable_out = -1;
     return;
   }
@@ -1303,7 +1303,7 @@ void HEkkPrimal::phase1ChooseRow() {
   analysis->simplexTimerStart(Chuzr2Clock);
   std::sort(ph1SorterR.begin(), ph1SorterR.end());
   double dMaxTheta = ph1SorterR.at(0).first;
-  double dGradient = fabs(thetaDual);
+  double dGradient = fabs(theta_dual);
   for (unsigned int i = 0; i < ph1SorterR.size(); i++) {
     double dMyTheta = ph1SorterR.at(i).first;
     int index = ph1SorterR.at(i).second;
@@ -1337,7 +1337,7 @@ void HEkkPrimal::phase1ChooseRow() {
   }
 
   // Finally choose a pivot with good enough alpha, working backwards
-  rowOut = -1;
+  row_out = -1;
   variable_out = -1;
   phase1OutBnd = 0;
   for (int i = iLast - 1; i >= 0; i--) {
@@ -1345,7 +1345,7 @@ void HEkkPrimal::phase1ChooseRow() {
     int iRow = index >= 0 ? index : index + num_row;
     double dAbsAlpha = fabs(col_aq.array[iRow]);
     if (dAbsAlpha > dMaxAlpha * 0.1) {
-      rowOut = iRow;
+      row_out = iRow;
       phase1OutBnd = index >= 0 ? 1 : -1;
       break;
     }
@@ -1370,7 +1370,7 @@ void HEkkPrimal::phase1UpdatePrimal() {
   //  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
   for (int iEl = 0; iEl < col_aq.count; iEl++) {
     int iRow = col_aq.index[iEl];
-    baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
+    baseValue[iRow] -= theta_primal * col_aq.array[iRow];
     int iCol = basicIndex[iRow];
     double was_cost = workCost[iCol];
     double cost = 0;
@@ -1394,7 +1394,7 @@ void HEkkPrimal::phase1UpdatePrimal() {
       if (iCol >= num_col) workDual[iCol] += delta_cost;
     }
   }
-  // Don't set baseValue[rowOut] yet so that dual update due to
+  // Don't set baseValue[row_out] yet so that dual update due to
   // feasibility changes is done correctly
   ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
   analysis->simplexTimerStop(UpdatePrimalClock);
@@ -1569,7 +1569,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
   //  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
   for (int iEl = 0; iEl < col_aq.count; iEl++) {
     int iRow = col_aq.index[iEl];
-    baseValue[iRow] -= thetaPrimal * col_aq.array[iRow];
+    baseValue[iRow] -= theta_primal * col_aq.array[iRow];
     double lower = baseLower[iRow];
     double upper = baseUpper[iRow];
     double value = baseValue[iRow];
@@ -1584,13 +1584,13 @@ void HEkkPrimal::phase2UpdatePrimal() {
       primal_infeasible = true;
     }
   }
-  if (rowOut >= 0) {
+  if (row_out >= 0) {
     // Check the feasibility of the entering variable - using work
     // vector values since its base vector values haven't been updated
-    baseValue[rowOut] = valueIn;
+    baseValue[row_out] = value_in;
     double lower = workLower[variable_in];
     double upper = workUpper[variable_in];
-    double value = valueIn;
+    double value = value_in;
     double primal_infeasibility = 0;
     if (value < lower - primal_feasibility_tolerance) {
       primal_infeasibility = lower - value;
@@ -1600,7 +1600,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
     if (primal_infeasibility > primal_feasibility_tolerance) {
       printf(
           "Entering varible has primal infeasibility of %g for [%g, %g, %g]\n",
-          primal_infeasibility, workLower[variable_in], valueIn,
+          primal_infeasibility, workLower[variable_in], value_in,
           workUpper[variable_in]);
       simplex_info.num_primal_infeasibilities++;
       primal_infeasible = true;
@@ -1611,23 +1611,23 @@ void HEkkPrimal::phase2UpdatePrimal() {
     rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
 
   simplex_info.updated_primal_objective_value +=
-      workDual[variable_in] * thetaPrimal;
+      workDual[variable_in] * theta_primal;
 
   ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
 void HEkkPrimal::considerInfeasibleValueIn() {
-  assert(rowOut >= 0);
+  assert(row_out >= 0);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const vector<double>& workLower = simplex_info.workLower_;
   const vector<double>& workUpper = simplex_info.workUpper_;
   vector<double>& workCost = simplex_info.workCost_;
   vector<double>& workDual = simplex_info.workDual_;
   double cost = 0;
-  if (valueIn < workLower[variable_in] - primal_feasibility_tolerance) {
+  if (value_in < workLower[variable_in] - primal_feasibility_tolerance) {
     cost = -1.0;
-  } else if (valueIn > workUpper[variable_in] + primal_feasibility_tolerance) {
+  } else if (value_in > workUpper[variable_in] + primal_feasibility_tolerance) {
     cost = 1.0;
   }
   workCost[variable_in] = cost;
@@ -1674,7 +1674,7 @@ void HEkkPrimal::updateDevex() {
     num_bad_devex_weight++;
 
   // Update the devex weight for all
-  double dPivot = col_aq.array[rowOut];
+  double dPivot = col_aq.array[row_out];
   dPivotWeight /= fabs(dPivot);
 
   for (int iEl = 0; iEl < row_ap.count; iEl++) {
@@ -1708,25 +1708,25 @@ void HEkkPrimal::updateVerify() {
   // updateVerify for primal
   const double numerical_trouble_tolerance = 1e-7;
   numericalTrouble = 0;
-  double abs_alpha_from_col = fabs(alphaCol);
-  std::string alphaRow_source;
+  double abs_alpha_from_col = fabs(alpha_col);
+  std::string alpha_row_source;
   if (variable_in < num_col) {
-    alphaRow = row_ap.array[variable_in];
-    alphaRow_source = "Col";
+    alpha_row = row_ap.array[variable_in];
+    alpha_row_source = "Col";
   } else {
-    alphaRow = row_ep.array[variable_in - num_col];
-    alphaRow_source = "Row";
+    alpha_row = row_ep.array[variable_in - num_col];
+    alpha_row_source = "Row";
   }
-  double abs_alpha_from_row = fabs(alphaRow);
+  double abs_alpha_from_row = fabs(alpha_row);
   double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
   numericalTrouble = abs_alpha_diff / min_abs_alpha;
   if (numericalTrouble > numerical_trouble_tolerance)
     printf(
-        "Numerical check: Iter %4d: alphaCol = %12g, (From %3s alphaRow = "
+        "Numerical check: Iter %4d: alpha_col = %12g, (From %3s alpha_row = "
         "%12g), aDiff = %12g: measure = %12g\n",
-        ekk_instance_.iteration_count_, alphaCol, alphaRow_source.c_str(),
-        alphaRow, abs_alpha_diff, numericalTrouble);
+        ekk_instance_.iteration_count_, alpha_col, alpha_row_source.c_str(),
+        alpha_row, abs_alpha_diff, numericalTrouble);
   assert(numericalTrouble < 1e-3);
   // Reinvert if the relative difference is large enough, and updates have been
   // performed
@@ -1742,18 +1742,18 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = ekk_instance_.iteration_count_;
   analysis->devex_iteration_count = num_devex_iterations;
-  analysis->pivotal_row_index = rowOut;
+  analysis->pivotal_row_index = row_out;
   analysis->leaving_variable = variable_out;
   analysis->entering_variable = variable_in;
-  analysis->invert_hint = rebuild_reason;
+  analysis->rebuild_reason = rebuild_reason;
   analysis->reduced_rhs_value = 0;
   analysis->reduced_cost_value = 0;
   analysis->edge_weight = 0;
   analysis->primal_delta = 0;
-  analysis->primal_step = thetaPrimal;
-  analysis->dual_step = thetaDual;
-  analysis->pivot_value_from_column = alphaCol;
-  analysis->pivot_value_from_row = alphaRow;
+  analysis->primal_step = theta_primal;
+  analysis->dual_step = theta_dual;
+  analysis->pivot_value_from_column = alpha_col;
+  analysis->pivot_value_from_row = alpha_row;
   analysis->numerical_trouble = 0;  // numericalTrouble;
   analysis->objective_value = simplex_info.updated_primal_objective_value;
   analysis->num_primal_infeasibilities =
@@ -1779,7 +1779,7 @@ void HEkkPrimal::iterationAnalysis() {
 }
 
 void HEkkPrimal::localReportIterHeader() {
-  printf(" Iter ColIn RowOut ColOut\n");
+  printf(" Iter ColIn Row_Out ColOut\n");
 }
 
 void HEkkPrimal::localReportIter(const bool header) {
@@ -1795,8 +1795,8 @@ void HEkkPrimal::localReportIter(const bool header) {
       localReportIterHeader();
       last_header_iteration_count = iteration_count;
     }
-    if (rowOut >= 0) {
-      printf("%5d %5d  %5d  %5d", iteration_count, variable_in, rowOut, variable_out);
+    if (row_out >= 0) {
+      printf("%5d %5d  %5d  %5d", iteration_count, variable_in, row_out, variable_out);
     } else {
       printf("%5d %5d Bound flip   ", iteration_count, variable_in);
     }
@@ -1834,10 +1834,10 @@ void HEkkPrimal::localReportIter(const bool header) {
   }
 }
 
-void HEkkPrimal::reportRebuild(const int rebuild_invert_hint) {
+void HEkkPrimal::reportRebuild(const int reason_for_rebuild) {
   analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
-  analysis->invert_hint = rebuild_invert_hint;
+  analysis->rebuild_reason = reason_for_rebuild;
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }

@@ -195,7 +195,7 @@ class HighsSimplexAnalysis {
   int num_primal_infeasibilities = 0;
   int num_dual_infeasibilities = 0;
   int num_dual_phase_1_lp_dual_infeasibility = 0;
-  int invert_hint = 0;
+  int rebuild_reason = 0;
   double reduced_rhs_value = 0;
   double reduced_cost_value = 0;
   double edge_weight = 0;
@@ -326,7 +326,7 @@ class HighsSimplexAnalysis {
   int AnIterTraceIterDl;
   AnIterTraceRec AnIterTrace[1 + AN_ITER_TRACE_MX_NUM_REC + 1];
 
-  int AnIterNumInvert[INVERT_HINT_Count];
+  int AnIterNumInvert[REBUILD_REASON_Count];
   int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
 
   HighsValueDistribution primal_step_distribution;

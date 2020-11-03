@@ -33,8 +33,8 @@ void HDual::iterateMulti() {
   // Report candidate
   majorChooseRow();
   minorChooseRow();
-  if (rowOut == -1) {
-    invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
+  if (row_out == -1) {
+    rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
     return;
   }
 
@@ -50,14 +50,14 @@ void HDual::iterateMulti() {
     chooseColumn(multi_finish[multi_nFinish].row_ep);
   }
   // If we failed.
-  if (invertHint) {
+  if (rebuild_reason) {
     if (multi_nFinish) {
       majorUpdate();
     } else {
       HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
                       "PAMI skipping majorUpdate() due to multi_nFinish = %d; "
-                      "invertHint = %d",
-                      multi_nFinish, invertHint);
+                      "rebuild_reason = %d",
+                      multi_nFinish, rebuild_reason);
     }
     return;
   }
@@ -110,16 +110,16 @@ void HDual::majorChooseRow() {
     }
 
     // 3. Store the choiceIndex to buffer
-    for (int ich = 0; ich < multi_num; ich++) multi_choice[ich].rowOut = -1;
+    for (int ich = 0; ich < multi_num; ich++) multi_choice[ich].row_out = -1;
     for (int ich = 0; ich < choiceCount; ich++)
-      multi_choice[ich].rowOut = choiceIndex[ich];
+      multi_choice[ich].row_out = choiceIndex[ich];
 
     // 4. Parallel BTRAN and compute weight
     majorChooseRowBtran();
 
     // 5. Update row densities
     for (int ich = 0; ich < multi_num; ich++) {
-      if (multi_choice[ich].rowOut >= 0) {
+      if (multi_choice[ich].row_out >= 0) {
         const double local_row_ep_density =
             (double)multi_choice[ich].row_ep.count / solver_num_row;
         analysis->updateOperationResultDensity(local_row_ep_density,
@@ -131,14 +131,14 @@ void HDual::majorChooseRow() {
       // 6. Check updated and computed weight - just for dual steepest edge
       int countWrongEdWt = 0;
       for (int i = 0; i < multi_num; i++) {
-        const int iRow = multi_choice[i].rowOut;
+        const int iRow = multi_choice[i].row_out;
         if (iRow < 0) continue;
         double updated_edge_weight = dualRHS.workEdWt[iRow];
         computed_edge_weight = dualRHS.workEdWt[iRow] =
             multi_choice[i].infeasEdWt;
         //      if (updated_edge_weight < 0.25 * computed_edge_weight) {
         if (!acceptDualSteepestEdgeWeight(updated_edge_weight)) {
-          multi_choice[i].rowOut = -1;
+          multi_choice[i].row_out = -1;
           countWrongEdWt++;
         }
       }
@@ -153,7 +153,7 @@ void HDual::majorChooseRow() {
   multi_chosen = 0;
   double pami_cutoff = 0.95;
   for (int i = 0; i < multi_num; i++) {
-    const int iRow = multi_choice[i].rowOut;
+    const int iRow = multi_choice[i].row_out;
     if (iRow < 0) continue;
     multi_chosen++;
     // Other info
@@ -181,8 +181,8 @@ void HDual::majorChooseRowBtran() {
   double multi_EdWt[HIGHS_THREAD_LIMIT];
   HVector_ptr multi_vector[HIGHS_THREAD_LIMIT];
   for (int ich = 0; ich < multi_num; ich++) {
-    if (multi_choice[ich].rowOut >= 0) {
-      multi_iRow[multi_ntasks] = multi_choice[ich].rowOut;
+    if (multi_choice[ich].row_out >= 0) {
+      multi_iRow[multi_ntasks] = multi_choice[ich].row_out;
       multi_vector[multi_ntasks] = &multi_choice[ich].row_ep;
       multi_iwhich[multi_ntasks] = ich;
       multi_ntasks++;
@@ -239,7 +239,7 @@ void HDual::minorChooseRow() {
   multi_iChoice = -1;
   double bestMerit = 0;
   for (int ich = 0; ich < multi_num; ich++) {
-    const int iRow = multi_choice[ich].rowOut;
+    const int iRow = multi_choice[ich].row_out;
     if (iRow < 0) continue;
     double infeasValue = multi_choice[ich].infeasValue;
     double infeasEdWt = multi_choice[ich].infeasEdWt;
@@ -253,22 +253,22 @@ void HDual::minorChooseRow() {
   /**
    * 2. Obtain other info for current sub-optimization choice
    */
-  rowOut = -1;
+  row_out = -1;
   if (multi_iChoice != -1) {
     MChoice* workChoice = &multi_choice[multi_iChoice];
 
     // Assign useful variables
-    rowOut = workChoice->rowOut;
-    variable_out = workHMO.simplex_basis_.basicIndex_[rowOut];
+    row_out = workChoice->row_out;
+    variable_out = workHMO.simplex_basis_.basicIndex_[row_out];
     double valueOut = workChoice->baseValue;
     double lowerOut = workChoice->baseLower;
     double upperOut = workChoice->baseUpper;
-    deltaPrimal = valueOut - (valueOut < lowerOut ? lowerOut : upperOut);
-    sourceOut = deltaPrimal < 0 ? -1 : 1;
+    delta_primal = valueOut - (valueOut < lowerOut ? lowerOut : upperOut);
+    move_out = delta_primal < 0 ? -1 : 1;
 
     // Assign buffers
     MFinish* finish = &multi_finish[multi_nFinish];
-    finish->rowOut = rowOut;
+    finish->row_out = row_out;
     finish->variable_out = variable_out;
     finish->row_ep = &workChoice->row_ep;
     finish->col_aq = &workChoice->col_aq;
@@ -277,7 +277,7 @@ void HDual::minorChooseRow() {
     finish->EdWt = workChoice->infeasEdWt;
 
     // Disable current row
-    workChoice->rowOut = -1;
+    workChoice->row_out = -1;
   }
 }
 
@@ -310,7 +310,7 @@ void HDual::minorUpdate() {
   // Minor update - check for the next iteration
   int countRemain = 0;
   for (int i = 0; i < multi_num; i++) {
-    int iRow = multi_choice[i].rowOut;
+    int iRow = multi_choice[i].row_out;
     if (iRow < 0) continue;
     double myInfeas = multi_choice[i].infeasValue;
     double myWeight = multi_choice[i].infeasEdWt;
@@ -324,17 +324,17 @@ void HDual::minorUpdateDual() {
    * 1. Update the dual solution
    *    XXX Data parallel (depends on the ap partition before)
    */
-  if (thetaDual == 0) {
+  if (theta_dual == 0) {
     shift_cost(workHMO, variable_in, -workDual[variable_in]);
   } else {
-    dualRow.updateDual(thetaDual);
+    dualRow.updateDual(theta_dual);
     if (slice_PRICE) {
       for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].updateDual(thetaDual);
+        slice_dualRow[i].updateDual(theta_dual);
     }
   }
   workDual[variable_in] = 0;
-  workDual[variable_out] = -thetaDual;
+  workDual[variable_out] = -theta_dual;
   shift_back(workHMO, variable_out);
 
   /**
@@ -346,7 +346,7 @@ void HDual::minorUpdateDual() {
    * 3. Apply local bound flips
    */
   for (int ich = 0; ich < multi_num; ich++) {
-    if (ich == multi_iChoice || multi_choice[ich].rowOut >= 0) {
+    if (ich == multi_iChoice || multi_choice[ich].row_out >= 0) {
       HVector* this_ep = &multi_choice[ich].row_ep;
       for (int i = 0; i < dualRow.workCount; i++) {
         double dot = matrix->compute_dot(*this_ep, dualRow.workData[i].first);
@@ -362,27 +362,27 @@ void HDual::minorUpdatePrimal() {
   double valueOut = choice->baseValue;
   double lowerOut = choice->baseLower;
   double upperOut = choice->baseUpper;
-  if (deltaPrimal < 0) {
-    thetaPrimal = (valueOut - lowerOut) / alphaRow;
+  if (delta_primal < 0) {
+    theta_primal = (valueOut - lowerOut) / alpha_row;
     finish->basicBound = lowerOut;
   }
-  if (deltaPrimal > 0) {
-    thetaPrimal = (valueOut - upperOut) / alphaRow;
+  if (delta_primal > 0) {
+    theta_primal = (valueOut - upperOut) / alpha_row;
     finish->basicBound = upperOut;
   }
-  finish->thetaPrimal = thetaPrimal;
+  finish->theta_primal = theta_primal;
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
       !new_devex_framework) {
-    assert(rowOut >= 0);
-    if (rowOut < 0) printf("ERROR: rowOut = %d in minorUpdatePrimal\n", rowOut);
-    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
+    assert(row_out >= 0);
+    if (row_out < 0) printf("ERROR: row_out = %d in minorUpdatePrimal\n", row_out);
+    const double updated_edge_weight = dualRHS.workEdWt[row_out];
     new_devex_framework = newDevexFramework(updated_edge_weight);
     minor_new_devex_framework = new_devex_framework;
     // Transform the edge weight of the pivotal row according to the
     // simplex update
     double new_pivotal_edge_weight =
-        computed_edge_weight / (alphaRow * alphaRow);
+        computed_edge_weight / (alpha_row * alpha_row);
     new_pivotal_edge_weight = max(1.0, new_pivotal_edge_weight);
     // Store the Devex weight of the leaving row now - OK since it's
     // stored in finish->EdWt and the updated weights are stored in
@@ -392,13 +392,13 @@ void HDual::minorUpdatePrimal() {
 
   /**
    * 5. Update the other primal value
-   *    By the pivot (thetaPrimal)
+   *    By the pivot (theta_primal)
    */
   for (int ich = 0; ich < multi_num; ich++) {
-    if (multi_choice[ich].rowOut >= 0) {
+    if (multi_choice[ich].row_out >= 0) {
       HVector* this_ep = &multi_choice[ich].row_ep;
       double dot = matrix->compute_dot(*this_ep, variable_in);
-      multi_choice[ich].baseValue -= thetaPrimal * dot;
+      multi_choice[ich].baseValue -= theta_primal * dot;
       double value = multi_choice[ich].baseValue;
       double lower = multi_choice[ich].baseLower;
       double upper = multi_choice[ich].baseUpper;
@@ -420,22 +420,22 @@ void HDual::minorUpdatePrimal() {
 }
 void HDual::minorUpdatePivots() {
   MFinish* finish = &multi_finish[multi_nFinish];
-  update_pivots(workHMO, variable_in, rowOut, sourceOut);
+  update_pivots(workHMO, variable_in, row_out, move_out);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     // Transform the edge weight of the pivotal row according to the
     // simplex update
-    finish->EdWt /= (alphaRow * alphaRow);
+    finish->EdWt /= (alpha_row * alpha_row);
   }
-  finish->basicValue = workHMO.simplex_info_.workValue_[variable_in] + thetaPrimal;
+  finish->basicValue = workHMO.simplex_info_.workValue_[variable_in] + theta_primal;
   update_matrix(workHMO, variable_in, variable_out);
   finish->variable_in = variable_in;
-  finish->alphaRow = alphaRow;
+  finish->alpha_row = alpha_row;
   // numericalTrouble is not set in minor iterations, only in
   // majorUpdate, so set it to an illegal value so that its
   // distribution is not updated
   numericalTrouble = -1;
   // Move thisTo Simplex class once it's created
-  // simplex_method.record_pivots(variable_in, variable_out, alphaRow);
+  // simplex_method.record_pivots(variable_in, variable_out, alpha_row);
   workHMO.iteration_counts_.simplex++;
 }
 
@@ -458,12 +458,12 @@ void HDual::minorUpdateRows() {
 
     // Collect tasks
     for (int ich = 0; ich < multi_num; ich++) {
-      if (multi_choice[ich].rowOut >= 0) {
+      if (multi_choice[ich].row_out >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
         double pivotX = matrix->compute_dot(*next_ep, variable_in);
         if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
         multi_vector[multi_nTasks] = next_ep;
-        multi_xpivot[multi_nTasks] = -pivotX / alphaRow;
+        multi_xpivot[multi_nTasks] = -pivotX / alpha_row;
         multi_iwhich[multi_nTasks] = ich;
         multi_nTasks++;
       }
@@ -489,11 +489,11 @@ void HDual::minorUpdateRows() {
   } else {
     // Sparse mode: just do it sequentially
     for (int ich = 0; ich < multi_num; ich++) {
-      if (multi_choice[ich].rowOut >= 0) {
+      if (multi_choice[ich].row_out >= 0) {
         HVector* next_ep = &multi_choice[ich].row_ep;
         double pivotX = matrix->compute_dot(*next_ep, variable_in);
         if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
-        next_ep->saxpy(-pivotX / alphaRow, Row);
+        next_ep->saxpy(-pivotX / alpha_row, Row);
         next_ep->tight();
         if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
           multi_choice[ich].infeasEdWt = next_ep->norm2();
@@ -516,7 +516,7 @@ void HDual::majorUpdate() {
   /**
    * 0. See if it's ready to perform a major update
    */
-  if (invertHint) multi_chooseAgain = 1;
+  if (rebuild_reason) multi_chooseAgain = 1;
   if (!multi_chooseAgain) return;
 
   // Major update - FTRANs
@@ -528,15 +528,15 @@ void HDual::majorUpdate() {
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* iFinish = &multi_finish[iFn];
     HVector* iColumn = iFinish->col_aq;
-    int iRowOut = iFinish->rowOut;
+    int iRow_Out = iFinish->row_out;
 
     // Use the two pivot values to identify numerical trouble
     if (reinvertOnNumericalTrouble("HDual::majorUpdate", workHMO,
-                                   numericalTrouble, iColumn->array[iRowOut],
-                                   iFinish->alphaRow,
+                                   numericalTrouble, iColumn->array[iRow_Out],
+                                   iFinish->alpha_row,
                                    multi_numerical_trouble_tolerance)) {
       // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
-      invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+      rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
       // if (startUpdate > 0) {
       majorRollback();
       return;
@@ -561,7 +561,7 @@ void HDual::majorUpdateFtranPrepare() {
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
     HVector* Vec = finish->col_BFRT;
-    matrix->collect_aj(*Vec, finish->variable_in, finish->thetaPrimal);
+    matrix->collect_aj(*Vec, finish->variable_in, finish->theta_primal);
 
     // Update this buffer by previous Row_ep
     for (int jFn = iFn - 1; jFn >= 0; jFn--) {
@@ -573,7 +573,7 @@ void HDual::majorUpdateFtranPrepare() {
         pivotX += Vec->array[iRow] * jRow_epArray[iRow];
       }
       if (fabs(pivotX) > HIGHS_CONST_TINY) {
-        pivotX /= jFinish->alphaRow;
+        pivotX /= jFinish->alpha_row;
         matrix->collect_aj(*Vec, jFinish->variable_in, -pivotX);
         matrix->collect_aj(*Vec, jFinish->variable_out, pivotX);
       }
@@ -688,8 +688,8 @@ void HDual::majorUpdateFtranFinal() {
       double* myCol = &multi_finish[iFn].col_aq->array[0];
       double* myRow = &multi_finish[iFn].row_ep->array[0];
       for (int jFn = 0; jFn < iFn; jFn++) {
-        int pivotRow = multi_finish[jFn].rowOut;
-        const double pivotAlpha = multi_finish[jFn].alphaRow;
+        int pivotRow = multi_finish[jFn].row_out;
+        const double pivotAlpha = multi_finish[jFn].alpha_row;
         const double* pivotArray = &multi_finish[jFn].col_aq->array[0];
         double pivotX1 = myCol[pivotRow];
         double pivotX2 = myRow[pivotRow];
@@ -719,18 +719,18 @@ void HDual::majorUpdateFtranFinal() {
       HVector* Row = finish->row_ep;
       for (int jFn = 0; jFn < iFn; jFn++) {
         MFinish* jFinish = &multi_finish[jFn];
-        int pivotRow = jFinish->rowOut;
+        int pivotRow = jFinish->row_out;
         double pivotX1 = Col->array[pivotRow];
         // The FTRAN regular buffer
         if (fabs(pivotX1) > HIGHS_CONST_TINY) {
-          pivotX1 /= jFinish->alphaRow;
+          pivotX1 /= jFinish->alpha_row;
           Col->saxpy(-pivotX1, jFinish->col_aq);
           Col->array[pivotRow] = pivotX1;
         }
         // The FTRAN-DSE buffer
         double pivotX2 = Row->array[pivotRow];
         if (fabs(pivotX2) > HIGHS_CONST_TINY) {
-          pivotX2 /= jFinish->alphaRow;
+          pivotX2 /= jFinish->alpha_row;
           Row->saxpy(-pivotX2, jFinish->col_aq);
           Row->array[pivotRow] = pivotX2;
         }
@@ -773,7 +773,7 @@ void HDual::majorUpdatePrimal() {
         if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
           // Update steepest edge weights
           const double* dseArray = &multi_finish[iFn].row_ep->array[0];
-          const double Kai = -2 / multi_finish[iFn].alphaRow;
+          const double Kai = -2 / multi_finish[iFn].alpha_row;
 #pragma omp parallel for schedule(static)
           for (int iRow = 0; iRow < solver_num_row; iRow++) {
             const double aa_iRow = colArray[iRow];
@@ -809,7 +809,7 @@ void HDual::majorUpdatePrimal() {
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
         // Update steepest edge weights
         HVector* Row = finish->row_ep;
-        double Kai = -2 / finish->alphaRow;
+        double Kai = -2 / finish->alpha_row;
         dualRHS.updateWeightDualSteepestEdge(Col, new_pivotal_edge_weight, Kai,
                                              &Row->array[0]);
       } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
@@ -824,7 +824,7 @@ void HDual::majorUpdatePrimal() {
   // Update primal value for the rows pivotal in this set of MI
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
-    int iRow = finish->rowOut;
+    int iRow = finish->row_out;
     double value = baseValue[iRow] - finish->basicBound + finish->basicValue;
     dualRHS.updatePivots(iRow, value);
   }
@@ -835,16 +835,16 @@ void HDual::majorUpdatePrimal() {
        !new_devex_framework)) {
     // Update weights for the pivots using the computed values.
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-      const int iRow = multi_finish[iFn].rowOut;
+      const int iRow = multi_finish[iFn].row_out;
       const double new_pivotal_edge_weight = multi_finish[iFn].EdWt;
       const double* colArray = &multi_finish[iFn].col_aq->array[0];
       // The weight for this pivot is known, but weights for rows
       // pivotal earlier need to be updated
       if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
         const double* dseArray = &multi_finish[iFn].row_ep->array[0];
-        double Kai = -2 / multi_finish[iFn].alphaRow;
+        double Kai = -2 / multi_finish[iFn].alpha_row;
         for (int jFn = 0; jFn < iFn; jFn++) {
-          int jRow = multi_finish[jFn].rowOut;
+          int jRow = multi_finish[jFn].row_out;
           double value = colArray[jRow];
           double EdWt = dualRHS.workEdWt[jRow];
           EdWt +=
@@ -856,7 +856,7 @@ void HDual::majorUpdatePrimal() {
         dualRHS.workEdWt[iRow] = new_pivotal_edge_weight;
       } else {
         for (int jFn = 0; jFn < iFn; jFn++) {
-          int jRow = multi_finish[jFn].rowOut;
+          int jRow = multi_finish[jFn].row_out;
           const double aa_iRow = colArray[iRow];
           double EdWt = dualRHS.workEdWt[jRow];
           EdWt = max(EdWt, new_pivotal_edge_weight * aa_iRow * aa_iRow);
@@ -878,12 +878,12 @@ void HDual::majorUpdateFactor() {
   for (int iCh = 0; iCh < multi_nFinish - 1; iCh++) {
     multi_finish[iCh].row_ep->next = multi_finish[iCh + 1].row_ep;
     multi_finish[iCh].col_aq->next = multi_finish[iCh + 1].col_aq;
-    iRows[iCh] = multi_finish[iCh].rowOut;
+    iRows[iCh] = multi_finish[iCh].row_out;
   }
-  iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].rowOut;
+  iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].row_out;
   if (multi_nFinish > 0)
     update_factor(workHMO, multi_finish[0].col_aq, multi_finish[0].row_ep,
-                  iRows, &invertHint);
+                  iRows, &rebuild_reason);
 
   // Determine whether to reinvert based on the synthetic clock
   const double use_build_syntheticTick =
@@ -894,7 +894,7 @@ void HDual::majorUpdateFactor() {
       workHMO.simplex_info_.update_count >=
       multi_synthetic_tick_reinversion_min_update_count;
   if (reinvert_syntheticClock && performed_min_updates)
-    invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
+    rebuild_reason = REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT;
 
   delete[] iRows;
 }
@@ -908,7 +908,7 @@ void HDual::majorRollback() {
     workHMO.simplex_basis_.nonbasicFlag_[finish->variable_in] = 1;
     workHMO.simplex_basis_.nonbasicMove_[finish->variable_out] = 0;
     workHMO.simplex_basis_.nonbasicFlag_[finish->variable_out] = 0;
-    workHMO.simplex_basis_.basicIndex_[finish->rowOut] = finish->variable_out;
+    workHMO.simplex_basis_.basicIndex_[finish->row_out] = finish->variable_out;
 
     // 2. Roll back matrix
     update_matrix(workHMO, finish->variable_out, finish->variable_in);
@@ -950,8 +950,8 @@ void HDual::iterationAnalysisMinorData() {
 
 void HDual::iterationAnalysisMinor() {
   // Possibly report on the iteration
-  // PAMI uses alphaRow but serial solver uses alpha
-  alphaCol = alphaRow;
+  // PAMI uses alpha_row but serial solver uses alpha
+  alpha_col = alpha_row;
   iterationAnalysisData();
   iterationAnalysisMinorData();
   analysis->iterationReport();

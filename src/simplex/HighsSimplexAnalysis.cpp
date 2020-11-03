@@ -177,8 +177,8 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     initialiseValueDistribution("", "density ", 1e-8, 1.0, 10.0,
                                 AnIter->AnIterOp_density);
   }
-  int last_invert_hint = INVERT_HINT_Count - 1;
-  for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
+  int last_rebuild_reason = REBUILD_REASON_Count - 1;
+  for (int k = 1; k <= last_rebuild_reason; k++) AnIterNumInvert[k] = 0;
   num_col_price = 0;
   num_row_price = 0;
   num_row_price_with_switch = 0;
@@ -259,8 +259,8 @@ void HighsSimplexAnalysis::invertReport() {
   }
   invertReport(false);
   // Force an iteration report header if this is an INVERT report without an
-  // invert_hint
-  if (!invert_hint) num_iteration_report_since_last_header = -1;
+  // rebuild_reason
+  if (!rebuild_reason) num_iteration_report_since_last_header = -1;
 }
 
 void HighsSimplexAnalysis::invertReport(const bool header) {
@@ -672,7 +672,7 @@ void HighsSimplexAnalysis::reportFactorTimer() {
 
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
-  if (invert_hint > 0) AnIterNumInvert[invert_hint]++;
+  if (rebuild_reason > 0) AnIterNumInvert[rebuild_reason]++;
   if (AnIterCuIt > AnIterPrevIt)
     AnIterNumEdWtIt[(int)edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
 
@@ -843,39 +843,39 @@ void HighsSimplexAnalysis::summaryReport() {
   }
   int NumInvert = 0;
 
-  int last_invert_hint = INVERT_HINT_Count - 1;
-  for (int k = 1; k <= last_invert_hint; k++) NumInvert += AnIterNumInvert[k];
+  int last_rebuild_reason = REBUILD_REASON_Count - 1;
+  for (int k = 1; k <= last_rebuild_reason; k++) NumInvert += AnIterNumInvert[k];
   if (NumInvert > 0) {
     int lcNumInvert = 0;
     printf("\nInvert    performed %d times: average frequency = %d\n",
            NumInvert, AnIterNumIter / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_UPDATE_LIMIT_REACHED];
+    lcNumInvert = AnIterNumInvert[REBUILD_REASON_UPDATE_LIMIT_REACHED];
     if (lcNumInvert > 0)
       printf("%12d (%3d%%) Invert operations due to update limit reached\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT];
+    lcNumInvert = AnIterNumInvert[REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT];
     if (lcNumInvert > 0)
       printf("%12d (%3d%%) Invert operations due to pseudo-clock\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_OPTIMAL];
+    lcNumInvert = AnIterNumInvert[REBUILD_REASON_POSSIBLY_OPTIMAL];
     if (lcNumInvert > 0)
       printf("%12d (%3d%%) Invert operations due to possibly optimal\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED];
+    lcNumInvert = AnIterNumInvert[REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED];
     if (lcNumInvert > 0)
       printf(
           "%12d (%3d%%) Invert operations due to possibly primal unbounded\n",
           lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED];
+    lcNumInvert = AnIterNumInvert[REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED];
     if (lcNumInvert > 0)
       printf("%12d (%3d%%) Invert operations due to possibly dual unbounded\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_SINGULAR_BASIS];
+    lcNumInvert = AnIterNumInvert[REBUILD_REASON_POSSIBLY_SINGULAR_BASIS];
     if (lcNumInvert > 0)
       printf("%12d (%3d%%) Invert operations due to possibly singular basis\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
     lcNumInvert =
-        AnIterNumInvert[INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX];
+        AnIterNumInvert[REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX];
     if (lcNumInvert > 0)
       printf(
           "%12d (%3d%%) Invert operations due to primal infeasible in primal "
@@ -1200,7 +1200,7 @@ void HighsSimplexAnalysis::reportInvert(const bool header,
     HighsPrintMessage(output, message_level, this_message_level, " Inv");
   } else {
     HighsPrintMessage(output, message_level, this_message_level, "  %2d",
-                      invert_hint);
+                      rebuild_reason);
   }
 }
 
@@ -1218,13 +1218,13 @@ void HighsSimplexAnalysis::reportCondition(const bool header,
 
 // Primal:
 // * primal_delta - 0
-// * dual_step    - thetaDual
-// * primal_step  - thetaPrimal
+// * dual_step    - theta_dual
+// * primal_step  - theta_primal
 //
 // Dual:
-// * primal_delta - deltaPrimal
-// * dual_step    - thetaDual
-// * primal_step  - thetaPrimal
+// * primal_delta - delta_primal
+// * dual_step    - theta_dual
+// * primal_step  - theta_primal
 void HighsSimplexAnalysis::reportIterationData(const bool header,
                                                const int this_message_level) {
   if (header) {

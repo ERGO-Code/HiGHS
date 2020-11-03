@@ -966,29 +966,29 @@ void HEkk::updateFactor(HVector* column, HVector* row_ep, int* iRow,
   // Now have a representation of B^{-1}, but it is not fresh
   simplex_lp_status_.has_invert = true;
   if (simplex_info_.update_count >= simplex_info_.update_limit)
-    *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+    *hint = REBUILD_REASON_UPDATE_LIMIT_REACHED;
 
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock = total_syntheticTick_ >= build_syntheticTick_;
   const bool performed_min_updates =
       simplex_info_.update_count >= synthetic_tick_reinversion_min_update_count;
   if (reinvert_syntheticClock && performed_min_updates)
-    *hint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
+    *hint = REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT;
 
   analysis_.simplexTimerStop(UpdateFactorClock);
 }
 
-void HEkk::updatePivots(const int variable_in, const int rowOut,
-                        const int sourceOut) {
+void HEkk::updatePivots(const int variable_in, const int row_out,
+                        const int move_out) {
   analysis_.simplexTimerStart(UpdatePivotsClock);
-  int variable_out = simplex_basis_.basicIndex_[rowOut];
+  int variable_out = simplex_basis_.basicIndex_[row_out];
 
   // Incoming variable
-  simplex_basis_.basicIndex_[rowOut] = variable_in;
+  simplex_basis_.basicIndex_[row_out] = variable_in;
   simplex_basis_.nonbasicFlag_[variable_in] = 0;
   simplex_basis_.nonbasicMove_[variable_in] = 0;
-  simplex_info_.baseLower_[rowOut] = simplex_info_.workLower_[variable_in];
-  simplex_info_.baseUpper_[rowOut] = simplex_info_.workUpper_[variable_in];
+  simplex_info_.baseLower_[row_out] = simplex_info_.workLower_[variable_in];
+  simplex_info_.baseUpper_[row_out] = simplex_info_.workUpper_[variable_in];
 
   // Outgoing variable
   simplex_basis_.nonbasicFlag_[variable_out] = 1;
@@ -996,7 +996,7 @@ void HEkk::updatePivots(const int variable_in, const int rowOut,
       simplex_info_.workUpper_[variable_out]) {
     simplex_info_.workValue_[variable_out] = simplex_info_.workLower_[variable_out];
     simplex_basis_.nonbasicMove_[variable_out] = 0;
-  } else if (sourceOut == -1) {
+  } else if (move_out == -1) {
     simplex_info_.workValue_[variable_out] = simplex_info_.workLower_[variable_out];
     simplex_basis_.nonbasicMove_[variable_out] = 1;
   } else {

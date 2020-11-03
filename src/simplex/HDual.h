@@ -142,8 +142,8 @@ class HDual {
   /**
    * @brief Perform a single serial dual simplex iteration
    *
-   * All the methods it calls have as their first line "if (invertHint)
-   * return;", where invertHint is, for example, set to 1 when CHUZR
+   * All the methods it calls have as their first line "if (rebuild_reason)
+   * return;", where rebuild_reason is, for example, set to 1 when CHUZR
    * finds no candidate. This causes a break from the inner loop of
    * solve_phase% and, hence, a call to rebuild().
    */
@@ -195,7 +195,7 @@ class HDual {
   /**
    * @brief Single line report after rebuild
    */
-  void reportRebuild(const int rebuild_invert_hint = -1);
+  void reportRebuild(const int reason_for_rebuild = -1);
 
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
@@ -443,7 +443,7 @@ class HDual {
   double dual_objective_value_upper_bound;
 
   int solvePhase;
-  int invertHint;
+  int rebuild_reason;
 
   HVector row_ep;
   HVector row_ap;
@@ -459,15 +459,15 @@ class HDual {
   HDualRHS dualRHS;
 
   // Simplex pivotal information
-  int rowOut;
+  int row_out;
   int variable_out;
-  int sourceOut;  // -1 from small to lower, +1 to upper
+  int move_out;  // -1 from small to lower, +1 to upper
   int variable_in;
-  double deltaPrimal;
-  double thetaDual;
-  double thetaPrimal;
-  double alphaCol;
-  double alphaRow;
+  double delta_primal;
+  double theta_dual;
+  double theta_primal;
+  double alpha_col;
+  double alpha_row;
   double numericalTrouble;
   // (Local) value of computed weight
   double computed_edge_weight;
@@ -486,7 +486,7 @@ class HDual {
    * @brief Multiple CHUZR data
    */
   struct MChoice {
-    int rowOut;
+    int row_out;
     double baseValue;
     double baseLower;
     double baseUpper;
@@ -506,11 +506,11 @@ class HDual {
     double shiftOut;
     std::vector<int> flipList;
 
-    int rowOut;
+    int row_out;
     int variable_out;
     int variable_in;
-    double alphaRow;
-    double thetaPrimal;
+    double alpha_row;
+    double theta_primal;
     double basicBound;
     double basicValue;
     double EdWt;

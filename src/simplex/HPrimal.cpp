@@ -43,7 +43,7 @@ HighsStatus HPrimal::solve() {
     return HighsStatus::Error;
   }
 
-  invertHint = INVERT_HINT_NO;
+  rebuild_reason = REBUILD_REASON_NO;
 
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
@@ -189,8 +189,8 @@ void HPrimal::solvePhase2() {
   // updated value
   simplex_lp_status.has_primal_objective_value = false;
   simplex_lp_status.has_dual_objective_value = false;
-  // Set invertHint so that it's assigned when first tested
-  invertHint = INVERT_HINT_NO;
+  // Set rebuild_reason so that it's assigned when first tested
+  rebuild_reason = REBUILD_REASON_NO;
   // Set solvePhase=2 so it's set if solvePhase2() is called directly
   solvePhase = 2;
   solve_bailout = false;
@@ -256,17 +256,17 @@ void HPrimal::solvePhase2() {
     for (;;) {
       primalChooseColumn();
       if (variable_in == -1) {
-        invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
+        rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
         break;
       }
       primalChooseRow();
-      if (rowOut == -1) {
-        invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
+      if (row_out == -1) {
+        rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED;
         break;
       }
       primalUpdate();
       if (bailout()) return;
-      if (invertHint) {
+      if (rebuild_reason) {
         break;
       }
     }
@@ -321,14 +321,14 @@ void HPrimal::primalRebuild() {
   }
 
   // Rebuild workHMO.factor_ - only if we got updates
-  int sv_invertHint = invertHint;
-  invertHint = INVERT_HINT_NO;
+  int sv_rebuild_reason = rebuild_reason;
+  rebuild_reason = REBUILD_REASON_NO;
   // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
   if (!invert_if_row_out_negative) {
-    // Don't reinvert if variable_in is negative [equivalently, if sv_invertHint ==
-    // INVERT_HINT_POSSIBLY_OPTIMAL]
-    if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {
+    // Don't reinvert if variable_in is negative [equivalently, if sv_rebuild_reason ==
+    // REBUILD_REASON_POSSIBLY_OPTIMAL]
+    if (sv_rebuild_reason == REBUILD_REASON_POSSIBLY_OPTIMAL) {
       assert(variable_in == -1);
       reInvert = false;
     }
@@ -375,7 +375,7 @@ void HPrimal::primalRebuild() {
   // simplex_info.num_dual_infeasibilities can be used
   copySimplexInfeasible(workHMO);
 
-  reportRebuild(sv_invertHint);
+  reportRebuild(sv_rebuild_reason);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
@@ -385,7 +385,7 @@ void HPrimal::primalRebuild() {
         analysis->simplexTimerRead(IteratePrimalRebuildClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
-        total_rebuilds, sv_invertHint, workHMO.iteration_counts_.simplex,
+        total_rebuilds, sv_rebuild_reason, workHMO.iteration_counts_.simplex,
         total_rebuild_time);
   }
 #endif
@@ -510,17 +510,17 @@ void HPrimal::primalChooseRow() {
       //    printf("Entry %2d: [%2d, %12g] Cost = %12g; check_dual_value =
       //    %12g\n", i, row, value, cost, check_dual_value);
     }
-    thetaDual = workDual[variable_in];
+    theta_dual = workDual[variable_in];
     double dual_error =
-        fabs(check_dual_value - thetaDual) / max(1.0, fabs(thetaDual));
+        fabs(check_dual_value - theta_dual) / max(1.0, fabs(theta_dual));
     if (dual_error > 1e-8)
       printf("Checking dual: updated = %12g; direct = %12g; error = %12g\n",
-             thetaDual, check_dual_value, dual_error);
+             theta_dual, check_dual_value, dual_error);
   }
 
   analysis->simplexTimerStart(Chuzr1Clock);
   // Initialize
-  rowOut = -1;
+  row_out = -1;
 
   // Choose row pass 1
   double alphaTol = workHMO.simplex_info_.update_count < 10
@@ -559,7 +559,7 @@ void HPrimal::primalChooseRow() {
       if (tightSpace < relaxTheta * alpha) {
         if (bestAlpha < alpha) {
           bestAlpha = alpha;
-          rowOut = index;
+          row_out = index;
         }
       }
     } else if (alpha < -alphaTol) {
@@ -568,7 +568,7 @@ void HPrimal::primalChooseRow() {
       if (tightSpace > relaxTheta * alpha) {
         if (bestAlpha < -alpha) {
           bestAlpha = -alpha;
-          rowOut = index;
+          row_out = index;
         }
       }
     }
@@ -589,40 +589,40 @@ void HPrimal::primalUpdate() {
       workHMO.scaled_solution_params_.primal_feasibility_tolerance;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
 
-  // Compute thetaPrimal
+  // Compute theta_primal
   int moveIn = jMove[variable_in];
   //  int
-  variable_out = workHMO.simplex_basis_.basicIndex_[rowOut];
+  variable_out = workHMO.simplex_basis_.basicIndex_[row_out];
   //  double
-  alpha = col_aq.array[rowOut];
+  alpha = col_aq.array[row_out];
   //  double
-  thetaPrimal = 0;
+  theta_primal = 0;
   if (alpha * moveIn > 0) {
     // Lower bound
-    thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alpha;
+    theta_primal = (baseValue[row_out] - baseLower[row_out]) / alpha;
   } else {
     // Upper bound
-    thetaPrimal = (baseValue[rowOut] - baseUpper[rowOut]) / alpha;
+    theta_primal = (baseValue[row_out] - baseUpper[row_out]) / alpha;
   }
 
   // 1. Make sure it is inside bounds or just flip bound
-  double lowerIn = workLower[variable_in];
-  double upperIn = workUpper[variable_in];
-  double valueIn = workValue[variable_in] + thetaPrimal;
+  double lower_in = workLower[variable_in];
+  double upper_in = workUpper[variable_in];
+  double value_in = workValue[variable_in] + theta_primal;
   bool flipped = false;
   if (jMove[variable_in] == 1) {
-    if (valueIn > upperIn + primalTolerance) {
+    if (value_in > upper_in + primalTolerance) {
       // Flip to upper
-      workValue[variable_in] = upperIn;
-      thetaPrimal = upperIn - lowerIn;
+      workValue[variable_in] = upper_in;
+      theta_primal = upper_in - lower_in;
       flipped = true;
       jMove[variable_in] = -1;
     }
   } else if (jMove[variable_in] == -1) {
-    if (valueIn < lowerIn - primalTolerance) {
+    if (value_in < lower_in - primalTolerance) {
       // Flip to lower
-      workValue[variable_in] = lowerIn;
-      thetaPrimal = lowerIn - upperIn;
+      workValue[variable_in] = lower_in;
+      theta_primal = lower_in - upper_in;
       flipped = true;
       jMove[variable_in] = 1;
     }
@@ -631,12 +631,12 @@ void HPrimal::primalUpdate() {
   analysis->simplexTimerStart(UpdatePrimalClock);
   for (int i = 0; i < col_aq.count; i++) {
     int index = col_aq.index[i];
-    baseValue[index] -= thetaPrimal * col_aq.array[index];
+    baseValue[index] -= theta_primal * col_aq.array[index];
   }
   analysis->simplexTimerStop(UpdatePrimalClock);
 
   simplex_info.updated_primal_objective_value +=
-      workDual[variable_in] * thetaPrimal;
+      workDual[variable_in] * theta_primal;
 
   // Why is the detailed primal infeasibility information needed?
   computeSimplexPrimalInfeasible(workHMO);
@@ -644,29 +644,29 @@ void HPrimal::primalUpdate() {
 
   // If flipped, then no need touch the pivots
   if (flipped) {
-    rowOut = -1;
+    row_out = -1;
     numericalTrouble = 0;
-    thetaDual = workDual[variable_in];
+    theta_dual = workDual[variable_in];
     iterationAnalysis();
     num_flip_since_rebuild++;
     return;
   }
 
   // Pivot in
-  int sourceOut = alpha * moveIn > 0 ? -1 : 1;
+  int move_out = alpha * moveIn > 0 ? -1 : 1;
   analysis->simplexTimerStart(IteratePivotsClock);
-  update_pivots(workHMO, variable_in, rowOut, sourceOut);
+  update_pivots(workHMO, variable_in, row_out, move_out);
   analysis->simplexTimerStop(IteratePivotsClock);
 
-  baseValue[rowOut] = valueIn;
+  baseValue[row_out] = value_in;
 
   analysis->simplexTimerStart(CollectPrIfsClock);
   // Check for any possible infeasible
   for (int iRow = 0; iRow < solver_num_row; iRow++) {
     if (baseValue[iRow] < baseLower[iRow] - primalTolerance) {
-      invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
+      rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     } else if (baseValue[iRow] > baseUpper[iRow] + primalTolerance) {
-      invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
+      rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     }
   }
   analysis->simplexTimerStop(CollectPrIfsClock);
@@ -677,8 +677,8 @@ void HPrimal::primalUpdate() {
   row_ep.clear();
   row_ap.clear();
   row_ep.count = 1;
-  row_ep.index[0] = rowOut;
-  row_ep.array[rowOut] = 1;
+  row_ep.index[0] = row_out;
+  row_ep.array[row_out] = 1;
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
@@ -717,15 +717,15 @@ void HPrimal::primalUpdate() {
   */
   analysis->simplexTimerStart(UpdateDualClock);
   //  double
-  thetaDual = workDual[variable_in] / alpha;
+  theta_dual = workDual[variable_in] / alpha;
   for (int i = 0; i < row_ap.count; i++) {
     int iCol = row_ap.index[i];
-    workDual[iCol] -= thetaDual * row_ap.array[iCol];
+    workDual[iCol] -= theta_dual * row_ap.array[iCol];
   }
   for (int i = 0; i < row_ep.count; i++) {
     int iGet = row_ep.index[i];
     int iCol = iGet + solver_num_col;
-    workDual[iCol] -= thetaDual * row_ep.array[iGet];
+    workDual[iCol] -= theta_dual * row_ep.array[iGet];
   }
   analysis->simplexTimerStop(UpdateDualClock);
 
@@ -736,32 +736,32 @@ void HPrimal::primalUpdate() {
   numericalTrouble = 0;
   /*
   double aCol = fabs(alpha);
-  double alphaRow;
+  double alpha_row;
   if (variable_in < workHMO.simplex_lp_.numCol_) {
-    alphaRow = row_ap.array[variable_in];
+    alpha_row = row_ap.array[variable_in];
   } else {
-    alphaRow = row_ep.array[rowOut];
+    alpha_row = row_ep.array[row_out];
   }
-  double aRow = fabs(alphaRow);
+  double aRow = fabs(alpha_row);
   double aDiff = fabs(aCol - aRow);
   numericalTrouble = aDiff / min(aCol, aRow);
   if (numericalTrouble > 1e-7)
-    printf("Numerical check: alphaCol = %12g, alphaRow = a%12g, aDiff = a%12g:
-  measure = %12g\n", alpha, alphaRow, aDiff, numericalTrouble);
+    printf("Numerical check: alpha_col = %12g, alpha_row = a%12g, aDiff = a%12g:
+  measure = %12g\n", alpha, alpha_row, aDiff, numericalTrouble);
   // Reinvert if the relative difference is large enough, and updates have been
   performed
   //  if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0)
-  invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+  rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
   */
   // Dual for the pivot
   workDual[variable_in] = 0;
-  workDual[variable_out] = -thetaDual;
+  workDual[variable_out] = -theta_dual;
 
   // Update workHMO.factor_ basis
-  update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
+  update_factor(workHMO, &col_aq, &row_ep, &row_out, &rebuild_reason);
   update_matrix(workHMO, variable_in, variable_out);
   if (simplex_info.update_count >= simplex_info.update_limit) {
-    invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+    rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
   }
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(variable_in, variable_out, alpha);
@@ -785,16 +785,16 @@ void HPrimal::iterationAnalysisData() {
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = workHMO.iteration_counts_.simplex;
   analysis->devex_iteration_count = 0;
-  analysis->pivotal_row_index = rowOut;
+  analysis->pivotal_row_index = row_out;
   analysis->leaving_variable = variable_out;
   analysis->entering_variable = variable_in;
-  analysis->invert_hint = invertHint;
+  analysis->rebuild_reason = rebuild_reason;
   analysis->reduced_rhs_value = 0;
   analysis->reduced_cost_value = 0;
   analysis->edge_weight = 0;
   analysis->primal_delta = 0;
-  analysis->primal_step = thetaPrimal;
-  analysis->dual_step = thetaDual;
+  analysis->primal_step = theta_primal;
+  analysis->dual_step = theta_dual;
   analysis->pivot_value_from_column = alpha;
   analysis->pivot_value_from_row = alpha;  // Row;
   analysis->numerical_trouble = numericalTrouble;
@@ -820,10 +820,10 @@ void HPrimal::iterationAnalysis() {
 #endif
 }
 
-void HPrimal::reportRebuild(const int rebuild_invert_hint) {
+void HPrimal::reportRebuild(const int reason_for_rebuild) {
   analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
-  analysis->invert_hint = rebuild_invert_hint;
+  analysis->rebuild_reason = reason_for_rebuild;
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }

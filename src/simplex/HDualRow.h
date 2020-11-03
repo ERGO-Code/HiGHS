@@ -162,7 +162,7 @@ class HDualRow {
   // (Local) value of computed weight
   double computed_edge_weight;
 
-  double workDelta;  //!< Local copy of dual.deltaPrimal
+  double workDelta;  //!< Local copy of dual.delta_primal
   double workAlpha;  //!< Original copy of pivotal computed row-wise
   double workTheta;  //!< Original copy of dual step workDual[workPivot] /
                      //!< workAlpha;

@@ -90,13 +90,13 @@ void HDualRow::choosePossible() {
                         ? 1e-9
                         : workHMO.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
   const double Td = workHMO.scaled_solution_params_.dual_feasibility_tolerance;
-  const int sourceOut = workDelta < 0 ? -1 : 1;
+  const int move_out = workDelta < 0 ? -1 : 1;
   workTheta = HIGHS_CONST_INF;
   workCount = 0;
   for (int i = 0; i < packCount; i++) {
     const int iCol = packIndex[i];
     const int move = workMove[iCol];
-    const double alpha = packValue[i] * sourceOut * move;
+    const double alpha = packValue[i] * move_out * move;
     if (alpha > Ta) {
       workData[workCount++] = make_pair(iCol, alpha);
       const double relax = workDual[iCol] * move + Td;
@@ -223,14 +223,14 @@ bool HDualRow::chooseFinal() {
   }
   analysis->simplexTimerStart(Chuzc3cClock);
 
-  int sourceOut = workDelta < 0 ? -1 : 1;
+  int move_out = workDelta < 0 ? -1 : 1;
   if (use_quad_sort) {
     workPivot = workData[breakIndex].first;
-    workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
+    workAlpha = workData[breakIndex].second * move_out * workMove[workPivot];
   } else {
     workPivot = sorted_workData[breakIndex].first;
     workAlpha =
-        sorted_workData[breakIndex].second * sourceOut * workMove[workPivot];
+        sorted_workData[breakIndex].second * move_out * workMove[workPivot];
   }
   if (workDual[workPivot] * workMove[workPivot] > 0) {
     workTheta = workDual[workPivot] / workAlpha;
@@ -475,14 +475,14 @@ void HDualRow::createFreemove(HVector* row_ep) {
     double Ta = workHMO.simplex_info_.update_count < 10
                     ? 1e-9
                     : workHMO.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
-    int sourceOut = workDelta < 0 ? -1 : 1;
+    int move_out = workDelta < 0 ? -1 : 1;
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
       assert(iCol < workHMO.simplex_lp_.numCol_);
       double alpha = workHMO.matrix_.compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
-        if (alpha * sourceOut > 0)
+        if (alpha * move_out > 0)
           workHMO.simplex_basis_.nonbasicMove_[iCol] = 1;
         else
           workHMO.simplex_basis_.nonbasicMove_[iCol] = -1;

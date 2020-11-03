@@ -88,7 +88,7 @@ class HDualRHS {
    */
   void updateWeightDualSteepestEdge(
       HVector* column,            //!< Pivotal column
-      const double rowOutWeight,  //!< (Edge weight of leaving row)/alpha^2
+      const double row_outWeight,  //!< (Edge weight of leaving row)/alpha^2
       double Kai,                 //!< -2/alpha
       double* dse                 //!< DSE std::vector
   );
@@ -96,7 +96,7 @@ class HDualRHS {
    * @brief Update the Devex weights
    */
   void updateWeightDevex(HVector* column,           //!< Pivotal column
-                         const double rowOutWeight  //!< max(1, (Edge weight of
+                         const double row_outWeight  //!< max(1, (Edge weight of
                                                     //!< leaving row)/alpha^2)
   );
   /**

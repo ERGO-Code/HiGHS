@@ -73,7 +73,7 @@ HighsStatus HDual::solve() {
     return returnFromSolve(HighsStatus::Error);
   }
 
-  invertHint = INVERT_HINT_NO;
+  rebuild_reason = REBUILD_REASON_NO;
 
   // Set solve_bailout to be true if control is to be returned immediately to
   // calling function
@@ -556,8 +556,8 @@ void HDual::solvePhase1() {
   // value
   simplex_lp_status.has_primal_objective_value = false;
   simplex_lp_status.has_dual_objective_value = false;
-  // Set invertHint so that it's assigned when first tested
-  invertHint = INVERT_HINT_NO;
+  // Set rebuild_reason so that it's assigned when first tested
+  rebuild_reason = REBUILD_REASON_NO;
   // Set solvePhase = SOLVE_PHASE_1 and solve_bailout = false so they are set if
   // solvePhase1() is called directly
   solvePhase = SOLVE_PHASE_1;
@@ -604,7 +604,7 @@ void HDual::solvePhase1() {
           break;
       }
       if (bailoutOnTimeIterations()) break;
-      if (invertHint) break;
+      if (rebuild_reason) break;
     }
     if (solve_bailout) break;
     // If the data are fresh from rebuild(), break out of
@@ -621,7 +621,7 @@ void HDual::solvePhase1() {
   // If bailing out, should have done so already
   assert(!solve_bailout);
   // Assess outcome of dual phase 1
-  if (rowOut == -1) {
+  if (row_out == -1) {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_DETAILED, "dual-phase-1-optimal\n");
     // Optimal in phase 1
@@ -649,7 +649,7 @@ void HDual::solvePhase1() {
       // tolerance. Plus there may be cost perturbations to remove
       assessPhase1Optimality();
     }
-  } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
+  } else if (rebuild_reason == REBUILD_REASON_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = SOLVE_PHASE_ERROR;
@@ -723,8 +723,8 @@ void HDual::solvePhase2() {
   // value
   simplex_lp_status.has_primal_objective_value = false;
   simplex_lp_status.has_dual_objective_value = false;
-  // Set invertHint so that it's assigned when first tested
-  invertHint = INVERT_HINT_NO;
+  // Set rebuild_reason so that it's assigned when first tested
+  rebuild_reason = REBUILD_REASON_NO;
   // Set solvePhase = SOLVE_PHASE_2 and solve_bailout = false so they are set if
   // solvePhase2() is called directly
   solvePhase = SOLVE_PHASE_2;
@@ -777,7 +777,7 @@ void HDual::solvePhase2() {
       }
       if (bailoutOnTimeIterations()) break;
       if (bailoutOnDualObjective()) break;
-      if (invertHint) break;
+      if (rebuild_reason) break;
     }
     if (solve_bailout) break;
     // If the data are fresh from rebuild(), break out of
@@ -801,7 +801,7 @@ void HDual::solvePhase2() {
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_DETAILED, "dual-phase-2-found-free\n");
     solvePhase = SOLVE_PHASE_1;
-  } else if (rowOut == -1) {
+  } else if (row_out == -1) {
     // There is no candidate in CHUZR, even after rebuild so probably optimal
     HighsPrintMessage(workHMO.options_.output, workHMO.options_.message_level,
                       ML_DETAILED, "dual-phase-2-optimal\n");
@@ -818,7 +818,7 @@ void HDual::solvePhase2() {
                         ML_DETAILED, "problem-optimal\n");
       scaled_model_status = HighsModelStatus::OPTIMAL;
     }
-  } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
+  } else if (rebuild_reason == REBUILD_REASON_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = SOLVE_PHASE_ERROR;
@@ -863,15 +863,15 @@ void HDual::rebuild() {
   // Move this to Simplex class once it's created
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
 
-  const int rebuild_invert_hint = invertHint;
-  invertHint = INVERT_HINT_NO;
+  const int reason_for_rebuild = rebuild_reason;
+  rebuild_reason = REBUILD_REASON_NO;
   // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
   if (!invert_if_row_out_negative) {
-    // Don't reinvert if rowOut is negative [equivalently, if
-    // rebuild_invert_hint == INVERT_HINT_POSSIBLY_OPTIMAL]
-    if (rebuild_invert_hint == INVERT_HINT_POSSIBLY_OPTIMAL) {
-      assert(rowOut == -1);
+    // Don't reinvert if row_out is negative [equivalently, if
+    // reason_for_rebuild == REBUILD_REASON_POSSIBLY_OPTIMAL]
+    if (reason_for_rebuild == REBUILD_REASON_POSSIBLY_OPTIMAL) {
+      assert(row_out == -1);
       reInvert = false;
     }
   }
@@ -973,7 +973,7 @@ void HDual::rebuild() {
       // In phase 2, report the simplex dual infeasiblities
       computeSimplexDualInfeasible(workHMO);
     }
-    reportRebuild(rebuild_invert_hint);
+    reportRebuild(reason_for_rebuild);
   }
 
   build_syntheticTick = factor->build_syntheticTick;
@@ -987,7 +987,7 @@ void HDual::rebuild() {
     printf(
         "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
         "%11.4g\n",
-        solvePhase, total_rebuilds, rebuild_invert_hint,
+        solvePhase, total_rebuilds, reason_for_rebuild,
         workHMO.iteration_counts_.simplex, total_rebuild_time);
   }
 #endif
@@ -1041,8 +1041,8 @@ void HDual::cleanup() {
 
 void HDual::iterate() {
   // This is the main teration loop for dual revised simplex. All the
-  // methods have as their first line if (invertHint) return;, where
-  // invertHint is, for example, set to 1 when CHUZR finds no
+  // methods have as their first line if (rebuild_reason) return;, where
+  // rebuild_reason is, for example, set to 1 when CHUZR finds no
   // candidate. This causes a break from the inner loop of
   // solve_phase% and, hence, a call to rebuild()
 
@@ -1151,18 +1151,18 @@ void HDual::iterationAnalysisData() {
   analysis->solve_phase = solvePhase;
   analysis->simplex_iteration_count = workHMO.iteration_counts_.simplex;
   analysis->devex_iteration_count = num_devex_iterations;
-  analysis->pivotal_row_index = rowOut;
+  analysis->pivotal_row_index = row_out;
   analysis->leaving_variable = variable_out;
   analysis->entering_variable = variable_in;
-  analysis->invert_hint = invertHint;
+  analysis->rebuild_reason = rebuild_reason;
   analysis->reduced_rhs_value = 0;
   analysis->reduced_cost_value = 0;
   analysis->edge_weight = 0;
-  analysis->primal_delta = deltaPrimal;
-  analysis->primal_step = thetaPrimal;
-  analysis->dual_step = thetaDual;
-  analysis->pivot_value_from_column = alphaCol;
-  analysis->pivot_value_from_row = alphaRow;
+  analysis->primal_delta = delta_primal;
+  analysis->primal_step = theta_primal;
+  analysis->dual_step = theta_dual;
+  analysis->pivot_value_from_column = alpha_col;
+  analysis->pivot_value_from_row = alpha_row;
   analysis->factor_pivot_threshold = simplex_info.factor_pivot_threshold;
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_dual_objective_value;
@@ -1214,10 +1214,10 @@ void HDual::iterationAnalysis() {
 #endif
 }
 
-void HDual::reportRebuild(const int rebuild_invert_hint) {
+void HDual::reportRebuild(const int reason_for_rebuild) {
   analysis->simplexTimerStart(ReportRebuildClock);
   iterationAnalysisData();
-  analysis->invert_hint = rebuild_invert_hint;
+  analysis->rebuild_reason = reason_for_rebuild;
   analysis->invertReport();
   analysis->simplexTimerStop(ReportRebuildClock);
 }
@@ -1226,17 +1226,17 @@ void HDual::chooseRow() {
   // Choose the index of a row to leave the basis (CHUZR)
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
   // Choose candidates repeatedly until candidate is OK or optimality is
   // detected
   for (;;) {
     // Choose the index of a good row to leave the basis
-    dualRHS.chooseNormal(&rowOut);
-    if (rowOut == -1) {
+    dualRHS.chooseNormal(&row_out);
+    if (row_out == -1) {
       // No index found so may be dual optimal. By setting
-      // invertHint>0 all subsequent methods in the iteration will
+      // rebuild_reason>0 all subsequent methods in the iteration will
       // be skipped until reinversion and rebuild have taken place
-      invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
+      rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
       return;
     }
     // Compute pi_p = B^{-T}e_p in row_ep
@@ -1244,8 +1244,8 @@ void HDual::chooseRow() {
     // Set up RHS for BTRAN
     row_ep.clear();
     row_ep.count = 1;
-    row_ep.index[0] = rowOut;
-    row_ep.array[rowOut] = 1;
+    row_ep.index[0] = row_out;
+    row_ep.array[row_out] = 1;
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
     HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -1265,9 +1265,9 @@ void HDual::chooseRow() {
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // For DSE, see how accurate the updated weight is
       // Save the updated weight
-      double updated_edge_weight = dualRHS.workEdWt[rowOut];
+      double updated_edge_weight = dualRHS.workEdWt[row_out];
       // Compute the weight from row_ep and over-write the updated weight
-      computed_edge_weight = dualRHS.workEdWt[rowOut] = row_ep.norm2();
+      computed_edge_weight = dualRHS.workEdWt[row_out] = row_ep.norm2();
       // If the weight error is acceptable then break out of the
       // loop. All we worry about is accepting rows with weights
       // which are not too small, since this can make the row look
@@ -1288,18 +1288,18 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  variable_out = workHMO.simplex_basis_.basicIndex_[rowOut];
+  variable_out = workHMO.simplex_basis_.basicIndex_[row_out];
   // Record the change in primal variable associated with the move to the bound
   // being violated
-  if (baseValue[rowOut] < baseLower[rowOut]) {
-    // Below the lower bound so set deltaPrimal = value - LB < 0
-    deltaPrimal = baseValue[rowOut] - baseLower[rowOut];
+  if (baseValue[row_out] < baseLower[row_out]) {
+    // Below the lower bound so set delta_primal = value - LB < 0
+    delta_primal = baseValue[row_out] - baseLower[row_out];
   } else {
-    // Above the upper bound so set deltaPrimal = value - UB > 0
-    deltaPrimal = baseValue[rowOut] - baseUpper[rowOut];
+    // Above the upper bound so set delta_primal = value - UB > 0
+    delta_primal = baseValue[row_out] - baseUpper[row_out];
   }
-  // Set sourceOut to be -1 if deltaPrimal<0, otherwise +1 (since deltaPrimal>0)
-  sourceOut = deltaPrimal < 0 ? -1 : 1;
+  // Set move_out to be -1 if delta_primal<0, otherwise +1 (since delta_primal>0)
+  move_out = delta_primal < 0 ? -1 : 1;
   // Update the record of average row_ep (pi_p) density. This ignores
   // any BTRANs done for skipped candidates
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
@@ -1350,7 +1350,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   // basis (CHUZC)
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
   //
   // PRICE
   //
@@ -1363,7 +1363,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   // from being changed.
   analysis->simplexTimerStart(Chuzc0Clock);
   dualRow.clear();
-  dualRow.workDelta = deltaPrimal;
+  dualRow.workDelta = delta_primal;
   dualRow.createFreemove(row_ep);
   analysis->simplexTimerStop(Chuzc0Clock);
   //
@@ -1382,7 +1382,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   // there are no candidates for CHUZC
   variable_in = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
-    invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;
+    rebuild_reason = REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED;
     return;
   }
   //
@@ -1390,7 +1390,7 @@ void HDual::chooseColumn(HVector* row_ep) {
   // fail if the dual values are excessively large
   bool chooseColumnFail = dualRow.chooseFinal();
   if (chooseColumnFail) {
-    invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
+    rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
     return;
   }
   //
@@ -1401,9 +1401,9 @@ void HDual::chooseColumn(HVector* row_ep) {
   // Record values for basis change, checking for numerical problems and update
   // of dual variables
   variable_in = dualRow.workPivot;   // Index of the column entering the basis
-  alphaRow = dualRow.workAlpha;   // Pivot value computed row-wise - used for
+  alpha_row = dualRow.workAlpha;   // Pivot value computed row-wise - used for
                                   // numerical checking
-  thetaDual = dualRow.workTheta;  // Dual step length
+  theta_dual = dualRow.workTheta;  // Dual step length
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
       !new_devex_framework) {
@@ -1429,11 +1429,11 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   // exploiting slices of the pivotal row - for SIP and PAMI
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
 
   analysis->simplexTimerStart(Chuzc0Clock);
   dualRow.clear();
-  dualRow.workDelta = deltaPrimal;
+  dualRow.workDelta = delta_primal;
   dualRow.createFreemove(row_ep);
   analysis->simplexTimerStop(Chuzc0Clock);
 
@@ -1511,7 +1511,7 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
       }
 
       slice_dualRow[i].clear();
-      slice_dualRow[i].workDelta = deltaPrimal;
+      slice_dualRow[i].workDelta = delta_primal;
       slice_dualRow[i].chooseMakepack(&slice_row_ap[i], slice_start[i]);
       slice_dualRow[i].choosePossible();
     }
@@ -1538,14 +1538,14 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   // Infeasible we created before
   variable_in = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
-    invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;
+    rebuild_reason = REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED;
     return;
   }
 
   // Choose column 2, This only happens if didn't go out
   bool chooseColumnFail = dualRow.chooseFinal();
   if (chooseColumnFail) {
-    invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
+    rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
     return;
   }
 
@@ -1554,8 +1554,8 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   analysis->simplexTimerStop(Chuzc4Clock);
 
   variable_in = dualRow.workPivot;
-  alphaRow = dualRow.workAlpha;
-  thetaDual = dualRow.workTheta;
+  alpha_row = dualRow.workAlpha;
+  theta_dual = dualRow.workTheta;
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX &&
       !new_devex_framework) {
@@ -1587,7 +1587,7 @@ void HDual::updateFtran() {
   // Compute the pivotal column (FTRAN)
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
   analysis->simplexTimerStart(FtranClock);
   // Clear the picotal column and indicate that its values should be packed
   col_aq.clear();
@@ -1612,7 +1612,7 @@ void HDual::updateFtran() {
   analysis->updateOperationResultDensity(local_col_aq_density,
                                          analysis->col_aq_density);
   // Save the pivot value computed column-wise - used for numerical checking
-  alphaCol = col_aq.array[rowOut];
+  alpha_col = col_aq.array[row_out];
   analysis->simplexTimerStop(FtranClock);
 }
 
@@ -1620,7 +1620,7 @@ void HDual::updateFtranBFRT() {
   // Compute the RHS changes corresponding to the BFRT (FTRAN-BFRT)
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
 
   // Only time updateFtranBFRT if dualRow.workCount > 0;
   // If dualRow.workCount = 0 then dualRow.updateFlip(&col_BFRT)
@@ -1666,7 +1666,7 @@ void HDual::updateFtranDSE(HVector* DSE_Vector) {
   // applied to the pivotal column (FTRAN-DSE)
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
   analysis->simplexTimerStart(FtranDseClock);
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
@@ -1694,13 +1694,13 @@ void HDual::updateVerify() {
   // determine whether reinversion is advisable
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
 
   // Use the two pivot values to identify numerical trouble
   if (reinvertOnNumericalTrouble("HDual::updateVerify", workHMO,
-                                 numericalTrouble, alphaCol, alphaRow,
+                                 numericalTrouble, alpha_col, alpha_row,
                                  numerical_trouble_tolerance)) {
-    invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
+    rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
   }
 }
 
@@ -1708,11 +1708,11 @@ void HDual::updateDual() {
   // Update the dual values
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
 
   // Update - dual (shift and back)
-  if (thetaDual == 0) {
-    // Little to do if thetaDual is zero
+  if (theta_dual == 0) {
+    // Little to do if theta_dual is zero
     debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "Before shift_cost");
     shift_cost(workHMO, variable_in, -workDual[variable_in]);
@@ -1722,12 +1722,12 @@ void HDual::updateDual() {
     // Update the whole vector of dual values
     debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "Before calling dualRow.updateDual");
-    dualRow.updateDual(thetaDual);
+    dualRow.updateDual(theta_dual);
     if (workHMO.simplex_info_.simplex_strategy != SIMPLEX_STRATEGY_DUAL_PLAIN &&
         slice_PRICE) {
       // Update the slice-by-slice copy of dual variables
       for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].updateDual(thetaDual);
+        slice_dualRow[i].updateDual(theta_dual);
     }
     debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                                "After calling dualRow.updateDual");
@@ -1749,7 +1749,7 @@ void HDual::updateDual() {
       workHMO.simplex_basis_.nonbasicFlag_[variable_out];
   assert(variable_out_nonbasicFlag == 0);
   if (variable_out_nonbasicFlag) {
-    const double variable_out_delta_dual = workDual[variable_out] - thetaDual;
+    const double variable_out_delta_dual = workDual[variable_out] - theta_dual;
     const double variable_out_value = workValue[variable_out];
     dual_objective_value_change =
         variable_out_nonbasicFlag * (-variable_out_value * variable_out_delta_dual);
@@ -1758,7 +1758,7 @@ void HDual::updateDual() {
         dual_objective_value_change;
   }
   workDual[variable_in] = 0;
-  workDual[variable_out] = -thetaDual;
+  workDual[variable_out] = -theta_dual;
 
   debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before shift_back");
@@ -1771,10 +1771,10 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   // Update the primal values and any edge weights
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
-    const double updated_edge_weight = dualRHS.workEdWt[rowOut];
-    dualRHS.workEdWt[rowOut] = computed_edge_weight;
+    const double updated_edge_weight = dualRHS.workEdWt[row_out];
+    dualRHS.workEdWt[row_out] = computed_edge_weight;
     new_devex_framework = newDevexFramework(updated_edge_weight);
   }
   // DSE_Vector is either col_DSE = B^{-1}B^{-T}e_p (if using dual
@@ -1783,36 +1783,36 @@ void HDual::updatePrimal(HVector* DSE_Vector) {
   // Update - primal and weight
   dualRHS.updatePrimal(&col_BFRT, 1);
   dualRHS.updateInfeasList(&col_BFRT);
-  double x_out = baseValue[rowOut];
-  double l_out = baseLower[rowOut];
-  double u_out = baseUpper[rowOut];
-  thetaPrimal = (x_out - (deltaPrimal < 0 ? l_out : u_out)) / alphaCol;
-  dualRHS.updatePrimal(&col_aq, thetaPrimal);
+  double x_out = baseValue[row_out];
+  double l_out = baseLower[row_out];
+  double u_out = baseUpper[row_out];
+  theta_primal = (x_out - (delta_primal < 0 ? l_out : u_out)) / alpha_col;
+  dualRHS.updatePrimal(&col_aq, theta_primal);
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     const double new_pivotal_edge_weight =
-        dualRHS.workEdWt[rowOut] / (alphaCol * alphaCol);
-    const double Kai = -2 / alphaCol;
+        dualRHS.workEdWt[row_out] / (alpha_col * alpha_col);
+    const double Kai = -2 / alpha_col;
     dualRHS.updateWeightDualSteepestEdge(&col_aq, new_pivotal_edge_weight, Kai,
                                          &DSE_Vector->array[0]);
-    dualRHS.workEdWt[rowOut] = new_pivotal_edge_weight;
+    dualRHS.workEdWt[row_out] = new_pivotal_edge_weight;
   } else if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     // Pivotal row is for the current basis: weights are required for
     // the next basis so have to divide the current (exact) weight by
     // the pivotal value
     double new_pivotal_edge_weight =
-        dualRHS.workEdWt[rowOut] / (alphaCol * alphaCol);
+        dualRHS.workEdWt[row_out] / (alpha_col * alpha_col);
     new_pivotal_edge_weight = max(1.0, new_pivotal_edge_weight);
     // nw_wt is max(workEdWt[iRow], NewExactWeight*columnArray[iRow]^2);
     //
     // But NewExactWeight is new_pivotal_edge_weight = max(1.0,
-    // dualRHS.workEdWt[rowOut] / (alpha * alpha))
+    // dualRHS.workEdWt[row_out] / (alpha * alpha))
     //
     // so nw_wt = max(workEdWt[iRow],
     // new_pivotal_edge_weight*columnArray[iRow]^2);
     //
     // Update rest of weights
     dualRHS.updateWeightDevex(&col_aq, new_pivotal_edge_weight);
-    dualRHS.workEdWt[rowOut] = new_pivotal_edge_weight;
+    dualRHS.workEdWt[row_out] = new_pivotal_edge_weight;
     num_devex_iterations++;
   }
   dualRHS.updateInfeasList(&col_aq);
@@ -1839,12 +1839,12 @@ void HDual::updatePivots() {
   // UPDATE
   //
   // If reinversion is needed then skip this method
-  if (invertHint) return;
+  if (rebuild_reason) return;
   //
   // Update the sets of indices of basic and nonbasic variables
   debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "Before update_pivots");
-  update_pivots(workHMO, variable_in, rowOut, sourceOut);
+  update_pivots(workHMO, variable_in, row_out, move_out);
   debugUpdatedObjectiveValue(workHMO, algorithm, solvePhase,
                              "After update_pivots");
   //
@@ -1855,7 +1855,7 @@ void HDual::updatePivots() {
   workHMO.iteration_counts_.simplex++;
   //
   // Update the invertible representation of the basis matrix
-  update_factor(workHMO, &col_aq, &row_ep, &rowOut, &invertHint);
+  update_factor(workHMO, &col_aq, &row_ep, &row_out, &rebuild_reason);
   //
   // Update the row-wise representation of the nonbasic columns
   update_matrix(workHMO, variable_in, variable_out);
@@ -1867,7 +1867,7 @@ void HDual::updatePivots() {
   // occurred, and set the corresponding primal infeasibility value in
   // dualRHS.work_infeasibility
   dualRHS.updatePivots(
-      rowOut, workHMO.simplex_info_.workValue_[variable_in] + thetaPrimal);
+      row_out, workHMO.simplex_info_.workValue_[variable_in] + theta_primal);
 
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock = total_syntheticTick >= build_syntheticTick;
@@ -1875,7 +1875,7 @@ void HDual::updatePivots() {
       workHMO.simplex_info_.update_count >=
       synthetic_tick_reinversion_min_update_count;
   if (reinvert_syntheticClock && performed_min_updates)
-    invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
+    rebuild_reason = REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT;
 }
 
 void HDual::initialiseDevexFramework(const bool parallel) {
@@ -1951,8 +1951,8 @@ HighsStatus HDual::returnFromSolve(const HighsStatus return_status) {
 
 void HDual::saveDualRay() {
   workHMO.simplex_lp_status_.has_dual_ray = true;
-  workHMO.simplex_info_.dual_ray_row_ = rowOut;
-  workHMO.simplex_info_.dual_ray_sign_ = sourceOut;
+  workHMO.simplex_info_.dual_ray_row_ = row_out;
+  workHMO.simplex_info_.dual_ray_sign_ = move_out;
 }
 
 bool HDual::getNonsingularInverse() {
@@ -2074,10 +2074,10 @@ void HDual::putBacktrackingBasis(
 }
 
 void HDual::assessPhase1Optimality() {
-  // Should only be called when optimal in phase 1 (rowOut == -1) with negative
+  // Should only be called when optimal in phase 1 (row_out == -1) with negative
   // dual activity
   assert(solvePhase == SOLVE_PHASE_1);
-  assert(rowOut == -1);
+  assert(row_out == -1);
   assert(workHMO.simplex_info_.dual_objective_value < 0);
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
@@ -2215,7 +2215,7 @@ void HDual::reportOnPossibleLpDualInfeasibility() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexAnalysis& analysis = workHMO.simplex_analysis_;
   assert(solvePhase == SOLVE_PHASE_1);
-  assert(rowOut == -1);
+  assert(row_out == -1);
   assert(simplex_info.dual_objective_value < 0);
   assert(!simplex_info.costs_perturbed);
   std::string lp_dual_status;

@@ -75,7 +75,7 @@ class HEkkPrimal {
   void iterationAnalysis();
   void localReportIterHeader();
   void localReportIter(const bool header = false);
-  void reportRebuild(const int rebuild_invert_hint = -1);
+  void reportRebuild(const int reason_for_rebuild = -1);
   void getNonbasicFreeColumnSet();
   void removeNonbasicFreeColumn();
   void getBasicPrimalInfeasibility();
@@ -97,15 +97,15 @@ class HEkkPrimal {
   int rebuild_reason;
   // Pivot related
   int variable_in;
-  int rowOut;
+  int row_out;
   int variable_out;
   int phase1OutBnd;
-  int sourceOut;
-  double thetaDual;
-  double thetaPrimal;
-  double valueIn;
-  double alphaCol;
-  double alphaRow;
+  int move_out;
+  double theta_dual;
+  double theta_primal;
+  double value_in;
+  double alpha_col;
+  double alpha_row;
   double numericalTrouble;
   int num_flip_since_rebuild;
   // Primal phase 1 tools

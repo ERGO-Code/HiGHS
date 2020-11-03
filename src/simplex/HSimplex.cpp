@@ -977,30 +977,6 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
   simplex_lp_status.has_dual_objective_value = true;
 }
 
-int setSourceOutFmBd(const HighsModelObject& highs_model_object,
-                     const int variable_out) {
-  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  int sourceOut = 0;
-  if (simplex_info.workLower_[variable_out] !=
-      simplex_info.workUpper_[variable_out]) {
-    if (!highs_isInfinity(-simplex_info.workLower_[variable_out])) {
-      // Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
-      sourceOut = -1;
-      //      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g]
-      //      so setting sourceOut = -1\n", variable_out,
-      //      simplex_info.workLower_[variable_out],
-      //      simplex_info.workUpper_[variable_out]);
-    } else {
-      // Infinite LB so sourceOut = 1 ensures value set to UB
-      sourceOut = 1;
-      if (!highs_isInfinity(simplex_info.workUpper_[variable_out])) {
-        // Free variable => trouble!
-        printf("TROUBLE: variable %d leaving the basis is free!\n", variable_out);
-      }
-    }
-  }
-  return sourceOut;
-}
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -3203,12 +3179,12 @@ void update_factor(HighsModelObject& highs_model_object, HVector* column,
   // Now have a representation of B^{-1}, but it is not fresh
   simplex_lp_status.has_invert = true;
   if (simplex_info.update_count >= simplex_info.update_limit)
-    *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+    *hint = REBUILD_REASON_UPDATE_LIMIT_REACHED;
   analysis.simplexTimerStop(UpdateFactorClock);
 }
 
 void update_pivots(HighsModelObject& highs_model_object, int variable_in,
-                   int rowOut, int sourceOut) {
+                   int row_out, int move_out) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -3217,14 +3193,14 @@ void update_pivots(HighsModelObject& highs_model_object, int variable_in,
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
 
   analysis.simplexTimerStart(UpdatePivotsClock);
-  int variable_out = simplex_basis.basicIndex_[rowOut];
+  int variable_out = simplex_basis.basicIndex_[row_out];
 
   // Incoming variable
-  simplex_basis.basicIndex_[rowOut] = variable_in;
+  simplex_basis.basicIndex_[row_out] = variable_in;
   simplex_basis.nonbasicFlag_[variable_in] = 0;
   simplex_basis.nonbasicMove_[variable_in] = 0;
-  simplex_info.baseLower_[rowOut] = simplex_info.workLower_[variable_in];
-  simplex_info.baseUpper_[rowOut] = simplex_info.workUpper_[variable_in];
+  simplex_info.baseLower_[row_out] = simplex_info.workLower_[variable_in];
+  simplex_info.baseUpper_[row_out] = simplex_info.workUpper_[variable_in];
 
   // Outgoing variable
   simplex_basis.nonbasicFlag_[variable_out] = 1;
@@ -3232,7 +3208,7 @@ void update_pivots(HighsModelObject& highs_model_object, int variable_in,
       simplex_info.workUpper_[variable_out]) {
     simplex_info.workValue_[variable_out] = simplex_info.workLower_[variable_out];
     simplex_basis.nonbasicMove_[variable_out] = 0;
-  } else if (sourceOut == -1) {
+  } else if (move_out == -1) {
     simplex_info.workValue_[variable_out] = simplex_info.workLower_[variable_out];
     simplex_basis.nonbasicMove_[variable_out] = 1;
   } else {
