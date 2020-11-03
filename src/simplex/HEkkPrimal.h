@@ -54,7 +54,8 @@ class HEkkPrimal {
   void hyperChooseColumnBasicFeasibilityChange();
   void hyperChooseColumnDualChange();
   void assessVariableIn();
-  const bool use_assessPivot = true;
+  const bool use_considerBoundSwap = true;
+  void considerBoundSwap();
   void assessPivot();
   void chooseRow();
   void updateDual();
@@ -146,6 +147,7 @@ class HEkkPrimal {
 
   const int check_iter = 9999999;
   const int check_column = -2133;
+  const bool flip_update_later = true;
 };
 
 #endif /* SIMPLEX_HEKKPRIMAL_H_ */

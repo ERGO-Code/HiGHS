@@ -489,39 +489,17 @@ void HEkkPrimal::iterate() {
   } else {
     chooseRow();
   }
-
+  if (use_considerBoundSwap) considerBoundSwap();
   // If pivoting, perform unit BTRAN and PRICE to get pivotal row - and do numerical check
-  if (use_assessPivot && row_out >= 0) {
+  if (row_out >= 0) {
     assessPivot();
     if (rebuild_reason) {
       assert(rebuild_reason==REBUILD_REASON_POSSIBLY_SINGULAR_BASIS);
       return;
     }
   }
-
+  // Any pivoting is numerically acceptable, so perform update
   update();
-}
-
-void HEkkPrimal::assessPivot() {
-  assert(row_out >= 0);
-  // Record the pivot entry
-  alpha_col = col_aq.array[row_out];
-  
-  // Compute the tableau row
-  //
-  // BTRAN
-  //
-  // Compute unit BTran for tableau row and FT update
-  ekk_instance_.unitBtran(row_out, row_ep);
-  //
-  // PRICE
-  //
-  ekk_instance_.tableauRowPrice(row_ep, row_ap);
-  
-  // Checks row-wise pivot against column-wise pivot for
-  // numerical trouble
-  updateVerify();
-  
 }
 
 void HEkkPrimal::assessVariableIn() {
@@ -561,8 +539,7 @@ void HEkkPrimal::assessVariableIn() {
   
 }
 
-void HEkkPrimal::update() {
-  // Perform update operations that are independent of phase
+void HEkkPrimal::considerBoundSwap() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const vector<double>& workDual = simplex_info.workDual_;
   const vector<double>& workLower = simplex_info.workLower_;
@@ -572,16 +549,6 @@ void HEkkPrimal::update() {
   vector<double>& workValue = simplex_info.workValue_;
   vector<double>& baseValue = simplex_info.baseValue_;
   vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
-
-  if (row_out >= 0) {
-    variable_out = ekk_instance_.simplex_basis_.basicIndex_[row_out];
-  } else {
-    variable_out = -1;
-  }
-
-  // Start hyper-sparse CHUZC, that takes place through phase1Update()
-  hyperChooseColumnStart();
-
   // Compute the primal theta and see if we should have done a bound
   // flip instead
   if (row_out < 0) {
@@ -592,8 +559,7 @@ void HEkkPrimal::update() {
   } else {
     // Determine the step to the leaving bound
     //
-    // Record the pivot entry
-    if (!use_assessPivot) alpha_col = col_aq.array[row_out];
+    alpha_col = col_aq.array[row_out];
     // In Phase 1, move_out depends on whether the leaving variable is
     // becoming feasible - moves up to lower (down to upper) - or
     // remaining feasible - moves down to lower (up to upper) - so
@@ -618,31 +584,174 @@ void HEkkPrimal::update() {
     if (value_in > upper_in + primal_feasibility_tolerance) {
       // Flip to upper
       value_in = upper_in;
-      workValue[variable_in] = value_in;
+      if (!flip_update_later) {
+	workValue[variable_in] = value_in;
+	nonbasicMove[variable_in] = NONBASIC_MOVE_DN;
+      }
       theta_primal = upper_in - lower_in;
       flipped = true;
-      nonbasicMove[variable_in] = NONBASIC_MOVE_DN;
     }
   } else {
     if (value_in < lower_in - primal_feasibility_tolerance) {
       // Flip to lower
       value_in = lower_in;
-      workValue[variable_in] = value_in;
+      if (!flip_update_later) {
+	workValue[variable_in] = value_in;
+	nonbasicMove[variable_in] = NONBASIC_MOVE_UP;
+      }
       theta_primal = lower_in - upper_in;
       flipped = true;
-      nonbasicMove[variable_in] = NONBASIC_MOVE_UP;
     }
   }
   if (flipped) {
+    if (!flip_update_later) assert(nonbasicMove[variable_in] = -move_in);
     row_out = -1;
     variable_out = variable_in;
     alpha_col = 0;
     numericalTrouble = 0;
+    if (flip_update_later) {
+      workValue[variable_in] = value_in;
+      assert(nonbasicMove[variable_in] = move_in);
+      nonbasicMove[variable_in] = -move_in;
+    }
   }
 
+  const bool pivot_or_flipped = row_out >= 0 || flipped;
+  if (solvePhase == SOLVE_PHASE_2) {
+    // Check for possible unboundedness
+    if (!pivot_or_flipped) {
+      rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED;
+      return;
+    }
+  }
+  // Check for possible error
+  assert(pivot_or_flipped);
+  assert(flipped == (row_out == -1));
+
+}
+
+void HEkkPrimal::assessPivot() {
+  assert(row_out >= 0);
+  // Record the pivot entry
+  alpha_col = col_aq.array[row_out];
+  variable_out = ekk_instance_.simplex_basis_.basicIndex_[row_out];
+  
+  // Compute the tableau row
+  //
+  // BTRAN
+  //
+  // Compute unit BTran for tableau row and FT update
+  ekk_instance_.unitBtran(row_out, row_ep);
+  //
+  // PRICE
+  //
+  ekk_instance_.tableauRowPrice(row_ep, row_ap);
+  
+  // Checks row-wise pivot against column-wise pivot for
+  // numerical trouble
+  updateVerify();
+  
+}
+
+void HEkkPrimal::update() {
+  // Perform update operations that are independent of phase
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& workDual = simplex_info.workDual_;
+  const vector<double>& workLower = simplex_info.workLower_;
+  const vector<double>& workUpper = simplex_info.workUpper_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  vector<double>& workValue = simplex_info.workValue_;
+  vector<double>& baseValue = simplex_info.baseValue_;
+  vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
+
+  if (!use_considerBoundSwap) {
+  // Compute the primal theta and see if we should have done a bound
+  // flip instead
+  if (row_out < 0) {
+    assert(solvePhase == SOLVE_PHASE_2);
+    // No binding ratio in CHUZR, so flip or unbounded
+    theta_primal = move_in * HIGHS_CONST_INF;
+    move_out = 0;
+  } else {
+    // Determine the step to the leaving bound
+    //
+    // Check that the pivot entry is known
+    assert(alpha_col == col_aq.array[row_out]);
+    // In Phase 1, move_out depends on whether the leaving variable is
+    // becoming feasible - moves up to lower (down to upper) - or
+    // remaining feasible - moves down to lower (up to upper) - so
+    // can't be set so easily as in phase 2
+    if (solvePhase == SOLVE_PHASE_2) 
+      move_out = alpha_col * move_in > 0 ? -1 : 1;
+    theta_primal = 0;
+    if (move_out == 1) {
+      theta_primal = (baseValue[row_out] - baseUpper[row_out]) / alpha_col;
+    } else {
+      theta_primal = (baseValue[row_out] - baseLower[row_out]) / alpha_col;
+    }
+    assert(theta_primal > -HIGHS_CONST_INF && theta_primal < HIGHS_CONST_INF);
+  }
+
+  // Look to see if there is a bound flip
+  bool flipped = false;
+  double lower_in = workLower[variable_in];
+  double upper_in = workUpper[variable_in];
+  value_in = workValue[variable_in] + theta_primal;
+  if (move_in > 0) {
+    if (value_in > upper_in + primal_feasibility_tolerance) {
+      // Flip to upper
+      value_in = upper_in;
+      if (!flip_update_later) {
+	workValue[variable_in] = value_in;
+	nonbasicMove[variable_in] = NONBASIC_MOVE_DN;
+      }
+      theta_primal = upper_in - lower_in;
+      flipped = true;
+    }
+  } else {
+    if (value_in < lower_in - primal_feasibility_tolerance) {
+      // Flip to lower
+      value_in = lower_in;
+      if (!flip_update_later) {
+	workValue[variable_in] = value_in;
+	nonbasicMove[variable_in] = NONBASIC_MOVE_UP;
+      }
+      theta_primal = lower_in - upper_in;
+      flipped = true;
+    }
+  }
+  if (flipped) {
+    if (!flip_update_later) assert(nonbasicMove[variable_in] = -move_in);
+    row_out = -1;
+    variable_out = variable_in;
+    alpha_col = 0;
+    numericalTrouble = 0;
+    if (flip_update_later) {
+      workValue[variable_in] = value_in;
+      assert(nonbasicMove[variable_in] = move_in);
+      nonbasicMove[variable_in] = -move_in;
+    }
+  }
+
+  const bool pivot_or_flipped = row_out >= 0 || flipped;
+  if (solvePhase == SOLVE_PHASE_2) {
+    // Check for possible unboundedness
+    if (!pivot_or_flipped) {
+      rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED;
+      return;
+    }
+  }
+  // Check for possible error
+  assert(pivot_or_flipped);
+  assert(flipped == (row_out == -1));
+  }
+
+  bool flipped = row_out < 0;
+  // Start hyper-sparse CHUZC, that takes place through phase1Update()
+  hyperChooseColumnStart();
+
   if (solvePhase == SOLVE_PHASE_1) {
-    // Check for possible error
-    assert(row_out >= 0 || flipped);
     
     // Update primal values
     phase1UpdatePrimal();
@@ -684,11 +793,6 @@ void HEkkPrimal::update() {
   } else {
     // Phase 2
     
-    // Check for possible unboundedness
-    if (row_out < 0 && !flipped) {
-      rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED;
-      return;
-    }
     //
     // Update primal values, and identify any infeasibilities
     //
@@ -711,23 +815,6 @@ void HEkkPrimal::update() {
     // Remaining update operations are independent of phase
   }
 
-  if (!use_assessPivot) {
-    // Compute the tableau row
-    //
-    // BTRAN
-    //
-    // Compute unit BTran for tableau row and FT update
-    ekk_instance_.unitBtran(row_out, row_ep);
-    //
-    // PRICE
-    //
-    ekk_instance_.tableauRowPrice(row_ep, row_ap);
-    
-    // Checks row-wise pivot against column-wise pivot for
-    // numerical trouble
-    updateVerify();
-  }
-  
   // Update the dual values
   theta_dual = workDual[variable_in];
   updateDual();
