@@ -53,6 +53,8 @@ class HEkkPrimal {
                                              const int iCol);
   void hyperChooseColumnBasicFeasibilityChange();
   void hyperChooseColumnDualChange();
+  void assessVariableIn();
+  void assessPivot();
   void chooseRow();
   void updateDual();
 
@@ -97,9 +99,9 @@ class HEkkPrimal {
   int rebuild_reason;
   // Pivot related
   int variable_in;
+  int move_in;
   int row_out;
   int variable_out;
-  int phase1OutBnd;
   int move_out;
   double theta_dual;
   double theta_primal;
