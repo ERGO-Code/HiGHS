@@ -952,6 +952,7 @@ void HEkkPrimal::update() {
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   */
+  assert(!rebuild_reason);
   bool flipped = row_out < 0;
   if (flipped) {
     variable_out = variable_in;
@@ -976,14 +977,20 @@ void HEkkPrimal::update() {
     // For hyper-sparse CHUZC, analyse the duals that have just changed
     hyperChooseColumnBasicFeasibilityChange();
     
-    // Update for the flip case
-    if (flipped) {
-      simplex_info.primal_bound_swap++;
-      ekk_instance_.invalidateDualInfeasibilityRecord();
-      iterationAnalysis();
-      localReportIter();
-      num_flip_since_rebuild++;
-      // Recompute things on flip
+  } else {
+
+    // Update primal values, and identify any infeasibilities
+    phase2UpdatePrimal();
+  }
+
+  if (flipped) {
+    simplex_info.primal_bound_swap++;
+    ekk_instance_.invalidateDualInfeasibilityRecord();
+    iterationAnalysis();
+    localReportIter();
+    num_flip_since_rebuild++;
+    if (solvePhase == SOLVE_PHASE_1) {
+      assert(!rebuild_reason);
       if (rebuild_reason == 0) {
 	if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
 	  is_primal_phase1_ = true;
@@ -992,41 +999,19 @@ void HEkkPrimal::update() {
 	  rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
 	}
       }
-      // Update the synthetic clock for UPDATE
-      ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
-      return;
     }
-    
+    // Update the synthetic clock for UPDATE
+    ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
+    return;
+  }
+
+  assert(row_out >= 0);
+  if (solvePhase == SOLVE_PHASE_1) {
     // Now set the value of the entering variable
-    assert(row_out >= 0);
     baseValue[row_out] = value_in;
     // Consider whether the entering value is feasible and, if not, take
     // action
     considerInfeasibleValueIn();
-    
-  } else {
-    // Phase 2
-    
-    //
-    // Update primal values, and identify any infeasibilities
-    //
-    phase2UpdatePrimal();
-    
-    // Why is the detailed primal infeasibility information needed?
-    //  ekk_instance_.computeSimplexPrimalInfeasible();
-    
-    // If flipped, then no need touch the pivots
-    if (flipped) {
-      simplex_info.primal_bound_swap++;
-      ekk_instance_.invalidateDualInfeasibilityRecord();
-      iterationAnalysis();
-      localReportIter();
-      num_flip_since_rebuild++;
-      // Update the synthetic clock for UPDATE
-      ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
-      return;
-    }
-    // Remaining update operations are independent of phase
   }
 
   // Update the dual values
