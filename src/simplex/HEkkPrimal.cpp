@@ -434,7 +434,7 @@ void HEkkPrimal::rebuild() {
 
   // Determine whether to use hyper-sparse CHUZC
   if (solvePhase == SOLVE_PHASE_1) {
-    use_hyper_chuzc = true;
+    use_hyper_chuzc = false;
   } else {
     use_hyper_chuzc = true;
   }
@@ -458,15 +458,13 @@ void HEkkPrimal::iterate() {
   }
 
   // Perform CHUZC
-  if (solvePhase == SOLVE_PHASE_1) {
-    chooseColumn();
-    if (variable_in == -1) {
+  // 
+  chuzc();
+  if (variable_in == -1) {
+    if (solvePhase == SOLVE_PHASE_1) {
       rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
       return;
-    }
-  } else {
-    chuzc();
-    if (variable_in == -1) {
+    } else {
       rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
       return;
     }
@@ -479,7 +477,7 @@ void HEkkPrimal::iterate() {
   // Perform CHUZR
   if (solvePhase == SOLVE_PHASE_1) {
     phase1ChooseRow();
-    if (row_out == -1) {
+    if (row_out < 0) {
       HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
                       "Primal phase 1 choose row failed");
       solvePhase = SOLVE_PHASE_ERROR;
@@ -493,24 +491,54 @@ void HEkkPrimal::iterate() {
   // Consider whether to perform a bound swap - either because it's
   // shorter than the pivoting step or, in the case of Phase 1,
   // because it's cheaper than pivoting - which may be questionable
+  //
+  // rebuild_reason = REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED is set
+  // in phase 2 if there's no pivot or bound swap. In phase 1 there is
+  // always a pivot at this stage since row_out < 0 is trapped (above)
+  // as an error.
   considerBoundSwap();
-  // If pivoting, perform unit BTRAN and PRICE to get pivotal row - and do
-  // numerical check
+  if (rebuild_reason == REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED) return;
+  assert(!rebuild_reason);
+  
   if (row_out >= 0) {
+    // Perform unit BTRAN and PRICE to get pivotal row - and do a
+    // numerical check.
+    //
+    // rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS is set
+    // if numerical trouble is detected
     assessPivot();
     if (rebuild_reason) {
       assert(rebuild_reason == REBUILD_REASON_POSSIBLY_SINGULAR_BASIS);
       return;
     }
   }
-  // Any pivoting is numerically acceptable, so perform update
+  // Any pivoting is numerically acceptable, so perform update.
+  //
+  // rebuild_reason =
+  // REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX is set if a
+  // primal infeasiblility is found in phase 2
+  //
+  // rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED is set in
+  // phase 1 if the number of primal infeasiblilities is reduced to
+  // zero, or in either phase if the update count reaches the limit!
+  //
+  // rebuild_reason = REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT is
+  // set in updateFactor() if it is considered to be more efficient to
+  // reinvert.
   update();
+  assert(rebuild_reason == REBUILD_REASON_NO ||
+	 rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX ||
+	 rebuild_reason == REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT ||
+	 rebuild_reason == REBUILD_REASON_UPDATE_LIMIT_REACHED);
+  assert(solvePhase == SOLVE_PHASE_1 ||
+	 solvePhase == SOLVE_PHASE_2);
 }
 
 void HEkkPrimal::chuzc() {
   if (done_next_chuzc) assert(use_hyper_chuzc);
-  if (!done_next_chuzc) chooseColumn(true);
   if (use_hyper_chuzc) {
+    // Perform hyper-sparse CHUZC and then check result using full CHUZC
+    if (!done_next_chuzc) chooseColumn(true);
     const vector<double>& workDual = ekk_instance_.simplex_info_.workDual_;
     const bool check_hyper_chuzc = true;
     if (check_hyper_chuzc) {
@@ -533,7 +561,9 @@ void HEkkPrimal::chuzc() {
       }
       variable_in = hyper_sparse_variable_in;
     }
-  }
+  } else {
+    chooseColumn(false);
+  }    
 }
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
@@ -938,6 +968,9 @@ void HEkkPrimal::assessPivot() {
 
   // Checks row-wise pivot against column-wise pivot for
   // numerical trouble
+  //
+  // rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS is set if
+  // numerical trouble is detected
   updateVerify();
 }
 
@@ -980,8 +1013,15 @@ void HEkkPrimal::update() {
 
   } else {
     // Update primal values, and identify any infeasibilities
+    // 
+    // rebuild_reason =
+    // REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX is set if a
+    // primal infeasiblility is found
     phase2UpdatePrimal();
   }
+
+  assert(rebuild_reason == REBUILD_REASON_NO ||
+	 rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX);
 
   if (flipped) {
     simplex_info.primal_bound_swap++;
