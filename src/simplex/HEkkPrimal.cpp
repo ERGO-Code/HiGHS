@@ -1091,6 +1091,12 @@ void HEkkPrimal::update() {
     // Consider whether the entering value is feasible and, if not, take
     // action
     considerInfeasibleValueIn();
+  } else {
+    if (set_entering_variable_baseValue_later) {
+      assert(value_in == save_value_in);
+      baseValue[row_out] = value_in;
+      considerInfeasibleValueIn();
+    }
   }
 
   // Update the dual values
@@ -1480,14 +1486,28 @@ void HEkkPrimal::considerInfeasibleValueIn() {
   vector<double>& workCost = simplex_info.workCost_;
   vector<double>& workDual = simplex_info.workDual_;
   double cost = 0;
+  double primal_infeasibility = 0;
   if (value_in < workLower[variable_in] - primal_feasibility_tolerance) {
     cost = -1.0;
+    primal_infeasibility = workLower[variable_in] - value_in;
   } else if (value_in > workUpper[variable_in] + primal_feasibility_tolerance) {
     cost = 1.0;
+    primal_infeasibility = value_in - workUpper[variable_in];
   }
-  workCost[variable_in] = cost;
   if (cost) simplex_info.num_primal_infeasibilities++;
-  workDual[variable_in] += cost;
+  if (solvePhase == SOLVE_PHASE_1) {
+    workCost[variable_in] = cost;
+    workDual[variable_in] += cost;
+  } else {
+    if (cost) {
+      printf(
+	     "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
+	     primal_infeasibility, workLower[variable_in], value_in,
+	     workUpper[variable_in]);
+      rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
+    }
+  }
+  ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
 }
 
 void HEkkPrimal::phase2UpdatePrimal() {
@@ -1519,26 +1539,29 @@ void HEkkPrimal::phase2UpdatePrimal() {
       primal_infeasible = true;
     }
   }
-  if (row_out >= 0) {
-    // Check the feasibility of the entering variable - using work
-    // vector values since its base vector values haven't been updated
-    baseValue[row_out] = value_in;
-    double lower = workLower[variable_in];
-    double upper = workUpper[variable_in];
-    double value = value_in;
-    double primal_infeasibility = 0;
-    if (value < lower - primal_feasibility_tolerance) {
-      primal_infeasibility = lower - value;
-    } else if (value > upper + primal_feasibility_tolerance) {
-      primal_infeasibility = value - upper;
-    }
-    if (primal_infeasibility > primal_feasibility_tolerance) {
-      printf(
-          "Entering varible has primal infeasibility of %g for [%g, %g, %g]\n",
-          primal_infeasibility, workLower[variable_in], value_in,
-          workUpper[variable_in]);
-      simplex_info.num_primal_infeasibilities++;
-      primal_infeasible = true;
+  save_value_in = value_in;
+  if (!set_entering_variable_baseValue_later) {
+    if (row_out >= 0) {
+      // Check the feasibility of the entering variable - using work
+      // vector values since its base vector values haven't been updated
+      baseValue[row_out] = value_in;
+      double lower = workLower[variable_in];
+      double upper = workUpper[variable_in];
+      double value = value_in;
+      double primal_infeasibility = 0;
+      if (value < lower - primal_feasibility_tolerance) {
+	primal_infeasibility = lower - value;
+      } else if (value > upper + primal_feasibility_tolerance) {
+	primal_infeasibility = value - upper;
+      }
+      if (primal_infeasibility > primal_feasibility_tolerance) {
+	printf(
+	       "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
+	       primal_infeasibility, workLower[variable_in], value_in,
+	       workUpper[variable_in]);
+	simplex_info.num_primal_infeasibilities++;
+	primal_infeasible = true;
+      }
     }
   }
 
