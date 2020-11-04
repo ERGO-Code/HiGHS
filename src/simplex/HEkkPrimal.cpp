@@ -17,8 +17,6 @@
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"
 
-using std::runtime_error;
-
 HighsStatus HEkkPrimal::solve() {
   HighsOptions& options = ekk_instance_.options_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
@@ -102,13 +100,37 @@ HighsStatus HEkkPrimal::solve() {
     }
     assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
     if (solvePhase == SOLVE_PHASE_1) {
+      //
       // Phase 1
+      //
+      // solvePhase = SOLVE_PHASE_2 if there are no primal infeasibilities
+      //
+      // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase1();
+      assert(solvePhase == SOLVE_PHASE_2 ||
+	     solvePhase == SOLVE_PHASE_ERROR);
       simplex_info.primal_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else if (solvePhase == SOLVE_PHASE_2) {
+      //
       // Phase 2
+      //
+      // solvePhase = SOLVE_PHASE_OPTIMAL if there are no dual infeasibilities
+      //
+      // solvePhase = SOLVE_PHASE_EXIT if primal unboundedness is
+      // detected, in which case scaled_model_status_ =
+      // HighsModelStatus::PRIMAL_UNBOUNDED is set
+      //
+      // solvePhase = SOLVE_PHASE_1 if there are primal infeasibilities
+      //
+      // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase2();
+      assert(solvePhase == SOLVE_PHASE_OPTIMAL ||
+	     solvePhase == SOLVE_PHASE_EXIT ||
+	     solvePhase == SOLVE_PHASE_1 ||
+	     solvePhase == SOLVE_PHASE_ERROR);
+      assert(solvePhase != SOLVE_PHASE_EXIT ||
+	     ekk_instance_.scaled_model_status_ == HighsModelStatus::PRIMAL_UNBOUNDED);
       simplex_info.primal_phase2_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else {
@@ -239,8 +261,14 @@ void HEkkPrimal::solvePhase1() {
                     "primal-phase1-start\n");
   // Main solving structure
   for (;;) {
+    //
+    // Rebuild
+    //
+    // solvePhase = SOLVE_PHASE_ERROR is set if the basis matrix is singular
     rebuild();
+    if (ekk_instance_.bailoutOnTimeIterations()) return;
     if (solvePhase == SOLVE_PHASE_ERROR) return;
+    assert(solvePhase == SOLVE_PHASE_1);
     if (!is_primal_phase1_) {
       // No primal infeasibilities found in rebuild() so break and
       // return to phase 2
@@ -253,6 +281,7 @@ void HEkkPrimal::solvePhase1() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solvePhase == SOLVE_PHASE_ERROR) return;
+      assert(solvePhase == SOLVE_PHASE_1);
       if (rebuild_reason) break;
     }
     // Go to the next rebuild
@@ -294,10 +323,15 @@ void HEkkPrimal::solvePhase2() {
                     "primal-phase2-start\n");
   // Main solving structure
   for (;;) {
+    //
+    // Rebuild
+    //
+    // solvePhase = SOLVE_PHASE_ERROR is set if the basis matrix is singular
     rebuild();
+    if (solvePhase == SOLVE_PHASE_ERROR) return;
+    assert(solvePhase == SOLVE_PHASE_2);
     if (ekk_instance_.bailoutOnTimeIterations()) return;
     if (solvePhase == SOLVE_PHASE_ERROR) return;
-
     if (is_primal_phase1_) {
       // Primal infeasibilities found in rebuild() Should be
       // shifted but, for now, break and return to phase 1
@@ -309,6 +343,7 @@ void HEkkPrimal::solvePhase2() {
       iterate();
       if (ekk_instance_.bailoutOnTimeIterations()) return;
       if (solvePhase == SOLVE_PHASE_ERROR) return;
+      assert(solvePhase == SOLVE_PHASE_2);
       if (rebuild_reason) break;
     }
     // If the data are fresh from rebuild() and no flips have occurred, break
@@ -388,7 +423,10 @@ void HEkkPrimal::rebuild() {
   if (reInvert) {
     int rank_deficiency = ekk_instance_.computeFactor();
     if (rank_deficiency) {
-      throw runtime_error("Primal reInvert: singular-basis-matrix");
+      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+                      "Primal reInvert: singular basis matrix");
+      solvePhase = SOLVE_PHASE_ERROR;
+      return;
     }
     simplex_info.update_count = 0;
   }
@@ -443,6 +481,7 @@ void HEkkPrimal::rebuild() {
   num_flip_since_rebuild = 0;
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
+  assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
 }
 
 void HEkkPrimal::iterate() {
