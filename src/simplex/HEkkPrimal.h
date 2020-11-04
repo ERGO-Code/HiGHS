@@ -97,7 +97,6 @@ class HEkkPrimal {
   int num_col;
   int num_row;
   int num_tot;
-  bool is_primal_phase1_;
   int solvePhase;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
@@ -150,7 +149,6 @@ class HEkkPrimal {
 
   const int check_iter = 9999999;
   const int check_column = -2133;
-  const bool move_phase_1_to_2_switch = true;
 };
 
 #endif /* SIMPLEX_HEKKPRIMAL_H_ */

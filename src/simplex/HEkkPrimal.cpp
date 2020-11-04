@@ -266,16 +266,13 @@ void HEkkPrimal::solvePhase1() {
     //
     // solvePhase = SOLVE_PHASE_ERROR is set if the basis matrix is singular
     rebuild();
-    if (ekk_instance_.bailoutOnTimeIterations()) return;
     if (solvePhase == SOLVE_PHASE_ERROR) return;
-    assert(solvePhase == SOLVE_PHASE_1);
-    if (!is_primal_phase1_) {
-      // No primal infeasibilities found in rebuild() so break and
-      // return to phase 2
-      solvePhase = SOLVE_PHASE_2;
-      break;
-    }
     if (ekk_instance_.bailoutOnTimeIterations()) return;
+    assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
+    //
+    // solvePhase = SOLVE_PHASE_2 is set if no primal infeasibilities
+    // are found in rebuild(), in which case return for phase 2
+    if (solvePhase == SOLVE_PHASE_2) break;
 
     for (;;) {
       iterate();
@@ -303,6 +300,7 @@ void HEkkPrimal::solvePhase1() {
     return;
   }
   if (ekk_instance_.simplex_info_.num_primal_infeasibilities == 0) {
+    assert(solvePhase == SOLVE_PHASE_2);
     // Primal feasible so switch to phase 2
     solvePhase = SOLVE_PHASE_2;
   }
@@ -329,15 +327,12 @@ void HEkkPrimal::solvePhase2() {
     // solvePhase = SOLVE_PHASE_ERROR is set if the basis matrix is singular
     rebuild();
     if (solvePhase == SOLVE_PHASE_ERROR) return;
-    assert(solvePhase == SOLVE_PHASE_2);
     if (ekk_instance_.bailoutOnTimeIterations()) return;
-    if (solvePhase == SOLVE_PHASE_ERROR) return;
-    if (is_primal_phase1_) {
-      // Primal infeasibilities found in rebuild() Should be
-      // shifted but, for now, break and return to phase 1
-      solvePhase = SOLVE_PHASE_1;
-      break;
-    }
+    assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
+    //
+    // solvePhase = SOLVE_PHASE_1 is set if primal infeasibilities
+    // are found in rebuild(), in which case return for phase 1
+    if (solvePhase == SOLVE_PHASE_1) break;
 
     for (;;) {
       iterate();
@@ -358,7 +353,7 @@ void HEkkPrimal::solvePhase2() {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
-  if (is_primal_phase1_) {
+  if (solvePhase == SOLVE_PHASE_1) {
     HighsPrintMessage(ekk_instance_.options_.output,
                       ekk_instance_.options_.message_level, ML_DETAILED,
                       "primal-return-phase1\n");
@@ -432,22 +427,24 @@ void HEkkPrimal::rebuild() {
   }
   ekk_instance_.computePrimal();
   getBasicPrimalInfeasibility();
-  is_primal_phase1_ = false;
   if (simplex_info.num_primal_infeasibilities > 0) {
-    // Primal infeasibilities so in phase 1
-    is_primal_phase1_ = true;
-    if (solvePhase == SOLVE_PHASE_2)
-      HighsLogMessage(
-          ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-          "HEkkPrimal::rebuild switching back to phase 1 from phase 2");
+    // Primal infeasibilities so should be in phase 1
+    if (solvePhase == SOLVE_PHASE_2) {
+      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
+		      "HEkkPrimal::rebuild switching back to phase 1 from phase 2");
+      solvePhase = SOLVE_PHASE_1;
+    }
     phase1ComputeDual();
   } else {
     // No primal infeasibilities so in phase 2. Reset costs if was
     // previously in phase 1
-    if (solvePhase == SOLVE_PHASE_1) ekk_instance_.initialiseCost();
+    if (solvePhase == SOLVE_PHASE_1) {
+      ekk_instance_.initialiseCost();
+      solvePhase = SOLVE_PHASE_2;
+    }
     ekk_instance_.computeDual();
-    ekk_instance_.computeSimplexDualInfeasible();
   }
+  ekk_instance_.computeSimplexDualInfeasible();
   ekk_instance_.computePrimalObjectiveValue();
   if (check_updated_objective_value) {
     // Apply the objective value correction due to computing primal
@@ -565,15 +562,11 @@ void HEkkPrimal::iterate() {
   // set in updateFactor() if it is considered to be more efficient to
   // reinvert.
   update();
-  if (move_phase_1_to_2_switch) {
-    if (solvePhase == SOLVE_PHASE_1) {
-      if (rebuild_reason == 0) {
-	if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
-	  is_primal_phase1_ = true;
-	} else {
-	  // Crude way to force rebuild
-	  rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
-	}
+  if (solvePhase == SOLVE_PHASE_1) {
+    if (rebuild_reason == 0) {
+      if (!ekk_instance_.simplex_info_.num_primal_infeasibilities) {
+	// Crude way to force rebuild
+	rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
       }
     }
   }
@@ -1082,19 +1075,6 @@ void HEkkPrimal::update() {
     num_flip_since_rebuild++;
     // Update the synthetic clock for UPDATE
     ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
-    if (!move_phase_1_to_2_switch) {
-      if (solvePhase == SOLVE_PHASE_1) {
-	assert(!rebuild_reason);
-	if (rebuild_reason == 0) {
-	  if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
-	    is_primal_phase1_ = true;
-	  } else {
-	    // Crude way to force rebuild
-	    rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
-	  }
-	}
-      }
-    }
     return;
   }
 
@@ -1147,20 +1127,6 @@ void HEkkPrimal::update() {
   // Perform hyper-sparse CHUZC
   hyperChooseColumn();
 
-  if (!move_phase_1_to_2_switch) {
-    if (solvePhase == SOLVE_PHASE_1) {
-      // Possibly rebuild if not already doing it and there are primal
-      // infeasibilities
-      if (!rebuild_reason) {
-	if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
-	  is_primal_phase1_ = true;
-	} else {
-	  // Crude way to force rebuild
-	  rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
-	}
-      }
-    }
-  }
 }
 
 void HEkkPrimal::hyperChooseColumn() {
@@ -1439,8 +1405,6 @@ void HEkkPrimal::phase1ComputeDual() {
     workDual[iCol] = -nonbasicFlag[iCol] * bufferLong.array[iCol];
   for (int iRow = 0, iCol = num_col; iRow < num_row; iRow++, iCol++)
     workDual[iCol] = -nonbasicFlag[iCol] * buffer.array[iRow];
-
-  ekk_instance_.computeSimplexDualInfeasible();
 }
 
 void HEkkPrimal::phase1UpdatePrimal() {
