@@ -3225,8 +3225,8 @@ void update_pivots(HighsModelObject& highs_model_object, int variable_in,
   simplex_info.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info.update_count++;
   // Update the number of basic logicals
-  if (variable_out < simplex_lp.numCol_) simplex_info.num_basic_logicals -= 1;
-  if (variable_in < simplex_lp.numCol_) simplex_info.num_basic_logicals += 1;
+  if (variable_out < simplex_lp.numCol_) simplex_info.num_basic_logicals++;
+  if (variable_in < simplex_lp.numCol_) simplex_info.num_basic_logicals--;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
   simplex_lp_status.has_invert = false;

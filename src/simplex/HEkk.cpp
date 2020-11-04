@@ -1013,8 +1013,8 @@ void HEkk::updatePivots(const int variable_in, const int row_out,
   simplex_info_.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info_.update_count++;
   // Update the number of basic logicals
-  if (variable_out < simplex_lp_.numCol_) simplex_info_.num_basic_logicals -= 1;
-  if (variable_in < simplex_lp_.numCol_) simplex_info_.num_basic_logicals += 1;
+  if (variable_out < simplex_lp_.numCol_) simplex_info_.num_basic_logicals++;
+  if (variable_in < simplex_lp_.numCol_) simplex_info_.num_basic_logicals--;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
   simplex_lp_status_.has_invert = false;

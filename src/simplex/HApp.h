@@ -122,13 +122,24 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     ekk.analysis_.simplexTimerStop(SimplexTotalClock);
 #endif
-    reportSimplexPhaseIterations(logfile, ekk.iteration_count_,
-                                 ekk.simplex_info_, SimplexAlgorithm::PRIMAL);
+    reportSimplexPhaseIterations(
+        logfile, ekk.iteration_count_, ekk.simplex_info_,
+        SimplexAlgorithm::PRIMAL);  // Check num_basic_logicals
     highs_model_object.scaled_model_status_ = ekk.scaled_model_status_;
     highs_model_object.scaled_solution_params_ = ekk.getSolutionParams();
     simplex_info = ekk.simplex_info_;
     highs_model_object.simplex_basis_ = ekk.simplex_basis_;
+    // Can't copy matrix due to const double hyperPRICE
     //    highs_model_object.matrix_ = ekk.matrix_;
+    int num_row = highs_model_object.simplex_lp_.numRow_;
+    int num_col = highs_model_object.simplex_lp_.numCol_;
+    int* Astart = &highs_model_object.simplex_lp_.Astart_[0];
+    int* Aindex = &highs_model_object.simplex_lp_.Aindex_[0];
+    double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
+    int* nonbasicFlag = &ekk.simplex_basis_.nonbasicFlag_[0];
+    highs_model_object.matrix_.setup(num_col, num_row, Astart, Aindex, Avalue,
+                                     nonbasicFlag);
+
     highs_model_object.factor_ = ekk.factor_;
     highs_model_object.iteration_counts_.simplex = ekk.iteration_count_;
     // Use this since data in Ekk now computed without max function
@@ -142,6 +153,20 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     }
     analysis.simplexTimerStop(SimplexTotalClock);
 #endif
+    HDual dual_solver(highs_model_object);
+    highs_model_object.simplex_info_.dual_simplex_cost_perturbation_multiplier =
+        0;
+    highs_model_object.simplex_info_.dual_edge_weight_strategy =
+        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG;
+    dual_solver.options();
+    HighsLogMessage(logfile, HighsMessageType::INFO,
+                    "Using dual simplex solver - serial");
+    call_status = dual_solver.solve();
+    return_status =
+        interpretCallStatus(call_status, return_status, "HDual::solve");
+    if (return_status == HighsStatus::Error) return return_status;
+    computeSimplexInfeasible(highs_model_object);
+    copySimplexInfeasible(highs_model_object);
     return return_status;
   }
 

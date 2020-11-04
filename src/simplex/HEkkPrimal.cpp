@@ -107,8 +107,7 @@ HighsStatus HEkkPrimal::solve() {
       //
       // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase1();
-      assert(solvePhase == SOLVE_PHASE_2 ||
-	     solvePhase == SOLVE_PHASE_ERROR);
+      assert(solvePhase == SOLVE_PHASE_2 || solvePhase == SOLVE_PHASE_ERROR);
       simplex_info.primal_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else if (solvePhase == SOLVE_PHASE_2) {
@@ -126,11 +125,11 @@ HighsStatus HEkkPrimal::solve() {
       // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase2();
       assert(solvePhase == SOLVE_PHASE_OPTIMAL ||
-	     solvePhase == SOLVE_PHASE_EXIT ||
-	     solvePhase == SOLVE_PHASE_1 ||
-	     solvePhase == SOLVE_PHASE_ERROR);
+             solvePhase == SOLVE_PHASE_EXIT || solvePhase == SOLVE_PHASE_1 ||
+             solvePhase == SOLVE_PHASE_ERROR);
       assert(solvePhase != SOLVE_PHASE_EXIT ||
-	     ekk_instance_.scaled_model_status_ == HighsModelStatus::PRIMAL_UNBOUNDED);
+             ekk_instance_.scaled_model_status_ ==
+                 HighsModelStatus::PRIMAL_UNBOUNDED);
       simplex_info.primal_phase2_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else {
@@ -430,8 +429,9 @@ void HEkkPrimal::rebuild() {
   if (simplex_info.num_primal_infeasibilities > 0) {
     // Primal infeasibilities so should be in phase 1
     if (solvePhase == SOLVE_PHASE_2) {
-      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-		      "HEkkPrimal::rebuild switching back to phase 1 from phase 2");
+      HighsLogMessage(
+          ekk_instance_.options_.logfile, HighsMessageType::WARNING,
+          "HEkkPrimal::rebuild switching back to phase 1 from phase 2");
       solvePhase = SOLVE_PHASE_1;
     }
     phase1ComputeDual();
@@ -494,7 +494,7 @@ void HEkkPrimal::iterate() {
   }
 
   // Perform CHUZC
-  // 
+  //
   chuzc();
   if (variable_in == -1) {
     if (solvePhase == SOLVE_PHASE_1) {
@@ -535,7 +535,7 @@ void HEkkPrimal::iterate() {
   considerBoundSwap();
   if (rebuild_reason == REBUILD_REASON_POSSIBLY_PRIMAL_UNBOUNDED) return;
   assert(!rebuild_reason);
-  
+
   if (row_out >= 0) {
     // Perform unit BTRAN and PRICE to get pivotal row - and do a
     // numerical check.
@@ -568,11 +568,10 @@ void HEkkPrimal::iterate() {
     rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
 
   assert(rebuild_reason == REBUILD_REASON_NO ||
-	 rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX ||
-	 rebuild_reason == REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT ||
-	 rebuild_reason == REBUILD_REASON_UPDATE_LIMIT_REACHED);
-  assert(solvePhase == SOLVE_PHASE_1 ||
-	 solvePhase == SOLVE_PHASE_2);
+         rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX ||
+         rebuild_reason == REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT ||
+         rebuild_reason == REBUILD_REASON_UPDATE_LIMIT_REACHED);
+  assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
 }
 
 void HEkkPrimal::chuzc() {
@@ -604,7 +603,7 @@ void HEkkPrimal::chuzc() {
     }
   } else {
     chooseColumn(false);
-  }    
+  }
 }
 
 void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
@@ -1054,7 +1053,7 @@ void HEkkPrimal::update() {
 
   } else {
     // Update primal values, and identify any infeasibilities
-    // 
+    //
     // rebuild_reason =
     // REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX is set if a
     // primal infeasiblility is found
@@ -1062,7 +1061,7 @@ void HEkkPrimal::update() {
   }
 
   assert(rebuild_reason == REBUILD_REASON_NO ||
-	 rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX);
+         rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX);
 
   if (flipped) {
     simplex_info.primal_bound_swap++;
@@ -1123,7 +1122,6 @@ void HEkkPrimal::update() {
 
   // Perform hyper-sparse CHUZC
   hyperChooseColumn();
-
 }
 
 void HEkkPrimal::hyperChooseColumn() {
@@ -1473,8 +1471,9 @@ void HEkkPrimal::considerInfeasibleValueIn() {
     workDual[variable_in] += cost;
   } else {
     if (cost) {
-      printf("Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
-	     primal_infeasibility, lower, value_in, upper);
+      printf(
+          "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
+          primal_infeasibility, lower, value_in, upper);
       rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     }
   }
