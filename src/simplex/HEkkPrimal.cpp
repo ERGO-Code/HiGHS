@@ -1103,6 +1103,11 @@ void HEkkPrimal::update() {
   baseValue[row_out] = value_in;
   // Consider whether the entering value is feasible and, if not, take
   // action
+  //
+  // rebuild_reason =
+  // REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX is set in
+  // phase 2 if a primal infeasiblility is found
+  considerInfeasibleValueIn();
 
   // Update the dual values
   theta_dual = workDual[variable_in];
