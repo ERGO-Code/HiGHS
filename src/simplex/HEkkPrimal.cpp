@@ -565,6 +565,18 @@ void HEkkPrimal::iterate() {
   // set in updateFactor() if it is considered to be more efficient to
   // reinvert.
   update();
+  if (move_phase_1_to_2_switch) {
+    if (solvePhase == SOLVE_PHASE_1) {
+      if (rebuild_reason == 0) {
+	if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
+	  is_primal_phase1_ = true;
+	} else {
+	  // Crude way to force rebuild
+	  rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+	}
+      }
+    }
+  }
   assert(rebuild_reason == REBUILD_REASON_NO ||
 	 rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX ||
 	 rebuild_reason == REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT ||
@@ -1068,36 +1080,29 @@ void HEkkPrimal::update() {
     iterationAnalysis();
     localReportIter();
     num_flip_since_rebuild++;
-    if (solvePhase == SOLVE_PHASE_1) {
-      assert(!rebuild_reason);
-      if (rebuild_reason == 0) {
-        if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
-          is_primal_phase1_ = true;
-        } else {
-          // Crude way to force rebuild
-          rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
-        }
-      }
-    }
     // Update the synthetic clock for UPDATE
     ekk_instance_.total_syntheticTick_ += col_aq.syntheticTick;
+    if (!move_phase_1_to_2_switch) {
+      if (solvePhase == SOLVE_PHASE_1) {
+	assert(!rebuild_reason);
+	if (rebuild_reason == 0) {
+	  if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
+	    is_primal_phase1_ = true;
+	  } else {
+	    // Crude way to force rebuild
+	    rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+	  }
+	}
+      }
+    }
     return;
   }
 
   assert(row_out >= 0);
-  if (solvePhase == SOLVE_PHASE_1) {
-    // Now set the value of the entering variable
-    baseValue[row_out] = value_in;
-    // Consider whether the entering value is feasible and, if not, take
-    // action
-    considerInfeasibleValueIn();
-  } else {
-    if (set_entering_variable_baseValue_later) {
-      assert(value_in == save_value_in);
-      baseValue[row_out] = value_in;
-      considerInfeasibleValueIn();
-    }
-  }
+  // Now set the value of the entering variable
+  baseValue[row_out] = value_in;
+  // Consider whether the entering value is feasible and, if not, take
+  // action
 
   // Update the dual values
   theta_dual = workDual[variable_in];
@@ -1137,15 +1142,17 @@ void HEkkPrimal::update() {
   // Perform hyper-sparse CHUZC
   hyperChooseColumn();
 
-  if (solvePhase == SOLVE_PHASE_1) {
-    // Possibly rebuild if not already doing it and there are primal
-    // infeasibilities
-    if (!rebuild_reason) {
-      if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
-        is_primal_phase1_ = true;
-      } else {
-        // Crude way to force rebuild
-        rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+  if (!move_phase_1_to_2_switch) {
+    if (solvePhase == SOLVE_PHASE_1) {
+      // Possibly rebuild if not already doing it and there are primal
+      // infeasibilities
+      if (!rebuild_reason) {
+	if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
+	  is_primal_phase1_ = true;
+	} else {
+	  // Crude way to force rebuild
+	  rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+	}
       }
     }
   }
@@ -1481,18 +1488,18 @@ void HEkkPrimal::phase1UpdatePrimal() {
 void HEkkPrimal::considerInfeasibleValueIn() {
   assert(row_out >= 0);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<double>& workLower = simplex_info.workLower_;
-  const vector<double>& workUpper = simplex_info.workUpper_;
   vector<double>& workCost = simplex_info.workCost_;
   vector<double>& workDual = simplex_info.workDual_;
   double cost = 0;
   double primal_infeasibility = 0;
-  if (value_in < workLower[variable_in] - primal_feasibility_tolerance) {
+  const double lower = simplex_info.workLower_[variable_in];
+  const double upper = simplex_info.workUpper_[variable_in];
+  if (value_in < lower - primal_feasibility_tolerance) {
     cost = -1.0;
-    primal_infeasibility = workLower[variable_in] - value_in;
-  } else if (value_in > workUpper[variable_in] + primal_feasibility_tolerance) {
+    primal_infeasibility = lower - value_in;
+  } else if (value_in > upper + primal_feasibility_tolerance) {
     cost = 1.0;
-    primal_infeasibility = value_in - workUpper[variable_in];
+    primal_infeasibility = value_in - upper;
   }
   if (cost) simplex_info.num_primal_infeasibilities++;
   if (solvePhase == SOLVE_PHASE_1) {
@@ -1500,10 +1507,8 @@ void HEkkPrimal::considerInfeasibleValueIn() {
     workDual[variable_in] += cost;
   } else {
     if (cost) {
-      printf(
-	     "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
-	     primal_infeasibility, workLower[variable_in], value_in,
-	     workUpper[variable_in]);
+      printf("Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
+	     primal_infeasibility, lower, value_in, upper);
       rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     }
   }
@@ -1515,8 +1520,6 @@ void HEkkPrimal::phase2UpdatePrimal() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
-  const vector<double>& workLower = simplex_info.workLower_;
-  const vector<double>& workUpper = simplex_info.workUpper_;
   const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& baseValue = simplex_info.baseValue_;
 
@@ -1539,32 +1542,6 @@ void HEkkPrimal::phase2UpdatePrimal() {
       primal_infeasible = true;
     }
   }
-  save_value_in = value_in;
-  if (!set_entering_variable_baseValue_later) {
-    if (row_out >= 0) {
-      // Check the feasibility of the entering variable - using work
-      // vector values since its base vector values haven't been updated
-      baseValue[row_out] = value_in;
-      double lower = workLower[variable_in];
-      double upper = workUpper[variable_in];
-      double value = value_in;
-      double primal_infeasibility = 0;
-      if (value < lower - primal_feasibility_tolerance) {
-	primal_infeasibility = lower - value;
-      } else if (value > upper + primal_feasibility_tolerance) {
-	primal_infeasibility = value - upper;
-      }
-      if (primal_infeasibility > primal_feasibility_tolerance) {
-	printf(
-	       "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
-	       primal_infeasibility, workLower[variable_in], value_in,
-	       workUpper[variable_in]);
-	simplex_info.num_primal_infeasibilities++;
-	primal_infeasible = true;
-      }
-    }
-  }
-
   if (primal_infeasible)
     rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
 

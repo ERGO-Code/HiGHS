@@ -150,8 +150,7 @@ class HEkkPrimal {
 
   const int check_iter = 9999999;
   const int check_column = -2133;
-  const bool set_entering_variable_baseValue_later = true;
-  double save_value_in;
+  const bool move_phase_1_to_2_switch = true;
 };
 
 #endif /* SIMPLEX_HEKKPRIMAL_H_ */
