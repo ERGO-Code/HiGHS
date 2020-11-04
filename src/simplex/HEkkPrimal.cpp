@@ -562,14 +562,11 @@ void HEkkPrimal::iterate() {
   // set in updateFactor() if it is considered to be more efficient to
   // reinvert.
   update();
-  if (solvePhase == SOLVE_PHASE_1) {
-    if (rebuild_reason == 0) {
-      if (!ekk_instance_.simplex_info_.num_primal_infeasibilities) {
-	// Crude way to force rebuild
-	rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
-      }
-    }
-  }
+  // Crude way to force rebuild if there are no infeasibilities in phase 1
+  if (!ekk_instance_.simplex_info_.num_primal_infeasibilities &&
+      solvePhase == SOLVE_PHASE_1)
+    rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
+
   assert(rebuild_reason == REBUILD_REASON_NO ||
 	 rebuild_reason == REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX ||
 	 rebuild_reason == REBUILD_REASON_SYNTHETIC_CLOCK_SAYS_INVERT ||
