@@ -275,6 +275,7 @@ struct HighsOptionsStruct {
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshold;
   double dual_simplex_cost_perturbation_multiplier;
+  double primal_simplex_bound_perturbation_multiplier;
   double factor_pivot_threshold;
   double factor_pivot_tolerance;
   double start_crossover_tolerance;
@@ -623,6 +624,13 @@ class HighsOptions : public HighsOptionsStruct {
         "dual_simplex_cost_perturbation_multiplier",
         "Dual simplex cost perturbation multiplier: 0 => no perturbation",
         advanced, &dual_simplex_cost_perturbation_multiplier, 0.0, 1.0,
+        HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble(
+        "primal_simplex_bound_perturbation_multiplier",
+        "Primal simplex bound perturbation multiplier: 0 => no perturbation",
+        advanced, &primal_simplex_bound_perturbation_multiplier, 0.0, 1.0,
         HIGHS_CONST_INF);
     records.push_back(record_double);
 

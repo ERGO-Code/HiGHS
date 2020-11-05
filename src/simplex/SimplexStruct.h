@@ -122,7 +122,10 @@ struct HighsSimplexInfo {
   bool valid_backtracking_basis_ = false;
   SimplexBasis backtracking_basis_;
   int backtracking_basis_costs_perturbed_;
+  int backtracking_basis_bounds_perturbed_;
   std::vector<double> backtracking_basis_workShift_;
+  std::vector<double> backtracking_basis_workLowerShift_;
+  std::vector<double> backtracking_basis_workUpperShift_;
   std::vector<double> backtracking_basis_edge_weights_;
 
   // Dual and primal ray vectors
@@ -163,8 +166,10 @@ struct HighsSimplexInfo {
   bool analyse_rebuild_time = false;
 #endif
   // Simplex runtime information
-  int allow_cost_perturbation = true;
+  bool allow_cost_perturbation = true;
+  bool allow_bound_perturbation = true;
   int costs_perturbed = 0;
+  int bounds_perturbed = 0;
 
   int num_primal_infeasibilities = -1;
   double max_primal_infeasibility;

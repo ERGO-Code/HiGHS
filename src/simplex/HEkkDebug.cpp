@@ -613,22 +613,24 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance, const int phase,
     for (int col = 0; col < simplex_lp.numCol_; ++col) {
       int var = col;
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
-        ok = simplex_info.workLower_[var] == simplex_lp.colLower_[col];
+	double lp_lower = simplex_info.workLower_[var] + simplex_info.workLowerShift_[var];
+        ok = lp_lower == simplex_lp.colLower_[col];
         if (!ok) {
           HighsLogMessage(
               options.logfile, HighsMessageType::ERROR,
               "For col %d, simplex_info.workLower_ should be %g but is %g", col,
-              simplex_lp.colLower_[col], simplex_info.workLower_[var]);
+              simplex_lp.colLower_[col], lp_lower);
           return ok;
         }
       }
       if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-        ok = simplex_info.workUpper_[var] == simplex_lp.colUpper_[col];
+	double lp_upper = simplex_info.workUpper_[var]- simplex_info.workUpperShift_[var];
+        ok = lp_upper == simplex_lp.colUpper_[col];
         if (!ok) {
           HighsLogMessage(
               options.logfile, HighsMessageType::ERROR,
               "For col %d, simplex_info.workUpper_ should be %g but is %g", col,
-              simplex_lp.colUpper_[col], simplex_info.workUpper_[var]);
+              simplex_lp.colUpper_[col], lp_upper);
           return ok;
         }
       }
@@ -636,22 +638,24 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance, const int phase,
     for (int row = 0; row < simplex_lp.numRow_; ++row) {
       int var = simplex_lp.numCol_ + row;
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
-        ok = simplex_info.workLower_[var] == -simplex_lp.rowUpper_[row];
+	double lp_lower = simplex_info.workLower_[var] + simplex_info.workLowerShift_[var];
+        ok = lp_lower == -simplex_lp.rowUpper_[row];
         if (!ok) {
           HighsLogMessage(
               options.logfile, HighsMessageType::ERROR,
               "For row %d, simplex_info.workLower_ should be %g but is %g", row,
-              -simplex_lp.rowUpper_[row], simplex_info.workLower_[var]);
+              -simplex_lp.rowUpper_[row], lp_lower);
           return ok;
         }
       }
       if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-        ok = simplex_info.workUpper_[var] == -simplex_lp.rowLower_[row];
+	double lp_upper = simplex_info.workUpper_[var]- simplex_info.workUpperShift_[var];
+        ok = lp_upper == -simplex_lp.rowLower_[row];
         if (!ok) {
           HighsLogMessage(
               options.logfile, HighsMessageType::ERROR,
               "For row %d, simplex_info.workUpper_ should be %g but is %g", row,
-              -simplex_lp.rowLower_[row], simplex_info.workUpper_[var]);
+              -simplex_lp.rowLower_[row], lp_upper);
           return ok;
         }
       }

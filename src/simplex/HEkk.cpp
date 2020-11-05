@@ -687,23 +687,23 @@ void HEkk::initialiseCost(const int perturb) {
 void HEkk::initialiseNonbasicWorkValue() {
   // Assign nonbasic values from bounds and (if necessary) nonbasicMove
   const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int iCol = 0; iCol < numTot; iCol++) {
-    if (!simplex_basis_.nonbasicFlag_[iCol]) continue;
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis_.nonbasicFlag_[iVar]) continue;
     // Nonbasic variable
-    const double lower = simplex_info_.workLower_[iCol];
-    const double upper = simplex_info_.workUpper_[iCol];
+    const double lower = simplex_info_.workLower_[iVar];
+    const double upper = simplex_info_.workUpper_[iVar];
     double value;
     if (lower == upper) {
       value = lower;
-    } else if (simplex_basis_.nonbasicMove_[iCol] == NONBASIC_MOVE_UP) {
+    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
       value = lower;
-    } else if (simplex_basis_.nonbasicMove_[iCol] == NONBASIC_MOVE_DN) {
+    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
       value = upper;
     } else {
-      assert(simplex_basis_.nonbasicMove_[iCol] == NONBASIC_MOVE_ZE);
+      assert(simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE);
       value = 0;
     }
-    simplex_info_.workValue_[iCol] = value;
+    simplex_info_.workValue_[iVar] = value;
   }
 }
 

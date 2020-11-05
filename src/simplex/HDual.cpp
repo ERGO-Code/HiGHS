@@ -834,9 +834,10 @@ void HDual::solvePhase2() {
       cleanup();
     } else {
       // If the costs have not been perturbed, so dual unbounded---and hence
-      // primal infeasible (and possibly also dual infeasible)
+      // primal infeasible (and possibly also dual infeasible)????
       solvePhase = SOLVE_PHASE_EXIT;
       if (scaled_model_status == HighsModelStatus::DUAL_INFEASIBLE) {
+	assert(1==0);
         HighsPrintMessage(workHMO.options_.output,
                           workHMO.options_.message_level, ML_MINIMAL,
                           "problem-primal-dual-infeasible\n");

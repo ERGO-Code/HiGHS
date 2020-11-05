@@ -40,6 +40,7 @@ class HEkkPrimal {
   void initialise();
   void solvePhase1();
   void solvePhase2();
+  void cleanup();
   void rebuild();
 
   void iterate();
@@ -86,6 +87,14 @@ class HEkkPrimal {
   void getNonbasicFreeColumnSet();
   void removeNonbasicFreeColumn();
   void getBasicPrimalInfeasibility();
+  void shiftBound(const bool lower,
+		  const int iVar,
+		  const double value,
+		  const double random_value,
+		  const double tolerance,
+		  double& bound,
+		  double& sum_shift,
+		  const bool report = false);
   HighsDebugStatus debugPrimalSimplex(const std::string message);
   // References:
   HEkk& ekk_instance_;
