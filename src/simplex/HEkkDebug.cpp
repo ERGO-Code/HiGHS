@@ -528,7 +528,9 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(
 
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                                     const SimplexAlgorithm algorithm,
-                                    const int phase, const bool perturbed) {
+                                    const int phase,
+				    const HighsModelStatus scaled_model_status,
+				    const bool perturbed) {
   if (ekk_instance.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsDebugStatus return_status = HighsDebugStatus::OK;
@@ -584,11 +586,11 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                               ekk_instance.simplex_basis_) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return HighsDebugStatus::LOGICAL_ERROR;
-  // Check initial work cost, lower, upper and range
-  if (!ekkDebugWorkArraysOk(ekk_instance, phase, perturbed))
+  // Check work cost, lower, upper and range
+  if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase, scaled_model_status, perturbed))
     return HighsDebugStatus::LOGICAL_ERROR;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  // Check initial work cost, lower, upper and range
+  // Check nonbasic move against work cost, lower, upper and range
   for (int var = 0; var < numTot; ++var) {
     if (simplex_basis.nonbasicFlag_[var]) {
       // Nonbasic variable
@@ -601,15 +603,17 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
 
 // Methods below are not called externally
 
-bool ekkDebugWorkArraysOk(const HEkk& ekk_instance, const int phase,
+bool ekkDebugWorkArraysOk(const HEkk& ekk_instance, 
+			  const SimplexAlgorithm algorithm,
+			  const int phase,
+			  const HighsModelStatus scaled_model_status,
                           const bool perturbed) {
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
   const HighsOptions& options = ekk_instance.options_;
   bool ok = true;
-  // Only check phase 2 bounds: others will have been set by solve() so can be
-  // trusted
-  if (phase == 2) {
+  // Don't check dual simplex phase 1 bounds
+  if (!(algorithm==SimplexAlgorithm::DUAL && phase==1)) {
     for (int col = 0; col < simplex_lp.numCol_; ++col) {
       int var = col;
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
@@ -676,18 +680,20 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance, const int phase,
       return ok;
     }
   }
-  // Don't check perturbed costs: these will have been set by solve() so can be
-  // trusted
-  if (!simplex_info.costs_perturbed) {
+  // Don't check costs against the LP, when using primal simplex in
+  // primal phase 1 or if the LP is primal infeasible
+  if (!(algorithm==SimplexAlgorithm::PRIMAL && (phase==1 ||
+						scaled_model_status == HighsModelStatus::PRIMAL_INFEASIBLE))) {
     for (int col = 0; col < simplex_lp.numCol_; ++col) {
       int var = col;
-      ok = simplex_info.workCost_[var] ==
-           (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
+      double work_cost = simplex_info.workCost_[var] + simplex_info.workShift_[var];// Needs dual simplex to be tested
+      double ok_cost = (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
+      ok = work_cost == ok_cost;
       if (!ok) {
         HighsLogMessage(
             options.logfile, HighsMessageType::ERROR,
-            "For col %d, simplex_info.workLower_ should be %g but is %g", col,
-            simplex_lp.colLower_[col], simplex_info.workCost_[var]);
+            "For col %d, simplex_info.workCost_ should be %g but is %g", col,
+            ok_cost, simplex_info.workCost_[var]);
         return ok;
       }
     }

@@ -139,9 +139,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     int* nonbasicFlag = &ekk.simplex_basis_.nonbasicFlag_[0];
     highs_model_object.matrix_.setup(num_col, num_row, Astart, Aindex, Avalue,
                                      nonbasicFlag);
-
     highs_model_object.factor_ = ekk.factor_;
     highs_model_object.iteration_counts_.simplex = ekk.iteration_count_;
+    if (ekk.scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE ||
+	ekk.scaled_model_status_ == HighsModelStatus::PRIMAL_UNBOUNDED) {
+      return return_status;
+    }
     // Use this since data in Ekk now computed without max function
     computeSimplexInfeasible(highs_model_object);
     copySimplexInfeasible(highs_model_object);

@@ -321,18 +321,10 @@ void HPrimal::primalRebuild() {
   }
 
   // Rebuild workHMO.factor_ - only if we got updates
-  int sv_rebuild_reason = rebuild_reason;
+  int reason_for_rebuild = rebuild_reason;
   rebuild_reason = REBUILD_REASON_NO;
   // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
-  if (!invert_if_row_out_negative) {
-    // Don't reinvert if variable_in is negative [equivalently, if
-    // sv_rebuild_reason == REBUILD_REASON_POSSIBLY_OPTIMAL]
-    if (sv_rebuild_reason == REBUILD_REASON_POSSIBLY_OPTIMAL) {
-      assert(variable_in == -1);
-      reInvert = false;
-    }
-  }
   if (reInvert) {
     analysis->simplexTimerStart(InvertClock);
     int rank_deficiency = computeFactor(workHMO);
@@ -375,7 +367,7 @@ void HPrimal::primalRebuild() {
   // simplex_info.num_dual_infeasibilities can be used
   copySimplexInfeasible(workHMO);
 
-  reportRebuild(sv_rebuild_reason);
+  reportRebuild(reason_for_rebuild);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
@@ -385,7 +377,7 @@ void HPrimal::primalRebuild() {
         analysis->simplexTimerRead(IteratePrimalRebuildClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
-        total_rebuilds, sv_rebuild_reason, workHMO.iteration_counts_.simplex,
+        total_rebuilds, reason_for_rebuild, workHMO.iteration_counts_.simplex,
         total_rebuild_time);
   }
 #endif

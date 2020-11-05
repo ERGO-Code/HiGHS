@@ -150,11 +150,6 @@ const int PARALLEL_THREADS_DEFAULT = 8;
 const int DUAL_TASKS_MIN_THREADS = 3;
 const int DUAL_MULTI_MIN_THREADS = 1;  // 2;
 
-// TODO: Set this false tactically to make mip interface more
-// efficient by preventing reinversion on optimality in phase 1 or
-// phase 2
-const bool invert_if_row_out_negative = true;
-
 /** Simplex nonbasicFlag status for columns and rows. Don't use enum
     class since they are used as int to replace conditional statements
     by multiplication */

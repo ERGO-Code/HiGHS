@@ -1,7 +1,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
-/*      <                                                                 */
+/*                                                                       */
 /*    Written and engineered 2008-2020 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
@@ -59,7 +59,8 @@ HighsStatus HEkkPrimal::solve() {
   solvePhase = num_primal_infeasibilities > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
 
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
-                         use_bound_perturbation) ==
+                         ekk_instance_.scaled_model_status_,
+			 use_bound_perturbation) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
@@ -107,7 +108,9 @@ HighsStatus HEkkPrimal::solve() {
       //
       // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase1();
-      assert(solvePhase == SOLVE_PHASE_2 || solvePhase == SOLVE_PHASE_ERROR);
+      assert(solvePhase == SOLVE_PHASE_2 ||
+	     solvePhase == SOLVE_PHASE_EXIT ||
+	     solvePhase == SOLVE_PHASE_ERROR);
       simplex_info.primal_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else if (solvePhase == SOLVE_PHASE_2) {
@@ -186,6 +189,7 @@ HighsStatus HEkkPrimal::solve() {
   if (solvePhase == SOLVE_PHASE_OPTIMAL)
     ekk_instance_.scaled_model_status_ = HighsModelStatus::OPTIMAL;
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
+                         ekk_instance_.scaled_model_status_,
                          use_bound_perturbation) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
@@ -286,10 +290,10 @@ void HEkkPrimal::solvePhase1() {
     }
     // Go to the next rebuild
     if (rebuild_reason) {
-      // Stop when the invert is new
       if (simplex_lp_status.has_fresh_rebuild) break;
       continue;
     }
+    assert(0==1);
     // If the data are fresh from rebuild() and no flips have occurred, break
     // out of the outer loop to see what's ocurred
     if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
@@ -297,15 +301,20 @@ void HEkkPrimal::solvePhase1() {
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
+  // Will only have accurate simplex info if moving to phase 2 - but
+  // should check primal feasiblilty and residual information if LP
+  // is primal infeasible
   if (debugPrimalSimplex("End of solvePhase1") ==
       HighsDebugStatus::LOGICAL_ERROR) {
     solvePhase = SOLVE_PHASE_ERROR;
     return;
   }
-  if (ekk_instance_.simplex_info_.num_primal_infeasibilities == 0) {
-    assert(solvePhase == SOLVE_PHASE_2);
-    // Primal feasible so switch to phase 2
-    solvePhase = SOLVE_PHASE_2;
+  // Determine whether primal infeasiblility has been identified
+  if (variable_in < 0) {
+    // Optimal in phase 1, so should have primal infeasiblilities
+    assert(ekk_instance_.simplex_info_.num_primal_infeasibilities > 0);
+    ekk_instance_.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+    solvePhase = SOLVE_PHASE_EXIT;
   }
 }
 
@@ -483,18 +492,10 @@ void HEkkPrimal::rebuild() {
   }
 
   // Rebuild ekk_instance_.factor_ - only if we got updates
-  int sv_rebuild_reason = rebuild_reason;
+  int reason_for_rebuild = rebuild_reason;
   rebuild_reason = REBUILD_REASON_NO;
   // Possibly Rebuild factor
   bool reInvert = simplex_info.update_count > 0;
-  if (!invert_if_row_out_negative) {
-    // Don't reinvert if variable_in is negative [equivalently, if
-    // sv_rebuild_reason == REBUILD_REASON_POSSIBLY_OPTIMAL]
-    if (sv_rebuild_reason == REBUILD_REASON_POSSIBLY_OPTIMAL) {
-      assert(variable_in == -1);
-      reInvert = false;
-    }
-  }
   if (reInvert) {
     int rank_deficiency = ekk_instance_.computeFactor();
     if (rank_deficiency) {
@@ -541,7 +542,7 @@ void HEkkPrimal::rebuild() {
   simplex_info.updated_primal_objective_value =
       simplex_info.primal_objective_value;
 
-  reportRebuild(sv_rebuild_reason);
+  reportRebuild(reason_for_rebuild);
 
   // Record the synthetic clock for INVERT, and zero it for UPDATE
   ekk_instance_.build_syntheticTick_ =
@@ -578,13 +579,8 @@ void HEkkPrimal::iterate() {
   //
   chuzc();
   if (variable_in == -1) {
-    if (solvePhase == SOLVE_PHASE_1) {
-      rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
-      return;
-    } else {
-      rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
-      return;
-    }
+    rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
+    return;
   }
 
   // Perform FTRAN - and dual value cross-check

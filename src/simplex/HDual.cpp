@@ -876,14 +876,6 @@ void HDual::rebuild() {
   rebuild_reason = REBUILD_REASON_NO;
   // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
-  if (!invert_if_row_out_negative) {
-    // Don't reinvert if row_out is negative [equivalently, if
-    // reason_for_rebuild == REBUILD_REASON_POSSIBLY_OPTIMAL]
-    if (reason_for_rebuild == REBUILD_REASON_POSSIBLY_OPTIMAL) {
-      assert(row_out == -1);
-      reInvert = false;
-    }
-  }
   if (reInvert) {
     // Get a nonsingular inverse if possible. One of three things
     // happens: Current basis is nonsingular; Current basis is
@@ -1242,9 +1234,7 @@ void HDual::chooseRow() {
     // Choose the index of a good row to leave the basis
     dualRHS.chooseNormal(&row_out);
     if (row_out == -1) {
-      // No index found so may be dual optimal. By setting
-      // rebuild_reason>0 all subsequent methods in the iteration will
-      // be skipped until reinversion and rebuild have taken place
+      // No index found so may be dual optimal.
       rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
       return;
     }
