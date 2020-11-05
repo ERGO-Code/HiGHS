@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 // const double inf = HIGHS_CONST_INF;
 void reportIssue(const int issue) {
