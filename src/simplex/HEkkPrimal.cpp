@@ -104,11 +104,19 @@ HighsStatus HEkkPrimal::solve() {
       //
       // Phase 1
       //
+      // solvePhase = SOLVE_PHASE_EXIT if primal infeasiblilty is
+      // detected, in which case scaled_model_status_ =
+      // HighsModelStatus::PRIMAL_INFEASIBLE is set
+      //
+      // solvePhase = SOLVE_PHASE_1 if the iteration or time limit has
+      // been reached
+      //
       // solvePhase = SOLVE_PHASE_2 if there are no primal infeasibilities
       //
       // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase1();
-      assert(solvePhase == SOLVE_PHASE_2 ||
+      assert(solvePhase == SOLVE_PHASE_1 ||
+	     solvePhase == SOLVE_PHASE_2 ||
 	     solvePhase == SOLVE_PHASE_EXIT ||
 	     solvePhase == SOLVE_PHASE_ERROR);
       simplex_info.primal_phase1_iteration_count +=
@@ -117,21 +125,28 @@ HighsStatus HEkkPrimal::solve() {
       //
       // Phase 2
       //
-      // solvePhase = SOLVE_PHASE_OPTIMAL if there are no dual infeasibilities
-      //
       // solvePhase = SOLVE_PHASE_EXIT if primal unboundedness is
       // detected, in which case scaled_model_status_ =
       // HighsModelStatus::PRIMAL_UNBOUNDED is set
       //
-      // solvePhase = SOLVE_PHASE_1 if there are primal infeasibilities
+      // solvePhase = SOLVE_PHASE_OPTIMAL if there are no dual
+      // infeasibilities
       //
-      // solvePhase = SOLVE_PHASE_1 if there are primal infeasibilities
+      // solvePhase = SOLVE_PHASE_1 if there are primal
+      // infeasibilities
+      //
+      // solvePhase = SOLVE_PHASE_2 if the iteration or time limit has
+      // been reached
+      //
+      // solvePhase = SOLVE_PHASE_CLEANUP if there are primal
+      // infeasiblilities to clean up after removing bound shifts
       //
       // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase2();
       assert(solvePhase == SOLVE_PHASE_OPTIMAL ||
              solvePhase == SOLVE_PHASE_EXIT || 
 	     solvePhase == SOLVE_PHASE_1 ||
+	     solvePhase == SOLVE_PHASE_2 ||
 	     solvePhase == SOLVE_PHASE_CLEANUP ||
              solvePhase == SOLVE_PHASE_ERROR);
       assert(solvePhase != SOLVE_PHASE_EXIT ||
@@ -1552,15 +1567,13 @@ void HEkkPrimal::considerInfeasibleValueIn() {
     } else if (simplex_info.allow_bound_perturbation) {
       if (cost>0) {
 	// Perturb the upper bound to accommodate the infeasiblilty
-	shiftBound(true, variable_in, value_in,
+	shiftBound(false, variable_in, value_in,
 		   numTotRandomValue[variable_in],
 		   primal_feasibility_tolerance,
 		   workUpper[variable_in],
 		   workUpperShift[variable_in],
 		   true);
 	simplex_info.bounds_perturbed = true;
-	assert(!simplex_info.bounds_perturbed);
-	
       } else {
 	// Perturb the lower bound to accommodate the infeasiblilty
 	shiftBound(true, variable_in, value_in,
