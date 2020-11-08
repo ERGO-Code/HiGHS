@@ -1566,25 +1566,27 @@ void HEkkPrimal::considerInfeasibleValueIn() {
       workCost[variable_in] = cost;
       workDual[variable_in] += cost;
     } else if (simplex_info.allow_bound_perturbation) {
+      double bound_shift;
       if (cost>0) {
 	// Perturb the upper bound to accommodate the infeasiblilty
 	shiftBound(false, variable_in, value_in,
 		   numTotRandomValue[variable_in],
 		   primal_feasibility_tolerance,
 		   workUpper[variable_in],
-		   workUpperShift[variable_in],
+		   bound_shift,
 		   true);
-	simplex_info.bounds_perturbed = true;
+	workUpperShift[variable_in] += bound_shift;
       } else {
 	// Perturb the lower bound to accommodate the infeasiblilty
 	shiftBound(true, variable_in, value_in,
 		   numTotRandomValue[variable_in],
 		   primal_feasibility_tolerance,
 		   workLower[variable_in],
-		   workLowerShift[variable_in],
+		   bound_shift,
 		   true);
-	simplex_info.bounds_perturbed = true;
+	workLowerShift[variable_in] += bound_shift;
       }
+      simplex_info.bounds_perturbed = true;
     } else {
       simplex_info.num_primal_infeasibilities++;
       printf("Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
@@ -1643,12 +1645,9 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
 }
 
 void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
-  const bool use_correction = false;
   static double max_max_primal_correction;
-  static double max_max_local_primal_infeasibility;
   if (initialise) {
     max_max_primal_correction = 0;
-    max_max_local_primal_infeasibility = 0;
     return;
   }
   assert(solvePhase == SOLVE_PHASE_2);
@@ -1662,9 +1661,6 @@ void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
   const vector<double>& baseValue = simplex_info.baseValue_;
   const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
   const vector<double>& numTotRandomValue = simplex_info.numTotRandomValue_;
-  int num_local_primal_infeasibility = 0;
-  double max_local_primal_infeasibility = 0;
-  double sum_local_primal_infeasibility = 0;
   int num_primal_correction = 0;
   double max_primal_correction = 0;
   double sum_primal_correction = 0;
@@ -1672,35 +1668,26 @@ void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
     double lower = baseLower[iRow];
     double upper = baseUpper[iRow];
     double value = baseValue[iRow];
-    double primal_infeasibility = 0;
-    int correction = 0;
+    int requires_correction = 0;
     if (value < lower - primal_feasibility_tolerance) {
-      primal_infeasibility = lower - value;
-      correction = -1;
+      requires_correction = -1;
     } else if (value > upper + primal_feasibility_tolerance) {
-      primal_infeasibility = value - upper;
-      correction = 1;
+      requires_correction = 1;
     }
-    if (primal_infeasibility > 0) {
-      if (primal_infeasibility > primal_feasibility_tolerance)
-        num_local_primal_infeasibility++;
-      max_local_primal_infeasibility =
-          std::max(primal_infeasibility, max_local_primal_infeasibility);
-      sum_local_primal_infeasibility += primal_infeasibility;
-    }
-    if (use_correction) {
+    if (requires_correction) {
       int iCol = basicIndex[iRow];
-      if (correction) simplex_info.bounds_perturbed = true;
-      if (correction > 0) {
+      double bound_shift;
+      if (requires_correction > 0) {
 	// Perturb the upper bound to accommodate the infeasiblilty
 	shiftBound(false, iCol,
 		   baseValue[iRow],
 		   numTotRandomValue[iCol],
 		   primal_feasibility_tolerance,
 		   workUpper[iCol],
-		   workUpperShift[iCol],
+		   bound_shift,
 		   true);
-	baseUpper[iRow] = workUpper[iCol];
+ 	baseUpper[iRow] = workUpper[iCol];
+	workUpperShift[iCol] += bound_shift;
       } else {
 	// Perturb the lower bound to accommodate the infeasiblilty
 	shiftBound(true, iCol,
@@ -1708,16 +1695,22 @@ void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
 		   numTotRandomValue[iCol],
 		   primal_feasibility_tolerance,
 		   workLower[iCol],
-		   workLowerShift[iCol],
+		   bound_shift,
 		   true);
-	baseLower[iRow] = workLower[iCol];
+ 	baseLower[iRow] = workLower[iCol];
+	workLowerShift[iCol] += bound_shift;
       }
+      assert(bound_shift>0);
+      num_primal_correction++;
+      max_primal_correction = max(bound_shift, max_primal_correction);
+      sum_primal_correction += bound_shift;
+      simplex_info.bounds_perturbed = true;
     }
   }
-  if (max_local_primal_infeasibility > 2*max_max_local_primal_infeasibility) {
-    printf("phase2CorrectPrimal: num / max / sum primal infeasibilities = %d / %g / %g\n",
-	   num_local_primal_infeasibility, max_local_primal_infeasibility, sum_local_primal_infeasibility);
-    max_max_local_primal_infeasibility = max_local_primal_infeasibility;
+  if (max_primal_correction > 2*max_max_primal_correction) {
+    printf("phase2CorrectPrimal: num / max / sum primal corrections = %d / %g / %g\n",
+	   num_primal_correction, max_primal_correction, sum_primal_correction);
+    max_max_primal_correction = max_primal_correction;
   }
 }
 
@@ -2173,13 +2166,12 @@ void HEkkPrimal::shiftBound(const bool lower,
 			    const double random_value,
 			    const double tolerance,
 			    double& bound,
-			    double& sum_shift,
+			    double& shift,
 			    const bool report) {
   double feasibility = (1 + random_value) * tolerance;
   double old_bound = bound;
   std::string type;
   double infeasibility;
-  double shift;
   double new_infeasibility;
   if (lower) {
     // Bound to shift is lower
@@ -2191,7 +2183,6 @@ void HEkkPrimal::shiftBound(const bool lower,
     // it's not degenerate
     shift = infeasibility + feasibility;
     bound -= shift;
-    sum_shift += shift;
     new_infeasibility = bound - value;
     assert(new_infeasibility<0);
   } else {
@@ -2204,8 +2195,7 @@ void HEkkPrimal::shiftBound(const bool lower,
     // it's not degenerate
      shift = infeasibility + feasibility;
     bound += shift;
-    sum_shift += shift;
-     new_infeasibility = value - bound;
+    new_infeasibility = value - bound;
     assert(new_infeasibility<0);
   }
   double error = fabs(-new_infeasibility - feasibility);
