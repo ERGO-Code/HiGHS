@@ -180,28 +180,28 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 	     simplex_info.num_primal_infeasibilities,
 	     simplex_info.num_dual_infeasibilities,
 	     utilHighsModelStatusToString(highs_model_object.scaled_model_status_).c_str());
-      // Should have no dual infeasibilities
-      assert(!simplex_info.num_dual_infeasibilities);
-      // Use dual simplex (phase 2) with Devex pricing
-      highs_model_object.simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-      highs_model_object.simplex_info_.dual_simplex_cost_perturbation_multiplier =
-        0;
-      highs_model_object.simplex_info_.dual_edge_weight_strategy =
-        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
-      HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
-      simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
-			     highs_model_object.iteration_counts_.simplex);
-      HDual dual_solver(highs_model_object);
-      dual_solver.options();
-      HighsLogMessage(logfile, HighsMessageType::INFO,
-		      "Using dual simplex solver - serial");
-      call_status = dual_solver.solve();
-      return_status =
-        interpretCallStatus(call_status, return_status, "HDual::solve");
-      if (return_status == HighsStatus::Error) return return_status;
-      computeSimplexInfeasible(highs_model_object);
-      copySimplexInfeasible(highs_model_object);
     }
+    // Should have no dual infeasibilities
+    assert(!simplex_info.num_dual_infeasibilities);
+    // Use dual simplex (phase 2) with Devex pricing
+    highs_model_object.simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+    highs_model_object.simplex_info_.dual_simplex_cost_perturbation_multiplier =
+      0;
+    highs_model_object.simplex_info_.dual_edge_weight_strategy =
+      SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
+    HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
+    simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
+			   highs_model_object.iteration_counts_.simplex);
+    HDual dual_solver(highs_model_object);
+    dual_solver.options();
+    HighsLogMessage(logfile, HighsMessageType::INFO,
+		    "Using dual simplex solver - serial");
+    call_status = dual_solver.solve();
+    return_status =
+      interpretCallStatus(call_status, return_status, "HDual::solve");
+    if (return_status == HighsStatus::Error) return return_status;
+    computeSimplexInfeasible(highs_model_object);
+    copySimplexInfeasible(highs_model_object);
     return return_status;
   }
 

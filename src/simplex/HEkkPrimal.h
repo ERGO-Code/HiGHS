@@ -72,7 +72,7 @@ class HEkkPrimal {
   void basicFeasibilityChangeUpdateDual();
 
   void phase2UpdatePrimal(const bool initialise=false);
-  void phase2CorrectPrimal();
+  void phase2CorrectPrimal(const bool initialise=false);
 
   void considerInfeasibleValueIn();
 

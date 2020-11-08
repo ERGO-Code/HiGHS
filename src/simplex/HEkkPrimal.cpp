@@ -71,6 +71,7 @@ HighsStatus HEkkPrimal::solve() {
   //  iterationAnalysisInitialise();
 
   localReportIter(true);
+  phase2CorrectPrimal(true);
   while (solvePhase) {
     int it0 = ekk_instance_.iteration_count_;
     // When starting a new phase the (updated) primal objective function
@@ -1641,37 +1642,82 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
   analysis->simplexTimerStop(UpdatePrimalClock);
 }
 
-void HEkkPrimal::phase2CorrectPrimal() {
+void HEkkPrimal::phase2CorrectPrimal(const bool initialise) {
+  const bool use_correction = false;
+  static double max_max_primal_correction;
+  static double max_max_local_primal_infeasibility;
+  if (initialise) {
+    max_max_primal_correction = 0;
+    max_max_local_primal_infeasibility = 0;
+    return;
+  }
   assert(solvePhase == SOLVE_PHASE_2);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<double>& baseLower = simplex_info.baseLower_;
-  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  vector<double>& workLower = simplex_info.workLower_;
+  vector<double>& workUpper = simplex_info.workUpper_;
+  vector<double>& workLowerShift = simplex_info.workLowerShift_;
+  vector<double>& workUpperShift = simplex_info.workUpperShift_;
+  vector<double>& baseLower = simplex_info.baseLower_;
+  vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& baseValue = simplex_info.baseValue_;
-  //  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
-  int num_primal_infeasibility = 0;
-  double max_primal_infeasibility = 0;
-  double sum_primal_infeasibility = 0;
+  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
+  const vector<double>& numTotRandomValue = simplex_info.numTotRandomValue_;
+  int num_local_primal_infeasibility = 0;
+  double max_local_primal_infeasibility = 0;
+  double sum_local_primal_infeasibility = 0;
+  int num_primal_correction = 0;
+  double max_primal_correction = 0;
+  double sum_primal_correction = 0;
   for(int iRow = 0; iRow < num_row; iRow++) {
     double lower = baseLower[iRow];
     double upper = baseUpper[iRow];
     double value = baseValue[iRow];
     double primal_infeasibility = 0;
+    int correction = 0;
     if (value < lower - primal_feasibility_tolerance) {
       primal_infeasibility = lower - value;
+      correction = -1;
     } else if (value > upper + primal_feasibility_tolerance) {
       primal_infeasibility = value - upper;
+      correction = 1;
     }
     if (primal_infeasibility > 0) {
       if (primal_infeasibility > primal_feasibility_tolerance)
-        num_primal_infeasibility++;
-      max_primal_infeasibility =
-          std::max(primal_infeasibility, max_primal_infeasibility);
-      sum_primal_infeasibility += primal_infeasibility;
+        num_local_primal_infeasibility++;
+      max_local_primal_infeasibility =
+          std::max(primal_infeasibility, max_local_primal_infeasibility);
+      sum_local_primal_infeasibility += primal_infeasibility;
+    }
+    if (use_correction) {
+      int iCol = basicIndex[iRow];
+      if (correction) simplex_info.bounds_perturbed = true;
+      if (correction > 0) {
+	// Perturb the upper bound to accommodate the infeasiblilty
+	shiftBound(false, iCol,
+		   baseValue[iRow],
+		   numTotRandomValue[iCol],
+		   primal_feasibility_tolerance,
+		   workUpper[iCol],
+		   workUpperShift[iCol],
+		   true);
+	baseUpper[iRow] = workUpper[iCol];
+      } else {
+	// Perturb the lower bound to accommodate the infeasiblilty
+	shiftBound(true, iCol,
+		   baseValue[iRow],
+		   numTotRandomValue[iCol],
+		   primal_feasibility_tolerance,
+		   workLower[iCol],
+		   workLowerShift[iCol],
+		   true);
+	baseLower[iRow] = workLower[iCol];
+      }
     }
   }
-  if (max_primal_infeasibility > 0.01*primal_feasibility_tolerance) {
+  if (max_local_primal_infeasibility > 2*max_max_local_primal_infeasibility) {
     printf("phase2CorrectPrimal: num / max / sum primal infeasibilities = %d / %g / %g\n",
-	   num_primal_infeasibility, max_primal_infeasibility, sum_primal_infeasibility);
+	   num_local_primal_infeasibility, max_local_primal_infeasibility, sum_local_primal_infeasibility);
+    max_max_local_primal_infeasibility = max_local_primal_infeasibility;
   }
 }
 
