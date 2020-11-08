@@ -128,6 +128,13 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         SimplexAlgorithm::PRIMAL);  // Check num_basic_logicals
     highs_model_object.scaled_model_status_ = ekk.scaled_model_status_;
     highs_model_object.scaled_solution_params_ = ekk.getSolutionParams();
+    if (
+	highs_model_object.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+	highs_model_object.scaled_model_status_ == HighsModelStatus::REACHED_ITERATION_LIMIT ||
+	highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE ||
+	highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_UNBOUNDED) {
+      return return_status;
+    }
     simplex_info = ekk.simplex_info_;
     highs_model_object.simplex_basis_ = ekk.simplex_basis_;
     highs_model_object.iteration_counts_.simplex = ekk.iteration_count_;
@@ -148,13 +155,13 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
                  simplex_info.factor_pivot_threshold,
                  options.factor_pivot_tolerance);
     highs_model_object.simplex_lp_status_.has_invert = false;
-    assert(!computeFactor(highs_model_object));
-    if (
-	highs_model_object.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
-	highs_model_object.scaled_model_status_ == HighsModelStatus::REACHED_ITERATION_LIMIT ||
-	highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE ||
-	highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_UNBOUNDED) {
-      return return_status;
+    int rank_deficiency = computeFactor(highs_model_object);
+    if (rank_deficiency) {
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
+		      "Rank deficiency of %d when reinverting in HMO after EkkPrimal",
+		      rank_deficiency);
+      assert(!rank_deficiency);
+      return HighsStatus::Error;
     }
     // Use this since data in Ekk now computed without max function
     computeSimplexInfeasible(highs_model_object);
