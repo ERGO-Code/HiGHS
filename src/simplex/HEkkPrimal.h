@@ -46,7 +46,7 @@ class HEkkPrimal {
   void iterate();
   void chuzc();
   void chooseColumn(const bool hyper_sparse = false);
-  void assessVariableIn();
+  bool useVariableIn();
   void phase1ChooseRow();
   void chooseRow();
 

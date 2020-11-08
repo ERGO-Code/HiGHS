@@ -320,6 +320,13 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_info.simplex_strategy = simplex_strategy;
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
+
+    if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
+      HighsLogMessage(logfile, HighsMessageType::WARNING,
+                      "Primal simplex solver unavailable");
+      simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+    }
+
     SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL)
       algorithm = SimplexAlgorithm::PRIMAL;

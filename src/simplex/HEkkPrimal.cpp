@@ -591,9 +591,13 @@ void HEkkPrimal::iterate() {
     return;
   }
 
-  // Perform FTRAN - and dual value cross-check
-  assessVariableIn();
+  // Perform FTRAN - and dual value cross-check to decide whether to use the variable
+  bool variable_in_useful = useVariableIn();
   if (solvePhase == SOLVE_PHASE_ERROR) return;
+  if (!variable_in_useful) {
+    rebuild_reason = REBUILD_REASON_POSSIBLY_OPTIMAL;
+    return;    
+  }
 
   // Perform CHUZR
   if (solvePhase == SOLVE_PHASE_1) {
@@ -779,16 +783,16 @@ void HEkkPrimal::chooseColumn(const bool hyper_sparse) {
   //	 ekk_instance_.iteration_count_, variable_in, best_measure);
 }
 
-void HEkkPrimal::assessVariableIn() {
-  const HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+bool HEkkPrimal::useVariableIn() {
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const vector<double>& workCost = simplex_info.workCost_;
-  const vector<double>& workDual = simplex_info.workDual_;
+  vector<double>& workDual = simplex_info.workDual_;
   const vector<int>& nonbasicMove = ekk_instance_.simplex_basis_.nonbasicMove_;
   const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
-  theta_dual = workDual[variable_in];
+  const double updated_theta_dual = workDual[variable_in];
   // Determine the move direction - can't use nonbasicMove_[variable_in]
   // due to free columns
-  move_in = theta_dual > 0 ? -1 : 1;
+  move_in = updated_theta_dual > 0 ? -1 : 1;
   // Unless the variable is free, nonbasicMove[variable_in] should be the same
   // as move_in
   if (nonbasicMove[variable_in]) assert(nonbasicMove[variable_in] == move_in);
@@ -800,21 +804,31 @@ void HEkkPrimal::assessVariableIn() {
   // Compute the dual for the pivot column and compare it with the
   // updated value
   double computed_theta_dual;
-  bool theta_dual_sign_ok = analysis->dualValueSignOk(
-      ekk_instance_.options_, theta_dual, variable_in, col_aq, workCost,
+  const bool theta_dual_sign_ok = analysis->dualValueSignOk(
+      ekk_instance_.options_, updated_theta_dual, variable_in, col_aq, workCost,
       basicIndex, computed_theta_dual);
-  // Really should do something if theta_dual_sign_ok is false
-  if (!theta_dual_sign_ok) {
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-                    "Primal simplex: Computed / update dual of entering "
-                    "variable are %g / %g: sign error",
-                    computed_theta_dual, theta_dual);
-    solvePhase = SOLVE_PHASE_ERROR;
-    return;
-  }
   // Feed in the computed dual value
-  //  simplex_info.workDual_[variable_in] = computed_theta_dual;
-  //  theta_dual = simplex_info.workDual_[variable_in];
+  simplex_info.workDual_[variable_in] = computed_theta_dual;
+  // Reassign theta_dual to be the computed value
+  theta_dual = simplex_info.workDual_[variable_in];
+  if (fabs(theta_dual) <= dual_feasibility_tolerance) {
+    // The computed dual is small, so don't use it
+    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
+		    "Primal simplex: Computed / updated dual of entering "
+		    "variable are %g / %g so don't use it",
+		    computed_theta_dual, updated_theta_dual);
+    return false;
+  }
+
+  if (theta_dual_sign_ok) return true;
+
+  // The computed dual has the opposite sign and is more than the tolerance 
+  HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+		  "Primal simplex: Computed / updated dual of entering "
+		  "variable are %g / %g so has sign error",
+		  computed_theta_dual, updated_theta_dual);
+  solvePhase = SOLVE_PHASE_ERROR;
+  return false;
 }
 
 void HEkkPrimal::phase1ChooseRow() {
