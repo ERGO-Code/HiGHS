@@ -259,13 +259,14 @@ class SpecialLps {
   }
 
   bool objectiveOk(const double optimal_objective,
-		   const double require_optimal_objective, const bool dev_run = false) {
+                   const double require_optimal_objective,
+                   const bool dev_run = false) {
     double error = std::fabs(optimal_objective - require_optimal_objective) /
-      std::max(1.0, std::fabs(require_optimal_objective));
+                   std::max(1.0, std::fabs(require_optimal_objective));
     bool error_ok = error < 1e-10;
     if (!error_ok && dev_run)
       printf("Objective is %g but require %g (error %g)\n", optimal_objective,
-	     require_optimal_objective, error);
+             require_optimal_objective, error);
     return error_ok;
   }
 
@@ -277,12 +278,12 @@ class SpecialLps {
       printf("Solution\n");
       printf("Col       Value        Dual\n");
       for (int iCol = 0; iCol < highs.getLp().numCol_; iCol++)
-	printf("%3d %11.4g %11.4g\n", iCol, solution.col_value[iCol],
-	       solution.col_dual[iCol]);
+        printf("%3d %11.4g %11.4g\n", iCol, solution.col_value[iCol],
+               solution.col_dual[iCol]);
       printf("Row       Value        Dual\n");
       for (int iRow = 0; iRow < highs.getLp().numRow_; iRow++)
-	printf("%3d %11.4g %11.4g\n", iRow, solution.row_value[iRow],
-	       solution.row_dual[iRow]);
+        printf("%3d %11.4g %11.4g\n", iRow, solution.row_value[iRow],
+               solution.row_dual[iRow]);
     } else {
       printf("info.primal_status = %d\n", info.primal_status);
     }

@@ -128,11 +128,14 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         SimplexAlgorithm::PRIMAL);  // Check num_basic_logicals
     highs_model_object.scaled_model_status_ = ekk.scaled_model_status_;
     highs_model_object.scaled_solution_params_ = ekk.getSolutionParams();
-    if (
-	highs_model_object.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
-	highs_model_object.scaled_model_status_ == HighsModelStatus::REACHED_ITERATION_LIMIT ||
-	highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE ||
-	highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_UNBOUNDED) {
+    if (highs_model_object.scaled_model_status_ ==
+            HighsModelStatus::REACHED_TIME_LIMIT ||
+        highs_model_object.scaled_model_status_ ==
+            HighsModelStatus::REACHED_ITERATION_LIMIT ||
+        highs_model_object.scaled_model_status_ ==
+            HighsModelStatus::PRIMAL_INFEASIBLE ||
+        highs_model_object.scaled_model_status_ ==
+            HighsModelStatus::PRIMAL_UNBOUNDED) {
       return return_status;
     }
     simplex_info = ekk.simplex_info_;
@@ -148,18 +151,18 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     HighsOptions& options = highs_model_object.options_;
     highs_model_object.matrix_.setup(num_col, num_row, Astart, Aindex, Avalue,
                                      nonbasicFlag);
-    highs_model_object.factor_.setup(num_col, num_row, Astart, Aindex, Avalue,
-                                     basicIndex,
-				     options.highs_debug_level,
-                 options.logfile, options.output, options.message_level,
-                 simplex_info.factor_pivot_threshold,
-                 options.factor_pivot_tolerance);
+    highs_model_object.factor_.setup(
+        num_col, num_row, Astart, Aindex, Avalue, basicIndex,
+        options.highs_debug_level, options.logfile, options.output,
+        options.message_level, simplex_info.factor_pivot_threshold,
+        options.factor_pivot_tolerance);
     highs_model_object.simplex_lp_status_.has_invert = false;
     int rank_deficiency = computeFactor(highs_model_object);
     if (rank_deficiency) {
-      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
-		      "Rank deficiency of %d when reinverting in HMO after EkkPrimal",
-		      rank_deficiency);
+      HighsLogMessage(
+          highs_model_object.options_.logfile, HighsMessageType::ERROR,
+          "Rank deficiency of %d when reinverting in HMO after EkkPrimal",
+          rank_deficiency);
       assert(!rank_deficiency);
       return HighsStatus::Error;
     }
@@ -176,29 +179,33 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #endif
     if (simplex_info.num_primal_infeasibilities) {
       // Have primal infeasibilities to clean up
-      printf("Leaving EkkPrimal with %d primal and %d dual infeasibilities: Status %s\n",
-	     simplex_info.num_primal_infeasibilities,
-	     simplex_info.num_dual_infeasibilities,
-	     utilHighsModelStatusToString(highs_model_object.scaled_model_status_).c_str());
+      printf(
+          "Leaving EkkPrimal with %d primal and %d dual infeasibilities: "
+          "Status %s\n",
+          simplex_info.num_primal_infeasibilities,
+          simplex_info.num_dual_infeasibilities,
+          utilHighsModelStatusToString(highs_model_object.scaled_model_status_)
+              .c_str());
     }
     // Should have no dual infeasibilities
     assert(!simplex_info.num_dual_infeasibilities);
     // Use dual simplex (phase 2) with Devex pricing
     highs_model_object.simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL;
     highs_model_object.simplex_info_.dual_simplex_cost_perturbation_multiplier =
-      0;
+        0;
     highs_model_object.simplex_info_.dual_edge_weight_strategy =
-      SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
-    HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
+        SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
+    HighsSimplexAnalysis& simplex_analysis =
+        highs_model_object.simplex_analysis_;
     simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
-			   highs_model_object.iteration_counts_.simplex);
+                           highs_model_object.iteration_counts_.simplex);
     HDual dual_solver(highs_model_object);
     dual_solver.options();
     HighsLogMessage(logfile, HighsMessageType::INFO,
-		    "Using dual simplex solver - serial");
+                    "Using dual simplex solver - serial");
     call_status = dual_solver.solve();
     return_status =
-      interpretCallStatus(call_status, return_status, "HDual::solve");
+        interpretCallStatus(call_status, return_status, "HDual::solve");
     if (return_status == HighsStatus::Error) return return_status;
     computeSimplexInfeasible(highs_model_object);
     copySimplexInfeasible(highs_model_object);

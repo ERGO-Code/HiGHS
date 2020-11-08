@@ -834,18 +834,18 @@ void HDual::solvePhase2() {
       cleanup();
     } else {
       // The costs have not been perturbed, so dual unbounded---and
-      // hence primal infeasible. 
+      // hence primal infeasible.
       solvePhase = SOLVE_PHASE_EXIT;
       if (scaled_model_status == HighsModelStatus::DUAL_INFEASIBLE) {
-	// LP has already been shown to be dual infeasible, so a cost
-	// shift was necessary to achieve dual feasibility in phase
-	// 2. In this case dual unboundedness (hopefully) implies
-	// primal and dual infeasiblility. Without a primal simplex
-	// solver, this is the only way to identify primal
-	// infeasiblilty for and LP that's also dual infeasible. With
-	// a primal simplex solver, once dual infeasiblility has been
-	// identified, use primal phase 1 to identify primal
-	// infeasiblilty.
+        // LP has already been shown to be dual infeasible, so a cost
+        // shift was necessary to achieve dual feasibility in phase
+        // 2. In this case dual unboundedness (hopefully) implies
+        // primal and dual infeasiblility. Without a primal simplex
+        // solver, this is the only way to identify primal
+        // infeasiblilty for and LP that's also dual infeasible. With
+        // a primal simplex solver, once dual infeasiblility has been
+        // identified, use primal phase 1 to identify primal
+        // infeasiblilty.
         HighsPrintMessage(workHMO.options_.output,
                           workHMO.options_.message_level, ML_MINIMAL,
                           "problem-primal-dual-infeasible\n");

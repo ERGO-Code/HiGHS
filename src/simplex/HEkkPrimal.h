@@ -71,8 +71,8 @@ class HEkkPrimal {
   void basicFeasibilityChangePrice();
   void basicFeasibilityChangeUpdateDual();
 
-  void phase2UpdatePrimal(const bool initialise=false);
-  void phase2CorrectPrimal(const bool initialise=false);
+  void phase2UpdatePrimal(const bool initialise = false);
+  void phase2CorrectPrimal(const bool initialise = false);
 
   void considerInfeasibleValueIn();
 
@@ -88,14 +88,9 @@ class HEkkPrimal {
   void getNonbasicFreeColumnSet();
   void removeNonbasicFreeColumn();
   void getBasicPrimalInfeasibility();
-  void shiftBound(const bool lower,
-		  const int iVar,
-		  const double value,
-		  const double random_value,
-		  const double tolerance,
-		  double& bound,
-		  double& sum_shift,
-		  const bool report = false);
+  void shiftBound(const bool lower, const int iVar, const double value,
+                  const double random_value, const double tolerance,
+                  double& bound, double& sum_shift, const bool report = false);
   HighsDebugStatus debugPrimalSimplex(const std::string message);
   // References:
   HEkk& ekk_instance_;

@@ -5,10 +5,10 @@
 
 const bool dev_run = true;
 
-void ekk_solve(Highs& highs, std::string presolve, 
-           const HighsModelStatus require_model_status,
-           const double require_optimal_objective = 0) {
-    SpecialLps special_lps;
+void ekk_solve(Highs& highs, std::string presolve,
+               const HighsModelStatus require_model_status,
+               const double require_optimal_objective = 0) {
+  SpecialLps special_lps;
   const HighsInfo& info = highs.getHighsInfo();
 
   REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_EKK) ==
@@ -23,8 +23,8 @@ void ekk_solve(Highs& highs, std::string presolve,
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::OPTIMAL) {
-    REQUIRE(
-	    special_lps.objectiveOk(info.objective_function_value, require_optimal_objective, dev_run));
+    REQUIRE(special_lps.objectiveOk(info.objective_function_value,
+                                    require_optimal_objective, dev_run));
   }
 
   REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
@@ -72,12 +72,12 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
   const bool from_file = false;
   if (from_file) {
     std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/stair.mps";
+        std::string(HIGHS_DIR) + "/check/instances/stair.mps";
     // "/check/instances/adlittle.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
 
-    REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_EKK) ==
-	    HighsStatus::OK);
+    REQUIRE(highs.setHighsOptionValue("simplex_strategy",
+                                      SIMPLEX_STRATEGY_EKK) == HighsStatus::OK);
     highs.setHighsOptionValue("message_level", 6);
     REQUIRE(highs.run() == HighsStatus::OK);
   } else {
@@ -94,4 +94,3 @@ TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   ekk_distillation(highs);
   ekk_blending(highs);
 }
-

@@ -23,8 +23,8 @@ void solve(Highs& highs, std::string presolve, std::string solver,
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::OPTIMAL) {
-    REQUIRE(
-	    special_lps.objectiveOk(info.objective_function_value, require_optimal_objective, dev_run));
+    REQUIRE(special_lps.objectiveOk(info.objective_function_value,
+                                    require_optimal_objective, dev_run));
   }
 
   REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
@@ -379,7 +379,8 @@ void singularStartingBasis(Highs& highs) {
   REQUIRE(highs.getModelStatus() == require_model_status);
 
   if (require_model_status == HighsModelStatus::OPTIMAL)
-    REQUIRE(special_lps.objectiveOk(info.objective_function_value, optimal_objective, dev_run));
+    REQUIRE(special_lps.objectiveOk(info.objective_function_value,
+                                    optimal_objective, dev_run));
 
   REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
 
