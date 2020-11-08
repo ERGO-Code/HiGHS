@@ -130,23 +130,30 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     highs_model_object.scaled_solution_params_ = ekk.getSolutionParams();
     simplex_info = ekk.simplex_info_;
     highs_model_object.simplex_basis_ = ekk.simplex_basis_;
-    // Can't copy matrix due to const double hyperPRICE
-    //    highs_model_object.matrix_ = ekk.matrix_;
+    highs_model_object.iteration_counts_.simplex = ekk.iteration_count_;
     int num_row = highs_model_object.simplex_lp_.numRow_;
     int num_col = highs_model_object.simplex_lp_.numCol_;
     int* Astart = &highs_model_object.simplex_lp_.Astart_[0];
     int* Aindex = &highs_model_object.simplex_lp_.Aindex_[0];
     double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
-    int* nonbasicFlag = &ekk.simplex_basis_.nonbasicFlag_[0];
+    int* nonbasicFlag = &highs_model_object.simplex_basis_.nonbasicFlag_[0];
+    int* basicIndex = &highs_model_object.simplex_basis_.basicIndex_[0];
+    HighsOptions& options = highs_model_object.options_;
     highs_model_object.matrix_.setup(num_col, num_row, Astart, Aindex, Avalue,
                                      nonbasicFlag);
-    highs_model_object.factor_ = ekk.factor_;
-    highs_model_object.iteration_counts_.simplex = ekk.iteration_count_;
+    highs_model_object.factor_.setup(num_col, num_row, Astart, Aindex, Avalue,
+                                     basicIndex,
+				     options.highs_debug_level,
+                 options.logfile, options.output, options.message_level,
+                 simplex_info.factor_pivot_threshold,
+                 options.factor_pivot_tolerance);
+    highs_model_object.simplex_lp_status_.has_invert = false;
+    assert(!computeFactor(highs_model_object));
     if (
-	ekk.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
-	ekk.scaled_model_status_ == HighsModelStatus::REACHED_ITERATION_LIMIT ||
-	ekk.scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE ||
-	ekk.scaled_model_status_ == HighsModelStatus::PRIMAL_UNBOUNDED) {
+	highs_model_object.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+	highs_model_object.scaled_model_status_ == HighsModelStatus::REACHED_ITERATION_LIMIT ||
+	highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE ||
+	highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_UNBOUNDED) {
       return return_status;
     }
     // Use this since data in Ekk now computed without max function
@@ -174,8 +181,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
         0;
       highs_model_object.simplex_info_.dual_edge_weight_strategy =
         SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
-      //    highs_model_object.options_.message_level = 7;
-      //    highs_model_object.options_.highs_debug_level = HIGHS_DEBUG_LEVEL_MAX;
       HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
       simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
 			     highs_model_object.iteration_counts_.simplex);
