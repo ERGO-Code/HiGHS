@@ -288,16 +288,9 @@ void HEkkPrimal::solvePhase1() {
       assert(solvePhase == SOLVE_PHASE_1);
       if (rebuild_reason) break;
     }
-    // Go to the next rebuild
-    if (rebuild_reason) {
-      if (simplex_lp_status.has_fresh_rebuild) break;
-      continue;
-    }
-    assert(0==1);
-    // If the data are fresh from rebuild() and no flips have occurred, break
-    // out of the outer loop to see what's ocurred
-    if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0)
-      break;
+    // If the data are fresh from rebuild() and no flips have
+    // occurred, break out of the outer loop to see what's ocurred
+    if (simplex_lp_status.has_fresh_rebuild && num_flip_since_rebuild == 0) break;
   }
   // If bailing out, should have returned already
   assert(!ekk_instance_.solve_bailout_);
@@ -333,6 +326,8 @@ void HEkkPrimal::solvePhase2() {
   HighsPrintMessage(options.output,
                     options.message_level, ML_DETAILED,
                     "primal-phase2-start\n");
+  phase2UpdatePrimal(true);
+
   // Main solving structure
   for (;;) {
     //
@@ -507,6 +502,8 @@ void HEkkPrimal::rebuild() {
     simplex_info.update_count = 0;
   }
   ekk_instance_.computePrimal();
+  if (solvePhase == SOLVE_PHASE_2) 
+    phase2CorrectPrimal();
   getBasicPrimalInfeasibility();
   if (simplex_info.num_primal_infeasibilities > 0) {
     // Primal infeasibilities so should be in phase 1
@@ -1584,15 +1581,20 @@ void HEkkPrimal::considerInfeasibleValueIn() {
   ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
 }
 
-void HEkkPrimal::phase2UpdatePrimal() {
+void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
+  static double max_max_local_primal_infeasibility;
+  if (initialise) {
+    max_max_local_primal_infeasibility = 0;
+    return;
+  }
   analysis->simplexTimerStart(UpdatePrimalClock);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   const vector<double>& baseLower = simplex_info.baseLower_;
   const vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& baseValue = simplex_info.baseValue_;
-
   bool primal_infeasible = false;
+  double max_local_primal_infeasibility = 0;
   //  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
   for (int iEl = 0; iEl < col_aq.count; iEl++) {
     int iRow = col_aq.index[iEl];
@@ -1606,6 +1608,7 @@ void HEkkPrimal::phase2UpdatePrimal() {
     } else if (value > upper + primal_feasibility_tolerance) {
       primal_infeasibility = value - upper;
     }
+    max_local_primal_infeasibility = max(primal_infeasibility, max_local_primal_infeasibility);
     if (primal_infeasibility > primal_feasibility_tolerance) {
       simplex_info.num_primal_infeasibilities++;
       primal_infeasible = true;
@@ -1614,11 +1617,49 @@ void HEkkPrimal::phase2UpdatePrimal() {
   if (primal_infeasible)
     rebuild_reason = REBUILD_REASON_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
 
+  if (max_local_primal_infeasibility > max_max_local_primal_infeasibility*2) {
+    max_max_local_primal_infeasibility = max_local_primal_infeasibility;
+    printf("phase2UpdatePrimal: max_local_primal_infeasibility = %g\n", max_local_primal_infeasibility);
+  }
   simplex_info.updated_primal_objective_value +=
       workDual[variable_in] * theta_primal;
 
   ekk_instance_.invalidatePrimalMaxSumInfeasibilityRecord();
   analysis->simplexTimerStop(UpdatePrimalClock);
+}
+
+void HEkkPrimal::phase2CorrectPrimal() {
+  assert(solvePhase == SOLVE_PHASE_2);
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  const vector<double>& baseLower = simplex_info.baseLower_;
+  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  const vector<double>& baseValue = simplex_info.baseValue_;
+  //  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
+  int num_primal_infeasibility = 0;
+  double max_primal_infeasibility = 0;
+  double sum_primal_infeasibility = 0;
+  for(int iRow = 0; iRow < num_row; iRow++) {
+    double lower = baseLower[iRow];
+    double upper = baseUpper[iRow];
+    double value = baseValue[iRow];
+    double primal_infeasibility = 0;
+    if (value < lower - primal_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + primal_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    }
+    if (primal_infeasibility > 0) {
+      if (primal_infeasibility > primal_feasibility_tolerance)
+        num_primal_infeasibility++;
+      max_primal_infeasibility =
+          std::max(primal_infeasibility, max_primal_infeasibility);
+      sum_primal_infeasibility += primal_infeasibility;
+    }
+  }
+  if (max_primal_infeasibility > 0.01*primal_feasibility_tolerance) {
+    printf("phase2CorrectPrimal: num / max / sum primal infeasibilities = %d / %g / %g\n",
+	   num_primal_infeasibility, max_primal_infeasibility, sum_primal_infeasibility);
+  }
 }
 
 void HEkkPrimal::basicFeasibilityChangeUpdateDual() {

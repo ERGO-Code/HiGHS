@@ -370,10 +370,10 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
   const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
-                                     // HIGHS_DEBUG_LEVEL_CHEAP;
+                                      HIGHS_DEBUG_LEVEL_CHEAP;
                                      // HIGHS_DEBUG_LEVEL_COSTLY;
                                      // HIGHS_DEBUG_LEVEL_EXPENSIVE;
-                                      HIGHS_DEBUG_LEVEL_MAX;
+                                     // HIGHS_DEBUG_LEVEL_MAX;
   if (options_.highs_debug_level < min_highs_debug_level) {
     printf(
         "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
