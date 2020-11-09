@@ -956,6 +956,18 @@ void HEkk::computeDual() {
   analysis_.simplexTimerStop(ComputeDualClock);
 }
 
+double HEkk::computeDualForTableauColumn(const int iVar, const HVector& tableau_column) {
+  const vector<double>& workCost = simplex_info_.workCost_;
+  const vector<int>& basicIndex = simplex_basis_.basicIndex_;
+
+  double dual = simplex_info_.workCost_[iVar];
+  for (int i = 0; i < tableau_column.count; i++) {
+    int iRow = tableau_column.index[i];
+    dual -= tableau_column.array[iRow] * workCost[basicIndex[iRow]];
+  }
+  return dual;
+}
+
 // The major model updates. Factor calls factor_.update; Matrix
 // calls matrix_.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots

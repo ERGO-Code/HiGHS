@@ -427,21 +427,6 @@ bool HighsSimplexAnalysis::switchToDevex() {
   return switch_to_devex;
 }
 
-bool HighsSimplexAnalysis::dualValueSignOk(
-    const HighsOptions& options, const double updated_dual, const int col_q,
-    const HVector& col_aq, const vector<double>& workCost,
-    const vector<int>& basicIndex, double& computed_dual) {
-  computed_dual = workCost[col_q];
-  for (int i = 0; i < col_aq.count; i++) {
-    int iRow = col_aq.index[i];
-    int iVar = basicIndex[iRow];
-    computed_dual -= col_aq.array[iRow] * workCost[iVar];
-  }
-  ekkDebugUpdatedDual(options, updated_dual, computed_dual);
-  bool sign_error = updated_dual * computed_dual < 0;
-  return !sign_error;
-}
-
 bool HighsSimplexAnalysis::predictEndDensity(const int tran_stage_type,
                                              const double start_density,
                                              double& end_density) {

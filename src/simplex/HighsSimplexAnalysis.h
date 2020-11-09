@@ -98,10 +98,6 @@ class HighsSimplexAnalysis {
   void dualSteepestEdgeWeightError(const double computed_edge_weight,
                                    const double updated_edge_weight);
   bool switchToDevex();
-  bool dualValueSignOk(const HighsOptions& options, const double updated_dual,
-                       const int col_q, const HVector& col_aq,
-                       const vector<double>& workCost,
-                       const vector<int>& basicIndex, double& computed_dual);
   bool predictEndDensity(const int tran_stage_id, const double start_density,
                          double& end_density);
   void afterTranStage(const int tran_stage_id, const double start_density,

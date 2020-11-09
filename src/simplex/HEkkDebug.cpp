@@ -944,7 +944,7 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
   double updated_dual_absolute_error = fabs(updated_dual - computed_dual);
   double updated_dual_relative_error =
       updated_dual_absolute_error / max(abs(computed_dual), 1.0);
-  bool sign_error = updated_dual * computed_dual < 0;
+  bool sign_error = updated_dual * computed_dual <= 0;
   bool at_least_small_error =
       sign_error ||
       updated_dual_absolute_error > updated_dual_small_absolute_error ||

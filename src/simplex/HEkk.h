@@ -88,10 +88,12 @@ class HEkk {
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
   void computeDual();
+  double computeDualForTableauColumn(const int iVar, const HVector& tableau_column);
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
   void updatePivots(const int variable_in, const int row_out,
                     const int move_out);
   void updateMatrix(const int variable_in, const int variable_out);
+				  
   void computeSimplexInfeasible();
   void computeSimplexPrimalInfeasible();
   void computeSimplexDualInfeasible();
