@@ -591,7 +591,8 @@ void HEkkPrimal::iterate() {
     return;
   }
 
-  // Perform FTRAN - and dual value cross-check to decide whether to use the variable
+  // Perform FTRAN - and dual value cross-check to decide whether to use the
+  // variable
   //
   // rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS is set if
   // numerical trouble is detected
@@ -808,8 +809,10 @@ bool HEkkPrimal::useVariableIn() {
   ekk_instance_.pivotColumnFtran(variable_in, col_aq);
   // Compute the dual for the pivot column and compare it with the
   // updated value
-  double computed_theta_dual = ekk_instance_.computeDualForTableauColumn(variable_in, col_aq);
-  ekkDebugUpdatedDual(ekk_instance_.options_, updated_theta_dual, computed_theta_dual);
+  double computed_theta_dual =
+      ekk_instance_.computeDualForTableauColumn(variable_in, col_aq);
+  ekkDebugUpdatedDual(ekk_instance_.options_, updated_theta_dual,
+                      computed_theta_dual);
 
   // Feed in the computed dual value
   simplex_info.workDual_[variable_in] = computed_theta_dual;
@@ -817,7 +820,8 @@ bool HEkkPrimal::useVariableIn() {
   theta_dual = simplex_info.workDual_[variable_in];
   // Determine whether theta_dual is too small or has changed sign
   const bool theta_dual_small = fabs(theta_dual) <= dual_feasibility_tolerance;
-  const bool theta_dual_sign_error = updated_theta_dual * computed_theta_dual <= 0;
+  const bool theta_dual_sign_error =
+      updated_theta_dual * computed_theta_dual <= 0;
 
   if (theta_dual_small || theta_dual_sign_error) {
     // The computed dual is small or has a sign error, so don't use it
@@ -828,9 +832,11 @@ bool HEkkPrimal::useVariableIn() {
     HighsPrintMessage(
         ekk_instance_.options_.output, ekk_instance_.options_.message_level,
         ML_ALWAYS,
-        "Chosen entering variable %d (Iter = %d; Update = %d) has computed (updated) dual of %10.4g (%10.4g) so don't use it%s%s\n",
+        "Chosen entering variable %d (Iter = %d; Update = %d) has computed "
+        "(updated) dual of %10.4g (%10.4g) so don't use it%s%s\n",
         variable_in, ekk_instance_.iteration_count_, simplex_info.update_count,
-	computed_theta_dual, updated_theta_dual, theta_dual_size.c_str(), theta_dual_sign.c_str());
+        computed_theta_dual, updated_theta_dual, theta_dual_size.c_str(),
+        theta_dual_sign.c_str());
     // If a significant computed dual has sign error, consider reinverting
     if (!theta_dual_small && simplex_info.update_count > 0)
       rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;

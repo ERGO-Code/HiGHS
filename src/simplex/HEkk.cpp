@@ -956,7 +956,8 @@ void HEkk::computeDual() {
   analysis_.simplexTimerStop(ComputeDualClock);
 }
 
-double HEkk::computeDualForTableauColumn(const int iVar, const HVector& tableau_column) {
+double HEkk::computeDualForTableauColumn(const int iVar,
+                                         const HVector& tableau_column) {
   const vector<double>& workCost = simplex_info_.workCost_;
   const vector<int>& basicIndex = simplex_basis_.basicIndex_;
 
