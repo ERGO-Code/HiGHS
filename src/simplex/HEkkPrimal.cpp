@@ -61,8 +61,7 @@ HighsStatus HEkkPrimal::solve() {
   solvePhase = num_primal_infeasibilities > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
 
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
-                         ekk_instance_.scaled_model_status_,
-                         use_bound_perturbation) ==
+                         ekk_instance_.scaled_model_status_) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
@@ -200,8 +199,7 @@ HighsStatus HEkkPrimal::solve() {
   if (solvePhase == SOLVE_PHASE_OPTIMAL)
     ekk_instance_.scaled_model_status_ = HighsModelStatus::OPTIMAL;
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
-                         ekk_instance_.scaled_model_status_,
-                         use_bound_perturbation) ==
+                         ekk_instance_.scaled_model_status_) ==
       HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   return ekk_instance_.returnFromSolve(HighsStatus::OK);
@@ -1146,6 +1144,9 @@ void HEkkPrimal::update() {
     workValue[variable_in] = value_in;
     assert(nonbasicMove[variable_in] = move_in);
     nonbasicMove[variable_in] = -move_in;
+  } else {
+    // Adjust perturbation if leaving equation
+    adjustPerturbedEquationOut();
   }
 
   // Start hyper-sparse CHUZC, that takes place through phase1Update()
@@ -1211,10 +1212,6 @@ void HEkkPrimal::update() {
 
   // Perform pivoting
   ekk_instance_.updatePivots(variable_in, row_out, move_out);
-
-  // Adjust perturbation of leaving equation
-  adjustPerturbedEquationOut();
-
   ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
   ekk_instance_.updateMatrix(variable_in, variable_out);
   if (simplex_info.update_count >= simplex_info.update_limit)
@@ -1624,10 +1621,16 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
   }
   analysis->simplexTimerStart(UpdatePrimalClock);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const vector<double>& baseLower = simplex_info.baseLower_;
-  const vector<double>& baseUpper = simplex_info.baseUpper_;
+  vector<double>& workLower = simplex_info.workLower_;
+  vector<double>& workUpper = simplex_info.workUpper_;
+  vector<double>& workLowerShift = simplex_info.workLowerShift_;
+  vector<double>& workUpperShift = simplex_info.workUpperShift_;
+  vector<double>& baseLower = simplex_info.baseLower_;
+  vector<double>& baseUpper = simplex_info.baseUpper_;
   const vector<double>& workDual = simplex_info.workDual_;
   vector<double>& baseValue = simplex_info.baseValue_;
+  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
+  const vector<double>& numTotRandomValue = simplex_info.numTotRandomValue_;
   bool primal_infeasible = false;
   double max_local_primal_infeasibility = 0;
   //  if (ekk_instance_.sparseLoopStyle(col_aq.count, num_row, to_entry)) {
@@ -1637,17 +1640,43 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
     double lower = baseLower[iRow];
     double upper = baseUpper[iRow];
     double value = baseValue[iRow];
+    int requires_correction = 0;
     double primal_infeasibility = 0;
     if (value < lower - primal_feasibility_tolerance) {
+      requires_correction = -1;
       primal_infeasibility = lower - value;
     } else if (value > upper + primal_feasibility_tolerance) {
+      requires_correction = 1;
       primal_infeasibility = value - upper;
     }
-    max_local_primal_infeasibility =
-        max(primal_infeasibility, max_local_primal_infeasibility);
-    if (primal_infeasibility > primal_feasibility_tolerance) {
-      simplex_info.num_primal_infeasibilities++;
-      primal_infeasible = true;
+    if (requires_correction) {
+      if (simplex_info.allow_bound_perturbation) {
+	int iCol = basicIndex[iRow];
+	double bound_shift;
+	if (requires_correction > 0) {
+	  // Perturb the upper bound to accommodate the infeasiblilty
+	  shiftBound(false, iCol, baseValue[iRow], numTotRandomValue[iCol],
+		     primal_feasibility_tolerance, workUpper[iCol], bound_shift,
+		     true);
+	  baseUpper[iRow] = workUpper[iCol];
+	  workUpperShift[iCol] += bound_shift;
+	} else {
+	  // Perturb the lower bound to accommodate the infeasiblilty
+	  shiftBound(true, iCol, baseValue[iRow], numTotRandomValue[iCol],
+		     primal_feasibility_tolerance, workLower[iCol], bound_shift,
+		     true);
+	  baseLower[iRow] = workLower[iCol];
+	  workLowerShift[iCol] += bound_shift;
+	}
+	assert(bound_shift > 0);
+      } else {
+	max_local_primal_infeasibility =
+	  max(primal_infeasibility, max_local_primal_infeasibility);
+	if (primal_infeasibility > primal_feasibility_tolerance) {
+	  simplex_info.num_primal_infeasibilities++;
+	  primal_infeasible = true;
+	}
+      }
     }
   }
   if (primal_infeasible)
@@ -2126,9 +2155,9 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
 }
 
 void HEkkPrimal::adjustPerturbedEquationOut() {
+  if (!ekk_instance_.simplex_info_.bounds_perturbed) return;
   const HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  if (!ekk_instance_.simplex_info_.bounds_perturbed) return;
   double lp_lower;
   double lp_upper;
   if (variable_out < num_col) {
@@ -2140,16 +2169,18 @@ void HEkkPrimal::adjustPerturbedEquationOut() {
   }
   if (lp_lower < lp_upper) return;
   // Leaving variable is fixed
-  double value = simplex_info.workValue_[variable_out];
-  double lp_value = lp_lower;
-  double shift = value - lp_value;
-  simplex_info.workLower_[variable_out] = value;
-  simplex_info.workUpper_[variable_out] = value;
-  simplex_info.workLowerShift_[variable_out] = -shift;
-  simplex_info.workUpperShift_[variable_out] = shift;
+  //  double save_theta_primal = theta_primal;
+  double true_fixed_value = lp_lower;
+  // Modify theta_primal so that variable leaves at true fixed value
+  theta_primal = (simplex_info.baseValue_[row_out] - true_fixed_value) / alpha_col;
+  /*
+    printf("For equation %4d to be nonbasic at RHS %10.4g requires theta_primal to change by %10.4g from %10.4g to %10.4g\n",
+    variable_out, true_fixed_value, theta_primal-save_theta_primal, save_theta_primal, theta_primal);
+  */
+  simplex_info.workLower_[variable_out] = true_fixed_value;
+  simplex_info.workUpper_[variable_out] = true_fixed_value;
   simplex_info.workRange_[variable_out] = 0;
-  ekk_instance_.simplex_basis_.nonbasicMove_[variable_out] = 0;
-  //  printf("Equation %4d becomes nonbasic at %10.4g with RHS %10.4g so shift is %10.4g\n", variable_out, value, lp_value, shift);
+  value_in = simplex_info.workValue_[variable_in] + theta_primal;
 }
 
 
@@ -2242,7 +2273,7 @@ void HEkkPrimal::shiftBound(const bool lower, const int iVar,
   if (report)
     HighsPrintMessage(
         ekk_instance_.options_.output, ekk_instance_.options_.message_level,
-        ML_ALWAYS,
+        ML_VERBOSE,
         "Value(%4d) = %10.4g exceeds %s = %10.4g by %9.4g, so shift bound by "
         "%9.4g to %10.4g: infeasibility %10.4g with error %g\n",
         iVar, value, type.c_str(), old_bound, infeasibility, shift, bound,

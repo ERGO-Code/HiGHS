@@ -637,7 +637,6 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm, const int solvePhas
   if (algorithm == SimplexAlgorithm::PRIMAL) {
     if (!perturb || simplex_info_.primal_simplex_bound_perturbation_multiplier == 0)
       return;
-    printf("\n\n !! Perturb the bounds !!\n\n");
     // Perturb the bounds
     // Determine the smallest and largest finite lower/upper bounds
     int num_col = simplex_lp_.numCol_;
@@ -670,8 +669,6 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm, const int solvePhas
       // Don't perturb bounds of nonbasic fixed variables as they stay nonbasic
       if (simplex_basis_.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE && fixed) continue;
       double random_value = simplex_info_.numTotRandomValue_[iVar];
-      double lower_delta = 0;
-      double upper_delta = 0;
       if (lower > -HIGHS_CONST_INF) {
 	if (lower < -1) {
 	  lower -= random_value * base * (-lower);
@@ -680,10 +677,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm, const int solvePhas
 	} else {
 	  lower -= random_value * base * lower;
 	}
-	lower_delta = simplex_info_.workLower_[iVar] - lower;
-	assert(lower_delta>0);
 	simplex_info_.workLower_[iVar] = lower;
-	simplex_info_.workLowerShift_[iVar] = lower_delta;
       }
       if (upper < HIGHS_CONST_INF) {
 	if (upper < -1) {
@@ -693,10 +687,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm, const int solvePhas
 	} else {
 	  upper += random_value * base * upper;
 	}
-	upper_delta = upper - simplex_info_.workUpper_[iVar];
-	assert(upper_delta>0);
 	simplex_info_.workUpper_[iVar] = upper;
-	simplex_info_.workUpperShift_[iVar] = upper_delta;
       }
       simplex_info_.workRange_[iVar] = simplex_info_.workUpper_[iVar] - simplex_info_.workLower_[iVar];      
       if (simplex_basis_.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
@@ -713,7 +704,6 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm, const int solvePhas
       simplex_info_.baseUpper_[iRow] = simplex_info_.workUpper_[iVar];     
     }
     simplex_info_.bounds_perturbed = 1;    
-    printf("\n\n !! Perturb the bounds !!\n\n");
     return;
   }
   // Dual simplex costs are either from the LP or set to special values in phase 1
