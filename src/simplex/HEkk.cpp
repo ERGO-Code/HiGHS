@@ -91,8 +91,8 @@ HighsStatus HEkk::initialise() {
     return HighsStatus::Error;
   initialiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
-  initialiseCost();
-  initialiseBound();
+  initialiseCost(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
+  initialiseBound(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
   initialiseNonbasicWorkValue();
   computePrimal();                // Timed
   computeDual();                  // Timed
@@ -121,6 +121,8 @@ void HEkk::setSimplexOptions() {
   simplex_info_.price_strategy = options_.simplex_price_strategy;
   simplex_info_.dual_simplex_cost_perturbation_multiplier =
       options_.dual_simplex_cost_perturbation_multiplier;
+  simplex_info_.primal_simplex_bound_perturbation_multiplier =
+    options_.primal_simplex_bound_perturbation_multiplier;
   simplex_info_.factor_pivot_threshold = options_.factor_pivot_threshold;
   simplex_info_.update_limit = options_.simplex_update_limit;
 
@@ -495,7 +497,7 @@ void HEkk::allocateWorkAndBaseArrays() {
   simplex_info_.baseValue_.resize(simplex_lp_.numRow_);
 }
 
-void HEkk::initialisePhase2ColBound() {
+void HEkk::initialiseLpColBound() {
   for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
     simplex_info_.workLower_[iCol] = simplex_lp_.colLower_[iCol];
     simplex_info_.workUpper_[iCol] = simplex_lp_.colUpper_[iCol];
@@ -506,7 +508,7 @@ void HEkk::initialisePhase2ColBound() {
   }
 }
 
-void HEkk::initialisePhase2RowBound() {
+void HEkk::initialiseLpRowBound() {
   for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
     int iCol = simplex_lp_.numCol_ + iRow;
     simplex_info_.workLower_[iCol] = -simplex_lp_.rowUpper_[iRow];
@@ -518,74 +520,16 @@ void HEkk::initialisePhase2RowBound() {
   }
 }
 
-void HEkk::initialiseBound(const int phase) {
-  initialisePhase2ColBound();
-  initialisePhase2RowBound();
-  if (phase == 2) return;
-
-  // The dual objective is the sum of products of primal and dual
-  // values for nonbasic variables. For dual simplex phase 1, the
-  // primal bounds are set so that when the dual value is feasible, the
-  // primal value is set to zero. Otherwise the value is +1/-1
-  // according to the required sign of the dual, except for free
-  // variables, where the bounds are [-1000, 1000]. Hence the dual
-  // objective is the negation of the sum of infeasibilities, unless there are
-  // free In Phase 1: change to dual phase 1 bound.
-  const double inf = HIGHS_CONST_INF;
-  const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int iCol = 0; iCol < numTot; iCol++) {
-    if (simplex_info_.workLower_[iCol] == -inf &&
-        simplex_info_.workUpper_[iCol] == inf) {
-      // Don't change for row variables: they should never become
-      // nonbasic when starting from a logical basis, and no crash
-      // should make a free row nonbasic, but could an advanced basis
-      // make a free row nonbasic.
-      // But what it it happened?
-      if (iCol >= simplex_lp_.numCol_) continue;
-      simplex_info_.workLower_[iCol] = -1000,
-      simplex_info_.workUpper_[iCol] = 1000;  // FREE
-    } else if (simplex_info_.workLower_[iCol] == -inf) {
-      simplex_info_.workLower_[iCol] = -1,
-      simplex_info_.workUpper_[iCol] = 0;  // UPPER
-    } else if (simplex_info_.workUpper_[iCol] == inf) {
-      simplex_info_.workLower_[iCol] = 0,
-      simplex_info_.workUpper_[iCol] = 1;  // LOWER
-    } else {
-      simplex_info_.workLower_[iCol] = 0,
-      simplex_info_.workUpper_[iCol] = 0;  // BOXED or FIXED
-    }
-    simplex_info_.workRange_[iCol] =
-        simplex_info_.workUpper_[iCol] - simplex_info_.workLower_[iCol];
-  }
-}
-
-void HEkk::initialisePhase2ColCost() {
-  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
-    simplex_info_.workCost_[iCol] =
-        (int)simplex_lp_.sense_ * simplex_lp_.colCost_[iCol];
-    simplex_info_.workShift_[iCol] = 0;
-  }
-}
-
-void HEkk::initialisePhase2RowCost() {
-  for (int iCol = simplex_lp_.numCol_;
-       iCol < simplex_lp_.numCol_ + simplex_lp_.numRow_; iCol++) {
-    simplex_info_.workCost_[iCol] = 0;
-    simplex_info_.workShift_[iCol] = 0;
-  }
-}
-
-void HEkk::initialiseCost(const int perturb) {
+void HEkk::initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase, const bool perturb) {
   // Copy the cost
-  initialisePhase2ColCost();
-  initialisePhase2RowCost();
-  // See if we want to skip perturbation
+  initialiseLpColCost();
+  initialiseLpRowCost();
   simplex_info_.costs_perturbed = 0;
-  if (perturb == 0 ||
-      simplex_info_.dual_simplex_cost_perturbation_multiplier == 0)
+  // Primal simplex costs are either from the LP or set specially in phase 1
+  if (algorithm == SimplexAlgorithm::PRIMAL) return;
+  // Dual simplex costs are either from the LP or perturbed
+  if (!perturb || simplex_info_.dual_simplex_cost_perturbation_multiplier == 0)
     return;
-  simplex_info_.costs_perturbed = 1;
-
   // Perturb the original costs, scale down if is too big
 #ifdef HiGHSDEV
   printf("grep_DuPtrb: Cost perturbation for %s\n",
@@ -618,6 +562,7 @@ void HEkk::initialiseCost(const int perturb) {
 #ifdef HiGHSDEV
     printf("grep_DuPtrb:    Large so set bigc = sqrt(bigc) = %g\n", bigc);
 #endif
+  simplex_info_.costs_perturbed = 1;
   }
 
   // If there's few boxed variables, we will just use simple perturbation
@@ -681,6 +626,149 @@ void HEkk::initialiseCost(const int perturb) {
     updateValueDistribution(perturbation2,
                             analysis_.cost_perturbation2_distribution);
 #endif
+  }
+}
+
+void HEkk::initialiseBound(const SimplexAlgorithm algorithm, const int solvePhase, const bool perturb) {
+  initialiseLpColBound();
+  initialiseLpRowBound();
+  simplex_info_.bounds_perturbed = 0;
+  // Primal simplex bounds are either from the LP or perturbed
+  if (algorithm == SimplexAlgorithm::PRIMAL) {
+    if (!perturb || simplex_info_.primal_simplex_bound_perturbation_multiplier == 0)
+      return;
+    printf("\n\n !! Perturb the bounds !!\n\n");
+    // Perturb the bounds
+    // Determine the smallest and largest finite lower/upper bounds
+    int num_col = simplex_lp_.numCol_;
+    int num_row = simplex_lp_.numRow_;
+    int num_tot = num_col + num_row;
+    double min_abs_lower = HIGHS_CONST_INF;
+    double max_abs_lower = -1;
+    double min_abs_upper = HIGHS_CONST_INF;
+    double max_abs_upper = -1;
+    for (int iVar = 0; iVar < num_tot; iVar++) {
+      double abs_lower = fabs(simplex_info_.workLower_[iVar]);
+      double abs_upper = fabs(simplex_info_.workUpper_[iVar]);
+      if (abs_lower && abs_lower < HIGHS_CONST_INF) {
+	min_abs_lower = min(abs_lower, min_abs_lower);
+	max_abs_lower = max(abs_lower, max_abs_lower);
+      }
+      if (abs_upper && abs_upper < HIGHS_CONST_INF) {
+	min_abs_upper = min(abs_upper, min_abs_upper);
+	max_abs_upper = max(abs_upper, max_abs_upper);
+      }
+    }
+    printf("Nonzero finite lower bounds in [%9.4g, %9.4g]; upper bounds in [%9.4g, %9.4g]\n",
+	   min_abs_lower, max_abs_lower, min_abs_upper, max_abs_upper);
+
+    const double base = simplex_info_.primal_simplex_bound_perturbation_multiplier * 5e-7;
+    for (int iVar = 0; iVar < num_tot; iVar++) {
+      double lower = simplex_info_.workLower_[iVar];
+      double upper = simplex_info_.workUpper_[iVar];
+      const bool fixed = lower == upper;
+      // Don't perturb bounds of nonbasic fixed variables as they stay nonbasic
+      if (simplex_basis_.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE && fixed) continue;
+      double random_value = simplex_info_.numTotRandomValue_[iVar];
+      double lower_delta = 0;
+      double upper_delta = 0;
+      if (lower > -HIGHS_CONST_INF) {
+	if (lower < -1) {
+	  lower -= random_value * base * (-lower);
+	} else if (lower < 1) {
+	  lower -= random_value * base;
+	} else {
+	  lower -= random_value * base * lower;
+	}
+	lower_delta = simplex_info_.workLower_[iVar] - lower;
+	assert(lower_delta>0);
+	simplex_info_.workLower_[iVar] = lower;
+	simplex_info_.workLowerShift_[iVar] = lower_delta;
+      }
+      if (upper < HIGHS_CONST_INF) {
+	if (upper < -1) {
+	  upper += random_value * base * (-upper);
+	} else if (upper < 1) {
+	  upper += random_value * base;
+	} else {
+	  upper += random_value * base * upper;
+	}
+	upper_delta = upper - simplex_info_.workUpper_[iVar];
+	assert(upper_delta>0);
+	simplex_info_.workUpper_[iVar] = upper;
+	simplex_info_.workUpperShift_[iVar] = upper_delta;
+      }
+      simplex_info_.workRange_[iVar] = simplex_info_.workUpper_[iVar] - simplex_info_.workLower_[iVar];      
+      if (simplex_basis_.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
+      // Set values of nonbasic variables
+      if (simplex_basis_.nonbasicMove_[iVar]>0) {
+	simplex_info_.workValue_[iVar] = lower;
+      } else if (simplex_basis_.nonbasicMove_[iVar]<0) {
+	simplex_info_.workValue_[iVar] = upper;
+      }
+    }
+    for (int iRow = 0; iRow < num_row; iRow++) {
+      int iVar = simplex_basis_.basicIndex_[iRow];
+      simplex_info_.baseLower_[iRow] = simplex_info_.workLower_[iVar];     
+      simplex_info_.baseUpper_[iRow] = simplex_info_.workUpper_[iVar];     
+    }
+    simplex_info_.bounds_perturbed = 1;    
+    printf("\n\n !! Perturb the bounds !!\n\n");
+    return;
+  }
+  // Dual simplex costs are either from the LP or set to special values in phase 1
+  assert(algorithm == SimplexAlgorithm::DUAL);
+  if (solvePhase == SOLVE_PHASE_2) return;
+
+  // The dual objective is the sum of products of primal and dual
+  // values for nonbasic variables. For dual simplex phase 1, the
+  // primal bounds are set so that when the dual value is feasible, the
+  // primal value is set to zero. Otherwise the value is +1/-1
+  // according to the required sign of the dual, except for free
+  // variables, where the bounds are [-1000, 1000]. Hence the dual
+  // objective is the negation of the sum of infeasibilities, unless there are
+  // free In Phase 1: change to dual phase 1 bound.
+  const double inf = HIGHS_CONST_INF;
+  const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (int iCol = 0; iCol < numTot; iCol++) {
+    if (simplex_info_.workLower_[iCol] == -inf &&
+        simplex_info_.workUpper_[iCol] == inf) {
+      // Don't change for row variables: they should never become
+      // nonbasic when starting from a logical basis, and no crash
+      // should make a free row nonbasic, but could an advanced basis
+      // make a free row nonbasic.
+      // But what it it happened?
+      if (iCol >= simplex_lp_.numCol_) continue;
+      simplex_info_.workLower_[iCol] = -1000,
+      simplex_info_.workUpper_[iCol] = 1000;  // FREE
+    } else if (simplex_info_.workLower_[iCol] == -inf) {
+      simplex_info_.workLower_[iCol] = -1,
+      simplex_info_.workUpper_[iCol] = 0;  // UPPER
+    } else if (simplex_info_.workUpper_[iCol] == inf) {
+      simplex_info_.workLower_[iCol] = 0,
+      simplex_info_.workUpper_[iCol] = 1;  // LOWER
+    } else {
+      simplex_info_.workLower_[iCol] = 0,
+      simplex_info_.workUpper_[iCol] = 0;  // BOXED or FIXED
+    }
+    simplex_info_.workRange_[iCol] =
+        simplex_info_.workUpper_[iCol] - simplex_info_.workLower_[iCol];
+  }
+}
+
+void HEkk::initialiseLpColCost() {
+  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+    simplex_info_.workCost_[iCol] =
+        (int)simplex_lp_.sense_ * simplex_lp_.colCost_[iCol];
+    simplex_info_.workShift_[iCol] = 0;
+  }
+}
+
+void HEkk::initialiseLpRowCost() {
+  for (int iCol = simplex_lp_.numCol_;
+       iCol < simplex_lp_.numCol_ + simplex_lp_.numRow_; iCol++) {
+    simplex_info_.workCost_[iCol] = 0;
+    simplex_info_.workShift_[iCol] = 0;
   }
 }
 

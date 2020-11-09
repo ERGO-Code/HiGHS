@@ -22,7 +22,7 @@
 using std::pair;
 
 const SimplexAlgorithm algorithm = SimplexAlgorithm::PRIMAL;
-const bool use_bound_perturbation = false;
+const bool use_bound_perturbation = true;
 
 /**
  * @brief Primal simplex solver for HiGHS
@@ -87,6 +87,7 @@ class HEkkPrimal {
   void reportRebuild(const int reason_for_rebuild = -1);
   void getNonbasicFreeColumnSet();
   void removeNonbasicFreeColumn();
+  void adjustPerturbedEquationOut();
   void getBasicPrimalInfeasibility();
   void shiftBound(const bool lower, const int iVar, const double value,
                   const double random_value, const double tolerance,

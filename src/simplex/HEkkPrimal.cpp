@@ -51,6 +51,8 @@ HighsStatus HEkkPrimal::solve() {
   getNonbasicFreeColumnSet();
 
   if (use_bound_perturbation) {
+    ekk_instance_.initialiseBound(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, true);
+    ekk_instance_.initialiseNonbasicWorkValue();
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();
   }
@@ -79,10 +81,8 @@ HighsStatus HEkkPrimal::solve() {
     // computed from scratch in rebuild() isn't checked against the the
     // updated value
     simplex_lp_status.has_primal_objective_value = false;
+    assert(solvePhase != SOLVE_PHASE_UNKNOWN);
     if (solvePhase == SOLVE_PHASE_UNKNOWN) {
-      // Reset the phase 2 bounds so that true number of dual
-      // infeasibilities can be determined
-      ekk_instance_.initialiseBound();
       // Determine the number of primal infeasibilities, and hence the solve
       // phase
       ekk_instance_.computeSimplexPrimalInfeasible();
@@ -92,8 +92,7 @@ HighsStatus HEkkPrimal::solve() {
           num_primal_infeasibilities > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
       /*
       if (simplex_info.backtracking_) {
-        // Backtracking, so set the bounds and primal values
-        ekk_instance_.initialiseBound(solvePhase);
+        // Backtracking
         ekk_instance_.initialiseValueAndNonbasicMove();
         // Can now forget that we might have been backtracking
         simplex_info.backtracking_ = false;
@@ -433,12 +432,9 @@ void HEkkPrimal::cleanup() {
                     "primal-cleanup-shift\n");
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   // Remove perturbation and don't permit further perturbation
-  ekk_instance_.initialiseBound();
+  ekk_instance_.initialiseBound(SimplexAlgorithm::PRIMAL, solvePhase, false);
   ekk_instance_.initialiseNonbasicWorkValue();
   simplex_info.allow_bound_perturbation = false;
-  // No solvePhase term in initialiseBound is surely an omission -
-  // when cleanup called in phase 1
-  //  initialiseCost(); ?? Why
   // Possibly take a copy of the original duals before recomputing them
   /*
   vector<double> original_baseValue;
@@ -529,7 +525,7 @@ void HEkkPrimal::rebuild() {
     // No primal infeasibilities so in phase 2. Reset costs if was
     // previously in phase 1
     if (solvePhase == SOLVE_PHASE_1) {
-      ekk_instance_.initialiseCost();
+      ekk_instance_.initialiseCost(SimplexAlgorithm::PRIMAL, solvePhase);
       solvePhase = SOLVE_PHASE_2;
     }
     ekk_instance_.computeDual();
@@ -1215,6 +1211,10 @@ void HEkkPrimal::update() {
 
   // Perform pivoting
   ekk_instance_.updatePivots(variable_in, row_out, move_out);
+
+  // Adjust perturbation of leaving equation
+  adjustPerturbedEquationOut();
+
   ekk_instance_.updateFactor(&col_aq, &row_ep, &row_out, &rebuild_reason);
   ekk_instance_.updateMatrix(variable_in, variable_out);
   if (simplex_info.update_count >= simplex_info.update_limit)
@@ -2124,6 +2124,35 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
     }
   }
 }
+
+void HEkkPrimal::adjustPerturbedEquationOut() {
+  const HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
+  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
+  if (!ekk_instance_.simplex_info_.bounds_perturbed) return;
+  double lp_lower;
+  double lp_upper;
+  if (variable_out < num_col) {
+    lp_lower = simplex_lp.colLower_[variable_out];
+    lp_upper = simplex_lp.colUpper_[variable_out];
+  } else {
+    lp_lower = -simplex_lp.rowUpper_[variable_out - num_col];
+    lp_upper = -simplex_lp.rowLower_[variable_out - num_col];
+  }
+  if (lp_lower < lp_upper) return;
+  // Leaving variable is fixed
+  double value = simplex_info.workValue_[variable_out];
+  double lp_value = lp_lower;
+  double shift = value - lp_value;
+  simplex_info.workLower_[variable_out] = value;
+  simplex_info.workUpper_[variable_out] = value;
+  simplex_info.workLowerShift_[variable_out] = -shift;
+  simplex_info.workUpperShift_[variable_out] = shift;
+  simplex_info.workRange_[variable_out] = 0;
+  ekk_instance_.simplex_basis_.nonbasicMove_[variable_out] = 0;
+  //  printf("Equation %4d becomes nonbasic at %10.4g with RHS %10.4g so shift is %10.4g\n", variable_out, value, lp_value, shift);
+}
+
+
 void HEkkPrimal::getBasicPrimalInfeasibility() {
   // Gets the num/max/sum of basic primal infeasibliities,
   analysis->simplexTimerStart(ComputePrIfsClock);

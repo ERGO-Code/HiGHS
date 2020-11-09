@@ -71,12 +71,12 @@ class HEkk {
   int computeFactor();
   void initialiseMatrix();
   void allocateWorkAndBaseArrays();
-  void initialisePhase2ColCost();
-  void initialisePhase2RowCost();
-  void initialiseCost(const int perturb = 0);
-  void initialisePhase2ColBound();
-  void initialisePhase2RowBound();
-  void initialiseBound(const int phase = 2);
+  void initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase, const bool perturb = false);
+  void initialiseBound(const SimplexAlgorithm algorithm, const int solvePhase, const bool perturb = false);
+  void initialiseLpColCost();
+  void initialiseLpRowCost();
+  void initialiseLpColBound();
+  void initialiseLpRowBound();
   void initialiseNonbasicWorkValue();
   void pivotColumnFtran(const int iCol, HVector& col_aq);
   void unitBtran(const int iRow, HVector& row_ep);
