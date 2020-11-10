@@ -89,11 +89,9 @@ class HEkkPrimal {
   void removeNonbasicFreeColumn();
   void adjustPerturbedEquationOut();
   void getBasicPrimalInfeasibility();
-  void shiftBound(const bool lower, const int iVar,
-		  const double value,
-                  const double random_value,
-		  double& bound,
-		  double& shift, const bool report = false);
+  void shiftBound(const bool lower, const int iVar, const double value,
+                  const double random_value, double& bound, double& shift,
+                  const bool report = false);
   HighsDebugStatus debugPrimalSimplex(const std::string message);
   // References:
   HEkk& ekk_instance_;
@@ -155,7 +153,8 @@ class HEkkPrimal {
   HVector col_basic_feasibility_change;
   HVector row_basic_feasibility_change;
 
-  const int primal_correction_strategy = SIMPLEX_PRIMAL_CORRECTION_STRATEGY_ALWAYS;
+  const int primal_correction_strategy =
+      SIMPLEX_PRIMAL_CORRECTION_STRATEGY_ALWAYS;
 
   const int check_iter = 9999999;
   const int check_column = -2133;

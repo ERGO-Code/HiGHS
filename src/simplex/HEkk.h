@@ -71,8 +71,10 @@ class HEkk {
   int computeFactor();
   void initialiseMatrix();
   void allocateWorkAndBaseArrays();
-  void initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase, const bool perturb = false);
-  void initialiseBound(const SimplexAlgorithm algorithm, const int solvePhase, const bool perturb = false);
+  void initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase,
+                      const bool perturb = false);
+  void initialiseBound(const SimplexAlgorithm algorithm, const int solvePhase,
+                       const bool perturb = false);
   void initialiseLpColCost();
   void initialiseLpRowCost();
   void initialiseLpColBound();

@@ -526,10 +526,9 @@ HighsDebugStatus ekkDebugNonbasicFlagConsistent(
   return return_status;
 }
 
-HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
-                                    const SimplexAlgorithm algorithm,
-                                    const int phase,
-                                    const HighsModelStatus scaled_model_status) {
+HighsDebugStatus ekkDebugOkForSolve(
+    const HEkk& ekk_instance, const SimplexAlgorithm algorithm, const int phase,
+    const HighsModelStatus scaled_model_status) {
   if (ekk_instance.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   const HighsDebugStatus return_status = HighsDebugStatus::OK;
@@ -586,7 +585,8 @@ HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
       HighsDebugStatus::LOGICAL_ERROR)
     return HighsDebugStatus::LOGICAL_ERROR;
   // Check work cost, lower, upper and range
-  if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase, scaled_model_status))
+  if (!ekkDebugWorkArraysOk(ekk_instance, algorithm, phase,
+                            scaled_model_status))
     return HighsDebugStatus::LOGICAL_ERROR;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   // Check nonbasic move against work cost, lower, upper and range
@@ -611,7 +611,8 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
   bool ok = true;
   // Don't check dual simplex phase 1 bounds or perturbed bounds
   const bool dual_phase1 = algorithm == SimplexAlgorithm::DUAL && phase == 1;
-  const bool primal_phase1 = algorithm == SimplexAlgorithm::PRIMAL && phase == 1;
+  const bool primal_phase1 =
+      algorithm == SimplexAlgorithm::PRIMAL && phase == 1;
   if (!(dual_phase1 || simplex_info.bounds_perturbed)) {
     for (int col = 0; col < simplex_lp.numCol_; ++col) {
       int var = col;
@@ -666,24 +667,25 @@ bool ekkDebugWorkArraysOk(const HEkk& ekk_instance,
     const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
     for (int var = 0; var < numTot; ++var) {
       ok = simplex_info.workRange_[var] ==
-	(simplex_info.workUpper_[var] - simplex_info.workLower_[var]);
+           (simplex_info.workUpper_[var] - simplex_info.workLower_[var]);
       if (!ok) {
-	HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "For variable %d, simplex_info.workRange_ should be %g = %g - %g "
-          "but is %g",
-          var, simplex_info.workUpper_[var] - simplex_info.workLower_[var],
-          simplex_info.workUpper_[var], simplex_info.workLower_[var],
-          simplex_info.workRange_[var]);
-	return ok;
+        HighsLogMessage(
+            options.logfile, HighsMessageType::ERROR,
+            "For variable %d, simplex_info.workRange_ should be %g = %g - %g "
+            "but is %g",
+            var, simplex_info.workUpper_[var] - simplex_info.workLower_[var],
+            simplex_info.workUpper_[var], simplex_info.workLower_[var],
+            simplex_info.workRange_[var]);
+        return ok;
       }
     }
   }
   // Don't check costs against the LP, when using primal simplex in
   // primal phase 1, if the LP is primal infeasible, or if the costs
   // have been perturbed
-  if (!(primal_phase1 || scaled_model_status == HighsModelStatus::PRIMAL_INFEASIBLE ||
-	simplex_info.costs_perturbed)) {
+  if (!(primal_phase1 ||
+        scaled_model_status == HighsModelStatus::PRIMAL_INFEASIBLE ||
+        simplex_info.costs_perturbed)) {
     for (int col = 0; col < simplex_lp.numCol_; ++col) {
       int var = col;
       double work_cost = simplex_info.workCost_[var];

@@ -122,7 +122,7 @@ void HEkk::setSimplexOptions() {
   simplex_info_.dual_simplex_cost_perturbation_multiplier =
       options_.dual_simplex_cost_perturbation_multiplier;
   simplex_info_.primal_simplex_bound_perturbation_multiplier =
-    options_.primal_simplex_bound_perturbation_multiplier;
+      options_.primal_simplex_bound_perturbation_multiplier;
   simplex_info_.factor_pivot_threshold = options_.factor_pivot_threshold;
   simplex_info_.update_limit = options_.simplex_update_limit;
 
@@ -520,7 +520,8 @@ void HEkk::initialiseLpRowBound() {
   }
 }
 
-void HEkk::initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase, const bool perturb) {
+void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
+                          const int solvePhase, const bool perturb) {
   // Copy the cost
   initialiseLpColCost();
   initialiseLpRowCost();
@@ -530,7 +531,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase
   // Dual simplex costs are either from the LP or perturbed
   if (!perturb || simplex_info_.dual_simplex_cost_perturbation_multiplier == 0)
     return;
-  // Perturb the original costs, scale down if is too big
+    // Perturb the original costs, scale down if is too big
 #ifdef HiGHSDEV
   printf("grep_DuPtrb: Cost perturbation for %s\n",
          simplex_lp_.model_name_.c_str());
@@ -562,10 +563,10 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase
 #ifdef HiGHSDEV
     printf("grep_DuPtrb:    Large so set bigc = sqrt(bigc) = %g\n", bigc);
 #endif
-  simplex_info_.costs_perturbed = 1;
+    simplex_info_.costs_perturbed = 1;
   }
 
-  // If there's few boxed variables, we will just use simple perturbation
+  // If there are few boxed variables, we will just use simple perturbation
   double boxedRate = 0;
   const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   for (int i = 0; i < numTot; i++)
@@ -629,13 +630,15 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm, const int solvePhase
   }
 }
 
-void HEkk::initialiseBound(const SimplexAlgorithm algorithm, const int solvePhase, const bool perturb) {
+void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
+                           const int solvePhase, const bool perturb) {
   initialiseLpColBound();
   initialiseLpRowBound();
   simplex_info_.bounds_perturbed = 0;
   // Primal simplex bounds are either from the LP or perturbed
   if (algorithm == SimplexAlgorithm::PRIMAL) {
-    if (!perturb || simplex_info_.primal_simplex_bound_perturbation_multiplier == 0)
+    if (!perturb ||
+        simplex_info_.primal_simplex_bound_perturbation_multiplier == 0)
       return;
     // Perturb the bounds
     // Determine the smallest and largest finite lower/upper bounds
@@ -650,63 +653,69 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm, const int solvePhas
       double abs_lower = fabs(simplex_info_.workLower_[iVar]);
       double abs_upper = fabs(simplex_info_.workUpper_[iVar]);
       if (abs_lower && abs_lower < HIGHS_CONST_INF) {
-	min_abs_lower = min(abs_lower, min_abs_lower);
-	max_abs_lower = max(abs_lower, max_abs_lower);
+        min_abs_lower = min(abs_lower, min_abs_lower);
+        max_abs_lower = max(abs_lower, max_abs_lower);
       }
       if (abs_upper && abs_upper < HIGHS_CONST_INF) {
-	min_abs_upper = min(abs_upper, min_abs_upper);
-	max_abs_upper = max(abs_upper, max_abs_upper);
+        min_abs_upper = min(abs_upper, min_abs_upper);
+        max_abs_upper = max(abs_upper, max_abs_upper);
       }
     }
-    printf("Nonzero finite lower bounds in [%9.4g, %9.4g]; upper bounds in [%9.4g, %9.4g]\n",
-	   min_abs_lower, max_abs_lower, min_abs_upper, max_abs_upper);
+    printf(
+        "Nonzero finite lower bounds in [%9.4g, %9.4g]; upper bounds in "
+        "[%9.4g, %9.4g]\n",
+        min_abs_lower, max_abs_lower, min_abs_upper, max_abs_upper);
 
-    const double base = simplex_info_.primal_simplex_bound_perturbation_multiplier * 5e-7;
+    const double base =
+        simplex_info_.primal_simplex_bound_perturbation_multiplier * 5e-7;
     for (int iVar = 0; iVar < num_tot; iVar++) {
       double lower = simplex_info_.workLower_[iVar];
       double upper = simplex_info_.workUpper_[iVar];
       const bool fixed = lower == upper;
       // Don't perturb bounds of nonbasic fixed variables as they stay nonbasic
-      if (simplex_basis_.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE && fixed) continue;
+      if (simplex_basis_.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE && fixed)
+        continue;
       double random_value = simplex_info_.numTotRandomValue_[iVar];
       if (lower > -HIGHS_CONST_INF) {
-	if (lower < -1) {
-	  lower -= random_value * base * (-lower);
-	} else if (lower < 1) {
-	  lower -= random_value * base;
-	} else {
-	  lower -= random_value * base * lower;
-	}
-	simplex_info_.workLower_[iVar] = lower;
+        if (lower < -1) {
+          lower -= random_value * base * (-lower);
+        } else if (lower < 1) {
+          lower -= random_value * base;
+        } else {
+          lower -= random_value * base * lower;
+        }
+        simplex_info_.workLower_[iVar] = lower;
       }
       if (upper < HIGHS_CONST_INF) {
-	if (upper < -1) {
-	  upper += random_value * base * (-upper);
-	} else if (upper < 1) {
-	  upper += random_value * base;
-	} else {
-	  upper += random_value * base * upper;
-	}
-	simplex_info_.workUpper_[iVar] = upper;
+        if (upper < -1) {
+          upper += random_value * base * (-upper);
+        } else if (upper < 1) {
+          upper += random_value * base;
+        } else {
+          upper += random_value * base * upper;
+        }
+        simplex_info_.workUpper_[iVar] = upper;
       }
-      simplex_info_.workRange_[iVar] = simplex_info_.workUpper_[iVar] - simplex_info_.workLower_[iVar];      
+      simplex_info_.workRange_[iVar] =
+          simplex_info_.workUpper_[iVar] - simplex_info_.workLower_[iVar];
       if (simplex_basis_.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
       // Set values of nonbasic variables
-      if (simplex_basis_.nonbasicMove_[iVar]>0) {
-	simplex_info_.workValue_[iVar] = lower;
-      } else if (simplex_basis_.nonbasicMove_[iVar]<0) {
-	simplex_info_.workValue_[iVar] = upper;
+      if (simplex_basis_.nonbasicMove_[iVar] > 0) {
+        simplex_info_.workValue_[iVar] = lower;
+      } else if (simplex_basis_.nonbasicMove_[iVar] < 0) {
+        simplex_info_.workValue_[iVar] = upper;
       }
     }
     for (int iRow = 0; iRow < num_row; iRow++) {
       int iVar = simplex_basis_.basicIndex_[iRow];
-      simplex_info_.baseLower_[iRow] = simplex_info_.workLower_[iVar];     
-      simplex_info_.baseUpper_[iRow] = simplex_info_.workUpper_[iVar];     
+      simplex_info_.baseLower_[iRow] = simplex_info_.workLower_[iVar];
+      simplex_info_.baseUpper_[iRow] = simplex_info_.workUpper_[iVar];
     }
-    simplex_info_.bounds_perturbed = 1;    
+    simplex_info_.bounds_perturbed = 1;
     return;
   }
-  // Dual simplex costs are either from the LP or set to special values in phase 1
+  // Dual simplex costs are either from the LP or set to special values in phase
+  // 1
   assert(algorithm == SimplexAlgorithm::DUAL);
   if (solvePhase == SOLVE_PHASE_2) return;
 
