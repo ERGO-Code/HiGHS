@@ -443,6 +443,7 @@ set_target_properties(libhighs PROPERTIES
 
 if (IPX_ON)
     add_library(ipx OBJECT ${basiclu_sources} ${ipx_sources})
+
     target_include_directories(ipx PUBLIC ipm/ipx/src
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
     #target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
