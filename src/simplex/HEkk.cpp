@@ -56,6 +56,8 @@ HighsStatus HEkk::solve() {
     HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                     "Using EKK dual simplex solver");
     HEkkDual dual(*this);
+    dual.options();
+    simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL_PLAIN;
     return_status = dual.solve();
   } else {
     HighsLogMessage(options_.logfile, HighsMessageType::INFO,
@@ -1063,7 +1065,8 @@ void HEkk::computeDualInfeasibleWithFlips() {
   // called from cleanup() at the end of dual phase 1, nonbasicMove
   // relates to the phase 1 bounds, but workLower and workUpper will
   // have been set to phase 2 values!
-  const double scaled_dual_feasibility_tolerance = options_.dual_feasibility_tolerance;
+  const double scaled_dual_feasibility_tolerance =
+      options_.dual_feasibility_tolerance;
   // Possibly verify that nonbasicMove is correct for fixed variables
   //  debugFixedNonbasicMove(ekk_instance_);
 
@@ -1141,7 +1144,8 @@ void HEkk::correctDual(int* free_infeasibility_count) {
           // Boxed variable = flip
           const int move = simplex_basis_.nonbasicMove_[i];
           flipBound(i);
-          double flip = simplex_info_.workUpper_[i] - simplex_info_.workLower_[i];
+          double flip =
+              simplex_info_.workUpper_[i] - simplex_info_.workLower_[i];
           // Negative dual at lower bound (move=1): flip to upper
           // bound so objective contribution is change in value (flip)
           // times dual, being move*flip*dual
@@ -1190,25 +1194,22 @@ void HEkk::correctDual(int* free_infeasibility_count) {
           shift_dual_objective_value_change += local_dual_objective_change;
           num_shift++;
           sum_shift += fabs(shift);
-          HighsPrintMessage(
-              options_.output,
-              options_.message_level, ML_VERBOSE,
-              "Move %s: cost shift = %g; objective change = %g\n",
-              direction.c_str(), shift, local_dual_objective_change);
+          HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+                            "Move %s: cost shift = %g; objective change = %g\n",
+                            direction.c_str(), shift,
+                            local_dual_objective_change);
         }
       }
     }
   }
   if (num_flip)
     HighsPrintMessage(
-        options_.output,
-        options_.message_level, ML_VERBOSE,
+        options_.output, options_.message_level, ML_VERBOSE,
         "Performed %d flip(s): total = %g; objective change = %g\n", num_flip,
         sum_flip, flip_dual_objective_value_change);
   if (num_shift)
     HighsPrintMessage(
-        options_.output,
-        options_.message_level, ML_DETAILED,
+        options_.output, options_.message_level, ML_DETAILED,
         "Performed %d cost shift(s): total = %g; objective change = %g\n",
         num_shift, sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;
@@ -1217,8 +1218,8 @@ void HEkk::correctDual(int* free_infeasibility_count) {
 void HEkk::flipBound(const int iCol) {
   int* nonbasicMove = &simplex_basis_.nonbasicMove_[0];
   const int move = nonbasicMove[iCol] = -nonbasicMove[iCol];
-  simplex_info_.workValue_[iCol] =
-      move == 1 ? simplex_info_.workLower_[iCol] : simplex_info_.workUpper_[iCol];
+  simplex_info_.workValue_[iCol] = move == 1 ? simplex_info_.workLower_[iCol]
+                                             : simplex_info_.workUpper_[iCol];
 }
 
 // The major model updates. Factor calls factor_.update; Matrix

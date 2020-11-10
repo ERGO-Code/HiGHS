@@ -94,7 +94,7 @@ class HEkk {
   double computeDualForTableauColumn(const int iVar,
                                      const HVector& tableau_column);
   void correctDual(int* free_infeasibility_count);
-  void flipBound(const int iCol) ;
+  void flipBound(const int iCol);
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
   void updatePivots(const int variable_in, const int row_out,
                     const int move_out);
