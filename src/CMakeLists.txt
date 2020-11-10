@@ -436,9 +436,7 @@ target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
 
 # two warnings in ipx/src/basis.h
 
-if (NOT WIN32)
-    target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-endif()
+# target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
 
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
@@ -451,12 +449,13 @@ if (IPX_ON)
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
     #target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
 
-    target_compile_options(ipx PRIVATE "-Wno-return-type-c-linkage")
+    if (MACOS)
+        target_compile_options(ipx PRIVATE "-Wno-return-type-c-linkage")
+    endif()
+
     target_compile_options(ipx PRIVATE "-Wno-return-type" "-Wno-switch")
 
-    if (NOT WIN32)
-        target_compile_options(ipx PRIVATE "-Wno-defaulted-function-deleted")
-    endif()
+    #target_compile_options(ipx PRIVATE "-Wno-defaulted-function-deleted")
 
     target_link_libraries(libhighs PRIVATE ipx)
 endif()
