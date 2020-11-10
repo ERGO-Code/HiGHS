@@ -168,9 +168,8 @@ struct HighsSimplexInfo {
 #endif
   // Simplex runtime information
   bool allow_cost_perturbation = true;
-  bool allow_bound_perturbation = true;
-  int costs_perturbed = 0;
-  int bounds_perturbed = 0;
+  bool costs_perturbed = false;
+  bool bounds_perturbed = false;
 
   int num_primal_infeasibilities = -1;
   double max_primal_infeasibility;
