@@ -103,7 +103,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   if (upper_bound != HIGHS_CONST_INF) {
     ub = upper_bound + offset;
     lb = std::min(ub, lb);
-    gap = 100 * (ub - lb) / std::abs(ub);
+    gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
 
     printf(
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
