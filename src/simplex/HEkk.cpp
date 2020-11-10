@@ -1043,6 +1043,55 @@ void HEkk::computeDual() {
   analysis_.simplexTimerStop(ComputeDualClock);
 }
 
+void HEkk::computeDualInfeasibleWithFlips() {
+  // Computes num/max/sum of dual infeasibliities according to
+  // nonbasicMove, using the bounds only to identify free variables
+  // and non-boxed. Fixed variables are assumed to have nonbasicMove=0
+  // so that no dual infeasibility is counted for them. Indeed, when
+  // called from cleanup() at the end of dual phase 1, nonbasicMove
+  // relates to the phase 1 bounds, but workLower and workUpper will
+  // have been set to phase 2 values!
+  const double scaled_dual_feasibility_tolerance = options_.dual_feasibility_tolerance;
+  // Possibly verify that nonbasicMove is correct for fixed variables
+  //  debugFixedNonbasicMove(ekk_instance_);
+
+  int num_dual_infeasibilities = 0;
+  double max_dual_infeasibility = 0;
+  double sum_dual_infeasibilities = 0;
+  const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis_.nonbasicFlag_[iVar]) continue;
+    // Nonbasic column
+    const double lower = simplex_info_.workLower_[iVar];
+    const double upper = simplex_info_.workUpper_[iVar];
+    const double dual = simplex_info_.workDual_[iVar];
+    double dual_infeasibility = 0;
+    if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+      // Free: any nonzero dual value is infeasible
+      dual_infeasibility = fabs(dual);
+    } else if (highs_isInfinity(-lower) || highs_isInfinity(upper)) {
+      // Not free or boxed: any dual infeasibility is given by value
+      // signed by nonbasicMove.
+      //
+      // For boxed variables, nonbasicMove may have the wrong sign for
+      // dual, but nonbasicMove and the primal value can be flipped to
+      // achieve dual feasiblility.
+      dual_infeasibility = -simplex_basis_.nonbasicMove_[iVar] * dual;
+    }
+    if (dual_infeasibility > 0) {
+      if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
+        num_dual_infeasibilities++;
+      max_dual_infeasibility =
+          std::max(dual_infeasibility, max_dual_infeasibility);
+      sum_dual_infeasibilities += dual_infeasibility;
+    }
+  }
+  simplex_info_.num_dual_infeasibilities = num_dual_infeasibilities;
+  simplex_info_.max_dual_infeasibility = max_dual_infeasibility;
+  simplex_info_.sum_dual_infeasibilities = sum_dual_infeasibilities;
+}
+
 double HEkk::computeDualForTableauColumn(const int iVar,
                                          const HVector& tableau_column) {
   const vector<double>& workCost = simplex_info_.workCost_;
@@ -1054,6 +1103,110 @@ double HEkk::computeDualForTableauColumn(const int iVar,
     dual -= tableau_column.array[iRow] * workCost[basicIndex[iRow]];
   }
   return dual;
+}
+
+void HEkk::correctDual(int* free_infeasibility_count) {
+  const double tau_d = options_.dual_feasibility_tolerance;
+  const double inf = HIGHS_CONST_INF;
+  int workCount = 0;
+  double flip_dual_objective_value_change = 0;
+  double shift_dual_objective_value_change = 0;
+  int num_flip = 0;
+  int num_shift = 0;
+  double sum_flip = 0;
+  double sum_shift = 0;
+  const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (int i = 0; i < numTot; i++) {
+    if (simplex_basis_.nonbasicFlag_[i]) {
+      if (simplex_info_.workLower_[i] == -inf &&
+          simplex_info_.workUpper_[i] == inf) {
+        // FREE variable
+        workCount += (fabs(simplex_info_.workDual_[i]) >= tau_d);
+      } else if (simplex_basis_.nonbasicMove_[i] * simplex_info_.workDual_[i] <=
+                 -tau_d) {
+        if (simplex_info_.workLower_[i] != -inf &&
+            simplex_info_.workUpper_[i] != inf) {
+          // Boxed variable = flip
+          const int move = simplex_basis_.nonbasicMove_[i];
+          flipBound(i);
+          double flip = simplex_info_.workUpper_[i] - simplex_info_.workLower_[i];
+          // Negative dual at lower bound (move=1): flip to upper
+          // bound so objective contribution is change in value (flip)
+          // times dual, being move*flip*dual
+          //
+          // Positive dual at upper bound (move=-1): flip to lower
+          // bound so objective contribution is change in value
+          // (-flip) times dual, being move*flip*dual
+          double local_dual_objective_change =
+              move * flip * simplex_info_.workDual_[i];
+          local_dual_objective_change *= cost_scale_;
+          flip_dual_objective_value_change += local_dual_objective_change;
+          num_flip++;
+          sum_flip += fabs(flip);
+        } else if (simplex_info_.allow_cost_perturbation) {
+          // Other variable = shift
+          //
+          // Before 07/01/20, these shifts were always done, but doing
+          // it after cost perturbation has been removed can lead to
+          // cycling when primal infeasibility has been detecteed in
+          // Phase 2, since the shift below removes dual
+          // infeasibilities, which are then reinstated after the dual
+          // values are recomputed.
+          //
+          // ToDo: Not shifting leads to dual infeasibilities when an
+          // LP is declared to be (primal) infeasible. Should go to
+          // phase 1 primal simplex to "prove" infeasibility.
+          simplex_info_.costs_perturbed = 1;
+          std::string direction;
+          double shift;
+          if (simplex_basis_.nonbasicMove_[i] == 1) {
+            direction = "  up";
+            double dual = (1 + random_.fraction()) * tau_d;
+            shift = dual - simplex_info_.workDual_[i];
+            simplex_info_.workDual_[i] = dual;
+            simplex_info_.workCost_[i] = simplex_info_.workCost_[i] + shift;
+          } else {
+            direction = "down";
+            double dual = -(1 + random_.fraction()) * tau_d;
+            shift = dual - simplex_info_.workDual_[i];
+            simplex_info_.workDual_[i] = dual;
+            simplex_info_.workCost_[i] = simplex_info_.workCost_[i] + shift;
+          }
+          double local_dual_objective_change =
+              shift * simplex_info_.workValue_[i];
+          local_dual_objective_change *= cost_scale_;
+          shift_dual_objective_value_change += local_dual_objective_change;
+          num_shift++;
+          sum_shift += fabs(shift);
+          HighsPrintMessage(
+              options_.output,
+              options_.message_level, ML_VERBOSE,
+              "Move %s: cost shift = %g; objective change = %g\n",
+              direction.c_str(), shift, local_dual_objective_change);
+        }
+      }
+    }
+  }
+  if (num_flip)
+    HighsPrintMessage(
+        options_.output,
+        options_.message_level, ML_VERBOSE,
+        "Performed %d flip(s): total = %g; objective change = %g\n", num_flip,
+        sum_flip, flip_dual_objective_value_change);
+  if (num_shift)
+    HighsPrintMessage(
+        options_.output,
+        options_.message_level, ML_DETAILED,
+        "Performed %d cost shift(s): total = %g; objective change = %g\n",
+        num_shift, sum_shift, shift_dual_objective_value_change);
+  *free_infeasibility_count = workCount;
+}
+
+void HEkk::flipBound(const int iCol) {
+  int* nonbasicMove = &simplex_basis_.nonbasicMove_[0];
+  const int move = nonbasicMove[iCol] = -nonbasicMove[iCol];
+  simplex_info_.workValue_[iCol] =
+      move == 1 ? simplex_info_.workLower_[iCol] : simplex_info_.workUpper_[iCol];
 }
 
 // The major model updates. Factor calls factor_.update; Matrix

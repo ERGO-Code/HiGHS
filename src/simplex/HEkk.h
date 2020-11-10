@@ -90,8 +90,11 @@ class HEkk {
   void fullPrice(const HVector& full_col, HVector& full_row);
   void computePrimal();
   void computeDual();
+  void computeDualInfeasibleWithFlips();
   double computeDualForTableauColumn(const int iVar,
                                      const HVector& tableau_column);
+  void correctDual(int* free_infeasibility_count);
+  void flipBound(const int iCol) ;
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
   void updatePivots(const int variable_in, const int row_out,
                     const int move_out);
@@ -115,6 +118,9 @@ class HEkk {
   void initialiseAnalysis();
 
   friend class HEkkPrimal;
+  friend class HEkkDual;
+  friend class HEkkDualRow;
+  //  friend class HEkkDualRHS;
 };
 
 #endif /* SIMPLEX_HEKK_H_ */

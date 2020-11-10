@@ -108,6 +108,10 @@ set(sources
     simplex/HEkk.cpp
     simplex/HEkkDebug.cpp
     simplex/HEkkPrimal.cpp
+    simplex/HEkkDual.cpp
+    simplex/HEkkDualRHS.cpp
+    simplex/HEkkDualRow.cpp
+    simplex/HEkkDualMulti.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
@@ -167,6 +171,9 @@ set(headers
     simplex/HEkk.h
     simplex/HEkkDebug.h
     simplex/HEkkPrimal.h
+    simplex/HEkkDual.h
+    simplex/HEkkDualRow.h
+    simplex/HEkkDualRHS.h
     simplex/HFactor.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
@@ -413,6 +420,10 @@ target_sources(libhighs PRIVATE
     simplex/HEkk.cpp
     simplex/HEkkDebug.cpp
     simplex/HEkkPrimal.cpp
+    simplex/HEkkDual.cpp
+    simplex/HEkkDualRHS.cpp
+    simplex/HEkkDualRow.cpp
+    simplex/HEkkDualMulti.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
