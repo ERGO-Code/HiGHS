@@ -18,6 +18,7 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HighsModelUtils.h"
+#include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HFactorDebug.h"
 #include "simplex/HighsSimplexAnalysis.h"
@@ -49,8 +50,19 @@ HighsStatus HEkk::solve() {
   assert(simplex_lp_status_.has_invert);
   assert(simplex_lp_status_.valid);
   if (scaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
-  HEkkPrimal primal(*this);
-  HighsStatus return_status = primal.solve();
+
+  HighsStatus return_status;
+  if (options_.simplex_strategy == SIMPLEX_STRATEGY_EKK_DUAL) {
+    HighsLogMessage(options_.logfile, HighsMessageType::INFO,
+                    "Using EKK dual simplex solver");
+    HEkkDual dual(*this);
+    return_status = dual.solve();
+  } else {
+    HighsLogMessage(options_.logfile, HighsMessageType::INFO,
+                    "Using EKK primal simplex solver");
+    HEkkPrimal primal(*this);
+    return_status = primal.solve();
+  }
   return return_status;
 }
 

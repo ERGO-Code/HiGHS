@@ -105,8 +105,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   return_status = interpretCallStatus(call_status, return_status, "transition");
   if (return_status == HighsStatus::Error) return return_status;
 
-  if (highs_model_object.options_.simplex_strategy == SIMPLEX_STRATEGY_EKK) {
+  if (highs_model_object.options_.simplex_strategy == SIMPLEX_STRATEGY_EKK_DUAL ||
+      highs_model_object.options_.simplex_strategy == SIMPLEX_STRATEGY_EKK_PRIMAL) {
     HEkk& ekk = highs_model_object.ekk_instance_;
+    // Initialise the phase iteration count data
     reportSimplexPhaseIterations(logfile, ekk.iteration_count_,
                                  ekk.simplex_info_, SimplexAlgorithm::PRIMAL,
                                  true);

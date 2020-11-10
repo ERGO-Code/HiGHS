@@ -11,7 +11,7 @@ void ekk_solve(Highs& highs, std::string presolve,
   SpecialLps special_lps;
   const HighsInfo& info = highs.getHighsInfo();
 
-  REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_EKK) ==
+  REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_EKK_DUAL) ==
           HighsStatus::OK);
 
   REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::OK);
@@ -69,19 +69,22 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     highs.setHighsOutput();
   }
   HighsLp lp;
-  const bool from_file = false;
+  const bool from_file = true;
   if (from_file) {
     std::string model_file =
-        std::string(HIGHS_DIR) + "/check/instances/stair.mps";
+        std::string(HIGHS_DIR) +
+       "/check/instances/25fv47.mps";
     // "/check/instances/adlittle.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
 
     REQUIRE(highs.setHighsOptionValue("simplex_strategy",
-                                      SIMPLEX_STRATEGY_EKK) == HighsStatus::OK);
+                                      SIMPLEX_STRATEGY_EKK_DUAL) == HighsStatus::OK);
     highs.setHighsOptionValue("message_level", 6);
     REQUIRE(highs.run() == HighsStatus::OK);
   } else {
-    ekk_scipLpi3(highs);
+    //    ekk_distillation(highs);
+    ekk_blending(highs);
+  //    ekk_scipLpi3(highs);
   }
 }
 
