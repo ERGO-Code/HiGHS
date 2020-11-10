@@ -148,6 +148,7 @@ void HighsMipSolver::run() {
       if (search.currentNodePruned()) {
         search.backtrack();
         ++mipdata_->num_leaves;
+        ++mipdata_->num_nodes;
         search.flushStatistics();
         mipdata_->lower_bound = std::min(
             mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound());

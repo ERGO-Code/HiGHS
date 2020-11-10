@@ -18,6 +18,7 @@
 #include "HighsOptions.h"
 #include "HighsRuntimeOptions.h"
 #include "HighsTimer.h"
+#include "presolve/HAggregator.h"
 
 void printHighsVersionCopyright(FILE* output, const int message_level,
                                 const char* message = nullptr);
@@ -204,8 +205,17 @@ HighsStatus callMipSolver(HighsOptions& use_options) {
   HighsStatus read_status = highs.readModel(options.model_file);
   reportLpStatsOrError(output, message_level, read_status, highs.getLp());
   if (read_status == HighsStatus::Error) return HighsStatus::Error;
+  HighsLp lp = highs.getLp();
+  printf("running aggregator (nnz = %lu)\n", lp.Avalue_.size());
+  presolve::HAggregator aggregator(lp.rowLower_, lp.rowUpper_, lp.colCost_,
+                                   lp.offset_, lp.integrality_, lp.colLower_,
+                                   lp.colUpper_);
 
-  HighsMipSolver solver(use_options, highs.getLp());
+  aggregator.loadCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  aggregator.run();
+  aggregator.buildCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  printf("aggregator finished (nnz = %lu)\n", lp.Avalue_.size());
+  HighsMipSolver solver(use_options, lp);
   solver.run();
 
   return HighsStatus::OK;
