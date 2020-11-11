@@ -17,6 +17,7 @@ TEST_CASE("irash-qap04", "[highs_presolve]") {
   REQUIRE(highs_status==HighsStatus::OK);
 
   HighsOptions options;
+
   options.icrash = true;
   options.icrash_starting_weight = 10;
   options.icrash_approximate_minimization_iterations = 100;

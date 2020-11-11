@@ -414,6 +414,7 @@ basis_.valid_, hmos_[0].basis_.valid_);
       case HighsPresolveStatus::Infeasible:
       case HighsPresolveStatus::Unbounded: {
         if (presolve_status == HighsPresolveStatus::Infeasible) {
+
           hmos_[original_hmo].unscaled_model_status_ =
               HighsModelStatus::PRIMAL_INFEASIBLE;
         } else {

@@ -709,6 +709,7 @@ class Highs {
   HighsOptions options_;
   HighsInfo info_;
 
+
   // Have copies in the HiGHS class so that const references to them
   // can be passed back, regardless of whether there is a HMO, or not,
   // and also to make objective_value and iteration_count independent
