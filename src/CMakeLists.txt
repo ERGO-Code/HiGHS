@@ -446,13 +446,13 @@ if (IPX_ON)
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
     #target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
 
-    if (MACOS)
-        # deal with warnings once hanging issue is fixed
-        # two warnings in ipx/src/basis.h
-        # target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-        target_compile_options(ipx PRIVATE "-Wno-return-type-c-linkage")
-        target_compile_options(ipx PRIVATE "-Wno-return-type" "-Wno-switch")
-    endif()
+    # if (MACOS)
+    #     # deal with warnings once hanging issue is fixed
+    #     # two warnings in ipx/src/basis.h
+    #     # target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    #     # target_compile_options(ipx PRIVATE "-Wno-return-type-c-linkage")
+    #     # target_compile_options(ipx PRIVATE "-Wno-return-type" "-Wno-switch")
+    # endif()
 
     #target_compile_options(ipx PRIVATE "-Wno-defaulted-function-deleted")
 
