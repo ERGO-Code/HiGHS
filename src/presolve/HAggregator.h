@@ -33,22 +33,22 @@ class HAggregator {
   std::vector<int> Acol;
 
   // linked list links for column based links for each nonzero
+  std::vector<int> colhead;
   std::vector<int> Anext;
   std::vector<int> Aprev;
 
-  // linked list links for row based links for each nonzero
-  std::vector<int> ARnext;
-  std::vector<int> ARprev;
-
-  // head pointers for column and row based linked list
-  std::vector<int> colhead;
-  std::vector<int> rowhead;
+  // splay tree links for row based iteration and lookup
+  std::vector<int> rowroot;
+  std::vector<int> ARleft;
+  std::vector<int> ARright;
 
   std::vector<int> rowsize;
   std::vector<int> colsize;
 
-  std::unordered_map<std::pair<int, int>, int, HighsPairHasher> entries;
-
+  std::vector<int> iterstack;
+  std::vector<int> rowpositions;
+  std::unordered_map<int, int> fillinCache;
+  std::vector<std::pair<int, int>> impliedBoundCache;
   // priority queue to reuse free slots
   std::priority_queue<int, std::vector<int>, std::greater<int>> freeslots;
 
@@ -87,7 +87,11 @@ class HAggregator {
 
   void addNonzero(int row, int col, double val);
 
-  bool isImpliedFree(int col) const;
+  double getImpliedLb(int row, int col);
+
+  double getImpliedUb(int row, int col);
+
+  bool isImpliedFree(int col);
 
   void computeActivities(int row);
 
@@ -96,10 +100,39 @@ class HAggregator {
   void substitute(int row, int col);
 
 #ifndef NDEBUG
-  void debugPrintRow(int row) const;
+  void debugPrintRow(int row);
 
-  void debugPrintSubMatrix(int row, int col) const;
+  void debugPrintSubMatrix(int row, int col);
 #endif
+
+  template <typename Func>
+  void loopRow(int row, Func&& func) {
+    int current = rowroot[row];
+
+    while (true) {
+      while (current != -1) {
+        iterstack.push_back(current);
+        current = ARleft[current];
+      }
+
+      if (iterstack.empty()) return;
+
+      if (func(iterstack.back())) {
+        iterstack.clear();
+        return;
+      }
+
+      current = ARright[iterstack.back()];
+      iterstack.pop_back();
+    }
+  }
+
+  int countFillin(int row);
+
+  void storeRowPositions(int pos);
+
+  int findNonzero(int row, int col);
+
  public:
   HAggregator(std::vector<double>& rowLower, std::vector<double>& rowUpper,
               std::vector<double>& colCost, double& objOffset,
@@ -129,10 +162,10 @@ class HAggregator {
                const std::vector<int>& ARstart);
 
   void toCSC(std::vector<double>& Aval, std::vector<int>& Aindex,
-                std::vector<int>& Astart);
+             std::vector<int>& Astart);
 
   void toCSR(std::vector<double>& ARval, std::vector<int>& ARindex,
-                std::vector<int>& ARstart);
+             std::vector<int>& ARstart);
 
   void run();
 };
