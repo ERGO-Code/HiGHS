@@ -3,6 +3,47 @@
 #include <algorithm>
 
 namespace presolve {
+#ifndef NDEBUG
+void HAggregator::debugPrintRow(int row) const {
+  printf("(row %d) %g <= ", row, rowLower[row]);
+
+  for (int rowiter = rowhead[row]; rowiter != -1; rowiter = ARnext[rowiter]) {
+    char colchar =
+        integrality[Acol[rowiter]] == HighsVarType::INTEGER ? 'y' : 'x';
+    char signchar = Avalue[rowiter] < 0 ? '-' : '+';
+    printf("%c%g %c%d ", signchar, std::abs(Avalue[rowiter]), colchar,
+           Acol[rowiter]);
+  }
+
+  printf("<= %g\n", rowUpper[row]);
+}
+
+void HAggregator::debugPrintSubMatrix(int row, int col) const {
+  printf("submatrix for col %d and row %d:\n", col, row);
+  debugPrintRow(row);
+  for (int coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
+    int r = Arow[coliter];
+
+    if (r == row) continue;
+
+    printf("(row %d) %g <= ... ", r, rowLower[r]);
+
+    for (int rowiter = rowhead[row]; rowiter != -1; rowiter = ARnext[rowiter]) {
+      auto it = entries.find(std::make_pair(r, Acol[rowiter]));
+      if (it != entries.end()) {
+        assert(Acol[it->second] == Acol[rowiter]);
+        char colchar =
+            integrality[Acol[it->second]] == HighsVarType::INTEGER ? 'y' : 'x';
+        char signchar = Avalue[it->second] < 0 ? '-' : '+';
+        printf("%c%g %c%d ", signchar, std::abs(Avalue[it->second]), colchar,
+               Acol[it->second]);
+      }
+    }
+
+    printf(" ... <= %g\n", rowUpper[r]);
+  }
+}
+#endif
 
 HAggregator::HAggregator(std::vector<double>& rowLower,
                          std::vector<double>& rowUpper,
@@ -29,6 +70,8 @@ HAggregator::HAggregator(std::vector<double>& rowLower,
   rowsize.resize(numrow);
   minact.resize(numrow);
   maxact.resize(numrow);
+  ninfmin.resize(numrow);
+  ninfmax.resize(numrow);
 }
 
 bool HAggregator::isImpliedFree(int col) const {
@@ -38,26 +81,77 @@ bool HAggregator::isImpliedFree(int col) const {
   if (lowerImplied && upperImplied) return true;
 
   for (int coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
-    if (!lowerImplied) {
-      double implLower =
-          rowLower[Arow[coliter]] / Avalue[coliter] + bound_tolerance;
+    int row = Arow[coliter];
+    double val = Avalue[coliter];
 
-      if (implLower >= colLower[col]) {
-        if (upperImplied) return true;
-        lowerImplied = true;
+    if (val > 0) {
+      if (!lowerImplied && rowLower[row] != -HIGHS_CONST_INF &&
+          (ninfmax[row] == 0 ||
+           (ninfmax[row] == 1 && colUpper[col] == HIGHS_CONST_INF))) {
+        HighsCDouble residualactivity = maxact[row];
+
+        if (ninfmax[row] == 0) residualactivity -= colUpper[col] * val;
+
+        double implLower =
+            double((rowLower[row] - residualactivity) / val + bound_tolerance);
+
+        if (implLower >= colLower[col]) {
+          if (upperImplied) return true;
+          lowerImplied = true;
+        }
       }
-    }
 
-    if (!upperImplied) {
-      double implUpper =
-          rowUpper[Arow[coliter]] / Avalue[coliter] - bound_tolerance;
+      if (!upperImplied && rowUpper[row] != HIGHS_CONST_INF &&
+          (ninfmin[row] == 0 ||
+           (ninfmin[row] == 1 && colLower[col] == -HIGHS_CONST_INF))) {
+        HighsCDouble residualactivity = minact[row];
 
-      if (implUpper <= colUpper[col]) {
-        if (lowerImplied) return true;
-        upperImplied = true;
+        if (ninfmin[row] == 0) residualactivity -= colLower[col] * val;
+
+        double implUpper =
+            double((rowLower[row] - residualactivity) / val - bound_tolerance);
+
+        if (implUpper <= colUpper[col]) {
+          if (lowerImplied) return true;
+          upperImplied = true;
+        }
+      }
+    } else {
+      if (!lowerImplied && rowUpper[row] != HIGHS_CONST_INF &&
+          (ninfmin[row] == 0 ||
+           (ninfmin[row] == 1 && colUpper[col] == HIGHS_CONST_INF))) {
+        HighsCDouble residualactivity = minact[row];
+
+        if (ninfmin[row] == 0) residualactivity -= colUpper[col] * val;
+
+        double implLower =
+            double((rowUpper[row] - residualactivity) / val + bound_tolerance);
+
+        if (implLower >= colLower[col]) {
+          if (upperImplied) return true;
+          lowerImplied = true;
+        }
+      }
+
+      if (!upperImplied && rowLower[row] != -HIGHS_CONST_INF &&
+          (ninfmax[row] == 0 ||
+           (ninfmax[row] == 1 && colLower[col] == -HIGHS_CONST_INF))) {
+        HighsCDouble residualactivity = maxact[row];
+
+        if (ninfmax[row] == 0) residualactivity -= colLower[col] * val;
+
+        double implUpper =
+            double((rowLower[row] - residualactivity) / val - bound_tolerance);
+
+        if (implUpper <= colUpper[col]) {
+          if (lowerImplied) return true;
+          upperImplied = true;
+        }
       }
     }
   }
+
+  assert(!lowerImplied || !upperImplied);
 
   return false;
 }
@@ -65,14 +159,30 @@ bool HAggregator::isImpliedFree(int col) const {
 void HAggregator::computeActivities(int row) {
   minact[row] = 0.0;
   maxact[row] = 0.0;
+  ninfmin[row] = 0;
+  ninfmax[row] = 0;
   for (int rowiter = rowhead[row]; rowiter != -1; rowiter = ARnext[rowiter]) {
     int col = Acol[rowiter];
     if (Avalue[rowiter] < 0) {
-      minact[row] += colUpper[col] * Avalue[rowiter];
-      maxact[row] += colLower[col] * Avalue[rowiter];
+      if (colUpper[col] == HIGHS_CONST_INF)
+        ninfmin[row] += 1;
+      else
+        minact[row] += colUpper[col] * Avalue[rowiter];
+
+      if (colLower[col] == -HIGHS_CONST_INF)
+        ninfmax[row] += 1;
+      else
+        maxact[row] += colLower[col] * Avalue[rowiter];
     } else {
-      minact[row] += colLower[col] * Avalue[rowiter];
-      maxact[row] += colUpper[col] * Avalue[rowiter];
+      if (colLower[col] == -HIGHS_CONST_INF)
+        ninfmin[row] += 1;
+      else
+        minact[row] += colLower[col] * Avalue[rowiter];
+
+      if (colUpper[col] == HIGHS_CONST_INF)
+        ninfmax[row] += 1;
+      else
+        maxact[row] += colUpper[col] * Avalue[rowiter];
     }
   }
 }
@@ -161,7 +271,7 @@ void HAggregator::addNonzero(int row, int col, double val) {
   link(pos);
 }
 
-void HAggregator::loadCSC(const std::vector<double>& Aval,
+void HAggregator::fromCSC(const std::vector<double>& Aval,
                           const std::vector<int>& Aindex,
                           const std::vector<int>& Astart) {
   Avalue.clear();
@@ -198,7 +308,7 @@ void HAggregator::loadCSC(const std::vector<double>& Aval,
   }
 }
 
-void HAggregator::loadCSR(const std::vector<double>& ARval,
+void HAggregator::fromCSR(const std::vector<double>& ARval,
                           const std::vector<int>& ARindex,
                           const std::vector<int>& ARstart) {
   Avalue.clear();
@@ -315,6 +425,7 @@ void HAggregator::substitute(int row, int col) {
   double substrowscale = -1.0 / Avalue[pos];
   double side = rowUpper[row];
   assert(side != HIGHS_CONST_INF && side == rowLower[row]);
+  assert(isImpliedFree(col));
 
   // substitute the column in each row where it occurs
   for (int coliter = colhead[col]; coliter != -1;) {
@@ -327,6 +438,11 @@ void HAggregator::substitute(int row, int col) {
 
     // skip the row that is used for substitution
     if (row == colrow) continue;
+
+    // printf("\nbefore substitution: ");
+    // debugPrintRow(colrow);
+
+    assert(entries.count(std::make_pair(colrow, col)) == 1);
 
     // determine the scale for the substitution row for addition to this row
     double scale = colval * substrowscale;
@@ -366,7 +482,12 @@ void HAggregator::substitute(int row, int col) {
 
     // recompute activities after substitution was performed
     computeActivities(colrow);
+
+    // printf("after substitution: ");
+    // debugPrintRow(colrow);
   }
+
+  assert(colsize[col] == 1);
 
   // substitute column in the objective function
   if (colCost[col] != 0.0) {
@@ -374,15 +495,17 @@ void HAggregator::substitute(int row, int col) {
     objOffset -= objscale * side;
     for (int rowiter = rowhead[row]; rowiter != -1; rowiter = ARnext[rowiter]) {
       colCost[Acol[rowiter]] += objscale * Avalue[rowiter];
+      if (std::abs(colCost[Acol[rowiter]]) <= drop_tolerance)
+        colCost[Acol[rowiter]] = 0.0;
     }
-
+    assert(colCost[col] == 0);
     colCost[col] = 0.0;
   }
 
   // finally remove the entries of the row that was used for substitution
   int rowiter = rowhead[row];
-  rowLower[row] = 0;
-  rowUpper[row] = 0;
+  rowLower[row] = -HIGHS_CONST_INF;
+  rowUpper[row] = HIGHS_CONST_INF;
 
   while (rowiter != -1) {
     int next = ARnext[rowiter];
@@ -397,8 +520,8 @@ void HAggregator::substitute(int row, int col) {
   }
 }
 
-void HAggregator::buildCSC(std::vector<double>& Aval, std::vector<int>& Aindex,
-                           std::vector<int>& Astart) {
+void HAggregator::toCSC(std::vector<double>& Aval, std::vector<int>& Aindex,
+                        std::vector<int>& Astart) {
   // set up the column starts using the column size array
   int numcol = colsize.size();
   Astart.resize(numcol + 1);
@@ -418,17 +541,16 @@ void HAggregator::buildCSC(std::vector<double>& Aval, std::vector<int>& Aindex,
   assert(numslots - int(freeslots.size()) == nnz);
   for (int i = 0; i != numslots; ++i) {
     if (Avalue[i] == 0.0) continue;
+    int pos = Astart[Acol[i] + 1] - colsize[Acol[i]];
     --colsize[Acol[i]];
     assert(colsize[Acol[i]] >= 0);
-    int pos = Astart[Acol[i]] + colsize[Acol[i]];
     Aval[pos] = Avalue[i];
     Aindex[pos] = Arow[i];
   }
 }
 
-void HAggregator::buildCSR(std::vector<double>& ARval,
-                           std::vector<int>& ARindex,
-                           std::vector<int>& ARstart) {
+void HAggregator::toCSR(std::vector<double>& ARval, std::vector<int>& ARindex,
+                        std::vector<int>& ARstart) {
   // set up the row starts using the row size array
   int numrow = rowsize.size();
   ARstart.resize(numrow + 1);
@@ -446,9 +568,9 @@ void HAggregator::buildCSR(std::vector<double>& ARval,
   ARindex.resize(nnz);
   for (int i = 0; i != nnz; ++i) {
     if (Avalue[i] == 0.0) continue;
+    int pos = ARstart[Arow[i] + 1] - rowsize[Arow[i]];
     --rowsize[Arow[i]];
     assert(rowsize[Arow[i]] >= 0);
-    int pos = ARstart[Arow[i]] + rowsize[Arow[i]];
     ARval[pos] = Avalue[i];
     ARindex[pos] = Acol[i];
   }
@@ -480,16 +602,19 @@ void HAggregator::run() {
       int col = Acol[rowiter];
       double val = Avalue[rowiter];
 
-      if (ncont == 0 && integrality[col] == HighsVarType::INTEGER) {
+      if (integrality[col] == HighsVarType::INTEGER) {
+        if (ncont != 0) continue;
+
         minintcoef = std::min(std::abs(val), minintcoef);
         aggr_cands.emplace_back(col, val);
       } else {
         if (ncont == 0) aggr_cands.clear();
 
+        aggr_cands.emplace_back(col, val);
         ++ncont;
       }
     }
-
+    assert(ncont == 0 || ncont == int(aggr_cands.size()));
     if (ncont == 0) {
       // all candidates are integer variables so we need to check if
       // all coefficients are integral when divided by the smallest absolute
@@ -519,6 +644,14 @@ void HAggregator::run() {
                                   drop_tolerance;
                          }),
           aggr_cands.end());
+    }
+
+    if (aggr_cands.empty()) {
+      // make sure that we do not try this equation again by deleting it from
+      // the set of equations
+      equations.erase(eqiters[sparsesteq]);
+      eqiters[sparsesteq] = equations.end();
+      continue;
     }
 
     // sort the candidates to prioritize sparse columns, tiebreak by preferring
@@ -562,7 +695,11 @@ void HAggregator::run() {
     // iterator to point to the next sparsest equation
     ++numsubst;
     if (integrality[chosencand] == HighsVarType::INTEGER) ++numsubstint;
+
+    // printf("substituting col %d with row %d\n", chosencand, sparsesteq);
+    // debugPrintSubMatrix(sparsesteq, chosencand);
     substitute(sparsesteq, chosencand);
+
     iter = equations.begin();
   }
 

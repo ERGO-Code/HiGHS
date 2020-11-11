@@ -49,6 +49,8 @@ void HighsMipSolver::run() {
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
 
+  mipdata_->printDisplayLine();
+
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes

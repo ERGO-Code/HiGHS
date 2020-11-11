@@ -211,9 +211,9 @@ HighsStatus callMipSolver(HighsOptions& use_options) {
                                    lp.offset_, lp.integrality_, lp.colLower_,
                                    lp.colUpper_);
 
-  aggregator.loadCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  aggregator.fromCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
   aggregator.run();
-  aggregator.buildCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  aggregator.toCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
   printf("aggregator finished (nnz = %lu)\n", lp.Avalue_.size());
   HighsMipSolver solver(use_options, lp);
   solver.run();

@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
 namespace presolve {
@@ -52,10 +53,13 @@ class HAggregator {
   std::priority_queue<int, std::vector<int>, std::greater<int>> freeslots;
 
   // vectors holding row activities
-  std::vector<double> minact;
-  std::vector<double> maxact;
+  std::vector<HighsCDouble> minact;
+  std::vector<HighsCDouble> maxact;
+  std::vector<int> ninfmin;
+  std::vector<int> ninfmax;
 
-  // set with equation rows and a vector to access there iterator positions in the set by index
+  // set with equation rows and a vector to access there iterator positions in
+  // the set by index
   std::set<std::pair<int, int>> equations;
   std::vector<std::set<std::pair<int, int>>::iterator> eqiters;
 
@@ -65,7 +69,8 @@ class HAggregator {
   double markowitz_tol;
   int maxfillin;
 
-  // references to row and column information. Row and objective information is updated in the aggregator
+  // references to row and column information. Row and objective information is
+  // updated in the aggregator
   std::vector<double>& rowLower;
   std::vector<double>& rowUpper;
   std::vector<double>& colCost;
@@ -90,6 +95,11 @@ class HAggregator {
 
   void substitute(int row, int col);
 
+#ifndef NDEBUG
+  void debugPrintRow(int row) const;
+
+  void debugPrintSubMatrix(int row, int col) const;
+#endif
  public:
   HAggregator(std::vector<double>& rowLower, std::vector<double>& rowUpper,
               std::vector<double>& colCost, double& objOffset,
@@ -111,17 +121,17 @@ class HAggregator {
     this->markowitz_tol = markowitz_tol;
   }
 
-  void loadCSC(const std::vector<double>& Aval, const std::vector<int>& Aindex,
+  void fromCSC(const std::vector<double>& Aval, const std::vector<int>& Aindex,
                const std::vector<int>& Astart);
 
-  void loadCSR(const std::vector<double>& ARval,
+  void fromCSR(const std::vector<double>& ARval,
                const std::vector<int>& ARindex,
                const std::vector<int>& ARstart);
 
-  void buildCSC(std::vector<double>& Aval, std::vector<int>& Aindex,
+  void toCSC(std::vector<double>& Aval, std::vector<int>& Aindex,
                 std::vector<int>& Astart);
 
-  void buildCSR(std::vector<double>& ARval, std::vector<int>& ARindex,
+  void toCSR(std::vector<double>& ARval, std::vector<int>& ARindex,
                 std::vector<int>& ARstart);
 
   void run();
