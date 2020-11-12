@@ -398,6 +398,7 @@ class HEkkDual {
   bool bailoutReturn();
   bool bailoutOnTimeIterations();
   bool bailoutOnDualObjective();
+  HighsDebugStatus debugDualSimplex(const std::string message);
 
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
                        //!< calling function

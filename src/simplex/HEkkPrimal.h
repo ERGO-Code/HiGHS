@@ -22,7 +22,6 @@
 using std::pair;
 
 const SimplexAlgorithm algorithm = SimplexAlgorithm::PRIMAL;
-const bool use_bound_perturbation = true;
 
 /**
  * @brief Primal simplex solver for HiGHS

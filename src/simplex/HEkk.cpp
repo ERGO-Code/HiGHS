@@ -52,19 +52,30 @@ HighsStatus HEkk::solve() {
   if (scaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
 
   HighsStatus return_status;
+  std::string algorithm;
   if (options_.simplex_strategy == SIMPLEX_STRATEGY_EKK_DUAL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                    "Using EKK dual simplex solver");
+    algorithm = "dual";
+  } else {
+    algorithm = "primal";
+  }
+  HighsLogMessage(options_.logfile, HighsMessageType::INFO,
+                  "Using EKK %s simplex solver", algorithm.c_str());
+  if (options_.simplex_strategy == SIMPLEX_STRATEGY_EKK_DUAL) {
     HEkkDual dual(*this);
     dual.options();
     simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL_PLAIN;
     return_status = dual.solve();
   } else {
-    HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                    "Using EKK primal simplex solver");
     HEkkPrimal primal(*this);
     return_status = primal.solve();
   }
+  HighsLogMessage(
+      options_.logfile, HighsMessageType::INFO,
+      "EKK %s simplex solver returns %d primal and %d dual infeasibilities: "
+      "Status %s\n",
+      algorithm.c_str(), simplex_info_.num_primal_infeasibilities,
+      simplex_info_.num_dual_infeasibilities,
+      utilHighsModelStatusToString(scaled_model_status_).c_str());
   return return_status;
 }
 
@@ -430,7 +441,7 @@ void HEkk::setNonbasicMove() {
   for (int iVar = 0; iVar < numTot; iVar++) {
     if (!simplex_basis_.nonbasicFlag_[iVar]) {
       // Basic variable
-      simplex_basis_.nonbasicMove_[iVar] = 0;
+      simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
       continue;
     }
     // Nonbasic variable
@@ -577,7 +588,6 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
 #ifdef HiGHSDEV
     printf("grep_DuPtrb:    Large so set bigc = sqrt(bigc) = %g\n", bigc);
 #endif
-    simplex_info_.costs_perturbed = 1;
   }
 
   // If there are few boxed variables, we will just use simple perturbation
@@ -642,6 +652,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
                             analysis_.cost_perturbation2_distribution);
 #endif
   }
+  simplex_info_.costs_perturbed = 1;
 }
 
 void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
@@ -804,6 +815,64 @@ void HEkk::initialiseNonbasicWorkValue() {
       assert(simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE);
       value = 0;
     }
+    simplex_info_.workValue_[iVar] = value;
+  }
+}
+
+void HEkk::initialiseValueAndNonbasicMove() {
+  // Initialise workValue and nonbasicMove from nonbasicFlag and
+  // bounds, except for boxed variables when nonbasicMove is used to
+  // set workValue=workLower/workUpper
+  const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis_.nonbasicFlag_[iVar]) {
+      // Basic variable
+      simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+      continue;
+    }
+    // Nonbasic variable
+    const double lower = simplex_info_.workLower_[iVar];
+    const double upper = simplex_info_.workUpper_[iVar];
+    const int original_move = simplex_basis_.nonbasicMove_[iVar];
+    double value;
+    int move = illegal_move_value;
+    if (lower == upper) {
+      // Fixed
+      value = lower;
+      move = NONBASIC_MOVE_ZE;
+    } else if (!highs_isInfinity(-lower)) {
+      // Finite lower bound so boxed or lower
+      if (!highs_isInfinity(upper)) {
+        // Finite upper bound so boxed
+        if (original_move == NONBASIC_MOVE_UP) {
+          // Set at lower
+          value = lower;
+          move = NONBASIC_MOVE_UP;
+        } else if (original_move == NONBASIC_MOVE_DN) {
+          // Set at upper
+          value = upper;
+          move = NONBASIC_MOVE_DN;
+        } else {
+          // Invalid nonbasicMove: correct and set value at lower
+          value = lower;
+          move = NONBASIC_MOVE_UP;
+        }
+      } else {
+        // Lower
+        value = lower;
+        move = NONBASIC_MOVE_UP;
+      }
+    } else if (!highs_isInfinity(upper)) {
+      // Upper
+      value = upper;
+      move = NONBASIC_MOVE_DN;
+    } else {
+      // FREE
+      value = 0;
+      move = NONBASIC_MOVE_ZE;
+    }
+    assert(move != illegal_move_value);
+    simplex_basis_.nonbasicMove_[iVar] = move;
     simplex_info_.workValue_[iVar] = value;
   }
 }

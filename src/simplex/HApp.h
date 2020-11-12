@@ -112,8 +112,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     HEkk& ekk = highs_model_object.ekk_instance_;
     // Initialise the phase iteration count data
     reportSimplexPhaseIterations(logfile, ekk.iteration_count_,
-                                 ekk.simplex_info_, SimplexAlgorithm::PRIMAL,
-                                 true);
+                                 ekk.simplex_info_, true);
 #ifdef HiGHSDEV
     ekk.analysis_.simplexTimerStart(SimplexTotalClock);
 #endif
@@ -128,8 +127,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #endif
     if (return_status == HighsStatus::Error) return return_status;
     reportSimplexPhaseIterations(
-        logfile, ekk.iteration_count_, ekk.simplex_info_,
-        SimplexAlgorithm::PRIMAL);  // Check num_basic_logicals
+        logfile, ekk.iteration_count_,
+        ekk.simplex_info_);  // Check num_basic_logicals
     highs_model_object.scaled_model_status_ = ekk.scaled_model_status_;
     highs_model_object.scaled_solution_params_ = ekk.getSolutionParams();
     if (highs_model_object.scaled_model_status_ ==
@@ -331,12 +330,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       simplex_strategy = SIMPLEX_STRATEGY_DUAL;
     }
 
-    SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
-    if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL)
-      algorithm = SimplexAlgorithm::PRIMAL;
-    reportSimplexPhaseIterations(
-        logfile, highs_model_object.iteration_counts_.simplex,
-        highs_model_object.simplex_info_, algorithm, true);
+    reportSimplexPhaseIterations(logfile,
+                                 highs_model_object.iteration_counts_.simplex,
+                                 highs_model_object.simplex_info_, true);
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
       HighsLogMessage(logfile, HighsMessageType::ERROR,
@@ -422,7 +418,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     // Official finish of solver
     reportSimplexPhaseIterations(logfile,
                                  highs_model_object.iteration_counts_.simplex,
-                                 highs_model_object.simplex_info_, algorithm);
+                                 highs_model_object.simplex_info_);
   }
 
 #ifdef HiGHSDEV

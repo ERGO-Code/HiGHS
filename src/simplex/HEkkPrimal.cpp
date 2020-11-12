@@ -35,11 +35,6 @@ HighsStatus HEkkPrimal::solve() {
   if (ekk_instance_.bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::Warning);
 
-  // Set up bound perturbation as cost perturbation in HDual
-  if (!use_bound_perturbation)
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                    "HEkkPrimal::solve not using bound perturbation");
-
   if (!simplex_lp_status.has_invert) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "HEkkPrimal::solve called without INVERT");
@@ -50,7 +45,7 @@ HighsStatus HEkkPrimal::solve() {
   // Get the nonabsic free column set
   getNonbasicFreeColumnSet();
 
-  if (use_bound_perturbation) {
+  if (simplex_info.primal_simplex_bound_perturbation_multiplier) {
     ekk_instance_.initialiseBound(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN,
                                   true);
     ekk_instance_.initialiseNonbasicWorkValue();

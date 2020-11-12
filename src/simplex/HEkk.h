@@ -80,6 +80,7 @@ class HEkk {
   void initialiseLpColBound();
   void initialiseLpRowBound();
   void initialiseNonbasicWorkValue();
+  void initialiseValueAndNonbasicMove();
   void pivotColumnFtran(const int iCol, HVector& col_aq);
   void unitBtran(const int iRow, HVector& row_ep);
   void fullBtran(HVector& buffer);

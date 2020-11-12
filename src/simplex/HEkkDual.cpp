@@ -30,6 +30,7 @@
 #include "simplex/HEkkPrimal.h"
 //#include "simplex/HSimplex.h"
 #include "simplex/HEkkDebug.h"
+#include "simplex/HSimplexReport.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsTimer.h"
 
@@ -217,8 +218,7 @@ HighsStatus HEkkDual::solve() {
       if (simplex_info.backtracking_) {
         // Backtracking, so set the bounds and primal values
         ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL, solvePhase);
-        ekk_instance_.initialiseNonbasicWorkValue();
-        //        initialiseValueAndNonbasicMove(ekk_instance_);
+        ekk_instance_.initialiseValueAndNonbasicMove();
         // Can now forget that we might have been backtracking
         simplex_info.backtracking_ = false;
       }
@@ -306,6 +306,7 @@ HighsStatus HEkkDual::solve() {
   }
   if (solvePhase == SOLVE_PHASE_CLEANUP) {
     ekk_instance_.computePrimalObjectiveValue();
+    /*
 #ifdef HiGHSDEV
     vector<double> primal_value_before_cleanup;
     //    ekk_instance_.getPrimalValue(primal_value_before_cleanup);
@@ -313,6 +314,7 @@ HighsStatus HEkkDual::solve() {
     //    analysePrimalObjectiveValue(ekk_instance_);
     const double objective_before = simplex_info.primal_objective_value;
 #endif
+    */
     if (options.dual_simplex_cleanup_strategy ==
         DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE) {
       // No clean up. Dual simplex was optimal with perturbed costs,
@@ -323,57 +325,54 @@ HighsStatus HEkkDual::solve() {
       scaled_model_status = HighsModelStatus::OPTIMAL;
     } else {
       // Use primal to clean up
-#ifdef HiGHSDEV
-      initialiseValueDistribution("Cleanup primal step summary", "", 1e-16,
-                                  1e16, 10.0,
-                                  analysis->cleanup_primal_step_distribution);
-      initialiseValueDistribution("Cleanup dual step summary", "", 1e-16, 1e16,
-                                  10.0,
-                                  analysis->cleanup_dual_step_distribution);
-#endif
-      int it0 = ekk_instance_.iteration_count_;
-      const bool full_logging = false;  // true;//
-      if (full_logging)
-        analysis->messaging(options.logfile, options.output, ML_ALWAYS);
-      analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
-      if (options.dual_simplex_cleanup_strategy ==
-          DUAL_SIMPLEX_CLEANUP_STRATEGY_HPRIMAL) {
-        // Cleanup with original primal phase 2 code
+      /*
+  #ifdef HiGHSDEV
+        initialiseValueDistribution("Cleanup primal step summary", "", 1e-16,
+                                    1e16, 10.0,
+                                    analysis->cleanup_primal_step_distribution);
+        initialiseValueDistribution("Cleanup dual step summary", "", 1e-16,
+  1e16, 10.0, analysis->cleanup_dual_step_distribution); #endif
+      */
+      if (options.dual_simplex_cleanup_strategy) {
+        analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
+        // Cleanup with primal code
+        // Switch off any bound perturbation
+        double save_primal_simplex_bound_perturbation_multiplier =
+            simplex_info.primal_simplex_bound_perturbation_multiplier;
+        simplex_info.primal_simplex_bound_perturbation_multiplier = 0;
         HEkkPrimal hEkkPrimal(ekk_instance_);
         hEkkPrimal.solve();
-      } else {
-        // Cleanup with phase 2 for new primal code
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Cleanup with phase 2 for new primal code is unavailable");
+        // Restore any bound perturbation
+        simplex_info.primal_simplex_bound_perturbation_multiplier =
+            save_primal_simplex_bound_perturbation_multiplier;
         analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-        return returnFromSolve(HighsStatus::Error);
+        /*
+    #ifdef HiGHSDEV
+          vector<double> primal_value_after_cleanup;
+          //      getPrimalValue(ekk_instance_, primal_value_after_cleanup);
+          for (int var = 0; var < solver_num_tot; var++) {
+            const double primal_change = fabs(primal_value_after_cleanup[var] -
+                                              primal_value_before_cleanup[var]);
+            updateValueDistribution(primal_change,
+                                    analysis->cleanup_primal_change_distribution);
+          }
+          //      printf("\nAnalyse primal objective evaluation after
+    cleanup\n");
+          //      analysePrimalObjectiveValue(ekk_instance_);
+          const double objective_after = simplex_info.primal_objective_value;
+          const double abs_objective_change =
+              fabs(objective_before - objective_after);
+          const double rel_objective_change =
+              abs_objective_change / max(1.0, fabs(objective_after));
+          printf(
+              "\nDuring cleanup, (abs: rel) primal objective changes is (%10.4g:
+    "
+              "%10.4g) \nfrom %20.10g\nto   %20.10g\n",
+              abs_objective_change, rel_objective_change, objective_before,
+              objective_after);
+    #endif
+        */
       }
-      analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-#ifdef HiGHSDEV
-      vector<double> primal_value_after_cleanup;
-      //      getPrimalValue(ekk_instance_, primal_value_after_cleanup);
-      for (int var = 0; var < solver_num_tot; var++) {
-        const double primal_change = fabs(primal_value_after_cleanup[var] -
-                                          primal_value_before_cleanup[var]);
-        updateValueDistribution(primal_change,
-                                analysis->cleanup_primal_change_distribution);
-      }
-      //      printf("\nAnalyse primal objective evaluation after cleanup\n");
-      //      analysePrimalObjectiveValue(ekk_instance_);
-      const double objective_after = simplex_info.primal_objective_value;
-      const double abs_objective_change =
-          fabs(objective_before - objective_after);
-      const double rel_objective_change =
-          abs_objective_change / max(1.0, fabs(objective_after));
-      printf(
-          "\nDuring cleanup, (abs: rel) primal objective changes is (%10.4g: "
-          "%10.4g) \nfrom %20.10g\nto   %20.10g\n",
-          abs_objective_change, rel_objective_change, objective_before,
-          objective_after);
-#endif
-      simplex_info.primal_phase2_iteration_count +=
-          (ekk_instance_.iteration_count_ - it0);
     }
   }
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::DUAL, solvePhase,
@@ -579,8 +578,7 @@ void HEkkDual::solvePhase1() {
                     "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
   ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL, solvePhase);
-  ekk_instance_.initialiseNonbasicWorkValue();
-  //        initialiseValueAndNonbasicMove(ekk_instance_);
+  ekk_instance_.initialiseValueAndNonbasicMove();
 
   // If there's no backtracking basis Save the initial basis in case of
   // backtracking
@@ -603,6 +601,11 @@ void HEkkDual::solvePhase1() {
     }
     if (bailoutOnTimeIterations()) break;
     for (;;) {
+      if (debugDualSimplex("Before iteration") ==
+          HighsDebugStatus::LOGICAL_ERROR) {
+        solvePhase = SOLVE_PHASE_ERROR;
+        return;
+      }
       switch (simplex_info.simplex_strategy) {
         default:
         case SIMPLEX_STRATEGY_DUAL_PLAIN:
@@ -702,8 +705,7 @@ void HEkkDual::solvePhase1() {
     // phase 1
     simplex_info.allow_cost_perturbation = true;
     ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL, solvePhase, true);
-    ekk_instance_
-        .initialiseNonbasicWorkValue();  // initialiseValueAndNonbasicMove();
+    ekk_instance_.initialiseValueAndNonbasicMove();
   }
   return;
 }
@@ -781,6 +783,11 @@ void HEkkDual::solvePhase2() {
     for (;;) {
       // Inner loop of solvePhase2()
       // Performs one iteration in case SIMPLEX_STRATEGY_DUAL_PLAIN:
+      if (debugDualSimplex("Before iteration") ==
+          HighsDebugStatus::LOGICAL_ERROR) {
+        solvePhase = SOLVE_PHASE_ERROR;
+        return;
+      }
       switch (simplex_info.simplex_strategy) {
         default:
         case SIMPLEX_STRATEGY_DUAL_PLAIN:
@@ -996,6 +1003,10 @@ void HEkkDual::rebuild() {
 
   ekk_instance_.build_syntheticTick_ = factor->build_syntheticTick;
   ekk_instance_.total_syntheticTick_ = 0;
+
+  // Dual simplex doesn't maintain the number of primal
+  // infeasiblities, so set it to an illegal value now
+  ekk_instance_.invalidatePrimalInfeasibilityRecord();
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
@@ -2460,4 +2471,11 @@ double HEkkDual::computeExactDualObjectiveValue() {
         "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g",
         norm_dual, norm_delta_dual, relative_delta);
   return dual_objective;
+}
+
+HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message) {
+  HighsDebugStatus return_status =
+      ekkDebugSimplex(message, ekk_instance_, algorithm, solvePhase);
+  if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
+  return HighsDebugStatus::OK;
 }
