@@ -547,7 +547,7 @@ void HAggregator::substitute(PostsolveStack& postsolveStack, int row, int col) {
     postsolveStack.reductionValues.emplace_back(rowcol, rowval);
   }
 
-  for (int coliter = colhead[col]; coliter != -1; coliter = Anext[col]) {
+  for (int coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
     int colrow = Arow[coliter];
     if (colrow == row) continue;
     double colval = Avalue[coliter];
