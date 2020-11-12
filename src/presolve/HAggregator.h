@@ -49,6 +49,7 @@ class HAggregator {
   std::vector<int> rowpositions;
   std::unordered_map<int, int> fillinCache;
   std::vector<std::pair<int, int>> impliedBoundCache;
+  std::vector<double> col_numerics_threshold;
   // priority queue to reuse free slots
   std::priority_queue<int, std::vector<int>, std::greater<int>> freeslots;
 
@@ -95,7 +96,7 @@ class HAggregator {
 
   void computeActivities(int row);
 
-  bool suitableForSubstitution(int row, int col);
+  bool checkFillin(int row, int col);
 
   void substitute(int row, int col);
 

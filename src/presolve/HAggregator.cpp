@@ -75,6 +75,7 @@ HAggregator::HAggregator(std::vector<double>& rowLower,
   int numcol = colUpper.size();
   colhead.resize(numcol, -1);
   colsize.resize(numcol);
+  col_numerics_threshold.resize(numcol);
   impliedBoundCache.resize(numcol);
   rowroot.resize(numrow, -1);
   rowsize.resize(numrow);
@@ -292,6 +293,8 @@ void HAggregator::link(int pos) {
   if (Anext[pos] != -1) Aprev[Anext[pos]] = pos;
 
   ++colsize[Acol[pos]];
+  col_numerics_threshold[Acol[pos]] = std::max(
+      markowitz_tol * std::abs(Avalue[pos]), col_numerics_threshold[Acol[pos]]);
 
   auto get_row_left = [&](int pos) -> int& { return ARleft[pos]; };
   auto get_row_right = [&](int pos) -> int& { return ARright[pos]; };
@@ -456,47 +459,17 @@ int HAggregator::countFillin(int row) {
   return fillin;
 }
 
-bool HAggregator::suitableForSubstitution(int row, int col) {
+bool HAggregator::checkFillin(int row, int col) {
   // check numerics against markowitz tolerance
-  int pos = -1;
-  double rowmax = 0.0;
-  double colmax = 0.0;
-
-  int coliter;
-
   assert(int(rowpositions.size()) == rowsize[row]);
-
-  for (int rowiter : rowpositions) {
-    assert(Arow[rowiter] == row);
-
-    if (Acol[rowiter] == col) pos = rowiter;
-
-    rowmax = std::max(rowmax, std::abs(Avalue[rowiter]));
-  }
-
-  assert(pos != -1);
-  assert(Arow[pos] == row);
-  assert(Acol[pos] == col);
-
-  if (std::abs(Avalue[pos]) < markowitz_tol * rowmax) {
-    coliter = colhead[col];
-    while (coliter != -1) {
-      assert(Acol[coliter] == col);
-
-      colmax = std::max(colmax, std::abs(Avalue[coliter]));
-      coliter = Anext[coliter];
-    }
-
-    if (std::abs(Avalue[pos]) < markowitz_tol * colmax) return false;
-  }
 
   // check fillin against max fillin
   int fillin = -(rowsize[row] + colsize[col] - 1);
 
 #if 1
   // first use fillin for rows where it is already computed
-  for (coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
-    if (coliter == pos) continue;
+  for (int coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
+    if (Arow[coliter] == row) continue;
 
     auto it = fillinCache.find(Arow[coliter]);
     if (it == fillinCache.end()) continue;
@@ -507,10 +480,10 @@ bool HAggregator::suitableForSubstitution(int row, int col) {
 
   // iterate over rows of substituted column again to count the fillin for the
   // remaining rows
-  for (coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
+  for (int coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
     assert(Acol[coliter] == col);
 
-    if (coliter == pos) continue;
+    if (Arow[coliter] == row) continue;
     auto it = fillinCache.find(Arow[coliter]);
     if (it != fillinCache.end()) continue;
 
@@ -721,23 +694,40 @@ void HAggregator::run() {
     storeRowPositions(rowroot[sparsesteq]);
 
     aggr_cands.clear();
+    double row_numerics_threshold = 0;
     for (int rowiter : rowpositions) {
       int col = Acol[rowiter];
-      double val = Avalue[rowiter];
+      double absval = std::abs(Avalue[rowiter]);
+
+      row_numerics_threshold = std::max(row_numerics_threshold, absval);
 
       if (integrality[col] == HighsVarType::INTEGER) {
+        // if there are non-integer variables in the row, no integer variable
+        // can be used
         if (ncont != 0) continue;
 
-        minintcoef = std::min(std::abs(val), minintcoef);
-        aggr_cands.emplace_back(col, val);
+        // if all variables in a row are integer variables, we still need to
+        // check whether their coefficients are all integral
+        minintcoef = std::min(absval, minintcoef);
+        aggr_cands.emplace_back(col, absval);
       } else {
+        // if this is the first continuous variable, we remove all integer
+        // candidates that were stored before
         if (ncont == 0) aggr_cands.clear();
 
-        aggr_cands.emplace_back(col, val);
+        aggr_cands.emplace_back(col, absval);
         ++ncont;
       }
     }
+
+    row_numerics_threshold *= markowitz_tol;
     assert(ncont == 0 || ncont == int(aggr_cands.size()));
+
+    // if all candidates are integral, we check that all coefficients are
+    // integral when divided by the minimal absolute coefficient of the row. If
+    // that is the case we keep all candidates with a value that is equal to the
+    // minimal absolute coefficient value. Otherwise we skip this equation for
+    // substitution.
     if (ncont == 0) {
       // all candidates are integer variables so we need to check if
       // all coefficients are integral when divided by the smallest absolute
@@ -760,15 +750,36 @@ void HAggregator::run() {
         continue;
       }
 
-      aggr_cands.erase(
-          std::remove_if(aggr_cands.begin(), aggr_cands.end(),
-                         [&](const std::pair<int, double>& cand) {
-                           return std::abs(cand.second - minintcoef) >
-                                  drop_tolerance;
-                         }),
-          aggr_cands.end());
+      // candidates with the coefficient equal to the minimal absolute
+      // coefficient value are suitable for substitution, other candidates are
+      // now removed
+      double maxintcoef = minintcoef + drop_tolerance;
+      aggr_cands.erase(std::remove_if(aggr_cands.begin(), aggr_cands.end(),
+                                      [&](const std::pair<int, double>& cand) {
+                                        return cand.second > maxintcoef;
+                                      }),
+                       aggr_cands.end());
     }
 
+    // remove candidates that have already been checked to be not implied free,
+    // or that do not fulfill the numerics criteria to have their absolute
+    // coefficient value in this row above the specified markowitz threshold
+    // times the maximal absolute value in the candidates row or column. Note
+    // that the "or"-nature of this numerics condition is not accidental.
+    aggr_cands.erase(
+        std::remove_if(aggr_cands.begin(), aggr_cands.end(),
+                       [&](const std::pair<int, double>& cand) {
+                         if (notimpliedfree[cand.first]) return true;
+
+                         if (row_numerics_threshold > cand.second &&
+                             col_numerics_threshold[cand.first] > cand.second)
+                           return true;
+
+                         return false;
+                       }),
+        aggr_cands.end());
+
+    // check if any candidates are left
     if (aggr_cands.empty()) {
       // make sure that we do not try this equation again by deleting it from
       // the set of equations
@@ -777,9 +788,9 @@ void HAggregator::run() {
       continue;
     }
 
-    // sort the candidates to prioritize sparse columns, tiebreak by preferring
-    // columns with a larger coefficient in this row which is better for
-    // numerics
+    // now sort the candidates to prioritize sparse columns, tiebreak by
+    // preferring columns with a larger coefficient in this row which is better
+    // for numerics
     std::sort(
         aggr_cands.begin(), aggr_cands.end(),
         [&](const std::pair<int, double>& cand1,
@@ -790,8 +801,6 @@ void HAggregator::run() {
     fillinCache.clear();
     int chosencand = -1;
     for (std::pair<int, double>& cand : aggr_cands) {
-      if (notimpliedfree[cand.first]) continue;
-
       bool isimpliedfree = isImpliedFree(cand.first);
 
       if (!isimpliedfree) {
@@ -799,10 +808,11 @@ void HAggregator::run() {
         continue;
       }
 
-      if (suitableForSubstitution(sparsesteq, cand.first)) {
-        chosencand = cand.first;
-        break;
-      }
+      if (!checkFillin(sparsesteq, cand.first)) continue;
+
+      // take the first suitable candidate
+      chosencand = cand.first;
+      break;
     }
 
     // if we have found no suitable candidate we continue with the next equation
