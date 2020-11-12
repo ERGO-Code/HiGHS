@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "lp_data/HStruct.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 
@@ -59,6 +60,32 @@ class HAggregator {
   std::vector<int> ninfmin;
   std::vector<int> ninfmax;
 
+  struct ImpliedFreeVarReduction {
+    int row;
+    int col;
+    int rowlen;
+    int collen;
+    int stackpos;
+    double eqrhs;
+    double colcost;
+    double substcoef;
+  };
+
+ public:
+  struct PostsolveStack {
+    friend class HAggregator;
+
+   private:
+    std::vector<std::pair<int, double>> reductionValues;
+    std::vector<ImpliedFreeVarReduction> reductionStack;
+
+   public:
+    void undo(HighsSolution& solution, HighsBasis& basis) const;
+
+    void undo(std::vector<double>& colvalue) const;
+  };
+
+ private:
   // set with equation rows and a vector to access there iterator positions in
   // the set by index
   std::set<std::pair<int, int>> equations;
@@ -98,7 +125,7 @@ class HAggregator {
 
   bool checkFillin(int row, int col);
 
-  void substitute(int row, int col);
+  void substitute(PostsolveStack& postsolveStack, int row, int col);
 
 #ifndef NDEBUG
   void debugPrintRow(int row);
@@ -168,7 +195,7 @@ class HAggregator {
   void toCSR(std::vector<double>& ARval, std::vector<int>& ARindex,
              std::vector<int>& ARstart);
 
-  void run();
+  PostsolveStack run();
 };
 
 }  // namespace presolve

@@ -514,7 +514,9 @@ bool HAggregator::checkFillin(int row, int col) {
   return true;
 }
 
-void HAggregator::substitute(int row, int col) {
+void HAggregator::substitute(PostsolveStack& postsolveStack, int row, int col) {
+  ImpliedFreeVarReduction reduction;
+
   int pos = findNonzero(row, col);
   assert(pos != -1);
 
@@ -524,6 +526,34 @@ void HAggregator::substitute(int row, int col) {
   double side = rowUpper[row];
   assert(side != HIGHS_CONST_INF && side == rowLower[row]);
   assert(isImpliedFree(col));
+
+  reduction.row = row;
+  reduction.col = col;
+  reduction.stackpos = postsolveStack.reductionStack.size();
+  reduction.collen = colsize[col] - 1;
+  reduction.rowlen = rowsize[row] - 1;
+  reduction.eqrhs = side;
+  reduction.colcost = colCost[col];
+  reduction.substcoef = Avalue[pos];
+
+  postsolveStack.reductionStack.emplace_back(reduction);
+
+  for (int rowiter : rowpositions) {
+    int rowcol = Acol[rowiter];
+
+    if (rowcol == col) continue;
+    double rowval = Avalue[rowiter];
+
+    postsolveStack.reductionValues.emplace_back(rowcol, rowval);
+  }
+
+  for (int coliter = colhead[col]; coliter != -1; coliter = Anext[col]) {
+    int colrow = Arow[coliter];
+    if (colrow == row) continue;
+    double colval = Avalue[coliter];
+
+    postsolveStack.reductionValues.emplace_back(colrow, colval);
+  }
 
   // substitute the column in each row where it occurs
   for (int coliter = colhead[col]; coliter != -1;) {
@@ -670,7 +700,8 @@ void HAggregator::toCSR(std::vector<double>& ARval, std::vector<int>& ARindex,
   }
 }
 
-void HAggregator::run() {
+HAggregator::PostsolveStack HAggregator::run() {
+  PostsolveStack postsolveStack;
   int numcol = colsize.size();
   auto iter = equations.begin();
   std::vector<uint8_t> notimpliedfree(numcol);
@@ -831,12 +862,59 @@ void HAggregator::run() {
 
     // printf("substituting col %d with row %d\n", chosencand, sparsesteq);
     // debugPrintSubMatrix(sparsesteq, chosencand);
-    substitute(sparsesteq, chosencand);
+    substitute(postsolveStack, sparsesteq, chosencand);
 
     iter = equations.begin();
   }
 
   printf("performed %d(%d int) substitutions\n", numsubst, numsubstint);
+
+  return postsolveStack;
+}
+
+void HAggregator::PostsolveStack::undo(HighsSolution& solution,
+                                       HighsBasis& basis) const {
+  for (int k = reductionStack.size() - 1; k >= 0; --k) {
+    const ImpliedFreeVarReduction& reduction = reductionStack.back();
+
+    const int rowstart = reduction.stackpos;
+    const int rowend = reduction.stackpos + reduction.rowlen;
+    const int colend = rowend + reduction.collen;
+
+    HighsCDouble colval = reduction.eqrhs;
+    for (int i = rowstart; i != rowend; ++i)
+      colval -= reductionValues[i].second *
+                solution.col_value[reductionValues[i].first];
+
+    solution.col_value[reduction.col] = double(colval / reduction.substcoef);
+    solution.row_value[reduction.row] = reduction.eqrhs;
+
+    HighsCDouble dualval = -reduction.colcost;
+    for (int i = rowend; i != colend; ++i)
+      dualval += reductionValues[i].second *
+                 solution.row_dual[reductionValues[i].first];
+
+    solution.row_dual[reduction.row] = double(dualval / reduction.substcoef);
+    solution.col_dual[reduction.col] = 0;
+
+    basis.col_status[reduction.col] = HighsBasisStatus::BASIC;
+    basis.row_status[reduction.col] = HighsBasisStatus::NONBASIC;
+  }
+}
+
+void HAggregator::PostsolveStack::undo(std::vector<double>& colvalue) const {
+  for (int k = reductionStack.size() - 1; k >= 0; --k) {
+    const ImpliedFreeVarReduction& reduction = reductionStack.back();
+
+    const int rowstart = reduction.stackpos;
+    const int rowend = reduction.stackpos + reduction.rowlen;
+
+    HighsCDouble colval = reduction.eqrhs;
+    for (int i = rowstart; i != rowend; ++i)
+      colval -= reductionValues[i].second * colvalue[reductionValues[i].first];
+
+    colvalue[reduction.col] = double(colval / reduction.substcoef);
+  }
 }
 
 }  // namespace presolve
