@@ -42,7 +42,7 @@ HighsStatus HEkkPrimal::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
 
-  if (debugPrimalSimplex("Initialise", true) == HighsDebugStatus::LOGICAL_ERROR) 
+  if (debugPrimalSimplex("Initialise", true) == HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
 
   // Get the nonabsic free column set
@@ -2300,9 +2300,10 @@ void HEkkPrimal::shiftBound(const bool lower, const int iVar,
         new_infeasibility, error);
 }
 
-HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message, const bool initialise) {
-  HighsDebugStatus return_status =
-    ekkDebugSimplex(message, ekk_instance_, algorithm, solvePhase, initialise);
+HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
+                                                const bool initialise) {
+  HighsDebugStatus return_status = ekkDebugSimplex(
+      message, ekk_instance_, algorithm, solvePhase, initialise);
   if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
   if (initialise) return return_status;
   return_status = ekkDebugNonbasicFreeColumnSet(ekk_instance_, num_free_col,

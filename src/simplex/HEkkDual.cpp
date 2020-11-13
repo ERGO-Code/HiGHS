@@ -905,7 +905,7 @@ void HEkkDual::solvePhase2() {
   // Before primal simplex clean-up there will be dual infeasibilities
   if (solvePhase != SOLVE_PHASE_CLEANUP) {
     if (debugDualSimplex("End of solvePhase2") ==
-	HighsDebugStatus::LOGICAL_ERROR) {
+        HighsDebugStatus::LOGICAL_ERROR) {
       solvePhase = SOLVE_PHASE_ERROR;
       return;
     }
@@ -1742,9 +1742,9 @@ void HEkkDual::updateVerify() {
   if (rebuild_reason) return;
 
   // Use the two pivot values to identify numerical trouble
-  if (ekk_instance_.reinvertOnNumericalTrouble("HEkkDual::updateVerify", 
-					       numericalTrouble, alpha_col, alpha_row,
-					       numerical_trouble_tolerance)) {
+  if (ekk_instance_.reinvertOnNumericalTrouble(
+          "HEkkDual::updateVerify", numericalTrouble, alpha_col, alpha_row,
+          numerical_trouble_tolerance)) {
     rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
   }
 }
@@ -2491,9 +2491,10 @@ double HEkkDual::computeExactDualObjectiveValue() {
   return dual_objective;
 }
 
-HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message, const bool initialise) {
-  HighsDebugStatus return_status =
-      ekkDebugSimplex(message, ekk_instance_, algorithm, solvePhase, initialise);
+HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
+                                            const bool initialise) {
+  HighsDebugStatus return_status = ekkDebugSimplex(
+      message, ekk_instance_, algorithm, solvePhase, initialise);
   if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
   if (initialise) return return_status;
   return HighsDebugStatus::OK;

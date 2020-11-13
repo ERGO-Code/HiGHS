@@ -21,7 +21,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const HEkk& ekk_instance,
                                  const SimplexAlgorithm algorithm,
                                  const int phase,
-				 const bool initialise = false);
+                                 const bool initialise = false);
 
 HighsDebugStatus ekkDebugBasisConsistent(const HighsOptions& options,
                                          const HighsLp& simplex_lp,

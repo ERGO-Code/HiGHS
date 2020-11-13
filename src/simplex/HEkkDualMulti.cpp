@@ -531,11 +531,11 @@ void HEkkDual::majorUpdate() {
     int iRow_Out = iFinish->row_out;
 
     // Use the two pivot values to identify numerical trouble
-    if (ekk_instance_.reinvertOnNumericalTrouble("HEkkDual::majorUpdate", 
-						 numericalTrouble, iColumn->array[iRow_Out],
-						 iFinish->alpha_row,
-						 multi_numerical_trouble_tolerance)) {
-      // int startUpdate = ekk_instance_.simplex_info_.update_count - multi_nFinish; 
+    if (ekk_instance_.reinvertOnNumericalTrouble(
+            "HEkkDual::majorUpdate", numericalTrouble, iColumn->array[iRow_Out],
+            iFinish->alpha_row, multi_numerical_trouble_tolerance)) {
+      // int startUpdate = ekk_instance_.simplex_info_.update_count -
+      // multi_nFinish;
       rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
       // if (startUpdate > 0) {
       majorRollback();

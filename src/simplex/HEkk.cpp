@@ -1293,11 +1293,10 @@ void HEkk::flipBound(const int iCol) {
                                              : simplex_info_.workUpper_[iCol];
 }
 
-bool HEkk::reinvertOnNumericalTrouble(const std::string method_name,
-				      double& numerical_trouble_measure,
-				      const double alpha_from_col,
-				      const double alpha_from_row,
-				      const double numerical_trouble_tolerance) {
+bool HEkk::reinvertOnNumericalTrouble(
+    const std::string method_name, double& numerical_trouble_measure,
+    const double alpha_from_col, const double alpha_from_row,
+    const double numerical_trouble_tolerance) {
   double abs_alpha_from_col = fabs(alpha_from_col);
   double abs_alpha_from_row = fabs(alpha_from_row);
   double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
@@ -1310,12 +1309,11 @@ bool HEkk::reinvertOnNumericalTrouble(const std::string method_name,
       numerical_trouble_measure > numerical_trouble_tolerance;
   const bool reinvert = numerical_trouble && update_count > 0;
   ekkDebugReportReinvertOnNumericalTrouble(
-      method_name, *this, numerical_trouble_measure,
-      alpha_from_col, alpha_from_row, numerical_trouble_tolerance, reinvert);
+      method_name, *this, numerical_trouble_measure, alpha_from_col,
+      alpha_from_row, numerical_trouble_tolerance, reinvert);
   if (reinvert) {
     // Consider increasing the Markowitz multiplier
-    const double current_pivot_threshold =
-        simplex_info_.factor_pivot_threshold;
+    const double current_pivot_threshold = simplex_info_.factor_pivot_threshold;
     double new_pivot_threshold = 0;
     if (current_pivot_threshold < default_pivot_threshold) {
       // Threshold is below default value, so increase it
@@ -1331,17 +1329,15 @@ bool HEkk::reinvertOnNumericalTrouble(const std::string method_name,
                 max_pivot_threshold);
     }
     if (new_pivot_threshold) {
-      HighsLogMessage(
-          options_.logfile, HighsMessageType::WARNING,
-          "   Increasing Markowitz threshold to %g", new_pivot_threshold);
-      simplex_info_.factor_pivot_threshold =
-          new_pivot_threshold;
+      HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
+                      "   Increasing Markowitz threshold to %g",
+                      new_pivot_threshold);
+      simplex_info_.factor_pivot_threshold = new_pivot_threshold;
       factor_.setPivotThreshold(new_pivot_threshold);
     }
   }
   return reinvert;
 }
-
 
 // The major model updates. Factor calls factor_.update; Matrix
 // calls matrix_.update; updatePivots does everything---and is
@@ -1449,7 +1445,8 @@ void HEkk::computeSimplexPrimalInfeasible() {
       } else if (value > upper + scaled_primal_feasibility_tolerance) {
         primal_infeasibility = value - upper;
       }
-      primal_infeasibility = max(lower - value, value - upper);
+      // This is needed so that HEkkDual and HDual run identically
+      //    primal_infeasibility = max(lower - value, value - upper);
       if (primal_infeasibility > 0) {
         if (primal_infeasibility > scaled_primal_feasibility_tolerance)
           num_primal_infeasibilities++;
@@ -1470,7 +1467,8 @@ void HEkk::computeSimplexPrimalInfeasible() {
     } else if (value > upper + scaled_primal_feasibility_tolerance) {
       primal_infeasibility = value - upper;
     }
-      primal_infeasibility = max(lower - value, value - upper);
+    // This is needed so that HEkkDual and HDual run identically
+    //    primal_infeasibility = max(lower - value, value - upper);
     if (primal_infeasibility > 0) {
       if (primal_infeasibility > scaled_primal_feasibility_tolerance)
         num_primal_infeasibilities++;

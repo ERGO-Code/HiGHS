@@ -91,7 +91,8 @@ class HEkkPrimal {
   void shiftBound(const bool lower, const int iVar, const double value,
                   const double random_value, double& bound, double& shift,
                   const bool report = false);
-  HighsDebugStatus debugPrimalSimplex(const std::string message, const bool initialise = false);
+  HighsDebugStatus debugPrimalSimplex(const std::string message,
+                                      const bool initialise = false);
   // References:
   HEkk& ekk_instance_;
 
