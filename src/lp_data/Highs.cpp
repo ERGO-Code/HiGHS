@@ -366,7 +366,7 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
-// with runLpSolver(..)
+// with callSolveLp(..)
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
   const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
@@ -520,11 +520,11 @@ HighsStatus Highs::run() {
         hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
-        call_status = runLpSolver(solved_hmo, "Not presolved: solving the LP");
+        call_status = callSolveLp(solved_hmo, "Not presolved: solving the LP");
         timer_.stop(timer_.solve_clock);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
-            interpretCallStatus(call_status, return_status, "runLpSolver");
+            interpretCallStatus(call_status, return_status, "callSolveLp");
         if (return_status == HighsStatus::Error)
           return returnFromRun(return_status);
         break;
@@ -536,12 +536,12 @@ HighsStatus Highs::run() {
                                  hmos_[original_hmo].lp_, false);
         this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
-        call_status = runLpSolver(
+        call_status = callSolveLp(
             solved_hmo, "Problem not reduced by presolve: solving the LP");
         timer_.stop(timer_.solve_clock);
         this_solve_original_lp_time += timer_.read(timer_.solve_clock);
         return_status =
-            interpretCallStatus(call_status, return_status, "runLpSolver");
+            interpretCallStatus(call_status, return_status, "callSolveLp");
         if (return_status == HighsStatus::Error)
           return returnFromRun(return_status);
         break;
@@ -576,7 +576,7 @@ HighsStatus Highs::run() {
         options_.dual_objective_value_upper_bound = HIGHS_CONST_INF;
         this_solve_presolved_lp_time = -timer_.read(timer_.solve_clock);
         timer_.start(timer_.solve_clock);
-        call_status = runLpSolver(solved_hmo, "Solving the presolved LP");
+        call_status = callSolveLp(solved_hmo, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
         if (hmos_[solved_hmo].simplex_lp_status_.valid) {
@@ -589,7 +589,7 @@ HighsStatus Highs::run() {
         options_.dual_objective_value_upper_bound =
             save_dual_objective_value_upper_bound;
         return_status =
-            interpretCallStatus(call_status, return_status, "runLpSolver");
+            interpretCallStatus(call_status, return_status, "callSolveLp");
         if (return_status == HighsStatus::Error)
           return returnFromRun(return_status);
 
@@ -740,13 +740,13 @@ HighsStatus Highs::run() {
           int iteration_count0 = info_.simplex_iteration_count;
           this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
           timer_.start(timer_.solve_clock);
-          call_status = runLpSolver(
+          call_status = callSolveLp(
               solved_hmo,
               "Solving the original LP from the solution after postsolve");
           timer_.stop(timer_.solve_clock);
           this_solve_original_lp_time += timer_.read(timer_.solve_clock);
           return_status =
-              interpretCallStatus(call_status, return_status, "runLpSolver");
+              interpretCallStatus(call_status, return_status, "callSolveLp");
           // Recover the options
           options = save_options;
           if (return_status == HighsStatus::Error)
@@ -783,11 +783,11 @@ HighsStatus Highs::run() {
     this_solve_original_lp_time = -timer_.read(timer_.solve_clock);
     timer_.start(timer_.solve_clock);
     call_status =
-        runLpSolver(solved_hmo, "Solving LP without presolve or with basis");
+        callSolveLp(solved_hmo, "Solving LP without presolve or with basis");
     timer_.stop(timer_.solve_clock);
     this_solve_original_lp_time += timer_.read(timer_.solve_clock);
     return_status =
-        interpretCallStatus(call_status, return_status, "runLpSolver");
+        interpretCallStatus(call_status, return_status, "callSolveLp");
     if (return_status == HighsStatus::Error)
       return returnFromRun(return_status);
   }
@@ -1854,7 +1854,7 @@ HighsPostsolveStatus Highs::runPostsolve() {
 // The method below runs calls solveLp to solve the LP associated with
 // a particular model, integrating the iteration counts into the
 // overall values in HighsInfo
-HighsStatus Highs::runLpSolver(const int model_index, const string message) {
+HighsStatus Highs::callSolveLp(const int model_index, const string message) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
 
@@ -1877,7 +1877,7 @@ HighsStatus Highs::runLpSolver(const int model_index, const string message) {
   // Transfer this model's LP solver iteration counts to HiGHS
   copyHighsIterationCounts(iteration_counts, info_);
 
-  return returnFromHighs(return_status);
+  return return_status;
 }
 
 HighsStatus Highs::writeSolution(const std::string filename,

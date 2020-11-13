@@ -5,7 +5,6 @@
 
 const bool dev_run = false;
 
-// const double inf = HIGHS_CONST_INF;
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0) {
@@ -168,13 +167,13 @@ void issue316(Highs& highs) {
 
   // Presolve reduces to empty
   solve(highs, "on", "simplex", require_model_status, min_optimal_objective);
-  solve(highs, "off", "simplex", require_model_status, min_optimal_objective);
+    solve(highs, "off", "simplex", require_model_status, min_optimal_objective);
 
   bool_status = highs.changeObjectiveSense(ObjSense::MAXIMIZE);
   REQUIRE(bool_status);
 
   solve(highs, "on", "simplex", require_model_status, max_optimal_objective);
-  solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
+    solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
 }
 
 void mpsGalenet(Highs& highs) {
@@ -297,9 +296,9 @@ void almostNotUnbounded(Highs& highs) {
   lp.numRow_ = 3;
   lp.colCost_ = {-1, 1 - epsilon};
   lp.colLower_ = {0, 0};
-  lp.colUpper_ = {1e+200, 1e+200};
+  lp.colUpper_ = {inf, inf};
   lp.rowLower_ = {-1 + epsilon, -1, 3};
-  lp.rowUpper_ = {1e+200, 1e+200, 1e+200};
+  lp.rowUpper_ = {inf, inf, inf};
   lp.Astart_ = {0, 3, 6};
   lp.Aindex_ = {0, 1, 2, 0, 1, 2};
   lp.Avalue_ = {1 + epsilon, -1, 1, -1, 1, 1};
@@ -347,8 +346,8 @@ void singularStartingBasis(Highs& highs) {
   lp.numRow_ = 2;
   lp.colCost_ = {-3, -2, -1};
   lp.colLower_ = {0, 0, 0};
-  lp.colUpper_ = {1e+200, 1e+200, 1e+200};
-  lp.rowLower_ = {-1e+200, -1e+200};
+  lp.colUpper_ = {inf, inf, inf};
+  lp.rowLower_ = {-inf, -inf};
   lp.rowUpper_ = {3, 2};
   lp.Astart_ = {0, 2, 4, 6};
   lp.Aindex_ = {0, 1, 0, 1, 0, 1};
@@ -386,6 +385,35 @@ void singularStartingBasis(Highs& highs) {
 
   special_lps.reportSolution(highs, dev_run);
 }
+
+void unconstrained(Highs& highs) {
+  HighsLp lp;
+  lp.numCol_ = 2;
+  lp.numRow_ = 0;
+  lp.colCost_ = {1, -1};
+  lp.colLower_ = {4, 2};
+  lp.colUpper_ = {inf, 3};
+  lp.Astart_ = {0, 0, 0};
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::OPTIMAL);
+  REQUIRE(highs.getObjectiveValue() == 1);
+  REQUIRE(highs.changeObjectiveSense(ObjSense::MAXIMIZE));
+  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::PRIMAL_UNBOUNDED);
+  REQUIRE(highs.changeColCost(0, -1));
+  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::OPTIMAL);
+  REQUIRE(highs.getObjectiveValue() == -6);
+  REQUIRE(highs.changeColBounds(0, 4, 1));
+  REQUIRE(highs.setBasis() == HighsStatus::OK);
+  REQUIRE(highs.run() == HighsStatus::OK);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::PRIMAL_INFEASIBLE);
+}
+
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
   Highs highs;
   if (!dev_run) {
@@ -506,4 +534,12 @@ TEST_CASE("LP-singular-starting-basis", "[highs_test_special_lps]") {
     highs.setHighsOutput();
   }
   singularStartingBasis(highs);
+}
+TEST_CASE("LP-unconstrained", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+  unconstrained(highs);
 }

@@ -497,22 +497,22 @@ void reportIpmNoProgress(const HighsOptions& options,
 
 HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
                                  const ipx::Parameters& parameters,
-                                 HighsModelStatus& unscaled_model_status) {
+                                 HighsModelStatus& model_status) {
   if (ipx_info.abs_presidual > parameters.ipm_feasibility_tol) {
     // Looks like the LP is infeasible
-    unscaled_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
     return HighsStatus::OK;
   } else if (ipx_info.abs_dresidual > parameters.ipm_optimality_tol) {
     // Looks like the LP is unbounded
-    unscaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
     return HighsStatus::OK;
   } else if (ipx_info.pobjval < -HIGHS_CONST_INF) {
     // Looks like the LP is unbounded
-    unscaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
     return HighsStatus::OK;
   } else {
     // Don't know
-    unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
+    model_status = HighsModelStatus::SOLVE_ERROR;
     return HighsStatus::Error;
   }
   return HighsStatus::Warning;
@@ -521,11 +521,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        const HighsLp& lp, bool& imprecise_solution,
                        HighsBasis& highs_basis, HighsSolution& highs_solution,
                        HighsIterationCounts& iteration_counts,
-                       HighsModelStatus& unscaled_model_status,
-                       HighsSolutionParams& unscaled_solution_params) {
+                       HighsModelStatus& model_status,
+                       HighsSolutionParams& solution_params) {
   imprecise_solution = false;
-  resetModelStatusAndSolutionParams(unscaled_model_status,
-                                    unscaled_solution_params, options);
+  resetModelStatusAndSolutionParams(model_status,
+                                    solution_params, options);
   // Create the LpSolver instance
   ipx::LpSolver lps;
   // Set IPX parameters
@@ -553,8 +553,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Just test feasibility and optimality tolerances for now
   // ToDo Set more parameters
   parameters.ipm_feasibility_tol =
-      min(unscaled_solution_params.primal_feasibility_tolerance,
-          unscaled_solution_params.dual_feasibility_tolerance);
+      min(solution_params.primal_feasibility_tolerance,
+          solution_params.dual_feasibility_tolerance);
 
   parameters.ipm_optimality_tol = options.ipm_optimality_tolerance;
   parameters.crossover_start = options.start_crossover_tolerance;
@@ -601,7 +601,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
         reportIpxSolveStatus(options, solve_status, ipx_info.errflag);
     // Return error if IPX solve error has occurred
     if (solve_return_status == HighsStatus::Error) {
-      unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
+      model_status = HighsModelStatus::SOLVE_ERROR;
       return HighsStatus::Error;
     }
   }
@@ -614,7 +614,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Return error if IPX IPM or crossover error has occurred
   if (ipm_return_status == HighsStatus::Error ||
       crossover_return_status == HighsStatus::Error) {
-    unscaled_model_status = HighsModelStatus::SOLVE_ERROR;
+    model_status = HighsModelStatus::SOLVE_ERROR;
     return HighsStatus::Error;
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved or
@@ -640,7 +640,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       return HighsStatus::Error;
     // Can stop and reach time limit
     if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
-      unscaled_model_status = HighsModelStatus::REACHED_TIME_LIMIT;
+      model_status = HighsModelStatus::REACHED_TIME_LIMIT;
       return HighsStatus::Warning;
     }
     //========
@@ -656,15 +656,15 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     // Can stop with iter limit
     // Can stop with no progress
     if (ipx_info.status_ipm == IPX_STATUS_time_limit) {
-      unscaled_model_status = HighsModelStatus::REACHED_TIME_LIMIT;
+      model_status = HighsModelStatus::REACHED_TIME_LIMIT;
       return HighsStatus::Warning;
     } else if (ipx_info.status_ipm == IPX_STATUS_iter_limit) {
-      unscaled_model_status = HighsModelStatus::REACHED_ITERATION_LIMIT;
+      model_status = HighsModelStatus::REACHED_ITERATION_LIMIT;
       return HighsStatus::Warning;
     } else if (ipx_info.status_ipm == IPX_STATUS_no_progress) {
       reportIpmNoProgress(options, ipx_info);
       return analyseIpmNoProgress(ipx_info, lps.GetParameters(),
-                                  unscaled_model_status);
+                                  model_status);
     }
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved
@@ -689,10 +689,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Can solve and be primal_infeas
   // Can solve and be dual_infeas
   if (ipx_info.status_ipm == IPX_STATUS_primal_infeas) {
-    unscaled_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+    model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
     return HighsStatus::OK;
   } else if (ipx_info.status_ipm == IPX_STATUS_dual_infeas) {
-    unscaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
     return HighsStatus::OK;
   }
 
@@ -751,15 +751,15 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   }
   HighsStatus return_status;
   if (imprecise_solution) {
-    unscaled_model_status = HighsModelStatus::NOTSET;
+    model_status = HighsModelStatus::NOTSET;
     return_status = HighsStatus::Warning;
   } else {
-    unscaled_model_status = HighsModelStatus::OPTIMAL;
-    unscaled_solution_params.primal_status =
+    model_status = HighsModelStatus::OPTIMAL;
+    solution_params.primal_status =
         PrimalDualStatus::STATUS_FEASIBLE_POINT;
     // Currently only have a dual solution if there is a basic solution
     if (have_basic_solution)
-      unscaled_solution_params.dual_status =
+      solution_params.dual_status =
           PrimalDualStatus::STATUS_FEASIBLE_POINT;
     return_status = HighsStatus::OK;
   }
@@ -767,10 +767,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   for (int iCol = 0; iCol < lp.numCol_; iCol++)
     objective_function_value +=
         highs_solution.col_value[iCol] * lp.colCost_[iCol];
-  unscaled_solution_params.objective_function_value = objective_function_value;
+  solution_params.objective_function_value = objective_function_value;
   if (highs_basis.valid_)
     getPrimalDualInfeasibilities(lp, highs_basis, highs_solution,
-                                 unscaled_solution_params);
+                                 solution_params);
   return return_status;
 }
 #endif

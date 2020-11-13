@@ -30,11 +30,9 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   // iteration counts
   resetModelStatusAndSolutionParams(highs_model_object);
 
-  // Aliases to unscaled model status and solution parameters
-  HighsSolutionParams& unscaled_solution_params =
+  // Aliase to solution parameters
+  HighsSolutionParams& fred_solution_params =
       highs_model_object.unscaled_solution_params_;
-  //  HighsModelStatus& unscaled_model_status =
-  //  highs_model_object.unscaled_model_status_;
 
   // Check that the LP really is unconstrained!
   const HighsLp& lp = highs_model_object.lp_;
@@ -52,9 +50,9 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   basis.col_status.assign(lp.numCol_, HighsBasisStatus::NONBASIC);
 
   double primal_feasibility_tolerance =
-      unscaled_solution_params.primal_feasibility_tolerance;
+      fred_solution_params.primal_feasibility_tolerance;
   double dual_feasibility_tolerance =
-      unscaled_solution_params.dual_feasibility_tolerance;
+      fred_solution_params.dual_feasibility_tolerance;
 
   // Initialise the objective value calculation. Done using
   // HighsSolution so offset is vanilla
@@ -62,8 +60,12 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   bool infeasible = false;
   bool unbounded = false;
 
-  unscaled_solution_params.num_primal_infeasibilities = 0;
-  unscaled_solution_params.num_dual_infeasibilities = 0;
+  fred_solution_params.num_primal_infeasibilities = 0;
+  fred_solution_params.max_primal_infeasibility = 0;
+  fred_solution_params.sum_primal_infeasibilities = 0;
+  fred_solution_params.num_dual_infeasibilities = 0;
+  fred_solution_params.max_dual_infeasibility = 0;
+  fred_solution_params.sum_dual_infeasibilities = 0;
 
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     double cost = lp.colCost_[iCol];
@@ -127,31 +129,31 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
     solution.col_dual[iCol] = (int)lp.sense_ * dual;
     basis.col_status[iCol] = status;
     objective += value * cost;
-    unscaled_solution_params.sum_primal_infeasibilities += primal_infeasibility;
+    fred_solution_params.sum_primal_infeasibilities += primal_infeasibility;
     if (primal_infeasibility > primal_feasibility_tolerance) {
       infeasible = true;
-      unscaled_solution_params.num_primal_infeasibilities++;
-      unscaled_solution_params.max_primal_infeasibility =
+      fred_solution_params.num_primal_infeasibilities++;
+      fred_solution_params.max_primal_infeasibility =
           max(primal_infeasibility,
-              unscaled_solution_params.max_primal_infeasibility);
+              fred_solution_params.max_primal_infeasibility);
     }
   }
-  unscaled_solution_params.objective_function_value = objective;
+  fred_solution_params.objective_function_value = objective;
   basis.valid_ = true;
 
   if (infeasible) {
     highs_model_object.unscaled_model_status_ =
         HighsModelStatus::PRIMAL_INFEASIBLE;
-    unscaled_solution_params.primal_status = STATUS_INFEASIBLE_POINT;
+    fred_solution_params.primal_status = STATUS_INFEASIBLE_POINT;
   } else {
-    unscaled_solution_params.primal_status = STATUS_FEASIBLE_POINT;
+    fred_solution_params.primal_status = STATUS_FEASIBLE_POINT;
     if (unbounded) {
       highs_model_object.unscaled_model_status_ =
           HighsModelStatus::PRIMAL_UNBOUNDED;
-      unscaled_solution_params.dual_status = STATUS_UNKNOWN;
+      fred_solution_params.dual_status = STATUS_UNKNOWN;
     } else {
       highs_model_object.unscaled_model_status_ = HighsModelStatus::OPTIMAL;
-      unscaled_solution_params.dual_status = STATUS_FEASIBLE_POINT;
+      fred_solution_params.dual_status = STATUS_FEASIBLE_POINT;
     }
   }
   highs_model_object.scaled_model_status_ =
