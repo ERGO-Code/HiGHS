@@ -677,13 +677,15 @@ void HEkkPrimal::chuzc() {
       double measure = 0;
       if (variable_in >= 0)
         measure = fabs(workDual[variable_in]) / devex_weight[variable_in];
-      if (hyper_sparse_measure != measure) {
+      double abs_measure_error = fabs(hyper_sparse_measure - measure);
+      bool measure_error = abs_measure_error > 1e-12;
+      if (measure_error) {
         printf(
             "Iteration %d: Hyper-sparse CHUZC measure %g != %g = Full "
-            "CHUZC measure (%d, %d)\n",
+            "CHUZC measure (%d, %d): error %g\n",
             ekk_instance_.iteration_count_, hyper_sparse_measure, measure,
-            hyper_sparse_variable_in, variable_in);
-        assert(hyper_sparse_measure == measure);
+            hyper_sparse_variable_in, variable_in, abs_measure_error);
+        assert(!measure_error);
       }
       variable_in = hyper_sparse_variable_in;
     }

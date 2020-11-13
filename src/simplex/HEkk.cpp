@@ -178,7 +178,8 @@ void HEkk::initialiseSimplexLpRandomVectors() {
   const int numTot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   if (!numTot) return;
   // Instantiate and (re-)initialise the random number generator
-  HighsRandom random;
+  //  HighsRandom random;
+  HighsRandom& random = random_;
   random.initialise();
 
   if (numCol) {
@@ -1448,6 +1449,7 @@ void HEkk::computeSimplexPrimalInfeasible() {
       } else if (value > upper + scaled_primal_feasibility_tolerance) {
         primal_infeasibility = value - upper;
       }
+      primal_infeasibility = max(lower - value, value - upper);
       if (primal_infeasibility > 0) {
         if (primal_infeasibility > scaled_primal_feasibility_tolerance)
           num_primal_infeasibilities++;
@@ -1468,6 +1470,7 @@ void HEkk::computeSimplexPrimalInfeasible() {
     } else if (value > upper + scaled_primal_feasibility_tolerance) {
       primal_infeasibility = value - upper;
     }
+      primal_infeasibility = max(lower - value, value - upper);
     if (primal_infeasibility > 0) {
       if (primal_infeasibility > scaled_primal_feasibility_tolerance)
         num_primal_infeasibilities++;
