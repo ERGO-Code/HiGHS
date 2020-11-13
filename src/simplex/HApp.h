@@ -543,12 +543,15 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   //  printf("Forcing simplex_info_.run_quiet true for testing\n");
   //  highs_model_object.simplex_info_.run_quiet = true;
 
-  if (!highs_model_object.lp_.numRow_) {
-    // Unconstrained LP so solve directly
-    call_status = solveUnconstrainedLp(highs_model_object);
-    return_status =
-        interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
-    return return_status;
+  // Assumes that the LP has a positive number of rows
+  bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
+  if (!positive_num_row) {
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
+                    "solveLpSimplex called for LP with non-positive (%d) "
+                    "number of constraints",
+                    highs_model_object.lp_.numRow_);
+    assert(positive_num_row);
+    return HighsStatus::Error;
   }
   HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
   simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,

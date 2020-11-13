@@ -21,8 +21,7 @@ HighsStatus HEkkPrimal::solve() {
   HighsOptions& options = ekk_instance_.options_;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
-  // Assumes that the LP has a positive number of rows, since
-  // unconstrained LPs should be solved in solveLpSimplex
+  // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
   if (!positive_num_row) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,

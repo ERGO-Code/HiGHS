@@ -64,15 +64,14 @@ HighsStatus HEkkDual::solve() {
       HighsDebugStatus::LOGICAL_ERROR)
     return returnFromSolve(HighsStatus::Error);
   */
-  // Assumes that the LP has a positive number of rows, since
-  // unconstrained LPs should be solved in solveLpSimplex
+  // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
-  assert(positive_num_row);
   if (!positive_num_row) {
     HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-                    "HPrimal::solve called for LP with non-positive (%d) "
+                    "HEkkDual::solve called for LP with non-positive (%d) "
                     "number of constraints",
                     ekk_instance_.simplex_lp_.numRow_);
+    assert(positive_num_row);
     return returnFromSolve(HighsStatus::Error);
   }
 
