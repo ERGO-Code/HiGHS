@@ -524,8 +524,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsModelStatus& model_status,
                        HighsSolutionParams& solution_params) {
   imprecise_solution = false;
-  resetModelStatusAndSolutionParams(model_status,
-                                    solution_params, options);
+  resetModelStatusAndSolutionParams(model_status, solution_params, options);
   // Create the LpSolver instance
   ipx::LpSolver lps;
   // Set IPX parameters
@@ -663,8 +662,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
       return HighsStatus::Warning;
     } else if (ipx_info.status_ipm == IPX_STATUS_no_progress) {
       reportIpmNoProgress(options, ipx_info);
-      return analyseIpmNoProgress(ipx_info, lps.GetParameters(),
-                                  model_status);
+      return analyseIpmNoProgress(ipx_info, lps.GetParameters(), model_status);
     }
   }
   // Should only reach here if Solve() returned IPX_STATUS_solved
@@ -755,12 +753,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
     return_status = HighsStatus::Warning;
   } else {
     model_status = HighsModelStatus::OPTIMAL;
-    solution_params.primal_status =
-        PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
     // Currently only have a dual solution if there is a basic solution
     if (have_basic_solution)
-      solution_params.dual_status =
-          PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
     return_status = HighsStatus::OK;
   }
   double objective_function_value = lp.offset_;

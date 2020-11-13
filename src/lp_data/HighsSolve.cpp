@@ -113,24 +113,28 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
 // and HighsSolutionParams
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
+  return (solveUnconstrainedLp(
+      highs_model_object.options_, highs_model_object.lp_,
+      highs_model_object.unscaled_model_status_,
+      highs_model_object.unscaled_solution_params_,
+      highs_model_object.solution_, highs_model_object.basis_));
+}
+
+// Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
+// and HighsSolutionParams
+HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
+                                 HighsModelStatus& model_status,
+                                 HighsSolutionParams& solution_params,
+                                 HighsSolution& solution, HighsBasis& basis) {
   // Aliase to model status and solution parameters
-  HighsOptions options = highs_model_object.options_;
-  HighsModelStatus& model_status = highs_model_object.unscaled_model_status_;
-  HighsSolutionParams& solution_params =
-      highs_model_object.unscaled_solution_params_;
   resetModelStatusAndSolutionParams(model_status, solution_params, options);
 
-
   // Check that the LP really is unconstrained!
-  const HighsLp& lp = highs_model_object.lp_;
   assert(lp.numRow_ == 0);
   if (lp.numRow_ != 0) return HighsStatus::Error;
 
   HighsLogMessage(options.logfile, HighsMessageType::INFO,
                   "Solving an unconstrained LP with %d columns", lp.numCol_);
-
-  HighsSolution& solution = highs_model_object.solution_;
-  HighsBasis& basis = highs_model_object.basis_;
 
   solution.col_value.assign(lp.numCol_, 0);
   solution.col_dual.assign(lp.numCol_, 0);
@@ -221,8 +225,7 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
       infeasible = true;
       solution_params.num_primal_infeasibilities++;
       solution_params.max_primal_infeasibility =
-          max(primal_infeasibility,
-              solution_params.max_primal_infeasibility);
+          max(primal_infeasibility, solution_params.max_primal_infeasibility);
     }
   }
   solution_params.objective_function_value = objective;
@@ -231,11 +234,12 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   if (infeasible) {
     model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
     solution_params.primal_status = STATUS_INFEASIBLE_POINT;
+    solution_params.dual_status = STATUS_UNKNOWN;
   } else {
     solution_params.primal_status = STATUS_FEASIBLE_POINT;
     if (unbounded) {
       model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
-      solution_params.dual_status = STATUS_UNKNOWN;
+      solution_params.dual_status = STATUS_INFEASIBLE_POINT;
     } else {
       model_status = HighsModelStatus::OPTIMAL;
       solution_params.dual_status = STATUS_FEASIBLE_POINT;
@@ -243,4 +247,3 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   }
   return HighsStatus::OK;
 }
-

@@ -414,7 +414,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL));
 
-    callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   return_status = highs.writeModel("");
   HighsStatusReport(options.logfile, "highs.writeModel(\"\")", return_status);
@@ -529,7 +529,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL));
 
-    callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   // Adding row vectors and matrix to model with columns returns OK
   REQUIRE(highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz,
@@ -623,7 +623,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL));
 
-    callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   REQUIRE(highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
                         row0135789_num_nz, row0135789_start, row0135789_index,
@@ -688,7 +688,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.deleteRows(0, num_row - 1));
 
-    callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   REQUIRE(highs.deleteCols(col0123_col_mask));
 
@@ -816,7 +816,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   REQUIRE(highs.deleteRows(0, num_row - 1));
 
-    callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
   REQUIRE(highs.deleteCols(0, num_col - 1));
 
@@ -830,7 +830,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0,
                         NULL, NULL, NULL));
 
-    callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+  callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
 
 #ifdef HiGHSDEV
   highs.reportModelStatusSolutionBasis("With columns but no rows");

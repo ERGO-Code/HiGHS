@@ -546,7 +546,8 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // Assumes that the LP has a positive number of rows
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
   if (!positive_num_row) {
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::ERROR,
+    HighsLogMessage(highs_model_object.options_.logfile,
+                    HighsMessageType::ERROR,
                     "solveLpSimplex called for LP with non-positive (%d) "
                     "number of constraints",
                     highs_model_object.lp_.numRow_);
