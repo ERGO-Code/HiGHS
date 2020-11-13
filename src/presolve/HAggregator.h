@@ -49,7 +49,8 @@ class HAggregator {
   std::vector<int> iterstack;
   std::vector<int> rowpositions;
   std::unordered_map<int, int> fillinCache;
-  std::vector<std::pair<int, int>> impliedBoundCache;
+  std::vector<int> impliedLbRow;
+  std::vector<int> impliedUbRow;
   std::vector<double> col_numerics_threshold;
   // priority queue to reuse free slots
   std::priority_queue<int, std::vector<int>, std::greater<int>> freeslots;
@@ -81,6 +82,12 @@ class HAggregator {
 
    public:
     void undo(HighsSolution& solution, HighsBasis& basis) const;
+
+    void undo(std::vector<int>& colFlag, std::vector<int>& rowFlag,
+              std::vector<double>& col_value, std::vector<double>& col_dual,
+              std::vector<double>& row_dual,
+              std::vector<HighsBasisStatus>& col_status,
+              std::vector<HighsBasisStatus>& row_status) const;
 
     void undo(std::vector<double>& colvalue) const;
   };

@@ -76,7 +76,8 @@ HAggregator::HAggregator(std::vector<double>& rowLower,
   colhead.resize(numcol, -1);
   colsize.resize(numcol);
   col_numerics_threshold.resize(numcol);
-  impliedBoundCache.resize(numcol);
+  impliedLbRow.resize(numcol, -1);
+  impliedUbRow.resize(numcol, -1);
   rowroot.resize(numrow, -1);
   rowsize.resize(numrow);
   minact.resize(numrow);
@@ -153,20 +154,20 @@ bool HAggregator::isImpliedFree(int col) {
   bool lowerImplied = colLower[col] == -HIGHS_CONST_INF;
   bool upperImplied = colUpper[col] == HIGHS_CONST_INF;
 
-  if (!lowerImplied && impliedBoundCache[col].first != 0) {
-    double implLower = getImpliedLb(impliedBoundCache[col].first - 1, col);
+  if (!lowerImplied && impliedLbRow[col] != -1) {
+    double implLower = getImpliedLb(impliedLbRow[col], col);
     if (implLower >= colLower[col])
       lowerImplied = true;
     else
-      impliedBoundCache[col].first = 0;
+      impliedLbRow[col] = -1;
   }
 
-  if (!upperImplied && impliedBoundCache[col].second != 0) {
-    double implUpper = getImpliedUb(impliedBoundCache[col].first - 1, col);
+  if (!upperImplied && impliedUbRow[col] != -1) {
+    double implUpper = getImpliedUb(impliedUbRow[col], col);
     if (implUpper <= colUpper[col])
       upperImplied = true;
     else
-      impliedBoundCache[col].second = 0;
+      impliedUbRow[col] = -1;
   }
 
   if (lowerImplied && upperImplied) return true;
@@ -175,7 +176,8 @@ bool HAggregator::isImpliedFree(int col) {
     double val = Avalue[coliter];
 
     if (val > 0) {
-      if (!lowerImplied && rowLower[row] != -HIGHS_CONST_INF &&
+      if (!lowerImplied && row != impliedUbRow[col] &&
+          rowLower[row] != -HIGHS_CONST_INF &&
           (ninfmax[row] == 0 ||
            (ninfmax[row] == 1 && colUpper[col] == HIGHS_CONST_INF))) {
         HighsCDouble residualactivity = maxact[row];
@@ -186,13 +188,14 @@ bool HAggregator::isImpliedFree(int col) {
             double((rowLower[row] - residualactivity) / val + bound_tolerance);
 
         if (implLower >= colLower[col]) {
-          impliedBoundCache[col].first = row + 1;
+          impliedLbRow[col] = row;
           if (upperImplied) return true;
           lowerImplied = true;
         }
       }
 
-      if (!upperImplied && rowUpper[row] != HIGHS_CONST_INF &&
+      if (!upperImplied && row != impliedLbRow[col] &&
+          rowUpper[row] != HIGHS_CONST_INF &&
           (ninfmin[row] == 0 ||
            (ninfmin[row] == 1 && colLower[col] == -HIGHS_CONST_INF))) {
         HighsCDouble residualactivity = minact[row];
@@ -203,13 +206,14 @@ bool HAggregator::isImpliedFree(int col) {
             double((rowLower[row] - residualactivity) / val - bound_tolerance);
 
         if (implUpper <= colUpper[col]) {
-          impliedBoundCache[col].second = row + 1;
+          impliedUbRow[col] = row;
           if (lowerImplied) return true;
           upperImplied = true;
         }
       }
     } else {
-      if (!lowerImplied && rowUpper[row] != HIGHS_CONST_INF &&
+      if (!lowerImplied && row != impliedUbRow[col] &&
+          rowUpper[row] != HIGHS_CONST_INF &&
           (ninfmin[row] == 0 ||
            (ninfmin[row] == 1 && colUpper[col] == HIGHS_CONST_INF))) {
         HighsCDouble residualactivity = minact[row];
@@ -220,13 +224,14 @@ bool HAggregator::isImpliedFree(int col) {
             double((rowUpper[row] - residualactivity) / val + bound_tolerance);
 
         if (implLower >= colLower[col]) {
-          impliedBoundCache[col].first = row + 1;
+          impliedLbRow[col] = row;
           if (upperImplied) return true;
           lowerImplied = true;
         }
       }
 
-      if (!upperImplied && rowLower[row] != -HIGHS_CONST_INF &&
+      if (!upperImplied && row != impliedLbRow[col] &&
+          rowLower[row] != -HIGHS_CONST_INF &&
           (ninfmax[row] == 0 ||
            (ninfmax[row] == 1 && colLower[col] == -HIGHS_CONST_INF))) {
         HighsCDouble residualactivity = maxact[row];
@@ -237,7 +242,7 @@ bool HAggregator::isImpliedFree(int col) {
             double((rowLower[row] - residualactivity) / val - bound_tolerance);
 
         if (implUpper <= colUpper[col]) {
-          impliedBoundCache[col].second = row + 1;
+          impliedUbRow[col] = row;
           if (lowerImplied) return true;
           upperImplied = true;
         }
@@ -899,6 +904,40 @@ void HAggregator::PostsolveStack::undo(HighsSolution& solution,
 
     basis.col_status[reduction.col] = HighsBasisStatus::BASIC;
     basis.row_status[reduction.col] = HighsBasisStatus::NONBASIC;
+  }
+}
+
+void HAggregator::PostsolveStack::undo(
+    std::vector<int>& colFlag, std::vector<int>& rowFlag,
+    std::vector<double>& col_value, std::vector<double>& col_dual,
+    std::vector<double>& row_dual, std::vector<HighsBasisStatus>& col_status,
+    std::vector<HighsBasisStatus>& row_status) const
+
+{
+  for (int k = reductionStack.size() - 1; k >= 0; --k) {
+    const ImpliedFreeVarReduction& reduction = reductionStack.back();
+
+    colFlag[reduction.col] = 1;
+    rowFlag[reduction.row] = 1;
+    const int rowstart = reduction.stackpos;
+    const int rowend = reduction.stackpos + reduction.rowlen;
+    const int colend = rowend + reduction.collen;
+
+    HighsCDouble colval = reduction.eqrhs;
+    for (int i = rowstart; i != rowend; ++i)
+      colval -= reductionValues[i].second * col_value[reductionValues[i].first];
+
+    col_value[reduction.col] = double(colval / reduction.substcoef);
+
+    HighsCDouble dualval = -reduction.colcost;
+    for (int i = rowend; i != colend; ++i)
+      dualval += reductionValues[i].second * row_dual[reductionValues[i].first];
+
+    row_dual[reduction.row] = double(dualval / reduction.substcoef);
+    col_dual[reduction.col] = 0;
+
+    col_status[reduction.col] = HighsBasisStatus::BASIC;
+    row_status[reduction.col] = HighsBasisStatus::NONBASIC;
   }
 }
 
