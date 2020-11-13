@@ -95,6 +95,12 @@ class HEkk {
   double computeDualForTableauColumn(const int iVar,
                                      const HVector& tableau_column);
   void correctDual(int* free_infeasibility_count);
+  bool reinvertOnNumericalTrouble(const std::string method_name,
+				  double& numerical_trouble_measure,
+				  const double alpha_from_col,
+				  const double alpha_from_row,
+				  const double numerical_trouble_tolerance);
+
   void flipBound(const int iCol);
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
   void updatePivots(const int variable_in, const int row_out,

@@ -525,26 +525,24 @@ void HEkkDual::majorUpdate() {
   majorUpdateFtranFinal();
 
   // Major update - check for roll back
-  numericalTrouble = 0;
-  /*
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* iFinish = &multi_finish[iFn];
     HVector* iColumn = iFinish->col_aq;
     int iRow_Out = iFinish->row_out;
 
     // Use the two pivot values to identify numerical trouble
-    if (reinvertOnNumericalTrouble("HEkkDual::majorUpdate", ekk_instance_,
-                                   numericalTrouble, iColumn->array[iRow_Out],
-                                   iFinish->alpha_row,
-                                   multi_numerical_trouble_tolerance)) {
-      // int startUpdate = ekk_instance_.simplex_info_.update_count -
-  multi_nFinish; rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
+    if (ekk_instance_.reinvertOnNumericalTrouble("HEkkDual::majorUpdate", 
+						 numericalTrouble, iColumn->array[iRow_Out],
+						 iFinish->alpha_row,
+						 multi_numerical_trouble_tolerance)) {
+      // int startUpdate = ekk_instance_.simplex_info_.update_count - multi_nFinish; 
+      rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
       // if (startUpdate > 0) {
       majorRollback();
       return;
+      // }
     }
   }
-  */
 
   // Major update - primal and factor
   majorUpdatePrimal();

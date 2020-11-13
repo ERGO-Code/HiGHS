@@ -334,7 +334,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "ekkDebugSimplex - %s: Iteration %d Should be primal "
                     "feasible, but num / max "
-                    "/ sum primal infeasibility is %g / %g / %g",
+                    "/ sum primal infeasibility is %d / %g / %g",
                     message.c_str(), iteration_count, num_primal_infeasibility,
                     max_primal_infeasibility, sum_primal_infeasibility);
     assert(!illegal_primal_infeasibility);
@@ -342,14 +342,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
 
   bool illegal_dual_infeasibility =
-      (algorithm == SimplexAlgorithm::DUAL || phase == 0) &&
+    ((algorithm == SimplexAlgorithm::DUAL && ekk_instance.simplex_lp_status_.has_fresh_rebuild) || phase == 0) &&
       num_dual_infeasibility > 0;
   if (illegal_dual_infeasibility) {
     // Dual simplex or optimal but has dual infeasibilities
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "ekkDebugSimplex - %s: Iteration %d Should be dual "
                     "feasible, but num / max / "
-                    "sum dual infeasibility is %g / %g / %g",
+                    "sum dual infeasibility is %d / %g / %g",
                     message.c_str(), iteration_count, num_dual_infeasibility,
                     max_dual_infeasibility, sum_dual_infeasibility);
     assert(!illegal_dual_infeasibility);

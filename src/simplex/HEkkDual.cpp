@@ -1007,6 +1007,9 @@ void HEkkDual::rebuild() {
   // Dual simplex doesn't maintain the number of primal
   // infeasiblities, so set it to an illegal value now
   ekk_instance_.invalidatePrimalInfeasibilityRecord();
+  // Although dual simplex should always be dual feasible,
+  // infeasiblilities are only corrected in rebuild
+  ekk_instance_.invalidateDualInfeasibilityRecord();
 
 #ifdef HiGHSDEV
   if (simplex_info.analyse_rebuild_time) {
@@ -1721,14 +1724,11 @@ void HEkkDual::updateVerify() {
   if (rebuild_reason) return;
 
   // Use the two pivot values to identify numerical trouble
-  numericalTrouble = 0;
-  /*
-  if (reinvertOnNumericalTrouble("HEkkDual::updateVerify", ekk_instance_,
-                                 numericalTrouble, alpha_col, alpha_row,
-                                 numerical_trouble_tolerance)) {
+  if (ekk_instance_.reinvertOnNumericalTrouble("HEkkDual::updateVerify", 
+					       numericalTrouble, alpha_col, alpha_row,
+					       numerical_trouble_tolerance)) {
     rebuild_reason = REBUILD_REASON_POSSIBLY_SINGULAR_BASIS;
   }
-  */
 }
 
 void HEkkDual::updateDual() {

@@ -18,6 +18,7 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HighsModelUtils.h"
+#include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
 #include "simplex/HEkkPrimal.h"
 #include "simplex/HFactorDebug.h"
@@ -1290,6 +1291,56 @@ void HEkk::flipBound(const int iCol) {
   simplex_info_.workValue_[iCol] = move == 1 ? simplex_info_.workLower_[iCol]
                                              : simplex_info_.workUpper_[iCol];
 }
+
+bool HEkk::reinvertOnNumericalTrouble(const std::string method_name,
+				      double& numerical_trouble_measure,
+				      const double alpha_from_col,
+				      const double alpha_from_row,
+				      const double numerical_trouble_tolerance) {
+  double abs_alpha_from_col = fabs(alpha_from_col);
+  double abs_alpha_from_row = fabs(alpha_from_row);
+  double min_abs_alpha = min(abs_alpha_from_col, abs_alpha_from_row);
+  double abs_alpha_diff = fabs(abs_alpha_from_col - abs_alpha_from_row);
+  numerical_trouble_measure = abs_alpha_diff / min_abs_alpha;
+  const int update_count = simplex_info_.update_count;
+  // Reinvert if the relative difference is large enough, and updates have been
+  // performed
+  const bool numerical_trouble =
+      numerical_trouble_measure > numerical_trouble_tolerance;
+  const bool reinvert = numerical_trouble && update_count > 0;
+  ekkDebugReportReinvertOnNumericalTrouble(
+      method_name, *this, numerical_trouble_measure,
+      alpha_from_col, alpha_from_row, numerical_trouble_tolerance, reinvert);
+  if (reinvert) {
+    // Consider increasing the Markowitz multiplier
+    const double current_pivot_threshold =
+        simplex_info_.factor_pivot_threshold;
+    double new_pivot_threshold = 0;
+    if (current_pivot_threshold < default_pivot_threshold) {
+      // Threshold is below default value, so increase it
+      new_pivot_threshold =
+          min(current_pivot_threshold * pivot_threshold_change_factor,
+              default_pivot_threshold);
+    } else if (current_pivot_threshold < max_pivot_threshold) {
+      // Threshold is below max value, so increase it if few updates have been
+      // performed
+      if (update_count < 10)
+        new_pivot_threshold =
+            min(current_pivot_threshold * pivot_threshold_change_factor,
+                max_pivot_threshold);
+    }
+    if (new_pivot_threshold) {
+      HighsLogMessage(
+          options_.logfile, HighsMessageType::WARNING,
+          "   Increasing Markowitz threshold to %g", new_pivot_threshold);
+      simplex_info_.factor_pivot_threshold =
+          new_pivot_threshold;
+      factor_.setPivotThreshold(new_pivot_threshold);
+    }
+  }
+  return reinvert;
+}
+
 
 // The major model updates. Factor calls factor_.update; Matrix
 // calls matrix_.update; updatePivots does everything---and is

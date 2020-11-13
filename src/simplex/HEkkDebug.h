@@ -59,4 +59,5 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
     const HSet nonbasic_free_col_set);
 
 HighsDebugStatus ekkDebugRowMatrix(const HEkk& ekk_instance);
+
 #endif  // SIMPLEX_HEKKDEBUG_H_
