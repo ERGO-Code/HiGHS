@@ -42,9 +42,19 @@ const double updated_dual_large_absolute_error =
 HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const HEkk& ekk_instance,
                                  const SimplexAlgorithm algorithm,
-                                 const int phase) {
+                                 const int phase,
+				 const bool initialise) {
   if (ekk_instance.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
+  static double max_max_basic_dual;
+  static double max_max_primal_residual;
+  static double max_max_dual_residual;
+  if (initialise) {
+    max_max_basic_dual = 0;
+    max_max_primal_residual = 0;
+    max_max_dual_residual = 0;
+    return::HighsDebugStatus::OK;
+  }
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const HighsSimplexInfo& simplex_info = ekk_instance.simplex_info_;
@@ -137,6 +147,8 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   // Check the basic variables
   double max_basic_dual = 0;
+  const double base =
+      simplex_info.primal_simplex_phase1_cost_perturbation_multiplier * 5e-7;
   for (int iRow = 0; iRow < num_row; iRow++) {
     int iVar = simplex_basis.basicIndex_[iRow];
     // For basic variables, check that the nonbasic flag isn't set,
@@ -173,16 +185,15 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       return HighsDebugStatus::LOGICAL_ERROR;
     }
     max_basic_dual = max(fabs(dual), max_basic_dual);
-    double primal_infeasibility = 0;
-    double primal_phase1_cost = 0;
+    int bound_violated = 0;
     if (value < lower - primal_feasibility_tolerance) {
-      primal_infeasibility = lower - value;
-      primal_phase1_cost = -1;
+      bound_violated = -1;
     } else if (value > upper + primal_feasibility_tolerance) {
-      primal_infeasibility = value - upper;
-      primal_phase1_cost = 1;
+      bound_violated = 1;
     }
     if (algorithm == SimplexAlgorithm::PRIMAL && phase == 1) {
+      double primal_phase1_cost = bound_violated;
+      if (base) primal_phase1_cost *= 1 + base * simplex_info.numTotRandomValue_[iRow];
       bool primal_phase1_cost_error = fabs(cost - primal_phase1_cost);
       if (primal_phase1_cost_error) {
         HighsLogMessage(options.logfile, HighsMessageType::ERROR,
@@ -195,13 +206,18 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
         return HighsDebugStatus::LOGICAL_ERROR;
       }
     }
-    if (primal_infeasibility > 0) {
-      if (primal_infeasibility > primal_feasibility_tolerance)
-        num_primal_infeasibility++;
-      max_primal_infeasibility =
-          max(primal_infeasibility, max_primal_infeasibility);
-      sum_primal_infeasibility += primal_infeasibility;
+    if (!bound_violated) continue;
+    double primal_infeasibility = 0;
+    if (bound_violated < 0) {
+      primal_infeasibility = lower - value;
+    } else {
+      primal_infeasibility = value - upper;
     }
+    if (primal_infeasibility > primal_feasibility_tolerance)
+      num_primal_infeasibility++;
+    max_primal_infeasibility =
+      max(primal_infeasibility, max_primal_infeasibility);
+    sum_primal_infeasibility += primal_infeasibility;
   }
   // Report on basic dual values
   if (max_basic_dual > excessive_basic_dual) {
@@ -217,11 +233,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     report_level = ML_VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
-  HighsPrintMessage(
-      options.output, options.message_level, report_level,
-      "ekkDebugSimplex - %s: Iteration %d %-9s max   basic dual = %9.4g\n",
-      message.c_str(), iteration_count, value_adjective.c_str(),
-      max_basic_dual);
+  if (max_basic_dual > 2*max_max_basic_dual) {
+    HighsPrintMessage(
+		      options.output, options.message_level, report_level,
+		      "ekkDebugSimplex - %s: Iteration %d %-9s max   basic dual = %9.4g\n",
+		      message.c_str(), iteration_count, value_adjective.c_str(),
+		      max_basic_dual);
+    max_max_basic_dual = max_basic_dual;
+  }
   // Check that the number, max and sums of primal and dual infeasibilities (if
   // known) are correct
   const int info_num_primal_infeasibilities =
@@ -415,11 +434,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     report_level = ML_VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
+  if (max_primal_residual > 2*max_max_primal_residual) {
   HighsPrintMessage(
       options.output, options.message_level, report_level,
       "ekkDebugSimplex - %s: Iteration %d %-9s max primal residual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_primal_residual);
+    max_max_primal_residual = max_primal_residual;
+  }
   if (max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
     report_level = ML_ALWAYS;
@@ -433,11 +455,14 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     report_level = ML_VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
+  if (max_dual_residual > 2*max_max_dual_residual) {
   HighsPrintMessage(
       options.output, options.message_level, report_level,
       "ekkDebugSimplex - %s: Iteration %d %-9s max   dual residual = %9.4g\n",
       message.c_str(), iteration_count, value_adjective.c_str(),
       max_dual_residual);
+    max_max_dual_residual = max_dual_residual;
+  }
   return return_status;
 }
 

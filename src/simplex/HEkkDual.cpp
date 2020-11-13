@@ -57,6 +57,8 @@ HighsStatus HEkkDual::solve() {
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance_.simplex_lp_status_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
   scaled_model_status = HighsModelStatus::NOTSET;
+  if (debugDualSimplex("Initialise", true) == HighsDebugStatus::LOGICAL_ERROR)
+    return ekk_instance_.returnFromSolve(HighsStatus::Error);
   /*
   if (debugSimplexInfoBasisRightSize(ekk_instance_) ==
       HighsDebugStatus::LOGICAL_ERROR)
@@ -699,6 +701,14 @@ void HEkkDual::solvePhase1() {
     }
   }
 
+  // Debug here since not all simplex data will be correct until after
+  // rebuild() when switching to Phase 2
+  if (debugDualSimplex("End of solvePhase1") ==
+      HighsDebugStatus::LOGICAL_ERROR) {
+    solvePhase = SOLVE_PHASE_ERROR;
+    return;
+  }
+
   if (solvePhase == SOLVE_PHASE_2) {
     // Moving to phase 2 so allow cost perturbation. It may have been
     // prevented to avoid cleanup-perturbation loops when optimal in
@@ -890,6 +900,14 @@ void HEkkDual::solvePhase2() {
                           "problem-primal-infeasible\n");
         scaled_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
       }
+    }
+  }
+  // Before primal simplex clean-up there will be dual infeasibilities
+  if (solvePhase != SOLVE_PHASE_CLEANUP) {
+    if (debugDualSimplex("End of solvePhase2") ==
+	HighsDebugStatus::LOGICAL_ERROR) {
+      solvePhase = SOLVE_PHASE_ERROR;
+      return;
     }
   }
   return;
@@ -2473,9 +2491,10 @@ double HEkkDual::computeExactDualObjectiveValue() {
   return dual_objective;
 }
 
-HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message) {
+HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message, const bool initialise) {
   HighsDebugStatus return_status =
-      ekkDebugSimplex(message, ekk_instance_, algorithm, solvePhase);
+      ekkDebugSimplex(message, ekk_instance_, algorithm, solvePhase, initialise);
   if (return_status == HighsDebugStatus::LOGICAL_ERROR) return return_status;
+  if (initialise) return return_status;
   return HighsDebugStatus::OK;
 }
