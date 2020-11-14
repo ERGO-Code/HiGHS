@@ -245,6 +245,7 @@ struct HighsOptionsStruct {
   double ipm_optimality_tolerance;
   double dual_objective_value_upper_bound;
   int highs_debug_level;
+  bool simplex_class_ekk;
   int simplex_strategy;
   int simplex_scale_strategy;
   int simplex_crash_strategy;
@@ -431,6 +432,11 @@ class HighsOptions : public HighsOptionsStruct {
                             advanced, &highs_debug_level, HIGHS_DEBUG_LEVEL_MIN,
                             HIGHS_DEBUG_LEVEL_MIN, HIGHS_DEBUG_LEVEL_MAX);
     records.push_back(record_int);
+
+    record_bool =
+        new OptionRecordBool("simplex_class_ekk", "Ekk class for simplex solver",
+                            advanced, &simplex_class_ekk, false);
+    records.push_back(record_bool);
 
     record_int =
         new OptionRecordInt("simplex_strategy", "Strategy for simplex solver",

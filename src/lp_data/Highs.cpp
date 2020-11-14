@@ -728,6 +728,8 @@ HighsStatus Highs::run() {
           // Force the use of simplex to clean up if IPM has been used
           // to solve the presolved problem
           if (options.solver == ipm_string) options.solver = simplex_string;
+	  // Use HMO simplex solver since it can hot start
+	  options.simplex_class_ekk = false;
           options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
           // Ensure that the parallel solver isn't used
           options.highs_min_threads = 1;

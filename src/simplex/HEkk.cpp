@@ -54,21 +54,21 @@ HighsStatus HEkk::solve() {
 
   HighsStatus return_status;
   std::string algorithm;
-  if (options_.simplex_strategy == SIMPLEX_STRATEGY_EKK_DUAL) {
-    algorithm = "dual";
-  } else {
+  if (options_.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     algorithm = "primal";
+  } else {
+    algorithm = "dual";
   }
   HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                   "Using EKK %s simplex solver", algorithm.c_str());
-  if (options_.simplex_strategy == SIMPLEX_STRATEGY_EKK_DUAL) {
+  if (options_.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
+    HEkkPrimal primal(*this);
+    return_status = primal.solve();
+  } else {
     HEkkDual dual(*this);
     dual.options();
     simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL_PLAIN;
     return_status = dual.solve();
-  } else {
-    HEkkPrimal primal(*this);
-    return_status = primal.solve();
   }
   HighsLogMessage(
       options_.logfile, HighsMessageType::INFO,

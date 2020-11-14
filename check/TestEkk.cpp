@@ -11,8 +11,9 @@ void ekk_solve(Highs& highs, std::string presolve,
   SpecialLps special_lps;
   const HighsInfo& info = highs.getHighsInfo();
 
-  REQUIRE(highs.setHighsOptionValue("simplex_strategy",
-                                    SIMPLEX_STRATEGY_EKK_DUAL) ==
+  REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+          HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL) ==
           HighsStatus::OK);
 
   REQUIRE(highs.setHighsOptionValue("presolve", presolve) == HighsStatus::OK);
@@ -77,8 +78,10 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     // "/check/instances/adlittle.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
 
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+          HighsStatus::OK);
     REQUIRE(highs.setHighsOptionValue("simplex_strategy",
-                                      SIMPLEX_STRATEGY_EKK_DUAL) ==
+                                      SIMPLEX_STRATEGY_DUAL) ==
             HighsStatus::OK);
     highs.setHighsOptionValue("message_level", 6);
     REQUIRE(highs.run() == HighsStatus::OK);

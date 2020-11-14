@@ -1240,6 +1240,5 @@ int HighsSimplexAnalysis::intLog10(const double v) {
 bool HighsSimplexAnalysis::dualAlgorithm() {
   return (simplex_strategy == SIMPLEX_STRATEGY_DUAL ||
           simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS ||
-          simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI ||
-          simplex_strategy == SIMPLEX_STRATEGY_EKK_DUAL);
+          simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI);
 }
