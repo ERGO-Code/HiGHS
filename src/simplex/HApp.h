@@ -74,7 +74,7 @@ void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
 // unconstrained LPs should be solved in solveLpSimplex
 //
 // Also sets the solution parameters for the unscaled LP
-HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
+HighsStatus runHmoSimplexSolver(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -496,7 +496,7 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
       HighsOptions save_options = highs_model_object.options_;
       HighsOptions& options = highs_model_object.options_;
       options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
-      call_status = runSimplexSolver(highs_model_object);
+      call_status = runHmoSimplexSolver(highs_model_object);
       options = save_options;
       return_status =
           interpretCallStatus(call_status, return_status, "runSimplexSolver");
@@ -528,7 +528,7 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 //
 // It sets the HiGHS basis within highs_model_object and, if optimal,
 // the HiGHS solution, too
-HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
+HighsStatus solveLpHmoSimplex(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   // Reset unscaled and scaled model status and solution params - except for
@@ -557,7 +557,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   //  SimplexTimer simplex_timer;
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
   // (Try to) solve the scaled LP
-  call_status = runSimplexSolver(highs_model_object);
+  call_status = runHmoSimplexSolver(highs_model_object);
   return_status =
       interpretCallStatus(call_status, return_status, "runSimplexSolver");
   if (return_status == HighsStatus::Error) return return_status;
@@ -631,3 +631,15 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   return return_status;
 }
 #endif
+
+HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
+  return HighsStatus::Error;
+}
+
+HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
+  //  if (highs_model_object.options_.simplex_class_ekk) {
+  //    return solveLpEkkSimplex(highs_model_object);
+  //  } else {
+    return solveLpHmoSimplex(highs_model_object);
+    //  }
+}

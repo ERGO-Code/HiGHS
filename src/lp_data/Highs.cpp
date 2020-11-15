@@ -369,8 +369,8 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // with callSolveLp(..)
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
-  const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
-      HIGHS_DEBUG_LEVEL_CHEAP;
+  const int min_highs_debug_level =   HIGHS_DEBUG_LEVEL_MIN;
+  //    HIGHS_DEBUG_LEVEL_CHEAP;
   //    HIGHS_DEBUG_LEVEL_COSTLY;
   // HIGHS_DEBUG_LEVEL_EXPENSIVE;
   //  HIGHS_DEBUG_LEVEL_MAX;
