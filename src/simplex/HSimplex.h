@@ -17,9 +17,7 @@
 #include "lp_data/HighsModelObject.h"
 
 enum class LpAction {
-  DUALISE = 0,
-  PERMUTE,
-  SCALE,
+  SCALE = 0,
   NEW_COSTS,
   NEW_BOUNDS,
   NEW_BASIS,
@@ -113,7 +111,7 @@ HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
                         const HighsIndexCollection& index_collection);
 // PERMUTE:
 
-void permuteSimplexLp(HighsModelObject& highs_model);
+HighsLp permuteLp(const HighsLp& lp, const vector<int>& permutation);
 
 #ifdef HiGHSDEV
 // Only used to analyse the row and column status after Crash

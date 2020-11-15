@@ -553,14 +553,12 @@ int HEkk::computeFactor() {
 }
 
 void HEkk::initialiseMatrix() {
-  if (!simplex_lp_status_.has_matrix_col_wise ||
-      !simplex_lp_status_.has_matrix_row_wise) {
+  if (!simplex_lp_status_.has_matrix) {
     analysis_.simplexTimerStart(matrixSetupClock);
     matrix_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
                   &simplex_lp_.Astart_[0], &simplex_lp_.Aindex_[0],
                   &simplex_lp_.Avalue_[0], &simplex_basis_.nonbasicFlag_[0]);
-    simplex_lp_status_.has_matrix_col_wise = true;
-    simplex_lp_status_.has_matrix_row_wise = true;
+    simplex_lp_status_.has_matrix = true;
     analysis_.simplexTimerStop(matrixSetupClock);
   }
 }

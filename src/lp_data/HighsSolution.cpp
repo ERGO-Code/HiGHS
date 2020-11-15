@@ -684,6 +684,13 @@ void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
       highs_model_object.unscaled_model_status_,
       highs_model_object.unscaled_solution_params_,
       highs_model_object.options_);
+}
+
+void resetTwoModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
+  resetModelStatusAndSolutionParams(
+      highs_model_object.unscaled_model_status_,
+      highs_model_object.unscaled_solution_params_,
+      highs_model_object.options_);
   resetModelStatusAndSolutionParams(highs_model_object.scaled_model_status_,
                                     highs_model_object.scaled_solution_params_,
                                     highs_model_object.options_);

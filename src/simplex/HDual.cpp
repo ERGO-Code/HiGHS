@@ -887,8 +887,7 @@ void HDual::rebuild() {
     }
   }
 
-  if (!workHMO.simplex_lp_status_.has_matrix_row_wise ||
-      !workHMO.simplex_lp_status_.has_matrix_col_wise) {
+  if (!workHMO.simplex_lp_status_.has_matrix) {
     // Don't have the matrix either row-wise or col-wise, so
     // reinitialise it
     assert(simplex_info.backtracking_);
@@ -898,8 +897,7 @@ void HDual::rebuild() {
                           &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0],
                           &simplex_lp.Avalue_[0],
                           &workHMO.simplex_basis_.nonbasicFlag_[0]);
-    simplex_lp_status.has_matrix_col_wise = true;
-    simplex_lp_status.has_matrix_row_wise = true;
+    simplex_lp_status.has_matrix = true;
     analysis->simplexTimerStop(matrixSetupClock);
   }
   // Record whether the update objective value should be tested. If

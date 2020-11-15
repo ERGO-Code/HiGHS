@@ -440,9 +440,8 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 HighsStatus solveLpHmoSimplex(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  // Reset unscaled and scaled model status and solution params - except for
-  // iteration counts
-  resetModelStatusAndSolutionParams(highs_model_object);
+  // Reset unscaled and scaled model status and solution params
+  resetTwoModelStatusAndSolutionParams(highs_model_object);
   // Set the value of simplex_info_.run_quiet to suppress computation
   // that is just for reporting
   //  setRunQuiet(highs_model_object);
@@ -542,13 +541,21 @@ HighsStatus solveLpHmoSimplex(HighsModelObject& highs_model_object) {
 #endif
 
 HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
-  return HighsStatus::Error;
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
+  HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
+  resetModelStatusAndSolutionParams(highs_model_object);
+
+  return_status = HighsStatus::Error;
+  return return_status;
 }
 
 HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
-  //  if (highs_model_object.options_.simplex_class_ekk) {
-  //    return solveLpEkkSimplex(highs_model_object);
-  //  } else {
-  return solveLpHmoSimplex(highs_model_object);
-  //  }
+  const bool use_solveLpEkkSimplex = false;
+  if (highs_model_object.options_.simplex_class_ekk && use_solveLpEkkSimplex) {
+    return solveLpEkkSimplex(highs_model_object);
+  } else {
+    return solveLpHmoSimplex(highs_model_object);
+  }
 }

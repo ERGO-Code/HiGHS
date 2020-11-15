@@ -517,6 +517,7 @@ HighsStatus analyseIpmNoProgress(const ipx::Info& ipx_info,
   }
   return HighsStatus::Warning;
 }
+
 HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        const HighsLp& lp, bool& imprecise_solution,
                        HighsBasis& highs_basis, HighsSolution& highs_solution,

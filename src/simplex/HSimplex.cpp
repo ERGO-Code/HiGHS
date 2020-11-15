@@ -177,9 +177,9 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
       // Generate a simplex basis, possibly by performing a crash,
       //
       // Possibly permute the columns of the LP to be used by the solver.
-      if (options.simplex_permute_strategy != OPTION_OFF) {
-        permuteSimplexLp(highs_model_object);
-      }
+      //      if (options.simplex_permute_strategy != OPTION_OFF) {
+      //        permuteSimplexLp(highs_model_object);
+      //      }
       // Allocate memory for nonbasicFlag and set it up for a logical basis
       simplex_basis.nonbasicFlag_.resize(simplex_lp.numCol_ +
                                          simplex_lp.numRow_);
@@ -464,14 +464,12 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   }
 
   // Possibly set up the HMatrix column-wise and row-wise copies of the matrix
-  if (!simplex_lp_status.has_matrix_col_wise ||
-      !simplex_lp_status.has_matrix_row_wise) {
+  if (!simplex_lp_status.has_matrix) {
     analysis.simplexTimerStart(matrixSetupClock);
     matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
                  &simplex_basis.nonbasicFlag_[0]);
-    simplex_lp_status.has_matrix_col_wise = true;
-    simplex_lp_status.has_matrix_row_wise = true;
+    simplex_lp_status.has_matrix = true;
     analysis.simplexTimerStop(matrixSetupClock);
   }
 
@@ -1857,62 +1855,23 @@ HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
   return HighsStatus::OK;
 }
 
-// PERMUTE:
-
-void permuteSimplexLp(HighsModelObject& highs_model_object) {
-  HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
-#ifdef HiGHSDEV
-  printf("Called permuteSimplexLp: simplex_lp_status.is_permuted = %d\n",
-         simplex_lp_status.is_permuted);
-#endif
-  if (simplex_lp_status.is_permuted) return;
-
-  int numCol = highs_model_object.simplex_lp_.numCol_;
-  vector<int>& numColPermutation =
-      highs_model_object.simplex_info_.numColPermutation_;
-  vector<int>& Astart = highs_model_object.simplex_lp_.Astart_;
-  vector<int>& Aindex = highs_model_object.simplex_lp_.Aindex_;
-  vector<double>& Avalue = highs_model_object.simplex_lp_.Avalue_;
-  vector<double>& colCost = highs_model_object.simplex_lp_.colCost_;
-  vector<double>& colLower = highs_model_object.simplex_lp_.colLower_;
-  vector<double>& colUpper = highs_model_object.simplex_lp_.colUpper_;
-
-  // 2. Duplicate the original data to copy from
-  vector<int> saveAstart = highs_model_object.simplex_lp_.Astart_;
-  vector<int> saveAindex = highs_model_object.simplex_lp_.Aindex_;
-  vector<double> saveAvalue = highs_model_object.simplex_lp_.Avalue_;
-  vector<double> saveColCost = highs_model_object.simplex_lp_.colCost_;
-  vector<double> saveColLower = highs_model_object.simplex_lp_.colLower_;
-  vector<double> saveColUpper = highs_model_object.simplex_lp_.colUpper_;
-
-  // 3. Generate the permuted matrix and corresponding vectors of column data
-  int countX = 0;
-  for (int i = 0; i < numCol; i++) {
-    int fromCol = numColPermutation[i];
-    Astart[i] = countX;
-    for (int k = saveAstart[fromCol]; k < saveAstart[fromCol + 1]; k++) {
-      Aindex[countX] = saveAindex[k];
-      Avalue[countX] = saveAvalue[k];
-      countX++;
+HighsLp permuteLp(const HighsLp& lp, const vector<int>& permutation) {
+  HighsLp permuted_lp;
+  int num_el = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    int fromCol = permutation[iCol];
+    permuted_lp.Astart_[iCol] = num_el;
+    for (int iEl = lp.Astart_[fromCol]; iEl < lp.Astart_[fromCol + 1]; iEl++) {
+      permuted_lp.Aindex_[num_el] = lp.Aindex_[iEl];
+      permuted_lp.Avalue_[num_el] = lp.Avalue_[iEl];
+      num_el++;
     }
-    colCost[i] = saveColCost[fromCol];
-    colLower[i] = saveColLower[fromCol];
-    colUpper[i] = saveColUpper[fromCol];
+    permuted_lp.colCost_[iCol] = lp.colCost_[fromCol];
+    permuted_lp.colLower_[iCol] = lp.colLower_[fromCol];
+    permuted_lp.colUpper_[iCol] = lp.colUpper_[fromCol];
   }
-  if (highs_model_object.scale_.is_scaled_) {
-    // Permute any columns scaling factors
-    vector<double>& colScale = highs_model_object.scale_.col_;
-    vector<double> saveColScale = highs_model_object.scale_.col_;
-    for (int i = 0; i < numCol; i++) {
-      int fromCol = numColPermutation[i];
-      colScale[i] = saveColScale[fromCol];
-    }
-  }
-  assert(Astart[numCol] == countX);
-  // Deduce the consequences of permuting the LP
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
-                        LpAction::PERMUTE);
+  assert(lp.Astart_[lp.numCol_] == num_el);
+  return permuted_lp;
 }
 
 #ifdef HiGHSDEV
@@ -2422,7 +2381,7 @@ void simplexHandleRankDeficiency(HighsModelObject& highs_model_object) {
     simplex_basis.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
     simplex_basis.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
   }
-  highs_model_object.simplex_lp_status_.has_matrix_row_wise = false;
+  highs_model_object.simplex_lp_status_.has_matrix = false;
 }
 
 int computeFactor(HighsModelObject& highs_model_object) {
@@ -3599,19 +3558,14 @@ void logRebuild(HighsModelObject& highs_model_object, const bool primal,
 void reportSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
                            const char* message) {
   printf("\nReporting solver status and flags: %s\n\n", message);
+  printf("  initialised =                    %d\n", simplex_lp_status.initialised);
   printf("  valid =                          %d\n", simplex_lp_status.valid);
-  printf("  is_dualised =                    %d\n",
-         simplex_lp_status.is_dualised);
-  printf("  is_permuted =                    %d\n",
-         simplex_lp_status.is_permuted);
-  printf("  is_scaled =                      %d\n",
+  printf("  scaling tried =                  %d\n",
          simplex_lp_status.scaling_tried);
   printf("  has_basis =                      %d\n",
          simplex_lp_status.has_basis);
-  printf("  has_matrix_col_wise =            %d\n",
-         simplex_lp_status.has_matrix_col_wise);
-  printf("  has_matrix_row_wise =            %d\n",
-         simplex_lp_status.has_matrix_row_wise);
+  printf("  has_matrix =                     %d\n",
+         simplex_lp_status.has_matrix);
   printf("  has_factor_arrays =              %d\n",
          simplex_lp_status.has_factor_arrays);
   printf("  has_dual_steepest_edge_weights = %d\n",
@@ -3635,8 +3589,7 @@ void reportSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 void invalidateSimplexLpBasisArtifacts(
     HighsSimplexLpStatus& simplex_lp_status) {
   // Invalidate the artifacts of the basis of the simplex LP
-  simplex_lp_status.has_matrix_col_wise = false;
-  simplex_lp_status.has_matrix_row_wise = false;
+  simplex_lp_status.has_matrix = false;
   simplex_lp_status.has_factor_arrays = false;
   simplex_lp_status.has_dual_steepest_edge_weights = false;
   simplex_lp_status.has_nonbasic_dual_values = false;
@@ -3658,9 +3611,8 @@ void invalidateSimplexLpBasis(HighsSimplexLpStatus& simplex_lp_status) {
 }
 
 void invalidateSimplexLp(HighsSimplexLpStatus& simplex_lp_status) {
+  simplex_lp_status.initialised = false;
   simplex_lp_status.valid = false;
-  simplex_lp_status.is_dualised = false;
-  simplex_lp_status.is_permuted = false;
   simplex_lp_status.scaling_tried = false;
   invalidateSimplexLpBasis(simplex_lp_status);
 }
@@ -3668,20 +3620,6 @@ void invalidateSimplexLp(HighsSimplexLpStatus& simplex_lp_status) {
 void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
                            LpAction action) {
   switch (action) {
-    case LpAction::DUALISE:
-#ifdef HIGHSDEV
-      printf(" LpAction::DUALISE\n");
-#endif
-      simplex_lp_status.is_dualised = true;
-      invalidateSimplexLpBasis(simplex_lp_status);
-      break;
-    case LpAction::PERMUTE:
-#ifdef HIGHSDEV
-      printf(" LpAction::PERMUTE\n");
-#endif
-      simplex_lp_status.is_permuted = true;
-      invalidateSimplexLpBasis(simplex_lp_status);
-      break;
     case LpAction::SCALE:
 #ifdef HIGHSDEV
       printf(" LpAction::SCALE\n");
@@ -3759,7 +3697,7 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #ifdef HIGHSDEV
       printf(" LpAction::BACKTRACKING\n");
 #endif
-      simplex_lp_status.has_matrix_row_wise = false;
+      simplex_lp_status.has_matrix = false;
       simplex_lp_status.has_nonbasic_dual_values = false;
       simplex_lp_status.has_basic_primal_values = false;
       simplex_lp_status.has_fresh_rebuild = false;

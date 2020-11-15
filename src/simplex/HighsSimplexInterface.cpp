@@ -729,7 +729,7 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow,
   bool& valid_simplex_lp = simplex_lp_status.valid;
   // Check that if there is no simplex LP then there is no matrix or scaling
   if (!valid_simplex_lp) {
-    assert(!simplex_lp_status.has_matrix_col_wise);
+    assert(!simplex_lp_status.has_matrix);
     assert(!highs_model_object.scale_.is_scaled_);
   }
   changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
@@ -1511,10 +1511,6 @@ void HighsSimplexInterface::convertSimplexToHighsBasis() {
   basis.row_status.resize(lp.numRow_);
 
   assert(highs_model_object.simplex_lp_status_.has_basis);
-  bool permuted = highs_model_object.simplex_lp_status_.is_permuted;
-  int* numColPermutation =
-      &highs_model_object.simplex_info_.numColPermutation_[0];
-  // numColPermutation[iCol] is the true column in column iCol
   const bool optimal_basis =
       highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL;
   bool error_found = false;
@@ -1525,7 +1521,6 @@ void HighsSimplexInterface::convertSimplexToHighsBasis() {
     const double lower = lp.colLower_[lp_col];
     const double upper = lp.colUpper_[lp_col];
     HighsBasisStatus basis_status;
-    if (permuted) lp_col = numColPermutation[iCol];
     if (!simplex_basis.nonbasicFlag_[simplex_var]) {
       basis_status = HighsBasisStatus::BASIC;
     } else if (simplex_basis.nonbasicMove_[simplex_var] == NONBASIC_MOVE_UP) {
@@ -1684,15 +1679,10 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   bool error_found = false;
-  bool permuted = highs_model_object.simplex_lp_status_.is_permuted;
-  int* numColPermutation =
-      &highs_model_object.simplex_info_.numColPermutation_[0];
-  // numColPermutation[iCol] is the true column in column iCol
   int num_basic = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     int simplex_var = iCol;
     int lp_col = iCol;
-    if (permuted) lp_col = numColPermutation[iCol];
     if (basis.col_status[lp_col] == HighsBasisStatus::BASIC) {
       // Basic
       simplex_basis.nonbasicFlag_[simplex_var] = NONBASIC_FLAG_FALSE;
@@ -1848,23 +1838,12 @@ void HighsSimplexInterface::convertSimplexToHighsSolution() {
   solution.row_value.resize(simplex_lp.numRow_);
   solution.row_dual.resize(simplex_lp.numRow_);
 
-  if (highs_model_object.simplex_lp_status_.is_permuted) {
-    const int* numColPermutation =
-        &highs_model_object.simplex_info_.numColPermutation_[0];
-    // numColPermutation[i] is the true column in column i
-    for (int i = 0; i < simplex_lp.numCol_; i++) {
-      int iCol = numColPermutation[i];
-      solution.col_value[iCol] = value[i];
-      solution.col_dual[iCol] = (int)simplex_lp.sense_ * dual[i];
-    }
-  } else {
-    for (int i = 0; i < simplex_lp.numCol_; i++) {
-      int iCol = i;
-      solution.col_value[iCol] = value[i];
-      solution.col_dual[iCol] = (int)simplex_lp.sense_ * dual[i];
-    }
+  for (int i = 0; i < simplex_lp.numCol_; i++) {
+    int iCol = i;
+    solution.col_value[iCol] = value[i];
+    solution.col_dual[iCol] = (int)simplex_lp.sense_ * dual[i];
   }
-  int row_dual_sign = 1;  //-1;
+  int row_dual_sign = 1;
   for (int i = 0; i < simplex_lp.numRow_; i++) {
     solution.row_value[i] = -value[i + simplex_lp.numCol_];
     solution.row_dual[i] =

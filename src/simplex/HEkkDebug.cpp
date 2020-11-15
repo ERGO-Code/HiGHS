@@ -566,8 +566,7 @@ HighsDebugStatus ekkDebugOkForSolve(
   const HighsOptions& options = ekk_instance.options_;
   bool ok;
   // Minimal check - just look at flags. This means we trust them!
-  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix_col_wise &&
-       simplex_lp_status.has_matrix_row_wise &&
+  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix &&
        simplex_lp_status.has_factor_arrays &&
        //       simplex_lp_status.has_dual_steepest_edge_weights &&
        simplex_lp_status.has_invert;
@@ -576,18 +575,11 @@ HighsDebugStatus ekkDebugOkForSolve(
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Not OK to solve since simplex_lp_status.has_basis = %d",
                       simplex_lp_status.has_basis);
-    if (!simplex_lp_status.has_matrix_col_wise)
+    if (!simplex_lp_status.has_matrix)
       HighsLogMessage(
           options.logfile, HighsMessageType::ERROR,
-          "Not OK to solve since simplex_lp_status.has_matrix_col_wise "
-          "= %d",
-          simplex_lp_status.has_matrix_col_wise);
-    if (!simplex_lp_status.has_matrix_row_wise)
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Not OK to solve since simplex_lp_status.has_matrix_row_wise "
-          "= %d",
-          simplex_lp_status.has_matrix_row_wise);
+          "Not OK to solve since simplex_lp_status.has_matrix = %d",
+          simplex_lp_status.has_matrix);
     if (!simplex_lp_status.has_factor_arrays)
       HighsLogMessage(
           options.logfile, HighsMessageType::ERROR,
