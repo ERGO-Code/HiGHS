@@ -545,6 +545,12 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
   HighsStatus call_status;
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
+
+  // Initialise simplex LP options and control if it's not been done
+  
+  assert(!simplex_lp_status.initialised);
+   
+
   resetModelStatusAndSolutionParams(highs_model_object);
 
   return_status = HighsStatus::Error;

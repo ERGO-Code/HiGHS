@@ -64,7 +64,8 @@ class HEkk {
   double total_syntheticTick_;
 
  private:
-  HighsStatus initialise();
+  void initialiseForNewLp();
+  HighsStatus initialiseForSolve();
   void setSimplexOptions();
   void initialiseSimplexLpRandomVectors();
   bool setBasis();

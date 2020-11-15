@@ -17,6 +17,7 @@
 #include "simplex/HEkk.h"
 
 #include "io/HighsIO.h"
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HEkkDual.h"
@@ -30,8 +31,10 @@
 // using std::endl;
 
 HighsStatus HEkk::passLp(const HighsLp& lp) {
+  
+  //  if (assessLp(lp, options_) == HighsStatus::Error) return HighsStatus::Error;
   simplex_lp_ = lp;
-  if (initialise() == HighsStatus::Error) return HighsStatus::Error;
+  initialiseForNewLp();
   return HighsStatus::OK;
 }
 
@@ -47,6 +50,8 @@ HighsStatus HEkk::initialiseSimplexLpBasisAndFactor() {
 }
 
 HighsStatus HEkk::solve() {
+  if (initialiseForSolve() == HighsStatus::Error) return HighsStatus::Error;
+  
   assert(simplex_lp_status_.has_basis);
   assert(simplex_lp_status_.has_invert);
   assert(simplex_lp_status_.valid);
@@ -151,7 +156,10 @@ HighsSolutionParams HEkk::getSolutionParams() {
 
 // Private methods
 
-HighsStatus HEkk::initialise() {
+void HEkk::initialiseForNewLp() {
+}
+
+HighsStatus HEkk::initialiseForSolve() {
   if (initialiseSimplexLpBasisAndFactor() == HighsStatus::Error)
     return HighsStatus::Error;
   initialiseMatrix();  // Timed
