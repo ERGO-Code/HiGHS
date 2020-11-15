@@ -42,6 +42,10 @@ class HEkk {
   HighsStatus solve();
   HighsSolutionParams getSolutionParams();
 
+  // Make this private later
+  void chooseSimplexStrategyThreads(const HighsOptions& options,
+                                    HighsSimplexInfo& simplex_info);
+
   double cost_scale_ = 1;
   int iteration_count_ = 0;
   bool solve_bailout_ = false;

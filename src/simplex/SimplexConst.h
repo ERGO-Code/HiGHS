@@ -31,12 +31,12 @@ enum class SimplexAlgorithm { PRIMAL = 0, DUAL };
 
 enum SimplexStrategy {
   SIMPLEX_STRATEGY_MIN = 0,
-  SIMPLEX_STRATEGY_CHOOSE = SIMPLEX_STRATEGY_MIN,      // 0
-  SIMPLEX_STRATEGY_DUAL,                               // 1
-  SIMPLEX_STRATEGY_DUAL_PLAIN = SIMPLEX_STRATEGY_DUAL, // 1
-  SIMPLEX_STRATEGY_DUAL_TASKS,                         // 2
-  SIMPLEX_STRATEGY_DUAL_MULTI,                         // 3
-  SIMPLEX_STRATEGY_PRIMAL,                             // 4
+  SIMPLEX_STRATEGY_CHOOSE = SIMPLEX_STRATEGY_MIN,       // 0
+  SIMPLEX_STRATEGY_DUAL,                                // 1
+  SIMPLEX_STRATEGY_DUAL_PLAIN = SIMPLEX_STRATEGY_DUAL,  // 1
+  SIMPLEX_STRATEGY_DUAL_TASKS,                          // 2
+  SIMPLEX_STRATEGY_DUAL_MULTI,                          // 3
+  SIMPLEX_STRATEGY_PRIMAL,                              // 4
   SIMPLEX_STRATEGY_MAX = SIMPLEX_STRATEGY_PRIMAL,
   SIMPLEX_STRATEGY_NUM
 };

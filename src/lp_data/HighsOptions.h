@@ -433,9 +433,9 @@ class HighsOptions : public HighsOptionsStruct {
                             HIGHS_DEBUG_LEVEL_MIN, HIGHS_DEBUG_LEVEL_MAX);
     records.push_back(record_int);
 
-    record_bool =
-        new OptionRecordBool("simplex_class_ekk", "Ekk class for simplex solver",
-                            advanced, &simplex_class_ekk, false);
+    record_bool = new OptionRecordBool("simplex_class_ekk",
+                                       "Ekk class for simplex solver", advanced,
+                                       &simplex_class_ekk, false);
     records.push_back(record_bool);
 
     record_int =
