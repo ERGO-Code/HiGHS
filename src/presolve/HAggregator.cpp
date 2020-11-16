@@ -597,12 +597,12 @@ void HAggregator::substitute(PostsolveStack& postsolveStack, int row, int col) {
       int alteredpos = findNonzero(colrow, Acol[rowiter]);
 
       if (alteredpos != -1) {
-        if (Acol[rowiter] == col)
-          Avalue[alteredpos] = 0;
-        else
+        if (Acol[rowiter] == col) {
+          unlink(pos);
+        } else {
           Avalue[alteredpos] += scale * Avalue[rowiter];
-
-        dropIfZero(alteredpos);
+          dropIfZero(alteredpos);
+        }
       } else {
         assert(Acol[rowiter] != col);
 
