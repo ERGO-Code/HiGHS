@@ -90,6 +90,13 @@ class HAggregator {
               std::vector<HighsBasisStatus>& row_status) const;
 
     void undo(std::vector<double>& colvalue) const;
+
+    void clear() {
+      reductionStack.clear();
+      reductionValues.clear();
+    }
+
+    bool empty() const { return reductionStack.empty(); }
   };
 
  private:

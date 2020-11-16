@@ -26,6 +26,7 @@
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolution.h"
 #include "lp_data/HighsSolve.h"
+#include "presolve/HAggregator.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "util/HighsMatrixPic.h"
@@ -1846,13 +1847,18 @@ HighsPostsolveStatus Highs::runPostsolve() {
                                          presolve_.data_.reduced_solution_);
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
-  // Run postsolve
   if (presolve_.presolve_status_ != HighsPresolveStatus::Reduced &&
       presolve_.presolve_status_ != HighsPresolveStatus::ReducedToEmpty)
     return HighsPostsolveStatus::NoPostsolve;
 
   // Handle max case.
   if (lp_.sense_ == ObjSense::MAXIMIZE) presolve_.negateReducedLpColDuals(true);
+
+  // Run postsolve, first of aggregator, then remaining postsolve if necessary
+  if (!presolve_.data_.aggregatorStack.empty()) {
+    presolve_.data_.aggregatorStack.undo(presolve_.data_.reduced_solution_,
+                                         presolve_.data_.reduced_basis_);
+  }
 
   HighsPostsolveStatus postsolve_status =
       presolve_.data_.presolve_[0].postsolve(

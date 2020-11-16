@@ -534,7 +534,7 @@ void HAggregator::substitute(PostsolveStack& postsolveStack, int row, int col) {
 
   reduction.row = row;
   reduction.col = col;
-  reduction.stackpos = postsolveStack.reductionStack.size();
+  reduction.stackpos = postsolveStack.reductionValues.size();
   reduction.collen = colsize[col] - 1;
   reduction.rowlen = rowsize[row] - 1;
   reduction.eqrhs = side;
@@ -552,6 +552,9 @@ void HAggregator::substitute(PostsolveStack& postsolveStack, int row, int col) {
     postsolveStack.reductionValues.emplace_back(rowcol, rowval);
   }
 
+  assert(int(postsolveStack.reductionValues.size()) - reduction.stackpos ==
+         reduction.rowlen);
+
   for (int coliter = colhead[col]; coliter != -1; coliter = Anext[coliter]) {
     int colrow = Arow[coliter];
     if (colrow == row) continue;
@@ -559,6 +562,9 @@ void HAggregator::substitute(PostsolveStack& postsolveStack, int row, int col) {
 
     postsolveStack.reductionValues.emplace_back(colrow, colval);
   }
+
+  assert(int(postsolveStack.reductionValues.size()) - reduction.stackpos ==
+         reduction.rowlen + reduction.collen);
 
   // substitute the column in each row where it occurs
   for (int coliter = colhead[col]; coliter != -1;) {
@@ -880,7 +886,9 @@ HAggregator::PostsolveStack HAggregator::run() {
 void HAggregator::PostsolveStack::undo(HighsSolution& solution,
                                        HighsBasis& basis) const {
   for (int k = reductionStack.size() - 1; k >= 0; --k) {
-    const ImpliedFreeVarReduction& reduction = reductionStack.back();
+    const ImpliedFreeVarReduction& reduction = reductionStack[k];
+
+    assert(solution.row_dual[reduction.row] == 0);
 
     const int rowstart = reduction.stackpos;
     const int rowend = reduction.stackpos + reduction.rowlen;
@@ -896,14 +904,14 @@ void HAggregator::PostsolveStack::undo(HighsSolution& solution,
 
     HighsCDouble dualval = -reduction.colcost;
     for (int i = rowend; i != colend; ++i)
-      dualval += reductionValues[i].second *
+      dualval -= reductionValues[i].second *
                  solution.row_dual[reductionValues[i].first];
 
-    solution.row_dual[reduction.row] = double(dualval / reduction.substcoef);
     solution.col_dual[reduction.col] = 0;
+    solution.row_dual[reduction.row] = double(dualval / reduction.substcoef);
 
     basis.col_status[reduction.col] = HighsBasisStatus::BASIC;
-    basis.row_status[reduction.col] = HighsBasisStatus::NONBASIC;
+    basis.row_status[reduction.row] = HighsBasisStatus::NONBASIC;
   }
 }
 
@@ -915,7 +923,7 @@ void HAggregator::PostsolveStack::undo(
 
 {
   for (int k = reductionStack.size() - 1; k >= 0; --k) {
-    const ImpliedFreeVarReduction& reduction = reductionStack.back();
+    const ImpliedFreeVarReduction& reduction = reductionStack[k];
 
     colFlag[reduction.col] = 1;
     rowFlag[reduction.row] = 1;
@@ -931,19 +939,19 @@ void HAggregator::PostsolveStack::undo(
 
     HighsCDouble dualval = -reduction.colcost;
     for (int i = rowend; i != colend; ++i)
-      dualval += reductionValues[i].second * row_dual[reductionValues[i].first];
+      dualval -= reductionValues[i].second * row_dual[reductionValues[i].first];
 
-    row_dual[reduction.row] = double(dualval / reduction.substcoef);
     col_dual[reduction.col] = 0;
+    row_dual[reduction.row] = double(dualval / reduction.substcoef);
 
     col_status[reduction.col] = HighsBasisStatus::BASIC;
-    row_status[reduction.col] = HighsBasisStatus::NONBASIC;
+    row_status[reduction.row] = HighsBasisStatus::NONBASIC;
   }
 }
 
 void HAggregator::PostsolveStack::undo(std::vector<double>& colvalue) const {
   for (int k = reductionStack.size() - 1; k >= 0; --k) {
-    const ImpliedFreeVarReduction& reduction = reductionStack.back();
+    const ImpliedFreeVarReduction& reduction = reductionStack[k];
 
     const int rowstart = reduction.stackpos;
     const int rowend = reduction.stackpos + reduction.rowlen;

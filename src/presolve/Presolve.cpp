@@ -1054,10 +1054,12 @@ void Presolve::resizeProblem() {
   vector<double> tempCost = colCost;
   vector<double> temp = colLower;
   vector<double> teup = colUpper;
+  vector<HighsVarType> tempintegrality = integrality;
 
   colCost.resize(numCol);
   colLower.resize(numCol);
   colUpper.resize(numCol);
+  integrality.resize(numCol);
 
   int k = 0;
   for (int i = 0; i < numColOriginal; ++i)
@@ -1065,6 +1067,7 @@ void Presolve::resizeProblem() {
       colCost.at(k) = tempCost.at(i);
       colLower.at(k) = temp.at(i);
       colUpper.at(k) = teup.at(i);
+      integrality.at(k) = tempintegrality.at(i);
       k++;
     }
 

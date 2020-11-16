@@ -99,11 +99,30 @@ HighsPresolveStatus PresolveComponent::run() {
     data_.reduced_lp_.colUpper_ = std::move(data_.presolve_[0].colUpper);
     data_.reduced_lp_.rowLower_ = std::move(data_.presolve_[0].rowLower);
     data_.reduced_lp_.rowUpper_ = std::move(data_.presolve_[0].rowUpper);
+    data_.reduced_lp_.integrality_ = std::move(data_.presolve_[0].integrality);
 
     data_.reduced_lp_.sense_ = ObjSense::MINIMIZE;
     data_.reduced_lp_.offset_ = 0;
     data_.reduced_lp_.model_name_ =
         std::move(data_.presolve_[0].modelName);  //"Presolved model";
+#if 1
+    printf("running aggregator (nnz = %lu)\n",
+           data_.reduced_lp_.Avalue_.size());
+
+    presolve::HAggregator aggregator(
+        data_.reduced_lp_.rowLower_, data_.reduced_lp_.rowUpper_,
+        data_.reduced_lp_.colCost_, data_.reduced_lp_.offset_,
+        data_.reduced_lp_.integrality_, data_.reduced_lp_.colLower_,
+        data_.reduced_lp_.colUpper_);
+
+    aggregator.fromCSC(data_.reduced_lp_.Avalue_, data_.reduced_lp_.Aindex_,
+                       data_.reduced_lp_.Astart_);
+    data_.aggregatorStack = aggregator.run();
+    aggregator.toCSC(data_.reduced_lp_.Avalue_, data_.reduced_lp_.Aindex_,
+                     data_.reduced_lp_.Astart_);
+    printf("aggregator finished (nnz = %lu)\n",
+           data_.reduced_lp_.Avalue_.size());
+#endif
   }
 
   return presolve_status_;

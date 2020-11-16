@@ -15,6 +15,7 @@
 #define PRESOLVE_PRESOLVE_COMPONENT_H_
 
 #include "presolve/Presolve.h"
+#include "presolve/HAggregator.h"
 #include "util/HighsComponent.h"
 
 // Class defining the Presolve Component to be used in HiGHS.
@@ -34,9 +35,12 @@ struct PresolveComponentData : public HighsComponentData {
   HighsBasis reduced_basis_;
   HighsBasis recovered_basis_;
 
+  presolve::HAggregator::PostsolveStack aggregatorStack;
+
   void clear() {
     is_valid = false;
 
+    aggregatorStack.clear();
     presolve_.clear();
     reduced_lp_.clear();
     clearSolutionUtil(reduced_solution_);
