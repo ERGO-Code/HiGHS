@@ -59,11 +59,6 @@ HighsStatus HEkkDual::solve() {
   scaled_model_status = HighsModelStatus::NOTSET;
   if (debugDualSimplex("Initialise", true) == HighsDebugStatus::LOGICAL_ERROR)
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
-  /*
-  if (debugSimplexInfoBasisRightSize(ekk_instance_) ==
-      HighsDebugStatus::LOGICAL_ERROR)
-    return returnFromSolve(HighsStatus::Error);
-  */
   // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
   if (!positive_num_row) {
@@ -130,26 +125,21 @@ HighsStatus HEkkDual::solve() {
       initialiseDevexFramework();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // Using dual steepest edge (DSE) weights
-      int num_basic_structurals =
+      const int num_basic_structurals =
           solver_num_row - simplex_info.num_basic_logicals;
-      bool computeExactDseWeights =
+      const bool computeExactDseWeights =
           num_basic_structurals > 0 && initialise_dual_steepest_edge_weights;
-#ifdef HiGHSDEV
       if (computeExactDseWeights) {
-        printf(
-            "If (0<num_basic_structurals = %d) && %d = "
-            "initialise_dual_steepest_edge_weights: Compute exact "
-            "DSE weights\n",
-            num_basic_structurals, initialise_dual_steepest_edge_weights);
-      }
-#endif
-      if (computeExactDseWeights) {
+        HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+			  "If (0<num_basic_structurals = %d) && %d = "
+			  "initialise_dual_steepest_edge_weights: Compute exact "
+			  "DSE weights\n",
+			  num_basic_structurals, initialise_dual_steepest_edge_weights);
         // Basis is not logical and DSE weights are to be initialised
-#ifdef HiGHSDEV
-        printf("Compute exact DSE weights\n");
-        analysis->simplexTimerStart(SimplexIzDseWtClock);
-        analysis->simplexTimerStart(DseIzClock);
-#endif
+        if (ekk_instance_.analysis_.analyse_simplex_time) {
+	  analysis->simplexTimerStart(SimplexIzDseWtClock);
+	  analysis->simplexTimerStart(DseIzClock);
+	}
         for (int i = 0; i < solver_num_row; i++) {
           row_ep.clear();
           row_ep.count = 1;
@@ -164,23 +154,20 @@ HighsStatus HEkkDual::solve() {
           analysis->updateOperationResultDensity(local_row_ep_density,
                                                  analysis->row_ep_density);
         }
-#ifdef HiGHSDEV
-        analysis->simplexTimerStop(SimplexIzDseWtClock);
-        analysis->simplexTimerStop(DseIzClock);
-        double IzDseWtTT = analysis->simplexTimerRead(SimplexIzDseWtClock);
-        HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
-                          "Computed %d initial DSE weights in %gs\n",
-                          solver_num_row, IzDseWtTT);
-#endif
-      }
-#ifdef HiGHSDEV
-      else {
+        if (ekk_instance_.analysis_.analyse_simplex_time) {
+	  analysis->simplexTimerStop(SimplexIzDseWtClock);
+	  analysis->simplexTimerStop(DseIzClock);
+	  double IzDseWtTT = analysis->simplexTimerRead(SimplexIzDseWtClock);
+	  HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+			    "Computed %d initial DSE weights in %gs\n",
+			    solver_num_row, IzDseWtTT);
+	}
+      } else {
         HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
                           "solve:: %d basic structurals: starting from B=I so "
                           "unit initial DSE weights\n",
                           num_basic_structurals);
       }
-#endif
     }
     // Indicate that edge weights are known
     simplex_lp_status.has_dual_steepest_edge_weights = true;
@@ -189,9 +176,7 @@ HighsStatus HEkkDual::solve() {
   ekk_instance_.computeDual();
   // Determine the number of dual infeasibilities, and hence the solve phase
   ekk_instance_.computeDualInfeasibleWithFlips();
-  dualInfeasCount =
-      simplex_info
-          .num_dual_infeasibilities;  // scaled_solution_params.num_dual_infeasibilities;
+  dualInfeasCount = simplex_info.num_dual_infeasibilities;
   solvePhase = dualInfeasCount > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::DUAL, solvePhase,
                          ekk_instance_.scaled_model_status_) ==
@@ -307,15 +292,6 @@ HighsStatus HEkkDual::solve() {
   }
   if (solvePhase == SOLVE_PHASE_CLEANUP) {
     ekk_instance_.computePrimalObjectiveValue();
-    /*
-#ifdef HiGHSDEV
-    vector<double> primal_value_before_cleanup;
-    //    ekk_instance_.getPrimalValue(primal_value_before_cleanup);
-    //    printf("\nAnalyse primal objective evaluation before cleanup\n");
-    //    analysePrimalObjectiveValue(ekk_instance_);
-    const double objective_before = simplex_info.primal_objective_value;
-#endif
-    */
     if (options.dual_simplex_cleanup_strategy ==
         DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE) {
       // No clean up. Dual simplex was optimal with perturbed costs,
@@ -326,14 +302,6 @@ HighsStatus HEkkDual::solve() {
       scaled_model_status = HighsModelStatus::OPTIMAL;
     } else {
       // Use primal to clean up
-      /*
-  #ifdef HiGHSDEV
-        initialiseValueDistribution("Cleanup primal step summary", "", 1e-16,
-                                    1e16, 10.0,
-                                    analysis->cleanup_primal_step_distribution);
-        initialiseValueDistribution("Cleanup dual step summary", "", 1e-16,
-  1e16, 10.0, analysis->cleanup_dual_step_distribution); #endif
-      */
       if (options.dual_simplex_cleanup_strategy) {
         analysis->simplexTimerStart(SimplexPrimalPhase2Clock);
         // Cleanup with primal code
@@ -347,32 +315,6 @@ HighsStatus HEkkDual::solve() {
         simplex_info.primal_simplex_bound_perturbation_multiplier =
             save_primal_simplex_bound_perturbation_multiplier;
         analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-        /*
-    #ifdef HiGHSDEV
-          vector<double> primal_value_after_cleanup;
-          //      getPrimalValue(ekk_instance_, primal_value_after_cleanup);
-          for (int var = 0; var < solver_num_tot; var++) {
-            const double primal_change = fabs(primal_value_after_cleanup[var] -
-                                              primal_value_before_cleanup[var]);
-            updateValueDistribution(primal_change,
-                                    analysis->cleanup_primal_change_distribution);
-          }
-          //      printf("\nAnalyse primal objective evaluation after
-    cleanup\n");
-          //      analysePrimalObjectiveValue(ekk_instance_);
-          const double objective_after = simplex_info.primal_objective_value;
-          const double abs_objective_change =
-              fabs(objective_before - objective_after);
-          const double rel_objective_change =
-              abs_objective_change / max(1.0, fabs(objective_after));
-          printf(
-              "\nDuring cleanup, (abs: rel) primal objective changes is (%10.4g:
-    "
-              "%10.4g) \nfrom %20.10g\nto   %20.10g\n",
-              abs_objective_change, rel_objective_change, objective_before,
-              objective_after);
-    #endif
-        */
       }
     }
   }
@@ -492,12 +434,10 @@ void HEkkDual::initSlice(const int initial_num_slice) {
   if (slice_num < 1) slice_num = 1;
   assert(slice_num <= HIGHS_SLICED_LIMIT);
   if (slice_num > HIGHS_SLICED_LIMIT) {
-#ifdef HiGHSDEV
-    printf(
-        "WARNING: %d = slice_num > HIGHS_SLICED_LIMIT = %d so truncating "
-        "slice_num\n",
-        slice_num, HIGHS_SLICED_LIMIT);
-#endif
+    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
+		    "WARNING: %d = slice_num > HIGHS_SLICED_LIMIT = %d so truncating "
+		    "slice_num",
+		    slice_num, HIGHS_SLICED_LIMIT);
     slice_num = HIGHS_SLICED_LIMIT;
   }
 
@@ -1026,18 +966,6 @@ void HEkkDual::rebuild() {
   // infeasiblilities are only corrected in rebuild
   ekk_instance_.invalidateDualInfeasibilityRecord();
 
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_rebuild_time) {
-    int total_rebuilds = analysis->simplexTimerNumCall(IterateDualRebuildClock);
-    double total_rebuild_time =
-        analysis->simplexTimerRead(IterateDualRebuildClock);
-    printf(
-        "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = "
-        "%11.4g\n",
-        solvePhase, total_rebuilds, reason_for_rebuild,
-        ekk_instance_.iteration_count_, total_rebuild_time);
-  }
-#endif
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
 }
@@ -1248,10 +1176,7 @@ void HEkkDual::iterationAnalysis() {
       initialiseDevexFramework();
     }
   }
-
-#ifdef HiGHSDEV
-  analysis->iterationRecord();
-#endif
+  if (analysis->analyse_simplex_data) analysis->iterationRecord();
 }
 
 void HEkkDual::reportRebuild(const int reason_for_rebuild) {
@@ -1285,18 +1210,14 @@ void HEkkDual::chooseRow() {
     row_ep.index[0] = row_out;
     row_ep.array[row_out] = 1;
     row_ep.packFlag = true;
-#ifdef HiGHSDEV
     if (analysis->analyse_simplex_data)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                       analysis->row_ep_density);
-#endif
     // Perform BTRAN
     factor->btran(row_ep, analysis->row_ep_density,
                   analysis->pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
-#endif
     analysis->simplexTimerStop(BtranClock);
     // Verify DSE weight
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -1483,7 +1404,6 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   choosePriceTechnique(simplex_info.price_strategy, local_density,
                        use_col_price, use_row_price_w_switch);
 
-#ifdef HiGHSDEV
   if (analysis->analyse_simplex_data) {
     const int row_ep_count = row_ep->count;
     if (use_col_price) {
@@ -1500,7 +1420,6 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
       analysis->num_row_price++;
     }
   }
-#endif
   analysis->simplexTimerStart(PriceChuzc1Clock);
   // Row_ep:         PACK + CC1
 
@@ -1556,15 +1475,13 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   }
 #pragma omp taskwait
 
-#ifdef HiGHSDEV
-  // Determine the nonzero count of the whole row
   if (analysis->analyse_simplex_data) {
+    // Determine the nonzero count of the whole row
     int row_ap_count = 0;
     for (int i = 0; i < slice_num; i++) row_ap_count += slice_row_ap[i].count;
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP,
                                    row_ap_count);
   }
-#endif
 
   // Join CC1 results here
   for (int i = 0; i < slice_num; i++) {
@@ -1633,18 +1550,14 @@ void HEkkDual::updateFtran() {
   // Get the constraint matrix column by combining just one column
   // with unit multiplier
   matrix->collect_aj(col_aq, variable_in, 1);
-#ifdef HiGHSDEV
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
                                     analysis->col_aq_density);
-#endif
   // Perform FTRAN
   factor->ftran(col_aq, analysis->col_aq_density,
                 analysis->pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
-#endif
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density,
                                          analysis->col_aq_density);
@@ -1675,19 +1588,15 @@ void HEkkDual::updateFtranBFRT() {
   //  update_flip");
 
   if (col_BFRT.count) {
-#ifdef HiGHSDEV
     if (analysis->analyse_simplex_data)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
                                       col_BFRT, analysis->col_BFRT_density);
-#endif
     // Perform FTRAN BFRT
     factor->ftran(col_BFRT, analysis->col_BFRT_density,
                   analysis->pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
                                      col_BFRT);
-#endif
   }
   if (time_updateFtranBFRT) {
     analysis->simplexTimerStop(FtranBfrtClock);
@@ -1704,19 +1613,15 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
   // If reinversion is needed then skip this method
   if (rebuild_reason) return;
   analysis->simplexTimerStart(FtranDseClock);
-#ifdef HiGHSDEV
   if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
                                     *DSE_Vector, analysis->row_DSE_density);
-#endif
   // Perform FTRAN DSE
   factor->ftran(*DSE_Vector, analysis->row_DSE_density,
                 analysis->pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
   if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
                                    *DSE_Vector);
-#endif
   analysis->simplexTimerStop(FtranDseClock);
   const double local_row_DSE_density =
       (double)DSE_Vector->count / solver_num_row;
@@ -1904,10 +1809,6 @@ void HEkkDual::updatePivots() {
   //  debugUpdatedObjectiveValue(ekk_instance_, algorithm, solvePhase, "After
   //  update_pivots");
   //
-  // Update the iteration count and store the basis change if HiGHSDEV
-  // is defined
-  // Move this to Simplex class once it's created
-  // simplex_method.record_pivots(variable_in, variable_out, alpha);
   ekk_instance_.iteration_count_++;
   //
   // Update the invertible representation of the basis matrix

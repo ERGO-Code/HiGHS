@@ -212,23 +212,6 @@ void HEkk::setSimplexOptions() {
 
   // Set values of internal options
   simplex_info_.store_squared_primal_infeasibility = true;
-  // Option for analysing the LP solution
-#ifdef HiGHSDEV
-  bool useful_analysis = false;  //false;  // 
-  bool full_timing = false;
-  // Options for reporting timing
-  simplex_info_.report_simplex_inner_clock = useful_analysis; 
-  simplex_info_.report_simplex_outer_clock = full_timing;
-  simplex_info_.report_simplex_phases_clock = full_timing;
-  simplex_info_.report_HFactor_clock = useful_analysis;  // full_timing;//
-  // Options for analysing the LP and simplex iterations
-  simplex_info_.analyse_lp = useful_analysis;  // false;  //
-  simplex_info_.analyse_iterations = useful_analysis;
-  simplex_info_.analyse_invert_form = true; //useful_analysis;
-  //  simplex_info_.analyse_invert_condition = useful_analysis;
-  simplex_info_.analyse_invert_time = full_timing;
-  simplex_info_.analyse_rebuild_time = full_timing;
-#endif
 }
 
 void HEkk::initialiseSimplexLpRandomVectors() {
@@ -480,18 +463,15 @@ void HEkk::computeDualObjectiveValue(const int phase) {
 
 int HEkk::computeFactor() {
   analysis_.simplexTimerStart(InvertClock);
-  HighsTimerClock* factor_timer_clock_pointer = NULL;
-  // TODO Understand why handling noPvC and noPvR in what seem to be
-  // different ways ends up equivalent.
-#ifdef HiGHSDEV
-  int thread_id = 0;
+  HighsTimerClock* factor_timer_clock_pointer= NULL;
+  if (analysis_.analyse_factor_time) {
+    int thread_id = 0;
 #ifdef OPENMP
-  thread_id = omp_get_thread_num();
-  //  printf("Hello world from computeFactor: thread %d\n", thread_id);
+    thread_id = omp_get_thread_num();
 #endif
-  factor_timer_clock_pointer =
+    factor_timer_clock_pointer =
       analysis_.getThreadFactorTimerClockPtr(thread_id);
-#endif
+  }
   const int rank_deficiency = factor_.build(factor_timer_clock_pointer);
   if (analysis_.analyse_factor_data) 
     analysis_.updateInvertFormData(factor_);
