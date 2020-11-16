@@ -1227,9 +1227,6 @@ void HEkkDual::iterationAnalysisData() {
     analysis->num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
     analysis->sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;
   }
-#ifdef HiGHSDEV
-  analysis->basis_condition = simplex_info.invert_condition;
-#endif
   if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) &&
       (num_devex_iterations == 0))
     analysis->num_devex_framework++;

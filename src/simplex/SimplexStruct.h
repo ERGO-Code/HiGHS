@@ -214,29 +214,6 @@ struct HighsSimplexInfo {
   // Number of logical variables in the basis
   int num_basic_logicals;
 
-#ifdef HiGHSDEV
-  // Analysis of INVERT
-  int num_invert = 0;
-  // Analysis of INVERT form
-  int num_kernel = 0;
-  int num_major_kernel = 0;
-  double major_kernel_relative_dim_threshold =
-      0.1;  // Should be a const, but will be changed later anyway
-  double max_kernel_dim = 0;
-  double sum_kernel_dim = 0;
-  double running_average_kernel_dim = 0;
-  double sum_invert_fill_factor = 0;
-  double sum_kernel_fill_factor = 0;
-  double sum_major_kernel_fill_factor = 0;
-  double running_average_invert_fill_factor = 1;
-  double running_average_kernel_fill_factor = 1;
-  double running_average_major_kernel_fill_factor = 1;
-
-  int total_inverts;
-  double total_invert_time;
-  double invert_condition = 1;
-#endif
-
 };
 
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */

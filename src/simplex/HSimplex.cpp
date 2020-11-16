@@ -2175,7 +2175,6 @@ void initialiseCost(HighsModelObject& highs_model_object, int perturb) {
 
 #ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object) {
-  HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   SimplexTimer simplex_timer;
@@ -2219,43 +2218,6 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
     simplex_timer.reportSimplexTotalClock(analysis.thread_simplex_clocks[0]);
     simplex_timer.reportSimplexPhasesClock(analysis.thread_simplex_clocks[0]);
   }
-
-  if (simplex_info.analyse_invert_time) {
-    double current_run_highs_time = timer.readRunHighsClock();
-    simplex_info.total_inverts = analysis.simplexTimerNumCall(InvertClock);
-    simplex_info.total_invert_time = analysis.simplexTimerRead(InvertClock);
-    printf(
-        "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time "
-        "= %11.4g",
-        simplex_info.total_inverts, simplex_info.total_invert_time,
-        current_run_highs_time);
-    if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n",
-             (100 * simplex_info.total_invert_time) / current_run_highs_time);
-    } else {
-      printf("\n");
-    }
-  }
-  /*
-  if (simplex_info.analyse_rebuild_time) {
-    double current_run_highs_time = timer.readRunHighsClock();
-    HighsClockRecord totalRebuildClock;
-    timer.clockInit(totalRebuildClock);
-    timer.clockAdd(totalRebuildClock,
-                   simplex_info.clock_[IterateDualRebuildClock]);
-    timer.clockAdd(totalRebuildClock,
-                   simplex_info.clock_[IteratePrimalRebuildClock]);
-    int totalRebuilds = 0;
-    double totalRebuildTime = 0;
-    printf("Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
-           totalRebuildTime, totalRebuilds, current_run_highs_time);
-    if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / current_run_highs_time);
-    } else {
-      printf("\n");
-    }
-  }
-  */
 }
 #endif
 
@@ -2389,12 +2351,6 @@ int computeFactor(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   HFactor& factor = highs_model_object.factor_;
-#ifdef HiGHSDEV
-  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
-  double tt0 = 0;
-  if (simplex_info.analyse_invert_time)
-    tt0 = analysis.simplexTimerRead(InvertClock);
-#endif
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -2409,71 +2365,6 @@ int computeFactor(HighsModelObject& highs_model_object) {
           thread_id);
 #endif
   const int rank_deficiency = factor.build(factor_timer_clock_pointer);
-#ifdef HiGHSDEV
-  if (simplex_info.analyse_invert_form) {
-    const bool report_kernel = false;
-    simplex_info.num_invert++;
-    assert(factor.basis_matrix_num_el);
-    double invert_fill_factor =
-        ((1.0 * factor.invert_num_el) / factor.basis_matrix_num_el);
-    if (report_kernel) printf("INVERT fill = %6.2f", invert_fill_factor);
-    simplex_info.sum_invert_fill_factor += invert_fill_factor;
-    simplex_info.running_average_invert_fill_factor =
-        0.95 * simplex_info.running_average_invert_fill_factor +
-        0.05 * invert_fill_factor;
-
-    double kernel_relative_dim =
-        (1.0 * factor.kernel_dim) / highs_model_object.simplex_lp_.numRow_;
-    if (report_kernel) printf("; kernel dim = %11.4g", kernel_relative_dim);
-    if (factor.kernel_dim) {
-      simplex_info.num_kernel++;
-      simplex_info.max_kernel_dim =
-          max(kernel_relative_dim, simplex_info.max_kernel_dim);
-      simplex_info.sum_kernel_dim += kernel_relative_dim;
-      simplex_info.running_average_kernel_dim =
-          0.95 * simplex_info.running_average_kernel_dim +
-          0.05 * kernel_relative_dim;
-
-      int kernel_invert_num_el =
-          factor.invert_num_el -
-          (factor.basis_matrix_num_el - factor.kernel_num_el);
-      assert(factor.kernel_num_el);
-      double kernel_fill_factor =
-          (1.0 * kernel_invert_num_el) / factor.kernel_num_el;
-      simplex_info.sum_kernel_fill_factor += kernel_fill_factor;
-      simplex_info.running_average_kernel_fill_factor =
-          0.95 * simplex_info.running_average_kernel_fill_factor +
-          0.05 * kernel_fill_factor;
-      if (report_kernel) printf("; fill = %6.2f", kernel_fill_factor);
-      if (kernel_relative_dim >
-          simplex_info.major_kernel_relative_dim_threshold) {
-        simplex_info.num_major_kernel++;
-        simplex_info.sum_major_kernel_fill_factor += kernel_fill_factor;
-        simplex_info.running_average_major_kernel_fill_factor =
-            0.95 * simplex_info.running_average_major_kernel_fill_factor +
-            0.05 * kernel_fill_factor;
-      }
-    }
-    if (report_kernel) printf("\n");
-  }
-  if (simplex_info.analyse_invert_condition) {
-    analysis.simplexTimerStart(BasisConditionClock);
-    simplex_info.invert_condition = computeBasisCondition(highs_model_object);
-    analysis.simplexTimerStop(BasisConditionClock);
-  }
-  if (simplex_info.analyse_invert_time) {
-    simplex_info.total_inverts = analysis.simplexTimerNumCall(InvertClock);
-    simplex_info.total_invert_time = analysis.simplexTimerRead(InvertClock);
-    const double invert_time = simplex_info.total_invert_time - tt0;
-    printf(
-        "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
-        "Total INVERT  time = %11.4g\n",
-        simplex_info.total_inverts,
-        highs_model_object.iteration_counts_.simplex, invert_time,
-        simplex_info.total_invert_time);
-  }
-#endif
-
   const bool force = rank_deficiency;
   debugCheckInvert(highs_model_object.options_, highs_model_object.factor_,
                    force);

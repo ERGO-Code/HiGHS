@@ -797,9 +797,6 @@ void HPrimal::iterationAnalysisData() {
   analysis->sum_primal_infeasibilities =
       simplex_info.sum_primal_infeasibilities;
   analysis->sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;
-#ifdef HiGHSDEV
-  analysis->basis_condition = simplex_info.invert_condition;
-#endif
 }
 
 void HPrimal::iterationAnalysis() {

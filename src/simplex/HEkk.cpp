@@ -122,6 +122,9 @@ HighsStatus HEkk::solve() {
       algorithm.c_str(), simplex_info_.num_primal_infeasibilities,
       simplex_info_.num_dual_infeasibilities,
       utilHighsModelStatusToString(scaled_model_status_).c_str());
+
+  if (analysis_.analyse_factor_data) analysis_.reportInvertFormData();
+
   return return_status;
 }
 
@@ -221,7 +224,7 @@ void HEkk::setSimplexOptions() {
   // Options for analysing the LP and simplex iterations
   simplex_info_.analyse_lp = useful_analysis;  // false;  //
   simplex_info_.analyse_iterations = useful_analysis;
-  simplex_info_.analyse_invert_form = useful_analysis;
+  simplex_info_.analyse_invert_form = true; //useful_analysis;
   //  simplex_info_.analyse_invert_condition = useful_analysis;
   simplex_info_.analyse_invert_time = full_timing;
   simplex_info_.analyse_rebuild_time = full_timing;
@@ -490,59 +493,8 @@ int HEkk::computeFactor() {
       analysis_.getThreadFactorTimerClockPtr(thread_id);
 #endif
   const int rank_deficiency = factor_.build(factor_timer_clock_pointer);
-#ifdef HiGHSDEV
-  if (simplex_info_.analyse_invert_form) {
-    const bool report_kernel = false;
-    simplex_info_.num_invert++;
-    assert(factor_.basis_matrix_num_el);
-    double invert_fill_factor =
-        ((1.0 * factor_.invert_num_el) / factor_.basis_matrix_num_el);
-    if (report_kernel) printf("INVERT fill = %6.2f", invert_fill_factor);
-    simplex_info_.sum_invert_fill_factor += invert_fill_factor;
-    simplex_info_.running_average_invert_fill_factor =
-        0.95 * simplex_info_.running_average_invert_fill_factor +
-        0.05 * invert_fill_factor;
-
-    double kernel_relative_dim =
-        (1.0 * factor_.kernel_dim) / simplex_lp_.numRow_;
-    if (report_kernel) printf("; kernel dim = %11.4g", kernel_relative_dim);
-    if (factor_.kernel_dim) {
-      simplex_info_.num_kernel++;
-      simplex_info_.max_kernel_dim =
-          max(kernel_relative_dim, simplex_info_.max_kernel_dim);
-      simplex_info_.sum_kernel_dim += kernel_relative_dim;
-      simplex_info_.running_average_kernel_dim =
-          0.95 * simplex_info_.running_average_kernel_dim +
-          0.05 * kernel_relative_dim;
-
-      int kernel_invert_num_el =
-          factor_.invert_num_el -
-          (factor_.basis_matrix_num_el - factor_.kernel_num_el);
-      assert(factor_.kernel_num_el);
-      double kernel_fill_factor =
-          (1.0 * kernel_invert_num_el) / factor_.kernel_num_el;
-      simplex_info_.sum_kernel_fill_factor += kernel_fill_factor;
-      simplex_info_.running_average_kernel_fill_factor =
-          0.95 * simplex_info_.running_average_kernel_fill_factor +
-          0.05 * kernel_fill_factor;
-      if (report_kernel) printf("; fill = %6.2f", kernel_fill_factor);
-      if (kernel_relative_dim >
-          simplex_info_.major_kernel_relative_dim_threshold) {
-        simplex_info_.num_major_kernel++;
-        simplex_info_.sum_major_kernel_fill_factor += kernel_fill_factor;
-        simplex_info_.running_average_major_kernel_fill_factor =
-            0.95 * simplex_info_.running_average_major_kernel_fill_factor +
-            0.05 * kernel_fill_factor;
-      }
-    }
-    if (report_kernel) printf("\n");
-  }
-  if (simplex_info_.analyse_invert_condition) {
-    analysis_.simplexTimerStart(BasisConditionClock);
-    simplex_info_.invert_condition = computeBasisCondition();
-    analysis_.simplexTimerStop(BasisConditionClock);
-  }
-#endif
+  if (analysis_.analyse_factor_data) 
+    analysis_.updateInvertFormData(factor_);
 
   const bool force = rank_deficiency;
   debugCheckInvert(options_, factor_, force);
@@ -708,37 +660,33 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   if (!perturb || simplex_info_.dual_simplex_cost_perturbation_multiplier == 0)
     return;
     // Perturb the original costs, scale down if is too big
-#ifdef HiGHSDEV
-  printf("grep_DuPtrb: Cost perturbation for %s\n",
-         simplex_lp_.model_name_.c_str());
   int num_original_nonzero_cost = 0;
-#endif
+  if (analysis_.analyse_simplex_data)
+    printf("grep_DuPtrb: Cost perturbation for %s\n",
+	   simplex_lp_.model_name_.c_str());
   double bigc = 0;
   for (int i = 0; i < simplex_lp_.numCol_; i++) {
     const double abs_cost = fabs(simplex_info_.workCost_[i]);
     bigc = max(bigc, abs_cost);
-#ifdef HiGHSDEV
-    if (abs_cost) num_original_nonzero_cost++;
-#endif
+    if (analysis_.analyse_simplex_data && abs_cost) num_original_nonzero_cost++;
   }
-#ifdef HiGHSDEV
   const int pct0 = (100 * num_original_nonzero_cost) / simplex_lp_.numCol_;
   double average_cost = 0;
-  if (num_original_nonzero_cost) {
-    average_cost = bigc / num_original_nonzero_cost;
-  } else {
-    printf("grep_DuPtrb:    STRANGE initial workCost has non nonzeros\n");
+  if (analysis_.analyse_simplex_data) {
+    if (num_original_nonzero_cost) {
+      average_cost = bigc / num_original_nonzero_cost;
+    } else {
+      printf("grep_DuPtrb:    STRANGE initial workCost has non nonzeros\n");
+    }
+    printf(
+	   "grep_DuPtrb:    Initially have %d nonzero costs (%3d%%) with bigc = %g "
+	   "and average = %g\n",
+	   num_original_nonzero_cost, pct0, bigc, average_cost);
   }
-  printf(
-      "grep_DuPtrb:    Initially have %d nonzero costs (%3d%%) with bigc = %g "
-      "and average = %g\n",
-      num_original_nonzero_cost, pct0, bigc, average_cost);
-#endif
   if (bigc > 100) {
     bigc = sqrt(sqrt(bigc));
-#ifdef HiGHSDEV
-    printf("grep_DuPtrb:    Large so set bigc = sqrt(bigc) = %g\n", bigc);
-#endif
+    if (analysis_.analyse_simplex_data)
+      printf("grep_DuPtrb:    Large so set bigc = sqrt(bigc) = %g\n", bigc);
   }
 
   // If there are few boxed variables, we will just use simple perturbation
@@ -749,18 +697,15 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   boxedRate /= numTot;
   if (boxedRate < 0.01) {
     bigc = min(bigc, 1.0);
-#ifdef HiGHSDEV
-    printf(
-        "grep_DuPtrb:    small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
-        "%g\n",
-        boxedRate, bigc);
-#endif
+    if (analysis_.analyse_simplex_data)
+      printf(
+	     "grep_DuPtrb:    small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
+	     "%g\n",
+	     boxedRate, bigc);
   }
   // Determine the perturbation base
   double base = 5e-7 * bigc;
-#ifdef HiGHSDEV
-  printf("grep_DuPtrb:    Perturbation base = %g\n", base);
-#endif
+  if (analysis_.analyse_simplex_data) printf("grep_DuPtrb:    Perturbation base = %g\n", base);
 
   // Now do the perturbation
   for (int i = 0; i < simplex_lp_.numCol_; i++) {
@@ -769,9 +714,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     double xpert = (fabs(simplex_info_.workCost_[i]) + 1) * base *
                    simplex_info_.dual_simplex_cost_perturbation_multiplier *
                    (1 + simplex_info_.numTotRandomValue_[i]);
-#ifdef HiGHSDEV
     const double previous_cost = simplex_info_.workCost_[i];
-#endif
     if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
       // Free - no perturb
     } else if (upper >= HIGHS_CONST_INF) {  // Lower
@@ -784,24 +727,24 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     } else {
       // Fixed - no perturb
     }
-#ifdef HiGHSDEV
-    const double perturbation1 =
+    if (analysis_.analyse_simplex_data) {
+      const double perturbation1 =
         fabs(simplex_info_.workCost_[i] - previous_cost);
-    if (perturbation1)
-      updateValueDistribution(perturbation1,
-                              analysis_.cost_perturbation1_distribution);
-#endif
+      if (perturbation1)
+	updateValueDistribution(perturbation1,
+				analysis_.cost_perturbation1_distribution);
+    }
   }
   for (int i = simplex_lp_.numCol_; i < numTot; i++) {
     double perturbation2 =
         (0.5 - simplex_info_.numTotRandomValue_[i]) *
         simplex_info_.dual_simplex_cost_perturbation_multiplier * 1e-12;
     simplex_info_.workCost_[i] += perturbation2;
-#ifdef HiGHSDEV
-    perturbation2 = fabs(perturbation2);
-    updateValueDistribution(perturbation2,
-                            analysis_.cost_perturbation2_distribution);
-#endif
+    if (analysis_.analyse_simplex_data) {
+      perturbation2 = fabs(perturbation2);
+      updateValueDistribution(perturbation2,
+			      analysis_.cost_perturbation2_distribution);
+    }
   }
   simplex_info_.costs_perturbed = 1;
 }
@@ -1033,17 +976,13 @@ void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
   col_aq.clear();
   col_aq.packFlag = true;
   matrix_.collect_aj(col_aq, iCol, 1);
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
                                     analysis_.col_aq_density);
-#endif
   factor_.ftran(col_aq, analysis_.col_aq_density,
                 analysis_.pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
-#endif
   int num_row = simplex_lp_.numRow_;
   const double local_col_aq_density = (double)col_aq.count / num_row;
   analysis_.updateOperationResultDensity(local_col_aq_density,
@@ -1058,17 +997,13 @@ void HEkk::unitBtran(const int iRow, HVector& row_ep) {
   row_ep.index[0] = iRow;
   row_ep.array[iRow] = 1;
   row_ep.packFlag = true;
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                     analysis_.row_ep_density);
-#endif
   factor_.btran(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
-#endif
   int num_row = simplex_lp_.numRow_;
   const double local_row_ep_density = (double)row_ep.count / num_row;
   analysis_.updateOperationResultDensity(local_row_ep_density,
@@ -1082,17 +1017,13 @@ void HEkk::fullBtran(HVector& buffer) {
   // than 0 if the indices of the RHS (and true value of buffer.count)
   // isn't known.
   analysis_.simplexTimerStart(BtranFullClock);
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer,
                                     analysis_.dual_col_density);
-#endif
   factor_.btran(buffer, analysis_.dual_col_density,
                 analysis_.pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
-#endif
   const double local_dual_col_density =
       (double)buffer.count / simplex_lp_.numRow_;
   analysis_.updateOperationResultDensity(local_dual_col_density,
@@ -1125,7 +1056,6 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   bool use_row_price_w_switch;
   choosePriceTechnique(simplex_info_.price_strategy, local_density,
                        use_col_price, use_row_price_w_switch);
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data) {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
@@ -1143,7 +1073,6 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
       analysis_.num_row_price++;
     }
   }
-#endif
   row_ap.clear();
   if (use_col_price) {
     // Perform column-wise PRICE
@@ -1170,30 +1099,24 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
   analysis_.updateOperationResultDensity(local_row_ap_density,
                                          analysis_.row_ap_density);
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
-#endif
   analysis_.simplexTimerStop(PriceClock);
 }
 
 void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   analysis_.simplexTimerStart(PriceFullClock);
   full_row.clear();
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data) {
     const double historical_density_for_non_hypersparse_operation = 1;
     analysis_.operationRecordBefore(
         ANALYSIS_OPERATION_TYPE_PRICE_FULL, full_col,
         historical_density_for_non_hypersparse_operation);
   }
-#endif
   matrix_.priceByColumn(full_row, full_col);
-#ifdef HiGHSDEV
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
                                    full_row);
-#endif
   analysis_.simplexTimerStop(PriceFullClock);
 }
 

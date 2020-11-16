@@ -41,34 +41,6 @@
 #include "omp.h"
 #endif
 
-#ifdef HiGHSDEV
-void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
-  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-
-  printf("grep_kernel,%s,%s,%d,%d,%d,",
-         highs_model_object.lp_.model_name_.c_str(),
-         highs_model_object.lp_.lp_name_.c_str(), simplex_info.num_invert,
-         simplex_info.num_kernel, simplex_info.num_major_kernel);
-  if (simplex_info.num_kernel)
-    printf("%g", simplex_info.sum_kernel_dim / simplex_info.num_kernel);
-  printf(",%g,%g,", simplex_info.running_average_kernel_dim,
-         simplex_info.max_kernel_dim);
-  if (simplex_info.num_invert)
-    printf("Fill-in,%g",
-           simplex_info.sum_invert_fill_factor / simplex_info.num_invert);
-  printf(",");
-  if (simplex_info.num_kernel)
-    printf("%g", simplex_info.sum_kernel_fill_factor / simplex_info.num_kernel);
-  printf(",");
-  if (simplex_info.num_major_kernel)
-    printf("%g", simplex_info.sum_major_kernel_fill_factor /
-                     simplex_info.num_major_kernel);
-  printf(",%g,%g,%g\n", simplex_info.running_average_invert_fill_factor,
-         simplex_info.running_average_kernel_fill_factor,
-         simplex_info.running_average_major_kernel_fill_factor);
-}
-#endif
-
 // Single function to solve the (scaled) LP according to
 // options. Assumes that the LP has a positive number of rows, since
 // unconstrained LPs should be solved in solveLpSimplex
@@ -463,11 +435,6 @@ HighsStatus solveLpHmoSimplex(HighsModelObject& highs_model_object) {
   return_status =
       interpretCallStatus(call_status, return_status, "runSimplexSolver");
   if (return_status == HighsStatus::Error) return return_status;
-#ifdef HiGHSDEV
-  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  if (simplex_info.analyse_invert_form)
-    reportAnalyseInvertForm(highs_model_object);
-#endif
 
   double cost_scale = highs_model_object.scale_.cost_;
 #ifdef HiGHSDEV
@@ -512,6 +479,7 @@ HighsStatus solveLpHmoSimplex(HighsModelObject& highs_model_object) {
   // Report profiling and analysis for the application of the simplex
   // method to this LP problem
   reportSimplexProfiling(highs_model_object);
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   if (simplex_info.report_HFactor_clock) simplex_analysis.reportFactorTimer();
   if (simplex_info.analyse_iterations) simplex_analysis.summaryReport();
   simplex_analysis.summaryReportFactor();

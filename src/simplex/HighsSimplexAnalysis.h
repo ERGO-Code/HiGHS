@@ -143,6 +143,8 @@ class HighsSimplexAnalysis {
   void summaryReportFactor();
   void reportSimplexTimer();
   void reportFactorTimer();
+  void updateInvertFormData(const HFactor& factor);
+  void reportInvertFormData();
   //#endif
 
   HighsTimer* timer_;
@@ -155,6 +157,8 @@ class HighsSimplexAnalysis {
   int numRow;
   int numCol;
   int numTot;
+  std::string model_name_;
+  std::string lp_name_;
   bool analyse_lp_data;
   bool analyse_simplex_data;
   bool analyse_simplex_time;
@@ -290,6 +294,29 @@ class HighsSimplexAnalysis {
   double average_fraction_of_possible_minor_iterations_performed;
   int sum_multi_chosen = 0;
   int sum_multi_finished = 0;
+
+  // Analysis of INVERT
+  int num_invert = 0;
+  // Analysis of INVERT form
+  int num_kernel = 0;
+  int num_major_kernel = 0;
+  const double major_kernel_relative_dim_threshold = 0.1;  // Should be a const, but will be changed later anyway
+  double max_kernel_dim = 0;
+  double sum_kernel_dim = 0;
+  double running_average_kernel_dim = 0;
+  double sum_invert_fill_factor = 0;
+  double sum_kernel_fill_factor = 0;
+  double sum_major_kernel_fill_factor = 0;
+  double running_average_invert_fill_factor = 1;
+  double running_average_kernel_fill_factor = 1;
+  double running_average_major_kernel_fill_factor = 1;
+
+  // Amalysis of invert time and condition
+  /*
+  int total_inverts;
+  double total_invert_time;
+  double invert_condition = 1;
+  */
 
   int AnIterIt0 = 0;
 #ifdef HiGHSDEV
