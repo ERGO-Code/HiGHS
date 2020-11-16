@@ -25,6 +25,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
 #include "presolve/HPreData.h"
+#include "presolve/HAggregator.h"
 #include "presolve/PresolveAnalysis.h"
 #include "test/DevKkt.h"
 
@@ -94,6 +95,16 @@ class Presolve : public HPreData {
   // Options
   std::vector<Presolver> order;
 
+  struct AggregatorCall {
+    HAggregator::PostsolveStack postsolveStack;
+    std::vector<double> colCostAtCall;
+    std::vector<double> ARvalueAtCall;
+    std::vector<int> ARindexAtCall;
+    std::vector<int> ARstartAtCall;
+  };
+
+  std::vector<AggregatorCall> aggregatorStack;
+
   int max_iterations = 0;
 
   void setTimeLimit(const double limit) {
@@ -113,6 +124,7 @@ class Presolve : public HPreData {
 
   double objShift;
   void initializeVectors();
+  void runAggregator();
   void setProblemStatus(const int s);
   void reportTimes();
 

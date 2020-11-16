@@ -90,8 +90,6 @@ class HPreData {
   vector<HighsBasisStatus> row_status;
 
   vector<double> colCostAtEl;
-  vector<double> rowLowerAtEl;
-  vector<double> rowUpperAtEl;
 
   void makeARCopy();
   void makeACopy();

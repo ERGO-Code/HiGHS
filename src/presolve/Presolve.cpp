@@ -424,6 +424,8 @@ int Presolve::presolve(int print) {
 
     if (current_cols_rows == 0) break;
 
+    if (!hasChange && aggregatorStack.empty()) runAggregator();
+
     if (iter == 1) {
       prev_cols_rows = current_cols_rows;
       iter++;
@@ -529,11 +531,13 @@ pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
   // only substitute the continuous variable.
   // if both columns are integer columns we may choose either column but need
   // to check the coefficients for integrality. The coefficient of the column
-  // that is not substituted, divided by the coefficient of the column that is substituted
-  // must be integral. If that is the case, we also check the right hand side divided by the
-  // coefficient of the substituted column for integrality. If the divided right hand side is not integral
-  // we can detect infeasibility of the MIP. This check is the same for the case of implied free singleton
-  // columns, or any other kind of substitutions on integer variables.
+  // that is not substituted, divided by the coefficient of the column that is
+  // substituted must be integral. If that is the case, we also check the right
+  // hand side divided by the coefficient of the substituted column for
+  // integrality. If the divided right hand side is not integral we can detect
+  // infeasibility of the MIP. This check is the same for the case of implied
+  // free singleton columns, or any other kind of substitutions on integer
+  // variables.
 
   pair<int, int> colIndex;
   // row is of form akx_x + aky_y = b, where k=row and y is present in fewer
@@ -1072,8 +1076,6 @@ void Presolve::resizeProblem() {
     }
 
   // RHS and bounds
-  rowLowerAtEl = rowLower;
-  rowUpperAtEl = rowUpper;
   temp = rowLower;
   teup = rowUpper;
   rowLower.resize(numRow);
@@ -1154,8 +1156,91 @@ void Presolve::initializeVectors() {
   }
 
   colCostAtEl = colCost;
-  rowLowerAtEl = rowLower;
-  rowUpperAtEl = rowUpper;
+}
+
+void Presolve::runAggregator() {
+  // run the aggregator and store back the modified matrix
+  timer.recordStart(AGGREGATOR);
+  aggregatorStack.emplace_back();
+
+  aggregatorStack.back().colCostAtCall = colCost;
+
+  {
+    HAggregator aggregator(rowLower, rowUpper, colCost, objShift, integrality,
+                           colLower, colUpper);
+
+    aggregator.fromDynamicCSC(Avalue, Aindex, Astart, Aend, flagRow, flagCol);
+    aggregatorStack.back().postsolveStack = aggregator.run();
+
+    if (aggregatorStack.back().postsolveStack.empty()) {
+      aggregatorStack.pop_back();
+      timer.recordFinish(AGGREGATOR);
+      return;
+    }
+    aggregator.toCSC(Avalue, Aindex, Astart);
+  }
+
+  hasChange = true;
+  chng.emplace(change{AGGREGATOR, 0, 0});
+
+  aggregatorStack.back().postsolveStack.unsetFlags(flagRow, flagCol);
+
+  // store old AR and create updated AR matrix
+  aggregatorStack.back().ARvalueAtCall = std::move(ARvalue);
+  aggregatorStack.back().ARindexAtCall = std::move(ARindex);
+  aggregatorStack.back().ARstartAtCall = std::move(ARstart);
+  makeARCopy();
+
+  // set nzRow and nzCol, remove empty rows
+  nzCol.assign(numCol, 0);
+  nzRow.assign(numRow, 0);
+
+  for (int i = 0; i < numRow; ++i) {
+    if (!flagRow[i]) continue;
+    nzRow.at(i) = ARstart.at(i + 1) - ARstart.at(i);
+    if (nzRow.at(i) == 1) singRow.push_back(i);
+    if (nzRow.at(i) == 0) {
+      timer.recordStart(EMPTY_ROW);
+      removeEmptyRow(i);
+      countRemovedRows(EMPTY_ROW);
+      timer.recordFinish(EMPTY_ROW);
+    }
+  }
+
+  Aend.resize(numCol + 1);
+  for (int i = 0; i < numCol; ++i) {
+    if (!flagCol[i]) continue;
+    Aend.at(i) = Astart.at(i + 1);
+    nzCol.at(i) = Aend.at(i) - Astart.at(i);
+    if (nzCol.at(i) == 1) singCol.push_back(i);
+  }
+
+  implColUpper = colUpper;  // working copies of primal variable bounds
+  implColLower = colLower;
+  implColLowerRowIndex.assign(numCol, -1);
+  implColUpperRowIndex.assign(numCol, -1);
+
+  implRowDualLowerSingColRowIndex.assign(numRow, -1);
+  implRowDualUpperSingColRowIndex.assign(numRow, -1);
+  implRowDualLower.assign(numRow, -HIGHS_CONST_INF);
+  implRowDualUpper.assign(numRow, HIGHS_CONST_INF);
+
+  implColDualLower.assign(numCol, -HIGHS_CONST_INF);
+  implColDualUpper.assign(numCol, HIGHS_CONST_INF);
+  implRowValueLower = rowLower;
+  implRowValueUpper = rowUpper;
+
+  for (int i = 0; i < numRow; ++i) {
+    if (rowLower.at(i) <= -HIGHS_CONST_INF) implRowDualUpper.at(i) = 0;
+    if (rowUpper.at(i) >= HIGHS_CONST_INF) implRowDualLower.at(i) = 0;
+  }
+
+  for (int i = 0; i < numCol; ++i) {
+    if (colLower.at(i) <= -HIGHS_CONST_INF) implColDualUpper.at(i) = 0;
+    if (colUpper.at(i) >= HIGHS_CONST_INF) implColDualLower.at(i) = 0;
+  }
+
+  timer.recordFinish(AGGREGATOR);
 }
 
 void Presolve::removeFixedCol(int j) {
@@ -1237,7 +1322,8 @@ void Presolve::rowDualBoundsDominatedColumns() {
 
   // todo, do not use integer variables to derive bounds on the row duals
   // using continous and implied integer variables is valid as the complementary
-  // slackness condition holds when all integer columns are fixed to any integer value
+  // slackness condition holds when all integer columns are fixed to any integer
+  // value
 
   // for each row calc yihat and yibar and store in implRowDualLower and
   // implRowDualUpper
@@ -1351,8 +1437,9 @@ pair<double, double> Presolve::getImpliedColumnBounds(int j) {
 }
 
 void Presolve::removeDominatedColumns() {
-  // todo, use only continuous and implied integer columns for calculating row dual upper and lower bounds
-  // then the domination (and also weak domination check) should be correct for integers
+  // todo, use only continuous and implied integer columns for calculating row
+  // dual upper and lower bounds then the domination (and also weak domination
+  // check) should be correct for integers
 
   // for each column j calculate e and d and check:
   double e, d;
@@ -2808,6 +2895,23 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
     setBasisElement(c);
     switch (c.type) {
+      case AGGREGATOR: {
+        // restore solution, basis, flags, and colCostAtEl
+        aggregatorStack.back().postsolveStack.undo(
+            flagCol, flagRow, valuePrimal, valueColDual, valueRowDual,
+            col_status, row_status);
+
+        // restore AR to state before the aggregator got called
+        ARstart = std::move(aggregatorStack.back().ARstartAtCall);
+        ARindex = std::move(aggregatorStack.back().ARindexAtCall);
+        ARvalue = std::move(aggregatorStack.back().ARvalueAtCall);
+        colCostAtEl = std::move(aggregatorStack.back().colCostAtCall);
+        aggregatorStack.pop_back();
+
+        // restore A from AR
+        makeACopy();
+        break;
+      }
       case TWO_COL_SING_TRIVIAL: {
         // WIP
         int y = (int)postValue.top();

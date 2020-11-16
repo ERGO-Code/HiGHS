@@ -384,6 +384,58 @@ void HAggregator::addNonzero(int row, int col, double val) {
   link(pos);
 }
 
+void HAggregator::fromDynamicCSC(const std::vector<double>& Aval,
+                                 const std::vector<int>& Aindex,
+                                 const std::vector<int>& Astart,
+                                 const std::vector<int>& Aend,
+                                 const std::vector<int>& rowFlag,
+                                 const std::vector<int>& colFlag) {
+  Avalue.clear();
+  Acol.clear();
+  Arow.clear();
+
+  int ncol = colhead.size();
+  assert(ncol == int(colhead.size()));
+  int nnz = Aval.size();
+
+  Avalue.reserve(nnz);
+  Acol.reserve(nnz);
+  Arow.reserve(nnz);
+
+  for (int i = 0; i != ncol; ++i) {
+    if (!colFlag[i]) continue;
+
+    for (int j = Astart[i]; j != Aend[i]; ++j) {
+      if (!rowFlag[Aindex[j]]) continue;
+      Acol.push_back(i);
+      Arow.push_back(Aindex[j]);
+      Avalue.push_back(Aval[j]);
+    }
+  }
+
+  Anext.reserve(nnz);
+  Aprev.reserve(nnz);
+  ARleft.reserve(nnz);
+  ARright.reserve(nnz);
+
+  nnz = Avalue.size();
+
+  Anext.resize(nnz);
+  Aprev.resize(nnz);
+  ARleft.resize(nnz);
+  ARright.resize(nnz);
+  for (int pos = 0; pos != nnz; ++pos) link(pos);
+  int nrow = rowFlag.size();
+  eqiters.assign(nrow, equations.end());
+  for (int i = 0; i != nrow; ++i) {
+    if (!rowFlag[i]) continue;
+    computeActivities(i);
+    // register equation
+    if (rowLower[i] == rowUpper[i])
+      eqiters[i] = equations.emplace(rowsize[i], i).first;
+  }
+}
+
 void HAggregator::fromCSC(const std::vector<double>& Aval,
                           const std::vector<int>& Aindex,
                           const std::vector<int>& Astart) {
@@ -919,9 +971,7 @@ void HAggregator::PostsolveStack::undo(
     std::vector<int>& colFlag, std::vector<int>& rowFlag,
     std::vector<double>& col_value, std::vector<double>& col_dual,
     std::vector<double>& row_dual, std::vector<HighsBasisStatus>& col_status,
-    std::vector<HighsBasisStatus>& row_status) const
-
-{
+    std::vector<HighsBasisStatus>& row_status) const {
   for (int k = reductionStack.size() - 1; k >= 0; --k) {
     const ImpliedFreeVarReduction& reduction = reductionStack[k];
 

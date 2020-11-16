@@ -96,6 +96,14 @@ class HAggregator {
       reductionValues.clear();
     }
 
+    void unsetFlags(std::vector<int>& rowFlag,
+                    std::vector<int>& colFlag) const {
+      for (const ImpliedFreeVarReduction& reduction : reductionStack) {
+        rowFlag[reduction.row] = 0;
+        colFlag[reduction.col] = 0;
+      }
+    }
+
     bool empty() const { return reductionStack.empty(); }
   };
 
@@ -198,6 +206,13 @@ class HAggregator {
 
   void fromCSC(const std::vector<double>& Aval, const std::vector<int>& Aindex,
                const std::vector<int>& Astart);
+
+  void fromDynamicCSC(const std::vector<double>& Aval,
+                      const std::vector<int>& Aindex,
+                      const std::vector<int>& Astart,
+                      const std::vector<int>& Aend,
+                      const std::vector<int>& rowFlag,
+                      const std::vector<int>& colFlag);
 
   void fromCSR(const std::vector<double>& ARval,
                const std::vector<int>& ARindex,
