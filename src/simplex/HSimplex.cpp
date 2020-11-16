@@ -3449,7 +3449,8 @@ void logRebuild(HighsModelObject& highs_model_object, const bool primal,
 void reportSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
                            const char* message) {
   printf("\nReporting solver status and flags: %s\n\n", message);
-  printf("  initialised =                    %d\n", simplex_lp_status.initialised);
+  printf("  initialised =                    %d\n",
+         simplex_lp_status.initialised);
   printf("  valid =                          %d\n", simplex_lp_status.valid);
   printf("  scaling tried =                  %d\n",
          simplex_lp_status.scaling_tried);

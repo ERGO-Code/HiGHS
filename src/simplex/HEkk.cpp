@@ -33,7 +33,7 @@
 HighsStatus HEkk::passLp(const HighsLp& lp) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  
+
   simplex_lp_ = lp;
   // Shouldn't have to check the incoming LP since this is an internal
   // call, but it may be an LP that's set up internally with errors
@@ -41,8 +41,7 @@ HighsStatus HEkk::passLp(const HighsLp& lp) {
   if (options_.highs_debug_level > HIGHS_DEBUG_LEVEL_NONE) {
     // ... so, if debugging, check the LP.
     call_status = assessLp(simplex_lp_, options_);
-    return_status =
-      interpretCallStatus(call_status, return_status, "assessLp");
+    return_status = interpretCallStatus(call_status, return_status, "assessLp");
     if (return_status == HighsStatus::Error) return return_status;
   }
   initialiseForNewLp();
@@ -52,7 +51,7 @@ HighsStatus HEkk::passLp(const HighsLp& lp) {
 
 HighsStatus HEkk::solve() {
   if (initialiseForSolve() == HighsStatus::Error) return HighsStatus::Error;
-  
+
   assert(simplex_lp_status_.has_basis);
   assert(simplex_lp_status_.has_invert);
   assert(simplex_lp_status_.valid);
@@ -463,18 +462,17 @@ void HEkk::computeDualObjectiveValue(const int phase) {
 
 int HEkk::computeFactor() {
   analysis_.simplexTimerStart(InvertClock);
-  HighsTimerClock* factor_timer_clock_pointer= NULL;
+  HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analysis_.analyse_factor_time) {
     int thread_id = 0;
 #ifdef OPENMP
     thread_id = omp_get_thread_num();
 #endif
     factor_timer_clock_pointer =
-      analysis_.getThreadFactorTimerClockPtr(thread_id);
+        analysis_.getThreadFactorTimerClockPtr(thread_id);
   }
   const int rank_deficiency = factor_.build(factor_timer_clock_pointer);
-  if (analysis_.analyse_factor_data) 
-    analysis_.updateInvertFormData(factor_);
+  if (analysis_.analyse_factor_data) analysis_.updateInvertFormData(factor_);
 
   const bool force = rank_deficiency;
   debugCheckInvert(options_, factor_, force);
@@ -639,11 +637,11 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
   // Dual simplex costs are either from the LP or perturbed
   if (!perturb || simplex_info_.dual_simplex_cost_perturbation_multiplier == 0)
     return;
-    // Perturb the original costs, scale down if is too big
+  // Perturb the original costs, scale down if is too big
   int num_original_nonzero_cost = 0;
   if (analysis_.analyse_simplex_data)
     printf("grep_DuPtrb: Cost perturbation for %s\n",
-	   simplex_lp_.model_name_.c_str());
+           simplex_lp_.model_name_.c_str());
   double bigc = 0;
   for (int i = 0; i < simplex_lp_.numCol_; i++) {
     const double abs_cost = fabs(simplex_info_.workCost_[i]);
@@ -659,9 +657,10 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
       printf("grep_DuPtrb:    STRANGE initial workCost has non nonzeros\n");
     }
     printf(
-	   "grep_DuPtrb:    Initially have %d nonzero costs (%3d%%) with bigc = %g "
-	   "and average = %g\n",
-	   num_original_nonzero_cost, pct0, bigc, average_cost);
+        "grep_DuPtrb:    Initially have %d nonzero costs (%3d%%) with bigc = "
+        "%g "
+        "and average = %g\n",
+        num_original_nonzero_cost, pct0, bigc, average_cost);
   }
   if (bigc > 100) {
     bigc = sqrt(sqrt(bigc));
@@ -679,13 +678,14 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     bigc = min(bigc, 1.0);
     if (analysis_.analyse_simplex_data)
       printf(
-	     "grep_DuPtrb:    small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
-	     "%g\n",
-	     boxedRate, bigc);
+          "grep_DuPtrb:    small boxedRate (%g) so set bigc = min(bigc, 1.0) = "
+          "%g\n",
+          boxedRate, bigc);
   }
   // Determine the perturbation base
   double base = 5e-7 * bigc;
-  if (analysis_.analyse_simplex_data) printf("grep_DuPtrb:    Perturbation base = %g\n", base);
+  if (analysis_.analyse_simplex_data)
+    printf("grep_DuPtrb:    Perturbation base = %g\n", base);
 
   // Now do the perturbation
   for (int i = 0; i < simplex_lp_.numCol_; i++) {
@@ -709,10 +709,10 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     }
     if (analysis_.analyse_simplex_data) {
       const double perturbation1 =
-        fabs(simplex_info_.workCost_[i] - previous_cost);
+          fabs(simplex_info_.workCost_[i] - previous_cost);
       if (perturbation1)
-	updateValueDistribution(perturbation1,
-				analysis_.cost_perturbation1_distribution);
+        updateValueDistribution(perturbation1,
+                                analysis_.cost_perturbation1_distribution);
     }
   }
   for (int i = simplex_lp_.numCol_; i < numTot; i++) {
@@ -723,7 +723,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
     if (analysis_.analyse_simplex_data) {
       perturbation2 = fabs(perturbation2);
       updateValueDistribution(perturbation2,
-			      analysis_.cost_perturbation2_distribution);
+                              analysis_.cost_perturbation2_distribution);
     }
   }
   simplex_info_.costs_perturbed = 1;

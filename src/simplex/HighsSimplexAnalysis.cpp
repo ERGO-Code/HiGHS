@@ -29,12 +29,17 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   model_name_ = lp.model_name_;
   lp_name_ = lp.lp_name_;
   // Set up analysis logic short-cuts
-  analyse_lp_data = HIGHS_ANALYSIS_LEVEL_MODEL_DATA & options.highs_analysis_level;
-  analyse_simplex_data = HIGHS_ANALYSIS_LEVEL_SOLVER_DATA & options.highs_analysis_level;
-  analyse_simplex_time = HIGHS_ANALYSIS_LEVEL_SOLVER_TIME & options.highs_analysis_level;
-  analyse_factor_data = HIGHS_ANALYSIS_LEVEL_NLA_DATA & options.highs_analysis_level;
-  analyse_factor_time = HIGHS_ANALYSIS_LEVEL_NLA_TIME & options.highs_analysis_level;
-  
+  analyse_lp_data =
+      HIGHS_ANALYSIS_LEVEL_MODEL_DATA & options.highs_analysis_level;
+  analyse_simplex_data =
+      HIGHS_ANALYSIS_LEVEL_SOLVER_DATA & options.highs_analysis_level;
+  analyse_simplex_time =
+      HIGHS_ANALYSIS_LEVEL_SOLVER_TIME & options.highs_analysis_level;
+  analyse_factor_data =
+      HIGHS_ANALYSIS_LEVEL_NLA_DATA & options.highs_analysis_level;
+  analyse_factor_time =
+      HIGHS_ANALYSIS_LEVEL_NLA_TIME & options.highs_analysis_level;
+
   // Copy tolerances from options
   allow_dual_steepest_edge_to_devex_switch =
       options.simplex_dual_edge_weight_strategy ==
@@ -1073,60 +1078,53 @@ void HighsSimplexAnalysis::updateInvertFormData(const HFactor& factor) {
   num_invert++;
   assert(factor.basis_matrix_num_el);
   double invert_fill_factor =
-    ((1.0 * factor.invert_num_el) / factor.basis_matrix_num_el);
+      ((1.0 * factor.invert_num_el) / factor.basis_matrix_num_el);
   if (report_kernel) printf("INVERT fill = %6.2f", invert_fill_factor);
   sum_invert_fill_factor += invert_fill_factor;
   running_average_invert_fill_factor =
-    0.95 * running_average_invert_fill_factor +
-    0.05 * invert_fill_factor;
-  
-  double kernel_relative_dim =
-    (1.0 * factor.kernel_dim) / numRow;
+      0.95 * running_average_invert_fill_factor + 0.05 * invert_fill_factor;
+
+  double kernel_relative_dim = (1.0 * factor.kernel_dim) / numRow;
   if (report_kernel) printf("; kernel dim = %11.4g", kernel_relative_dim);
   if (factor.kernel_dim) {
     num_kernel++;
-    max_kernel_dim =
-      max(kernel_relative_dim, max_kernel_dim);
+    max_kernel_dim = max(kernel_relative_dim, max_kernel_dim);
     sum_kernel_dim += kernel_relative_dim;
     running_average_kernel_dim =
-      0.95 * running_average_kernel_dim +
-      0.05 * kernel_relative_dim;
-    
+        0.95 * running_average_kernel_dim + 0.05 * kernel_relative_dim;
+
     int kernel_invert_num_el =
-      factor.invert_num_el -
-      (factor.basis_matrix_num_el - factor.kernel_num_el);
+        factor.invert_num_el -
+        (factor.basis_matrix_num_el - factor.kernel_num_el);
     assert(factor.kernel_num_el);
     double kernel_fill_factor =
-      (1.0 * kernel_invert_num_el) / factor.kernel_num_el;
+        (1.0 * kernel_invert_num_el) / factor.kernel_num_el;
     sum_kernel_fill_factor += kernel_fill_factor;
     running_average_kernel_fill_factor =
-      0.95 * running_average_kernel_fill_factor +
-      0.05 * kernel_fill_factor;
+        0.95 * running_average_kernel_fill_factor + 0.05 * kernel_fill_factor;
     if (report_kernel) printf("; fill = %6.2f", kernel_fill_factor);
-    if (kernel_relative_dim >
-	major_kernel_relative_dim_threshold) {
+    if (kernel_relative_dim > major_kernel_relative_dim_threshold) {
       num_major_kernel++;
       sum_major_kernel_fill_factor += kernel_fill_factor;
       running_average_major_kernel_fill_factor =
-	0.95 * running_average_major_kernel_fill_factor +
-	0.05 * kernel_fill_factor;
+          0.95 * running_average_major_kernel_fill_factor +
+          0.05 * kernel_fill_factor;
     }
   }
   if (report_kernel) printf("\n");
 }
 
 void HighsSimplexAnalysis::reportInvertFormData() {
-  printf("grep_kernel,%s,%s,%d,%d,%d,",
-         model_name_.c_str(),
-         lp_name_.c_str(), num_invert,
-         num_kernel, num_major_kernel);
+  printf("grep_kernel,%s,%s,%d,%d,%d,", model_name_.c_str(), lp_name_.c_str(),
+         num_invert, num_kernel, num_major_kernel);
   if (num_kernel) printf("%g", sum_kernel_dim / num_kernel);
   printf(",%g,%g,", running_average_kernel_dim, max_kernel_dim);
   if (num_invert) printf("Fill-in,%g", sum_invert_fill_factor / num_invert);
   printf(",");
   if (num_kernel) printf("%g", sum_kernel_fill_factor / num_kernel);
   printf(",");
-  if (num_major_kernel) printf("%g", sum_major_kernel_fill_factor / num_major_kernel);
+  if (num_major_kernel)
+    printf("%g", sum_major_kernel_fill_factor / num_major_kernel);
   printf(",%g,%g,%g\n", running_average_invert_fill_factor,
          running_average_kernel_fill_factor,
          running_average_major_kernel_fill_factor);
@@ -1324,4 +1322,3 @@ bool HighsSimplexAnalysis::dualAlgorithm() {
           simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS ||
           simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI);
 }
-

@@ -189,12 +189,12 @@ void HEkkDual::majorChooseRowBtran() {
     }
   }
 
-#ifdef HiGHSDEV
-  for (int i = 0; i < multi_ntasks; i++)
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, 1,
-                                    analysis->row_ep_density);
-#endif
-    // 4.2 Perform BTRAN
+  if (analysis->analyse_simplex_data) {
+    for (int i = 0; i < multi_ntasks; i++)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, 1,
+                                      analysis->row_ep_density);
+  }
+  // 4.2 Perform BTRAN
 #pragma omp parallel for schedule(static, 1)
   for (int i = 0; i < multi_ntasks; i++) {
     const int iRow = multi_iRow[i];
@@ -217,11 +217,11 @@ void HEkkDual::majorChooseRowBtran() {
       multi_EdWt[i] = dualRHS.workEdWt[iRow];
     }
   }
-#ifdef HiGHSDEV
-  for (int i = 0; i < multi_ntasks; i++)
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP,
-                                   multi_vector[i]->count);
-#endif
+  if (analysis->analyse_simplex_data) {
+    for (int i = 0; i < multi_ntasks; i++)
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP,
+                                     multi_vector[i]->count);
+  }
   // 4.3 Put back edge weights: the edge weights for the chosen rows
   // are stored in multi_choice[*].infeasEdWt
   for (int i = 0; i < multi_ntasks; i++)
@@ -600,21 +600,19 @@ void HEkkDual::majorUpdateFtranParallel() {
   double multi_density[HIGHS_THREAD_LIMIT * 2 + 1];
   HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
   // BFRT first
-#ifdef HiGHSDEV
-  analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-                                  col_BFRT.count, analysis->col_aq_density);
-#endif
+  if (analysis->analyse_simplex_data)
+    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
+                                    col_BFRT.count, analysis->col_aq_density);
   multi_density[multi_ntasks] = analysis->col_aq_density;
   multi_vector[multi_ntasks] = &col_BFRT;
   multi_ntasks++;
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
     // Then DSE
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-#ifdef HiGHSDEV
-      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-                                      multi_finish[iFn].row_ep->count,
-                                      analysis->row_DSE_density);
-#endif
+      if (analysis->analyse_simplex_data)
+        analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
+                                        multi_finish[iFn].row_ep->count,
+                                        analysis->row_DSE_density);
       multi_density[multi_ntasks] = analysis->row_DSE_density;
       multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
       multi_ntasks++;
@@ -622,11 +620,10 @@ void HEkkDual::majorUpdateFtranParallel() {
   }
   // Then Column
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
-#ifdef HiGHSDEV
-    analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN,
-                                    multi_finish[iFn].col_aq->count,
-                                    analysis->col_aq_density);
-#endif
+    if (analysis->analyse_simplex_data)
+      analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN,
+                                      multi_finish[iFn].col_aq->count,
+                                      analysis->col_aq_density);
     multi_density[multi_ntasks] = analysis->col_aq_density;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
     multi_ntasks++;
@@ -652,10 +649,9 @@ void HEkkDual::majorUpdateFtranParallel() {
   }
 
   // Update rates
-#ifdef HiGHSDEV
-  analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-                                 col_BFRT.count);
-#endif
+  if (analysis->analyse_simplex_data)
+    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
+                                   col_BFRT.count);
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
     HVector* Col = finish->col_aq;
@@ -663,17 +659,15 @@ void HEkkDual::majorUpdateFtranParallel() {
     const double local_col_aq_density = (double)Col->count / solver_num_row;
     analysis->updateOperationResultDensity(local_col_aq_density,
                                            analysis->col_aq_density);
-#ifdef HiGHSDEV
-    analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
-#endif
+    if (analysis->analyse_simplex_data)
+      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       const double local_row_DSE_density = (double)Row->count / solver_num_row;
       analysis->updateOperationResultDensity(local_row_DSE_density,
                                              analysis->row_DSE_density);
-#ifdef HiGHSDEV
-      analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-                                     Row->count);
-#endif
+      if (analysis->analyse_simplex_data)
+        analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
+                                       Row->count);
     }
   }
   analysis->simplexTimerStop(FtranMixParClock);
@@ -959,9 +953,7 @@ void HEkkDual::iterationAnalysisMinor() {
   iterationAnalysisData();
   iterationAnalysisMinorData();
   analysis->iterationReport();
-#ifdef HiGHSDEV
-  analysis->iterationRecord();
-#endif
+  if (analysis->analyse_simplex_data) analysis->iterationRecord();
 }
 
 void HEkkDual::iterationAnalysisMajorData() {
@@ -985,8 +977,8 @@ void HEkkDual::iterationAnalysisMajor() {
       initialiseDevexFramework();
     }
   }
-#ifdef HiGHSDEV
-  analysis->iterationRecord();
-  analysis->iterationRecordMajor();
-#endif
+  if (analysis->analyse_simplex_data) {
+    analysis->iterationRecord();
+    analysis->iterationRecordMajor();
+  }
 }

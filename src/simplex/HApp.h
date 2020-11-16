@@ -510,7 +510,7 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
 
   assert(!simplex_lp_status.initialised);
-   
+
   // Assumes that the LP has a positive number of rows, since
   // unconstrained LPs should be solved in solveLpSimplex
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
@@ -525,7 +525,6 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
   // Reset the model status and solution parameter for the unscaled LP
   // - to check that they are set later
   resetModelStatusAndSolutionParams(highs_model_object);
-  
 
   return_status = HighsStatus::Error;
   return return_status;

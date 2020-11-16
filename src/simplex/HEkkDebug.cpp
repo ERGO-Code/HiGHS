@@ -576,10 +576,9 @@ HighsDebugStatus ekkDebugOkForSolve(
                       "Not OK to solve since simplex_lp_status.has_basis = %d",
                       simplex_lp_status.has_basis);
     if (!simplex_lp_status.has_matrix)
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Not OK to solve since simplex_lp_status.has_matrix = %d",
-          simplex_lp_status.has_matrix);
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_matrix = %d",
+                      simplex_lp_status.has_matrix);
     if (!simplex_lp_status.has_factor_arrays)
       HighsLogMessage(
           options.logfile, HighsMessageType::ERROR,

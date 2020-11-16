@@ -33,8 +33,8 @@ struct HighsSimplexLpStatus {
   bool initialised = false;
   bool valid = false;
   bool scaling_tried = false;
-  bool has_basis = false;            // The simplex LP has a valid simplex basis
-  bool has_matrix = false;           // The HMatrix matrices are valid
+  bool has_basis = false;   // The simplex LP has a valid simplex basis
+  bool has_matrix = false;  // The HMatrix matrices are valid
   bool has_factor_arrays =
       false;  // Has the arrays for the representation of B^{-1}
   bool has_dual_steepest_edge_weights = false;  // The DSE weights are known
@@ -145,7 +145,6 @@ struct HighsSimplexInfo {
   int update_limit;
 
   // Simplex control parameters from HSA
-  
 
   // Internal options - can't be changed externally
   bool run_quiet = false;
@@ -213,7 +212,6 @@ struct HighsSimplexInfo {
   double updated_primal_objective_value;
   // Number of logical variables in the basis
   int num_basic_logicals;
-
 };
 
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */
