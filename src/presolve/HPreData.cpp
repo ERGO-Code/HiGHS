@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "presolve/HPreData.h"
+
 #include "util/HighsUtils.h"
 
 using std::cout;
@@ -50,12 +51,33 @@ bool HPreData::isZeroA(int i, int j) {
 
 void HPreData::makeARCopy() {
   // Make a AR copy
-  highsSparseTranspose(numRow, numCol, Astart, Aindex, Avalue, ARstart, ARindex, ARvalue);
+  highsSparseTranspose(numRow, numCol, Astart, Aindex, Avalue, ARstart, ARindex,
+                       ARvalue);
 }
 
 void HPreData::makeACopy() {
   // Make a A copy
-  highsSparseTranspose(numColOriginal, numRowOriginal, ARstart, ARindex, ARvalue, Astart, Aindex, Avalue);
+
+  vector<int> iwork(numColOriginal, 0);
+  Astart.assign(numColOriginal + 1, 0);
+  const int AcountX = ARindex.size();
+  Aindex.resize(AcountX);
+  Avalue.resize(AcountX);
+  for (int k = 0; k < AcountX; k++)
+    if (ARindex[k] < numColOriginal) iwork[ARindex[k]]++;
+  for (int i = 1; i <= numColOriginal; i++)
+    Astart[i] = Astart[i - 1] + iwork[i - 1];
+  for (int i = 0; i < numColOriginal; i++) iwork[i] = Astart[i];
+  for (int iRow = 0; iRow < numRowOriginal; iRow++) {
+    for (int k = ARstart[iRow]; k < ARstart[iRow + 1]; k++) {
+      const int iColumn = ARindex[k];
+      if (iColumn != numColOriginal) {
+        int iPut = iwork[iColumn]++;
+        Aindex[iPut] = iRow;
+        Avalue[iPut] = ARvalue[k];
+      }
+    }
+  }
 
   Aend.resize(numColOriginal + 1, 0);
   for (int i = 0; i < numColOriginal; i++) Aend[i] = Astart[i + 1];
