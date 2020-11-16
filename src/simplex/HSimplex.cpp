@@ -252,20 +252,17 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
     analysis.simplexTimerStart(ScaleClock);
     scaleSimplexLp(highs_model_object);
     analysis.simplexTimerStop(ScaleClock);
-#ifdef HiGHSDEV
-    // Analyse the scaled LP
-    if (simplex_info.analyse_lp) {
+    if (analysis.analyse_lp_data) {
       analyseLp(simplex_lp, "Unscaled");
       HighsScale& scale = highs_model_object.scale_;
       if (scale.is_scaled_) {
-        analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
-                            scale.col_);
-        analyseVectorValues("Row    scaling factors", simplex_lp.numRow_,
-                            scale.row_);
-        analyseLp(simplex_lp, "Scaled");
+	analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
+			    scale.col_);
+	analyseVectorValues("Row    scaling factors", simplex_lp.numRow_,
+			    scale.row_);
+	analyseLp(simplex_lp, "Scaled");
       }
     }
-#endif
   }
   // Now there is a valid nonbasicFlag and basicIndex, possibly
   // reinvert to check for basis condition/singularity
@@ -1002,9 +999,9 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   simplex_lp_status.has_primal_objective_value = true;
 }
 
-#ifdef HiGHSDEV
 void getPrimalValue(const HighsModelObject& highs_model_object,
                     vector<double>& primal_value) {
+  assert(highs_model_object.simplex_analysis_.analyse_simplex_data);
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1019,6 +1016,7 @@ void getPrimalValue(const HighsModelObject& highs_model_object,
 }
 
 void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
+  assert(highs_model_object.simplex_analysis_.analyse_simplex_data);
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -1090,7 +1088,6 @@ void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object) {
   primal_objective_value -= simplex_lp.offset_;
   printf("Offset objective value: %g\n", primal_objective_value);
 }
-#endif
 
 void initialiseSimplexLpDefinition(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status =
@@ -2173,8 +2170,8 @@ void initialiseCost(HighsModelObject& highs_model_object, int perturb) {
   }
 }
 
-#ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object) {
+  assert(highs_model_object.simplex_analysis_.analyse_simplex_time);  
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   SimplexTimer simplex_timer;
@@ -2219,7 +2216,6 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
     simplex_timer.reportSimplexPhasesClock(analysis.thread_simplex_clocks[0]);
   }
 }
-#endif
 
 void setRunQuiet(HighsModelObject& highs_model_object) {
   highs_model_object.simplex_info_.run_quiet =
@@ -2742,7 +2738,6 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
   bool use_row_price_w_switch;
   choosePriceTechnique(simplex_info.price_strategy, local_density,
                        use_col_price, use_row_price_w_switch);
-#ifdef HiGHSDEV
   if (simplex_info.analyse_iterations) {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
@@ -2760,7 +2755,6 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
       analysis.num_row_price++;
     }
   }
-#endif
   analysis.simplexTimerStart(PriceClock);
   row_ap.clear();
   if (use_col_price) {
@@ -2791,10 +2785,8 @@ void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
   const double local_row_ap_density = (double)row_ap.count / solver_num_col;
   analysis.updateOperationResultDensity(local_row_ap_density,
                                         analysis.row_ap_density);
-#ifdef HiGHSDEV
   if (simplex_info.analyse_iterations)
     analysis.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
-#endif
   analysis.simplexTimerStop(PriceClock);
 }
 
@@ -2836,18 +2828,14 @@ void computeDual(HighsModelObject& highs_model_object) {
     simplex_info.workDual_[i] = simplex_info.workCost_[i];
   if (dual_col.count) {
     // RHS of row dual calculation is nonzero
-#ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL,
                                      dual_col, analysis.dual_col_density);
-#endif
     factor.btran(dual_col, analysis.dual_col_density,
                  analysis.pointer_serial_factor_clocks);
-#ifdef HiGHSDEV
     if (simplex_info.analyse_iterations)
       analysis.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL,
                                     dual_col);
-#endif
     const double local_dual_col_density =
         (double)dual_col.count / simplex_lp.numRow_;
     analysis.updateOperationResultDensity(local_dual_col_density,

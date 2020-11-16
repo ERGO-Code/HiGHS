@@ -27,6 +27,10 @@
 #include "simplex/SimplexTimer.h"
 #include "util/HighsRandom.h"
 
+#ifdef OPENMP
+#include "omp.h"
+#endif
+
 // using std::cout;
 // using std::endl;
 

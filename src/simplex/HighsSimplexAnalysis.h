@@ -22,11 +22,10 @@
 #include "util/HighsTimer.h"
 #include "util/HighsUtils.h"
 
-#ifdef OPENMP
-#include "omp.h"
-#endif
+//#ifdef OPENMP
+//#include "omp.h"
+//#endif
 
-#ifdef HiGHSDEV
 enum ANALYSIS_OPERATION_TYPE {
   ANALYSIS_OPERATION_TYPE_BTRAN_FULL = 0,
   ANALYSIS_OPERATION_TYPE_PRICE_FULL,
@@ -39,7 +38,7 @@ enum ANALYSIS_OPERATION_TYPE {
   ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
   NUM_ANALYSIS_OPERATION_TYPE,
 };
-#endif
+
 enum TRAN_STAGE {
   TRAN_STAGE_FTRAN_LOWER = 0,
   TRAN_STAGE_FTRAN_UPPER_FT,
@@ -70,9 +69,9 @@ const double max_hyper_density = 0.1;
  */
 class HighsSimplexAnalysis {
  public:
-  HighsSimplexAnalysis(HighsTimer& timer) {
+  HighsSimplexAnalysis(HighsTimer& timer) : timer_reference(timer) {
     timer_ = &timer;
-#ifdef HiGHSDEV
+    /*
     int omp_max_threads = 1;
 #ifdef OPENMP
     omp_max_threads = omp_get_max_threads();
@@ -83,10 +82,16 @@ class HighsSimplexAnalysis {
       thread_factor_clocks.push_back(clock);
     }
     pointer_serial_factor_clocks = &thread_factor_clocks[0];
-#else
-    pointer_serial_factor_clocks = NULL;
-#endif
+    */
+    //#ifdef HiGHSDEV
+    //#else
+    //    pointer_serial_factor_clocks = NULL;
+    //#endif
   }
+  // Reference and pointer to timer
+  HighsTimer& timer_reference;
+  HighsTimer* timer_;
+
   void setup(const HighsLp& lp, const HighsOptions& options,
              const int simplex_iteration_count);
   void messaging(FILE* logfile_, FILE* output_, const int message_level_);
@@ -114,7 +119,6 @@ class HighsSimplexAnalysis {
 
   HighsTimerClock* getThreadFactorTimerClockPointer();
 
-  //#ifdef HiGHSDEV
   const std::vector<HighsTimerClock>& getThreadSimplexTimerClocks() {
     return thread_simplex_clocks;
   }
@@ -145,13 +149,9 @@ class HighsSimplexAnalysis {
   void reportFactorTimer();
   void updateInvertFormData(const HFactor& factor);
   void reportInvertFormData();
-  //#endif
 
-  HighsTimer* timer_;
-#ifdef HiGHSDEV
   std::vector<HighsTimerClock> thread_simplex_clocks;
   std::vector<HighsTimerClock> thread_factor_clocks;
-#endif
   HighsTimerClock* pointer_serial_factor_clocks;
 
   int numRow;
@@ -221,7 +221,6 @@ class HighsSimplexAnalysis {
   int num_row_price = 0;
   int num_row_price_with_switch = 0;
 
-#ifdef HiGHSDEV
   HighsValueDistribution before_ftran_upper_sparse_density;
   HighsValueDistribution ftran_upper_sparse_density;
   HighsValueDistribution before_ftran_upper_hyper_density;
@@ -232,7 +231,6 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_primal_step_distribution;
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
-#endif
 
   vector<double> original_start_density_tolerance;
   vector<double> new_start_density_tolerance;
@@ -245,7 +243,6 @@ class HighsSimplexAnalysis {
   void reportAlgorithmPhaseIterationObjective(const bool header,
                                               const int this_message_level);
   void reportInfeasibility(const bool header, const int this_message_level);
-#ifdef HiGHSDEV
   void reportThreads(const bool header, const int this_message_level);
   void reportMulti(const bool header, const int this_message_level);
   void reportOneDensity(const int this_message_level, const double density);
@@ -256,7 +253,6 @@ class HighsSimplexAnalysis {
   void reportIterationData(const bool header, const int this_message_level);
   void reportFreeListSize(const bool header, const int this_message_level);
   int intLog10(const double v);
-#endif
   bool dualAlgorithm();
 
   int AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
@@ -320,7 +316,6 @@ class HighsSimplexAnalysis {
   */
 
   int AnIterIt0 = 0;
-#ifdef HiGHSDEV
   int AnIterPrevIt;
 
   // Major operation analysis struct
@@ -361,7 +356,6 @@ class HighsSimplexAnalysis {
   HighsValueDistribution simplex_pivot_distribution;
   HighsValueDistribution numerical_trouble_distribution;
   HighsValueDistribution factor_pivot_threshold_distribution;
-#endif
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXANALYSIS_H_ */

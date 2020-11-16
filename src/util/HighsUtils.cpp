@@ -241,7 +241,6 @@ double highsRelativeDifference(const double v0, const double v1) {
   return fabs(v0 - v1) / std::max(v0, std::max(v1, 1.0));
 }
 
-#ifdef HiGHSDEV
 void analyseVectorValues(const char* message, int vecDim,
                          const std::vector<double>& vec, bool analyseValueList,
                          std::string model_name) {
@@ -729,7 +728,6 @@ bool printValueDistribution(const HighsValueDistribution& value_distribution,
            sum_count);
   return true;
 }
-#endif
 
 bool initialiseScatterData(const int max_num_point,
                            HighsScatterData& scatter_data) {

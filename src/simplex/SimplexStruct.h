@@ -149,10 +149,8 @@ struct HighsSimplexInfo {
   // Internal options - can't be changed externally
   bool run_quiet = false;
   bool store_squared_primal_infeasibility = false;
-#ifndef HiGHSDEV
-  bool analyse_lp_solution = false;  // true;//
-#else
-  bool analyse_lp_solution = true;
+
+  //  bool analyse_lp_solution = true;
   // Options for reporting timing
   bool report_simplex_inner_clock = false;
   bool report_simplex_outer_clock = false;
@@ -163,10 +161,11 @@ struct HighsSimplexInfo {
   bool analyse_lp = false;
   bool analyse_iterations = false;
   bool analyse_invert_form = false;
-  bool analyse_invert_condition = false;
-  bool analyse_invert_time = false;
-  bool analyse_rebuild_time = false;
-#endif
+  //  bool analyse_invert_condition = false;
+  //  bool analyse_invert_time = false;
+  //  bool analyse_rebuild_time = false;
+
+
   // Simplex runtime information
   bool allow_cost_perturbation = true;
   bool costs_perturbed = false;

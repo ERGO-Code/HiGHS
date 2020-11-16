@@ -1718,7 +1718,6 @@ void reportMatrix(const HighsOptions& options, const std::string message,
                     "             Start   %10d\n", num_nz);
 }
 
-#ifdef HiGHSDEV
 void analyseLp(const HighsLp& lp, const std::string message) {
   vector<double> min_colBound;
   vector<double> min_rowBound;
@@ -1754,7 +1753,6 @@ void analyseLp(const HighsLp& lp, const std::string message) {
   analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
   analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
-#endif
 
 void writeSolutionToFile(FILE* file, const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution, const bool pretty) {
