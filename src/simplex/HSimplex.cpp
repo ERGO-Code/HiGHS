@@ -256,11 +256,11 @@ int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
       analyseLp(simplex_lp, "Unscaled");
       HighsScale& scale = highs_model_object.scale_;
       if (scale.is_scaled_) {
-	analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
-			    scale.col_);
-	analyseVectorValues("Row    scaling factors", simplex_lp.numRow_,
-			    scale.row_);
-	analyseLp(simplex_lp, "Scaled");
+        analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
+                            scale.col_);
+        analyseVectorValues("Row    scaling factors", simplex_lp.numRow_,
+                            scale.row_);
+        analyseLp(simplex_lp, "Scaled");
       }
     }
   }
@@ -2171,7 +2171,7 @@ void initialiseCost(HighsModelObject& highs_model_object, int perturb) {
 }
 
 void reportSimplexProfiling(HighsModelObject& highs_model_object) {
-  assert(highs_model_object.simplex_analysis_.analyse_simplex_time);  
+  assert(highs_model_object.simplex_analysis_.analyse_simplex_time);
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
   SimplexTimer simplex_timer;

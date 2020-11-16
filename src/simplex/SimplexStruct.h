@@ -165,7 +165,6 @@ struct HighsSimplexInfo {
   //  bool analyse_invert_time = false;
   //  bool analyse_rebuild_time = false;
 
-
   // Simplex runtime information
   bool allow_cost_perturbation = true;
   bool costs_perturbed = false;

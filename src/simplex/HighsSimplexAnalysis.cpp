@@ -188,29 +188,29 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     for (int k = 0; k < NUM_ANALYSIS_OPERATION_TYPE; k++) {
       AnIter = &AnIterOp[k];
       if ((k == ANALYSIS_OPERATION_TYPE_PRICE_AP) ||
-	  (k == ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE) ||
-	  (k == ANALYSIS_OPERATION_TYPE_PRICE_FULL)) {
-	AnIter->AnIterOpHyperCANCEL = 1.0;
-	AnIter->AnIterOpHyperTRAN = 1.0;
-	AnIter->AnIterOpRsDim = numCol;
+          (k == ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE) ||
+          (k == ANALYSIS_OPERATION_TYPE_PRICE_FULL)) {
+        AnIter->AnIterOpHyperCANCEL = 1.0;
+        AnIter->AnIterOpHyperTRAN = 1.0;
+        AnIter->AnIterOpRsDim = numCol;
       } else {
-	if ((k == ANALYSIS_OPERATION_TYPE_BTRAN_EP) ||
-	    (k == ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE) ||
-	    (k == ANALYSIS_OPERATION_TYPE_BTRAN_FULL)) {
-	  AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
-	  AnIter->AnIterOpHyperTRAN = hyperBTRANU;
-	} else {
-	  AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
-	  AnIter->AnIterOpHyperTRAN = hyperFTRANL;
-	}
-	AnIter->AnIterOpRsDim = numRow;
+        if ((k == ANALYSIS_OPERATION_TYPE_BTRAN_EP) ||
+            (k == ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE) ||
+            (k == ANALYSIS_OPERATION_TYPE_BTRAN_FULL)) {
+          AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
+          AnIter->AnIterOpHyperTRAN = hyperBTRANU;
+        } else {
+          AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
+          AnIter->AnIterOpHyperTRAN = hyperFTRANL;
+        }
+        AnIter->AnIterOpRsDim = numRow;
       }
       AnIter->AnIterOpNumCa = 0;
       AnIter->AnIterOpNumHyperOp = 0;
       AnIter->AnIterOpNumHyperRs = 0;
       AnIter->AnIterOpSumLog10RsDensity = 0;
       initialiseValueDistribution("", "density ", 1e-8, 1.0, 10.0,
-				  AnIter->AnIterOp_density);
+                                  AnIter->AnIterOp_density);
     }
     int last_rebuild_reason = REBUILD_REASON_Count - 1;
     for (int k = 1; k <= last_rebuild_reason; k++) AnIterNumInvert[k] = 0;
@@ -218,44 +218,45 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     num_row_price = 0;
     num_row_price_with_switch = 0;
     int last_dual_edge_weight_mode = (int)DualEdgeWeightMode::STEEPEST_EDGE;
-    for (int k = 0; k <= last_dual_edge_weight_mode; k++) AnIterNumEdWtIt[k] = 0;
+    for (int k = 0; k <= last_dual_edge_weight_mode; k++)
+      AnIterNumEdWtIt[k] = 0;
     AnIterTraceNumRec = 0;
     AnIterTraceIterDl = 1;
     AnIterTraceRec* lcAnIter = &AnIterTrace[0];
     lcAnIter->AnIterTraceIter = AnIterIt0;
     lcAnIter->AnIterTraceTime = timer_->getWallTime();
     initialiseValueDistribution("Primal step summary", "", 1e-16, 1e16, 10.0,
-				primal_step_distribution);
+                                primal_step_distribution);
     initialiseValueDistribution("Dual step summary", "", 1e-16, 1e16, 10.0,
-				dual_step_distribution);
+                                dual_step_distribution);
     initialiseValueDistribution("Simplex pivot summary", "", 1e-8, 1e16, 10.0,
-				simplex_pivot_distribution);
+                                simplex_pivot_distribution);
     initialiseValueDistribution("Factor pivot threshold summary", "",
-				min_pivot_threshold, max_pivot_threshold,
-				pivot_threshold_change_factor,
-				factor_pivot_threshold_distribution);
-    initialiseValueDistribution("Numerical trouble summary", "", 1e-16, 1.0, 10.0,
-				numerical_trouble_distribution);
+                                min_pivot_threshold, max_pivot_threshold,
+                                pivot_threshold_change_factor,
+                                factor_pivot_threshold_distribution);
+    initialiseValueDistribution("Numerical trouble summary", "", 1e-16, 1.0,
+                                10.0, numerical_trouble_distribution);
     initialiseValueDistribution("", "1 ", 1e-16, 1e16, 10.0,
-				cost_perturbation1_distribution);
+                                cost_perturbation1_distribution);
     initialiseValueDistribution("", "2 ", 1e-16, 1e16, 10.0,
-				cost_perturbation2_distribution);
+                                cost_perturbation2_distribution);
     initialiseValueDistribution("FTRAN upper sparse summary - before", "", 1e-8,
-				1.0, 10.0, before_ftran_upper_sparse_density);
+                                1.0, 10.0, before_ftran_upper_sparse_density);
     initialiseValueDistribution("FTRAN upper sparse summary - after", "", 1e-8,
-				1.0, 10.0, before_ftran_upper_hyper_density);
+                                1.0, 10.0, before_ftran_upper_hyper_density);
     initialiseValueDistribution("FTRAN upper hyper-sparse summary - before", "",
-				1e-8, 1.0, 10.0, ftran_upper_sparse_density);
+                                1e-8, 1.0, 10.0, ftran_upper_sparse_density);
     initialiseValueDistribution("FTRAN upper hyper-sparse summary - after", "",
-				1e-8, 1.0, 10.0, ftran_upper_hyper_density);
+                                1e-8, 1.0, 10.0, ftran_upper_hyper_density);
     initialiseValueDistribution("Cleanup dual change summary", "", 1e-16, 1e16,
-				10.0, cleanup_dual_change_distribution);
-    initialiseValueDistribution("Cleanup primal change summary", "", 1e-16, 1e16,
-				10.0, cleanup_primal_step_distribution);
+                                10.0, cleanup_dual_change_distribution);
+    initialiseValueDistribution("Cleanup primal change summary", "", 1e-16,
+                                1e16, 10.0, cleanup_primal_step_distribution);
     initialiseValueDistribution("Cleanup primal step summary", "", 1e-16, 1e16,
-				10.0, cleanup_primal_change_distribution);
+                                10.0, cleanup_primal_change_distribution);
     initialiseValueDistribution("Cleanup dual step summary", "", 1e-16, 1e16,
-				10.0, cleanup_dual_step_distribution);
+                                10.0, cleanup_dual_step_distribution);
   }
 
   if (analyse_simplex_time) {
@@ -320,7 +321,7 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
     }
     reportDensity(header, invert_report_message_level);
     reportInvert(header, invert_report_message_level);
-  //  reportCondition(header, invert_report_message_level);
+    //  reportCondition(header, invert_report_message_level);
   }
   reportInfeasibility(header, invert_report_message_level);
   HighsPrintMessage(output, message_level, invert_report_message_level, "\n");
@@ -388,23 +389,24 @@ void HighsSimplexAnalysis::dualSteepestEdgeWeightError(
     const bool report_weight_error = false;
     if (report_weight_error && weight_error > 0.5 * weight_error_threshold) {
       printf(
-	     "DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - "
-	     "%s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g "
-	     "%10.4g %10.4g %10.4g %10.4g %10.4g\n",
-	     simplex_iteration_count, accept_weight,
-	     num_dual_steepest_edge_weight_check,
-	     num_dual_steepest_edge_weight_reject, computed_edge_weight,
-	     updated_edge_weight, weight_error, error_type.c_str(),
-	     average_frequency_low_dual_steepest_edge_weight,
-	     average_log_low_dual_steepest_edge_weight_error,
-	     average_frequency_high_dual_steepest_edge_weight,
-	     average_log_high_dual_steepest_edge_weight_error,
-	     max_average_frequency_low_dual_steepest_edge_weight,
-	     max_average_frequency_high_dual_steepest_edge_weight,
-	     max_sum_average_frequency_extreme_dual_steepest_edge_weight,
-	     max_average_log_low_dual_steepest_edge_weight_error,
-	     max_average_log_high_dual_steepest_edge_weight_error,
-	     max_sum_average_log_extreme_dual_steepest_edge_weight_error);
+          "DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g "
+          "- "
+          "%s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g "
+          "%10.4g %10.4g %10.4g %10.4g %10.4g\n",
+          simplex_iteration_count, accept_weight,
+          num_dual_steepest_edge_weight_check,
+          num_dual_steepest_edge_weight_reject, computed_edge_weight,
+          updated_edge_weight, weight_error, error_type.c_str(),
+          average_frequency_low_dual_steepest_edge_weight,
+          average_log_low_dual_steepest_edge_weight_error,
+          average_frequency_high_dual_steepest_edge_weight,
+          average_log_high_dual_steepest_edge_weight_error,
+          max_average_frequency_low_dual_steepest_edge_weight,
+          max_average_frequency_high_dual_steepest_edge_weight,
+          max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+          max_average_log_low_dual_steepest_edge_weight_error,
+          max_average_log_high_dual_steepest_edge_weight_error,
+          max_sum_average_log_extreme_dual_steepest_edge_weight_error);
     }
   }
 }
@@ -444,7 +446,6 @@ bool HighsSimplexAnalysis::switchToDevex() {
           AnIterNumCostlyDseIt, lcNumIter, col_aq_density, row_ep_density,
           row_ap_density, row_DSE_density);
     }
-
   }
   if (!switch_to_devex) {
     // Secondly consider switching on the basis of weight accuracy
@@ -592,23 +593,25 @@ bool HighsSimplexAnalysis::simplexTimerRunning(const int simplex_clock,
                                                const int thread_id) {
   if (!analyse_simplex_time) return false;
   // assert(analyse_simplex_time);
-  return thread_simplex_clocks[thread_id].timer_
-          .clock_start[thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
+  return thread_simplex_clocks[thread_id].timer_.clock_start
+             [thread_simplex_clocks[thread_id].clock_[simplex_clock]] < 0;
 }
 
 int HighsSimplexAnalysis::simplexTimerNumCall(const int simplex_clock,
                                               const int thread_id) {
   if (!analyse_simplex_time) return -1;
   // assert(analyse_simplex_time);
-  return thread_simplex_clocks[thread_id].timer_.clock_num_call
-                 [thread_simplex_clocks[thread_id].clock_[simplex_clock]];
+  return thread_simplex_clocks[thread_id]
+      .timer_
+      .clock_num_call[thread_simplex_clocks[thread_id].clock_[simplex_clock]];
 }
 
 double HighsSimplexAnalysis::simplexTimerRead(const int simplex_clock,
                                               const int thread_id) {
   if (!analyse_simplex_time) return -1.0;
   // assert(analyse_simplex_time);
-  return thread_simplex_clocks[thread_id].timer_.read(thread_simplex_clocks[thread_id].clock_[simplex_clock]);
+  return thread_simplex_clocks[thread_id].timer_.read(
+      thread_simplex_clocks[thread_id].clock_[simplex_clock]);
 }
 
 HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {

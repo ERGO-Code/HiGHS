@@ -181,6 +181,5 @@ class FactorTimer {
     reportFactorLevel1Clock(factor_timer_clock);
     reportFactorLevel2Clock(factor_timer_clock);
   }
-
 };
 #endif /* SIMPLEX_FACTORTIMER_H_ */
