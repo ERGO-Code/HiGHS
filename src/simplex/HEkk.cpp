@@ -31,21 +31,22 @@
 // using std::endl;
 
 HighsStatus HEkk::passLp(const HighsLp& lp) {
+  HighsStatus return_status = HighsStatus::OK;
+  HighsStatus call_status;
   
-  //  if (assessLp(lp, options_) == HighsStatus::Error) return HighsStatus::Error;
   simplex_lp_ = lp;
+  // Shouldn't have to check the incoming LP since this is an internal
+  // call, but it may be an LP that's set up internally with errors
+  // :-) ...
+  if (options_.highs_debug_level > HIGHS_DEBUG_LEVEL_NONE) {
+    // ... so, if debugging, check the LP.
+    call_status = assessLp(simplex_lp_, options_);
+    return_status =
+      interpretCallStatus(call_status, return_status, "assessLp");
+    if (return_status == HighsStatus::Error) return return_status;
+  }
   initialiseForNewLp();
-  return HighsStatus::OK;
-}
-
-HighsStatus HEkk::initialiseSimplexLpBasisAndFactor() {
-  setSimplexOptions();
-  initialiseSimplexLpRandomVectors();
-  setBasis();
-  const int rank_deficiency = getFactor();
-  if (rank_deficiency) return HighsStatus::Error;
-  setNonbasicMove();
-  simplex_lp_status_.has_basis = true;
+  initialiseAnalysis();
   return HighsStatus::OK;
 }
 
@@ -157,11 +158,18 @@ HighsSolutionParams HEkk::getSolutionParams() {
 // Private methods
 
 void HEkk::initialiseForNewLp() {
+  setSimplexOptions();
+  initialiseSimplexLpRandomVectors();
+  setBasis();
+  simplex_lp_status_.initialised = true;
 }
 
 HighsStatus HEkk::initialiseForSolve() {
-  if (initialiseSimplexLpBasisAndFactor() == HighsStatus::Error)
-    return HighsStatus::Error;
+  const int rank_deficiency = getFactor();
+  if (rank_deficiency) return HighsStatus::Error;
+  setNonbasicMove();
+  simplex_lp_status_.has_basis = true;
+
   initialiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
@@ -203,10 +211,10 @@ void HEkk::setSimplexOptions() {
   simplex_info_.store_squared_primal_infeasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = false;  // true;  //
+  bool useful_analysis = true;  //false;  // 
   bool full_timing = false;
   // Options for reporting timing
-  simplex_info_.report_simplex_inner_clock = false;  // useful_analysis;  //
+  simplex_info_.report_simplex_inner_clock = useful_analysis; 
   simplex_info_.report_simplex_outer_clock = full_timing;
   simplex_info_.report_simplex_phases_clock = full_timing;
   simplex_info_.report_HFactor_clock = useful_analysis;  // full_timing;//
@@ -359,7 +367,7 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   }
 }
 
-bool HEkk::setBasis() {
+void HEkk::setBasis() {
   int num_col = simplex_lp_.numCol_;
   int num_row = simplex_lp_.numRow_;
   int num_tot = num_col + num_row;
@@ -375,7 +383,6 @@ bool HEkk::setBasis() {
   }
   simplex_info_.num_basic_logicals = num_row;
   simplex_lp_status_.has_basis = true;
-  return true;
 }
 
 int HEkk::getFactor() {

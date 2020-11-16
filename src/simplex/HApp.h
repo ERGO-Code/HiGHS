@@ -81,7 +81,7 @@ HighsStatus runHmoSimplexSolver(HighsModelObject& highs_model_object) {
   FILE* logfile = highs_model_object.options_.logfile;
 
   // Assumes that the LP has a positive number of rows, since
-  // unconstrained LPs should be solved in solveLpSimplex
+  // unconstrained LPs should be solved in solveLp
   bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
   assert(positive_num_row);
   if (!positive_num_row) {
@@ -110,12 +110,10 @@ HighsStatus runHmoSimplexSolver(HighsModelObject& highs_model_object) {
     // Initialise the phase iteration count data
     reportSimplexPhaseIterations(logfile, ekk.iteration_count_,
                                  ekk.simplex_info_, true);
+    ekk.passLp(highs_model_object.simplex_lp_);
 #ifdef HiGHSDEV
     ekk.analysis_.simplexTimerStart(SimplexTotalClock);
 #endif
-    // Include the time for passLp since it includes timed simplex
-    // components called by ekk.initialise()
-    ekk.passLp(highs_model_object.simplex_lp_);
     call_status = ekk.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkk::solve");
@@ -175,7 +173,9 @@ HighsStatus runHmoSimplexSolver(HighsModelObject& highs_model_object) {
       simplex_timer.reportSimplexInnerClock(
           ekk.analysis_.thread_simplex_clocks[0]);
     }
-    analysis.simplexTimerStop(SimplexTotalClock);
+    if (simplex_info.report_HFactor_clock) ekk.analysis_.reportFactorTimer();
+    if (simplex_info.analyse_iterations) ekk.analysis_.summaryReport();
+    ekk.analysis_.summaryReportFactor();
 #endif
     if (simplex_info.num_primal_infeasibilities) {
       // Have primal infeasibilities to clean up
@@ -542,16 +542,28 @@ HighsStatus solveLpHmoSimplex(HighsModelObject& highs_model_object) {
 
 HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
-  HighsStatus call_status;
+  //  HighsStatus call_status;
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HighsOptions& options = highs_model_object.options_;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
 
-  // Initialise simplex LP options and control if it's not been done
-  
   assert(!simplex_lp_status.initialised);
    
-
+  // Assumes that the LP has a positive number of rows, since
+  // unconstrained LPs should be solved in solveLpSimplex
+  bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
+  assert(positive_num_row);
+  if (!positive_num_row) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "solveLpEkkSimplex called for LP with non-positive (%d) "
+                    "number of constraints",
+                    highs_model_object.lp_.numRow_);
+    return HighsStatus::Error;
+  }
+  // Reset the model status and solution parameter for the unscaled LP
+  // - to check that they are set later
   resetModelStatusAndSolutionParams(highs_model_object);
+  
 
   return_status = HighsStatus::Error;
   return return_status;

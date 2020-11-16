@@ -35,7 +35,6 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   if (return_status == HighsStatus::Error) return return_status;
 
   // If the LP has no columns there is nothing left to test
-  // NB assessLpDimensions returns HighsStatus::Error if lp.numCol_ < 0
   if (lp.numCol_ == 0) return HighsStatus::OK;
 
   // From here, any LP has lp.numCol_ > 0 and lp.Astart_[lp.numCol_] exists (as

@@ -24,9 +24,7 @@
 class HEkk {
  public:
   HEkk(HighsOptions& options, HighsTimer& timer)
-      : options_(options), timer_(timer), analysis_(timer) {
-    initialiseAnalysis();
-  }
+      : options_(options), timer_(timer), analysis_(timer) {}
   /**
    * @brief Interface to simplex solvers
    */
@@ -68,7 +66,7 @@ class HEkk {
   HighsStatus initialiseForSolve();
   void setSimplexOptions();
   void initialiseSimplexLpRandomVectors();
-  bool setBasis();
+  void setBasis();
   void setNonbasicMove();
   int getFactor();
   void computePrimalObjectiveValue();
