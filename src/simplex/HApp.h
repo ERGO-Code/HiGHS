@@ -167,16 +167,10 @@ HighsStatus runHmoSimplexSolver(HighsModelObject& highs_model_object) {
     // Use this since data in Ekk now computed without max function
     computeSimplexInfeasible(highs_model_object);
     copySimplexInfeasible(highs_model_object);
-#ifdef HiGHSDEV
-    if (simplex_info.report_simplex_inner_clock) {
-      SimplexTimer simplex_timer;
-      simplex_timer.reportSimplexInnerClock(
-          ekk.analysis_.thread_simplex_clocks[0]);
-    }
-    if (simplex_info.report_HFactor_clock) ekk.analysis_.reportFactorTimer();
-    if (simplex_info.analyse_iterations) ekk.analysis_.summaryReport();
-    ekk.analysis_.summaryReportFactor();
-#endif
+    if (ekk.analysis_.analyse_simplex_time) ekk.analysis_.reportSimplexTimer();
+    if (ekk.analysis_.analyse_factor_time) ekk.analysis_.reportFactorTimer();
+    if (ekk.analysis_.analyse_simplex_data) ekk.analysis_.summaryReport();
+    if (ekk.analysis_.analyse_factor_data) ekk.analysis_.summaryReportFactor();
     if (simplex_info.num_primal_infeasibilities) {
       // Have primal infeasibilities to clean up
       printf(

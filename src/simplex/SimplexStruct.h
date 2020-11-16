@@ -144,6 +144,9 @@ struct HighsSimplexInfo {
   double factor_pivot_threshold;
   int update_limit;
 
+  // Simplex control parameters from HSA
+  
+
   // Internal options - can't be changed externally
   bool run_quiet = false;
   bool store_squared_primal_infeasibility = false;
@@ -234,14 +237,6 @@ struct HighsSimplexInfo {
   double invert_condition = 1;
 #endif
 
-  /*
-#ifdef HiGHSDEV
-  // Move this to Simplex class once it's created
-  vector<int> historyVariable_In;
-  vector<int> historyVariable_Out;
-  vector<double> historyAlpha;
-#endif
-  */
 };
 
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */

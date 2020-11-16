@@ -26,6 +26,13 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   numRow = lp.numRow_;
   numCol = lp.numCol_;
   numTot = numRow + numCol;
+  // Set up analysis logic short-cuts
+  analyse_lp_data = HIGHS_ANALYSIS_LEVEL_MODEL_DATA & options.highs_analysis_level;
+  analyse_simplex_data = HIGHS_ANALYSIS_LEVEL_SOLVER_DATA & options.highs_analysis_level;
+  analyse_simplex_time = HIGHS_ANALYSIS_LEVEL_SOLVER_TIME & options.highs_analysis_level;
+  analyse_factor_data = HIGHS_ANALYSIS_LEVEL_NLA_DATA & options.highs_analysis_level;
+  analyse_factor_time = HIGHS_ANALYSIS_LEVEL_NLA_TIME & options.highs_analysis_level;
+  
   // Copy tolerances from options
   allow_dual_steepest_edge_to_devex_switch =
       options.simplex_dual_edge_weight_strategy ==
@@ -136,14 +143,18 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
     factor_timer.initialiseFactorClocks(clock);
 
   AnIterOpRec* AnIter;
-  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
-  AnIter->AnIterOpName = "BTRAN e_p";
-  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_AP];
-  AnIter->AnIterOpName = "PRICE a_p";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_FULL];
   AnIter->AnIterOpName = "BTRAN Full";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_FULL];
   AnIter->AnIterOpName = "PRICE Full";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE];
+  AnIter->AnIterOpName = "BTRAN BcFsCg";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE];
+  AnIter->AnIterOpName = "PRICE BcFsCg";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_BTRAN_EP];
+  AnIter->AnIterOpName = "BTRAN e_p";
+  AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_PRICE_AP];
+  AnIter->AnIterOpName = "PRICE a_p";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN];
   AnIter->AnIterOpName = "FTRAN";
   AnIter = &AnIterOp[ANALYSIS_OPERATION_TYPE_FTRAN_BFRT];
@@ -534,28 +545,6 @@ void HighsSimplexAnalysis::afterTranStage(
   regressScatterData(stage.rhs_density_);
 }
 
-void HighsSimplexAnalysis::summaryReportFactor() {
-  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE;
-       tran_stage_type++) {
-    TranStageAnalysis& stage = tran_stage[tran_stage_type];
-    //    printScatterData(stage.name_, stage.rhs_density_);
-    printScatterDataRegressionComparison(stage.name_, stage.rhs_density_);
-    if (!stage.num_decision_) return;
-    printf("Of %10d Sps/Hyper decisions made using regression:\n",
-           stage.num_decision_);
-    printf(
-        "   %10d wrong sparseTRAN; %10d wrong hyperTRAN: using original "
-        "logic\n",
-        stage.num_wrong_original_sparse_decision_,
-        stage.num_wrong_original_hyper_decision_);
-    printf(
-        "   %10d wrong sparseTRAN; %10d wrong hyperTRAN: using new      "
-        "logic\n",
-        stage.num_wrong_new_sparse_decision_,
-        stage.num_wrong_new_hyper_decision_);
-  }
-}
-
 void HighsSimplexAnalysis::simplexTimerStart(const int simplex_clock,
                                              const int thread_id) {
 #ifdef HiGHSDEV
@@ -618,40 +607,6 @@ HighsTimerClock* HighsSimplexAnalysis::getThreadFactorTimerClockPointer() {
 }
 
 #ifdef HiGHSDEV
-void HighsSimplexAnalysis::reportFactorTimer() {
-  FactorTimer factor_timer;
-  int omp_max_threads = 1;
-#ifdef OPENMP
-  omp_max_threads = omp_get_max_threads();
-#endif
-  for (int i = 0; i < omp_max_threads; i++) {
-    //  for (HighsTimerClock clock : thread_factor_clocks) {
-    printf("reportFactorTimer: HFactor clocks for OMP thread %d / %d\n", i,
-           omp_max_threads - 1);
-    factor_timer.reportFactorClock(thread_factor_clocks[i]);
-  }
-  if (omp_max_threads > 1) {
-    HighsTimer& timer = thread_factor_clocks[0].timer_;
-    HighsTimerClock all_factor_clocks(timer);
-    vector<int>& clock = all_factor_clocks.clock_;
-    factor_timer.initialiseFactorClocks(all_factor_clocks);
-    for (int i = 0; i < omp_max_threads; i++) {
-      vector<int>& thread_clock = thread_factor_clocks[i].clock_;
-      for (int clock_id = 0; clock_id < FactorNumClock; clock_id++) {
-        int all_factor_iClock = clock[clock_id];
-        int thread_factor_iClock = thread_clock[clock_id];
-        timer.clock_num_call[all_factor_iClock] +=
-            timer.clock_num_call[thread_factor_iClock];
-        timer.clock_time[all_factor_iClock] +=
-            timer.clock_time[thread_factor_iClock];
-      }
-    }
-    printf("reportFactorTimer: HFactor clocks for all %d threads\n",
-           omp_max_threads);
-    factor_timer.reportFactorClock(all_factor_clocks);
-  }
-}
-
 void HighsSimplexAnalysis::iterationRecord() {
   int AnIterCuIt = simplex_iteration_count;
   if (rebuild_reason > 0) AnIterNumInvert[rebuild_reason]++;
@@ -1049,6 +1004,67 @@ void HighsSimplexAnalysis::summaryReport() {
   }
 }
 #endif
+
+void HighsSimplexAnalysis::summaryReportFactor() {
+  for (int tran_stage_type = 0; tran_stage_type < NUM_TRAN_STAGE_TYPE;
+       tran_stage_type++) {
+    TranStageAnalysis& stage = tran_stage[tran_stage_type];
+    //    printScatterData(stage.name_, stage.rhs_density_);
+    printScatterDataRegressionComparison(stage.name_, stage.rhs_density_);
+    if (!stage.num_decision_) return;
+    printf("Of %10d Sps/Hyper decisions made using regression:\n",
+           stage.num_decision_);
+    printf(
+        "   %10d wrong sparseTRAN; %10d wrong hyperTRAN: using original "
+        "logic\n",
+        stage.num_wrong_original_sparse_decision_,
+        stage.num_wrong_original_hyper_decision_);
+    printf(
+        "   %10d wrong sparseTRAN; %10d wrong hyperTRAN: using new      "
+        "logic\n",
+        stage.num_wrong_new_sparse_decision_,
+        stage.num_wrong_new_hyper_decision_);
+  }
+}
+
+void HighsSimplexAnalysis::reportSimplexTimer() {
+  SimplexTimer simplex_timer;
+  simplex_timer.reportSimplexInnerClock(thread_simplex_clocks[0]);
+}
+
+void HighsSimplexAnalysis::reportFactorTimer() {
+  FactorTimer factor_timer;
+  int omp_max_threads = 1;
+#ifdef OPENMP
+  omp_max_threads = omp_get_max_threads();
+#endif
+  for (int i = 0; i < omp_max_threads; i++) {
+    //  for (HighsTimerClock clock : thread_factor_clocks) {
+    printf("reportFactorTimer: HFactor clocks for OMP thread %d / %d\n", i,
+           omp_max_threads - 1);
+    factor_timer.reportFactorClock(thread_factor_clocks[i]);
+  }
+  if (omp_max_threads > 1) {
+    HighsTimer& timer = thread_factor_clocks[0].timer_;
+    HighsTimerClock all_factor_clocks(timer);
+    vector<int>& clock = all_factor_clocks.clock_;
+    factor_timer.initialiseFactorClocks(all_factor_clocks);
+    for (int i = 0; i < omp_max_threads; i++) {
+      vector<int>& thread_clock = thread_factor_clocks[i].clock_;
+      for (int clock_id = 0; clock_id < FactorNumClock; clock_id++) {
+        int all_factor_iClock = clock[clock_id];
+        int thread_factor_iClock = thread_clock[clock_id];
+        timer.clock_num_call[all_factor_iClock] +=
+            timer.clock_num_call[thread_factor_iClock];
+        timer.clock_time[all_factor_iClock] +=
+            timer.clock_time[thread_factor_iClock];
+      }
+    }
+    printf("reportFactorTimer: HFactor clocks for all %d threads\n",
+           omp_max_threads);
+    factor_timer.reportFactorClock(all_factor_clocks);
+  }
+}
 
 void HighsSimplexAnalysis::iterationReport(const bool header) {
   if (!(iteration_report_message_level & message_level)) return;

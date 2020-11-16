@@ -105,7 +105,6 @@ class HighsSimplexAnalysis {
                       const double predicted_end_density,
                       const bool use_solve_sparse_original_HFactor_logic,
                       const bool use_solve_sparse_new_HFactor_logic);
-  void summaryReportFactor();
 
   void simplexTimerStart(const int simplex_clock, const int thread_id = 0);
   void simplexTimerStop(const int simplex_clock, const int thread_id = 0);
@@ -115,7 +114,7 @@ class HighsSimplexAnalysis {
 
   HighsTimerClock* getThreadFactorTimerClockPointer();
 
-#ifdef HiGHSDEV
+  //#ifdef HiGHSDEV
   const std::vector<HighsTimerClock>& getThreadSimplexTimerClocks() {
     return thread_simplex_clocks;
   }
@@ -132,7 +131,6 @@ class HighsSimplexAnalysis {
     return &thread_factor_clocks[i];
   }
 
-  void reportFactorTimer();
   void iterationRecord();
   void iterationRecordMajor();
   void operationRecordBefore(const int operation_type, const HVector& vector,
@@ -142,7 +140,10 @@ class HighsSimplexAnalysis {
   void operationRecordAfter(const int operation_type, const HVector& vector);
   void operationRecordAfter(const int operation_type, const int result_count);
   void summaryReport();
-#endif
+  void summaryReportFactor();
+  void reportSimplexTimer();
+  void reportFactorTimer();
+  //#endif
 
   HighsTimer* timer_;
 #ifdef HiGHSDEV
@@ -154,6 +155,11 @@ class HighsSimplexAnalysis {
   int numRow;
   int numCol;
   int numTot;
+  bool analyse_lp_data;
+  bool analyse_simplex_data;
+  bool analyse_simplex_time;
+  bool analyse_factor_data;
+  bool analyse_factor_time;
   bool allow_dual_steepest_edge_to_devex_switch;
   double dual_steepest_edge_weight_log_error_threshold;
   FILE* logfile;

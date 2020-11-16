@@ -211,7 +211,7 @@ void HEkk::setSimplexOptions() {
   simplex_info_.store_squared_primal_infeasibility = true;
   // Option for analysing the LP solution
 #ifdef HiGHSDEV
-  bool useful_analysis = true;  //false;  // 
+  bool useful_analysis = false;  //false;  // 
   bool full_timing = false;
   // Options for reporting timing
   simplex_info_.report_simplex_inner_clock = useful_analysis; 
@@ -1034,14 +1034,14 @@ void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
   col_aq.packFlag = true;
   matrix_.collect_aj(col_aq, iCol, 1);
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
                                     analysis_.col_aq_density);
 #endif
   factor_.ftran(col_aq, analysis_.col_aq_density,
                 analysis_.pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
 #endif
   int num_row = simplex_lp_.numRow_;
@@ -1059,14 +1059,14 @@ void HEkk::unitBtran(const int iRow, HVector& row_ep) {
   row_ep.array[iRow] = 1;
   row_ep.packFlag = true;
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                     analysis_.row_ep_density);
 #endif
   factor_.btran(row_ep, analysis_.row_ep_density,
                 analysis_.pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
   int num_row = simplex_lp_.numRow_;
@@ -1083,14 +1083,14 @@ void HEkk::fullBtran(HVector& buffer) {
   // isn't known.
   analysis_.simplexTimerStart(BtranFullClock);
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (analysis_.analyse_simplex_data)
     analysis_.operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer,
                                     analysis_.dual_col_density);
 #endif
   factor_.btran(buffer, analysis_.dual_col_density,
                 analysis_.pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_FULL, buffer);
 #endif
   const double local_dual_col_density =
@@ -1126,7 +1126,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   choosePriceTechnique(simplex_info_.price_strategy, local_density,
                        use_col_price, use_row_price_w_switch);
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations) {
+  if (analysis_.analyse_simplex_data) {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
       analysis_.operationRecordBefore(
@@ -1171,7 +1171,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   analysis_.updateOperationResultDensity(local_row_ap_density,
                                          analysis_.row_ap_density);
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
 #endif
   analysis_.simplexTimerStop(PriceClock);
@@ -1181,7 +1181,7 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
   analysis_.simplexTimerStart(PriceFullClock);
   full_row.clear();
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations) {
+  if (analysis_.analyse_simplex_data) {
     const double historical_density_for_non_hypersparse_operation = 1;
     analysis_.operationRecordBefore(
         ANALYSIS_OPERATION_TYPE_PRICE_FULL, full_col,
@@ -1190,7 +1190,7 @@ void HEkk::fullPrice(const HVector& full_col, HVector& full_row) {
 #endif
   matrix_.priceByColumn(full_row, full_col);
 #ifdef HiGHSDEV
-  if (simplex_info_.analyse_iterations)
+  if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_FULL,
                                    full_row);
 #endif

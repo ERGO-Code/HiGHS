@@ -1289,8 +1289,7 @@ void HEkkDual::chooseRow() {
     row_ep.array[row_out] = 1;
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
-    HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-    if (simplex_info.analyse_iterations)
+    if (analysis->analyse_simplex_data)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep,
                                       analysis->row_ep_density);
 #endif
@@ -1298,7 +1297,7 @@ void HEkkDual::chooseRow() {
     factor->btran(row_ep, analysis->row_ep_density,
                   analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-    if (simplex_info.analyse_iterations)
+    if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP, row_ep);
 #endif
     analysis->simplexTimerStop(BtranClock);
@@ -1488,7 +1487,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
                        use_col_price, use_row_price_w_switch);
 
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations) {
+  if (analysis->analyse_simplex_data) {
     const int row_ep_count = row_ep->count;
     if (use_col_price) {
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_PRICE_AP,
@@ -1562,7 +1561,7 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
 
 #ifdef HiGHSDEV
   // Determine the nonzero count of the whole row
-  if (simplex_info.analyse_iterations) {
+  if (analysis->analyse_simplex_data) {
     int row_ap_count = 0;
     for (int i = 0; i < slice_num; i++) row_ap_count += slice_row_ap[i].count;
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP,
@@ -1638,8 +1637,7 @@ void HEkkDual::updateFtran() {
   // with unit multiplier
   matrix->collect_aj(col_aq, variable_in, 1);
 #ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  if (simplex_info.analyse_iterations)
+  if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq,
                                     analysis->col_aq_density);
 #endif
@@ -1647,7 +1645,7 @@ void HEkkDual::updateFtran() {
   factor->ftran(col_aq, analysis->col_aq_density,
                 analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
+  if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, col_aq);
 #endif
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
@@ -1681,8 +1679,7 @@ void HEkkDual::updateFtranBFRT() {
 
   if (col_BFRT.count) {
 #ifdef HiGHSDEV
-    HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-    if (simplex_info.analyse_iterations)
+    if (analysis->analyse_simplex_data)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
                                       col_BFRT, analysis->col_BFRT_density);
 #endif
@@ -1690,7 +1687,7 @@ void HEkkDual::updateFtranBFRT() {
     factor->ftran(col_BFRT, analysis->col_BFRT_density,
                   analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-    if (simplex_info.analyse_iterations)
+    if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
                                      col_BFRT);
 #endif
@@ -1711,8 +1708,7 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
   if (rebuild_reason) return;
   analysis->simplexTimerStart(FtranDseClock);
 #ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  if (simplex_info.analyse_iterations)
+  if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
                                     *DSE_Vector, analysis->row_DSE_density);
 #endif
@@ -1720,7 +1716,7 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
   factor->ftran(*DSE_Vector, analysis->row_DSE_density,
                 analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
+  if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
                                    *DSE_Vector);
 #endif

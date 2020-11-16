@@ -1837,8 +1837,7 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
   analysis->simplexTimerStart(BtranBasicFeasibilityChangeClock);
   const int solver_num_row = ekk_instance_.simplex_lp_.numRow_;
 #ifdef HiGHSDEV
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  if (simplex_info.analyse_iterations)
+  if (analysis->analyse_simplex_data)
     analysis->operationRecordBefore(
         ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
         col_basic_feasibility_change,
@@ -1848,7 +1847,7 @@ void HEkkPrimal::basicFeasibilityChangeBtran() {
                               analysis->col_basic_feasibility_change_density,
                               analysis->pointer_serial_factor_clocks);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
+  if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(
         ANALYSIS_OPERATION_TYPE_BTRAN_BASIC_FEASIBILITY_CHANGE,
         col_basic_feasibility_change);
@@ -1871,7 +1870,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
   ekk_instance_.choosePriceTechnique(simplex_info.price_strategy, local_density,
                                      use_col_price, use_row_price_w_switch);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations) {
+  if (analysis->analyse_simplex_data) {
     if (use_col_price) {
       const double historical_density_for_non_hypersparse_operation = 1;
       analysis->operationRecordBefore(
@@ -1926,7 +1925,7 @@ void HEkkPrimal::basicFeasibilityChangePrice() {
       local_row_basic_feasibility_change_density,
       analysis->row_basic_feasibility_change_density);
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_iterations)
+  if (analysis->analyse_simplex_data)
     analysis->operationRecordAfter(
         ANALYSIS_OPERATION_TYPE_PRICE_BASIC_FEASIBILITY_CHANGE,
         row_basic_feasibility_change);
