@@ -110,6 +110,7 @@ set(sources
     presolve/PresolveUtils.cpp
     presolve/HPreData.cpp
     presolve/HAggregator.cpp
+    presolve/HighsLpPropagator.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp

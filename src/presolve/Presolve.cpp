@@ -26,6 +26,7 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
+#include "presolve/HighsLpPropagator.h"
 #include "presolve/PresolveUtils.h"
 
 namespace presolve {
@@ -424,7 +425,10 @@ int Presolve::presolve(int print) {
 
     if (current_cols_rows == 0) break;
 
-    if (!hasChange && aggregatorStack.empty()) runAggregator();
+    if (!hasChange && aggregatorStack.empty()) {
+      runAggregator();
+      runPropagator();
+    }
 
     if (iter == 1) {
       prev_cols_rows = current_cols_rows;
@@ -1241,6 +1245,53 @@ void Presolve::runAggregator() {
   }
 
   timer.recordFinish(AGGREGATOR);
+}
+
+void Presolve::runPropagator() {
+  // run the aggregator and store back the modified matrix
+  HighsLpPropagator propagator(colLower, colUpper, Avalue, Aindex, Astart, Aend,
+                               ARvalue, ARindex, ARstart, flagRow, flagCol,
+                               rowLower, rowUpper);
+  propagator.computeRowActivities();
+  propagator.propagate();
+  int ntightened = 0;
+
+  for (int i = 0; i != numCol; ++i) {
+    if (!flagCol[i]) continue;
+
+    if (colLower[i] >= propagator.colLower_[i] &&
+        colUpper[i] <= propagator.colUpper_[i])
+      continue;
+
+    int start = Astart[i];
+    int end = Aend[i];
+    double minabs = 1.0;
+
+    for (int j = start; j != end; ++j) {
+      int row = Aindex[j];
+      if (!flagRow[row]) continue;
+
+      minabs = std::min(minabs, std::abs(Avalue[j]));
+    }
+
+    double margin = 128.0 * default_primal_feasiblility_tolerance / minabs;
+    propagator.colLower_[i] -= margin;
+    propagator.colUpper_[i] += margin;
+    if (propagator.colLower_[i] > colLower[i]) {
+      colLower[i] = propagator.colLower_[i];
+      ++ntightened;
+    }
+
+    if (propagator.colUpper_[i] < colUpper[i]) {
+      colUpper[i] = propagator.colUpper_[i];
+      ++ntightened;
+    }
+  }
+
+  implColLower = colLower;
+  implColUpper = colUpper;
+
+  printf("propagator found %d tightened bounds\n", ntightened);
 }
 
 void Presolve::removeFixedCol(int j) {

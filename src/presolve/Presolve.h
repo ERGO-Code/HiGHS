@@ -115,6 +115,7 @@ class Presolve : public HPreData {
   int iPrint = 0;
   int message_level;
   FILE* output;
+  double objShift;
 
  private:
   int iKKTcheck = 0;
@@ -122,9 +123,9 @@ class Presolve : public HPreData {
 
   const bool report_postsolve = false;
 
-  double objShift;
   void initializeVectors();
   void runAggregator();
+  void runPropagator();
   void setProblemStatus(const int s);
   void reportTimes();
 
