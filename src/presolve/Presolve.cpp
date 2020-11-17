@@ -1284,15 +1284,15 @@ void Presolve::runPropagator() {
 
     // use a relative minimal margin to ensure large bounds are relaxed enough
     double minlowermargin =
-        default_small_matrix_value * std::abs(propagator.colLower_[i]);
+        default_primal_feasiblility_tolerance * std::abs(propagator.colLower_[i]);
     double minuppermargin =
-        default_small_matrix_value * std::abs(propagator.colUpper_[i]);
+        default_primal_feasiblility_tolerance * std::abs(propagator.colUpper_[i]);
 
     // use a big enough factor of the feasibility tolerance and further increase
     // it if the column has coefficient values below 1.0 so that it is ensured
     // that no primal feasible solution can have this variable sitting at this
     // artifical bound
-    double margin = 16.0 * default_primal_feasiblility_tolerance / minabs;
+    double margin = 2.0 * default_primal_feasiblility_tolerance / minabs;
 
     // now widen the bounds and check if they are tighter than the previous
     // bounds
