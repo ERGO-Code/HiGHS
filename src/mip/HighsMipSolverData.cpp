@@ -125,8 +125,9 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
 void HighsMipSolverData::evaluateRootNode() {
   // solve the first root lp
+  lp.getLpSolver().setHighsOptionValue("presolve", "on");
   lp.resolveLp();
-
+  lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
 
   lp.setIterationLimit(int(10 * maxrootlpiters));
