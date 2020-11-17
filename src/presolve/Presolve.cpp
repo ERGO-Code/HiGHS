@@ -1286,7 +1286,7 @@ void Presolve::runPropagator() {
     // it if the column has coefficient values below 1.0 so that it is ensured
     // that no primal feasible solution can have this variable sitting at this
     // artifical bound
-    double margin = 2.0 * default_primal_feasiblility_tolerance / minabs;
+    double margin = 128.0 * default_primal_feasiblility_tolerance / minabs;
 
     // now widen the bounds and check if they are tighter than the previous
     // bounds
