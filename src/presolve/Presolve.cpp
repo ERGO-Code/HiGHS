@@ -401,14 +401,16 @@ int Presolve::presolve(int print) {
     // order.push_back(Presolver::kMainSingletonsOnly);
   }
 
-  int prev_cols_rows = 0;
-  double prev_diff = 0;
-  // max_iterations = 10;
+  const double reduction_pct_for_further_presolve_iteration = 0.05;
+  int model_cols_rows = numCol + numRow;
+  int prev_cols_rows;
+  int current_cols_rows = model_cols_rows;
+  //  double prev_diff = 0;
   // Else: The order has been modified for experiments
   while (hasChange == 1) {
     if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
-    printf("presolve iteration %d (max=%d)\n", iter, max_iterations);
+    //    printf("presolve iteration %d (max=%d)\n", iter, max_iterations);
     reportDevMainLoop();
     timer.recordStart(RUN_PRESOLVERS);
     int run_status = runPresolvers(order);
@@ -417,35 +419,48 @@ int Presolve::presolve(int print) {
     if (run_status) return status;
 
     // Exit check
-    int current_cols_rows = 0;
+    prev_cols_rows = current_cols_rows;
+    current_cols_rows = 0;
+    int current_num_col = 0;
+    int current_num_row = 0;
     for (int i = 0; i < numRow; i++)
       if (flagRow[i]) current_cols_rows++;
-    for (int i = 0; i < numCol; i++)
+    current_num_row = current_cols_rows;
+    for (int i = 0; i < numCol; i++) 
       if (flagCol[i]) current_cols_rows++;
-
+    current_num_col = current_cols_rows - current_num_row;
+    int diff = prev_cols_rows - current_cols_rows;
+    double iteration_reduction_pct = 100*(1.0 * diff) / (1.0 * model_cols_rows);
+    printf("Iteration %2d (Presolve)   Current number rows = %9d; cols = %9d: Reduction this iteration (%9d) is %5.2f%%\n",
+	   iter, current_num_row, 
+	   current_num_col, diff, iteration_reduction_pct);
     if (current_cols_rows == 0) break;
+    iter++;
+
+    if (hasChange) {
+      if (iteration_reduction_pct < reduction_pct_for_further_presolve_iteration) hasChange = false;
+    }
 
     if (!hasChange && aggregatorStack.empty()) {
       runAggregator();
       runPropagator();
-    }
-
-    if (iter == 1) {
       prev_cols_rows = current_cols_rows;
+      current_cols_rows = 0;
+      int current_num_col = 0;
+      int current_num_row = 0;
+      for (int i = 0; i < numRow; i++)
+	if (flagRow[i]) current_num_row++;
+      for (int i = 0; i < numCol; i++) 
+	if (flagCol[i]) current_num_col++;
+      current_cols_rows = current_num_col + current_num_row;
+      int diff = prev_cols_rows - current_cols_rows;
+      double iteration_reduction_pct = 100*(1.0 * diff) / (1.0 * model_cols_rows);
+      printf("Iteration %2d (Aggregator) Current number rows = %9d; cols = %9d: Reduction this iteration (%9d) is %5.2f%%\n",
+	   iter, current_num_row, 
+	   current_num_col, diff, iteration_reduction_pct);
       iter++;
-      continue;
-    } else {
-      double diff = (double)prev_cols_rows - (double)current_cols_rows;
-      if (iter < 10) {
-        prev_diff = diff;
-        iter++;
-        continue;
-      }
-      // iter > 10 : check difference
-      // if (prev_diff * diff / current_cols_rows < 0.05) break;
     }
 
-    iter++;
   }
 
   // std::cout << "   MAIN LOOP ITER = " << iter << std::endl;
