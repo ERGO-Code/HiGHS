@@ -154,22 +154,26 @@ class HighsSimplexAnalysis {
   std::vector<HighsTimerClock> thread_factor_clocks;
   HighsTimerClock* pointer_serial_factor_clocks;
 
+  // Local copies of LP data
   int numRow;
   int numCol;
   int numTot;
   std::string model_name_;
   std::string lp_name_;
+
+  // Local copies of IO data
+  FILE* logfile;
+  FILE* output;
+  int message_level;
+
+  // Interpreted shortcuts from bit settings in highs_analysis_level
   bool analyse_lp_data;
   bool analyse_simplex_data;
   bool analyse_simplex_time;
   bool analyse_factor_data;
   bool analyse_factor_time;
-  bool allow_dual_steepest_edge_to_devex_switch;
-  double dual_steepest_edge_weight_log_error_threshold;
-  FILE* logfile;
-  FILE* output;
-  int message_level;
 
+  // Control parameters moving to simplex_info
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
@@ -179,25 +183,18 @@ class HighsSimplexAnalysis {
   double col_BFRT_density;
   double primal_col_density;
   double dual_col_density;
+  bool allow_dual_steepest_edge_to_devex_switch;
+  double dual_steepest_edge_weight_log_error_threshold;
 
+  // Local copies of simplex data for reporting
   int simplex_strategy = 0;
-  int min_threads = 0;
-  int num_threads = 0;
-  int max_threads = 0;
-  int multi_num = 0;
   DualEdgeWeightMode edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
   int solve_phase = 0;
   int simplex_iteration_count = 0;
-  int multi_iteration_count = 0;
   int devex_iteration_count = 0;
-  int multi_chosen = 0;
-  int multi_finished = 0;
   int pivotal_row_index = 0;
   int leaving_variable = 0;
   int entering_variable = 0;
-  int num_primal_infeasibilities = 0;
-  int num_dual_infeasibilities = 0;
-  int num_dual_phase_1_lp_dual_infeasibility = 0;
   int rebuild_reason = 0;
   double reduced_rhs_value = 0;
   double reduced_cost_value = 0;
@@ -210,13 +207,30 @@ class HighsSimplexAnalysis {
   double factor_pivot_threshold = 0;
   double numerical_trouble = 0;
   double objective_value = 0;
+  int num_primal_infeasibilities = 0;
+  int num_dual_infeasibilities = 0;
   double sum_primal_infeasibilities = 0;
   double sum_dual_infeasibilities = 0;
+  // This triple is an original infeasiblility record, so it includes max,
+  // but it's only used for reporting
+  int num_dual_phase_1_lp_dual_infeasibility = 0;
   double max_dual_phase_1_lp_dual_infeasibility = 0;
   double sum_dual_phase_1_lp_dual_infeasibility = 0;
-  double basis_condition = 0;
   int num_devex_framework = 0;
 
+  // Local copies of parallel simplex data for reporting
+  int multi_iteration_count = 0;
+  int multi_chosen = 0;
+  int multi_finished = 0;
+  int min_threads = 0;
+  int num_threads = 0;
+  int max_threads = 0;
+
+  // Unused
+  //  int multi_num = 0; // Useless
+  //  double basis_condition = 0; // Maybe useful
+  
+  // Records of how pivotal row PRICE was done
   int num_col_price = 0;
   int num_row_price = 0;
   int num_row_price_with_switch = 0;
@@ -232,6 +246,8 @@ class HighsSimplexAnalysis {
   HighsValueDistribution cleanup_dual_step_distribution;
   HighsValueDistribution cleanup_primal_change_distribution;
 
+  // Tolerances for analysis of TRAN stages - could be needed for
+  // control if this is ever used again!
   vector<double> original_start_density_tolerance;
   vector<double> new_start_density_tolerance;
   vector<double> historical_density_tolerance;
@@ -249,7 +265,7 @@ class HighsSimplexAnalysis {
   void reportOneDensity(const double density);
   void reportDensity(const bool header, const int this_message_level);
   void reportInvert(const bool header, const int this_message_level);
-  void reportCondition(const bool header, const int this_message_level);
+  //  void reportCondition(const bool header, const int this_message_level);
   void reportIterationData(const bool header, const int this_message_level);
   void reportFreeListSize(const bool header, const int this_message_level);
   int intLog10(const double v);
@@ -291,13 +307,11 @@ class HighsSimplexAnalysis {
   int sum_multi_chosen = 0;
   int sum_multi_finished = 0;
 
-  // Analysis of INVERT
-  int num_invert = 0;
   // Analysis of INVERT form
+  int num_invert = 0;
   int num_kernel = 0;
   int num_major_kernel = 0;
-  const double major_kernel_relative_dim_threshold =
-      0.1;  // Should be a const, but will be changed later anyway
+  const double major_kernel_relative_dim_threshold = 0.1; 
   double max_kernel_dim = 0;
   double sum_kernel_dim = 0;
   double running_average_kernel_dim = 0;
@@ -307,13 +321,6 @@ class HighsSimplexAnalysis {
   double running_average_invert_fill_factor = 1;
   double running_average_kernel_fill_factor = 1;
   double running_average_major_kernel_fill_factor = 1;
-
-  // Amalysis of invert time and condition
-  /*
-  int total_inverts;
-  double total_invert_time;
-  double invert_condition = 1;
-  */
 
   int AnIterIt0 = 0;
   int AnIterPrevIt;

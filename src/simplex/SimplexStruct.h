@@ -145,6 +145,17 @@ struct HighsSimplexInfo {
   int update_limit;
 
   // Simplex control parameters from HSA
+  double col_aq_density;
+  double row_ep_density;
+  double row_ap_density;
+  double row_DSE_density;
+  double col_basic_feasibility_change_density;
+  double row_basic_feasibility_change_density;
+  double col_BFRT_density;
+  double primal_col_density;
+  double dual_col_density;
+  bool allow_dual_steepest_edge_to_devex_switch;
+  double dual_steepest_edge_weight_log_error_threshold;
 
   // Internal options - can't be changed externally
   bool run_quiet = false;

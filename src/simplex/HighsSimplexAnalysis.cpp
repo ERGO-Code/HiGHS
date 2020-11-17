@@ -1290,7 +1290,7 @@ void HighsSimplexAnalysis::reportInvert(const bool header,
                       rebuild_reason);
   }
 }
-
+/*
 void HighsSimplexAnalysis::reportCondition(const bool header,
                                            const int this_message_level) {
   assert(analyse_simplex_data);
@@ -1301,6 +1301,7 @@ void HighsSimplexAnalysis::reportCondition(const bool header,
                       basis_condition);
   }
 }
+*/
 
 // Primal:
 // * primal_delta - 0
