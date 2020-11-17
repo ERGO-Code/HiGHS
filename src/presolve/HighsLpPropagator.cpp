@@ -227,7 +227,7 @@ int HighsLpPropagator::propagateRowLower(const int* Rindex,
 void HighsLpPropagator::updateActivityLbChange(int col, double oldbound,
                                                double newbound) {
   int start = Astart_[col];
-  int end = Astart_[col + 1];
+  int end = Aend_[col];
 
   for (int i = start; i != end; ++i) {
     if (!flagRow[Aindex_[i]]) continue;
@@ -284,7 +284,7 @@ void HighsLpPropagator::updateActivityLbChange(int col, double oldbound,
 void HighsLpPropagator::updateActivityUbChange(int col, double oldbound,
                                                double newbound) {
   int start = Astart_[col];
-  int end = Astart_[col + 1];
+  int end = Aend_[col];
 
   for (int i = start; i != end; ++i) {
     if (!flagRow[Aindex_[i]]) continue;
