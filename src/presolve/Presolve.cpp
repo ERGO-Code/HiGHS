@@ -1282,12 +1282,6 @@ void Presolve::runPropagator() {
       minabs = std::min(minabs, std::abs(Avalue[j]));
     }
 
-    // use a relative minimal margin to ensure large bounds are relaxed enough
-    double minlowermargin =
-        default_primal_feasiblility_tolerance * std::abs(propagator.colLower_[i]);
-    double minuppermargin =
-        default_primal_feasiblility_tolerance * std::abs(propagator.colUpper_[i]);
-
     // use a big enough factor of the feasibility tolerance and further increase
     // it if the column has coefficient values below 1.0 so that it is ensured
     // that no primal feasible solution can have this variable sitting at this
@@ -1296,16 +1290,28 @@ void Presolve::runPropagator() {
 
     // now widen the bounds and check if they are tighter than the previous
     // bounds
-    propagator.colLower_[i] -= std::max(margin, minlowermargin);
-    propagator.colUpper_[i] += std::max(margin, minuppermargin);
-    if (propagator.colLower_[i] > colLower[i]) {
-      colLower[i] = propagator.colLower_[i];
-      ++ntightened;
+    double abslb = std::abs(propagator.colLower_[i]);
+
+    if (abslb <= 1e8) {
+      // use a relative minimal margin to ensure large bounds are relaxed enough
+      double minlowermargin = default_primal_feasiblility_tolerance * abslb;
+      propagator.colLower_[i] -= std::max(margin, minlowermargin);
+      if (propagator.colLower_[i] > colLower[i]) {
+        colLower[i] = propagator.colLower_[i];
+        ++ntightened;
+      }
     }
 
-    if (propagator.colUpper_[i] < colUpper[i]) {
-      colUpper[i] = propagator.colUpper_[i];
-      ++ntightened;
+    double absub = std::abs(propagator.colUpper_[i]);
+
+    if (absub <= 1e8) {
+      // use a relative minimal margin to ensure large bounds are relaxed enough
+      double minuppermargin = default_primal_feasiblility_tolerance * absub;
+      propagator.colUpper_[i] += std::max(margin, minuppermargin);
+      if (propagator.colUpper_[i] < colUpper[i]) {
+        colUpper[i] = propagator.colUpper_[i];
+        ++ntightened;
+      }
     }
   }
 
