@@ -662,7 +662,8 @@ void HighsDomain::propagate() {
       for (int i = 0; i != numproprows; ++i) {
         int row = propagateinds[i];
         propagateflags_[row] = 0;
-        propnnz += mipsolver->mipdata_->ARstart_[i + 1] - mipsolver->mipdata_->ARstart_[i];
+        propnnz += mipsolver->mipdata_->ARstart_[i + 1] -
+                   mipsolver->mipdata_->ARstart_[i];
       }
 
       if (!infeasible_) {

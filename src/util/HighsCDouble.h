@@ -79,7 +79,10 @@ class HighsCDouble {
     return *this;
   }
 
-  HighsCDouble& operator-=(double v) { (*this) += -v; return *this; }
+  HighsCDouble& operator-=(double v) {
+    (*this) += -v;
+    return *this;
+  }
 
   HighsCDouble& operator-=(const HighsCDouble& v) {
     (*this) -= v.hi;
@@ -122,9 +125,7 @@ class HighsCDouble {
     return *this;
   }
 
-  HighsCDouble operator-() const {
-    return HighsCDouble(-hi, -lo);
-  }
+  HighsCDouble operator-() const { return HighsCDouble(-hi, -lo); }
 
   HighsCDouble operator+(double v) const {
     HighsCDouble res;
@@ -142,8 +143,7 @@ class HighsCDouble {
     return res;
   }
 
-  friend HighsCDouble operator+(double a, const HighsCDouble& b)
-  {
+  friend HighsCDouble operator+(double a, const HighsCDouble& b) {
     return b + a;
   }
 
@@ -163,8 +163,7 @@ class HighsCDouble {
     return res;
   }
 
-  friend HighsCDouble operator-(double a, const HighsCDouble& b)
-  {
+  friend HighsCDouble operator-(double a, const HighsCDouble& b) {
     return -b + a;
   }
 
@@ -184,8 +183,7 @@ class HighsCDouble {
     return res;
   }
 
-  friend HighsCDouble operator*(double a, const HighsCDouble& b)
-  {
+  friend HighsCDouble operator*(double a, const HighsCDouble& b) {
     return b * a;
   }
 
@@ -205,8 +203,7 @@ class HighsCDouble {
     return res;
   }
 
-  friend HighsCDouble operator/(double a, const HighsCDouble& b)
-  {
+  friend HighsCDouble operator/(double a, const HighsCDouble& b) {
     return HighsCDouble(a) / b;
   }
 
@@ -214,9 +211,7 @@ class HighsCDouble {
     return double(*this) > double(other);
   }
 
-  bool operator>(double other) const {
-    return double(*this) > other;
-  }
+  bool operator>(double other) const { return double(*this) > other; }
 
   friend bool operator>(double a, const HighsCDouble& b) {
     return a > double(b);
@@ -226,9 +221,7 @@ class HighsCDouble {
     return double(*this) < double(other);
   }
 
-  bool operator<(double other) const {
-    return double(*this) < other;
-  }
+  bool operator<(double other) const { return double(*this) < other; }
 
   friend bool operator<(double a, const HighsCDouble& b) {
     return a < double(b);
@@ -238,9 +231,7 @@ class HighsCDouble {
     return double(*this) >= double(other);
   }
 
-  bool operator>=(double other) const {
-    return double(*this) >= other;
-  }
+  bool operator>=(double other) const { return double(*this) >= other; }
 
   friend bool operator>=(double a, const HighsCDouble& b) {
     return a >= double(b);
@@ -250,9 +241,7 @@ class HighsCDouble {
     return double(*this) <= double(other);
   }
 
-  bool operator<=(double other) const {
-    return double(*this) <= other;
-  }
+  bool operator<=(double other) const { return double(*this) <= other; }
 
   friend bool operator<=(double a, const HighsCDouble& b) {
     return a <= double(b);

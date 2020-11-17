@@ -103,12 +103,13 @@ void highs_splay_unlink(int unlinknode, int& root, GetLeft&& get_left,
   root = highs_splay(get_key(unlinknode), root, get_left, get_right, get_key);
   assert(get_key(root) == get_key(unlinknode));
 
-  // in case keys can be equal it might happen that we did not splay the correct node to the top
-  // since equal keys are put to the right subtree, we recurse into that part of the tree
-  if( root != unlinknode )
-  {
-      highs_splay_unlink(unlinknode, get_right(root), get_left, get_right, get_key);
-      return;
+  // in case keys can be equal it might happen that we did not splay the correct
+  // node to the top since equal keys are put to the right subtree, we recurse
+  // into that part of the tree
+  if (root != unlinknode) {
+    highs_splay_unlink(unlinknode, get_right(root), get_left, get_right,
+                       get_key);
+    return;
   }
 
   assert(root == unlinknode);
@@ -116,7 +117,8 @@ void highs_splay_unlink(int unlinknode, int& root, GetLeft&& get_left,
   if (get_left(unlinknode) == -1) {
     root = get_right(unlinknode);
   } else {
-    root = highs_splay(get_key(unlinknode), get_left(unlinknode), get_left, get_right, get_key);
+    root = highs_splay(get_key(unlinknode), get_left(unlinknode), get_left,
+                       get_right, get_key);
     get_right(root) = get_right(unlinknode);
   }
 }

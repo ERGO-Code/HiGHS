@@ -426,19 +426,23 @@ int Presolve::presolve(int print) {
     for (int i = 0; i < numRow; i++)
       if (flagRow[i]) current_cols_rows++;
     current_num_row = current_cols_rows;
-    for (int i = 0; i < numCol; i++) 
+    for (int i = 0; i < numCol; i++)
       if (flagCol[i]) current_cols_rows++;
     current_num_col = current_cols_rows - current_num_row;
     int diff = prev_cols_rows - current_cols_rows;
-    double iteration_reduction_pct = 100*(1.0 * diff) / (1.0 * model_cols_rows);
-    printf("Iteration %2d (Presolve)   Current number rows = %9d; cols = %9d: Reduction this iteration (%9d) is %5.2f%%\n",
-	   iter, current_num_row, 
-	   current_num_col, diff, iteration_reduction_pct);
+    double iteration_reduction_pct =
+        100 * (1.0 * diff) / (1.0 * model_cols_rows);
+    printf(
+        "Iteration %2d (Presolve)   Current number rows = %9d; cols = %9d: "
+        "Reduction this iteration (%9d) is %5.2f%%\n",
+        iter, current_num_row, current_num_col, diff, iteration_reduction_pct);
     if (current_cols_rows == 0) break;
     iter++;
 
     if (hasChange) {
-      if (iteration_reduction_pct < reduction_pct_for_further_presolve_iteration) hasChange = false;
+      if (iteration_reduction_pct <
+          reduction_pct_for_further_presolve_iteration)
+        hasChange = false;
     }
 
     if (!hasChange && aggregatorStack.empty()) {
@@ -449,18 +453,20 @@ int Presolve::presolve(int print) {
       int current_num_col = 0;
       int current_num_row = 0;
       for (int i = 0; i < numRow; i++)
-	if (flagRow[i]) current_num_row++;
-      for (int i = 0; i < numCol; i++) 
-	if (flagCol[i]) current_num_col++;
+        if (flagRow[i]) current_num_row++;
+      for (int i = 0; i < numCol; i++)
+        if (flagCol[i]) current_num_col++;
       current_cols_rows = current_num_col + current_num_row;
       int diff = prev_cols_rows - current_cols_rows;
-      double iteration_reduction_pct = 100*(1.0 * diff) / (1.0 * model_cols_rows);
-      printf("Iteration %2d (Aggregator) Current number rows = %9d; cols = %9d: Reduction this iteration (%9d) is %5.2f%%\n",
-	   iter, current_num_row, 
-	   current_num_col, diff, iteration_reduction_pct);
+      double iteration_reduction_pct =
+          100 * (1.0 * diff) / (1.0 * model_cols_rows);
+      printf(
+          "Iteration %2d (Aggregator) Current number rows = %9d; cols = %9d: "
+          "Reduction this iteration (%9d) is %5.2f%%\n",
+          iter, current_num_row, current_num_col, diff,
+          iteration_reduction_pct);
       iter++;
     }
-
   }
 
   // std::cout << "   MAIN LOOP ITER = " << iter << std::endl;

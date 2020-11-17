@@ -24,8 +24,8 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
-#include "presolve/HPreData.h"
 #include "presolve/HAggregator.h"
+#include "presolve/HPreData.h"
 #include "presolve/PresolveAnalysis.h"
 #include "test/DevKkt.h"
 

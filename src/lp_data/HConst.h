@@ -14,9 +14,9 @@
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
 
+#include <cstdint>
 #include <limits>
 #include <string>
-#include <cstdint>
 
 const int HIGHS_CONST_I_INF = std::numeric_limits<int>::max();
 const double HIGHS_CONST_INF = std::numeric_limits<double>::infinity();
