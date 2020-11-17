@@ -408,7 +408,7 @@ int Presolve::presolve(int print) {
   while (hasChange == 1) {
     if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
-
+    printf("presolve iteration %d (max=%d)\n", iter, max_iterations);
     reportDevMainLoop();
     timer.recordStart(RUN_PRESOLVERS);
     int run_status = runPresolvers(order);
@@ -1248,7 +1248,11 @@ void Presolve::runAggregator() {
 }
 
 void Presolve::runPropagator() {
-  // run the aggregator and store back the modified matrix
+  // run the propagator to compute tightened bounds
+  // which can help with other reductions like redundant rows or forcing
+  // constraints and also decrease the number of total iterations required due
+  // to their exploitation with the long-step rule for the dual simplex ratio
+  // test
   HighsLpPropagator propagator(colLower, colUpper, Avalue, Aindex, Astart, Aend,
                                ARvalue, ARindex, ARstart, flagRow, flagCol,
                                rowLower, rowUpper);
@@ -1256,6 +1260,10 @@ void Presolve::runPropagator() {
   propagator.propagate();
   int ntightened = 0;
 
+  // we cannot use the tightest bounds that we obtained by propagation
+  // as then the dual postsolve step might not work anymore. Instead
+  // we relax the bounds by a wide enough margin so that they cannot
+  // be used in a basic feasible solution
   for (int i = 0; i != numCol; ++i) {
     if (!flagCol[i]) continue;
 
@@ -1274,9 +1282,22 @@ void Presolve::runPropagator() {
       minabs = std::min(minabs, std::abs(Avalue[j]));
     }
 
-    double margin = 128.0 * default_primal_feasiblility_tolerance / minabs;
-    propagator.colLower_[i] -= margin;
-    propagator.colUpper_[i] += margin;
+    // use a relative minimal margin to ensure large bounds are relaxed enough
+    double minlowermargin =
+        default_small_matrix_value * std::abs(propagator.colLower_[i]);
+    double minuppermargin =
+        default_small_matrix_value * std::abs(propagator.colUpper_[i]);
+
+    // use a big enough factor of the feasibility tolerance and further increase
+    // it if the column has coefficient values below 1.0 so that it is ensured
+    // that no primal feasible solution can have this variable sitting at this
+    // artifical bound
+    double margin = 16.0 * default_primal_feasiblility_tolerance / minabs;
+
+    // now widen the bounds and check if they are tighter than the previous
+    // bounds
+    propagator.colLower_[i] -= std::max(margin, minlowermargin);
+    propagator.colUpper_[i] += std::max(margin, minuppermargin);
     if (propagator.colLower_[i] > colLower[i]) {
       colLower[i] = propagator.colLower_[i];
       ++ntightened;
