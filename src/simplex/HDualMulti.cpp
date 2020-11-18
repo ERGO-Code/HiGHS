@@ -193,10 +193,10 @@ void HDual::majorChooseRowBtran() {
   if (workHMO.simplex_info_.analyse_iterations) {
     for (int i = 0; i < multi_ntasks; i++)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_BTRAN_EP, 1,
-                                    analysis->row_ep_density);
+                                      analysis->row_ep_density);
   }
 #endif
-    // 4.2 Perform BTRAN
+  // 4.2 Perform BTRAN
 #pragma omp parallel for schedule(static, 1)
   for (int i = 0; i < multi_ntasks; i++) {
     const int iRow = multi_iRow[i];
@@ -223,7 +223,7 @@ void HDual::majorChooseRowBtran() {
   if (workHMO.simplex_info_.analyse_iterations) {
     for (int i = 0; i < multi_ntasks; i++)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_BTRAN_EP,
-				     multi_vector[i]->count);
+                                     multi_vector[i]->count);
   }
 #endif
   // 4.3 Put back edge weights: the edge weights for the chosen rows
@@ -606,9 +606,9 @@ void HDual::majorUpdateFtranParallel() {
   HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
   // BFRT first
 #ifdef HiGHSDEV
-  if (workHMO.simplex_info_.analyse_iterations) 
+  if (workHMO.simplex_info_.analyse_iterations)
     analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-				    col_BFRT.count, analysis->col_aq_density);
+                                    col_BFRT.count, analysis->col_aq_density);
 #endif
   multi_density[multi_ntasks] = analysis->col_aq_density;
   multi_vector[multi_ntasks] = &col_BFRT;
@@ -617,10 +617,10 @@ void HDual::majorUpdateFtranParallel() {
     // Then DSE
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
 #ifdef HiGHSDEV
-      if (workHMO.simplex_info_.analyse_iterations) 
-	analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-					multi_finish[iFn].row_ep->count,
-					analysis->row_DSE_density);
+      if (workHMO.simplex_info_.analyse_iterations)
+        analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
+                                        multi_finish[iFn].row_ep->count,
+                                        analysis->row_DSE_density);
 #endif
       multi_density[multi_ntasks] = analysis->row_DSE_density;
       multi_vector[multi_ntasks] = multi_finish[iFn].row_ep;
@@ -632,8 +632,8 @@ void HDual::majorUpdateFtranParallel() {
 #ifdef HiGHSDEV
     if (workHMO.simplex_info_.analyse_iterations)
       analysis->operationRecordBefore(ANALYSIS_OPERATION_TYPE_FTRAN,
-				      multi_finish[iFn].col_aq->count,
-				      analysis->col_aq_density);
+                                      multi_finish[iFn].col_aq->count,
+                                      analysis->col_aq_density);
 #endif
     multi_density[multi_ntasks] = analysis->col_aq_density;
     multi_vector[multi_ntasks] = multi_finish[iFn].col_aq;
@@ -663,7 +663,7 @@ void HDual::majorUpdateFtranParallel() {
 #ifdef HiGHSDEV
   if (workHMO.simplex_info_.analyse_iterations)
     analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_BFRT,
-				   col_BFRT.count);
+                                   col_BFRT.count);
 #endif
   for (int iFn = 0; iFn < multi_nFinish; iFn++) {
     MFinish* finish = &multi_finish[iFn];
@@ -673,7 +673,7 @@ void HDual::majorUpdateFtranParallel() {
     analysis->updateOperationResultDensity(local_col_aq_density,
                                            analysis->col_aq_density);
 #ifdef HiGHSDEV
-    if (workHMO.simplex_info_.analyse_iterations) 
+    if (workHMO.simplex_info_.analyse_iterations)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
 #endif
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -682,8 +682,8 @@ void HDual::majorUpdateFtranParallel() {
                                              analysis->row_DSE_density);
 #ifdef HiGHSDEV
       if (workHMO.simplex_info_.analyse_iterations)
-	analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
-				       Row->count);
+        analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
+                                       Row->count);
 #endif
     }
   }
@@ -967,8 +967,7 @@ void HDual::iterationAnalysisMinor() {
   iterationAnalysisData();
   iterationAnalysisMinorData();
   analysis->iterationReport();
-  if (analysis->analyse_simplex_data)
-    analysis->iterationRecord();
+  if (analysis->analyse_simplex_data) analysis->iterationRecord();
 }
 
 void HDual::iterationAnalysisMajorData() {

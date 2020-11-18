@@ -1170,8 +1170,7 @@ void HDual::iterationAnalysis() {
     }
   }
 
-  if (analysis->analyse_simplex_data)
-    analysis->iterationRecord();
+  if (analysis->analyse_simplex_data) analysis->iterationRecord();
 }
 
 void HDual::reportRebuild(const int reason_for_rebuild) {

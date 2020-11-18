@@ -59,7 +59,7 @@ struct TranStageAnalysis {
   int num_wrong_new_hyper_decision_;
 };
 
-//const double running_average_multiplier = 0.05;
+// const double running_average_multiplier = 0.05;
 const double max_regression_density = 0.2;
 const double max_hyper_density = 0.1;
 
@@ -91,8 +91,6 @@ class HighsSimplexAnalysis {
   // Reference and pointer to timer
   HighsTimer& timer_reference;
   HighsTimer* timer_;
-
-
 
   void setup(const HighsLp& lp, const HighsOptions& options,
              const int simplex_iteration_count);
@@ -153,7 +151,6 @@ class HighsSimplexAnalysis {
   void dualSteepestEdgeWeightError(const double computed_edge_weight,
                                    const double updated_edge_weight);
   bool switchToDevex();
-  
 
   std::vector<HighsTimerClock> thread_simplex_clocks;
   std::vector<HighsTimerClock> thread_factor_clocks;
@@ -234,7 +231,7 @@ class HighsSimplexAnalysis {
   // Unused
   //  int multi_num = 0; // Useless
   //  double basis_condition = 0; // Maybe useful
-  
+
   // Records of how pivotal row PRICE was done
   int num_col_price = 0;
   int num_row_price = 0;
@@ -316,7 +313,7 @@ class HighsSimplexAnalysis {
   int num_invert = 0;
   int num_kernel = 0;
   int num_major_kernel = 0;
-  const double major_kernel_relative_dim_threshold = 0.1; 
+  const double major_kernel_relative_dim_threshold = 0.1;
   double max_kernel_dim = 0;
   double sum_kernel_dim = 0;
   double running_average_kernel_dim = 0;

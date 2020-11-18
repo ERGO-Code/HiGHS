@@ -806,8 +806,7 @@ void HPrimal::iterationAnalysis() {
   iterationAnalysisData();
   analysis->iterationReport();
 
-  if (analysis->analyse_simplex_data)
-    analysis->iterationRecord();
+  if (analysis->analyse_simplex_data) analysis->iterationRecord();
 }
 
 void HPrimal::reportRebuild(const int reason_for_rebuild) {

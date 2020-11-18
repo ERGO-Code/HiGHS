@@ -2166,7 +2166,7 @@ void initialiseCost(HighsModelObject& highs_model_object, int perturb) {
     if (analysis->analyse_simplex_data) {
       perturbation2 = fabs(perturbation2);
       updateValueDistribution(perturbation2,
-			      analysis->cost_perturbation2_distribution);
+                              analysis->cost_perturbation2_distribution);
     }
 #endif
   }

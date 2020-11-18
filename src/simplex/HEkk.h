@@ -130,11 +130,11 @@ class HEkk {
 
   // Methods in HEkkControl
   void assessDSEWeightError(const double computed_edge_weight,
-			    const double updated_edge_weight);
+                            const double updated_edge_weight);
   void updateOperationResultDensity(const double local_density,
                                     double& density);
   bool switchToDevex();
- 
+
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

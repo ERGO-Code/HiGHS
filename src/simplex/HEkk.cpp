@@ -973,7 +973,7 @@ void HEkk::pivotColumnFtran(const int iCol, HVector& col_aq) {
   analysis_.updateOperationResultDensity(local_col_aq_density,
                                          analysis_.col_aq_density);
   updateOperationResultDensity(local_col_aq_density,
-			       simplex_info_.col_aq_density);
+                               simplex_info_.col_aq_density);
   assert(analysis_.col_aq_density == simplex_info_.col_aq_density);
   analysis_.simplexTimerStop(FtranClock);
 }
@@ -997,7 +997,7 @@ void HEkk::unitBtran(const int iRow, HVector& row_ep) {
   analysis_.updateOperationResultDensity(local_row_ep_density,
                                          analysis_.row_ep_density);
   updateOperationResultDensity(local_row_ep_density,
-			       simplex_info_.row_ep_density);
+                               simplex_info_.row_ep_density);
   assert(analysis_.row_ep_density == simplex_info_.row_ep_density);
   analysis_.simplexTimerStop(BtranClock);
 }
@@ -1020,7 +1020,7 @@ void HEkk::fullBtran(HVector& buffer) {
   analysis_.updateOperationResultDensity(local_dual_col_density,
                                          analysis_.dual_col_density);
   updateOperationResultDensity(local_dual_col_density,
-			       simplex_info_.dual_col_density);
+                               simplex_info_.dual_col_density);
   assert(analysis_.dual_col_density == simplex_info_.dual_col_density);
   analysis_.simplexTimerStop(BtranFullClock);
 }
@@ -1094,7 +1094,7 @@ void HEkk::tableauRowPrice(const HVector& row_ep, HVector& row_ap) {
   analysis_.updateOperationResultDensity(local_row_ap_density,
                                          analysis_.row_ap_density);
   updateOperationResultDensity(local_row_ap_density,
-			       simplex_info_.row_ap_density);
+                               simplex_info_.row_ap_density);
   assert(analysis_.row_ap_density == simplex_info_.row_ap_density);
   if (analysis_.analyse_simplex_data)
     analysis_.operationRecordAfter(ANALYSIS_OPERATION_TYPE_PRICE_AP, row_ap);
@@ -1138,9 +1138,9 @@ void HEkk::computePrimal() {
                   analysis_.pointer_serial_factor_clocks);
     const double local_primal_col_density = (double)primal_col.count / num_row;
     analysis_.updateOperationResultDensity(local_primal_col_density,
-					   analysis_.primal_col_density);
+                                           analysis_.primal_col_density);
     updateOperationResultDensity(local_primal_col_density,
-				 simplex_info_.primal_col_density);
+                                 simplex_info_.primal_col_density);
     assert(analysis_.primal_col_density == simplex_info_.primal_col_density);
   }
   for (int i = 0; i < num_row; i++) {

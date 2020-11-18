@@ -884,9 +884,6 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-#ifdef HiGHSDEV
-  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
-#endif
   // Make sure that the original_dual has been set up
   assert((int)original_dual.size() == simplex_lp.numCol_ + simplex_lp.numRow_);
   const std::vector<double>& new_dual = simplex_info.workDual_;
@@ -902,8 +899,6 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
 #ifdef HiGHSDEV
     const double nonbasic_dual_change =
         std::fabs(new_dual[iVar] - original_dual[iVar]);
-    updateValueDistribution(nonbasic_dual_change,
-                            analysis.cleanup_dual_change_distribution);
     cleanup_absolute_nonbasic_dual_change_norm += nonbasic_dual_change;
 #endif
     const double max_dual =
