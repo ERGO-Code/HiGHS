@@ -155,11 +155,13 @@ struct HighsSimplexInfo {
   double col_BFRT_density;
   double primal_col_density;
   double dual_col_density;
+  // For control of switch from DSE to Devex in dual simplex
   bool allow_dual_steepest_edge_to_devex_switch;
   double dual_steepest_edge_weight_log_error_threshold;
-  // For control of switch from DSE to Devex in dual simplex
   double costly_DSE_frequency;
   int num_costly_DSE_iteration;
+  double average_log_low_dual_steepest_edge_weight_error;
+  double average_log_high_dual_steepest_edge_weight_error;
   // Needed globally??
 
   // Internal options - can't be changed externally
