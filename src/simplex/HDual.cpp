@@ -298,13 +298,6 @@ HighsStatus HDual::solve() {
   }
   if (solvePhase == SOLVE_PHASE_CLEANUP) {
     computePrimalObjectiveValue(workHMO);
-#ifdef HiGHSDEV
-    vector<double> primal_value_before_cleanup;
-    getPrimalValue(workHMO, primal_value_before_cleanup);
-    //    printf("\nAnalyse primal objective evaluation before cleanup\n");
-    //    analysePrimalObjectiveValue(workHMO);
-    const double objective_before = simplex_info.primal_objective_value;
-#endif
     if (options.dual_simplex_cleanup_strategy ==
         DUAL_SIMPLEX_CLEANUP_STRATEGY_NONE) {
       // No clean up. Dual simplex was optimal with perturbed costs,
@@ -315,14 +308,6 @@ HighsStatus HDual::solve() {
       scaled_model_status = HighsModelStatus::OPTIMAL;
     } else {
       // Use primal to clean up
-#ifdef HiGHSDEV
-      initialiseValueDistribution("Cleanup primal step summary", "", 1e-16,
-                                  1e16, 10.0,
-                                  analysis->cleanup_primal_step_distribution);
-      initialiseValueDistribution("Cleanup dual step summary", "", 1e-16, 1e16,
-                                  10.0,
-                                  analysis->cleanup_dual_step_distribution);
-#endif
       int it0 = iteration_counts.simplex;
       const bool full_logging = false;  // true;//
       if (full_logging)
@@ -342,28 +327,6 @@ HighsStatus HDual::solve() {
         return returnFromSolve(HighsStatus::Error);
       }
       analysis->simplexTimerStop(SimplexPrimalPhase2Clock);
-#ifdef HiGHSDEV
-      vector<double> primal_value_after_cleanup;
-      getPrimalValue(workHMO, primal_value_after_cleanup);
-      for (int var = 0; var < solver_num_tot; var++) {
-        const double primal_change = fabs(primal_value_after_cleanup[var] -
-                                          primal_value_before_cleanup[var]);
-        updateValueDistribution(primal_change,
-                                analysis->cleanup_primal_change_distribution);
-      }
-      //      printf("\nAnalyse primal objective evaluation after cleanup\n");
-      //      analysePrimalObjectiveValue(workHMO);
-      const double objective_after = simplex_info.primal_objective_value;
-      const double abs_objective_change =
-          fabs(objective_before - objective_after);
-      const double rel_objective_change =
-          abs_objective_change / max(1.0, fabs(objective_after));
-      printf(
-          "\nDuring cleanup, (abs: rel) primal objective changes is (%10.4g: "
-          "%10.4g) \nfrom %20.10g\nto   %20.10g\n",
-          abs_objective_change, rel_objective_change, objective_before,
-          objective_after);
-#endif
       simplex_info.primal_phase2_iteration_count +=
           (iteration_counts.simplex - it0);
     }
@@ -979,6 +942,7 @@ void HDual::rebuild() {
   total_syntheticTick = 0;
 
 #ifdef HiGHSDEV
+  /*
   if (simplex_info.analyse_rebuild_time) {
     int total_rebuilds = analysis->simplexTimerNumCall(IterateDualRebuildClock);
     double total_rebuild_time =
@@ -989,6 +953,7 @@ void HDual::rebuild() {
         solvePhase, total_rebuilds, reason_for_rebuild,
         workHMO.iteration_counts_.simplex, total_rebuild_time);
   }
+  */
 #endif
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
@@ -1205,9 +1170,8 @@ void HDual::iterationAnalysis() {
     }
   }
 
-#ifdef HiGHSDEV
-  analysis->iterationRecord();
-#endif
+  if (analysis->analyse_simplex_data)
+    analysis->iterationRecord();
 }
 
 void HDual::reportRebuild(const int reason_for_rebuild) {

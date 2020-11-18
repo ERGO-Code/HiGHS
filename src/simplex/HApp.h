@@ -478,7 +478,8 @@ HighsStatus solveLpHmoSimplex(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
   // Report profiling and analysis for the application of the simplex
   // method to this LP problem
-  reportSimplexProfiling(highs_model_object);
+  if (simplex_analysis.analyse_simplex_time)
+    reportSimplexProfiling(highs_model_object);
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   if (simplex_info.report_HFactor_clock) simplex_analysis.reportFactorTimer();
   if (simplex_info.analyse_iterations) simplex_analysis.summaryReport();

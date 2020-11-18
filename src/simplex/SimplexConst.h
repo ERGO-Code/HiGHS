@@ -241,4 +241,9 @@ const int illegal_move_value =
 // Nonbasic rows
 // =============
 //
+const double running_average_multiplier = 0.05;
+const double accept_weight_threshold = 0.25;
+const double weight_error_threshold = 4.0;
+
+
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

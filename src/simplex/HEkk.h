@@ -126,7 +126,13 @@ class HEkk {
 
   double computeBasisCondition();
   void initialiseAnalysis();
+  void initialiseControl();
 
+  // Methods in HEkkControl
+  void updateOperationResultDensity(const double local_density,
+                                    double& density);
+  bool switchToDevex();
+ 
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

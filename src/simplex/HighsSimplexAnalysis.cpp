@@ -437,7 +437,7 @@ bool HighsSimplexAnalysis::switchToDevex() {
         (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
         (lcNumIter > AnIterFracNumTot_ItBfSw * numTot);
 
-    if (analyse_simplex_data && switch_to_devex) {
+    if (switch_to_devex) {
       HighsLogMessage(
           logfile, HighsMessageType::INFO,
           "Switch from DSE to Devex after %d costly DSE iterations of %d with "
@@ -456,7 +456,7 @@ bool HighsSimplexAnalysis::switchToDevex() {
         dual_steepest_edge_weight_log_error_threshold;
     switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
                       dse_weight_error_measure > dse_weight_error_threshold;
-    if (analyse_simplex_data && switch_to_devex) {
+    if (switch_to_devex) {
       HighsLogMessage(logfile, HighsMessageType::INFO,
                       "Switch from DSE to Devex with log error measure of %g > "
                       "%g = threshold",

@@ -154,6 +154,9 @@ HighsStatus HEkkDual::solve() {
               (double)row_ep.count / solver_num_row;
           analysis->updateOperationResultDensity(local_row_ep_density,
                                                  analysis->row_ep_density);
+          ekk_instance_.updateOperationResultDensity(local_row_ep_density,
+						    ekk_instance_.simplex_info_.row_ep_density);
+	  assert(analysis->row_ep_density == ekk_instance_.simplex_info_.row_ep_density);
         }
         if (ekk_instance_.analysis_.analyse_simplex_time) {
           analysis->simplexTimerStop(SimplexIzDseWtClock);
@@ -1169,8 +1172,8 @@ void HEkkDual::iterationAnalysis() {
 
   // Possibly switch from DSE to Devex
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    bool switch_to_devex = false;
-    switch_to_devex = analysis->switchToDevex();
+    const bool switch_to_devex = analysis->switchToDevex();
+    //    assert(ekk_instance_.switchToDevex() == switch_to_devex);
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
       // Using dual Devex edge weights, so set up the first framework
@@ -1266,6 +1269,9 @@ void HEkkDual::chooseRow() {
   const double local_row_ep_density = (double)row_ep.count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_ep_density,
                                          analysis->row_ep_density);
+  ekk_instance_.updateOperationResultDensity(local_row_ep_density,
+					    ekk_instance_.simplex_info_.row_ep_density);
+  assert(analysis->row_ep_density == ekk_instance_.simplex_info_.row_ep_density);
 }
 
 bool HEkkDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
@@ -1274,6 +1280,7 @@ bool HEkkDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
   const double accept_weight_threshold = 0.25;
   const bool accept_weight =
       updated_edge_weight >= accept_weight_threshold * computed_edge_weight;
+  //  if (analysis->analyse_simplex_data) 
   analysis->dualSteepestEdgeWeightError(computed_edge_weight,
                                         updated_edge_weight);
   return accept_weight;
@@ -1563,6 +1570,9 @@ void HEkkDual::updateFtran() {
   const double local_col_aq_density = (double)col_aq.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_aq_density,
                                          analysis->col_aq_density);
+  ekk_instance_.updateOperationResultDensity(local_col_aq_density,
+					    ekk_instance_.simplex_info_.col_aq_density);
+  assert(analysis->col_aq_density == ekk_instance_.simplex_info_.col_aq_density);
   // Save the pivot value computed column-wise - used for numerical checking
   alpha_col = col_aq.array[row_out];
   analysis->simplexTimerStop(FtranClock);
@@ -1606,6 +1616,9 @@ void HEkkDual::updateFtranBFRT() {
   const double local_col_BFRT_density = (double)col_BFRT.count / solver_num_row;
   analysis->updateOperationResultDensity(local_col_BFRT_density,
                                          analysis->col_BFRT_density);
+  ekk_instance_.updateOperationResultDensity(local_col_BFRT_density,
+					    ekk_instance_.simplex_info_.col_BFRT_density);
+  assert(analysis->col_BFRT_density == ekk_instance_.simplex_info_.col_BFRT_density);
 }
 
 void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
@@ -1629,6 +1642,9 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
       (double)DSE_Vector->count / solver_num_row;
   analysis->updateOperationResultDensity(local_row_DSE_density,
                                          analysis->row_DSE_density);
+  ekk_instance_.updateOperationResultDensity(local_row_DSE_density,
+					    ekk_instance_.simplex_info_.row_DSE_density);
+  assert(analysis->row_DSE_density == ekk_instance_.simplex_info_.row_DSE_density);
 }
 
 void HEkkDual::updateVerify() {
@@ -1761,17 +1777,6 @@ void HEkkDual::updatePrimal(HVector* DSE_Vector) {
   }
   dualRHS.updateInfeasList(&col_aq);
 
-  /*
-  // Move these to where the FTRAN operations are actually performed
-  if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    const double local_row_DSE_density = (double)DSE_Vector->count /
-  solver_num_row; analysis->updateOperationResultDensity(local_row_DSE_density,
-  analysis->row_DSE_density);
-  }
-  const double local_col_aq_density = (double)col_aq.count / solver_num_row;
-  analysis->updateOperationResultDensity(local_col_aq_density,
-  analysis->col_aq_density);
-  */
   // Whether or not dual steepest edge weights are being used, have to
   // add in DSE_Vector->syntheticTick_ since this contains the
   // contribution from forming row_ep = B^{-T}e_p.

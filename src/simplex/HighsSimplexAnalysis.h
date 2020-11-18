@@ -59,7 +59,7 @@ struct TranStageAnalysis {
   int num_wrong_new_hyper_decision_;
 };
 
-const double running_average_multiplier = 0.05;
+//const double running_average_multiplier = 0.05;
 const double max_regression_density = 0.2;
 const double max_hyper_density = 0.1;
 
@@ -92,17 +92,14 @@ class HighsSimplexAnalysis {
   HighsTimer& timer_reference;
   HighsTimer* timer_;
 
+
+
   void setup(const HighsLp& lp, const HighsOptions& options,
              const int simplex_iteration_count);
   void messaging(FILE* logfile_, FILE* output_, const int message_level_);
-  void updateOperationResultDensity(const double local_density,
-                                    double& density);
   void iterationReport();
   void invertReport();
   void invertReport(const bool header);
-  void dualSteepestEdgeWeightError(const double computed_edge_weight,
-                                   const double updated_edge_weight);
-  bool switchToDevex();
   bool predictEndDensity(const int tran_stage_id, const double start_density,
                          double& end_density);
   void afterTranStage(const int tran_stage_id, const double start_density,
@@ -149,6 +146,14 @@ class HighsSimplexAnalysis {
   void reportFactorTimer();
   void updateInvertFormData(const HFactor& factor);
   void reportInvertFormData();
+
+  // Control methods to be moved to HEkkControl
+  void updateOperationResultDensity(const double local_density,
+                                    double& density);
+  void dualSteepestEdgeWeightError(const double computed_edge_weight,
+                                   const double updated_edge_weight);
+  bool switchToDevex();
+  
 
   std::vector<HighsTimerClock> thread_simplex_clocks;
   std::vector<HighsTimerClock> thread_factor_clocks;

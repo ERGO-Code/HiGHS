@@ -106,6 +106,7 @@ set(sources
     simplex/HDualRow.cpp
     simplex/HDualMulti.cpp
     simplex/HEkk.cpp
+    simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
     simplex/HEkkPrimal.cpp
     simplex/HEkkDual.cpp
@@ -418,6 +419,7 @@ target_sources(libhighs PRIVATE
     simplex/HDualRow.cpp
     simplex/HDualMulti.cpp
     simplex/HEkk.cpp
+    simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
     simplex/HEkkPrimal.cpp
     simplex/HEkkDual.cpp

@@ -221,6 +221,14 @@ struct HighsSimplexInfo {
   double updated_primal_objective_value;
   // Number of logical variables in the basis
   int num_basic_logicals;
+
+  // Control variables from HSA  
+  int num_dual_steepest_edge_weight_check = 0;
+  int num_dual_steepest_edge_weight_reject = 0;
+  int num_wrong_low_dual_steepest_edge_weight = 0;
+  int num_wrong_high_dual_steepest_edge_weight = 0;
+
+
 };
 
 #endif /* SIMPLEX_SIMPLEXSTRUCT_H_ */

@@ -73,8 +73,8 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.analyse_iterations = useful_analysis;
   simplex_info.analyse_invert_form = useful_analysis;
   //  simplex_info.analyse_invert_condition = useful_analysis;
-  simplex_info.analyse_invert_time = full_timing;
-  simplex_info.analyse_rebuild_time = full_timing;
+  //  simplex_info.analyse_invert_time = full_timing;
+  //  simplex_info.analyse_rebuild_time = full_timing;
 #endif
 }
 
@@ -2152,7 +2152,7 @@ void initialiseCost(HighsModelObject& highs_model_object, int perturb) {
 #ifdef HiGHSDEV
     const double perturbation1 =
         fabs(simplex_info.workCost_[i] - previous_cost);
-    if (perturbation1)
+    if (analysis->analyse_simplex_data && perturbation1)
       updateValueDistribution(perturbation1,
                               analysis->cost_perturbation1_distribution);
 #endif
@@ -2163,9 +2163,11 @@ void initialiseCost(HighsModelObject& highs_model_object, int perturb) {
         simplex_info.dual_simplex_cost_perturbation_multiplier * 1e-12;
     simplex_info.workCost_[i] += perturbation2;
 #ifdef HiGHSDEV
-    perturbation2 = fabs(perturbation2);
-    updateValueDistribution(perturbation2,
-                            analysis->cost_perturbation2_distribution);
+    if (analysis->analyse_simplex_data) {
+      perturbation2 = fabs(perturbation2);
+      updateValueDistribution(perturbation2,
+			      analysis->cost_perturbation2_distribution);
+    }
 #endif
   }
 }
@@ -2348,18 +2350,6 @@ int computeFactor(HighsModelObject& highs_model_object) {
       highs_model_object.simplex_lp_status_;
   HFactor& factor = highs_model_object.factor_;
   HighsTimerClock* factor_timer_clock_pointer = NULL;
-  // TODO Understand why handling noPvC and noPvR in what seem to be
-  // different ways ends up equivalent.
-#ifdef HiGHSDEV
-  int thread_id = 0;
-#ifdef OPENMP
-  thread_id = omp_get_thread_num();
-  //  printf("Hello world from computeFactor: thread %d\n", thread_id);
-#endif
-  factor_timer_clock_pointer =
-      highs_model_object.simplex_analysis_.getThreadFactorTimerClockPtr(
-          thread_id);
-#endif
   const int rank_deficiency = factor.build(factor_timer_clock_pointer);
   const bool force = rank_deficiency;
   debugCheckInvert(highs_model_object.options_, highs_model_object.factor_,

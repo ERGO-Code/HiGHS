@@ -370,6 +370,7 @@ void HPrimal::primalRebuild() {
   reportRebuild(reason_for_rebuild);
 
 #ifdef HiGHSDEV
+  /*
   if (simplex_info.analyse_rebuild_time) {
     int total_rebuilds =
         analysis->simplexTimerNumCall(IteratePrimalRebuildClock);
@@ -380,6 +381,7 @@ void HPrimal::primalRebuild() {
         total_rebuilds, reason_for_rebuild, workHMO.iteration_counts_.simplex,
         total_rebuild_time);
   }
+  */
 #endif
   num_flip_since_rebuild = 0;
   // Data are fresh from rebuild
@@ -804,9 +806,8 @@ void HPrimal::iterationAnalysis() {
   iterationAnalysisData();
   analysis->iterationReport();
 
-#ifdef HiGHSDEV
-  analysis->iterationRecord();
-#endif
+  if (analysis->analyse_simplex_data)
+    analysis->iterationRecord();
 }
 
 void HPrimal::reportRebuild(const int reason_for_rebuild) {
