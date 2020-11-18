@@ -55,6 +55,7 @@ class HPreData {
   vector<double> colUpper;
   vector<double> rowLower;
   vector<double> rowUpper;
+  vector<HighsVarType> integrality;
 
   // during postsolve hold the reduced solution, then at the end of postsolve
   // they hold the recovered. passed to dev kkt checker.

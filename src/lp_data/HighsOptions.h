@@ -285,6 +285,9 @@ struct HighsOptionsStruct {
   // Options for MIP solver
   int mip_max_nodes;
   int mip_report_level;
+  double mip_feasibility_tolerance;
+  double mip_epsilon;
+  double mip_heuristic_effort;
 
   // Switch for MIP solver
   bool mip;
@@ -533,6 +536,20 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordInt("mip_report_level", "MIP solver reporting level",
                             advanced, &mip_report_level, 0, 1, 2);
     records.push_back(record_int);
+
+    record_double = new OptionRecordDouble(
+        "mip_feasibility_tolerance", "MIP feasibility tolerance", advanced,
+        &mip_feasibility_tolerance, 1e-10, 1e-6, HIGHS_CONST_INF);
+
+    record_double =
+        new OptionRecordDouble("mip_epsilon", "MIP epsilon tolerance", advanced,
+                               &mip_epsilon, 1e-15, 1e-9, HIGHS_CONST_INF);
+
+    record_double = new OptionRecordDouble(
+        "mip_heuristic_effort", "effort spent for MIP heuristics", advanced,
+        &mip_heuristic_effort, 0.0, 0.05, 1.0);
+
+    records.push_back(record_double);
 
     // Advanced options
     advanced = true;

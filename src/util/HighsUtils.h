@@ -21,6 +21,13 @@
 #include "HConfig.h"
 #include "lp_data/HighsOptions.h"
 
+void highsSparseTranspose(int numRow, int numCol,
+                          const std::vector<int>& Astart,
+                          const std::vector<int>& Aindex,
+                          const std::vector<double>& Avalue,
+                          std::vector<int>& ARstart, std::vector<int>& ARindex,
+                          std::vector<double>& ARvalue);
+
 struct HighsIndexCollection {
   int dimension_ = -1;
   bool is_interval_ = false;

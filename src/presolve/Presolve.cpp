@@ -59,6 +59,7 @@ void Presolve::load(const HighsLp& lp) {
       colCost[col] = -colCost[col];
   }
 
+  integrality = lp.integrality_;
   colLower = lp.colLower_;
   colUpper = lp.colUpper_;
   rowLower = lp.rowLower_;
@@ -524,6 +525,16 @@ void Presolve::checkBoundsAreConsistent() {
  * 		   row is of form akx_x + aky_y = b,
  */
 pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
+  // todo, if one column is integral and the other continuous
+  // only substitute the continuous variable.
+  // if both columns are integer columns we may choose either column but need
+  // to check the coefficients for integrality. The coefficient of the column
+  // that is not substituted, divided by the coefficient of the column that is substituted
+  // must be integral. If that is the case, we also check the right hand side divided by the
+  // coefficient of the substituted column for integrality. If the divided right hand side is not integral
+  // we can detect infeasibility of the MIP. This check is the same for the case of implied free singleton
+  // columns, or any other kind of substitutions on integer variables.
+
   pair<int, int> colIndex;
   // row is of form akx_x + aky_y = b, where k=row and y is present in fewer
   // constraints
@@ -1221,6 +1232,10 @@ void Presolve::removeEmptyColumn(int j) {
 void Presolve::rowDualBoundsDominatedColumns() {
   int col, i, k;
 
+  // todo, do not use integer variables to derive bounds on the row duals
+  // using continous and implied integer variables is valid as the complementary
+  // slackness condition holds when all integer columns are fixed to any integer value
+
   // for each row calc yihat and yibar and store in implRowDualLower and
   // implRowDualUpper
   for (list<int>::iterator it = singCol.begin(); it != singCol.end(); ++it)
@@ -1333,6 +1348,9 @@ pair<double, double> Presolve::getImpliedColumnBounds(int j) {
 }
 
 void Presolve::removeDominatedColumns() {
+  // todo, use only continuous and implied integer columns for calculating row dual upper and lower bounds
+  // then the domination (and also weak domination check) should be correct for integers
+
   // for each column j calculate e and d and check:
   double e, d;
   pair<double, double> p;
@@ -1764,6 +1782,10 @@ void Presolve::removeColumnSingletons() {
         continue;
       }
 
+      // todo if the variable type of column is HighsVarType::INTEGRAL check the
+      // integrality of all coefficients divided by the coefficient of the
+      // integral singleton variable coefficients before doing a substitution
+
       // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
           colUpper.at(col) >= HIGHS_CONST_INF) {
@@ -1779,6 +1801,7 @@ void Presolve::removeColumnSingletons() {
         continue;
       }
 
+      // todo, I think this case might not work for integral variables
       // singleton column in a doubleton inequality
       // case two column singletons
       if (nzRow.at(i) == 2) {
@@ -2299,7 +2322,9 @@ void Presolve::removeRowSingletons() {
               }
       }*/
 
-      // update bounds of X
+      // todo, round bounds for integer and implied integer variables, be
+      // careful with tolerances, i.e. use floor(ub + eps) for rounding down an
+      // upper bound update bounds of X
       if (aij > 0) {
         if (rowLower.at(i) != -HIGHS_CONST_INF)
           colLower.at(j) =

@@ -45,7 +45,7 @@ class HighsLp {
   std::vector<std::string> col_names_;
   std::vector<std::string> row_names_;
 
-  std::vector<int> integrality_;
+  std::vector<HighsVarType> integrality_;
 
   bool operator==(const HighsLp& lp);
   bool equalButForNames(const HighsLp& lp);

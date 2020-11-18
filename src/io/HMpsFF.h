@@ -84,7 +84,7 @@ class HMpsFF {
   std::vector<std::string> rowNames;
   std::vector<std::string> colNames;
 
-  std::vector<int> col_integrality;
+  std::vector<HighsVarType> col_integrality;
 
   // Keep track of columns that are binary by default, being columns
   // that are defined as integer by markers in the column section, or

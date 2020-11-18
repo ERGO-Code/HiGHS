@@ -16,6 +16,7 @@
 
 #include <limits>
 #include <string>
+#include <cstdint>
 
 const int HIGHS_CONST_I_INF = std::numeric_limits<int>::max();
 const double HIGHS_CONST_INF = std::numeric_limits<double>::infinity();
@@ -44,6 +45,12 @@ enum class HighsDebugStatus {
   ERROR,
   EXCESSIVE_ERROR,
   LOGICAL_ERROR,
+};
+
+enum class HighsVarType : uint8_t {
+  CONTINUOUS = 0,
+  IMPLICIT_INTEGER = 1,
+  INTEGER = 2,
 };
 
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING };

@@ -189,7 +189,11 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   filename = std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
 
   // integer variables are COL03,COL04 so x[2], x[3].
-  const std::vector<int> kIntegers{0, 0, 1, 1, 0, 0, 0, 0};
+  const std::vector<HighsVarType> kIntegers{
+      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS,
+      HighsVarType::INTEGER,    HighsVarType::INTEGER,
+      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS,
+      HighsVarType::CONTINUOUS, HighsVarType::CONTINUOUS};
 
   HighsStatus status;
   HighsOptions options;

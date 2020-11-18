@@ -84,7 +84,11 @@ if(EXT_PRESOLVE_DIR)
 endif()
 
 
+option(DEBUGSOL "check the debug solution" OFF)
 
+if(DEBUGSOL)
+  add_definitions("-DHIGHS_DEBUGSOL")
+endif()
 # For the moment keep above coverage part in case we are testing at CI.
 option(CI "CI extended tests" ON)
 

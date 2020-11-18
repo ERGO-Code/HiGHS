@@ -103,7 +103,7 @@ void reportLpStatsOrError(FILE* output, int message_level,
                       lp.Avalue_.size());
     int num_int = 0;
     for (unsigned int i = 0; i < lp.integrality_.size(); i++)
-      if (lp.integrality_[i]) num_int++;
+      if (lp.integrality_[i] != HighsVarType::CONTINUOUS) num_int++;
     if (num_int)
       HighsPrintMessage(output, message_level, ML_ALWAYS, "Integer  : %d\n",
                         num_int);
@@ -206,12 +206,7 @@ HighsStatus callMipSolver(HighsOptions& use_options) {
   if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
   HighsMipSolver solver(use_options, highs.getLp());
-  HighsMipStatus status = solver.runMipSolver();
-  switch (status) {
-    case HighsMipStatus::kOptimal:
-      return HighsStatus::OK;
-    default:
-      break;
-  }
-  return HighsStatus::Error;
+  solver.run();
+
+  return HighsStatus::OK;
 }

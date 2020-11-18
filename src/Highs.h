@@ -308,13 +308,13 @@ class Highs {
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumCols() { return lp_.numCol_; }
+  int getNumCols() const { return lp_.numCol_; }
 
   /**
    * @brief Get the number of rows in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumRows() { return lp_.numRow_; }
+  int getNumRows() const { return lp_.numRow_; }
 
   /**
    * @brief Get the number of entries in the LP of the (first?)
