@@ -938,7 +938,9 @@ bool HighsSearch::branch() {
   if (currnode.branchingdecision.column == -1) {
     lp->getLpSolver().clearSolver();
     lp->setIterationLimit();
+    lp->getLpSolver().setHighsOptionValue("presolve", "on");
     evaluateNode();
+    lp->getLpSolver().setHighsOptionValue("presolve", "off");
 
     if (currnode.opensubtrees != 0) {
       printf(
