@@ -3591,3 +3591,22 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   right_size = (int)basis.basicIndex_.size() == lp.numRow_ && right_size;
   return right_size;
 }
+
+void initialiseScale(const HighsLp& lp, HighsScale& scale) {
+}
+
+void computeSimplexLpScale(const HighsOptions& options, const HighsLp& lp, HighsScale& scale) {
+}
+
+bool computeEquilibrationSimplexMatrixScale(const HighsOptions& options, const HighsLp& lp, HighsScale& scale) {
+  return false;
+}
+
+bool computeMaxValueSimplexMatrixScale(const HighsOptions& options, const HighsLp& lp, HighsScale& scale) {
+  return false;
+}
+
+
+
+
+

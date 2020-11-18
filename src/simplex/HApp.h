@@ -83,15 +83,9 @@ HighsStatus runHmoSimplexSolver(HighsModelObject& highs_model_object) {
     reportSimplexPhaseIterations(logfile, ekk.iteration_count_,
                                  ekk.simplex_info_, true);
     ekk.passLp(highs_model_object.simplex_lp_);
-#ifdef HiGHSDEV
-    ekk.analysis_.simplexTimerStart(SimplexTotalClock);
-#endif
     call_status = ekk.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkk::solve");
-#ifdef HiGHSDEV
-    ekk.analysis_.simplexTimerStop(SimplexTotalClock);
-#endif
     if (return_status == HighsStatus::Error) return return_status;
     reportSimplexPhaseIterations(
         logfile, ekk.iteration_count_,
@@ -139,10 +133,6 @@ HighsStatus runHmoSimplexSolver(HighsModelObject& highs_model_object) {
     // Use this since data in Ekk now computed without max function
     computeSimplexInfeasible(highs_model_object);
     copySimplexInfeasible(highs_model_object);
-    if (ekk.analysis_.analyse_simplex_time) ekk.analysis_.reportSimplexTimer();
-    if (ekk.analysis_.analyse_factor_time) ekk.analysis_.reportFactorTimer();
-    if (ekk.analysis_.analyse_simplex_data) ekk.analysis_.summaryReport();
-    if (ekk.analysis_.analyse_factor_data) ekk.analysis_.summaryReportFactor();
     if (simplex_info.num_primal_infeasibilities) {
       // Have primal infeasibilities to clean up
       printf(
@@ -510,7 +500,9 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
   HighsOptions& options = highs_model_object.options_;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
 
-  assert(!simplex_lp_status.initialised);
+  // Reset the model status and solution parameters for the unscaled
+  // LP in case of premature return
+  resetModelStatusAndSolutionParams(highs_model_object);
 
   // Assumes that the LP has a positive number of rows, since
   // unconstrained LPs should be solved in solveLpSimplex
@@ -523,16 +515,42 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
                     highs_model_object.lp_.numRow_);
     return HighsStatus::Error;
   }
-  // Reset the model status and solution parameter for the unscaled LP
-  // - to check that they are set later
-  resetModelStatusAndSolutionParams(highs_model_object);
+
+  // 
+  if (!simplex_lp_status.initialised) {
+    // The simplex LP isn't initialised
+    //
+    // Possibly scale the LP
+    // Initialise unit scaling factors
+    scaleHighsModelInit(highs_model_object);
+    bool scale_lp = options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF;
+    const bool force_no_scaling = false;  // true;//
+    if (force_no_scaling) {
+      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+		      "Forcing no scaling");
+      scale_lp = false;
+    }
+    if (scale_lp) {
+      HighsLp scaled_lp = highs_model_object.lp_;
+      // Perform scaling
+      //
+      // Pass the scaled LP to Ekk
+      ekk_instance.passLp(scaled_lp);
+    } else {
+      // Pass the original LP to Ekk
+      ekk_instance.passLp(highs_model_object.lp_);
+    }
+  }
+
+
 
   return_status = HighsStatus::Error;
+  assert(1==0);
   return return_status;
 }
 
 HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
-  const bool use_solveLpEkkSimplex = false;
+  const bool use_solveLpEkkSimplex = false;//true;
   if (highs_model_object.options_.simplex_class_ekk && use_solveLpEkkSimplex) {
     return solveLpEkkSimplex(highs_model_object);
   } else {

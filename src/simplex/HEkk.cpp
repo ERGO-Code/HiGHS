@@ -49,11 +49,12 @@ HighsStatus HEkk::passLp(const HighsLp& lp) {
     if (return_status == HighsStatus::Error) return return_status;
   }
   initialiseForNewLp();
-  initialiseAnalysis();
   return HighsStatus::OK;
 }
 
 HighsStatus HEkk::solve() {
+  initialiseAnalysis();
+  if (analysis_.analyse_simplex_time) analysis_.simplexTimerStart(SimplexTotalClock);
   if (initialiseForSolve() == HighsStatus::Error) return HighsStatus::Error;
 
   assert(simplex_lp_status_.has_basis);
@@ -65,69 +66,60 @@ HighsStatus HEkk::solve() {
   HighsStatus call_status;
   std::string algorithm;
 
+  // Indicate that dual and primal rays are not known
+  simplex_lp_status_.has_dual_ray = false;
+  simplex_lp_status_.has_primal_ray = false;
+
   chooseSimplexStrategyThreads(options_, simplex_info_);
   int simplex_strategy = simplex_info_.simplex_strategy;
 
-  if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
-    algorithm = "primal";
-  } else {
-    algorithm = "dual";
-  }
-  HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                  "Using EKK %s simplex solver", algorithm.c_str());
-
+  assert(simplex_strategy == options_.simplex_strategy);
   if (options_.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
+    algorithm = "primal";
+    HighsLogMessage(options_.logfile, HighsMessageType::INFO,
+		    "Using EKK primal simplex solver");
     HEkkPrimal primal_solver(*this);
     call_status = primal_solver.solve();
     return_status =
-        interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
+      interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
+    algorithm = "dual";
     HEkkDual dual_solver(*this);
     dual_solver.options();
-
-    //    simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL_PLAIN;
-    //    return_status = dual_solver.solve();
-
+    //
     // Solve, depending on the particular strategy
     if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
-      // Parallel - SIP
       HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                      "Using parallel simplex solver - SIP with %d threads",
+                      "Using EKK parallel dual simplex solver - SIP with %d threads",
                       simplex_info_.num_threads);
-      // writePivots("tasks");
-      call_status = dual_solver.solve();
-      return_status =
-          interpretCallStatus(call_status, return_status, "HEkkDual::solve");
-      if (return_status == HighsStatus::Error) return return_status;
     } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
-      // Parallel - PAMI
       HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                      "Using parallel simplex solver - PAMI with %d threads",
+                      "Using EKK parallel dual simplex solver - PAMI with %d threads",
                       simplex_info_.num_threads);
-      call_status = dual_solver.solve();
-      return_status =
-          interpretCallStatus(call_status, return_status, "HEkkDual::solve");
-      if (return_status == HighsStatus::Error) return return_status;
     } else {
-      // Serial
       HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                      "Using dual simplex solver - serial");
-      call_status = dual_solver.solve();
-      return_status =
-          interpretCallStatus(call_status, return_status, "HEkkDual::solve");
-      if (return_status == HighsStatus::Error) return return_status;
+                      "Using EKK dual simplex solver - serial");
     }
+    call_status = dual_solver.solve();
+    return_status =
+      interpretCallStatus(call_status, return_status, "HEkkDual::solve");
   }
+  if (return_status == HighsStatus::Error) return return_status;
   HighsLogMessage(
       options_.logfile, HighsMessageType::INFO,
       "EKK %s simplex solver returns %d primal and %d dual infeasibilities: "
-      "Status %s\n",
+      "Status %s",
       algorithm.c_str(), simplex_info_.num_primal_infeasibilities,
       simplex_info_.num_dual_infeasibilities,
       utilHighsModelStatusToString(scaled_model_status_).c_str());
 
+  if (analysis_.analyse_simplex_time) {
+    analysis_.simplexTimerStop(SimplexTotalClock);
+    analysis_.reportSimplexTimer();
+  }
+  if (analysis_.analyse_simplex_data) analysis_.summaryReport();
   if (analysis_.analyse_factor_data) analysis_.reportInvertFormData();
-
+  if (analysis_.analyse_factor_time) analysis_.reportFactorTimer();
   return return_status;
 }
 

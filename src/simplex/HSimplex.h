@@ -107,8 +107,6 @@ void scaleSimplexLp(HighsModelObject& highs_model);
 bool equilibrationScaleMatrix(HighsModelObject& highs_model);
 bool maxValueScaleMatrix(HighsModelObject& highs_model);
 
-HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
-                        const HighsIndexCollection& index_collection);
 // PERMUTE:
 
 HighsLp permuteLp(const HighsLp& lp, const vector<int>& permutation);
@@ -256,4 +254,17 @@ void updateSimplexLpStatus(
 );
 
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
+
+// SCALE:
+
+void initialiseScale(const HighsLp& lp, HighsScale& scale);
+
+HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
+                        const HighsIndexCollection& index_collection);
+
+void computeSimplexLpScale(const HighsOptions& options, const HighsLp& lp, HighsScale& scale);
+bool computeEquilibrationSimplexMatrixScale(const HighsOptions& options, const HighsLp& lp, HighsScale& scale);
+bool computeMaxValueSimplexMatrixScale(const HighsOptions& options, const HighsLp& lp, HighsScale& scale);
+
+
 #endif  // SIMPLEX_HSIMPLEX_H_
