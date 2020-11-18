@@ -245,5 +245,9 @@ const double running_average_multiplier = 0.05;
 const double accept_weight_threshold = 0.25;
 const double weight_error_threshold = 4.0;
 
+const double costly_DSE_measure_limit = 1000.0;
+const double costly_DSE_minimum_density = 0.01;     
+const double costly_DSE_fraction_num_total_iteration_before_switch = 0.1;// AnIterFracNumTot_ItBfSw = 0.1;       
+const double costly_DSE_fraction_num_costly_DSE_iteration_before_switch = 0.05;// AnIterFracNumCostlyDseItbfSw = 0.05; 
 
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

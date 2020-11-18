@@ -145,6 +145,7 @@ struct HighsSimplexInfo {
   int update_limit;
 
   // Simplex control parameters from HSA
+  int control_iteration_count0;
   double col_aq_density;
   double row_ep_density;
   double row_ap_density;
@@ -156,6 +157,10 @@ struct HighsSimplexInfo {
   double dual_col_density;
   bool allow_dual_steepest_edge_to_devex_switch;
   double dual_steepest_edge_weight_log_error_threshold;
+  // For control of switch from DSE to Devex in dual simplex
+  double costly_DSE_frequency;
+  int num_costly_DSE_iteration;
+  // Needed globally??
 
   // Internal options - can't be changed externally
   bool run_quiet = false;
