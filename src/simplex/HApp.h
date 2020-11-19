@@ -591,18 +591,23 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
 		      new_primal_feasibility_tolerance,
 		      new_dual_feasibility_tolerance);
   }
+  highs_model_object.scaled_model_status_ = ekk_instance.scaled_model_status_;
+  solution_params.objective_function_value = ekk_instance.simplex_info_.primal_objective_value;
+  highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
   highs_model_object.solution_ = ekk_instance.getSolution();
-  //  if (ekk_instance.simplex_lp_status_.is_scaled_)
-  //    unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
+  if (highs_model_object.scale_.is_scaled_)
+    unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
   highs_model_object.basis_ = ekk_instance.getBasis();
   return return_status;
 }
 
 HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
+  HighsStatus return_status;
   const bool use_solveLpEkkSimplex = true;  // true;
   if (highs_model_object.options_.simplex_class_ekk && use_solveLpEkkSimplex) {
-    return solveLpEkkSimplex(highs_model_object);
+    return_status = solveLpEkkSimplex(highs_model_object);
   } else {
-    return solveLpHmoSimplex(highs_model_object);
+    return_status = solveLpHmoSimplex(highs_model_object);
   }
+  return return_status;
 }
