@@ -262,7 +262,8 @@ void initialiseScale(const HighsLp& lp, HighsScale& scale);
 HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
                         const HighsIndexCollection& index_collection);
 
-void computeSimplexLpScale(const HighsOptions& options, HighsLp& lp, HighsScale& scale);
+void scaleSimplexLp(const HighsOptions& options, HighsLp& lp, HighsScale& scale);
+void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale);
 bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, HighsScale& scale);
 bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, HighsScale& scale);
 
