@@ -126,6 +126,104 @@ HighsStatus HEkk::solve() {
   return return_status;
 }
 
+void HEkk::setBasis() {
+  int num_col = simplex_lp_.numCol_;
+  int num_row = simplex_lp_.numRow_;
+  int num_tot = num_col + num_row;
+  simplex_basis_.nonbasicFlag_.resize(num_tot);
+  simplex_basis_.nonbasicMove_.resize(num_tot);
+  simplex_basis_.basicIndex_.resize(num_row);
+  for (int iCol = 0; iCol < num_col; iCol++)
+    simplex_basis_.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+  for (int iRow = 0; iRow < num_row; iRow++) {
+    int iVar = num_col + iRow;
+    simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+    simplex_basis_.basicIndex_[iRow] = iVar;
+  }
+  simplex_info_.num_basic_logicals = num_row;
+  simplex_lp_status_.has_basis = true;
+}
+
+void HEkk::setBasis(HighsBasis& basis) {
+  assert(1==0);
+}
+
+HighsSolution HEkk::getSolution() {
+  HighsSolution solution;
+  // Scatter the basic primal values
+  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
+    simplex_info_.workValue_[simplex_basis_.basicIndex_[iRow]] = simplex_info_.baseValue_[iRow];
+  // Zero the basic dual values
+  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
+    simplex_info_.workDual_[simplex_basis_.basicIndex_[iRow]] = 0;
+
+  // Now we can get the solution
+  solution.col_value.resize(simplex_lp_.numCol_);
+  solution.col_dual.resize(simplex_lp_.numCol_);
+  solution.row_value.resize(simplex_lp_.numRow_);
+  solution.row_dual.resize(simplex_lp_.numRow_);
+
+  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+    solution.col_value[iCol] = simplex_info_.workValue_[iCol];
+    solution.col_dual[iCol] = (int)simplex_lp_.sense_ * simplex_info_.workDual_[iCol];
+  }
+  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
+    solution.row_value[iRow] = -simplex_info_.workValue_[simplex_lp_.numCol_ + iRow];
+    solution.row_dual[iRow] = (int)simplex_lp_.sense_ * simplex_info_.workDual_[simplex_lp_.numCol_ + iRow];
+  }
+  return solution;
+}
+
+HighsBasis HEkk::getBasis() {
+  HighsBasis basis;
+  basis.col_status.resize(simplex_lp_.numCol_);
+  basis.row_status.resize(simplex_lp_.numRow_);
+  assert(simplex_lp_status_.has_basis);
+  basis.valid_ = false;
+  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+    int iVar = iCol;
+    const double lower = simplex_lp_.colLower_[iCol];
+    const double upper = simplex_lp_.colUpper_[iCol];
+    HighsBasisStatus basis_status;
+    if (!simplex_basis_.nonbasicFlag_[iVar]) {
+      basis_status = HighsBasisStatus::BASIC;
+    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
+        basis_status = HighsBasisStatus::LOWER;
+    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
+        basis_status = HighsBasisStatus::UPPER;
+    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE) {
+      if (lower == upper) {
+	basis_status = HighsBasisStatus::LOWER;
+      } else {
+	basis_status = HighsBasisStatus::ZERO;
+      }
+    }
+    basis.col_status[iCol] = basis_status;
+  }
+  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
+    int iVar = simplex_lp_.numCol_ + iRow;
+    const double lower = simplex_lp_.rowLower_[iRow];
+    const double upper = simplex_lp_.rowUpper_[iRow];
+    HighsBasisStatus basis_status;
+    if (!simplex_basis_.nonbasicFlag_[iVar]) {
+      basis_status = HighsBasisStatus::BASIC;
+    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
+      basis_status = HighsBasisStatus::UPPER;
+    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
+      basis_status = HighsBasisStatus::LOWER;
+    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE) {
+      if (lower == upper) {
+	basis_status = HighsBasisStatus::LOWER;
+      } else {
+	basis_status = HighsBasisStatus::ZERO;
+      }
+    }
+    basis.row_status[iRow] = basis_status;
+  }
+  basis.valid_ = true;
+  return basis;
+}
+
 HighsSolutionParams HEkk::getSolutionParams() {
   HighsSolutionParams solution_params;
   solution_params.primal_feasibility_tolerance =
@@ -350,24 +448,6 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
                     "Primal simplex solver unavailable");
     simplex_strategy = SIMPLEX_STRATEGY_DUAL;
   }
-}
-
-void HEkk::setBasis() {
-  int num_col = simplex_lp_.numCol_;
-  int num_row = simplex_lp_.numRow_;
-  int num_tot = num_col + num_row;
-  simplex_basis_.nonbasicFlag_.resize(num_tot);
-  simplex_basis_.nonbasicMove_.resize(num_tot);
-  simplex_basis_.basicIndex_.resize(num_row);
-  for (int iCol = 0; iCol < num_col; iCol++)
-    simplex_basis_.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
-  for (int iRow = 0; iRow < num_row; iRow++) {
-    int iVar = num_col + iRow;
-    simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-    simplex_basis_.basicIndex_[iRow] = iVar;
-  }
-  simplex_info_.num_basic_logicals = num_row;
-  simplex_lp_status_.has_basis = true;
 }
 
 int HEkk::getFactor() {

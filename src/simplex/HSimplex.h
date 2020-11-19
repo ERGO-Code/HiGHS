@@ -103,11 +103,6 @@ void scaleSimplexLp(HighsModelObject& highs_model);
 
 HighsLp permuteLp(const HighsLp& lp, const vector<int>& permutation);
 
-#ifdef HiGHSDEV
-// Only used to analyse the row and column status after Crash
-void initialise_basic_index(HighsModelObject& highs_model_object);
-#endif
-
 void allocateWorkAndBaseArrays(HighsModelObject& highs_model_object);
 
 void initialiseValueAndNonbasicMove(HighsModelObject& highs_model_object);
@@ -261,4 +256,16 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
 HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
                         const HighsIndexCollection& index_collection);
 
+void getUnscaledInfeasibilitiesAndNewTolerances(
+    const HighsOptions& options,
+    const HighsLp& lp,
+    const HighsModelStatus model_status,
+    const SimplexBasis& basis,
+    const HighsSimplexInfo& simplex_info,
+    const HighsScale& scale,
+    HighsSolutionParams& solution_params,
+    double& new_primal_feasibility_tolerance,
+    double& new_dual_feasibility_tolerance);
+
+void unscaleSolution(HighsSolution& solution, const HighsScale scale);
 #endif  // SIMPLEX_HSIMPLEX_H_

@@ -521,20 +521,20 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
     // The simplex LP isn't initialised
     //
     // Possibly scale the LP
-    // Initialise unit scaling factors
-    scaleHighsModelInit(highs_model_object);
     bool scale_lp =
         options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF;
     const bool force_no_scaling = false;  // true;//
     if (force_no_scaling) {
+      // Initialise unit scaling factors
+      scaleHighsModelInit(highs_model_object);
       HighsLogMessage(options.logfile, HighsMessageType::WARNING,
                       "Forcing no scaling");
       scale_lp = false;
     }
     if (scale_lp) {
       HighsLp scaled_lp = highs_model_object.lp_;
-      // Perform scaling
-      //
+      // Perform scaling - if it's worth it.
+      scaleSimplexLp(options, scaled_lp, highs_model_object.scale_);
       // Pass the scaled LP to Ekk
       ekk_instance.passLp(scaled_lp);
     } else {
@@ -543,13 +543,63 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
     }
   }
 
-  return_status = HighsStatus::Error;
-  assert(1 == 0);
+  // Solve the LP!
+  return_status = ekk_instance.solve();
+  if (return_status == HighsStatus::Error) return HighsStatus::Error;
+  
+  // Determine whether the unscaled LP has been solved
+  HighsSolutionParams& solution_params = highs_model_object.unscaled_solution_params_;
+  double new_primal_feasibility_tolerance;
+  double new_dual_feasibility_tolerance;
+  HighsSolutionParams solution_;
+  getUnscaledInfeasibilitiesAndNewTolerances(ekk_instance.options_,
+					     ekk_instance.simplex_lp_,
+					     ekk_instance.scaled_model_status_,
+					     ekk_instance.simplex_basis_,
+					     ekk_instance.simplex_info_,
+					     highs_model_object.scale_,
+					     solution_params,
+					     new_primal_feasibility_tolerance,
+					     new_dual_feasibility_tolerance);
+
+  int num_unscaled_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  int num_unscaled_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  // Set the model and solution status according to the unscaled solution
+  // parameters
+  if (num_unscaled_primal_infeasibilities == 0 &&
+      num_unscaled_dual_infeasibilities == 0) {
+    // Optimal
+    highs_model_object.unscaled_model_status_ = HighsModelStatus::OPTIMAL;
+    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  } else {
+    // Not optimal - should try refinement
+    assert(num_unscaled_primal_infeasibilities > 0 ||
+	   num_unscaled_dual_infeasibilities > 0);
+    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		    "Have num/max/sum primal (%d/%g/%g) and dual (%d/%g/%g) unscaled infeasibilities",
+		    num_unscaled_primal_infeasibilities,
+		    solution_params.max_primal_infeasibility,
+		    solution_params.sum_primal_infeasibilities,
+		    num_unscaled_dual_infeasibilities,
+		    solution_params.max_dual_infeasibility,
+		    solution_params.sum_dual_infeasibilities);
+    if (ekk_instance.scaled_model_status_ == HighsModelStatus::OPTIMAL)
+      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
+		      "Possibly re-solve with feasibility tolerances of %g "
+		      "primal and %g dual",
+		      new_primal_feasibility_tolerance,
+		      new_dual_feasibility_tolerance);
+  }
+  highs_model_object.solution_ = ekk_instance.getSolution();
+  //  if (ekk_instance.simplex_lp_status_.is_scaled_)
+  //    unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
+  highs_model_object.basis_ = ekk_instance.getBasis();
   return return_status;
 }
 
 HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
-  const bool use_solveLpEkkSimplex = false;  // true;
+  const bool use_solveLpEkkSimplex = true;  // true;
   if (highs_model_object.options_.simplex_class_ekk && use_solveLpEkkSimplex) {
     return solveLpEkkSimplex(highs_model_object);
   } else {

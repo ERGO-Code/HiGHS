@@ -38,6 +38,10 @@ class HEkk {
   HighsStatus passLp(const HighsLp& lp);
   HighsStatus initialiseSimplexLpBasisAndFactor();
   HighsStatus solve();
+  void setBasis();
+  void setBasis(HighsBasis& basis);
+  HighsSolution getSolution();
+  HighsBasis getBasis();
   HighsSolutionParams getSolutionParams();
 
   // Make this private later
@@ -66,7 +70,6 @@ class HEkk {
   HighsStatus initialiseForSolve();
   void setSimplexOptions();
   void initialiseSimplexLpRandomVectors();
-  void setBasis();
   void setNonbasicMove();
   int getFactor();
   void computePrimalObjectiveValue();

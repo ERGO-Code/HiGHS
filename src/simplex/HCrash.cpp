@@ -244,6 +244,25 @@ void HCrash::bixby() {
 #endif
 }
 
+#ifdef HiGHSDEV
+// Only used to analyse the row and column status after Crash
+void initialise_basic_index() {
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  SimplexBasis& simplex_basis = workHMO.simplex_basis_;
+
+  int num_basic_variables = 0;
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) {
+      assert(num_basic_variables < simplex_lp.numRow_);
+      simplex_basis.basicIndex_[num_basic_variables] = iVar;
+      num_basic_variables++;
+    }
+  }
+  assert(num_basic_variables == simplex_lp.numRow_);
+}
+#endif
+
 bool HCrash::bixby_iz_da() {
   HighsLp& simplex_lp = workHMO.simplex_lp_;
   const int* Astart = &simplex_lp.Astart_[0];
