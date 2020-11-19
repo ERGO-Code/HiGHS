@@ -1205,196 +1205,19 @@ void scaleHighsModelInit(HighsModelObject& highs_model_object) {
   initialiseScale(highs_model_object.simplex_lp_, highs_model_object.scale_);
 }
 
-void scaleCosts(HighsModelObject& highs_model_object) {
-  scaleCosts(highs_model_object.options_,
-	     highs_model_object.simplex_lp_,
-	     highs_model_object.scale_.cost_);
-}
-
-void scaleFactorRanges(HighsModelObject& highs_model_object,
-                       double& min_col_scale, double& max_col_scale,
-                       double& min_row_scale, double& max_row_scale) {
-  int numCol = highs_model_object.simplex_lp_.numCol_;
-  int numRow = highs_model_object.simplex_lp_.numRow_;
-  double* colScale = &highs_model_object.scale_.col_[0];
-  double* rowScale = &highs_model_object.scale_.row_[0];
-  // Determine the max and min row and column scaling factors
-  min_col_scale = HIGHS_CONST_INF;
-  max_col_scale = 1 / HIGHS_CONST_INF;
-  min_row_scale = HIGHS_CONST_INF;
-  max_row_scale = 1 / HIGHS_CONST_INF;
-  for (int iCol = 0; iCol < numCol; iCol++) {
-    min_col_scale = min(colScale[iCol], min_col_scale);
-    max_col_scale = max(colScale[iCol], max_col_scale);
-  }
-  for (int iRow = 0; iRow < numRow; iRow++) {
-    min_row_scale = min(rowScale[iRow], min_row_scale);
-    max_row_scale = max(rowScale[iRow], max_row_scale);
-  }
-}
-
 void scaleSimplexLp(HighsModelObject& highs_model_object) {
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   if (simplex_lp_status.scaling_tried) return;
 
-  //  printf("\n!! Forcing options.simplex_scale_strategy = 4 !!\n");
-  //  highs_model_object.options_.simplex_scale_strategy = 4;
-
-  const bool use_scaleSimplexLp = true;
-  if (use_scaleSimplexLp) {
-    scaleSimplexLp(highs_model_object.options_,
-		   highs_model_object.simplex_lp_,
-		   highs_model_object.scale_);
-    // Deduce the consequences of scaling the LP
-    if (highs_model_object.scale_.is_scaled_)
-      updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
-			    LpAction::SCALE);
-    return;
-  }
-  // Scale the LP highs_model_object.simplex_lp_, assuming all data are in place
-  HighsScale& scale = highs_model_object.scale_;
-  // Reset all scaling to 1
-  scaleHighsModelInit(highs_model_object);
-  int numCol = highs_model_object.simplex_lp_.numCol_;
-  int numRow = highs_model_object.simplex_lp_.numRow_;
-  double* colScale = &highs_model_object.scale_.col_[0];
-  double* rowScale = &highs_model_object.scale_.row_[0];
-  int* Astart = &highs_model_object.simplex_lp_.Astart_[0];
-  double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
-  double* colCost = &highs_model_object.simplex_lp_.colCost_[0];
-  double* colLower = &highs_model_object.simplex_lp_.colLower_[0];
-  double* colUpper = &highs_model_object.simplex_lp_.colUpper_[0];
-  double* rowLower = &highs_model_object.simplex_lp_.rowLower_[0];
-  double* rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
-
-  // Allow a switch to/from the original scaling rules
-  int simplex_scale_strategy =
-      highs_model_object.options_.simplex_scale_strategy;
-  bool allow_cost_scaling =
-      highs_model_object.options_.allowed_simplex_cost_scale_factor > 0;
-  // Find out range of matrix values and skip matrix scaling if all
-  // |values| are in [0.2, 5]
-  const double no_scaling_original_matrix_min_value = 0.2;
-  const double no_scaling_original_matrix_max_value = 5.0;
-  double original_matrix_min_value = HIGHS_CONST_INF;
-  double original_matrix_max_value = 0;
-  for (int k = 0, AnX = Astart[numCol]; k < AnX; k++) {
-    double value = fabs(Avalue[k]);
-    original_matrix_min_value = min(original_matrix_min_value, value);
-    original_matrix_max_value = max(original_matrix_max_value, value);
-  }
-  bool no_scaling =
-      (original_matrix_min_value >= no_scaling_original_matrix_min_value) &&
-      (original_matrix_max_value <= no_scaling_original_matrix_max_value);
-  const bool force_scaling = false;
-  if (force_scaling) {
-    no_scaling = false;
-    printf("!!!! FORCE SCALING !!!!\n");
-  }
-  bool scaled_matrix = false;
-  if (no_scaling) {
-    // No matrix scaling, but possible cost scaling
-    HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-                    "Scaling: Matrix has [min, max] values of [%g, %g] within "
-                    "[%g, %g] so no scaling performed",
-                    original_matrix_min_value, original_matrix_max_value,
-                    no_scaling_original_matrix_min_value,
-                    no_scaling_original_matrix_max_value);
-  } else {
-    const bool equilibration_scaling =
-        simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS ||
-        simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
-    if (equilibration_scaling) {
-      printf("\nUsing equilibration scaling: %d\n", simplex_scale_strategy);
-      scaled_matrix = equilibrationScaleMatrix(highs_model_object);
-    } else {
-      printf("\nUsing max value scaling: %d\n", simplex_scale_strategy);
-      scaled_matrix = maxValueScaleMatrix(highs_model_object);
-    }
-    scale.is_scaled_ = scaled_matrix;
-    if (scaled_matrix) {
-      // Matrix is scaled, so scale the bounds and costs
-      for (int iCol = 0; iCol < numCol; iCol++) {
-        colLower[iCol] /= colScale[iCol];
-        colUpper[iCol] /= colScale[iCol];
-        colCost[iCol] *= colScale[iCol];
-      }
-      for (int iRow = 0; iRow < numRow; iRow++) {
-        rowLower[iRow] *= rowScale[iRow];
-        rowUpper[iRow] *= rowScale[iRow];
-      }
-    }
-  }
-  // Possibly scale the costs
-  if (allow_cost_scaling) scaleCosts(highs_model_object);
-
-  // If matrix is unscaled, then LP is only scaled if there is a cost scaling
-  // factor
-  if (!scaled_matrix) scale.is_scaled_ = scale.cost_ != 1;
-
+  scaleSimplexLp(highs_model_object.options_, highs_model_object.simplex_lp_,
+                 highs_model_object.scale_);
   // Deduce the consequences of scaling the LP
-  if (scale.is_scaled_)
+  if (highs_model_object.scale_.is_scaled_)
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::SCALE);
-}
-
-bool equilibrationScaleMatrix(HighsModelObject& highs_model_object) {
-  return equilibrationScaleSimplexMatrix(highs_model_object.options_,
-					 highs_model_object.simplex_lp_,
-					 highs_model_object.scale_);
-}
-
-bool maxValueScaleMatrix(HighsModelObject& highs_model_object) {
-  return maxValueScaleSimplexMatrix(highs_model_object.options_,
-				    highs_model_object.simplex_lp_,
-				    highs_model_object.scale_);
-}
-
-HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
-                        const HighsIndexCollection& index_collection) {
-  HighsStatus return_status = HighsStatus::OK;
-  if (!assessIndexCollection(options, index_collection))
-    return interpretCallStatus(HighsStatus::Error, return_status,
-                               "assessIndexCollection");
-  int from_k;
-  int to_k;
-  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
-    return interpretCallStatus(HighsStatus::Error, return_status,
-                               "limitsForIndexCollection");
-  if (index_collection.is_set_) {
-    // For deletion by set it must be increasing
-    if (!increasingSetOk(index_collection.set_,
-                         index_collection.set_num_entries_, 0,
-                         index_collection.dimension_ - 1, true))
-      return HighsStatus::Error;
-  }
-  if (from_k > to_k) return HighsStatus::OK;
-
-  int delete_from_col;
-  int delete_to_col;
-  int keep_from_col;
-  int keep_to_col = -1;
-  int current_set_entry = 0;
-
-  int col_dim = index_collection.dimension_;
-  int new_num_col = 0;
-  for (int k = from_k; k <= to_k; k++) {
-    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
-                                    delete_to_col, keep_from_col, keep_to_col,
-                                    current_set_entry);
-    // Account for the initial columns being kept
-    if (k == from_k) new_num_col = delete_from_col;
-    if (delete_to_col >= col_dim - 1) break;
-    assert(delete_to_col < col_dim);
-    for (int col = keep_from_col; col <= keep_to_col; col++) {
-      scale[new_num_col] = scale[col];
-      new_num_col++;
-    }
-    if (keep_to_col >= col_dim - 1) break;
-  }
-  return HighsStatus::OK;
+  return;
 }
 
 HighsLp permuteLp(const HighsLp& lp, const vector<int>& permutation) {
@@ -3144,7 +2967,8 @@ void initialiseScale(const HighsLp& lp, HighsScale& scale) {
   scale.cost_ = 1;
 }
 
-void scaleSimplexLp(const HighsOptions& options, HighsLp& lp, HighsScale& scale) {
+void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
+                    HighsScale& scale) {
   initialiseScale(lp, scale);
   int numCol = lp.numCol_;
   int numRow = lp.numRow_;
@@ -3159,10 +2983,8 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp, HighsScale& scale)
   double* rowUpper = &lp.rowUpper_[0];
 
   // Allow a switch to/from the original scaling rules
-  int simplex_scale_strategy =
-      options.simplex_scale_strategy;
-  bool allow_cost_scaling =
-      options.allowed_simplex_cost_scale_factor > 0;
+  int simplex_scale_strategy = options.simplex_scale_strategy;
+  bool allow_cost_scaling = options.allowed_simplex_cost_scale_factor > 0;
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
   const double no_scaling_original_matrix_min_value = 0.2;
@@ -3222,18 +3044,16 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp, HighsScale& scale)
   // If matrix is unscaled, then LP is only scaled if there is a cost scaling
   // factor
   if (!scaled_matrix) scale.is_scaled_ = scale.cost_ != 1;
-
 }
 
 void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
   // Scale the costs by no less than minAlwCostScale
-  double max_allowed_cost_scale = pow(2.0, options.allowed_simplex_cost_scale_factor);
+  double max_allowed_cost_scale =
+      pow(2.0, options.allowed_simplex_cost_scale_factor);
   double max_nonzero_cost = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     if (lp.colCost_[iCol]) {
-      max_nonzero_cost =
-          max(fabs(lp.colCost_[iCol]),
-              max_nonzero_cost);
+      max_nonzero_cost = max(fabs(lp.colCost_[iCol]), max_nonzero_cost);
     }
   }
   // Scaling the costs up effectively increases the dual tolerance to
@@ -3283,7 +3103,8 @@ void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
 #endif
 }
 
-bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, HighsScale& scale) {
+bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
+                                     HighsScale& scale) {
   int numCol = lp.numCol_;
   int numRow = lp.numRow_;
   double* colScale = &scale.col_[0];
@@ -3293,8 +3114,7 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, H
   double* Avalue = &lp.Avalue_[0];
   double* colCost = &lp.colCost_[0];
 
-  int simplex_scale_strategy =
-      options.simplex_scale_strategy;
+  int simplex_scale_strategy = options.simplex_scale_strategy;
 
   double original_matrix_min_value = HIGHS_CONST_INF;
   double original_matrix_max_value = 0;
@@ -3319,8 +3139,7 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, H
   // std::numeric_limits<double>::infinity(), this Qi-trick doesn't
   // work so, in recognition, use the old value of HIGHS_CONST_INF
   const double finite_infinity = 1e200;
-  max_allow_scale =
-      pow(2.0, options.allowed_simplex_matrix_scale_factor);
+  max_allow_scale = pow(2.0, options.allowed_simplex_matrix_scale_factor);
   min_allow_scale = 1 / max_allow_scale;
 
   double min_allow_col_scale = min_allow_scale;
@@ -3583,15 +3402,13 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, H
           mean_equilibration_improvement);
     }
     if (matrix_value_ratio_improvement < 1.0) {
-      HighsLogMessage(options.logfile,
-                      HighsMessageType::WARNING,
+      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
                       "Scaling: Applying scaling with matrix value ratio "
                       "improvement of %0.4g",
                       matrix_value_ratio_improvement);
     }
     if (improvement_factor < 10 * improvement_factor_required) {
-      HighsLogMessage(options.logfile,
-                      HighsMessageType::WARNING,
+      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
                       "Scaling: Applying scaling with improvement factor %0.4g "
                       "< 10*(%0.4g) improvement",
                       improvement_factor, improvement_factor_required);
@@ -3601,7 +3418,8 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, H
   return true;
 }
 
-bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, HighsScale& scale) {
+bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
+                                HighsScale& scale) {
   int numCol = lp.numCol_;
   int numRow = lp.numRow_;
   vector<double>& colScale = scale.col_;
@@ -3613,7 +3431,8 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, HighsS
   assert(options.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_015 ||
          options.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_0157);
   const double log2 = log(2.0);
-  const double max_allow_scale = pow(2.0, options.allowed_simplex_matrix_scale_factor);
+  const double max_allow_scale =
+      pow(2.0, options.allowed_simplex_matrix_scale_factor);
   const double min_allow_scale = 1 / max_allow_scale;
 
   const double min_allow_col_scale = min_allow_scale;
@@ -3702,7 +3521,47 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, HighsS
   return true;
 }
 
+HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
+                        const HighsIndexCollection& index_collection) {
+  HighsStatus return_status = HighsStatus::OK;
+  if (!assessIndexCollection(options, index_collection))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "assessIndexCollection");
+  int from_k;
+  int to_k;
+  if (!limitsForIndexCollection(options, index_collection, from_k, to_k))
+    return interpretCallStatus(HighsStatus::Error, return_status,
+                               "limitsForIndexCollection");
+  if (index_collection.is_set_) {
+    // For deletion by set it must be increasing
+    if (!increasingSetOk(index_collection.set_,
+                         index_collection.set_num_entries_, 0,
+                         index_collection.dimension_ - 1, true))
+      return HighsStatus::Error;
+  }
+  if (from_k > to_k) return HighsStatus::OK;
 
+  int delete_from_col;
+  int delete_to_col;
+  int keep_from_col;
+  int keep_to_col = -1;
+  int current_set_entry = 0;
 
-
-
+  int col_dim = index_collection.dimension_;
+  int new_num_col = 0;
+  for (int k = from_k; k <= to_k; k++) {
+    updateIndexCollectionOutInIndex(index_collection, delete_from_col,
+                                    delete_to_col, keep_from_col, keep_to_col,
+                                    current_set_entry);
+    // Account for the initial columns being kept
+    if (k == from_k) new_num_col = delete_from_col;
+    if (delete_to_col >= col_dim - 1) break;
+    assert(delete_to_col < col_dim);
+    for (int col = keep_from_col; col <= keep_to_col; col++) {
+      scale[new_num_col] = scale[col];
+      new_num_col++;
+    }
+    if (keep_to_col >= col_dim - 1) break;
+  }
+  return HighsStatus::OK;
+}

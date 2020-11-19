@@ -516,18 +516,19 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
     return HighsStatus::Error;
   }
 
-  // 
+  //
   if (!simplex_lp_status.initialised) {
     // The simplex LP isn't initialised
     //
     // Possibly scale the LP
     // Initialise unit scaling factors
     scaleHighsModelInit(highs_model_object);
-    bool scale_lp = options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF;
+    bool scale_lp =
+        options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF;
     const bool force_no_scaling = false;  // true;//
     if (force_no_scaling) {
       HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-		      "Forcing no scaling");
+                      "Forcing no scaling");
       scale_lp = false;
     }
     if (scale_lp) {
@@ -542,15 +543,13 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
     }
   }
 
-
-
   return_status = HighsStatus::Error;
-  assert(1==0);
+  assert(1 == 0);
   return return_status;
 }
 
 HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
-  const bool use_solveLpEkkSimplex = false;//true;
+  const bool use_solveLpEkkSimplex = false;  // true;
   if (highs_model_object.options_.simplex_class_ekk && use_solveLpEkkSimplex) {
     return solveLpEkkSimplex(highs_model_object);
   } else {

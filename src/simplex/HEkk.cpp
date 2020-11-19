@@ -54,7 +54,8 @@ HighsStatus HEkk::passLp(const HighsLp& lp) {
 
 HighsStatus HEkk::solve() {
   initialiseAnalysis();
-  if (analysis_.analyse_simplex_time) analysis_.simplexTimerStart(SimplexTotalClock);
+  if (analysis_.analyse_simplex_time)
+    analysis_.simplexTimerStart(SimplexTotalClock);
   if (initialiseForSolve() == HighsStatus::Error) return HighsStatus::Error;
 
   assert(simplex_lp_status_.has_basis);
@@ -77,11 +78,11 @@ HighsStatus HEkk::solve() {
   if (options_.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     algorithm = "primal";
     HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-		    "Using EKK primal simplex solver");
+                    "Using EKK primal simplex solver");
     HEkkPrimal primal_solver(*this);
     call_status = primal_solver.solve();
     return_status =
-      interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
+        interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
     algorithm = "dual";
     HEkkDual dual_solver(*this);
@@ -89,20 +90,22 @@ HighsStatus HEkk::solve() {
     //
     // Solve, depending on the particular strategy
     if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
-      HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                      "Using EKK parallel dual simplex solver - SIP with %d threads",
-                      simplex_info_.num_threads);
+      HighsLogMessage(
+          options_.logfile, HighsMessageType::INFO,
+          "Using EKK parallel dual simplex solver - SIP with %d threads",
+          simplex_info_.num_threads);
     } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
-      HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                      "Using EKK parallel dual simplex solver - PAMI with %d threads",
-                      simplex_info_.num_threads);
+      HighsLogMessage(
+          options_.logfile, HighsMessageType::INFO,
+          "Using EKK parallel dual simplex solver - PAMI with %d threads",
+          simplex_info_.num_threads);
     } else {
       HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                       "Using EKK dual simplex solver - serial");
     }
     call_status = dual_solver.solve();
     return_status =
-      interpretCallStatus(call_status, return_status, "HEkkDual::solve");
+        interpretCallStatus(call_status, return_status, "HEkkDual::solve");
   }
   if (return_status == HighsStatus::Error) return return_status;
   HighsLogMessage(

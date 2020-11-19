@@ -97,15 +97,7 @@ void extendSimplexLpRandomVectors(HighsModelObject& highs_model_object,
 
 void scaleHighsModelInit(HighsModelObject& highs_model);
 
-void scaleCosts(HighsModelObject& highs_model);
-
-void scaleFactorRanges(HighsModelObject& highs_model_object,
-                       double& min_col_scale, double& max_col_scale,
-                       double& min_row_scale, double& max_row_scale);
-
 void scaleSimplexLp(HighsModelObject& highs_model);
-bool equilibrationScaleMatrix(HighsModelObject& highs_model);
-bool maxValueScaleMatrix(HighsModelObject& highs_model);
 
 // PERMUTE:
 
@@ -259,13 +251,14 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
 void initialiseScale(const HighsLp& lp, HighsScale& scale);
 
+void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
+                    HighsScale& scale);
+void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale);
+bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
+                                     HighsScale& scale);
+bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
+                                HighsScale& scale);
 HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
                         const HighsIndexCollection& index_collection);
-
-void scaleSimplexLp(const HighsOptions& options, HighsLp& lp, HighsScale& scale);
-void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale);
-bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, HighsScale& scale);
-bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp, HighsScale& scale);
-
 
 #endif  // SIMPLEX_HSIMPLEX_H_
