@@ -27,6 +27,8 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
 HighsMipSolver::~HighsMipSolver() = default;
 
 HighsPresolveStatus HighsMipSolver::runPresolve() {
+  std::cout << "Running MIP presolve" << std::endl;
+
   // todo: commented out parts or change Highs::runPresolve to operate on a
   // parameter LP rather than Highs::lp_. Not sure which approach is preferable.
 
@@ -113,6 +115,8 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
 }
 
 HighsPostsolveStatus HighsMipSolver::runPostsolve() {
+  std::cout << "Running MIP postsolve..." << std::endl;
+
   assert(presolve_.has_run_);
   bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
                                          presolve_.data_.reduced_solution_);
@@ -144,7 +148,13 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 }
 
 void HighsMipSolver::run() {
-  if (options_mip_->presolve == "on") runPresolve();
+  std::cout << options_mip_->presolve << std::endl;
+
+  if (options_mip_->presolve != "off") {
+    HighsPresolveStatus presolve_status = runPresolve();
+    if (presolve_status == HighsPresolveStatus::Reduced) 
+      model_ = &presolve_.getReducedProblem();
+  }
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->timer.start(mipdata_->timer.solve_clock);
@@ -295,5 +305,5 @@ void HighsMipSolver::run() {
   mipdata_->timer.stop(mipdata_->timer.solve_clock);
   mipdata_->printDisplayLine();
 
-  if (options_mip_->presolve == "on") runPostsolve();
+  if (options_mip_->presolve != "off") runPostsolve();
 }

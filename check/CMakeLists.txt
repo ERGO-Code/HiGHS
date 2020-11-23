@@ -165,6 +165,11 @@ set(unboundedInstances
 
 set(failInstances
     )
+ 
+set(mipInstances 
+    "small_mip\;3.23684211\;"
+    "flugpl\;1201500\;"
+    )
 
 # define settings
 set(settings
@@ -224,31 +229,22 @@ add_instancetests(failInstances "Fail")
 add_instancetests(infeasibleInstances "Infeasible")
 add_instancetests(unboundedInstances "Unbounded")
 
-# todo: test objective value
+foreach(instance ${mipInstances})
+    list(GET instance 0 name)
+    list(GET instance 1 optval)
+    # specify the instance and the settings load command
+    set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
-# todo: test iteration count
+    foreach(setting ${settings})
+        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+              ${inst})
 
-# manually add presolve tests until we fix presolve
-set(setting "--presolve=on")
+        set_tests_properties (${name}${setting} PROPERTIES
+                DEPENDS unit_tests_all)
 
-set(inst "${HIGHS_SOURCE_DIR}/check/instances/adlittle.mps")
-add_test(NAME "presolve-adlittle" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-adlittle" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Optimal")
-set_tests_properties ("presolve-adlittle" PROPERTIES DEPENDS unit_tests_all)
+        set_tests_properties (${name}${setting} PROPERTIES
+                PASS_REGULAR_EXPRESSION
+                "${optval}")
 
-set(inst "${HIGHS_SOURCE_DIR}/check/instances/scrs8.mps")
-add_test(NAME "presolve-scrs8" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-scrs8" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Optimal")
-set_tests_properties ("presolve-scrs8" PROPERTIES DEPENDS unit_tests_all)
-
-
-set(inst "${HIGHS_SOURCE_DIR}/check/instances/woodinfe.mps")
-add_test(NAME "presolve-woodinfe" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-woodinfe" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Infeasible")
-set_tests_properties ("presolve-woodinfe" PROPERTIES DEPENDS unit_tests_all)
-
-
-set(inst "${HIGHS_SOURCE_DIR}/check/instances/gas11.mps")
-add_test(NAME "presolve-gas11" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-gas11" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Unbounded")
-set_tests_properties ("presolve-gas11" PROPERTIES DEPENDS unit_tests_all)
+    endforeach(setting)
+endforeach()
