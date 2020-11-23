@@ -19,13 +19,131 @@
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
 #include "util/HighsCDouble.h"
+#include "presolve/PresolveComponent.h"
 
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
     : options_mip_(&options), model_(&lp) {}
 
 HighsMipSolver::~HighsMipSolver() = default;
 
+HighsPresolveStatus HighsMipSolver::runPresolve() {
+  // todo: commented out parts or change Highs::runPresolve to operate on a parameter LP rather than Highs::lp_.
+  // Not sure which approach is preferable.
+
+  const HighsLp& lp_ = *(model_);
+
+  // Exit if the problem is empty or if presolve is set to off.
+  // if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
+  // if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
+  //   return HighsPresolveStatus::NullError;
+
+  // Clear info from previous runs if lp_ has been modified.
+  // if (presolve_.has_run_) presolve_.clear();
+  // double start_presolve = timer_.readRunHighsClock();
+
+  // Set time limit.
+  // if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
+  //   double left = options_.time_limit - start_presolve;
+  //   if (left <= 0) {
+  //     HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+  //                       "Time limit reached while reading in matrix\n");
+  //     return HighsPresolveStatus::Timeout;
+  //   }
+
+  //   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+  //                     "Time limit set: reading matrix took %.2g, presolve "
+  //                     "time left: %.2g\n",
+  //                     start_presolve, left);
+  //   presolve_.options_.time_limit = left;
+  // }
+
+  // Presolve.
+  presolve_.init(lp_, timer_);
+  // if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
+  //   double current = timer_.readRunHighsClock();
+  //   double time_init = current - start_presolve;
+  //   double left = presolve_.options_.time_limit - time_init;
+  //   if (left <= 0) {
+  //     HighsPrintMessage(
+  //         options_.output, options_.message_level, ML_VERBOSE,
+  //         "Time limit reached while copying matrix into presolve.\n");
+  //     return HighsPresolveStatus::Timeout;
+  //   }
+
+  //   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+  //                     "Time limit set: copying matrix took %.2g, presolve "
+  //                     "time left: %.2g\n",
+  //                     time_init, left);
+  //   presolve_.options_.time_limit = options_.time_limit;
+  // }
+
+  // presolve_.data_.presolve_[0].message_level = options_.message_level;
+  // presolve_.data_.presolve_[0].output = options_.output;
+
+  HighsPresolveStatus presolve_return_status = presolve_.run();
+
+  // Handle max case.
+  // if (presolve_return_status == HighsPresolveStatus::Reduced &&
+  //     lp_.sense_ == ObjSense::MAXIMIZE) {
+  //   presolve_.negateReducedLpCost();
+  //   presolve_.data_.reduced_lp_.sense_ = ObjSense::MAXIMIZE;
+  // }
+
+  // Update reduction counts.
+  switch (presolve_.presolve_status_) {
+    case HighsPresolveStatus::Reduced: {
+      HighsLp& reduced_lp = presolve_.getReducedProblem();
+      presolve_.info_.n_cols_removed = lp_.numCol_ - reduced_lp.numCol_;
+      presolve_.info_.n_rows_removed = lp_.numRow_ - reduced_lp.numRow_;
+      presolve_.info_.n_nnz_removed =
+          (int)lp_.Avalue_.size() - (int)reduced_lp.Avalue_.size();
+      break;
+    }
+    case HighsPresolveStatus::ReducedToEmpty: {
+      presolve_.info_.n_cols_removed = lp_.numCol_;
+      presolve_.info_.n_rows_removed = lp_.numRow_;
+      presolve_.info_.n_nnz_removed = (int)lp_.Avalue_.size();
+      break;
+    }
+    default:
+      break;
+  }
+  return presolve_return_status;
+}
+
+HighsPostsolveStatus HighsMipSolver::runPostsolve() {
+  assert(presolve_.has_run_);
+  bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
+                                         presolve_.data_.reduced_solution_);
+  if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
+
+  if (presolve_.presolve_status_ != HighsPresolveStatus::Reduced &&
+      presolve_.presolve_status_ != HighsPresolveStatus::ReducedToEmpty)
+    return HighsPostsolveStatus::NoPostsolve;
+
+  // todo:
+  // Handle max case.
+  // if (lp_.sense_ == ObjSense::MAXIMIZE) presolve_.negateReducedLpColDuals(true);
+
+  // Run postsolve
+  HighsPostsolveStatus postsolve_status =
+      presolve_.data_.presolve_[0].postsolve(
+          presolve_.data_.reduced_solution_, presolve_.data_.reduced_basis_,
+          presolve_.data_.recovered_solution_,
+          presolve_.data_.recovered_basis_);
+
+  if (postsolve_status != HighsPostsolveStatus::SolutionRecovered)
+    return postsolve_status;
+
+  // if (lp_.sense_ == ObjSense::MAXIMIZE)
+  //   presolve_.negateReducedLpColDuals(false);
+
+  return HighsPostsolveStatus::SolutionRecovered;
+}
+
 void HighsMipSolver::run() {
+  runPresolve();
+
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->timer.start(mipdata_->timer.solve_clock);
   mipdata_->setup();
@@ -174,4 +292,6 @@ void HighsMipSolver::run() {
 
   mipdata_->timer.stop(mipdata_->timer.solve_clock);
   mipdata_->printDisplayLine();
+
+  runPostsolve();
 }

@@ -206,15 +206,16 @@ HighsStatus callMipSolver(HighsOptions& use_options) {
   reportLpStatsOrError(output, message_level, read_status, highs.getLp());
   if (read_status == HighsStatus::Error) return HighsStatus::Error;
   HighsLp lp = highs.getLp();
-  printf("running aggregator (nnz = %lu)\n", lp.Avalue_.size());
-  presolve::HAggregator aggregator(lp.rowLower_, lp.rowUpper_, lp.colCost_,
-                                   lp.offset_, lp.integrality_, lp.colLower_,
-                                   lp.colUpper_);
+  // printf("running aggregator (nnz = %lu)\n", lp.Avalue_.size());
+  // presolve::HAggregator aggregator(lp.rowLower_, lp.rowUpper_, lp.colCost_,
+  //                                  lp.offset_, lp.integrality_, lp.colLower_,
+  //                                  lp.colUpper_);
 
-  aggregator.fromCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
-  aggregator.run();
-  aggregator.toCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
-  printf("aggregator finished (nnz = %lu)\n", lp.Avalue_.size());
+  // aggregator.fromCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  // aggregator.run();
+  // aggregator.toCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  // printf("aggregator finished (nnz = %lu)\n", lp.Avalue_.size());
+
   HighsMipSolver solver(use_options, lp);
   solver.run();
 

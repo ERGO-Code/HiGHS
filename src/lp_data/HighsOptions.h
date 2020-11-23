@@ -679,7 +679,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_bool =
-        new OptionRecordBool("mip", "Use mip solver.", advanced, &mip, false);
+        new OptionRecordBool("mip", "Use mip solver.", advanced, &mip, true);
     records.push_back(record_bool);
   }
 
