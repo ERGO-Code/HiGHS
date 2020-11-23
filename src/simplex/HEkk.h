@@ -38,10 +38,14 @@ class HEkk {
   HighsStatus passLp(const HighsLp& lp);
   HighsStatus initialiseSimplexLpBasisAndFactor();
   HighsStatus solve();
-  void setBasis();
-  void setBasis(HighsBasis& basis);
+  HighsStatus setBasis();
+  HighsStatus setBasis(const HighsBasis& basis);
+  HighsStatus setBasis(const SimplexBasis& basis);
+
   HighsSolution getSolution();
-  HighsBasis getBasis();
+  HighsBasis getHighsBasis();
+  const SimplexBasis& getSimplexBasis() { return simplex_basis_; }
+
   HighsSolutionParams getSolutionParams();
 
   // Make this private later

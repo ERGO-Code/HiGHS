@@ -126,7 +126,8 @@ HighsStatus HEkk::solve() {
   return return_status;
 }
 
-void HEkk::setBasis() {
+HighsStatus HEkk::setBasis() {
+  // Set up a logical basis
   int num_col = simplex_lp_.numCol_;
   int num_row = simplex_lp_.numRow_;
   int num_tot = num_col + num_row;
@@ -142,17 +143,100 @@ void HEkk::setBasis() {
   }
   simplex_info_.num_basic_logicals = num_row;
   simplex_lp_status_.has_basis = true;
+  return HighsStatus::OK;
 }
 
-void HEkk::setBasis(HighsBasis& basis) {
-  assert(1==0);
+HighsStatus HEkk::setBasis(const HighsBasis& basis) {
+  // Shouldn't have to check the incoming basis since this is an
+  // internal call, but it may be a basis that's set up internally
+  // with errors :-) ...
+  if (debugBasisConsistent(options_, simplex_lp_, basis) ==
+      HighsDebugStatus::LOGICAL_ERROR) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "Supposed to be a Highs basis, but not valid");
+    return HighsStatus::Error;
+  }
+  int num_col = simplex_lp_.numCol_;
+  int num_row = simplex_lp_.numRow_;
+  int num_tot = num_col + num_row;
+  assert((int)simplex_basis_.nonbasicFlag_.size() == num_tot);
+  assert((int)simplex_basis_.nonbasicMove_.size() == num_tot);
+  assert((int)simplex_basis_.basicIndex_.size() == num_row);
+
+  int num_basic_variables = 0;
+  for (int iCol = 0; iCol < num_col; iCol++) {
+    int iVar = iCol;
+    const double lower = simplex_lp_.colLower_[iCol];
+    const double upper = simplex_lp_.colUpper_[iCol];
+    if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
+      simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+      simplex_basis_.nonbasicMove_[iVar] = 0;
+      simplex_basis_.basicIndex_[num_basic_variables++] = iVar;
+    } else {
+      simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+      if (basis.col_status[iCol] == HighsBasisStatus::LOWER) {
+        if (lower == upper) {
+          simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+        } else {
+          simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_UP;
+        }
+      } else if (basis.col_status[iCol] == HighsBasisStatus::UPPER) {
+        simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_DN;
+      } else {
+        assert(basis.col_status[iCol] == HighsBasisStatus::ZERO);
+        simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+      }
+    }
+  }
+  for (int iRow = 0; iRow < num_row; iRow++) {
+    int iVar = num_col + iRow;
+    const double lower = simplex_lp_.rowLower_[iRow];
+    const double upper = simplex_lp_.rowUpper_[iRow];
+    if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
+      simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+      simplex_basis_.nonbasicMove_[iVar] = 0;
+      simplex_basis_.basicIndex_[num_basic_variables++] = iVar;
+    } else {
+      simplex_basis_.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+      if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
+        if (lower == upper) {
+          simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+        } else {
+          simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_DN;
+        }
+      } else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
+        simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_UP;
+      } else {
+        assert(basis.row_status[iRow] == HighsBasisStatus::ZERO);
+        simplex_basis_.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+      }
+    }
+  }
+  return HighsStatus::OK;
+}
+
+HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
+  // Shouldn't have to check the incoming basis since this is an
+  // internal call, but it may be a basis that's set up internally
+  // with errors :-) ...
+  if (debugBasisConsistent(options_, simplex_lp_, basis) ==
+      HighsDebugStatus::LOGICAL_ERROR) {
+    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                    "Supposed to be a Highs basis, but not valid");
+    return HighsStatus::Error;
+  }
+  simplex_basis_.nonbasicFlag_ = basis_.nonbasicFlag_;
+  simplex_basis_.nonbasicMove_ = basis_.nonbasicMove_;
+  simplex_basis_.basicIndex_ = basis_.basicIndex_;
+  return HighsStatus::OK;
 }
 
 HighsSolution HEkk::getSolution() {
   HighsSolution solution;
   // Scatter the basic primal values
   for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
-    simplex_info_.workValue_[simplex_basis_.basicIndex_[iRow]] = simplex_info_.baseValue_[iRow];
+    simplex_info_.workValue_[simplex_basis_.basicIndex_[iRow]] =
+        simplex_info_.baseValue_[iRow];
   // Zero the basic dual values
   for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++)
     simplex_info_.workDual_[simplex_basis_.basicIndex_[iRow]] = 0;
@@ -165,22 +249,29 @@ HighsSolution HEkk::getSolution() {
 
   for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
     solution.col_value[iCol] = simplex_info_.workValue_[iCol];
-    solution.col_dual[iCol] = (int)simplex_lp_.sense_ * simplex_info_.workDual_[iCol];
+    solution.col_dual[iCol] =
+        (int)simplex_lp_.sense_ * simplex_info_.workDual_[iCol];
   }
   for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
-    solution.row_value[iRow] = -simplex_info_.workValue_[simplex_lp_.numCol_ + iRow];
-    solution.row_dual[iRow] = (int)simplex_lp_.sense_ * simplex_info_.workDual_[simplex_lp_.numCol_ + iRow];
+    solution.row_value[iRow] =
+        -simplex_info_.workValue_[simplex_lp_.numCol_ + iRow];
+    solution.row_dual[iRow] =
+        (int)simplex_lp_.sense_ *
+        simplex_info_.workDual_[simplex_lp_.numCol_ + iRow];
   }
   return solution;
 }
 
-HighsBasis HEkk::getBasis() {
+HighsBasis HEkk::getHighsBasis() {
+  int num_col = simplex_lp_.numCol_;
+  int num_row = simplex_lp_.numRow_;
+  int num_tot = num_col + num_row;
   HighsBasis basis;
-  basis.col_status.resize(simplex_lp_.numCol_);
-  basis.row_status.resize(simplex_lp_.numRow_);
+  basis.col_status.resize(num_col);
+  basis.row_status.resize(num_row);
   assert(simplex_lp_status_.has_basis);
   basis.valid_ = false;
-  for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
+  for (int iCol = 0; iCol < num_col; iCol++) {
     int iVar = iCol;
     const double lower = simplex_lp_.colLower_[iCol];
     const double upper = simplex_lp_.colUpper_[iCol];
@@ -188,20 +279,20 @@ HighsBasis HEkk::getBasis() {
     if (!simplex_basis_.nonbasicFlag_[iVar]) {
       basis_status = HighsBasisStatus::BASIC;
     } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
-        basis_status = HighsBasisStatus::LOWER;
+      basis_status = HighsBasisStatus::LOWER;
     } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
-        basis_status = HighsBasisStatus::UPPER;
+      basis_status = HighsBasisStatus::UPPER;
     } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE) {
       if (lower == upper) {
-	basis_status = HighsBasisStatus::LOWER;
+        basis_status = HighsBasisStatus::LOWER;
       } else {
-	basis_status = HighsBasisStatus::ZERO;
+        basis_status = HighsBasisStatus::ZERO;
       }
     }
     basis.col_status[iCol] = basis_status;
   }
-  for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
-    int iVar = simplex_lp_.numCol_ + iRow;
+  for (int iRow = 0; iRow < num_row; iRow++) {
+    int iVar = num_col + iRow;
     const double lower = simplex_lp_.rowLower_[iRow];
     const double upper = simplex_lp_.rowUpper_[iRow];
     HighsBasisStatus basis_status;
@@ -213,9 +304,9 @@ HighsBasis HEkk::getBasis() {
       basis_status = HighsBasisStatus::LOWER;
     } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE) {
       if (lower == upper) {
-	basis_status = HighsBasisStatus::LOWER;
+        basis_status = HighsBasisStatus::LOWER;
       } else {
-	basis_status = HighsBasisStatus::ZERO;
+        basis_status = HighsBasisStatus::ZERO;
       }
     }
     basis.row_status[iRow] = basis_status;
@@ -267,7 +358,9 @@ void HEkk::initialiseForNewLp() {
 HighsStatus HEkk::initialiseForSolve() {
   const int rank_deficiency = getFactor();
   if (rank_deficiency) return HighsStatus::Error;
-  setNonbasicMove();
+  if (!simplex_lp_status_.has_basis) {
+    setNonbasicMove();
+  }
   simplex_lp_status_.has_basis = true;
 
   initialiseMatrix();  // Timed

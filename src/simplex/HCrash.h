@@ -97,8 +97,8 @@ class HCrash {
 #endif
 
 #ifdef HiGHSDEV
-// Only used to analyse the row and column status after Crash
-void initialise_basic_index();
+  // Only used to analyse the row and column status after Crash
+  void initialise_basic_index();
 #endif
 
   // Model to be crashed

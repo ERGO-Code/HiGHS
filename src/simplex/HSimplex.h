@@ -257,12 +257,9 @@ HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
                         const HighsIndexCollection& index_collection);
 
 void getUnscaledInfeasibilitiesAndNewTolerances(
-    const HighsOptions& options,
-    const HighsLp& lp,
-    const HighsModelStatus model_status,
-    const SimplexBasis& basis,
-    const HighsSimplexInfo& simplex_info,
-    const HighsScale& scale,
+    const HighsOptions& options, const HighsLp& lp,
+    const HighsModelStatus model_status, const SimplexBasis& basis,
+    const HighsSimplexInfo& simplex_info, const HighsScale& scale,
     HighsSolutionParams& solution_params,
     double& new_primal_feasibility_tolerance,
     double& new_dual_feasibility_tolerance);
