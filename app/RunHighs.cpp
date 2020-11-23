@@ -26,8 +26,8 @@ void reportLpStatsOrError(FILE* output, int message_level,
                           const HighsStatus read_status, const HighsLp& lp);
 void reportSolvedLpStats(FILE* output, int message_level,
                          const HighsStatus run_status, const Highs& highs);
-HighsStatus callLpSolver(HighsOptions& options);
-HighsStatus callMipSolver(HighsOptions& options);
+HighsStatus callLpSolver(HighsOptions& options, const HighsLp& lp);
+HighsStatus callMipSolver(HighsOptions& options, const HighsLp& lp);
 
 int main(int argc, char** argv) {
   printHighsVersionCopyright(stdout, ML_ALWAYS);
@@ -37,12 +37,29 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
+  Highs highs;
+  HighsStatus read_status = highs.readModel(options.model_file);
+  reportLpStatsOrError(options.output, options.message_level, read_status,
+                       highs.getLp());
+  if (read_status == HighsStatus::Error)
+    return 1;  // todo: change to read error
+
   // Run LP or MIP solver.
+  // todo: modify so there is no extra matrix copy.
+  // requires load model to be separated from HiGHS
+  const HighsLp& lp = highs.getLp();
   HighsStatus run_status = HighsStatus::Error;
-  if (!options.mip) {
-    run_status = callLpSolver(options);
+  bool is_mip = false;
+  for (int i=0; i<lp.integrality_.size(); i++)
+    if (lp.integrality_[i] == HighsVarType::INTEGER) {
+      is_mip = true;
+      break;
+    }
+
+  if (!options.mip && !is_mip) {
+    run_status = callLpSolver(options, lp);
   } else {
-    run_status = callMipSolver(options);
+    run_status = callMipSolver(options, lp);
   }
 
   return (int)run_status;
@@ -176,7 +193,7 @@ void reportSolvedLpStats(FILE* output, int message_level,
   }
 }
 
-HighsStatus callLpSolver(HighsOptions& use_options) {
+HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   FILE* output = use_options.output;
   const int message_level = use_options.message_level;
 
@@ -184,10 +201,11 @@ HighsStatus callLpSolver(HighsOptions& use_options) {
   Highs highs(use_options);
   const HighsOptions& options = highs.getHighsOptions();
 
-  // Load problem.
-  HighsStatus read_status = highs.readModel(options.model_file);
-  reportLpStatsOrError(output, message_level, read_status, highs.getLp());
-  if (read_status == HighsStatus::Error) return HighsStatus::Error;
+  // // Load problem.
+  highs.passModel(lp);
+  // HighsStatus read_status = highs.readModel(options.model_file);
+  // reportLpStatsOrError(output, message_level, read_status, highs.getLp());
+  // if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
   // Run HiGHS.
   highs.setBasis();
@@ -197,15 +215,16 @@ HighsStatus callLpSolver(HighsOptions& use_options) {
   return run_status;
 }
 
-HighsStatus callMipSolver(HighsOptions& use_options) {
+HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
   FILE* output = use_options.output;
   const int message_level = use_options.message_level;
-  Highs highs(use_options);
-  const HighsOptions& options = highs.getHighsOptions();
-  HighsStatus read_status = highs.readModel(options.model_file);
-  reportLpStatsOrError(output, message_level, read_status, highs.getLp());
-  if (read_status == HighsStatus::Error) return HighsStatus::Error;
-  HighsLp lp = highs.getLp();
+
+  // Highs highs(use_options);
+  // const HighsOptions& options = highs.getHighsOptions();
+  // HighsStatus read_status = highs.readModel(options.model_file);
+  // reportLpStatsOrError(output, message_level, read_status, highs.getLp());
+  // if (read_status == HighsStatus::Error) return HighsStatus::Error;
+  // HighsLp lp = highs.getLp();
   // printf("running aggregator (nnz = %lu)\n", lp.Avalue_.size());
   // presolve::HAggregator aggregator(lp.rowLower_, lp.rowUpper_, lp.colCost_,
   //                                  lp.offset_, lp.integrality_, lp.colLower_,

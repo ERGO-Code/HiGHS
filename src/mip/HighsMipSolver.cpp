@@ -18,8 +18,8 @@
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
-#include "util/HighsCDouble.h"
 #include "presolve/PresolveComponent.h"
+#include "util/HighsCDouble.h"
 
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
     : options_mip_(&options), model_(&lp) {}
@@ -27,14 +27,15 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
 HighsMipSolver::~HighsMipSolver() = default;
 
 HighsPresolveStatus HighsMipSolver::runPresolve() {
-  // todo: commented out parts or change Highs::runPresolve to operate on a parameter LP rather than Highs::lp_.
-  // Not sure which approach is preferable.
+  // todo: commented out parts or change Highs::runPresolve to operate on a
+  // parameter LP rather than Highs::lp_. Not sure which approach is preferable.
 
   const HighsLp& lp_ = *(model_);
 
   // Exit if the problem is empty or if presolve is set to off.
-  // if (options_.presolve == off_string) return HighsPresolveStatus::NotPresolved;
-  // if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
+  // if (options_.presolve == off_string) return
+  // HighsPresolveStatus::NotPresolved; if (lp_.numCol_ == 0 && lp_.numRow_ ==
+  // 0)
   //   return HighsPresolveStatus::NullError;
 
   // Clear info from previous runs if lp_ has been modified.
@@ -123,7 +124,8 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 
   // todo:
   // Handle max case.
-  // if (lp_.sense_ == ObjSense::MAXIMIZE) presolve_.negateReducedLpColDuals(true);
+  // if (lp_.sense_ == ObjSense::MAXIMIZE)
+  // presolve_.negateReducedLpColDuals(true);
 
   // Run postsolve
   HighsPostsolveStatus postsolve_status =
@@ -142,7 +144,7 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 }
 
 void HighsMipSolver::run() {
-  runPresolve();
+  if (options_mip_->presolve == "on") runPresolve();
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->timer.start(mipdata_->timer.solve_clock);
@@ -293,5 +295,5 @@ void HighsMipSolver::run() {
   mipdata_->timer.stop(mipdata_->timer.solve_clock);
   mipdata_->printDisplayLine();
 
-  runPostsolve();
+  if (options_mip_->presolve == "on") runPostsolve();
 }
