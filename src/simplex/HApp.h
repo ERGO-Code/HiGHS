@@ -547,17 +547,38 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
   return_status = ekk_instance.solve();
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
 
-  // Determine whether the unscaled LP has been solved
+  // Copy solution data into the HMO
   HighsSolutionParams& solution_params =
       highs_model_object.unscaled_solution_params_;
+  highs_model_object.scaled_model_status_ = ekk_instance.scaled_model_status_;
+  solution_params.objective_function_value =
+      ekk_instance.simplex_info_.primal_objective_value;
+  highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
+  highs_model_object.solution_ = ekk_instance.getSolution();
+  if (highs_model_object.scale_.is_scaled_)
+    unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
+  highs_model_object.basis_ = ekk_instance.getHighsBasis();
+
+  // Determine whether the unscaled LP has been solved
   double new_primal_feasibility_tolerance;
   double new_dual_feasibility_tolerance;
-  HighsSolutionParams solution_;
+  //  HighsSolutionParams solution_;
   getUnscaledInfeasibilitiesAndNewTolerances(
       ekk_instance.options_, ekk_instance.simplex_lp_,
       ekk_instance.scaled_model_status_, ekk_instance.simplex_basis_,
       ekk_instance.simplex_info_, highs_model_object.scale_, solution_params,
       new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
+
+  // Handle non-optimal status
+  if (ekk_instance.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
+    highs_model_object.unscaled_model_status_ =
+        ekk_instance.scaled_model_status_;
+    return return_status;
+  }
+
+  // Now interpret the status of the unscaled solution when the scaled
+  // LP is solved to optimailty
+  assert(ekk_instance.scaled_model_status_ == HighsModelStatus::OPTIMAL);
 
   int num_unscaled_primal_infeasibilities =
       solution_params.num_primal_infeasibilities;
@@ -573,6 +594,7 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
     solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
   } else {
     // Not optimal - should try refinement
+    highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
     assert(num_unscaled_primal_infeasibilities > 0 ||
            num_unscaled_dual_infeasibilities > 0);
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
@@ -590,15 +612,11 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
           "Possibly re-solve with feasibility tolerances of %g "
           "primal and %g dual",
           new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
+    highs_model_object.solution_ = ekk_instance.getSolution();
+    if (highs_model_object.scale_.is_scaled_)
+      unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
+    highs_model_object.basis_ = ekk_instance.getHighsBasis();
   }
-  highs_model_object.scaled_model_status_ = ekk_instance.scaled_model_status_;
-  solution_params.objective_function_value =
-      ekk_instance.simplex_info_.primal_objective_value;
-  highs_model_object.iteration_counts_.simplex += ekk_instance.iteration_count_;
-  highs_model_object.solution_ = ekk_instance.getSolution();
-  if (highs_model_object.scale_.is_scaled_)
-    unscaleSolution(highs_model_object.solution_, highs_model_object.scale_);
-  highs_model_object.basis_ = ekk_instance.getHighsBasis();
   return return_status;
 }
 

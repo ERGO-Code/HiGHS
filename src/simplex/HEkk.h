@@ -38,6 +38,7 @@ class HEkk {
   HighsStatus passLp(const HighsLp& lp);
   HighsStatus initialiseSimplexLpBasisAndFactor();
   HighsStatus solve();
+  HighsStatus cleanup();
   HighsStatus setBasis();
   HighsStatus setBasis(const HighsBasis& basis);
   HighsStatus setBasis(const SimplexBasis& basis);

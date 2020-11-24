@@ -239,14 +239,14 @@ void HCrash::bixby() {
   // Analyse the row and column status after Crash
   // basicIndex is only required for this analysis, so set it here.
   workHMO.simplex_basis_.basicIndex_.resize(numRow);
-  initialise_basic_index(workHMO);
+  initialise_basic_index();
   crsh_an_r_c_st_af();
 #endif
 }
 
 #ifdef HiGHSDEV
 // Only used to analyse the row and column status after Crash
-void initialise_basic_index() {
+void HCrash::initialise_basic_index() {
   HighsLp& simplex_lp = workHMO.simplex_lp_;
   SimplexBasis& simplex_basis = workHMO.simplex_basis_;
 
@@ -602,7 +602,7 @@ void HCrash::ltssf() {
   // Analyse the row and column status after Crash
   // basicIndex is only required for this analysis, so set it here.
   workHMO.simplex_basis_.basicIndex_.resize(numRow);
-  initialise_basic_index(workHMO);
+  initialise_basic_index();
   crsh_an_r_c_st_af();
 #endif
 }
