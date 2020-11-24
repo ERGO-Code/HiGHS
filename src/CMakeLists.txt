@@ -84,6 +84,7 @@ set(sources
     lp_data/Highs.cpp
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
+    lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
@@ -113,6 +114,7 @@ set(sources
     simplex/HEkkDualRHS.cpp
     simplex/HEkkDualRow.cpp
     simplex/HEkkDualMulti.cpp
+    simplex/HEkkInterface.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
@@ -397,6 +399,7 @@ target_sources(libhighs PRIVATE
     lp_data/Highs.cpp
     lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
+    lp_data/HighsInterface.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
@@ -426,6 +429,7 @@ target_sources(libhighs PRIVATE
     simplex/HEkkDualRHS.cpp
     simplex/HEkkDualRow.cpp
     simplex/HEkkDualMulti.cpp
+    simplex/HEkkInterface.cpp
     simplex/HFactor.cpp
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp

@@ -46,9 +46,24 @@ class HEkk {
   HighsSolution getSolution();
   HighsBasis getHighsBasis();
   const SimplexBasis& getSimplexBasis() { return simplex_basis_; }
-
+  // This will go when only using HEkk
   HighsSolutionParams getSolutionParams();
 
+  // Interface methods
+  void appendColsToVectors(const int num_new_col,
+			   const vector<double>& colCost,
+			   const vector<double>& colLower,
+			   const vector<double>& colUpper);
+  void appendRowsToVectors(const int num_new_row,
+			   const vector<double>& rowLower,
+			   const vector<double>& rowUpper);
+  void appendColsToMatrix(const int num_new_col,
+			  const int num_new_nz, const int* XAstart,
+			  const int* XAindex, const double* XAvalue);
+  void appendRowsToMatrix(const int num_new_row,
+			  const int num_new_nz, const int* XARstart,
+			  const int* XARindex, const double* XARvalue);
+  
   // Make this private later
   void chooseSimplexStrategyThreads(const HighsOptions& options,
                                     HighsSimplexInfo& simplex_info);
@@ -143,6 +158,7 @@ class HEkk {
                                     double& density);
   bool switchToDevex();
 
+  friend class Highs;
   friend class HEkkPrimal;
   friend class HEkkDual;
   friend class HEkkDualRow;

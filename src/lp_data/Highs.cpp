@@ -1233,7 +1233,11 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
   // Check that there is a HighsModelObject
   if (!haveHmo("addRows")) return false;
   if (options_.simplex_class_ekk) {
-    return_status = HighsStatus::Error;
+    return_status = interpretCallStatus(
+					addRowsInterface(num_new_row, lower_bounds, upper_bounds, num_new_nz,
+							  starts, indices, values),
+					return_status, "addRows");
+
   } else {
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interpretCallStatus(
@@ -1260,7 +1264,9 @@ bool Highs::addCols(const int num_new_col, const double* costs,
   HighsStatus return_status = HighsStatus::OK;
   if (!haveHmo("addCols")) return false;
   if (options_.simplex_class_ekk) {
-    return_status = HighsStatus::Error;
+    return_status = interpretCallStatus(addColsInterface(num_new_col, costs, lower_bounds, upper_bounds,
+						num_new_nz, starts, indices, values),
+					return_status, "addCols");
   } else {
     HighsSimplexInterface interface(hmos_[0]);
   return_status = interpretCallStatus(
@@ -1508,7 +1514,8 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
   index_collection.to_ = to_col;
   if (!haveHmo("getCols")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = getColsInterface(index_collection, num_col, costs, lower,
+				   upper, num_nz, start, index, value);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getCols(index_collection, num_col, costs, lower,
@@ -1535,7 +1542,8 @@ bool Highs::getCols(const int num_set_entries, const int* set, int& num_col,
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getCols")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = getColsInterface(index_collection, num_col, costs, lower,
+				   upper, num_nz, start, index, value);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getCols(index_collection, num_col, costs, lower,
@@ -1561,7 +1569,8 @@ bool Highs::getCols(const int* mask, int& num_col, double* costs, double* lower,
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getCols")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = getColsInterface(index_collection, num_col, costs, lower,
+				   upper, num_nz, start, index, value);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getCols(index_collection, num_col, costs, lower,
@@ -1584,11 +1593,12 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
   index_collection.to_ = to_row;
   if (!haveHmo("getRows")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = getRowsInterface(index_collection, num_row, lower, upper,
+				   num_nz, start, index, value);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.getRows(index_collection, num_row, lower, upper,
-                                  num_nz, start, index, value);
+    call_status = interface.getRows(index_collection, num_row, lower, upper,
+				    num_nz, start, index, value);
   }
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
@@ -1611,7 +1621,8 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getRows")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = getRowsInterface(index_collection, num_row, lower, upper,
+				   num_nz, start, index, value);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getRows(index_collection, num_row, lower, upper,
@@ -1636,7 +1647,8 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getRows")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = getRowsInterface(index_collection, num_row, lower, upper,
+				   num_nz, start, index, value);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getRows(index_collection, num_row, lower, upper,
@@ -1673,7 +1685,7 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
   index_collection.to_ = to_col;
   if (!haveHmo("deleteCols")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = deleteColsInterface(index_collection);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
     call_status = interface.deleteCols(index_collection);
@@ -1697,7 +1709,7 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("deleteCols")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = deleteColsInterface(index_collection);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
     call_status = interface.deleteCols(index_collection);
@@ -1716,7 +1728,7 @@ bool Highs::deleteCols(int* mask) {
   index_collection.mask_ = &mask[0];
   if (!haveHmo("deleteCols")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = deleteColsInterface(index_collection);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
     call_status = interface.deleteCols(index_collection);
@@ -1736,7 +1748,7 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
   index_collection.to_ = to_row;
   if (!haveHmo("deleteRows")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = deleteRowsInterface(index_collection);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
     call_status = interface.deleteRows(index_collection);
@@ -1760,7 +1772,7 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("deleteRows")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = deleteRowsInterface(index_collection);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
     call_status = interface.deleteRows(index_collection);
@@ -1779,7 +1791,7 @@ bool Highs::deleteRows(int* mask) {
   index_collection.mask_ = &mask[0];
   if (!haveHmo("deleteRows")) return false;
   if (options_.simplex_class_ekk) {
-    call_status = HighsStatus::Error;
+    call_status = deleteRowsInterface(index_collection);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
     call_status = interface.deleteRows(index_collection);

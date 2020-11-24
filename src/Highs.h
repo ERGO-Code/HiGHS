@@ -834,6 +834,27 @@ class Highs {
   HighsStatus returnFromRun(const HighsStatus return_status);
   HighsStatus returnFromHighs(const HighsStatus return_status);
 
+  // Interface methods
+  HighsStatus addColsInterface(int XnumNewCol, const double* XcolCost, const double* XcolLower,
+			       const double* XcolUpper, int XnumNewNZ, const int* XAstart,
+			       const int* XAindex, const double* XAvalue);
+  
+  HighsStatus addRowsInterface(int XnumNewRow, const double* XrowLower, const double* XrowUpper,
+			       int XnumNewNZ, const int* XARstart, const int* XARindex,
+			       const double* XARvalue);
+
+  HighsStatus deleteColsInterface(HighsIndexCollection& index_collection);
+
+  HighsStatus deleteRowsInterface(HighsIndexCollection& index_collection);
+
+  HighsStatus getColsInterface(const HighsIndexCollection& index_collection, int& num_col,
+			       double* col_cost, double* col_lower, double* col_upper, int& num_nz,
+			       int* col_matrix_start, int* col_matrix_index, double* col_matrix_value);
+
+  HighsStatus getRowsInterface(const HighsIndexCollection& index_collection, int& num_row,
+			       double* row_lower, double* row_upper, int& num_nz, int* row_matrix_start,
+			       int* row_matrix_index, double* row_matrix_value);
+
   friend class HighsMipSolver;
 };
 

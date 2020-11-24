@@ -5,6 +5,7 @@
 #include "util/HighsUtils.h"
 
 const bool dev_run = false;
+const bool use_ekk = true;
 
 void HighsStatusReport(FILE* logfile, std::string message, HighsStatus status) {
   HighsLogMessage(logfile, HighsMessageType::INFO,
@@ -364,6 +365,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsLp avgas_lp;
   HighsLp lp;
 
+  if (use_ekk) options.simplex_class_ekk = true;
   Highs avgas_highs(options);
   if (!dev_run) {
     avgas_highs.setHighsLogfile();
