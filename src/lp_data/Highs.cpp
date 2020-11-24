@@ -327,8 +327,11 @@ HighsStatus Highs::readBasis(const std::string filename) {
   this->basis_ = read_basis;
   this->basis_.valid_ = true;
   if (hmos_.size() > 0) {
-    HighsSimplexInterface interface(hmos_[0]);
-    interface.clearBasis();
+    if (options_.simplex_class_ekk) {
+    } else {
+      HighsSimplexInterface interface(hmos_[0]);
+      interface.clearBasis();
+    }
   }
   // Can't use returnFromHighs since...
   return HighsStatus::OK;
@@ -890,16 +893,24 @@ const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
 
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   if (!haveHmo("getDualRay")) return HighsStatus::Error;
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  return simplex_interface.getDualRay(has_dual_ray, dual_ray_value);
+  if (options_.simplex_class_ekk) {
+    return HighsStatus::Error;
+  } else {
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    return simplex_interface.getDualRay(has_dual_ray, dual_ray_value);
+  }
 }
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
   underDevelopmentLogMessage("getPrimalRay");
   if (!haveHmo("getPrimalRay")) return HighsStatus::Error;
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  return simplex_interface.getPrimalRay(has_primal_ray, primal_ray_value);
+  if (options_.simplex_class_ekk) {
+    return HighsStatus::Error;
+  } else {
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    return simplex_interface.getPrimalRay(has_primal_ray, primal_ray_value);
+  }
 }
 
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
@@ -915,8 +926,12 @@ HighsStatus Highs::getBasicVariables(int* basic_variables) {
                     "getBasicVariables: basic_variables is NULL");
     return HighsStatus::Error;
   }
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  return simplex_interface.getBasicVariables(basic_variables);
+  if (options_.simplex_class_ekk) {
+    return HighsStatus::Error;
+  } else {
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    return simplex_interface.getBasicVariables(basic_variables);
+  }
 }
 
 HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
@@ -945,8 +960,11 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
   vector<double> rhs;
   rhs.assign(numRow, 0);
   rhs[row] = 1;
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, row_vector, row_num_nz, row_indices, true);
+  if (options_.simplex_class_ekk) {
+  } else {
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    simplex_interface.basisSolve(rhs, row_vector, row_num_nz, row_indices, true);
+  }
   return HighsStatus::OK;
 }
 
@@ -977,8 +995,11 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
   vector<double> rhs;
   rhs.assign(numRow, 0);
   rhs[col] = 1;
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices, false);
+  if (options_.simplex_class_ekk) {
+  } else {
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices, false);
+  }
   return HighsStatus::OK;
 }
 
@@ -1006,9 +1027,12 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz,
+  if (options_.simplex_class_ekk) {
+  } else {
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz,
                                solution_indices, false);
+  }
   return HighsStatus::OK;
 }
 
@@ -1038,9 +1062,12 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
-  HighsSimplexInterface simplex_interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+  } else {
+    HighsSimplexInterface simplex_interface(hmos_[0]);
   simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz,
                                solution_indices, true);
+  }
   return HighsStatus::OK;
 }
 
@@ -1077,9 +1104,12 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
     rhs.assign(numRow, 0);
     rhs[row] = 1;
     basis_inverse_row.resize(numRow, 0);
-    HighsSimplexInterface simplex_interface(hmos_[0]);
+    if (options_.simplex_class_ekk) {
+    } else {
+      HighsSimplexInterface simplex_interface(hmos_[0]);
     // Form B^{-T}e_{row}
     simplex_interface.basisSolve(rhs, &basis_inverse_row[0], NULL, NULL, true);
+    }
     basis_inverse_row_vector = &basis_inverse_row[0];
   }
   bool return_indices = row_num_nz != NULL;
@@ -1126,8 +1156,11 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
   rhs.assign(numRow, 0);
   for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++)
     rhs[lp.Aindex_[el]] = lp.Avalue_[el];
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices, false);
+  if (options_.simplex_class_ekk) {
+  } else {
+    HighsSimplexInterface simplex_interface(hmos_[0]);
+    simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices, false);
+  }
   return HighsStatus::OK;
 }
 
@@ -1199,11 +1232,15 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
   HighsStatus return_status = HighsStatus::OK;
   // Check that there is a HighsModelObject
   if (!haveHmo("addRows")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  return_status = interpretCallStatus(
-      interface.addRows(num_new_row, lower_bounds, upper_bounds, num_new_nz,
-                        starts, indices, values),
-      return_status, "addRows");
+  if (options_.simplex_class_ekk) {
+    return_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interpretCallStatus(
+					interface.addRows(num_new_row, lower_bounds, upper_bounds, num_new_nz,
+							  starts, indices, values),
+					return_status, "addRows");
+  }
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
@@ -1222,11 +1259,15 @@ bool Highs::addCols(const int num_new_col, const double* costs,
                     const double* values) {
   HighsStatus return_status = HighsStatus::OK;
   if (!haveHmo("addCols")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    return_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   return_status = interpretCallStatus(
       interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
                         num_new_nz, starts, indices, values),
       return_status, "addCols");
+  }
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
@@ -1234,9 +1275,13 @@ bool Highs::addCols(const int num_new_col, const double* costs,
 bool Highs::changeObjectiveSense(const ObjSense sense) {
   HighsStatus return_status = HighsStatus::OK;
   if (!haveHmo("changeObjectiveSense")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    return_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   return_status = interpretCallStatus(interface.changeObjectiveSense(sense),
                                       return_status, "changeObjectiveSense");
+  }
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
@@ -1259,8 +1304,12 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("changeColsCost")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeCosts(index_collection, cost);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::Error) return false;
@@ -1279,8 +1328,12 @@ bool Highs::changeColsCost(const int* mask, const double* cost) {
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeColsCost")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeCosts(index_collection, cost);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "changeCosts");
   if (return_status == HighsStatus::Error) return false;
@@ -1302,8 +1355,12 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
   if (!haveHmo("changeColsBounds")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeColBounds(index_collection, lower, upper);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::Error) return false;
@@ -1324,8 +1381,12 @@ bool Highs::changeColsBounds(const int num_set_entries, const int* set,
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("changeColsBounds")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeColBounds(index_collection, lower, upper);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::Error) return false;
@@ -1345,8 +1406,12 @@ bool Highs::changeColsBounds(const int* mask, const double* lower,
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeColsBounds")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeColBounds(index_collection, lower, upper);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "changeColBounds");
   if (return_status == HighsStatus::Error) return false;
@@ -1372,8 +1437,12 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("changeRowsBounds")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.changeRowBounds(index_collection, lower, upper);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::Error) return false;
@@ -1393,8 +1462,12 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("changeRowsBounds")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.changeRowBounds(index_collection, lower, upper);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.changeRowBounds(index_collection, lower, upper);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "changeRowBounds");
   if (return_status == HighsStatus::Error) return false;
@@ -1405,8 +1478,12 @@ bool Highs::changeCoeff(const int row, const int col, const double value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   if (!haveHmo("changeCoeff")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.changeCoefficient(row, col, value);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.changeCoefficient(row, col, value);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "changeCoefficient");
   if (return_status == HighsStatus::Error) return false;
@@ -1430,9 +1507,13 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
   if (!haveHmo("getCols")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getCols(index_collection, num_col, costs, lower,
                                   upper, num_nz, start, index, value);
+  }
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1453,9 +1534,13 @@ bool Highs::getCols(const int num_set_entries, const int* set, int& num_col,
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getCols")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getCols(index_collection, num_col, costs, lower,
                                   upper, num_nz, start, index, value);
+  }
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1475,9 +1560,13 @@ bool Highs::getCols(const int* mask, int& num_col, double* costs, double* lower,
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getCols")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getCols(index_collection, num_col, costs, lower,
                                   upper, num_nz, start, index, value);
+  }
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1494,9 +1583,13 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
   index_collection.from_ = from_row;
   index_collection.to_ = to_row;
   if (!haveHmo("getRows")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getRows(index_collection, num_row, lower, upper,
                                   num_nz, start, index, value);
+  }
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1517,9 +1610,13 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getRows")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getRows(index_collection, num_row, lower, upper,
                                   num_nz, start, index, value);
+  }
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1538,9 +1635,13 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getRows")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
   call_status = interface.getRows(index_collection, num_row, lower, upper,
                                   num_nz, start, index, value);
+  }
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1550,9 +1651,12 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   if (!haveHmo("getCoeff")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-
-  call_status = interface.getCoefficient(row, col, value);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.getCoefficient(row, col, value);
+  }
   return_status =
       interpretCallStatus(call_status, return_status, "getCoefficient");
   if (return_status == HighsStatus::Error) return false;
@@ -1568,8 +1672,12 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
   if (!haveHmo("deleteCols")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteCols(index_collection);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.deleteCols(index_collection);
+  }
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1588,8 +1696,12 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("deleteCols")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteCols(index_collection);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.deleteCols(index_collection);
+  }
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1603,8 +1715,12 @@ bool Highs::deleteCols(int* mask) {
   index_collection.is_mask_ = true;
   index_collection.mask_ = &mask[0];
   if (!haveHmo("deleteCols")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteCols(index_collection);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.deleteCols(index_collection);
+  }
   return_status = interpretCallStatus(call_status, return_status, "deleteCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1619,8 +1735,12 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
   index_collection.from_ = from_row;
   index_collection.to_ = to_row;
   if (!haveHmo("deleteRows")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteRows(index_collection);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.deleteRows(index_collection);
+  }
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1639,8 +1759,12 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("deleteRows")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteRows(index_collection);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.deleteRows(index_collection);
+  }
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1654,8 +1778,12 @@ bool Highs::deleteRows(int* mask) {
   index_collection.is_mask_ = true;
   index_collection.mask_ = &mask[0];
   if (!haveHmo("deleteRows")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.deleteRows(index_collection);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.deleteRows(index_collection);
+  }
   return_status = interpretCallStatus(call_status, return_status, "deleteRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1665,8 +1793,12 @@ bool Highs::scaleCol(const int col, const double scaleval) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   if (!haveHmo("scaleCol")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.scaleCol(col, scaleval);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.scaleCol(col, scaleval);
+  }
   return_status = interpretCallStatus(call_status, return_status, "scaleCol");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1676,8 +1808,12 @@ bool Highs::scaleRow(const int row, const double scaleval) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   if (!haveHmo("scaleRow")) return false;
-  HighsSimplexInterface interface(hmos_[0]);
-  call_status = interface.scaleRow(row, scaleval);
+  if (options_.simplex_class_ekk) {
+    call_status = HighsStatus::Error;
+  } else {
+    HighsSimplexInterface interface(hmos_[0]);
+    call_status = interface.scaleRow(row, scaleval);
+  }
   return_status = interpretCallStatus(call_status, return_status, "scaleRow");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1909,8 +2045,11 @@ void Highs::newHighsBasis() {
   if (hmos_.size() > 0) {
     // Copy this basis to the HMO basis and clear any simplex basis
     hmos_[0].basis_ = this->basis_;
-    HighsSimplexInterface interface(hmos_[0]);
-    interface.clearBasis();
+    if (options_.simplex_class_ekk) {
+    } else {
+      HighsSimplexInterface interface(hmos_[0]);
+      interface.clearBasis();
+    }
   }
 }
 
