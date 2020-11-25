@@ -126,8 +126,6 @@ void HEkkDual::majorChooseRow() {
                                                analysis->row_ep_density);
         ekk_instance_.updateOperationResultDensity(
             local_row_ep_density, ekk_instance_.simplex_info_.row_ep_density);
-        assert(analysis->row_ep_density ==
-               ekk_instance_.simplex_info_.row_ep_density);
       }
     }
 
@@ -665,8 +663,6 @@ void HEkkDual::majorUpdateFtranParallel() {
                                            analysis->col_aq_density);
     ekk_instance_.updateOperationResultDensity(
         local_col_aq_density, ekk_instance_.simplex_info_.col_aq_density);
-    assert(analysis->col_aq_density ==
-           ekk_instance_.simplex_info_.col_aq_density);
     if (analysis->analyse_simplex_data)
       analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN, Col->count);
     if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
@@ -675,8 +671,6 @@ void HEkkDual::majorUpdateFtranParallel() {
                                              analysis->row_DSE_density);
       ekk_instance_.updateOperationResultDensity(
           local_row_DSE_density, ekk_instance_.simplex_info_.row_DSE_density);
-      assert(analysis->row_DSE_density ==
-             ekk_instance_.simplex_info_.row_DSE_density);
       if (analysis->analyse_simplex_data)
         analysis->operationRecordAfter(ANALYSIS_OPERATION_TYPE_FTRAN_DSE,
                                        Row->count);

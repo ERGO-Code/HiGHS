@@ -156,8 +156,6 @@ HighsStatus HEkkDual::solve() {
                                                  analysis->row_ep_density);
           ekk_instance_.updateOperationResultDensity(
               local_row_ep_density, ekk_instance_.simplex_info_.row_ep_density);
-          assert(analysis->row_ep_density ==
-                 ekk_instance_.simplex_info_.row_ep_density);
         }
         if (ekk_instance_.analysis_.analyse_simplex_time) {
           analysis->simplexTimerStop(SimplexIzDseWtClock);
@@ -1272,8 +1270,6 @@ void HEkkDual::chooseRow() {
                                          analysis->row_ep_density);
   ekk_instance_.updateOperationResultDensity(
       local_row_ep_density, ekk_instance_.simplex_info_.row_ep_density);
-  assert(analysis->row_ep_density ==
-         ekk_instance_.simplex_info_.row_ep_density);
 }
 
 bool HEkkDual::acceptDualSteepestEdgeWeight(const double updated_edge_weight) {
@@ -1575,8 +1571,6 @@ void HEkkDual::updateFtran() {
                                          analysis->col_aq_density);
   ekk_instance_.updateOperationResultDensity(
       local_col_aq_density, ekk_instance_.simplex_info_.col_aq_density);
-  assert(analysis->col_aq_density ==
-         ekk_instance_.simplex_info_.col_aq_density);
   // Save the pivot value computed column-wise - used for numerical checking
   alpha_col = col_aq.array[row_out];
   analysis->simplexTimerStop(FtranClock);
@@ -1622,8 +1616,6 @@ void HEkkDual::updateFtranBFRT() {
                                          analysis->col_BFRT_density);
   ekk_instance_.updateOperationResultDensity(
       local_col_BFRT_density, ekk_instance_.simplex_info_.col_BFRT_density);
-  assert(analysis->col_BFRT_density ==
-         ekk_instance_.simplex_info_.col_BFRT_density);
 }
 
 void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
@@ -1649,8 +1641,6 @@ void HEkkDual::updateFtranDSE(HVector* DSE_Vector) {
                                          analysis->row_DSE_density);
   ekk_instance_.updateOperationResultDensity(
       local_row_DSE_density, ekk_instance_.simplex_info_.row_DSE_density);
-  assert(analysis->row_DSE_density ==
-         ekk_instance_.simplex_info_.row_DSE_density);
 }
 
 void HEkkDual::updateVerify() {
