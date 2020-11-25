@@ -475,7 +475,8 @@ HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance) {
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
-  const bool consistent = ekkDebugBasisConsistent(ekk_instance) != HighsDebugStatus::LOGICAL_ERROR;
+  const bool consistent =
+      ekkDebugBasisConsistent(ekk_instance) != HighsDebugStatus::LOGICAL_ERROR;
   if (!consistent) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "Supposed to be a Simplex basis, but not consistent");
@@ -597,7 +598,8 @@ HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance) {
   const HighsLp& simplex_lp = ekk_instance.simplex_lp_;
   const SimplexBasis& simplex_basis = ekk_instance.simplex_basis_;
   // Check consistency of nonbasicFlag
-  if (ekkDebugNonbasicFlagConsistent(ekk_instance) == HighsDebugStatus::LOGICAL_ERROR) {
+  if (ekkDebugNonbasicFlagConsistent(ekk_instance) ==
+      HighsDebugStatus::LOGICAL_ERROR) {
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "nonbasicFlag inconsistent");
     return_status = HighsDebugStatus::LOGICAL_ERROR;

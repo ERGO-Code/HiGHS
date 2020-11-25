@@ -143,7 +143,8 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
 
   if (simplex_lp_status.has_basis) {
     const bool simplex_basis_correct =
-        debugDebugToHighsStatus(ekkDebugBasisCorrect(ekk_instance)) != HighsStatus::Error;
+        debugDebugToHighsStatus(ekkDebugBasisCorrect(ekk_instance)) !=
+        HighsStatus::Error;
     if (!simplex_basis_correct) {
       HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                       "Supposed to be a Simplex basis, but incorrect");

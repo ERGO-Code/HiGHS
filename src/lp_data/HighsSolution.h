@@ -32,9 +32,8 @@ using std::string;
 void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
                                   const HighsSolution& solution,
                                   HighsSolutionParams& solution_params);
-void refineBasis(const HighsLp& lp,
-		 const HighsSolution& solution,
-		 HighsBasis& basis);
+void refineBasis(const HighsLp& lp, const HighsSolution& solution,
+                 HighsBasis& basis);
 
 #ifdef HiGHSDEV
 void analyseSimplexAndHighsSolutionDifferences(

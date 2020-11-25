@@ -120,9 +120,8 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
 
 // Refine any HighsBasisStatus::NONBASIC settings according to the LP
 // and any solution values
-void refineBasis(const HighsLp& lp,
-		 const HighsSolution& solution,
-		 HighsBasis& basis) {
+void refineBasis(const HighsLp& lp, const HighsSolution& solution,
+                 HighsBasis& basis) {
   assert(basis.valid_);
   const bool have_highs_solution = isSolutionRightSize(lp, solution);
 
@@ -137,19 +136,19 @@ void refineBasis(const HighsLp& lp,
       status = HighsBasisStatus::LOWER;
     } else if (!highs_isInfinity(-lower)) {
       if (!highs_isInfinity(upper)) {
-	if (have_highs_solution) {
+        if (have_highs_solution) {
           if (solution.col_value[iCol] < 0.5 * (lower + upper)) {
             status = HighsBasisStatus::LOWER;
           } else {
             status = HighsBasisStatus::UPPER;
           }
-	} else {
+        } else {
           if (fabs(lower) < fabs(upper)) {
             status = HighsBasisStatus::LOWER;
           } else {
             status = HighsBasisStatus::UPPER;
           }
-	}
+        }
       } else {
         status = HighsBasisStatus::LOWER;
       }
@@ -171,19 +170,19 @@ void refineBasis(const HighsLp& lp,
       status = HighsBasisStatus::LOWER;
     } else if (!highs_isInfinity(-lower)) {
       if (!highs_isInfinity(upper)) {
-	if (have_highs_solution) {
+        if (have_highs_solution) {
           if (solution.row_value[iRow] < 0.5 * (lower + upper)) {
             status = HighsBasisStatus::LOWER;
           } else {
             status = HighsBasisStatus::UPPER;
           }
-	} else {
+        } else {
           if (fabs(lower) < fabs(upper)) {
             status = HighsBasisStatus::LOWER;
           } else {
             status = HighsBasisStatus::UPPER;
           }
-	}
+        }
       } else {
         status = HighsBasisStatus::LOWER;
       }
