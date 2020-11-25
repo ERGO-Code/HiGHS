@@ -56,7 +56,9 @@ void Presolve::load(const HighsLp& lp, bool mip) {
   this->mip = mip;
 
   colCost = lp.colCost_;
+  objShift = lp.offset_;
   if (lp.sense_ == ObjSense::MAXIMIZE) {
+    objShift = -objShift;
     for (unsigned int col = 0; col < lp.colCost_.size(); col++)
       colCost[col] = -colCost[col];
   }
@@ -1194,7 +1196,6 @@ void Presolve::initializeVectors() {
     nzCol.at(i) = Aend.at(i) - Astart.at(i);
     if (nzCol.at(i) == 1) singCol.push_back(i);
   }
-  objShift = 0;
 
   implColUpper = colUpper;  // working copies of primal variable bounds
   implColLower = colLower;
