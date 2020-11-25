@@ -20,6 +20,12 @@
 #include "lp_data/HighsOptions.h"
 #include "simplex/SimplexConst.h"
 
+// Methods for Ekk
+
+HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object);
+
+// Methods for HMO
+
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object);
 
 HighsDebugStatus debugSimplexBasisCorrect(

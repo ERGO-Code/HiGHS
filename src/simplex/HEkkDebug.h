@@ -23,13 +23,10 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                                  const int phase,
                                  const bool initialise = false);
 
-HighsDebugStatus ekkDebugBasisConsistent(const HighsOptions& options,
-                                         const HighsLp& simplex_lp,
-                                         const SimplexBasis& simplex_basis);
-
-HighsDebugStatus ekkDebugNonbasicFlagConsistent(
-    const HighsOptions& options, const HighsLp& simplex_lp,
-    const SimplexBasis& simplex_basis);
+HighsDebugStatus ekkDebugBasisCorrect(const HEkk& ekk_instance);
+HighsDebugStatus ekkDebugNonbasicMove(const HEkk& ekk_instance);
+HighsDebugStatus ekkDebugBasisConsistent(const HEkk& ekk_instance);
+HighsDebugStatus ekkDebugNonbasicFlagConsistent(const HEkk& ekk_instance);
 
 HighsDebugStatus ekkDebugOkForSolve(const HEkk& ekk_instance,
                                     const SimplexAlgorithm algorithm,

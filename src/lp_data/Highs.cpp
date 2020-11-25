@@ -2356,8 +2356,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
 
   forceHighsSolutionBasisSize();
 
-  const bool consistent = debugBasisConsistent(options_, lp_, basis_) !=
-                          HighsDebugStatus::LOGICAL_ERROR;
+  const bool consistent = debugBasisConsistent(options_, lp_, basis_) != HighsDebugStatus::LOGICAL_ERROR;
   if (!consistent) {
     HighsLogMessage(
         options_.logfile, HighsMessageType::ERROR,
@@ -2367,8 +2366,12 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
 
   if (hmos_.size()) {
-    const bool simplex_lp_ok =
-        debugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
+    bool simplex_lp_ok;
+    if (options_.simplex_class_ekk) {
+      simplex_lp_ok = ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
+    } else {
+      simplex_lp_ok = debugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
+    }
     if (!simplex_lp_ok) {
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                       "returnFromHighs: Simplex LP not OK");
