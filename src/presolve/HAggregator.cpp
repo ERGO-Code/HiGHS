@@ -930,7 +930,7 @@ HAggregator::PostsolveStack HAggregator::run() {
     iter = equations.begin();
   }
 
-  printf("performed %d(%d int) substitutions\n", numsubst, numsubstint);
+  // printf("performed %d(%d int) substitutions\n", numsubst, numsubstint);
 
   return postsolveStack;
 }

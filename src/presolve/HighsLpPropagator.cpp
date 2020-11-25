@@ -5,8 +5,6 @@
 #include <numeric>
 #include <queue>
 
-#include "lp_data/HConst.h"
-
 static double activityContributionMin(double coef, const double& lb,
                                       const double& ub) {
   if (coef < 0) {
@@ -35,6 +33,7 @@ static double activityContributionMax(double coef, const double& lb,
 
 HighsLpPropagator::HighsLpPropagator(
     const std::vector<double>& colLower, const std::vector<double>& colUpper,
+    const std::vector<HighsVarType>& integrality_,
     const std::vector<double>& Avalue_, const std::vector<int>& Aindex_,
     const std::vector<int>& Astart_, const std::vector<int>& Aend_,
     const std::vector<double>& ARvalue_, const std::vector<int>& ARindex_,
@@ -52,6 +51,7 @@ HighsLpPropagator::HighsLpPropagator(
       flagCol(flagCol),
       rowLower_(rowLower_),
       rowUpper_(rowUpper_),
+      integrality_(integrality_),
       colLower_(colLower),
       colUpper_(colUpper) {}
 
@@ -127,16 +127,24 @@ int HighsLpPropagator::propagateRowUpper(const int* Rindex,
     if (Rvalue[i] > 0) {
       bool accept;
 
-      if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
-        accept = true;
-      else if (bound + 1e-3 < colUpper_[Rindex[i]] &&
-               (colUpper_[Rindex[i]] - bound) /
-                       std::max(std::abs(colUpper_[Rindex[i]]),
-                                std::abs(bound)) >
-                   0.3)
-        accept = true;
-      else
-        accept = false;
+      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+        bound = std::floor(bound + 1e-6);
+        if (bound < colUpper_[Rindex[i]])
+          accept = true;
+        else
+          accept = false;
+      } else {
+        if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
+          accept = true;
+        else if (bound + 1e-3 < colUpper_[Rindex[i]] &&
+                 (colUpper_[Rindex[i]] - bound) /
+                         std::max(std::abs(colUpper_[Rindex[i]]),
+                                  std::abs(bound)) >
+                     0.3)
+          accept = true;
+        else
+          accept = false;
+      }
 
       if (accept)
         boundchgs[numchgs++] = {HighsBoundType::Upper, Rindex[i], bound};
@@ -144,16 +152,24 @@ int HighsLpPropagator::propagateRowUpper(const int* Rindex,
     } else {
       bool accept;
 
-      if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
-        accept = true;
-      else if (bound - 1e-3 > colLower_[Rindex[i]] &&
-               (bound - colLower_[Rindex[i]]) /
-                       std::max(std::abs(colUpper_[Rindex[i]]),
-                                std::abs(bound)) >
-                   0.3)
-        accept = true;
-      else
-        accept = false;
+      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+        bound = std::ceil(bound - 1e-6);
+        if (bound > colLower_[Rindex[i]])
+          accept = true;
+        else
+          accept = false;
+      } else {
+        if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
+          accept = true;
+        else if (bound - 1e-3 > colLower_[Rindex[i]] &&
+                 (bound - colLower_[Rindex[i]]) /
+                         std::max(std::abs(colUpper_[Rindex[i]]),
+                                  std::abs(bound)) >
+                     0.3)
+          accept = true;
+        else
+          accept = false;
+      }
 
       if (accept)
         boundchgs[numchgs++] = {HighsBoundType::Lower, Rindex[i], bound};
@@ -189,33 +205,48 @@ int HighsLpPropagator::propagateRowLower(const int* Rindex,
     if (Rvalue[i] < 0) {
       bool accept;
 
-      if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
-        accept = true;
-      else if (bound + 1e-3 < colUpper_[Rindex[i]] &&
-               (colUpper_[Rindex[i]] - bound) /
-                       std::max(std::abs(colUpper_[Rindex[i]]),
-                                std::abs(bound)) >
-                   0.3)
-        accept = true;
-      else
-        accept = false;
+      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+        bound = std::floor(bound + 1e-6);
+        if (bound < colUpper_[Rindex[i]])
+          accept = true;
+        else
+          accept = false;
+      } else {
+        if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
+          accept = true;
+        else if (bound + 1e-3 < colUpper_[Rindex[i]] &&
+                 (colUpper_[Rindex[i]] - bound) /
+                         std::max(std::abs(colUpper_[Rindex[i]]),
+                                  std::abs(bound)) >
+                     0.3)
+          accept = true;
+        else
+          accept = false;
+      }
 
       if (accept)
         boundchgs[numchgs++] = {HighsBoundType::Upper, Rindex[i], bound};
     } else {
       bool accept;
 
-      if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
-        accept = true;
-      else if (bound - 1e-3 > colLower_[Rindex[i]] &&
-               (bound - colLower_[Rindex[i]]) /
-                       std::max(std::abs(colUpper_[Rindex[i]]),
-                                std::abs(bound)) >
-                   0.3)
-        accept = true;
-      else
-        accept = false;
-
+      if (integrality_[Rindex[i]] != HighsVarType::CONTINUOUS) {
+        bound = std::ceil(bound - 1e-6);
+        if (bound > colLower_[Rindex[i]])
+          accept = true;
+        else
+          accept = false;
+      } else {
+        if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
+          accept = true;
+        else if (bound - 1e-3 > colLower_[Rindex[i]] &&
+                 (bound - colLower_[Rindex[i]]) /
+                         std::max(std::abs(colUpper_[Rindex[i]]),
+                                  std::abs(bound)) >
+                     0.3)
+          accept = true;
+        else
+          accept = false;
+      }
       if (accept)
         boundchgs[numchgs++] = {HighsBoundType::Lower, Rindex[i], bound};
     }
@@ -362,7 +393,9 @@ void HighsLpPropagator::computeRowActivities() {
   propagateflags_.resize(rowLower_.size());
   propagateinds_.reserve(rowLower_.size());
 
-  for (int i = 0; i != rowLower_.size(); ++i) {
+  const int numrow = rowLower_.size();
+
+  for (int i = 0; i != numrow; ++i) {
     if (!flagRow[i]) continue;
     int start = ARstart_[i];
     int end = ARstart_[i + 1];

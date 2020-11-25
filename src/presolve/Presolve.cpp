@@ -369,6 +369,7 @@ void Presolve::removeFixed() {
 
 int Presolve::presolve(int print) {
   timer.start_time = timer.getTime();
+  bool aggregatorCalled = false;
 
   if (iPrint > 0) {
     cout << "Presolve started ..." << endl;
@@ -447,7 +448,8 @@ int Presolve::presolve(int print) {
         hasChange = false;
     }
 
-    if (!hasChange && aggregatorStack.empty()) {
+    if (!hasChange && !aggregatorCalled) {
+      aggregatorCalled = true;
       runAggregator();
       runPropagator();
       prev_cols_rows = current_cols_rows;
@@ -1313,12 +1315,17 @@ void Presolve::runPropagator() {
   // constraints and also decrease the number of total iterations required due
   // to their exploitation with the long-step rule for the dual simplex ratio
   // test
-  HighsLpPropagator propagator(colLower, colUpper, Avalue, Aindex, Astart, Aend,
-                               ARvalue, ARindex, ARstart, flagRow, flagCol,
-                               rowLower, rowUpper);
+  HighsLpPropagator propagator(colLower, colUpper, integrality, Avalue, Aindex,
+                               Astart, Aend, ARvalue, ARindex, ARstart, flagRow,
+                               flagCol, rowLower, rowUpper);
   propagator.computeRowActivities();
   propagator.propagate();
   int ntightened = 0;
+
+  if (propagator.infeasible()) {
+    status = Infeasible;
+    return;
+  }
 
   // we cannot use the tightest bounds that we obtained by propagation
   // as then the dual postsolve step might not work anymore. Instead
@@ -1332,9 +1339,20 @@ void Presolve::runPropagator() {
       continue;
 
     if (mip) {
-      colLower[i] = std::max(propagator.colLower_[i], colLower[i]);
-      colUpper[i] = std::min(propagator.colUpper_[i], colUpper[i]);
+      if (colLower[i] < propagator.colLower_[i]) {
+        colLower[i] = propagator.colLower_[i];
+        ++ntightened;
+      }
+
+      if (colUpper[i] > propagator.colUpper_[i]) {
+        colUpper[i] = propagator.colUpper_[i];
+        ++ntightened;
+      }
+
       roundIntegerBounds(i);
+      if (std::abs(colUpper[i] - colLower[i]) <= fixed_column_tolerance)
+        removeFixedCol(i);
+
       continue;
     }
 
@@ -1386,6 +1404,7 @@ void Presolve::runPropagator() {
   implColUpper = colUpper;
 
   printf("propagator found %d tightened bounds\n", ntightened);
+  if (ntightened != 0) hasChange = true;
 }
 
 void Presolve::removeFixedCol(int j) {
@@ -1766,6 +1785,8 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
   double upp = HIGHS_CONST_INF;
   double low = -HIGHS_CONST_INF;
 
+  roundIntegerBounds(col);
+
   if (aij > 0 && aik > 0) {
     if (colLower.at(col) > -HIGHS_CONST_INF && rowUpper.at(i) < HIGHS_CONST_INF)
       upp = (rowUpper.at(i) - aik * colLower.at(col)) / aij;
@@ -1838,6 +1859,9 @@ void Presolve::removeFreeColumnSingleton(const int col, const int row,
 
   valueColDual.at(col) = 0;
   valueRowDual.at(row) = -colCost.at(col) / Avalue.at(k);
+
+  double b = valueRowDual[row] < 0 ? rowLower[row] : rowUpper[row];
+  objShift += colCost.at(col) * b / Avalue.at(k);
 
   addChange(FREE_SING_COL, row, col);
   removeRow(row);
@@ -2018,15 +2042,6 @@ void Presolve::removeColumnSingletons() {
       const int col = *it;
       assert(0 <= col && col <= numCol);
 
-      // todo if the variable type of column is HighsVarType::INTEGRAL check the
-      // integrality of all coefficients divided by the coefficient of the
-      // integral singleton variable coefficients before doing a substitution,
-      // for now we skip the reductions
-      if (mip && integrality[col] == HighsVarType::INTEGER) {
-        it = singCol.erase(it);
-        continue;
-      }
-
       const int k = getSingColElementIndexInA(col);
       if (k < 0) {
         it = singCol.erase(it);
@@ -2035,9 +2050,47 @@ void Presolve::removeColumnSingletons() {
       }
       assert(k < (int)Aindex.size());
       const int i = Aindex.at(k);
+      const double ai = Avalue[k];
+
+      // todo if the variable type of column is HighsVarType::INTEGRAL check the
+      // integrality of all coefficients divided by the coefficient of the
+      // integral singleton variable coefficients before doing a substitution,
+      // for now we skip the reductions
+      if (mip && integrality[col] == HighsVarType::INTEGER) {
+        // for integral columns only handle equality rows
+        if (rowLower[i] != rowUpper[i]) {
+          ++it;
+          continue;
+        }
+
+        bool suitable = false;
+        for (int kk = ARstart[i]; kk < ARstart[i + 1]; ++kk) {
+          int j = ARindex[kk];
+          if (flagCol[j] && j != col) {
+            if (integrality[col] != HighsVarType::INTEGER) {
+              suitable = false;
+              break;
+            }
+
+            double substval = ARvalue[kk] / ai;
+            double intval = std::floor(substval + 0.5);
+            if (std::abs(substval - intval) > tol) {
+              suitable = false;
+              break;
+            }
+          }
+        }
+
+        if (!suitable) {
+          ++it;
+          continue;
+        }
+
+        printf("integer singleton can be subsituted\n");
+      }
 
       // zero cost
-      bool on_zero_cost = false;
+      bool on_zero_cost = false && !mip;
       if (on_zero_cost && fabs(colCost.at(col)) < tol) {
         removeZeroCostColumnSingleton(col, i, k);
         it = singCol.erase(it);
@@ -2061,14 +2114,15 @@ void Presolve::removeColumnSingletons() {
       // todo, I think this case might not work for integral variables
       // singleton column in a doubleton inequality
       // case two column singletons
-      if (nzRow.at(i) == 2) {
-        const bool result_di =
-            removeColumnSingletonInDoubletonInequality(col, i, k);
-        if (result_di) {
-          it = singCol.erase(it);
-          continue;
+      if (!mip || integrality[col] != HighsVarType::INTEGER)
+        if (nzRow.at(i) == 2) {
+          const bool result_di =
+              removeColumnSingletonInDoubletonInequality(col, i, k);
+          if (result_di) {
+            it = singCol.erase(it);
+            continue;
+          }
         }
-      }
       it++;
 
       if (status) return;
@@ -2242,6 +2296,8 @@ void Presolve::removeImpliedFreeColumn(const int col, const int i,
 
   valueColDual.at(col) = 0;
   valueRowDual.at(i) = -colCost.at(col) / Avalue.at(k);
+  double b = valueRowDual[i] < 0 ? rowLower[i] : rowUpper[i];
+  objShift += colCost.at(col) * b / Avalue.at(k);
   addChange(IMPLIED_FREE_SING_COL, i, col);
   removeRow(i);
 }

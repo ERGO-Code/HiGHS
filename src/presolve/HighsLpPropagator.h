@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "lp_data/HConst.h"
 #include "mip/HighsDomainChange.h"
 #include "util/HighsCDouble.h"
 
@@ -33,6 +34,7 @@ class HighsLpPropagator {
   const std::vector<int>& flagCol;
   const std::vector<double>& rowLower_;
   const std::vector<double>& rowUpper_;
+  const std::vector<HighsVarType>& integrality_;
 
   int infeasible_ = 0;
 
@@ -64,6 +66,7 @@ class HighsLpPropagator {
 
   HighsLpPropagator(
       const std::vector<double>& colLower, const std::vector<double>& colUpper,
+      const std::vector<HighsVarType>& integrality_,
       const std::vector<double>& Avalue_, const std::vector<int>& Aindex_,
       const std::vector<int>& Astart_, const std::vector<int>& Aend_,
       const std::vector<double>& ARvalue_, const std::vector<int>& ARindex_,
