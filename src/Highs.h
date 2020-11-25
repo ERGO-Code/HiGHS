@@ -821,7 +821,7 @@ class Highs {
 
   void newHighsBasis();
   void forceHighsSolutionBasisSize();
-  bool getHighsModelStatusAndInfo(const int solved_hmo);
+  bool getHighsModelStatusAndInfo(const int model_index);
 
   HighsStatus reset();
 

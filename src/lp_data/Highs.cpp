@@ -372,10 +372,10 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // with callSolveLp(..)
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
-  const int min_highs_debug_level = HIGHS_DEBUG_LEVEL_MIN;
+  const int min_highs_debug_level = //HIGHS_DEBUG_LEVEL_MIN;
   //    HIGHS_DEBUG_LEVEL_CHEAP;
   //    HIGHS_DEBUG_LEVEL_COSTLY;
-  //      HIGHS_DEBUG_LEVEL_EXPENSIVE;
+        HIGHS_DEBUG_LEVEL_EXPENSIVE;
   //  HIGHS_DEBUG_LEVEL_MAX;
   if (options_.highs_debug_level < min_highs_debug_level) {
     printf(
@@ -731,8 +731,8 @@ HighsStatus Highs::run() {
           // Force the use of simplex to clean up if IPM has been used
           // to solve the presolved problem
           if (options.solver == ipm_string) options.solver = simplex_string;
-          // Use HMO simplex solver since it can hot start
-          options.simplex_class_ekk = false;
+	  const bool use_ekk = true;
+          if (!use_ekk) options.simplex_class_ekk = false;
           options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
           // Ensure that the parallel solver isn't used
           options.highs_min_threads = 1;
@@ -740,6 +740,12 @@ HighsStatus Highs::run() {
           // Use any pivot threshold resulting from solving the presolved LP
           if (factor_pivot_threshold > 0)
             options.factor_pivot_threshold = factor_pivot_threshold;
+
+	  // The basis returned from postsolve is just basic/nonbasic
+	  // and EKK expects a refined basis, so set it up now
+	  if (options.simplex_class_ekk) refineBasis(lp_, 
+						     hmos_[original_hmo].solution_,
+						     hmos_[original_hmo].basis_);
 
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
           int iteration_count0 = info_.simplex_iteration_count;

@@ -543,6 +543,12 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
     }
   }
 
+  // If there is no simplex basis, use the HiGHS basis
+  if (!simplex_lp_status.has_basis && highs_model_object.basis_.valid_) {
+    return_status = ekk_instance.setBasis(highs_model_object.basis_);
+    if (return_status == HighsStatus::Error) return HighsStatus::Error;
+  }
+
   // Solve the LP!
   return_status = ekk_instance.solve();
   if (return_status == HighsStatus::Error) return HighsStatus::Error;

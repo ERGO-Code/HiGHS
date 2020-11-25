@@ -75,9 +75,8 @@ HighsStatus HEkk::solve() {
   chooseSimplexStrategyThreads(options_, simplex_info_);
   int simplex_strategy = simplex_info_.simplex_strategy;
 
-  assert(simplex_strategy == options_.simplex_strategy);
   // Initial solve according to strategy
-  if (options_.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
+  if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     algorithm = "primal";
     HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                     "Using EKK primal simplex solver");
@@ -231,10 +230,11 @@ HighsStatus HEkk::setBasis(const HighsBasis& basis) {
   }
   int num_col = simplex_lp_.numCol_;
   int num_row = simplex_lp_.numRow_;
-  assert((int)simplex_basis_.nonbasicFlag_.size() == num_col + num_row);
-  assert((int)simplex_basis_.nonbasicMove_.size() == num_col + num_row);
-  assert((int)simplex_basis_.basicIndex_.size() == num_row);
-
+  int num_tot = num_col + num_row;
+  // Resize the basis in case none has yet been defined for this LP
+  simplex_basis_.nonbasicFlag_.resize(num_tot);
+  simplex_basis_.nonbasicMove_.resize(num_tot);
+  simplex_basis_.basicIndex_.resize(num_row);
   int num_basic_variables = 0;
   for (int iCol = 0; iCol < num_col; iCol++) {
     int iVar = iCol;
@@ -424,11 +424,12 @@ void HEkk::initialiseForNewLp() {
   setSimplexOptions();
   initialiseControl();
   initialiseSimplexLpRandomVectors();
-  setBasis();
   simplex_lp_status_.initialised = true;
 }
 
 HighsStatus HEkk::initialiseForSolve() {
+  // If there's no basis, set a logical basis
+  if (!simplex_lp_status_.has_basis) setBasis();
   const int rank_deficiency = getFactor();
   if (rank_deficiency) return HighsStatus::Error;
   assert(simplex_lp_status_.has_basis);

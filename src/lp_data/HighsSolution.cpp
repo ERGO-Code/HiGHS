@@ -118,6 +118,85 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
   }
 }
 
+// Refine any HighsBasisStatus::NONBASIC settings according to the LP
+// and any solution values
+void refineBasis(const HighsLp& lp,
+		 const HighsSolution& solution,
+		 HighsBasis& basis) {
+  assert(basis.valid_);
+  const bool have_highs_solution = isSolutionRightSize(lp, solution);
+
+  const int num_col = lp.numCol_;
+  const int num_row = lp.numRow_;
+  for (int iCol = 0; iCol < num_col; iCol++) {
+    if (basis.col_status[iCol] != HighsBasisStatus::NONBASIC) continue;
+    const double lower = lp.colLower_[iCol];
+    const double upper = lp.colUpper_[iCol];
+    HighsBasisStatus status = HighsBasisStatus::NONBASIC;
+    if (lower == upper) {
+      status = HighsBasisStatus::LOWER;
+    } else if (!highs_isInfinity(-lower)) {
+      if (!highs_isInfinity(upper)) {
+	if (have_highs_solution) {
+          if (solution.col_value[iCol] < 0.5 * (lower + upper)) {
+            status = HighsBasisStatus::LOWER;
+          } else {
+            status = HighsBasisStatus::UPPER;
+          }
+	} else {
+          if (fabs(lower) < fabs(upper)) {
+            status = HighsBasisStatus::LOWER;
+          } else {
+            status = HighsBasisStatus::UPPER;
+          }
+	}
+      } else {
+        status = HighsBasisStatus::LOWER;
+      }
+    } else if (!highs_isInfinity(upper)) {
+      status = HighsBasisStatus::UPPER;
+    } else {
+      status = HighsBasisStatus::ZERO;
+    }
+    assert(status != HighsBasisStatus::NONBASIC);
+    basis.col_status[iCol] = status;
+  }
+
+  for (int iRow = 0; iRow < num_row; iRow++) {
+    if (basis.row_status[iRow] != HighsBasisStatus::NONBASIC) continue;
+    const double lower = lp.rowLower_[iRow];
+    const double upper = lp.rowUpper_[iRow];
+    HighsBasisStatus status = HighsBasisStatus::NONBASIC;
+    if (lower == upper) {
+      status = HighsBasisStatus::LOWER;
+    } else if (!highs_isInfinity(-lower)) {
+      if (!highs_isInfinity(upper)) {
+	if (have_highs_solution) {
+          if (solution.row_value[iRow] < 0.5 * (lower + upper)) {
+            status = HighsBasisStatus::LOWER;
+          } else {
+            status = HighsBasisStatus::UPPER;
+          }
+	} else {
+          if (fabs(lower) < fabs(upper)) {
+            status = HighsBasisStatus::LOWER;
+          } else {
+            status = HighsBasisStatus::UPPER;
+          }
+	}
+      } else {
+        status = HighsBasisStatus::LOWER;
+      }
+    } else if (!highs_isInfinity(upper)) {
+      status = HighsBasisStatus::UPPER;
+    } else {
+      status = HighsBasisStatus::ZERO;
+    }
+    assert(status != HighsBasisStatus::NONBASIC);
+    basis.row_status[iRow] = status;
+  }
+}
+
 #ifdef HiGHSDEV
 void analyseSimplexAndHighsSolutionDifferences(
     const HighsModelObject& highs_model_object) {
