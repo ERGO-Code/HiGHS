@@ -212,6 +212,8 @@ void reportOption(FILE* file, const OptionRecordString& option,
 
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";
+const string mip_string = "mip";
+
 const int KEEP_N_ROWS_DELETE_ROWS = -1;
 const int KEEP_N_ROWS_DELETE_ENTRIES = 0;
 const int KEEP_N_ROWS_KEEP_ROWS = 1;
