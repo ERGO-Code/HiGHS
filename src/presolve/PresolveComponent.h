@@ -86,7 +86,7 @@ class PresolveComponent : public HighsComponent {
  public:
   void clear() override;
 
-  HighsStatus init(const HighsLp& lp, HighsTimer& timer);
+  HighsStatus init(const HighsLp& lp, HighsTimer& timer, bool mip = false);
 
   HighsPresolveStatus run();
 

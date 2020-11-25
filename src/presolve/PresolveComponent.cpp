@@ -14,10 +14,11 @@
 
 #include "presolve/PresolveComponent.h"
 
-HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer) {
+HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
+                                    bool mip) {
   assert(options_.presolve_on);
   data_.presolve_.push_back(presolve::Presolve(timer));
-  data_.presolve_[0].load(lp);
+  data_.presolve_[0].load(lp, mip);
   return HighsStatus::OK;
 }
 

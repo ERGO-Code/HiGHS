@@ -61,7 +61,7 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
   // }
 
   // Presolve.
-  presolve_.init(lp_, timer_);
+  presolve_.init(lp_, timer_, true);
   // if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
   //   double current = timer_.readRunHighsClock();
   //   double time_init = current - start_presolve;
@@ -152,7 +152,7 @@ void HighsMipSolver::run() {
 
   if (options_mip_->presolve != "off") {
     HighsPresolveStatus presolve_status = runPresolve();
-    if (presolve_status == HighsPresolveStatus::Reduced) 
+    if (presolve_status == HighsPresolveStatus::Reduced)
       model_ = &presolve_.getReducedProblem();
   }
 

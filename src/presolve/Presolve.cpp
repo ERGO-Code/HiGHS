@@ -45,7 +45,7 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-void Presolve::load(const HighsLp& lp) {
+void Presolve::load(const HighsLp& lp, bool mip) {
   timer.recordStart(MATRIX_COPY);
   numCol = lp.numCol_;
   numRow = lp.numRow_;
@@ -53,6 +53,7 @@ void Presolve::load(const HighsLp& lp) {
   Astart = lp.Astart_;
   Aindex = lp.Aindex_;
   Avalue = lp.Avalue_;
+  this->mip = mip;
 
   colCost = lp.colCost_;
   if (lp.sense_ == ObjSense::MAXIMIZE) {
@@ -354,6 +355,7 @@ void Presolve::removeFixed() {
       // Analyse dependency on numerical tolerance
       timer.updateNumericsRecord(FIXED_COLUMN,
                                  fabs(colUpper.at(j) - colLower.at(j)));
+      roundIntegerBounds(j);
       if (fabs(colUpper.at(j) - colLower.at(j)) > fixed_column_tolerance)
         continue;
       removeFixedCol(j);
@@ -525,6 +527,7 @@ void Presolve::checkBoundsAreConsistent() {
       // Analyse dependency on numerical tolerance
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  colLower[col] - colUpper[col]);
+      roundIntegerBounds(col);
       if (colLower[col] - colUpper[col] > inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
@@ -552,32 +555,26 @@ void Presolve::checkBoundsAreConsistent() {
  * 		   row is of form akx_x + aky_y = b,
  */
 pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
-  // todo, if one column is integral and the other continuous
-  // only substitute the continuous variable.
-  // if both columns are integer columns we may choose either column but need
-  // to check the coefficients for integrality. The coefficient of the column
-  // that is not substituted, divided by the coefficient of the column that is
-  // substituted must be integral. If that is the case, we also check the right
-  // hand side divided by the coefficient of the substituted column for
-  // integrality. If the divided right hand side is not integral we can detect
-  // infeasibility of the MIP. This check is the same for the case of implied
-  // free singleton columns, or any other kind of substitutions on integer
-  // variables.
-
+  // todo, for mip presolve also check integrality of right hand side value to
+  // detect integer feasibility
   pair<int, int> colIndex;
   // row is of form akx_x + aky_y = b, where k=row and y is present in fewer
   // constraints
 
   int col1 = -1;
   int col2 = -1;
+  double val1 = 0.0;
+  double val2 = 0.0;
   int kk = ARstart.at(row);
   while (kk < ARstart.at(row + 1)) {
     if (flagCol.at(ARindex.at(kk))) {
-      if (col1 == -1)
+      if (col1 == -1) {
         col1 = ARindex.at(kk);
-      else if (col2 == -1)
+        val1 = std::abs(ARvalue[kk]);
+      } else if (col2 == -1) {
         col2 = ARindex.at(kk);
-      else {
+        val2 = std::abs(ARvalue[kk]);
+      } else {
         cout << "ERROR: doubleton eq row" << row
              << " has more than two variables. \n";
         col2 = -2;
@@ -596,7 +593,46 @@ pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
   }
 
   int x, y;
-  if (nzCol.at(col1) <= nzCol.at(col2)) {
+  if (mip && (integrality[col1] == HighsVarType::INTEGER ||
+              integrality[col2] == HighsVarType::INTEGER)) {
+    if (integrality[col1] != integrality[col2]) {
+      // only one of the columns is integral, select the non-integral column to
+      // be substituted out
+      if (integrality[col1] == HighsVarType::INTEGER) {
+        // printf("column %d integral, column %d is not\n", col1, col2);
+        assert(integrality[col2] != HighsVarType::INTEGER);
+        y = col2;
+        x = col1;
+      } else {
+        // printf("column %d integral, column %d is not\n", col2, col1);
+        assert(integrality[col2] == HighsVarType::INTEGER);
+        assert(integrality[col1] != HighsVarType::INTEGER);
+        y = col1;
+        x = col2;
+      }
+    } else {
+      // printf(
+      //     "column %d with coefficient %f is integral and column %d with "
+      //     "coefficient %f too\n",
+      //     col1, val1, col2, val2);
+      // both columns are integral, need to choose column with smaller
+      // coefficient value, if coefficients are the same choose the column with
+      // fewer nonzeros
+      if (val1 < val2) {
+        y = col1;
+        x = col2;
+      } else if (val2 < val1) {
+        y = col2;
+        x = col1;
+      } else if (nzCol.at(col1) <= nzCol.at(col2)) {
+        y = col1;
+        x = col2;
+      } else {
+        x = col1;
+        y = col2;
+      }
+    }
+  } else if (nzCol.at(col1) <= nzCol.at(col2)) {
     y = col1;
     x = col2;
   } else {
@@ -647,8 +683,11 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
   if (low > colLower.at(x)) colLower.at(x) = low;
   if (upp < colUpper.at(x)) colUpper.at(x) = upp;
 
+  roundIntegerBounds(x);
+
   // modify cost of xj
   colCost.at(x) = colCost.at(x) - colCost.at(y) * akx / aky;
+  objShift += colCost.at(y) * b / aky;
 
   // for postsolve: need the new bounds too
   assert(x >= 0 && x < numCol);
@@ -1292,6 +1331,13 @@ void Presolve::runPropagator() {
         colUpper[i] <= propagator.colUpper_[i])
       continue;
 
+    if (mip) {
+      colLower[i] = std::max(propagator.colLower_[i], colLower[i]);
+      colUpper[i] = std::min(propagator.colUpper_[i], colUpper[i]);
+      roundIntegerBounds(i);
+      continue;
+    }
+
     int start = Astart[i];
     int end = Aend[i];
     double minabs = 1.0;
@@ -1429,6 +1475,7 @@ void Presolve::rowDualBoundsDominatedColumns() {
   for (list<int>::iterator it = singCol.begin(); it != singCol.end(); ++it)
     if (flagCol.at(*it)) {
       col = *it;
+      if (mip && integrality[col] == HighsVarType::INTEGER) continue;
       k = getSingColElementIndexInA(col);
       if (k < 0) continue;
       assert(k < (int)Aindex.size());
@@ -1641,48 +1688,51 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
       double bnd;
 
       // calculate new bounds
-      if (colLower.at(j) > -HIGHS_CONST_INF ||
-          colUpper.at(j) >= HIGHS_CONST_INF)
-        for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
-          if (flagRow.at(Aindex.at(kk)) && d < HIGHS_CONST_INF) {
-            i = Aindex.at(kk);
-            if (Avalue.at(kk) > 0 &&
-                implRowDualLower.at(i) > -HIGHS_CONST_INF) {
-              bnd =
-                  -(colCost.at(j) + d) / Avalue.at(kk) + implRowDualLower.at(i);
-              if (bnd < implRowDualUpper.at(i) &&
-                  !(bnd < implRowDualLower.at(i)))
-                implRowDualUpper.at(i) = bnd;
-            } else if (Avalue.at(kk) < 0 &&
-                       implRowDualUpper.at(i) < HIGHS_CONST_INF) {
-              bnd =
-                  -(colCost.at(j) + d) / Avalue.at(kk) + implRowDualUpper.at(i);
-              if (bnd > implRowDualLower.at(i) &&
-                  !(bnd > implRowDualUpper.at(i)))
-                implRowDualLower.at(i) = bnd;
+      if (!mip || integrality[j] != HighsVarType::INTEGER) {
+        if (colLower.at(j) > -HIGHS_CONST_INF ||
+            colUpper.at(j) >= HIGHS_CONST_INF)
+          for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
+            if (flagRow.at(Aindex.at(kk)) && d < HIGHS_CONST_INF) {
+              i = Aindex.at(kk);
+              if (Avalue.at(kk) > 0 &&
+                  implRowDualLower.at(i) > -HIGHS_CONST_INF) {
+                bnd = -(colCost.at(j) + d) / Avalue.at(kk) +
+                      implRowDualLower.at(i);
+                if (bnd < implRowDualUpper.at(i) &&
+                    !(bnd < implRowDualLower.at(i)))
+                  implRowDualUpper.at(i) = bnd;
+              } else if (Avalue.at(kk) < 0 &&
+                         implRowDualUpper.at(i) < HIGHS_CONST_INF) {
+                bnd = -(colCost.at(j) + d) / Avalue.at(kk) +
+                      implRowDualUpper.at(i);
+                if (bnd > implRowDualLower.at(i) &&
+                    !(bnd > implRowDualUpper.at(i)))
+                  implRowDualLower.at(i) = bnd;
+              }
             }
-          }
 
-      if (colLower.at(j) <= -HIGHS_CONST_INF ||
-          colUpper.at(j) < HIGHS_CONST_INF)
-        for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
-          if (flagRow.at(Aindex.at(kk)) && e > -HIGHS_CONST_INF) {
-            i = Aindex.at(kk);
-            if (Avalue.at(kk) > 0 && implRowDualUpper.at(i) < HIGHS_CONST_INF) {
-              bnd =
-                  -(colCost.at(j) + e) / Avalue.at(kk) + implRowDualUpper.at(i);
-              if (bnd > implRowDualLower.at(i) &&
-                  !(bnd > implRowDualUpper.at(i)))
-                implRowDualLower.at(i) = bnd;
-            } else if (Avalue.at(kk) < 0 &&
-                       implRowDualLower.at(i) > -HIGHS_CONST_INF) {
-              bnd =
-                  -(colCost.at(j) + e) / Avalue.at(kk) + implRowDualLower.at(i);
-              if (bnd < implRowDualUpper.at(i) &&
-                  !(bnd < implRowDualLower.at(i)))
-                implRowDualUpper.at(i) = bnd;
+        if (colLower.at(j) <= -HIGHS_CONST_INF ||
+            colUpper.at(j) < HIGHS_CONST_INF)
+          for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
+            if (flagRow.at(Aindex.at(kk)) && e > -HIGHS_CONST_INF) {
+              i = Aindex.at(kk);
+              if (Avalue.at(kk) > 0 &&
+                  implRowDualUpper.at(i) < HIGHS_CONST_INF) {
+                bnd = -(colCost.at(j) + e) / Avalue.at(kk) +
+                      implRowDualUpper.at(i);
+                if (bnd > implRowDualLower.at(i) &&
+                    !(bnd > implRowDualUpper.at(i)))
+                  implRowDualLower.at(i) = bnd;
+              } else if (Avalue.at(kk) < 0 &&
+                         implRowDualLower.at(i) > -HIGHS_CONST_INF) {
+                bnd = -(colCost.at(j) + e) / Avalue.at(kk) +
+                      implRowDualLower.at(i);
+                if (bnd < implRowDualUpper.at(i) &&
+                    !(bnd < implRowDualLower.at(i)))
+                  implRowDualUpper.at(i) = bnd;
+              }
             }
-          }
+      }
     }
   }
 }
@@ -1748,6 +1798,19 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
   }
 
   return make_pair(low, upp);
+}
+
+void Presolve::roundIntegerBounds(const int col) {
+  // for mip we check if the bounds can be rounded
+  if (mip && integrality[col] != HighsVarType::CONTINUOUS) {
+    if (colLower[col] != -HIGHS_CONST_INF)
+      colLower[col] =
+          ceil(colLower[col] - default_primal_feasiblility_tolerance);
+
+    if (colUpper[col] != HIGHS_CONST_INF)
+      colUpper[col] =
+          floor(colUpper[col] + default_primal_feasiblility_tolerance);
+  }
 }
 
 void Presolve::removeFreeColumnSingleton(const int col, const int row,
@@ -1954,6 +2017,16 @@ void Presolve::removeColumnSingletons() {
     if (flagCol[*it]) {
       const int col = *it;
       assert(0 <= col && col <= numCol);
+
+      // todo if the variable type of column is HighsVarType::INTEGRAL check the
+      // integrality of all coefficients divided by the coefficient of the
+      // integral singleton variable coefficients before doing a substitution,
+      // for now we skip the reductions
+      if (mip && integrality[col] == HighsVarType::INTEGER) {
+        it = singCol.erase(it);
+        continue;
+      }
+
       const int k = getSingColElementIndexInA(col);
       if (k < 0) {
         it = singCol.erase(it);
@@ -1971,11 +2044,6 @@ void Presolve::removeColumnSingletons() {
         continue;
       }
 
-      // todo if the variable type of column is HighsVarType::INTEGRAL check the
-      // integrality of all coefficients divided by the coefficient of the
-      // integral singleton variable coefficients before doing a substitution
-
-      // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
           colUpper.at(col) >= HIGHS_CONST_INF) {
         removeFreeColumnSingleton(col, i, k);
@@ -2547,6 +2615,8 @@ void Presolve::removeRowSingletons() {
                       }
               }
       }*/
+
+      roundIntegerBounds(j);
 
       // check for feasibility
       // Analyse dependency on numerical tolerance

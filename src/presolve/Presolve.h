@@ -88,7 +88,7 @@ class Presolve : public HPreData {
                                  HighsBasis& recovered_basis);
 
   void setNumericalTolerances();
-  void load(const HighsLp& lp);
+  void load(const HighsLp& lp, bool mip = false);
   // todo: clear the public from below.
   string modelName;
 
@@ -160,6 +160,7 @@ class Presolve : public HPreData {
   };
 
  private:
+  bool mip;
   bool hasChange = true;
   int status = 0;  // 0 is unassigned, see enum stat
 
@@ -280,6 +281,7 @@ class Presolve : public HPreData {
                        const double colLow, const double colUpp);
   double getRowDualPost(const int row, const int col);
   double getColumnDualPost(const int col);
+  void roundIntegerBounds(int col);
   string getDualsForcingRow(const int row, vector<int>& fRjs);
   void getDualsSingletonRow(const int row, const int col);
   void getDualsDoubletonEquation(const int row, const int col);
