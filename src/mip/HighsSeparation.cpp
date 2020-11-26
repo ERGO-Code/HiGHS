@@ -8,7 +8,6 @@
 #include "mip/HighsDomain.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
-#include "mip/HighsMip.h"
 #include "mip/HighsMipSolverData.h"
 
 enum class RowType : int8_t {

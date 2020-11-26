@@ -6,7 +6,6 @@
 #include <queue>
 
 #include "mip/HighsCutPool.h"
-#include "mip/HighsMip.h"
 #include "mip/HighsMipSolverData.h"
 
 static double activityContributionMin(double coef, const double& lb,
