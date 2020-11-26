@@ -374,9 +374,9 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
   const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
-    //    HIGHS_DEBUG_LEVEL_CHEAP;
+      HIGHS_DEBUG_LEVEL_CHEAP;
   //    HIGHS_DEBUG_LEVEL_COSTLY;
-        HIGHS_DEBUG_LEVEL_EXPENSIVE;
+  //      HIGHS_DEBUG_LEVEL_EXPENSIVE;
   //  HIGHS_DEBUG_LEVEL_MAX;
   if (options_.highs_debug_level < min_highs_debug_level) {
     printf(
@@ -901,7 +901,7 @@ const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   if (!haveHmo("getDualRay")) return HighsStatus::Error;
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    assert(1 == 0);
     return HighsStatus::Error;
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
@@ -914,7 +914,7 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   underDevelopmentLogMessage("getPrimalRay");
   if (!haveHmo("getPrimalRay")) return HighsStatus::Error;
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    assert(1 == 0);
     return HighsStatus::Error;
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
@@ -936,8 +936,7 @@ HighsStatus Highs::getBasicVariables(int* basic_variables) {
     return HighsStatus::Error;
   }
   if (options_.simplex_class_ekk) {
-      assert(1==0);
-    return HighsStatus::Error;
+    return getBasicVariablesInterface(basic_variables);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     return simplex_interface.getBasicVariables(basic_variables);
@@ -961,7 +960,13 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
                     row, numRow - 1);
     return HighsStatus::Error;
   }
-  if (!hmos_[0].simplex_lp_status_.has_invert) {
+  bool has_invert;
+  if (options_.simplex_class_ekk) {
+    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
+  } else {
+    has_invert = hmos_[0].simplex_lp_status_.has_invert;
+  }
+  if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisInverseRow");
     return HighsStatus::Error;
@@ -971,7 +976,7 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
   rhs.assign(numRow, 0);
   rhs[row] = 1;
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    basisSolveInterface(rhs, row_vector, row_num_nz, row_indices, true);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, row_vector, row_num_nz, row_indices,
@@ -998,7 +1003,13 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
         numRow - 1);
     return HighsStatus::Error;
   }
-  if (!hmos_[0].simplex_lp_status_.has_invert) {
+  bool has_invert;
+  if (options_.simplex_class_ekk) {
+    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
+  } else {
+    has_invert = hmos_[0].simplex_lp_status_.has_invert;
+  }
+  if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisInverseCol");
     return HighsStatus::Error;
@@ -1008,7 +1019,7 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
   rhs.assign(numRow, 0);
   rhs[col] = 1;
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    basisSolveInterface(rhs, col_vector, col_num_nz, col_indices, false);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices,
@@ -1032,7 +1043,13 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  if (!hmos_[0].simplex_lp_status_.has_invert) {
+  bool has_invert;
+  if (options_.simplex_class_ekk) {
+    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
+  } else {
+    has_invert = hmos_[0].simplex_lp_status_.has_invert;
+  }
+  if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisSolve");
     return HighsStatus::Error;
@@ -1042,7 +1059,8 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    basisSolveInterface(rhs, solution_vector, solution_num_nz, solution_indices,
+                        false);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz,
@@ -1068,7 +1086,13 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  if (!hmos_[0].simplex_lp_status_.has_invert) {
+  bool has_invert;
+  if (options_.simplex_class_ekk) {
+    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
+  } else {
+    has_invert = hmos_[0].simplex_lp_status_.has_invert;
+  }
+  if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisTransposeSolve");
     return HighsStatus::Error;
@@ -1078,7 +1102,8 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    basisSolveInterface(rhs, solution_vector, solution_num_nz, solution_indices,
+                        true);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz,
@@ -1105,7 +1130,13 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                     hmos_[0].lp_.numRow_ - 1);
     return HighsStatus::Error;
   }
-  if (!hmos_[0].simplex_lp_status_.has_invert) {
+  bool has_invert;
+  if (options_.simplex_class_ekk) {
+    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
+  } else {
+    has_invert = hmos_[0].simplex_lp_status_.has_invert;
+  }
+  if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getReducedRow");
     return HighsStatus::Error;
@@ -1121,7 +1152,7 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
     rhs[row] = 1;
     basis_inverse_row.resize(numRow, 0);
     if (options_.simplex_class_ekk) {
-      assert(1==0);
+      basisSolveInterface(rhs, &basis_inverse_row[0], NULL, NULL, true);
     } else {
       HighsSimplexInterface simplex_interface(hmos_[0]);
       // Form B^{-T}e_{row}
@@ -1163,7 +1194,13 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                     col, hmos_[0].lp_.numCol_ - 1);
     return HighsStatus::Error;
   }
-  if (!hmos_[0].simplex_lp_status_.has_invert) {
+  bool has_invert;
+  if (options_.simplex_class_ekk) {
+    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
+  } else {
+    has_invert = hmos_[0].simplex_lp_status_.has_invert;
+  }
+  if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getReducedColumn");
     return HighsStatus::Error;
@@ -1175,7 +1212,7 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
   for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++)
     rhs[lp.Aindex_[el]] = lp.Avalue_[el];
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    basisSolveInterface(rhs, col_vector, col_num_nz, col_indices, false);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices,
@@ -1303,7 +1340,7 @@ bool Highs::changeObjectiveSense(const ObjSense sense) {
   HighsStatus return_status = HighsStatus::OK;
   if (!haveHmo("changeObjectiveSense")) return false;
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    assert(1 == 0);
     return_status = HighsStatus::Error;
   } else {
     HighsSimplexInterface interface(hmos_[0]);
@@ -1686,7 +1723,7 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
   HighsStatus call_status;
   if (!haveHmo("getCoeff")) return false;
   if (options_.simplex_class_ekk) {
-      assert(1==0);
+    assert(1 == 0);
     call_status = HighsStatus::Error;
   } else {
     HighsSimplexInterface interface(hmos_[0]);
@@ -2078,11 +2115,13 @@ HighsStatus Highs::writeSolution(const std::string filename,
 // Actions to take if there is a new Highs basis
 void Highs::newHighsBasis() {
   if (hmos_.size() > 0) {
-    // Copy this basis to the HMO basis and clear any simplex basis
+    // Copy this basis to the HMO basis
     hmos_[0].basis_ = this->basis_;
     if (options_.simplex_class_ekk) {
+      // Clear any simplex basis
       clearBasisInterface();
     } else {
+      // Clear any simplex basis
       HighsSimplexInterface interface(hmos_[0]);
       interface.clearBasis();
     }

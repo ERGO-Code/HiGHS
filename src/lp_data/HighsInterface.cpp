@@ -1174,3 +1174,196 @@ void Highs::clearBasisInterface() {
   updateSimplexLpStatus(highs_model_object.ekk_instance_.simplex_lp_status_,
                         LpAction::NEW_BASIS);
 }
+
+// Get the basic variables, performing INVERT if necessary
+HighsStatus Highs::getBasicVariablesInterface(int* basic_variables) {
+  HighsModelObject& highs_model_object = hmos_[0];
+  HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HighsLp& lp = highs_model_object.lp_;
+  HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
+  HighsStatus return_status = HighsStatus::OK;
+
+  // Initialise analysis so that (even null) timing data structures
+  // are set up
+  ekk_instance.initialiseAnalysis();
+
+  // If the simplex LP isn't initialised, scale and pass the current LP
+  if (!simplex_lp_status.initialised) scaleAndPassLpToEkk(highs_model_object);
+
+  if (!simplex_lp_status.has_basis) {
+    //
+    // The Ekk instance has no simplex basis, so pass the HiGHS basis
+    // if it's valid, otherwise return an error for consistency with old code
+    //
+    // Arguable that a warning should be issued and a logical basis
+    // set up
+    HighsBasis& basis = highs_model_object.basis_;
+    if (basis.valid_) {
+      return_status = interpretCallStatus(ekk_instance.setBasis(basis),
+                                          return_status, "setBasis");
+      if (return_status == HighsStatus::Error) return return_status;
+    } else {
+      HighsLogMessage(
+          options_.logfile, HighsMessageType::ERROR,
+          "getBasicVariables called without a simplex or HiGHS basis");
+      // Arguable that a warning should be issued and a logical basis
+      // set up
+      //      ekk_instance.setBasis();
+      return HighsStatus::Error;
+    }
+  }
+  assert(simplex_lp_status.has_basis);
+
+  const bool only_from_known_basis = true;
+  if (ekk_instance.initialiseSimplexLpBasisAndFactor(only_from_known_basis))
+    return HighsStatus::Error;
+  assert(simplex_lp_status.has_invert);
+
+  int numRow = lp.numRow_;
+  int numCol = lp.numCol_;
+  assert(numRow == ekk_instance.simplex_lp_.numRow_);
+  for (int row = 0; row < numRow; row++) {
+    int var = ekk_instance.simplex_basis_.basicIndex_[row];
+    if (var < numCol) {
+      basic_variables[row] = var;
+    } else {
+      basic_variables[row] = -(1 + var - numCol);
+    }
+  }
+  return return_status;
+}
+
+// Solve (transposed) system involving the basis matrix
+
+HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
+                                       double* solution_vector,
+                                       int* solution_num_nz,
+                                       int* solution_indices, bool transpose) {
+  HighsModelObject& highs_model_object = hmos_[0];
+  HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HVector solve_vector;
+  int numRow = ekk_instance.simplex_lp_.numRow_;
+  int numCol = ekk_instance.simplex_lp_.numCol_;
+  HighsScale& scale = highs_model_object.scale_;
+  // Set up solve vector with suitably scaled RHS
+  solve_vector.setup(numRow);
+  solve_vector.clear();
+  int rhs_num_nz = 0;
+  if (transpose) {
+    for (int row = 0; row < numRow; row++) {
+      if (rhs[row]) {
+        solve_vector.index[rhs_num_nz++] = row;
+        double rhs_value = rhs[row];
+        int col = ekk_instance.simplex_basis_.basicIndex_[row];
+        if (col < numCol) {
+          rhs_value *= scale.col_[col];
+        } else {
+          double scale_value = scale.row_[col - numCol];
+          rhs_value /= scale_value;
+        }
+        solve_vector.array[row] = rhs_value;
+      }
+    }
+  } else {
+    for (int row = 0; row < numRow; row++) {
+      if (rhs[row]) {
+        solve_vector.index[rhs_num_nz++] = row;
+        solve_vector.array[row] = rhs[row] * scale.row_[row];
+      }
+    }
+  }
+  solve_vector.count = rhs_num_nz;
+  //
+  // Note that solve_vector.count is just used to determine whether
+  // hyper-sparse solves should be used. The indices of the nonzeros
+  // in the solution are always accumulated. There's no switch (such
+  // as setting solve_vector.count = numRow+1) to not do this.
+  //
+  // Get hist_dsty from analysis during simplex solve.
+  double hist_dsty = 1;
+  if (transpose) {
+    ekk_instance.factor_.btran(solve_vector, hist_dsty);
+  } else {
+    ekk_instance.factor_.ftran(solve_vector, hist_dsty);
+  }
+  // Extract the solution
+  if (solution_indices == NULL) {
+    // Nonzeros in the solution not required
+    if (solve_vector.count > numRow) {
+      // Solution nonzeros not known
+      for (int row = 0; row < numRow; row++) {
+        solution_vector[row] = solve_vector.array[row];
+      }
+    } else {
+      // Solution nonzeros are known
+      for (int row = 0; row < numRow; row++) solution_vector[row] = 0;
+      for (int ix = 0; ix < solve_vector.count; ix++) {
+        int row = solve_vector.index[ix];
+        solution_vector[row] = solve_vector.array[row];
+      }
+    }
+  } else {
+    // Nonzeros in the solution are required
+    if (solve_vector.count > numRow) {
+      // Solution nonzeros not known
+      solution_num_nz = 0;
+      for (int row = 0; row < numRow; row++) {
+        solution_vector[row] = 0;
+        if (solve_vector.array[row]) {
+          solution_vector[row] = solve_vector.array[row];
+          solution_indices[*solution_num_nz++] = row;
+        }
+      }
+    } else {
+      // Solution nonzeros are known
+      for (int row = 0; row < numRow; row++) solution_vector[row] = 0;
+      for (int ix = 0; ix < solve_vector.count; ix++) {
+        int row = solve_vector.index[ix];
+        solution_vector[row] = solve_vector.array[row];
+        solution_indices[ix] = row;
+      }
+      *solution_num_nz = solve_vector.count;
+    }
+  }
+  // Scale the solution
+  if (transpose) {
+    if (solve_vector.count > numRow) {
+      // Solution nonzeros not known
+      for (int row = 0; row < numRow; row++) {
+        double scale_value = scale.row_[row];
+        solution_vector[row] *= scale_value;
+      }
+    } else {
+      for (int ix = 0; ix < solve_vector.count; ix++) {
+        int row = solve_vector.index[ix];
+        double scale_value = scale.row_[row];
+        solution_vector[row] *= scale_value;
+      }
+    }
+  } else {
+    if (solve_vector.count > numRow) {
+      // Solution nonzeros not known
+      for (int row = 0; row < numRow; row++) {
+        int col = ekk_instance.simplex_basis_.basicIndex_[row];
+        if (col < numCol) {
+          solution_vector[row] *= scale.col_[col];
+        } else {
+          double scale_value = scale.row_[col - numCol];
+          solution_vector[row] /= scale_value;
+        }
+      }
+    } else {
+      for (int ix = 0; ix < solve_vector.count; ix++) {
+        int row = solve_vector.index[ix];
+        int col = ekk_instance.simplex_basis_.basicIndex_[row];
+        if (col < numCol) {
+          solution_vector[row] *= scale.col_[col];
+        } else {
+          double scale_value = scale.row_[col - numCol];
+          solution_vector[row] /= scale_value;
+        }
+      }
+    }
+  }
+  return HighsStatus::OK;
+}

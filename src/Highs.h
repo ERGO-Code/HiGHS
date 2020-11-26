@@ -875,6 +875,10 @@ class Highs {
   HighsStatus scaleRowInterface(const int row, const double scaleval);
   HighsStatus setNonbasicStatusInterface(
       const HighsIndexCollection& index_collection, const bool columns);
+  HighsStatus getBasicVariablesInterface(int* basic_variables);
+  HighsStatus basisSolveInterface(const vector<double>& rhs,
+                                  double* solution_vector, int* solution_num_nz,
+                                  int* solution_indices, bool transpose);
   void clearBasisInterface();
 
   friend class HighsMipSolver;

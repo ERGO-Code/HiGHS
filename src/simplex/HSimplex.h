@@ -31,6 +31,10 @@ enum class LpAction {
   BACKTRACKING
 };
 
+void scaleAndPassLpToEkk(HighsModelObject& highs_model_object);
+
+// Move methods unused by Ekk below here
+
 void setSimplexOptions(
     HighsModelObject& highs_model_object  //!< Model object in which simplex
                                           //!< options are to be set

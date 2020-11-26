@@ -5,7 +5,7 @@
 #include "HighsRandom.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 const bool use_ekk = true;
 
 bool GetBasisSolvesSolutionNzOk(int numRow,
@@ -424,8 +424,9 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
 
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

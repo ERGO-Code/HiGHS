@@ -366,8 +366,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsLp lp;
 
   Highs avgas_highs(options);
-  if (use_ekk) REQUIRE(avgas_highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(avgas_highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     avgas_highs.setHighsLogfile();
     avgas_highs.setHighsOutput();
@@ -389,8 +390,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   Highs highs(options);
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

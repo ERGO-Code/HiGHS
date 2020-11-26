@@ -210,8 +210,9 @@ void testInfeasibleMps(const std::string model) {
   vector<double> primal_ray_value;
 
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -242,8 +243,9 @@ void testInfeasibleMps(const std::string model) {
 void testUnboundedMps(const std::string model,
                       const ObjSense sense = ObjSense::MINIMIZE) {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -281,8 +283,9 @@ void testUnboundedMps(const std::string model,
 
 TEST_CASE("Rays", "[highs_test_rays]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

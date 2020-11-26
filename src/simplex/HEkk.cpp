@@ -389,6 +389,40 @@ HighsBasis HEkk::getHighsBasis() {
   return basis;
 }
 
+int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
+  // If there's no basis, return error if the basis has to be known,
+  // otherwise set a logical basis
+  if (!simplex_lp_status_.has_basis) {
+    if (only_from_known_basis) {
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                      "Simplex basis should be known but isn't");
+      return -(int)HighsStatus::Error;
+    }
+    setBasis();
+  }
+  const int rank_deficiency = getFactor();
+  if (rank_deficiency) {
+    // Basis is rank deficient
+    if (only_from_known_basis) {
+      // If only this basis should be used, then return error
+      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+                      "Supposed to be a full-rank basis, but incorrect");
+      return rank_deficiency;
+    } else {
+      return -(int)HighsStatus::Error;
+      /*
+      // Account for rank deficiency by correcing nonbasicFlag
+      simplexHandleRankDeficiency(highs_model_object);
+      updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
+      simplex_lp_status.has_invert = true;
+      simplex_lp_status.has_fresh_invert = true;
+      */
+    }
+  }
+  assert(simplex_lp_status_.has_invert);
+  return 0;
+}
+
 HighsSolutionParams HEkk::getSolutionParams() {
   HighsSolutionParams solution_params;
   solution_params.primal_feasibility_tolerance =

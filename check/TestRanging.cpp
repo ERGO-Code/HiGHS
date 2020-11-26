@@ -500,8 +500,9 @@ void testRanging(Highs& highs) {
 
 TEST_CASE("Ranging-min", "[highs_test_ranging]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -525,8 +526,9 @@ TEST_CASE("Ranging-min", "[highs_test_ranging]") {
 
 TEST_CASE("Ranging-max", "[highs_test_ranging]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

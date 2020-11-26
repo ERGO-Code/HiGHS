@@ -39,6 +39,35 @@ using std::runtime_error;
 #include "omp.h"
 #endif
 
+void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
+  HEkk& ekk_instance = highs_model_object.ekk_instance_;
+  HighsOptions& options = highs_model_object.options_;
+  // Possibly scale the LP
+  bool scale_lp =
+      options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF &&
+      highs_model_object.lp_.numCol_ > 0;
+  const bool force_no_scaling = false;  // true;//
+  if (force_no_scaling) {
+    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+                    "Forcing no scaling");
+    scale_lp = false;
+  }
+  if (scale_lp) {
+    HighsLp scaled_lp = highs_model_object.lp_;
+    // Perform scaling - if it's worth it.
+    scaleSimplexLp(options, scaled_lp, highs_model_object.scale_);
+    // Pass the scaled LP to Ekk
+    ekk_instance.passLp(scaled_lp);
+  } else {
+    // Initialise unit scaling factors
+    scaleHighsModelInit(highs_model_object);
+    // Pass the original LP to Ekk
+    ekk_instance.passLp(highs_model_object.lp_);
+  }
+}
+
+// Move methods unused by Ekk below here
+
 void setSimplexOptions(HighsModelObject& highs_model_object) {
   const HighsOptions& options = highs_model_object.options_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -2947,6 +2976,8 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
   initialiseScale(lp, scale);
   int numCol = lp.numCol_;
   int numRow = lp.numRow_;
+  // Scaling not well defined for models with no columns
+  assert(numCol > 0);
   double* colScale = &scale.col_[0];
   double* rowScale = &scale.row_[0];
   int* Astart = &lp.Astart_[0];

@@ -417,8 +417,9 @@ void unconstrained(Highs& highs) {
 
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -428,8 +429,9 @@ TEST_CASE("LP-distillation", "[highs_test_special_lps]") {
 
 TEST_CASE("LP-272", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -438,8 +440,9 @@ TEST_CASE("LP-272", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-280", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -448,8 +451,9 @@ TEST_CASE("LP-280", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-282", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -458,8 +462,9 @@ TEST_CASE("LP-282", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-285", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -468,8 +473,9 @@ TEST_CASE("LP-285", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-295", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -478,8 +484,9 @@ TEST_CASE("LP-295", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-306", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -488,8 +495,9 @@ TEST_CASE("LP-306", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-316", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -498,8 +506,9 @@ TEST_CASE("LP-316", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-galenet", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -508,8 +517,9 @@ TEST_CASE("LP-galenet", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -518,8 +528,9 @@ TEST_CASE("LP-primal-dual-infeasible1", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -528,8 +539,9 @@ TEST_CASE("LP-primal-dual-infeasible2", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -538,8 +550,9 @@ TEST_CASE("LP-unbounded", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -548,8 +561,9 @@ TEST_CASE("LP-gas11", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -558,8 +572,9 @@ TEST_CASE("LP-almost-not-unbounded", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-singular-starting-basis", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -568,8 +583,9 @@ TEST_CASE("LP-singular-starting-basis", "[highs_test_special_lps]") {
 }
 TEST_CASE("LP-unconstrained", "[highs_test_special_lps]") {
   Highs highs;
-  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
+  if (use_ekk)
+    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

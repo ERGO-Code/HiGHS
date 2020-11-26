@@ -516,32 +516,8 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
     return HighsStatus::Error;
   }
 
-  //
-  if (!simplex_lp_status.initialised) {
-    // The simplex LP isn't initialised
-    //
-    // Possibly scale the LP
-    bool scale_lp =
-        options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF;
-    const bool force_no_scaling = false;  // true;//
-    if (force_no_scaling) {
-      // Initialise unit scaling factors
-      scaleHighsModelInit(highs_model_object);
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                      "Forcing no scaling");
-      scale_lp = false;
-    }
-    if (scale_lp) {
-      HighsLp scaled_lp = highs_model_object.lp_;
-      // Perform scaling - if it's worth it.
-      scaleSimplexLp(options, scaled_lp, highs_model_object.scale_);
-      // Pass the scaled LP to Ekk
-      ekk_instance.passLp(scaled_lp);
-    } else {
-      // Pass the original LP to Ekk
-      ekk_instance.passLp(highs_model_object.lp_);
-    }
-  }
+  // If the simplex LP isn't initialised, scale and pass the current LP
+  if (!simplex_lp_status.initialised) scaleAndPassLpToEkk(highs_model_object);
 
   // If there is no simplex basis, use the HiGHS basis
   if (!simplex_lp_status.has_basis && highs_model_object.basis_.valid_) {

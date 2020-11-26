@@ -36,7 +36,6 @@ class HEkk {
   HighsSimplexAnalysis analysis_;
 
   HighsStatus passLp(const HighsLp& lp);
-  HighsStatus initialiseSimplexLpBasisAndFactor();
   HighsStatus solve();
   HighsStatus cleanup();
   HighsStatus setBasis();
@@ -46,6 +45,9 @@ class HEkk {
   HighsSolution getSolution();
   HighsBasis getHighsBasis();
   const SimplexBasis& getSimplexBasis() { return simplex_basis_; }
+
+  int initialiseSimplexLpBasisAndFactor(
+      const bool only_from_known_basis = false);
   // This will go when only using HEkk
   HighsSolutionParams getSolutionParams();
 
