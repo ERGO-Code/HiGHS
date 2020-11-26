@@ -1,7 +1,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const bool use_ekk = true;
 
 struct IterationCount {

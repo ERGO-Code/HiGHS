@@ -1339,14 +1339,14 @@ bool Highs::addCols(const int num_new_col, const double* costs,
 bool Highs::changeObjectiveSense(const ObjSense sense) {
   HighsStatus return_status = HighsStatus::OK;
   if (!haveHmo("changeObjectiveSense")) return false;
+  HighsStatus call_status;
   if (options_.simplex_class_ekk) {
-    assert(1 == 0);
-    return_status = HighsStatus::Error;
+    call_status = changeObjectiveSenseInterface(sense);
   } else {
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interpretCallStatus(interface.changeObjectiveSense(sense),
-                                        return_status, "changeObjectiveSense");
+    call_status = interface.changeObjectiveSense(sense);
   }
+  return_status = interpretCallStatus(call_status, return_status, "changeObjectiveSense");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
 }

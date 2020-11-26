@@ -861,6 +861,8 @@ class Highs {
                                int* row_matrix_start, int* row_matrix_index,
                                double* row_matrix_value);
 
+  HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
+
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,
                                    const double* usr_col_cost);
   HighsStatus changeColBoundsInterface(HighsIndexCollection& index_collection,
