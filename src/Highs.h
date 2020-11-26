@@ -875,6 +875,7 @@ class Highs {
   HighsStatus scaleRowInterface(const int row, const double scaleval);
   HighsStatus setNonbasicStatusInterface(
       const HighsIndexCollection& index_collection, const bool columns);
+  void clearBasisInterface();
 
   friend class HighsMipSolver;
 };

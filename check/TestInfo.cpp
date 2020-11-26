@@ -6,6 +6,7 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
+const bool use_ekk = true;
 
 TEST_CASE("highs-info", "[highs_info]") {
   std::string filename;
@@ -14,6 +15,8 @@ TEST_CASE("highs-info", "[highs_info]") {
   //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
 
   Highs highs;
+  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+          HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

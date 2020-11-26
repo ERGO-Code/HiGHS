@@ -328,6 +328,7 @@ HighsStatus Highs::readBasis(const std::string filename) {
   this->basis_.valid_ = true;
   if (hmos_.size() > 0) {
     if (options_.simplex_class_ekk) {
+      clearBasisInterface();
     } else {
       HighsSimplexInterface interface(hmos_[0]);
       interface.clearBasis();
@@ -373,9 +374,9 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 HighsStatus Highs::run() {
 #ifdef HiGHSDEV
   const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
-      HIGHS_DEBUG_LEVEL_CHEAP;
+    //    HIGHS_DEBUG_LEVEL_CHEAP;
   //    HIGHS_DEBUG_LEVEL_COSTLY;
-  //      HIGHS_DEBUG_LEVEL_EXPENSIVE;
+        HIGHS_DEBUG_LEVEL_EXPENSIVE;
   //  HIGHS_DEBUG_LEVEL_MAX;
   if (options_.highs_debug_level < min_highs_debug_level) {
     printf(
@@ -900,6 +901,7 @@ const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   if (!haveHmo("getDualRay")) return HighsStatus::Error;
   if (options_.simplex_class_ekk) {
+      assert(1==0);
     return HighsStatus::Error;
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
@@ -912,6 +914,7 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   underDevelopmentLogMessage("getPrimalRay");
   if (!haveHmo("getPrimalRay")) return HighsStatus::Error;
   if (options_.simplex_class_ekk) {
+      assert(1==0);
     return HighsStatus::Error;
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
@@ -933,6 +936,7 @@ HighsStatus Highs::getBasicVariables(int* basic_variables) {
     return HighsStatus::Error;
   }
   if (options_.simplex_class_ekk) {
+      assert(1==0);
     return HighsStatus::Error;
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
@@ -967,6 +971,7 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
   rhs.assign(numRow, 0);
   rhs[row] = 1;
   if (options_.simplex_class_ekk) {
+      assert(1==0);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, row_vector, row_num_nz, row_indices,
@@ -1003,6 +1008,7 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
   rhs.assign(numRow, 0);
   rhs[col] = 1;
   if (options_.simplex_class_ekk) {
+      assert(1==0);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices,
@@ -1036,6 +1042,7 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
   if (options_.simplex_class_ekk) {
+      assert(1==0);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz,
@@ -1071,6 +1078,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
   if (options_.simplex_class_ekk) {
+      assert(1==0);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz,
@@ -1113,6 +1121,7 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
     rhs[row] = 1;
     basis_inverse_row.resize(numRow, 0);
     if (options_.simplex_class_ekk) {
+      assert(1==0);
     } else {
       HighsSimplexInterface simplex_interface(hmos_[0]);
       // Form B^{-T}e_{row}
@@ -1166,6 +1175,7 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
   for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++)
     rhs[lp.Aindex_[el]] = lp.Avalue_[el];
   if (options_.simplex_class_ekk) {
+      assert(1==0);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices,
@@ -1293,6 +1303,7 @@ bool Highs::changeObjectiveSense(const ObjSense sense) {
   HighsStatus return_status = HighsStatus::OK;
   if (!haveHmo("changeObjectiveSense")) return false;
   if (options_.simplex_class_ekk) {
+      assert(1==0);
     return_status = HighsStatus::Error;
   } else {
     HighsSimplexInterface interface(hmos_[0]);
@@ -1675,6 +1686,7 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
   HighsStatus call_status;
   if (!haveHmo("getCoeff")) return false;
   if (options_.simplex_class_ekk) {
+      assert(1==0);
     call_status = HighsStatus::Error;
   } else {
     HighsSimplexInterface interface(hmos_[0]);
@@ -2069,6 +2081,7 @@ void Highs::newHighsBasis() {
     // Copy this basis to the HMO basis and clear any simplex basis
     hmos_[0].basis_ = this->basis_;
     if (options_.simplex_class_ekk) {
+      clearBasisInterface();
     } else {
       HighsSimplexInterface interface(hmos_[0]);
       interface.clearBasis();

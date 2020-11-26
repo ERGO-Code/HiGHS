@@ -57,6 +57,7 @@ HighsStatus HEkk::solve() {
   initialiseAnalysis();
   if (analysis_.analyse_simplex_time)
     analysis_.simplexTimerStart(SimplexTotalClock);
+  iteration_count_ = 0;
   if (initialiseForSolve() == HighsStatus::Error) return HighsStatus::Error;
 
   assert(simplex_lp_status_.has_basis);

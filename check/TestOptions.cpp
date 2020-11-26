@@ -6,6 +6,7 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
+const bool use_ekk = true;
 
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;
@@ -179,6 +180,8 @@ TEST_CASE("internal-options", "[highs_options]") {
 
 TEST_CASE("highs-options", "[highs_options]") {
   Highs highs;
+  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+          HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

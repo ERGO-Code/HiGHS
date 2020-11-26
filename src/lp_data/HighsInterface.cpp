@@ -1168,3 +1168,9 @@ HighsStatus Highs::setNonbasicStatusInterface(
   }
   return return_status;
 }
+
+void Highs::clearBasisInterface() {
+  HighsModelObject& highs_model_object = hmos_[0];
+  updateSimplexLpStatus(highs_model_object.ekk_instance_.simplex_lp_status_,
+                        LpAction::NEW_BASIS);
+}

@@ -5,6 +5,7 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
+const bool use_ekk = true;
 
 char printedmsg[100000];
 void* receiveddata = NULL;

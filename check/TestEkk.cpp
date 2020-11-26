@@ -4,6 +4,7 @@
 #include "lp_data/HConst.h"
 
 const bool dev_run = false;
+const bool use_ekk = true;
 
 void ekk_solve(Highs& highs, std::string presolve,
                const HighsModelStatus require_model_status,
@@ -66,6 +67,8 @@ void ekk_scipLpi3(Highs& highs) {
 
 TEST_CASE("Ekk", "[highs_test_ekk]") {
   Highs highs;
+  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+          HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -93,6 +96,8 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   Highs highs;
+  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+          HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

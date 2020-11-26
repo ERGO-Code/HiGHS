@@ -3,7 +3,8 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
+const bool use_ekk = true;
 const std::string basis_file = "adlittle.bas";
 HighsBasis basis_data;
 
@@ -118,7 +119,8 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs(options);
-
+  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+          HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -189,6 +191,8 @@ TEST_CASE("Basis-data", "[highs_basis_data]") {
       std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
 
   Highs highs(options);
+  if (use_ekk) REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+          HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
