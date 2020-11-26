@@ -155,7 +155,7 @@ class HighsLpRelaxation {
 
   Status resolveLp();
 
-  Status run();
+  Status run(bool resolve_on_error = true);
 
   Highs& getLpSolver() { return lpsolver; }
   const Highs& getLpSolver() const { return lpsolver; }

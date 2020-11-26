@@ -441,7 +441,7 @@ void HighsLpRelaxation::recoverBasis() {
   }
 }
 
-HighsLpRelaxation::Status HighsLpRelaxation::run() {
+HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsStatus callstatus;
   try {
     callstatus = lpsolver.run();
@@ -457,11 +457,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run() {
   if (callstatus == HighsStatus::Error) {
     lpsolver.clearSolver();
     recoverBasis();
+    if (resolve_on_error) return run(false);
+
     return Status::Error;
   }
 
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
-  int scalestrategy;
 
   switch (scaledmodelstatus) {
     case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
@@ -473,13 +474,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run() {
       storeDualInfProof();
       if (checkDualProof()) return Status::Infeasible;
 
-      lpsolver.getHighsOptionValue("simplex_scale_strategy", scalestrategy);
-      if (scalestrategy != 0) {
+      if (resolve_on_error) {
+        int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
         lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
         HighsBasis basis = lpsolver.getBasis();
         lpsolver.clearSolver();
         lpsolver.setBasis(basis);
-        auto tmp = run();
+        auto tmp = run(false);
         lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
         return tmp;
       }
@@ -491,13 +492,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run() {
           info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::Optimal;
 
-      lpsolver.getHighsOptionValue("simplex_scale_strategy", scalestrategy);
-      if (scalestrategy != 0) {
+      if (resolve_on_error) {
+        int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
         lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
         HighsBasis basis = lpsolver.getBasis();
         lpsolver.clearSolver();
         lpsolver.setBasis(basis);
-        auto tmp = run();
+        auto tmp = run(false);
         lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
         return tmp;
       }
