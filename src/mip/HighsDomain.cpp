@@ -109,15 +109,17 @@ int HighsDomain::propagateRowUpper(const int* Rindex, const double* Rvalue,
       bool accept;
 
       if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
-        bound = std::floor(bound + 1e-6);
-        if (bound < colUpper_[Rindex[i]])
+        bound = std::floor(bound + mipsolver->mipdata_->feastol);
+        if (bound < colUpper_[Rindex[i]] &&
+            colUpper_[Rindex[i]] - bound > 1e-3 * std::abs(bound))
           accept = true;
         else
           accept = false;
       } else {
         if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
           accept = true;
-        else if (bound + 1e-3 < colUpper_[Rindex[i]] &&
+        else if (bound + 1000.0 * mipsolver->mipdata_->feastol <
+                     colUpper_[Rindex[i]] &&
                  (colUpper_[Rindex[i]] - bound) /
                          std::max(std::abs(colUpper_[Rindex[i]]),
                                   std::abs(bound)) >
@@ -134,15 +136,17 @@ int HighsDomain::propagateRowUpper(const int* Rindex, const double* Rvalue,
       bool accept;
 
       if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
-        bound = std::ceil(bound - 1e-6);
-        if (bound > colLower_[Rindex[i]])
+        bound = std::ceil(bound - mipsolver->mipdata_->feastol);
+        if (bound > colLower_[Rindex[i]] &&
+            bound - colLower_[Rindex[i]] > 1e-3 * std::abs(bound))
           accept = true;
         else
           accept = false;
       } else {
         if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
           accept = true;
-        else if (bound - 1e-3 > colLower_[Rindex[i]] &&
+        else if (bound - 1000.0 * mipsolver->mipdata_->feastol >
+                     colLower_[Rindex[i]] &&
                  (bound - colLower_[Rindex[i]]) /
                          std::max(std::abs(colUpper_[Rindex[i]]),
                                   std::abs(bound)) >
@@ -184,15 +188,17 @@ int HighsDomain::propagateRowLower(const int* Rindex, const double* Rvalue,
       bool accept;
 
       if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
-        bound = std::floor(bound + 1e-6);
-        if (bound < colUpper_[Rindex[i]])
+        bound = std::floor(bound + mipsolver->mipdata_->feastol);
+        if (bound < colUpper_[Rindex[i]] &&
+            colUpper_[Rindex[i]] - bound > 1e-3 * std::abs(bound))
           accept = true;
         else
           accept = false;
       } else {
         if (colUpper_[Rindex[i]] == HIGHS_CONST_INF)
           accept = true;
-        else if (bound + 1e-3 < colUpper_[Rindex[i]] &&
+        else if (bound + 1000.0 * mipsolver->mipdata_->feastol <
+                     colUpper_[Rindex[i]] &&
                  (colUpper_[Rindex[i]] - bound) /
                          std::max(std::abs(colUpper_[Rindex[i]]),
                                   std::abs(bound)) >
@@ -208,15 +214,17 @@ int HighsDomain::propagateRowLower(const int* Rindex, const double* Rvalue,
       bool accept;
 
       if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
-        bound = std::ceil(bound - 1e-6);
-        if (bound > colLower_[Rindex[i]])
+        bound = std::ceil(bound - mipsolver->mipdata_->feastol);
+        if (bound > colLower_[Rindex[i]] &&
+            bound - colLower_[Rindex[i]] > 1e-3 * std::abs(bound))
           accept = true;
         else
           accept = false;
       } else {
         if (colLower_[Rindex[i]] == -HIGHS_CONST_INF)
           accept = true;
-        else if (bound - 1e-3 > colLower_[Rindex[i]] &&
+        else if (bound - 1000.0 * mipsolver->mipdata_->feastol >
+                     colLower_[Rindex[i]] &&
                  (bound - colLower_[Rindex[i]]) /
                          std::max(std::abs(colUpper_[Rindex[i]]),
                                   std::abs(bound)) >

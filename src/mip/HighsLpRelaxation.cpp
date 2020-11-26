@@ -461,6 +461,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run() {
   }
 
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
+  int scalestrategy;
 
   switch (scaledmodelstatus) {
     case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
@@ -472,14 +473,40 @@ HighsLpRelaxation::Status HighsLpRelaxation::run() {
       storeDualInfProof();
       if (checkDualProof()) return Status::Infeasible;
 
+      lpsolver.getHighsOptionValue("simplex_scale_strategy", scalestrategy);
+      if (scalestrategy != 0) {
+        lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
+        HighsBasis basis = lpsolver.getBasis();
+        lpsolver.clearSolver();
+        lpsolver.setBasis(basis);
+        auto tmp = run();
+        lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
+        return tmp;
+      }
+
+      assert(false);
       return Status::Error;
     case HighsModelStatus::OPTIMAL:
-      if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol) {
-        if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
-          return Status::Optimal;
+      if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
+          info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
+        return Status::Optimal;
 
+      lpsolver.getHighsOptionValue("simplex_scale_strategy", scalestrategy);
+      if (scalestrategy != 0) {
+        lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
+        HighsBasis basis = lpsolver.getBasis();
+        lpsolver.clearSolver();
+        lpsolver.setBasis(basis);
+        auto tmp = run();
+        lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
+        return tmp;
+      }
+
+      if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol) {
         return Status::UnscaledPrimalFeasible;
-      } else if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol) {
+      }
+
+      if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol) {
         return Status::UnscaledDualFeasible;
       }
 
