@@ -134,6 +134,18 @@ void HighsCutPool::removeObsoleteRows(HighsLpRelaxation& lprelaxation) {
   lprelaxation.removeCuts(ndelcuts, deletemask);
 }
 
+void HighsCutPool::removeAllRows(HighsLpRelaxation& lprelaxation) {
+  int nlprows = lprelaxation.getNumLpRows();
+  int nummodelrows = lprelaxation.getNumModelRows();
+
+  for (int i = nummodelrows; i != nlprows; ++i) {
+    int cut = lprelaxation.getCutIndex(i);
+    ages_[cut] = 1;
+  }
+
+  lprelaxation.removeCuts();
+}
+
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                             HighsCutSet& cutset) {
   int nrows = matrix_.getNumRows();

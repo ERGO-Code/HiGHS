@@ -31,6 +31,7 @@ class HighsLpRelaxation {
   std::vector<int> dualproofinds;
   std::vector<double> dualproofbuffer;
   double dualproofrhs;
+  bool hasdualproof;
   double objective;
   std::shared_ptr<const HighsBasis> basischeckpoint;
   bool currentbasisstored;
@@ -130,6 +131,8 @@ class HighsLpRelaxation {
   void addCuts(HighsCutSet& cutset);
 
   void removeCuts(int ndelcuts, std::vector<int>& deletemask);
+
+  void removeCuts();
 
   void flushDomain(HighsDomain& domain, bool continuous = false);
 

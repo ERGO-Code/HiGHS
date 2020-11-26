@@ -50,6 +50,7 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
   if (numcuts > 0) {
     status = Status::NotSet;
     currentbasisstored = false;
+    basischeckpoint.reset();
     lp2cutpoolindex.insert(lp2cutpoolindex.end(), cutset.cutindices.begin(),
                            cutset.cutindices.end());
     lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
@@ -77,6 +78,12 @@ void HighsLpRelaxation::removeCuts(int ndelcuts, std::vector<int>& deletemask) {
     lpsolver.setBasis(basis);
     lpsolver.run();
   }
+}
+
+void HighsLpRelaxation::removeCuts() {
+  int nlprows = lpsolver.getNumRows();
+  lpsolver.deleteRows(mipsolver.numRow(), nlprows - 1);
+  lp2cutpoolindex.clear();
 }
 
 void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
@@ -170,10 +177,10 @@ void HighsLpRelaxation::storeDualInfProof() {
   assert(lpsolver.getModelStatus(true) == HighsModelStatus::PRIMAL_INFEASIBLE);
 
   int numrow = lpsolver.getNumRows();
-  bool hasdualray = false;
-  lpsolver.getDualRay(hasdualray);
+  hasdualproof = false;
+  lpsolver.getDualRay(hasdualproof);
 
-  if (!hasdualray) {
+  if (!hasdualproof) {
     printf("no dual ray stored\n");
     return;
   }
@@ -184,7 +191,7 @@ void HighsLpRelaxation::storeDualInfProof() {
   const HighsLp& lp = lpsolver.getLp();
   dualproofbuffer.resize(numrow);
 
-  lpsolver.getDualRay(hasdualray, dualproofbuffer.data());
+  lpsolver.getDualRay(hasdualproof, dualproofbuffer.data());
   std::vector<double>& dualray = dualproofbuffer;
 
   HighsCDouble upper = 0.0;
@@ -394,6 +401,7 @@ void HighsLpRelaxation::storeDualUBProof() {
 }
 
 bool HighsLpRelaxation::checkDualProof() const {
+  if (!hasdualproof) return true;
   if (dualproofrhs == HIGHS_CONST_INF) return false;
 
   int len = dualproofinds.size();
@@ -421,6 +429,8 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
                                             std::vector<int>& inds,
                                             std::vector<double>& vals,
                                             double& rhs) {
+  if (!hasdualproof) return false;
+
   assert(checkDualProof());
 
   inds = dualproofinds;
@@ -431,8 +441,8 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
 
 void HighsLpRelaxation::recoverBasis() {
   if (basischeckpoint && basischeckpoint->valid_) {
-    assert(isBasisRightSize(lpsolver.getLp(), *basischeckpoint));
-    assert(isBasisConsistent(lpsolver.getLp(), *basischeckpoint));
+    // assert(isBasisRightSize(lpsolver.getLp(), *basischeckpoint));
+    // assert(isBasisConsistent(lpsolver.getLp(), *basischeckpoint));
     // basischeckpoint->row_status.resize(lpsolver.getNumRows(),
     //                                  HighsBasisStatus::BASIC);
 
@@ -473,6 +483,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     case HighsModelStatus::PRIMAL_INFEASIBLE:
       storeDualInfProof();
       if (checkDualProof()) return Status::Infeasible;
+      hasdualproof = false;
 
       if (resolve_on_error) {
         int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
@@ -483,9 +494,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         auto tmp = run(false);
         lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
         return tmp;
+      } else if (lpsolver.getModelStatus() ==
+                 HighsModelStatus::PRIMAL_INFEASIBLE) {
+        // the LP was solved from the basis without scaling and highs still says infeasible
+        // trust the LP solver in this case
+        return Status::Infeasible;
       }
 
-      assert(false);
       return Status::Error;
     case HighsModelStatus::OPTIMAL:
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&

@@ -937,6 +937,7 @@ bool HighsSearch::branch() {
 
   if (currnode.branchingdecision.column == -1) {
     lp->getLpSolver().clearSolver();
+    mipsolver.mipdata_->cutpool.removeAllRows(*lp);
     lp->setIterationLimit();
     lp->getLpSolver().setHighsOptionValue("presolve", "on");
     evaluateNode();

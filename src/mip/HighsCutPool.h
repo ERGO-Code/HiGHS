@@ -81,6 +81,8 @@ class HighsCutPool {
 
   void removeObsoleteRows(HighsLpRelaxation& lprelaxation);
 
+  void removeAllRows(HighsLpRelaxation& lprelaxation);
+
   void separate(const std::vector<double>& sol, HighsDomain& domprop,
                 HighsCutSet& cutset);
 
