@@ -2055,7 +2055,7 @@ HighsStatus transformIntoEqualityProblem(const HighsLp& lp,
   }
   equality_lp.rowLower_ = rhs;
   equality_lp.rowUpper_ = rhs;
-
+  equality_lp.integrality_.assign(equality_lp.numCol_, 0);
   return HighsStatus::OK;
 }
 

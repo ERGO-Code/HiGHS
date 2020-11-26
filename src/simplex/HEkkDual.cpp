@@ -125,17 +125,24 @@ HighsStatus HEkkDual::solve() {
       initialiseDevexFramework();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // Using dual steepest edge (DSE) weights
-      const int num_basic_structurals =
-          solver_num_row - simplex_info.num_basic_logicals;
-      const bool computeExactDseWeights =
-          num_basic_structurals > 0 && initialise_dual_steepest_edge_weights;
-      if (computeExactDseWeights) {
+      //
+      // Exact DSE weights need to be computed if the basis contains structurals
+      bool logical_basis = true;
+      for (int iRow=0; iRow < solver_num_row; iRow++) {
+	if (ekk_instance_.simplex_basis_.basicIndex_[iRow] < solver_num_col) {
+	  logical_basis = false;
+	  break;
+	}
+      }
+      const bool compute_exact_DSE_weights =
+	!logical_basis && initialise_dual_steepest_edge_weights;
+      if (compute_exact_DSE_weights) {
         HighsPrintMessage(
             options.output, options.message_level, ML_DETAILED,
-            "If (0<num_basic_structurals = %d) && %d = "
+            "If logical_basis = %d = 1 && %d = "
             "initialise_dual_steepest_edge_weights: Compute exact "
             "DSE weights\n",
-            num_basic_structurals, initialise_dual_steepest_edge_weights);
+            logical_basis, initialise_dual_steepest_edge_weights);
         // Basis is not logical and DSE weights are to be initialised
         if (ekk_instance_.analysis_.analyse_simplex_time) {
           analysis->simplexTimerStart(SimplexIzDseWtClock);
@@ -167,9 +174,7 @@ HighsStatus HEkkDual::solve() {
         }
       } else {
         HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
-                          "solve:: %d basic structurals: starting from B=I so "
-                          "unit initial DSE weights\n",
-                          num_basic_structurals);
+                          "solve:: Starting from B=I so unit initial DSE weights\n");
       }
     }
     // Indicate that edge weights are known
