@@ -39,12 +39,12 @@ bool commandLineOffChooseOnOk(FILE* logfile, const string& value) {
 
 bool commandLineSolverOk(FILE* logfile, const string& value) {
   if (value == simplex_string || value == choose_string ||
-      value == ipm_string || value == mip_string)
+      value == ipm_string)
     return true;
   HighsLogMessage(logfile, HighsMessageType::WARNING,
-                  "Value \"%s\" is not one of \"%s\", \"%s\", \"%s\" or \"%s\"\n",
+                  "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
                   value.c_str(), simplex_string.c_str(), choose_string.c_str(),
-                  ipm_string.c_str(), mip_string.c_str());
+                  ipm_string.c_str());
   return false;
 }
 
@@ -282,7 +282,7 @@ OptionStatus checkOptionValue(FILE* logfile, OptionRecordString& option,
   // Setting a string option. For some options only particular values
   // are permitted, so check them
   if (option.name == presolve_string) {
-    if (!commandLineOffChooseOnOk(logfile, value))
+    if (!commandLineOffChooseOnOk(logfile, value) && value != "mip")
       return OptionStatus::ILLEGAL_VALUE;
   } else if (option.name == solver_string) {
     if (!commandLineSolverOk(logfile, value))

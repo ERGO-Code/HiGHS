@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
   const HighsLp& lp = highs.getLp();
   HighsStatus run_status = HighsStatus::Error;
   bool is_mip = false;
-  for (int i = 0; i < lp.integrality_.size(); i++)
+  for (int i = 0; i < (int) lp.integrality_.size(); i++)
     if (lp.integrality_[i] == HighsVarType::INTEGER) {
       is_mip = true;
       break;
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
   // options.solver will control which solver is used
   // instead.
   if (options.solver == "simplex" || options.solver == "ipm" ||
-      (!options.mip && !is_mip)) {
+      (!options.mip && !is_mip && options.presolve != "mip")) {
     run_status = callLpSolver(options, lp);
   } else {
     run_status = callMipSolver(options, lp);
