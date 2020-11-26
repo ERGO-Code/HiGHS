@@ -537,9 +537,16 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp() {
       for (int i = 0; i != mipsolver.numCol(); ++i) {
         if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
 
-        double intval = std::floor(sol.col_value[i] + 0.5);
-        if (std::abs(sol.col_value[i] - intval) > mipsolver.mipdata_->feastol)
-          fractionalints.emplace_back(i, sol.col_value[i]);
+        // for the fractionality we assume that LP bounds are not violated
+        // bounds that are violated by the unscaled LP are indicated by the
+        // return status already
+        double val =
+            std::max(std::min(sol.col_value[i], lpsolver.getLp().colUpper_[i]),
+                     lpsolver.getLp().colLower_[i]);
+        double intval = std::floor(val + 0.5);
+
+        if (std::abs(val - intval) > mipsolver.mipdata_->feastol)
+          fractionalints.emplace_back(i, val);
       }
 
       for (int i = 0; i != mipsolver.numCol(); ++i)

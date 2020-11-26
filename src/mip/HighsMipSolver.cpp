@@ -284,6 +284,12 @@ void HighsMipSolver::run() {
         search.flushStatistics();
         mipdata_->lower_bound = std::min(
             mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound());
+
+        if (mipdata_->dispfreq != 0) {
+          if (mipdata_->num_leaves - mipdata_->last_displeave >=
+              mipdata_->dispfreq)
+            mipdata_->printDisplayLine();
+        }
         continue;
       }
 
