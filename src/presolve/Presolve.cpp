@@ -1320,14 +1320,45 @@ void Presolve::runPropagator() {
                                Astart, Aend, ARvalue, ARindex, ARstart, flagRow,
                                flagCol, rowLower, rowUpper);
   propagator.computeRowActivities();
-  propagator.propagate();
-  int ntightened = 0;
+  int nboundchgs = propagator.propagate();
+  printf("propagation found %d bound changes\n", nboundchgs);
+  // propagation found nothing, so we can stop here. Only for mip we also try
+  // coefficient tightening
+  if (!mip && nboundchgs == 0) return;
 
-  if (propagator.infeasible()) {
-    status = Infeasible;
-    return;
+  if (mip) {
+    int ntotalcoeffchgs = 0;
+    while (true) {
+      int ncoeffchgs = propagator.tightenCoefficients();
+      printf("tightened %d coefficients\n", ncoeffchgs);
+      // if no coefficients where tightened we can stop
+      if (ncoeffchgs == 0) break;
+      ntotalcoeffchgs += ncoeffchgs;
+
+      hasChange = true;
+      nboundchgs = propagator.propagate();
+
+      if (propagator.infeasible()) {
+        status = Infeasible;
+        return;
+      }
+
+      printf("propagation found %d bound changes\n", nboundchgs);
+      // if no further bounds where changed we can stop
+      if (nboundchgs == 0) break;
+    }
+
+    if (ntotalcoeffchgs != 0) {
+      // row sides might have changed during coefficient tightening
+      implRowValueLower = rowLower;
+      implRowValueUpper = rowUpper;
+    }
+
+    // no bounds where tightened, so we can return here
+    if (propagator.getNumChangedBounds() == 0) return;
   }
 
+  int ntightened = 0;
   // we cannot use the tightest bounds that we obtained by propagation
   // as then the dual postsolve step might not work anymore. Instead
   // we relax the bounds by a wide enough margin so that they cannot

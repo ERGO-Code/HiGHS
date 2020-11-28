@@ -5,6 +5,8 @@
 #include <numeric>
 #include <queue>
 
+#include "util/HighsUtils.h"
+
 static double activityContributionMin(double coef, const double& lb,
                                       const double& ub) {
   if (coef < 0) {
@@ -33,13 +35,12 @@ static double activityContributionMax(double coef, const double& lb,
 
 HighsLpPropagator::HighsLpPropagator(
     const std::vector<double>& colLower, const std::vector<double>& colUpper,
-    const std::vector<HighsVarType>& integrality_,
-    const std::vector<double>& Avalue_, const std::vector<int>& Aindex_,
-    const std::vector<int>& Astart_, const std::vector<int>& Aend_,
-    const std::vector<double>& ARvalue_, const std::vector<int>& ARindex_,
-    const std::vector<int>& ARstart_, const std::vector<int>& flagRow,
-    const std::vector<int>& flagCol, const std::vector<double>& rowLower_,
-    const std::vector<double>& rowUpper_)
+    const std::vector<HighsVarType>& integrality_, std::vector<double>& Avalue_,
+    std::vector<int>& Aindex_, std::vector<int>& Astart_,
+    std::vector<int>& Aend_, std::vector<double>& ARvalue_,
+    std::vector<int>& ARindex_, std::vector<int>& ARstart_,
+    const std::vector<int>& flagRow, const std::vector<int>& flagCol,
+    std::vector<double>& rowLower_, std::vector<double>& rowUpper_)
     : Avalue_(Avalue_),
       Aindex_(Aindex_),
       Astart_(Astart_),
@@ -416,6 +417,7 @@ void HighsLpPropagator::computeRowActivities() {
 
 double HighsLpPropagator::doChangeBound(const HighsDomainChange& boundchg) {
   double oldbound;
+  ++numBoundChgs_;
 
   if (boundchg.boundtype == HighsBoundType::Lower) {
     oldbound = colLower_[boundchg.column];
@@ -457,11 +459,12 @@ void HighsLpPropagator::changeBound(HighsDomainChange boundchg) {
   doChangeBound(boundchg);
 }
 
-void HighsLpPropagator::propagate() {
+int HighsLpPropagator::propagate() {
   std::vector<int> propagateinds;
 
-  if (propagateinds_.empty()) return;
+  if (propagateinds_.empty()) return 0;
 
+  int numchgs = -numBoundChgs_;
   size_t changedboundsize = 2 * ARvalue_.size();
   std::unique_ptr<HighsDomainChange[]> changedbounds(
       new HighsDomainChange[changedboundsize]);
@@ -530,4 +533,92 @@ void HighsLpPropagator::propagate() {
 
     propagateinds.clear();
   }
+
+  numchgs += numBoundChgs_;
+  return numchgs;
+}
+
+int HighsLpPropagator::tightenCoefficients() {
+  int numrow = rowUpper_.size();
+  int ntightenedtotal = 0;
+  for (int i = 0; i != numrow; ++i) {
+    if (!flagRow[i] ||
+        (rowUpper_[i] != HIGHS_CONST_INF && rowLower_[i] != -HIGHS_CONST_INF))
+      continue;
+
+    int scale;
+
+    if (rowUpper_[i] != HIGHS_CONST_INF) {
+      if (activitymaxinf_[i] != 0) continue;
+
+      if (activitymax_[i] - rowUpper_[i] <= 1e-6) continue;
+
+      scale = 1;
+    } else {
+      if (activitymininf_[i] != 0) continue;
+
+      if (rowLower_[i] - activitymin_[i] <= 1e-6) continue;
+
+      scale = -1;
+    }
+
+    HighsCDouble maxactivity = scale == 1 ? activitymax_[i] : -activitymin_[i];
+    HighsCDouble upper = scale == 1 ? rowUpper_[i] : -rowLower_[i];
+    HighsCDouble maxabscoef = double(maxactivity - upper);
+    int tightened = 0;
+    const int start = ARstart_[i];
+    const int end = ARstart_[i + 1];
+
+    for (int j = start; j != end; ++j) {
+      int col = ARindex_[j];
+      if (!flagCol[col] || integrality_[col] == HighsVarType::CONTINUOUS)
+        continue;
+
+      double val = scale * ARvalue_[j];
+      if (val > maxabscoef) {
+        HighsCDouble delta = val - maxabscoef;
+        upper -= delta * colUpper_[col];
+        ARvalue_[j] = scale * double(maxabscoef);
+        ++tightened;
+      } else if (val < -maxabscoef) {
+        HighsCDouble delta = -val - maxabscoef;
+        upper += delta * colLower_[col];
+        ARvalue_[j] = -scale * double(maxabscoef);
+        ++tightened;
+      }
+    }
+
+    if (tightened != 0) {
+      if (scale == 1)
+        rowUpper_[i] = double(upper);
+      else
+        rowLower_[i] = -double(upper);
+      // printf("tightened %d coefficients, rhs changed from %g to %g\n",
+      //       tightened, rhs, double(upper));
+      computeMinActivity(start, end, ARindex_.data(), ARvalue_.data(),
+                         activitymininf_[i], activitymin_[i]);
+      computeMaxActivity(start, end, ARindex_.data(), ARvalue_.data(),
+                         activitymaxinf_[i], activitymax_[i]);
+
+      if ((activitymininf_[i] <= 1 && rowUpper_[i] != HIGHS_CONST_INF) ||
+          (activitymaxinf_[i] <= 1 && rowLower_[i] != -HIGHS_CONST_INF)) {
+        markPropagate(i);
+        // propagateflags_[i] = 1;
+        // propagateinds_.push_back(i);
+      }
+
+      ntightenedtotal += tightened;
+    }
+  }
+
+  if (ntightenedtotal != 0) {
+    int transNcol = numrow;
+    int transNrow = colLower_.size();
+
+    highsSparseTranspose(transNrow, transNcol, ARstart_, ARindex_, ARvalue_,
+                         Astart_, Aindex_, Avalue_);
+    std::copy(Astart_.begin() + 1, Astart_.end(), Aend_.begin());
+  }
+
+  return ntightenedtotal;
 }
