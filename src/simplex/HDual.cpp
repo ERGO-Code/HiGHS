@@ -2037,7 +2037,7 @@ void HDual::assessPhase1Optimality() {
   // dual activity
   assert(solvePhase == SOLVE_PHASE_1);
   assert(row_out == -1);
-  assert(workHMO.simplex_info_.dual_objective_value < 0);
+  //  assert(workHMO.simplex_info_.dual_objective_value < 0);
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsModelStatus& scaled_model_status = workHMO.scaled_model_status_;
   // We still have dual infeasibilities, so clean up any perturbations
@@ -2175,7 +2175,7 @@ void HDual::reportOnPossibleLpDualInfeasibility() {
   HighsSimplexAnalysis& analysis = workHMO.simplex_analysis_;
   assert(solvePhase == SOLVE_PHASE_1);
   assert(row_out == -1);
-  assert(simplex_info.dual_objective_value < 0);
+  //  assert(simplex_info.dual_objective_value < 0);
   assert(!simplex_info.costs_perturbed);
   std::string lp_dual_status;
   if (analysis.num_dual_phase_1_lp_dual_infeasibility) {

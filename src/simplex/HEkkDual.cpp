@@ -1942,7 +1942,7 @@ bool HEkkDual::getNonsingularInverse() {
 
   // Call computeFactor to perform INVERT
   int rank_deficiency = ekk_instance_.computeFactor();
-  const bool artificial_rank_deficiency = false;  // true;
+  const bool artificial_rank_deficiency = false;  // true;//
   if (artificial_rank_deficiency) {
     if (!simplex_info.phase1_backtracking_test_done &&
         solvePhase == SOLVE_PHASE_1) {
@@ -2043,7 +2043,7 @@ void HEkkDual::assessPhase1Optimality() {
   // dual activity
   assert(solvePhase == SOLVE_PHASE_1);
   assert(row_out == -1);
-  assert(ekk_instance_.simplex_info_.dual_objective_value < 0);
+  //  assert(ekk_instance_.simplex_info_.dual_objective_value < 0);
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   HighsModelStatus& scaled_model_status = ekk_instance_.scaled_model_status_;
   // We still have dual infeasibilities, so clean up any perturbations
@@ -2179,7 +2179,7 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   HighsSimplexAnalysis& analysis = ekk_instance_.analysis_;
   assert(solvePhase == SOLVE_PHASE_1);
   assert(row_out == -1);
-  assert(simplex_info.dual_objective_value < 0);
+  //  assert(simplex_info.dual_objective_value < 0);
   assert(!simplex_info.costs_perturbed);
   std::string lp_dual_status;
   if (analysis.num_dual_phase_1_lp_dual_infeasibility) {
@@ -2398,3 +2398,4 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
   if (initialise) return return_status;
   return HighsDebugStatus::OK;
 }
+

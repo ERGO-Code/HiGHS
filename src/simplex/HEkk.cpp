@@ -105,6 +105,8 @@ HighsStatus HEkk::solve() {
       HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                       "Using EKK dual simplex solver - serial");
     }
+    workEdWt_ = dual_solver.getWorkEdWt();
+    workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkDual::solve");
@@ -148,6 +150,8 @@ HighsStatus HEkk::cleanup() {
         SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
     HEkkDual dual_solver(*this);
     dual_solver.options();
+    workEdWt_ = dual_solver.getWorkEdWt();
+    workEdWtFull_ = dual_solver.getWorkEdWtFull();
     call_status = dual_solver.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkDual::solve");
@@ -169,9 +173,9 @@ HighsStatus HEkk::cleanup() {
 
 HighsStatus HEkk::setBasis() {
   // Set up nonbasicFlag and basicIndex for a logical basis
-  int num_col = simplex_lp_.numCol_;
-  int num_row = simplex_lp_.numRow_;
-  int num_tot = num_col + num_row;
+  const int num_col = simplex_lp_.numCol_;
+  const int num_row = simplex_lp_.numRow_;
+  const int num_tot = num_col + num_row;
   simplex_basis_.nonbasicFlag_.resize(num_tot);
   simplex_basis_.nonbasicMove_.resize(num_tot);
   simplex_basis_.basicIndex_.resize(num_row);
@@ -400,7 +404,18 @@ int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
     }
     setBasis();
   }
-  const int rank_deficiency = getFactor();
+  if (!simplex_lp_status_.has_factor_arrays) {
+    assert(simplex_info_.factor_pivot_threshold >=
+           options_.factor_pivot_threshold);
+    factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
+                  &simplex_lp_.Astart_[0], &simplex_lp_.Aindex_[0],
+                  &simplex_lp_.Avalue_[0], &simplex_basis_.basicIndex_[0],
+                  options_.highs_debug_level, options_.logfile, options_.output,
+                  options_.message_level, simplex_info_.factor_pivot_threshold,
+                  options_.factor_pivot_tolerance);
+    simplex_lp_status_.has_factor_arrays = true;
+  }
+  const int rank_deficiency = computeFactor();
   if (rank_deficiency) {
     // Basis is rank deficient
     if (only_from_known_basis) {
@@ -408,16 +423,14 @@ int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                       "Supposed to be a full-rank basis, but incorrect");
       return rank_deficiency;
-    } else {
-      return -(int)HighsStatus::Error;
-      /*
-      // Account for rank deficiency by correcing nonbasicFlag
-      simplexHandleRankDeficiency(highs_model_object);
-      updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
-      simplex_lp_status.has_invert = true;
-      simplex_lp_status.has_fresh_invert = true;
-      */
     }
+    // Account for rank deficiency by correcing nonbasicFlag
+    handleRankDeficiency();
+    updateSimplexLpStatus(simplex_lp_status_, LpAction::NEW_BASIS);
+    setNonbasicMove();
+    simplex_lp_status_.has_basis = true;
+    simplex_lp_status_.has_invert = true;
+    simplex_lp_status_.has_fresh_invert = true;
   }
   assert(simplex_lp_status_.has_invert);
   return 0;
@@ -465,10 +478,10 @@ void HEkk::initialiseForNewLp() {
 HighsStatus HEkk::initialiseForSolve() {
   // If there's no basis, set a logical basis
   if (!simplex_lp_status_.has_basis) setBasis();
-  const int rank_deficiency = getFactor();
-  if (rank_deficiency) return HighsStatus::Error;
+  const int error_return = initialiseSimplexLpBasisAndFactor();
+  assert(!error_return);
+  if (error_return) return HighsStatus::Error;
   assert(simplex_lp_status_.has_basis);
-  // May have to call setNonbasicMove() in some circumstances
 
   initialiseMatrix();  // Timed
   allocateWorkAndBaseArrays();
@@ -651,40 +664,161 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
 }
 
 int HEkk::getFactor() {
-  if (!simplex_lp_status_.has_factor_arrays) {
-    assert(simplex_info_.factor_pivot_threshold >=
-           options_.factor_pivot_threshold);
-    factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
-                  &simplex_lp_.Astart_[0], &simplex_lp_.Aindex_[0],
-                  &simplex_lp_.Avalue_[0], &simplex_basis_.basicIndex_[0],
-                  options_.highs_debug_level, options_.logfile, options_.output,
-                  options_.message_level, simplex_info_.factor_pivot_threshold,
-                  options_.factor_pivot_tolerance);
-    simplex_lp_status_.has_factor_arrays = true;
-  }
+  assert(simplex_lp_status_.has_factor_arrays);
   if (!simplex_lp_status_.has_invert) {
     const int rank_deficiency = computeFactor();
     if (rank_deficiency) {
       // Basis is rank deficient
       return rank_deficiency;
-      /*
-        if (only_from_known_basis) {
-          // If only this basis should be used, then return error
-          HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                          "Supposed to be a full-rank basis, but incorrect");
-          return rank_deficiency;
-        } else {
-          // Account for rank deficiency by correcing nonbasicFlag
-          simplexHandleRankDeficiency();
-          updateSimplexLpStatus(simplex_lp_status_, LpAction::NEW_BASIS);
-          simplex_lp_status_.has_invert = true;
-          simplex_lp_status_.has_fresh_invert = true;
-        }
-      */
     }
     assert(simplex_lp_status_.has_invert);
   }
   return 0;
+}
+
+bool HEkk::getNonsingularInverse(const int solve_phase) {
+  const vector<int>& basicIndex = simplex_basis_.basicIndex_;
+  // Take a copy of basicIndex from before INVERT to be used as the
+  // saved ordering of basic variables - so reinvert will run
+  // identically.
+  const vector<int> basicIndex_before_compute_factor = basicIndex;
+  // Save the number of updates performed in case it has to be used to determine
+  // a limit
+  const int simplex_update_count = simplex_info_.update_count;
+  // Dual simplex edge weights are identified with rows, so must be
+  // permuted according to INVERT. This must be done if workEdWt_ is
+  // not NULL.
+  const bool handle_edge_weights = workEdWt_ != NULL;
+  // Scatter the edge weights so that, after INVERT, they can be
+  // gathered according to the new permutation of basicIndex
+  if (handle_edge_weights) {
+    analysis_.simplexTimerStart(PermWtClock);
+    for (int i = 0; i < simplex_lp_.numRow_; i++)
+      workEdWtFull_[basicIndex[i]] = workEdWt_[i];
+    analysis_.simplexTimerStop(PermWtClock);
+  }
+
+  // Call computeFactor to perform INVERT
+  int rank_deficiency = computeFactor();
+  const bool artificial_rank_deficiency = false;  // true;//
+  if (artificial_rank_deficiency) {
+    if (!simplex_info_.phase1_backtracking_test_done &&
+        solve_phase == SOLVE_PHASE_1) {
+      // Claim rank deficiency to test backtracking
+      printf("Phase1 (Iter %d) Claiming rank deficiency to test backtracking\n",
+             iteration_count_);
+      rank_deficiency = 1;
+      simplex_info_.phase1_backtracking_test_done = true;
+    } else if (!simplex_info_.phase2_backtracking_test_done &&
+               solve_phase == SOLVE_PHASE_2) {
+      // Claim rank deficiency to test backtracking
+      printf("Phase2 (Iter %d) Claiming rank deficiency to test backtracking\n",
+             iteration_count_);
+      rank_deficiency = 1;
+      simplex_info_.phase2_backtracking_test_done = true;
+    }
+  }
+  if (rank_deficiency) {
+    // Rank deficient basis, so backtrack to last full rank basis
+    //
+    // Get the last nonsingular basis - so long as there is one
+    if (!getBacktrackingBasis(workEdWtFull_)) return false;
+    // Record that backtracking is taking place
+    simplex_info_.backtracking_ = true;
+    updateSimplexLpStatus(simplex_lp_status_,
+                          LpAction::BACKTRACKING);
+    int backtrack_rank_deficiency = computeFactor();
+    // This basis has previously been inverted successfully, so it shouldn't be
+    // singular
+    if (backtrack_rank_deficiency) return false;
+    // simplex update limit will be half of the number of updates
+    // performed, so make sure that at least one update was performed
+    if (simplex_update_count <= 1) return false;
+    int use_simplex_update_limit = simplex_info_.update_limit;
+    int new_simplex_update_limit = simplex_update_count / 2;
+    simplex_info_.update_limit = new_simplex_update_limit;
+    HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
+                    "Rank deficiency of %d after %d simplex updates, so "
+                    "backtracking: max updates reduced from %d to %d",
+                    rank_deficiency, simplex_update_count,
+                    use_simplex_update_limit, new_simplex_update_limit);
+  } else {
+    // Current basis is full rank so save it
+    putBacktrackingBasis(basicIndex_before_compute_factor,
+                         workEdWtFull_);
+    // Indicate that backtracking is not taking place
+    simplex_info_.backtracking_ = false;
+    // Reset the update limit in case this is the first successful
+    // inversion after backtracking
+    simplex_info_.update_limit = options_.simplex_update_limit;
+  }
+  if (handle_edge_weights) {
+    // Gather the edge weights according to the permutation of
+    // basicIndex after INVERT
+    analysis_.simplexTimerStart(PermWtClock);
+    for (int i = 0; i < simplex_lp_.numRow_; i++)
+      workEdWt_[i] = workEdWtFull_[basicIndex[i]];
+    analysis_.simplexTimerStop(PermWtClock);
+  }
+  return true;
+}
+
+bool HEkk::getBacktrackingBasis(double* scattered_edge_weights) {
+  if (!simplex_info_.valid_backtracking_basis_) return false;
+  simplex_basis_ = simplex_info_.backtracking_basis_;
+  simplex_info_.costs_perturbed =
+      simplex_info_.backtracking_basis_costs_perturbed_;
+  simplex_info_.workShift_ = simplex_info_.backtracking_basis_workShift_;
+  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  const bool handle_edge_weights = scattered_edge_weights != NULL;
+  if (handle_edge_weights) {
+    for (int iVar=0; iVar < num_tot; iVar++)
+      scattered_edge_weights[iVar] = simplex_info_.backtracking_basis_edge_weights_[iVar];
+  }
+  return true;
+}
+
+void HEkk::putBacktrackingBasis() {
+  const vector<int>& basicIndex = simplex_basis_.basicIndex_;
+  const bool handle_edge_weights = workEdWt_ != NULL;
+  if (handle_edge_weights) {
+    analysis_.simplexTimerStart(PermWtClock);
+    for (int i = 0; i < simplex_lp_.numRow_; i++)
+      workEdWtFull_[basicIndex[i]] = workEdWt_[i];
+    analysis_.simplexTimerStop(PermWtClock);
+  }
+  putBacktrackingBasis(basicIndex, workEdWtFull_);
+}
+
+void HEkk::putBacktrackingBasis(
+    const vector<int>& basicIndex_before_compute_factor,
+    double* scattered_edge_weights) {
+  simplex_info_.valid_backtracking_basis_ = true;
+  simplex_info_.backtracking_basis_ = simplex_basis_;
+  simplex_info_.backtracking_basis_.basicIndex_ =
+      basicIndex_before_compute_factor;
+  simplex_info_.backtracking_basis_costs_perturbed_ =
+      simplex_info_.costs_perturbed;
+  simplex_info_.backtracking_basis_workShift_ = simplex_info_.workShift_;
+  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
+  const bool handle_edge_weights = scattered_edge_weights != NULL;
+  if (handle_edge_weights) {
+    for (int iVar=0; iVar < num_tot; iVar++)
+      simplex_info_.backtracking_basis_edge_weights_[iVar] = scattered_edge_weights[iVar];
+  }
+}
+
+void HEkk::handleRankDeficiency() {
+  int rank_deficiency = factor_.rank_deficiency;
+  vector<int>& noPvC = factor_.noPvC;
+  vector<int>& noPvR = factor_.noPvR;
+  for (int k = 0; k < rank_deficiency; k++) {
+    int variable_in = simplex_lp_.numCol_ + noPvR[k];
+    int variable_out = noPvC[k];
+    simplex_basis_.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
+    simplex_basis_.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
+  }
+  simplex_lp_status_.has_matrix = false; 
 }
 
 void HEkk::computePrimalObjectiveValue() {
@@ -741,6 +875,10 @@ void HEkk::computeDualObjectiveValue(const int phase) {
 }
 
 int HEkk::computeFactor() {
+
+  if (workEdWt_ != NULL) printf("EdWt[0] = %g\n", workEdWt_[0]);
+
+
   analysis_.simplexTimerStart(InvertClock);
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analysis_.analyse_factor_time) {
@@ -1009,7 +1147,7 @@ void HEkk::initialiseCost(const SimplexAlgorithm algorithm,
 }
 
 void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
-                           const int solvePhase, const bool perturb) {
+                           const int solve_phase, const bool perturb) {
   initialiseLpColBound();
   initialiseLpRowBound();
   simplex_info_.bounds_perturbed = 0;
@@ -1095,7 +1233,7 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
   // Dual simplex costs are either from the LP or set to special values in phase
   // 1
   assert(algorithm == SimplexAlgorithm::DUAL);
-  if (solvePhase == SOLVE_PHASE_2) return;
+  if (solve_phase == SOLVE_PHASE_2) return;
 
   // The dual objective is the sum of products of primal and dual
   // values for nonbasic variables. For dual simplex phase 1, the

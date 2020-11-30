@@ -80,6 +80,9 @@ class HEkk {
   SimplexBasis simplex_basis_;
   HighsRandom random_;
 
+  double* workEdWt_ = NULL;      //!< DSE or Dvx weight
+  double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
+  
   HMatrix matrix_;
   HFactor factor_;
 
@@ -92,7 +95,13 @@ class HEkk {
   void setSimplexOptions();
   void initialiseSimplexLpRandomVectors();
   void setNonbasicMove();
+  bool getNonsingularInverse(const int solve_phase = 0);
+  bool getBacktrackingBasis(double* scattered_edge_weights);
+  void putBacktrackingBasis();
+  void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
+			    double* scattered_edge_weights);
   int getFactor();
+  void handleRankDeficiency();
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const int phase = 2);
   int computeFactor();
