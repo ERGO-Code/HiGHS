@@ -1385,4 +1385,3 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
   }
   return HighsStatus::OK;
 }
-

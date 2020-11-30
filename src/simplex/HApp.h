@@ -556,7 +556,7 @@ HighsStatus solveLpEkkSimplex(HighsModelObject& highs_model_object) {
     highs_model_object.unscaled_model_status_ =
         ekk_instance.scaled_model_status_;
     return_status =
-      highsStatusFromHighsModelStatus(ekk_instance.scaled_model_status_);
+        highsStatusFromHighsModelStatus(ekk_instance.scaled_model_status_);
     return return_status;
   }
 

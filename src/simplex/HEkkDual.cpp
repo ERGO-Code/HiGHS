@@ -67,15 +67,15 @@ HighsStatus HEkkDual::solve() {
                     "number of constraints",
                     ekk_instance_.simplex_lp_.numRow_);
     assert(positive_num_row);
-    return returnFromSolve(HighsStatus::Error);
+    return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
-
   rebuild_reason = REBUILD_REASON_NO;
 
   // Set solve_bailout to be true if control is to be returned immediately to
   // calling function
   solve_bailout = false;
-  if (bailoutOnTimeIterations()) return returnFromSolve(HighsStatus::Warning);
+  if (bailoutOnTimeIterations())
+    return ekk_instance_.returnFromSolve(HighsStatus::Warning);
 
   // Initialise working environment. Does LOTS, including
   // initialisation of edge weights to 1s. Should only be called if
@@ -87,7 +87,7 @@ HighsStatus HEkkDual::solve() {
   if (!dual_info_ok) {
     HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
                     "HPrimalDual::solve has error in dual information");
-    return returnFromSolve(HighsStatus::Error);
+    return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
 
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
@@ -107,7 +107,7 @@ HighsStatus HEkkDual::solve() {
   if (!simplex_lp_status.has_invert) {
     HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
                     "HPrimalDual:: Should enter solve with INVERT");
-    return returnFromSolve(HighsStatus::Error);
+    return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
   // Consider initialising edge weights
   //
@@ -128,14 +128,14 @@ HighsStatus HEkkDual::solve() {
       //
       // Exact DSE weights need to be computed if the basis contains structurals
       bool logical_basis = true;
-      for (int iRow=0; iRow < solver_num_row; iRow++) {
-	if (ekk_instance_.simplex_basis_.basicIndex_[iRow] < solver_num_col) {
-	  logical_basis = false;
-	  break;
-	}
+      for (int iRow = 0; iRow < solver_num_row; iRow++) {
+        if (ekk_instance_.simplex_basis_.basicIndex_[iRow] < solver_num_col) {
+          logical_basis = false;
+          break;
+        }
       }
       const bool compute_exact_DSE_weights =
-	!logical_basis && initialise_dual_steepest_edge_weights;
+          !logical_basis && initialise_dual_steepest_edge_weights;
       if (compute_exact_DSE_weights) {
         HighsPrintMessage(
             options.output, options.message_level, ML_DETAILED,
@@ -173,13 +173,17 @@ HighsStatus HEkkDual::solve() {
                             solver_num_row, IzDseWtTT);
         }
       } else {
-        HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
-                          "solve:: Starting from B=I so unit initial DSE weights\n");
+        HighsPrintMessage(
+            options.output, options.message_level, ML_DETAILED,
+            "solve:: Starting from B=I so unit initial DSE weights\n");
       }
     }
     // Indicate that edge weights are known
     simplex_lp_status.has_dual_steepest_edge_weights = true;
   }
+  // Resize the copy of scattered edge weights for backtracking
+  simplex_info.backtracking_basis_edge_weights_.resize(solver_num_tot);
+
   // Compute the dual values
   ekk_instance_.computeDual();
   // Determine the number of dual infeasibilities, and hence the solve phase
@@ -189,7 +193,7 @@ HighsStatus HEkkDual::solve() {
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::DUAL, solvePhase,
                          ekk_instance_.scaled_model_status_) ==
       HighsDebugStatus::LOGICAL_ERROR)
-    return returnFromSolve(HighsStatus::Error);
+    return ekk_instance_.returnFromSolve(HighsStatus::Error);
   //
   // The major solving loop
   //
@@ -235,17 +239,18 @@ HighsStatus HEkkDual::solve() {
     } else {
       // Should only be SOLVE_PHASE_1 or SOLVE_PHASE_2
       scaled_model_status = HighsModelStatus::SOLVE_ERROR;
-      return returnFromSolve(HighsStatus::Error);
+      return ekk_instance_.returnFromSolve(HighsStatus::Error);
     }
     // Return if bailing out from solve
-    if (solve_bailout) return returnFromSolve(HighsStatus::Warning);
+    if (solve_bailout)
+      return ekk_instance_.returnFromSolve(HighsStatus::Warning);
     // Can have all possible cases of solvePhase
     assert(solvePhase >= SOLVE_PHASE_MIN && solvePhase <= SOLVE_PHASE_MAX);
     // Look for scenarios when the major solving loop ends
     if (solvePhase == SOLVE_PHASE_ERROR) {
       // Solver error so return HighsStatus::Error
       assert(scaled_model_status == HighsModelStatus::SOLVE_ERROR);
-      return returnFromSolve(HighsStatus::Error);
+      return ekk_instance_.returnFromSolve(HighsStatus::Error);
     }
     if (solvePhase == SOLVE_PHASE_EXIT) {
       // LP identified as not having an optimal solution
@@ -296,7 +301,7 @@ HighsStatus HEkkDual::solve() {
     //      // Should only be primal unbounded
     //      assert(scaled_model_status == HighsModelStatus::PRIMAL_UNBOUNDED);
     //    }
-    return returnFromSolve(HighsStatus::Error);
+    return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
   if (solvePhase == SOLVE_PHASE_CLEANUP) {
     ekk_instance_.computePrimalObjectiveValue();
@@ -329,9 +334,9 @@ HighsStatus HEkkDual::solve() {
   if (ekkDebugOkForSolve(ekk_instance_, SimplexAlgorithm::DUAL, solvePhase,
                          ekk_instance_.scaled_model_status_) ==
       HighsDebugStatus::LOGICAL_ERROR)
-    return returnFromSolve(HighsStatus::Error);
+    return ekk_instance_.returnFromSolve(HighsStatus::Error);
   ekk_instance_.computePrimalObjectiveValue();
-  return returnFromSolve(HighsStatus::OK);
+  return ekk_instance_.returnFromSolve(HighsStatus::OK);
 }
 
 void HEkkDual::options() {
@@ -530,9 +535,10 @@ void HEkkDual::solvePhase1() {
   ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL, solvePhase);
   ekk_instance_.initialiseValueAndNonbasicMove();
 
-  // If there's no backtracking basis Save the initial basis in case of
+  // If there's no backtracking basis, save the initial basis in case of
   // backtracking
-  if (!simplex_info.valid_backtracking_basis_) putBacktrackingBasis();
+  if (!simplex_info.valid_backtracking_basis_)
+    ekk_instance_.putBacktrackingBasis();
 
   // Main solving structure
   analysis->simplexTimerStart(IterateClock);
@@ -716,7 +722,8 @@ void HEkkDual::solvePhase2() {
 
   // If there's no backtracking basis Save the initial basis in case of
   // backtracking
-  if (!simplex_info.valid_backtracking_basis_) putBacktrackingBasis();
+  if (!simplex_info.valid_backtracking_basis_)
+    ekk_instance_.putBacktrackingBasis();
 
   // Main solving structure
   analysis->simplexTimerStart(IterateClock);
@@ -877,7 +884,7 @@ void HEkkDual::rebuild() {
     // happens: Current basis is nonsingular; Current basis is
     // singular and last nonsingular basis is refactorized as
     // nonsingular - or found singular. Latter is code failure.
-    if (!getNonsingularInverse()) {
+    if (!ekk_instance_.getNonsingularInverse(solvePhase)) {
       solvePhase = SOLVE_PHASE_ERROR;
       return;
     }
@@ -1911,131 +1918,10 @@ void HEkkDual::interpretDualEdgeWeightStrategy(
   }
 }
 
-HighsStatus HEkkDual::returnFromSolve(const HighsStatus return_status) {
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  simplex_info.valid_backtracking_basis_ = false;
-  return return_status;
-}
-
 void HEkkDual::saveDualRay() {
   ekk_instance_.simplex_lp_status_.has_dual_ray = true;
   ekk_instance_.simplex_info_.dual_ray_row_ = row_out;
   ekk_instance_.simplex_info_.dual_ray_sign_ = move_out;
-}
-
-bool HEkkDual::getNonsingularInverse() {
-  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
-  // Take a copy of basicIndex from before INVERT to be used as the
-  // saved ordering of basic variables - so reinvert will run
-  // identically.
-  const vector<int> basicIndex_before_compute_factor = basicIndex;
-  // Save the number of updates performed in case it has to be used to determine
-  // a limit
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  const int simplex_update_count = simplex_info.update_count;
-  // Scatter the edge weights so that, after INVERT, they can be
-  // gathered according to the new permutation of basicIndex
-  analysis->simplexTimerStart(PermWtClock);
-  for (int i = 0; i < solver_num_row; i++)
-    dualRHS.workEdWtFull[basicIndex[i]] = dualRHS.workEdWt[i];
-  analysis->simplexTimerStop(PermWtClock);
-
-  // Call computeFactor to perform INVERT
-  int rank_deficiency = ekk_instance_.computeFactor();
-  const bool artificial_rank_deficiency = false;  // true;//
-  if (artificial_rank_deficiency) {
-    if (!simplex_info.phase1_backtracking_test_done &&
-        solvePhase == SOLVE_PHASE_1) {
-      // Claim rank deficiency to test backtracking
-      printf("Phase1 (Iter %d) Claiming rank deficiency to test backtracking\n",
-             ekk_instance_.iteration_count_);
-      rank_deficiency = 1;
-      simplex_info.phase1_backtracking_test_done = true;
-    } else if (!simplex_info.phase2_backtracking_test_done &&
-               solvePhase == SOLVE_PHASE_2) {
-      // Claim rank deficiency to test backtracking
-      printf("Phase2 (Iter %d) Claiming rank deficiency to test backtracking\n",
-             ekk_instance_.iteration_count_);
-      rank_deficiency = 1;
-      simplex_info.phase2_backtracking_test_done = true;
-    }
-  }
-  if (rank_deficiency) {
-    // Rank deficient basis, so backtrack to last full rank basis
-    //
-    // Get the last nonsingular basis - so long as there is one
-    if (!getBacktrackingBasis(dualRHS.workEdWtFull)) return false;
-    // Record that backtracking is taking place
-    simplex_info.backtracking_ = true;
-    updateSimplexLpStatus(ekk_instance_.simplex_lp_status_,
-                          LpAction::BACKTRACKING);
-    int backtrack_rank_deficiency = ekk_instance_.computeFactor();
-    // This basis has previously been inverted successfully, so it shouldn't be
-    // singular
-    if (backtrack_rank_deficiency) return false;
-    // simplex update limit will be half of the number of updates
-    // performed, so make sure that at least one update was performed
-    if (simplex_update_count <= 1) return false;
-    int use_simplex_update_limit = simplex_info.update_limit;
-    int new_simplex_update_limit = simplex_update_count / 2;
-    simplex_info.update_limit = new_simplex_update_limit;
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-                    "Rank deficiency of %d after %d simplex updates, so "
-                    "backtracking: max updates reduced from %d to %d",
-                    rank_deficiency, simplex_update_count,
-                    use_simplex_update_limit, new_simplex_update_limit);
-  } else {
-    // Current basis is full rank so save it
-    putBacktrackingBasis(basicIndex_before_compute_factor,
-                         dualRHS.workEdWtFull);
-    // Indicate that backtracking is not taking place
-    simplex_info.backtracking_ = false;
-    // Reset the update limit in case this is the first successful
-    // inversion after backtracking
-    simplex_info.update_limit = ekk_instance_.options_.simplex_update_limit;
-  }
-  // Gather the edge weights according to the permutation of
-  // basicIndex after INVERT
-  analysis->simplexTimerStart(PermWtClock);
-  for (int i = 0; i < solver_num_row; i++)
-    dualRHS.workEdWt[i] = dualRHS.workEdWtFull[basicIndex[i]];
-  analysis->simplexTimerStop(PermWtClock);
-  return true;
-}
-
-bool HEkkDual::getBacktrackingBasis(vector<double>& scattered_edge_weights) {
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  if (!simplex_info.valid_backtracking_basis_) return false;
-
-  ekk_instance_.simplex_basis_ = simplex_info.backtracking_basis_;
-  simplex_info.costs_perturbed =
-      simplex_info.backtracking_basis_costs_perturbed_;
-  simplex_info.workShift_ = simplex_info.backtracking_basis_workShift_;
-  scattered_edge_weights = simplex_info.backtracking_basis_edge_weights_;
-  return true;
-}
-
-void HEkkDual::putBacktrackingBasis() {
-  const vector<int>& basicIndex = ekk_instance_.simplex_basis_.basicIndex_;
-  analysis->simplexTimerStart(PermWtClock);
-  for (int i = 0; i < solver_num_row; i++)
-    dualRHS.workEdWtFull[basicIndex[i]] = dualRHS.workEdWt[i];
-  analysis->simplexTimerStop(PermWtClock);
-  putBacktrackingBasis(basicIndex, dualRHS.workEdWtFull);
-}
-
-void HEkkDual::putBacktrackingBasis(
-    const vector<int>& basicIndex_before_compute_factor,
-    const vector<double>& scattered_edge_weights) {
-  HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  simplex_info.valid_backtracking_basis_ = true;
-  simplex_info.backtracking_basis_ = ekk_instance_.simplex_basis_;
-  simplex_info.backtracking_basis_.basicIndex_ =
-      basicIndex_before_compute_factor;
-  simplex_info.backtracking_basis_costs_perturbed_ =
-      simplex_info.costs_perturbed;
-  simplex_info.backtracking_basis_workShift_ = simplex_info.workShift_;
-  simplex_info.backtracking_basis_edge_weights_ = scattered_edge_weights;
 }
 
 void HEkkDual::assessPhase1Optimality() {
@@ -2398,4 +2284,3 @@ HighsDebugStatus HEkkDual::debugDualSimplex(const std::string message,
   if (initialise) return return_status;
   return HighsDebugStatus::OK;
 }
-

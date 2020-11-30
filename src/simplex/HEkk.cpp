@@ -436,6 +436,19 @@ int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
   return 0;
 }
 
+void HEkk::handleRankDeficiency() {
+  int rank_deficiency = factor_.rank_deficiency;
+  vector<int>& noPvC = factor_.noPvC;
+  vector<int>& noPvR = factor_.noPvR;
+  for (int k = 0; k < rank_deficiency; k++) {
+    int variable_in = simplex_lp_.numCol_ + noPvR[k];
+    int variable_out = noPvC[k];
+    simplex_basis_.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
+    simplex_basis_.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
+  }
+  simplex_lp_status_.has_matrix = false;
+}
+
 HighsSolutionParams HEkk::getSolutionParams() {
   HighsSolutionParams solution_params;
   solution_params.primal_feasibility_tolerance =
@@ -663,20 +676,8 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   }
 }
 
-int HEkk::getFactor() {
-  assert(simplex_lp_status_.has_factor_arrays);
-  if (!simplex_lp_status_.has_invert) {
-    const int rank_deficiency = computeFactor();
-    if (rank_deficiency) {
-      // Basis is rank deficient
-      return rank_deficiency;
-    }
-    assert(simplex_lp_status_.has_invert);
-  }
-  return 0;
-}
-
 bool HEkk::getNonsingularInverse(const int solve_phase) {
+  assert(simplex_lp_status_.has_factor_arrays);
   const vector<int>& basicIndex = simplex_basis_.basicIndex_;
   // Take a copy of basicIndex from before INVERT to be used as the
   // saved ordering of basic variables - so reinvert will run
@@ -700,7 +701,7 @@ bool HEkk::getNonsingularInverse(const int solve_phase) {
 
   // Call computeFactor to perform INVERT
   int rank_deficiency = computeFactor();
-  const bool artificial_rank_deficiency = false;  // true;//
+  const bool artificial_rank_deficiency = false;  //  true;//
   if (artificial_rank_deficiency) {
     if (!simplex_info_.phase1_backtracking_test_done &&
         solve_phase == SOLVE_PHASE_1) {
@@ -725,8 +726,7 @@ bool HEkk::getNonsingularInverse(const int solve_phase) {
     if (!getBacktrackingBasis(workEdWtFull_)) return false;
     // Record that backtracking is taking place
     simplex_info_.backtracking_ = true;
-    updateSimplexLpStatus(simplex_lp_status_,
-                          LpAction::BACKTRACKING);
+    updateSimplexLpStatus(simplex_lp_status_, LpAction::BACKTRACKING);
     int backtrack_rank_deficiency = computeFactor();
     // This basis has previously been inverted successfully, so it shouldn't be
     // singular
@@ -744,8 +744,7 @@ bool HEkk::getNonsingularInverse(const int solve_phase) {
                     use_simplex_update_limit, new_simplex_update_limit);
   } else {
     // Current basis is full rank so save it
-    putBacktrackingBasis(basicIndex_before_compute_factor,
-                         workEdWtFull_);
+    putBacktrackingBasis(basicIndex_before_compute_factor, workEdWtFull_);
     // Indicate that backtracking is not taking place
     simplex_info_.backtracking_ = false;
     // Reset the update limit in case this is the first successful
@@ -772,8 +771,9 @@ bool HEkk::getBacktrackingBasis(double* scattered_edge_weights) {
   const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   const bool handle_edge_weights = scattered_edge_weights != NULL;
   if (handle_edge_weights) {
-    for (int iVar=0; iVar < num_tot; iVar++)
-      scattered_edge_weights[iVar] = simplex_info_.backtracking_basis_edge_weights_[iVar];
+    for (int iVar = 0; iVar < num_tot; iVar++)
+      scattered_edge_weights[iVar] =
+          simplex_info_.backtracking_basis_edge_weights_[iVar];
   }
   return true;
 }
@@ -803,22 +803,10 @@ void HEkk::putBacktrackingBasis(
   const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
   const bool handle_edge_weights = scattered_edge_weights != NULL;
   if (handle_edge_weights) {
-    for (int iVar=0; iVar < num_tot; iVar++)
-      simplex_info_.backtracking_basis_edge_weights_[iVar] = scattered_edge_weights[iVar];
+    for (int iVar = 0; iVar < num_tot; iVar++)
+      simplex_info_.backtracking_basis_edge_weights_[iVar] =
+          scattered_edge_weights[iVar];
   }
-}
-
-void HEkk::handleRankDeficiency() {
-  int rank_deficiency = factor_.rank_deficiency;
-  vector<int>& noPvC = factor_.noPvC;
-  vector<int>& noPvR = factor_.noPvR;
-  for (int k = 0; k < rank_deficiency; k++) {
-    int variable_in = simplex_lp_.numCol_ + noPvR[k];
-    int variable_out = noPvC[k];
-    simplex_basis_.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
-    simplex_basis_.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
-  }
-  simplex_lp_status_.has_matrix = false; 
 }
 
 void HEkk::computePrimalObjectiveValue() {
@@ -875,10 +863,6 @@ void HEkk::computeDualObjectiveValue(const int phase) {
 }
 
 int HEkk::computeFactor() {
-
-  if (workEdWt_ != NULL) printf("EdWt[0] = %g\n", workEdWt_[0]);
-
-
   analysis_.simplexTimerStart(InvertClock);
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analysis_.analyse_factor_time) {

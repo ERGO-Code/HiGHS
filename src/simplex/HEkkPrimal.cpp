@@ -78,7 +78,6 @@ HighsStatus HEkkPrimal::solve() {
     // computed from scratch in rebuild() isn't checked against the the
     // updated value
     simplex_lp_status.has_primal_objective_value = false;
-    assert(solvePhase != SOLVE_PHASE_UNKNOWN);
     if (solvePhase == SOLVE_PHASE_UNKNOWN) {
       // Determine the number of primal infeasibilities, and hence the solve
       // phase
@@ -87,42 +86,40 @@ HighsStatus HEkkPrimal::solve() {
           ekk_instance_.simplex_info_.num_primal_infeasibilities;
       solvePhase =
           num_primal_infeasibilities > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
-      /*
       if (simplex_info.backtracking_) {
         // Backtracking
+        ekk_instance_.initialiseCost(SimplexAlgorithm::PRIMAL, solvePhase);
         ekk_instance_.initialiseValueAndNonbasicMove();
         // Can now forget that we might have been backtracking
         simplex_info.backtracking_ = false;
       }
-      */
     }
     assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
     if (solvePhase == SOLVE_PHASE_1) {
       //
       // Phase 1
       //
-      // solvePhase = SOLVE_PHASE_EXIT if primal infeasiblilty is
-      // detected, in which case scaled_model_status_ =
-      // HighsModelStatus::PRIMAL_INFEASIBLE is set
-      //
       // solvePhase = SOLVE_PHASE_1 if the iteration or time limit has
       // been reached
       //
       // solvePhase = SOLVE_PHASE_2 if there are no primal infeasibilities
       //
+      // solvePhase = SOLVE_PHASE_UNKNOWN if backtracking
+      //
+      // solvePhase = SOLVE_PHASE_EXIT if primal infeasiblilty is
+      // detected, in which case scaled_model_status_ =
+      // HighsModelStatus::PRIMAL_INFEASIBLE is set
+      //
       // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase1();
       assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2 ||
+             solvePhase == SOLVE_PHASE_UNKNOWN ||
              solvePhase == SOLVE_PHASE_EXIT || solvePhase == SOLVE_PHASE_ERROR);
       simplex_info.primal_phase1_iteration_count +=
           (ekk_instance_.iteration_count_ - it0);
     } else if (solvePhase == SOLVE_PHASE_2) {
       //
       // Phase 2
-      //
-      // solvePhase = SOLVE_PHASE_EXIT if primal unboundedness is
-      // detected, in which case scaled_model_status_ =
-      // HighsModelStatus::PRIMAL_UNBOUNDED is set
       //
       // solvePhase = SOLVE_PHASE_OPTIMAL if there are no dual
       // infeasibilities
@@ -136,12 +133,18 @@ HighsStatus HEkkPrimal::solve() {
       // solvePhase = SOLVE_PHASE_CLEANUP if there are primal
       // infeasiblilities to clean up after removing bound shifts
       //
+      // solvePhase = SOLVE_PHASE_UNKNOWN if backtracking
+      //
+      // solvePhase = SOLVE_PHASE_EXIT if primal unboundedness is
+      // detected, in which case scaled_model_status_ =
+      // HighsModelStatus::PRIMAL_UNBOUNDED is set
+      //
       // solvePhase = SOLVE_PHASE_ERROR is set if an error occurs
       solvePhase2();
-      assert(solvePhase == SOLVE_PHASE_OPTIMAL ||
-             solvePhase == SOLVE_PHASE_EXIT || solvePhase == SOLVE_PHASE_1 ||
+      assert(solvePhase == SOLVE_PHASE_OPTIMAL || solvePhase == SOLVE_PHASE_1 ||
              solvePhase == SOLVE_PHASE_2 || solvePhase == SOLVE_PHASE_CLEANUP ||
-             solvePhase == SOLVE_PHASE_ERROR);
+             solvePhase == SOLVE_PHASE_UNKNOWN ||
+             solvePhase == SOLVE_PHASE_EXIT || solvePhase == SOLVE_PHASE_ERROR);
       assert(solvePhase != SOLVE_PHASE_EXIT ||
              ekk_instance_.scaled_model_status_ ==
                  HighsModelStatus::PRIMAL_UNBOUNDED);
@@ -273,6 +276,11 @@ void HEkkPrimal::solvePhase1() {
   HighsPrintMessage(ekk_instance_.options_.output,
                     ekk_instance_.options_.message_level, ML_DETAILED,
                     "primal-phase1-start\n");
+  // If there's no backtracking basis, save the initial basis in case of
+  // backtracking
+  if (!ekk_instance_.simplex_info_.valid_backtracking_basis_)
+    ekk_instance_.putBacktrackingBasis();
+
   // Main solving structure
   for (;;) {
     //
@@ -281,6 +289,7 @@ void HEkkPrimal::solvePhase1() {
     // solvePhase = SOLVE_PHASE_ERROR is set if the basis matrix is singular
     rebuild();
     if (solvePhase == SOLVE_PHASE_ERROR) return;
+    if (solvePhase == SOLVE_PHASE_UNKNOWN) return;
     if (ekk_instance_.bailoutOnTimeIterations()) return;
     assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
     //
@@ -335,6 +344,11 @@ void HEkkPrimal::solvePhase2() {
                     "primal-phase2-start\n");
   phase2UpdatePrimal(true);
 
+  // If there's no backtracking basis Save the initial basis in case of
+  // backtracking
+  if (!ekk_instance_.simplex_info_.valid_backtracking_basis_)
+    ekk_instance_.putBacktrackingBasis();
+
   // Main solving structure
   for (;;) {
     //
@@ -343,6 +357,7 @@ void HEkkPrimal::solvePhase2() {
     // solvePhase = SOLVE_PHASE_ERROR is set if the basis matrix is singular
     rebuild();
     if (solvePhase == SOLVE_PHASE_ERROR) return;
+    if (solvePhase == SOLVE_PHASE_UNKNOWN) return;
     if (ekk_instance_.bailoutOnTimeIterations()) return;
     assert(solvePhase == SOLVE_PHASE_1 || solvePhase == SOLVE_PHASE_2);
     //
@@ -496,15 +511,35 @@ void HEkkPrimal::rebuild() {
   // Possibly Rebuild factor
   bool reInvert = simplex_info.update_count > 0;
   if (reInvert) {
-    int rank_deficiency = ekk_instance_.computeFactor();
-    if (rank_deficiency) {
-      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-                      "Primal reInvert: singular basis matrix");
+    // Get a nonsingular inverse if possible. One of three things
+    // happens: Current basis is nonsingular; Current basis is
+    // singular and last nonsingular basis is refactorized as
+    // nonsingular - or found singular. Latter is code failure.
+    if (!ekk_instance_.getNonsingularInverse(solvePhase)) {
       solvePhase = SOLVE_PHASE_ERROR;
       return;
     }
-    simplex_info.update_count = 0;
   }
+  if (!ekk_instance_.simplex_lp_status_.has_matrix) {
+    // Don't have the matrix either row-wise or col-wise, so
+    // reinitialise it
+    assert(simplex_info.backtracking_);
+    HighsLp& simplex_lp = ekk_instance_.simplex_lp_;
+    analysis->simplexTimerStart(matrixSetupClock);
+    ekk_instance_.matrix_.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+                                &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0],
+                                &simplex_lp.Avalue_[0],
+                                &ekk_instance_.simplex_basis_.nonbasicFlag_[0]);
+    simplex_lp_status.has_matrix = true;
+    analysis->simplexTimerStop(matrixSetupClock);
+  }
+
+  if (simplex_info.backtracking_) {
+    // If backtracking, may change phase, so drop out
+    solvePhase = SOLVE_PHASE_UNKNOWN;
+    return;
+  }
+
   ekk_instance_.computePrimal();
   if (solvePhase == SOLVE_PHASE_2) phase2CorrectPrimal();
   getBasicPrimalInfeasibility();

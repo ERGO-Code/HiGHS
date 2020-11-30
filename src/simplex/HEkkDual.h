@@ -381,14 +381,7 @@ class HEkkDual {
   void majorRollback();
 
   // private:
-  HighsStatus returnFromSolve(const HighsStatus return_status);
   void saveDualRay();
-  bool getNonsingularInverse();
-  bool getBacktrackingBasis(vector<double>& scattered_edge_weights);
-  void putBacktrackingBasis();
-  void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
-                            const vector<double>& scattered_edge_weights);
-
   void assessPhase1Optimality();
   void exitPhase1ResetDuals();
   void reportOnPossibleLpDualInfeasibility();
@@ -402,7 +395,7 @@ class HEkkDual {
                                     const bool initialise = false);
   double* getWorkEdWt() { return &dualRHS.workEdWt[0]; };
   double* getWorkEdWtFull() { return &dualRHS.workEdWtFull[0]; };
-  
+
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
                        //!< calling function
 

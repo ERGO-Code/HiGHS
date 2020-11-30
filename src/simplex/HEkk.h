@@ -48,6 +48,7 @@ class HEkk {
 
   int initialiseSimplexLpBasisAndFactor(
       const bool only_from_known_basis = false);
+  void handleRankDeficiency();
   // This will go when only using HEkk
   HighsSolutionParams getSolutionParams();
 
@@ -82,7 +83,7 @@ class HEkk {
 
   double* workEdWt_ = NULL;      //!< DSE or Dvx weight
   double* workEdWtFull_ = NULL;  //!< Full-length std::vector where weights
-  
+
   HMatrix matrix_;
   HFactor factor_;
 
@@ -99,9 +100,7 @@ class HEkk {
   bool getBacktrackingBasis(double* scattered_edge_weights);
   void putBacktrackingBasis();
   void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
-			    double* scattered_edge_weights);
-  int getFactor();
-  void handleRankDeficiency();
+                            double* scattered_edge_weights);
   void computePrimalObjectiveValue();
   void computeDualObjectiveValue(const int phase = 2);
   int computeFactor();

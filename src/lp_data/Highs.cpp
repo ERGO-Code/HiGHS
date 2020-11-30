@@ -1346,7 +1346,8 @@ bool Highs::changeObjectiveSense(const ObjSense sense) {
     HighsSimplexInterface interface(hmos_[0]);
     call_status = interface.changeObjectiveSense(sense);
   }
-  return_status = interpretCallStatus(call_status, return_status, "changeObjectiveSense");
+  return_status =
+      interpretCallStatus(call_status, return_status, "changeObjectiveSense");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
