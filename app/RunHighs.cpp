@@ -45,23 +45,17 @@ int main(int argc, char** argv) {
     return 1;  // todo: change to read error
 
   // Run LP or MIP solver.
-  // todo: modify so there is no extra matrix copy.
-  // requires load model to be separated from HiGHS
   const HighsLp& lp = highs.getLp();
   HighsStatus run_status = HighsStatus::Error;
   bool is_mip = false;
-  for (int i = 0; i < (int) lp.integrality_.size(); i++)
+  for (int i = 0; i < (int)lp.integrality_.size(); i++)
     if (lp.integrality_[i] == HighsVarType::INTEGER) {
       is_mip = true;
       break;
     }
 
-  // todo: remove options.mip
-  // it was used for development of the mip solver but now
-  // options.solver will control which solver is used
-  // instead.
   if (options.solver == "simplex" || options.solver == "ipm" ||
-      (!options.mip && !is_mip && options.presolve != "mip")) {
+      (!is_mip && options.presolve != "mip")) {
     run_status = callLpSolver(options, lp);
   } else {
     run_status = callMipSolver(options, lp);
