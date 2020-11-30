@@ -60,6 +60,12 @@ enum HighsAnalysisLevel {
       HIGHS_ANALYSIS_LEVEL_NLA_TIME
 };
 
+enum class HighsVarType : uint8_t {
+  CONTINUOUS = 0,
+  IMPLICIT_INTEGER = 1,
+  INTEGER = 2,
+};
+
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING };
 
 enum class HighsInfoType { INT = 1, DOUBLE };
