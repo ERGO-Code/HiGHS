@@ -676,7 +676,6 @@ class HighsOptions : public HighsOptionsStruct {
                              "Use LiDSE if LP has right properties", advanced,
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
-
   }
 
   void deleteRecords() {
