@@ -425,7 +425,7 @@ void HEkkPrimal::solvePhase2() {
         scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
       } else {
         // Primal unbounded, so save primal ray
-	savePrimalRay();
+        savePrimalRay();
         // Model status should be unset
         assert(scaled_model_status == HighsModelStatus::NOTSET);
         HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
@@ -2326,8 +2326,7 @@ void HEkkPrimal::shiftBound(const bool lower, const int iVar,
 void HEkkPrimal::savePrimalRay() {
   ekk_instance_.simplex_lp_status_.has_primal_ray = true;
   ekk_instance_.simplex_info_.primal_ray_col_ = variable_in;
-  ekk_instance_.simplex_info_.primal_ray_sign_ =
-    ekk_instance_.simplex_basis_.nonbasicMove_[variable_in];
+  ekk_instance_.simplex_info_.primal_ray_sign_ = -move_in;
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,

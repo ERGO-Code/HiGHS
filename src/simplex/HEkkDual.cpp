@@ -663,11 +663,12 @@ void HEkkDual::solvePhase1() {
   // when the LP is dual infeasible. However, the model status can't
   // be set to dual infeasible until perturbations have been removed.
   //
-  const bool no_debug = ekk_instance_.simplex_info_.num_dual_infeasibilities > 0 &&
-    scaled_model_status == HighsModelStatus::NOTSET;
+  const bool no_debug =
+      ekk_instance_.simplex_info_.num_dual_infeasibilities > 0 &&
+      scaled_model_status == HighsModelStatus::NOTSET;
   if (!no_debug) {
     if (debugDualSimplex("End of solvePhase1") ==
-	HighsDebugStatus::LOGICAL_ERROR) {
+        HighsDebugStatus::LOGICAL_ERROR) {
       solvePhase = SOLVE_PHASE_ERROR;
       return;
     }

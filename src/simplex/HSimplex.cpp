@@ -2830,6 +2830,9 @@ void invalidateSimplexLpBasisArtifacts(
     HighsSimplexLpStatus& simplex_lp_status) {
   // Invalidate the artifacts of the basis of the simplex LP
   simplex_lp_status.has_matrix = false;
+  // has_factor_arrays shouldn't be set false unless model dimension
+  // changes, but invalidateSimplexLpBasisArtifacts is all that's
+  // called when rows or columns are added, so can't change this now.
   simplex_lp_status.has_factor_arrays = false;
   simplex_lp_status.has_dual_steepest_edge_weights = false;
   simplex_lp_status.has_nonbasic_dual_values = false;

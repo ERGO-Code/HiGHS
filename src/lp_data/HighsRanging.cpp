@@ -39,7 +39,7 @@ double possInfProduct(double poss_inf, double value) {
 }
 
 HighsStatus getHighsRangingEkk(HighsRanging& ranging,
-			       const HighsModelObject& highs_model_object) {
+                               const HighsModelObject& highs_model_object) {
   return HighsStatus::Error;
 }
 

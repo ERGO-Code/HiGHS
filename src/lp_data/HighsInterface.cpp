@@ -1387,7 +1387,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
 }
 
 HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
-				       double* dual_ray_value) {
+                                       double* dual_ray_value) {
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsLp& lp = highs_model_object.lp_;
@@ -1405,7 +1405,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
 }
 
 HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
-					 double* primal_ray_value) {
+                                         double* primal_ray_value) {
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsLp& lp = highs_model_object.lp_;
@@ -1438,4 +1438,3 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   }
   return HighsStatus::OK;
 }
-

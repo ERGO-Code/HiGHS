@@ -404,17 +404,6 @@ int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
     }
     setBasis();
   }
-  if (!simplex_lp_status_.has_factor_arrays) {
-    assert(simplex_info_.factor_pivot_threshold >=
-           options_.factor_pivot_threshold);
-    factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
-                  &simplex_lp_.Astart_[0], &simplex_lp_.Aindex_[0],
-                  &simplex_lp_.Avalue_[0], &simplex_basis_.basicIndex_[0],
-                  options_.highs_debug_level, options_.logfile, options_.output,
-                  options_.message_level, simplex_info_.factor_pivot_threshold,
-                  options_.factor_pivot_tolerance);
-    simplex_lp_status_.has_factor_arrays = true;
-  }
   const int rank_deficiency = computeFactor();
   if (rank_deficiency) {
     // Basis is rank deficient
@@ -489,8 +478,6 @@ void HEkk::initialiseForNewLp() {
 }
 
 HighsStatus HEkk::initialiseForSolve() {
-  // If there's no basis, set a logical basis
-  if (!simplex_lp_status_.has_basis) setBasis();
   const int error_return = initialiseSimplexLpBasisAndFactor();
   assert(!error_return);
   if (error_return) return HighsStatus::Error;
@@ -677,7 +664,7 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
 }
 
 bool HEkk::getNonsingularInverse(const int solve_phase) {
-  assert(simplex_lp_status_.has_factor_arrays);
+  assert(simplex_lp_status_.has_basis);
   const vector<int>& basicIndex = simplex_basis_.basicIndex_;
   // Take a copy of basicIndex from before INVERT to be used as the
   // saved ordering of basic variables - so reinvert will run
@@ -863,6 +850,17 @@ void HEkk::computeDualObjectiveValue(const int phase) {
 }
 
 int HEkk::computeFactor() {
+  if (!simplex_lp_status_.has_factor_arrays) {
+    assert(simplex_info_.factor_pivot_threshold >=
+           options_.factor_pivot_threshold);
+    factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
+                  &simplex_lp_.Astart_[0], &simplex_lp_.Aindex_[0],
+                  &simplex_lp_.Avalue_[0], &simplex_basis_.basicIndex_[0],
+                  options_.highs_debug_level, options_.logfile, options_.output,
+                  options_.message_level, simplex_info_.factor_pivot_threshold,
+                  options_.factor_pivot_tolerance);
+    simplex_lp_status_.has_factor_arrays = true;
+  }
   analysis_.simplexTimerStart(InvertClock);
   HighsTimerClock* factor_timer_clock_pointer = NULL;
   if (analysis_.analyse_factor_time) {
