@@ -831,11 +831,11 @@ bool generateCut(const HighsMipSolver& mip, const std::vector<double>& upper,
                  int nbin, int nint, int ncont, int nunbndint,
                  std::vector<double>& solvals,
                  std::vector<int8_t>& complementation, std::vector<int>& inds,
-                 std::vector<double>& vals, HighsCDouble& rhs) {
+                 std::vector<double>& vals, HighsCDouble& rhs, bool& integral) {
   std::vector<int> cover;
 
   bool success;
-
+  integral = false;
 #if 0
   auto tmpinds = inds;
   auto tmpvals = vals;
@@ -856,8 +856,11 @@ bool generateCut(const HighsMipSolver& mip, const std::vector<double>& upper,
 
     if (success) {
       if (nint == 0 && ncont == 0)
+      {
+        integral = true;
         success = separatePureBinaryKnapsackCover(solvals, coverweight, lambda,
                                                   cover, inds, vals, rhs);
+      }
       else if (nint == 0)
         success = separateMixedBinaryKnapsackCover(
             mip, solvals, coverweight, lambda, cover, inds, vals, rhs);
@@ -1630,8 +1633,10 @@ class AggregationHeuristic {
   }
 
   void computeCut() {
-    bool foundcut = generateCut(mip, upper, nbin, nint, ncont, nunbndint,
-                                solvals, complementation, inds, vals, rhs);
+    bool cutintegral;
+    bool foundcut =
+        generateCut(mip, upper, nbin, nint, ncont, nunbndint, solvals,
+                    complementation, inds, vals, rhs, cutintegral);
 
     if (foundcut) {
       vectorsum.clear();
@@ -1709,8 +1714,8 @@ class AggregationHeuristic {
       assert(debugactivity <= upper + 1e-6);
 #endif
 
-      int cutindex =
-          cutpool.addCut(inds.data(), vals.data(), inds.size(), upper);
+      int cutindex = cutpool.addCut(inds.data(), vals.data(), inds.size(),
+                                    upper, cutintegral);
       propdomain.cutAdded(cutindex);
 
       ++numcuts;
@@ -1893,6 +1898,7 @@ static void doSeparate(const HighsDomain& domain, const HighsLpRelaxation& lp,
 
   for (int i = 0; i != numbaserows; ++i) {
     bool success;
+    bool cutintegral;
 
     int start = baserows.ARstart_[i];
     int end = baserows.ARstart_[i + 1];
@@ -1909,11 +1915,11 @@ static void doSeparate(const HighsDomain& domain, const HighsLpRelaxation& lp,
         vals, upper, solvals, nbin, nint, ncont, nunbndint);
     if (success)
       success = generateCut(mip, upper, nbin, nint, ncont, nunbndint, solvals,
-                            complementation, inds, vals, rhs);
+                            complementation, inds, vals, rhs, cutintegral);
 
     if (success) {
       baserows.retransformAndAddCut(domain, lp, inds, vals, complementation,
-                                    rhs, cutpool, propdomain);
+                                    rhs, cutpool, propdomain, cutintegral);
     }
 
     rhs = baserows.rhs_[i];
@@ -1924,11 +1930,11 @@ static void doSeparate(const HighsDomain& domain, const HighsLpRelaxation& lp,
 
     if (success)
       success = generateCut(mip, upper, nbin, nint, ncont, nunbndint, solvals,
-                            complementation, inds, vals, rhs);
+                            complementation, inds, vals, rhs, cutintegral);
 
     if (success) {
       baserows.retransformAndAddCut(domain, lp, inds, vals, complementation,
-                                    rhs, cutpool, propdomain);
+                                    rhs, cutpool, propdomain, cutintegral);
     }
   }
 }
@@ -2076,7 +2082,7 @@ void HighsSeparation::BaseRows::retransformAndAddCut(
     const HighsDomain& domain, const HighsLpRelaxation& lp,
     std::vector<int>& inds, std::vector<double>& vals,
     std::vector<int8_t>& complementation, HighsCDouble rhs,
-    HighsCutPool& cutpool, HighsDomain& propdomain) const {
+    HighsCutPool& cutpool, HighsDomain& propdomain, bool cutintegral) const {
   const HighsMipSolver& mip = lp.getMipSolver();
   vectorsum.setDimension(mip.numCol() + lp.getNumLpRows());
 
@@ -2164,7 +2170,8 @@ void HighsSeparation::BaseRows::retransformAndAddCut(
   double upper = double(rhs);
   // domain.tightenCoefficients(inds.data(), vals.data(), inds.size(),
   // upper);
-  int cutindex = cutpool.addCut(inds.data(), vals.data(), inds.size(), upper);
+  int cutindex =
+      cutpool.addCut(inds.data(), vals.data(), inds.size(), upper, cutintegral);
   propdomain.cutAdded(cutindex);
 }
 
@@ -2299,8 +2306,10 @@ void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
     minact += solvals[i] * vals[i];
   }
 
-  bool success = generateCut(mipsolver, upper, nbin, nint, ncont, nunbndint,
-                             solvals, complementation, inds, vals, rhs);
+  bool cutintegral;
+  bool success =
+      generateCut(mipsolver, upper, nbin, nint, ncont, nunbndint, solvals,
+                  complementation, inds, vals, rhs, cutintegral);
 
   if (success) {
     int offset = 0;
@@ -2334,8 +2343,8 @@ void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
     assert(debugactivity <= rhs + 1e-6);
 #endif
 
-    int cutind = mipsolver.mipdata_->cutpool.addCut(inds.data(), vals.data(),
-                                                    offset, double(rhs));
+    int cutind = mipsolver.mipdata_->cutpool.addCut(
+        inds.data(), vals.data(), offset, double(rhs), cutintegral);
     localdomain.cutAdded(cutind);
   }
 }

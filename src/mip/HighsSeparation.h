@@ -41,7 +41,7 @@ class HighsSeparation {
                               std::vector<int>& inds, std::vector<double>& vals,
                               std::vector<int8_t>& complementation,
                               HighsCDouble rhs, HighsCutPool& cutpool,
-                              HighsDomain& propdomain) const;
+                              HighsDomain& propdomain, bool cutintegral) const;
   };
 
   int separationRound(HighsDomain& propdomain,

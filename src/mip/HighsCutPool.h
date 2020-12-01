@@ -49,6 +49,7 @@ class HighsCutPool {
   std::vector<int> ages_;
   std::vector<double> rownormalization_;
   std::vector<double> maxabscoef_;
+  std::vector<uint8_t> rowintegral;
   std::unordered_multimap<size_t, int> supportmap;
 
   int agelim_;
@@ -86,13 +87,16 @@ class HighsCutPool {
   void separate(const std::vector<double>& sol, HighsDomain& domprop,
                 HighsCutSet& cutset);
 
+  bool cutIsIntegral(int cut) const { return rowintegral[cut]; }
+
   int getNumCuts() const {
     return matrix_.getNumRows() - matrix_.getNumDelRows();
   }
 
   double getMaxAbsCutCoef(int cut) const { return maxabscoef_[cut]; }
 
-  int addCut(int* Rindex, double* Rvalue, int Rlen, double rhs);
+  int addCut(int* Rindex, double* Rvalue, int Rlen, double rhs,
+             bool integral = false);
 
   int getRowLength(int row) const {
     return matrix_.getRowEnd(row) - matrix_.getRowStart(row);

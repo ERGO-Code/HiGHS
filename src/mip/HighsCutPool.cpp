@@ -274,7 +274,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   cutset.ARstart_[cutset.numCuts()] = offset;
 }
 
-int HighsCutPool::addCut(int* Rindex, double* Rvalue, int Rlen, double rhs) {
+int HighsCutPool::addCut(int* Rindex, double* Rvalue, int Rlen, double rhs, bool integral) {
   size_t sh = support_hash(Rindex, Rlen);
 
   // try to replace another cut with equal support that has an age > 0
@@ -291,12 +291,14 @@ int HighsCutPool::addCut(int* Rindex, double* Rvalue, int Rlen, double rhs) {
       modification_.resize(rowindex + 1);
       rownormalization_.resize(rowindex + 1);
       maxabscoef_.resize(rowindex + 1);
+      rowintegral.resize(rowindex + 1);
     }
   }
 
   // set the right hand side and reset the age
   rhs_[rowindex] = rhs;
   ages_[rowindex] = 0;
+  rowintegral[rowindex] = integral;
   ++modification_[rowindex];
 
   // compute 1/||a|| for the cut

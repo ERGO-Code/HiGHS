@@ -35,6 +35,8 @@ void HighsMipSolverData::setup() {
                        model.Aindex_, model.Avalue_, ARstart_, ARindex_,
                        ARvalue_);
 
+  rowintegral.resize(mipsolver.model_->numRow_);
+
   // compute the maximal absolute coefficients to filter propagation
   maxAbsRowCoef.resize(mipsolver.model_->numRow_);
   for (int i = 0; i != mipsolver.model_->numRow_; ++i) {
@@ -42,11 +44,44 @@ void HighsMipSolverData::setup() {
 
     int start = ARstart_[i];
     int end = ARstart_[i + 1];
+    bool integral = true;
+    for (int j = start; j != end; ++j) {
+      if (integral) {
+        if (mipsolver.variableType(ARindex_[j]) == HighsVarType::CONTINUOUS)
+          integral = false;
+        else {
+          double intval = std::floor(ARvalue_[j] + 0.5);
+          if (std::abs(ARvalue_[j] - intval) > epsilon) integral = false;
+        }
+      }
 
-    for (int j = start; j != end; ++j)
       maxabsval = std::max(maxabsval, std::abs(ARvalue_[j]));
+    }
+
+    rowintegral[i] = integral;
 
     maxAbsRowCoef[i] = maxabsval;
+  }
+
+  objintegral = true;
+
+  for (int i = 0; i != mipsolver.numCol(); ++i) {
+    if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) {
+      objintegral = false;
+      break;
+    }
+
+    double cost = mipsolver.colCost(i);
+    double intcost = std::floor(cost + 0.5);
+    if (std::abs(cost - intcost) > epsilon) {
+      objintegral = false;
+      break;
+    }
+  }
+
+  if( objintegral )
+  {
+    printf("objective is always integral\n");
   }
 
   // compute row activities and propagate all rows once
@@ -72,7 +107,8 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     upper_bound = solobj;
     incumbent = sol;
 
-    double new_upper_limit = solobj - feastol;
+    double new_upper_limit =
+        objintegral ? floor(solobj - 0.5) : solobj - feastol;
     if (new_upper_limit < upper_limit) {
       upper_limit = new_upper_limit;
       pruned_treeweight += nodequeue.performBounding(upper_limit);

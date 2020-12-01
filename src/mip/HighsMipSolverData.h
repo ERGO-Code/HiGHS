@@ -29,6 +29,8 @@ struct HighsMipSolverData {
   std::vector<int> ARindex_;
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
+  std::vector<uint8_t> rowintegral;
+  bool objintegral;
 
   double feastol;
   double epsilon;
