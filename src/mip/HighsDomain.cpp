@@ -561,6 +561,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
       changedcols_.push_back(boundchg.column);
     }
   }
+  assert(oldbound != boundchg.boundval);
 
   return oldbound;
 }
@@ -568,6 +569,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
 void HighsDomain::changeBound(HighsDomainChange boundchg, int reason) {
   assert(boundchg.column >= 0);
   if (boundchg.boundtype == HighsBoundType::Lower) {
+    if (boundchg.boundval <= colLower_[boundchg.column]) return;
     if (boundchg.boundval > colUpper_[boundchg.column]) {
       if (boundchg.boundval - colUpper_[boundchg.column] > 1e-6) {
         infeasible_ = reason >= 0 ? reason + 1 : reason;
@@ -578,6 +580,7 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, int reason) {
       if (boundchg.boundval == colLower_[boundchg.column]) return;
     }
   } else {
+    if (boundchg.boundval >= colUpper_[boundchg.column]) return;
     if (boundchg.boundval < colLower_[boundchg.column]) {
       if (colLower_[boundchg.column] - boundchg.boundval > 1e-6) {
         infeasible_ = reason >= 0 ? reason + 1 : reason;
