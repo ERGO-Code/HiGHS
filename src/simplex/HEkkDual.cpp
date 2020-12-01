@@ -657,10 +657,20 @@ void HEkkDual::solvePhase1() {
 
   // Debug here since not all simplex data will be correct until after
   // rebuild() when switching to Phase 2
-  if (debugDualSimplex("End of solvePhase1") ==
-      HighsDebugStatus::LOGICAL_ERROR) {
-    solvePhase = SOLVE_PHASE_ERROR;
-    return;
+  //
+  // Also have to avoid debug when the model status is not set and
+  // there are dual infeasibilities, since this happens legitimately
+  // when the LP is dual infeasible. However, the model status can't
+  // be set to dual infeasible until perturbations have been removed.
+  //
+  const bool no_debug = ekk_instance_.simplex_info_.num_dual_infeasibilities > 0 &&
+    scaled_model_status == HighsModelStatus::NOTSET;
+  if (!no_debug) {
+    if (debugDualSimplex("End of solvePhase1") ==
+	HighsDebugStatus::LOGICAL_ERROR) {
+      solvePhase = SOLVE_PHASE_ERROR;
+      return;
+    }
   }
 
   if (solvePhase == SOLVE_PHASE_2) {

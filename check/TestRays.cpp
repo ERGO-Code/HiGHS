@@ -3,8 +3,8 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
-const bool use_ekk = true;
+const bool dev_run = true;
+const bool use_ekk = false;
 const double zero_ray_value_tolerance = 1e-8;
 
 void checkRayDirection(const int dim, const vector<double>& ray_value,

@@ -901,8 +901,7 @@ const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
   if (!haveHmo("getDualRay")) return HighsStatus::Error;
   if (options_.simplex_class_ekk) {
-    assert(1 == 0);
-    return HighsStatus::Error;
+    return getDualRayInterface(has_dual_ray, dual_ray_value);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     return simplex_interface.getDualRay(has_dual_ray, dual_ray_value);
@@ -914,8 +913,7 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
   underDevelopmentLogMessage("getPrimalRay");
   if (!haveHmo("getPrimalRay")) return HighsStatus::Error;
   if (options_.simplex_class_ekk) {
-    assert(1 == 0);
-    return HighsStatus::Error;
+    return getPrimalRayInterface(has_primal_ray, primal_ray_value);
   } else {
     HighsSimplexInterface simplex_interface(hmos_[0]);
     return simplex_interface.getPrimalRay(has_primal_ray, primal_ray_value);
@@ -925,7 +923,11 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
   underDevelopmentLogMessage("getRanging");
   if (!haveHmo("getRanging")) return HighsStatus::Error;
-  return getHighsRanging(ranging, hmos_[0]);
+  if (options_.simplex_class_ekk) {
+    return getHighsRangingEkk(ranging, hmos_[0]);
+  } else {
+    return getHighsRanging(ranging, hmos_[0]);
+  }
 }
 
 HighsStatus Highs::getBasicVariables(int* basic_variables) {

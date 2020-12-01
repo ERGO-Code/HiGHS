@@ -883,6 +883,12 @@ class Highs {
                                   int* solution_indices, bool transpose);
   void clearBasisInterface();
 
+  HighsStatus getDualRayInterface(bool& has_dual_ray,
+				  double* dual_ray_value);
+
+  HighsStatus getPrimalRayInterface(bool& has_primal_ray,
+				    double* primal_ray_value);
+
   friend class HighsMipSolver;
 };
 

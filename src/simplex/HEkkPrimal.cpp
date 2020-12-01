@@ -425,15 +425,18 @@ void HEkkPrimal::solvePhase2() {
         scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
       } else {
         // Primal unbounded, so save primal ray
-        //        savePrimalRay();
-        // Model status should be unset?
+	savePrimalRay();
+        // Model status should be unset
         assert(scaled_model_status == HighsModelStatus::NOTSET);
         HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
                           "problem-primal-unbounded\n");
         scaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
       }
     }
-    scaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
+    // Wrong to set this here since it's not properly deduced until
+    // bound perturbations have been removed.
+    //
+    //    scaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
   }
 }
 
@@ -2177,7 +2180,7 @@ void HEkkPrimal::getNonbasicFreeColumnSet() {
         simplex_info.workUpper_[iCol] >= HIGHS_CONST_INF;
     if (nonbasic_free) nonbasic_free_col_set.add(iCol);
   }
-  nonbasic_free_col_set.print();
+  //  nonbasic_free_col_set.print();
 }
 
 void HEkkPrimal::removeNonbasicFreeColumn() {
@@ -2318,6 +2321,13 @@ void HEkkPrimal::shiftBound(const bool lower, const int iVar,
         "%9.4g to %10.4g: infeasibility %10.4g with error %g\n",
         iVar, value, type.c_str(), old_bound, infeasibility, shift, bound,
         new_infeasibility, error);
+}
+
+void HEkkPrimal::savePrimalRay() {
+  ekk_instance_.simplex_lp_status_.has_primal_ray = true;
+  ekk_instance_.simplex_info_.primal_ray_col_ = variable_in;
+  ekk_instance_.simplex_info_.primal_ray_sign_ =
+    ekk_instance_.simplex_basis_.nonbasicMove_[variable_in];
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
