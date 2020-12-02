@@ -382,16 +382,27 @@ static bool transformBaseEquation(
   for (int j = 0; j != Rlen; ++j) {
     int col = Rindex[j];
     if (col >= mip.numCol()) {
+      int row = col - mip.numCol();
+      bool rowintegral;
+      if (row < mip.numRow())
+        rowintegral = mip.mipdata_->rowintegral[row];
+      else
+        rowintegral = mip.mipdata_->cutpool.cutIsIntegral(
+            mip.mipdata_->lp.getCutIndex(row));
       double val = Rvalue[j] * scale;
-      if (val > 0.0) continue;
+      if (false && rowintegral) {
+        // todo
+      } else {
+        if (val > 0.0) continue;
 
-      inds.push_back(col);
-      upper.push_back(HIGHS_CONST_INF);
-      vals.push_back(val);
-      complementation.push_back(0);
-      solvals.push_back(0);
+        inds.push_back(col);
+        upper.push_back(HIGHS_CONST_INF);
+        vals.push_back(val);
+        complementation.push_back(0);
+        solvals.push_back(0);
 
-      ++ncont;
+        ++ncont;
+      }
 
       continue;
     } else if (domain.colLower_[col] == -HIGHS_CONST_INF &&
@@ -855,13 +866,11 @@ bool generateCut(const HighsMipSolver& mip, const std::vector<double>& upper,
                              coverweight, lambda);
 
     if (success) {
-      if (nint == 0 && ncont == 0)
-      {
+      if (nint == 0 && ncont == 0) {
         integral = true;
         success = separatePureBinaryKnapsackCover(solvals, coverweight, lambda,
                                                   cover, inds, vals, rhs);
-      }
-      else if (nint == 0)
+      } else if (nint == 0)
         success = separateMixedBinaryKnapsackCover(
             mip, solvals, coverweight, lambda, cover, inds, vals, rhs);
       else
@@ -1980,14 +1989,30 @@ static void tableauaggregator(HighsLpRelaxation& lp,
   auto& lpsol = lp.getLpSolver().getSolution();
 
   for (int i = 0; i != int(basisinds.size()); ++i) {
-    if (basisinds[i] < 0) continue;
+    if (basisinds[i] < 0) {
+      continue;
+      //todo, cuts off solutions
+      int row = -basisinds[i] - 1;
 
-    int col = basisinds[i];
-    if (mip.variableType(col) == HighsVarType::CONTINUOUS) continue;
+      bool rowintegral;
+      if (row < mip.numRow())
+        rowintegral = mip.mipdata_->rowintegral[row];
+      else
+        rowintegral = cutpool.cutIsIntegral(lp.getCutIndex(row));
 
-    double frac =
-        std::abs(floor(lpsol.col_value[col] + 0.5) - lpsol.col_value[col]);
-    if (frac < 1e-4) continue;
+      if (!rowintegral) continue;
+
+      double solval = lpsol.row_value[row];
+      double frac = std::abs(floor(solval + 0.5) - solval);
+      if (frac < 1e-1) continue;
+    } else {
+      int col = basisinds[i];
+      if (mip.variableType(col) == HighsVarType::CONTINUOUS) continue;
+      double solval = lpsol.col_value[col];
+
+      double frac = std::abs(std::floor(solval + 0.5) - solval);
+      if (frac < 1e-4) continue;
+    }
 
     if (lp.getLpSolver().getBasisInverseRow(i, aggrvals.data(), &naggrinds,
                                             aggrinds.data()) != HighsStatus::OK)

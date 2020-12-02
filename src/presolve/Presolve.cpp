@@ -1223,6 +1223,10 @@ void Presolve::initializeVectors() {
   }
 
   colCostAtEl = colCost;
+
+  // initialize integrality information
+  if(!mip || int(integrality.size()) != numCol)
+    integrality.assign(numCol, HighsVarType::CONTINUOUS);
 }
 
 void Presolve::runAggregator() {

@@ -1,5 +1,21 @@
 #include "mip/HighsMipSolverData.h"
 
+static int64_t gcd(int64_t a, int64_t b) {
+  int h;
+  if (a < 0) a = -a;
+  if (b < 0) b = -b;
+
+  if (a == 0) return b;
+  if (b == 0) return a;
+
+  do {
+    h = a % b;
+    a = b;
+    b = h;
+  } while (b != 0);
+
+  return a;
+}
 void HighsMipSolverData::setup() {
   const HighsLp& model = *mipsolver.model_;
 
@@ -63,25 +79,37 @@ void HighsMipSolverData::setup() {
     maxAbsRowCoef[i] = maxabsval;
   }
 
-  objintegral = true;
+  objintscale = 600.0;
 
   for (int i = 0; i != mipsolver.numCol(); ++i) {
+    if (mipsolver.colCost(i) == 0.0) continue;
+
     if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) {
-      objintegral = false;
+      objintscale = 0.0;
       break;
     }
 
     double cost = mipsolver.colCost(i);
-    double intcost = std::floor(cost + 0.5);
+    double intcost = std::floor(objintscale * cost + 0.5) / objintscale;
     if (std::abs(cost - intcost) > epsilon) {
-      objintegral = false;
+      objintscale = 0.0;
       break;
     }
   }
 
-  if( objintegral )
-  {
-    printf("objective is always integral\n");
+  if (objintscale != 0.0) {
+    int64_t currgcd = objintscale;
+    for (int i = 0; i != mipsolver.numCol(); ++i) {
+      if (mipsolver.colCost(i) == 0.0) continue;
+      int64_t intval = std::floor(mipsolver.colCost(i) * objintscale + 0.5);
+      currgcd = gcd(intval, currgcd);
+      if (currgcd == 1) break;
+    }
+
+    objintscale /= currgcd;
+
+    printf("objective is always integral with scale %g\n",
+           objintscale);
   }
 
   // compute row activities and propagate all rows once
@@ -106,9 +134,12 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
   if (solobj < upper_bound) {
     upper_bound = solobj;
     incumbent = sol;
-
-    double new_upper_limit =
-        objintegral ? floor(solobj - 0.5) : solobj - feastol;
+    double new_upper_limit;
+    if (objintscale != 0.0) {
+      new_upper_limit = floor(objintscale * solobj - 0.5) / objintscale;
+    } else {
+      new_upper_limit = solobj - feastol;
+    }
     if (new_upper_limit < upper_limit) {
       upper_limit = new_upper_limit;
       pruned_treeweight += nodequeue.performBounding(upper_limit);
