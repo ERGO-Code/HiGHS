@@ -98,15 +98,21 @@ void HighsMipSolverData::setup() {
   }
 
   if (objintscale != 0.0) {
-    int64_t currgcd = objintscale;
+    int64_t currgcd = 0;
     for (int i = 0; i != mipsolver.numCol(); ++i) {
       if (mipsolver.colCost(i) == 0.0) continue;
       int64_t intval = std::floor(mipsolver.colCost(i) * objintscale + 0.5);
+      if( currgcd == 0 )
+      {
+        currgcd = intval;
+        continue;
+      }
       currgcd = gcd(intval, currgcd);
       if (currgcd == 1) break;
     }
 
-    objintscale /= currgcd;
+    if( currgcd != 0 )
+      objintscale /= currgcd;
 
     printf("objective is always integral with scale %g\n",
            objintscale);
