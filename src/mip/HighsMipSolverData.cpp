@@ -102,20 +102,17 @@ void HighsMipSolverData::setup() {
     for (int i = 0; i != mipsolver.numCol(); ++i) {
       if (mipsolver.colCost(i) == 0.0) continue;
       int64_t intval = std::floor(mipsolver.colCost(i) * objintscale + 0.5);
-      if( currgcd == 0 )
-      {
-        currgcd = intval;
+      if (currgcd == 0) {
+        currgcd = intval < 0 ? -intval : intval;
         continue;
       }
       currgcd = gcd(intval, currgcd);
       if (currgcd == 1) break;
     }
 
-    if( currgcd != 0 )
-      objintscale /= currgcd;
+    if (currgcd != 0) objintscale /= currgcd;
 
-    printf("objective is always integral with scale %g\n",
-           objintscale);
+    printf("objective is always integral with scale %g\n", objintscale);
   }
 
   // compute row activities and propagate all rows once
