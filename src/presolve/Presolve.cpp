@@ -453,6 +453,7 @@ int Presolve::presolve(int print) {
     if (!hasChange && !aggregatorCalled) {
       aggregatorCalled = true;
       runAggregator();
+      if (mip) detectImpliedIntegers();
       runPropagator();
       prev_cols_rows = current_cols_rows;
       current_cols_rows = 0;
@@ -1225,7 +1226,7 @@ void Presolve::initializeVectors() {
   colCostAtEl = colCost;
 
   // initialize integrality information
-  if(!mip || int(integrality.size()) != numCol)
+  if (!mip || int(integrality.size()) != numCol)
     integrality.assign(numCol, HighsVarType::CONTINUOUS);
 }
 
@@ -1463,6 +1464,166 @@ void Presolve::removeFixedCol(int j) {
       }
     }
   }
+}
+
+void Presolve::detectImpliedIntegers() {
+  std::vector<int> numcont(numRow);
+  std::vector<int> equations;
+  equations.reserve(numRow);
+
+  for (int i = 0; i != numRow; ++i) {
+    if (!flagRow[i]) continue;
+    if (rowLower[i] != rowUpper[i]) continue;
+
+    const int start = ARstart[i];
+    const int end = ARstart[i + 1];
+
+    for (int j = start; j != end; ++j) {
+      if (integrality[ARindex[j]] == HighsVarType::CONTINUOUS) ++numcont[i];
+    }
+
+    if (numcont[i] == 1) equations.push_back(i);
+  }
+
+  int numimplint = 0;
+  int primalimplint;
+  do {
+    primalimplint = numimplint;
+
+    for (size_t k = 0; k != equations.size(); ++k) {
+      int i = equations[k];
+      if (numcont[i] != 1) continue;
+
+      const int start = ARstart[i];
+      const int end = ARstart[i + 1];
+
+      int cont = -1;
+      for (int j = start; j != end; ++j) {
+        if (integrality[ARindex[j]] == HighsVarType::CONTINUOUS) {
+          cont = j;
+          break;
+        }
+      }
+
+      assert(cont != -1);
+      double b = rowUpper[i] / ARvalue[cont];
+      if (std::abs(b - std::floor(b + 0.5)) > 1e-9) continue;
+
+      bool impliedint = true;
+      for (int j = start; j != end; ++j) {
+        if (j == cont) continue;
+
+        double val = ARvalue[j] / ARvalue[cont];
+        if (std::abs(val - std::floor(val + 0.5)) > 1e-9) {
+          impliedint = false;
+          break;
+        }
+      }
+
+      if (!impliedint) continue;
+
+      int col = ARindex[cont];
+      const int colstart = Astart[col];
+      const int colend = Aend[col];
+      integrality[col] = HighsVarType::IMPLICIT_INTEGER;
+      roundIntegerBounds(col);
+      ++numimplint;
+
+      for (int j = colstart; j != colend; ++j) {
+        if (--numcont[Aindex[j]] == 1) {
+          assert(rowLower[Aindex[j]] == rowUpper[Aindex[j]]);
+          equations.push_back(Aindex[j]);
+        }
+      }
+    }
+
+    equations.clear();
+
+    printf("found %d implied integers with primal detection method\n",
+           numimplint - primalimplint);
+
+    primalimplint = numimplint;
+
+    for (int i = 0; i != numCol; ++i) {
+      if (!flagCol[i]) continue;
+      if (integrality[i] != HighsVarType::CONTINUOUS) continue;
+
+      const int colstart = Astart[i];
+      const int colend = Aend[i];
+      bool haseq = false;
+      for (int j = colstart; j != colend; ++j) {
+        int row = Aindex[j];
+        if (!flagRow[row]) continue;
+        if (rowLower[row] == rowUpper[row]) {
+          haseq = true;
+          break;
+        }
+      }
+
+      if (haseq) continue;
+
+      bool impliedinteger = true;
+      for (int j = colstart; j != colend; ++j) {
+        int row = Aindex[j];
+        if (!flagRow[row]) continue;
+
+        if (rowUpper[row] != HIGHS_CONST_INF) {
+          double val = rowUpper[row] / Avalue[j];
+
+          if (std::abs(val - std::floor(val + 0.5)) > 1e-9) {
+            impliedinteger = false;
+            break;
+          }
+        }
+
+        if (rowLower[row] != -HIGHS_CONST_INF) {
+          double val = rowLower[row] / Avalue[j];
+
+          if (std::abs(val - std::floor(val + 0.5)) > 1e-9) {
+            impliedinteger = false;
+            break;
+          }
+        }
+
+        const int start = ARstart[i];
+        const int end = ARstart[i + 1];
+        for (int k = start; k != end; ++k) {
+          if (ARindex[k] == i) continue;
+
+          if (integrality[ARindex[k]] == HighsVarType::CONTINUOUS) {
+            impliedinteger = false;
+            break;
+          }
+
+          double val = ARvalue[k] / Avalue[j];
+          if (std::abs(val - std::floor(val + 0.5)) > 1e-9) {
+            impliedinteger = false;
+            break;
+          }
+        }
+
+        if (!impliedinteger) break;
+      }
+
+      if (!impliedinteger) continue;
+      integrality[i] = HighsVarType::IMPLICIT_INTEGER;
+      roundIntegerBounds(i);
+      ++numimplint;
+
+      for (int j = colstart; j != colend; ++j) {
+        if (--numcont[Aindex[j]] == 1) {
+          assert(rowLower[Aindex[j]] == rowUpper[Aindex[j]]);
+          equations.push_back(Aindex[j]);
+        }
+      }
+    }
+
+    printf("found %d implied integers with dual detection method\n",
+           numimplint - primalimplint);
+
+  } while (numimplint - primalimplint != 0);
+
+  printf("implint detection found %d implied integers\n", numimplint);
 }
 
 void Presolve::removeEmptyRow(int i) {

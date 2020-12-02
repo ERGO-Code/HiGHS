@@ -551,7 +551,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp() {
 
       HighsCDouble objsum = 0;
       for (int i = 0; i != mipsolver.numCol(); ++i) {
-        if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
+        if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
 
         // for the fractionality we assume that LP bounds are not violated
         // bounds that are violated by the unscaled LP are indicated by the

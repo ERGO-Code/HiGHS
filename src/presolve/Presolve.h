@@ -126,6 +126,7 @@ class Presolve : public HPreData {
   void initializeVectors();
   void runAggregator();
   void runPropagator();
+  void detectImpliedIntegers();
   void setProblemStatus(const int s);
   void reportTimes();
 
