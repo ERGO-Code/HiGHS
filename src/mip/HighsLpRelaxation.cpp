@@ -505,7 +505,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
       HighsLogMessage(mipsolver.options_mip_->logfile,
                       HighsMessageType::WARNING,
-                      "LP failed to reliably determine infeasibility\n");
+                      "LP failed to reliably determine infeasibility");
 
       return Status::Error;
     case HighsModelStatus::OPTIMAL:
@@ -541,7 +541,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     default:
       HighsLogMessage(
           mipsolver.options_mip_->logfile, HighsMessageType::WARNING,
-          "LP solved to unexpected status (%d)\n", (int)scaledmodelstatus);
+          "LP solved to unexpected status (%d)", (int)scaledmodelstatus);
       return Status::Error;
   }
 }
