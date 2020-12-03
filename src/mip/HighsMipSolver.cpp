@@ -9,6 +9,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "mip/HighsMipSolver.h"
 
+#include "lp_data/HighsLpUtils.h"
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
@@ -27,11 +28,10 @@ HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
 HighsMipSolver::~HighsMipSolver() = default;
 
 HighsPresolveStatus HighsMipSolver::runPresolve() {
-  std::cout << "Running MIP presolve" << std::endl;
-
   // todo: commented out parts or change Highs::runPresolve to operate on a
   // parameter LP rather than Highs::lp_. Not sure which approach is preferable.
-
+  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                    ML_MINIMAL, "\nrunning MIP presolve\n");
   const HighsLp& lp_ = *(model_);
 
   // Exit if the problem is empty or if presolve is set to off.
@@ -115,8 +115,6 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
 }
 
 HighsPostsolveStatus HighsMipSolver::runPostsolve() {
-  std::cout << "Running MIP postsolve..." << std::endl;
-
   assert(presolve_.has_run_);
   if (!mipdata_) return HighsPostsolveStatus::ReducedSolutionEmpty;
 
@@ -147,12 +145,39 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 }
 
 void HighsMipSolver::run() {
-  std::cout << options_mip_->presolve << std::endl;
+  // std::cout << options_mip_->presolve << std::endl;
 
   if (options_mip_->presolve != "off") {
     HighsPresolveStatus presolve_status = runPresolve();
-    if (presolve_status == HighsPresolveStatus::Reduced)
-      model_ = &presolve_.getReducedProblem();
+    switch (presolve_status) {
+      case HighsPresolveStatus::Reduced:
+        reportPresolveReductions(*options_mip_, *model_,
+                                 presolve_.getReducedProblem());
+        model_ = &presolve_.getReducedProblem();
+        break;
+      case HighsPresolveStatus::Unbounded:
+        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                          ML_MINIMAL,
+                          "Presolve: Model detected to be unbounded\n");
+        return;
+      case HighsPresolveStatus::Infeasible:
+        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                          ML_MINIMAL,
+                          "Presolve: Model detected to be infeasible\n");
+        return;
+      case HighsPresolveStatus::Timeout:
+        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                          ML_MINIMAL, "Time limit reached during presolve\n");
+        return;
+      case HighsPresolveStatus::ReducedToEmpty:
+        reportPresolveReductions(*options_mip_, *model_, true);
+        break;
+      case HighsPresolveStatus::NotReduced:
+        reportPresolveReductions(*options_mip_, *model_, false);
+        break;
+      default:
+        assert(false);
+    }
   }
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
@@ -161,12 +186,15 @@ void HighsMipSolver::run() {
   mipdata_->evaluateRootNode();
 
   if (mipdata_->nodequeue.empty()) {
-    printf("\nmodel was solved in the root node\n");
+    HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                      ML_MINIMAL, "\nmodel was solved in the root node\n");
+    if (options_mip_->presolve != "off") runPostsolve();
     mipdata_->timer.stop(mipdata_->timer.solve_clock);
     return;
   }
 
-  printf("\nstarting tree search\n");
+  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                    ML_MINIMAL, "\nstarting tree search\n");
 
   std::shared_ptr<const HighsBasis> basis;
   HighsSearch search{*this, mipdata_->pseudocost};
@@ -192,17 +220,40 @@ void HighsMipSolver::run() {
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
+    bool limit_reached = false;
     while (true) {
       search.dive();
       ++mipdata_->num_leaves;
 
       search.flushStatistics();
+      if (options_mip_->mip_max_nodes != HIGHS_CONST_I_INF &&
+          mipdata_->num_nodes >= size_t(options_mip_->mip_max_nodes)) {
+        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                          ML_MINIMAL, "reached node limit\n");
+        limit_reached = true;
+        break;
+      }
+      if (options_mip_->mip_max_leaves != HIGHS_CONST_I_INF &&
+          mipdata_->num_leaves >= size_t(options_mip_->mip_max_leaves)) {
+        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                          ML_MINIMAL, "reached leave node limit\n");
+        limit_reached = true;
+        break;
+      }
+      if (mipdata_->timer.read(mipdata_->timer.solve_clock) >=
+          options_mip_->time_limit) {
+        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                          ML_MINIMAL, "reached time limit\n");
+        limit_reached = true;
+        break;
+      }
+
       if (!search.backtrack()) break;
 
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
       if (mipdata_->num_nodes - plungestart >=
-          std::min(size_t{1000}, mipdata_->num_nodes/2))
+          std::min(size_t{1000}, mipdata_->num_nodes / 2))
         break;
 
       if (mipdata_->dispfreq != 0) {
@@ -216,6 +267,8 @@ void HighsMipSolver::run() {
     search.openNodesToQueue(mipdata_->nodequeue);
     mipdata_->lower_bound = std::min(mipdata_->upper_bound,
                                      mipdata_->nodequeue.getBestLowerBound());
+
+    if (limit_reached) break;
 
     if (mipdata_->dispfreq != 0) {
       if (mipdata_->num_leaves - mipdata_->last_displeave >= mipdata_->dispfreq)
@@ -246,8 +299,9 @@ void HighsMipSolver::run() {
 
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
-      printf("added %lu global bound changes\n",
-             mipdata_->domain.getChangedCols().size());
+      HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                        ML_MINIMAL, "added %lu global bound changes\n",
+                        mipdata_->domain.getChangedCols().size());
 
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
       search.resetLocalDomain();

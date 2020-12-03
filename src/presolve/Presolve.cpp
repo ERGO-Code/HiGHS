@@ -437,7 +437,9 @@ int Presolve::presolve(int print) {
     int diff = prev_cols_rows - current_cols_rows;
     double iteration_reduction_pct =
         100 * (1.0 * diff) / (1.0 * model_cols_rows);
-    printf(
+    HighsPrintMessage(
+        output, message_level, ML_VERBOSE,
+        // printf(
         "Iteration %2d (Presolve)   Current number rows = %9d; cols = %9d: "
         "Reduction this iteration (%9d) is %5.2f%%\n",
         iter, current_num_row, current_num_col, diff, iteration_reduction_pct);
@@ -467,7 +469,9 @@ int Presolve::presolve(int print) {
       int diff = prev_cols_rows - current_cols_rows;
       double iteration_reduction_pct =
           100 * (1.0 * diff) / (1.0 * model_cols_rows);
-      printf(
+      HighsPrintMessage(
+          output, message_level, ML_VERBOSE,
+          // printf(
           "Iteration %2d (Aggregator) Current number rows = %9d; cols = %9d: "
           "Reduction this iteration (%9d) is %5.2f%%\n",
           iter, current_num_row, current_num_col, diff,
@@ -1325,7 +1329,8 @@ void Presolve::runPropagator() {
                                flagCol, rowLower, rowUpper);
   propagator.computeRowActivities();
   int nboundchgs = propagator.propagate();
-  printf("propagation found %d bound changes\n", nboundchgs);
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+                    "propagation found %d bound changes\n", nboundchgs);
   // propagation found nothing, so we can stop here. Only for mip we also try
   // coefficient tightening
   if (!mip && nboundchgs == 0) return;
@@ -1334,7 +1339,8 @@ void Presolve::runPropagator() {
     int ntotalcoeffchgs = 0;
     while (true) {
       int ncoeffchgs = propagator.tightenCoefficients();
-      printf("tightened %d coefficients\n", ncoeffchgs);
+      HighsPrintMessage(output, message_level, ML_VERBOSE,
+                        "tightened %d coefficients\n", ncoeffchgs);
       // if no coefficients where tightened we can stop
       if (ncoeffchgs == 0) break;
       ntotalcoeffchgs += ncoeffchgs;
@@ -1346,8 +1352,6 @@ void Presolve::runPropagator() {
         status = Infeasible;
         return;
       }
-
-      printf("propagation found %d bound changes\n", nboundchgs);
       // if no further bounds where changed we can stop
       if (nboundchgs == 0) break;
     }
@@ -1439,7 +1443,8 @@ void Presolve::runPropagator() {
   implColLower = colLower;
   implColUpper = colUpper;
 
-  printf("propagator found %d tightened bounds\n", ntightened);
+  HighsPrintMessage(output, message_level, ML_VERBOSE, "tightened %d bounds\n",
+                    ntightened);
   if (ntightened != 0) hasChange = true;
 }
 
@@ -1537,8 +1542,9 @@ void Presolve::detectImpliedIntegers() {
     }
   }
 
-  printf("found %d implied integers with primal detection method\n",
-         numimplint);
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+                    "found %d implied integers with primal detection method\n",
+                    numimplint);
 
   primalimplint = numimplint;
 
@@ -1610,10 +1616,13 @@ void Presolve::detectImpliedIntegers() {
     ++numimplint;
   }
 
-  printf("found %d implied integers with dual detection method\n",
-         numimplint - primalimplint);
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+                    "found %d implied integers with dual detection method\n",
+                    numimplint - primalimplint);
 
-  printf("implint detection found %d implied integers\n", numimplint);
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+                    "implint detection found %d implied integers\n",
+                    numimplint);
 }
 
 void Presolve::removeEmptyRow(int i) {
@@ -3385,7 +3394,6 @@ HighsPostsolveStatus Presolve::primalPostsolve(
         Astart[yindex] = st;
         Aend[yindex] = Avalue.size();
 
-        double topp = postValue.top();
         postValue.pop();
 
         break;

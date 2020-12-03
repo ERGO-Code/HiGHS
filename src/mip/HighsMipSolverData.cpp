@@ -112,14 +112,16 @@ void HighsMipSolverData::setup() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    printf("objective is always integral with scale %g\n", objintscale);
+    HighsPrintMessage(mipsolver.options_mip_->output,
+                      mipsolver.options_mip_->message_level, ML_MINIMAL,
+                      "objective is always integral with scale %g\n",
+                      objintscale);
   }
 
   // compute row activities and propagate all rows once
   domain.computeRowActivities();
   domain.propagate();
-  printf("initial propagation found %lu bound changes\n",
-         domain.getChangedCols().size());
+
   if (!domain.getChangedCols().empty()) lp.flushDomain(domain);
 
   // extract cliques
@@ -154,7 +156,9 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 void HighsMipSolverData::printDisplayLine(char first) {
   double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
-    printf(
+    HighsPrintMessage(
+        mipsolver.options_mip_->output, mipsolver.options_mip_->message_level,
+        ML_MINIMAL,
         "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
         "| %8s | %8s\n",
         "time", "open nodes", "nodes", "leaves", "lpiters", "dual bound",
@@ -175,7 +179,9 @@ void HighsMipSolverData::printDisplayLine(char first) {
     lb = std::min(ub, lb);
     gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
 
-    printf(
+    HighsPrintMessage(
+        mipsolver.options_mip_->output, mipsolver.options_mip_->message_level,
+        ML_MINIMAL,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %7.2f%% | %7.2f%%\n",
         first, timer.read(timer.solve_clock), nodequeue.numNodes(), num_nodes,
@@ -183,7 +189,9 @@ void HighsMipSolverData::printDisplayLine(char first) {
         mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
         100 * double(pruned_treeweight));
   } else {
-    printf(
+    HighsPrintMessage(
+        mipsolver.options_mip_->output, mipsolver.options_mip_->message_level,
+        ML_MINIMAL,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %8.2f | %7.2f%%\n",
         first, timer.read(timer.solve_clock), nodequeue.numNodes(), num_nodes,
@@ -195,6 +203,10 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
 void HighsMipSolverData::evaluateRootNode() {
   // solve the first root lp
+
+  HighsPrintMessage(mipsolver.options_mip_->output,
+                    mipsolver.options_mip_->message_level, ML_MINIMAL,
+                    "\nsolving root node LP relaxation\n");
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
   lp.resolveLp();
   lp.getLpSolver().setHighsOptionValue("presolve", "off");

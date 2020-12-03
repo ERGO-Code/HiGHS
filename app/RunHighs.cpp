@@ -239,7 +239,7 @@ HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
 
   const auto& solution = solver.presolve_.data_.recovered_solution_;
 
-  if (solution.col_value.size() == lp.numCol_) {
+  if (int(solution.col_value.size()) == lp.numCol_) {
     printf("checking recovered solution\n");
     double boundviol = 0.0;
     double intviol = 0.0;

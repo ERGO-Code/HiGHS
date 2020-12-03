@@ -286,6 +286,7 @@ struct HighsOptionsStruct {
 
   // Options for MIP solver
   int mip_max_nodes;
+  int mip_max_leaves;
   int mip_report_level;
   double mip_feasibility_tolerance;
   double mip_epsilon;
@@ -529,6 +530,11 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "mip_max_nodes", "MIP solver max number of nodes", advanced,
         &mip_max_nodes, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_max_leaves", "MIP solver max number of leave nodes", advanced,
+        &mip_max_leaves, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
     record_int =

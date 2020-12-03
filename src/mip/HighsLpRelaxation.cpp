@@ -181,7 +181,9 @@ void HighsLpRelaxation::storeDualInfProof() {
   lpsolver.getDualRay(hasdualproof);
 
   if (!hasdualproof) {
-    printf("no dual ray stored\n");
+    HighsPrintMessage(mipsolver.options_mip_->output,
+                      mipsolver.options_mip_->message_level, ML_VERBOSE,
+                      "no dual ray stored\n");
     return;
   }
 
@@ -501,7 +503,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return Status::Infeasible;
       }
 
-      printf("WARNING: LP failed to reliably determine infeasibility\n");
+      HighsLogMessage(mipsolver.options_mip_->logfile,
+                      HighsMessageType::WARNING,
+                      "LP failed to reliably determine infeasibility\n");
 
       return Status::Error;
     case HighsModelStatus::OPTIMAL:
@@ -535,8 +539,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     //    return Status::Infeasible;
     //  return Status::Error;
     default:
-      printf("WARNING: LP solved to unexpected status (%d)\n",
-             (int)scaledmodelstatus);
+      HighsLogMessage(
+          mipsolver.options_mip_->logfile, HighsMessageType::WARNING,
+          "LP solved to unexpected status (%d)\n", (int)scaledmodelstatus);
       return Status::Error;
   }
 }
