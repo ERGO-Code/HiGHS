@@ -535,7 +535,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     //    return Status::Infeasible;
     //  return Status::Error;
     default:
-      printf("WARNING: LP solved to unexpected status (%d)\n", (int)scaledmodelstatus);
+      printf("WARNING: LP solved to unexpected status (%d)\n",
+             (int)scaledmodelstatus);
       return Status::Error;
   }
 }

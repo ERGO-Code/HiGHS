@@ -118,8 +118,10 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
   std::cout << "Running MIP postsolve..." << std::endl;
 
   assert(presolve_.has_run_);
-  bool solution_ok = isSolutionRightSize(presolve_.getReducedProblem(),
-                                         presolve_.data_.reduced_solution_);
+  if (!mipdata_) return HighsPostsolveStatus::ReducedSolutionEmpty;
+
+  bool solution_ok =
+      presolve_.getReducedProblem().numCol_ == (int)mipdata_->incumbent.size();
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
   if (presolve_.presolve_status_ != HighsPresolveStatus::Reduced &&
@@ -133,18 +135,15 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 
   // Run postsolve
   HighsPostsolveStatus postsolve_status =
-      presolve_.data_.presolve_[0].postsolve(
-          presolve_.data_.reduced_solution_, presolve_.data_.reduced_basis_,
-          presolve_.data_.recovered_solution_,
-          presolve_.data_.recovered_basis_);
+      presolve_.data_.presolve_[0].primalPostsolve(
+          mipdata_->incumbent, presolve_.data_.recovered_solution_);
 
-  if (postsolve_status != HighsPostsolveStatus::SolutionRecovered)
-    return postsolve_status;
+  return postsolve_status;
 
   // if (lp_.sense_ == ObjSense::MAXIMIZE)
   //   presolve_.negateReducedLpColDuals(false);
 
-  return HighsPostsolveStatus::SolutionRecovered;
+  //return HighsPostsolveStatus::SolutionRecovered;
 }
 
 void HighsMipSolver::run() {

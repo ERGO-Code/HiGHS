@@ -237,5 +237,36 @@ HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
   HighsMipSolver solver(use_options, lp);
   solver.run();
 
+  const auto& solution = solver.presolve_.data_.recovered_solution_;
+
+  if (solution.col_value.size() == lp.numCol_) {
+    printf("checking recovered solution\n");
+    double boundviol = 0.0;
+    double intviol = 0.0;
+    double rowviol = 0.0;
+    HighsCDouble obj = lp.offset_;
+    for (int i = 0; i != lp.numCol_; ++i) {
+      obj += lp.colCost_[i] * solution.col_value[i];
+
+      boundviol = std::max(boundviol, lp.colLower_[i] - solution.col_value[i]);
+      boundviol = std::max(boundviol, solution.col_value[i] - lp.colUpper_[i]);
+
+      if (lp.integrality_[i] == HighsVarType::INTEGER) {
+        double intval = std::floor(solution.col_value[i] + 0.5);
+        intviol = std::max(std::abs(intval - solution.col_value[i]), intviol);
+      }
+    }
+
+    for (int i = 0; i != lp.numRow_; ++i) {
+      rowviol = std::max(rowviol, lp.rowLower_[i] - solution.row_value[i]);
+      rowviol = std::max(rowviol, solution.row_value[i] - lp.rowUpper_[i]);
+    }
+
+    printf("bound violation: %.14g\n", boundviol);
+    printf("integrality violation: %.14g\n", intviol);
+    printf("row violation: %.14g\n", rowviol);
+    printf("objective value: %.14g\n", double(obj));
+  }
+
   return HighsStatus::OK;
 }

@@ -3237,6 +3237,490 @@ void Presolve::testAnAR(int post) {
   }
 }
 
+HighsPostsolveStatus Presolve::primalPostsolve(
+    const std::vector<double>& reduced_solution,
+    HighsSolution& recovered_solution) {
+  colValue = reduced_solution;
+
+  makeACopy();  // so we can efficiently calculate primal and dual
+  // values
+
+  //	iKKTcheck = false;
+  // set corresponding parts of solution vectors:
+  int j_index = 0;
+  vector<int> eqIndexOfReduced(numCol, -1);
+  vector<int> eqIndexOfReduROW(numRow, -1);
+  for (int i = 0; i < numColOriginal; ++i)
+    if (cIndex.at(i) > -1) {
+      eqIndexOfReduced.at(j_index) = i;
+      ++j_index;
+    }
+  j_index = 0;
+  for (int i = 0; i < numRowOriginal; ++i)
+    if (rIndex.at(i) > -1) {
+      eqIndexOfReduROW.at(j_index) = i;
+      ++j_index;
+    }
+
+  for (int i = 0; i < numCol; ++i) {
+    int iCol = eqIndexOfReduced.at(i);
+    assert(iCol < (int)valuePrimal.size());
+    assert(iCol >= 0);
+    valuePrimal[iCol] = colValue.at(i);
+    // valueColDual[iCol] = colDual.at(i);
+    // col_status.at(iCol) = temp_col_status.at(i);
+  }
+
+  // cmpNBF(-1, -1);
+  // testBasisMatrixSingularity();
+
+  if (iKKTcheck) {
+    cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
+    checkKkt();
+  }
+
+  vector<int> fRjs;
+  while (!chng.empty()) {
+    change c = chng.top();
+    chng.pop();
+    // cout<<"chng.pop:       "<<c.col<<"       "<<c.row << endl;
+
+    switch (c.type) {
+      case AGGREGATOR: {
+        // restore solution, basis, flags, and colCostAtEl
+        aggregatorStack.back().postsolveStack.undo(flagCol, flagRow,
+                                                   valuePrimal);
+
+        // restore AR to state before the aggregator got called
+        ARstart = std::move(aggregatorStack.back().ARstartAtCall);
+        ARindex = std::move(aggregatorStack.back().ARindexAtCall);
+        ARvalue = std::move(aggregatorStack.back().ARvalueAtCall);
+        colCostAtEl = std::move(aggregatorStack.back().colCostAtCall);
+        aggregatorStack.pop_back();
+
+        // restore A from AR
+        makeACopy();
+        break;
+      }
+      case TWO_COL_SING_TRIVIAL: {
+        // WIP
+        int y = (int)postValue.top();
+        postValue.pop();
+        int x = (int)postValue.top();
+        postValue.pop();
+        assert(x == c.col);
+        flagRow[c.row] = true;
+        flagCol[x] = true;
+        flagCol[y] = true;
+        break;
+      }
+      case DOUBLETON_EQUATION: {  // Doubleton equation row
+        getDualsDoubletonEquation(c.row, c.col);
+
+        // exit(2);
+        break;
+      }
+      case DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE: {
+        // new bounds from doubleton equation, retrieve old ones
+        // just for KKT check, not called otherwise
+        // chk2.addChange(171, c.row, c.col, 0, 0, 0);
+        break;
+      }
+      case DOUBLETON_EQUATION_NEW_X_NONZERO: {
+        // matrix transformation from doubleton equation, case x still there
+        // case new x is not 0
+        // just change value of entry in row for x
+        int indi;
+        for (indi = ARstart[c.row]; indi < ARstart[c.row + 1]; ++indi)
+          if (ARindex.at(indi) == c.col) break;
+        ARvalue.at(indi) = postValue.top();
+        for (indi = Astart[c.col]; indi < Aend[c.col]; ++indi)
+          if (Aindex.at(indi) == c.row) break;
+        Avalue.at(indi) = postValue.top();
+
+        postValue.pop();
+
+        break;
+      }
+      case DOUBLETON_EQUATION_X_ZERO_INITIALLY: {
+        // matrix transformation from doubleton equation, retrieve old value
+        // case when row does not have x initially: entries for row i swap x and
+        // y cols
+
+        const int yindex = (int)postValue.top();
+        postValue.pop();
+
+        // reverse AR for case when x is zero and y entry has moved
+        int indi;
+        for (indi = ARstart[c.row]; indi < ARstart[c.row + 1]; ++indi)
+          if (ARindex.at(indi) == c.col) break;
+        ARvalue.at(indi) = postValue.top();
+        ARindex.at(indi) = yindex;
+
+        // reverse A for case when x is zero and y entry has moved
+        for (indi = Astart[c.col]; indi < Aend[c.col]; ++indi)
+          if (Aindex.at(indi) == c.row) break;
+
+        // recover x: column decreases by 1
+        // if indi is not Aend-1 swap elements indi and Aend-1
+        if (indi != Aend[c.col] - 1) {
+          double tmp = Avalue[Aend[c.col] - 1];
+          int tmpi = Aindex[Aend[c.col] - 1];
+          Avalue[Aend[c.col] - 1] = Avalue.at(indi);
+          Aindex[Aend[c.col] - 1] = Aindex.at(indi);
+          Avalue.at(indi) = tmp;
+          Aindex.at(indi) = tmpi;
+        }
+        Aend[c.col]--;
+
+        // recover y: column increases by 1
+        // update A: append X column to end of array
+        int st = Avalue.size();
+        for (int ind = Astart[yindex]; ind < Aend[yindex]; ++ind) {
+          Avalue.push_back(Avalue.at(ind));
+          Aindex.push_back(Aindex.at(ind));
+        }
+        Avalue.push_back(postValue.top());
+        Aindex.push_back(c.row);
+        Astart[yindex] = st;
+        Aend[yindex] = Avalue.size();
+
+        double topp = postValue.top();
+        postValue.pop();
+
+        break;
+      }
+      case DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE: {
+        // sp case x disappears row representation change
+        int indi;
+        for (indi = ARstart[c.row]; indi < ARstart[c.row + 1]; ++indi)
+          if (ARindex.at(indi) == numColOriginal) break;
+        ARindex.at(indi) = c.col;
+        ARvalue.at(indi) = postValue.top();
+
+        postValue.pop();
+
+        break;
+      }
+      case DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE: {
+        // sp case x disappears column representation change
+        // here A is copied from AR array at end of presolve so need to expand x
+        // column  Aend[c.col]++; wouldn't do because old value is overriden
+        double oldXvalue = postValue.top();
+        postValue.pop();
+        int x = c.col;
+
+        // update A: append X column to end of array
+        int st = Avalue.size();
+        for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) {
+          Avalue.push_back(Avalue.at(ind));
+          Aindex.push_back(Aindex.at(ind));
+        }
+        Avalue.push_back(oldXvalue);
+        Aindex.push_back(c.row);
+        Astart.at(x) = st;
+        Aend.at(x) = Avalue.size();
+
+        break;
+      }
+      case EMPTY_ROW: {
+        flagRow[c.row] = 1;
+        break;
+      }
+      case SING_ROW: {
+        // valuePrimal is already set for this one, colDual also, we need
+        // rowDual. AR copy keeps full matrix.  col dual maybe infeasible, we
+        // need to check.  recover old bounds and see
+        // getDualsSingletonRow(c.row, c.col);
+        oldBounds.pop();
+        postValue.pop();
+
+        break;
+      }
+      case FORCING_ROW_VARIABLE:
+        oldBounds.pop();
+        flagCol[c.col] = 1;
+        break;
+      case FORCING_ROW: {
+        flagRow[c.row] = 1;
+        break;
+      }
+      case REDUNDANT_ROW: {
+        flagRow[c.row] = 1;
+        break;
+      }
+      case FREE_SING_COL:
+      case IMPLIED_FREE_SING_COL: {
+        // colDual rowDual already set.
+        // calculate row value without xj
+        double aij = getaij(c.row, c.col);
+        double sum = 0;
+        for (int k = ARstart[c.row]; k < ARstart[c.row + 1]; ++k)
+          if (flagCol.at(ARindex.at(k)))
+            sum += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
+
+        double rowlb = postValue.top();
+        postValue.pop();
+        double rowub = postValue.top();
+        postValue.pop();
+
+        // calculate xj
+        if (rowlb == rowub)
+          valuePrimal[c.col] = (rowlb - sum) / aij;
+        else if (colCostAtEl[c.col] > 0) {
+          // we are interested in the lowest possible value of x:
+          // max { l_j, bound implied by row i }
+          double bndL;
+          if (aij > 0)
+            bndL = (rowlb - sum) / aij;
+          else
+            bndL = (rowub - sum) / aij;
+          valuePrimal[c.col] = max(colLowerOriginal[c.col], bndL);
+        } else if (colCostAtEl[c.col] < 0) {
+          // we are interested in the highest possible value of x:
+          // min { u_j, bound implied by row i }
+          double bndU;
+          if (aij < 0)
+            bndU = (rowlb - sum) / aij;
+          else
+            bndU = (rowub - sum) / aij;
+          valuePrimal[c.col] = min(colUpperOriginal[c.col], bndU);
+        } else {  // cost is zero
+          double bndL, bndU;
+          if (aij > 0) {
+            bndL = (rowlb - sum) / aij;
+            bndU = (rowub - sum) / aij;
+          } else {
+            bndL = (rowub - sum) / aij;
+            bndU = (rowlb - sum) / aij;
+          }
+          double valuePrimalUB = min(colUpperOriginal[c.col], bndU);
+          double valuePrimalLB = max(colLowerOriginal[c.col], bndL);
+          if (valuePrimalUB < valuePrimalLB - tol) {
+            cout << "Postsolve error: inconsistent bounds for implied free "
+                    "column singleton "
+                 << c.col << endl;
+          }
+
+          if (fabs(valuePrimalLB) < fabs(valuePrimalUB))
+            valuePrimal[c.col] = valuePrimalLB;
+          else
+            valuePrimal[c.col] = valuePrimalUB;
+        }
+        sum = sum + valuePrimal[c.col] * aij;
+
+        double costAtTimeOfElimination = postValue.top();
+        postValue.pop();
+        objShift += (costAtTimeOfElimination * sum) / aij;
+
+        flagRow[c.row] = 1;
+        flagCol[c.col] = 1;
+        // valueRowDual[c.row] = 0;
+        break;
+      }
+      case SING_COL_DOUBLETON_INEQ: {
+        assert(false);
+        // column singleton in a doubleton equation.
+        // colDual already set. need valuePrimal from stack. maybe change
+        // rowDual depending on bounds. old bounds kept in oldBounds. variables
+        // j,k : we eliminated j and are left with changed bounds on k and no
+        // row. c.col is column COL (K) - eliminated, j is with new bounds
+        pair<int, vector<double>> p = oldBounds.top();
+        oldBounds.pop();
+        const int j = p.first;
+        vector<double> v = p.second;
+        // double lbNew = v[0];
+        // double ubNew = v[1];
+        double cjNew = v[2];
+
+        p = oldBounds.top();
+        oldBounds.pop();
+        v = p.second;
+        double ubOld = v[1];
+        double lbOld = v[0];
+        double cjOld = v[2];
+
+        p = oldBounds.top();
+        oldBounds.pop();
+        v = p.second;
+        double ubCOL = v[1];
+        double lbCOL = v[0];
+        double ck = v[2];
+
+        double rowlb = postValue.top();
+        postValue.pop();
+        double rowub = postValue.top();
+        postValue.pop();
+        double aik = postValue.top();
+        postValue.pop();
+        double aij = postValue.top();
+        postValue.pop();
+        double xj = valuePrimal.at(j);
+
+        // calculate xk, depending on signs of coeff and cost
+        double upp = HIGHS_CONST_INF;
+        double low = -HIGHS_CONST_INF;
+
+        if ((aij > 0 && aik > 0) || (aij < 0 && aik < 0)) {
+          if (rowub < HIGHS_CONST_INF) upp = (rowub - aij * xj) / aik;
+          if (rowlb > -HIGHS_CONST_INF) low = (rowlb - aij * xj) / aik;
+        } else {
+          if (rowub < HIGHS_CONST_INF) upp = (rowub - aij * xj) / aik;
+          if (rowlb > -HIGHS_CONST_INF) low = (rowlb - aij * xj) / aik;
+        }
+
+        double xkValue = 0;
+        if (ck == 0) {
+          if (low < 0 && upp > 0)
+            xkValue = 0;
+          else if (fabs(low) < fabs(upp))
+            xkValue = low;
+          else
+            xkValue = upp;
+        }
+
+        else if ((ck > 0 && aik > 0) || (ck < 0 && aik < 0)) {
+          assert(low > -HIGHS_CONST_INF);
+          xkValue = low;
+        } else if ((ck > 0 && aik < 0) || (ck < 0 && aik > 0)) {
+          assert(low < HIGHS_CONST_INF);
+          xkValue = upp;
+        }
+
+        // primal value and objective shift
+        valuePrimal[c.col] = xkValue;
+        objShift += -cjNew * xj + cjOld * xj + ck * xkValue;
+
+        // fix duals
+        double rowVal = aij * xj + aik * xkValue;
+
+        // If row is strictly between bounds:
+        // Row is basic and column is non basic.
+        if ((rowub == HIGHS_CONST_INF || (rowub - rowVal > tol)) &&
+            (rowlb == -HIGHS_CONST_INF || (rowVal - rowlb > tol))) {
+          row_status.at(c.row) = HighsBasisStatus::BASIC;
+          col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+          valueRowDual[c.row] = 0;
+          flagRow[c.row] = 1;
+          valueColDual[c.col] = getColumnDualPost(c.col);
+        } else {
+          // row is at a bound
+          // case fabs(rowlb - rowub) < tol
+          double lo = -HIGHS_CONST_INF;
+          double up = HIGHS_CONST_INF;
+
+          if (fabs(rowub - rowVal) <= tol) {
+            lo = 0;
+            up = HIGHS_CONST_INF;
+          } else if (fabs(rowlb - rowVal) <= tol) {
+            lo = -HIGHS_CONST_INF;
+            up = 0;
+          }
+
+          colCostAtEl.at(j) = cjOld;  // revert cost before calculating duals
+          getBoundOnLByZj(c.row, j, &lo, &up, lbOld, ubOld);
+          getBoundOnLByZj(c.row, c.col, &lo, &up, lbCOL, ubCOL);
+
+          // calculate yi
+          if (lo - up > tol)
+            cout << "PR: Error in postsolving doubleton inequality " << c.row
+                 << " : inconsistent bounds for its dual value." << std::endl;
+
+          // WARNING: bound_row_dual not used. commented out to surpress warning
+          // but maybe this causes trouble. Look into when you do dual postsolve
+          // again (todo)
+          //
+          //
+          // double bound_row_dual = 0;
+          // if (lo > 0) {
+          //   bound_row_dual = lo;
+          // } else if (up < 0) {
+          //   bound_row_dual = up;
+          // }
+
+          // kxx
+          // if (lo > 0 || up < 0)
+          if (lo > 0 || up < 0 || ck != 0) {
+            // row is nonbasic
+            // since either dual value zero for it is infeasible
+            // or the column cost has changed for col j hence the row dual has
+            // to be nonzero to balance out the Stationarity of Lagrangian.
+            row_status.at(c.row) = HighsBasisStatus::NONBASIC;
+            col_status.at(c.col) = HighsBasisStatus::BASIC;
+            valueColDual[c.col] = 0;
+            flagRow[c.row] = 1;
+            valueRowDual[c.row] = getRowDualPost(c.row, c.col);
+            valueColDual[j] = getColumnDualPost(j);
+          } else {
+            // zero row dual is feasible, set row to basic and column to
+            // nonbasic.
+            row_status.at(c.row) = HighsBasisStatus::BASIC;
+            col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+            valueRowDual[c.row] = 0;
+            flagRow[c.row] = 1;
+            valueColDual[c.col] = getColumnDualPost(c.col);
+          }
+        }
+
+        flagCol[c.col] = 1;
+
+        // exit(2);
+        break;
+      }
+      case EMPTY_COL:
+      case DOMINATED_COLS:
+      case WEAKLY_DOMINATED_COLS: {
+        // got valuePrimal, need colDual
+        flagCol[c.col] = 1;
+        break;
+      }
+
+      case FIXED_COL: {
+        // got valuePrimal, need colDual
+        flagCol[c.col] = 1;
+        break;
+      }
+    }
+    // cmpNBF(c.row, c.col);
+  }
+
+  // cmpNBF();
+
+  // now recover original model data to pass back to HiGHS
+  // A is already recovered!
+  // however, A is expressed in terms of Astart, Aend and columns are in
+  // different order so
+  makeACopy();
+
+  numRow = numRowOriginal;
+  numCol = numColOriginal;
+  numTot = numRow + numCol;
+
+  rowUpper = rowUpperOriginal;
+  rowLower = rowLowerOriginal;
+
+  colUpper = colUpperOriginal;
+  colLower = colLowerOriginal;
+
+  colCost = colCostOriginal;
+
+  colValue = valuePrimal;
+
+  rowValue.assign(numRow, 0);
+  for (int i = 0; i < numRowOriginal; ++i) {
+    for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
+      rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
+  }
+
+  // cout<<"Singularity check at end of postsolve: ";
+  // testBasisMatrixSingularity();
+
+  // Save solution to PresolveComponentData.
+  recovered_solution.col_value = colValue;
+  recovered_solution.row_value = rowValue;
+
+  return HighsPostsolveStatus::SolutionRecovered;
+}
 // todo: error reporting.
 HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                                          const HighsBasis& reduced_basis,
@@ -4393,6 +4877,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
 
   flagRow.at(row) = 1;
   flagCol.at(y) = 1;
+
+  if (mip) return;
 
   const HighsBasisStatus x_status_reduced = col_status.at(x);
   bool x_make_basic = false;

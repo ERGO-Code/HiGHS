@@ -999,9 +999,14 @@ void HAggregator::PostsolveStack::undo(
   }
 }
 
-void HAggregator::PostsolveStack::undo(std::vector<double>& colvalue) const {
+void HAggregator::PostsolveStack::undo(std::vector<int>& colFlag,
+                                       std::vector<int>& rowFlag,
+                                       std::vector<double>& colvalue) const {
   for (int k = reductionStack.size() - 1; k >= 0; --k) {
     const ImpliedFreeVarReduction& reduction = reductionStack[k];
+
+    colFlag[reduction.col] = 1;
+    rowFlag[reduction.row] = 1;
 
     const int rowstart = reduction.stackpos;
     const int rowend = reduction.stackpos + reduction.rowlen;

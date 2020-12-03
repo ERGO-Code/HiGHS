@@ -87,6 +87,9 @@ class Presolve : public HPreData {
                                  HighsSolution& recovered_solution,
                                  HighsBasis& recovered_basis);
 
+  HighsPostsolveStatus primalPostsolve(const std::vector<double>& reduced_solution,
+                                 HighsSolution& recovered_solution);
+
   void setNumericalTolerances();
   void load(const HighsLp& lp, bool mip = false);
   // todo: clear the public from below.
