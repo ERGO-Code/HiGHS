@@ -143,7 +143,7 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
   // if (lp_.sense_ == ObjSense::MAXIMIZE)
   //   presolve_.negateReducedLpColDuals(false);
 
-  //return HighsPostsolveStatus::SolutionRecovered;
+  // return HighsPostsolveStatus::SolutionRecovered;
 }
 
 void HighsMipSolver::run() {
@@ -184,7 +184,7 @@ void HighsMipSolver::run() {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    int iterlimit = 10 * int(mipdata_->lp.getNumLpIterations() /
+    int iterlimit = 50 * int(mipdata_->lp.getNumLpIterations() /
                              (double)std::max(size_t{1}, mipdata_->num_nodes));
     iterlimit = std::max(1000, iterlimit);
 
@@ -201,7 +201,9 @@ void HighsMipSolver::run() {
 
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
-      if (mipdata_->num_nodes - plungestart >= 1000) break;
+      if (mipdata_->num_nodes - plungestart >=
+          std::min(size_t{1000}, mipdata_->num_nodes/2))
+        break;
 
       if (mipdata_->dispfreq != 0) {
         if (mipdata_->num_leaves - mipdata_->last_displeave >=

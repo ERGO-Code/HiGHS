@@ -98,6 +98,8 @@ class HighsSearch {
 
   void openNodesToQueue(HighsNodeQueue& nodequeue);
 
+  void currentNodeToQueue(HighsNodeQueue& nodequeue);
+
   void flushStatistics();
 
   void installNode(HighsNodeQueue::OpenNode&& node);

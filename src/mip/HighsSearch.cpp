@@ -571,6 +571,20 @@ const HighsSearch::NodeData* HighsSearch::getParentNodeData() const {
   return &nodestack[nodestack.size() - 2];
 }
 
+void HighsSearch::currentNodeToQueue(HighsNodeQueue& nodequeue) {
+  localdom.propagate();
+  if (!localdom.infeasible()) {
+    nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
+                          nodestack.back().lower_bound,
+                          nodestack.back().estimate, getCurrentDepth());
+  } else
+    treeweight += std::pow(0.5, getCurrentDepth() - 1);
+  nodestack.back().opensubtrees = 0;
+
+  backtrack();
+  lp->flushDomain(localdom);
+}
+
 void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
   if (nodestack.empty()) return;
   if (nodestack.back().opensubtrees == 0) backtrack();
