@@ -1901,7 +1901,7 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   assert(solution.col_value.size() > 0);
-  if (!isSolutionRightSize(lp, solution)) return HighsStatus::Error;
+  if (int(solution.col_value.size()) != lp.numCol_) return HighsStatus::Error;
 
   solution.row_value.clear();
   solution.row_value.assign(lp.numRow_, 0);

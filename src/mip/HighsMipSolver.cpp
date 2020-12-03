@@ -368,5 +368,10 @@ void HighsMipSolver::run() {
   mipdata_->timer.stop(mipdata_->timer.solve_clock);
   mipdata_->printDisplayLine();
 
-  if (options_mip_->presolve != "off") runPostsolve();
+  if (options_mip_->presolve != "off")
+    runPostsolve();
+  else if (!mipdata_->incumbent.empty()) {
+    presolve_.data_.recovered_solution_.col_value = mipdata_->incumbent;
+    calculateRowValues(*model_, presolve_.data_.recovered_solution_);
+  }
 }
