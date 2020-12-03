@@ -1248,7 +1248,18 @@ void Presolve::runAggregator() {
     aggregatorStack.back().postsolveStack = aggregator.run();
 
     if (aggregatorStack.back().postsolveStack.empty()) {
-      aggregatorStack.pop_back();
+      if (mip) {
+        //todo, we need to store the state of the matrix before
+        // doing mip presolve steps that alter the coefficients,
+        // currently only coefficient tightening.
+        // this is a bit hacky but works for now as those steps
+        // run after the first call of the aggregator
+        aggregatorStack.back().ARvalueAtCall = ARvalue;
+        aggregatorStack.back().ARindexAtCall = ARindex;
+        aggregatorStack.back().ARstartAtCall = ARstart;
+        chng.emplace(change{AGGREGATOR, 0, 0});
+      } else
+        aggregatorStack.pop_back();
       timer.recordFinish(AGGREGATOR);
       return;
     }
