@@ -200,7 +200,7 @@ void HighsMipSolverData::evaluateRootNode() {
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
 
-  lp.setIterationLimit(int(10 * maxrootlpiters));
+  lp.setIterationLimit(std::max(1000, int(10 * maxrootlpiters)));
   lp.getLpSolver().setHighsLogfile(NULL);
   lp.getLpSolver().setHighsOptionValue("message_level", 0);
   lp.getLpSolver().setHighsOptionValue("parallel", "off");

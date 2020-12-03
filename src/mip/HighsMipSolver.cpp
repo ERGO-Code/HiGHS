@@ -185,9 +185,11 @@ void HighsMipSolver::run() {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    mipdata_->lp.setIterationLimit(
-        10 * int(mipdata_->lp.getNumLpIterations() /
-                 (double)std::max(size_t{1}, mipdata_->num_nodes)));
+    int iterlimit = 10 * int(mipdata_->lp.getNumLpIterations() /
+                             (double)std::max(size_t{1}, mipdata_->num_nodes));
+    iterlimit = std::max(1000, iterlimit);
+
+    mipdata_->lp.setIterationLimit(iterlimit);
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;

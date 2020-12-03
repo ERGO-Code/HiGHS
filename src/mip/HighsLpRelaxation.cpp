@@ -496,10 +496,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return tmp;
       } else if (lpsolver.getModelStatus() ==
                  HighsModelStatus::PRIMAL_INFEASIBLE) {
-        // the LP was solved from the basis without scaling and highs still says infeasible
-        // trust the LP solver in this case
+        // the LP was solved from the basis without scaling and highs still says
+        // infeasible trust the LP solver in this case
         return Status::Infeasible;
       }
+
+      printf("WARNING: LP failed to reliably determine infeasibility\n");
 
       return Status::Error;
     case HighsModelStatus::OPTIMAL:
@@ -533,6 +535,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     //    return Status::Infeasible;
     //  return Status::Error;
     default:
+      printf("WARNING: LP solved to unexpected status (%d)\n", (int)scaledmodelstatus);
       return Status::Error;
   }
 }
