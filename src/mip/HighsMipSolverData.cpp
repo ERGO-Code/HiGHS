@@ -72,7 +72,11 @@ void HighsMipSolverData::setup() {
   last_displeave = 0;
   lower_bound = -HIGHS_CONST_INF;
   upper_bound = HIGHS_CONST_INF;
-  upper_limit = HIGHS_CONST_INF;
+  upper_limit = mipsolver.options_mip_->dual_objective_value_upper_bound -
+                mipsolver.model_->offset_;
+
+  if( mipsolver.submip )
+    pseudocost.setMinReliable(1);
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -243,6 +247,9 @@ void HighsMipSolverData::evaluateRootNode() {
                     mipsolver.options_mip_->message_level, ML_MINIMAL,
                     "\nsolving root node LP relaxation\n");
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
+  lp.getLpSolver().setHighsOptionValue("message_level",
+                                       mipsolver.options_mip_->message_level);
+  lp.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
   lp.resolveLp();
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
@@ -332,6 +339,7 @@ void HighsMipSolverData::evaluateRootNode() {
     lp.setIterationLimit(int(10 * maxrootlpiters));
 
     if (ncuts == 0) break;
+    if (mipsolver.submip && nseparounds == 5) break;
   }
 
   // remove inactive cuts and resolve final root LP without iteration limit

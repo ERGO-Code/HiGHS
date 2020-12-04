@@ -41,7 +41,7 @@ void highsSparseTranspose(int numRow, int numCol,
   int AcountX = Aindex.size();
   ARindex.resize(AcountX);
   ARvalue.resize(AcountX);
-  for (int k = 0; k < AcountX; k++) iwork[Aindex[k]]++;
+  for (int k = 0; k < AcountX; k++) { assert(Aindex[k] < numRow); iwork[Aindex[k]]++; }
   for (int i = 1; i <= numRow; i++) ARstart[i] = ARstart[i - 1] + iwork[i - 1];
   for (int i = 0; i < numRow; i++) iwork[i] = ARstart[i];
   for (int iCol = 0; iCol < numCol; iCol++) {

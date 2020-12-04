@@ -20,6 +20,7 @@ class HighsMipSolver {
  public:
   const HighsOptions* options_mip_;
   const HighsLp* model_;
+  bool submip;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
 
@@ -49,7 +50,8 @@ class HighsMipSolver {
 
   HighsVarType variableType(int col) const { return model_->integrality_[col]; }
 
-  HighsMipSolver(const HighsOptions& options, const HighsLp& lp);
+  HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
+                 bool submip = false);
 
   ~HighsMipSolver();
 

@@ -88,6 +88,7 @@ int HighsDomain::propagateRowUpper(const int* Rindex, const double* Rvalue,
                                    int Rlen, double Rupper,
                                    const HighsCDouble& minactivity, int ninfmin,
                                    HighsDomainChange* boundchgs) {
+  assert(std::isfinite(double(minactivity)));
   if (ninfmin > 1) return 0;
   int numchgs = 0;
   for (int i = 0; i != Rlen; ++i) {
@@ -167,6 +168,7 @@ int HighsDomain::propagateRowLower(const int* Rindex, const double* Rvalue,
                                    int Rlen, double Rlower,
                                    const HighsCDouble& maxactivity, int ninfmax,
                                    HighsDomainChange* boundchgs) {
+  assert(std::isfinite(double(maxactivity)));
   if (ninfmax > 1) return 0;
   int numchgs = 0;
   for (int i = 0; i != Rlen; ++i) {
@@ -253,6 +255,9 @@ void HighsDomain::updateActivityLbChange(int col, double oldbound,
       if (oldbound == -HIGHS_CONST_INF) {
         --activitymininf_[mip->Aindex_[i]];
         deltamin = newbound * mip->Avalue_[i];
+      } else if (newbound == -HIGHS_CONST_INF) {
+        ++activitymininf_[mip->Aindex_[i]];
+        deltamin = -oldbound * mip->Avalue_[i];
       } else {
         deltamin = (newbound - oldbound) * mip->Avalue_[i];
       }
@@ -261,7 +266,7 @@ void HighsDomain::updateActivityLbChange(int col, double oldbound,
       if (mip->rowUpper_[mip->Aindex_[i]] != HIGHS_CONST_INF &&
           activitymininf_[mip->Aindex_[i]] == 0 &&
           activitymin_[mip->Aindex_[i]] - mip->rowUpper_[mip->Aindex_[i]] >
-              1e-6) {
+              mipsolver->mipdata_->feastol) {
         infeasible_ = mip->Aindex_[i] + 1;
       }
 
@@ -277,6 +282,9 @@ void HighsDomain::updateActivityLbChange(int col, double oldbound,
       if (oldbound == -HIGHS_CONST_INF) {
         --activitymaxinf_[mip->Aindex_[i]];
         deltamax = newbound * mip->Avalue_[i];
+      } else if (newbound == -HIGHS_CONST_INF) {
+        ++activitymaxinf_[mip->Aindex_[i]];
+        deltamax = -oldbound * mip->Avalue_[i];
       } else {
         deltamax = (newbound - oldbound) * mip->Avalue_[i];
       }
@@ -285,7 +293,7 @@ void HighsDomain::updateActivityLbChange(int col, double oldbound,
       if (mip->rowLower_[mip->Aindex_[i]] != -HIGHS_CONST_INF &&
           activitymaxinf_[mip->Aindex_[i]] == 0 &&
           mip->rowLower_[mip->Aindex_[i]] - activitymax_[mip->Aindex_[i]] >
-              1e-6) {
+              mipsolver->mipdata_->feastol) {
         infeasible_ = mip->Aindex_[i] + 1;
       }
 
@@ -319,6 +327,9 @@ void HighsDomain::updateActivityLbChange(int col, double oldbound,
         if (oldbound == -HIGHS_CONST_INF) {
           --activitycutsinf_[row];
           deltamin = newbound * val;
+        } else if (newbound == -HIGHS_CONST_INF) {
+          ++activitycutsinf_[row];
+          deltamin = -oldbound * val;
         } else {
           deltamin = (newbound - oldbound) * val;
         }
@@ -354,6 +365,9 @@ void HighsDomain::updateActivityUbChange(int col, double oldbound,
       if (oldbound == HIGHS_CONST_INF) {
         --activitymaxinf_[mip->Aindex_[i]];
         deltamax = newbound * mip->Avalue_[i];
+      } else if (newbound == HIGHS_CONST_INF) {
+        ++activitymaxinf_[mip->Aindex_[i]];
+        deltamax = -oldbound * mip->Avalue_[i];
       } else {
         deltamax = (newbound - oldbound) * mip->Avalue_[i];
       }
@@ -362,7 +376,7 @@ void HighsDomain::updateActivityUbChange(int col, double oldbound,
       if (mip->rowLower_[mip->Aindex_[i]] != -HIGHS_CONST_INF &&
           activitymaxinf_[mip->Aindex_[i]] == 0 &&
           mip->rowLower_[mip->Aindex_[i]] - activitymax_[mip->Aindex_[i]] >
-              1e-6) {
+              mipsolver->mipdata_->feastol) {
         infeasible_ = mip->Aindex_[i] + 1;
       }
 
@@ -378,6 +392,9 @@ void HighsDomain::updateActivityUbChange(int col, double oldbound,
       if (oldbound == HIGHS_CONST_INF) {
         --activitymininf_[mip->Aindex_[i]];
         deltamin = newbound * mip->Avalue_[i];
+      } else if (newbound == HIGHS_CONST_INF) {
+        ++activitymininf_[mip->Aindex_[i]];
+        deltamin = -oldbound * mip->Avalue_[i];
       } else {
         deltamin = (newbound - oldbound) * mip->Avalue_[i];
       }
@@ -387,7 +404,7 @@ void HighsDomain::updateActivityUbChange(int col, double oldbound,
       if (mip->rowUpper_[mip->Aindex_[i]] != HIGHS_CONST_INF &&
           activitymininf_[mip->Aindex_[i]] == 0 &&
           activitymin_[mip->Aindex_[i]] - mip->rowUpper_[mip->Aindex_[i]] >
-              1e-6) {
+              mipsolver->mipdata_->feastol) {
         infeasible_ = mip->Aindex_[i] + 1;
       }
 
@@ -423,7 +440,9 @@ void HighsDomain::updateActivityUbChange(int col, double oldbound,
         if (oldbound == HIGHS_CONST_INF) {
           --activitycutsinf_[row];
           deltamin = newbound * val;
-
+        } else if (newbound == HIGHS_CONST_INF) {
+          ++activitycutsinf_[row];
+          deltamin = -oldbound * val;
         } else {
           deltamin = (newbound - oldbound) * val;
         }
@@ -431,7 +450,8 @@ void HighsDomain::updateActivityUbChange(int col, double oldbound,
       }
 
       if (activitycutsinf_[row] == 0 &&
-          activitycuts_[row] - cutpool->getRhs()[row] > 1e-6) {
+          activitycuts_[row] - cutpool->getRhs()[row] >
+              mipsolver->mipdata_->feastol) {
         infeasible_ = mip->numRow_ + row + 1;
       }
 
@@ -454,7 +474,7 @@ void HighsDomain::markPropagateCut(int cut) {
       (activitycutsinf_[cut] == 1 ||
        (cutpool->getRhs()[cut] - activitycuts_[cut]) /
                cutpool->getMaxAbsCutCoef(cut) <
-           1.0 - 1e-6)) {
+           1.0 - mipsolver->mipdata_->feastol)) {
     propagatecutinds_.push_back(cut);
     propagatecutflags_[cut] = 1;
   }
@@ -469,12 +489,12 @@ void HighsDomain::markPropagate(int row) {
                      (activitymaxinf_[row] == 1 ||
                       (activitymax_[row] - mipsolver->rowLower(row)) /
                               mipsolver->mipdata_->maxAbsRowCoef[row] <
-                          1.0 - 1e-6);
+                          1.0 - mipsolver->mipdata_->feastol);
     bool propupper = mipsolver->rowUpper(row) != HIGHS_CONST_INF &&
                      (activitymininf_[row] == 1 ||
                       (mipsolver->rowUpper(row) - activitymin_[row]) /
                               mipsolver->mipdata_->maxAbsRowCoef[row] <
-                          1.0 - 1e-6);
+                          1.0 - mipsolver->mipdata_->feastol);
 
     if (proplower || propupper) {
       propagateinds_.push_back(row);
@@ -571,7 +591,8 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, int reason) {
   if (boundchg.boundtype == HighsBoundType::Lower) {
     if (boundchg.boundval <= colLower_[boundchg.column]) return;
     if (boundchg.boundval > colUpper_[boundchg.column]) {
-      if (boundchg.boundval - colUpper_[boundchg.column] > 1e-6) {
+      if (boundchg.boundval - colUpper_[boundchg.column] >
+          mipsolver->mipdata_->feastol) {
         infeasible_ = reason >= 0 ? reason + 1 : reason;
         return;
       }
@@ -582,7 +603,8 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, int reason) {
   } else {
     if (boundchg.boundval >= colUpper_[boundchg.column]) return;
     if (boundchg.boundval < colLower_[boundchg.column]) {
-      if (colLower_[boundchg.column] - boundchg.boundval > 1e-6) {
+      if (colLower_[boundchg.column] - boundchg.boundval >
+          mipsolver->mipdata_->feastol) {
         infeasible_ = reason >= 0 ? reason + 1 : reason;
         return;
       }
@@ -839,7 +861,7 @@ void HighsDomain::tightenCoefficients(int* inds, double* vals, int len,
     }
   }
 
-  if (maxactivity - rhs > 1e-6) {
+  if (maxactivity - rhs > mipsolver->mipdata_->feastol) {
     HighsCDouble upper = rhs;
     HighsCDouble maxabscoef = double(maxactivity - rhs);
     int tightened = 0;

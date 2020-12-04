@@ -167,6 +167,10 @@ class HighsLpRelaxation {
     return fractionalints;
   }
 
+  std::vector<std::pair<int, double>>& getFractionalIntegers() {
+    return fractionalints;
+  }
+
   double getObjective() const { return objective; }
 
   void setIterationLimit(int limit = HIGHS_CONST_I_INF) {

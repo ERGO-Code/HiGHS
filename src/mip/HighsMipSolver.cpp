@@ -26,8 +26,9 @@
 std::vector<double> highsDebugSolution;
 #endif
 
-HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
-    : options_mip_(&options), model_(&lp) {}
+HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
+                               bool submip)
+    : options_mip_(&options), model_(&lp), submip(submip) {}
 
 HighsMipSolver::~HighsMipSolver() = default;
 
@@ -150,7 +151,6 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 
 void HighsMipSolver::run() {
   // std::cout << options_mip_->presolve << std::endl;
-
   if (options_mip_->presolve != "off") {
     HighsPresolveStatus presolve_status = runPresolve();
     switch (presolve_status) {
@@ -175,7 +175,11 @@ void HighsMipSolver::run() {
         return;
       case HighsPresolveStatus::ReducedToEmpty:
         reportPresolveReductions(*options_mip_, *model_, true);
-        break;
+        mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+        mipdata_->timer.start(mipdata_->timer.solve_clock);
+        runPostsolve();
+        mipdata_->timer.stop(mipdata_->timer.solve_clock);
+        return;
       case HighsPresolveStatus::NotReduced:
         reportPresolveReductions(*options_mip_, *model_, false);
         break;
@@ -186,9 +190,10 @@ void HighsMipSolver::run() {
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->timer.start(mipdata_->timer.solve_clock);
-  mipdata_->setup();
-  mipdata_->evaluateRootNode();
-
+  if (model_->numCol_ != 0) {
+    mipdata_->setup();
+    mipdata_->evaluateRootNode();
+  }
   if (mipdata_->nodequeue.empty()) {
     HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                       ML_MINIMAL, "\nmodel was solved in the root node\n");
@@ -288,8 +293,10 @@ void HighsMipSolver::run() {
 #ifdef HIGHS_DEBUGSOL
     assert(!mipdata_->domain.infeasible());
     for (int i = 0; i != numCol(); ++i) {
-      assert(highsDebugSolution[i] + mipdata_->epsilon >= mipdata_->domain.colLower_[i]);
-      assert(highsDebugSolution[i] - mipdata_->epsilon <= mipdata_->domain.colUpper_[i]);
+      assert(highsDebugSolution[i] + mipdata_->epsilon >=
+             mipdata_->domain.colLower_[i]);
+      assert(highsDebugSolution[i] - mipdata_->epsilon <=
+             mipdata_->domain.colUpper_[i]);
     }
 #endif
 
