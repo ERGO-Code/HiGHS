@@ -951,7 +951,7 @@ bool HighsSearch::branch() {
     pseudocost.setSeed(random.integer());
 
     for (int i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
+      if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
 
       if (localdom.colUpper_[i] - localdom.colLower_[i] < 0.5) continue;
 
