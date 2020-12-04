@@ -21,7 +21,6 @@ class HighsMipSolver {
   const HighsOptions* options_mip_;
   const HighsLp* model_;
 
-  std::vector<double> debugSolution_;
   std::unique_ptr<HighsMipSolverData> mipdata_;
 
   void run();

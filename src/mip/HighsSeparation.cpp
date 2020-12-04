@@ -920,12 +920,13 @@ class ImpliedBounds {
       if (implications.globaldomain.colLower_[col] != 0.0 ||
           implications.globaldomain.colUpper_[col] != 1.0)
         continue;
-
       bool infeas;
       const HighsDomainChange* implics = nullptr;
       int nimplics = implications.getImplications(col, 1, implics, infeas);
-
       if (infeas) {
+#ifdef HIGHS_DEBUGSOL
+        assert(highsDebugSolution[col] < 0.5);
+#endif
         vals[0] = 1.0;
         inds[0] = col;
         int cut = cutpool.addCut(inds, vals, 1, 0.0);
@@ -966,9 +967,9 @@ class ImpliedBounds {
 #ifdef HIGHS_DEBUGSOL
           HighsCDouble debugactivity = 0;
           for (size_t i = 0; i != 2; ++i)
-            debugactivity += lp.getMip().debugSolution_[inds[i]] * vals[i];
+            debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
-          assert(debugactivity <= rhs + 1e-6);
+          assert(debugactivity <= rhs + 1e-9);
 #endif
           int cut = cutpool.addCut(inds, vals, 2, rhs);
           propdomain.cutAdded(cut);
@@ -976,8 +977,10 @@ class ImpliedBounds {
       }
 
       nimplics = implications.getImplications(col, 0, implics, infeas);
-
       if (infeas) {
+#ifdef HIGHS_DEBUGSOL
+        assert(highsDebugSolution[col] > 0.5);
+#endif
         vals[0] = -1.0;
         inds[0] = col;
         int cut = cutpool.addCut(inds, vals, 1, -1.0);
@@ -1017,7 +1020,7 @@ class ImpliedBounds {
 #ifdef HIGHS_DEBUGSOL
           HighsCDouble debugactivity = 0;
           for (size_t i = 0; i != 2; ++i)
-            debugactivity += lp.getMip().debugSolution_[inds[i]] * vals[i];
+            debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
           assert(debugactivity <= rhs + 1e-6);
 #endif
@@ -1718,7 +1721,7 @@ class AggregationHeuristic {
 #ifdef HIGHS_DEBUGSOL
       HighsCDouble debugactivity = 0;
       for (size_t i = 0; i != inds.size(); ++i)
-        debugactivity += mip.debugSolution_[inds[i]] * vals[i];
+        debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
       assert(debugactivity <= upper + 1e-6);
 #endif
@@ -1869,7 +1872,7 @@ class AggregationHeuristic {
 #ifdef HIGHS_DEBUGSOL
         HighsCDouble debugactivity = 0;
         for (size_t i = 0; i != baseinds.size(); ++i)
-          debugactivity += mip.debugSolution_[baseinds[i]] * basevals[i];
+          debugactivity += highsDebugSolution[baseinds[i]] * basevals[i];
 
         assert(debugactivity <= baserhs + 1e-6);
 #endif
@@ -1991,7 +1994,7 @@ static void tableauaggregator(HighsLpRelaxation& lp,
   for (int i = 0; i != int(basisinds.size()); ++i) {
     if (basisinds[i] < 0) {
       continue;
-      //todo, cuts off solutions
+      // todo, cuts off solutions
       int row = -basisinds[i] - 1;
 
       bool rowintegral;
@@ -2182,10 +2185,10 @@ void HighsSeparation::BaseRows::retransformAndAddCut(
 
   HighsCDouble debugactivity = 0;
   for (int i = 0; i != len; ++i) {
-    debugactivity += mip.debugSolution_[inds[i]] * HighsCDouble(vals[i]);
+    debugactivity += highsDebugSolution[inds[i]] * HighsCDouble(vals[i]);
   }
 
-  if (debugactivity - 1e-6 > rhs) {
+  if (debugactivity - lp.getMipSolver().mipdata_->epsilon > rhs) {
     printf("debug solution violated by %g for this cut:\n",
            double(debugactivity - rhs));
     printCut(inds.data(), vals.data(), len, double(rhs));
@@ -2278,9 +2281,9 @@ void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
 #ifdef HIGHS_DEBUGSOL
   HighsCDouble debugactivity = 0;
   for (size_t i = 0; i != inds.size(); ++i)
-    debugactivity += mip.debugSolution_[inds[i]] * vals[i];
+    debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
-  assert(debugactivity <= rhs + 1e-6);
+  assert(debugactivity <= rhs + mipsolver.mipdata_->epsilon);
 #endif
 
   int nbin = 0;
@@ -2363,9 +2366,9 @@ void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
 #ifdef HIGHS_DEBUGSOL
     HighsCDouble debugactivity = 0;
     for (int i = 0; i != offset; ++i)
-      debugactivity += mip.debugSolution_[inds[i]] * vals[i];
+      debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
-    assert(debugactivity <= rhs + 1e-6);
+    assert(debugactivity <= rhs + mipsolver.mipdata_->epsilon);
 #endif
 
     int cutind = mipsolver.mipdata_->cutpool.addCut(

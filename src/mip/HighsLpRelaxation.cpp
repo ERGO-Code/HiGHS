@@ -165,7 +165,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 #ifdef HIGHS_DEBUGSOL
   HighsCDouble debugactivity = 0;
   for (size_t i = 0; i != inds.size(); ++i)
-    debugactivity += mip.debugSolution_[inds[i]] * vals[i];
+    debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
   assert(debugactivity <= rhs + mipsolver.mipdata_->feastol);
 #endif
@@ -283,9 +283,9 @@ void HighsLpRelaxation::storeDualInfProof() {
 #ifdef HIGHS_DEBUGSOL
   HighsCDouble debugactivity = 0;
   for (size_t i = 0; i != dualproofinds.size(); ++i)
-    debugactivity += mip.debugSolution_[inds[i]] * dualproofvals[i];
+    debugactivity += highsDebugSolution[dualproofinds[i]] * dualproofvals[i];
 
-  assert(debugactivity <= rhs + mipsolver.mipdata_->feastol);
+  assert(debugactivity <= dualproofrhs + mipsolver.mipdata_->feastol);
 #endif
 }
 
@@ -396,9 +396,9 @@ void HighsLpRelaxation::storeDualUBProof() {
 #ifdef HIGHS_DEBUGSOL
   HighsCDouble debugactivity = 0;
   for (size_t i = 0; i != dualproofinds.size(); ++i)
-    debugactivity += mip.debugSolution_[inds[i]] * dualproofvals[i];
+    debugactivity += highsDebugSolution[dualproofinds[i]] * dualproofvals[i];
 
-  assert(debugactivity <= rhs + mipsolver.mipdata_->feastol);
+  assert(debugactivity <= dualproofrhs + mipsolver.mipdata_->feastol);
 #endif
 }
 
@@ -455,6 +455,21 @@ void HighsLpRelaxation::recoverBasis() {
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsStatus callstatus;
+#ifdef HIGHS_DEBUGSOL
+  bool debugsolactive = true;
+  HighsCDouble debugsolobj = 0;
+  for (int i = 0; i != mipsolver.numCol(); ++i) {
+    if (highsDebugSolution[i] + mipsolver.mipdata_->epsilon <
+            lpsolver.getLp().colLower_[i] ||
+        highsDebugSolution[i] - mipsolver.mipdata_->epsilon >
+            lpsolver.getLp().colUpper_[i]) {
+      debugsolactive = false;
+    }
+
+    debugsolobj += highsDebugSolution[i] * lpsolver.getLp().colCost_[i];
+  }
+#endif
+
   try {
     callstatus = lpsolver.run();
   } catch (const std::runtime_error&) {
@@ -484,7 +499,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::Error;
     case HighsModelStatus::PRIMAL_INFEASIBLE:
       storeDualInfProof();
-      if (checkDualProof()) return Status::Infeasible;
+      if (checkDualProof()) {
+#ifdef HIGHS_DEBUGSOL
+        assert(!debugsolactive);
+#endif
+        return Status::Infeasible;
+      }
       hasdualproof = false;
 
       if (resolve_on_error) {
@@ -510,8 +530,14 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::Error;
     case HighsModelStatus::OPTIMAL:
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
-          info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
+          info.max_dual_infeasibility <= mipsolver.mipdata_->feastol) {
+#ifdef HIGHS_DEBUGSOL
+        assert(!debugsolactive ||
+               lpsolver.getObjectiveValue() <=
+                   debugsolobj + mipsolver.mipdata_->epsilon);
+#endif
         return Status::Optimal;
+      }
 
       if (resolve_on_error) {
         int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
@@ -529,6 +555,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       }
 
       if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol) {
+#ifdef HIGHS_DEBUGSOL
+        assert(!debugsolactive ||
+               lpsolver.getObjectiveValue() <=
+                   debugsolobj + mipsolver.mipdata_->epsilon);
+#endif
         return Status::UnscaledDualFeasible;
       }
 

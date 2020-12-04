@@ -22,6 +22,10 @@
 #include "presolve/PresolveComponent.h"
 #include "util/HighsCDouble.h"
 
+#ifdef HIGHS_DEBUGSOL
+std::vector<double> highsDebugSolution;
+#endif
+
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
     : options_mip_(&options), model_(&lp) {}
 
@@ -282,11 +286,10 @@ void HighsMipSolver::run() {
     mipdata_->domain.propagate();
 
 #ifdef HIGHS_DEBUGSOL
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
-      assert(lp.getMip().debugSolution_[i] + 1e-6 >=
-             separate mipsolver.mipdata_->domain.colLower_[i]);
-      assert(lp.getMip().debugSolution_[i] - 1e-6 <=
-             mipsolver.mipdata_->domain.colUpper_[i]);
+    assert(!mipdata_->domain.infeasible());
+    for (int i = 0; i != numCol(); ++i) {
+      assert(highsDebugSolution[i] + mipdata_->epsilon >= mipdata_->domain.colLower_[i]);
+      assert(highsDebugSolution[i] - mipdata_->epsilon <= mipdata_->domain.colUpper_[i]);
     }
 #endif
 

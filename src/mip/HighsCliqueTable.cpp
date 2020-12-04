@@ -439,9 +439,9 @@ void HighsCliqueTable::separateCliques(const std::vector<double>& sol,
 #ifdef HIGHS_DEBUGSOL
     HighsCDouble debugactivity = 0;
     for (size_t i = 0; i != inds.size(); ++i)
-      debugactivity += globaldom.mip->debugSolution_[inds[i]] * vals[i];
+      debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
-    assert(debugactivity <= rhs + 1e-6);
+    assert(debugactivity <= rhs + 1e-9);
 #endif
     int cut = cutpool.addCut(inds.data(), vals.data(), inds.size(), rhs);
     localdom.cutAdded(cut);

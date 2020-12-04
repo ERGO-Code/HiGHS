@@ -19,6 +19,41 @@ static int64_t gcd(int64_t a, int64_t b) {
 void HighsMipSolverData::setup() {
   const HighsLp& model = *mipsolver.model_;
 
+#ifdef HIGHS_DEBUGSOL
+  if (!mipsolver.options_mip_->mip_debug_solution_file.empty()) {
+    HighsPrintMessage(mipsolver.options_mip_->output,
+                      mipsolver.options_mip_->message_level, ML_MINIMAL,
+                      "reading debug solution file %s\n",
+                      mipsolver.options_mip_->mip_debug_solution_file.c_str());
+    std::ifstream file(mipsolver.options_mip_->mip_debug_solution_file);
+    if (file) {
+      std::string varname;
+      double varval;
+      std::map<std::string, int> nametoidx;
+
+      for (int i = 0; i != mipsolver.model_->numCol_; ++i)
+        nametoidx[mipsolver.model_->col_names_[i]] = i;
+
+      highsDebugSolution.resize(mipsolver.model_->numCol_, 0.0);
+      while (!file.eof()) {
+        file >> varname;
+        auto it = nametoidx.find(varname);
+        if (it != nametoidx.end()) {
+          file >> varval;
+          HighsPrintMessage(mipsolver.options_mip_->output,
+                            mipsolver.options_mip_->message_level, ML_MINIMAL,
+                            "%s = %g\n", varname.c_str(), varval);
+          highsDebugSolution[it->second] = varval;
+        }
+
+        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+      }
+    } else {
+      throw std::runtime_error("debug solution: could not open file\n");
+    }
+  }
+#endif
+
   feastol = mipsolver.options_mip_->mip_feasibility_tolerance;
   epsilon = mipsolver.options_mip_->mip_epsilon;
   heuristic_effort = mipsolver.options_mip_->mip_heuristic_effort;
@@ -141,7 +176,7 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     incumbent = sol;
     double new_upper_limit;
     if (objintscale != 0.0) {
-      new_upper_limit = floor(objintscale * solobj - 0.5) / objintscale;
+      new_upper_limit = (floor(objintscale * solobj - 0.5) / objintscale) + feastol;
     } else {
       new_upper_limit = solobj - feastol;
     }

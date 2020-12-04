@@ -291,7 +291,9 @@ struct HighsOptionsStruct {
   double mip_feasibility_tolerance;
   double mip_epsilon;
   double mip_heuristic_effort;
-
+#ifdef HIGHS_DEBUGSOL
+  std::string mip_debug_solution_file;
+#endif
   // Options for HighsPrintMessage and HighsLogMessage
   FILE* logfile = stdout;
   FILE* output = stdout;
@@ -531,6 +533,12 @@ class HighsOptions : public HighsOptionsStruct {
         "mip_max_nodes", "MIP solver max number of nodes", advanced,
         &mip_max_nodes, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
+#ifdef HIGHS_DEBUGSOL
+    record_string =
+        new OptionRecordString("mip_debug_solution_file", "Solution file for debug solution of the MIP solver", advanced,
+                               &mip_debug_solution_file, FILENAME_DEFAULT);
+    records.push_back(record_string);
+#endif
 
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leave nodes", advanced,

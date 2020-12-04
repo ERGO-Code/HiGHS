@@ -656,6 +656,19 @@ HighsDomainChange HighsDomain::backtrack() {
 void HighsDomain::propagate() {
   std::vector<int> propagateinds;
 
+#ifdef HIGHS_DEBUGSOL
+  bool debugsolactive = true;
+  HighsCDouble debugsolobj = 0;
+  for (int i = 0; i != mipsolver->numCol(); ++i) {
+    if (highsDebugSolution[i] + mipsolver->mipdata_->epsilon < colLower_[i] ||
+        highsDebugSolution[i] - mipsolver->mipdata_->epsilon > colUpper_[i]) {
+      debugsolactive = false;
+    }
+
+    debugsolobj += highsDebugSolution[i] * mipsolver->colCost(i);
+  }
+#endif
+
   if (propagateinds_.empty() && propagatecutinds_.empty()) return;
 
   size_t changedboundsize = std::max(2 * mipsolver->mipdata_->ARvalue_.size(),
@@ -795,6 +808,19 @@ void HighsDomain::propagate() {
       propagateinds.clear();
     }
   }
+
+#ifdef HIGHS_DEBUGSOL
+  if (debugsolactive && mipsolver->mipdata_->upper_bound >
+                            debugsolobj + mipsolver->mipdata_->epsilon) {
+    assert(!infeasible_);
+    for (int i = 0; i != mipsolver->numCol(); ++i) {
+      if (highsDebugSolution[i] + mipsolver->mipdata_->epsilon < colLower_[i] ||
+          highsDebugSolution[i] - mipsolver->mipdata_->epsilon > colUpper_[i]) {
+        assert(false);
+      }
+    }
+  }
+#endif
 }
 
 void HighsDomain::tightenCoefficients(int* inds, double* vals, int len,

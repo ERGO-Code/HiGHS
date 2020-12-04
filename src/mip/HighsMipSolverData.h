@@ -15,6 +15,10 @@
 #include "mip/HighsSeparation.h"
 #include "util/HighsTimer.h"
 
+#ifdef HIGHS_DEBUGSOL
+  extern std::vector<double> highsDebugSolution;
+#endif
+
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
   HighsCutPool cutpool;

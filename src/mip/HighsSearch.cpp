@@ -207,8 +207,12 @@ void HighsSearch::heuristicSearch() {
                             std::abs(0.01 * (mipsolver.mipdata_->upper_bound -
                                              nodestack.back().lower_bound))
                       : HIGHS_CONST_INF;
-
-  heur.upper_limit = objlim;
+  if (mipsolver.mipdata_->objintscale != 0.0 && objlim != HIGHS_CONST_INF) {
+    objlim = std::floor(mipsolver.mipdata_->objintscale * objlim) /
+                 mipsolver.mipdata_->objintscale +
+             mipsolver.mipdata_->feastol;
+  }
+  heur.upper_limit = std::min(objlim, getCutoffBound());
 
   HighsLpRelaxation heurlp(*lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
@@ -431,7 +435,7 @@ int HighsSearch::selectBranchingCandidate() {
         }
 
         if (lp->unscaledDualFeasible(status)) {
-          if (solobj >= getCutoffBound()) {
+          if (solobj > getCutoffBound()) {
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
@@ -654,26 +658,26 @@ void HighsSearch::evaluateNode() {
   bool debugsolactive = true;
   HighsCDouble debugsolobj = 0;
   for (int i = 0; i != mipsolver.numCol(); ++i) {
-    if (lp->getMip().debugSolution_[i] + mipsolver.mipdata_->feastol <
+    if (highsDebugSolution[i] + mipsolver.mipdata_->epsilon <
             localdom.colLower_[i] ||
-        lp->getMip().debugSolution_[i] - mipsolver.mipdata_->feastol >
+        highsDebugSolution[i] - mipsolver.mipdata_->epsilon >
             localdom.colUpper_[i]) {
       debugsolactive = false;
     }
 
-    debugsolobj += lp->getMip().debugSolution_[i] * lp->getMip().colCost_[i];
+    debugsolobj += highsDebugSolution[i] * mipsolver.colCost(i);
   }
 #endif
   localdom.propagate();
 #ifdef HIGHS_DEBUGSOL
-  if (debugsolactive &&
-      upper_bound > debugsolobj + mipsolver.mipdata_->feastol) {
+  if (debugsolactive && mipsolver.mipdata_->upper_bound >
+                            debugsolobj + mipsolver.mipdata_->epsilon) {
     bool debugsolstillactive = true;
 
     for (int i = 0; i != mipsolver.numCol(); ++i) {
-      if (lp->getMip().debugSolution_[i] + mipsolver.mipdata_->feastol <
+      if (highsDebugSolution[i] + mipsolver.mipdata_->epsilon <
               localdom.colLower_[i] ||
-          lp->getMip().debugSolution_[i] - mipsolver.mipdata_->feastol >
+          highsDebugSolution[i] - mipsolver.mipdata_->epsilon >
               localdom.colUpper_[i]) {
         debugsolstillactive = false;
         break;
@@ -690,8 +694,8 @@ void HighsSearch::evaluateNode() {
 
   if (localdom.infeasible()) {
 #ifdef HIGHS_DEBUGSOL
-    assert(!debugsolactive ||
-           upper_bound <= debugsolobj + mipsolver.mipdata_->feastol);
+    assert(!debugsolactive || mipsolver.mipdata_->upper_bound <=
+                                  debugsolobj + mipsolver.mipdata_->feastol);
 #endif
     localdom.clearChangedCols();
     prune = true;
@@ -726,7 +730,7 @@ void HighsSearch::evaluateNode() {
           if (getHeuristicLpIterations() <
                   getTotalLpIterations() *
                       mipsolver.mipdata_->heuristic_effort &&
-              currnode.estimate < getCutoffBound()) {
+              currnode.estimate <= getCutoffBound()) {
             heuristicSearch();
           }
         }
@@ -735,6 +739,12 @@ void HighsSearch::evaluateNode() {
       if (lp->unscaledDualFeasible(status)) {
         currnode.lower_bound =
             std::max(lp->getObjective(), currnode.lower_bound);
+
+#ifdef HIGHS_DEBUGSOL
+        assert(!debugsolactive ||
+               currnode.lower_bound <=
+                   debugsolobj + mipsolver.mipdata_->epsilon);
+#endif
 
         const NodeData* parent = getParentNodeData();
 
@@ -749,10 +759,10 @@ void HighsSearch::evaluateNode() {
           pseudocost.addObservation(col, delta, objdelta);
         }
 
-        if (currnode.lower_bound >= getCutoffBound()) {
+        if (currnode.lower_bound > getCutoffBound()) {
 #ifdef HIGHS_DEBUGSOL
-          if (debugsolactive &&
-              upper_bound > debugsolobj + mipsolver.mipdata_->feastol) {
+          if (debugsolactive && mipsolver.mipdata_->upper_bound >
+                                    debugsolobj + mipsolver.mipdata_->feastol) {
             lp->getLpSolver().writeModel("wronglp->mps");
             lp->getLpSolver().writeBasis("wronglp->bas");
             assert(false);
@@ -766,8 +776,8 @@ void HighsSearch::evaluateNode() {
     } else if (status == HighsLpRelaxation::Status::Infeasible) {
       addInfeasibleConflict();
 #ifdef HIGHS_DEBUGSOL
-      if (debugsolactive &&
-          upper_bound > debugsolobj + mipsolver.mipdata_->feastol) {
+      if (debugsolactive && mipsolver.mipdata_->upper_bound >
+                                debugsolobj + mipsolver.mipdata_->feastol) {
         lp->getLpSolver().writeModel("wronglp->mps");
         lp->getLpSolver().writeBasis("wronglp->bas");
         assert(false);
@@ -808,6 +818,23 @@ void HighsSearch::evaluateNode() {
 #endif
 
   if (prune) {
+#ifdef HIGHS_DEBUGSOL
+    if (debugsolactive && mipsolver.mipdata_->upper_bound >
+                              debugsolobj + mipsolver.mipdata_->feastol) {
+      bool debugsolstillactive = true;
+
+      for (int i = 0; i != mipsolver.numCol(); ++i) {
+        if (highsDebugSolution[i] + mipsolver.mipdata_->feastol <
+                localdom.colLower_[i] ||
+            highsDebugSolution[i] - mipsolver.mipdata_->feastol >
+                localdom.colUpper_[i]) {
+          debugsolstillactive = false;
+          break;
+        }
+      }
+      assert(debugsolstillactive);
+    }
+#endif
     treeweight += std::pow(0.5, getCurrentDepth() - 1);
     currnode.opensubtrees = 0;
   }
