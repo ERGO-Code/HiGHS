@@ -2399,10 +2399,13 @@ void Presolve::setPrimalValue(int j, double value) {
 
       // update singleton row list
       if (nzRow.at(row) == 1) singRow.push_back(row);
-      if (nzRow.at(row) == 0) {
-        flagRow[row] = 0;
-        addChange(PresolveRule::EMPTY_ROW, row, j);
-      }
+
+      // TODO: the following causes presolve to miss some infeasible problems;
+      //       see https://github.com/ERGO-Code/HiGHS/issues/425
+      // if (nzRow.at(row) == 0) {
+      //   flagRow[row] = 0;
+      //   addChange(PresolveRule::EMPTY_ROW, row, j);
+      // }
     }
   }
 
