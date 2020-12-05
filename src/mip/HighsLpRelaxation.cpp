@@ -479,7 +479,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   const HighsInfo& info = lpsolver.getHighsInfo();
   assert(info.max_primal_infeasibility >= 0);
   assert(info.max_dual_infeasibility >= 0);
-  numlpiters += info.simplex_iteration_count;
+  numlpiters += std::max(0, info.simplex_iteration_count);
 
   if (callstatus == HighsStatus::Error) {
     lpsolver.clearSolver();

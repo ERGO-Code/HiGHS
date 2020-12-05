@@ -75,8 +75,7 @@ void HighsMipSolverData::setup() {
   upper_limit = mipsolver.options_mip_->dual_objective_value_upper_bound -
                 mipsolver.model_->offset_;
 
-  if( mipsolver.submip )
-    pseudocost.setMinReliable(1);
+  if (mipsolver.submip) pseudocost.setMinReliable(0);
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -180,7 +179,8 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     incumbent = sol;
     double new_upper_limit;
     if (objintscale != 0.0) {
-      new_upper_limit = (floor(objintscale * solobj - 0.5) / objintscale) + feastol;
+      new_upper_limit =
+          (std::floor(objintscale * solobj - 0.5) / objintscale) + feastol;
     } else {
       new_upper_limit = solobj - feastol;
     }
@@ -223,9 +223,9 @@ void HighsMipSolverData::printDisplayLine(char first) {
         ML_MINIMAL,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %7.2f%% | %7.2f%%\n",
-        first, timer.read(timer.solve_clock), nodequeue.numNodes(), num_nodes,
-        num_leaves, total_lp_iterations, lb, ub,
-        mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
+        first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+        nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
+        ub, mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
         100 * double(pruned_treeweight));
   } else {
     HighsPrintMessage(
@@ -233,9 +233,9 @@ void HighsMipSolverData::printDisplayLine(char first) {
         ML_MINIMAL,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %8.2f | %7.2f%%\n",
-        first, timer.read(timer.solve_clock), nodequeue.numNodes(), num_nodes,
-        num_leaves, total_lp_iterations, lb, ub,
-        mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
+        first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
+        nodequeue.numNodes(), num_nodes, num_leaves, total_lp_iterations, lb,
+        ub, mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
         100 * double(pruned_treeweight));
   }
 }
@@ -337,6 +337,9 @@ void HighsMipSolverData::evaluateRootNode() {
 
     printDisplayLine();
     lp.setIterationLimit(int(10 * maxrootlpiters));
+
+    if (mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit)
+      return;
 
     if (ncuts == 0) break;
     if (mipsolver.submip && nseparounds == 5) break;

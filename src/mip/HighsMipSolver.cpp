@@ -40,62 +40,68 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
   const HighsLp& lp_ = *(model_);
 
   // Exit if the problem is empty or if presolve is set to off.
-  // if (options_.presolve == off_string) return
-  // HighsPresolveStatus::NotPresolved; if (lp_.numCol_ == 0 && lp_.numRow_ ==
-  // 0)
-  //   return HighsPresolveStatus::NullError;
+  if (options_mip_->presolve == off_string)
+    return HighsPresolveStatus::NotPresolved;
+  if (lp_.numCol_ == 0 && lp_.numRow_ == 0)
+    return HighsPresolveStatus::NullError;
 
   // Clear info from previous runs if lp_ has been modified.
-  // if (presolve_.has_run_) presolve_.clear();
-  // double start_presolve = timer_.readRunHighsClock();
+  if (presolve_.has_run_) presolve_.clear();
+  double start_presolve = timer_.readRunHighsClock();
 
   // Set time limit.
-  // if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
-  //   double left = options_.time_limit - start_presolve;
-  //   if (left <= 0) {
-  //     HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-  //                       "Time limit reached while reading in matrix\n");
-  //     return HighsPresolveStatus::Timeout;
-  //   }
+  if (options_mip_->time_limit > 0 &&
+      options_mip_->time_limit < HIGHS_CONST_INF) {
+    double left = options_mip_->time_limit - start_presolve;
+    if (left <= 0) {
+      HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                        ML_VERBOSE,
+                        "Time limit reached while reading in matrix\n");
+      return HighsPresolveStatus::Timeout;
+    }
 
-  //   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-  //                     "Time limit set: reading matrix took %.2g, presolve "
-  //                     "time left: %.2g\n",
-  //                     start_presolve, left);
-  //   presolve_.options_.time_limit = left;
-  // }
+    HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                      ML_VERBOSE,
+                      "Time limit set: reading matrix took %.2g, presolve "
+                      "time left: %.2g\n",
+                      start_presolve, left);
+    presolve_.options_.time_limit = left;
+  }
 
   // Presolve.
   presolve_.init(lp_, timer_, true);
-  // if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
-  //   double current = timer_.readRunHighsClock();
-  //   double time_init = current - start_presolve;
-  //   double left = presolve_.options_.time_limit - time_init;
-  //   if (left <= 0) {
-  //     HighsPrintMessage(
-  //         options_.output, options_.message_level, ML_VERBOSE,
-  //         "Time limit reached while copying matrix into presolve.\n");
-  //     return HighsPresolveStatus::Timeout;
-  //   }
 
-  //   HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
-  //                     "Time limit set: copying matrix took %.2g, presolve "
-  //                     "time left: %.2g\n",
-  //                     time_init, left);
-  //   presolve_.options_.time_limit = options_.time_limit;
-  // }
+  if (options_mip_->time_limit > 0 &&
+      options_mip_->time_limit < HIGHS_CONST_INF) {
+    double current = timer_.readRunHighsClock();
+    double time_init = current - start_presolve;
+    double left = presolve_.options_.time_limit - time_init;
+    if (left <= 0) {
+      HighsPrintMessage(
+          options_mip_->output, options_mip_->message_level, ML_VERBOSE,
+          "Time limit reached while copying matrix into presolve.\n");
+      return HighsPresolveStatus::Timeout;
+    }
 
-  // presolve_.data_.presolve_[0].message_level = options_.message_level;
-  // presolve_.data_.presolve_[0].output = options_.output;
+    HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                      ML_VERBOSE,
+                      "Time limit set: copying matrix took %.2g, presolve "
+                      "time left: %.2g\n",
+                      time_init, left);
+    presolve_.options_.time_limit = options_mip_->time_limit;
+  }
+
+  presolve_.data_.presolve_[0].message_level = options_mip_->message_level;
+  presolve_.data_.presolve_[0].output = options_mip_->output;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
   // Handle max case.
-  // if (presolve_return_status == HighsPresolveStatus::Reduced &&
-  //     lp_.sense_ == ObjSense::MAXIMIZE) {
-  //   presolve_.negateReducedLpCost();
-  //   presolve_.data_.reduced_lp_.sense_ = ObjSense::MAXIMIZE;
-  // }
+  if (presolve_return_status == HighsPresolveStatus::Reduced &&
+      lp_.sense_ == ObjSense::MAXIMIZE) {
+    presolve_.negateReducedLpCost();
+    presolve_.data_.reduced_lp_.sense_ = ObjSense::MAXIMIZE;
+  }
 
   // Update reduction counts.
   switch (presolve_.presolve_status_) {
@@ -151,6 +157,7 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 
 void HighsMipSolver::run() {
   // std::cout << options_mip_->presolve << std::endl;
+  timer_.start(timer_.solve_clock);
   if (options_mip_->presolve != "off") {
     HighsPresolveStatus presolve_status = runPresolve();
     switch (presolve_status) {
@@ -163,22 +170,24 @@ void HighsMipSolver::run() {
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL,
                           "Presolve: Model detected to be unbounded\n");
+        timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Infeasible:
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL,
                           "Presolve: Model detected to be infeasible\n");
+        timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Timeout:
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL, "Time limit reached during presolve\n");
+        timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::ReducedToEmpty:
         reportPresolveReductions(*options_mip_, *model_, true);
         mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-        mipdata_->timer.start(mipdata_->timer.solve_clock);
         runPostsolve();
-        mipdata_->timer.stop(mipdata_->timer.solve_clock);
+        timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::NotReduced:
         reportPresolveReductions(*options_mip_, *model_, false);
@@ -189,7 +198,6 @@ void HighsMipSolver::run() {
   }
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-  mipdata_->timer.start(mipdata_->timer.solve_clock);
   if (model_->numCol_ != 0) {
     mipdata_->setup();
     mipdata_->evaluateRootNode();
@@ -198,7 +206,7 @@ void HighsMipSolver::run() {
     HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                       ML_MINIMAL, "\nmodel was solved in the root node\n");
     if (options_mip_->presolve != "off") runPostsolve();
-    mipdata_->timer.stop(mipdata_->timer.solve_clock);
+    timer_.stop(timer_.solve_clock);
     return;
   }
 
@@ -249,8 +257,7 @@ void HighsMipSolver::run() {
         limit_reached = true;
         break;
       }
-      if (mipdata_->timer.read(mipdata_->timer.solve_clock) >=
-          options_mip_->time_limit) {
+      if (timer_.read(timer_.solve_clock) >= options_mip_->time_limit) {
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL, "reached time limit\n");
         limit_reached = true;
@@ -349,6 +356,26 @@ void HighsMipSolver::run() {
         ++mipdata_->num_leaves;
         ++mipdata_->num_nodes;
         search.flushStatistics();
+        if (options_mip_->mip_max_nodes != HIGHS_CONST_I_INF &&
+            mipdata_->num_nodes >= size_t(options_mip_->mip_max_nodes)) {
+          HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                            ML_MINIMAL, "reached node limit\n");
+          limit_reached = true;
+          break;
+        }
+        if (options_mip_->mip_max_leaves != HIGHS_CONST_I_INF &&
+            mipdata_->num_leaves >= size_t(options_mip_->mip_max_leaves)) {
+          HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                            ML_MINIMAL, "reached leave node limit\n");
+          limit_reached = true;
+          break;
+        }
+        if (timer_.read(timer_.solve_clock) >= options_mip_->time_limit) {
+          HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                            ML_MINIMAL, "reached time limit\n");
+          limit_reached = true;
+          break;
+        }
         mipdata_->lower_bound = std::min(
             mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound());
 
@@ -373,9 +400,10 @@ void HighsMipSolver::run() {
 
       break;
     }
+
+    if (limit_reached) break;
   }
 
-  mipdata_->timer.stop(mipdata_->timer.solve_clock);
   mipdata_->printDisplayLine();
 
   if (options_mip_->presolve != "off")
@@ -384,4 +412,6 @@ void HighsMipSolver::run() {
     presolve_.data_.recovered_solution_.col_value = mipdata_->incumbent;
     calculateRowValues(*model_, presolve_.data_.recovered_solution_);
   }
+
+  timer_.stop(timer_.solve_clock);
 }

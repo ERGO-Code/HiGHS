@@ -27,7 +27,6 @@ struct HighsMipSolverData {
   HighsPseudocost pseudocost;
   HighsCliqueTable cliquetable;
   HighsImplications implications;
-  HighsTimer timer;
 
   std::vector<int> ARstart_;
   std::vector<int> ARindex_;

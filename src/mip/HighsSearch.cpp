@@ -221,8 +221,10 @@ void HighsSearch::heuristicSearchNew() {
   int nbacktracks = 0;
   while (true) {
     heur.evaluateNode();
-    if (heur.currentNodePruned()) {
-      printf("backtracking\n");
+    if (heur.currentNodePruned() ||
+        heur.nodestack.back().estimate > getCutoffBound()) {
+      heur.nodestack.back().opensubtrees = 0;
+      printf("backtracking, %d\n", heur.hasNode());
       ++nbacktracks;
       if (!heur.backtrack()) break;
       continue;
@@ -256,7 +258,10 @@ void HighsSearch::heuristicSearchNew() {
 
     // no candidates left to fix, stop the dive here and decide
     // whether this neighborhood looks promising for a submip search
-    if (heurlp.getFractionalIntegers().begin() == fixcandend) break;
+    if (heurlp.getFractionalIntegers().begin() == fixcandend) {
+      printf("neighborhood exhausted\n");
+      break;
+    }
 
     // now sort the variables by their distance towards the value they will be
     // fixed to
@@ -281,6 +286,7 @@ void HighsSearch::heuristicSearchNew() {
         heur.nodestack.back().branchingdecision.boundval = fixval;
         heur.nodestack.back().branchingdecision.boundtype =
             HighsBoundType::Lower;
+        heur.nodestack.back().opensubtrees = 1;
         heur.localdom.changeBound(heur.nodestack.back().branchingdecision);
         heur.nodestack.emplace_back(heur.nodestack.back().lower_bound,
                                     heur.nodestack.back().estimate);
@@ -292,6 +298,7 @@ void HighsSearch::heuristicSearchNew() {
         heur.nodestack.back().branchingdecision.boundval = fixval;
         heur.nodestack.back().branchingdecision.boundtype =
             HighsBoundType::Upper;
+        heur.nodestack.back().opensubtrees = 1;
         heur.localdom.changeBound(heur.nodestack.back().branchingdecision);
         heur.nodestack.emplace_back(heur.nodestack.back().lower_bound,
                                     heur.nodestack.back().estimate);
@@ -349,7 +356,7 @@ void HighsSearch::heuristicSearchNew() {
 
   double fixingrate = nfixed / (double)ntotal;
   printf("fixing rate is %g\n", fixingrate);
-  if (fixingrate < 0.1 || mipsolver.submip) {
+  if (fixingrate < 0.25) {
     // heur.childselrule = ChildSelectionRule::BestCost;
     heur.pseudocost.setMinReliable(0);
     heur.solveDepthFirst(10);
@@ -359,11 +366,11 @@ void HighsSearch::heuristicSearchNew() {
     return;
   }
 
-  solveSubMip(
-      std::move(heur.localdom.colLower_), std::move(heur.localdom.colUpper_),
-      HIGHS_CONST_I_INF,  // std::max(50, int(0.05 *
-                          // (mipsolver.mipdata_->num_leaves))),
-      std::max(500, int(0.05 * (mipsolver.mipdata_->num_nodes + nnodes))));
+  solveSubMip(std::move(heur.localdom.colLower_),
+              std::move(heur.localdom.colUpper_),
+              500,  // std::max(50, int(0.05 *
+                    // (mipsolver.mipdata_->num_leaves))),
+              200 + int(0.05 * (mipsolver.mipdata_->num_nodes + nnodes)));
 }
 
 void HighsSearch::heuristicSearch() {
@@ -839,7 +846,7 @@ void HighsSearch::solveSubMip(std::vector<double> colLower,
   // submipoptions.logfile = NULL;
   submipoptions.mip_max_nodes = maxnodes;
   submipoptions.time_limit -=
-      mipsolver.mipdata_->timer.read(mipsolver.mipdata_->timer.solve_clock);
+      mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   // submipoptions.message_level = 0;
   submipoptions.dual_objective_value_upper_bound =
       mipsolver.mipdata_->upper_limit;
