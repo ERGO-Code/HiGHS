@@ -158,4 +158,3 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   return return_status;
 }
 #endif
-

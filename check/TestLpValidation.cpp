@@ -56,7 +56,8 @@ TEST_CASE("LP-validation", "[highs_data]") {
   Highs highs(options);
 
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
-  return_bool =      highs.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
+  return_bool =
+      highs.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
@@ -80,8 +81,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<int> XAindex;
   vector<double> XAvalue;
   // Add an empty column
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], NULL, NULL);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
   XcolUpper[0] = my_infinity;
   //  reportLp(lp, 2);
@@ -94,47 +96,54 @@ TEST_CASE("LP-validation", "[highs_data]") {
     require_return_bool = false;
   }
   XcolCost[0] = my_infinity;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], NULL, NULL);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool == require_return_bool);
   XcolCost[0] = -my_infinity;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], NULL, NULL);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool == require_return_bool);
   XcolCost[0] = 1;
 
   // Add a column with bound inconsistency due to upper
   XcolUpper[0] = -1;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], NULL, NULL);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
   XcolUpper[0] = 0;
 
   // Add a column with bound inconsistency due to lower
   XcolLower[0] = 1;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], NULL, NULL);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
   XcolLower[0] = 0;
 
   // Add a column with illegal bound due to lower
   XcolLower[0] = my_infinity;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], NULL, NULL);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(!return_bool);
   XcolLower[0] = 0;
 
   // Add a column with illegal bound due to upper
   XcolUpper[0] = -my_infinity;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], NULL, NULL);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(!return_bool);
   XcolUpper[0] = 0;
 
   // Add a legitimate column
   XcolLower[0] = 0;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], NULL, NULL);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
 
   //  reportLp(lp, 2);
@@ -170,15 +179,17 @@ TEST_CASE("LP-validation", "[highs_data]") {
   XAvalue[4] = -1e60;
   XAvalue[5] = 1e100;
   XAvalue[6] = -1;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(!return_bool);
 
   // Legitimise large matrix entries. Small entries now cause warning
   XAvalue[4] = -1;
   XAvalue[5] = 1;
-  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-                  XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+  return_bool =
+      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_bool);
 
   //  reportLp(lp, 2);

@@ -39,7 +39,7 @@ double possInfProduct(double poss_inf, double value) {
 }
 
 HighsStatus getHighsRanging(HighsRanging& ranging,
-			    const HighsModelObject& highs_model_object) {
+                            const HighsModelObject& highs_model_object) {
   if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
     HighsLogMessage(highs_model_object.options_.logfile,
                     HighsMessageType::ERROR,

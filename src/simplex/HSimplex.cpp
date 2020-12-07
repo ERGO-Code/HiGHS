@@ -12,8 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include "HConfig.h"
 #include "simplex/HSimplex.h"
+
+#include "HConfig.h"
 #include "util/HighsSort.h"
 
 using std::runtime_error;
@@ -437,12 +438,13 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
         num_dual_infeasibilities++;
         if (get_new_scaled_feasibility_tolerances) {
           double multiplier = dual_feasibility_tolerance / scale_mu;
-	  //          double scaled_value = simplex_info.workValue_[iVar];
-	  //          HighsLogMessage(logfile, HighsMessageType::INFO,
-	  //                          "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g
-	  //          s=%11.4g %11.4g: Mu = %g", iVar, iCol, iRow, scaled_lower,
-	  //          scaled_value, scaled_upper, scaled_dual_infeasibility, scale_mu,
-	  //          dual_infeasibility, multiplier);
+          //          double scaled_value = simplex_info.workValue_[iVar];
+          //          HighsLogMessage(logfile, HighsMessageType::INFO,
+          //                          "Var %6d (%6d, %6d): [%11.4g, %11.4g,
+          //                          %11.4g] %11.4g
+          //          s=%11.4g %11.4g: Mu = %g", iVar, iCol, iRow, scaled_lower,
+          //          scaled_value, scaled_upper, scaled_dual_infeasibility,
+          //          scale_mu, dual_infeasibility, multiplier);
           new_dual_feasibility_tolerance =
               min(multiplier, new_dual_feasibility_tolerance);
         }
@@ -481,11 +483,12 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
       num_primal_infeasibilities++;
       if (get_new_scaled_feasibility_tolerances) {
         double multiplier = primal_feasibility_tolerance / scale_mu;
-	//         HighsLogMessage(logfile, HighsMessageType::INFO,
-	//                        "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g
-	//         s=%11.4g %11.4g: Mu = %g", iVar, iCol, iRow, scaled_lower,
-	//         scaled_value, scaled_upper, scaled_primal_infeasibility, scale_mu,
-	//         primal_infeasibility, multiplier);
+        //         HighsLogMessage(logfile, HighsMessageType::INFO,
+        //                        "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g]
+        //                        %11.4g
+        //         s=%11.4g %11.4g: Mu = %g", iVar, iCol, iRow, scaled_lower,
+        //         scaled_value, scaled_upper, scaled_primal_infeasibility,
+        //         scale_mu, primal_infeasibility, multiplier);
         new_primal_feasibility_tolerance =
             min(multiplier, new_primal_feasibility_tolerance);
       }
@@ -623,7 +626,6 @@ void scaleCosts(const HighsOptions& options, HighsLp& lp, double& cost_scale) {
     lp.colCost_[iCol] /= cost_scale;
   }
   max_nonzero_cost /= cost_scale;
-
 }
 
 bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
@@ -1216,4 +1218,3 @@ double computeBasisCondition(const HighsModelObject& highs_model_object) {
   double cond_B = norm_Binv * norm_B;
   return cond_B;
 }
-

@@ -861,7 +861,8 @@ class Highs {
                                int* row_matrix_start, int* row_matrix_index,
                                double* row_matrix_value);
 
-  HighsStatus getCoefficientInterface(const int Xrow, const int Xcol, double& value);
+  HighsStatus getCoefficientInterface(const int Xrow, const int Xcol,
+                                      double& value);
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense Xsense);
   HighsStatus changeCostsInterface(HighsIndexCollection& index_collection,

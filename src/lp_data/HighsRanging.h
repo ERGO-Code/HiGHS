@@ -35,5 +35,5 @@ struct HighsRanging {
 };
 
 HighsStatus getHighsRanging(HighsRanging& ranging,
-			    const HighsModelObject& highs_model_object);
+                            const HighsModelObject& highs_model_object);
 #endif

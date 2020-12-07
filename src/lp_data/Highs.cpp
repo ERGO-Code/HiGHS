@@ -736,8 +736,8 @@ HighsStatus Highs::run() {
 
           // The basis returned from postsolve is just basic/nonbasic
           // and EKK expects a refined basis, so set it up now
-	  refineBasis(lp_, hmos_[original_hmo].solution_,
-		      hmos_[original_hmo].basis_);
+          refineBasis(lp_, hmos_[original_hmo].solution_,
+                      hmos_[original_hmo].basis_);
 
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
           int iteration_count0 = info_.simplex_iteration_count;
@@ -1005,7 +1005,8 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
-  basisSolveInterface(rhs, solution_vector, solution_num_nz, solution_indices, false);
+  basisSolveInterface(rhs, solution_vector, solution_num_nz, solution_indices,
+                      false);
   return HighsStatus::OK;
 }
 
@@ -1036,7 +1037,8 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   vector<double> rhs;
   rhs.assign(numRow, 0);
   for (int row = 0; row < numRow; row++) rhs[row] = Xrhs[row];
-  basisSolveInterface(rhs, solution_vector, solution_num_nz, solution_indices, true);
+  basisSolveInterface(rhs, solution_vector, solution_num_nz, solution_indices,
+                      true);
   return HighsStatus::OK;
 }
 
@@ -1195,8 +1197,10 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
   HighsStatus return_status = HighsStatus::OK;
   // Check that there is a HighsModelObject
   if (!haveHmo("addRows")) return false;
-  return_status = interpretCallStatus(addRowsInterface(num_new_row, lower_bounds, upper_bounds, num_new_nz,
-						       starts, indices, values), return_status, "addRows");
+  return_status = interpretCallStatus(
+      addRowsInterface(num_new_row, lower_bounds, upper_bounds, num_new_nz,
+                       starts, indices, values),
+      return_status, "addRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
@@ -1216,9 +1220,9 @@ bool Highs::addCols(const int num_new_col, const double* costs,
   HighsStatus return_status = HighsStatus::OK;
   if (!haveHmo("addCols")) return false;
   return_status = interpretCallStatus(
-				      addColsInterface(num_new_col, costs, lower_bounds, upper_bounds,
-						       num_new_nz, starts, indices, values),
-				      return_status, "addCols");
+      addColsInterface(num_new_col, costs, lower_bounds, upper_bounds,
+                       num_new_nz, starts, indices, values),
+      return_status, "addCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
 }
@@ -1415,7 +1419,8 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
   index_collection.from_ = from_col;
   index_collection.to_ = to_col;
   if (!haveHmo("getCols")) return false;
-  call_status = getColsInterface(index_collection, num_col, costs, lower, upper, num_nz, start, index, value);
+  call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
+                                 num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1436,7 +1441,8 @@ bool Highs::getCols(const int num_set_entries, const int* set, int& num_col,
   index_collection.set_ = &local_set[0];
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getCols")) return false;
-  call_status = getColsInterface(index_collection, num_col, costs, lower, upper, num_nz, start, index, value);
+  call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
+                                 num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1456,7 +1462,8 @@ bool Highs::getCols(const int* mask, int& num_col, double* costs, double* lower,
   index_collection.is_mask_ = true;
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getCols")) return false;
-  call_status = getColsInterface(index_collection, num_col, costs, lower, upper, num_nz, start, index, value);
+  call_status = getColsInterface(index_collection, num_col, costs, lower, upper,
+                                 num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getCols");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1474,7 +1481,7 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
   index_collection.to_ = to_row;
   if (!haveHmo("getRows")) return false;
   call_status = getRowsInterface(index_collection, num_row, lower, upper,
-				 num_nz, start, index, value);
+                                 num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1496,7 +1503,7 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
   index_collection.set_num_entries_ = num_set_entries;
   if (!haveHmo("getRows")) return false;
   call_status = getRowsInterface(index_collection, num_row, lower, upper,
-				 num_nz, start, index, value);
+                                 num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -1516,7 +1523,7 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
   index_collection.mask_ = &local_mask[0];
   if (!haveHmo("getRows")) return false;
   call_status = getRowsInterface(index_collection, num_row, lower, upper,
-				 num_nz, start, index, value);
+                                 num_nz, start, index, value);
   return_status = interpretCallStatus(call_status, return_status, "getRows");
   if (return_status == HighsStatus::Error) return false;
   return returnFromHighs(return_status) != HighsStatus::Error;
@@ -2185,7 +2192,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
 
   if (hmos_.size()) {
     bool simplex_lp_ok =
-      ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
+        ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
     if (!simplex_lp_ok) {
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                       "returnFromHighs: Simplex LP not OK");

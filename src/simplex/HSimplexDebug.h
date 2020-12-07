@@ -32,7 +32,6 @@ HighsDebugStatus debugDualChuzcFail(
     const std::vector<std::pair<int, double>>& workData, const double* workDual,
     const double selectTheta, const double remainTheta);
 
-
 // Methods for HMO
 
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object);

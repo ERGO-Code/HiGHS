@@ -695,7 +695,8 @@ HighsStatus Highs::getRowsInterface(
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getCoefficientInterface(const int Xrow, const int Xcol, double& value) {
+HighsStatus Highs::getCoefficientInterface(const int Xrow, const int Xcol,
+                                           double& value) {
   if (Xrow < 0 || Xrow > lp_.numRow_) return HighsStatus::Error;
   if (Xcol < 0 || Xcol > lp_.numCol_) return HighsStatus::Error;
   value = 0;
@@ -706,7 +707,6 @@ HighsStatus Highs::getCoefficientInterface(const int Xrow, const int Xcol, doubl
     }
   }
   return HighsStatus::OK;
-
 }
 
 HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
