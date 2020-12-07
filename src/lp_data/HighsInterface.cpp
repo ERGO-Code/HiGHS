@@ -700,6 +700,20 @@ HighsStatus Highs::getRowsInterface(
   return HighsStatus::OK;
 }
 
+HighsStatus Highs::getCoefficientInterface(const int Xrow, const int Xcol, double& value) {
+  if (Xrow < 0 || Xrow > lp_.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol > lp_.numCol_) return HighsStatus::Error;
+  value = 0;
+  for (int el = lp_.Astart_[Xcol]; el < lp_.Astart_[Xcol + 1]; el++) {
+    if (lp_.Aindex_[el] == Xrow) {
+      value = lp_.Avalue_[el];
+      break;
+    }
+  }
+  return HighsStatus::OK;
+
+}
+
 HighsStatus Highs::changeObjectiveSenseInterface(const ObjSense Xsense) {
   HighsModelObject& highs_model_object = hmos_[0];
   // If the sense doesn't change, just return
