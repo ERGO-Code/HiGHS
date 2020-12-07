@@ -15,7 +15,6 @@
 #include <sstream>
 
 #include "simplex/HSimplex.h"
-#include "simplex/HSimplexDebug.h"
 
 void reportSimplexPhaseIterations(FILE* logfile, const int iteration_count,
                                   const HighsSimplexInfo& simplex_info,
