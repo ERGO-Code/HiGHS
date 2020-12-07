@@ -442,7 +442,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool("simplex_class_ekk",
                                        "Ekk class for simplex solver", advanced,
-                                       &simplex_class_ekk, false);
+                                       &simplex_class_ekk, true);
     records.push_back(record_bool);
 
     record_int =
