@@ -102,10 +102,6 @@ set(sources
     presolve/PresolveUtils.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
-    simplex/HDual.cpp
-    simplex/HDualRHS.cpp
-    simplex/HDualRow.cpp
-    simplex/HDualMulti.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -119,7 +115,6 @@ set(sources
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HMatrix.cpp
-    simplex/HPrimal.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexReport.cpp
@@ -167,9 +162,6 @@ set(headers
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
-    simplex/HDual.h
-    simplex/HDualRow.h
-    simplex/HDualRHS.h
     simplex/HEkk.h
     simplex/HEkkDebug.h
     simplex/HEkkPrimal.h
@@ -180,7 +172,6 @@ set(headers
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
     simplex/HMatrix.h
-    simplex/HPrimal.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
@@ -415,10 +406,6 @@ target_sources(libhighs PRIVATE
     presolve/PresolveUtils.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
-    simplex/HDual.cpp
-    simplex/HDualRHS.cpp
-    simplex/HDualRow.cpp
-    simplex/HDualMulti.cpp
     simplex/HEkk.cpp
     simplex/HEkkControl.cpp
     simplex/HEkkDebug.cpp
@@ -432,7 +419,6 @@ target_sources(libhighs PRIVATE
     simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HMatrix.cpp
-    simplex/HPrimal.cpp
     simplex/HSimplex.cpp
     simplex/HSimplexDebug.cpp
     simplex/HSimplexReport.cpp

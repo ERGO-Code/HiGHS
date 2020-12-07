@@ -978,12 +978,7 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
         numRow - 1);
     return HighsStatus::Error;
   }
-  bool has_invert;
-  if (options_.simplex_class_ekk) {
-    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
-  } else {
-    has_invert = hmos_[0].simplex_lp_status_.has_invert;
-  }
+  bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisInverseCol");
@@ -2221,14 +2216,8 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   }
 
   if (hmos_.size()) {
-    bool simplex_lp_ok;
-    if (options_.simplex_class_ekk) {
-      simplex_lp_ok =
-          ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
-    } else {
-      simplex_lp_ok =
-          debugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
-    }
+    bool simplex_lp_ok =
+      ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
     if (!simplex_lp_ok) {
       HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                       "returnFromHighs: Simplex LP not OK");

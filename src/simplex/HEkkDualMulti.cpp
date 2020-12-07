@@ -21,7 +21,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "simplex/HEkkDual.h"
-#include "simplex/HPrimal.h"
+//#include "simplex/HPrimal.h"
 #include "simplex/SimplexTimer.h"
 
 using std::cout;

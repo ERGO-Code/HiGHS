@@ -13,14 +13,9 @@
  */
 #include "HConfig.h"
 #include "Highs.h"
-//#include "io/HMPSIO.h"
-//#include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
-//#include "lp_data/HighsModelUtils.h"
 #include "simplex/HSimplex.h"
-//#include "simplex/HSimplexDebug.h"
 #include "util/HighsSort.h"
-//#include "util/HighsUtils.h"
 
 HighsStatus Highs::addColsInterface(int XnumNewCol, const double* XcolCost,
                                     const double* XcolLower,

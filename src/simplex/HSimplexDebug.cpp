@@ -20,7 +20,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsSolutionDebug.h"
-#include "simplex/HDualRow.h"
+#include "simplex/HEkkDualRow.h"
 #include "simplex/HEkkDebug.h"
 #include "simplex/HFactorDebug.h"
 #include "simplex/HSimplex.h"
