@@ -726,8 +726,6 @@ HighsStatus Highs::run() {
           // Force the use of simplex to clean up if IPM has been used
           // to solve the presolved problem
           if (options.solver == ipm_string) options.solver = simplex_string;
-          const bool use_ekk = true;
-          if (!use_ekk) options.simplex_class_ekk = false;
           options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
           // Ensure that the parallel solver isn't used
           options.highs_min_threads = 1;
@@ -738,9 +736,8 @@ HighsStatus Highs::run() {
 
           // The basis returned from postsolve is just basic/nonbasic
           // and EKK expects a refined basis, so set it up now
-          if (options.simplex_class_ekk)
-            refineBasis(lp_, hmos_[original_hmo].solution_,
-                        hmos_[original_hmo].basis_);
+	  refineBasis(lp_, hmos_[original_hmo].solution_,
+		      hmos_[original_hmo].basis_);
 
           hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
           int iteration_count0 = info_.simplex_iteration_count;
@@ -907,11 +904,7 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
   underDevelopmentLogMessage("getRanging");
   if (!haveHmo("getRanging")) return HighsStatus::Error;
-  if (options_.simplex_class_ekk) {
-    return getHighsRangingEkk(ranging, hmos_[0]);
-  } else {
-    return getHighsRanging(ranging, hmos_[0]);
-  }
+  return getHighsRanging(ranging, hmos_[0]);
 }
 
 HighsStatus Highs::getBasicVariables(int* basic_variables) {
@@ -941,12 +934,7 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
                     row, numRow - 1);
     return HighsStatus::Error;
   }
-  bool has_invert;
-  if (options_.simplex_class_ekk) {
-    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
-  } else {
-    has_invert = hmos_[0].simplex_lp_status_.has_invert;
-  }
+  bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisInverseRow");
@@ -1007,12 +995,7 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  bool has_invert;
-  if (options_.simplex_class_ekk) {
-    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
-  } else {
-    has_invert = hmos_[0].simplex_lp_status_.has_invert;
-  }
+  bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisSolve");
@@ -1043,12 +1026,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
-  bool has_invert;
-  if (options_.simplex_class_ekk) {
-    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
-  } else {
-    has_invert = hmos_[0].simplex_lp_status_.has_invert;
-  }
+  bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getBasisTransposeSolve");
@@ -1080,12 +1058,7 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                     hmos_[0].lp_.numRow_ - 1);
     return HighsStatus::Error;
   }
-  bool has_invert;
-  if (options_.simplex_class_ekk) {
-    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
-  } else {
-    has_invert = hmos_[0].simplex_lp_status_.has_invert;
-  }
+  bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getReducedRow");
@@ -1138,12 +1111,7 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                     col, hmos_[0].lp_.numCol_ - 1);
     return HighsStatus::Error;
   }
-  bool has_invert;
-  if (options_.simplex_class_ekk) {
-    has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
-  } else {
-    has_invert = hmos_[0].simplex_lp_status_.has_invert;
-  }
+  bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
     HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
                     "No invertible representation for getReducedColumn");

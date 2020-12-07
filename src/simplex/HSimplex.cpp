@@ -12,24 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include "simplex/HSimplex.h"
-
 #include "HConfig.h"
-#include "io/HighsIO.h"
-#include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelUtils.h"
-#include "lp_data/HighsSolution.h"
-#include "lp_data/HighsSolutionDebug.h"
-#include "lp_data/HighsStatus.h"
-#include "simplex/HCrash.h"
-#include "simplex/HFactorDebug.h"
-#include "simplex/HSimplexDebug.h"
-#include "simplex/HVector.h"
-//#include "simplex/HighsSimplexInterface.h"
-#include "simplex/SimplexConst.h"  // For simplex strategy constants
-#include "simplex/SimplexTimer.h"
+#include "simplex/HSimplex.h"
 #include "util/HighsSort.h"
-#include "util/HighsUtils.h"
 
 using std::runtime_error;
 #include <cassert>
