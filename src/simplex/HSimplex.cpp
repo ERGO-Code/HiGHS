@@ -25,7 +25,7 @@
 #include "simplex/HFactorDebug.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HVector.h"
-#include "simplex/HighsSimplexInterface.h"
+//#include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"  // For simplex strategy constants
 #include "simplex/SimplexTimer.h"
 #include "util/HighsSort.h"

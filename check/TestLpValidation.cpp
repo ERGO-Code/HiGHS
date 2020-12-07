@@ -1,12 +1,6 @@
 #include "Avgas.h"
 #include "Highs.h"
-#include "HighsIO.h"
-#include "HighsLp.h"
 #include "HighsLpUtils.h"
-#include "HighsOptions.h"
-#include "HighsSimplexInterface.h"
-#include "HighsStatus.h"
-#include "HighsTimer.h"
 #include "catch.hpp"
 
 const bool dev_run = false;
@@ -17,8 +11,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // Create an empty LP
   HighsLp lp;
   HighsOptions options;
-  HighsTimer timer;
+  //  HighsTimer timer;
   HighsStatus return_status;
+  bool return_bool;
   options.message_level = ML_ALWAYS;
   if (!dev_run) {
     options.output = NULL;
@@ -59,16 +54,15 @@ TEST_CASE("LP-validation", "[highs_data]") {
   //  reportLp(lp, 2);
 
   const double my_infinity = 1e30;
-  HighsModelObject hmo(lp, options, timer);
-  HighsSimplexInterface hsi(hmo);
+  Highs highs(options);
 
-  return_status =
-      hsi.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  return_bool =      highs.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
+  REQUIRE(return_bool);
 
-  return_status = hsi.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
                               num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_bool);
 
   // Create an empty column
   int XnumNewCol = 1;
@@ -87,70 +81,62 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<int> XAindex;
   vector<double> XAvalue;
   // Add an empty column
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_bool);
   XcolUpper[0] = my_infinity;
   //  reportLp(lp, 2);
 
   // Try to add a column with illegal cost
-  HighsStatus require_return_status;
+  bool require_return_bool;
   if (allow_infinite_costs) {
-    require_return_status = HighsStatus::OK;
+    require_return_bool = true;
   } else {
-    require_return_status = HighsStatus::Error;
+    require_return_bool = false;
   }
   XcolCost[0] = my_infinity;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == require_return_status);
+  REQUIRE(return_bool == require_return_bool);
   XcolCost[0] = -my_infinity;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == require_return_status);
+  REQUIRE(return_bool == require_return_bool);
   XcolCost[0] = 1;
 
   // Add a column with bound inconsistency due to upper
   XcolUpper[0] = -1;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == HighsStatus::Warning);
+  REQUIRE(return_bool);
   XcolUpper[0] = 0;
 
   // Add a column with bound inconsistency due to lower
   XcolLower[0] = 1;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == HighsStatus::Warning);
+  REQUIRE(return_bool);
   XcolLower[0] = 0;
 
   // Add a column with illegal bound due to lower
   XcolLower[0] = my_infinity;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(!return_bool);
   XcolLower[0] = 0;
 
   // Add a column with illegal bound due to upper
   XcolUpper[0] = -my_infinity;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(!return_bool);
   XcolUpper[0] = 0;
 
   // Add a legitimate column
   XcolLower[0] = 0;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], NULL, NULL);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(return_bool);
 
   //  reportLp(lp, 2);
 
@@ -185,37 +171,25 @@ TEST_CASE("LP-validation", "[highs_data]") {
   XAvalue[4] = -1e60;
   XAvalue[5] = 1e100;
   XAvalue[6] = -1;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
-  REQUIRE(return_status == HighsStatus::Error);
+  REQUIRE(!return_bool);
 
   // Legitimise large matrix entries. Small entries now cause warning
   XAvalue[4] = -1;
   XAvalue[5] = 1;
-  return_status =
-      hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  return_bool =      highs.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                   XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
-  REQUIRE(return_status == HighsStatus::Warning);
+  REQUIRE(return_bool);
 
   //  reportLp(lp, 2);
 
-  Highs highs(options);
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
+	  HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
   }
-
-  HighsStatus init_status = highs.passModel(lp);
-  REQUIRE(init_status == HighsStatus::OK);
-
-  /*
-  HighsStatus write_status =  highs.writeModel("");
-  REQUIRE(write_status == HighsStatus::Warning);
-  */
 
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);

@@ -32,7 +32,7 @@
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
 #include "simplex/HSimplexReport.h"
-#include "simplex/HighsSimplexInterface.h"
+//#include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
 #include "util/HighsUtils.h"
@@ -477,9 +477,10 @@ HighsStatus solveLpHmoSimplex(HighsModelObject& highs_model_object) {
 #endif
 
   // Deduce the HiGHS basis and solution from the simplex basis and solution
-  HighsSimplexInterface simplex_interface(highs_model_object);
-  simplex_interface.convertSimplexToHighsSolution();
-  simplex_interface.convertSimplexToHighsBasis();
+  assert(1==0);
+  //  HighsSimplexInterface simplex_interface(highs_model_object);
+  //  simplex_interface.convertSimplexToHighsSolution();
+  //  simplex_interface.convertSimplexToHighsBasis();
 
   copySolutionObjectiveParams(highs_model_object.scaled_solution_params_,
                               highs_model_object.unscaled_solution_params_);
