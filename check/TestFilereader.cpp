@@ -10,7 +10,6 @@
 #include "lp_data/HighsLpUtils.h"
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   std::string model = "";
@@ -26,9 +25,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   const bool test_garbage_lp = false;
 
   Highs highs(options);
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -105,9 +101,6 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   HighsOptions options;
 
   Highs highs(options);
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -140,9 +133,6 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   HighsOptions options;
 
   Highs highs(options);
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -205,9 +195,6 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   HighsOptions options;
 
   Highs highs(options);
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -254,9 +241,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   REQUIRE(status == HighsStatus::OK);
 
   Highs highs_lp;
-  if (use_ekk)
-    REQUIRE(highs_lp.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs_lp.setHighsLogfile();
     highs_lp.setHighsOutput();
@@ -269,9 +253,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   Highs highs_primal;
-  if (use_ekk)
-    REQUIRE(highs_primal.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs_primal.setHighsLogfile();
     highs_primal.setHighsOutput();
@@ -294,9 +275,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   status = dualizeEqualityProblem(primal, dual);
   REQUIRE(status == HighsStatus::OK);
   Highs highs_dual;
-  if (use_ekk)
-    REQUIRE(highs_dual.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs_dual.setHighsLogfile();
     highs_dual.setHighsOutput();

@@ -2,7 +2,6 @@
 #include "util/HSet.h"
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 TEST_CASE("HSet", "[highs_test_hset]") {
   const int size = 5;

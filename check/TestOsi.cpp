@@ -21,7 +21,6 @@
 #include "OsiUnitTests.hpp"
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 using namespace OsiUnitTest;
 

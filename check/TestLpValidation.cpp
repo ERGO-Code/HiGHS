@@ -4,7 +4,6 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 // No commas in test case name.
 TEST_CASE("LP-validation", "[highs_data]") {
@@ -184,8 +183,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   //  reportLp(lp, 2);
 
-  REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-	  HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

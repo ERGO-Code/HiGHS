@@ -2,7 +2,6 @@
 #include "catch.hpp"
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 struct IterationCount {
   int simplex;
@@ -241,9 +240,6 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   HighsStatus read_status;
 
   Highs highs(options);
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -312,9 +308,6 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   double save_dual_objective_value_upper_bound;
   HighsOptions options;
   Highs highs(options);
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

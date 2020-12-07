@@ -17,7 +17,6 @@
 #include <cstdio>  // For printf
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 void Avgas::row(int row, int& num_row, int& num_row_nz,
                 std::vector<double>& rowLower, std::vector<double>& rowUpper,

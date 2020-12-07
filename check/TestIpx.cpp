@@ -16,7 +16,6 @@
 #include "lp_solver.h"
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 using Int = ipxint;
 

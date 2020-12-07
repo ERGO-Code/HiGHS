@@ -4,7 +4,6 @@
 #include "lp_data/HConst.h"
 
 const bool dev_run = false;
-const bool use_ekk = true;
 const double zero_ray_value_tolerance = 1e-8;
 
 void checkRayDirection(const int dim, const vector<double>& ray_value,
@@ -214,9 +213,6 @@ void testInfeasibleMps(const std::string model) {
   vector<double> primal_ray_value;
 
   Highs highs;
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -247,9 +243,6 @@ void testInfeasibleMps(const std::string model) {
 void testUnboundedMps(const std::string model,
                       const ObjSense sense = ObjSense::MINIMIZE) {
   Highs highs;
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -287,9 +280,6 @@ void testUnboundedMps(const std::string model,
 
 TEST_CASE("Rays", "[highs_test_rays]") {
   Highs highs;
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

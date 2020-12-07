@@ -4,7 +4,6 @@
 #include "lp_data/HConst.h"
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 void ekk_solve(Highs& highs, std::string presolve,
                const HighsModelStatus require_model_status,
@@ -12,8 +11,6 @@ void ekk_solve(Highs& highs, std::string presolve,
   SpecialLps special_lps;
   const HighsInfo& info = highs.getHighsInfo();
 
-  REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-          HighsStatus::OK);
   REQUIRE(highs.setHighsOptionValue("simplex_strategy",
                                     SIMPLEX_STRATEGY_DUAL) == HighsStatus::OK);
 
@@ -67,9 +64,6 @@ void ekk_scipLpi3(Highs& highs) {
 
 TEST_CASE("Ekk", "[highs_test_ekk]") {
   Highs highs;
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();
@@ -82,8 +76,6 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     // "/check/instances/adlittle.mps";
     REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
 
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
     REQUIRE(highs.setHighsOptionValue(
                 "simplex_strategy", SIMPLEX_STRATEGY_DUAL) == HighsStatus::OK);
     highs.setHighsOptionValue("message_level", 6);
@@ -97,9 +89,6 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   Highs highs;
-  if (use_ekk)
-    REQUIRE(highs.setHighsOptionValue("simplex_class_ekk", true) ==
-            HighsStatus::OK);
   if (!dev_run) {
     highs.setHighsLogfile();
     highs.setHighsOutput();

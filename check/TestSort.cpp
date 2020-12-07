@@ -9,7 +9,6 @@
 using std::vector;
 
 const bool dev_run = false;
-const bool use_ekk = true;
 
 // No commas in test case name.
 void getRandomValues(const int num_values, vector<double>& values,
