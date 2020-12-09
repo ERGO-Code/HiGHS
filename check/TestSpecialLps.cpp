@@ -194,7 +194,7 @@ void issue425(Highs& highs) {
   special_lps.issue425Lp(lp, require_model_status);
   REQUIRE(highs.passModel(lp) == HighsStatus::OK);
   solve(highs, "on", "simplex", require_model_status, 0, 0);
-  solve(highs, "off", "simplex", require_model_status, 0, 1);
+  solve(highs, "off", "simplex", require_model_status, 0, 3);
   solve(highs, "off", "ipm", require_model_status, 0, 4);
 }
 
