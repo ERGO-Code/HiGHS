@@ -28,10 +28,10 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
       objective(other.objective),
       basischeckpoint(other.basischeckpoint),
       currentbasisstored(other.currentbasisstored) {
+  lpsolver.setHighsLogfile(NULL);
+  lpsolver.passHighsOptions(other.lpsolver.getHighsOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
-  lpsolver.passHighsOptions(other.lpsolver.getHighsOptions());
-  lpsolver.setHighsLogfile(NULL);
   numlpiters = 0;
 }
 
