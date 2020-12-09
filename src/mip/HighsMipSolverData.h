@@ -42,6 +42,7 @@ struct HighsMipSolverData {
   std::vector<double> firstlpsol;
   std::vector<double> rootlpsol;
   double firstlpsolobj;
+  HighsBasis firstrootbasis;
   double rootlpsolobj;
 
   HighsCDouble pruned_treeweight;

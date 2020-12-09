@@ -4,6 +4,7 @@
 
 bool HighsImplications::computeImplications(int col, bool val) {
   globaldomain.propagate();
+  if (globaldomain.infeasible()) return true;
   const auto& domchgstack = globaldomain.getDomainChangeStack();
 
   int changedend = globaldomain.getChangedCols().size();
@@ -14,6 +15,17 @@ bool HighsImplications::computeImplications(int col, bool val) {
     globaldomain.changeBound(HighsBoundType::Lower, col, 1);
   else
     globaldomain.changeBound(HighsBoundType::Upper, col, 0);
+
+  if (globaldomain.infeasible()) {
+    globaldomain.backtrack();
+    globaldomain.clearChangedCols(changedend);
+    globaldomain.clearPropagateRows(proprowend);
+    globaldomain.clearPropagateCuts(propcutend);
+
+    cliquetable.vertexInfeasible(globaldomain, col, val);
+
+    return true;
+  }
 
   cliquetable.addImplications(globaldomain, col, val);
 
@@ -27,12 +39,7 @@ bool HighsImplications::computeImplications(int col, bool val) {
     globaldomain.clearPropagateRows(proprowend);
     globaldomain.clearPropagateCuts(propcutend);
 
-    if (val)
-      globaldomain.changeBound(HighsBoundType::Upper, col, 0, -2);
-    else
-      globaldomain.changeBound(HighsBoundType::Lower, col, 1, -2);
-
-    globaldomain.propagate();
+    cliquetable.vertexInfeasible(globaldomain, col, val);
 
     return true;
   }
@@ -57,6 +64,8 @@ bool HighsImplications::computeImplications(int col, bool val) {
                        return !globaldomain.isBinary(a.column);
                      });
 
+  std::sort(implications.begin() + implstart, binstart);
+
   HighsCliqueTable::CliqueVar clique[2];
   clique[0] = HighsCliqueTable::CliqueVar(col, val);
 
@@ -66,13 +75,63 @@ bool HighsImplications::computeImplications(int col, bool val) {
     else
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 1);
 
-    cliquetable.addClique(clique, 2);
+    cliquetable.addClique(globaldomain, clique, 2);
+    if (globaldomain.infeasible()) return true;
   }
 
   implications.erase(binstart, implications.end());
 
   implicationmap[loc].start = implstart;
   implicationmap[loc].num = implications.size() - implstart;
+
+  return false;
+}
+
+bool HighsImplications::runProbing(int col, int& numboundchgs) {
+  if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
+      !implicationsCached(col, 0)) {
+    const HighsDomainChange* implicsup;
+    const HighsDomainChange* implicsdown;
+    int nimplicsup;
+    int nimplicsdown;
+    bool infeasible;
+    nimplicsup = getImplications(col, 1, implicsup, infeasible);
+    if (globaldomain.infeasible()) return true;
+
+    if (infeasible) return true;
+
+    nimplicsdown = getImplications(col, 0, implicsdown, infeasible);
+    if (globaldomain.infeasible()) return true;
+    if (infeasible) return true;
+
+    // analyze implications
+    int u = 0;
+    int d = 0;
+
+    while (u < nimplicsup && d < nimplicsdown) {
+      if (implicsup[u] < implicsdown[d])
+        ++u;
+      else if (implicsdown[d] < implicsup[u])
+        ++d;
+      else {
+        assert(implicsup[u].boundtype == implicsdown[d].boundtype);
+        assert(implicsup[u].column == implicsdown[d].column);
+        if ((implicsup[u].boundtype == HighsBoundType::Lower &&
+             implicsdown[d].boundval < implicsup[u].boundval) ||
+            (implicsup[u].boundtype == HighsBoundType::Upper &&
+             implicsdown[d].boundval > implicsup[u].boundval))
+          globaldomain.changeBound(implicsdown[d], -2);
+        else
+          globaldomain.changeBound(implicsup[u], -2);
+        assert(!globaldomain.infeasible());
+        ++numboundchgs;
+        globaldomain.propagate();
+        assert(!globaldomain.infeasible());
+        ++u;
+        ++d;
+      }
+    }
+  }
 
   return false;
 }

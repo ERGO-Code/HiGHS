@@ -21,6 +21,7 @@ class HighsMipSolver {
   const HighsOptions* options_mip_;
   const HighsLp* model_;
   bool submip;
+  const HighsBasis* rootbasis;
 
   std::unique_ptr<HighsMipSolverData> mipdata_;
 

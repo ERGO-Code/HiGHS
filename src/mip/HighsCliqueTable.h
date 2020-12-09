@@ -2,7 +2,10 @@
 #define HIGHS_CLIQUE_TABLE_H_
 
 #include <cstdint>
+#include <set>
 #include <vector>
+
+#include "lp_data/HConst.h"
 
 class HighsCutPool;
 class HighsDomain;
@@ -20,6 +23,8 @@ class HighsCliqueTable {
       return val ? sol[col] : 1.0 - sol[col];
     }
 
+    CliqueVar complement() const { return CliqueVar(col, 1 - val); }
+
     bool operator==(const CliqueVar& other) const {
       return index() == other.index();
     }
@@ -30,19 +35,33 @@ class HighsCliqueTable {
 
  private:
   struct CliqueSetNode {
-    // links for storing the column lists of the clique as a red-black-tree
     int cliqueid;
+    // links for storing the column lists of the clique as a splay tree
     int left;
     int right;
 
     CliqueSetNode(int cliqueid) : cliqueid(cliqueid), left(-1), right(-1) {}
+
+    CliqueSetNode() : cliqueid(-1), left(-1), right(-1) {}
   };
 
   std::vector<CliqueVar> cliqueentries;
   std::vector<CliqueSetNode> cliquesets;
-  std::vector<int> cliquestart;
+
+  struct Clique {
+    int start;
+    int end;
+    int origin;
+    bool equality;
+  };
+
+  std::vector<std::pair<int*, int*>> commoncliquestack;
+  std::set<std::pair<int, int>> freespaces;
+  std::vector<int> freeslots;
+  std::vector<Clique> cliques;
   std::vector<int> cliquesetroot;
   std::vector<int> numcliquesvar;
+  std::vector<CliqueVar> infeasvertexstack;
 
   int splay(int cliqueid, int root);
 
@@ -50,7 +69,7 @@ class HighsCliqueTable {
 
   void link(int node);
 
-  bool haveCommonCliqueRecurse(int& r1, int& r2);
+  int findCommonCliqueRecurse(int& r1, int& r2);
 
   struct BronKerboschData {
     const std::vector<double>& sol;
@@ -73,52 +92,55 @@ class HighsCliqueTable {
   void bronKerboschRecurse(BronKerboschData& data, int Plen, const CliqueVar* X,
                            int Xlen);
 
-  void extractCliques(const HighsDomain& globaldom, std::vector<int>& inds,
+  void extractCliques(HighsDomain& globaldom, std::vector<int>& inds,
                       std::vector<double>& vals,
                       std::vector<int8_t>& complementation, double rhs,
                       int nbin, std::vector<int>& perm,
                       std::vector<CliqueVar>& clique);
+  void processInfeasibleVertices(HighsDomain& domain);
+
+  void propagateAndCleanup(HighsDomain& globaldom);
 
  public:
   HighsCliqueTable(int ncols) {
     cliquesetroot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
-    cliquestart.push_back(0);
   }
 
-  void addClique(const CliqueVar* cliquevars, int numcliquevars) {
-    if (numcliquevars == 2 && haveCommonClique(cliquevars[0], cliquevars[1]))
-      return;
-    cliqueentries.insert(cliqueentries.end(), cliquevars,
-                         cliquevars + numcliquevars);
-    int cliqueid = cliquestart.size() - 1;
-    int end = cliqueentries.size();
-    cliquestart.push_back(end);
-    cliquesets.resize(cliqueentries.size(), CliqueSetNode(cliqueid));
+  void addClique(HighsDomain& globaldom, const CliqueVar* cliquevars,
+                 int numcliquevars, bool equality = false,
+                 int origin = HIGHS_CONST_I_INF);
 
-    for (int i = cliquestart[cliqueid]; i != end; ++i) link(i);
-  }
+  void removeClique(int cliqueid);
 
-  void extractCliques(const HighsMipSolver& mipsolver);
+  bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
+
+  void extractCliques(HighsMipSolver& mipsolver);
+
+  void vertexInfeasible(HighsDomain& globaldom, int col, int val);
 
   bool haveCommonClique(CliqueVar v1, CliqueVar v2) {
     if (v1 == v2) return false;
-    return haveCommonCliqueRecurse(cliquesetroot[v1.index()],
-                                   cliquesetroot[v2.index()]);
+    return findCommonCliqueRecurse(cliquesetroot[v1.index()],
+                                   cliquesetroot[v2.index()]) != -1;
   }
 
   bool haveCommonClique(int col1, int val1, int col2, int val2) {
     if (2 * col1 + val1 == 2 * col2 + val2) return false;
-    return haveCommonCliqueRecurse(
-        cliquesetroot[CliqueVar(col1, val1).index()],
-        cliquesetroot[CliqueVar(col2, val2).index()]);
+    return findCommonCliqueRecurse(
+               cliquesetroot[CliqueVar(col1, val1).index()],
+               cliquesetroot[CliqueVar(col2, val2).index()]) != -1;
   }
 
   void separateCliques(const std::vector<double>& sol,
                        const HighsDomain& globaldom, HighsDomain& localdom,
                        HighsCutPool& cutpool);
 
+  void cleanupFixed(HighsDomain& globaldom);
+
   void addImplications(HighsDomain& domain, int col, int val);
+
+  int getNumImplications(int col) const;
 };
 
 #endif

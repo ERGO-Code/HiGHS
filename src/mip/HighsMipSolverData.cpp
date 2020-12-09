@@ -89,6 +89,134 @@ void HighsMipSolverData::setup() {
                        model.Aindex_, model.Avalue_, ARstart_, ARindex_,
                        ARvalue_);
 
+  // if a root basis is given, construct a basis for the root LP from
+  // in the reduced problem space after presolving
+  if (mipsolver.rootbasis) {
+    if (mipsolver.presolve_.data_.presolve_.empty())
+      firstrootbasis = *mipsolver.rootbasis;
+    else {
+      int numColOrig = mipsolver.presolve_.data_.presolve_[0].numColOriginal;
+      int numRowOrig = mipsolver.presolve_.data_.presolve_[0].numRowOriginal;
+
+      const auto& rIndex = mipsolver.presolve_.data_.presolve_[0].rIndex;
+      const auto& cIndex = mipsolver.presolve_.data_.presolve_[0].cIndex;
+      firstrootbasis.valid_ = true;
+      firstrootbasis.col_status.resize(mipsolver.numCol(),
+                                       HighsBasisStatus::NONBASIC);
+      firstrootbasis.row_status.resize(mipsolver.numRow(),
+                                       HighsBasisStatus::NONBASIC);
+
+      int missingbasic = mipsolver.model_->numRow_;
+
+      for (int i = 0; i != numRowOrig; ++i) {
+        if (rIndex[i] < 0) continue;
+
+        HighsBasisStatus rowstatus = mipsolver.rootbasis->row_status[i];
+
+        if (rowstatus == HighsBasisStatus::BASIC) {
+          if (missingbasic != 0)
+            --missingbasic;
+          else
+            rowstatus = HighsBasisStatus::NONBASIC;
+        }
+
+        firstrootbasis.row_status[rIndex[i]] = rowstatus;
+      }
+
+      for (int i = 0; i != numColOrig; ++i) {
+        if (cIndex[i] < 0) continue;
+
+        HighsBasisStatus colstatus = mipsolver.rootbasis->col_status[i];
+
+        if (colstatus == HighsBasisStatus::BASIC) {
+          if (missingbasic != 0)
+            --missingbasic;
+          else
+            colstatus = HighsBasisStatus::NONBASIC;
+        }
+
+        firstrootbasis.col_status[cIndex[i]] = colstatus;
+      }
+
+      // there are missing basic variables; first add the sparsest nonbasic
+      // structural columns to the basis whenever the column does not contain
+      // any basic row. Then proceed by adding logical columns of rows which
+      // contain no basic variables until the basis is complete
+      if (missingbasic != 0) {
+        std::vector<int> nonbasiccols;
+        nonbasiccols.reserve(model.numCol_);
+        for (int i = 0; i != model.numCol_; ++i) {
+          if (firstrootbasis.col_status[i] != HighsBasisStatus::BASIC)
+            nonbasiccols.push_back(i);
+        }
+        std::sort(nonbasiccols.begin(), nonbasiccols.end(),
+                  [&](int col1, int col2) {
+                    int len1 = model.Astart_[col1 + 1] - model.Astart_[col1];
+                    int len2 = model.Astart_[col2 + 1] - model.Astart_[col2];
+                    return len1 < len2;
+                  });
+        nonbasiccols.resize(
+            std::min(nonbasiccols.size(), size_t(missingbasic)));
+        for (int i : nonbasiccols) {
+          const int start = model.Astart_[i];
+          const int end = model.Astart_[i + 1];
+
+          bool hasbasic = false;
+          for (int j = start; j != end; ++j) {
+            if (firstrootbasis.row_status[model.Aindex_[j]] ==
+                HighsBasisStatus::BASIC) {
+              hasbasic = true;
+              break;
+            }
+          }
+
+          if (!hasbasic) {
+            firstrootbasis.col_status[i] = HighsBasisStatus::BASIC;
+            --missingbasic;
+            if (missingbasic == 0) break;
+          }
+        }
+
+        if (missingbasic != 0) {
+          std::vector<std::pair<int, int>> nonbasicrows;
+
+          for (int i = 0; i != model.numRow_; ++i) {
+            if (firstrootbasis.row_status[i] == HighsBasisStatus::BASIC)
+              continue;
+
+            const int start = ARstart_[i];
+            const int end = ARstart_[i + 1];
+
+            int nbasic = 0;
+            for (int j = start; j != end; ++j) {
+              if (firstrootbasis.col_status[ARindex_[j]] ==
+                  HighsBasisStatus::BASIC) {
+                ++nbasic;
+              }
+            }
+
+            if (nbasic == 0) {
+              firstrootbasis.row_status[i] = HighsBasisStatus::BASIC;
+              --missingbasic;
+              if (missingbasic == 0) break;
+            } else {
+              nonbasicrows.emplace_back(nbasic, i);
+            }
+          }
+
+          std::sort(nonbasicrows.begin(), nonbasicrows.end());
+          nonbasicrows.resize(missingbasic);
+
+          for (std::pair<int, int> nonbasicrow : nonbasicrows)
+            firstrootbasis.row_status[nonbasicrow.second] =
+                HighsBasisStatus::BASIC;
+        }
+      }
+    }
+
+    lp.getLpSolver().setBasis(firstrootbasis);
+  }
+
   rowintegral.resize(mipsolver.model_->numRow_);
 
   // compute the maximal absolute coefficients to filter propagation
@@ -160,10 +288,61 @@ void HighsMipSolverData::setup() {
   domain.computeRowActivities();
   domain.propagate();
 
-  if (!domain.getChangedCols().empty()) lp.flushDomain(domain);
-
   // extract cliques
   cliquetable.extractCliques(mipsolver);
+  if (domain.infeasible()) {
+    lower_bound = HIGHS_CONST_INF;
+    pruned_treeweight = 1.0;
+    return;
+  }
+  // store binary variables in vector with their number of implications on other
+  // binaries
+  std::vector<std::tuple<int, int, int>> binaries;
+  binaries.reserve(model.numCol_);
+  HighsRandom random;
+  for (int i = 0; i != model.numCol_; ++i) {
+    if (domain.isBinary(i))
+      binaries.emplace_back(-std::min(100, cliquetable.getNumImplications(i)),
+                            random.integer(), i);
+  }
+  if (!binaries.empty()) {
+    // sort variables with many implications on other binaries first
+    std::sort(binaries.begin(), binaries.end());
+
+    int nfixed = 0;
+    int contingent = 1000;
+    int nprobed = 0;
+    for (std::tuple<int, int, int> binvar : binaries) {
+      int i = std::get<2>(binvar);
+
+      if (domain.isBinary(i)) {
+        --contingent;
+        if (contingent < 0) break;
+        ++nprobed;
+        bool fixed = implications.runProbing(i, contingent);
+
+        if (domain.infeasible()) {
+          lower_bound = HIGHS_CONST_INF;
+          pruned_treeweight = 1.0;
+          return;
+        }
+        if (fixed) {
+          ++nfixed;
+          contingent += nfixed;
+        }
+      } else
+        ++nfixed;
+    }
+
+    HighsPrintMessage(mipsolver.options_mip_->output,
+                      mipsolver.options_mip_->message_level, ML_MINIMAL,
+                      "%d probing evaluations: %lu bound changes and %d fixed "
+                      "binary variables\n",
+                      nprobed, domain.getChangedCols().size(), nfixed);
+
+    cliquetable.cleanupFixed(domain);
+  }
+  if (!domain.getChangedCols().empty()) lp.flushDomain(domain, true);
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   lp.getLpSolver().setHighsOptionValue("dual_simplex_cleanup_strategy", 2);
@@ -261,7 +440,11 @@ void HighsMipSolverData::evaluateRootNode() {
 
   firstlpsol = lp.getLpSolver().getSolution().col_value;
   firstlpsolobj = lp.getObjective();
+  firstrootbasis = lp.getLpSolver().getBasis();
   rootlpsolobj = firstlpsolobj;
+
+  if (lp.unscaledDualFeasible(lp.getStatus()))
+    mipsolver.mipdata_->lower_bound = lp.getObjective();
 
   // begin separation
   std::vector<double> avgdirection;
@@ -278,13 +461,25 @@ void HighsMipSolverData::evaluateRootNode() {
   HighsSeparation sepa;
   sepa.setLpRelaxation(&lp);
 
+  total_lp_iterations = lp.getNumLpIterations();
+
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
     ++nseparounds;
+    printDisplayLine();
     size_t tmpilpiters = lp.getNumLpIterations();
-    int ncuts = sepa.separationRound(domain, status);
     maxrootlpiters =
         std::max(maxrootlpiters, lp.getNumLpIterations() - tmpilpiters);
+
+    int ncuts = sepa.separationRound(domain, status);
+    if (status == HighsLpRelaxation::Status::Infeasible) {
+      pruned_treeweight = 1.0;
+      lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+      total_lp_iterations = lp.getNumLpIterations();
+      num_nodes = 1;
+      num_leaves = 1;
+      return;
+    }
 
     const std::vector<double>& solvals =
         lp.getLpSolver().getSolution().col_value;
@@ -335,11 +530,16 @@ void HighsMipSolverData::evaluateRootNode() {
       mipsolver.mipdata_->lower_bound = lp.getObjective();
     total_lp_iterations = lp.getNumLpIterations();
 
-    printDisplayLine();
-    lp.setIterationLimit(int(10 * maxrootlpiters));
+    lp.setIterationLimit(int(50 * maxrootlpiters));
 
-    if (mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit)
+    if (mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
+      lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+      total_lp_iterations = lp.getNumLpIterations();
+      pruned_treeweight = 1.0;
+      num_nodes = 1;
+      num_leaves = 1;
       return;
+    }
 
     if (ncuts == 0) break;
     if (mipsolver.submip && nseparounds == 5) break;
@@ -350,15 +550,18 @@ void HighsMipSolverData::evaluateRootNode() {
   cutpool.removeObsoleteRows(lp);
 
   status = lp.resolveLp();
-  total_lp_iterations += lp.getNumLpIterations();
+  total_lp_iterations = lp.getNumLpIterations();
   if (status == HighsLpRelaxation::Status::Optimal &&
       lp.getFractionalIntegers().empty()) {
+    pruned_treeweight = 1.0;
+    num_nodes = 1;
+    num_leaves = 1;
     addIncumbent(lp.getLpSolver().getSolution().col_value, lp.getObjective(),
                  'T');
   } else {
     rootlpsol = lp.getLpSolver().getSolution().col_value;
     rootlpsolobj = lp.getObjective();
-    lp.setIterationLimit(int(2 * maxrootlpiters));
+    lp.setIterationLimit(int(50 * maxrootlpiters));
 
     // add the root node to the nodequeue to initialize the search
     nodequeue.emplaceNode(std::vector<HighsDomainChange>(), lp.getObjective(),

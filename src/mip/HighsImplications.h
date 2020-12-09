@@ -52,6 +52,8 @@ class HighsImplications {
     int loc = 2 * col + val;
     return implicationmap[loc].start != -1;
   }
+
+  bool runProbing(int col, int& numboundchgs);
 };
 
 #endif

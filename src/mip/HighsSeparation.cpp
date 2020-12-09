@@ -914,15 +914,34 @@ class ImpliedBounds {
     double vals[2];
     double rhs;
     const auto& sol = lp.getLpSolver().getSolution().col_value;
+    implications.cliquetable.cleanupFixed(implications.globaldomain);
+    if (implications.globaldomain.infeasible()) return;
+    int numboundchgs = 0;
+
+    // first do probing on all candidates that have not been probed yet
+    for (std::pair<int, double> fracint : lp.getFractionalIntegers()) {
+      int col = fracint.first;
+      if (implications.globaldomain.colLower_[col] != 0.0 ||
+          implications.globaldomain.colUpper_[col] != 1.0)
+        continue;
+
+      if (implications.runProbing(col, numboundchgs)) {
+        ++numboundchgs;
+        if (implications.globaldomain.infeasible()) return;
+      }
+    }
+
     for (std::pair<int, double> fracint : lp.getFractionalIntegers()) {
       int col = fracint.first;
       // skip non binary variables
       if (implications.globaldomain.colLower_[col] != 0.0 ||
           implications.globaldomain.colUpper_[col] != 1.0)
         continue;
+
       bool infeas;
       const HighsDomainChange* implics = nullptr;
       int nimplics = implications.getImplications(col, 1, implics, infeas);
+      if (implications.globaldomain.infeasible()) return;
       if (infeas) {
 #ifdef HIGHS_DEBUGSOL
         assert(highsDebugSolution[col] < 0.5);
@@ -977,6 +996,7 @@ class ImpliedBounds {
       }
 
       nimplics = implications.getImplications(col, 0, implics, infeas);
+      if (implications.globaldomain.infeasible()) return;
       if (infeas) {
 #ifdef HIGHS_DEBUGSOL
         assert(highsDebugSolution[col] > 0.5);
@@ -2210,10 +2230,9 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
   HighsMipSolverData& mipdata = *lp->getMipSolver().mipdata_;
   ImpliedBounds implbound(mipdata.implications);
   implbound.separateImplBounds(*lp, mipdata.cutpool, propdomain);
-
   propdomain.propagate();
 
-  if (propdomain.infeasible()) {
+  if (propdomain.infeasible() || mipdata.domain.infeasible()) {
     status = HighsLpRelaxation::Status::Infeasible;
     propdomain.clearChangedCols();
     return 0;

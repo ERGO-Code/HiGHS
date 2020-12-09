@@ -28,7 +28,7 @@ std::vector<double> highsDebugSolution;
 
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                                bool submip)
-    : options_mip_(&options), model_(&lp), submip(submip) {}
+    : options_mip_(&options), model_(&lp), submip(submip), rootbasis(nullptr) {}
 
 HighsMipSolver::~HighsMipSolver() = default;
 
@@ -137,7 +137,6 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
       presolve_.presolve_status_ != HighsPresolveStatus::ReducedToEmpty)
     return HighsPostsolveStatus::NoPostsolve;
 
-  // todo:
   // Handle max case.
   // if (lp_.sense_ == ObjSense::MAXIMIZE)
   // presolve_.negateReducedLpColDuals(true);
@@ -186,6 +185,7 @@ void HighsMipSolver::run() {
       case HighsPresolveStatus::ReducedToEmpty:
         reportPresolveReductions(*options_mip_, *model_, true);
         mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
+        mipdata_->setup();
         runPostsolve();
         timer_.stop(timer_.solve_clock);
         return;
@@ -198,11 +198,12 @@ void HighsMipSolver::run() {
   }
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-  if (model_->numCol_ != 0) {
-    mipdata_->setup();
+  mipdata_->setup();
+  if (!mipdata_->domain.infeasible() && model_->numCol_ != 0) {
     mipdata_->evaluateRootNode();
   }
   if (mipdata_->nodequeue.empty()) {
+    mipdata_->printDisplayLine();
     HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                       ML_MINIMAL, "\nmodel was solved in the root node\n");
     if (options_mip_->presolve != "off") runPostsolve();
@@ -229,7 +230,7 @@ void HighsMipSolver::run() {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    int iterlimit = 50 * int(mipdata_->lp.getNumLpIterations() /
+    int iterlimit = 100 * int(mipdata_->lp.getNumLpIterations() /
                              (double)std::max(size_t{1}, mipdata_->num_nodes));
     iterlimit = std::max(1000, iterlimit);
 
@@ -319,7 +320,7 @@ void HighsMipSolver::run() {
       HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                         ML_MINIMAL, "added %lu global bound changes\n",
                         mipdata_->domain.getChangedCols().size());
-
+      mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
       search.resetLocalDomain();
 

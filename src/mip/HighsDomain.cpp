@@ -588,6 +588,7 @@ double HighsDomain::doChangeBound(const HighsDomainChange& boundchg) {
 
 void HighsDomain::changeBound(HighsDomainChange boundchg, int reason) {
   assert(boundchg.column >= 0);
+  assert(infeasible_ == 0);
   if (boundchg.boundtype == HighsBoundType::Lower) {
     if (boundchg.boundval <= colLower_[boundchg.column]) return;
     if (boundchg.boundval > colUpper_[boundchg.column]) {
@@ -756,7 +757,8 @@ void HighsDomain::propagate() {
           int i = propagateinds[k];
           int start = 2 * mipsolver->mipdata_->ARstart_[i];
           int end = start + propRowNumChangedBounds_[k];
-          for (int j = start; j != end; ++j) changeBound(changedbounds[j], i);
+          for (int j = start; j != end && infeasible_ == 0; ++j)
+            changeBound(changedbounds[j], i);
 
           if (infeasible_) break;
         }
@@ -821,7 +823,8 @@ void HighsDomain::propagate() {
           cutpool->resetAge(i);
           int start = cutpool->getMatrix().getRowStart(i);
           int end = start + propRowNumChangedBounds_[k];
-          for (int j = start; j != end; ++j) changeBound(changedbounds[j], i);
+          for (int j = start; j != end && infeasible_ == 0; ++j)
+            changeBound(changedbounds[j], i);
 
           if (infeasible_) break;
         }

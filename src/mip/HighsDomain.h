@@ -154,6 +154,15 @@ class HighsDomain {
     changeBound({boundtype, col, boundval}, reason);
   }
 
+  void fixCol(int col, double val) {
+    assert(infeasible_ == 0);
+    if (colLower_[col] < val)
+      changeBound({HighsBoundType::Lower, col, val}, -2);
+
+    if (infeasible_ == 0 && colUpper_[col] > val)
+      changeBound({HighsBoundType::Upper, col, val}, -2);
+  }
+
   HighsDomainChange backtrack();
 
   const std::vector<HighsDomainChange>& getDomainChangeStack() const {

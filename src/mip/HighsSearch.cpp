@@ -177,12 +177,15 @@ void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
     double downval = std::floor(lpsol[i] + mipsolver.mipdata_->feastol);
     double upval = std::ceil(lpsol[i] - mipsolver.mipdata_->feastol);
 
-    if (localdom.colLower_[i] < downval)
+    if (localdom.colLower_[i] < downval) {
       localdom.changeBound(HighsBoundType::Lower, i,
                            std::min(downval, localdom.colUpper_[i]), -2);
+      if (localdom.infeasible()) return;
+    }
     if (localdom.colUpper_[i] > upval)
       localdom.changeBound(HighsBoundType::Upper, i,
                            std::max(upval, localdom.colLower_[i]), -2);
+    if (localdom.infeasible()) return;
   }
 }
 
@@ -208,6 +211,8 @@ void HighsSearch::heuristicSearchNew() {
     //}
     heur.upper_limit = getCutoffBound();  // std::min(objlim, getCutoffBound());
   }
+  if (heur.localdom.infeasible()) return;
+
   HighsLpRelaxation heurlp(*lp);
   // only use the global upper limit as LP limit so that dual proofs are valid
   heurlp.setObjectiveLimit(mipsolver.mipdata_->upper_limit);
@@ -219,12 +224,25 @@ void HighsSearch::heuristicSearchNew() {
   heur.localdom.clearChangedCols();
   heur.nodestack.emplace_back();
   int nbacktracks = 0;
+  // int nfixed = 0;
+  // int ntotal = 0;
+  //
+  // for (int i = 0; i != mipsolver.numCol(); ++i) {
+  //  // skip fixed and continuous variables
+  //  if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
+  //  if (mipsolver.mipdata_->domain.colLower_[i] ==
+  //      mipsolver.mipdata_->domain.colUpper_[i])
+  //    continue;
+  //
+  //  // count globally unfixed variable
+  //  ++ntotal;
+  //
+  //  // count locally fixed variable
+  //  if (heur.localdom.colLower_[i] == heur.localdom.colUpper_[i]) ++nfixed;
+  //}
   while (true) {
     heur.evaluateNode();
-    if (heur.currentNodePruned() ||
-        heur.nodestack.back().estimate > getCutoffBound()) {
-      heur.nodestack.back().opensubtrees = 0;
-      printf("backtracking, %d\n", heur.hasNode());
+    if (heur.currentNodePruned()) {
       ++nbacktracks;
       if (!heur.backtrack()) break;
       continue;
@@ -259,7 +277,6 @@ void HighsSearch::heuristicSearchNew() {
     // no candidates left to fix, stop the dive here and decide
     // whether this neighborhood looks promising for a submip search
     if (heurlp.getFractionalIntegers().begin() == fixcandend) {
-      printf("neighborhood exhausted\n");
       break;
     }
 
@@ -329,11 +346,11 @@ void HighsSearch::heuristicSearchNew() {
 
   // if the estimate of this node is too bad, we will not proceed to solve it in
   // a submip
-  double estimate = heur.getCurrentEstimate();
-  if (estimate > getCutoffBound()) {
-    // printf("estimate unpromising\n");
-    return;
-  }
+  // double estimate = heur.getCurrentEstimate();
+  // if (estimate > getCutoffBound()) {
+  //  printf("estimate unpromising\n");
+  //  return;
+  //}
 
   // determine the fixing rate to decide if the problem is restricted enough to
   // be considered for solving a submip
@@ -355,7 +372,8 @@ void HighsSearch::heuristicSearchNew() {
   }
 
   double fixingrate = nfixed / (double)ntotal;
-  printf("fixing rate is %g\n", fixingrate);
+
+  //printf("fixing rate is %g\n", fixingrate);
   if (fixingrate < 0.25) {
     // heur.childselrule = ChildSelectionRule::BestCost;
     heur.pseudocost.setMinReliable(0);
@@ -376,40 +394,7 @@ void HighsSearch::heuristicSearchNew() {
 void HighsSearch::heuristicSearch() {
   const auto& lpsol = lp->getLpSolver().getSolution().col_value;
 
-  if (!mipsolver.submip) {
-    std::vector<double> collower = mipsolver.mipdata_->domain.colLower_;
-    std::vector<double> colupper = mipsolver.mipdata_->domain.colUpper_;
-    int nchgs = 0;
-    int nint = 0;
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
-      if (mipsolver.variableType(i) != HighsVarType::INTEGER) continue;
-      if (localdom.colLower_[i] == localdom.colUpper_[i]) continue;
-
-      double downval = std::floor(lpsol[i] + mipsolver.mipdata_->feastol);
-      double upval = std::ceil(lpsol[i] - mipsolver.mipdata_->feastol);
-      ++nint;
-      if (collower[i] < downval) {
-        ++nchgs;
-        collower[i] = std::min(downval, colupper[i]);
-      }
-      if (colupper[i] > upval) {
-        ++nchgs;
-        colupper[i] = std::max(upval, collower[i]);
-      }
-    }
-
-    printf("nchgs: %d, nint: %d\n", nchgs, nint);
-    if (nchgs > 0.3 * nint) {
-      solveSubMip(
-          std::move(collower), std::move(colupper),
-          std::max(50, int(0.05 * (mipsolver.mipdata_->num_leaves))),
-          std::max(500, int(0.05 * (mipsolver.mipdata_->num_nodes + nnodes))));
-      return;
-    }
-  }
-
   HighsSearch heur(mipsolver, pseudocost);
-  heur.childselrule = ChildSelectionRule::BestCost;
   heur.localdom.setParentDomain(&localdom);
   heur.inheuristic = true;
   if (!mipsolver.mipdata_->incumbent.empty()) {
@@ -418,6 +403,8 @@ void HighsSearch::heuristicSearch() {
     // in case we have no incumbent we use the rens neighbourhood
     heur.setRENSNeighbourhood(lpsol);
   }
+
+  if (heur.localdom.infeasible()) return;
 
   heur.localdom.propagate();
   if (heur.localdom.infeasible()) return;
@@ -453,7 +440,8 @@ void HighsSearch::heuristicSearch() {
                 (double)mipsolver.mipdata_->total_lp_iterations);
   if (backtracklim < 10) backtracklim = 10;
 
-  heur.pseudocost.setMinReliable(std::min(1, pseudocost.getMinReliable()));
+  heur.pseudocost.setMinReliable(
+      0);  // std::min(1, pseudocost.getMinReliable()));
   heur.nodestack.emplace_back();
   double cutoffbnd = getCutoffBound();
   heur.solveDepthFirst(backtracklim);
@@ -843,15 +831,16 @@ void HighsSearch::solveSubMip(std::vector<double> colLower,
 
   // set limits
   submipoptions.mip_max_leaves = maxleaves;
-  // submipoptions.logfile = NULL;
+  submipoptions.logfile = NULL;
   submipoptions.mip_max_nodes = maxnodes;
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
-  // submipoptions.message_level = 0;
+  submipoptions.message_level = 0;
   submipoptions.dual_objective_value_upper_bound =
       mipsolver.mipdata_->upper_limit;
   // setup solver and run it
   HighsMipSolver submipsolver(submipoptions, submip, true);
+  submipsolver.rootbasis = &mipsolver.mipdata_->firstrootbasis;
   submipsolver.run();
 
   if (!submipsolver.presolve_.data_.recovered_solution_.col_value.empty()) {
@@ -996,10 +985,8 @@ void HighsSearch::evaluateNode() {
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
         } else if (!inbranching && !inheuristic) {
           if (getHeuristicLpIterations() <
-                  getTotalLpIterations() *
-                      mipsolver.mipdata_->heuristic_effort &&
-              currnode.estimate <= getCutoffBound()) {
-            heuristicSearch();
+              getTotalLpIterations() * mipsolver.mipdata_->heuristic_effort) {
+            heuristicSearchNew();
           }
         }
       }
