@@ -101,7 +101,7 @@ class Presolve : public HPreData {
     timer.time_limit = limit;
   }
 
-  int iPrint = 0;
+  int iPrint = 1;
   int message_level;
   FILE* output;
 

@@ -2400,10 +2400,17 @@ void Presolve::setPrimalValue(int j, double value) {
       // update singleton row list
       if (nzRow.at(row) == 1) singRow.push_back(row);
       if (nzRow.at(row) == 0) {
+        std::cout << row << " " << rowLower[row] << " " << rowUpper[row] << std::endl;
+
         if (rowLower[row] - rowUpper[row] > tol) {
           status = Infeasible;
           return;
         }
+        if (rowLower[row] > tol || rowUpper[row] < -tol) {
+          status = Infeasible;
+          return;
+        }
+
         flagRow[row] = 0;
         addChange(PresolveRule::EMPTY_ROW, row, j);
       }
