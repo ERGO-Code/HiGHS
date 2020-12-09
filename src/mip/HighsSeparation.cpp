@@ -30,7 +30,7 @@ static double complementWithLower(double coef, double lb, HighsCDouble& rhs) {
 static bool separatePureBinaryKnapsackCover(
     const std::vector<double>& solvals, HighsCDouble coverweight,
     HighsCDouble lambda, std::vector<int>& cover, std::vector<int>& inds,
-    std::vector<double>& vals, HighsCDouble& rhs) {
+    std::vector<double>& vals, HighsCDouble& rhs, double feastol) {
   int coversize = cover.size();
   int rowlen = inds.size();
   std::vector<double> S;
@@ -65,7 +65,7 @@ static bool separatePureBinaryKnapsackCover(
     sum += std::min(abar, vals[cover[i]]);
     S[i] = double(sum);
 
-    if (vals[cover[i]] > abar + 1e-6) {
+    if (vals[cover[i]] > abar + feastol) {
       ++cplussize;
       coverflag[cover[i]] = 1;
     } else
@@ -87,7 +87,7 @@ static bool separatePureBinaryKnapsackCover(
 
     h = std::max(h - 1, 0);
     for (; h < coversize; ++h) {
-      if (z <= S[h] + 1e-6) break;
+      if (z <= S[h] + feastol) break;
     }
 
     return coef + h;
@@ -377,7 +377,7 @@ static bool transformBaseEquation(
     if (absval > minabsval) minabsval = absval;
   }
 
-  minabsval *= 1e-6;
+  minabsval *= mip.mipdata_->feastol;
 
   for (int j = 0; j != Rlen; ++j) {
     int col = Rindex[j];
@@ -511,7 +511,7 @@ static bool transformBaseEquation(
   }
 
   HighsCDouble maxabscoef = maxact - rhs;
-  if (!unbnd && maxabscoef > 1e-6) {
+  if (!unbnd && maxabscoef > mip.mipdata_->feastol) {
     int ntightened = 0;
     for (int i = 0; i != len; ++i) {
       if (inds[i] >= mip.numCol() ||
@@ -546,7 +546,7 @@ static bool determineCover(const HighsMipSolver& mip, std::vector<int>& inds,
   for (int j = 0; j != len; ++j) {
     if (inds[j] >= mip.numCol()) continue;
 
-    if (solvals[j] > 1e-6 &&
+    if (solvals[j] > mip.mipdata_->feastol &&
         mip.variableType(inds[j]) != HighsVarType::CONTINUOUS) {
       cover.push_back(j);
     }
@@ -640,7 +640,7 @@ bool cmirCutGenerationHeuristic(const HighsMipSolver& mip,
     if (inds[i] < mip.numCol() &&
         mip.variableType(inds[i]) != HighsVarType::CONTINUOUS) {
       integerinds.push_back(i);
-      if (solvals[i] > 1e-6) {
+      if (solvals[i] > mip.mipdata_->feastol) {
         double delta = std::abs(vals[i]);
         if (delta <= 1e-4 || delta >= 1e4) continue;
         maxabsdelta = std::max(maxabsdelta, delta);
@@ -661,7 +661,7 @@ bool cmirCutGenerationHeuristic(const HighsMipSolver& mip,
   std::sort(deltas.begin(), deltas.end());
   double curdelta = deltas[0];
   for (size_t i = 1; i < deltas.size(); ++i) {
-    if (deltas[i] - curdelta <= 1e-6)
+    if (deltas[i] - curdelta <= mip.mipdata_->feastol)
       deltas[i] = 0.0;
     else
       curdelta = deltas[i];
@@ -852,7 +852,7 @@ bool generateCut(const HighsMipSolver& mip, const std::vector<double>& upper,
   auto tmpvals = vals;
   auto tmpcompl = complementation;
   HighsCDouble tmprhs = rhs;
-  HighsCDouble efficacy = 1e-6;
+  HighsCDouble efficacy = feastol;
 #endif
   if (nunbndint != 0) {
     HighsCDouble efficacy = 0;
@@ -869,7 +869,8 @@ bool generateCut(const HighsMipSolver& mip, const std::vector<double>& upper,
       if (nint == 0 && ncont == 0) {
         integral = true;
         success = separatePureBinaryKnapsackCover(solvals, coverweight, lambda,
-                                                  cover, inds, vals, rhs);
+                                                  cover, inds, vals, rhs,
+                                                  mip.mipdata_->feastol);
       } else if (nint == 0)
         success = separateMixedBinaryKnapsackCover(
             mip, solvals, coverweight, lambda, cover, inds, vals, rhs);
@@ -910,6 +911,7 @@ class ImpliedBounds {
 
   void separateImplBounds(const HighsLpRelaxation& lp, HighsCutPool& cutpool,
                           HighsDomain& propdomain) {
+    const double feastol = lp.getMipSolver().mipdata_->feastol;
     int inds[2];
     double vals[2];
     double rhs;
@@ -955,7 +957,7 @@ class ImpliedBounds {
 
       for (int i = 0; i != nimplics; ++i) {
         if (implics[i].boundtype == HighsBoundType::Upper) {
-          if (implics[i].boundval + 1e-6 >=
+          if (implics[i].boundval + feastol >=
               implications.globaldomain.colUpper_[implics[i].column])
             continue;
 
@@ -967,7 +969,7 @@ class ImpliedBounds {
           rhs = implications.globaldomain.colUpper_[implics[i].column];
 
         } else {
-          if (implics[i].boundval - 1e-6 <=
+          if (implics[i].boundval - feastol <=
               implications.globaldomain.colLower_[implics[i].column])
             continue;
 
@@ -981,7 +983,7 @@ class ImpliedBounds {
 
         double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
 
-        if (viol > 1e-6) {
+        if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
 #ifdef HIGHS_DEBUGSOL
           HighsCDouble debugactivity = 0;
@@ -1010,7 +1012,7 @@ class ImpliedBounds {
 
       for (int i = 0; i != nimplics; ++i) {
         if (implics[i].boundtype == HighsBoundType::Upper) {
-          if (implics[i].boundval + 1e-6 >=
+          if (implics[i].boundval + feastol >=
               implications.globaldomain.colUpper_[implics[i].column])
             continue;
 
@@ -1021,7 +1023,7 @@ class ImpliedBounds {
           inds[1] = col;
           rhs = implics[i].boundval;
         } else {
-          if (implics[i].boundval - 1e-6 <=
+          if (implics[i].boundval - feastol <=
               implications.globaldomain.colLower_[implics[i].column])
             continue;
 
@@ -1035,14 +1037,14 @@ class ImpliedBounds {
 
         double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
 
-        if (viol > 1e-6) {
+        if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
 #ifdef HIGHS_DEBUGSOL
           HighsCDouble debugactivity = 0;
           for (size_t i = 0; i != 2; ++i)
             debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
-          assert(debugactivity <= rhs + 1e-6);
+          assert(debugactivity <= rhs + feastol);
 #endif
           int cut = cutpool.addCut(inds, vals, 2, rhs);
           propdomain.cutAdded(cut);
@@ -1143,7 +1145,8 @@ class AggregationHeuristic {
       if (lp.rowUpper_[i] != HIGHS_CONST_INF)
         upperslack = lp.rowUpper_[i] - lpsol.row_value[i];
 
-      if (lowerslack > 1e-6 && upperslack > 1e-6)
+      if (lowerslack > mip.mipdata_->feastol &&
+          upperslack > mip.mipdata_->feastol)
         rowtype[i] = RowType::Unusuable;
       else if (lowerslack < upperslack)
         rowtype[i] = RowType::Geq;
@@ -1254,7 +1257,7 @@ class AggregationHeuristic {
                      : HIGHS_CONST_INF;
 
       bounddistance[i] = std::min(lbdist, ubdist);
-      if (bounddistance[i] < 1e-6) bounddistance[i] = 0;
+      if (bounddistance[i] < mip.mipdata_->feastol) bounddistance[i] = 0;
     }
 
     // todo :mark all continuous variables that have fractional integer
@@ -1357,7 +1360,7 @@ class AggregationHeuristic {
       // complement positive if possible without slack using a simple or
       // variable bound otherwise use the tightest bound and prefer simple
       // bounds adjust the right hand side accordingly
-      if (bounddistance[col] > 1e-6) bounddistpos.push_back(j);
+      if (bounddistance[col] > mip.mipdata_->feastol) bounddistpos.push_back(j);
 
       if (bounddistance[col] == HIGHS_CONST_INF) freevar = true;
 
@@ -1408,12 +1411,12 @@ class AggregationHeuristic {
             assert(mip.variableType(UBindex[k]) != HighsVarType::CONTINUOUS);
             vectorsum.add(UBindex[k], scale * UBvalue[k]);
           }
-        } else if (simpleubdist - 1e-6 <= bounddistance[col]) {
+        } else if (simpleubdist - mip.mipdata_->feastol <= bounddistance[col]) {
           // use  the simple upper bound for complementation and then relax
           // the positive continuous variable as it has a positive
           // coefficient
           complementWithUpper(baseval, domain.colUpper_[col], rhs);
-        } else if (simplelbdist - 1e-6 <= bounddistance[col]) {
+        } else if (simplelbdist - mip.mipdata_->feastol <= bounddistance[col]) {
           inds.push_back(col);
           complementation.push_back(1);
           if (domain.colUpper_[col] == HIGHS_CONST_INF)
@@ -1515,12 +1518,12 @@ class AggregationHeuristic {
             assert(mip.variableType(LBindex[k]) != HighsVarType::CONTINUOUS);
             vectorsum.add(LBindex[k], scale * LBvalue[k]);
           }
-        } else if (simplelbdist - 1e-6 <= bounddistance[col]) {
+        } else if (simplelbdist - mip.mipdata_->feastol <= bounddistance[col]) {
           // use  the simple lower bound for complementation and then relax
           // the positive continuous variable as it has a positive
           // coefficient
           complementWithLower(baseval, domain.colLower_[col], rhs);
-        } else if (simpleubdist - 1e-6 <= bounddistance[col]) {
+        } else if (simpleubdist - mip.mipdata_->feastol <= bounddistance[col]) {
           // use the simple upper bound and add the negative complemented
           // variable
           inds.push_back(col);
@@ -1597,7 +1600,7 @@ class AggregationHeuristic {
 
       if (std::abs(val) <= 1e-10) continue;
 
-      if (std::abs(val) <= 1e-6) {
+      if (std::abs(val) <= mip.mipdata_->feastol) {
         if (val < 0)
           rhs -= domain.colUpper_[col] * val;
         else
@@ -1647,7 +1650,7 @@ class AggregationHeuristic {
     }
 
     HighsCDouble maxabscoef = maxact - rhs;
-    if (!unbnd && maxabscoef > 1e-6) {
+    if (!unbnd && maxabscoef > mip.mipdata_->feastol) {
       int ntightened = 0;
       for (int i = 0; i != len; ++i) {
         if (inds[i] >= mip.numCol() ||
@@ -1743,7 +1746,7 @@ class AggregationHeuristic {
       for (size_t i = 0; i != inds.size(); ++i)
         debugactivity += highsDebugSolution[inds[i]] * vals[i];
 
-      assert(debugactivity <= upper + 1e-6);
+      assert(debugactivity <= upper + feastol);
 #endif
 
       int cutindex = cutpool.addCut(inds.data(), vals.data(), inds.size(),
@@ -1894,7 +1897,7 @@ class AggregationHeuristic {
         for (size_t i = 0; i != baseinds.size(); ++i)
           debugactivity += highsDebugSolution[baseinds[i]] * basevals[i];
 
-        assert(debugactivity <= baserhs + 1e-6);
+        assert(debugactivity <= baserhs + feastol);
 #endif
         computeTransformedRow(false);
 
@@ -2062,7 +2065,7 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
 
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
-    if (std::abs(aggrvals[j]) <= 1e-6) continue;
+    if (std::abs(aggrvals[j]) <= mip.mipdata_->feastol) continue;
 
     int rowlen;
     const int* rowinds;
@@ -2246,7 +2249,7 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
   }
 
   mipdata.cliquetable.separateCliques(sol.col_value, mipdata.domain, propdomain,
-                                      mipdata.cutpool);
+                                      mipdata.cutpool, mipdata.feastol);
 
   AggregationHeuristic aggheur(*lp, mipdata.domain, mipdata.cutpool,
                                propdomain);
@@ -2271,7 +2274,8 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
   }
 
   if (lp->scaledOptimal(status)) {
-    mipdata.cutpool.separate(sol.col_value, propdomain, cutset);
+    mipdata.cutpool.separate(sol.col_value, propdomain, cutset,
+                             mipdata.feastol);
 
     int ncuts = cutset.numCuts();
 

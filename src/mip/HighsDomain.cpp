@@ -111,7 +111,8 @@ int HighsDomain::propagateRowUpper(const int* Rindex, const double* Rvalue,
       if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
         bound = std::floor(bound + mipsolver->mipdata_->feastol);
         if (bound < colUpper_[Rindex[i]] &&
-            colUpper_[Rindex[i]] - bound > 1e-3 * std::abs(bound))
+            colUpper_[Rindex[i]] - bound >
+                1000.0 * mipsolver->mipdata_->feastol * std::abs(bound))
           accept = true;
         else
           accept = false;
@@ -138,7 +139,8 @@ int HighsDomain::propagateRowUpper(const int* Rindex, const double* Rvalue,
       if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
         bound = std::ceil(bound - mipsolver->mipdata_->feastol);
         if (bound > colLower_[Rindex[i]] &&
-            bound - colLower_[Rindex[i]] > 1e-3 * std::abs(bound))
+            bound - colLower_[Rindex[i]] >
+                1000.0 * mipsolver->mipdata_->feastol * std::abs(bound))
           accept = true;
         else
           accept = false;
@@ -191,7 +193,8 @@ int HighsDomain::propagateRowLower(const int* Rindex, const double* Rvalue,
       if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
         bound = std::floor(bound + mipsolver->mipdata_->feastol);
         if (bound < colUpper_[Rindex[i]] &&
-            colUpper_[Rindex[i]] - bound > 1e-3 * std::abs(bound))
+            colUpper_[Rindex[i]] - bound >
+                1000.0 * mipsolver->mipdata_->feastol * std::abs(bound))
           accept = true;
         else
           accept = false;
@@ -217,7 +220,8 @@ int HighsDomain::propagateRowLower(const int* Rindex, const double* Rvalue,
       if (mipsolver->variableType(Rindex[i]) != HighsVarType::CONTINUOUS) {
         bound = std::ceil(bound - mipsolver->mipdata_->feastol);
         if (bound > colLower_[Rindex[i]] &&
-            bound - colLower_[Rindex[i]] > 1e-3 * std::abs(bound))
+            bound - colLower_[Rindex[i]] >
+                1000.0 * mipsolver->mipdata_->feastol * std::abs(bound))
           accept = true;
         else
           accept = false;
@@ -337,7 +341,8 @@ void HighsDomain::updateActivityLbChange(int col, double oldbound,
       }
 
       if (activitycutsinf_[row] == 0 &&
-          activitycuts_[row] - cutpool->getRhs()[row] > 1e-6) {
+          activitycuts_[row] - cutpool->getRhs()[row] >
+              mipsolver->mipdata_->feastol) {
         infeasible_ = mip->numRow_ + row + 1;
       }
 

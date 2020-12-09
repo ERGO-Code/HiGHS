@@ -85,7 +85,7 @@ class HighsCutPool {
   void removeAllRows(HighsLpRelaxation& lprelaxation);
 
   void separate(const std::vector<double>& sol, HighsDomain& domprop,
-                HighsCutSet& cutset);
+                HighsCutSet& cutset, double feastol);
 
   bool cutIsIntegral(int cut) const { return rowintegral[cut]; }
 

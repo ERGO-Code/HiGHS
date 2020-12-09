@@ -147,7 +147,7 @@ void HighsCutPool::removeAllRows(HighsLpRelaxation& lprelaxation) {
 }
 
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
-                            HighsCutSet& cutset) {
+                            HighsCutSet& cutset, double feastol) {
   int nrows = matrix_.getNumRows();
   const int* ARindex = matrix_.getARindex();
   const double* ARvalue = matrix_.getARvalue();
@@ -177,7 +177,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     // if the cut is not violated more than feasibility tolerance
     // we skip it and increase its age, otherwise we reset its age
-    if (double(viol) <= 1e-6) {
+    if (double(viol) <= feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
         size_t sh = support_hash(&ARindex[start], end - start);
@@ -211,10 +211,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
       int col = ARindex[j];
       double solval = sol[col];
       if (ARvalue[j] > 0) {
-        if (solval - 1e-6 > domain.colLower_[col])
+        if (solval - feastol > domain.colLower_[col])
           rownorm += ARvalue[j] * ARvalue[j];
       } else {
-        if (solval + 1e-6 < domain.colUpper_[col])
+        if (solval + feastol < domain.colUpper_[col])
           rownorm += ARvalue[j] * ARvalue[j];
       }
     }
@@ -274,7 +274,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   cutset.ARstart_[cutset.numCuts()] = offset;
 }
 
-int HighsCutPool::addCut(int* Rindex, double* Rvalue, int Rlen, double rhs, bool integral) {
+int HighsCutPool::addCut(int* Rindex, double* Rvalue, int Rlen, double rhs,
+                         bool integral) {
   size_t sh = support_hash(Rindex, Rlen);
 
   // try to replace another cut with equal support that has an age > 0

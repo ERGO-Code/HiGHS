@@ -373,7 +373,7 @@ void HighsSearch::heuristicSearchNew() {
 
   double fixingrate = nfixed / (double)ntotal;
 
-  //printf("fixing rate is %g\n", fixingrate);
+  // printf("fixing rate is %g\n", fixingrate);
   if (fixingrate < 0.25) {
     // heur.childselrule = ChildSelectionRule::BestCost;
     heur.pseudocost.setMinReliable(0);
@@ -603,7 +603,7 @@ int HighsSearch::selectBranchingCandidate() {
         double solobj = checkSol(sol, integerfeasible);
 
         double objdelta = std::max(solobj - lp->getObjective(), 0.0);
-        if (objdelta < 1e-9) objdelta = 0.0;
+        if (objdelta < mipsolver.mipdata_->epsilon) objdelta = 0.0;
 
         downscore[candidate] = objdelta;
         downscorereliable[candidate] = 1;
@@ -701,7 +701,7 @@ int HighsSearch::selectBranchingCandidate() {
         double solobj = checkSol(sol, integerfeasible);
 
         double objdelta = std::max(solobj - lp->getObjective(), 0.0);
-        if (objdelta < 1e-9) objdelta = 0.0;
+        if (objdelta < mipsolver.mipdata_->epsilon) objdelta = 0.0;
 
         upscore[candidate] = objdelta;
         upscorereliable[candidate] = 1;

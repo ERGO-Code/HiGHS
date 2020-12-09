@@ -105,16 +105,16 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
     if (X[i].weight(data.sol) > pivweight) {
       pivweight = X[i].weight(data.sol);
       pivot = X[i];
-      if (pivweight >= 1.0 - 1e-6) break;
+      if (pivweight >= 1.0 - data.feastol) break;
     }
   }
 
-  if (pivweight < 1.0 - 1e-6) {
+  if (pivweight < 1.0 - data.feastol) {
     for (int i = 0; i != Plen; ++i) {
       if (data.P[i].weight(data.sol) > pivweight) {
         pivweight = data.P[i].weight(data.sol);
         pivot = data.P[i];
-        if (pivweight >= 1.0 - 1e-6) break;
+        if (pivweight >= 1.0 - data.feastol) break;
       }
     }
   }
@@ -302,7 +302,7 @@ void HighsCliqueTable::removeClique(int cliqueid) {
 void HighsCliqueTable::extractCliques(
     HighsDomain& globaldom, std::vector<int>& inds, std::vector<double>& vals,
     std::vector<int8_t>& complementation, double rhs, int nbin,
-    std::vector<int>& perm, std::vector<CliqueVar>& clique) {
+    std::vector<int>& perm, std::vector<CliqueVar>& clique, double feastol) {
   perm.resize(inds.size());
   std::iota(perm.begin(), perm.end(), 0);
 
@@ -314,12 +314,12 @@ void HighsCliqueTable::extractCliques(
             [&](int p1, int p2) { return vals[p1] > vals[p2]; });
 
   // check if any cliques exists
-  if (vals[perm[0]] + vals[perm[1]] <= rhs + 1e-6) return;
+  if (vals[perm[0]] + vals[perm[1]] <= rhs + feastol) return;
 
   // check if this is a set packing constraint (or easily transformable
   // into one)
-  if (std::abs(vals[0] - vals[perm[nbin - 1]]) <= 1e-6 &&
-      rhs < 2 * vals[perm[nbin - 1]] - 1e-6) {
+  if (std::abs(vals[0] - vals[perm[nbin - 1]]) <= feastol &&
+      rhs < 2 * vals[perm[nbin - 1]] - feastol) {
     // the coefficients on the binary variables are all equal and the
     // right hand side is strictly below two times the coefficient value.
     // Therefore the constraint can be transformed into a set packing
@@ -344,7 +344,7 @@ void HighsCliqueTable::extractCliques(
   }
 
   for (int k = nbin - 1; k != 0; --k) {
-    double mincliqueval = rhs - vals[perm[k]] + 1e-6;
+    double mincliqueval = rhs - vals[perm[k]] + feastol;
     auto cliqueend =
         std::partition_point(perm.begin(), perm.begin() + k,
                              [&](int p) { return vals[p] > mincliqueval; });
@@ -492,7 +492,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver) {
         // printRow(globaldom, inds.data(), vals.data(), inds.size(),
         //         -HIGHS_CONST_INF, rhs);
         extractCliques(globaldom, inds, vals, complementation, rhs, nbin, perm,
-                       clique);
+                       clique, mipsolver.mipdata_->feastol);
         if (globaldom.infeasible()) return;
       }
     }
@@ -538,7 +538,7 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver) {
         // printRow(globaldom, inds.data(), vals.data(), inds.size(),
         //         -HIGHS_CONST_INF, rhs);
         extractCliques(globaldom, inds, vals, complementation, rhs, nbin, perm,
-                       clique);
+                       clique, mipsolver.mipdata_->feastol);
         if (globaldom.infeasible()) return;
       }
     }
@@ -664,8 +664,9 @@ void HighsCliqueTable::vertexInfeasible(HighsDomain& globaldom, int col,
 void HighsCliqueTable::separateCliques(const std::vector<double>& sol,
                                        const HighsDomain& globaldom,
                                        HighsDomain& localdom,
-                                       HighsCutPool& cutpool) {
+                                       HighsCutPool& cutpool, double feastol) {
   BronKerboschData data(sol);
+  data.feastol = feastol;
 
   int numcols = globaldom.colLower_.size();
   for (int i = 0; i != numcols; ++i) {
@@ -674,10 +675,10 @@ void HighsCliqueTable::separateCliques(const std::vector<double>& sol,
     if (numcliquesvar[CliqueVar(i, 1).index()] != 0) data.P.emplace_back(i, 1);
 #else
     if (numcliquesvar[CliqueVar(i, 0).index()] != 0 &&
-        CliqueVar(i, 0).weight(sol) > 1e-6)
+        CliqueVar(i, 0).weight(sol) > feastol)
       data.P.emplace_back(i, 0);
     if (numcliquesvar[CliqueVar(i, 1).index()] != 0 &&
-        CliqueVar(i, 1).weight(sol) > 1e-6)
+        CliqueVar(i, 1).weight(sol) > feastol)
       data.P.emplace_back(i, 1);
 #endif
   }

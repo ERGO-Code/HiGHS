@@ -78,6 +78,7 @@ class HighsCliqueTable {
     std::vector<std::vector<CliqueVar>> cliques;
     double wR = 0.0;
     double minW = 1.05;
+    double feastol = 1e-6;
     int ncalls = 0;
     int maxcalls = 10000;
     int maxcliques = 100;
@@ -96,7 +97,8 @@ class HighsCliqueTable {
                       std::vector<double>& vals,
                       std::vector<int8_t>& complementation, double rhs,
                       int nbin, std::vector<int>& perm,
-                      std::vector<CliqueVar>& clique);
+                      std::vector<CliqueVar>& clique, double feastol);
+
   void processInfeasibleVertices(HighsDomain& domain);
 
   void propagateAndCleanup(HighsDomain& globaldom);
@@ -134,7 +136,7 @@ class HighsCliqueTable {
 
   void separateCliques(const std::vector<double>& sol,
                        const HighsDomain& globaldom, HighsDomain& localdom,
-                       HighsCutPool& cutpool);
+                       HighsCutPool& cutpool, double feastol);
 
   void cleanupFixed(HighsDomain& globaldom);
 
