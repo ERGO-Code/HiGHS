@@ -101,7 +101,7 @@ class Presolve : public HPreData {
     timer.time_limit = limit;
   }
 
-  int iPrint = 1;
+  int iPrint = 0;
   int message_level;
   FILE* output;
 
@@ -164,7 +164,7 @@ class Presolve : public HPreData {
   vector<double> colUpperOriginal;
 
   // functions
-  void setPrimalValue(int j, double value);
+  void setPrimalValue(const int j, const double value);
   void checkForChanges(int iteration);
   void resizeProblem();
   void resizeImpliedBounds();
