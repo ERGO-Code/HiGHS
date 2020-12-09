@@ -134,8 +134,8 @@ class SpecialLps {
   void issue425Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
     lp.numCol_ = 4;
     lp.numRow_ = 4;
-    lp.colCost_ = {1,1,1,2};
-    lp.colLower_ = {0,0,0,0};
+    lp.colCost_ = {1, 1, 1, 2};
+    lp.colLower_ = {0, 0, 0, 0};
     lp.colUpper_ = {inf, inf, inf, inf};
     lp.rowLower_ = {1, 2, 2, 4};
     lp.rowUpper_ = {1, 2, 2, 4};

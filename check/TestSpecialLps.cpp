@@ -188,7 +188,8 @@ void issue316(Highs& highs) {
 void issue425(Highs& highs) {
   SpecialLps special_lps;
   special_lps.reportIssue(425, dev_run);
-  // This is issue425 from mckib2 for which presolve failed to identify infeasibility
+  // This is issue425 from mckib2 for which presolve failed to identify
+  // infeasibility
   HighsLp lp;
   HighsModelStatus require_model_status;
   special_lps.issue425Lp(lp, require_model_status);

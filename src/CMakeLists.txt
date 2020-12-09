@@ -428,6 +428,7 @@ target_sources(libhighs PRIVATE
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/HighsMatrixPic.cpp
+    util/HSet.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
