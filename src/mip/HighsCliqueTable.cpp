@@ -40,56 +40,35 @@ void HighsCliqueTable::link(int node) {
   return highs_splay_link(node, root, get_left, get_right, get_key);
 }
 
-int HighsCliqueTable::findCommonCliqueRecurse(int& root1, int& root2) {
+int HighsCliqueTable::findCommonCliqueRecurse(int& root1, int& r2) {
+  if (r2 == -1) return -1;
   int commonclique = -1;
   assert(commoncliquestack.empty());
-  commoncliquestack.emplace_back(&root1, &root2);
+  commoncliquestack.emplace_back(&root1);
+  int cliqueid2 = cliquesets[r2].cliqueid;
 
   while (!commoncliquestack.empty()) {
-    int& r1 = *commoncliquestack.back().first;
-    int& r2 = *commoncliquestack.back().second;
-    if (r1 == -1 || r2 == -1) break;
+    int& r1 = *commoncliquestack.back();
+    if (r1 == -1) break;
     commoncliquestack.pop_back();
 
     int cliqueid1 = cliquesets[r1].cliqueid;
-    int cliqueid2 = cliquesets[r2].cliqueid;
 
     if (cliqueid1 == cliqueid2) {
       commonclique = cliqueid1;
       break;
     }
 
-    int cliquelen1 = cliques[cliqueid1].end - cliques[cliqueid1].start;
-    int cliquelen2 = cliques[cliqueid2].end - cliques[cliqueid2].start;
+    r2 = splay(cliqueid1, r2);
+    cliqueid2 = cliquesets[r2].cliqueid;
 
-    // look for the larger of the two cliques in the other tree by splaying it
-    // to the top in that tree if the clique is contained in the other tree we
-    // can can return true, otherwise we know that this clique is not part of
-    // the intersection and make two recursive calls for the left and right
-    // subtrees
-    if (cliquelen2 > cliquelen1) {
-      r1 = splay(cliqueid2, r1);
-      cliqueid1 = cliquesets[r1].cliqueid;
-
-      if (cliqueid1 == cliqueid2) {
-        commonclique = cliqueid1;
-        break;
-      }
-
-      commoncliquestack.emplace_back(&r1, &cliquesets[r2].left);
-      commoncliquestack.emplace_back(&r1, &cliquesets[r2].right);
-    } else {
-      r2 = splay(cliqueid1, r2);
-      cliqueid2 = cliquesets[r2].cliqueid;
-
-      if (cliqueid1 == cliqueid2) {
-        commonclique = cliqueid1;
-        break;
-      }
-
-      commoncliquestack.emplace_back(&r2, &cliquesets[r1].left);
-      commoncliquestack.emplace_back(&r2, &cliquesets[r1].right);
+    if (cliqueid1 == cliqueid2) {
+      commonclique = cliqueid1;
+      break;
     }
+
+    commoncliquestack.emplace_back(&cliquesets[r1].left);
+    commoncliquestack.emplace_back(&cliquesets[r1].right);
   }
 
   commoncliquestack.clear();
@@ -144,7 +123,7 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
   PminusNu.reserve(Plen);
 
   for (int i = 0; i != Plen; ++i) {
-    if (haveCommonClique(data.P[i], pivot)) continue;
+    if (haveCommonClique(pivot, data.P[i])) continue;
 
     PminusNu.push_back(data.P[i]);
   }
@@ -243,6 +222,7 @@ void HighsCliqueTable::addClique(HighsDomain& globaldom,
     for (int i = 0; i < numcliquevars - 1; ++i) {
       CliqueVar cover[2];
       cover[0] = cliquevars[i].complement();
+      if (cliquesetroot[cover[0].index()] == -1) continue;
       for (int j = i + 1; j < numcliquevars; ++j) {
         cover[1] = cliquevars[j].complement();
         bool isclique = foundCover(globaldom, cover[0], cover[1]);

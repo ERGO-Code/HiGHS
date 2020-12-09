@@ -55,7 +55,7 @@ class HighsCliqueTable {
     bool equality;
   };
 
-  std::vector<std::pair<int*, int*>> commoncliquestack;
+  std::vector<int*> commoncliquestack;
   std::set<std::pair<int, int>> freespaces;
   std::vector<int> freeslots;
   std::vector<Clique> cliques;
