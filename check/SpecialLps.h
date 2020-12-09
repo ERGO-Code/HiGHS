@@ -131,6 +131,22 @@ class SpecialLps {
     optimal_objective = -1.191;
   }
 
+  void issue425Lp(HighsLp& lp, HighsModelStatus& require_model_status) {
+    lp.numCol_ = 4;
+    lp.numRow_ = 4;
+    lp.colCost_ = {1,1,1,2};
+    lp.colLower_ = {0,0,0,0};
+    lp.colUpper_ = {inf, inf, inf, inf};
+    lp.rowLower_ = {1, 2, 2, 4};
+    lp.rowUpper_ = {1, 2, 2, 4};
+    lp.Astart_ = {0, 3, 5, 6, 7};
+    lp.Aindex_ = {0, 2, 3, 1, 3, 3, 3};
+    lp.Avalue_ = {1, 1, 1, 2, 1, 1, 1};
+    lp.sense_ = ObjSense::MINIMIZE;
+    lp.offset_ = 0;
+    require_model_status = HighsModelStatus::PRIMAL_INFEASIBLE;
+  }
+
   void primalDualInfeasible1Lp(HighsLp& lp,
                                HighsModelStatus& require_model_status) {
     lp.numCol_ = 2;

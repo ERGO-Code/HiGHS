@@ -3,11 +3,12 @@
 #include "catch.hpp"
 #include "lp_data/HConst.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void solve(Highs& highs, std::string presolve, std::string solver,
            const HighsModelStatus require_model_status,
-           const double require_optimal_objective = 0) {
+           const double require_optimal_objective = 0,
+           const double require_iteration_count = -1) {
   SpecialLps special_lps;
   const HighsInfo& info = highs.getHighsInfo();
 
@@ -25,7 +26,15 @@ void solve(Highs& highs, std::string presolve, std::string solver,
     REQUIRE(special_lps.objectiveOk(info.objective_function_value,
                                     require_optimal_objective, dev_run));
   }
-
+  if (require_iteration_count >= 0) {
+    int iteration_count;
+    if (solver == "simplex") {
+      iteration_count = highs.getSimplexIterationCount();
+    } else {
+      iteration_count = highs.getHighsInfo().ipm_iteration_count;
+    }
+    REQUIRE(iteration_count == require_iteration_count);
+  }
   REQUIRE(highs.resetHighsOptions() == HighsStatus::OK);
 }
 
@@ -174,6 +183,19 @@ void issue316(Highs& highs) {
 
   solve(highs, "on", "simplex", require_model_status, max_optimal_objective);
   solve(highs, "off", "simplex", require_model_status, max_optimal_objective);
+}
+
+void issue425(Highs& highs) {
+  SpecialLps special_lps;
+  special_lps.reportIssue(425, dev_run);
+  // This is issue425 from mckib2 for which presolve failed to identify infeasibility
+  HighsLp lp;
+  HighsModelStatus require_model_status;
+  special_lps.issue425Lp(lp, require_model_status);
+  REQUIRE(highs.passModel(lp) == HighsStatus::OK);
+  solve(highs, "on", "simplex", require_model_status, 0, 0);
+  solve(highs, "off", "simplex", require_model_status, 0, 1);
+  solve(highs, "off", "ipm", require_model_status, 0, 4);
 }
 
 void mpsGalenet(Highs& highs) {
@@ -478,6 +500,14 @@ TEST_CASE("LP-316", "[highs_test_special_lps]") {
     highs.setHighsOutput();
   }
   issue316(highs);
+}
+TEST_CASE("LP-425", "[highs_test_special_lps]") {
+  Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+  issue425(highs);
 }
 TEST_CASE("LP-galenet", "[highs_test_special_lps]") {
   Highs highs;
