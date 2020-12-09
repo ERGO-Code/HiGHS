@@ -10,9 +10,9 @@ struct HighsDomainChange {
   double boundval;
 
   bool operator<(const HighsDomainChange& other) const {
-    if( column < other.column ) return true;
-    if( other.column < column ) return false;
-    if( (int)boundtype < (int)other.boundtype ) return true;
+    if (column < other.column) return true;
+    if (other.column < column) return false;
+    if ((int)boundtype < (int)other.boundtype) return true;
     return false;
   }
 };

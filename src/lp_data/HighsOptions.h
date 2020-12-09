@@ -534,9 +534,10 @@ class HighsOptions : public HighsOptionsStruct {
         &mip_max_nodes, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 #ifdef HIGHS_DEBUGSOL
-    record_string =
-        new OptionRecordString("mip_debug_solution_file", "Solution file for debug solution of the MIP solver", advanced,
-                               &mip_debug_solution_file, FILENAME_DEFAULT);
+    record_string = new OptionRecordString(
+        "mip_debug_solution_file",
+        "Solution file for debug solution of the MIP solver", advanced,
+        &mip_debug_solution_file, FILENAME_DEFAULT);
     records.push_back(record_string);
 #endif
 

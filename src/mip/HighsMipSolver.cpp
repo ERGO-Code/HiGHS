@@ -231,7 +231,7 @@ void HighsMipSolver::run() {
     // average nodes
 
     int iterlimit = 100 * int(mipdata_->lp.getNumLpIterations() /
-                             (double)std::max(size_t{1}, mipdata_->num_nodes));
+                              (double)std::max(size_t{1}, mipdata_->num_nodes));
     iterlimit = std::max(1000, iterlimit);
 
     mipdata_->lp.setIterationLimit(iterlimit);
