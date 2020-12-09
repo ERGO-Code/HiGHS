@@ -58,7 +58,10 @@ class HighsSearch {
 
     NodeData(double parentlb = -HIGHS_CONST_INF,
              double parentestimate = -HIGHS_CONST_INF)
-        : lower_bound(parentlb), estimate(parentestimate), opensubtrees(2), lpsolved(false) {}
+        : lower_bound(parentlb),
+          estimate(parentestimate),
+          opensubtrees(2),
+          lpsolved(false) {}
   };
 
   std::vector<NodeData> nodestack;
@@ -87,7 +90,8 @@ class HighsSearch {
 
   void resetLocalDomain();
 
-  void solveSubMip(std::vector<double> colLower, std::vector<double> colUpper, int maxleaves, int maxnodes);
+  void solveSubMip(std::vector<double> colLower, std::vector<double> colUpper,
+                   int maxleaves, int maxnodes);
 
   size_t getHeuristicLpIterations() const;
 
