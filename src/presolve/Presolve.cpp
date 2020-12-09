@@ -2263,7 +2263,7 @@ void Presolve::removeRowSingletons() {
         // kxx
         continue;
       }
-      // if (i != 695) { it++;continue;}
+
       const int j = ARindex.at(k);
 
       // add old bounds OF X to checker and for postsolve
