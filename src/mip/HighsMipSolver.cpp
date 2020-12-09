@@ -206,7 +206,12 @@ void HighsMipSolver::run() {
     mipdata_->printDisplayLine();
     HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                       ML_MINIMAL, "\nmodel was solved in the root node\n");
-    if (options_mip_->presolve != "off") runPostsolve();
+    if (options_mip_->presolve != "off")
+      runPostsolve();
+    else if (!mipdata_->incumbent.empty()) {
+      presolve_.data_.recovered_solution_.col_value = mipdata_->incumbent;
+      calculateRowValues(*model_, presolve_.data_.recovered_solution_);
+    }
     timer_.stop(timer_.solve_clock);
     return;
   }

@@ -262,10 +262,20 @@ HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
       rowviol = std::max(rowviol, solution.row_value[i] - lp.rowUpper_[i]);
     }
 
-    printf("bound violation: %.14g\n", boundviol);
-    printf("integrality violation: %.14g\n", intviol);
-    printf("row violation: %.14g\n", rowviol);
-    printf("objective value: %.14g\n", double(obj));
+    bool feasible = boundviol <= use_options.mip_feasibility_tolerance &&
+                    intviol <= use_options.mip_feasibility_tolerance &&
+                    rowviol <= use_options.mip_feasibility_tolerance;
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "solution is %s, violations:\n",
+                      feasible ? "feasible" : "infeasible");
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  bounds:      %.14g\n", boundviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  integrality: %.14g\n", intviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  contraints:  %.14g\n", rowviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "objective function value: %.14g\n", double(obj));
   }
 
   return HighsStatus::OK;

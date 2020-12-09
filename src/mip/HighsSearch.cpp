@@ -307,6 +307,7 @@ void HighsSearch::heuristicSearchNew() {
         heur.localdom.changeBound(heur.nodestack.back().branchingdecision);
         heur.nodestack.emplace_back(heur.nodestack.back().lower_bound,
                                     heur.nodestack.back().estimate);
+        if (heur.localdom.infeasible()) break;
       }
 
       if (heur.localdom.colUpper_[fracint.first] > fixval) {
@@ -319,6 +320,7 @@ void HighsSearch::heuristicSearchNew() {
         heur.localdom.changeBound(heur.nodestack.back().branchingdecision);
         heur.nodestack.emplace_back(heur.nodestack.back().lower_bound,
                                     heur.nodestack.back().estimate);
+        if (heur.localdom.infeasible()) break;
       }
 
       change += std::abs(fixval - fracint.second);
