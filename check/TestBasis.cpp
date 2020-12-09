@@ -3,7 +3,7 @@
 #include "Highs.h"
 #include "catch.hpp"
 
-const bool dev_run = true;
+const bool dev_run = false;
 const std::string basis_file = "adlittle.bas";
 HighsBasis basis_data;
 
@@ -67,14 +67,14 @@ void testBasisRestart(Highs& highs, const bool from_file) {
   const HighsSolution& solution = highs.getSolution();
   // Find the first basic variable
   int iCol;
-  for (iCol=0; iCol<lp.numCol_; iCol++) {
+  for (iCol = 0; iCol < lp.numCol_; iCol++) {
     if (basis.col_status[iCol] == HighsBasisStatus::BASIC) break;
   }
-  assert(iCol<lp.numCol_);
+  assert(iCol < lp.numCol_);
   const int changeCol = iCol;
   const double old_lower_bound = lp.colLower_[changeCol];
   const double old_upper_bound = lp.colUpper_[changeCol];
-  const double new_lower_bound = solution.col_value[changeCol]+0.1;
+  const double new_lower_bound = solution.col_value[changeCol] + 0.1;
   highs.changeColBounds(changeCol, new_lower_bound, old_upper_bound);
 
   return_status = highs.run();
@@ -89,7 +89,6 @@ void testBasisRestart(Highs& highs, const bool from_file) {
     //  highs.writeSolution("", true);
   }
   // Make sure that the test requires iterations
-  printf("getSimplexIterationCount returns %d\n", highs.getSimplexIterationCount());
   assert(highs.getSimplexIterationCount() > 0);
 
   // Recover bound, load optimal basis and resolve
