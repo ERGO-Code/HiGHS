@@ -1080,6 +1080,12 @@ void HighsSearch::evaluateNode() {
           prune = true;
         }
       } else if (lp->getObjective() > getCutoffBound()) {
+        // the LP is not solved to dual feasibilty due to scaling/numerics
+        // therefore we compute a conflict constraint as if the LP was bound
+        // exceeding and propagate the local domain again. The lp relaxation
+        // class will take care to consider the dual multipliers with an
+        // increased zero tolerance due to the dual infeasibility when computing
+        // the proof constraint.
         addBoundExceedingConflict();
         localdom.propagate();
         prune = localdom.infeasible();
