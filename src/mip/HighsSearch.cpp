@@ -708,9 +708,9 @@ int HighsSearch::selectBranchingCandidate() {
           addBoundExceedingConflict();
           localdom.propagate();
           bool infeas = localdom.infeasible();
-          localdom.backtrack();
-          lp->flushDomain(localdom);
           if (infeas) {
+            localdom.backtrack();
+            lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
             lp->setStoredBasis(std::move(basis));
             lp->recoverBasis();
@@ -819,9 +819,9 @@ int HighsSearch::selectBranchingCandidate() {
           addBoundExceedingConflict();
           localdom.propagate();
           bool infeas = localdom.infeasible();
-          localdom.backtrack();
-          lp->flushDomain(localdom);
           if (infeas) {
+            localdom.backtrack();
+            lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
             lp->setStoredBasis(std::move(basis));
             lp->recoverBasis();
