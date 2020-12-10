@@ -704,6 +704,18 @@ int HighsSearch::selectBranchingCandidate() {
             lp->recoverBasis();
             return -1;
           }
+        } else if (solobj > getCutoffBound()) {
+          addBoundExceedingConflict();
+          localdom.propagate();
+          bool infeas = localdom.infeasible();
+          localdom.backtrack();
+          lp->flushDomain(localdom);
+          if (infeas) {
+            localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
+            lp->setStoredBasis(std::move(basis));
+            lp->recoverBasis();
+            return -1;
+          }
         }
       } else if (status == HighsLpRelaxation::Status::Infeasible) {
         addInfeasibleConflict();
@@ -794,10 +806,22 @@ int HighsSearch::selectBranchingCandidate() {
         }
 
         if (lp->unscaledDualFeasible(status)) {
-          if (solobj >= getCutoffBound()) {
+          if (solobj > getCutoffBound()) {
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
+            localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
+            lp->setStoredBasis(std::move(basis));
+            lp->recoverBasis();
+            return -1;
+          }
+        } else if (solobj > getCutoffBound()) {
+          addBoundExceedingConflict();
+          localdom.propagate();
+          bool infeas = localdom.infeasible();
+          localdom.backtrack();
+          lp->flushDomain(localdom);
+          if (infeas) {
             localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
             lp->setStoredBasis(std::move(basis));
             lp->recoverBasis();
