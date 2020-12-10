@@ -115,8 +115,9 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   assert(std::isfinite(upperbound));
   HighsCDouble upper = upperbound;
 
-  double dualfeastol = std::max(mipsolver.mipdata_->feastol,
-                                lpsolver.getHighsInfo().max_dual_infeasibility);
+  double dualfeastol =
+      std::max(mipsolver.mipdata_->feastol,
+               2 * lpsolver.getHighsInfo().max_dual_infeasibility);
   for (int i = 0; i != lp.numRow_; ++i) {
     if (std::abs(row_dual[i]) <= dualfeastol) continue;
     if (row_dual[i] > 0)
