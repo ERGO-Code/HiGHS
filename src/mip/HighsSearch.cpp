@@ -256,22 +256,6 @@ void HighsSearch::heuristicSearchNew() {
   heur.localdom.clearChangedCols();
   heur.nodestack.emplace_back();
   int nbacktracks = 0;
-  // int nfixed = 0;
-  // int ntotal = 0;
-  //
-  // for (int i = 0; i != mipsolver.numCol(); ++i) {
-  //  // skip fixed and continuous variables
-  //  if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
-  //  if (mipsolver.mipdata_->domain.colLower_[i] ==
-  //      mipsolver.mipdata_->domain.colUpper_[i])
-  //    continue;
-  //
-  //  // count globally unfixed variable
-  //  ++ntotal;
-  //
-  //  // count locally fixed variable
-  //  if (heur.localdom.colLower_[i] == heur.localdom.colUpper_[i]) ++nfixed;
-  //}
 
   // determine the initial number of unfixed variables fixing rate to decide if
   // the problem is restricted enough to be considered for solving a submip
@@ -281,8 +265,6 @@ void HighsSearch::heuristicSearchNew() {
   double fixingrate = 0.0;
   bool stop = false;
 
-  const std::vector<HighsDomainChange>& domchgstack =
-      heur.localdom.getDomainChangeStack();
   while (true) {
     heur.evaluateNode();
     if (heur.currentNodePruned()) {
@@ -1097,6 +1079,10 @@ void HighsSearch::evaluateNode() {
           addBoundExceedingConflict();
           prune = true;
         }
+      } else if (lp->getObjective() > getCutoffBound()) {
+        addBoundExceedingConflict();
+        localdom.propagate();
+        prune = localdom.infeasible();
       }
 
     } else if (status == HighsLpRelaxation::Status::Infeasible) {
