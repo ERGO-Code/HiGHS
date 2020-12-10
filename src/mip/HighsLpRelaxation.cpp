@@ -11,6 +11,8 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   HighsLp lpmodel = *mipsolver.model_;
   lpmodel.integrality_.clear();
+  lpsolver.setHighsLogfile();
+  lpsolver.setHighsOutput();
   lpsolver.passModel(std::move(lpmodel));
   lpsolver.setHighsOptionValue(
       "primal_feasibility_tolerance",
@@ -30,7 +32,8 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
       objective(other.objective),
       basischeckpoint(other.basischeckpoint),
       currentbasisstored(other.currentbasisstored) {
-  lpsolver.setHighsLogfile(NULL);
+  lpsolver.setHighsLogfile();
+  lpsolver.setHighsOutput();
   lpsolver.passHighsOptions(other.lpsolver.getHighsOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());

@@ -426,16 +426,15 @@ void HighsMipSolverData::evaluateRootNode() {
                     mipsolver.options_mip_->message_level, ML_MINIMAL,
                     "\nsolving root node LP relaxation\n");
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
-  lp.getLpSolver().setHighsOptionValue("message_level",
-                                       mipsolver.options_mip_->message_level);
   lp.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
+  lp.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
   lp.resolveLp();
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
 
   lp.setIterationLimit(std::max(1000, int(50 * maxrootlpiters)));
-  lp.getLpSolver().setHighsLogfile(NULL);
-  lp.getLpSolver().setHighsOptionValue("message_level", 0);
+  lp.getLpSolver().setHighsLogfile();
+  lp.getLpSolver().setHighsOutput();
   lp.getLpSolver().setHighsOptionValue("parallel", "off");
 
   firstlpsol = lp.getLpSolver().getSolution().col_value;

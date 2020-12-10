@@ -907,8 +907,8 @@ void HighsSearch::solveSubMip(std::vector<double> colLower,
 
   // set limits
   submipoptions.mip_max_leaves = maxleaves;
-  submipoptions.logfile = NULL;
-  submipoptions.message_level = 0;
+  submipoptions.logfile = nullptr;
+  submipoptions.output = nullptr;
   submipoptions.mip_max_nodes = maxnodes;
   submipoptions.time_limit -=
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
