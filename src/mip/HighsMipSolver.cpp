@@ -245,6 +245,12 @@ void HighsMipSolver::run() {
     size_t plungestart = mipdata_->num_nodes;
     bool limit_reached = false;
     while (true) {
+      if (mipdata_->heuristic_lp_iterations <
+          mipdata_->total_lp_iterations * mipdata_->heuristic_effort) {
+        search.evaluateNode();
+        if (!search.currentNodePruned()) search.heuristicSearchNew();
+      }
+
       search.dive();
       ++mipdata_->num_leaves;
 

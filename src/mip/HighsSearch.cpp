@@ -1059,11 +1059,6 @@ void HighsSearch::evaluateNode() {
               inheuristic ? 'H' : 'T');
           if (mipsolver.mipdata_->upper_limit < cutoffbnd)
             lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
-        } else if (!inbranching && !inheuristic) {
-          if (getHeuristicLpIterations() <
-              getTotalLpIterations() * mipsolver.mipdata_->heuristic_effort) {
-            heuristicSearchNew();
-          }
         }
       }
 
