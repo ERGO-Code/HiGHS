@@ -95,14 +95,16 @@ bool HighsImplications::runProbing(int col, int& numboundchgs) {
     int nimplicsup;
     int nimplicsdown;
     bool infeasible;
-    nimplicsup = getImplications(col, 1, implicsup, infeasible);
-    if (globaldomain.infeasible()) return true;
 
+    infeasible = computeImplications(col, 1);
+    if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
 
     nimplicsdown = getImplications(col, 0, implicsdown, infeasible);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
+
+    nimplicsup = getImplications(col, 1, implicsup, infeasible);
 
     // analyze implications
     int u = 0;

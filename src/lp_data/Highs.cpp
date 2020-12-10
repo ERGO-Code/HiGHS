@@ -214,10 +214,10 @@ HighsStatus Highs::reset() {
   return returnFromHighs(return_status);
 }
 
-HighsStatus Highs::passModel(const HighsLp& lp) {
+HighsStatus Highs::passModel(HighsLp lp) {
   HighsStatus return_status = HighsStatus::OK;
-  // Copy the LP to the internal LP
-  lp_ = lp;
+  // move the copy of the LP to the internal LP
+  lp_ = std::move(lp);
   // Check validity of the LP, normalising its values
   return_status =
       interpretCallStatus(assessLp(lp_, options_), return_status, "assessLp");
@@ -264,7 +264,7 @@ HighsStatus Highs::passModel(const int num_col, const int num_row,
   }
   lp.Astart_.resize(num_col + 1);
   lp.Astart_[num_col] = num_nz;
-  return this->passModel(lp);
+  return this->passModel(std::move(lp));
 }
 
 HighsStatus Highs::readModel(const std::string filename) {

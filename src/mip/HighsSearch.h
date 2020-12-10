@@ -103,6 +103,8 @@ class HighsSearch {
 
   double getCurrentEstimate() const { return nodestack.back().estimate; }
 
+  double getCurrentLowerBound() const { return nodestack.back().lower_bound; }
+
   int getCurrentDepth() const { return nodestack.size() + depthoffset; }
 
   void openNodesToQueue(HighsNodeQueue& nodequeue);
@@ -134,8 +136,6 @@ class HighsSearch {
   void dive();
 
   void solveDepthFirst(size_t maxbacktracks = 1);
-
-  double getLowerBound() const;
 };
 
 #endif

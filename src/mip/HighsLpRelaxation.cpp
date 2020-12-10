@@ -9,7 +9,9 @@
 
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
-  lpsolver.passModel(*mipsolver.model_);
+  HighsLp lpmodel = *mipsolver.model_;
+  lpmodel.integrality_.clear();
+  lpsolver.passModel(std::move(lpmodel));
   lpsolver.setHighsOptionValue(
       "primal_feasibility_tolerance",
       mipsolver.options_mip_->mip_feasibility_tolerance);
