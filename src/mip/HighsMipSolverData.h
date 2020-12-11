@@ -53,6 +53,7 @@ struct HighsMipSolverData {
   size_t total_lp_iterations;
   size_t heuristic_lp_iterations;
   size_t sepa_lp_iterations;
+  size_t sb_lp_iterations;
   size_t num_disp_lines;
 
   double lower_bound;

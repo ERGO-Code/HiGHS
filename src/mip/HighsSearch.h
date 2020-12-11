@@ -25,6 +25,7 @@ class HighsSearch {
   size_t nnodes;
   size_t lpiterations;
   size_t heurlpiterations;
+  size_t sblpiterations;
   double upper_limit;
   std::vector<int> inds;
   std::vector<double> vals;
@@ -96,6 +97,8 @@ class HighsSearch {
   size_t getHeuristicLpIterations() const;
 
   size_t getTotalLpIterations() const;
+
+  size_t getStrongBranchingLpIterations() const;
 
   bool hasNode() const { return !nodestack.empty(); }
 

@@ -329,8 +329,8 @@ void HighsMipSolver::run() {
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
       HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                        ML_MINIMAL, "added %lu global bound changes\n",
-                        mipdata_->domain.getChangedCols().size());
+                        ML_MINIMAL, "added %d global bound changes\n",
+                        (int)mipdata_->domain.getChangedCols().size());
       mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
       search.resetLocalDomain();
@@ -343,8 +343,8 @@ void HighsMipSolver::run() {
 
     // loop to install the next node for the search
     while (!mipdata_->nodequeue.empty()) {
-      // printf("popping node from nodequeue (length = %lu)\n",
-      // nodequeue.size());
+      // printf("popping node from nodequeue (length = %d)\n",
+      // (int)nodequeue.size());
       assert(!search.hasNode());
       search.installNode(mipdata_->nodequeue.popBestNode());
 
