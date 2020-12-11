@@ -224,7 +224,8 @@ bool HDualRow::chooseFinal() {
   analysis->simplexTimerStart(Chuzc3cClock);
 
   int sourceOut = workDelta < 0 ? -1 : 1;
-  assert(breakIndex >= 0);
+  assert(breakIndex >= 0);  // todo @ Julian : assert can fail and leads to
+                            // invalid memory access below
   if (use_quad_sort) {
     workPivot = workData[breakIndex].first;
     workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
