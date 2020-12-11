@@ -438,7 +438,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
 
       // Mark the column as integer and binary, according to whether
       // the integral_cols flag is set
-      col_integrality.push_back((int)integral_cols);
+      col_integrality.push_back(integral_cols ? HighsVarType::INTEGER
+                                              : HighsVarType::CONTINUOUS);
       col_binary.push_back(integral_cols);
 
       // initialize with default bounds
@@ -771,7 +772,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
       colNames.push_back(colname);
 
       // Mark the column as continuous and non-binary
-      col_integrality.push_back(0);
+      col_integrality.push_back(HighsVarType::CONTINUOUS);
       col_binary.push_back(false);
 
       // initialize with default bounds
@@ -792,7 +793,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
           return HMpsFF::parsekey::FAIL;
         }
         // Mark the column as integer and binary
-        col_integrality[colidx] = true;
+        col_integrality[colidx] = HighsVarType::INTEGER;
         col_binary[colidx] = true;
       } else {
         // continuous: MI, PL or FR
@@ -822,7 +823,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(FILE* logfile, std::ifstream& file) {
                         "Bound for LI/UI row %s is %g: not integer",
                         marker.c_str(), value);
       // Bound marker LI or UI defines the column as integer
-      col_integrality[colidx] = true;
+      col_integrality[colidx] = HighsVarType::INTEGER;
     }
     // Column is not binary by default
     col_binary[colidx] = false;

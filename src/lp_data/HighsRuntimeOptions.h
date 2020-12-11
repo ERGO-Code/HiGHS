@@ -26,7 +26,8 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     cxx_options.add_options()(model_file_string, "File of model to solve.",
                               cxxopts::value<std::vector<std::string>>())(
         presolve_string,
-        "Presolve: \"choose\" by default - \"on\"/\"off\" are alternatives.",
+        "Presolve: \"choose\" by default - \"on\"/\"off\"/\"mip\" are "
+        "alternatives.",
         cxxopts::value<std::string>(presolve))(
         solver_string,
         "Solver: \"choose\" by default - \"simplex\"/\"ipm\" are alternatives.",

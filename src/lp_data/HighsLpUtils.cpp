@@ -1474,7 +1474,7 @@ int getNumInt(const HighsLp& lp) {
   int num_int = 0;
   if (lp.integrality_.size()) {
     for (int iCol = 0; iCol < lp.numCol_; iCol++)
-      if (lp.integrality_[iCol]) num_int++;
+      if (lp.integrality_[iCol] == HighsVarType::INTEGER) num_int++;
   }
   return num_int;
 }
@@ -1635,7 +1635,7 @@ void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
                       type.c_str(), count);
     if (have_integer_columns) {
       std::string integer_column = "";
-      if (lp.integrality_[iCol]) {
+      if (lp.integrality_[iCol] == HighsVarType::INTEGER) {
         if (lp.colLower_[iCol] == 0 && lp.colUpper_[iCol] == 1) {
           integer_column = "Binary";
         } else {
@@ -1901,7 +1901,7 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   assert(solution.col_value.size() > 0);
-  if (!isSolutionRightSize(lp, solution)) return HighsStatus::Error;
+  if (int(solution.col_value.size()) != lp.numCol_) return HighsStatus::Error;
 
   solution.row_value.clear();
   solution.row_value.assign(lp.numRow_, 0);

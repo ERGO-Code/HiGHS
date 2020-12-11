@@ -711,7 +711,9 @@ int HFactor::buildKernel() {
     double pivotX = colDelete(jColPivot, iRowPivot);
     if (!singleton_pivot) assert(candidate_pivot_value == fabs(pivotX));
     if (fabs(pivotX) < pivot_tolerance) {
-      printf("Small |pivot| = %g when nwork = %d\n", fabs(pivotX), nwork);
+      HighsLogMessage(logfile, HighsMessageType::WARNING,
+                      "Small |pivot| = %g when nwork = %d\n", fabs(pivotX),
+                      nwork);
       rank_deficiency = nwork + 1;
       return rank_deficiency;
     }

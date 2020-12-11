@@ -26,6 +26,7 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
+#include "presolve/HighsLpPropagator.h"
 #include "presolve/PresolveUtils.h"
 
 namespace presolve {
@@ -44,7 +45,7 @@ using std::setprecision;
 using std::setw;
 using std::stringstream;
 
-void Presolve::load(const HighsLp& lp) {
+void Presolve::load(const HighsLp& lp, bool mip) {
   timer.recordStart(MATRIX_COPY);
   numCol = lp.numCol_;
   numRow = lp.numRow_;
@@ -52,13 +53,17 @@ void Presolve::load(const HighsLp& lp) {
   Astart = lp.Astart_;
   Aindex = lp.Aindex_;
   Avalue = lp.Avalue_;
+  this->mip = mip;
 
   colCost = lp.colCost_;
+  objShift = lp.offset_;
   if (lp.sense_ == ObjSense::MAXIMIZE) {
+    objShift = -objShift;
     for (unsigned int col = 0; col < lp.colCost_.size(); col++)
       colCost[col] = -colCost[col];
   }
 
+  integrality = lp.integrality_;
   colLower = lp.colLower_;
   colUpper = lp.colUpper_;
   rowLower = lp.rowLower_;
@@ -352,6 +357,7 @@ void Presolve::removeFixed() {
       // Analyse dependency on numerical tolerance
       timer.updateNumericsRecord(FIXED_COLUMN,
                                  fabs(colUpper.at(j) - colLower.at(j)));
+      roundIntegerBounds(j);
       if (fabs(colUpper.at(j) - colLower.at(j)) > fixed_column_tolerance)
         continue;
       removeFixedCol(j);
@@ -365,6 +371,7 @@ void Presolve::removeFixed() {
 
 int Presolve::presolve(int print) {
   timer.start_time = timer.getTime();
+  bool aggregatorCalled = false;
 
   if (iPrint > 0) {
     cout << "Presolve started ..." << endl;
@@ -399,14 +406,16 @@ int Presolve::presolve(int print) {
     // order.push_back(Presolver::kMainSingletonsOnly);
   }
 
-  int prev_cols_rows = 0;
-  double prev_diff = 0;
-  // max_iterations = 10;
+  const double reduction_pct_for_further_presolve_iteration = 0.05;
+  int model_cols_rows = numCol + numRow;
+  int prev_cols_rows;
+  int current_cols_rows = model_cols_rows;
+  //  double prev_diff = 0;
   // Else: The order has been modified for experiments
   while (hasChange == 1) {
     if (max_iterations > 0 && iter > max_iterations) break;
     hasChange = false;
-
+    //    printf("presolve iteration %d (max=%d)\n", iter, max_iterations);
     reportDevMainLoop();
     timer.recordStart(RUN_PRESOLVERS);
     int run_status = runPresolvers(order);
@@ -415,30 +424,60 @@ int Presolve::presolve(int print) {
     if (run_status) return status;
 
     // Exit check
-    int current_cols_rows = 0;
+    prev_cols_rows = current_cols_rows;
+    current_cols_rows = 0;
+    int current_num_col = 0;
+    int current_num_row = 0;
     for (int i = 0; i < numRow; i++)
       if (flagRow[i]) current_cols_rows++;
+    current_num_row = current_cols_rows;
     for (int i = 0; i < numCol; i++)
       if (flagCol[i]) current_cols_rows++;
-
+    current_num_col = current_cols_rows - current_num_row;
+    int diff = prev_cols_rows - current_cols_rows;
+    double iteration_reduction_pct =
+        100 * (1.0 * diff) / (1.0 * model_cols_rows);
+    HighsPrintMessage(
+        output, message_level, ML_VERBOSE,
+        // printf(
+        "Iteration %2d (Presolve)   Current number rows = %9d; cols = %9d: "
+        "Reduction this iteration (%9d) is %5.2f%%\n",
+        iter, current_num_row, current_num_col, diff, iteration_reduction_pct);
     if (current_cols_rows == 0) break;
+    iter++;
 
-    if (iter == 1) {
-      prev_cols_rows = current_cols_rows;
-      iter++;
-      continue;
-    } else {
-      double diff = (double)prev_cols_rows - (double)current_cols_rows;
-      if (iter < 10) {
-        prev_diff = diff;
-        iter++;
-        continue;
-      }
-      // iter > 10 : check difference
-      // if (prev_diff * diff / current_cols_rows < 0.05) break;
+    if (hasChange) {
+      if (iteration_reduction_pct <
+          reduction_pct_for_further_presolve_iteration)
+        hasChange = false;
     }
 
-    iter++;
+    if (!hasChange && !aggregatorCalled) {
+      aggregatorCalled = true;
+      runAggregator();
+      if (mip) detectImpliedIntegers();
+      runPropagator();
+      prev_cols_rows = current_cols_rows;
+      current_cols_rows = 0;
+      int current_num_col = 0;
+      int current_num_row = 0;
+      for (int i = 0; i < numRow; i++)
+        if (flagRow[i]) current_num_row++;
+      for (int i = 0; i < numCol; i++)
+        if (flagCol[i]) current_num_col++;
+      current_cols_rows = current_num_col + current_num_row;
+      int diff = prev_cols_rows - current_cols_rows;
+      double iteration_reduction_pct =
+          100 * (1.0 * diff) / (1.0 * model_cols_rows);
+      HighsPrintMessage(
+          output, message_level, ML_VERBOSE,
+          // printf(
+          "Iteration %2d (Aggregator) Current number rows = %9d; cols = %9d: "
+          "Reduction this iteration (%9d) is %5.2f%%\n",
+          iter, current_num_row, current_num_col, diff,
+          iteration_reduction_pct);
+      iter++;
+    }
   }
 
   // std::cout << "   MAIN LOOP ITER = " << iter << std::endl;
@@ -497,6 +536,7 @@ void Presolve::checkBoundsAreConsistent() {
       // Analyse dependency on numerical tolerance
       timer.updateNumericsRecord(INCONSISTENT_BOUNDS,
                                  colLower[col] - colUpper[col]);
+      roundIntegerBounds(col);
       if (colLower[col] - colUpper[col] > inconsistent_bounds_tolerance) {
         status = Infeasible;
         return;
@@ -524,20 +564,26 @@ void Presolve::checkBoundsAreConsistent() {
  * 		   row is of form akx_x + aky_y = b,
  */
 pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
+  // todo, for mip presolve also check integrality of right hand side value to
+  // detect integer feasibility
   pair<int, int> colIndex;
   // row is of form akx_x + aky_y = b, where k=row and y is present in fewer
   // constraints
 
   int col1 = -1;
   int col2 = -1;
+  double val1 = 0.0;
+  double val2 = 0.0;
   int kk = ARstart.at(row);
   while (kk < ARstart.at(row + 1)) {
     if (flagCol.at(ARindex.at(kk))) {
-      if (col1 == -1)
+      if (col1 == -1) {
         col1 = ARindex.at(kk);
-      else if (col2 == -1)
+        val1 = std::abs(ARvalue[kk]);
+      } else if (col2 == -1) {
         col2 = ARindex.at(kk);
-      else {
+        val2 = std::abs(ARvalue[kk]);
+      } else {
         cout << "ERROR: doubleton eq row" << row
              << " has more than two variables. \n";
         col2 = -2;
@@ -556,7 +602,46 @@ pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
   }
 
   int x, y;
-  if (nzCol.at(col1) <= nzCol.at(col2)) {
+  if (mip && (integrality[col1] == HighsVarType::INTEGER ||
+              integrality[col2] == HighsVarType::INTEGER)) {
+    if (integrality[col1] != integrality[col2]) {
+      // only one of the columns is integral, select the non-integral column to
+      // be substituted out
+      if (integrality[col1] == HighsVarType::INTEGER) {
+        // printf("column %d integral, column %d is not\n", col1, col2);
+        assert(integrality[col2] != HighsVarType::INTEGER);
+        y = col2;
+        x = col1;
+      } else {
+        // printf("column %d integral, column %d is not\n", col2, col1);
+        assert(integrality[col2] == HighsVarType::INTEGER);
+        assert(integrality[col1] != HighsVarType::INTEGER);
+        y = col1;
+        x = col2;
+      }
+    } else {
+      // printf(
+      //     "column %d with coefficient %f is integral and column %d with "
+      //     "coefficient %f too\n",
+      //     col1, val1, col2, val2);
+      // both columns are integral, need to choose column with smaller
+      // coefficient value, if coefficients are the same choose the column with
+      // fewer nonzeros
+      if (val1 < val2) {
+        y = col1;
+        x = col2;
+      } else if (val2 < val1) {
+        y = col2;
+        x = col1;
+      } else if (nzCol.at(col1) <= nzCol.at(col2)) {
+        y = col1;
+        x = col2;
+      } else {
+        x = col1;
+        y = col2;
+      }
+    }
+  } else if (nzCol.at(col1) <= nzCol.at(col2)) {
     y = col1;
     x = col2;
   } else {
@@ -607,8 +692,11 @@ void Presolve::processRowDoubletonEquation(const int row, const int x,
   if (low > colLower.at(x)) colLower.at(x) = low;
   if (upp < colUpper.at(x)) colUpper.at(x) = upp;
 
+  roundIntegerBounds(x);
+
   // modify cost of xj
   colCost.at(x) = colCost.at(x) - colCost.at(y) * akx / aky;
+  objShift += colCost.at(y) * b / aky;
 
   // for postsolve: need the new bounds too
   assert(x >= 0 && x < numCol);
@@ -1043,10 +1131,12 @@ void Presolve::resizeProblem() {
   vector<double> tempCost = colCost;
   vector<double> temp = colLower;
   vector<double> teup = colUpper;
+  vector<HighsVarType> tempintegrality = integrality;
 
   colCost.resize(numCol);
   colLower.resize(numCol);
   colUpper.resize(numCol);
+  integrality.resize(numCol);
 
   int k = 0;
   for (int i = 0; i < numColOriginal; ++i)
@@ -1054,12 +1144,11 @@ void Presolve::resizeProblem() {
       colCost.at(k) = tempCost.at(i);
       colLower.at(k) = temp.at(i);
       colUpper.at(k) = teup.at(i);
+      integrality.at(k) = tempintegrality.at(i);
       k++;
     }
 
   // RHS and bounds
-  rowLowerAtEl = rowLower;
-  rowUpperAtEl = rowUpper;
   temp = rowLower;
   teup = rowUpper;
   rowLower.resize(numRow);
@@ -1112,7 +1201,6 @@ void Presolve::initializeVectors() {
     nzCol.at(i) = Aend.at(i) - Astart.at(i);
     if (nzCol.at(i) == 1) singCol.push_back(i);
   }
-  objShift = 0;
 
   implColUpper = colUpper;  // working copies of primal variable bounds
   implColLower = colLower;
@@ -1140,11 +1228,243 @@ void Presolve::initializeVectors() {
   }
 
   colCostAtEl = colCost;
-  rowLowerAtEl = rowLower;
-  rowUpperAtEl = rowUpper;
+
+  // initialize integrality information
+  if (!mip) integrality.assign(numCol, HighsVarType::CONTINUOUS);
+}
+
+void Presolve::runAggregator() {
+  // run the aggregator and store back the modified matrix
+  timer.recordStart(AGGREGATOR);
+  aggregatorStack.emplace_back();
+
+  aggregatorStack.back().colCostAtCall = colCost;
+
+  {
+    HAggregator aggregator(rowLower, rowUpper, colCost, objShift, integrality,
+                           colLower, colUpper);
+
+    aggregator.fromDynamicCSC(Avalue, Aindex, Astart, Aend, flagRow, flagCol);
+    aggregatorStack.back().postsolveStack = aggregator.run();
+
+    if (aggregatorStack.back().postsolveStack.empty()) {
+      if (mip) {
+        // todo, we need to store the state of the matrix before
+        // doing mip presolve steps that alter the coefficients,
+        // currently only coefficient tightening.
+        // this is a bit hacky but works for now as those steps
+        // run after the first call of the aggregator
+        aggregatorStack.back().ARvalueAtCall = std::move(ARvalue);
+        aggregatorStack.back().ARindexAtCall = std::move(ARindex);
+        aggregatorStack.back().ARstartAtCall = std::move(ARstart);
+        aggregator.toCSC(Avalue, Aindex, Astart);
+        makeARCopy();
+        Aend.resize(numCol + 1);
+        std::copy(Astart.begin() + 1, Astart.end(), Aend.begin());
+        chng.emplace(change{AGGREGATOR, 0, 0});
+      } else
+        aggregatorStack.pop_back();
+      timer.recordFinish(AGGREGATOR);
+      return;
+    }
+    aggregator.toCSC(Avalue, Aindex, Astart);
+  }
+
+  hasChange = true;
+  chng.emplace(change{AGGREGATOR, 0, 0});
+
+  aggregatorStack.back().postsolveStack.unsetFlags(flagRow, flagCol);
+
+  // store old AR and create updated AR matrix
+  aggregatorStack.back().ARvalueAtCall = std::move(ARvalue);
+  aggregatorStack.back().ARindexAtCall = std::move(ARindex);
+  aggregatorStack.back().ARstartAtCall = std::move(ARstart);
+  makeARCopy();
+
+  // set nzRow and nzCol, remove empty rows
+  nzCol.assign(numCol, 0);
+  nzRow.assign(numRow, 0);
+
+  for (int i = 0; i < numRow; ++i) {
+    if (!flagRow[i]) continue;
+    nzRow.at(i) = ARstart.at(i + 1) - ARstart.at(i);
+    if (nzRow.at(i) == 1) singRow.push_back(i);
+    if (nzRow.at(i) == 0) {
+      timer.recordStart(EMPTY_ROW);
+      removeEmptyRow(i);
+      countRemovedRows(EMPTY_ROW);
+      timer.recordFinish(EMPTY_ROW);
+    }
+  }
+
+  Aend.resize(numCol + 1);
+  for (int i = 0; i < numCol; ++i) {
+    if (!flagCol[i]) continue;
+    Aend.at(i) = Astart.at(i + 1);
+    nzCol.at(i) = Aend.at(i) - Astart.at(i);
+    if (nzCol.at(i) == 1) singCol.push_back(i);
+  }
+
+  implColUpper = colUpper;  // working copies of primal variable bounds
+  implColLower = colLower;
+  implColLowerRowIndex.assign(numCol, -1);
+  implColUpperRowIndex.assign(numCol, -1);
+
+  implRowDualLowerSingColRowIndex.assign(numRow, -1);
+  implRowDualUpperSingColRowIndex.assign(numRow, -1);
+  implRowDualLower.assign(numRow, -HIGHS_CONST_INF);
+  implRowDualUpper.assign(numRow, HIGHS_CONST_INF);
+
+  implColDualLower.assign(numCol, -HIGHS_CONST_INF);
+  implColDualUpper.assign(numCol, HIGHS_CONST_INF);
+  implRowValueLower = rowLower;
+  implRowValueUpper = rowUpper;
+
+  for (int i = 0; i < numRow; ++i) {
+    if (rowLower.at(i) <= -HIGHS_CONST_INF) implRowDualUpper.at(i) = 0;
+    if (rowUpper.at(i) >= HIGHS_CONST_INF) implRowDualLower.at(i) = 0;
+  }
+
+  for (int i = 0; i < numCol; ++i) {
+    if (colLower.at(i) <= -HIGHS_CONST_INF) implColDualUpper.at(i) = 0;
+    if (colUpper.at(i) >= HIGHS_CONST_INF) implColDualLower.at(i) = 0;
+  }
+
+  timer.recordFinish(AGGREGATOR);
+}
+
+void Presolve::runPropagator() {
+  // run the propagator to compute tightened bounds
+  // which can help with other reductions like redundant rows or forcing
+  // constraints and also decrease the number of total iterations required due
+  // to their exploitation with the long-step rule for the dual simplex ratio
+  // test
+  HighsLpPropagator propagator(colLower, colUpper, integrality, Avalue, Aindex,
+                               Astart, Aend, ARvalue, ARindex, ARstart, flagRow,
+                               flagCol, rowLower, rowUpper);
+  propagator.computeRowActivities();
+  int nboundchgs = propagator.propagate();
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+                    "propagation found %d bound changes\n", nboundchgs);
+  // propagation found nothing, so we can stop here. Only for mip we also try
+  // coefficient tightening
+  if (!mip && nboundchgs == 0) return;
+
+  if (mip) {
+    int ntotalcoeffchgs = 0;
+    while (true) {
+      int ncoeffchgs = propagator.tightenCoefficients();
+      HighsPrintMessage(output, message_level, ML_VERBOSE,
+                        "tightened %d coefficients\n", ncoeffchgs);
+      // if no coefficients where tightened we can stop
+      if (ncoeffchgs == 0) break;
+      ntotalcoeffchgs += ncoeffchgs;
+
+      hasChange = true;
+      nboundchgs = propagator.propagate();
+
+      if (propagator.infeasible()) {
+        status = Infeasible;
+        return;
+      }
+      // if no further bounds where changed we can stop
+      if (nboundchgs == 0) break;
+    }
+
+    if (ntotalcoeffchgs != 0) {
+      // row sides might have changed during coefficient tightening
+      implRowValueLower = rowLower;
+      implRowValueUpper = rowUpper;
+    }
+
+    // no bounds where tightened, so we can return here
+    if (propagator.getNumChangedBounds() == 0) return;
+  }
+
+  int ntightened = 0;
+  // we cannot use the tightest bounds that we obtained by propagation
+  // as then the dual postsolve step might not work anymore. Instead
+  // we relax the bounds by a wide enough margin so that they cannot
+  // be used in a basic feasible solution
+  for (int i = 0; i != numCol; ++i) {
+    if (!flagCol[i]) continue;
+
+    if (colLower[i] >= propagator.colLower_[i] &&
+        colUpper[i] <= propagator.colUpper_[i])
+      continue;
+
+    if (mip) {
+      if (colLower[i] < propagator.colLower_[i]) {
+        colLower[i] = propagator.colLower_[i];
+        ++ntightened;
+      }
+
+      if (colUpper[i] > propagator.colUpper_[i]) {
+        colUpper[i] = propagator.colUpper_[i];
+        ++ntightened;
+      }
+
+      roundIntegerBounds(i);
+      if (std::abs(colUpper[i] - colLower[i]) <= fixed_column_tolerance)
+        removeFixedCol(i);
+
+      continue;
+    }
+
+    int start = Astart[i];
+    int end = Aend[i];
+    double minabs = 1.0;
+
+    for (int j = start; j != end; ++j) {
+      int row = Aindex[j];
+      if (!flagRow[row]) continue;
+
+      minabs = std::min(minabs, std::abs(Avalue[j]));
+    }
+
+    // use a big enough factor of the feasibility tolerance and further increase
+    // it if the column has coefficient values below 1.0 so that it is ensured
+    // that no primal feasible solution can have this variable sitting at this
+    // artifical bound
+    double margin = 128.0 * default_primal_feasiblility_tolerance / minabs;
+
+    // now widen the bounds and check if they are tighter than the previous
+    // bounds
+    double abslb = std::abs(propagator.colLower_[i]);
+
+    if (abslb <= 1e8) {
+      // use a relative minimal margin to ensure large bounds are relaxed enough
+      double minlowermargin = default_primal_feasiblility_tolerance * abslb;
+      propagator.colLower_[i] -= std::max(margin, minlowermargin);
+      if (propagator.colLower_[i] > colLower[i]) {
+        colLower[i] = propagator.colLower_[i];
+        ++ntightened;
+      }
+    }
+
+    double absub = std::abs(propagator.colUpper_[i]);
+
+    if (absub <= 1e8) {
+      // use a relative minimal margin to ensure large bounds are relaxed enough
+      double minuppermargin = default_primal_feasiblility_tolerance * absub;
+      propagator.colUpper_[i] += std::max(margin, minuppermargin);
+      if (propagator.colUpper_[i] < colUpper[i]) {
+        colUpper[i] = propagator.colUpper_[i];
+        ++ntightened;
+      }
+    }
+  }
+
+  implColLower = colLower;
+  implColUpper = colUpper;
+
+  HighsPrintMessage(output, message_level, ML_VERBOSE, "tightened %d bounds\n ",
+                    ntightened);
+  if (ntightened != 0) hasChange = true;
 }
 
 void Presolve::removeFixedCol(int j) {
+  assert(std::isfinite(colUpper[j]));
   setPrimalValue(j, colUpper.at(j));
   addChange(FIXED_COL, 0, j);
   if (iPrint > 0)
@@ -1164,6 +1484,161 @@ void Presolve::removeFixedCol(int j) {
       }
     }
   }
+}
+
+void Presolve::detectImpliedIntegers() {
+  std::vector<int> numcont(numRow);
+  std::vector<int> equations;
+  equations.reserve(numRow);
+
+  for (int i = 0; i != numRow; ++i) {
+    if (!flagRow[i]) continue;
+    if (rowLower[i] != rowUpper[i]) continue;
+
+    const int start = ARstart[i];
+    const int end = ARstart[i + 1];
+
+    for (int j = start; j != end; ++j) {
+      if (!flagCol[ARindex[j]]) continue;
+      if (integrality[ARindex[j]] == HighsVarType::CONTINUOUS) ++numcont[i];
+    }
+
+    if (numcont[i] == 1) equations.push_back(i);
+  }
+
+  int numimplint = 0;
+  int primalimplint;
+
+  for (size_t k = 0; k != equations.size(); ++k) {
+    int i = equations[k];
+    if (numcont[i] != 1) continue;
+
+    const int start = ARstart[i];
+    const int end = ARstart[i + 1];
+
+    int cont = -1;
+    for (int j = start; j != end; ++j) {
+      if (!flagCol[ARindex[j]]) continue;
+      if (integrality[ARindex[j]] == HighsVarType::CONTINUOUS) {
+        cont = j;
+        break;
+      }
+    }
+
+    assert(cont != -1);
+    double b = rowUpper[i] / ARvalue[cont];
+    if (std::abs(b - std::floor(b + 0.5)) > 1e-9) continue;
+
+    bool impliedint = true;
+    for (int j = start; j != end; ++j) {
+      if (j == cont) continue;
+      if (!flagCol[ARindex[j]]) continue;
+
+      double val = ARvalue[j] / ARvalue[cont];
+      if (std::abs(val - std::floor(val + 0.5)) > 1e-9) {
+        impliedint = false;
+        break;
+      }
+    }
+
+    if (!impliedint) continue;
+
+    int col = ARindex[cont];
+    const int colstart = Astart[col];
+    const int colend = Aend[col];
+    integrality[col] = HighsVarType::IMPLICIT_INTEGER;
+    roundIntegerBounds(col);
+    ++numimplint;
+
+    for (int j = colstart; j != colend; ++j) {
+      if (--numcont[Aindex[j]] == 1) {
+        assert(rowLower[Aindex[j]] == rowUpper[Aindex[j]]);
+        equations.push_back(Aindex[j]);
+      }
+    }
+  }
+
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+                    "found %d implied integers with primal detection method\n",
+                    numimplint);
+
+  primalimplint = numimplint;
+
+  for (int i = 0; i != numCol; ++i) {
+    if (!flagCol[i]) continue;
+    if (integrality[i] != HighsVarType::CONTINUOUS) continue;
+
+    const int colstart = Astart[i];
+    const int colend = Aend[i];
+    bool haseq = false;
+    for (int j = colstart; j != colend; ++j) {
+      int row = Aindex[j];
+      if (!flagRow[row]) continue;
+      if (rowLower[row] == rowUpper[row]) {
+        haseq = true;
+        break;
+      }
+    }
+
+    if (haseq) continue;
+
+    bool impliedinteger = true;
+    for (int j = colstart; j != colend; ++j) {
+      int row = Aindex[j];
+      if (!flagRow[row]) continue;
+
+      if (rowUpper[row] != HIGHS_CONST_INF) {
+        double val = rowUpper[row] / Avalue[j];
+
+        if (std::abs(val - std::floor(val + 0.5)) > 1e-9) {
+          impliedinteger = false;
+          break;
+        }
+      }
+
+      if (rowLower[row] != -HIGHS_CONST_INF) {
+        double val = rowLower[row] / Avalue[j];
+
+        if (std::abs(val - std::floor(val + 0.5)) > 1e-9) {
+          impliedinteger = false;
+          break;
+        }
+      }
+
+      const int start = ARstart[row];
+      const int end = ARstart[row + 1];
+      for (int k = start; k != end; ++k) {
+        if (ARindex[k] == i) continue;
+        if (!flagCol[ARindex[k]]) continue;
+
+        if (integrality[ARindex[k]] == HighsVarType::CONTINUOUS) {
+          impliedinteger = false;
+          break;
+        }
+
+        double val = ARvalue[k] / Avalue[j];
+        if (std::abs(val - std::floor(val + 0.5)) > 1e-9) {
+          impliedinteger = false;
+          break;
+        }
+      }
+
+      if (!impliedinteger) break;
+    }
+
+    if (!impliedinteger) continue;
+    integrality[i] = HighsVarType::IMPLICIT_INTEGER;
+    roundIntegerBounds(i);
+    ++numimplint;
+  }
+
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+                    "found %d implied integers with dual detection method\n",
+                    numimplint - primalimplint);
+
+  HighsPrintMessage(output, message_level, ML_VERBOSE,
+                    "implint detection found %d implied integers\n",
+                    numimplint);
 }
 
 void Presolve::removeEmptyRow(int i) {
@@ -1221,11 +1696,17 @@ void Presolve::removeEmptyColumn(int j) {
 void Presolve::rowDualBoundsDominatedColumns() {
   int col, i, k;
 
+  // todo, do not use integer variables to derive bounds on the row duals
+  // using continous and implied integer variables is valid as the complementary
+  // slackness condition holds when all integer columns are fixed to any integer
+  // value
+
   // for each row calc yihat and yibar and store in implRowDualLower and
   // implRowDualUpper
   for (list<int>::iterator it = singCol.begin(); it != singCol.end(); ++it)
     if (flagCol.at(*it)) {
       col = *it;
+      if (mip && integrality[col] == HighsVarType::INTEGER) continue;
       k = getSingColElementIndexInA(col);
       if (k < 0) continue;
       assert(k < (int)Aindex.size());
@@ -1333,6 +1814,10 @@ pair<double, double> Presolve::getImpliedColumnBounds(int j) {
 }
 
 void Presolve::removeDominatedColumns() {
+  // todo, use only continuous and implied integer columns for calculating row
+  // dual upper and lower bounds then the domination (and also weak domination
+  // check) should be correct for integers
+
   // for each column j calculate e and d and check:
   double e, d;
   pair<double, double> p;
@@ -1434,48 +1919,51 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
       double bnd;
 
       // calculate new bounds
-      if (colLower.at(j) > -HIGHS_CONST_INF ||
-          colUpper.at(j) >= HIGHS_CONST_INF)
-        for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
-          if (flagRow.at(Aindex.at(kk)) && d < HIGHS_CONST_INF) {
-            i = Aindex.at(kk);
-            if (Avalue.at(kk) > 0 &&
-                implRowDualLower.at(i) > -HIGHS_CONST_INF) {
-              bnd =
-                  -(colCost.at(j) + d) / Avalue.at(kk) + implRowDualLower.at(i);
-              if (bnd < implRowDualUpper.at(i) &&
-                  !(bnd < implRowDualLower.at(i)))
-                implRowDualUpper.at(i) = bnd;
-            } else if (Avalue.at(kk) < 0 &&
-                       implRowDualUpper.at(i) < HIGHS_CONST_INF) {
-              bnd =
-                  -(colCost.at(j) + d) / Avalue.at(kk) + implRowDualUpper.at(i);
-              if (bnd > implRowDualLower.at(i) &&
-                  !(bnd > implRowDualUpper.at(i)))
-                implRowDualLower.at(i) = bnd;
+      if (!mip || integrality[j] != HighsVarType::INTEGER) {
+        if (colLower.at(j) > -HIGHS_CONST_INF ||
+            colUpper.at(j) >= HIGHS_CONST_INF)
+          for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
+            if (flagRow.at(Aindex.at(kk)) && d < HIGHS_CONST_INF) {
+              i = Aindex.at(kk);
+              if (Avalue.at(kk) > 0 &&
+                  implRowDualLower.at(i) > -HIGHS_CONST_INF) {
+                bnd = -(colCost.at(j) + d) / Avalue.at(kk) +
+                      implRowDualLower.at(i);
+                if (bnd < implRowDualUpper.at(i) &&
+                    !(bnd < implRowDualLower.at(i)))
+                  implRowDualUpper.at(i) = bnd;
+              } else if (Avalue.at(kk) < 0 &&
+                         implRowDualUpper.at(i) < HIGHS_CONST_INF) {
+                bnd = -(colCost.at(j) + d) / Avalue.at(kk) +
+                      implRowDualUpper.at(i);
+                if (bnd > implRowDualLower.at(i) &&
+                    !(bnd > implRowDualUpper.at(i)))
+                  implRowDualLower.at(i) = bnd;
+              }
             }
-          }
 
-      if (colLower.at(j) <= -HIGHS_CONST_INF ||
-          colUpper.at(j) < HIGHS_CONST_INF)
-        for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
-          if (flagRow.at(Aindex.at(kk)) && e > -HIGHS_CONST_INF) {
-            i = Aindex.at(kk);
-            if (Avalue.at(kk) > 0 && implRowDualUpper.at(i) < HIGHS_CONST_INF) {
-              bnd =
-                  -(colCost.at(j) + e) / Avalue.at(kk) + implRowDualUpper.at(i);
-              if (bnd > implRowDualLower.at(i) &&
-                  !(bnd > implRowDualUpper.at(i)))
-                implRowDualLower.at(i) = bnd;
-            } else if (Avalue.at(kk) < 0 &&
-                       implRowDualLower.at(i) > -HIGHS_CONST_INF) {
-              bnd =
-                  -(colCost.at(j) + e) / Avalue.at(kk) + implRowDualLower.at(i);
-              if (bnd < implRowDualUpper.at(i) &&
-                  !(bnd < implRowDualLower.at(i)))
-                implRowDualUpper.at(i) = bnd;
+        if (colLower.at(j) <= -HIGHS_CONST_INF ||
+            colUpper.at(j) < HIGHS_CONST_INF)
+          for (int kk = Astart.at(j); kk < Aend.at(j); ++kk)
+            if (flagRow.at(Aindex.at(kk)) && e > -HIGHS_CONST_INF) {
+              i = Aindex.at(kk);
+              if (Avalue.at(kk) > 0 &&
+                  implRowDualUpper.at(i) < HIGHS_CONST_INF) {
+                bnd = -(colCost.at(j) + e) / Avalue.at(kk) +
+                      implRowDualUpper.at(i);
+                if (bnd > implRowDualLower.at(i) &&
+                    !(bnd > implRowDualUpper.at(i)))
+                  implRowDualLower.at(i) = bnd;
+              } else if (Avalue.at(kk) < 0 &&
+                         implRowDualLower.at(i) > -HIGHS_CONST_INF) {
+                bnd = -(colCost.at(j) + e) / Avalue.at(kk) +
+                      implRowDualLower.at(i);
+                if (bnd < implRowDualUpper.at(i) &&
+                    !(bnd < implRowDualLower.at(i)))
+                  implRowDualUpper.at(i) = bnd;
+              }
             }
-          }
+      }
     }
   }
 }
@@ -1508,6 +1996,8 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
 
   double upp = HIGHS_CONST_INF;
   double low = -HIGHS_CONST_INF;
+
+  roundIntegerBounds(col);
 
   if (aij > 0 && aik > 0) {
     if (colLower.at(col) > -HIGHS_CONST_INF && rowUpper.at(i) < HIGHS_CONST_INF)
@@ -1543,6 +2033,19 @@ pair<double, double> Presolve::getNewBoundsDoubletonConstraint(
   return make_pair(low, upp);
 }
 
+void Presolve::roundIntegerBounds(const int col) {
+  // for mip we check if the bounds can be rounded
+  if (mip && integrality[col] != HighsVarType::CONTINUOUS) {
+    if (colLower[col] != -HIGHS_CONST_INF)
+      colLower[col] =
+          ceil(colLower[col] - default_primal_feasiblility_tolerance);
+
+    if (colUpper[col] != HIGHS_CONST_INF)
+      colUpper[col] =
+          floor(colUpper[col] + default_primal_feasiblility_tolerance);
+  }
+}
+
 void Presolve::removeFreeColumnSingleton(const int col, const int row,
                                          const int k) {
   if (iPrint > 0)
@@ -1568,6 +2071,9 @@ void Presolve::removeFreeColumnSingleton(const int col, const int row,
 
   valueColDual.at(col) = 0;
   valueRowDual.at(row) = -colCost.at(col) / Avalue.at(k);
+
+  double b = valueRowDual[row] < 0 ? rowLower[row] : rowUpper[row];
+  objShift += colCost.at(col) * b / Avalue.at(k);
 
   addChange(FREE_SING_COL, row, col);
   removeRow(row);
@@ -1747,6 +2253,7 @@ void Presolve::removeColumnSingletons() {
     if (flagCol[*it]) {
       const int col = *it;
       assert(0 <= col && col <= numCol);
+
       const int k = getSingColElementIndexInA(col);
       if (k < 0) {
         it = singCol.erase(it);
@@ -1755,16 +2262,53 @@ void Presolve::removeColumnSingletons() {
       }
       assert(k < (int)Aindex.size());
       const int i = Aindex.at(k);
+      const double ai = Avalue[k];
+
+      // todo if the variable type of column is HighsVarType::INTEGRAL check the
+      // integrality of all coefficients divided by the coefficient of the
+      // integral singleton variable coefficients before doing a substitution,
+      // for now we skip the reductions
+      if (mip && integrality[col] == HighsVarType::INTEGER) {
+        // for integral columns only handle equality rows
+        if (rowLower[i] != rowUpper[i]) {
+          ++it;
+          continue;
+        }
+
+        bool suitable = false;
+        for (int kk = ARstart[i]; kk < ARstart[i + 1]; ++kk) {
+          int j = ARindex[kk];
+          if (flagCol[j] && j != col) {
+            if (integrality[col] != HighsVarType::INTEGER) {
+              suitable = false;
+              break;
+            }
+
+            double substval = ARvalue[kk] / ai;
+            double intval = std::floor(substval + 0.5);
+            if (std::abs(substval - intval) > tol) {
+              suitable = false;
+              break;
+            }
+          }
+        }
+
+        if (!suitable) {
+          ++it;
+          continue;
+        }
+
+        printf("integer singleton can be subsituted\n");
+      }
 
       // zero cost
-      bool on_zero_cost = false;
+      bool on_zero_cost = false && !mip;
       if (on_zero_cost && fabs(colCost.at(col)) < tol) {
         removeZeroCostColumnSingleton(col, i, k);
         it = singCol.erase(it);
         continue;
       }
 
-      // free
       if (colLower.at(col) <= -HIGHS_CONST_INF &&
           colUpper.at(col) >= HIGHS_CONST_INF) {
         removeFreeColumnSingleton(col, i, k);
@@ -1779,16 +2323,18 @@ void Presolve::removeColumnSingletons() {
         continue;
       }
 
+      // todo, I think this case might not work for integral variables
       // singleton column in a doubleton inequality
       // case two column singletons
-      if (nzRow.at(i) == 2) {
-        const bool result_di =
-            removeColumnSingletonInDoubletonInequality(col, i, k);
-        if (result_di) {
-          it = singCol.erase(it);
-          continue;
+      if (!mip || integrality[col] != HighsVarType::INTEGER)
+        if (nzRow.at(i) == 2) {
+          const bool result_di =
+              removeColumnSingletonInDoubletonInequality(col, i, k);
+          if (result_di) {
+            it = singCol.erase(it);
+            continue;
+          }
         }
-      }
       it++;
 
       if (status) return;
@@ -1962,6 +2508,8 @@ void Presolve::removeImpliedFreeColumn(const int col, const int i,
 
   valueColDual.at(col) = 0;
   valueRowDual.at(i) = -colCost.at(col) / Avalue.at(k);
+  double b = valueRowDual[i] < 0 ? rowLower[i] : rowUpper[i];
+  objShift += colCost.at(col) * b / Avalue.at(k);
   addChange(IMPLIED_FREE_SING_COL, i, col);
   removeRow(i);
 }
@@ -2299,7 +2847,9 @@ void Presolve::removeRowSingletons() {
               }
       }*/
 
-      // update bounds of X
+      // todo, round bounds for integer and implied integer variables, be
+      // careful with tolerances, i.e. use floor(ub + eps) for rounding down an
+      // upper bound update bounds of X
       if (aij > 0) {
         if (rowLower.at(i) != -HIGHS_CONST_INF)
           colLower.at(j) =
@@ -2333,6 +2883,8 @@ void Presolve::removeRowSingletons() {
                       }
               }
       }*/
+
+      roundIntegerBounds(j);
 
       // check for feasibility
       // Analyse dependency on numerical tolerance
@@ -2720,6 +3272,489 @@ void Presolve::testAnAR(int post) {
   }
 }
 
+HighsPostsolveStatus Presolve::primalPostsolve(
+    const std::vector<double>& reduced_solution,
+    HighsSolution& recovered_solution) {
+  colValue = reduced_solution;
+
+  makeACopy();  // so we can efficiently calculate primal and dual
+  // values
+
+  //	iKKTcheck = false;
+  // set corresponding parts of solution vectors:
+  int j_index = 0;
+  vector<int> eqIndexOfReduced(numCol, -1);
+  vector<int> eqIndexOfReduROW(numRow, -1);
+  for (int i = 0; i < numColOriginal; ++i)
+    if (cIndex.at(i) > -1) {
+      eqIndexOfReduced.at(j_index) = i;
+      ++j_index;
+    }
+  j_index = 0;
+  for (int i = 0; i < numRowOriginal; ++i)
+    if (rIndex.at(i) > -1) {
+      eqIndexOfReduROW.at(j_index) = i;
+      ++j_index;
+    }
+
+  for (int i = 0; i < numCol; ++i) {
+    int iCol = eqIndexOfReduced.at(i);
+    assert(iCol < (int)valuePrimal.size());
+    assert(iCol >= 0);
+    valuePrimal[iCol] = colValue.at(i);
+    // valueColDual[iCol] = colDual.at(i);
+    // col_status.at(iCol) = temp_col_status.at(i);
+  }
+
+  // cmpNBF(-1, -1);
+  // testBasisMatrixSingularity();
+
+  if (iKKTcheck) {
+    cout << std::endl << "~~~~~ KKT check on HiGHS solution ~~~~~\n";
+    checkKkt();
+  }
+
+  vector<int> fRjs;
+  while (!chng.empty()) {
+    change c = chng.top();
+    chng.pop();
+    // cout<<"chng.pop:       "<<c.col<<"       "<<c.row << endl;
+
+    switch (c.type) {
+      case AGGREGATOR: {
+        // restore solution, basis, flags, and colCostAtEl
+        aggregatorStack.back().postsolveStack.undo(flagCol, flagRow,
+                                                   valuePrimal);
+
+        // restore AR to state before the aggregator got called
+        ARstart = std::move(aggregatorStack.back().ARstartAtCall);
+        ARindex = std::move(aggregatorStack.back().ARindexAtCall);
+        ARvalue = std::move(aggregatorStack.back().ARvalueAtCall);
+        colCostAtEl = std::move(aggregatorStack.back().colCostAtCall);
+        aggregatorStack.pop_back();
+
+        // restore A from AR
+        makeACopy();
+        break;
+      }
+      case TWO_COL_SING_TRIVIAL: {
+        // WIP
+        int y = (int)postValue.top();
+        postValue.pop();
+        int x = (int)postValue.top();
+        postValue.pop();
+        assert(x == c.col);
+        flagRow[c.row] = true;
+        flagCol[x] = true;
+        flagCol[y] = true;
+        break;
+      }
+      case DOUBLETON_EQUATION: {  // Doubleton equation row
+        getDualsDoubletonEquation(c.row, c.col);
+
+        // exit(2);
+        break;
+      }
+      case DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE: {
+        // new bounds from doubleton equation, retrieve old ones
+        // just for KKT check, not called otherwise
+        // chk2.addChange(171, c.row, c.col, 0, 0, 0);
+        break;
+      }
+      case DOUBLETON_EQUATION_NEW_X_NONZERO: {
+        // matrix transformation from doubleton equation, case x still there
+        // case new x is not 0
+        // just change value of entry in row for x
+        int indi;
+        for (indi = ARstart[c.row]; indi < ARstart[c.row + 1]; ++indi)
+          if (ARindex.at(indi) == c.col) break;
+        ARvalue.at(indi) = postValue.top();
+        for (indi = Astart[c.col]; indi < Aend[c.col]; ++indi)
+          if (Aindex.at(indi) == c.row) break;
+        Avalue.at(indi) = postValue.top();
+
+        postValue.pop();
+
+        break;
+      }
+      case DOUBLETON_EQUATION_X_ZERO_INITIALLY: {
+        // matrix transformation from doubleton equation, retrieve old value
+        // case when row does not have x initially: entries for row i swap x and
+        // y cols
+
+        const int yindex = (int)postValue.top();
+        postValue.pop();
+
+        // reverse AR for case when x is zero and y entry has moved
+        int indi;
+        for (indi = ARstart[c.row]; indi < ARstart[c.row + 1]; ++indi)
+          if (ARindex.at(indi) == c.col) break;
+        ARvalue.at(indi) = postValue.top();
+        ARindex.at(indi) = yindex;
+
+        // reverse A for case when x is zero and y entry has moved
+        for (indi = Astart[c.col]; indi < Aend[c.col]; ++indi)
+          if (Aindex.at(indi) == c.row) break;
+
+        // recover x: column decreases by 1
+        // if indi is not Aend-1 swap elements indi and Aend-1
+        if (indi != Aend[c.col] - 1) {
+          double tmp = Avalue[Aend[c.col] - 1];
+          int tmpi = Aindex[Aend[c.col] - 1];
+          Avalue[Aend[c.col] - 1] = Avalue.at(indi);
+          Aindex[Aend[c.col] - 1] = Aindex.at(indi);
+          Avalue.at(indi) = tmp;
+          Aindex.at(indi) = tmpi;
+        }
+        Aend[c.col]--;
+
+        // recover y: column increases by 1
+        // update A: append X column to end of array
+        int st = Avalue.size();
+        for (int ind = Astart[yindex]; ind < Aend[yindex]; ++ind) {
+          Avalue.push_back(Avalue.at(ind));
+          Aindex.push_back(Aindex.at(ind));
+        }
+        Avalue.push_back(postValue.top());
+        Aindex.push_back(c.row);
+        Astart[yindex] = st;
+        Aend[yindex] = Avalue.size();
+
+        postValue.pop();
+
+        break;
+      }
+      case DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE: {
+        // sp case x disappears row representation change
+        int indi;
+        for (indi = ARstart[c.row]; indi < ARstart[c.row + 1]; ++indi)
+          if (ARindex.at(indi) == numColOriginal) break;
+        ARindex.at(indi) = c.col;
+        ARvalue.at(indi) = postValue.top();
+
+        postValue.pop();
+
+        break;
+      }
+      case DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE: {
+        // sp case x disappears column representation change
+        // here A is copied from AR array at end of presolve so need to expand x
+        // column  Aend[c.col]++; wouldn't do because old value is overriden
+        double oldXvalue = postValue.top();
+        postValue.pop();
+        int x = c.col;
+
+        // update A: append X column to end of array
+        int st = Avalue.size();
+        for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) {
+          Avalue.push_back(Avalue.at(ind));
+          Aindex.push_back(Aindex.at(ind));
+        }
+        Avalue.push_back(oldXvalue);
+        Aindex.push_back(c.row);
+        Astart.at(x) = st;
+        Aend.at(x) = Avalue.size();
+
+        break;
+      }
+      case EMPTY_ROW: {
+        flagRow[c.row] = 1;
+        break;
+      }
+      case SING_ROW: {
+        // valuePrimal is already set for this one, colDual also, we need
+        // rowDual. AR copy keeps full matrix.  col dual maybe infeasible, we
+        // need to check.  recover old bounds and see
+        // getDualsSingletonRow(c.row, c.col);
+        oldBounds.pop();
+        postValue.pop();
+
+        break;
+      }
+      case FORCING_ROW_VARIABLE:
+        oldBounds.pop();
+        flagCol[c.col] = 1;
+        break;
+      case FORCING_ROW: {
+        flagRow[c.row] = 1;
+        break;
+      }
+      case REDUNDANT_ROW: {
+        flagRow[c.row] = 1;
+        break;
+      }
+      case FREE_SING_COL:
+      case IMPLIED_FREE_SING_COL: {
+        // colDual rowDual already set.
+        // calculate row value without xj
+        double aij = getaij(c.row, c.col);
+        double sum = 0;
+        for (int k = ARstart[c.row]; k < ARstart[c.row + 1]; ++k)
+          if (flagCol.at(ARindex.at(k)))
+            sum += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
+
+        double rowlb = postValue.top();
+        postValue.pop();
+        double rowub = postValue.top();
+        postValue.pop();
+
+        // calculate xj
+        if (rowlb == rowub)
+          valuePrimal[c.col] = (rowlb - sum) / aij;
+        else if (colCostAtEl[c.col] > 0) {
+          // we are interested in the lowest possible value of x:
+          // max { l_j, bound implied by row i }
+          double bndL;
+          if (aij > 0)
+            bndL = (rowlb - sum) / aij;
+          else
+            bndL = (rowub - sum) / aij;
+          valuePrimal[c.col] = max(colLowerOriginal[c.col], bndL);
+        } else if (colCostAtEl[c.col] < 0) {
+          // we are interested in the highest possible value of x:
+          // min { u_j, bound implied by row i }
+          double bndU;
+          if (aij < 0)
+            bndU = (rowlb - sum) / aij;
+          else
+            bndU = (rowub - sum) / aij;
+          valuePrimal[c.col] = min(colUpperOriginal[c.col], bndU);
+        } else {  // cost is zero
+          double bndL, bndU;
+          if (aij > 0) {
+            bndL = (rowlb - sum) / aij;
+            bndU = (rowub - sum) / aij;
+          } else {
+            bndL = (rowub - sum) / aij;
+            bndU = (rowlb - sum) / aij;
+          }
+          double valuePrimalUB = min(colUpperOriginal[c.col], bndU);
+          double valuePrimalLB = max(colLowerOriginal[c.col], bndL);
+          if (valuePrimalUB < valuePrimalLB - tol) {
+            cout << "Postsolve error: inconsistent bounds for implied free "
+                    "column singleton "
+                 << c.col << endl;
+          }
+
+          if (fabs(valuePrimalLB) < fabs(valuePrimalUB))
+            valuePrimal[c.col] = valuePrimalLB;
+          else
+            valuePrimal[c.col] = valuePrimalUB;
+        }
+        sum = sum + valuePrimal[c.col] * aij;
+
+        double costAtTimeOfElimination = postValue.top();
+        postValue.pop();
+        objShift += (costAtTimeOfElimination * sum) / aij;
+
+        flagRow[c.row] = 1;
+        flagCol[c.col] = 1;
+        // valueRowDual[c.row] = 0;
+        break;
+      }
+      case SING_COL_DOUBLETON_INEQ: {
+        assert(false);
+        // column singleton in a doubleton equation.
+        // colDual already set. need valuePrimal from stack. maybe change
+        // rowDual depending on bounds. old bounds kept in oldBounds. variables
+        // j,k : we eliminated j and are left with changed bounds on k and no
+        // row. c.col is column COL (K) - eliminated, j is with new bounds
+        pair<int, vector<double>> p = oldBounds.top();
+        oldBounds.pop();
+        const int j = p.first;
+        vector<double> v = p.second;
+        // double lbNew = v[0];
+        // double ubNew = v[1];
+        double cjNew = v[2];
+
+        p = oldBounds.top();
+        oldBounds.pop();
+        v = p.second;
+        double ubOld = v[1];
+        double lbOld = v[0];
+        double cjOld = v[2];
+
+        p = oldBounds.top();
+        oldBounds.pop();
+        v = p.second;
+        double ubCOL = v[1];
+        double lbCOL = v[0];
+        double ck = v[2];
+
+        double rowlb = postValue.top();
+        postValue.pop();
+        double rowub = postValue.top();
+        postValue.pop();
+        double aik = postValue.top();
+        postValue.pop();
+        double aij = postValue.top();
+        postValue.pop();
+        double xj = valuePrimal.at(j);
+
+        // calculate xk, depending on signs of coeff and cost
+        double upp = HIGHS_CONST_INF;
+        double low = -HIGHS_CONST_INF;
+
+        if ((aij > 0 && aik > 0) || (aij < 0 && aik < 0)) {
+          if (rowub < HIGHS_CONST_INF) upp = (rowub - aij * xj) / aik;
+          if (rowlb > -HIGHS_CONST_INF) low = (rowlb - aij * xj) / aik;
+        } else {
+          if (rowub < HIGHS_CONST_INF) upp = (rowub - aij * xj) / aik;
+          if (rowlb > -HIGHS_CONST_INF) low = (rowlb - aij * xj) / aik;
+        }
+
+        double xkValue = 0;
+        if (ck == 0) {
+          if (low < 0 && upp > 0)
+            xkValue = 0;
+          else if (fabs(low) < fabs(upp))
+            xkValue = low;
+          else
+            xkValue = upp;
+        }
+
+        else if ((ck > 0 && aik > 0) || (ck < 0 && aik < 0)) {
+          assert(low > -HIGHS_CONST_INF);
+          xkValue = low;
+        } else if ((ck > 0 && aik < 0) || (ck < 0 && aik > 0)) {
+          assert(low < HIGHS_CONST_INF);
+          xkValue = upp;
+        }
+
+        // primal value and objective shift
+        valuePrimal[c.col] = xkValue;
+        objShift += -cjNew * xj + cjOld * xj + ck * xkValue;
+
+        // fix duals
+        double rowVal = aij * xj + aik * xkValue;
+
+        // If row is strictly between bounds:
+        // Row is basic and column is non basic.
+        if ((rowub == HIGHS_CONST_INF || (rowub - rowVal > tol)) &&
+            (rowlb == -HIGHS_CONST_INF || (rowVal - rowlb > tol))) {
+          row_status.at(c.row) = HighsBasisStatus::BASIC;
+          col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+          valueRowDual[c.row] = 0;
+          flagRow[c.row] = 1;
+          valueColDual[c.col] = getColumnDualPost(c.col);
+        } else {
+          // row is at a bound
+          // case fabs(rowlb - rowub) < tol
+          double lo = -HIGHS_CONST_INF;
+          double up = HIGHS_CONST_INF;
+
+          if (fabs(rowub - rowVal) <= tol) {
+            lo = 0;
+            up = HIGHS_CONST_INF;
+          } else if (fabs(rowlb - rowVal) <= tol) {
+            lo = -HIGHS_CONST_INF;
+            up = 0;
+          }
+
+          colCostAtEl.at(j) = cjOld;  // revert cost before calculating duals
+          getBoundOnLByZj(c.row, j, &lo, &up, lbOld, ubOld);
+          getBoundOnLByZj(c.row, c.col, &lo, &up, lbCOL, ubCOL);
+
+          // calculate yi
+          if (lo - up > tol)
+            cout << "PR: Error in postsolving doubleton inequality " << c.row
+                 << " : inconsistent bounds for its dual value." << std::endl;
+
+          // WARNING: bound_row_dual not used. commented out to surpress warning
+          // but maybe this causes trouble. Look into when you do dual postsolve
+          // again (todo)
+          //
+          //
+          // double bound_row_dual = 0;
+          // if (lo > 0) {
+          //   bound_row_dual = lo;
+          // } else if (up < 0) {
+          //   bound_row_dual = up;
+          // }
+
+          // kxx
+          // if (lo > 0 || up < 0)
+          if (lo > 0 || up < 0 || ck != 0) {
+            // row is nonbasic
+            // since either dual value zero for it is infeasible
+            // or the column cost has changed for col j hence the row dual has
+            // to be nonzero to balance out the Stationarity of Lagrangian.
+            row_status.at(c.row) = HighsBasisStatus::NONBASIC;
+            col_status.at(c.col) = HighsBasisStatus::BASIC;
+            valueColDual[c.col] = 0;
+            flagRow[c.row] = 1;
+            valueRowDual[c.row] = getRowDualPost(c.row, c.col);
+            valueColDual[j] = getColumnDualPost(j);
+          } else {
+            // zero row dual is feasible, set row to basic and column to
+            // nonbasic.
+            row_status.at(c.row) = HighsBasisStatus::BASIC;
+            col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+            valueRowDual[c.row] = 0;
+            flagRow[c.row] = 1;
+            valueColDual[c.col] = getColumnDualPost(c.col);
+          }
+        }
+
+        flagCol[c.col] = 1;
+
+        // exit(2);
+        break;
+      }
+      case EMPTY_COL:
+      case DOMINATED_COLS:
+      case WEAKLY_DOMINATED_COLS: {
+        // got valuePrimal, need colDual
+        flagCol[c.col] = 1;
+        break;
+      }
+
+      case FIXED_COL: {
+        // got valuePrimal, need colDual
+        flagCol[c.col] = 1;
+        break;
+      }
+    }
+    // cmpNBF(c.row, c.col);
+  }
+
+  // cmpNBF();
+
+  // now recover original model data to pass back to HiGHS
+  // A is already recovered!
+  // however, A is expressed in terms of Astart, Aend and columns are in
+  // different order so
+  makeACopy();
+
+  numRow = numRowOriginal;
+  numCol = numColOriginal;
+  numTot = numRow + numCol;
+
+  rowUpper = rowUpperOriginal;
+  rowLower = rowLowerOriginal;
+
+  colUpper = colUpperOriginal;
+  colLower = colLowerOriginal;
+
+  colCost = colCostOriginal;
+
+  colValue = valuePrimal;
+
+  rowValue.assign(numRow, 0);
+  for (int i = 0; i < numRowOriginal; ++i) {
+    for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
+      rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
+  }
+
+  // cout<<"Singularity check at end of postsolve: ";
+  // testBasisMatrixSingularity();
+
+  // Save solution to PresolveComponentData.
+  recovered_solution.col_value = colValue;
+  recovered_solution.row_value = rowValue;
+
+  return HighsPostsolveStatus::SolutionRecovered;
+}
 // todo: error reporting.
 HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                                          const HighsBasis& reduced_basis,
@@ -2790,6 +3825,23 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
     setBasisElement(c);
     switch (c.type) {
+      case AGGREGATOR: {
+        // restore solution, basis, flags, and colCostAtEl
+        aggregatorStack.back().postsolveStack.undo(
+            flagCol, flagRow, valuePrimal, valueColDual, valueRowDual,
+            col_status, row_status);
+
+        // restore AR to state before the aggregator got called
+        ARstart = std::move(aggregatorStack.back().ARstartAtCall);
+        ARindex = std::move(aggregatorStack.back().ARindexAtCall);
+        ARvalue = std::move(aggregatorStack.back().ARvalueAtCall);
+        colCostAtEl = std::move(aggregatorStack.back().colCostAtCall);
+        aggregatorStack.pop_back();
+
+        // restore A from AR
+        makeACopy();
+        break;
+      }
       case TWO_COL_SING_TRIVIAL: {
         // WIP
         int y = (int)postValue.top();
@@ -3859,6 +4911,8 @@ void Presolve::getDualsDoubletonEquation(const int row, const int col) {
 
   flagRow.at(row) = 1;
   flagCol.at(y) = 1;
+
+  if (mip) return;
 
   const HighsBasisStatus x_status_reduced = col_status.at(x);
   bool x_make_basic = false;
