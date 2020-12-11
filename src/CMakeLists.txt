@@ -419,6 +419,7 @@ target_sources(libhighs PRIVATE
     mip/HighsCliqueTable.cpp
     mip/HighsCutPool.cpp
     mip/HighsDynamicRowMatrix.cpp
+    mip/HighsDomain.cpp
     mip/HighsImplications.cpp
     mip/HighsLpRelaxation.cpp
     mip/HighsMipSolver.cpp
