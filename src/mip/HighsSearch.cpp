@@ -15,6 +15,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
   depthoffset = 0;
   lpiterations = 0;
   heurlpiterations = 0;
+  sblpiterations = 0;
   upper_limit = HIGHS_CONST_INF;
   inheuristic = false;
   inbranching = false;
@@ -559,6 +560,7 @@ void HighsSearch::addInfeasibleConflict() {
 int HighsSearch::selectBranchingCandidate() {
   assert(!lp->getFractionalIntegers().empty());
 
+  static constexpr int basisstart_threshold = 20;
   std::vector<double> upscore;
   std::vector<double> downscore;
   std::vector<uint8_t> upscorereliable;
@@ -620,6 +622,7 @@ int HighsSearch::selectBranchingCandidate() {
 
     if (upscorereliable[candidate] && downscorereliable[candidate]) {
       lp->setStoredBasis(std::move(basis));
+      lp->recoverBasis();
       lp->run();
       return candidate;
     }
@@ -643,9 +646,11 @@ int HighsSearch::selectBranchingCandidate() {
 
       lp->flushDomain(localdom);
 
-      size_t oldnumiters = lp->getNumLpIterations();
-      HighsLpRelaxation::Status status = lp->run();
-      lpiterations += lp->getNumLpIterations() - oldnumiters;
+      size_t numiters = lp->getNumLpIterations();
+      HighsLpRelaxation::Status status = lp->run(false);
+      numiters = lp->getNumLpIterations() - numiters;
+      lpiterations += numiters;
+      sblpiterations += numiters;
 
       if (lp->scaledOptimal(status)) {
         double delta = downval - fracval;
@@ -701,7 +706,7 @@ int HighsSearch::selectBranchingCandidate() {
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
             lp->setStoredBasis(std::move(basis));
-            lp->recoverBasis();
+            if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -713,7 +718,7 @@ int HighsSearch::selectBranchingCandidate() {
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
             lp->setStoredBasis(std::move(basis));
-            lp->recoverBasis();
+            if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
           }
         }
@@ -723,7 +728,7 @@ int HighsSearch::selectBranchingCandidate() {
         lp->flushDomain(localdom);
         localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
         lp->setStoredBasis(std::move(basis));
-        lp->recoverBasis();
+        if (numiters > basisstart_threshold) lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -737,7 +742,7 @@ int HighsSearch::selectBranchingCandidate() {
 
       localdom.backtrack();
       lp->flushDomain(localdom);
-      lp->recoverBasis();
+      if (numiters > basisstart_threshold) lp->recoverBasis();
     } else {
       // evaluate up branch
       localdom.changeBound(HighsBoundType::Lower, col, upval);
@@ -752,9 +757,11 @@ int HighsSearch::selectBranchingCandidate() {
 
       lp->flushDomain(localdom);
 
-      size_t oldnumiters = lp->getNumLpIterations();
-      HighsLpRelaxation::Status status = lp->run();
-      lpiterations += lp->getNumLpIterations() - oldnumiters;
+      size_t numiters = lp->getNumLpIterations();
+      HighsLpRelaxation::Status status = lp->run(false);
+      numiters = lp->getNumLpIterations() - numiters;
+      lpiterations += numiters;
+      sblpiterations += numiters;
 
       if (lp->scaledOptimal(status)) {
         double delta = upval - fracval;
@@ -812,7 +819,7 @@ int HighsSearch::selectBranchingCandidate() {
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
             lp->setStoredBasis(std::move(basis));
-            lp->recoverBasis();
+            if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
           }
         } else if (solobj > getCutoffBound()) {
@@ -824,7 +831,7 @@ int HighsSearch::selectBranchingCandidate() {
             lp->flushDomain(localdom);
             localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
             lp->setStoredBasis(std::move(basis));
-            lp->recoverBasis();
+            if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
           }
         }
@@ -834,7 +841,7 @@ int HighsSearch::selectBranchingCandidate() {
         lp->flushDomain(localdom);
         localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
         lp->setStoredBasis(std::move(basis));
-        lp->recoverBasis();
+        if (numiters > basisstart_threshold) lp->recoverBasis();
         return -1;
       } else {
         // printf("todo2\n");
@@ -848,7 +855,7 @@ int HighsSearch::selectBranchingCandidate() {
 
       localdom.backtrack();
       lp->flushDomain(localdom);
-      lp->recoverBasis();
+      if (numiters > basisstart_threshold) lp->recoverBasis();
     }
   }
 }
@@ -954,6 +961,9 @@ void HighsSearch::flushStatistics() {
 
   mipsolver.mipdata_->heuristic_lp_iterations += heurlpiterations;
   heurlpiterations = 0;
+
+  mipsolver.mipdata_->sb_lp_iterations += sblpiterations;
+  sblpiterations = 0;
 }
 
 size_t HighsSearch::getHeuristicLpIterations() const {
@@ -962,6 +972,10 @@ size_t HighsSearch::getHeuristicLpIterations() const {
 
 size_t HighsSearch::getTotalLpIterations() const {
   return lpiterations + mipsolver.mipdata_->total_lp_iterations;
+}
+
+size_t HighsSearch::getStrongBranchingLpIterations() const {
+  return sblpiterations + mipsolver.mipdata_->sb_lp_iterations;
 }
 
 void HighsSearch::resetLocalDomain() {
@@ -1148,7 +1162,7 @@ void HighsSearch::evaluateNode() {
             
           }
 
-          printf("glbminact: %g   localminact: %g   rhs: %g  len: %lu\n", glbminact, localminact, rhs, inds.size());
+          printf("glbminact: %g   localminact: %g   rhs: %g  len: %d\n", glbminact, localminact, rhs, (int)inds.size());
         }
 
       }
@@ -1184,11 +1198,30 @@ bool HighsSearch::branch() {
   assert(currnode.opensubtrees == 2);
   currnode.branchingdecision.column = -1;
   inbranching = true;
+
+  int minrel = pseudocost.getMinReliable();
   pseudocost.setSeed(random.integer());
 
   while (currnode.opensubtrees == 2 && lp->scaledOptimal(lp->getStatus()) &&
          !lp->getFractionalIntegers().empty()) {
     // evalUnreliableBranchCands();
+    if (minrel > 0) {
+      size_t sbiters = getStrongBranchingLpIterations();
+      size_t sbmaxiters =
+          100000 + (getTotalLpIterations() - getHeuristicLpIterations() -
+                    getStrongBranchingLpIterations()) /
+                       2;
+      if (sbiters > sbmaxiters) {
+        pseudocost.setMinReliable(0);
+      } else if (sbiters > sbmaxiters / 2) {
+        double reductionratio =
+            (sbiters - sbmaxiters / 2) / (double)(sbmaxiters - sbmaxiters / 2);
+
+        int minrelreduced = int(8.0 - reductionratio * 7.0);
+        pseudocost.setMinReliable(std::min(minrel, minrelreduced));
+      }
+    }
+
     int branchcand = selectBranchingCandidate();
 
     if (branchcand != -1) {
@@ -1271,10 +1304,10 @@ bool HighsSearch::branch() {
     }
 
     assert(!localdom.getChangedCols().empty());
-
     evaluateNode();
   }
   inbranching = false;
+  pseudocost.setMinReliable(minrel);
 
   assert(currnode.opensubtrees == 2 || currnode.opensubtrees == 0);
 

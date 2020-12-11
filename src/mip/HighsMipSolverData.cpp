@@ -68,6 +68,7 @@ void HighsMipSolverData::setup() {
   total_lp_iterations = 0;
   heuristic_lp_iterations = 0;
   sepa_lp_iterations = 0;
+  sb_lp_iterations = 0;
   num_disp_lines = 0;
   last_displeave = 0;
   lower_bound = -HIGHS_CONST_INF;
@@ -336,9 +337,8 @@ void HighsMipSolverData::setup() {
 
     HighsPrintMessage(mipsolver.options_mip_->output,
                       mipsolver.options_mip_->message_level, ML_MINIMAL,
-                      "%d probing evaluations: %lu bound changes and %d fixed "
-                      "binary variables\n",
-                      nprobed, domain.getChangedCols().size(), nfixed);
+                      "%d probing evaluations: %d fixed binary variables\n",
+                      nprobed, nfixed);
 
     cliquetable.cleanupFixed(domain);
   }
