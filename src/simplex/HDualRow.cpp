@@ -117,7 +117,7 @@ void HDualRow::chooseJoinpack(const HDualRow* otherRow) {
   workTheta = min(workTheta, otherRow->workTheta);
 }
 
-bool HDualRow::chooseFinal() {
+int HDualRow::chooseFinal() {
   /**
    * Chooses the entering variable via BFRT and EXPAND
    *
@@ -192,7 +192,7 @@ bool HDualRow::chooseFinal() {
     analysis->simplexTimerStop(Chuzc3a0Clock);
     if (!choose_ok) {
       analysis->simplexTimerStop(Chuzc3Clock);
-      return true;
+      return -1;
     }
   }
   if (use_heap_sort) {
@@ -223,6 +223,11 @@ bool HDualRow::chooseFinal() {
   }
   analysis->simplexTimerStart(Chuzc3cClock);
 
+  if (breakIndex < 0) {
+    HighsLogMessage(workHMO.options_.logfile, HighsMessageType::WARNING,
+                    "Suspected dual unboundedness identified in chooseFinal");
+    return 1;
+  }
   int sourceOut = workDelta < 0 ? -1 : 1;
   assert(breakIndex >= 0);  // todo @ Julian : assert can fail and leads to
                             // invalid memory access below
@@ -277,7 +282,7 @@ bool HDualRow::chooseFinal() {
   sort(workData.begin(), workData.begin() + workCount);
   analysis->simplexTimerStop(Chuzc3eClock);
   analysis->simplexTimerStop(Chuzc3Clock);
-  return false;
+  return 0;
 }
 
 bool HDualRow::chooseFinalWorkGroupQuad() {
