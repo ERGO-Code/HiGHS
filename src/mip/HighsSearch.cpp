@@ -580,7 +580,7 @@ int HighsSearch::selectBranchingCandidate() {
   for (int k = 0; k != numfrac; ++k) {
     int col = fracints[k].first;
 
-    if (pseudocost.isReliable(col)) {
+    if (pseudocost.isReliable(col) || branchingVarReliableAtNode(col)) {
       upscore[k] = pseudocost.getPseudocostUp(col, fracints[k].second);
       downscore[k] = pseudocost.getPseudocostDown(col, fracints[k].second);
       upscorereliable[k] = true;
@@ -664,6 +664,7 @@ int HighsSearch::selectBranchingCandidate() {
 
         downscore[candidate] = objdelta;
         downscorereliable[candidate] = 1;
+        markBranchingVarDownReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
 
         for (int k = 0; k != numfrac; ++k) {
@@ -674,6 +675,7 @@ int HighsSearch::selectBranchingCandidate() {
               otherdownval + mipsolver.mipdata_->feastol) {
             if (objdelta == 0.0 && downscore[k] != 0.0) {
               downscorereliable[k] = 1;
+              markBranchingVarDownReliableAtNode(fracints[k].first);
               pseudocost.addObservation(fracints[k].first,
                                         otherdownval - otherfracval, objdelta);
             }
@@ -682,6 +684,7 @@ int HighsSearch::selectBranchingCandidate() {
                      otherupval - mipsolver.mipdata_->feastol) {
             if (objdelta == 0.0 && upscore[k] != 0.0) {
               upscorereliable[k] = 1;
+              markBranchingVarUpReliableAtNode(fracints[k].first);
               pseudocost.addObservation(fracints[k].first,
                                         otherupval - otherfracval, objdelta);
             }
@@ -738,6 +741,8 @@ int HighsSearch::selectBranchingCandidate() {
         upscore[candidate] = 0.0;
         downscorereliable[candidate] = 1;
         upscorereliable[candidate] = 1;
+        markBranchingVarUpReliableAtNode(col);
+        markBranchingVarDownReliableAtNode(col);
       }
 
       localdom.backtrack();
@@ -776,6 +781,7 @@ int HighsSearch::selectBranchingCandidate() {
 
         upscore[candidate] = objdelta;
         upscorereliable[candidate] = 1;
+        markBranchingVarUpReliableAtNode(col);
         pseudocost.addObservation(col, delta, objdelta);
 
         for (int k = 0; k != numfrac; ++k) {
@@ -786,6 +792,7 @@ int HighsSearch::selectBranchingCandidate() {
               otherdownval + mipsolver.mipdata_->feastol) {
             if (objdelta == 0.0 && downscore[k] != 0.0) {
               downscorereliable[k] = 1;
+              markBranchingVarDownReliableAtNode(fracints[k].first);
               pseudocost.addObservation(fracints[k].first,
                                         otherdownval - otherfracval, objdelta);
             }
@@ -795,6 +802,7 @@ int HighsSearch::selectBranchingCandidate() {
                      otherupval - mipsolver.mipdata_->feastol) {
             if (objdelta == 0.0 && upscore[k] != 0.0) {
               upscorereliable[k] = 1;
+              markBranchingVarUpReliableAtNode(fracints[k].first);
               pseudocost.addObservation(fracints[k].first,
                                         otherupval - otherfracval, objdelta);
             }
@@ -851,6 +859,8 @@ int HighsSearch::selectBranchingCandidate() {
         upscore[candidate] = 0.0;
         downscorereliable[candidate] = 1;
         upscorereliable[candidate] = 1;
+        markBranchingVarUpReliableAtNode(col);
+        markBranchingVarDownReliableAtNode(col);
       }
 
       localdom.backtrack();
@@ -1422,6 +1432,8 @@ bool HighsSearch::backtrack() {
 }
 
 void HighsSearch::dive() {
+  reliableatnode.clear();
+
   do {
     ++nnodes;
     evaluateNode();

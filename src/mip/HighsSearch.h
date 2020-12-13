@@ -66,6 +66,18 @@ class HighsSearch {
   };
 
   std::vector<NodeData> nodestack;
+  std::unordered_map<int, int> reliableatnode;
+
+  bool branchingVarReliableAtNode(int col) const {
+    auto it = reliableatnode.find(col);
+    if (it == reliableatnode.end() || it->second != 3) return false;
+
+    return true;
+  }
+
+  void markBranchingVarUpReliableAtNode(int col) { reliableatnode[col] |= 1; }
+
+  void markBranchingVarDownReliableAtNode(int col) { reliableatnode[col] |= 2; }
 
  public:
   HighsSearch(HighsMipSolver& mipsolver, const HighsPseudocost& pseudocost);
