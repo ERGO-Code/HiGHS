@@ -14,6 +14,7 @@
 #ifndef PRESOLVE_PRESOLVE_COMPONENT_H_
 #define PRESOLVE_PRESOLVE_COMPONENT_H_
 
+#include "presolve/HAggregator.h"
 #include "presolve/Presolve.h"
 #include "util/HighsComponent.h"
 
@@ -85,7 +86,7 @@ class PresolveComponent : public HighsComponent {
  public:
   void clear() override;
 
-  HighsStatus init(const HighsLp& lp, HighsTimer& timer);
+  HighsStatus init(const HighsLp& lp, HighsTimer& timer, bool mip = false);
 
   HighsPresolveStatus run();
 

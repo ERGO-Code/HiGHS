@@ -14,10 +14,11 @@
 
 #include "presolve/PresolveComponent.h"
 
-HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer) {
+HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
+                                    bool mip) {
   assert(options_.presolve_on);
   data_.presolve_.push_back(presolve::Presolve(timer));
-  data_.presolve_[0].load(lp);
+  data_.presolve_[0].load(lp, mip);
   return HighsStatus::OK;
 }
 
@@ -99,9 +100,10 @@ HighsPresolveStatus PresolveComponent::run() {
     data_.reduced_lp_.colUpper_ = std::move(data_.presolve_[0].colUpper);
     data_.reduced_lp_.rowLower_ = std::move(data_.presolve_[0].rowLower);
     data_.reduced_lp_.rowUpper_ = std::move(data_.presolve_[0].rowUpper);
+    data_.reduced_lp_.integrality_ = std::move(data_.presolve_[0].integrality);
 
     data_.reduced_lp_.sense_ = ObjSense::MINIMIZE;
-    data_.reduced_lp_.offset_ = 0;
+    data_.reduced_lp_.offset_ = data_.presolve_[0].objShift;
     data_.reduced_lp_.model_name_ =
         std::move(data_.presolve_[0].modelName);  //"Presolved model";
   }

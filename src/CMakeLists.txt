@@ -94,12 +94,23 @@ set(sources
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
-    mip/SolveMip.cpp
+    mip/HighsMipSolverData.cpp
+    mip/HighsDomain.cpp
+    mip/HighsDynamicRowMatrix.cpp
+    mip/HighsLpRelaxation.cpp
+    mip/HighsSeparation.cpp
+    mip/HighsSearch.cpp
+    mip/HighsCutPool.cpp
+    mip/HighsCliqueTable.cpp
+    mip/HighsImplications.cpp
+    mip/HighsNodeQueue.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
     presolve/PresolveUtils.cpp
     presolve/HPreData.cpp
+    presolve/HAggregator.cpp
+    presolve/HighsLpPropagator.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -395,12 +406,23 @@ target_sources(libhighs PRIVATE
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
-    mip/SolveMip.cpp
+    mip/HighsMipSolverData.cpp
+    mip/HighsDomain.cpp
+    mip/HighsDynamicRowMatrix.cpp
+    mip/HighsLpRelaxation.cpp
+    mip/HighsSeparation.cpp
+    mip/HighsSearch.cpp
+    mip/HighsCutPool.cpp
+    mip/HighsCliqueTable.cpp
+    mip/HighsImplications.cpp
+    mip/HighsNodeQueue.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
     presolve/PresolveUtils.cpp
     presolve/HPreData.cpp
+    presolve/HAggregator.cpp
+    presolve/HighsLpPropagator.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -432,8 +454,12 @@ target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
 set_target_properties(libhighs PROPERTIES PUBLIC_HEADER src/Highs.h)
 
-target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
+if (${HiGHSRELEASE} ON)
+    target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
+endif()
 
+# target_compile_options(libhighs PRIVATE "-Wall")
+# target_compile_options(libhighs PRIVATE "-Wunused")
 
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
