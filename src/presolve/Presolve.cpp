@@ -2508,7 +2508,10 @@ void Presolve::removeImpliedFreeColumn(const int col, const int i,
 
   valueColDual.at(col) = 0;
   valueRowDual.at(i) = -colCost.at(col) / Avalue.at(k);
-  double b = valueRowDual[i] < 0 ? rowLower[i] : rowUpper[i];
+  double b = valueRowDual[i] < 0 || rowUpper[i] == HIGHS_CONST_INF
+                 ? rowLower[i]
+                 : rowUpper[i];
+  assert(std::isfinite(b));
   objShift += colCost.at(col) * b / Avalue.at(k);
   addChange(IMPLIED_FREE_SING_COL, i, col);
   removeRow(i);

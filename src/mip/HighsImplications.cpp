@@ -76,7 +76,7 @@ bool HighsImplications::computeImplications(int col, bool val) {
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 1);
 
     cliquetable.addClique(globaldomain, clique, 2);
-    if (globaldomain.infeasible()) return true;
+    if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
   }
 
   implications.erase(binstart, implications.end());
@@ -90,23 +90,23 @@ bool HighsImplications::computeImplications(int col, bool val) {
 bool HighsImplications::runProbing(int col, int& numboundchgs) {
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0)) {
-    const HighsDomainChange* implicsup;
-    const HighsDomainChange* implicsdown;
-    int nimplicsup;
-    int nimplicsdown;
     bool infeasible;
 
     infeasible = computeImplications(col, 1);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
 
-    nimplicsdown = getImplications(col, 0, implicsdown, infeasible);
+    infeasible = computeImplications(col, 0);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
 
-    nimplicsup = getImplications(col, 1, implicsup, infeasible);
-
     // analyze implications
+    const HighsDomainChange* implicsup;
+    const HighsDomainChange* implicsdown;
+    int nimplicsup;
+    int nimplicsdown;
+    nimplicsdown = getImplications(col, 0, implicsdown, infeasible);
+    nimplicsup = getImplications(col, 1, implicsup, infeasible);
     int u = 0;
     int d = 0;
 
