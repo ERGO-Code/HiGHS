@@ -82,6 +82,8 @@ HighsStatus HEkk::solve() {
     HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                     "Using EKK primal simplex solver");
     HEkkPrimal primal_solver(*this);
+    workEdWt_ = NULL;
+    workEdWtFull_ = NULL;
     call_status = primal_solver.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
@@ -163,6 +165,8 @@ HighsStatus HEkk::cleanup() {
     simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
     simplex_info_.primal_simplex_bound_perturbation_multiplier = 0;
     HEkkPrimal primal_solver(*this);
+    workEdWt_ = NULL;
+    workEdWtFull_ = NULL;
     call_status = primal_solver.solve();
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");

@@ -123,6 +123,7 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis) {
   assert(basis.valid_);
+  assert(isBasisRightSize(lp, basis));
   const bool have_highs_solution = isSolutionRightSize(lp, solution);
 
   const int num_col = lp.numCol_;

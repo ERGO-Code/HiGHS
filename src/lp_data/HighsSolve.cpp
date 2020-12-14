@@ -165,7 +165,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     double upper = lp.colUpper_[iCol];
     double value;
     double primal_infeasibility = 0;
-    HighsBasisStatus status;
+    HighsBasisStatus status = HighsBasisStatus::NONBASIC;
     if (lower > upper) {
       // Inconsistent bounds, so set the variable to lower bound,
       // unless it's infinite. Otherwise set the variable to upper
@@ -216,6 +216,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
         status = HighsBasisStatus::LOWER;
       }
     }
+    assert(status != HighsBasisStatus::NONBASIC);
     solution.col_value[iCol] = value;
     solution.col_dual[iCol] = (int)lp.sense_ * dual;
     basis.col_status[iCol] = status;
