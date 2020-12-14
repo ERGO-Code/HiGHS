@@ -42,7 +42,7 @@ class Highs {
    * HighsModelObjects (hmos), creates a HighsModelObject for this LP
    * and makes it the first of the vector of HighsModelObjects
    */
-  HighsStatus passModel(const HighsLp& lp  //!< The HighsLp instance for this LP
+  HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
   );
 
   HighsStatus passModel(const int num_col, const int num_row, const int num_nz,
@@ -308,13 +308,13 @@ class Highs {
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumCols() { return lp_.numCol_; }
+  int getNumCols() const { return lp_.numCol_; }
 
   /**
    * @brief Get the number of rows in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumRows() { return lp_.numRow_; }
+  int getNumRows() const { return lp_.numRow_; }
 
   /**
    * @brief Get the number of entries in the LP of the (first?)

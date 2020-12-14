@@ -14,6 +14,7 @@
 #include "simplex/HMatrix.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdio>
 
@@ -135,6 +136,9 @@ void HMatrix::update(int variable_in, int variable_out) {
       int iFind = ARstart[iRow];
       int iSwap = --AR_Nend[iRow];
       while (ARindex[iFind] != variable_in) iFind++;
+      // todo @ Julian : this assert can fail
+      assert(iFind >= 0 && iFind < int(ARindex.size()));
+      assert(iSwap >= 0 && iSwap < int(ARindex.size()));
       swap(ARindex[iFind], ARindex[iSwap]);
       swap(ARvalue[iFind], ARvalue[iSwap]);
     }

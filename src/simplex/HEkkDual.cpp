@@ -1529,9 +1529,13 @@ void HEkkDual::chooseColumnSlice(HVector* row_ep) {
   }
 
   // Choose column 2, This only happens if didn't go out
-  bool chooseColumnFail = dualRow.chooseFinal();
-  if (chooseColumnFail) {
-    rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
+  int return_code = dualRow.chooseFinal();
+  if (return_code) {
+    if (return_code < 0) {
+      rebuild_reason = REBUILD_REASON_CHOOSE_COLUMN_FAIL;
+    } else {
+      rebuild_reason = REBUILD_REASON_POSSIBLY_DUAL_UNBOUNDED;
+    }
     return;
   }
 

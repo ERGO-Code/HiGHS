@@ -24,6 +24,7 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsSolution.h"
+#include "presolve/HAggregator.h"
 #include "presolve/HPreData.h"
 #include "presolve/PresolveAnalysis.h"
 #include "test/DevKkt.h"
@@ -86,13 +87,27 @@ class Presolve : public HPreData {
                                  HighsSolution& recovered_solution,
                                  HighsBasis& recovered_basis);
 
+  HighsPostsolveStatus primalPostsolve(
+      const std::vector<double>& reduced_solution,
+      HighsSolution& recovered_solution);
+
   void setNumericalTolerances();
-  void load(const HighsLp& lp);
+  void load(const HighsLp& lp, bool mip = false);
   // todo: clear the public from below.
   string modelName;
 
   // Options
   std::vector<Presolver> order;
+
+  struct AggregatorCall {
+    HAggregator::PostsolveStack postsolveStack;
+    std::vector<double> colCostAtCall;
+    std::vector<double> ARvalueAtCall;
+    std::vector<int> ARindexAtCall;
+    std::vector<int> ARstartAtCall;
+  };
+
+  std::vector<AggregatorCall> aggregatorStack;
 
   int max_iterations = 0;
 
@@ -104,6 +119,7 @@ class Presolve : public HPreData {
   int iPrint = 0;
   int message_level;
   FILE* output;
+  double objShift;
 
  private:
   int iKKTcheck = 0;
@@ -111,8 +127,10 @@ class Presolve : public HPreData {
 
   const bool report_postsolve = false;
 
-  double objShift;
   void initializeVectors();
+  void runAggregator();
+  void runPropagator();
+  void detectImpliedIntegers();
   void setProblemStatus(const int s);
   void reportTimes();
 
@@ -147,6 +165,7 @@ class Presolve : public HPreData {
   };
 
  private:
+  bool mip;
   bool hasChange = true;
   int status = 0;  // 0 is unassigned, see enum stat
 
@@ -267,6 +286,7 @@ class Presolve : public HPreData {
                        const double colLow, const double colUpp);
   double getRowDualPost(const int row, const int col);
   double getColumnDualPost(const int col);
+  void roundIntegerBounds(int col);
   string getDualsForcingRow(const int row, vector<int>& fRjs);
   void getDualsSingletonRow(const int row, const int col);
   void getDualsDoubletonEquation(const int row, const int col);

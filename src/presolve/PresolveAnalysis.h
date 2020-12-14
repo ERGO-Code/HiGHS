@@ -47,6 +47,7 @@ enum PresolveRule {
   WEAKLY_DOMINATED_COLS,
   DOMINATED_COL_BOUNDS,
   EMPTY_COL,
+  AGGREGATOR,
 
   // For timing.
   MATRIX_COPY,

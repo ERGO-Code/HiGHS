@@ -34,8 +34,9 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
                           vector<double>& Avalue, vector<double>& colCost,
                           vector<double>& colLower, vector<double>& colUpper,
                           vector<double>& rowLower, vector<double>& rowUpper,
-                          vector<int>& integerColumn, vector<string>& col_names,
-                          vector<string>& row_names, const int keep_n_rows) {
+                          vector<HighsVarType>& integerColumn,
+                          vector<string>& col_names, vector<string>& row_names,
+                          const int keep_n_rows) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;
@@ -65,7 +66,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
   double data[3];
 
   int num_alien_entries = 0;
-  int integerCol = 0;
+  HighsVarType integerCol = HighsVarType::CONTINUOUS;
 
   // Load NAME
   load_mpsLine(file, integerCol, lmax, line, flag, data);
@@ -373,7 +374,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
   // for integer variables without bounds
   int num_int = 0;
   for (int iCol = 0; iCol < numCol; iCol++) {
-    if (integerColumn[iCol]) {
+    if (integerColumn[iCol] == HighsVarType::INTEGER) {
       num_int++;
       if (colUpper[iCol] >= HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
@@ -394,8 +395,8 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
   return FilereaderRetcode::OK;
 }
 
-bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
-                  double* data) {
+bool load_mpsLine(FILE* file, HighsVarType& integerVar, int lmax, char* line,
+                  char* flag, double* data) {
   int F1 = 1, F2 = 4, F3 = 14, F4 = 24, F5 = 39, F6 = 49;
   char* fgets_rt;
 
@@ -439,11 +440,11 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
         if (line[cnter + 1] == 'I' && line[cnter + 2] == 'N' &&
             line[cnter + 3] == 'T' && line[cnter + 4] == 'O' &&
             line[cnter + 5] == 'R' && line[cnter + 6] == 'G')
-          integerVar = 1;
+          integerVar = HighsVarType::INTEGER;
         else if (line[cnter + 1] == 'I' && line[cnter + 2] == 'N' &&
                  line[cnter + 3] == 'T' && line[cnter + 4] == 'E' &&
                  line[cnter + 5] == 'N' && line[cnter + 6] == 'D')
-          integerVar = 0;
+          integerVar = HighsVarType::CONTINUOUS;
         continue;
       }
     }
@@ -523,8 +524,9 @@ HighsStatus writeMPS(
     const vector<double>& Avalue, const vector<double>& colCost,
     const vector<double>& colLower, const vector<double>& colUpper,
     const vector<double>& rowLower, const vector<double>& rowUpper,
-    const vector<int>& integerColumn, const vector<std::string>& col_names,
-    const vector<std::string>& row_names, const bool use_free_format) {
+    const vector<HighsVarType>& integerColumn,
+    const vector<std::string>& col_names, const vector<std::string>& row_names,
+    const bool use_free_format) {
   const bool write_zero_no_cost_columns = true;
   int num_zero_no_cost_columns = 0;
   int num_zero_no_cost_columns_in_bounds_section = 0;
@@ -601,7 +603,7 @@ HighsStatus writeMPS(
   have_int = false;
   if (integerColumn.size()) {
     for (int c_n = 0; c_n < numCol; c_n++) {
-      if (integerColumn[c_n]) {
+      if (integerColumn[c_n] == HighsVarType::INTEGER) {
         have_int = true;
         break;
       }
@@ -613,7 +615,7 @@ HighsStatus writeMPS(
       break;
     }
     bool discrete = false;
-    if (have_int) discrete = integerColumn[c_n];
+    if (have_int) discrete = integerColumn[c_n] == HighsVarType::INTEGER;
     if (!highs_isInfinity(colUpper[c_n]) || discrete) {
       // If the upper bound is finite, or the variable is integer then there is
       // a BOUNDS section. Integer variables with infinite upper bound are
@@ -675,13 +677,13 @@ HighsStatus writeMPS(
       continue;
     }
     if (have_int) {
-      if (integerColumn[c_n] && !integerFg) {
+      if (integerColumn[c_n] == HighsVarType::INTEGER && !integerFg) {
         // Start an integer section
         fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n",
                 nIntegerMk);
         nIntegerMk++;
         integerFg = true;
-      } else if (!integerColumn[c_n] && integerFg) {
+      } else if (integerColumn[c_n] != HighsVarType::INTEGER && integerFg) {
         // End an integer section
         fprintf(file, "    MARK%04d  'MARKER'                 'INTEND'\n",
                 nIntegerMk);
@@ -730,7 +732,7 @@ HighsStatus writeMPS(
       double lb = colLower[c_n];
       double ub = colUpper[c_n];
       bool discrete = false;
-      if (have_int) discrete = integerColumn[c_n];
+      if (have_int) discrete = integerColumn[c_n] == HighsVarType::INTEGER;
       if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
         // Possibly skip this column if it's zero and has no cost
         if (!highs_isInfinity(ub) || lb) {

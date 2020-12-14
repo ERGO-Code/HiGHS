@@ -18,6 +18,7 @@
 #include "HighsOptions.h"
 #include "HighsRuntimeOptions.h"
 #include "HighsTimer.h"
+#include "presolve/HAggregator.h"
 
 void printHighsVersionCopyright(FILE* output, const int message_level,
                                 const char* message = nullptr);
@@ -25,8 +26,8 @@ void reportLpStatsOrError(FILE* output, int message_level,
                           const HighsStatus read_status, const HighsLp& lp);
 void reportSolvedLpStats(FILE* output, int message_level,
                          const HighsStatus run_status, const Highs& highs);
-HighsStatus callLpSolver(HighsOptions& options);
-HighsStatus callMipSolver(HighsOptions& options);
+HighsStatus callLpSolver(HighsOptions& options, const HighsLp& lp);
+HighsStatus callMipSolver(HighsOptions& options, const HighsLp& lp);
 
 int main(int argc, char** argv) {
   printHighsVersionCopyright(stdout, ML_ALWAYS);
@@ -36,12 +37,28 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
+  Highs highs;
+  HighsStatus read_status = highs.readModel(options.model_file);
+  reportLpStatsOrError(options.output, options.message_level, read_status,
+                       highs.getLp());
+  if (read_status == HighsStatus::Error)
+    return 1;  // todo: change to read error
+
   // Run LP or MIP solver.
+  const HighsLp& lp = highs.getLp();
   HighsStatus run_status = HighsStatus::Error;
-  if (!options.mip) {
-    run_status = callLpSolver(options);
+  bool is_mip = false;
+  for (int i = 0; i < (int)lp.integrality_.size(); i++)
+    if (lp.integrality_[i] == HighsVarType::INTEGER) {
+      is_mip = true;
+      break;
+    }
+
+  if (options.solver == "simplex" || options.solver == "ipm" ||
+      (!is_mip && options.presolve != "mip")) {
+    run_status = callLpSolver(options, lp);
   } else {
-    run_status = callMipSolver(options);
+    run_status = callMipSolver(options, lp);
   }
 
   return (int)run_status;
@@ -103,7 +120,7 @@ void reportLpStatsOrError(FILE* output, int message_level,
                       lp.Avalue_.size());
     int num_int = 0;
     for (unsigned int i = 0; i < lp.integrality_.size(); i++)
-      if (lp.integrality_[i]) num_int++;
+      if (lp.integrality_[i] != HighsVarType::CONTINUOUS) num_int++;
     if (num_int)
       HighsPrintMessage(output, message_level, ML_ALWAYS, "Integer  : %d\n",
                         num_int);
@@ -175,7 +192,7 @@ void reportSolvedLpStats(FILE* output, int message_level,
   }
 }
 
-HighsStatus callLpSolver(HighsOptions& use_options) {
+HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   FILE* output = use_options.output;
   const int message_level = use_options.message_level;
 
@@ -183,10 +200,11 @@ HighsStatus callLpSolver(HighsOptions& use_options) {
   Highs highs(use_options);
   const HighsOptions& options = highs.getHighsOptions();
 
-  // Load problem.
-  HighsStatus read_status = highs.readModel(options.model_file);
-  reportLpStatsOrError(output, message_level, read_status, highs.getLp());
-  if (read_status == HighsStatus::Error) return HighsStatus::Error;
+  // // Load problem.
+  highs.passModel(lp);
+  // HighsStatus read_status = highs.readModel(options.model_file);
+  // reportLpStatsOrError(output, message_level, read_status, highs.getLp());
+  // if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
   // Run HiGHS.
   highs.setBasis();
@@ -196,22 +214,69 @@ HighsStatus callLpSolver(HighsOptions& use_options) {
   return run_status;
 }
 
-HighsStatus callMipSolver(HighsOptions& use_options) {
+HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
   FILE* output = use_options.output;
   const int message_level = use_options.message_level;
-  Highs highs(use_options);
-  const HighsOptions& options = highs.getHighsOptions();
-  HighsStatus read_status = highs.readModel(options.model_file);
-  reportLpStatsOrError(output, message_level, read_status, highs.getLp());
-  if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
-  HighsMipSolver solver(use_options, highs.getLp());
-  HighsMipStatus status = solver.runMipSolver();
-  switch (status) {
-    case HighsMipStatus::kOptimal:
-      return HighsStatus::OK;
-    default:
-      break;
+  // Highs highs(use_options);
+  // const HighsOptions& options = highs.getHighsOptions();
+  // HighsStatus read_status = highs.readModel(options.model_file);
+  // reportLpStatsOrError(output, message_level, read_status, highs.getLp());
+  // if (read_status == HighsStatus::Error) return HighsStatus::Error;
+  // HighsLp lp = highs.getLp();
+  // printf("running aggregator (nnz = %lu)\n", lp.Avalue_.size());
+  // presolve::HAggregator aggregator(lp.rowLower_, lp.rowUpper_, lp.colCost_,
+  //                                  lp.offset_, lp.integrality_, lp.colLower_,
+  //                                  lp.colUpper_);
+
+  // aggregator.fromCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  // aggregator.run();
+  // aggregator.toCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  // printf("aggregator finished (nnz = %lu)\n", lp.Avalue_.size());
+
+  HighsMipSolver solver(use_options, lp);
+  solver.run();
+
+  const auto& solution = solver.presolve_.data_.recovered_solution_;
+
+  if (int(solution.col_value.size()) == lp.numCol_) {
+    printf("checking recovered solution\n");
+    double boundviol = 0.0;
+    double intviol = 0.0;
+    double rowviol = 0.0;
+    HighsCDouble obj = lp.offset_;
+    for (int i = 0; i != lp.numCol_; ++i) {
+      obj += lp.colCost_[i] * solution.col_value[i];
+
+      boundviol = std::max(boundviol, lp.colLower_[i] - solution.col_value[i]);
+      boundviol = std::max(boundviol, solution.col_value[i] - lp.colUpper_[i]);
+
+      if (lp.integrality_[i] == HighsVarType::INTEGER) {
+        double intval = std::floor(solution.col_value[i] + 0.5);
+        intviol = std::max(std::abs(intval - solution.col_value[i]), intviol);
+      }
+    }
+
+    for (int i = 0; i != lp.numRow_; ++i) {
+      rowviol = std::max(rowviol, lp.rowLower_[i] - solution.row_value[i]);
+      rowviol = std::max(rowviol, solution.row_value[i] - lp.rowUpper_[i]);
+    }
+
+    bool feasible = boundviol <= use_options.mip_feasibility_tolerance &&
+                    intviol <= use_options.mip_feasibility_tolerance &&
+                    rowviol <= use_options.mip_feasibility_tolerance;
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "solution is %s, violations:\n",
+                      feasible ? "feasible" : "infeasible");
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  bounds:      %.14g\n", boundviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  integrality: %.14g\n", intviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  contraints:  %.14g\n", rowviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "objective function value: %.14g\n", double(obj));
   }
-  return HighsStatus::Error;
+
+  return HighsStatus::OK;
 }

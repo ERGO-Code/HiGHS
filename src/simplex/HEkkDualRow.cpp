@@ -119,7 +119,7 @@ void HEkkDualRow::chooseJoinpack(const HEkkDualRow* otherRow) {
   workTheta = min(workTheta, otherRow->workTheta);
 }
 
-bool HEkkDualRow::chooseFinal() {
+int HEkkDualRow::chooseFinal() {
   /**
    * Chooses the entering variable via BFRT and EXPAND
    *
@@ -194,7 +194,7 @@ bool HEkkDualRow::chooseFinal() {
     analysis->simplexTimerStop(Chuzc3a0Clock);
     if (!choose_ok) {
       analysis->simplexTimerStop(Chuzc3Clock);
-      return true;
+      return -1;
     }
   }
   if (use_heap_sort) {
@@ -226,6 +226,12 @@ bool HEkkDualRow::chooseFinal() {
   analysis->simplexTimerStart(Chuzc3cClock);
 
   int move_out = workDelta < 0 ? -1 : 1;
+  if (breakIndex < 0) {
+    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
+                    "Suspected dual unboundedness identified in chooseFinal");
+    return 1;
+  }
+  assert(breakIndex >= 0);
   if (use_quad_sort) {
     workPivot = workData[breakIndex].first;
     workAlpha = workData[breakIndex].second * move_out * workMove[workPivot];
@@ -279,7 +285,7 @@ bool HEkkDualRow::chooseFinal() {
   sort(workData.begin(), workData.begin() + workCount);
   analysis->simplexTimerStop(Chuzc3eClock);
   analysis->simplexTimerStop(Chuzc3Clock);
-  return false;
+  return 0;
 }
 
 bool HEkkDualRow::chooseFinalWorkGroupQuad() {

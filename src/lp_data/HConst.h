@@ -14,6 +14,7 @@
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
 
+#include <cstdint>
 #include <limits>
 #include <string>
 

@@ -28,7 +28,8 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
     return HighsDebugStatus::NOT_CHECKED;
   if (force)
-    HighsPrintMessage(options.output, 1, 1, "CheckINVERT:   Forcing debug\n");
+    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+                      "CheckINVERT:   Forcing debug\n");
 
   HighsDebugStatus return_status = HighsDebugStatus::NOT_CHECKED;
   return_status = HighsDebugStatus::OK;
@@ -73,7 +74,6 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
   }
   std::string value_adjective;
   int report_level;
-  int message_level;
   return_status = HighsDebugStatus::OK;
 
   if (solve_error_norm) {
@@ -89,14 +89,11 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
       value_adjective = "Small";
       report_level = ML_VERBOSE;
     }
-    if (force) {
-      message_level = 1;
-      report_level = 1;
-    } else {
-      message_level = options.message_level;
-    }
+
+    if (force) report_level = ML_MINIMAL;
+
     HighsPrintMessage(
-        options.output, message_level, report_level,
+        options.output, options.message_level, report_level,
         "CheckINVERT:   %-9s (%9.4g) norm for random solution solve error\n",
         value_adjective.c_str(), solve_error_norm);
   }
