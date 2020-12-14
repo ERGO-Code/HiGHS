@@ -62,6 +62,10 @@ set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
 find_program(GIT git)
@@ -436,10 +440,11 @@ endif()
 # Dashboards later on.
 # include(CTest)
 
-install(TARGETS libhighs EXPORT highs-targets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        PUBLIC_HEADER DESTINATION include)
+# todo: ig
+# install(TARGETS libhighs EXPORT highs-targets
+#         LIBRARY DESTINATION lib
+#         ARCHIVE DESTINATION lib
+#         PUBLIC_HEADER DESTINATION include)
 
 # if (IPX_ON)
 #     install(TARGETS ipx EXPORT highs-targets
