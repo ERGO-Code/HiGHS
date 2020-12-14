@@ -567,10 +567,8 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
         simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS ||
         simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
     if (equilibration_scaling) {
-      printf("\nUsing equilibration scaling: %d\n", simplex_scale_strategy);
       scaled_matrix = equilibrationScaleSimplexMatrix(options, lp, scale);
     } else {
-      printf("\nUsing max value scaling: %d\n", simplex_scale_strategy);
       scaled_matrix = maxValueScaleSimplexMatrix(options, lp, scale);
     }
     scale.is_scaled_ = scaled_matrix;
