@@ -1194,8 +1194,7 @@ void HEkkDual::iterationAnalysis() {
 
   // Possibly switch from DSE to Devex
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    const bool switch_to_devex = analysis->switchToDevex();
-    assert(ekk_instance_.switchToDevex() == switch_to_devex);
+    const bool switch_to_devex = ekk_instance_.switchToDevex();
     if (switch_to_devex) {
       dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
       // Using dual Devex edge weights, so set up the first framework
