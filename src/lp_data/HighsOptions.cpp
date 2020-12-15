@@ -281,7 +281,7 @@ OptionStatus checkOptionValue(FILE* logfile, OptionRecordString& option,
   // Setting a string option. For some options only particular values
   // are permitted, so check them
   if (option.name == presolve_string) {
-    if (!commandLineOffChooseOnOk(logfile, value))
+    if (!commandLineOffChooseOnOk(logfile, value) && value != "mip")
       return OptionStatus::ILLEGAL_VALUE;
   } else if (option.name == solver_string) {
     if (!commandLineSolverOk(logfile, value))

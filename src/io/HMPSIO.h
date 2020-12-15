@@ -50,7 +50,7 @@ FilereaderRetcode readMPS(
     vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
     vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
     vector<double>& rowLower, vector<double>& rowUpper,
-    vector<int>& integerColumn, vector<std::string>& col_names,
+    vector<HighsVarType>& integerColumn, vector<std::string>& col_names,
     vector<std::string>& row_names, const int keep_n_rows = 0);
 
 HighsStatus writeMPS(
@@ -60,11 +60,12 @@ HighsStatus writeMPS(
     const vector<double>& Avalue, const vector<double>& colCost,
     const vector<double>& colLower, const vector<double>& colUpper,
     const vector<double>& rowLower, const vector<double>& rowUpper,
-    const vector<int>& integerColumn, const vector<std::string>& col_names,
-    const vector<std::string>& row_names, const bool use_free_format = true);
+    const vector<HighsVarType>& integerColumn,
+    const vector<std::string>& col_names, const vector<std::string>& row_names,
+    const bool use_free_format = true);
 
-bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
-                  double* data);
+bool load_mpsLine(FILE* file, HighsVarType& integerVar, int lmax, char* line,
+                  char* flag, double* data);
 
 HighsStatus writeLpAsMPS(const HighsOptions& options,
                          const std::string filename, const HighsLp& lp,

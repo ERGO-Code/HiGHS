@@ -42,8 +42,14 @@ set(CMAKE_MACOSX_RPATH ON)
 
 set(HIGHS_VERSION_PATCH 0)
 
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
+
+# uncomment for memory debugging
+# set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address")
+# set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address")
+# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+# set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 
 find_package(PkgConfig)
 
@@ -83,7 +89,11 @@ if(EXT_PRESOLVE_DIR)
 endif()
 
 
+option(DEBUGSOL "check the debug solution" OFF)
 
+if(DEBUGSOL)
+  add_definitions("-DHIGHS_DEBUGSOL")
+endif()
 # For the moment keep above coverage part in case we are testing at CI.
 option(CI "CI extended tests" ON)
 
@@ -420,7 +430,8 @@ endforeach()
 
 if (EXP) 
     add_executable(doctest)
-    target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
+    #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
+    target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
     target_include_directories(doctest PRIVATE external)
     target_link_libraries(doctest libhighs)
 endif()
