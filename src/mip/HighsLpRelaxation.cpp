@@ -449,15 +449,7 @@ bool HighsLpRelaxation::computeDualInfProof(const HighsDomain& globaldomain,
 }
 
 void HighsLpRelaxation::recoverBasis() {
-  if (basischeckpoint && basischeckpoint->valid_) {
-    // assert(isBasisRightSize(lpsolver.getLp(), *basischeckpoint));
-    // assert(isBasisConsistent(lpsolver.getLp(), *basischeckpoint));
-    // basischeckpoint->row_status.resize(lpsolver.getNumRows(),
-    //                                  HighsBasisStatus::BASIC);
-
-    lpsolver.clearSolver();
-    lpsolver.setBasis(*basischeckpoint);
-  }
+  if (basischeckpoint) lpsolver.setBasis(*basischeckpoint);
 }
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {

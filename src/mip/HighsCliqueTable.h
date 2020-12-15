@@ -103,13 +103,18 @@ class HighsCliqueTable {
 
   void propagateAndCleanup(HighsDomain& globaldom);
 
+  void doAddClique(const CliqueVar* cliquevars, int numcliquevars,
+                   bool equality = false, int origin = HIGHS_CONST_I_INF);
+
  public:
   HighsCliqueTable(int ncols) {
     cliquesetroot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
   }
 
-  void addClique(HighsDomain& globaldom, const CliqueVar* cliquevars,
+  bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
+
+  void addClique(HighsDomain& globaldom, CliqueVar* cliquevars,
                  int numcliquevars, bool equality = false,
                  int origin = HIGHS_CONST_I_INF);
 

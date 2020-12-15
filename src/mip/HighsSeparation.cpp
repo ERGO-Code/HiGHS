@@ -2417,9 +2417,10 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
       // printf("separated %d cuts\n", ncuts);
 
       // printf(
-      //     "separation round %d at node %lu added %d cuts objective changed "
+      //     "separation round %d at node %d added %d cuts objective changed "
       //     "from %g to %g, first obj is %g\n",
-      //     nrounds, nnodes, ncuts, lastobj, lp->getObjective(), firstobj);
+      //     nrounds, (int)nnodes, ncuts, lastobj, lp->getObjective(),
+      //     firstobj);
       if (ncuts == 0 || !lp->scaledOptimal(status) ||
           lp->getFractionalIntegers().empty())
         break;
