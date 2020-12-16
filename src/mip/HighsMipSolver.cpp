@@ -10,6 +10,7 @@
 #include "mip/HighsMipSolver.h"
 
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
@@ -129,8 +130,9 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
   assert(presolve_.has_run_);
   if (!mipdata_) return HighsPostsolveStatus::ReducedSolutionEmpty;
 
+  const std::vector<double>& incumbent = mipdata_->getSolution();
   bool solution_ok =
-      presolve_.getReducedProblem().numCol_ == (int)mipdata_->incumbent.size();
+      presolve_.getReducedProblem().numCol_ == (int)incumbent.size();
   if (!solution_ok) return HighsPostsolveStatus::ReducedSolutionDimenionsError;
 
   if (presolve_.presolve_status_ != HighsPresolveStatus::Reduced &&
@@ -144,7 +146,7 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
   // Run postsolve
   HighsPostsolveStatus postsolve_status =
       presolve_.data_.presolve_[0].primalPostsolve(
-          mipdata_->incumbent, presolve_.data_.recovered_solution_);
+          incumbent, presolve_.data_.recovered_solution_);
 
   return postsolve_status;
 
@@ -155,6 +157,7 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 }
 
 void HighsMipSolver::run() {
+  modelstatus_ = HighsModelStatus::NOTSET;
   // std::cout << options_mip_->presolve << std::endl;
   timer_.start(timer_.solve_clock);
   if (options_mip_->presolve != "off") {
@@ -166,26 +169,30 @@ void HighsMipSolver::run() {
         model_ = &presolve_.getReducedProblem();
         break;
       case HighsPresolveStatus::Unbounded:
+        modelstatus_ = HighsModelStatus::PRIMAL_UNBOUNDED;
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL,
                           "Presolve: Model detected to be unbounded\n");
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Infeasible:
+        modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL,
                           "Presolve: Model detected to be infeasible\n");
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Timeout:
+        modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL, "Time limit reached during presolve\n");
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::ReducedToEmpty:
+        modelstatus_ = HighsModelStatus::OPTIMAL;
         reportPresolveReductions(*options_mip_, *model_, true);
         mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-        mipdata_->setup();
+        mipdata_->init();
         runPostsolve();
         timer_.stop(timer_.solve_clock);
         return;
@@ -198,26 +205,33 @@ void HighsMipSolver::run() {
   }
 
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
-  mipdata_->setup();
-  if (!mipdata_->domain.infeasible() && model_->numCol_ != 0) {
+  mipdata_->init();
+  mipdata_->runSetup();
+  if (modelstatus_ == HighsModelStatus::NOTSET) {
     mipdata_->evaluateRootNode();
   }
   if (mipdata_->nodequeue.empty()) {
     mipdata_->printDisplayLine();
     HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                      ML_MINIMAL, "\nmodel was solved in the root node\n");
-    if (options_mip_->presolve != "off")
-      runPostsolve();
-    else if (!mipdata_->incumbent.empty()) {
-      presolve_.data_.recovered_solution_.col_value = mipdata_->incumbent;
-      calculateRowValues(*model_, presolve_.data_.recovered_solution_);
+                      ML_MINIMAL, "\nSolving stopped with status: %s\n",
+                      utilHighsModelStatusToString(modelstatus_).c_str());
+    bool haveSolution = mipdata_->upper_bound != HIGHS_CONST_INF;
+    if (mipdata_->modelcleanup) {
+      model_ = mipdata_->modelcleanup->origmodel;
+      if (haveSolution)
+        mipdata_->modelcleanup->recoverSolution(mipdata_->incumbent);
+    }
+    if (haveSolution) {
+      if (options_mip_->presolve != "off")
+        runPostsolve();
+      else if (!mipdata_->getSolution().empty()) {
+        presolve_.data_.recovered_solution_.col_value = mipdata_->getSolution();
+        calculateRowValues(*model_, presolve_.data_.recovered_solution_);
+      }
     }
     timer_.stop(timer_.solve_clock);
     return;
   }
-
-  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                    ML_MINIMAL, "\nstarting tree search\n");
 
   std::shared_ptr<const HighsBasis> basis;
   HighsSearch search{*this, mipdata_->pseudocost};
@@ -230,6 +244,9 @@ void HighsMipSolver::run() {
   search.installNode(mipdata_->nodequeue.popBestBoundNode());
 
   mipdata_->printDisplayLine();
+
+  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                    ML_MINIMAL, "\nstarting tree search\n");
 
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
@@ -255,23 +272,7 @@ void HighsMipSolver::run() {
       ++mipdata_->num_leaves;
 
       search.flushStatistics();
-      if (options_mip_->mip_max_nodes != HIGHS_CONST_I_INF &&
-          mipdata_->num_nodes >= size_t(options_mip_->mip_max_nodes)) {
-        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                          ML_MINIMAL, "reached node limit\n");
-        limit_reached = true;
-        break;
-      }
-      if (options_mip_->mip_max_leaves != HIGHS_CONST_I_INF &&
-          mipdata_->num_leaves >= size_t(options_mip_->mip_max_leaves)) {
-        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                          ML_MINIMAL, "reached leave node limit\n");
-        limit_reached = true;
-        break;
-      }
-      if (timer_.read(timer_.solve_clock) >= options_mip_->time_limit) {
-        HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                          ML_MINIMAL, "reached time limit\n");
+      if (mipdata_->checkLimits()) {
         limit_reached = true;
         break;
       }
@@ -281,7 +282,7 @@ void HighsMipSolver::run() {
       if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
 
       if (mipdata_->num_nodes - plungestart >=
-          std::min(size_t{1000}, mipdata_->num_nodes / 2))
+          std::min(size_t{1000}, mipdata_->num_nodes / 10))
         break;
 
       if (mipdata_->dispfreq != 0) {
@@ -368,26 +369,12 @@ void HighsMipSolver::run() {
         ++mipdata_->num_leaves;
         ++mipdata_->num_nodes;
         search.flushStatistics();
-        if (options_mip_->mip_max_nodes != HIGHS_CONST_I_INF &&
-            mipdata_->num_nodes >= size_t(options_mip_->mip_max_nodes)) {
-          HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                            ML_MINIMAL, "reached node limit\n");
+
+        if (mipdata_->checkLimits()) {
           limit_reached = true;
           break;
         }
-        if (options_mip_->mip_max_leaves != HIGHS_CONST_I_INF &&
-            mipdata_->num_leaves >= size_t(options_mip_->mip_max_leaves)) {
-          HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                            ML_MINIMAL, "reached leave node limit\n");
-          limit_reached = true;
-          break;
-        }
-        if (timer_.read(timer_.solve_clock) >= options_mip_->time_limit) {
-          HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                            ML_MINIMAL, "reached time limit\n");
-          limit_reached = true;
-          break;
-        }
+
         mipdata_->lower_bound = std::min(
             mipdata_->upper_bound, mipdata_->nodequeue.getBestLowerBound());
 
@@ -417,13 +404,35 @@ void HighsMipSolver::run() {
   }
 
   mipdata_->printDisplayLine();
+  bool havesolution = mipdata_->upper_bound != HIGHS_CONST_INF;
 
-  if (options_mip_->presolve != "off")
-    runPostsolve();
-  else if (!mipdata_->incumbent.empty()) {
-    presolve_.data_.recovered_solution_.col_value = mipdata_->incumbent;
-    calculateRowValues(*model_, presolve_.data_.recovered_solution_);
+  if (modelstatus_ == HighsModelStatus::NOTSET) {
+    if (havesolution)
+      modelstatus_ = HighsModelStatus::OPTIMAL;
+    else
+      modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+  }
+
+  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                    ML_MINIMAL, "\nSolving stopped with status: %s\n",
+                    utilHighsModelStatusToString(modelstatus_).c_str());
+
+  if (mipdata_->modelcleanup) {
+    model_ = mipdata_->modelcleanup->origmodel;
+    if (havesolution)
+      mipdata_->modelcleanup->recoverSolution(mipdata_->incumbent);
+  }
+
+  if (havesolution) {
+    if (options_mip_->presolve != "off")
+      runPostsolve();
+    else if (!mipdata_->getSolution().empty()) {
+      presolve_.data_.recovered_solution_.col_value = mipdata_->getSolution();
+      calculateRowValues(*model_, presolve_.data_.recovered_solution_);
+    }
   }
 
   timer_.stop(timer_.solve_clock);
+
+  assert(modelstatus_ != HighsModelStatus::NOTSET);
 }

@@ -2181,12 +2181,18 @@ void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
   } else {
     num_els_to = 0;
   }
+  char elemsignchar = '-';
+  int elemdelta = num_els_from - num_els_to;
+  if (num_els_from < num_els_to) {
+    elemdelta = -elemdelta;
+    elemsignchar = '+';
+  }
   HighsPrintMessage(options.logfile, options.message_level, ML_ALWAYS,
                     "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
-                    "elements %d(-%d)\n",
+                    "elements %d(%c%d)\n",
                     num_row_to, (num_row_from - num_row_to), num_col_to,
-                    (num_col_from - num_col_to), num_els_to,
-                    (num_els_from - num_els_to));
+                    (num_col_from - num_col_to), num_els_to, elemsignchar,
+                    elemdelta);
 }
 
 void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,

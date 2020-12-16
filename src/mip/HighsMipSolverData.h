@@ -27,6 +27,33 @@ struct HighsMipSolverData {
   HighsPseudocost pseudocost;
   HighsCliqueTable cliquetable;
   HighsImplications implications;
+  struct Substitution {
+    int substcol;
+    int staycol;
+    double scale;
+    double offset;
+  };
+  std::vector<Substitution> substitutions;
+
+  struct ModelCleanup {
+    ModelCleanup(HighsMipSolver& mipsolver);
+
+    std::vector<double> origsol;
+    std::vector<HighsSubstitution> substitutionStack;
+
+    HighsLp cleanedUpModel;
+
+    void recoverSolution(const std::vector<double>& reducedSol);
+
+    const HighsLp* origmodel;
+    std::vector<int> rIndex;
+    std::vector<int> cIndex;
+  };
+
+  bool cliquesExtracted;
+  bool rowMatrixSet;
+  bool tryProbing;
+  std::unique_ptr<ModelCleanup> modelcleanup;
 
   std::vector<int> ARstart_;
   std::vector<int> ARindex_;
@@ -72,9 +99,16 @@ struct HighsMipSolverData {
         cliquetable(mipsolver.numCol()),
         implications(domain, cliquetable) {}
 
-  void setup();
+  void init();
+  void basisTransfer();
+  void checkObjIntegrality();
+  void cliqueExtraction();
+  void runSetup();
+  void runProbing();
   void evaluateRootNode();
   void addIncumbent(const std::vector<double>& sol, double solobj, char source);
+
+  const std::vector<double>& getSolution() const;
 
   void printDisplayLine(char first = ' ');
 
@@ -85,6 +119,8 @@ struct HighsMipSolverData {
     rowinds = ARindex_.data() + start;
     rowvals = ARvalue_.data() + start;
   }
+
+  bool checkLimits() const;
 };
 
 #endif
