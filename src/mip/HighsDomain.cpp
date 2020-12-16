@@ -51,7 +51,7 @@ void HighsDomain::computeMinActivity(int start, int end, const int* ARindex,
     int col = ARindex[j];
     double val = ARvalue[j];
 
-    assert(col < int(colLower_.size()) );
+    assert(col < int(colLower_.size()));
 
     double contributionmin =
         activityContributionMin(val, colLower_[col], colUpper_[col]);
@@ -74,7 +74,7 @@ void HighsDomain::computeMaxActivity(int start, int end, const int* ARindex,
     int col = ARindex[j];
     double val = ARvalue[j];
 
-    assert(col < int(colLower_.size()) );
+    assert(col < int(colLower_.size()));
 
     double contributionmin =
         activityContributionMax(val, colLower_[col], colUpper_[col]);

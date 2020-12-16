@@ -1664,7 +1664,7 @@ void Presolve::applyMipDualFixing() {
 
     for (int j = start; j != end; ++j) {
       int row = Aindex[j];
-      if(!flagRow[row]) continue;
+      if (!flagRow[row]) continue;
       double lower;
       double upper;
 

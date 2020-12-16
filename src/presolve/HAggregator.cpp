@@ -1093,7 +1093,10 @@ void HAggregator::removeRow(int row) {
   assert(row >= 0);
   rowpositions.clear();
   storeRowPositions(rowroot[row]);
-  for (int rowiter : rowpositions) { assert(Arow[rowiter] == row); unlink(rowiter); }
+  for (int rowiter : rowpositions) {
+    assert(Arow[rowiter] == row);
+    unlink(rowiter);
+  }
 
   rowLower[row] = -HIGHS_CONST_INF;
   rowUpper[row] = HIGHS_CONST_INF;
