@@ -2414,6 +2414,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
       int ncuts = separationRound(propdomain, status);
       nlpiters += lp->getNumLpIterations();
       mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
+      mipsolver.mipdata_->total_lp_iterations += nlpiters;
       // printf("separated %d cuts\n", ncuts);
 
       // printf(
