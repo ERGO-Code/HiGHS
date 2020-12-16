@@ -39,6 +39,7 @@ void initializePresolveRuleInfo(std::vector<PresolveRuleInfo>& rules) {
       PresolveRuleInfo(IMPLIED_FREE_SING_COL, "Impl free sing col", "IFS"));
   rules.push_back(
       PresolveRuleInfo(REMOVE_DOMINATED_COLUMNS, "Rm dom col", "RDC"));
+  rules.push_back(PresolveRuleInfo(MIP_DUAL_FIXING, "Mip dual fix", "MDF"));
   rules.push_back(PresolveRuleInfo(DOMINATED_COLS, "Dominated col", "DMC"));
   rules.push_back(
       PresolveRuleInfo(WEAKLY_DOMINATED_COLS, "Weakly dom col", "WDC"));

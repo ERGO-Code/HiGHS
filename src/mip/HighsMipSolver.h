@@ -20,6 +20,7 @@ class HighsMipSolver {
  public:
   const HighsOptions* options_mip_;
   const HighsLp* model_;
+  HighsModelStatus modelstatus_;
   bool submip;
   const HighsBasis* rootbasis;
 

@@ -362,6 +362,7 @@ void HAggregator::dropIfZero(int pos) {
 
 void HAggregator::addNonzero(int row, int col, double val) {
   assert(std::abs(val) > drop_tolerance);
+  assert(findNonzero(row, col) == -1);
   int pos;
   if (freeslots.empty()) {
     pos = Avalue.size();
@@ -1016,6 +1017,107 @@ void HAggregator::PostsolveStack::undo(std::vector<int>& colFlag,
       colval -= reductionValues[i].second * colvalue[reductionValues[i].first];
 
     colvalue[reduction.col] = double(colval / reduction.substcoef);
+  }
+}
+
+void HAggregator::substitute(int substcol, int staycol, double offset,
+                             double scale) {
+  // substitute the column in each row where it occurs
+  for (int coliter = colhead[substcol]; coliter != -1;) {
+    int colrow = Arow[coliter];
+    double colval = Avalue[coliter];
+    // walk to the next position before doing any modifications, because
+    // the current position will be deleted in the loop below
+    assert(Acol[coliter] == substcol);
+    int colpos = coliter;
+    coliter = Anext[coliter];
+    unlink(colpos);
+
+    // adjust the sides
+    if (rowLower[colrow] != -HIGHS_CONST_INF)
+      rowLower[colrow] -= colval * offset;
+
+    if (rowUpper[colrow] != HIGHS_CONST_INF)
+      rowUpper[colrow] -= colval * offset;
+
+    int staycolpos = findNonzero(colrow, staycol);
+
+    if (staycolpos != -1) {
+      Avalue[staycolpos] += scale * colval;
+      dropIfZero(staycolpos);
+    } else
+      addNonzero(colrow, staycol, scale * colval);
+
+    // printf("after substitution: ");
+    // debugPrintRow(colrow);
+  }
+
+  // substitute column in the objective function
+  if (colCost[substcol] != 0.0) {
+    objOffset += colCost[substcol] * offset;
+
+    colCost[staycol] += scale * colCost[substcol];
+
+    if (std::abs(colCost[staycol]) <= drop_tolerance) colCost[staycol] = 0.0;
+    colCost[substcol] = 0.0;
+  }
+}
+
+void HAggregator::removeFixedCol(int col) {
+  assert(colLower[col] == colUpper[col]);
+  double fixval = colLower[col];
+
+  for (int coliter = colhead[col]; coliter != -1;) {
+    int colrow = Arow[coliter];
+    double colval = Avalue[coliter];
+    assert(Acol[coliter] == col);
+
+    int colpos = coliter;
+    coliter = Anext[coliter];
+
+    if (rowLower[colrow] != -HIGHS_CONST_INF)
+      rowLower[colrow] -= colval * fixval;
+
+    if (rowUpper[colrow] != HIGHS_CONST_INF)
+      rowUpper[colrow] -= colval * fixval;
+
+    unlink(colpos);
+  }
+
+  objOffset += colCost[col] * fixval;
+  colCost[col] = 0;
+}
+
+void HAggregator::removeRow(int row) {
+  assert(row < int(rowroot.size()));
+  assert(row >= 0);
+  rowpositions.clear();
+  storeRowPositions(rowroot[row]);
+  for (int rowiter : rowpositions) { assert(Arow[rowiter] == row); unlink(rowiter); }
+
+  rowLower[row] = -HIGHS_CONST_INF;
+  rowUpper[row] = HIGHS_CONST_INF;
+}
+
+void HAggregator::removeRedundantRows(std::vector<uint8_t>& rowdeleted) {
+  int numrow = rowLower.size();
+
+  for (int row = 0; row != numrow; ++row) {
+    if (rowdeleted[row]) continue;
+    computeActivities(row);
+
+    // skip if lower row bound is not redundant
+    if (rowLower[row] != -HIGHS_CONST_INF &&
+        (ninfmin[row] != 0 || minact[row] < rowLower[row] - bound_tolerance))
+      continue;
+
+    // skip if upper row bound is not redundant
+    if (rowUpper[row] != HIGHS_CONST_INF &&
+        (ninfmax[row] != 0 || maxact[row] > rowUpper[row] + bound_tolerance))
+      continue;
+
+    rowdeleted[row] = true;
+    removeRow(row);
   }
 }
 

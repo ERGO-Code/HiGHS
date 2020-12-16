@@ -311,6 +311,11 @@ int Presolve::runPresolvers(const std::vector<Presolver>& order) {
         removeSingletonsOnly();
         // timer.recordFinish(SING_ONLY);
         break;
+      case Presolver::kMainMipDualFixing:
+        timer.recordStart(MIP_DUAL_FIXING);
+        applyMipDualFixing();
+        timer.recordFinish(MIP_DUAL_FIXING);
+        break;
     }
 
     double time_end = timer.timer_.readRunHighsClock();
@@ -402,6 +407,7 @@ int Presolve::presolve(int print) {
     order.push_back(Presolver::kMainRowSingletons);
     order.push_back(Presolver::kMainColSingletons);
     order.push_back(Presolver::kMainDominatedCols);
+    if (mip) order.push_back(Presolver::kMainMipDualFixing);
     // wip
     // order.push_back(Presolver::kMainSingletonsOnly);
   }
@@ -1639,6 +1645,53 @@ void Presolve::detectImpliedIntegers() {
   HighsPrintMessage(output, message_level, ML_VERBOSE,
                     "implint detection found %d implied integers\n",
                     numimplint);
+}
+
+void Presolve::applyMipDualFixing() {
+  for (int i = 0; i != numCol; ++i) {
+    if (!flagCol[i] || integrality[i] != HighsVarType::INTEGER) continue;
+
+    int start = Astart[i];
+    int end = Aend[i];
+    int nuplocks = 0;
+    int ndownlocks = 0;
+
+    if (colCost[i] > 0 || colUpper[i] == HIGHS_CONST_INF) ++nuplocks;
+
+    if (colCost[i] < 0 || colLower[i] == -HIGHS_CONST_INF) ++ndownlocks;
+
+    if (ndownlocks != 0 && nuplocks != 0) continue;
+
+    for (int j = start; j != end; ++j) {
+      int row = Aindex[j];
+      if(!flagRow[row]) continue;
+      double lower;
+      double upper;
+
+      if (Avalue[j] < 0) {
+        lower = -rowUpper[row];
+        upper = -rowLower[row];
+      } else {
+        lower = rowLower[row];
+        upper = rowUpper[row];
+      }
+
+      if (lower != -HIGHS_CONST_INF) ++ndownlocks;
+      if (upper != HIGHS_CONST_INF) ++nuplocks;
+
+      if (ndownlocks != 0 && nuplocks != 0) break;
+    }
+
+    if (ndownlocks == 0) {
+      colUpper[i] = colLower[i];
+      removeFixedCol(i);
+      timer.increaseCount(false, MIP_DUAL_FIXING);
+    } else if (nuplocks == 0) {
+      colLower[i] = colUpper[i];
+      removeFixedCol(i);
+      timer.increaseCount(false, MIP_DUAL_FIXING);
+    }
+  }
 }
 
 void Presolve::removeEmptyRow(int i) {

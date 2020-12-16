@@ -198,6 +198,8 @@ class HighsDomain {
   }
 
   bool isFixed(int col) const { return colLower_[col] == colUpper_[col]; }
+
+  bool isFixing(const HighsDomainChange& domchg) const;
 };
 
 #endif
