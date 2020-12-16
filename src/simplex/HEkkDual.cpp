@@ -77,9 +77,7 @@ HighsStatus HEkkDual::solve() {
   if (bailoutOnTimeIterations())
     return ekk_instance_.returnFromSolve(HighsStatus::Warning);
 
-  // Initialise working environment. Does LOTS, including
-  // initialisation of edge weights to 1s. Should only be called if
-  // model dimension changes
+  // Initialise working environment.
   init();
   initParallel();
 
@@ -101,8 +99,28 @@ HighsStatus HEkkDual::solve() {
     }
   }
 
+  // Determine whether the solution is near-optimal. Value 1 is
+  // unimportant, as the sum of primal infeasiblilities for
+  // near-optimal solutions is typically many orders of magnitude
+  // smaller than 1, and the sum of primal infeasiblilities will be
+  // very much larger for non-trivial LPs that are dual feasible for a
+  // logical or crash basis.
+  const bool near_optimal =
+    simplex_info.num_dual_infeasibilities == 0 &&
+    simplex_info.sum_primal_infeasibilities < 1;
+  if (near_optimal) 
+    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
+                    "Dual feasible and num / max / sum primal infeasibilities are %d / %g / %g, so near-optimal",
+		    simplex_info.num_primal_infeasibilities,
+		    simplex_info.max_primal_infeasibility,
+		    simplex_info.sum_primal_infeasibilities);
+
+  // Perturb costs according to whether the solution is near-optimnal
+  bool perturb_costs = !near_optimal;
   ekk_instance_.initialiseCost(SimplexAlgorithm::DUAL, SOLVE_PHASE_UNKNOWN,
-                               true);
+                               perturb_costs);
+   if (!perturb_costs) HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
+				       "Near-optimal, so don't use cost perturbation");
   assert(simplex_lp_status.has_invert);
   if (!simplex_lp_status.has_invert) {
     HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
@@ -119,6 +137,10 @@ HighsStatus HEkkDual::solve() {
     // Edge weights are not known
     // Set up edge weights according to dual_edge_weight_mode and
     // initialise_dual_steepest_edge_weights
+
+    //    if (near_optimal) {
+      // Initialise DSE weights according to near_optimal
+
     if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
       // Using dual Devex edge weights, so set up the first framework
       simplex_info.devex_index_.assign(solver_num_tot, 0);
