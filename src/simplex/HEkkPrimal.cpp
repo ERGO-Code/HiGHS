@@ -47,9 +47,32 @@ HighsStatus HEkkPrimal::solve() {
   // Get the nonabsic free column set
   getNonbasicFreeColumnSet();
 
-  if (simplex_info.primal_simplex_bound_perturbation_multiplier) {
+  // Determine whether the solution is near-optimal. Value 1 is
+  // unimportant, as the sum of dual infeasiblilities for near-optimal
+  // solutions is typically many orders of magnitude smaller than 1,
+  // and the sum of dual infeasiblilities will be very much larger for
+  // non-trivial LPs that are primal feasible for a logical or crash
+  // basis.
+  const bool near_optimal = simplex_info.num_primal_infeasibilities == 0 &&
+                            simplex_info.sum_dual_infeasibilities < 1;
+  if (near_optimal)
+    HighsPrintMessage(
+        options.output, options.message_level, ML_DETAILED,
+        "Primal feasible and num / max / sum dual infeasibilities are %d / %g "
+        "/ %g, so near-optimal\n",
+        simplex_info.num_dual_infeasibilities,
+        simplex_info.max_dual_infeasibility,
+        simplex_info.sum_dual_infeasibilities);
+
+  // Perturb bounds according to whether the solution is near-optimnal
+  const bool perturb_bounds = !near_optimal;
+  if (!perturb_bounds)
+    HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+                      "Near-optimal, so don't use bound perturbation\n");
+  if (perturb_bounds &&
+      simplex_info.primal_simplex_bound_perturbation_multiplier) {
     ekk_instance_.initialiseBound(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN,
-                                  true);
+                                  perturb_bounds);
     ekk_instance_.initialiseNonbasicWorkValue();
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();

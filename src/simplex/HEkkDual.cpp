@@ -105,22 +105,24 @@ HighsStatus HEkkDual::solve() {
   // smaller than 1, and the sum of primal infeasiblilities will be
   // very much larger for non-trivial LPs that are dual feasible for a
   // logical or crash basis.
-  const bool near_optimal =
-    simplex_info.num_dual_infeasibilities == 0 &&
-    simplex_info.sum_primal_infeasibilities < 1;
-  if (near_optimal) 
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
-                    "Dual feasible and num / max / sum primal infeasibilities are %d / %g / %g, so near-optimal",
-		    simplex_info.num_primal_infeasibilities,
-		    simplex_info.max_primal_infeasibility,
-		    simplex_info.sum_primal_infeasibilities);
+  const bool near_optimal = simplex_info.num_dual_infeasibilities == 0 &&
+                            simplex_info.sum_primal_infeasibilities < 1;
+  if (near_optimal)
+    HighsPrintMessage(
+        options.output, options.message_level, ML_DETAILED,
+        "Dual feasible and num / max / sum primal infeasibilities are %d / %g "
+        "/ %g, so near-optimal\n",
+        simplex_info.num_primal_infeasibilities,
+        simplex_info.max_primal_infeasibility,
+        simplex_info.sum_primal_infeasibilities);
 
   // Perturb costs according to whether the solution is near-optimnal
-  bool perturb_costs = !near_optimal;
+  const bool perturb_costs = !near_optimal;
+  if (!perturb_costs)
+    HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+                      "Near-optimal, so don't use cost perturbation\n");
   ekk_instance_.initialiseCost(SimplexAlgorithm::DUAL, SOLVE_PHASE_UNKNOWN,
                                perturb_costs);
-   if (!perturb_costs) HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
-				       "Near-optimal, so don't use cost perturbation");
   assert(simplex_lp_status.has_invert);
   if (!simplex_lp_status.has_invert) {
     HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
@@ -138,66 +140,75 @@ HighsStatus HEkkDual::solve() {
     // Set up edge weights according to dual_edge_weight_mode and
     // initialise_dual_steepest_edge_weights
 
-    //    if (near_optimal) {
-      // Initialise DSE weights according to near_optimal
-
     if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
       // Using dual Devex edge weights, so set up the first framework
       simplex_info.devex_index_.assign(solver_num_tot, 0);
       initialiseDevexFramework();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      // Using dual steepest edge (DSE) weights
-      //
-      // Exact DSE weights need to be computed if the basis contains structurals
-      bool logical_basis = true;
-      for (int iRow = 0; iRow < solver_num_row; iRow++) {
-        if (ekk_instance_.simplex_basis_.basicIndex_[iRow] < solver_num_col) {
-          logical_basis = false;
-          break;
+      // Intending to using dual steepest edge (DSE) weights
+      if (initialise_dual_steepest_edge_weights) {
+        // Exact DSE weights need to be computed if the basis contains
+        // structurals
+        bool logical_basis = true;
+        for (int iRow = 0; iRow < solver_num_row; iRow++) {
+          if (ekk_instance_.simplex_basis_.basicIndex_[iRow] < solver_num_col) {
+            logical_basis = false;
+            break;
+          }
         }
-      }
-      const bool compute_exact_DSE_weights =
-          !logical_basis && initialise_dual_steepest_edge_weights;
-      if (compute_exact_DSE_weights) {
-        HighsPrintMessage(
-            options.output, options.message_level, ML_DETAILED,
-            "If logical_basis = %d = 1 && %d = "
-            "initialise_dual_steepest_edge_weights: Compute exact "
-            "DSE weights\n",
-            logical_basis, initialise_dual_steepest_edge_weights);
-        // Basis is not logical and DSE weights are to be initialised
-        if (ekk_instance_.analysis_.analyse_simplex_time) {
-          analysis->simplexTimerStart(SimplexIzDseWtClock);
-          analysis->simplexTimerStart(DseIzClock);
+        if (!logical_basis) {
+          if (near_optimal) {
+            // Basis is not logical but near optimal, so use Devex
+            // rather than initialise DSE weights
+            HighsPrintMessage(
+                options.output, options.message_level, ML_DETAILED,
+                "Basis is not logical, but near-optimal so use Devex rather "
+                "than compute exact weights for DSE\n");
+            dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
+            simplex_info.devex_index_.assign(solver_num_tot, 0);
+            initialiseDevexFramework();
+          } else {
+            // Basis is not logical and DSE weights are to be initialised
+            HighsPrintMessage(
+                options.output, options.message_level, ML_DETAILED,
+                "Basis is not logical, so compute exact DSE weights\n");
+            if (ekk_instance_.analysis_.analyse_simplex_time) {
+              analysis->simplexTimerStart(SimplexIzDseWtClock);
+              analysis->simplexTimerStart(DseIzClock);
+            }
+            for (int i = 0; i < solver_num_row; i++) {
+              row_ep.clear();
+              row_ep.count = 1;
+              row_ep.index[0] = i;
+              row_ep.array[i] = 1;
+              row_ep.packFlag = false;
+              factor->btran(row_ep, analysis->row_ep_density,
+                            analysis->pointer_serial_factor_clocks);
+              dualRHS.workEdWt[i] = row_ep.norm2();
+              const double local_row_ep_density =
+                  (double)row_ep.count / solver_num_row;
+              analysis->updateOperationResultDensity(local_row_ep_density,
+                                                     analysis->row_ep_density);
+              ekk_instance_.updateOperationResultDensity(
+                  local_row_ep_density,
+                  ekk_instance_.simplex_info_.row_ep_density);
+            }
+            if (ekk_instance_.analysis_.analyse_simplex_time) {
+              analysis->simplexTimerStop(SimplexIzDseWtClock);
+              analysis->simplexTimerStop(DseIzClock);
+              double IzDseWtTT =
+                  analysis->simplexTimerRead(SimplexIzDseWtClock);
+              HighsPrintMessage(options.output, options.message_level,
+                                ML_DETAILED,
+                                "Computed %d initial DSE weights in %gs\n",
+                                solver_num_row, IzDseWtTT);
+            }
+          }
+        } else {
+          HighsPrintMessage(
+              options.output, options.message_level, ML_DETAILED,
+              "solve:: Starting from B=I so unit initial DSE weights\n");
         }
-        for (int i = 0; i < solver_num_row; i++) {
-          row_ep.clear();
-          row_ep.count = 1;
-          row_ep.index[0] = i;
-          row_ep.array[i] = 1;
-          row_ep.packFlag = false;
-          factor->btran(row_ep, analysis->row_ep_density,
-                        analysis->pointer_serial_factor_clocks);
-          dualRHS.workEdWt[i] = row_ep.norm2();
-          const double local_row_ep_density =
-              (double)row_ep.count / solver_num_row;
-          analysis->updateOperationResultDensity(local_row_ep_density,
-                                                 analysis->row_ep_density);
-          ekk_instance_.updateOperationResultDensity(
-              local_row_ep_density, ekk_instance_.simplex_info_.row_ep_density);
-        }
-        if (ekk_instance_.analysis_.analyse_simplex_time) {
-          analysis->simplexTimerStop(SimplexIzDseWtClock);
-          analysis->simplexTimerStop(DseIzClock);
-          double IzDseWtTT = analysis->simplexTimerRead(SimplexIzDseWtClock);
-          HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
-                            "Computed %d initial DSE weights in %gs\n",
-                            solver_num_row, IzDseWtTT);
-        }
-      } else {
-        HighsPrintMessage(
-            options.output, options.message_level, ML_DETAILED,
-            "solve:: Starting from B=I so unit initial DSE weights\n");
       }
     }
     // Indicate that edge weights are known
