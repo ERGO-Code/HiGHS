@@ -579,10 +579,11 @@ int HighsSearch::selectBranchingCandidate() {
   // reliable pseudocost so that they do not get evaluated
   for (int k = 0; k != numfrac; ++k) {
     int col = fracints[k].first;
+    double fracval = fracints[k].second;
 
     if (pseudocost.isReliable(col) || branchingVarReliableAtNode(col)) {
-      upscore[k] = pseudocost.getPseudocostUp(col, fracints[k].second);
-      downscore[k] = pseudocost.getPseudocostDown(col, fracints[k].second);
+      upscore[k] = pseudocost.getPseudocostUp(col, fracval);
+      downscore[k] = pseudocost.getPseudocostDown(col, fracval);
       upscorereliable[k] = true;
       downscorereliable[k] = true;
     }

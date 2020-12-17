@@ -41,36 +41,68 @@ void HighsCliqueTable::link(int node) {
   return highs_splay_link(node, root, get_left, get_right, get_key);
 }
 
-int HighsCliqueTable::findCommonCliqueRecurse(int& root1, int& r2) {
-  if (r2 == -1 || root1 == -1) return -1;
+int HighsCliqueTable::findCommonCliqueRecurse(int& root1, int& root2) {
+  if (root1 == -1 || root2 == -1) return -1;
   int commonclique = -1;
   assert(commoncliquestack.empty());
-  commoncliquestack.emplace_back(&root1);
-  int cliqueid2 = cliquesets[r2].cliqueid;
+  commoncliquestack.emplace_back(&root1, &root2);
 
   while (!commoncliquestack.empty()) {
-    int& r1 = *commoncliquestack.back();
+    int& r1 = *commoncliquestack.back().first;
+    int& r2 = *commoncliquestack.back().second;
+
     commoncliquestack.pop_back();
 
     int cliqueid1 = cliquesets[r1].cliqueid;
+    int cliqueid2 = cliquesets[r2].cliqueid;
 
     if (cliqueid1 == cliqueid2) {
       commonclique = cliqueid1;
       break;
     }
 
-    r2 = splay(cliqueid1, r2);
-    cliqueid2 = cliquesets[r2].cliqueid;
+    // splay the root clique of the tree with root r2 in the splay tree with
+    // root r1
+    r1 = splay(cliqueid2, r1);
+    cliqueid1 = cliquesets[r1].cliqueid;
 
+    // if it was a common clique we have found it
     if (cliqueid1 == cliqueid2) {
       commonclique = cliqueid1;
       break;
     }
 
-    if (cliquesets[r1].left != -1)
-      commoncliquestack.emplace_back(&cliquesets[r1].left);
-    if (cliquesets[r1].right != -1)
-      commoncliquestack.emplace_back(&cliquesets[r1].right);
+    // otherwise we know it is not a common clique and we can rule it out and
+    // search further as the trees are binary search trees ordered with the
+    // cliqueids we can rule out some parts
+
+    if (cliqueid1 < cliqueid2) {
+      // cliqueid1 is now at the root r1 and comes before cliqueid2 but its
+      // right subtree only contains elements larger than cliqueid2 there for we
+      // recursively need to check wether the left subtree plus the root r1 has
+      // a common clique with the left subtree of r2 or whether the right
+      // subtrees have a common clique. We first add to the stack the call to
+      // check for the left subtree of r2 in the tree rooted at r1 so that this
+      // call is made later. This is because the other call that is now made
+      // first will only include the right sub trees of both trees and does not
+      // touch the tree root
+      if (cliquesets[r2].left != -1)
+        commoncliquestack.emplace_back(&r1, &cliquesets[r2].left);
+
+      if (cliquesets[r1].right != -1 && cliquesets[r2].right != -1)
+        commoncliquestack.emplace_back(&cliquesets[r1].right,
+                                       &cliquesets[r2].right);
+    } else {
+      // the analogous case when the left subtree of both trees need to be
+      // checked and the root of r1 plus its right subtree with the right
+      // subtree of r2
+      if (cliquesets[r2].right != -1)
+        commoncliquestack.emplace_back(&r1, &cliquesets[r2].right);
+
+      if (cliquesets[r1].left != -1 && cliquesets[r2].left != -1)
+        commoncliquestack.emplace_back(&cliquesets[r1].left,
+                                       &cliquesets[r2].left);
+    }
   }
 
   commoncliquestack.clear();

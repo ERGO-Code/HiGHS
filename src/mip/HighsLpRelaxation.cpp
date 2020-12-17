@@ -1,5 +1,7 @@
 #include "mip/HighsLpRelaxation.h"
 
+#include <unordered_map>
+
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
@@ -586,6 +588,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp() {
     case Status::UnscaledDualFeasible:
     case Status::UnscaledPrimalFeasible:
     case Status::Optimal: {
+      std::unordered_map<int, std::pair<double, int>> fracints;
       const HighsSolution& sol = lpsolver.getSolution();
 
       HighsCDouble objsum = 0;
@@ -600,9 +603,25 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp() {
                      lpsolver.getLp().colLower_[i]);
         double intval = std::floor(val + 0.5);
 
-        if (std::abs(val - intval) > mipsolver.mipdata_->feastol)
-          fractionalints.emplace_back(i, val);
+        if (std::abs(val - intval) > mipsolver.mipdata_->feastol) {
+          int col = i;
+          const HighsCliqueTable::Substitution* subst =
+              mipsolver.mipdata_->cliquetable.getSubstitution(col);
+          while (subst != nullptr) {
+            col = subst->replace.col;
+            if (subst->replace.val == 0) val = 1.0 - val;
+
+            subst = mipsolver.mipdata_->cliquetable.getSubstitution(col);
+          }
+          auto& pair = fracints[col];
+          pair.first += val;
+          pair.second += 1;
+        }
       }
+
+      for (const auto& it : fracints)
+        fractionalints.emplace_back(it.first,
+                                    it.second.first / (double)it.second.second);
 
       for (int i = 0; i != mipsolver.numCol(); ++i)
         objsum += sol.col_value[i] * mipsolver.colCost(i);

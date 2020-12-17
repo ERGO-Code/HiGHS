@@ -90,7 +90,8 @@ bool HighsImplications::computeImplications(int col, bool val) {
 
 bool HighsImplications::runProbing(int col, int& numboundchgs) {
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
-      !implicationsCached(col, 0)) {
+      !implicationsCached(col, 0) &&
+      cliquetable.getSubstitution(col) == nullptr) {
     bool infeasible;
 
     infeasible = computeImplications(col, 1);

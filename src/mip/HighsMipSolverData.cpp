@@ -709,7 +709,7 @@ void HighsMipSolverData::evaluateRootNode() {
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
 
-  lp.setIterationLimit(std::max(1000, int(50 * maxrootlpiters)));
+  lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
   lp.getLpSolver().setHighsLogfile();
   lp.getLpSolver().setHighsOutput();
   lp.getLpSolver().setHighsOptionValue("parallel", "off");
@@ -807,7 +807,7 @@ void HighsMipSolverData::evaluateRootNode() {
       mipsolver.mipdata_->lower_bound = lp.getObjective();
     total_lp_iterations = lp.getNumLpIterations();
 
-    lp.setIterationLimit(int(50 * maxrootlpiters));
+    lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
 
     if (mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
       mipsolver.modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
@@ -840,7 +840,7 @@ void HighsMipSolverData::evaluateRootNode() {
   } else {
     rootlpsol = lp.getLpSolver().getSolution().col_value;
     rootlpsolobj = lp.getObjective();
-    lp.setIterationLimit(int(50 * maxrootlpiters));
+    lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
 
     // add the root node to the nodequeue to initialize the search
     nodequeue.emplaceNode(std::vector<HighsDomainChange>(), lp.getObjective(),
@@ -937,6 +937,8 @@ void HighsMipSolverData::runProbing() {
     int nprobed = 0;
     for (std::tuple<int, int, int> binvar : binaries) {
       int i = std::get<2>(binvar);
+
+      if (cliquetable.getSubstitution(i) != nullptr) continue;
 
       if (domain.isBinary(i)) {
         if (nprobed % 16 == 1 && checkLimits()) return;

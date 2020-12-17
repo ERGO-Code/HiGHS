@@ -59,7 +59,7 @@ class HighsCliqueTable {
   std::vector<CliqueVar> cliqueentries;
   std::vector<CliqueSetNode> cliquesets;
 
-  std::vector<int*> commoncliquestack;
+  std::vector<std::pair<int*,int*>> commoncliquestack;
   std::set<std::pair<int, int>> freespaces;
   std::vector<int> freeslots;
   std::vector<Clique> cliques;
@@ -143,6 +143,11 @@ class HighsCliqueTable {
 
   const std::vector<Substitution>& getSubstitutions() const {
     return substitutions;
+  }
+
+  const Substitution* getSubstitution(int col) const {
+    return colsubstituted[col] ? &substitutions[colsubstituted[col] - 1]
+                               : nullptr;
   }
 
   std::vector<std::pair<int, CliqueVar>>& getCliqueExtensions() {
