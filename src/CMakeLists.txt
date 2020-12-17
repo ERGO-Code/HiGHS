@@ -404,17 +404,6 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
-    mip/HighsMipSolver.cpp
-    mip/HighsMipSolverData.cpp
-    mip/HighsDomain.cpp
-    mip/HighsDynamicRowMatrix.cpp
-    mip/HighsLpRelaxation.cpp
-    mip/HighsSeparation.cpp
-    mip/HighsSearch.cpp
-    mip/HighsCutPool.cpp
-    mip/HighsCliqueTable.cpp
-    mip/HighsImplications.cpp
-    mip/HighsNodeQueue.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp

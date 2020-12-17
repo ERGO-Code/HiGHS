@@ -332,6 +332,25 @@ add_subdirectory(src)
 # No changes in app/ apart from a relative path
 add_subdirectory(app)
 
+# Until MIP solver is in library object also and tested. At the moment 
+# breaks binary builder for julia interface.
+# if (MIP)
+if (FAST_BUILD)
+    target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
+    target_sources(highs PRIVATE 
+        src/mip/HighsMipSolver.cpp
+        src/mip/HighsMipSolverData.cpp
+        src/mip/HighsDomain.cpp
+        src/mip/HighsDynamicRowMatrix.cpp
+        src/mip/HighsLpRelaxation.cpp
+        src/mip/HighsSeparation.cpp
+        src/mip/HighsSearch.cpp
+        src/mip/HighsCutPool.cpp
+        src/mip/HighsCliqueTable.cpp
+        src/mip/HighsImplications.cpp
+        src/mip/HighsNodeQueue.cpp)
+endif()
+
 # check/ not added here, instead define fewer tests: 
 # build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
 enable_testing()
