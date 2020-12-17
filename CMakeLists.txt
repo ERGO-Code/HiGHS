@@ -330,12 +330,12 @@ configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.
 add_subdirectory(src)
 
 # No changes in app/ apart from a relative path
-add_subdirectory(app)
+# add_subdirectory(app)
 
 # Until MIP solver is in library object also and tested. At the moment 
 # breaks binary builder for julia interface.
-# if (MIP)
-if (FAST_BUILD)
+# if (MIP) FAST_BUILD
+if (0)
     target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
     target_sources(highs PRIVATE 
         src/mip/HighsMipSolver.cpp
@@ -437,15 +437,15 @@ endforeach(instance)
 
 endfunction()
 
-# add tests for success and fail instances
-add_instance_tests(successInstances "Optimal" " ")
-add_instance_tests(failInstances "Fail" " ")
-add_instance_tests(infeasibleInstances "Infeasible" " ")
-add_instance_tests(unboundedInstances "Unbounded" " ")
+# # add tests for success and fail instances
+# add_instance_tests(successInstances "Optimal" " ")
+# add_instance_tests(failInstances "Fail" " ")
+# add_instance_tests(infeasibleInstances "Infeasible" " ")
+# add_instance_tests(unboundedInstances "Unbounded" " ")
 
-foreach(setting ${settings})
-    add_instance_tests(optionsInstances "Optimal" ${setting})
-endforeach()
+# foreach(setting ${settings})
+#     add_instance_tests(optionsInstances "Optimal" ${setting})
+# endforeach()
 
 if (EXP) 
     add_executable(doctest)
