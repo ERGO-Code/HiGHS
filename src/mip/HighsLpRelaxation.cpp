@@ -613,12 +613,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp() {
           const HighsCliqueTable::Substitution* subst =
               mipsolver.mipdata_->cliquetable.getSubstitution(col);
           while (subst != nullptr) {
-            if (!mipsolver.submip)
-              printf(
-                  "happened: col %d with val %g replaced with col %d with val "
-                  "%g\n",
-                  col, val, subst->replace.col,
-                  (subst->replace.val == 0) ? 1.0 - val : val);
             col = subst->replace.col;
             if (subst->replace.val == 0) val = 1.0 - val;
 
@@ -631,9 +625,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp() {
       }
 
       for (const auto& it : fracints) {
-        if (it.second.second != 1 && !mipsolver.submip)
-          printf("col %d: %d values averaged to %g\n", it.first,
-                 it.second.second, it.second.first / (double)it.second.second);
         fractionalints.emplace_back(it.first,
                                     it.second.first / (double)it.second.second);
       }

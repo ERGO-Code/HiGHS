@@ -279,7 +279,9 @@ void HighsMipSolver::run() {
 
       if (!search.backtrack()) break;
 
-      if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
+      if (mipdata_->upper_limit == HIGHS_CONST_INF ||
+          search.getCurrentEstimate() >= mipdata_->upper_limit)
+        break;
 
       if (mipdata_->num_nodes - plungestart >=
           std::min(size_t{1000}, mipdata_->num_nodes / 10))
