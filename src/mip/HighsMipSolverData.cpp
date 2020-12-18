@@ -364,6 +364,28 @@ void HighsMipSolverData::runSetup() {
     highsSparseTranspose(model.numRow_, model.numCol_, model.Astart_,
                          model.Aindex_, model.Avalue_, ARstart_, ARindex_,
                          ARvalue_);
+    uplocks.resize(model.numCol_);
+    downlocks.resize(model.numCol_);
+    for (int i = 0; i != model.numCol_; ++i) {
+      int start = model.Astart_[i];
+      int end = model.Astart_[i + 1];
+      for (int j = start; j != end; ++j) {
+        int row = model.Aindex_[j];
+
+        if (model.rowLower_[row] != -HIGHS_CONST_INF) {
+          if (model.Avalue_[j] < 0)
+            ++uplocks[i];
+          else
+            ++downlocks[i];
+        }
+        if (model.rowUpper_[row] != HIGHS_CONST_INF) {
+          if (model.Avalue_[j] < 0)
+            ++downlocks[i];
+          else
+            ++uplocks[i];
+        }
+      }
+    }
   }
 
   if (mipsolver.submip) pseudocost.setMinReliable(0);

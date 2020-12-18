@@ -60,6 +60,8 @@ struct HighsMipSolverData {
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
   std::vector<uint8_t> rowintegral;
+  std::vector<int> uplocks;
+  std::vector<int> downlocks;
   double objintscale;
 
   double feastol;
