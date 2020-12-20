@@ -565,6 +565,19 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       }
 
       return Status::UnscaledInfeasible;
+    case HighsModelStatus::REACHED_ITERATION_LIMIT: {
+      if (resolve_on_error) {
+        Highs ipm;
+        ipm.passModel(lpsolver.getLp());
+        ipm.setHighsOptionValue("solver", "ipm");
+        ipm.setHighsOutput();
+        ipm.setHighsLogfile();
+        ipm.run();
+        lpsolver.setBasis(ipm.getBasis());
+        return run(false);
+      }
+      return Status::Error;
+    }
     case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
     // case HighsModelStatus::PRIMAL_INFEASIBLE:
     //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)

@@ -252,8 +252,11 @@ void HighsMipSolver::run() {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    int iterlimit = 100 * int(mipdata_->total_lp_iterations /
-                              (double)std::max(size_t{1}, mipdata_->num_nodes));
+    int iterlimit =
+        10 *
+        int(mipdata_->total_lp_iterations - mipdata_->sb_lp_iterations -
+            mipdata_->sepa_lp_iterations) /
+        (double)std::max(size_t{1}, mipdata_->num_nodes);
     iterlimit = std::max(10000, iterlimit);
 
     mipdata_->lp.setIterationLimit(iterlimit);
@@ -342,7 +345,7 @@ void HighsMipSolver::run() {
     }
 
     // remove the iteration limit when installing a new node
-    mipdata_->lp.setIterationLimit();
+    // mipdata_->lp.setIterationLimit();
 
     // loop to install the next node for the search
     while (!mipdata_->nodequeue.empty()) {

@@ -59,7 +59,7 @@ class HighsCliqueTable {
   std::vector<CliqueVar> cliqueentries;
   std::vector<CliqueSetNode> cliquesets;
 
-  std::vector<std::pair<int*,int*>> commoncliquestack;
+  std::vector<std::pair<int*, int*>> commoncliquestack;
   std::set<std::pair<int, int>> freespaces;
   std::vector<int> freeslots;
   std::vector<Clique> cliques;

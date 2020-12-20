@@ -991,6 +991,6 @@ void HighsMipSolverData::runProbing() {
                       int(domain.getChangedCols().size()) - nfixed);
 
     cliquetable.cleanupFixed(domain);
-    cliquetable.runCliqueMerging(domain);
+    if (!mipsolver.mipdata_->modelcleanup) cliquetable.runCliqueMerging(domain);
   }
 }

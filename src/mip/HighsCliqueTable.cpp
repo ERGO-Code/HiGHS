@@ -895,12 +895,12 @@ void HighsCliqueTable::separateCliques(const std::vector<double>& sol,
   }
 
   bronKerboschRecurse(data, data.P.size(), nullptr, 0);
-
+  bool runcliquesubsumption = false;
   std::vector<int> inds;
   std::vector<double> vals;
   for (const std::vector<CliqueVar>& clique : data.cliques) {
     double rhs = 1;
-
+    runcliquesubsumption = cliques.size() > 2;
     inds.clear();
     vals.clear();
 
@@ -924,6 +924,86 @@ void HighsCliqueTable::separateCliques(const std::vector<double>& sol,
 #endif
     int cut = cutpool.addCut(inds.data(), vals.data(), inds.size(), rhs);
     localdom.cutAdded(cut);
+  }
+
+  if (runcliquesubsumption) {
+    std::vector<uint16_t> cliquehits(cliques.size());
+    std::vector<int> cliquehitinds;
+    std::vector<int> stack;
+
+    for (std::vector<CliqueVar>& clique : data.cliques) {
+      if (clique.size() == 2) continue;
+
+      for (CliqueVar v : clique) {
+        if (cliquesetroot[v.index()] != -1)
+          stack.emplace_back(cliquesetroot[v.index()]);
+
+        while (!stack.empty()) {
+          int node = stack.back();
+          stack.pop_back();
+
+          if (cliquesets[node].left != -1)
+            stack.emplace_back(cliquesets[node].left);
+          if (cliquesets[node].right != -1)
+            stack.emplace_back(cliquesets[node].right);
+
+          int cliqueid = cliquesets[node].cliqueid;
+          if (cliquehits[cliqueid] == 0) cliquehitinds.push_back(cliqueid);
+
+          ++cliquehits[cliqueid];
+        }
+      }
+
+      if (cliquehitinds.size() == 1) {
+        cliquehits[cliquehitinds[0]] = 0;
+      } else {
+        int nremoved = 0;
+        int firstremovable = -1;
+        int origin = HIGHS_CONST_I_INF;
+        for (int cliqueid : cliquehitinds) {
+          int hits = cliquehits[cliqueid];
+          cliquehits[cliqueid] = 0;
+
+          if (cliques[cliqueid].end - cliques[cliqueid].start == hits) {
+            if (cliques[cliqueid].equality) {
+              for (CliqueVar v : clique) {
+                cliquesetroot[v.index()] =
+                    splay(cliqueid, cliquesetroot[v.index()]);
+                int node = cliquesetroot[v.index()];
+                if (node == -1 || cliquesets[node].cliqueid != cliqueid)
+                  infeasvertexstack.push_back(v);
+              }
+            } else if (firstremovable == -1) {
+              firstremovable = cliqueid;
+            } else {
+              ++nremoved;
+              if (cliques[cliqueid].origin != HIGHS_CONST_I_INF) {
+                cliques[cliqueid].origin = HIGHS_CONST_I_INF;
+                origin = -1;
+              }
+              removeClique(cliqueid);
+            }
+          }
+        }
+
+        if (nremoved != 0) {
+          if (cliques[firstremovable].origin != HIGHS_CONST_I_INF) {
+            cliques[firstremovable].origin = HIGHS_CONST_I_INF;
+            origin = -1;
+          }
+          removeClique(firstremovable);
+          printf("removed %d cliques in favor of clique cut of size %d\n",
+                 nremoved + 1, (int)clique.size());
+          clique.erase(std::remove_if(clique.begin(), clique.end(),
+                                      [&](CliqueVar v) {
+                                        return globaldom.isFixed(v.col);
+                                      }),
+                       clique.end());
+          doAddClique(clique.data(), clique.size(), false, origin);
+        }
+      }
+      cliquehitinds.clear();
+    }
   }
 }
 
