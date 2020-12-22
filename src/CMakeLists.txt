@@ -164,6 +164,21 @@ set(headers
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
+    mip/HighsCliqueTable.h
+    mip/HighsCutPool.h
+    mip/HighsDomain.h
+    mip/HighsDomainChange.h
+    mip/HighsDynamicRowMatrix.h
+    mip/HighsImplications.h
+    mip/HighsLpRelaxation.h
+    mip/HighsMipSolver.h
+    mip/HighsMipSolverData.h
+    mip/HighsNodeQueue.h
+    mip/HighsPseudoCost.h
+    mip/HighsSearch.h
+    mip/HighsSeparation.h
+    mip/SparseVectorSum.h
+    mip/SolveMip.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
@@ -433,76 +448,9 @@ target_sources(libhighs PRIVATE
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
-
 target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
                            presolve/ util/ test/ interfaces/ ../external/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
-
-set(headers_fast_build
-    "external/filereaderlp/builder.hpp;
-    external/filereaderlp/model.hpp;
-    external/filereaderlp/reader.hpp;
-    src/ipm/IpxStatus.h
-    src/io/Filereader.h
-    src/io/FilereaderLp.h
-    src/io/FilereaderEms.h
-    src/io/FilereaderMps.h
-    src/io/HMpsFF.h
-    src/io/HMPSIO.h
-    src/io/HighsIO.h
-    src/io/LoadOptions.h
-    src/lp_data/HConst.h
-    src/lp_data/HStruct.h
-    src/lp_data/HighsAnalysis.h
-    src/lp_data/HighsDebug.h
-    src/lp_data/HighsInfo.h
-    src/lp_data/HighsLp.h
-    src/lp_data/HighsLpUtils.h
-    src/lp_data/HighsModelUtils.h
-    src/lp_data/HighsModelObject.h
-    src/lp_data/HighsModelObjectUtils.h
-    src/lp_data/HighsOptions.h
-    src/lp_data/HighsRanging.h
-    src/lp_data/HighsSolution.h
-    src/lp_data/HighsSolutionDebug.h
-    src/lp_data/HighsSolve.h
-    src/lp_data/HighsStatus.h
-    src/simplex/HApp.h
-    src/simplex/FactorTimer.h
-    src/simplex/HCrash.h
-    src/simplex/HDual.h
-    src/simplex/HDualRow.h
-    src/simplex/HDualRHS.h
-    src/simplex/HFactor.h
-    src/simplex/HFactorDebug.h
-    src/simplex/HighsSimplexAnalysis.h
-    src/simplex/HighsSimplexInterface.h
-    src/simplex/HMatrix.h
-    src/simplex/HPrimal.h
-    src/simplex/HQPrimal.h
-    src/simplex/HSimplex.h
-    src/simplex/HSimplexReport.h
-    src/simplex/HSimplexDebug.h
-    src/simplex/SimplexConst.h
-    src/simplex/SimplexStruct.h
-    src/presolve/Presolve.h
-    src/presolve/PresolveComponent.h
-    src/presolve/PresolveAnalysis.h
-    src/presolve/PresolveUtils.h
-    src/presolve/HPreData.h
-    src/simplex/HVector.h
-    src/test/DevKkt.h
-    src/test/KktCh2.h
-    src/util/stringutil.h
-    src/util/HighsComponent.h
-    src/util/HighsRandom.h
-    src/util/HighsSort.h
-    src/util/HighsTimer.h
-    src/util/HighsUtils.h
-    src/util/HighsMatrixPic.h
-    src/Highs.h
-    src/interfaces/highs_c_api.h"
-)
 
 set(headers_fast_build_
     ../external/filereaderlp/builder.hpp
