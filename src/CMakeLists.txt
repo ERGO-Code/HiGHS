@@ -485,12 +485,12 @@ if (IPX_ON)
     target_include_directories(libhighs PRIVATE ipm/ipx/src
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
-    # if (MACOS)
-    target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-    target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
-    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
-    target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-    # endif()
+    if (MACOS)
+        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+        target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    endif()
 
 endif()
 
