@@ -314,8 +314,7 @@ message(STATUS "FAST BUILD set to on.
 # add here to avoid compile errors.
 set(HIGHS_VERSION_PATCH 0)
 
-# todo: ig wip building but not running, add headers? see install first since we want
-# a single library object installed, not three like so far
+# todo: ig branch ipx-m 
 if (IPX)
     set(IPX_ON ON)
 else()
@@ -470,8 +469,6 @@ install(TARGETS libhighs EXPORT highs-targets
 #             ARCHIVE DESTINATION lib
 #             INCLUDES DESTINATION include)
 # endif()
-
-
 
 endif()
 
