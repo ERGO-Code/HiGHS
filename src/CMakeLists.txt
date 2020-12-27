@@ -475,28 +475,23 @@ endif()
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
-set_target_properties(libhighs PROPERTIES
-    OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+# set_target_properties(libhighs PROPERTIES
+#     OUTPUT_NAME "highs"
+#     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 if (IPX_ON)
-    add_library(ipx OBJECT ${basiclu_sources} ${ipx_sources})
+    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
 
-    target_include_directories(ipx PUBLIC ipm/ipx/src
+    target_include_directories(libhighs PRIVATE ipm/ipx/src
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
-    #target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
 
     # if (MACOS)
-    #     # deal with warnings once hanging issue is fixed
-    #     # two warnings in ipx/src/basis.h
-    #     # target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
-    #     # target_compile_options(ipx PRIVATE "-Wno-return-type-c-linkage")
-    #     # target_compile_options(ipx PRIVATE "-Wno-return-type" "-Wno-switch")
+    target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+    target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+    target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
     # endif()
 
-    #target_compile_options(ipx PRIVATE "-Wno-defaulted-function-deleted")
-
-    target_link_libraries(libhighs PRIVATE ipx)
 endif()
 
 endif()
