@@ -164,7 +164,20 @@ set(headers
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
+    mip/HighsCliqueTable.h
+    mip/HighsCutPool.h
+    mip/HighsDomain.h
+    mip/HighsDomainChange.h
+    mip/HighsDynamicRowMatrix.h
+    mip/HighsImplications.h
+    mip/HighsLpRelaxation.h
     mip/HighsMipSolver.h
+    mip/HighsMipSolverData.h
+    mip/HighsNodeQueue.h
+    mip/HighsPseudoCost.h
+    mip/HighsSearch.h
+    mip/HighsSeparation.h
+    mip/SparseVectorSum.h
     mip/SolveMip.h
     simplex/HApp.h
     simplex/FactorTimer.h
@@ -405,17 +418,18 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
+    mip/HighsCliqueTable.cpp
+    mip/HighsCutPool.cpp
+    mip/HighsDynamicRowMatrix.cpp
+    mip/HighsDomain.cpp
+    mip/HighsImplications.cpp
+    mip/HighsLpRelaxation.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
-    mip/HighsDomain.cpp
-    mip/HighsDynamicRowMatrix.cpp
-    mip/HighsLpRelaxation.cpp
-    mip/HighsSeparation.cpp
-    mip/HighsSearch.cpp
-    mip/HighsCutPool.cpp
-    mip/HighsCliqueTable.cpp
-    mip/HighsImplications.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsSearch.cpp
+    mip/HighsSeparation.cpp
+    mip/SolveMip.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
