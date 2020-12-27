@@ -475,19 +475,12 @@ endif()
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
-# set_target_properties(libhighs PROPERTIES
-#     OUTPUT_NAME "highs"
-#     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+# on UNIX system the 'lib' prefix is automatically added
+set_target_properties(libhighs PROPERTIES
+    OUTPUT_NAME "highs"
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 if (IPX_ON)
-    # use, i.e. don't skip the full RPATH for the build tree
-    set(CMAKE_SKIP_BUILD_RPATH FALSE)
-
-    # when building, don't use the install RPATH already
-    # (but later on when installing)
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
 
     target_include_directories(libhighs PRIVATE ipm/ipx/src
@@ -501,5 +494,9 @@ if (IPX_ON)
     endif()
 
 endif()
+
+# set the install rpath to the installed destination
+set_target_properties(highs PROPERTIES INSTALL_RPATH
+    "${CMAKE_INSTALL_PREFIX}/lib")
 
 endif()
