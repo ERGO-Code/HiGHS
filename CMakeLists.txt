@@ -322,16 +322,6 @@ else()
     set(IPX_ON OFF)
 endif()
 
-# use, i.e. don't skip the full RPATH for the build tree
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
-
-# when building, don't use the install RPATH already
-# (but later on when installing)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 
 # condition added to src/CMakeLists.txt
