@@ -65,6 +65,7 @@ enum class Presolver {
   kMainDoubletonEq,
   kMainDominatedCols,
   kMainSingletonsOnly,
+  kMainMipDualFixing,
 };
 
 const std::map<Presolver, std::string> kPresolverNames{
@@ -74,7 +75,8 @@ const std::map<Presolver, std::string> kPresolverNames{
     {Presolver::kMainColSingletons, "Col singletons ()"},
     {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
     {Presolver::kMainDominatedCols, "Dominated Cols()"},
-    {Presolver::kMainSingletonsOnly, "Singletons only()"}};
+    {Presolver::kMainSingletonsOnly, "Singletons only()"},
+    {Presolver::kMainMipDualFixing, "Dual fixing ()"}};
 
 class Presolve : public HPreData {
  public:
@@ -131,6 +133,7 @@ class Presolve : public HPreData {
   void runAggregator();
   void runPropagator();
   void detectImpliedIntegers();
+  void applyMipDualFixing();
   void setProblemStatus(const int s);
   void reportTimes();
 

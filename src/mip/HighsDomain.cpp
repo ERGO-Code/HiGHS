@@ -51,6 +51,8 @@ void HighsDomain::computeMinActivity(int start, int end, const int* ARindex,
     int col = ARindex[j];
     double val = ARvalue[j];
 
+    assert(col < int(colLower_.size()));
+
     double contributionmin =
         activityContributionMin(val, colLower_[col], colUpper_[col]);
 
@@ -71,6 +73,8 @@ void HighsDomain::computeMaxActivity(int start, int end, const int* ARindex,
   for (int j = start; j != end; ++j) {
     int col = ARindex[j];
     double val = ARvalue[j];
+
+    assert(col < int(colLower_.size()));
 
     double contributionmin =
         activityContributionMax(val, colLower_[col], colUpper_[col]);
@@ -893,4 +897,11 @@ void HighsDomain::tightenCoefficients(int* inds, double* vals, int len,
       rhs = double(upper);
     }
   }
+}
+
+bool HighsDomain::isFixing(const HighsDomainChange& domchg) const {
+  double otherbound = domchg.boundtype == HighsBoundType::Upper
+                          ? colLower_[domchg.column]
+                          : colUpper_[domchg.column];
+  return std::abs(domchg.boundval - otherbound) <= mipsolver->mipdata_->epsilon;
 }
