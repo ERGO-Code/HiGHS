@@ -28,4 +28,23 @@ struct HighsPairHasher {
   }
 };
 
+struct HighsVectorHasher {
+  template <typename T>
+  size_t operator()(const std::vector<T>& vec) const {
+    size_t hash = vec.size();
+
+    for (const T& x : vec) hash_combine(hash, std::hash<T>()(x));
+    return hash;
+  }
+};
+
+struct HighsVectorEqual {
+  template <typename T>
+  bool operator()(const std::vector<T>& vec1,
+                  const std::vector<T>& vec2) const {
+    if (vec1.size() != vec2.size()) return false;
+    return std::equal(vec1.begin(), vec1.end(), vec2.begin());
+  }
+};
+
 #endif

@@ -89,8 +89,6 @@ class HighsSearch {
 
   double getCutoffBound() const;
 
-  HighsDomain& getLocalDomain() { return localdom; }
-
   void setLpRelaxation(HighsLpRelaxation* lp) { this->lp = lp; }
 
   double checkSol(const std::vector<double>& sol, bool& integerfeasible) const;
@@ -99,7 +97,21 @@ class HighsSearch {
 
   void heuristicSearchNew();
 
+  void createNewNode();
+
+  void cutoffNode();
+
+  void branchDownwards(int col, double newub, double branchpoint);
+
+  void branchUpwards(int col, double newlb, double branchpoint);
+
+  void setMinReliable(int minreliable);
+
+  void setHeuristic(bool inheuristic) { this->inheuristic = inheuristic; }
+
   void addBoundExceedingConflict();
+
+  void reducedCostFixing();
 
   void resetLocalDomain();
 
@@ -109,6 +121,8 @@ class HighsSearch {
   size_t getHeuristicLpIterations() const;
 
   size_t getTotalLpIterations() const;
+
+  size_t getLocalLpIterations() const;
 
   size_t getStrongBranchingLpIterations() const;
 
@@ -149,6 +163,14 @@ class HighsSearch {
   void printDisplayLine(char first, bool header = false);
 
   void dive();
+
+  HighsDomain& getLocalDomain() { return localdom; }
+
+  const HighsDomain& getLocalDomain() const { return localdom; }
+
+  HighsPseudocost& getPseudoCost() { return pseudocost; }
+
+  const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
   void solveDepthFirst(size_t maxbacktracks = 1);
 };

@@ -8,7 +8,7 @@ HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
                          const HighsPseudocost& pseudocost)
     : mipsolver(mipsolver),
       lp(nullptr),
-      localdom(mipsolver.mipdata_->domain.createChildDomain()),
+      localdom(mipsolver.mipdata_->domain),
       pseudocost(pseudocost) {
   nnodes = 0;
   treeweight = 0.0;
@@ -83,13 +83,13 @@ void HighsSearch::roundingHeuristic() {
 
     if (domain.colLower_[i] < fixval - mipsolver.mipdata_->feastol) {
       domain.changeBound(HighsBoundType::Lower, i, fixval,
-                         domain.getChangedCols().empty() ? -1 : -2);
+                         domain.getChangedCols().empty() ? HighsDomain::Reason::unspecified() : HighsDomain::Reason::unspecified());
       changed = true;
     }
 
     if (domain.colUpper_[i] > fixval + mipsolver.mipdata_->feastol) {
       domain.changeBound(HighsBoundType::Upper, i, fixval,
-                         domain.getChangedCols().empty() ? -1 : -2);
+                         domain.getChangedCols().empty() ? -1 : HighsDomain::Reason::unspecified());
       changed = true;
     }
     if (changed) {
@@ -162,10 +162,12 @@ void HighsSearch::setRINSNeighbourhood(const std::vector<double>& basesol,
     if (std::abs(relaxsol[i] - intval) < mipsolver.mipdata_->feastol) {
       if (localdom.colLower_[i] < intval)
         localdom.changeBound(HighsBoundType::Lower, i,
-                             std::min(intval, localdom.colUpper_[i]), -2);
+                             std::min(intval, localdom.colUpper_[i]),
+                             HighsDomain::Reason::unspecified());
       if (localdom.colUpper_[i] > intval)
         localdom.changeBound(HighsBoundType::Upper, i,
-                             std::max(intval, localdom.colLower_[i]), -2);
+                             std::max(intval, localdom.colLower_[i]),
+                             HighsDomain::Reason::unspecified());
     }
   }
 }
@@ -180,12 +182,14 @@ void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
 
     if (localdom.colLower_[i] < downval) {
       localdom.changeBound(HighsBoundType::Lower, i,
-                           std::min(downval, localdom.colUpper_[i]), -2);
+                           std::min(downval, localdom.colUpper_[i]),
+                           HighsDomain::Reason::unspecified());
       if (localdom.infeasible()) return;
     }
     if (localdom.colUpper_[i] > upval) {
       localdom.changeBound(HighsBoundType::Upper, i,
-                           std::max(upval, localdom.colLower_[i]), -2);
+                           std::max(upval, localdom.colLower_[i]),
+                           HighsDomain::Reason::unspecified());
       if (localdom.infeasible()) return;
     }
   }
@@ -194,7 +198,6 @@ void HighsSearch::setRENSNeighbourhood(const std::vector<double>& lpsol) {
 void HighsSearch::heuristicSearchNew() {
   const auto& lpsol = lp->getLpSolver().getSolution().col_value;
   HighsSearch heur(mipsolver, pseudocost);
-  heur.localdom.setParentDomain(&localdom);
   heur.inheuristic = true;
   if (mipsolver.mipdata_->incumbent.empty()) {
     heur.setRENSNeighbourhood(lpsol);
@@ -448,7 +451,6 @@ void HighsSearch::heuristicSearch() {
   const auto& lpsol = lp->getLpSolver().getSolution().col_value;
 
   HighsSearch heur(mipsolver, pseudocost);
-  heur.localdom.setParentDomain(&localdom);
   heur.inheuristic = true;
   if (!mipsolver.mipdata_->incumbent.empty()) {
     heur.setRINSNeighbourhood(mipsolver.mipdata_->incumbent, lpsol);
@@ -508,6 +510,46 @@ void HighsSearch::heuristicSearch() {
   lpiterations += heur.lpiterations;
 }
 
+void HighsSearch::createNewNode() { nodestack.emplace_back(); }
+
+void HighsSearch::cutoffNode() { nodestack.back().opensubtrees = 0; }
+
+void HighsSearch::setMinReliable(int minreliable) {
+  pseudocost.setMinReliable(minreliable);
+}
+
+void HighsSearch::branchDownwards(int col, double newub, double branchpoint) {
+  NodeData& currnode = nodestack.back();
+
+  assert(currnode.opensubtrees == 2);
+  assert(mipsolver.variableType(col) != HighsVarType::CONTINUOUS);
+
+  currnode.opensubtrees = 1;
+  currnode.branching_point = branchpoint;
+  currnode.branchingdecision.column = col;
+  currnode.branchingdecision.boundval = newub;
+  currnode.branchingdecision.boundtype = HighsBoundType::Upper;
+
+  localdom.changeBound(currnode.branchingdecision);
+  nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
+}
+
+void HighsSearch::branchUpwards(int col, double newlb, double branchpoint) {
+  NodeData& currnode = nodestack.back();
+
+  assert(currnode.opensubtrees == 2);
+  assert(mipsolver.variableType(col) != HighsVarType::CONTINUOUS);
+
+  currnode.opensubtrees = 1;
+  currnode.branching_point = branchpoint;
+  currnode.branchingdecision.column = col;
+  currnode.branchingdecision.boundval = newlb;
+  currnode.branchingdecision.boundtype = HighsBoundType::Lower;
+
+  localdom.changeBound(currnode.branchingdecision);
+  nodestack.emplace_back(currnode.lower_bound, currnode.estimate);
+}
+
 void HighsSearch::addBoundExceedingConflict() {
   if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
     double rhs;
@@ -518,6 +560,42 @@ void HighsSearch::addBoundExceedingConflict() {
                                                 rhs);
       // int cutind = cutpool.addCut(inds.data(), vals.data(), inds.size(),
       // rhs); localdom.cutAdded(cutind);
+    }
+  }
+}
+
+void HighsSearch::reducedCostFixing() {
+  if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
+    double rhs;
+    if (lp->computeDualProof(mipsolver.mipdata_->domain,
+                             mipsolver.mipdata_->upper_limit, inds, vals,
+                             rhs)) {
+      HighsCDouble minact;
+      int ninfmin;
+      localdom.computeMinActivity(0, inds.size(), inds.data(), vals.data(),
+                                  ninfmin, minact);
+      std::vector<HighsDomainChange> domchgs(inds.size());
+      int nchgs =
+          localdom.propagateRowUpper(inds.data(), vals.data(), inds.size(), rhs,
+                                     minact, ninfmin, domchgs.data());
+
+      if (nchgs != 0) {
+        for (int i = 0; i != nchgs && !localdom.infeasible(); ++i)
+          localdom.changeBound(domchgs[i], HighsDomain::Reason::unspecified());
+
+        if (!localdom.infeasible()) localdom.propagate();
+
+        mipsolver.mipdata_->domain.computeMinActivity(
+            0, inds.size(), inds.data(), vals.data(), ninfmin, minact);
+        nchgs = mipsolver.mipdata_->domain.propagateRowUpper(
+            inds.data(), vals.data(), inds.size(), rhs, minact, ninfmin,
+            domchgs.data());
+        for (int i = 0; i != nchgs; ++i) {
+          mipsolver.mipdata_->domain.changeBound(
+              domchgs[i], HighsDomain::Reason::unspecified());
+          if (mipsolver.mipdata_->domain.infeasible()) return;
+        }
+      }
     }
   }
 }
@@ -640,7 +718,8 @@ int HighsSearch::selectBranchingCandidate() {
       if (localdom.infeasible()) {
         localdom.backtrack();
         localdom.clearChangedCols();
-        localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
+        localdom.changeBound(HighsBoundType::Lower, col, upval,
+                             HighsDomain::Reason::unspecified());
         lp->setStoredBasis(std::move(basis));
         return -1;
       }
@@ -708,7 +787,8 @@ int HighsSearch::selectBranchingCandidate() {
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
+            localdom.changeBound(HighsBoundType::Lower, col, upval,
+                                 HighsDomain::Reason::unspecified());
             lp->setStoredBasis(std::move(basis));
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
@@ -720,7 +800,8 @@ int HighsSearch::selectBranchingCandidate() {
           if (infeas) {
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
+            localdom.changeBound(HighsBoundType::Lower, col, upval,
+                                 HighsDomain::Reason::unspecified());
             lp->setStoredBasis(std::move(basis));
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
@@ -730,7 +811,8 @@ int HighsSearch::selectBranchingCandidate() {
         addInfeasibleConflict();
         localdom.backtrack();
         lp->flushDomain(localdom);
-        localdom.changeBound(HighsBoundType::Lower, col, upval, -2);
+        localdom.changeBound(HighsBoundType::Lower, col, upval,
+                             HighsDomain::Reason::unspecified());
         lp->setStoredBasis(std::move(basis));
         if (numiters > basisstart_threshold) lp->recoverBasis();
         return -1;
@@ -756,7 +838,8 @@ int HighsSearch::selectBranchingCandidate() {
       if (localdom.infeasible()) {
         localdom.backtrack();
         localdom.clearChangedCols();
-        localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
+        localdom.changeBound(HighsBoundType::Upper, col, downval,
+                             HighsDomain::Reason::unspecified());
         lp->setStoredBasis(std::move(basis));
         return -1;
       }
@@ -826,7 +909,8 @@ int HighsSearch::selectBranchingCandidate() {
             addBoundExceedingConflict();
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
+            localdom.changeBound(HighsBoundType::Upper, col, downval,
+                                 HighsDomain::Reason::unspecified());
             lp->setStoredBasis(std::move(basis));
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
@@ -838,7 +922,8 @@ int HighsSearch::selectBranchingCandidate() {
           if (infeas) {
             localdom.backtrack();
             lp->flushDomain(localdom);
-            localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
+            localdom.changeBound(HighsBoundType::Upper, col, downval,
+                                 HighsDomain::Reason::unspecified());
             lp->setStoredBasis(std::move(basis));
             if (numiters > basisstart_threshold) lp->recoverBasis();
             return -1;
@@ -848,7 +933,8 @@ int HighsSearch::selectBranchingCandidate() {
         addInfeasibleConflict();
         localdom.backtrack();
         lp->flushDomain(localdom);
-        localdom.changeBound(HighsBoundType::Upper, col, downval, -2);
+        localdom.changeBound(HighsBoundType::Upper, col, downval,
+                             HighsDomain::Reason::unspecified());
         lp->setStoredBasis(std::move(basis));
         if (numiters > basisstart_threshold) lp->recoverBasis();
         return -1;
@@ -986,6 +1072,8 @@ size_t HighsSearch::getTotalLpIterations() const {
   return lpiterations + mipsolver.mipdata_->total_lp_iterations;
 }
 
+size_t HighsSearch::getLocalLpIterations() const { return lpiterations; }
+
 size_t HighsSearch::getStrongBranchingLpIterations() const {
   return sblpiterations + mipsolver.mipdata_->sb_lp_iterations;
 }
@@ -994,7 +1082,7 @@ void HighsSearch::resetLocalDomain() {
   this->lp->getLpSolver().changeColsBounds(
       0, mipsolver.numCol() - 1, mipsolver.mipdata_->domain.colLower_.data(),
       mipsolver.mipdata_->domain.colUpper_.data());
-  localdom = mipsolver.mipdata_->domain.createChildDomain();
+  localdom = mipsolver.mipdata_->domain;
 
 #ifndef NDEBUG
   for (int i = 0; i != mipsolver.numCol(); ++i) {
@@ -1073,69 +1161,77 @@ void HighsSearch::evaluateNode() {
     HighsLpRelaxation::Status status = lp->resolveLp();
     lpiterations += lp->getNumLpIterations() - oldnumiters;
     if (lp->scaledOptimal(status)) {
-      lp->storeBasis();
+      reducedCostFixing();
+      if (localdom.infeasible()) {
+        prune = true;
+      } else if (!localdom.getChangedCols().empty()) {
+        evaluateNode();
+        return;
+      } else {
+        lp->storeBasis();
 
-      currnode.estimate = lp->computeBestEstimate(pseudocost);
+        currnode.estimate = lp->computeBestEstimate(pseudocost);
 
-      if (lp->unscaledPrimalFeasible(status)) {
-        if (lp->getFractionalIntegers().empty()) {
-          double cutoffbnd = getCutoffBound();
-          mipsolver.mipdata_->addIncumbent(
-              lp->getLpSolver().getSolution().col_value, lp->getObjective(),
-              inheuristic ? 'H' : 'T');
-          if (mipsolver.mipdata_->upper_limit < cutoffbnd)
-            lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
-        }
-      }
-
-      if (lp->unscaledDualFeasible(status)) {
-        currnode.lpsolved = true;
-        currnode.lower_bound =
-            std::max(lp->getObjective(), currnode.lower_bound);
-
-#ifdef HIGHS_DEBUGSOL
-        assert(!debugsolactive ||
-               currnode.lower_bound <=
-                   debugsolobj + mipsolver.mipdata_->epsilon);
-#endif
-
-        const NodeData* parent = getParentNodeData();
-
-        if (parent != nullptr && parent->lpsolved &&
-            parent->branching_point != parent->branchingdecision.boundval) {
-          int col = parent->branchingdecision.column;
-          double delta =
-              parent->branchingdecision.boundval - parent->branching_point;
-          double objdelta =
-              std::max(0.0, currnode.lower_bound - parent->lower_bound);
-
-          pseudocost.addObservation(col, delta, objdelta);
-        }
-
-        if (currnode.lower_bound > getCutoffBound()) {
-#ifdef HIGHS_DEBUGSOL
-          if (debugsolactive && mipsolver.mipdata_->upper_bound >
-                                    debugsolobj + mipsolver.mipdata_->feastol) {
-            lp->getLpSolver().writeModel("wronglp->mps");
-            lp->getLpSolver().writeBasis("wronglp->bas");
-            assert(false);
+        if (lp->unscaledPrimalFeasible(status)) {
+          if (lp->getFractionalIntegers().empty()) {
+            double cutoffbnd = getCutoffBound();
+            mipsolver.mipdata_->addIncumbent(
+                lp->getLpSolver().getSolution().col_value, lp->getObjective(),
+                inheuristic ? 'H' : 'T');
+            if (mipsolver.mipdata_->upper_limit < cutoffbnd)
+              lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
           }
-#endif
-          addBoundExceedingConflict();
-          prune = true;
         }
-      } else if (lp->getObjective() > getCutoffBound()) {
-        // the LP is not solved to dual feasibilty due to scaling/numerics
-        // therefore we compute a conflict constraint as if the LP was bound
-        // exceeding and propagate the local domain again. The lp relaxation
-        // class will take care to consider the dual multipliers with an
-        // increased zero tolerance due to the dual infeasibility when computing
-        // the proof constraint.
-        addBoundExceedingConflict();
-        localdom.propagate();
-        prune = localdom.infeasible();
-      }
 
+        if (lp->unscaledDualFeasible(status)) {
+          currnode.lpsolved = true;
+          currnode.lower_bound =
+              std::max(lp->getObjective(), currnode.lower_bound);
+
+#ifdef HIGHS_DEBUGSOL
+          assert(!debugsolactive ||
+                 currnode.lower_bound <=
+                     debugsolobj + mipsolver.mipdata_->epsilon);
+#endif
+
+          const NodeData* parent = getParentNodeData();
+
+          if (parent != nullptr && parent->lpsolved &&
+              parent->branching_point != parent->branchingdecision.boundval) {
+            int col = parent->branchingdecision.column;
+            double delta =
+                parent->branchingdecision.boundval - parent->branching_point;
+            double objdelta =
+                std::max(0.0, currnode.lower_bound - parent->lower_bound);
+
+            pseudocost.addObservation(col, delta, objdelta);
+          }
+
+          if (currnode.lower_bound > getCutoffBound()) {
+#ifdef HIGHS_DEBUGSOL
+            if (debugsolactive &&
+                mipsolver.mipdata_->upper_bound >
+                    debugsolobj + mipsolver.mipdata_->feastol) {
+              lp->getLpSolver().writeModel("wronglp->mps");
+              lp->getLpSolver().writeBasis("wronglp->bas");
+              assert(false);
+            }
+#endif
+            addBoundExceedingConflict();
+            prune = true;
+          }
+        } else if (lp->getObjective() > getCutoffBound()) {
+          // the LP is not solved to dual feasibilty due to scaling/numerics
+          // therefore we compute a conflict constraint as if the LP was bound
+          // exceeding and propagate the local domain again. The lp relaxation
+          // class will take care to consider the dual multipliers with an
+          // increased zero tolerance due to the dual infeasibility when
+          // computing the proof constraint.
+          addBoundExceedingConflict();
+          localdom.propagate();
+          prune = localdom.infeasible();
+        }
+      }
     } else if (status == HighsLpRelaxation::Status::Infeasible) {
       addInfeasibleConflict();
 #ifdef HIGHS_DEBUGSOL

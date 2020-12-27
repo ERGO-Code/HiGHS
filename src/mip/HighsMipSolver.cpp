@@ -268,8 +268,26 @@ void HighsMipSolver::run() {
       if (mipdata_->heuristic_lp_iterations <
           mipdata_->total_lp_iterations * mipdata_->heuristic_effort) {
         search.evaluateNode();
-        if (!search.currentNodePruned()) search.heuristicSearchNew();
+        if (search.currentNodePruned()) {
+          ++mipdata_->num_leaves;
+          search.flushStatistics();
+          break;
+        }
+
+        mipdata_->heuristics.randomizedRounding(
+            mipdata_->lp.getLpSolver().getSolution().col_value);
+
+        if (mipdata_->incumbent.empty())
+          mipdata_->heuristics.RENS(
+              mipdata_->lp.getLpSolver().getSolution().col_value);
+        else
+          mipdata_->heuristics.RINS(
+              mipdata_->lp.getLpSolver().getSolution().col_value);
+
+        mipdata_->heuristics.flushStatistics();
       }
+
+      if (mipdata_->domain.infeasible()) break;
 
       search.dive();
       ++mipdata_->num_leaves;
@@ -287,7 +305,7 @@ void HighsMipSolver::run() {
         break;
 
       if (mipdata_->num_nodes - plungestart >=
-          std::min(size_t{1000}, mipdata_->num_nodes / 10))
+          std::min(size_t{100}, mipdata_->num_nodes / 10))
         break;
 
       if (mipdata_->dispfreq != 0) {
@@ -374,6 +392,12 @@ void HighsMipSolver::run() {
         ++mipdata_->num_leaves;
         ++mipdata_->num_nodes;
         search.flushStatistics();
+
+        if (mipdata_->domain.infeasible()) {
+          mipdata_->nodequeue.clear();
+          mipdata_->pruned_treeweight = 1.0;
+          break;
+        }
 
         if (mipdata_->checkLimits()) {
           limit_reached = true;

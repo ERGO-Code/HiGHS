@@ -104,6 +104,7 @@ set(sources
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
     mip/HighsImplications.cpp
+    mip/HighsPrimalHeuristics.cpp
     mip/HighsNodeQueue.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
@@ -419,6 +420,7 @@ target_sources(libhighs PRIVATE
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
     mip/HighsImplications.cpp
+    mip/HighsPrimalHeuristics.cpp
     mip/HighsNodeQueue.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp

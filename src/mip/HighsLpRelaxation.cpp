@@ -496,6 +496,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       if (checkDualProof()) return Status::Infeasible;
 
       return Status::Error;
+    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
     case HighsModelStatus::PRIMAL_INFEASIBLE:
       storeDualInfProof();
       if (checkDualProof()) {
@@ -578,7 +579,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       }
       return Status::Error;
     }
-    case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
+    //case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
     // case HighsModelStatus::PRIMAL_INFEASIBLE:
     //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)
     //    return Status::Infeasible;
@@ -670,7 +671,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp() {
         for (int i = 0; i != mipsolver.numCol(); ++i)
           objsum += roundsol[i] * mipsolver.colCost(i);
 
-        mipsolver.mipdata_->addIncumbent(roundsol, double(objsum), 'R');
+        mipsolver.mipdata_->addIncumbent(roundsol, double(objsum), 'S');
         objsum = 0;
       }
 

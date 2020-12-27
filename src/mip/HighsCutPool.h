@@ -51,6 +51,7 @@ class HighsCutPool {
   std::vector<double> maxabscoef_;
   std::vector<uint8_t> rowintegral;
   std::unordered_multimap<size_t, int> supportmap;
+  std::vector<HighsDomain::CutpoolPropagation*> propagationDomains;
 
   int agelim_;
   int nrounds_;
@@ -77,6 +78,19 @@ class HighsCutPool {
   void ageLPRows(HighsLpRelaxation& lprelaxation);
 
   void ageNonLPRows();
+
+  void addPropagationDomain(HighsDomain::CutpoolPropagation* domain) {
+    propagationDomains.push_back(domain);
+  }
+
+  void removePropagationDomain(HighsDomain::CutpoolPropagation* domain) {
+    for (int k = propagationDomains.size() - 1; k >= 0; --k) {
+      if (propagationDomains[k] == domain) {
+        propagationDomains.erase(propagationDomains.begin() + k);
+        return;
+      }
+    }
+  }
 
   void setAgeLimit(int agelim) { agelim_ = agelim; }
 

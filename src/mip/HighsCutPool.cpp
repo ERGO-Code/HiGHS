@@ -315,5 +315,8 @@ int HighsCutPool::addCut(int* Rindex, double* Rvalue, int Rlen, double rhs,
   rownormalization_[rowindex] = 1.0 / double(sqrt(norm));
   maxabscoef_[rowindex] = maxabscoef;
 
+  for (HighsDomain::CutpoolPropagation* propagationdomain : propagationDomains)
+    propagationdomain->cutAdded(rowindex);
+
   return rowindex;
 }
