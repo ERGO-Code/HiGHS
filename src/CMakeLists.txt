@@ -480,12 +480,20 @@ endif()
 #     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 if (IPX_ON)
+    # use, i.e. don't skip the full RPATH for the build tree
+    set(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+    # when building, don't use the install RPATH already
+    # (but later on when installing)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
 
     target_include_directories(libhighs PRIVATE ipm/ipx/src
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
-    if (MACOS)
+    if (UNIX)
         target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
         target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
         target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
