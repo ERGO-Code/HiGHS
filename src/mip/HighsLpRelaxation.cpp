@@ -579,7 +579,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       }
       return Status::Error;
     }
-    //case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
+    // case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
     // case HighsModelStatus::PRIMAL_INFEASIBLE:
     //  if (lpsolver.getModelStatus(false) == scaledmodelstatus)
     //    return Status::Infeasible;
