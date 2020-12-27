@@ -194,7 +194,7 @@ void testSolversSetup(const std::string model,
     simplex_strategy_iteration_count[(
         int)SimplexStrategy::SIMPLEX_STRATEGY_PRIMAL] = 94;
     model_iteration_count.ipm = 18;
-    model_iteration_count.crossover = 2;
+    model_iteration_count.crossover = 4;
   }
 }
 
