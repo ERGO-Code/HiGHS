@@ -17,4 +17,11 @@ struct HighsDomainChange {
   }
 };
 
+struct HighsSubstitution {
+  int substcol;
+  int staycol;
+  double scale;
+  double offset;
+};
+
 #endif

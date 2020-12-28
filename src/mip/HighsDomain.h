@@ -196,6 +196,10 @@ class HighsDomain {
     return mipsolver->variableType(col) != HighsVarType::CONTINUOUS &&
            colLower_[col] == 0.0 && colUpper_[col] == 1.0;
   }
+
+  bool isFixed(int col) const { return colLower_[col] == colUpper_[col]; }
+
+  bool isFixing(const HighsDomainChange& domchg) const;
 };
 
 #endif

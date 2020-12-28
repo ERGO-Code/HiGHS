@@ -137,6 +137,9 @@ void HMatrix::update(int columnIn, int columnOut) {
       int iFind = ARstart[iRow];
       int iSwap = --AR_Nend[iRow];
       while (ARindex[iFind] != columnIn) iFind++;
+      // todo @ Julian : this assert can fail
+      assert(iFind >= 0 && iFind < int(ARindex.size()));
+      assert(iSwap >= 0 && iSwap < int(ARindex.size()));
       swap(ARindex[iFind], ARindex[iSwap]);
       swap(ARvalue[iFind], ARvalue[iSwap]);
     }

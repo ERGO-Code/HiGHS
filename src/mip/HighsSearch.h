@@ -25,6 +25,7 @@ class HighsSearch {
   size_t nnodes;
   size_t lpiterations;
   size_t heurlpiterations;
+  size_t sblpiterations;
   double upper_limit;
   std::vector<int> inds;
   std::vector<double> vals;
@@ -65,6 +66,18 @@ class HighsSearch {
   };
 
   std::vector<NodeData> nodestack;
+  std::unordered_map<int, int> reliableatnode;
+
+  bool branchingVarReliableAtNode(int col) const {
+    auto it = reliableatnode.find(col);
+    if (it == reliableatnode.end() || it->second != 3) return false;
+
+    return true;
+  }
+
+  void markBranchingVarUpReliableAtNode(int col) { reliableatnode[col] |= 1; }
+
+  void markBranchingVarDownReliableAtNode(int col) { reliableatnode[col] |= 2; }
 
  public:
   HighsSearch(HighsMipSolver& mipsolver, const HighsPseudocost& pseudocost);
@@ -96,6 +109,8 @@ class HighsSearch {
   size_t getHeuristicLpIterations() const;
 
   size_t getTotalLpIterations() const;
+
+  size_t getStrongBranchingLpIterations() const;
 
   bool hasNode() const { return !nodestack.empty(); }
 

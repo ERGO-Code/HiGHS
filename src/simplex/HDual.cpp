@@ -1539,9 +1539,13 @@ void HDual::chooseColumnSlice(HVector* row_ep) {
   }
 
   // Choose column 2, This only happens if didn't go out
-  bool chooseColumnFail = dualRow.chooseFinal();
-  if (chooseColumnFail) {
-    invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
+  int return_code = dualRow.chooseFinal();
+  if (return_code) {
+    if (return_code < 0) {
+      invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
+    } else {
+      invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;
+    }
     return;
   }
 

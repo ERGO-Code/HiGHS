@@ -32,6 +32,17 @@ class HighsCliqueTable {
     CliqueVar(int col, int val) : col(col), val(val) {}
     CliqueVar() = default;
   };
+  struct Clique {
+    int start;
+    int end;
+    int origin;
+    bool equality;
+  };
+
+  struct Substitution {
+    int substcol;
+    CliqueVar replace;
+  };
 
  private:
   struct CliqueSetNode {
@@ -48,20 +59,20 @@ class HighsCliqueTable {
   std::vector<CliqueVar> cliqueentries;
   std::vector<CliqueSetNode> cliquesets;
 
-  struct Clique {
-    int start;
-    int end;
-    int origin;
-    bool equality;
-  };
-
   std::vector<int*> commoncliquestack;
   std::set<std::pair<int, int>> freespaces;
   std::vector<int> freeslots;
   std::vector<Clique> cliques;
   std::vector<int> cliquesetroot;
   std::vector<int> numcliquesvar;
+  std::vector<int> redundantconstraints;
   std::vector<CliqueVar> infeasvertexstack;
+
+  std::vector<int> colsubstituted;
+  std::vector<Substitution> substitutions;
+  std::vector<int> deletedrows;
+  std::vector<std::pair<int, CliqueVar>> cliqueextensions;
+  int nfixings;
 
   int splay(int cliqueid, int root);
 
@@ -70,6 +81,8 @@ class HighsCliqueTable {
   void link(int node);
 
   int findCommonCliqueRecurse(int& r1, int& r2);
+
+  void resolveSubstitution(CliqueVar& v) const;
 
   struct BronKerboschData {
     const std::vector<double>& sol;
@@ -103,17 +116,44 @@ class HighsCliqueTable {
 
   void propagateAndCleanup(HighsDomain& globaldom);
 
+  void doAddClique(const CliqueVar* cliquevars, int numcliquevars,
+                   bool equality = false, int origin = HIGHS_CONST_I_INF);
+
  public:
   HighsCliqueTable(int ncols) {
     cliquesetroot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
+    colsubstituted.resize(ncols);
+    nfixings = 0;
   }
 
-  void addClique(HighsDomain& globaldom, const CliqueVar* cliquevars,
+  bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
+
+  void addClique(HighsDomain& globaldom, CliqueVar* cliquevars,
                  int numcliquevars, bool equality = false,
                  int origin = HIGHS_CONST_I_INF);
 
   void removeClique(int cliqueid);
+
+  std::vector<int>& getDeletedRows() { return deletedrows; }
+
+  const std::vector<int>& getDeletedRows() const { return deletedrows; }
+
+  std::vector<Substitution>& getSubstitutions() { return substitutions; }
+
+  const std::vector<Substitution>& getSubstitutions() const {
+    return substitutions;
+  }
+
+  std::vector<std::pair<int, CliqueVar>>& getCliqueExtensions() {
+    return cliqueextensions;
+  }
+
+  const std::vector<std::pair<int, CliqueVar>>& getCliqueExtensions() const {
+    return cliqueextensions;
+  }
+
+  int getNumFixings() const { return nfixings; }
 
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
@@ -143,6 +183,11 @@ class HighsCliqueTable {
   void addImplications(HighsDomain& domain, int col, int val);
 
   int getNumImplications(int col) const;
+
+  void runCliqueMerging(HighsDomain& globaldomain);
+
+  void rebuild(int ncols, const std::vector<int>& cIndex,
+               const std::vector<int>& rIndex);
 };
 
 #endif

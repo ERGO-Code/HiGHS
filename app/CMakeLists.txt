@@ -2,6 +2,7 @@
 add_executable(highs)
 
 target_sources(highs PRIVATE RunHighs.cpp)
+
 target_include_directories(highs PRIVATE .)
 target_link_libraries(highs libhighs)
 

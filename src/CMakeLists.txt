@@ -1,5 +1,12 @@
-# Source files for ipx, available in both pre-release CMake and FAST_BUILD.
+# Define library.
+# Outdated CMake approach: update in progress
+if (NOT FAST_BUILD)
+include_directories(ipm/ipx/src)
+include_directories(ipm/ipx/include)
+include_directories(ipm/basiclu/src)
+include_directories(ipm/basiclu/include)
 
+if (IPX_ON)
 set(basiclu_sources
     ipm/basiclu/src/basiclu_factorize.c
     ipm/basiclu/src/basiclu_solve_dense.c
@@ -62,14 +69,7 @@ set(ipx_sources
     ipm/ipx/src/symbolic_invert.cc
     ipm/ipx/src/timer.cc
     ipm/ipx/src/utils.cc)
-
-# Define library.
-# Outdated CMake approach: update in progress
-if (NOT FAST_BUILD)
-include_directories(ipm/ipx/src)
-include_directories(ipm/ipx/include)
-include_directories(ipm/basiclu/src)
-include_directories(ipm/basiclu/include)
+endif()
 
 set(sources
     ../external/filereaderlp/reader.cpp
@@ -418,18 +418,6 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
-    mip/HighsCliqueTable.cpp
-    mip/HighsCutPool.cpp
-    mip/HighsDynamicRowMatrix.cpp
-    mip/HighsDomain.cpp
-    mip/HighsImplications.cpp
-    mip/HighsLpRelaxation.cpp
-    mip/HighsMipSolver.cpp
-    mip/HighsMipSolverData.cpp
-    mip/HighsNodeQueue.cpp
-    mip/HighsSearch.cpp
-    mip/HighsSeparation.cpp
-    mip/SolveMip.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
@@ -461,16 +449,92 @@ target_sources(libhighs PRIVATE
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
-
 target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
                            presolve/ util/ test/ interfaces/ ../external/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
-set_target_properties(libhighs PROPERTIES PUBLIC_HEADER src/Highs.h)
+set(headers_fast_build_
+    ../external/filereaderlp/builder.hpp
+    ../external/filereaderlp/model.hpp
+    ../external/filereaderlp/reader.hpp
+    ipm/IpxStatus.h
+    io/Filereader.h
+    io/FilereaderLp.h
+    io/FilereaderEms.h
+    io/FilereaderMps.h
+    io/HMpsFF.h
+    io/HMPSIO.h
+    io/HighsIO.h
+    io/LoadOptions.h
+    lp_data/HConst.h
+    lp_data/HStruct.h
+    lp_data/HighsAnalysis.h
+    lp_data/HighsDebug.h
+    lp_data/HighsInfo.h
+    lp_data/HighsLp.h
+    lp_data/HighsLpUtils.h
+    lp_data/HighsModelUtils.h
+    lp_data/HighsModelObject.h
+    lp_data/HighsModelObjectUtils.h
+    lp_data/HighsOptions.h
+    lp_data/HighsRanging.h
+    lp_data/HighsSolution.h
+    lp_data/HighsSolutionDebug.h
+    lp_data/HighsSolve.h
+    lp_data/HighsStatus.h
+    simplex/HApp.h
+    simplex/FactorTimer.h
+    simplex/HCrash.h
+    simplex/HDual.h
+    simplex/HDualRow.h
+    simplex/HDualRHS.h
+    simplex/HFactor.h
+    simplex/HFactorDebug.h
+    simplex/HighsSimplexAnalysis.h
+    simplex/HighsSimplexInterface.h
+    simplex/HMatrix.h
+    simplex/HPrimal.h
+    simplex/HQPrimal.h
+    simplex/HSimplex.h
+    simplex/HSimplexReport.h
+    simplex/HSimplexDebug.h
+    simplex/SimplexConst.h
+    simplex/SimplexStruct.h
+    presolve/Presolve.h
+    presolve/PresolveComponent.h
+    presolve/PresolveAnalysis.h
+    presolve/PresolveUtils.h
+    presolve/HAggregator.h
+    presolve/HPreData.h
+    simplex/HVector.h
+    test/DevKkt.h
+    test/KktCh2.h
+    util/stringutil.h
+    util/HighsCDouble.h
+    util/HighsComponent.h
+    util/HighsHash.h
+    util/HighsRandom.h
+    util/HighsSort.h
+    util/HighsTimer.h
+    util/HighsUtils.h
+    util/HighsMatrixPic.h
+    Highs.h
+    interfaces/highs_c_api.h
+)
 
-if (${HiGHSRELEASE} ON)
-    target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
-endif()
+#set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsModelObject.h")
+
+# set the install rpath to the installed destination
+set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+    "${CMAKE_INSTALL_PREFIX}/lib")
+
+# install the header files of highs
+foreach ( file ${headers_fast_build_} )
+    get_filename_component( dir ${file} DIRECTORY )
+    install( FILES ${file} DESTINATION include/${dir} )
+endforeach()
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+
 
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
@@ -496,7 +560,14 @@ if (IPX_ON)
 endif()
 
 # set the install rpath to the installed destination
-set_target_properties(highs PROPERTIES INSTALL_RPATH
-    "${CMAKE_INSTALL_PREFIX}/lib")
+if (NOT JULIA)
+    set_target_properties(highs PROPERTIES INSTALL_RPATH
+        "${CMAKE_INSTALL_PREFIX}/lib")
+endif()
+
+if (JULIA)
+    set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+        "${CMAKE_INSTALL_PREFIX}/lib")
+endif()
 
 endif()

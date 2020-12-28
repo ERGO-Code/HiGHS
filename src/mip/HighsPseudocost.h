@@ -24,7 +24,7 @@ class HighsPseudocost {
         pseudocostdown(ncols),
         nsamplesup(ncols),
         nsamplesdown(ncols),
-        minreliable(5),
+        minreliable(8),
         seed(seed) {}
 
   void setSeed(unsigned int seed) { seed = seed; }

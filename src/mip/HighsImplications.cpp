@@ -1,6 +1,7 @@
 #include "mip/HighsImplications.h"
 
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsMipSolverData.h"
 
 bool HighsImplications::computeImplications(int col, bool val) {
   globaldomain.propagate();
@@ -76,7 +77,7 @@ bool HighsImplications::computeImplications(int col, bool val) {
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 1);
 
     cliquetable.addClique(globaldomain, clique, 2);
-    if (globaldomain.infeasible()) return true;
+    if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
   }
 
   implications.erase(binstart, implications.end());
@@ -90,47 +91,64 @@ bool HighsImplications::computeImplications(int col, bool val) {
 bool HighsImplications::runProbing(int col, int& numboundchgs) {
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0)) {
-    const HighsDomainChange* implicsup;
-    const HighsDomainChange* implicsdown;
-    int nimplicsup;
-    int nimplicsdown;
     bool infeasible;
 
     infeasible = computeImplications(col, 1);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
 
-    nimplicsdown = getImplications(col, 0, implicsdown, infeasible);
+    infeasible = computeImplications(col, 0);
     if (globaldomain.infeasible()) return true;
     if (infeasible) return true;
 
-    nimplicsup = getImplications(col, 1, implicsup, infeasible);
-
     // analyze implications
+    const HighsDomainChange* implicsup;
+    const HighsDomainChange* implicsdown;
+    int nimplicsup;
+    int nimplicsdown;
+    nimplicsdown = getImplications(col, 0, implicsdown, infeasible);
+    nimplicsup = getImplications(col, 1, implicsup, infeasible);
     int u = 0;
     int d = 0;
 
     while (u < nimplicsup && d < nimplicsdown) {
-      if (implicsup[u] < implicsdown[d])
+      if (implicsup[u].column < implicsdown[d].column)
         ++u;
-      else if (implicsdown[d] < implicsup[u])
+      else if (implicsdown[d].column < implicsup[u].column)
         ++d;
       else {
-        assert(implicsup[u].boundtype == implicsdown[d].boundtype);
         assert(implicsup[u].column == implicsdown[d].column);
-        if ((implicsup[u].boundtype == HighsBoundType::Lower &&
-             implicsdown[d].boundval < implicsup[u].boundval) ||
-            (implicsup[u].boundtype == HighsBoundType::Upper &&
-             implicsdown[d].boundval > implicsup[u].boundval))
-          globaldomain.changeBound(implicsdown[d], -2);
+
+        if (implicsup[u].boundtype == implicsdown[d].boundtype) {
+          if ((implicsup[u].boundtype == HighsBoundType::Lower &&
+               implicsdown[d].boundval < implicsup[u].boundval) ||
+              (implicsup[u].boundtype == HighsBoundType::Upper &&
+               implicsdown[d].boundval > implicsup[u].boundval))
+            globaldomain.changeBound(implicsdown[d], -2);
+          else
+            globaldomain.changeBound(implicsup[u], -2);
+          assert(!globaldomain.infeasible());
+          ++numboundchgs;
+          globaldomain.propagate();
+          assert(!globaldomain.infeasible());
+          ++u;
+          ++d;
+        } else if (!globaldomain.isFixed(implicsup[u].column) &&
+                   !colsubstituted[implicsup[u].column] &&
+                   globaldomain.isFixing(implicsup[u]) &&
+                   globaldomain.isFixing(implicsdown[d])) {
+          HighsSubstitution substitution;
+          substitution.substcol = implicsup[u].column;
+          substitution.staycol = col;
+          substitution.offset = implicsdown[d].boundval;
+          substitution.scale = implicsup[u].boundval - implicsdown[d].boundval;
+          substitutions.push_back(substitution);
+          colsubstituted[implicsup[u].column] = true;
+
+        } else if ((int)implicsup[u].boundtype < (int)implicsdown[d].boundtype)
+          ++u;
         else
-          globaldomain.changeBound(implicsup[u], -2);
-        assert(!globaldomain.infeasible());
-        ++numboundchgs;
-        globaldomain.propagate();
-        assert(!globaldomain.infeasible());
-        ++u;
-        ++d;
+          ++d;
       }
     }
   }
