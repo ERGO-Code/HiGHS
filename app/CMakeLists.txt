@@ -9,3 +9,6 @@ target_link_libraries(highs libhighs)
 # install the binary
 install(TARGETS highs EXPORT highs-targets
         RUNTIME DESTINATION bin)
+
+set_target_properties(highs PROPERTIES INSTALL_RPATH
+        "${CMAKE_INSTALL_PREFIX}/lib")

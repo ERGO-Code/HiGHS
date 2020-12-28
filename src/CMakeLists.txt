@@ -559,15 +559,7 @@ if (IPX_ON)
 
 endif()
 
-# set the install rpath to the installed destination
-if (NOT JULIA)
-    set_target_properties(highs PROPERTIES INSTALL_RPATH
-        "${CMAKE_INSTALL_PREFIX}/lib")
-endif()
-
-if (JULIA)
     set_target_properties(libhighs PROPERTIES INSTALL_RPATH
         "${CMAKE_INSTALL_PREFIX}/lib")
-endif()
 
 endif()
