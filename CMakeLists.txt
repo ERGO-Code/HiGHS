@@ -328,14 +328,15 @@ set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 # condition added to src/CMakeLists.txt
 add_subdirectory(src)
 
-# No changes in app/ apart from a relative path
-add_subdirectory(app)
+option(JULIA "Build library only for Julia" OFF)
 
-# Until MIP solver is in library object also and tested. Switch becayse at the 
-# moment breaks binary builder for julia interface.
-# set(MIP OFF)
-set(MIP ON)
-if (MIP)
+if (NOT JULIA)
+    # No changes in app/ apart from a relative path
+    add_subdirectory(app)
+
+    # Until MIP solver is in library object also and tested. Switch becayse at the 
+    # moment breaks binary builder for julia interface.
+    # set(MIP OFF)
     target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
     target_sources(highs PRIVATE 
         src/mip/HighsMipSolver.cpp
@@ -353,7 +354,9 @@ endif()
 
 # check/ not added here, instead define fewer tests: 
 # build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
-enable_testing()
+if (NOT JULIA)
+    enable_testing()
+endif()
 
 # Check whether targets build OK.
 add_test(NAME highs-lib-build
@@ -437,15 +440,17 @@ endforeach(instance)
 
 endfunction()
 
-# add tests for success and fail instances
-add_instance_tests(successInstances "Optimal" " ")
-add_instance_tests(failInstances "Fail" " ")
-add_instance_tests(infeasibleInstances "Infeasible" " ")
-add_instance_tests(unboundedInstances "Unbounded" " ")
+if (NOT JULIA)
+    # add tests for success and fail instances
+    add_instance_tests(successInstances "Optimal" " ")
+    add_instance_tests(failInstances "Fail" " ")
+    add_instance_tests(infeasibleInstances "Infeasible" " ")
+    add_instance_tests(unboundedInstances "Unbounded" " ")
 
-foreach(setting ${settings})
-    add_instance_tests(optionsInstances "Optimal" ${setting})
-endforeach()
+    foreach(setting ${settings})
+        add_instance_tests(optionsInstances "Optimal" ${setting})
+    endforeach()
+endif()
 
 if (EXP) 
     add_executable(doctest)
