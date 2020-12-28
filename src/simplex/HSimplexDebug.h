@@ -32,8 +32,13 @@ HighsDebugStatus debugDualChuzcFail(
     const std::vector<std::pair<int, double>>& workData, const double* workDual,
     const double selectTheta, const double remainTheta);
 
+HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
+                                             const HighsLp& simplex_lp,
+                                             const SimplexBasis& simplex_basis);
+
 // Methods for HMO
 
+/*
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object);
 
 HighsDebugStatus debugSimplexBasisCorrect(
@@ -104,10 +109,6 @@ HighsDebugStatus debugAssessSolutionNormDifference(const HighsOptions& options,
                                                    const std::string type,
                                                    const double difference);
 
-HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
-                                             const HighsLp& simplex_lp,
-                                             const SimplexBasis& simplex_basis);
-
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase);
 
@@ -127,4 +128,5 @@ void debugReportReinvertOnNumericalTrouble(
     const double numerical_trouble_measure, const double alpha_from_col,
     const double alpha_from_row, const double numerical_trouble_tolerance,
     const bool reinvert);
+*/
 #endif  // SIMPLEX_HSIMPLEXDEBUG_H_

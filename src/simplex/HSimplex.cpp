@@ -46,7 +46,7 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
     ekk_instance.passLp(scaled_lp);
   } else {
     // Initialise unit scaling factors
-    initialiseScale(highs_model_object);
+    initialiseScale(highs_model_object.lp_, highs_model_object.scale_);
     // Pass the original LP to Ekk
     ekk_instance.passLp(highs_model_object.lp_);
   }
@@ -508,9 +508,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
 
 // SCALING
 
-void initialiseScale(HighsModelObject& highs_model_object) {
-  initialiseScale(highs_model_object.simplex_lp_, highs_model_object.scale_);
-}
+//void initialiseScale(HighsModelObject& highs_model_object) { initialiseScale(highs_model_object.simplex_lp_, highs_model_object.scale_);}
 
 void initialiseScale(const HighsLp& lp, HighsScale& scale) {
   scale.is_scaled_ = false;
@@ -1069,6 +1067,7 @@ bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis) {
   return right_size;
 }
 
+/*
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                int phase) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
@@ -1223,3 +1222,4 @@ double computeBasisCondition(const HighsModelObject& highs_model_object) {
   double cond_B = norm_Binv * norm_B;
   return cond_B;
 }
+*/

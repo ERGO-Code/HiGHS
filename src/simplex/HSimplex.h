@@ -80,7 +80,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
 
 // SCALE:
 
-void initialiseScale(HighsModelObject& highs_model);
+//void initialiseScale(HighsModelObject& highs_model);
 
 void initialiseScale(const HighsLp& lp, HighsScale& scale);
 
@@ -93,10 +93,9 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                 HighsScale& scale);
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
-void computeDualObjectiveValue(HighsModelObject& highs_model_object,
-                               int phase = 2);
-
+/*
+void computeDualObjectiveValue(HighsModelObject& highs_model_object, int phase = 2);
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
-
 double computeBasisCondition(const HighsModelObject& highs_model_object);
+*/
 #endif  // SIMPLEX_HSIMPLEX_H_
