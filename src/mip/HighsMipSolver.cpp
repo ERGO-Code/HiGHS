@@ -274,8 +274,9 @@ void HighsMipSolver::run() {
           break;
         }
 
-        mipdata_->heuristics.randomizedRounding(
-            mipdata_->lp.getLpSolver().getSolution().col_value);
+        if (mipdata_->incumbent.empty())
+          mipdata_->heuristics.randomizedRounding(
+              mipdata_->lp.getLpSolver().getSolution().col_value);
 
         if (mipdata_->incumbent.empty())
           mipdata_->heuristics.RENS(
