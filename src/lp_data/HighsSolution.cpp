@@ -765,6 +765,7 @@ void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
       highs_model_object.options_);
 }
 
+/*
 void resetTwoModelStatusAndSolutionParams(
     HighsModelObject& highs_model_object) {
   resetModelStatusAndSolutionParams(
@@ -775,7 +776,7 @@ void resetTwoModelStatusAndSolutionParams(
                                     highs_model_object.scaled_solution_params_,
                                     highs_model_object.options_);
 }
-
+*/
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
                                        HighsSolutionParams& solution_params,
                                        const HighsOptions& options) {
