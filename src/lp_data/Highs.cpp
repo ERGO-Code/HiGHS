@@ -693,7 +693,7 @@ HighsStatus Highs::run() {
           //
           // The original model hasn't been solved, so set up its solution
           // parameters
-          resetTwoModelStatusAndSolutionParams(hmos_[original_hmo]);
+          resetModelStatusAndSolutionParams(hmos_[original_hmo]);
           // Set solution and its status
           hmos_[original_hmo].solution_ = presolve_.data_.recovered_solution_;
 

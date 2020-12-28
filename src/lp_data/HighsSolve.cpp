@@ -28,9 +28,9 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   HighsOptions& options = model.options_;
-  // Reset unscaled and scaled model status and solution params - except for
+  // Reset unscaled model status and solution params - except for
   // iteration counts
-  resetTwoModelStatusAndSolutionParams(model);
+  resetModelStatusAndSolutionParams(model);
   HighsLogMessage(options.logfile, HighsMessageType::INFO, message.c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
@@ -50,7 +50,6 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     if (return_status == HighsStatus::Error) return return_status;
     // Set the scaled model status and solution params for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
-    model.scaled_solution_params_ = model.unscaled_solution_params_;
   } else if (options.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
@@ -85,7 +84,6 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     } else {
       // Set the scaled model status and solution params for completeness
       model.scaled_model_status_ = model.unscaled_model_status_;
-      model.scaled_solution_params_ = model.unscaled_solution_params_;
     }
 #else
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
