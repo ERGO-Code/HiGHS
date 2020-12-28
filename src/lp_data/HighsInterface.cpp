@@ -928,8 +928,8 @@ HighsStatus Highs::changeCoefficientInterface(const int Xrow, const int Xcol,
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsLp& lp = highs_model_object.lp_;
-  if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
-  if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
+  if (Xrow < 0 || Xrow >= lp.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol >= lp.numCol_) return HighsStatus::Error;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
   bool& valid_simplex_lp = simplex_lp_status.valid;
   // Check that if there is no simplex LP then there is no matrix or scaling
