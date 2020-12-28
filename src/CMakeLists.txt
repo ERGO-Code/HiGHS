@@ -1,10 +1,8 @@
 # Define library.
 # Outdated CMake approach: update in progress
 if (NOT FAST_BUILD)
-include_directories(ipm/ipx/src)
-include_directories(ipm/ipx/include)
-include_directories(ipm/basiclu/src)
-include_directories(ipm/basiclu/include)
+  set(IPX_ON ON)
+endif()
 
 if (IPX_ON)
 set(basiclu_sources
@@ -70,6 +68,13 @@ set(ipx_sources
     ipm/ipx/src/timer.cc
     ipm/ipx/src/utils.cc)
 endif()
+
+# Outdated CMake approach: update in progress
+if (NOT FAST_BUILD)
+include_directories(ipm/ipx/src)
+include_directories(ipm/ipx/include)
+include_directories(ipm/basiclu/src)
+include_directories(ipm/basiclu/include)
 
 set(sources
     ../external/filereaderlp/reader.cpp
@@ -521,6 +526,11 @@ set(headers_fast_build_
     Highs.h
     interfaces/highs_c_api.h
 )
+
+if(IPX_ON)
+    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
+        ${ipx_headers})
+endif()
 
 #set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsModelObject.h")
 
