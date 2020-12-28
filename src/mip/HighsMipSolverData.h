@@ -10,6 +10,7 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsNodeQueue.h"
+#include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
@@ -27,6 +28,7 @@ struct HighsMipSolverData {
   HighsPseudocost pseudocost;
   HighsCliqueTable cliquetable;
   HighsImplications implications;
+  HighsPrimalHeuristics heuristics;
   struct Substitution {
     int substcol;
     int staycol;
@@ -60,6 +62,11 @@ struct HighsMipSolverData {
   std::vector<double> ARvalue_;
   std::vector<double> maxAbsRowCoef;
   std::vector<uint8_t> rowintegral;
+  std::vector<int> uplocks;
+  std::vector<int> downlocks;
+  std::vector<int> integer_cols;
+  std::vector<int> implint_cols;
+  std::vector<int> continuous_cols;
   double objintscale;
 
   double feastol;
@@ -93,11 +100,14 @@ struct HighsMipSolverData {
   HighsMipSolverData(HighsMipSolver& mipsolver)
       : mipsolver(mipsolver),
         cutpool(mipsolver.numCol(), 10),
-        domain(mipsolver, cutpool),
+        domain(mipsolver),
         lp(mipsolver),
         pseudocost(mipsolver.numCol()),
         cliquetable(mipsolver.numCol()),
-        implications(domain, cliquetable) {}
+        implications(domain, cliquetable),
+        heuristics(mipsolver) {
+    domain.addCutpool(cutpool);
+  }
 
   void init();
   void basisTransfer();
@@ -105,6 +115,7 @@ struct HighsMipSolverData {
   void cliqueExtraction();
   void runSetup();
   void runProbing();
+  bool trySolution(const std::vector<double>& solution, char source = ' ');
   void evaluateRootNode();
   void addIncumbent(const std::vector<double>& sol, double solobj, char source);
 

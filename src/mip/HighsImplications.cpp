@@ -9,8 +9,6 @@ bool HighsImplications::computeImplications(int col, bool val) {
   const auto& domchgstack = globaldomain.getDomainChangeStack();
 
   int changedend = globaldomain.getChangedCols().size();
-  int proprowend = globaldomain.getPropagateRows().size();
-  int propcutend = globaldomain.getPropagateCuts().size();
 
   if (val)
     globaldomain.changeBound(HighsBoundType::Lower, col, 1);
@@ -20,9 +18,6 @@ bool HighsImplications::computeImplications(int col, bool val) {
   if (globaldomain.infeasible()) {
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);
-    globaldomain.clearPropagateRows(proprowend);
-    globaldomain.clearPropagateCuts(propcutend);
-
     cliquetable.vertexInfeasible(globaldomain, col, val);
 
     return true;
@@ -37,8 +32,6 @@ bool HighsImplications::computeImplications(int col, bool val) {
   if (globaldomain.infeasible()) {
     globaldomain.backtrack();
     globaldomain.clearChangedCols(changedend);
-    globaldomain.clearPropagateRows(proprowend);
-    globaldomain.clearPropagateCuts(propcutend);
 
     cliquetable.vertexInfeasible(globaldomain, col, val);
 
@@ -55,8 +48,6 @@ bool HighsImplications::computeImplications(int col, bool val) {
 
   globaldomain.backtrack();
   globaldomain.clearChangedCols(changedend);
-  globaldomain.clearPropagateRows(proprowend);
-  globaldomain.clearPropagateCuts(propcutend);
 
   // add the implications of binary variables to the clique table
   auto binstart =
@@ -90,7 +81,8 @@ bool HighsImplications::computeImplications(int col, bool val) {
 
 bool HighsImplications::runProbing(int col, int& numboundchgs) {
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
-      !implicationsCached(col, 0)) {
+      !implicationsCached(col, 0) &&
+      cliquetable.getSubstitution(col) == nullptr) {
     bool infeasible;
 
     infeasible = computeImplications(col, 1);
@@ -124,9 +116,11 @@ bool HighsImplications::runProbing(int col, int& numboundchgs) {
                implicsdown[d].boundval < implicsup[u].boundval) ||
               (implicsup[u].boundtype == HighsBoundType::Upper &&
                implicsdown[d].boundval > implicsup[u].boundval))
-            globaldomain.changeBound(implicsdown[d], -2);
+            globaldomain.changeBound(implicsdown[d],
+                                     HighsDomain::Reason::unspecified());
           else
-            globaldomain.changeBound(implicsup[u], -2);
+            globaldomain.changeBound(implicsup[u],
+                                     HighsDomain::Reason::unspecified());
           assert(!globaldomain.infeasible());
           ++numboundchgs;
           globaldomain.propagate();

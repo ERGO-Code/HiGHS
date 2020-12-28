@@ -252,9 +252,12 @@ void HighsMipSolver::run() {
     // set iteration limit for each lp solve during the dive to 10 times the
     // average nodes
 
-    int iterlimit = 100 * int(mipdata_->lp.getNumLpIterations() /
-                              (double)std::max(size_t{1}, mipdata_->num_nodes));
-    iterlimit = std::max(1000, iterlimit);
+    int iterlimit =
+        10 *
+        int(mipdata_->total_lp_iterations - mipdata_->sb_lp_iterations -
+            mipdata_->sepa_lp_iterations) /
+        (double)std::max(size_t{1}, mipdata_->num_nodes);
+    iterlimit = std::max(10000, iterlimit);
 
     mipdata_->lp.setIterationLimit(iterlimit);
 
@@ -265,8 +268,27 @@ void HighsMipSolver::run() {
       if (mipdata_->heuristic_lp_iterations <
           mipdata_->total_lp_iterations * mipdata_->heuristic_effort) {
         search.evaluateNode();
-        if (!search.currentNodePruned()) search.heuristicSearchNew();
+        if (search.currentNodePruned()) {
+          ++mipdata_->num_leaves;
+          search.flushStatistics();
+          break;
+        }
+
+        if (mipdata_->incumbent.empty())
+          mipdata_->heuristics.randomizedRounding(
+              mipdata_->lp.getLpSolver().getSolution().col_value);
+
+        if (mipdata_->incumbent.empty())
+          mipdata_->heuristics.RENS(
+              mipdata_->lp.getLpSolver().getSolution().col_value);
+        else
+          mipdata_->heuristics.RINS(
+              mipdata_->lp.getLpSolver().getSolution().col_value);
+
+        mipdata_->heuristics.flushStatistics();
       }
+
+      if (mipdata_->domain.infeasible()) break;
 
       search.dive();
       ++mipdata_->num_leaves;
@@ -279,10 +301,12 @@ void HighsMipSolver::run() {
 
       if (!search.backtrack()) break;
 
-      if (search.getCurrentEstimate() >= mipdata_->upper_limit) break;
+      if (mipdata_->upper_limit == HIGHS_CONST_INF ||
+          search.getCurrentEstimate() >= mipdata_->upper_limit)
+        break;
 
       if (mipdata_->num_nodes - plungestart >=
-          std::min(size_t{1000}, mipdata_->num_nodes / 10))
+          std::min(size_t{100}, mipdata_->num_nodes / 10))
         break;
 
       if (mipdata_->dispfreq != 0) {
@@ -340,7 +364,7 @@ void HighsMipSolver::run() {
     }
 
     // remove the iteration limit when installing a new node
-    mipdata_->lp.setIterationLimit();
+    // mipdata_->lp.setIterationLimit();
 
     // loop to install the next node for the search
     while (!mipdata_->nodequeue.empty()) {
@@ -369,6 +393,12 @@ void HighsMipSolver::run() {
         ++mipdata_->num_leaves;
         ++mipdata_->num_nodes;
         search.flushStatistics();
+
+        if (mipdata_->domain.infeasible()) {
+          mipdata_->nodequeue.clear();
+          mipdata_->pruned_treeweight = 1.0;
+          break;
+        }
 
         if (mipdata_->checkLimits()) {
           limit_reached = true;

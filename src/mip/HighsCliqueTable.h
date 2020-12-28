@@ -59,7 +59,7 @@ class HighsCliqueTable {
   std::vector<CliqueVar> cliqueentries;
   std::vector<CliqueSetNode> cliquesets;
 
-  std::vector<int*> commoncliquestack;
+  std::vector<std::pair<int*, int*>> commoncliquestack;
   std::set<std::pair<int, int>> freespaces;
   std::vector<int> freeslots;
   std::vector<Clique> cliques;
@@ -72,6 +72,9 @@ class HighsCliqueTable {
   std::vector<Substitution> substitutions;
   std::vector<int> deletedrows;
   std::vector<std::pair<int, CliqueVar>> cliqueextensions;
+  std::vector<uint16_t> cliquehits;
+  std::vector<int> cliquehitinds;
+  std::vector<int> stack;
   int nfixings;
 
   int splay(int cliqueid, int root);
@@ -82,8 +85,8 @@ class HighsCliqueTable {
 
   int findCommonCliqueRecurse(int& r1, int& r2);
 
-  void resolveSubstitution(CliqueVar& v) const;
-
+  int runCliqueSubsumption(HighsDomain& globaldom,
+                           std::vector<CliqueVar>& clique);
   struct BronKerboschData {
     const std::vector<double>& sol;
     std::vector<CliqueVar> P;
@@ -135,6 +138,10 @@ class HighsCliqueTable {
 
   void removeClique(int cliqueid);
 
+  void resolveSubstitution(CliqueVar& v) const;
+
+  void resolveSubstitution(int& col, double& val, double& rhs) const;
+
   std::vector<int>& getDeletedRows() { return deletedrows; }
 
   const std::vector<int>& getDeletedRows() const { return deletedrows; }
@@ -143,6 +150,11 @@ class HighsCliqueTable {
 
   const std::vector<Substitution>& getSubstitutions() const {
     return substitutions;
+  }
+
+  const Substitution* getSubstitution(int col) const {
+    return colsubstituted[col] ? &substitutions[colsubstituted[col] - 1]
+                               : nullptr;
   }
 
   std::vector<std::pair<int, CliqueVar>>& getCliqueExtensions() {
@@ -158,6 +170,8 @@ class HighsCliqueTable {
   bool foundCover(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
   void extractCliques(HighsMipSolver& mipsolver);
+
+  void extractObjCliques(HighsMipSolver& mipsolver);
 
   void vertexInfeasible(HighsDomain& globaldom, int col, int val);
 
@@ -177,6 +191,10 @@ class HighsCliqueTable {
   void separateCliques(const std::vector<double>& sol,
                        const HighsDomain& globaldom, HighsDomain& localdom,
                        HighsCutPool& cutpool, double feastol);
+
+  std::vector<std::vector<CliqueVar>> separateCliques(
+      const std::vector<double>& sol, const HighsDomain& globaldom,
+      double feastol);
 
   void cleanupFixed(HighsDomain& globaldom);
 

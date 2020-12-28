@@ -2,6 +2,7 @@
 #define HIGHS_DOMAIN_H_
 
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -13,13 +14,56 @@
 class HighsCutPool;
 
 class HighsDomain {
+ public:
+  struct Reason {
+    int type;
+    int index;
+
+    enum {
+      kBranching = -1,
+      kUnknown = -2,
+      kModelRow = -3,
+    };
+    static Reason branching() { return Reason{kBranching, 0}; }
+    static Reason unspecified() { return Reason{kUnknown, 0}; }
+    static Reason modelRow(int row) { return Reason{kModelRow, row}; }
+    static Reason cut(int cutpool, int cut) { return Reason{cutpool, cut}; }
+  };
+
+  struct CutpoolPropagation {
+    int cutpoolindex;
+    HighsDomain* domain;
+    HighsCutPool* cutpool;
+    std::vector<HighsCDouble> activitycuts_;
+    std::vector<int> activitycutsinf_;
+    std::vector<unsigned> activitycutversion_;
+    std::vector<uint8_t> propagatecutflags_;
+    std::vector<int> propagatecutinds_;
+
+    CutpoolPropagation(int cutpoolindex, HighsDomain* domain,
+                       HighsCutPool& cutpool);
+
+    CutpoolPropagation(const CutpoolPropagation& other);
+
+    ~CutpoolPropagation();
+
+    void cutAdded(int cut);
+
+    void markPropagateCut(int cut);
+
+    void updateActivityLbChange(int col, double oldbound, double newbound);
+
+    void updateActivityUbChange(int col, double oldbound, double newbound);
+  };
+
+ private:
   std::vector<uint8_t> changedcolsflags_;
   std::vector<int> changedcols_;
 
   std::vector<int> propRowNumChangedBounds_;
 
   std::vector<HighsDomainChange> domchgstack_;
-  std::vector<int> domchgreason_;
+  std::vector<Reason> domchgreason_;
   std::vector<double> prevboundval_;
 
   std::vector<HighsCDouble> activitymin_;
@@ -29,17 +73,70 @@ class HighsDomain {
   std::vector<uint8_t> propagateflags_;
   std::vector<int> propagateinds_;
 
-  std::vector<HighsCDouble> activitycuts_;
-  std::vector<int> activitycutsinf_;
-  std::vector<unsigned> activitycutversion_;
-  std::vector<uint8_t> propagatecutflags_;
-  std::vector<int> propagatecutinds_;
-
   HighsMipSolver* mipsolver;
-  HighsCutPool* cutpool;
-  HighsDomain* parentdomain;
 
-  int infeasible_ = 0;
+ private:
+  std::deque<CutpoolPropagation> cutpoolpropagation;
+
+  bool infeasible_ = 0;
+  Reason infeasible_reason;
+
+  void updateActivityLbChange(int col, double oldbound, double newbound);
+
+  void updateActivityUbChange(int col, double oldbound, double newbound);
+
+  double doChangeBound(const HighsDomainChange& boundchg);
+
+ public:
+  std::vector<double> colLower_;
+  std::vector<double> colUpper_;
+
+  HighsDomain(HighsMipSolver& mipsolver);
+
+  HighsDomain(const HighsDomain& other)
+      : changedcolsflags_(other.changedcolsflags_),
+        changedcols_(other.changedcols_),
+        domchgstack_(other.domchgstack_),
+        domchgreason_(other.domchgreason_),
+        prevboundval_(other.prevboundval_),
+        activitymin_(other.activitymin_),
+        activitymax_(other.activitymax_),
+        activitymininf_(other.activitymininf_),
+        activitymaxinf_(other.activitymaxinf_),
+        propagateflags_(other.propagateflags_),
+        propagateinds_(other.propagateinds_),
+        mipsolver(other.mipsolver),
+        cutpoolpropagation(other.cutpoolpropagation),
+        infeasible_(other.infeasible_),
+        infeasible_reason(other.infeasible_reason),
+        colLower_(other.colLower_),
+        colUpper_(other.colUpper_) {
+    for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
+      cutpoolprop.domain = this;
+  }
+
+  HighsDomain& operator=(const HighsDomain& other) {
+    changedcolsflags_ = other.changedcolsflags_;
+    changedcols_ = other.changedcols_;
+    domchgstack_ = other.domchgstack_;
+    domchgreason_ = other.domchgreason_;
+    prevboundval_ = other.prevboundval_;
+    activitymin_ = other.activitymin_;
+    activitymax_ = other.activitymax_;
+    activitymininf_ = other.activitymininf_;
+    activitymaxinf_ = other.activitymaxinf_;
+    propagateflags_ = other.propagateflags_;
+    propagateinds_ = other.propagateinds_;
+    mipsolver = other.mipsolver;
+    cutpoolpropagation = other.cutpoolpropagation;
+    infeasible_ = other.infeasible_;
+    infeasible_reason = other.infeasible_reason;
+    colLower_ = other.colLower_;
+    colUpper_ = other.colUpper_;
+    for (CutpoolPropagation& cutpoolprop : cutpoolpropagation)
+      cutpoolprop.domain = this;
+    return *this;
+  }
 
   void computeMinActivity(int start, int end, const int* ARindex,
                           const double* ARvalue, int& ninfmin,
@@ -57,50 +154,9 @@ class HighsDomain {
                         double Rlower, const HighsCDouble& maxactivity,
                         int ninfmax, HighsDomainChange* boundchgs);
 
-  void updateActivityLbChange(int col, double oldbound, double newbound);
-
-  void updateActivityUbChange(int col, double oldbound, double newbound);
-
-  double doChangeBound(const HighsDomainChange& boundchg);
-
- public:
-  std::vector<double> colLower_;
-  std::vector<double> colUpper_;
-  HighsDomain(HighsMipSolver& mipsolver, HighsCutPool& cutpool);
-
-  HighsDomain(const HighsDomain& other)
-      : changedcolsflags_(other.changedcolsflags_),
-        changedcols_(other.changedcols_),
-        domchgstack_(other.domchgstack_),
-        domchgreason_(other.domchgreason_),
-        prevboundval_(other.prevboundval_),
-        activitymin_(other.activitymin_),
-        activitymax_(other.activitymax_),
-        activitymininf_(other.activitymininf_),
-        activitymaxinf_(other.activitymaxinf_),
-        propagateflags_(other.propagateflags_),
-        propagateinds_(other.propagateinds_),
-        activitycuts_(other.activitycuts_),
-        activitycutsinf_(other.activitycutsinf_),
-        activitycutversion_(other.activitycutversion_),
-        propagatecutflags_(other.propagatecutflags_),
-        propagatecutinds_(other.propagatecutinds_),
-        mipsolver(other.mipsolver),
-        cutpool(other.cutpool),
-        parentdomain(other.parentdomain),
-        infeasible_(other.infeasible_),
-        colLower_(other.colLower_),
-        colUpper_(other.colUpper_) {}
-
-  HighsDomain& operator=(const HighsDomain&) = default;
-
-  HighsDomain createChildDomain() {
-    HighsDomain childdomain(*this);
-    childdomain.parentdomain = this;
-    return childdomain;
-  }
-
   const std::vector<int>& getChangedCols() const { return changedcols_; }
+
+  void addCutpool(HighsCutPool& cutpool);
 
   void clearChangedCols() {
     for (int i : changedcols_) changedcolsflags_[i] = 0;
@@ -114,53 +170,29 @@ class HighsDomain {
     changedcols_.resize(start);
   }
 
-  const std::vector<int>& getPropagateRows() const { return propagateinds_; }
-
-  void clearPropagateRows(int start) {
-    int end = propagateinds_.size();
-    for (int i = start; i != end; ++i) propagateflags_[propagateinds_[i]] = 0;
-
-    propagateinds_.resize(start);
-  }
-
-  const std::vector<int>& getPropagateCuts() const { return propagatecutinds_; }
-
-  void clearPropagateCuts(int start) {
-    int end = propagatecutinds_.size();
-    for (int i = start; i != end; ++i)
-      propagatecutflags_[propagatecutinds_[i]] = 0;
-
-    propagatecutinds_.resize(start);
-  }
-
-  void setParentDomain(HighsDomain* parentdomain) {
-    this->parentdomain = parentdomain;
-  }
-
-  void cutAdded(int cut);
-
-  void markPropagateCut(int cut);
-
   void markPropagate(int row);
+
+  void markPropagateCut(Reason reason);
 
   void computeRowActivities();
 
-  bool infeasible() const { return infeasible_ != 0; }
+  bool infeasible() const { return infeasible_; }
 
-  void changeBound(HighsDomainChange boundchg, int reason = -1);
+  void changeBound(HighsDomainChange boundchg,
+                   Reason reason = Reason::branching());
 
   void changeBound(HighsBoundType boundtype, int col, double boundval,
-                   int reason = -1) {
+                   Reason reason = Reason::branching()) {
     changeBound({boundtype, col, boundval}, reason);
   }
 
   void fixCol(int col, double val) {
     assert(infeasible_ == 0);
     if (colLower_[col] < val)
-      changeBound({HighsBoundType::Lower, col, val}, -2);
+      changeBound({HighsBoundType::Lower, col, val}, Reason::unspecified());
 
     if (infeasible_ == 0 && colUpper_[col] > val)
-      changeBound({HighsBoundType::Upper, col, val}, -2);
+      changeBound({HighsBoundType::Upper, col, val}, Reason::unspecified());
   }
 
   HighsDomainChange backtrack();

@@ -46,6 +46,8 @@ class HighsMipSolver {
 
   double rowUpper(int col) const { return model_->rowUpper_[col]; }
 
+  bool isSolutionFeasible(const std::vector<double>& solution) const;
+
   const HighsVarType* variableType() const {
     return model_->integrality_.data();
   }

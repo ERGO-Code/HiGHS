@@ -412,9 +412,13 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     int iRow = 0;
     if (col) {
       iCol = iVar;
+      // todo @ Julian the asserts can fail with simplex_scale_strategy=0 and
+      // presolve=on scale.col_.size() is 0 in that case
+      assert(int(scale.col_.size()) > iCol);
       scale_mu = 1 / (scale.col_[iCol] / scale.cost_);
     } else {
       iRow = iVar - lp.numCol_;
+      assert(int(scale.row_.size()) > iRow);
       scale_mu = scale.row_[iRow] * scale.cost_;
     }
     const double scaled_dual = simplex_info.workDual_[iVar];

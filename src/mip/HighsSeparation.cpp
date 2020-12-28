@@ -950,8 +950,7 @@ class ImpliedBounds {
 #endif
         vals[0] = 1.0;
         inds[0] = col;
-        int cut = cutpool.addCut(inds, vals, 1, 0.0);
-        propdomain.cutAdded(cut);
+        cutpool.addCut(inds, vals, 1, 0.0);
         continue;
       }
 
@@ -992,8 +991,7 @@ class ImpliedBounds {
 
           assert(debugactivity <= rhs + 1e-9);
 #endif
-          int cut = cutpool.addCut(inds, vals, 2, rhs);
-          propdomain.cutAdded(cut);
+          cutpool.addCut(inds, vals, 2, rhs);
         }
       }
 
@@ -1005,8 +1003,7 @@ class ImpliedBounds {
 #endif
         vals[0] = -1.0;
         inds[0] = col;
-        int cut = cutpool.addCut(inds, vals, 1, -1.0);
-        propdomain.cutAdded(cut);
+        cutpool.addCut(inds, vals, 1, -1.0);
         continue;
       }
 
@@ -1046,8 +1043,7 @@ class ImpliedBounds {
 
           assert(debugactivity <= rhs + feastol);
 #endif
-          int cut = cutpool.addCut(inds, vals, 2, rhs);
-          propdomain.cutAdded(cut);
+          cutpool.addCut(inds, vals, 2, rhs);
         }
       }
     }
@@ -1749,9 +1745,7 @@ class AggregationHeuristic {
       assert(debugactivity <= upper + feastol);
 #endif
 
-      int cutindex = cutpool.addCut(inds.data(), vals.data(), inds.size(),
-                                    upper, cutintegral);
-      propdomain.cutAdded(cutindex);
+      cutpool.addCut(inds.data(), vals.data(), inds.size(), upper, cutintegral);
 
       ++numcuts;
     }
@@ -2221,9 +2215,7 @@ void HighsSeparation::BaseRows::retransformAndAddCut(
   double upper = double(rhs);
   // domain.tightenCoefficients(inds.data(), vals.data(), inds.size(),
   // upper);
-  int cutindex =
-      cutpool.addCut(inds.data(), vals.data(), inds.size(), upper, cutintegral);
-  propdomain.cutAdded(cutindex);
+  cutpool.addCut(inds.data(), vals.data(), inds.size(), upper, cutintegral);
 }
 
 int HighsSeparation::separationRound(HighsDomain& propdomain,
@@ -2393,10 +2385,8 @@ void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
 
     assert(debugactivity <= rhs + mipsolver.mipdata_->epsilon);
 #endif
-
-    int cutind = mipsolver.mipdata_->cutpool.addCut(
-        inds.data(), vals.data(), offset, double(rhs), cutintegral);
-    localdomain.cutAdded(cutind);
+    mipsolver.mipdata_->cutpool.addCut(inds.data(), vals.data(), offset,
+                                       double(rhs), cutintegral);
   }
 }
 
@@ -2414,6 +2404,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
       int ncuts = separationRound(propdomain, status);
       nlpiters += lp->getNumLpIterations();
       mipsolver.mipdata_->sepa_lp_iterations += nlpiters;
+      mipsolver.mipdata_->total_lp_iterations += nlpiters;
       // printf("separated %d cuts\n", ncuts);
 
       // printf(
