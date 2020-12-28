@@ -581,7 +581,8 @@ HighsStatus Highs::run() {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
           factor_pivot_threshold =
-              hmos_[solved_hmo].ekk_instance_.simplex_info_.factor_pivot_threshold;
+              hmos_[solved_hmo]
+                  .ekk_instance_.simplex_info_.factor_pivot_threshold;
         }
         // Restore the dual objective cut-off
         options_.dual_objective_value_upper_bound =
@@ -1688,9 +1689,8 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
     scaled_model_status = hmos_[hmo_ix].scaled_model_status_;
     solution = hmos_[hmo_ix].solution_;
     basis = hmos_[hmo_ix].basis_;
-    unscaled_primal_status =
-        hmos_[hmo_ix].unscaled_solution_params_.primal_status;
-    unscaled_dual_status = hmos_[hmo_ix].unscaled_solution_params_.dual_status;
+    unscaled_primal_status = hmos_[hmo_ix].solution_params_.primal_status;
+    unscaled_dual_status = hmos_[hmo_ix].solution_params_.dual_status;
     lp = hmos_[hmo_ix].lp_;
   }
   printf(
@@ -1699,11 +1699,10 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
       "(%d, %d)\n\n",
       message.c_str(), utilHighsModelStatusToString(model_status).c_str(),
       utilHighsModelStatusToString(scaled_model_status).c_str(), lp.numCol_,
-      lp.numRow_, unscaled_primal_status, 
-      (int)solution.col_value.size(), (int)solution.row_value.size(),
-      unscaled_dual_status, (int)solution.col_dual.size(),
-      (int)solution.row_dual.size(), basis.valid_, (int)basis.col_status.size(),
-      (int)basis.row_status.size());
+      lp.numRow_, unscaled_primal_status, (int)solution.col_value.size(),
+      (int)solution.row_value.size(), unscaled_dual_status,
+      (int)solution.col_dual.size(), (int)solution.row_dual.size(),
+      basis.valid_, (int)basis.col_status.size(), (int)basis.row_status.size());
 }
 #endif
 
@@ -1914,8 +1913,7 @@ bool Highs::getHighsModelStatusAndInfo(const int solved_hmo) {
   model_status_ = hmos_[solved_hmo].unscaled_model_status_;
   scaled_model_status_ = hmos_[solved_hmo].scaled_model_status_;
 
-  HighsSolutionParams& solution_params =
-      hmos_[solved_hmo].unscaled_solution_params_;
+  HighsSolutionParams& solution_params = hmos_[solved_hmo].solution_params_;
 
   info_.primal_status = solution_params.primal_status;
   info_.dual_status = solution_params.dual_status;

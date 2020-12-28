@@ -225,8 +225,10 @@ void HCrash::bixby() {
     int cz_c_n = bixby_vr_in_r[r_n];
     int variable_in = cz_c_n;
     int variable_out = numCol + r_n;
-    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
-    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
+        NONBASIC_FLAG_FALSE;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
+        NONBASIC_FLAG_TRUE;
 #ifdef HiGHSDEV
     int cz_r_n = r_n;
     int vr_ty = crsh_r_ty[cz_r_n];
@@ -638,8 +640,10 @@ void HCrash::ltssf_iterate() {
       mn_rlv_pv_v = min(rlv_pv_v, mn_rlv_pv_v);
       int variable_in = cz_c_n;
       int variable_out = numCol + cz_r_n;
-      ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
-      ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
+      ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
+          NONBASIC_FLAG_FALSE;
+      ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
+          NONBASIC_FLAG_TRUE;
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       int vr_ty = crsh_r_ty[cz_r_n];
@@ -1219,8 +1223,10 @@ void HCrash::tsSing() {
     int r_n = c_n;
     int variable_in = c_n;
     int variable_out = numCol + r_n;
-    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] = NONBASIC_FLAG_FALSE;
-    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] = NONBASIC_FLAG_TRUE;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_in] =
+        NONBASIC_FLAG_FALSE;
+    ekk_instance.simplex_basis_.nonbasicFlag_[variable_out] =
+        NONBASIC_FLAG_TRUE;
     nBcVr++;
     if (nBcVr == numRow) break;
   }

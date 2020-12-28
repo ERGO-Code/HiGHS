@@ -84,8 +84,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
 
   // Copy solution data into the HMO
-  HighsSolutionParams& solution_params =
-      highs_model_object.unscaled_solution_params_;
+  HighsSolutionParams& solution_params = highs_model_object.solution_params_;
   highs_model_object.scaled_model_status_ = ekk_instance.scaled_model_status_;
   solution_params.objective_function_value =
       ekk_instance.simplex_info_.primal_objective_value;

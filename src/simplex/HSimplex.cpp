@@ -508,7 +508,8 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
 
 // SCALING
 
-//void initialiseScale(HighsModelObject& highs_model_object) { initialiseScale(highs_model_object.simplex_lp_, highs_model_object.scale_);}
+// void initialiseScale(HighsModelObject& highs_model_object) {
+// initialiseScale(highs_model_object.simplex_lp_, highs_model_object.scale_);}
 
 void initialiseScale(const HighsLp& lp, HighsScale& scale) {
   scale.is_scaled_ = false;

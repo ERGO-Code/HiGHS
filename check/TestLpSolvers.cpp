@@ -296,13 +296,13 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
 
   // Test the solver without scaling
   REQUIRE(highs.readModel(model_file) == HighsStatus::OK);
-  REQUIRE(highs.setHighsOptionValue("simplex_scale_strategy", 0) == HighsStatus::OK);
+  REQUIRE(highs.setHighsOptionValue("simplex_scale_strategy", 0) ==
+          HighsStatus::OK);
 
-  //  return_status = highs.run();  REQUIRE(return_status == HighsStatus::OK);
+  return_status = highs.run();
+  REQUIRE(return_status == HighsStatus::OK);
 
- 
-
- 
+  REQUIRE(info.simplex_iteration_count == 635);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {

@@ -54,10 +54,10 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     // Use IPM
 #ifdef IPX_ON
     bool imprecise_solution;
-    call_status = solveLpIpx(
-        options, model.timer_, model.lp_, imprecise_solution, model.basis_,
-        model.solution_, model.iteration_counts_, model.unscaled_model_status_,
-        model.unscaled_solution_params_);
+    call_status =
+        solveLpIpx(options, model.timer_, model.lp_, imprecise_solution,
+                   model.basis_, model.solution_, model.iteration_counts_,
+                   model.unscaled_model_status_, model.solution_params_);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
     if (return_status == HighsStatus::Error) return return_status;
@@ -114,8 +114,8 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   return (solveUnconstrainedLp(
       highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.unscaled_model_status_,
-      highs_model_object.unscaled_solution_params_,
-      highs_model_object.solution_, highs_model_object.basis_));
+      highs_model_object.solution_params_, highs_model_object.solution_,
+      highs_model_object.basis_));
 }
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution

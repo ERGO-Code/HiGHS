@@ -559,10 +559,9 @@ std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
 }
 
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
-  resetModelStatusAndSolutionParams(
-      highs_model_object.unscaled_model_status_,
-      highs_model_object.unscaled_solution_params_,
-      highs_model_object.options_);
+  resetModelStatusAndSolutionParams(highs_model_object.unscaled_model_status_,
+                                    highs_model_object.solution_params_,
+                                    highs_model_object.options_);
 }
 
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,

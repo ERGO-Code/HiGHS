@@ -86,7 +86,7 @@ HighsDebugStatus debugHighsBasicSolution(
   return debugHighsBasicSolution(
       message, highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.basis_, highs_model_object.solution_,
-      highs_model_object.unscaled_solution_params_,
+      highs_model_object.solution_params_,
       highs_model_object.unscaled_model_status_);
 }
 

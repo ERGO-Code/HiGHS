@@ -40,7 +40,7 @@ class HighsModelObject {
   HighsModelStatus unscaled_model_status_ = HighsModelStatus::NOTSET;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
 
-  HighsSolutionParams unscaled_solution_params_;
+  HighsSolutionParams solution_params_;
   HighsIterationCounts iteration_counts_;
   HighsBasis basis_;
   HighsSolution solution_;
