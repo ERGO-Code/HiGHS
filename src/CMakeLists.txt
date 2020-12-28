@@ -231,18 +231,13 @@ endif()
 if (IPX_ON)
     set(headers ${headers} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
-    add_library(libbasiclu ${basiclu_sources})
-    add_library(libipx ${ipx_sources})
-    target_link_libraries(libipx libbasiclu)
+    set(sources ${sources} ${basiclu_sources})
+    set(sources ${sources} ${ipx_sources})
 else ()
     set(headers ${headers} ipm/IpxWrapperEmpty.h)
 endif()
 
 add_library(libhighs ${sources})
-
-if (IPX_ON)
-    target_link_libraries(libhighs libipx)
-endif()
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -260,15 +255,6 @@ endif()
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-
-if (IPX_ON)
-    set_target_properties(libipx PROPERTIES
-        OUTPUT_NAME "ipx"
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-    set_target_properties(libbasiclu PROPERTIES
-        OUTPUT_NAME "basiclu"
-        MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-endif()
 
 include(CheckLanguage)
 check_language("Fortran")
@@ -344,26 +330,14 @@ foreach ( file ${headers} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
-if (IPX_ON)
-    install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
-            LIBRARY DESTINATION lib
-            ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
+install(TARGETS libhighs EXPORT highs-targets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        INCLUDES DESTINATION include)
 
-    # Add library targets to the build-tree export set
-    export(TARGETS libhighs libipx libbasiclu
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
-else()
-    install(TARGETS libhighs EXPORT highs-targets
-            LIBRARY DESTINATION lib
-            ARCHIVE DESTINATION lib
-            INCLUDES DESTINATION include)
-
-    # Add library targets to the build-tree export set
-    export(TARGETS libhighs 
-    FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
-endif()
-
+# Add library targets to the build-tree export set
+export(TARGETS libhighs 
+FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 # Configure the config file for the build tree:
 # Either list all the src/* directories here, or put explicit paths in all the
@@ -557,7 +531,7 @@ set_target_properties(libhighs PROPERTIES
 if (IPX_ON)
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
 
-    target_include_directories(libhighs PRIVATE ipm/ipx/src
+    target_include_directories(libhighs PUBLIC ipm/ipx/src
         ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
 
     if (UNIX)

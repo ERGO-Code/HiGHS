@@ -187,6 +187,7 @@ if (OSI_FOUND)
     include_directories(${OSITEST_INCLUDE_DIRS})
 endif (OSI_FOUND)
 
+set(IPX_ON ON)
 include(CheckLanguage)
 check_language("Fortran")
 if(CMAKE_Fortran_COMPILER)
