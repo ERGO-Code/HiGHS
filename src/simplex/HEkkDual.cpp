@@ -324,9 +324,9 @@ HighsStatus HEkkDual::solve() {
                     "Primal simplex solver unavailable");
     //    if (scaled_model_status == HighsModelStatus::OPTIMAL) {
     //      if
-    //      (ekk_instance_.scaled_solution_params_.num_primal_infeasibilities) {
+    //      (ekk_instance_.simplex_info_..num_primal_infeasibilities) {
     //        // Optimal with primal infeasibilities => primal infeasible
-    //        assert(ekk_instance_.scaled_solution_params_.num_primal_infeasibilities
+    //        assert(ekk_instance_.simplex_info_.num_primal_infeasibilities
     //        > 0); scaled_model_status =
     //        HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
     //      }

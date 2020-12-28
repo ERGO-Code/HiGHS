@@ -35,11 +35,6 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis);
 
-#ifdef HiGHSDEV
-void analyseSimplexAndHighsSolutionDifferences(
-    const HighsModelObject& highs_model_object);
-#endif
-
 #ifdef IPX_ON
 HighsStatus ipxSolutionToHighsSolution(
     FILE* logfile, const HighsLp& lp, const std::vector<double>& rhs,
