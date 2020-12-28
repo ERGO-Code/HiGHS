@@ -30,8 +30,6 @@ endif()
 
 # Note: Not ON by default yet
 option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
-option(EXP "Experimental mode: run unit tests with doctest." OFF)
-option(IPX "Use interior point solver" OFF)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
@@ -306,13 +304,17 @@ add_subdirectory(src)
 
 
 else()
-message(STATUS "FAST BUILD set to on.
+
+message(STATUS "FAST_BUILD set to on.
  Note: The HiGHS team is preparing for our first official release. If you
        experience any issues please let us know via email or on GitHub.")
 
 # todo: remove patch once release is official. 
 # add here to avoid compile errors.
 set(HIGHS_VERSION_PATCH 0)
+
+option(EXP "Experimental mode: run unit tests with doctest." OFF)
+option(IPX "Use interior point solver" OFF)
 
 # todo: ig branch ipx-m 
 if (IPX)
