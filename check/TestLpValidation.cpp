@@ -3,7 +3,7 @@
 #include "HighsLpUtils.h"
 #include "catch.hpp"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 // No commas in test case name.
 TEST_CASE("LP-validation", "[highs_data]") {
@@ -198,6 +198,22 @@ TEST_CASE("LP-validation", "[highs_data]") {
     highs.setHighsLogfile();
     highs.setHighsOutput();
   }
+
+  const HighsLp& internal_lp = highs.getLp();
+  double check_value;
+  REQUIRE(!highs.getCoeff(-1, 0, check_value));
+  REQUIRE(!highs.getCoeff(0, -1, check_value));
+  REQUIRE(!highs.getCoeff(internal_lp.numRow_, 0, check_value));
+  REQUIRE(!highs.getCoeff(0, internal_lp.numCol_, check_value));
+
+  const int check_col = 4;
+  const int check_row = 7;
+  REQUIRE(highs.getCoeff(check_col, check_row, check_value));
+  REQUIRE(check_value == 0);
+
+  const double value = -3;
+  REQUIRE(highs.getCoeff(check_row, check_col, check_value));
+  REQUIRE(check_value == value);
 
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);

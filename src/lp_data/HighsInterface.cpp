@@ -697,8 +697,8 @@ HighsStatus Highs::getRowsInterface(
 
 HighsStatus Highs::getCoefficientInterface(const int Xrow, const int Xcol,
                                            double& value) {
-  if (Xrow < 0 || Xrow > lp_.numRow_) return HighsStatus::Error;
-  if (Xcol < 0 || Xcol > lp_.numCol_) return HighsStatus::Error;
+  if (Xrow < 0 || Xrow >= lp_.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol >= lp_.numCol_) return HighsStatus::Error;
   value = 0;
   for (int el = lp_.Astart_[Xcol]; el < lp_.Astart_[Xcol + 1]; el++) {
     if (lp_.Aindex_[el] == Xrow) {

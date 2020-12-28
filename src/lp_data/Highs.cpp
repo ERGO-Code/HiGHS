@@ -1538,8 +1538,6 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
   HighsStatus call_status;
   if (!haveHmo("getCoeff")) return false;
   call_status = getCoefficientInterface(row, col, value);
-  assert(1 == 0);
-  call_status = HighsStatus::Error;
   return_status =
       interpretCallStatus(call_status, return_status, "getCoefficient");
   if (return_status == HighsStatus::Error) return false;
