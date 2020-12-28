@@ -936,7 +936,8 @@ void HighsSearch::solveSubMip(std::vector<double> colLower,
   submipsolver.rootbasis = &mipsolver.mipdata_->firstrootbasis;
   submipsolver.run();
 
-  if (!submipsolver.presolve_.data_.recovered_solution_.col_value.empty()) {
+  if (submipsolver.modelstatus_ != HighsModelStatus::PRIMAL_INFEASIBLE &&
+      !submipsolver.presolve_.data_.recovered_solution_.col_value.empty()) {
     bool integerfeasible;
     double solobj =
         checkSol(submipsolver.presolve_.data_.recovered_solution_.col_value,

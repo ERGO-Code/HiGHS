@@ -136,8 +136,6 @@ class HAggregator {
 
   void dropIfZero(int pos);
 
-  void addNonzero(int row, int col, double val);
-
   double getImpliedLb(int row, int col);
 
   double getImpliedUb(int row, int col);
@@ -205,6 +203,10 @@ class HAggregator {
     this->markowitz_tol = markowitz_tol;
   }
 
+  int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
+
+  void addNonzero(int row, int col, double val);
+
   void fromCSC(const std::vector<double>& Aval, const std::vector<int>& Aindex,
                const std::vector<int>& Astart);
 
@@ -226,6 +228,14 @@ class HAggregator {
              std::vector<int>& ARstart);
 
   PostsolveStack run();
+
+  void substitute(int substcol, int staycol, double offset, double scale);
+
+  void removeFixedCol(int col);
+
+  void removeRow(int row);
+
+  void removeRedundantRows(std::vector<uint8_t>& rowdeleted);
 };
 
 }  // namespace presolve

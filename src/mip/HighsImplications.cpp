@@ -1,6 +1,7 @@
 #include "mip/HighsImplications.h"
 
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsMipSolverData.h"
 
 bool HighsImplications::computeImplications(int col, bool val) {
   globaldomain.propagate();
@@ -111,26 +112,43 @@ bool HighsImplications::runProbing(int col, int& numboundchgs) {
     int d = 0;
 
     while (u < nimplicsup && d < nimplicsdown) {
-      if (implicsup[u] < implicsdown[d])
+      if (implicsup[u].column < implicsdown[d].column)
         ++u;
-      else if (implicsdown[d] < implicsup[u])
+      else if (implicsdown[d].column < implicsup[u].column)
         ++d;
       else {
-        assert(implicsup[u].boundtype == implicsdown[d].boundtype);
         assert(implicsup[u].column == implicsdown[d].column);
-        if ((implicsup[u].boundtype == HighsBoundType::Lower &&
-             implicsdown[d].boundval < implicsup[u].boundval) ||
-            (implicsup[u].boundtype == HighsBoundType::Upper &&
-             implicsdown[d].boundval > implicsup[u].boundval))
-          globaldomain.changeBound(implicsdown[d], -2);
+
+        if (implicsup[u].boundtype == implicsdown[d].boundtype) {
+          if ((implicsup[u].boundtype == HighsBoundType::Lower &&
+               implicsdown[d].boundval < implicsup[u].boundval) ||
+              (implicsup[u].boundtype == HighsBoundType::Upper &&
+               implicsdown[d].boundval > implicsup[u].boundval))
+            globaldomain.changeBound(implicsdown[d], -2);
+          else
+            globaldomain.changeBound(implicsup[u], -2);
+          assert(!globaldomain.infeasible());
+          ++numboundchgs;
+          globaldomain.propagate();
+          assert(!globaldomain.infeasible());
+          ++u;
+          ++d;
+        } else if (!globaldomain.isFixed(implicsup[u].column) &&
+                   !colsubstituted[implicsup[u].column] &&
+                   globaldomain.isFixing(implicsup[u]) &&
+                   globaldomain.isFixing(implicsdown[d])) {
+          HighsSubstitution substitution;
+          substitution.substcol = implicsup[u].column;
+          substitution.staycol = col;
+          substitution.offset = implicsdown[d].boundval;
+          substitution.scale = implicsup[u].boundval - implicsdown[d].boundval;
+          substitutions.push_back(substitution);
+          colsubstituted[implicsup[u].column] = true;
+
+        } else if ((int)implicsup[u].boundtype < (int)implicsdown[d].boundtype)
+          ++u;
         else
-          globaldomain.changeBound(implicsup[u], -2);
-        assert(!globaldomain.infeasible());
-        ++numboundchgs;
-        globaldomain.propagate();
-        assert(!globaldomain.infeasible());
-        ++u;
-        ++d;
+          ++d;
       }
     }
   }

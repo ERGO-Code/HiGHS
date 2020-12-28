@@ -25,9 +25,24 @@ class HighsImplications {
  public:
   HighsDomain& globaldomain;
   HighsCliqueTable& cliquetable;
+  std::vector<HighsSubstitution> substitutions;
+  std::vector<uint8_t> colsubstituted;
   HighsImplications(HighsDomain& globaldom, HighsCliqueTable& cliquetable)
       : globaldomain(globaldom), cliquetable(cliquetable) {
-    implicationmap.resize(2 * globaldom.colLower_.size(), {-1, 0});
+    int numcol = globaldom.colLower_.size();
+    implicationmap.resize(2 * numcol, {-1, 0});
+    colsubstituted.resize(numcol);
+  }
+
+  void reset() {
+    colsubstituted.clear();
+    colsubstituted.shrink_to_fit();
+    implicationmap.clear();
+    implicationmap.shrink_to_fit();
+
+    int numcol = globaldomain.colLower_.size();
+    implicationmap.resize(2 * numcol, {-1, 0});
+    colsubstituted.resize(numcol);
   }
 
   int getImplications(int col, bool val,
