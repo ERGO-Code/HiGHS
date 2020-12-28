@@ -400,6 +400,9 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     new_primal_feasibility_tolerance = HIGHS_CONST_INF;
     new_dual_feasibility_tolerance = HIGHS_CONST_INF;
   }
+
+  assert(int(scale.col_.size()) == lp.numCol_);
+  assert(int(scale.row_.size()) == lp.numRow_);
   for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
     // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
