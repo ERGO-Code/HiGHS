@@ -103,7 +103,10 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     }
   }
   // Possibly analyse the HiGHS basic solution
-  debugHighsBasicSolution(message, model);
+  //
+  // NB IPX may not yield a basic solution
+  if (model.basis_.valid_) 
+    debugHighsBasicSolution(message, model);
 
   return return_status;
 }

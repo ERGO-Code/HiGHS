@@ -366,10 +366,6 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-  printf("Called Highs::run()\n");fflush(stdout);
-  options_.output = stdout;
-  options_.logfile = stdout;
-  options_.message_level = 7;
   const int min_highs_debug_level = // HIGHS_DEBUG_LEVEL_MIN;
     //   HIGHS_DEBUG_LEVEL_CHEAP;
       HIGHS_DEBUG_LEVEL_COSTLY;
@@ -2171,7 +2167,6 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         HighsDebugStatus::LOGICAL_ERROR)
       return_status = HighsStatus::Error;
   }
-  options_.message_level = 0;
   return returnFromHighs(return_status);
 }
 

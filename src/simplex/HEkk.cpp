@@ -491,8 +491,7 @@ HighsStatus HEkk::initialiseForSolve() {
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
   initialiseBound(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
-  //  initialiseNonbasicWorkValue();
-  initialiseValueAndNonbasicMove();
+  initialiseNonbasicValueAndMove();
   computePrimal();                // Timed
   computeDual();                  // Timed
   computeSimplexInfeasible();     // Timed
@@ -1274,30 +1273,7 @@ void HEkk::initialiseLpRowCost() {
   }
 }
 
-void HEkk::initialiseNonbasicWorkValue() {
-  // Assign nonbasic values from bounds and (if necessary) nonbasicMove
-  const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
-  for (int iVar = 0; iVar < num_tot; iVar++) {
-    if (!simplex_basis_.nonbasicFlag_[iVar]) continue;
-    // Nonbasic variable
-    const double lower = simplex_info_.workLower_[iVar];
-    const double upper = simplex_info_.workUpper_[iVar];
-    double value;
-    if (lower == upper) {
-      value = lower;
-    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
-      value = lower;
-    } else if (simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
-      value = upper;
-    } else {
-      assert(simplex_basis_.nonbasicMove_[iVar] == NONBASIC_MOVE_ZE);
-      value = 0;
-    }
-    simplex_info_.workValue_[iVar] = value;
-  }
-}
-
-void HEkk::initialiseValueAndNonbasicMove() {
+void HEkk::initialiseNonbasicValueAndMove() {
   // Initialise workValue and nonbasicMove from nonbasicFlag and
   // bounds, except for boxed variables when nonbasicMove is used to
   // set workValue=workLower/workUpper

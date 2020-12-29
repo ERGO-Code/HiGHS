@@ -73,7 +73,7 @@ HighsStatus HEkkPrimal::solve() {
       simplex_info.primal_simplex_bound_perturbation_multiplier) {
     ekk_instance_.initialiseBound(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN,
                                   perturb_bounds);
-    ekk_instance_.initialiseNonbasicWorkValue();
+    ekk_instance_.initialiseNonbasicValueAndMove();
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();
   }
@@ -112,7 +112,7 @@ HighsStatus HEkkPrimal::solve() {
       if (simplex_info.backtracking_) {
         // Backtracking
         ekk_instance_.initialiseCost(SimplexAlgorithm::PRIMAL, solvePhase);
-        ekk_instance_.initialiseValueAndNonbasicMove();
+        ekk_instance_.initialiseNonbasicValueAndMove();
         // Can now forget that we might have been backtracking
         simplex_info.backtracking_ = false;
       }
@@ -471,7 +471,7 @@ void HEkkPrimal::cleanup() {
                     "primal-cleanup-shift\n");
   // Remove perturbation
   ekk_instance_.initialiseBound(SimplexAlgorithm::PRIMAL, solvePhase, false);
-  ekk_instance_.initialiseNonbasicWorkValue();
+  ekk_instance_.initialiseNonbasicValueAndMove();
   // Possibly take a copy of the original duals before recomputing them
   /*
   vector<double> original_baseValue;

@@ -208,8 +208,10 @@ HighsStatus ipxSolutionToHighsSolution(
   // Resize the HighsSolution
   highs_solution.col_value.resize(lp.numCol_);
   highs_solution.row_value.resize(lp.numRow_);
-  //  highs_solution.col_dual.resize(lp.numCol_);
-  //  highs_solution.row_dual.resize(lp.numRow_);
+  // No dual values are known, but ensure that the vectors are sized
+  // and assigned
+  highs_solution.col_dual.assign(lp.numCol_, 0.0);
+  highs_solution.row_dual.assign(lp.numRow_, 0.0);
 
   const std::vector<double>& ipx_col_value = ipx_x;
   const std::vector<double>& ipx_row_value = ipx_slack_vars;

@@ -242,7 +242,7 @@ HighsStatus HEkkDual::solve() {
       // infeasibilities canbe determined
       ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL,
                                     SOLVE_PHASE_UNKNOWN);
-      ekk_instance_.initialiseValueAndNonbasicMove();
+      ekk_instance_.initialiseNonbasicValueAndMove();
       // Determine the number of dual infeasibilities, and hence the solve phase
       ekk_instance_.computeDualInfeasibleWithFlips();
       dualInfeasCount = simplex_info.num_dual_infeasibilities;
@@ -250,7 +250,7 @@ HighsStatus HEkkDual::solve() {
       if (simplex_info.backtracking_) {
         // Backtracking, so set the bounds and primal values
         ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL, solvePhase);
-        ekk_instance_.initialiseValueAndNonbasicMove();
+        ekk_instance_.initialiseNonbasicValueAndMove();
         // Can now forget that we might have been backtracking
         simplex_info.backtracking_ = false;
       }
@@ -567,7 +567,7 @@ void HEkkDual::solvePhase1() {
                     "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
   ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL, solvePhase);
-  ekk_instance_.initialiseValueAndNonbasicMove();
+  ekk_instance_.initialiseNonbasicValueAndMove();
 
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
@@ -714,7 +714,7 @@ void HEkkDual::solvePhase1() {
     // phase 1
     simplex_info.allow_cost_perturbation = true;
     ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL, solvePhase, true);
-    ekk_instance_.initialiseValueAndNonbasicMove();
+    ekk_instance_.initialiseNonbasicValueAndMove();
   }
   return;
 }
