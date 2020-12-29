@@ -20,8 +20,7 @@ static size_t support_hash(const int* Rindex, const int Rlen) {
 int HighsCutPool::replaceSupportDuplicate(size_t hash, int* Rindex,
                                           double* Rvalue, int Rlen,
                                           double rhs) {
-  size_t sh = support_hash(Rindex, Rlen);
-  auto range = supportmap.equal_range(sh);
+  auto range = supportmap.equal_range(hash);
   for (auto it = range.first; it != range.second; ++it) {
     int rowindex = it->second;
     int start = matrix_.getRowStart(rowindex);

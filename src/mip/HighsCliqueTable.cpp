@@ -4,7 +4,6 @@
 #include <cassert>
 #include <cstdio>
 #include <numeric>
-#include <random>
 
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
@@ -12,7 +11,8 @@
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsSplay.h"
 
-//#define ADD_ZERO_WEIGHT_VARS
+#define ADD_ZERO_WEIGHT_VARS
+
 int HighsCliqueTable::splay(int cliqueid, int root) {
   auto get_left = [&](int node) -> int& { return cliquesets[node].left; };
   auto get_right = [&](int node) -> int& { return cliquesets[node].right; };
@@ -202,18 +202,42 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
                                            const CliqueVar* X, int Xlen) {
   double w = data.wR;
 
-  for (int i = 0; i != Plen; ++i) {
-    w += data.P[i].weight(data.sol);
-    if (w >= data.minW) break;
-  }
+  for (int i = 0; i != Plen; ++i) w += data.P[i].weight(data.sol);
 
-  if (w < data.minW) return;
+  if (w < data.minW - data.feastol) return;
 
   if (Plen == 0 && Xlen == 0) {
-    data.cliques.push_back(data.R);
+    std::vector<CliqueVar> clique = data.R;
+
+#ifdef ADD_ZERO_WEIGHT_VARS
+    auto extensionend = data.Z.end();
+    for (CliqueVar v : clique) {
+      extensionend =
+          std::partition(data.Z.begin(), extensionend,
+                         [&](CliqueVar z) { return haveCommonClique(v, z); });
+      if (data.Z.begin() == extensionend) break;
+    }
+
+    if (data.Z.begin() != extensionend) {
+      std::shuffle(data.Z.begin(), extensionend, randgen);
+
+      for (auto it = data.Z.begin(); it != extensionend; ++it) {
+        extensionend = std::partition(it + 1, extensionend, [&](CliqueVar z) {
+          return haveCommonClique(*it, z);
+        });
+      }
+
+      clique.insert(clique.end(), data.Z.begin(), extensionend);
+    }
+#endif
+    if (data.minW < w - data.feastol) {
+      data.maxcliques -= data.cliques.size();
+      data.cliques.clear();
+      data.minW = w;
+    }
+    data.cliques.emplace_back(std::move(clique));
     // do not further search for cliques that are violated less than this
     // current clique
-    data.minW = w;
     return;
   }
 
@@ -279,15 +303,9 @@ void HighsCliqueTable::bronKerboschRecurse(BronKerboschData& data, int Plen,
     // remove v from R restore the weight and continue the loop in this call
     data.R.pop_back();
     data.wR -= wv;
-#ifdef ADD_ZERO_WEIGHT_VARS
-    // we stop after the first recursive call of a variable that has weight zero
-    // the rationale here is, that we want to separate cliques with high
-    // violation and the variables with weight zero do not contribute to that.
-    // Therefore we just extend a violated clique that is maximal for the
-    // variables with nonzero weights to a single maximal clique on all
-    // variables
-    if (wv <= 1e-9) return;
-#endif
+
+    w -= wv;
+    if (w < data.minW) return;
     // find the position of v in the vertices removed from P for the recursive
     // call
     // and also remove it from the set P for this call
@@ -1078,8 +1096,18 @@ void HighsCliqueTable::separateCliques(const std::vector<double>& sol,
   for (int i = 0; i != numcols; ++i) {
     if (colsubstituted[i]) continue;
 #ifdef ADD_ZERO_WEIGHT_VARS
-    if (numcliquesvar[CliqueVar(i, 0).index()] != 0) data.P.emplace_back(i, 0);
-    if (numcliquesvar[CliqueVar(i, 1).index()] != 0) data.P.emplace_back(i, 1);
+    if (numcliquesvar[CliqueVar(i, 0).index()] != 0) {
+      if (CliqueVar(i, 0).weight(sol) > feastol)
+        data.P.emplace_back(i, 0);
+      else
+        data.Z.emplace_back(i, 0);
+    }
+    if (numcliquesvar[CliqueVar(i, 1).index()] != 0) {
+      if (CliqueVar(i, 1).weight(sol) > feastol)
+        data.P.emplace_back(i, 1);
+      else
+        data.Z.emplace_back(i, 1);
+    }
 #else
     if (numcliquesvar[CliqueVar(i, 0).index()] != 0 &&
         CliqueVar(i, 0).weight(sol) > feastol)
@@ -1090,7 +1118,16 @@ void HighsCliqueTable::separateCliques(const std::vector<double>& sol,
 #endif
   }
 
+  // auto t1 = std::chrono::high_resolution_clock::now();
   bronKerboschRecurse(data, data.P.size(), nullptr, 0);
+  // auto t2 = std::chrono::high_resolution_clock::now();
+
+  // printf(
+  //     "bron kerbosch: %d calls, %d cliques, %ldms\n", data.ncalls,
+  //     int(data.cliques.size()),
+  //     std::chrono::duration_cast<std::chrono::milliseconds>(t2 -
+  //     t1).count());
+
   bool runcliquesubsumption = false;
   std::vector<int> inds;
   std::vector<double> vals;
@@ -1357,7 +1394,6 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
   std::vector<uint16_t> cliquehits(cliques.size());
   std::vector<int> cliquehitinds;
 
-  std::mt19937 g(cliques.size());
   int numcliqueslots = cliques.size();
 
   for (int k = 0; k != numcliqueslots; ++k) {
@@ -1425,7 +1461,7 @@ void HighsCliqueTable::runCliqueMerging(HighsDomain& globaldomain) {
     if (extensionvars.empty()) continue;
 
     // todo, shuffle extension vars?
-    std::shuffle(extensionvars.begin(), extensionvars.end(), g);
+    std::shuffle(extensionvars.begin(), extensionvars.end(), randgen);
     size_t i = 0;
     while (i < extensionvars.size()) {
       CliqueVar extvar = extensionvars[i];
