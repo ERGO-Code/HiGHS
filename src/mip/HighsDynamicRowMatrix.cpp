@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <cassert>
-#include <numeric>
 #include <cstddef>
+#include <numeric>
 
 HighsDynamicRowMatrix::HighsDynamicRowMatrix(int ncols) {
   Ahead_.resize(ncols, -1);
