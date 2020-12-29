@@ -118,8 +118,9 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       dual_infeasibility = fabs(dual);
     }
     if (dual_infeasibility > 0) {
-      if (dual_infeasibility > dual_feasibility_tolerance)
+      if (dual_infeasibility > dual_feasibility_tolerance) {
         num_dual_infeasibility++;
+      }
       max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibility += dual_infeasibility;
     }
@@ -373,6 +374,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   bool require_dual_feasible_in_dual_simplex =
       algorithm == SimplexAlgorithm::DUAL &&
       ekk_instance.simplex_lp_status_.has_fresh_rebuild &&
+      ekk_instance.simplex_info_.allow_cost_perturbation &&
       ekk_instance.scaled_model_status_ != HighsModelStatus::DUAL_INFEASIBLE &&
       ekk_instance.scaled_model_status_ !=
           HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
@@ -385,12 +387,10 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
                     "ekkDebugSimplex - %s: Iteration %d Should be dual "
                     "feasible, but num / max / "
-                    "sum dual infeasibility is %d / %g / %g",
+                    "sum dual infeasibility is %d / %g / %g; Phase = %d; status = %s",
                     message.c_str(), iteration_count, num_dual_infeasibility,
-                    max_dual_infeasibility, sum_dual_infeasibility);
-    printf("Phase = %d; status = %s\n", phase,
-           utilHighsModelStatusToString(ekk_instance.scaled_model_status_)
-               .c_str());
+                    max_dual_infeasibility, sum_dual_infeasibility, phase,
+		    utilHighsModelStatusToString(ekk_instance.scaled_model_status_).c_str());
     assert(!illegal_dual_infeasibility);
     return HighsDebugStatus::LOGICAL_ERROR;
   }
