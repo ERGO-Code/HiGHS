@@ -836,7 +836,8 @@ HighsStatus Highs::changeColBoundsInterface(
     }
   }
   if (highs_model_object.basis_.valid_) {
-    // Update status of nonbasic variables whose bounds have changed
+    // Update HiGHS basis status and (any) simplex move status of
+    // nonbasic variables whose bounds have changed
     return_status =
         interpretCallStatus(setNonbasicStatusInterface(index_collection, true),
                             return_status, "setNonbasicStatusInterface");
@@ -908,7 +909,8 @@ HighsStatus Highs::changeRowBoundsInterface(
     }
   }
   if (highs_model_object.basis_.valid_) {
-    // Update status of nonbasic variables whose bounds have changed
+    // Update HiGHS basis status and (any) simplex move status of
+    // nonbasic variables whose bounds have changed
     return_status =
         interpretCallStatus(setNonbasicStatusInterface(index_collection, false),
                             return_status, "setNonbasicStatusInterface");

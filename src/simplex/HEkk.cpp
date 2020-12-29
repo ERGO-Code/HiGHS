@@ -491,7 +491,8 @@ HighsStatus HEkk::initialiseForSolve() {
   allocateWorkAndBaseArrays();
   initialiseCost(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
   initialiseBound(SimplexAlgorithm::PRIMAL, SOLVE_PHASE_UNKNOWN, false);
-  initialiseNonbasicWorkValue();
+  //  initialiseNonbasicWorkValue();
+  initialiseValueAndNonbasicMove();
   computePrimal();                // Timed
   computeDual();                  // Timed
   computeSimplexInfeasible();     // Timed

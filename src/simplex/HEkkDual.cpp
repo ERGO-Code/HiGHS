@@ -242,6 +242,7 @@ HighsStatus HEkkDual::solve() {
       // infeasibilities canbe determined
       ekk_instance_.initialiseBound(SimplexAlgorithm::DUAL,
                                     SOLVE_PHASE_UNKNOWN);
+      ekk_instance_.initialiseValueAndNonbasicMove();
       // Determine the number of dual infeasibilities, and hence the solve phase
       ekk_instance_.computeDualInfeasibleWithFlips();
       dualInfeasCount = simplex_info.num_dual_infeasibilities;

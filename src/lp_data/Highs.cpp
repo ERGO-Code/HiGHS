@@ -366,23 +366,27 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-#ifdef HiGHSDEV
-  const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
-      HIGHS_DEBUG_LEVEL_CHEAP;
-  //    HIGHS_DEBUG_LEVEL_COSTLY;
+  printf("Called Highs::run()\n");fflush(stdout);
+  options_.output = stdout;
+  options_.logfile = stdout;
+  options_.message_level = 7;
+  const int min_highs_debug_level = // HIGHS_DEBUG_LEVEL_MIN;
+    //   HIGHS_DEBUG_LEVEL_CHEAP;
+      HIGHS_DEBUG_LEVEL_COSTLY;
   //      HIGHS_DEBUG_LEVEL_EXPENSIVE;
   //  HIGHS_DEBUG_LEVEL_MAX;
-  if (options_.highs_debug_level < min_highs_debug_level) {
+#ifdef HiGHSDEV
+  if (options_.highs_debug_level < min_highs_debug_level)
     printf(
         "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
         "from %d to %d\n",
         options_.highs_debug_level, min_highs_debug_level);
-    options_.highs_debug_level = min_highs_debug_level;
-  }
   writeModel("HighsRunModel.mps");
   //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
   //  "LpMatrix", lp_);
 #endif
+  if (options_.highs_debug_level < min_highs_debug_level)
+    options_.highs_debug_level = min_highs_debug_level;
 
 #ifdef OPENMP
   omp_max_threads = omp_get_max_threads();
@@ -2167,6 +2171,7 @@ HighsStatus Highs::returnFromRun(const HighsStatus run_return_status) {
         HighsDebugStatus::LOGICAL_ERROR)
       return_status = HighsStatus::Error;
   }
+  options_.message_level = 0;
   return returnFromHighs(return_status);
 }
 

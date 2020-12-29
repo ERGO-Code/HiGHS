@@ -152,9 +152,9 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   for (int iRow = 0; iRow < num_row; iRow++) {
     int iVar = simplex_basis.basicIndex_[iRow];
     // For basic variables, check that the nonbasic flag isn't set,
-    // that baseLower/Upper are correct, that the dual is zero and, in
-    // primal phase 1, that the cost is correct. Determine primal
-    // infeasibilities
+    // that nonbasicMove is zero, that baseLower/Upper are correct,
+    // that the dual is zero and, in primal phase 1, that the cost is
+    // correct. Determine primal infeasibilities
     bool nonbasicFlag_error =
         simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE;
     if (nonbasicFlag_error) {
@@ -164,6 +164,16 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                       message.c_str(), iteration_count, iVar,
                       simplex_basis.nonbasicFlag_[iVar]);
       assert(!nonbasicFlag_error);
+      return HighsDebugStatus::LOGICAL_ERROR;
+    }
+    bool nonbasicMove_error = simplex_basis.nonbasicMove_[iVar];
+    if (nonbasicMove_error) {
+      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                      "ekkDebugSimplex - %s: Iteration %d Basic variable %d "
+                      "has nonbasicMove = %d",
+                      message.c_str(), iteration_count, iVar,
+                      simplex_basis.nonbasicMove_[iVar]);
+      assert(!nonbasicMove_error);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
     double workLower = simplex_info.workLower_[iVar];
