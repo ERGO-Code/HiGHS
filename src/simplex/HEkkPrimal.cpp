@@ -53,16 +53,16 @@ HighsStatus HEkkPrimal::solve() {
   // and the sum of dual infeasiblilities will be very much larger for
   // non-trivial LPs that are primal feasible for a logical or crash
   // basis.
-  const bool near_optimal = simplex_info.num_primal_infeasibilities == 0 &&
-                            simplex_info.sum_dual_infeasibilities < 1;
+  const bool near_optimal = simplex_info.num_primal_infeasibility == 0 &&
+                            simplex_info.sum_dual_infeasibility < 1;
   if (near_optimal)
     HighsPrintMessage(
         options.output, options.message_level, ML_DETAILED,
         "Primal feasible and num / max / sum dual infeasibilities are %d / %g "
         "/ %g, so near-optimal\n",
-        simplex_info.num_dual_infeasibilities,
+        simplex_info.num_dual_infeasibility,
         simplex_info.max_dual_infeasibility,
-        simplex_info.sum_dual_infeasibilities);
+        simplex_info.sum_dual_infeasibility);
 
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
@@ -77,9 +77,9 @@ HighsStatus HEkkPrimal::solve() {
     ekk_instance_.computePrimal();
     ekk_instance_.computeSimplexPrimalInfeasible();
   }
-  int num_primal_infeasibilities =
-      ekk_instance_.simplex_info_.num_primal_infeasibilities;
-  solvePhase = num_primal_infeasibilities > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
+  int num_primal_infeasibility =
+      ekk_instance_.simplex_info_.num_primal_infeasibility;
+  solvePhase = num_primal_infeasibility > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
 
   if (ekkDebugOkForSolve(ekk_instance_, algorithm, solvePhase,
                          ekk_instance_.scaled_model_status_) ==
@@ -105,10 +105,10 @@ HighsStatus HEkkPrimal::solve() {
       // Determine the number of primal infeasibilities, and hence the solve
       // phase
       ekk_instance_.computeSimplexPrimalInfeasible();
-      num_primal_infeasibilities =
-          ekk_instance_.simplex_info_.num_primal_infeasibilities;
+      num_primal_infeasibility =
+          ekk_instance_.simplex_info_.num_primal_infeasibility;
       solvePhase =
-          num_primal_infeasibilities > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
+          num_primal_infeasibility > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
       if (simplex_info.backtracking_) {
         // Backtracking
         ekk_instance_.initialiseCost(SimplexAlgorithm::PRIMAL, solvePhase);
@@ -345,7 +345,7 @@ void HEkkPrimal::solvePhase1() {
   // Determine whether primal infeasiblility has been identified
   if (variable_in < 0) {
     // Optimal in phase 1, so should have primal infeasiblilities
-    assert(ekk_instance_.simplex_info_.num_primal_infeasibilities > 0);
+    assert(ekk_instance_.simplex_info_.num_primal_infeasibility > 0);
     ekk_instance_.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     solvePhase = SOLVE_PHASE_EXIT;
   }
@@ -416,7 +416,7 @@ void HEkkPrimal::solvePhase2() {
                       "primal-phase-2-optimal\n");
     // Remove any bound perturbations and see if basis is still primal feasible
     cleanup();
-    if (ekk_instance_.simplex_info_.num_primal_infeasibilities > 0) {
+    if (ekk_instance_.simplex_info_.num_primal_infeasibility > 0) {
       // There are primal infeasiblities, so consider performing dual
       // simplex iterations to get primal feasibility
       solvePhase = SOLVE_PHASE_CLEANUP;
@@ -569,7 +569,7 @@ void HEkkPrimal::rebuild() {
   ekk_instance_.computePrimal();
   if (solvePhase == SOLVE_PHASE_2) phase2CorrectPrimal();
   getBasicPrimalInfeasibility();
-  if (simplex_info.num_primal_infeasibilities > 0) {
+  if (simplex_info.num_primal_infeasibility > 0) {
     // Primal infeasibilities so should be in phase 1
     if (solvePhase == SOLVE_PHASE_2) {
       HighsLogMessage(
@@ -709,7 +709,7 @@ void HEkkPrimal::iterate() {
   // reinvert.
   update();
   // Crude way to force rebuild if there are no infeasibilities in phase 1
-  if (!ekk_instance_.simplex_info_.num_primal_infeasibilities &&
+  if (!ekk_instance_.simplex_info_.num_primal_infeasibility &&
       solvePhase == SOLVE_PHASE_1)
     rebuild_reason = REBUILD_REASON_UPDATE_LIMIT_REACHED;
 
@@ -1606,9 +1606,9 @@ void HEkkPrimal::phase1UpdatePrimal() {
     if (base) cost *= 1 + base * simplex_info.numTotRandomValue_[iRow];
     simplex_info.workCost_[iCol] = cost;
     if (was_cost) {
-      if (!cost) simplex_info.num_primal_infeasibilities--;
+      if (!cost) simplex_info.num_primal_infeasibility--;
     } else {
-      if (cost) simplex_info.num_primal_infeasibilities++;
+      if (cost) simplex_info.num_primal_infeasibility++;
     }
     double delta_cost = cost - was_cost;
     if (delta_cost) {
@@ -1641,20 +1641,21 @@ void HEkkPrimal::considerInfeasibleValueIn() {
   if (!bound_violated) return;
   // The primal value of the entering variable is not feasible
   if (solvePhase == SOLVE_PHASE_1) {
-    simplex_info.num_primal_infeasibilities++;
+    simplex_info.num_primal_infeasibility++;
     double cost = bound_violated;
     if (base) cost *= 1 + base * simplex_info.numTotRandomValue_[row_out];
     simplex_info.workCost_[variable_in] = cost;
     simplex_info.workDual_[variable_in] += cost;
   } else if (primal_correction_strategy ==
              SIMPLEX_PRIMAL_CORRECTION_STRATEGY_NONE) {
+    // @primal_infeasibility calculation
     double primal_infeasibility;
     if (bound_violated < 0) {
       primal_infeasibility = lower - value_in;
     } else {
       primal_infeasibility = value_in - upper;
     }
-    simplex_info.num_primal_infeasibilities++;
+    simplex_info.num_primal_infeasibility++;
     printf(
         "Entering variable has primal infeasibility of %g for [%g, %g, %g]\n",
         primal_infeasibility, lower, value_in, upper);
@@ -1723,6 +1724,7 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
     if (!bound_violated) continue;
     // A bound is violated
     if (primal_correction_strategy == SIMPLEX_PRIMAL_CORRECTION_STRATEGY_NONE) {
+      // @primal_infeasibility calculation
       double primal_infeasibility;
       if (bound_violated < 0) {
         primal_infeasibility = lower - value;
@@ -1732,7 +1734,7 @@ void HEkkPrimal::phase2UpdatePrimal(const bool initialise) {
       max_local_primal_infeasibility =
           max(primal_infeasibility, max_local_primal_infeasibility);
       if (primal_infeasibility > primal_feasibility_tolerance) {
-        simplex_info.num_primal_infeasibilities++;
+        simplex_info.num_primal_infeasibility++;
         primal_infeasible = true;
       }
     } else if (ignore_bounds) {
@@ -2108,12 +2110,12 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->pivot_value_from_row = alpha_row;
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_primal_objective_value;
-  analysis->num_primal_infeasibilities =
-      simplex_info.num_primal_infeasibilities;
-  analysis->num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
-  analysis->sum_primal_infeasibilities =
-      simplex_info.sum_primal_infeasibilities;
-  analysis->sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;
+  analysis->num_primal_infeasibility =
+      simplex_info.num_primal_infeasibility;
+  analysis->num_dual_infeasibility = simplex_info.num_dual_infeasibility;
+  analysis->sum_primal_infeasibility =
+      simplex_info.sum_primal_infeasibility;
+  analysis->sum_dual_infeasibility = simplex_info.sum_dual_infeasibility;
   if ((analysis->edge_weight_mode == DualEdgeWeightMode::DEVEX) &&
       (num_devex_iterations == 0))
     analysis->num_devex_framework++;
@@ -2260,18 +2262,19 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
   const double primal_feasibility_tolerance =
       ekk_instance_.options_.primal_feasibility_tolerance;
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
-  int& num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
+  int& num_primal_infeasibility = simplex_info.num_primal_infeasibility;
   double& max_primal_infeasibility = simplex_info.max_primal_infeasibility;
-  double& sum_primal_infeasibilities = simplex_info.sum_primal_infeasibilities;
-  const int updated_num_primal_infeasibilities = num_primal_infeasibilities;
-  num_primal_infeasibilities = 0;
+  double& sum_primal_infeasibility = simplex_info.sum_primal_infeasibility;
+  const int updated_num_primal_infeasibility = num_primal_infeasibility;
+  num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
-  sum_primal_infeasibilities = 0;
+  sum_primal_infeasibility = 0;
 
   for (int iRow = 0; iRow < num_row; iRow++) {
     double value = simplex_info.baseValue_[iRow];
     double lower = simplex_info.baseLower_[iRow];
     double upper = simplex_info.baseUpper_[iRow];
+    // @primal_infeasibility calculation
     double primal_infeasibility = 0;
     if (value < lower - primal_feasibility_tolerance) {
       primal_infeasibility = lower - value;
@@ -2280,23 +2283,23 @@ void HEkkPrimal::getBasicPrimalInfeasibility() {
     }
     if (primal_infeasibility > 0) {
       if (primal_infeasibility > primal_feasibility_tolerance)
-        num_primal_infeasibilities++;
+        num_primal_infeasibility++;
       max_primal_infeasibility =
           std::max(primal_infeasibility, max_primal_infeasibility);
-      sum_primal_infeasibilities += primal_infeasibility;
+      sum_primal_infeasibility += primal_infeasibility;
     }
   }
-  if (updated_num_primal_infeasibilities >= 0) {
+  if (updated_num_primal_infeasibility >= 0) {
     // The number of primal infeasibliities should be correct
-    bool num_primal_infeasibilities_ok =
-        num_primal_infeasibilities == updated_num_primal_infeasibilities;
-    if (!num_primal_infeasibilities_ok) {
+    bool num_primal_infeasibility_ok =
+        num_primal_infeasibility == updated_num_primal_infeasibility;
+    if (!num_primal_infeasibility_ok) {
       printf(
-          "In iteration %d: num_primal_infeasibilities = %d != %d = "
-          "updated_num_primal_infeasibilities\n",
-          ekk_instance_.iteration_count_, num_primal_infeasibilities,
-          updated_num_primal_infeasibilities);
-      assert(num_primal_infeasibilities_ok);
+          "In iteration %d: num_primal_infeasibility = %d != %d = "
+          "updated_num_primal_infeasibility\n",
+          ekk_instance_.iteration_count_, num_primal_infeasibility,
+          updated_num_primal_infeasibility);
+      assert(num_primal_infeasibility_ok);
     }
   }
   analysis->simplexTimerStop(ComputePrIfsClock);

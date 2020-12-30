@@ -1918,12 +1918,12 @@ bool Highs::getHighsModelStatusAndInfo(const int solved_hmo) {
   info_.primal_status = solution_params.primal_status;
   info_.dual_status = solution_params.dual_status;
   info_.objective_function_value = solution_params.objective_function_value;
-  info_.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  info_.num_primal_infeasibilities = solution_params.num_primal_infeasibility;
   info_.max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  info_.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
-  info_.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  info_.sum_primal_infeasibilities = solution_params.sum_primal_infeasibility;
+  info_.num_dual_infeasibilities = solution_params.num_dual_infeasibility;
   info_.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibility;
   return true;
 }
 

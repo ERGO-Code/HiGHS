@@ -374,21 +374,20 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
       options.primal_feasibility_tolerance;
   const double dual_feasibility_tolerance = options.dual_feasibility_tolerance;
 
-  int& num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  int& num_primal_infeasibility = solution_params.num_primal_infeasibility;
   double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  double& sum_primal_infeasibilities =
-      solution_params.sum_primal_infeasibilities;
-  int& num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibility;
+  int& num_dual_infeasibility = solution_params.num_dual_infeasibility;
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  double& sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
 
   // Zero the counts of unscaled primal and dual infeasibilities
-  num_primal_infeasibilities = 0;
+  num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
-  sum_primal_infeasibilities = 0;
-  num_dual_infeasibilities = 0;
+  sum_primal_infeasibility = 0;
+  num_dual_infeasibility = 0;
   max_dual_infeasibility = 0;
-  sum_dual_infeasibilities = 0;
+  sum_dual_infeasibility = 0;
 
   // If the scaled LP has beeen solved to optimality, look at the
   // scaled solution and, if there are infeasibilities, identify new
@@ -442,7 +441,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= dual_feasibility_tolerance) {
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
         if (get_new_scaled_feasibility_tolerances) {
           double multiplier = dual_feasibility_tolerance / scale_mu;
           //          double scaled_value = simplex_info.workValue_[iVar];
@@ -457,7 +456,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
         }
       }
       max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
   }
   // Look at the primal infeasibilities of basic variables
@@ -479,6 +478,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     double scaled_lower = simplex_info.baseLower_[ix];
     double scaled_upper = simplex_info.baseUpper_[ix];
     double scaled_value = simplex_info.baseValue_[ix];
+    // @primal_infeasibility calculation
     double scaled_primal_infeasibility = 0;
     if (scaled_value < scaled_lower - primal_feasibility_tolerance) {
       scaled_primal_infeasibility = scaled_lower - scaled_value;
@@ -487,7 +487,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     }
     double primal_infeasibility = scaled_primal_infeasibility * scale_mu;
     if (primal_infeasibility > primal_feasibility_tolerance) {
-      num_primal_infeasibilities++;
+      num_primal_infeasibility++;
       if (get_new_scaled_feasibility_tolerances) {
         double multiplier = primal_feasibility_tolerance / scale_mu;
         //         HighsLogMessage(logfile, HighsMessageType::INFO,
@@ -502,7 +502,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     }
     max_primal_infeasibility =
         max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
+    sum_primal_infeasibility += primal_infeasibility;
   }
 }
 

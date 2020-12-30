@@ -152,12 +152,12 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   bool infeasible = false;
   bool unbounded = false;
 
-  solution_params.num_primal_infeasibilities = 0;
+  solution_params.num_primal_infeasibility = 0;
   solution_params.max_primal_infeasibility = 0;
-  solution_params.sum_primal_infeasibilities = 0;
-  solution_params.num_dual_infeasibilities = 0;
+  solution_params.sum_primal_infeasibility = 0;
+  solution_params.num_dual_infeasibility = 0;
   solution_params.max_dual_infeasibility = 0;
-  solution_params.sum_dual_infeasibilities = 0;
+  solution_params.sum_dual_infeasibility = 0;
 
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     double cost = lp.colCost_[iCol];
@@ -222,10 +222,10 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     solution.col_dual[iCol] = (int)lp.sense_ * dual;
     basis.col_status[iCol] = status;
     objective += value * cost;
-    solution_params.sum_primal_infeasibilities += primal_infeasibility;
+    solution_params.sum_primal_infeasibility += primal_infeasibility;
     if (primal_infeasibility > primal_feasibility_tolerance) {
       infeasible = true;
-      solution_params.num_primal_infeasibilities++;
+      solution_params.num_primal_infeasibility++;
       solution_params.max_primal_infeasibility =
           max(primal_infeasibility, solution_params.max_primal_infeasibility);
     }

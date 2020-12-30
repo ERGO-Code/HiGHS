@@ -118,8 +118,8 @@ HighsStatus HEkk::solve() {
       options_.logfile, HighsMessageType::INFO,
       "EKK %s simplex solver returns %d primal and %d dual infeasibilities: "
       "Status %s",
-      algorithm.c_str(), simplex_info_.num_primal_infeasibilities,
-      simplex_info_.num_dual_infeasibilities,
+      algorithm.c_str(), simplex_info_.num_primal_infeasibility,
+      simplex_info_.num_dual_infeasibility,
       utilHighsModelStatusToString(scaled_model_status_).c_str());
   if (scaled_model_status_ == HighsModelStatus::NOTSET) {
     call_status = cleanup();
@@ -142,9 +142,9 @@ HighsStatus HEkk::cleanup() {
   // infeasiblilities, but not both
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  if (simplex_info_.num_primal_infeasibilities) {
+  if (simplex_info_.num_primal_infeasibility) {
     // Primal infeasibilities, so should be just dual phase 2
-    assert(!simplex_info_.num_dual_infeasibilities);
+    assert(!simplex_info_.num_dual_infeasibility);
     // Use dual simplex (phase 2) with Devex pricing and no perturbation
     simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL;
     simplex_info_.dual_simplex_cost_perturbation_multiplier = 0;
@@ -160,7 +160,7 @@ HighsStatus HEkk::cleanup() {
     if (return_status == HighsStatus::Error) return return_status;
   } else {
     // Dual infeasibilities, so should be just primal phase 2
-    assert(!simplex_info_.num_primal_infeasibilities);
+    assert(!simplex_info_.num_primal_infeasibility);
     // Use primal simplex (phase 2) with no perturbation
     simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
     simplex_info_.primal_simplex_bound_perturbation_multiplier = 0;
@@ -458,17 +458,17 @@ HighsSolutionParams HEkk::getSolutionParams() {
   // Output from solution analysis method
   solution_params.objective_function_value =
       simplex_info_.primal_objective_value;
-  solution_params.num_primal_infeasibilities =
-      simplex_info_.num_primal_infeasibilities;
+  solution_params.num_primal_infeasibility =
+      simplex_info_.num_primal_infeasibility;
   solution_params.max_primal_infeasibility =
       simplex_info_.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibilities =
-      simplex_info_.sum_primal_infeasibilities;
-  solution_params.num_dual_infeasibilities =
-      simplex_info_.num_dual_infeasibilities;
+  solution_params.sum_primal_infeasibility =
+      simplex_info_.sum_primal_infeasibility;
+  solution_params.num_dual_infeasibility =
+      simplex_info_.num_dual_infeasibility;
   solution_params.max_dual_infeasibility = simplex_info_.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibilities =
-      simplex_info_.sum_dual_infeasibilities;
+  solution_params.sum_dual_infeasibility =
+      simplex_info_.sum_dual_infeasibility;
   return solution_params;
 }
 
@@ -499,8 +499,8 @@ HighsStatus HEkk::initialiseForSolve() {
   computePrimalObjectiveValue();  // Timed
   simplex_lp_status_.valid = true;
 
-  bool primal_feasible = simplex_info_.num_primal_infeasibilities == 0;
-  bool dual_feasible = simplex_info_.num_dual_infeasibilities == 0;
+  bool primal_feasible = simplex_info_.num_primal_infeasibility == 0;
+  bool dual_feasible = simplex_info_.num_dual_infeasibility == 0;
   scaled_model_status_ = HighsModelStatus::NOTSET;
   if (primal_feasible && dual_feasible)
     scaled_model_status_ = HighsModelStatus::OPTIMAL;
@@ -582,13 +582,13 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // dual feasibility
   //
   int simplex_strategy = options.simplex_strategy;
-  if (simplex_info.num_primal_infeasibilities > 0) {
+  if (simplex_info.num_primal_infeasibility > 0) {
     // Not primal feasible, so use dual simplex if choice is permitted
     if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
       simplex_strategy = SIMPLEX_STRATEGY_DUAL;
   } else {
     // Primal feasible - so must be dual infeasible
-    assert(simplex_info.num_dual_infeasibilities > 0);
+    assert(simplex_info.num_dual_infeasibility > 0);
     // Use primal simplex if choice is permitted
     if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
       simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
@@ -1520,9 +1520,9 @@ void HEkk::computePrimal() {
     simplex_info_.baseUpper_[i] = simplex_info_.workUpper_[iCol];
   }
   // Indicate that the primal infeasiblility information isn't known
-  simplex_info_.num_primal_infeasibilities = illegal_infeasibility_count;
+  simplex_info_.num_primal_infeasibility = illegal_infeasibility_count;
   simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
-  simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
+  simplex_info_.sum_primal_infeasibility = illegal_infeasibility_measure;
 
   // Now have basic primals
   simplex_lp_status_.has_basic_primal_values = true;
@@ -1561,9 +1561,9 @@ void HEkk::computeDual() {
       simplex_info_.workDual_[i] -= dual_col.array[i - simplex_lp_.numCol_];
   }
   // Indicate that the dual infeasiblility information isn't known
-  simplex_info_.num_dual_infeasibilities = illegal_infeasibility_count;
+  simplex_info_.num_dual_infeasibility = illegal_infeasibility_count;
   simplex_info_.max_dual_infeasibility = illegal_infeasibility_measure;
-  simplex_info_.sum_dual_infeasibilities = illegal_infeasibility_measure;
+  simplex_info_.sum_dual_infeasibility = illegal_infeasibility_measure;
 
   // Now have nonbasic duals
   simplex_lp_status_.has_nonbasic_dual_values = true;
@@ -1583,9 +1583,9 @@ void HEkk::computeDualInfeasibleWithFlips() {
   // Possibly verify that nonbasicMove is correct for fixed variables
   //  debugFixedNonbasicMove(ekk_instance_);
 
-  int num_dual_infeasibilities = 0;
+  int num_dual_infeasibility = 0;
   double max_dual_infeasibility = 0;
-  double sum_dual_infeasibilities = 0;
+  double sum_dual_infeasibility = 0;
   const int num_tot = simplex_lp_.numCol_ + simplex_lp_.numRow_;
 
   for (int iVar = 0; iVar < num_tot; iVar++) {
@@ -1609,15 +1609,15 @@ void HEkk::computeDualInfeasibleWithFlips() {
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
   }
-  simplex_info_.num_dual_infeasibilities = num_dual_infeasibilities;
+  simplex_info_.num_dual_infeasibility = num_dual_infeasibility;
   simplex_info_.max_dual_infeasibility = max_dual_infeasibility;
-  simplex_info_.sum_dual_infeasibilities = sum_dual_infeasibilities;
+  simplex_info_.sum_dual_infeasibility = sum_dual_infeasibility;
 }
 
 double HEkk::computeDualForTableauColumn(const int iVar,
@@ -1868,12 +1868,12 @@ void HEkk::computeSimplexPrimalInfeasible() {
   analysis_.simplexTimerStart(ComputePrIfsClock);
   const double scaled_primal_feasibility_tolerance =
       options_.primal_feasibility_tolerance;
-  int& num_primal_infeasibilities = simplex_info_.num_primal_infeasibilities;
+  int& num_primal_infeasibility = simplex_info_.num_primal_infeasibility;
   double& max_primal_infeasibility = simplex_info_.max_primal_infeasibility;
-  double& sum_primal_infeasibilities = simplex_info_.sum_primal_infeasibilities;
-  num_primal_infeasibilities = 0;
+  double& sum_primal_infeasibility = simplex_info_.sum_primal_infeasibility;
+  num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
-  sum_primal_infeasibilities = 0;
+  sum_primal_infeasibility = 0;
 
   for (int i = 0; i < simplex_lp_.numCol_ + simplex_lp_.numRow_; i++) {
     if (simplex_basis_.nonbasicFlag_[i]) {
@@ -1881,6 +1881,7 @@ void HEkk::computeSimplexPrimalInfeasible() {
       double value = simplex_info_.workValue_[i];
       double lower = simplex_info_.workLower_[i];
       double upper = simplex_info_.workUpper_[i];
+      // @primal_infeasibility calculation
       double primal_infeasibility = 0;
       if (value < lower - scaled_primal_feasibility_tolerance) {
         primal_infeasibility = lower - value;
@@ -1891,10 +1892,10 @@ void HEkk::computeSimplexPrimalInfeasible() {
       //    primal_infeasibility = max(lower - value, value - upper);
       if (primal_infeasibility > 0) {
         if (primal_infeasibility > scaled_primal_feasibility_tolerance)
-          num_primal_infeasibilities++;
+          num_primal_infeasibility++;
         max_primal_infeasibility =
             std::max(primal_infeasibility, max_primal_infeasibility);
-        sum_primal_infeasibilities += primal_infeasibility;
+        sum_primal_infeasibility += primal_infeasibility;
       }
     }
   }
@@ -1903,6 +1904,7 @@ void HEkk::computeSimplexPrimalInfeasible() {
     double value = simplex_info_.baseValue_[i];
     double lower = simplex_info_.baseLower_[i];
     double upper = simplex_info_.baseUpper_[i];
+    // @primal_infeasibility calculation
     double primal_infeasibility = 0;
     if (value < lower - scaled_primal_feasibility_tolerance) {
       primal_infeasibility = lower - value;
@@ -1913,10 +1915,10 @@ void HEkk::computeSimplexPrimalInfeasible() {
     //    primal_infeasibility = max(lower - value, value - upper);
     if (primal_infeasibility > 0) {
       if (primal_infeasibility > scaled_primal_feasibility_tolerance)
-        num_primal_infeasibilities++;
+        num_primal_infeasibility++;
       max_primal_infeasibility =
           std::max(primal_infeasibility, max_primal_infeasibility);
-      sum_primal_infeasibilities += primal_infeasibility;
+      sum_primal_infeasibility += primal_infeasibility;
     }
   }
   analysis_.simplexTimerStop(ComputePrIfsClock);
@@ -1930,12 +1932,12 @@ void HEkk::computeSimplexDualInfeasible() {
   // nonbasicMove=0 so that no dual infeasibility is counted for them.
   const double scaled_dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
-  int& num_dual_infeasibilities = simplex_info_.num_dual_infeasibilities;
+  int& num_dual_infeasibility = simplex_info_.num_dual_infeasibility;
   double& max_dual_infeasibility = simplex_info_.max_dual_infeasibility;
-  double& sum_dual_infeasibilities = simplex_info_.sum_dual_infeasibilities;
-  num_dual_infeasibilities = 0;
+  double& sum_dual_infeasibility = simplex_info_.sum_dual_infeasibility;
+  num_dual_infeasibility = 0;
   max_dual_infeasibility = 0;
-  sum_dual_infeasibilities = 0;
+  sum_dual_infeasibility = 0;
 
   for (int iCol = 0; iCol < simplex_lp_.numCol_ + simplex_lp_.numRow_; iCol++) {
     if (!simplex_basis_.nonbasicFlag_[iCol]) continue;
@@ -1954,10 +1956,10 @@ void HEkk::computeSimplexDualInfeasible() {
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
   }
   analysis_.simplexTimerStop(ComputeDuIfsClock);
@@ -1971,15 +1973,15 @@ void HEkk::computeSimplexLpDualInfeasible() {
   // used for reporting after rebuilds.
   const double scaled_dual_feasibility_tolerance =
       options_.dual_feasibility_tolerance;
-  int& num_dual_infeasibilities =
+  int& num_dual_infeasibility =
       analysis_.num_dual_phase_1_lp_dual_infeasibility;
   double& max_dual_infeasibility =
       analysis_.max_dual_phase_1_lp_dual_infeasibility;
-  double& sum_dual_infeasibilities =
+  double& sum_dual_infeasibility =
       analysis_.sum_dual_phase_1_lp_dual_infeasibility;
-  num_dual_infeasibilities = 0;
+  num_dual_infeasibility = 0;
   max_dual_infeasibility = 0;
-  sum_dual_infeasibilities = 0;
+  sum_dual_infeasibility = 0;
 
   for (int iCol = 0; iCol < simplex_lp_.numCol_; iCol++) {
     int iVar = iCol;
@@ -2008,10 +2010,10 @@ void HEkk::computeSimplexLpDualInfeasible() {
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
   }
   for (int iRow = 0; iRow < simplex_lp_.numRow_; iRow++) {
@@ -2041,10 +2043,10 @@ void HEkk::computeSimplexLpDualInfeasible() {
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= scaled_dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
   }
 }
@@ -2064,21 +2066,21 @@ bool HEkk::sparseLoopStyle(const int count, const int dim, int& to_entry) {
 
 void HEkk::invalidatePrimalMaxSumInfeasibilityRecord() {
   simplex_info_.max_primal_infeasibility = illegal_infeasibility_measure;
-  simplex_info_.sum_primal_infeasibilities = illegal_infeasibility_measure;
+  simplex_info_.sum_primal_infeasibility = illegal_infeasibility_measure;
 }
 
 void HEkk::invalidatePrimalInfeasibilityRecord() {
-  simplex_info_.num_primal_infeasibilities = illegal_infeasibility_count;
+  simplex_info_.num_primal_infeasibility = illegal_infeasibility_count;
   invalidatePrimalMaxSumInfeasibilityRecord();
 }
 
 void HEkk::invalidateDualMaxSumInfeasibilityRecord() {
   simplex_info_.max_dual_infeasibility = illegal_infeasibility_measure;
-  simplex_info_.sum_dual_infeasibilities = illegal_infeasibility_measure;
+  simplex_info_.sum_dual_infeasibility = illegal_infeasibility_measure;
 }
 
 void HEkk::invalidateDualInfeasibilityRecord() {
-  simplex_info_.num_dual_infeasibilities = illegal_infeasibility_count;
+  simplex_info_.num_dual_infeasibility = illegal_infeasibility_count;
   invalidateDualMaxSumInfeasibilityRecord();
 }
 

@@ -38,20 +38,20 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
       solution_params.dual_feasibility_tolerance;
 
   // solution_params are the values computed in this method.
-  int& num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  int& num_primal_infeasibility = solution_params.num_primal_infeasibility;
   double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  double& sum_primal_infeasibilities =
-      solution_params.sum_primal_infeasibilities;
-  int& num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  double& sum_primal_infeasibility =
+      solution_params.sum_primal_infeasibility;
+  int& num_dual_infeasibility = solution_params.num_dual_infeasibility;
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  double& sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
 
-  num_primal_infeasibilities = 0;
+  num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
-  sum_primal_infeasibilities = 0;
-  num_dual_infeasibilities = 0;
+  sum_primal_infeasibility = 0;
+  num_dual_infeasibility = 0;
   max_dual_infeasibility = 0;
-  sum_dual_infeasibilities = 0;
+  sum_dual_infeasibility = 0;
 
   double primal_infeasibility;
   double dual_infeasibility;
@@ -79,13 +79,14 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
     // Flip dual according to lp.sense_
     dual *= (int)lp.sense_;
 
+    // @primal_infeasibility calculation
     double primal_residual = std::max(lower - value, value - upper);
     primal_infeasibility = std::max(primal_residual, 0.);
     if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
+      num_primal_infeasibility++;
     max_primal_infeasibility =
         std::max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
+    sum_primal_infeasibility += primal_infeasibility;
 
     if (status != HighsBasisStatus::BASIC) {
       // Nonbasic variable: look for dual infeasibility
@@ -110,10 +111,10 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
         dual_infeasibility = fabs(dual);
       }
       if (dual_infeasibility > dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
   }
 }
@@ -609,12 +610,12 @@ void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
 // instance.
 void invalidateSolutionInfeasibilityParams(
     HighsSolutionParams& solution_params) {
-  solution_params.num_primal_infeasibilities = illegal_infeasibility_count;
+  solution_params.num_primal_infeasibility = illegal_infeasibility_count;
   solution_params.max_primal_infeasibility = illegal_infeasibility_measure;
-  solution_params.sum_primal_infeasibilities = illegal_infeasibility_measure;
-  solution_params.num_dual_infeasibilities = illegal_infeasibility_count;
+  solution_params.sum_primal_infeasibility = illegal_infeasibility_measure;
+  solution_params.num_dual_infeasibility = illegal_infeasibility_count;
   solution_params.max_dual_infeasibility = illegal_infeasibility_measure;
-  solution_params.sum_dual_infeasibilities = illegal_infeasibility_measure;
+  solution_params.sum_dual_infeasibility = illegal_infeasibility_measure;
 }
 
 void copySolutionObjectiveParams(
@@ -631,16 +632,16 @@ void copyFromSolutionParams(HighsInfo& highs_info,
   highs_info.objective_function_value =
       solution_params.objective_function_value;
   highs_info.num_primal_infeasibilities =
-      solution_params.num_primal_infeasibilities;
+      solution_params.num_primal_infeasibility;
   highs_info.max_primal_infeasibility =
       solution_params.max_primal_infeasibility;
   highs_info.sum_primal_infeasibilities =
-      solution_params.sum_primal_infeasibilities;
+      solution_params.sum_primal_infeasibility;
   highs_info.num_dual_infeasibilities =
-      solution_params.num_dual_infeasibilities;
+      solution_params.num_dual_infeasibility;
   highs_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
   highs_info.sum_dual_infeasibilities =
-      solution_params.sum_dual_infeasibilities;
+      solution_params.sum_dual_infeasibility;
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {
