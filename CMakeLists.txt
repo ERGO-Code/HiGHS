@@ -28,13 +28,8 @@ endif()
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
 
-# Note: Not ON by default. Still need to fix the exe generation dir: rename from 
-# app/ to bin/
-option(EXP "Experimental mode: run unit tests with doctest." OFF)
+# Note: Not ON by default yet
 option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
-
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
@@ -309,24 +304,61 @@ add_subdirectory(src)
 
 
 else()
-message(STATUS "FAST BUILD set to on.
+
+message(STATUS "FAST_BUILD set to on.
  Note: The HiGHS team is preparing for our first official release. If you
        experience any issues please let us know via email or on GitHub.")
 
 # todo: remove patch once release is official. 
 # add here to avoid compile errors.
 set(HIGHS_VERSION_PATCH 0)
+
+option(EXP "Experimental mode: run unit tests with doctest." OFF)
+option(IPX "Use interior point solver" OFF)
+
+# todo: ig branch ipx-m 
+if (IPX)
+    set(IPX_ON ON)
+else()
+    set(IPX_ON OFF)
+endif()
+
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+
+set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 
 # condition added to src/CMakeLists.txt
 add_subdirectory(src)
 
-# No changes in app/ apart from a relative path
-add_subdirectory(app)
+option(JULIA "Build library only for Julia" OFF)
+
+if (NOT JULIA)
+    # No changes in app/ apart from a relative path
+    add_subdirectory(app)
+
+    # Until MIP solver is in library object also and tested. Switch becayse at the 
+    # moment breaks binary builder for julia interface.
+    # set(MIP OFF)
+    target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
+    target_sources(highs PRIVATE 
+        src/mip/HighsMipSolver.cpp
+        src/mip/HighsMipSolverData.cpp
+        src/mip/HighsDomain.cpp
+        src/mip/HighsDynamicRowMatrix.cpp
+        src/mip/HighsLpRelaxation.cpp
+        src/mip/HighsSeparation.cpp
+        src/mip/HighsSearch.cpp
+        src/mip/HighsCutPool.cpp
+        src/mip/HighsCliqueTable.cpp
+        src/mip/HighsImplications.cpp
+        src/mip/HighsNodeQueue.cpp)
+endif()
 
 # check/ not added here, instead define fewer tests: 
 # build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
-enable_testing()
+if (NOT JULIA)
+    enable_testing()
+endif()
 
 # Check whether targets build OK.
 add_test(NAME highs-lib-build
@@ -410,15 +442,17 @@ endforeach(instance)
 
 endfunction()
 
-# add tests for success and fail instances
-add_instance_tests(successInstances "Optimal" " ")
-add_instance_tests(failInstances "Fail" " ")
-add_instance_tests(infeasibleInstances "Infeasible" " ")
-add_instance_tests(unboundedInstances "Unbounded" " ")
+if (NOT JULIA)
+    # add tests for success and fail instances
+    add_instance_tests(successInstances "Optimal" " ")
+    add_instance_tests(failInstances "Fail" " ")
+    add_instance_tests(infeasibleInstances "Infeasible" " ")
+    add_instance_tests(unboundedInstances "Unbounded" " ")
 
-foreach(setting ${settings})
-    add_instance_tests(optionsInstances "Optimal" ${setting})
-endforeach()
+    foreach(setting ${settings})
+        add_instance_tests(optionsInstances "Optimal" ${setting})
+    endforeach()
+endif()
 
 if (EXP) 
     add_executable(doctest)
@@ -430,6 +464,18 @@ endif()
 
 # Dashboards later on.
 # include(CTest)
+
+install(TARGETS libhighs EXPORT highs-targets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        PUBLIC_HEADER DESTINATION include)
+
+# if (IPX_ON)
+#     install(TARGETS ipx EXPORT highs-targets
+#             LIBRARY DESTINATION lib
+#             ARCHIVE DESTINATION lib
+#             INCLUDES DESTINATION include)
+# endif()
 
 endif()
 

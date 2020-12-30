@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <numeric>
 
 HighsDynamicRowMatrix::HighsDynamicRowMatrix(int ncols) {
