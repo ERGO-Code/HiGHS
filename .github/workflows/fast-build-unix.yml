@@ -68,4 +68,4 @@ jobs:
     - name: Doctest
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: doctest
+      run: ./doctest
