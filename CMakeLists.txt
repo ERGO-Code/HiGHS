@@ -281,6 +281,15 @@ enable_cxx_compiler_flag_if_supported("-pedantic")
 #    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
 #endif()
 
+if (IPX_ON)
+    # use, i.e. don't skip the full RPATH for the build tree
+    set(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+    # when building, don't use the install RPATH already
+    # (but later on when installing)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+endif()
 
 # Targets
 enable_testing()
@@ -451,21 +460,12 @@ if (EXP)
     target_link_libraries(doctest libhighs)
 endif()
 
-# Dashboards later on.
-# include(CTest)
 
-# todo: ig
-# install(TARGETS libhighs EXPORT highs-targets
-#         LIBRARY DESTINATION lib
-#         ARCHIVE DESTINATION lib
-#         PUBLIC_HEADER DESTINATION include)
+install(TARGETS libhighs EXPORT highs-targets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        PUBLIC_HEADER DESTINATION include)
 
-# if (IPX_ON)
-#     install(TARGETS ipx EXPORT highs-targets
-#             LIBRARY DESTINATION lib
-#             ARCHIVE DESTINATION lib
-#             INCLUDES DESTINATION include)
-# endif()
 
 endif()
 

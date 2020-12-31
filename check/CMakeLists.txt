@@ -29,11 +29,12 @@ set(TEST_SOURCES
     TestRanging.cpp
     Avgas.cpp)
 
+set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp)
+
 if (NOT APPLE)
     # Bug with updated IPX code and gas11. Somehow related to the rpath on 
     # macOS. OK with FAST_BUILD which will be default, the test can be added
     # to doctest for macOS.
-    set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp)
 endif()
 
 if (IPX_ON)
