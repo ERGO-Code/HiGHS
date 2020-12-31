@@ -174,10 +174,10 @@ set(headers
     mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
     mip/HighsNodeQueue.h
-    mip/HighsPseudoCost.h
+    mip/HighsPseudocost.h
     mip/HighsSearch.h
     mip/HighsSeparation.h
-    mip/SparseVectorSum.h
+    mip/HighsSparseVectorSum.h
     mip/SolveMip.h
     simplex/HApp.h
     simplex/FactorTimer.h
