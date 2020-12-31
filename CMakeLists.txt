@@ -456,6 +456,11 @@ if (EXP)
     add_executable(doctest)
     #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
     target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
+
+    if (IPX_ON)
+    target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
+    endif()
+
     target_include_directories(doctest PRIVATE external)
     target_link_libraries(doctest libhighs)
 endif()
