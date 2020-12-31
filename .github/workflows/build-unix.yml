@@ -26,7 +26,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-         cmake --build . --config DEBUG
+         cmake --build --parallel . --config DEBUG
 
 
     - name: Test
@@ -58,7 +58,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-         cmake --build . --config RELEASE
+         cmake --build --parallel . --config RELEASE
 
 
     - name: Test
