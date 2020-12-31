@@ -457,8 +457,9 @@ if (EXP)
     #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
     target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
 
-    if (IPX_ON)
-    target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
+    if (IPX_ON AND NOT APPLE)
+        # triggers hanging on macOS
+        target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
     endif()
 
     target_include_directories(doctest PRIVATE external)
