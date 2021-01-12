@@ -1064,7 +1064,7 @@ void HAggregator::substitute(int substcol, int staycol, double offset,
 }
 
 void HAggregator::removeFixedCol(int col) {
-  assert(colLower[col] == colUpper[col]);
+  assert(std::abs(colLower[col] - colUpper[col]) <= drop_tolerance);
   double fixval = colLower[col];
 
   for (int coliter = colhead[col]; coliter != -1;) {

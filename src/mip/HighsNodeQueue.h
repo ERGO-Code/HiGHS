@@ -2,16 +2,21 @@
 #ifndef HIGHS_NODE_QUEUE_H_
 #define HIGHS_NODE_QUEUE_H_
 
+#include <map>
 #include <queue>
 #include <vector>
 
 #include "lp_data/HConst.h"
 #include "mip/HighsDomainChange.h"
+#include "util/HighsCDouble.h"
+
+class HighsDomain;
 
 class HighsNodeQueue {
  public:
   struct OpenNode {
     std::vector<HighsDomainChange> domchgstack;
+    std::vector<std::multimap<double, int>::iterator> domchglinks;
     double lower_bound;
     double estimate;
     int depth;
@@ -48,8 +53,13 @@ class HighsNodeQueue {
     OpenNode(const OpenNode&) = delete;
   };
 
+  void checkGlobalBounds(int col, double lb, double ub, double feastol,
+                         HighsCDouble& treeweight);
+
  private:
   std::vector<OpenNode> nodes;
+  std::vector<std::multimap<double, int>> colLowerNodes;
+  std::vector<std::multimap<double, int>> colUpperNodes;
   std::priority_queue<int, std::vector<int>, std::greater<int>> freeslots;
   int lowerroot = -1;
   int estimroot = -1;
@@ -62,8 +72,18 @@ class HighsNodeQueue {
 
   void unlink_lower(int node);
 
+  void link_domchgs(int node);
+
+  void unlink_domchgs(int node);
+
+  void link(int node);
+
+  void unlink(int node);
+
  public:
   double performBounding(double upper_limit);
+
+  void setNumCol(int numcol);
 
   void emplaceNode(std::vector<HighsDomainChange>&& domchgs, double lower_bound,
                    double estimate, int depth);
@@ -71,6 +91,8 @@ class HighsNodeQueue {
   OpenNode popBestNode();
 
   OpenNode popBestBoundNode();
+
+  double pruneInfeasibleNodes(HighsDomain& globaldomain, double feastol);
 
   double getBestLowerBound();
 

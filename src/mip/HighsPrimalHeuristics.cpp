@@ -84,6 +84,11 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
     if (heur.currentNodePruned()) {
       ++nbacktracks;
       // printf("backtrack1\n");
+      if (mipsolver.mipdata_->domain.infeasible()) {
+        lp_iterations += heur.getLocalLpIterations();
+        return;
+      }
+
       if (!heur.backtrack()) break;
       continue;
     }

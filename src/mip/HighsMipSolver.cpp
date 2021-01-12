@@ -336,6 +336,8 @@ void HighsMipSolver::run() {
 
     // propagate the global domain
     mipdata_->domain.propagate();
+    mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
+        mipdata_->domain, mipdata_->feastol);
 
 #ifdef HIGHS_DEBUGSOL
     assert(!mipdata_->domain.infeasible());
