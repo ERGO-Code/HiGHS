@@ -226,6 +226,13 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
     if (rowdeleted[i]) ++nremoved;
   }
 
+  int numstrengthened = aggregator.strengthenInequalities();
+
+  if (numstrengthened != 0)
+    HighsPrintMessage(mipsolver.options_mip_->output,
+                      mipsolver.options_mip_->message_level, ML_MINIMAL,
+                      "strengthened %d coefficients\n", numstrengthened);
+
   // printf("removed redundant rows: %d removed rows, %d nonzeros\n", nremoved,
   //       aggregator.numNonzeros());
 
