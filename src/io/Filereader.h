@@ -36,7 +36,7 @@ class Filereader {
                                               HighsLp& model) = 0;
   virtual HighsStatus writeModelToFile(const HighsOptions& options,
                                        const std::string filename,
-                                       HighsLp& model) = 0;
+                                       const HighsLp& model) = 0;
   static Filereader* getFilereader(const std::string filename);
 
   virtual ~Filereader(){};
