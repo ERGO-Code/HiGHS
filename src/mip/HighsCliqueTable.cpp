@@ -649,9 +649,13 @@ void HighsCliqueTable::removeClique(int cliqueid) {
 }
 
 void HighsCliqueTable::extractCliques(
-    HighsDomain& globaldom, std::vector<int>& inds, std::vector<double>& vals,
-    std::vector<int8_t>& complementation, double rhs, int nbin,
-    std::vector<int>& perm, std::vector<CliqueVar>& clique, double feastol) {
+    const HighsMipSolver& mipsolver, std::vector<int>& inds,
+    std::vector<double>& vals, std::vector<int8_t>& complementation, double rhs,
+    int nbin, std::vector<int>& perm, std::vector<CliqueVar>& clique,
+    double feastol) {
+  HighsImplications& implics = mipsolver.mipdata_->implications;
+  HighsDomain& globaldom = mipsolver.mipdata_->domain;
+
   perm.resize(inds.size());
   std::iota(perm.begin(), perm.end(), 0);
 
@@ -659,6 +663,46 @@ void HighsCliqueTable::extractCliques(
     return globaldom.isBinary(inds[pos]);
   });
   nbin = binaryend - perm.begin();
+  int ntotal = (int)perm.size();
+
+  // if not all variables are binary, we extract variable upper and lower bounds
+  // constraints on the non-binary variable for each binary variable in the
+  // constraint
+  if (nbin < ntotal) {
+    for (int i = 0; i != nbin; ++i) {
+      int bincol = inds[perm[i]];
+      HighsCDouble impliedub = HighsCDouble(rhs) - vals[perm[i]];
+      for (int j = nbin; j != ntotal; ++j) {
+        int col = inds[perm[j]];
+        if (globaldom.isFixed(col)) continue;
+
+        HighsCDouble colub =
+            HighsCDouble(globaldom.colUpper_[col]) - globaldom.colLower_[col];
+        HighsCDouble implcolub = impliedub / vals[perm[j]];
+        if (implcolub < colub - feastol) {
+          HighsCDouble coef;
+          HighsCDouble constant;
+
+          if (complementation[perm[i]] == -1) {
+            coef = colub - implcolub;
+            constant = implcolub;
+          } else {
+            coef = implcolub - colub;
+            constant = colub;
+          }
+
+          if (complementation[perm[j]] == -1) {
+            constant -= globaldom.colUpper_[col];
+            implics.addVLB(col, bincol, -double(coef), -double(constant));
+          } else {
+            implics.addVUB(col, bincol, double(coef), double(constant));
+          }
+        }
+      }
+    }
+  }
+
+  // only one binary means we do have no cliques
   if (nbin <= 1) return;
 
   std::sort(perm.begin(), binaryend,
@@ -862,11 +906,11 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver) {
         }
       }
 
-      if (!freevar && nbin > 1) {
+      if (!freevar && nbin != 0) {
         // printf("extracing cliques from this row:\n");
         // printRow(globaldom, inds.data(), vals.data(), inds.size(),
         //         -HIGHS_CONST_INF, rhs);
-        extractCliques(globaldom, inds, vals, complementation, rhs, nbin, perm,
+        extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
                        clique, mipsolver.mipdata_->feastol);
         if (globaldom.infeasible()) return;
       }
@@ -910,11 +954,11 @@ void HighsCliqueTable::extractCliques(HighsMipSolver& mipsolver) {
         }
       }
 
-      if (!freevar && nbin > 1) {
+      if (!freevar && nbin != 0) {
         // printf("extracing cliques from this row:\n");
         // printRow(globaldom, inds.data(), vals.data(), inds.size(),
         //         -HIGHS_CONST_INF, rhs);
-        extractCliques(globaldom, inds, vals, complementation, rhs, nbin, perm,
+        extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
                        clique, mipsolver.mipdata_->feastol);
         if (globaldom.infeasible()) return;
       }
@@ -984,7 +1028,7 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
     }
   }
 
-  if (!freevar && nbin > 1) {
+  if (!freevar) {
     int len = (int)inds.size();
 
     int nfixed = 0;
@@ -1004,9 +1048,11 @@ void HighsCliqueTable::extractObjCliques(HighsMipSolver& mipsolver) {
     // printf("extracing cliques from this row:\n");
     // printRow(globaldom, inds.data(), vals.data(), inds.size(),
     //         -HIGHS_CONST_INF, rhs);
-    extractCliques(globaldom, inds, vals, complementation, rhs, nbin, perm,
-                   clique, mipsolver.mipdata_->feastol);
-    if (globaldom.infeasible()) return;
+    if (nbin != 0) {
+      extractCliques(mipsolver, inds, vals, complementation, rhs, nbin, perm,
+                     clique, mipsolver.mipdata_->feastol);
+      if (globaldom.infeasible()) return;
+    }
   }
 }
 

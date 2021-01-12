@@ -293,14 +293,13 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   mipsolver.mipdata_->pseudocost = HighsPseudocost(cleanedUpModel.numCol_);
   mipsolver.mipdata_->cliquetable.rebuild(cleanedUpModel.numCol_, cIndex,
                                           rIndex);
+  mipsolver.mipdata_->implications.rebuild(cleanedUpModel.numCol_, cIndex,
+                                           rIndex);
 
   HighsLp lpmodel = cleanedUpModel;
   lpmodel.integrality_.clear();
   mipsolver.mipdata_->lp.getLpSolver().clearSolver();
   mipsolver.mipdata_->lp.getLpSolver().passModel(std::move(lpmodel));
-
-  // todo, transfer  implications
-  mipsolver.mipdata_->implications.reset();
 
   reportPresolveReductions(*mipsolver.options_mip_, *origmodel, cleanedUpModel);
 }
@@ -350,7 +349,7 @@ void HighsMipSolverData::init() {
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
   else if (mipsolver.options_mip_->mip_report_level == 1)
-    dispfreq = 10;
+    dispfreq = 50;
   else
     dispfreq = 1;
 }

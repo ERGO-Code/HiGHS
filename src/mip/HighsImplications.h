@@ -23,6 +23,19 @@ class HighsImplications {
   bool computeImplications(int col, bool val);
 
  public:
+  struct VarBound {
+    double coef;
+    double constant;
+
+    double minValue() const { return constant + std::min(coef, 0.0); }
+    double maxValue() const { return constant + std::max(coef, 0.0); }
+  };
+
+ private:
+  std::vector<std::map<int, VarBound>> vubs;
+  std::vector<std::map<int, VarBound>> vlbs;
+
+ public:
   HighsDomain& globaldomain;
   HighsCliqueTable& cliquetable;
   std::vector<HighsSubstitution> substitutions;
@@ -32,6 +45,8 @@ class HighsImplications {
     int numcol = globaldom.colLower_.size();
     implicationmap.resize(2 * numcol, {-1, 0});
     colsubstituted.resize(numcol);
+    vubs.resize(numcol);
+    vlbs.resize(numcol);
   }
 
   void reset() {
@@ -43,6 +58,12 @@ class HighsImplications {
     int numcol = globaldomain.colLower_.size();
     implicationmap.resize(2 * numcol, {-1, 0});
     colsubstituted.resize(numcol);
+    vubs.clear();
+    vubs.shrink_to_fit();
+    vubs.resize(numcol);
+    vlbs.clear();
+    vlbs.shrink_to_fit();
+    vlbs.resize(numcol);
   }
 
   int getImplications(int col, bool val,
@@ -68,7 +89,18 @@ class HighsImplications {
     return implicationmap[loc].start != -1;
   }
 
+  void addVUB(int col, int vubcol, double vubcoef, double vubconstant);
+
+  void addVLB(int col, int vlbcol, double vlbcoef, double vlbconstant);
+
+  const std::map<int, VarBound>& getVUBs(int col) const { return vubs[col]; }
+
+  const std::map<int, VarBound>& getVLBs(int col) const { return vlbs[col]; }
+
   bool runProbing(int col, int& numboundchgs);
+
+  void rebuild(int ncols, const std::vector<int>& cIndex,
+               const std::vector<int>& rIndex);
 };
 
 #endif

@@ -112,7 +112,7 @@ class HighsCliqueTable {
   void bronKerboschRecurse(BronKerboschData& data, int Plen, const CliqueVar* X,
                            int Xlen);
 
-  void extractCliques(HighsDomain& globaldom, std::vector<int>& inds,
+  void extractCliques(const HighsMipSolver& mipsolver, std::vector<int>& inds,
                       std::vector<double>& vals,
                       std::vector<int8_t>& complementation, double rhs,
                       int nbin, std::vector<int>& perm,
