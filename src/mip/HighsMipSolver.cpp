@@ -311,7 +311,8 @@ void HighsMipSolver::run() {
 
       if (mipdata_->dispfreq != 0) {
         if (mipdata_->num_leaves - mipdata_->last_displeave >=
-            mipdata_->dispfreq)
+            std::min(size_t{mipdata_->dispfreq},
+                     1 + size_t(0.01 * mipdata_->num_leaves)))
           mipdata_->printDisplayLine();
       }
 
@@ -324,7 +325,9 @@ void HighsMipSolver::run() {
     if (limit_reached) break;
 
     if (mipdata_->dispfreq != 0) {
-      if (mipdata_->num_leaves - mipdata_->last_displeave >= mipdata_->dispfreq)
+      if (mipdata_->num_leaves - mipdata_->last_displeave >=
+          std::min(size_t{mipdata_->dispfreq},
+                   1 + size_t(0.01 * mipdata_->num_leaves)))
         mipdata_->printDisplayLine();
     }
 
@@ -410,7 +413,8 @@ void HighsMipSolver::run() {
 
         if (mipdata_->dispfreq != 0) {
           if (mipdata_->num_leaves - mipdata_->last_displeave >=
-              mipdata_->dispfreq)
+              std::min(size_t{mipdata_->dispfreq},
+                       1 + size_t(0.01 * mipdata_->num_leaves)))
             mipdata_->printDisplayLine();
         }
         continue;
