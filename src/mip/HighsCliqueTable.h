@@ -135,7 +135,7 @@ class HighsCliqueTable {
 
   bool processNewEdge(HighsDomain& globaldom, CliqueVar v1, CliqueVar v2);
 
-  void addClique(HighsDomain& globaldom, CliqueVar* cliquevars,
+  void addClique(const HighsMipSolver& mipsolver, CliqueVar* cliquevars,
                  int numcliquevars, bool equality = false,
                  int origin = HIGHS_CONST_I_INF);
 
@@ -196,9 +196,9 @@ class HighsCliqueTable {
     c.second = cliques[clq].end - cliques[clq].start;
   }
 
-  void separateCliques(const std::vector<double>& sol,
-                       const HighsDomain& globaldom, HighsDomain& localdom,
-                       HighsCutPool& cutpool, double feastol);
+  void separateCliques(const HighsMipSolver& mipsolver,
+                       const std::vector<double>& sol, HighsCutPool& cutpool,
+                       double feastol);
 
   std::vector<std::vector<CliqueVar>> separateCliques(
       const std::vector<double>& sol, const HighsDomain& globaldom,

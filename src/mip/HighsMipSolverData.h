@@ -6,6 +6,7 @@
 
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsCutPool.h"
+#include "mip/HighsDebugSol.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
@@ -15,10 +16,6 @@
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
 #include "util/HighsTimer.h"
-
-#ifdef HIGHS_DEBUGSOL
-extern std::vector<double> highsDebugSolution;
-#endif
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
@@ -97,6 +94,8 @@ struct HighsMipSolverData {
 
   HighsNodeQueue nodequeue;
 
+  HighsDebugSol debugSolution;
+
   HighsMipSolverData(HighsMipSolver& mipsolver)
       : mipsolver(mipsolver),
         cutpool(mipsolver.numCol(), 10),
@@ -104,8 +103,9 @@ struct HighsMipSolverData {
         lp(mipsolver),
         pseudocost(mipsolver.numCol()),
         cliquetable(mipsolver.numCol()),
-        implications(domain, cliquetable),
-        heuristics(mipsolver) {
+        implications(mipsolver),
+        heuristics(mipsolver),
+        debugSolution(mipsolver) {
     domain.addCutpool(cutpool);
   }
 

@@ -103,6 +103,7 @@ set(sources
     mip/HighsSearch.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
+    mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
     mip/HighsNodeQueue.cpp
@@ -169,6 +170,7 @@ set(headers
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
+    mip/HighsDebugSol.h
     mip/HighsMipSolver.h
     mip/SolveMip.h
     simplex/HApp.h
@@ -419,6 +421,7 @@ target_sources(libhighs PRIVATE
     mip/HighsSearch.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
+    mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
     mip/HighsNodeQueue.cpp

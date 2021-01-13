@@ -1101,49 +1101,14 @@ void HighsSearch::installNode(HighsNodeQueue::OpenNode&& node) {
 }
 
 void HighsSearch::evaluateNode() {
-#ifdef HIGHS_DEBUGSOL
-  bool debugsolactive = true;
-  HighsCDouble debugsolobj = 0;
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
-    if (highsDebugSolution[i] + mipsolver.mipdata_->epsilon <
-            localdom.colLower_[i] ||
-        highsDebugSolution[i] - mipsolver.mipdata_->epsilon >
-            localdom.colUpper_[i]) {
-      debugsolactive = false;
-    }
-
-    debugsolobj += highsDebugSolution[i] * mipsolver.colCost(i);
-  }
-#endif
   localdom.propagate();
-#ifdef HIGHS_DEBUGSOL
-  if (debugsolactive && mipsolver.mipdata_->upper_bound >
-                            debugsolobj + mipsolver.mipdata_->epsilon) {
-    bool debugsolstillactive = true;
 
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
-      if (highsDebugSolution[i] + mipsolver.mipdata_->epsilon <
-              localdom.colLower_[i] ||
-          highsDebugSolution[i] - mipsolver.mipdata_->epsilon >
-              localdom.colUpper_[i]) {
-        debugsolstillactive = false;
-        break;
-      }
-    }
-
-    assert(debugsolstillactive);
-  }
-#endif
   assert(!nodestack.empty());
   NodeData& currnode = nodestack.back();
 
   bool prune = false;
 
   if (localdom.infeasible()) {
-#ifdef HIGHS_DEBUGSOL
-    assert(!debugsolactive || mipsolver.mipdata_->upper_bound <=
-                                  debugsolobj + mipsolver.mipdata_->feastol);
-#endif
     localdom.clearChangedCols();
     prune = true;
   } else {
@@ -1188,12 +1153,6 @@ void HighsSearch::evaluateNode() {
           currnode.lower_bound =
               std::max(lp->getObjective(), currnode.lower_bound);
 
-#ifdef HIGHS_DEBUGSOL
-          assert(!debugsolactive ||
-                 currnode.lower_bound <=
-                     debugsolobj + mipsolver.mipdata_->epsilon);
-#endif
-
           const NodeData* parent = getParentNodeData();
 
           if (parent != nullptr && parent->lpsolved &&
@@ -1208,15 +1167,6 @@ void HighsSearch::evaluateNode() {
           }
 
           if (currnode.lower_bound > getCutoffBound()) {
-#ifdef HIGHS_DEBUGSOL
-            if (debugsolactive &&
-                mipsolver.mipdata_->upper_bound >
-                    debugsolobj + mipsolver.mipdata_->feastol) {
-              lp->getLpSolver().writeModel("wronglp->mps");
-              lp->getLpSolver().writeBasis("wronglp->bas");
-              assert(false);
-            }
-#endif
             addBoundExceedingConflict();
             prune = true;
           }
@@ -1234,66 +1184,12 @@ void HighsSearch::evaluateNode() {
       }
     } else if (status == HighsLpRelaxation::Status::Infeasible) {
       addInfeasibleConflict();
-#ifdef HIGHS_DEBUGSOL
-      if (debugsolactive && mipsolver.mipdata_->upper_bound >
-                                debugsolobj + mipsolver.mipdata_->feastol) {
-        lp->getLpSolver().writeModel("wronglp->mps");
-        lp->getLpSolver().writeBasis("wronglp->bas");
-        assert(false);
-      }
-#endif
       prune = true;
     }
   }
 
-#if 0 
-      if( status == HighsModelStatus::PRIMAL_INFEASIBLE )
-      {
-        double rhs;
-        if( lp->computeDualProof(globaldom, currnode.lower_bound, inds, vals, rhs) )
-        {
-          double glbminact = 0.0;
-          double localminact = 0.0;
-
-          for( size_t i = 0; i != inds.size(); ++i )
-          {
-            if( vals[i] < 0 )
-            {
-              glbminact += globaldom.colUpper_[inds[i]] * vals[i];
-              localminact += localdom.colUpper_[inds[i]] * vals[i];
-            }
-            else
-            {
-              glbminact += globaldom.colLower_[inds[i]] * vals[i];
-              localminact += localdom.colLower_[inds[i]] * vals[i];
-            }
-            
-          }
-
-          printf("glbminact: %g   localminact: %g   rhs: %g  len: %d\n", glbminact, localminact, rhs, (int)inds.size());
-        }
-
-      }
-#endif
-
   if (prune) {
-#ifdef HIGHS_DEBUGSOL
-    if (debugsolactive && mipsolver.mipdata_->upper_bound >
-                              debugsolobj + mipsolver.mipdata_->feastol) {
-      bool debugsolstillactive = true;
-
-      for (int i = 0; i != mipsolver.numCol(); ++i) {
-        if (highsDebugSolution[i] + mipsolver.mipdata_->feastol <
-                localdom.colLower_[i] ||
-            highsDebugSolution[i] - mipsolver.mipdata_->feastol >
-                localdom.colUpper_[i]) {
-          debugsolstillactive = false;
-          break;
-        }
-      }
-      assert(debugsolstillactive);
-    }
-#endif
+    mipsolver.mipdata_->debugSolution.nodePruned(localdom);
     treeweight += std::pow(0.5, getCurrentDepth() - 1);
     currnode.opensubtrees = 0;
   }

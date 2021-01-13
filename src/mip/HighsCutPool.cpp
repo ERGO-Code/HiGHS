@@ -273,8 +273,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   cutset.ARstart_[cutset.numCuts()] = offset;
 }
 
-int HighsCutPool::addCut(int* Rindex, double* Rvalue, int Rlen, double rhs,
-                         bool integral) {
+int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
+                         double* Rvalue, int Rlen, double rhs, bool integral) {
+  mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
+
   size_t sh = support_hash(Rindex, Rlen);
 
   // try to replace another cut with equal support that has an age > 0

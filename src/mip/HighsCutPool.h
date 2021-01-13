@@ -109,8 +109,8 @@ class HighsCutPool {
 
   double getMaxAbsCutCoef(int cut) const { return maxabscoef_[cut]; }
 
-  int addCut(int* Rindex, double* Rvalue, int Rlen, double rhs,
-             bool integral = false);
+  int addCut(const HighsMipSolver& mipsolver, int* Rindex, double* Rvalue,
+             int Rlen, double rhs, bool integral = false);
 
   int getRowLength(int row) const {
     return matrix_.getRowEnd(row) - matrix_.getRowStart(row);

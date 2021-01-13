@@ -911,123 +911,112 @@ class ImpliedBounds {
 
   void separateImplBounds(const HighsLpRelaxation& lp, HighsCutPool& cutpool,
                           HighsDomain& propdomain) {
+    HighsDomain& globaldomain = lp.getMipSolver().mipdata_->domain;
+
     const double feastol = lp.getMipSolver().mipdata_->feastol;
     int inds[2];
     double vals[2];
     double rhs;
     const auto& sol = lp.getLpSolver().getSolution().col_value;
-    implications.cliquetable.cleanupFixed(implications.globaldomain);
-    if (implications.globaldomain.infeasible()) return;
+    lp.getMipSolver().mipdata_->cliquetable.cleanupFixed(globaldomain);
+    if (globaldomain.infeasible()) return;
     int numboundchgs = 0;
 
     // first do probing on all candidates that have not been probed yet
     for (std::pair<int, double> fracint : lp.getFractionalIntegers()) {
       int col = fracint.first;
-      if (implications.globaldomain.colLower_[col] != 0.0 ||
-          implications.globaldomain.colUpper_[col] != 1.0)
+      if (globaldomain.colLower_[col] != 0.0 ||
+          globaldomain.colUpper_[col] != 1.0)
         continue;
 
       if (implications.runProbing(col, numboundchgs)) {
         ++numboundchgs;
-        if (implications.globaldomain.infeasible()) return;
+        if (globaldomain.infeasible()) return;
       }
     }
 
     for (std::pair<int, double> fracint : lp.getFractionalIntegers()) {
       int col = fracint.first;
       // skip non binary variables
-      if (implications.globaldomain.colLower_[col] != 0.0 ||
-          implications.globaldomain.colUpper_[col] != 1.0)
+      if (globaldomain.colLower_[col] != 0.0 ||
+          globaldomain.colUpper_[col] != 1.0)
         continue;
 
       bool infeas;
       const HighsDomainChange* implics = nullptr;
       int nimplics = implications.getImplications(col, 1, implics, infeas);
-      if (implications.globaldomain.infeasible()) return;
+      if (globaldomain.infeasible()) return;
       if (infeas) {
-#ifdef HIGHS_DEBUGSOL
-        assert(highsDebugSolution[col] < 0.5);
-#endif
         vals[0] = 1.0;
         inds[0] = col;
-        cutpool.addCut(inds, vals, 1, 0.0);
+        cutpool.addCut(lp.getMipSolver(), inds, vals, 1, 0.0);
         continue;
       }
 
       for (int i = 0; i != nimplics; ++i) {
         if (implics[i].boundtype == HighsBoundType::Upper) {
           if (implics[i].boundval + feastol >=
-              implications.globaldomain.colUpper_[implics[i].column])
+              globaldomain.colUpper_[implics[i].column])
             continue;
 
           vals[0] = 1.0;
           inds[0] = implics[i].column;
-          vals[1] = implications.globaldomain.colUpper_[implics[i].column] -
-                    implics[i].boundval;
+          vals[1] =
+              globaldomain.colUpper_[implics[i].column] - implics[i].boundval;
           inds[1] = col;
-          rhs = implications.globaldomain.colUpper_[implics[i].column];
+          rhs = globaldomain.colUpper_[implics[i].column];
 
         } else {
           if (implics[i].boundval - feastol <=
-              implications.globaldomain.colLower_[implics[i].column])
+              globaldomain.colLower_[implics[i].column])
             continue;
 
           vals[0] = -1.0;
           inds[0] = implics[i].column;
-          vals[1] = implications.globaldomain.colLower_[implics[i].column] -
-                    implics[i].boundval;
+          vals[1] =
+              globaldomain.colLower_[implics[i].column] - implics[i].boundval;
           inds[1] = col;
-          rhs = -implications.globaldomain.colLower_[implics[i].column];
+          rhs = -globaldomain.colLower_[implics[i].column];
         }
 
         double viol = sol[inds[0]] * vals[0] + sol[inds[1]] * vals[1] - rhs;
 
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
-#ifdef HIGHS_DEBUGSOL
-          HighsCDouble debugactivity = 0;
-          for (size_t i = 0; i != 2; ++i)
-            debugactivity += highsDebugSolution[inds[i]] * vals[i];
-
-          assert(debugactivity <= rhs + 1e-9);
-#endif
-          cutpool.addCut(inds, vals, 2, rhs);
+          cutpool.addCut(lp.getMipSolver(), inds, vals, 2, rhs);
         }
       }
 
       nimplics = implications.getImplications(col, 0, implics, infeas);
-      if (implications.globaldomain.infeasible()) return;
+      if (globaldomain.infeasible()) return;
       if (infeas) {
-#ifdef HIGHS_DEBUGSOL
-        assert(highsDebugSolution[col] > 0.5);
-#endif
         vals[0] = -1.0;
         inds[0] = col;
-        cutpool.addCut(inds, vals, 1, -1.0);
+        cutpool.addCut(lp.getMipSolver(), inds, vals, 1, -1.0);
         continue;
       }
 
       for (int i = 0; i != nimplics; ++i) {
         if (implics[i].boundtype == HighsBoundType::Upper) {
           if (implics[i].boundval + feastol >=
-              implications.globaldomain.colUpper_[implics[i].column])
+              globaldomain.colUpper_[implics[i].column])
             continue;
 
           vals[0] = 1.0;
           inds[0] = implics[i].column;
-          vals[1] = implics[i].boundval -
-                    implications.globaldomain.colUpper_[implics[i].column];
+          vals[1] =
+              implics[i].boundval - globaldomain.colUpper_[implics[i].column];
           inds[1] = col;
           rhs = implics[i].boundval;
         } else {
           if (implics[i].boundval - feastol <=
-              implications.globaldomain.colLower_[implics[i].column])
+              globaldomain.colLower_[implics[i].column])
             continue;
 
           vals[0] = -1.0;
           inds[0] = implics[i].column;
-          vals[1] = implications.globaldomain.colLower_[implics[i].column] -
-                    implics[i].boundval;
+          vals[1] =
+              globaldomain.colLower_[implics[i].column] - implics[i].boundval;
           inds[1] = col;
           rhs = -implics[i].boundval;
         }
@@ -1036,14 +1025,7 @@ class ImpliedBounds {
 
         if (viol > feastol) {
           // printf("added implied bound cut to pool\n");
-#ifdef HIGHS_DEBUGSOL
-          HighsCDouble debugactivity = 0;
-          for (size_t i = 0; i != 2; ++i)
-            debugactivity += highsDebugSolution[inds[i]] * vals[i];
-
-          assert(debugactivity <= rhs + feastol);
-#endif
-          cutpool.addCut(inds, vals, 2, rhs);
+          cutpool.addCut(lp.getMipSolver(), inds, vals, 2, rhs);
         }
       }
     }
@@ -1737,15 +1719,8 @@ class AggregationHeuristic {
 
       double upper = double(rhs);
 
-#ifdef HIGHS_DEBUGSOL
-      HighsCDouble debugactivity = 0;
-      for (size_t i = 0; i != inds.size(); ++i)
-        debugactivity += highsDebugSolution[inds[i]] * vals[i];
-
-      assert(debugactivity <= upper + feastol);
-#endif
-
-      cutpool.addCut(inds.data(), vals.data(), inds.size(), upper, cutintegral);
+      cutpool.addCut(mip, inds.data(), vals.data(), inds.size(), upper,
+                     cutintegral);
 
       ++numcuts;
     }
@@ -1886,13 +1861,6 @@ class AggregationHeuristic {
       setupStartRow(row);
 
       do {
-#ifdef HIGHS_DEBUGSOL
-        HighsCDouble debugactivity = 0;
-        for (size_t i = 0; i != baseinds.size(); ++i)
-          debugactivity += highsDebugSolution[baseinds[i]] * basevals[i];
-
-        assert(debugactivity <= baserhs + feastol);
-#endif
         computeTransformedRow(false);
 
         if (!freevar) {
@@ -2197,25 +2165,10 @@ void HighsSeparation::BaseRows::retransformAndAddCut(
 
   vectorsum.clear();
 
-#ifdef HIGHSDEBUGSOL
-  int len = inds.size();
-
-  HighsCDouble debugactivity = 0;
-  for (int i = 0; i != len; ++i) {
-    debugactivity += highsDebugSolution[inds[i]] * HighsCDouble(vals[i]);
-  }
-
-  if (debugactivity - lp.getMipSolver().mipdata_->epsilon > rhs) {
-    printf("debug solution violated by %g for this cut:\n",
-           double(debugactivity - rhs));
-    printCut(inds.data(), vals.data(), len, double(rhs));
-    assert(false);
-  }
-#endif
   double upper = double(rhs);
-  // domain.tightenCoefficients(inds.data(), vals.data(), inds.size(),
-  // upper);
-  cutpool.addCut(inds.data(), vals.data(), inds.size(), upper, cutintegral);
+
+  cutpool.addCut(mip, inds.data(), vals.data(), inds.size(), upper,
+                 cutintegral);
 }
 
 int HighsSeparation::separationRound(HighsDomain& propdomain,
@@ -2240,7 +2193,7 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
     if (!lp->scaledOptimal(status)) return 0;
   }
 
-  mipdata.cliquetable.separateCliques(sol.col_value, mipdata.domain, propdomain,
+  mipdata.cliquetable.separateCliques(lp->getMipSolver(), sol.col_value,
                                       mipdata.cutpool, mipdata.feastol);
 
   AggregationHeuristic aggheur(*lp, mipdata.domain, mipdata.cutpool,
@@ -2293,13 +2246,8 @@ void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
   std::vector<double> upper(len);
   HighsCDouble rhs = rowupper;
 
-#ifdef HIGHS_DEBUGSOL
-  HighsCDouble debugactivity = 0;
-  for (size_t i = 0; i != inds.size(); ++i)
-    debugactivity += highsDebugSolution[inds[i]] * vals[i];
-
-  assert(debugactivity <= rhs + mipsolver.mipdata_->epsilon);
-#endif
+  mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
+                                             inds.size(), rowupper);
 
   int nbin = 0;
   int nint = 0;
@@ -2378,15 +2326,8 @@ void HighsSeparation::computeAndAddConflictCut(HighsMipSolver& mipsolver,
       ++offset;
     }
 
-#ifdef HIGHS_DEBUGSOL
-    HighsCDouble debugactivity = 0;
-    for (int i = 0; i != offset; ++i)
-      debugactivity += highsDebugSolution[inds[i]] * vals[i];
-
-    assert(debugactivity <= rhs + mipsolver.mipdata_->epsilon);
-#endif
-    mipsolver.mipdata_->cutpool.addCut(inds.data(), vals.data(), offset,
-                                       double(rhs), cutintegral);
+    mipsolver.mipdata_->cutpool.addCut(mipsolver, inds.data(), vals.data(),
+                                       offset, double(rhs), cutintegral);
   }
 }
 

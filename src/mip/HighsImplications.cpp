@@ -4,6 +4,8 @@
 #include "mip/HighsMipSolverData.h"
 
 bool HighsImplications::computeImplications(int col, bool val) {
+  HighsDomain& globaldomain = mipsolver.mipdata_->domain;
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
   globaldomain.propagate();
   if (globaldomain.infeasible()) return true;
   const auto& domchgstack = globaldomain.getDomainChangeStack();
@@ -67,7 +69,7 @@ bool HighsImplications::computeImplications(int col, bool val) {
     else
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 1);
 
-    cliquetable.addClique(globaldomain, clique, 2);
+    cliquetable.addClique(mipsolver, clique, 2);
     if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
   }
 
@@ -99,9 +101,10 @@ bool HighsImplications::computeImplications(int col, bool val) {
 }
 
 bool HighsImplications::runProbing(int col, int& numboundchgs) {
+  HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0) &&
-      cliquetable.getSubstitution(col) == nullptr) {
+      mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
     bool infeasible;
 
     infeasible = computeImplications(col, 1);
@@ -173,7 +176,9 @@ void HighsImplications::addVUB(int col, int vubcol, double vubcoef,
                                double vubconstant) {
   VarBound vub{vubcoef, vubconstant};
 
-  if (vub.minValue() >= globaldomain.colUpper_[col] - 1e-6) return;
+  if (vub.minValue() >=
+      mipsolver.mipdata_->domain.colUpper_[col] - mipsolver.mipdata_->feastol)
+    return;
 
   auto insertresult = vubs[col].emplace(vubcol, vub);
 
@@ -181,7 +186,7 @@ void HighsImplications::addVUB(int col, int vubcol, double vubcoef,
     VarBound& currentvub = insertresult.first->second;
     double minbound_current = currentvub.constant - std::abs(currentvub.coef);
     double minbound_new = vubconstant - std::abs(vubcoef);
-    if (minbound_new < minbound_current - 1e-6) {
+    if (minbound_new < minbound_current - mipsolver.mipdata_->feastol) {
       currentvub.coef = vubcoef;
       currentvub.constant = vubconstant;
     }
@@ -192,7 +197,9 @@ void HighsImplications::addVLB(int col, int vlbcol, double vlbcoef,
                                double vlbconstant) {
   VarBound vlb{vlbcoef, vlbconstant};
 
-  if (vlb.maxValue() <= globaldomain.colLower_[col] + 1e-6) return;
+  if (vlb.maxValue() <=
+      mipsolver.mipdata_->domain.colLower_[col] + mipsolver.mipdata_->feastol)
+    return;
 
   auto insertresult = vlbs[col].emplace(vlbcol, vlb);
 

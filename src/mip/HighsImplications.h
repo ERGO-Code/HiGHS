@@ -36,13 +36,12 @@ class HighsImplications {
   std::vector<std::map<int, VarBound>> vlbs;
 
  public:
-  HighsDomain& globaldomain;
-  HighsCliqueTable& cliquetable;
+  const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
   std::vector<uint8_t> colsubstituted;
-  HighsImplications(HighsDomain& globaldom, HighsCliqueTable& cliquetable)
-      : globaldomain(globaldom), cliquetable(cliquetable) {
-    int numcol = globaldom.colLower_.size();
+  HighsImplications(const HighsMipSolver& mipsolver)
+      : mipsolver(mipsolver) {
+    int numcol = mipsolver.numCol();
     implicationmap.resize(2 * numcol, {-1, 0});
     colsubstituted.resize(numcol);
     vubs.resize(numcol);
@@ -55,7 +54,7 @@ class HighsImplications {
     implicationmap.clear();
     implicationmap.shrink_to_fit();
 
-    int numcol = globaldomain.colLower_.size();
+    int numcol = mipsolver.numCol();
     implicationmap.resize(2 * numcol, {-1, 0});
     colsubstituted.resize(numcol);
     vubs.clear();

@@ -171,13 +171,8 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   assert(std::isfinite(rhs));
   globaldomain.tightenCoefficients(inds.data(), vals.data(), inds.size(), rhs);
 
-#ifdef HIGHS_DEBUGSOL
-  HighsCDouble debugactivity = 0;
-  for (size_t i = 0; i != inds.size(); ++i)
-    debugactivity += highsDebugSolution[inds[i]] * vals[i];
-
-  assert(debugactivity <= rhs + mipsolver.mipdata_->feastol);
-#endif
+  mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
+                                             inds.size(), rhs);
 
   return true;
 }
@@ -289,13 +284,9 @@ void HighsLpRelaxation::storeDualInfProof() {
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
       dualproofrhs);
 
-#ifdef HIGHS_DEBUGSOL
-  HighsCDouble debugactivity = 0;
-  for (size_t i = 0; i != dualproofinds.size(); ++i)
-    debugactivity += highsDebugSolution[dualproofinds[i]] * dualproofvals[i];
-
-  assert(debugactivity <= dualproofrhs + mipsolver.mipdata_->feastol);
-#endif
+  mipsolver.mipdata_->debugSolution.checkCut(
+      dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
+      dualproofrhs);
 }
 
 void HighsLpRelaxation::storeDualUBProof() {
@@ -402,13 +393,9 @@ void HighsLpRelaxation::storeDualUBProof() {
       dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
       dualproofrhs);
 
-#ifdef HIGHS_DEBUGSOL
-  HighsCDouble debugactivity = 0;
-  for (size_t i = 0; i != dualproofinds.size(); ++i)
-    debugactivity += highsDebugSolution[dualproofinds[i]] * dualproofvals[i];
-
-  assert(debugactivity <= dualproofrhs + mipsolver.mipdata_->feastol);
-#endif
+  mipsolver.mipdata_->debugSolution.checkCut(
+      dualproofinds.data(), dualproofvals.data(), dualproofinds.size(),
+      dualproofrhs);
 }
 
 bool HighsLpRelaxation::checkDualProof() const {
@@ -456,20 +443,6 @@ void HighsLpRelaxation::recoverBasis() {
 
 HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsStatus callstatus;
-#ifdef HIGHS_DEBUGSOL
-  bool debugsolactive = true;
-  HighsCDouble debugsolobj = 0;
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
-    if (highsDebugSolution[i] + mipsolver.mipdata_->epsilon <
-            lpsolver.getLp().colLower_[i] ||
-        highsDebugSolution[i] - mipsolver.mipdata_->epsilon >
-            lpsolver.getLp().colUpper_[i]) {
-      debugsolactive = false;
-    }
-
-    debugsolobj += highsDebugSolution[i] * lpsolver.getLp().colCost_[i];
-  }
-#endif
 
   try {
     callstatus = lpsolver.run();
@@ -500,9 +473,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     case HighsModelStatus::PRIMAL_INFEASIBLE:
       storeDualInfProof();
       if (checkDualProof()) {
-#ifdef HIGHS_DEBUGSOL
-        assert(!debugsolactive);
-#endif
         return Status::Infeasible;
       }
       hasdualproof = false;
@@ -532,14 +502,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       assert(info.max_primal_infeasibility >= 0);
       assert(info.max_dual_infeasibility >= 0);
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol &&
-          info.max_dual_infeasibility <= mipsolver.mipdata_->feastol) {
-#ifdef HIGHS_DEBUGSOL
-        assert(!debugsolactive ||
-               lpsolver.getObjectiveValue() <=
-                   debugsolobj + mipsolver.mipdata_->epsilon);
-#endif
+          info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::Optimal;
-      }
 
       if (resolve_on_error) {
         int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
@@ -552,18 +516,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return tmp;
       }
 
-      if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol) {
+      if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::UnscaledPrimalFeasible;
-      }
 
-      if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol) {
-#ifdef HIGHS_DEBUGSOL
-        assert(!debugsolactive ||
-               lpsolver.getObjectiveValue() <=
-                   debugsolobj + mipsolver.mipdata_->epsilon);
-#endif
+      if (info.max_dual_infeasibility <= mipsolver.mipdata_->feastol)
         return Status::UnscaledDualFeasible;
-      }
 
       return Status::UnscaledInfeasible;
     case HighsModelStatus::REACHED_ITERATION_LIMIT: {

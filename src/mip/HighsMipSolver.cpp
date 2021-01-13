@@ -23,10 +23,6 @@
 #include "presolve/PresolveComponent.h"
 #include "util/HighsCDouble.h"
 
-#ifdef HIGHS_DEBUGSOL
-std::vector<double> highsDebugSolution;
-#endif
-
 HighsMipSolver::HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
                                bool submip)
     : options_mip_(&options), model_(&lp), submip(submip), rootbasis(nullptr) {}
@@ -338,16 +334,6 @@ void HighsMipSolver::run() {
     mipdata_->domain.propagate();
     mipdata_->pruned_treeweight += mipdata_->nodequeue.pruneInfeasibleNodes(
         mipdata_->domain, mipdata_->feastol);
-
-#ifdef HIGHS_DEBUGSOL
-    assert(!mipdata_->domain.infeasible());
-    for (int i = 0; i != numCol(); ++i) {
-      assert(highsDebugSolution[i] + mipdata_->epsilon >=
-             mipdata_->domain.colLower_[i]);
-      assert(highsDebugSolution[i] - mipdata_->epsilon <=
-             mipdata_->domain.colUpper_[i]);
-    }
-#endif
 
     // if global propagation detected infeasibility, stop here
     if (mipdata_->domain.infeasible()) {

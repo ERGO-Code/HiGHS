@@ -364,41 +364,6 @@ void HighsMipSolverData::init() {
 void HighsMipSolverData::runSetup() {
   const HighsLp& model = *mipsolver.model_;
 
-#ifdef HIGHS_DEBUGSOL
-  if (!mipsolver.options_mip_->mip_debug_solution_file.empty()) {
-    HighsPrintMessage(mipsolver.options_mip_->output,
-                      mipsolver.options_mip_->message_level, ML_MINIMAL,
-                      "reading debug solution file %s\n",
-                      mipsolver.options_mip_->mip_debug_solution_file.c_str());
-    std::ifstream file(mipsolver.options_mip_->mip_debug_solution_file);
-    if (file) {
-      std::string varname;
-      double varval;
-      std::map<std::string, int> nametoidx;
-
-      for (int i = 0; i != mipsolver.model_->numCol_; ++i)
-        nametoidx[mipsolver.model_->col_names_[i]] = i;
-
-      highsDebugSolution.resize(mipsolver.model_->numCol_, 0.0);
-      while (!file.eof()) {
-        file >> varname;
-        auto it = nametoidx.find(varname);
-        if (it != nametoidx.end()) {
-          file >> varval;
-          HighsPrintMessage(mipsolver.options_mip_->output,
-                            mipsolver.options_mip_->message_level, ML_MINIMAL,
-                            "%s = %g\n", varname.c_str(), varval);
-          highsDebugSolution[it->second] = varval;
-        }
-
-        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-      }
-    } else {
-      throw std::runtime_error("debug solution: could not open file\n");
-    }
-  }
-#endif
-
   upper_limit = mipsolver.options_mip_->dual_objective_value_upper_bound -
                 mipsolver.model_->offset_;
 
@@ -549,6 +514,8 @@ void HighsMipSolverData::runSetup() {
         integer_cols.push_back(i);
     }
   }
+
+  debugSolution.activate();
 }
 
 void HighsMipSolverData::basisTransfer() {
@@ -728,6 +695,7 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
       new_upper_limit = solobj - feastol;
     }
     if (new_upper_limit < upper_limit) {
+      debugSolution.newIncumbentFound();
       upper_limit = new_upper_limit;
       cliquetable.extractObjCliques(mipsolver);
       pruned_treeweight += nodequeue.performBounding(upper_limit);
