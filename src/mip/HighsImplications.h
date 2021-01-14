@@ -39,8 +39,7 @@ class HighsImplications {
   const HighsMipSolver& mipsolver;
   std::vector<HighsSubstitution> substitutions;
   std::vector<uint8_t> colsubstituted;
-  HighsImplications(const HighsMipSolver& mipsolver)
-      : mipsolver(mipsolver) {
+  HighsImplications(const HighsMipSolver& mipsolver) : mipsolver(mipsolver) {
     int numcol = mipsolver.numCol();
     implicationmap.resize(2 * numcol, {-1, 0});
     colsubstituted.resize(numcol);
