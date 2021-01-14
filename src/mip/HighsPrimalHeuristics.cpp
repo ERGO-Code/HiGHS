@@ -365,7 +365,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     intval = std::min(localdom.colUpper_[i], intval);
     intval = std::max(localdom.colLower_[i], intval);
 
-    localdom.fixCol(i, intval);
+    localdom.fixCol(i, intval, HighsDomain::Reason::branching());
     if (localdom.infeasible()) return;
     localdom.propagate();
     if (localdom.infeasible()) return;

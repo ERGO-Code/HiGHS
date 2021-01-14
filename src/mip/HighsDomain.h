@@ -186,13 +186,13 @@ class HighsDomain {
     changeBound({boundtype, col, boundval}, reason);
   }
 
-  void fixCol(int col, double val) {
+  void fixCol(int col, double val, Reason reason = Reason::unspecified()) {
     assert(infeasible_ == 0);
     if (colLower_[col] < val)
-      changeBound({HighsBoundType::Lower, col, val}, Reason::unspecified());
+      changeBound({HighsBoundType::Lower, col, val}, reason);
 
     if (infeasible_ == 0 && colUpper_[col] > val)
-      changeBound({HighsBoundType::Upper, col, val}, Reason::unspecified());
+      changeBound({HighsBoundType::Upper, col, val}, reason);
   }
 
   HighsDomainChange backtrack();

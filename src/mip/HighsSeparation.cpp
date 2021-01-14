@@ -202,9 +202,14 @@ static bool separateMixedIntegerKnapsackCover(
   HighsCDouble mu;
   for (int i = coversize - 1; i >= 0; --i) {
     int j = cover[i];
+    // we divide by the coefficient for computing
+    // r and eta before rounding. Function values of the lifting function
+    // depend on those values and using too small values can lead to numerical
+    // blow up.
+    if (vals[j] < 10 * mip.mipdata_->feastol) continue;
     mu = upper[j] * vals[j] - lambda;
 
-    if (mu > 1e-5) {
+    if (mu > 10 * mip.mipdata_->feastol) {
       l = j;
       break;
     }
@@ -212,12 +217,15 @@ static bool separateMixedIntegerKnapsackCover(
 
   if (l == -1) return false;
 
-  assert(mu > 1e-5);
+  assert(mu > 10 * mip.mipdata_->feastol);
 
   double al = vals[l];
   double mudival = double(mu / al);
   double eta = ceil(mudival);
   HighsCDouble r = mu - floor(mudival) * al;
+  // we multiply with r and it is important that it does not flip the sign
+  // so we safe guard against tiny numerical errors here
+  if (r < 0) r = 0;
 
   int kmin = floor(eta - upper[l] - 0.5);
 
@@ -236,7 +244,7 @@ static bool separateMixedIntegerKnapsackCover(
       }
     }
 
-    assert(a < -lambda);
+    assert(a + mip.mipdata_->epsilon <= -lambda + 1e-10);
     return double(kmin * (al - r));
   };
 
@@ -320,7 +328,15 @@ static bool separateMixedIntegerKnapsackCover(
   coverflag.resize(rowlen);
   for (int i : cover) coverflag[i] = 1;
 
-  rhs = (HighsCDouble(upper[l]) - eta) * r - lambda;
+  // for computing the right hand side value we recompute eta and r but use
+  // tolerances for floor/ceil such that the right hand side is possibly weaker
+  // and numerically safer. The largest(weakest) value for the right hand side
+  // is attained when eta is as small as possible and r as large as possible.
+  double safe_eta = ceil(mudival - mip.mipdata_->epsilon);
+  HighsCDouble safe_r = mu - floor(mudival - mip.mipdata_->epsilon) * al;
+  if (safe_r < 0) safe_r = 0;
+
+  rhs = (HighsCDouble(upper[l]) - safe_eta) * safe_r - lambda;
 
   for (int i = 0; i != rowlen; ++i) {
     int col = inds[i];
@@ -344,6 +360,9 @@ static bool separateMixedIntegerKnapsackCover(
   if (double(viol) > 1e-5) {
     // printf("found mixed integer cover cut with violation %g\n",
     // double(viol));
+    // printf("al: %g  r: %g  eta: %g  mu: %g  lambda: %g\n", al, double(r),
+    // eta,
+    //        double(mu), double(lambda));
     return true;
   }
 
@@ -2025,9 +2044,19 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
   assert(std::all_of(vectorsum.nonzeroflag.begin(), vectorsum.nonzeroflag.end(),
                      [](uint8_t f) { return f == 0; }));
 
+  double sum = 0.0;
+  for (int k = 0; k != naggrinds; ++k) {
+    double val = std::abs(aggrvals[aggrinds[k]]);
+    sum += val;
+  }
+
+  int expscal;
+  std::frexp(sum, &expscal);
+
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
-    if (std::abs(aggrvals[j]) <= mip.mipdata_->feastol) continue;
+    double aggval = std::ldexp(aggrvals[j], -expscal);
+    if (std::abs(aggval) <= mip.mipdata_->feastol) continue;
 
     int rowlen;
     const int* rowinds;
@@ -2039,7 +2068,7 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
       cutpool.getCut(cut, rowlen, rowinds, rowvals);
     }
 
-    HighsCDouble scale = aggrvals[j];
+    HighsCDouble scale = aggval;
 
     assert(slacktype_[j] != 0 || lp.rowLower(j) == lp.rowUpper(j));
 

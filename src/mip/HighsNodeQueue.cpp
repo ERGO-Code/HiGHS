@@ -152,6 +152,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
         if (globallb > globaldomain.colLower_[i]) {
           globaldomain.changeBound(HighsBoundType::Lower, i, globallb,
                                    HighsDomain::Reason::unspecified());
+          if (globaldomain.infeasible()) break;
         }
       }
 
@@ -160,6 +161,7 @@ double HighsNodeQueue::pruneInfeasibleNodes(HighsDomain& globaldomain,
         if (globalub < globaldomain.colUpper_[i]) {
           globaldomain.changeBound(HighsBoundType::Upper, i, globalub,
                                    HighsDomain::Reason::unspecified());
+          if (globaldomain.infeasible()) break;
         }
       }
     }
