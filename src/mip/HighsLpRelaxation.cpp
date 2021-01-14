@@ -124,22 +124,12 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
       std::max(mipsolver.mipdata_->feastol,
                2 * lpsolver.getHighsInfo().max_dual_infeasibility);
 
-  double sum = 0.0;
   for (int i = 0; i != lp.numRow_; ++i) {
     if (std::abs(row_dual[i]) <= dualfeastol) continue;
-    sum += std::abs(row_dual[i]);
-  }
-
-  int expscal;
-  std::frexp(sum, &expscal);
-
-  for (int i = 0; i != lp.numRow_; ++i) {
-    if (std::abs(row_dual[i]) <= dualfeastol) continue;
-    double rowdual = std::ldexp(row_dual[i], -expscal);
-    if (rowdual > 0)
-      upper += rowdual * lp.rowUpper_[i];
+    if (row_dual[i] > 0)
+      upper += row_dual[i] * lp.rowUpper_[i];
     else
-      upper += rowdual * lp.rowLower_[i];
+      upper += row_dual[i] * lp.rowLower_[i];
   }
 
   inds.clear();
@@ -152,8 +142,7 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     for (int j = start; j != end; ++j) {
       if (std::abs(row_dual[lp.Aindex_[j]]) <= dualfeastol) continue;
-      double rowdual = std::ldexp(row_dual[lp.Aindex_[j]], -expscal);
-      sum += lp.Avalue_[j] * rowdual;
+      sum += lp.Avalue_[j] * row_dual[lp.Aindex_[j]];
     }
 
     double val = double(sum);
