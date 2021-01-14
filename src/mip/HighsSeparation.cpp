@@ -244,7 +244,7 @@ static bool separateMixedIntegerKnapsackCover(
       }
     }
 
-    assert(a + mip.mipdata_->epsilon <= -lambda + 1e-10);
+    assert(a <= -lambda + mip.mipdata_->epsilon);
     return double(kmin * (al - r));
   };
 
