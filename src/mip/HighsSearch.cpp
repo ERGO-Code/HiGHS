@@ -564,42 +564,6 @@ void HighsSearch::addBoundExceedingConflict() {
   }
 }
 
-void HighsSearch::reducedCostFixing() {
-  if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
-    double rhs;
-    if (lp->computeDualProof(mipsolver.mipdata_->domain,
-                             mipsolver.mipdata_->upper_limit, inds, vals,
-                             rhs)) {
-      HighsCDouble minact;
-      int ninfmin;
-      localdom.computeMinActivity(0, inds.size(), inds.data(), vals.data(),
-                                  ninfmin, minact);
-      std::vector<HighsDomainChange> domchgs(inds.size());
-      int nchgs =
-          localdom.propagateRowUpper(inds.data(), vals.data(), inds.size(), rhs,
-                                     minact, ninfmin, domchgs.data());
-
-      if (nchgs != 0) {
-        for (int i = 0; i != nchgs && !localdom.infeasible(); ++i)
-          localdom.changeBound(domchgs[i], HighsDomain::Reason::unspecified());
-
-        if (!localdom.infeasible()) localdom.propagate();
-
-        mipsolver.mipdata_->domain.computeMinActivity(
-            0, inds.size(), inds.data(), vals.data(), ninfmin, minact);
-        nchgs = mipsolver.mipdata_->domain.propagateRowUpper(
-            inds.data(), vals.data(), inds.size(), rhs, minact, ninfmin,
-            domchgs.data());
-        for (int i = 0; i != nchgs; ++i) {
-          mipsolver.mipdata_->domain.changeBound(
-              domchgs[i], HighsDomain::Reason::unspecified());
-          if (mipsolver.mipdata_->domain.infeasible()) return;
-        }
-      }
-    }
-  }
-}
-
 void HighsSearch::addInfeasibleConflict() {
   double rhs;
   if (lp->computeDualInfProof(mipsolver.mipdata_->domain, inds, vals, rhs)) {
@@ -1126,61 +1090,62 @@ void HighsSearch::evaluateNode() {
     HighsLpRelaxation::Status status = lp->resolveLp();
     lpiterations += lp->getNumLpIterations() - oldnumiters;
     if (lp->scaledOptimal(status)) {
-      reducedCostFixing();
-      if (localdom.infeasible()) {
-        prune = true;
-      } else if (!localdom.getChangedCols().empty()) {
-        evaluateNode();
-        return;
-      } else {
-        lp->storeBasis();
+      lp->storeBasis();
 
-        currnode.estimate = lp->computeBestEstimate(pseudocost);
+      currnode.estimate = lp->computeBestEstimate(pseudocost);
 
-        if (lp->unscaledPrimalFeasible(status)) {
-          if (lp->getFractionalIntegers().empty()) {
-            double cutoffbnd = getCutoffBound();
-            mipsolver.mipdata_->addIncumbent(
-                lp->getLpSolver().getSolution().col_value, lp->getObjective(),
-                inheuristic ? 'H' : 'T');
-            if (mipsolver.mipdata_->upper_limit < cutoffbnd)
-              lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
-          }
+      if (lp->unscaledPrimalFeasible(status)) {
+        if (lp->getFractionalIntegers().empty()) {
+          double cutoffbnd = getCutoffBound();
+          mipsolver.mipdata_->addIncumbent(
+              lp->getLpSolver().getSolution().col_value, lp->getObjective(),
+              inheuristic ? 'H' : 'T');
+          if (mipsolver.mipdata_->upper_limit < cutoffbnd)
+            lp->setObjectiveLimit(mipsolver.mipdata_->upper_limit);
+        }
+      }
+
+      if (lp->unscaledDualFeasible(status)) {
+        currnode.lpsolved = true;
+        currnode.lower_bound =
+            std::max(lp->getObjective(), currnode.lower_bound);
+
+        const NodeData* parent = getParentNodeData();
+
+        if (parent != nullptr && parent->lpsolved &&
+            parent->branching_point != parent->branchingdecision.boundval) {
+          int col = parent->branchingdecision.column;
+          double delta =
+              parent->branchingdecision.boundval - parent->branching_point;
+          double objdelta =
+              std::max(0.0, currnode.lower_bound - parent->lower_bound);
+
+          pseudocost.addObservation(col, delta, objdelta);
         }
 
-        if (lp->unscaledDualFeasible(status)) {
-          currnode.lpsolved = true;
-          currnode.lower_bound =
-              std::max(lp->getObjective(), currnode.lower_bound);
-
-          const NodeData* parent = getParentNodeData();
-
-          if (parent != nullptr && parent->lpsolved &&
-              parent->branching_point != parent->branchingdecision.boundval) {
-            int col = parent->branchingdecision.column;
-            double delta =
-                parent->branchingdecision.boundval - parent->branching_point;
-            double objdelta =
-                std::max(0.0, currnode.lower_bound - parent->lower_bound);
-
-            pseudocost.addObservation(col, delta, objdelta);
-          }
-
-          if (currnode.lower_bound > getCutoffBound()) {
-            addBoundExceedingConflict();
-            prune = true;
-          }
-        } else if (lp->getObjective() > getCutoffBound()) {
-          // the LP is not solved to dual feasibilty due to scaling/numerics
-          // therefore we compute a conflict constraint as if the LP was bound
-          // exceeding and propagate the local domain again. The lp relaxation
-          // class will take care to consider the dual multipliers with an
-          // increased zero tolerance due to the dual infeasibility when
-          // computing the proof constraint.
+        if (currnode.lower_bound > getCutoffBound()) {
           addBoundExceedingConflict();
-          localdom.propagate();
-          prune = localdom.infeasible();
+          prune = true;
+        } else if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF) {
+          HighsRedcostFixing::propagateRedCost(
+              mipsolver, localdom, lp->getLpSolver().getSolution().col_dual,
+              lp->getObjective());
+          if (!localdom.getChangedCols().empty()) {
+            evaluateNode();
+            return;
+          } else if (localdom.infeasible())
+            prune = true;
         }
+      } else if (lp->getObjective() > getCutoffBound()) {
+        // the LP is not solved to dual feasibilty due to scaling/numerics
+        // therefore we compute a conflict constraint as if the LP was bound
+        // exceeding and propagate the local domain again. The lp relaxation
+        // class will take care to consider the dual multipliers with an
+        // increased zero tolerance due to the dual infeasibility when
+        // computing the proof constraint.
+        addBoundExceedingConflict();
+        localdom.propagate();
+        prune = localdom.infeasible();
       }
     } else if (status == HighsLpRelaxation::Status::Infeasible) {
       addInfeasibleConflict();

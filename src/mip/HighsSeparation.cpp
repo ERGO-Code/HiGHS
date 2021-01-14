@@ -206,7 +206,7 @@ static bool separateMixedIntegerKnapsackCover(
     // r and eta before rounding. Function values of the lifting function
     // depend on those values and using too small values can lead to numerical
     // blow up.
-    if (vals[j] < 10 * mip.mipdata_->feastol) continue;
+    if (vals[j] < 1000 * mip.mipdata_->feastol) continue;
     mu = upper[j] * vals[j] - lambda;
 
     if (mu > 10 * mip.mipdata_->feastol) {
@@ -332,8 +332,8 @@ static bool separateMixedIntegerKnapsackCover(
   // tolerances for floor/ceil such that the right hand side is possibly weaker
   // and numerically safer. The largest(weakest) value for the right hand side
   // is attained when eta is as small as possible and r as large as possible.
-  double safe_eta = ceil(mudival - mip.mipdata_->epsilon);
-  HighsCDouble safe_r = mu - floor(mudival - mip.mipdata_->epsilon) * al;
+  double safe_eta = ceil(mudival - mip.mipdata_->feastol);
+  HighsCDouble safe_r = mu - floor(mudival - mip.mipdata_->feastol) * al;
   if (safe_r < 0) safe_r = 0;
 
   rhs = (HighsCDouble(upper[l]) - safe_eta) * safe_r - lambda;

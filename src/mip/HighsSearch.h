@@ -111,8 +111,6 @@ class HighsSearch {
 
   void addBoundExceedingConflict();
 
-  void reducedCostFixing();
-
   void resetLocalDomain();
 
   void solveSubMip(std::vector<double> colLower, std::vector<double> colUpper,

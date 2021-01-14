@@ -13,6 +13,7 @@
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
+#include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
 #include "util/HighsTimer.h"
@@ -26,6 +27,8 @@ struct HighsMipSolverData {
   HighsCliqueTable cliquetable;
   HighsImplications implications;
   HighsPrimalHeuristics heuristics;
+  HighsRedcostFixing redcostfixing;
+
   struct Substitution {
     int substcol;
     int staycol;

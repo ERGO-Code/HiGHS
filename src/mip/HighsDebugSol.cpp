@@ -10,8 +10,9 @@
 HighsDebugSol::HighsDebugSol(HighsMipSolver& mipsolver)
     : debugSolActive(false) {
   this->mipsolver = &mipsolver;
-  if (mipsolver.submip) return;
+  debugSolObjective = HIGHS_CONST_INF;
   debugSolActive = false;
+  if (mipsolver.submip) return;
   if (!mipsolver.options_mip_->mip_debug_solution_file.empty()) {
     HighsPrintMessage(mipsolver.options_mip_->output,
                       mipsolver.options_mip_->message_level, ML_MINIMAL,

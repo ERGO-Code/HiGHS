@@ -697,6 +697,7 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
     if (new_upper_limit < upper_limit) {
       debugSolution.newIncumbentFound();
       upper_limit = new_upper_limit;
+      redcostfixing.propagateRootRedcost(mipsolver);
       cliquetable.extractObjCliques(mipsolver);
       pruned_treeweight += nodequeue.performBounding(upper_limit);
       printDisplayLine(source);
@@ -774,11 +775,18 @@ void HighsMipSolverData::evaluateRootNode() {
   firstrootbasis = lp.getLpSolver().getBasis();
   rootlpsolobj = firstlpsolobj;
 
-  if (lp.unscaledDualFeasible(lp.getStatus()))
-    mipsolver.mipdata_->lower_bound = lp.getObjective();
+  if (lp.unscaledDualFeasible(lp.getStatus())) {
+    lower_bound = lp.getObjective();
+    redcostfixing.addRootRedcost(
+        mipsolver, lp.getLpSolver().getSolution().col_dual, lower_bound);
+    if (mipsolver.mipdata_->upper_limit != HIGHS_CONST_INF)
+      redcostfixing.propagateRootRedcost(mipsolver);
+  }
 
-  heuristics.randomizedRounding(firstlpsol);
-  heuristics.flushStatistics();
+  if (!domain.infeasible()) {
+    heuristics.randomizedRounding(firstlpsol);
+    heuristics.flushStatistics();
+  }
 
   if (mipsolver.mipdata_->domain.infeasible() ||
       mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
@@ -842,6 +850,31 @@ void HighsMipSolverData::evaluateRootNode() {
       heuristics.flushStatistics();
     }
 
+    if (lp.unscaledDualFeasible(status)) {
+      lower_bound = lp.getObjective();
+      redcostfixing.addRootRedcost(
+          mipsolver, lp.getLpSolver().getSolution().col_dual, lower_bound);
+      if (upper_limit != HIGHS_CONST_INF) {
+        redcostfixing.propagateRootRedcost(mipsolver);
+
+        if (domain.infeasible()) {
+          status = HighsLpRelaxation::Status::Infeasible;
+        } else if (!domain.getChangedCols().empty()) {
+          lp.flushDomain(domain);
+          status = lp.resolveLp();
+        }
+
+        if (status == HighsLpRelaxation::Status::Infeasible) {
+          pruned_treeweight = 1.0;
+          lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
+          total_lp_iterations = lp.getNumLpIterations();
+          num_nodes = 1;
+          num_leaves = 1;
+          return;
+        }
+      }
+    }
+
     HighsCDouble sqrnorm = 0.0;
     for (int i = 0; i != mipsolver.numCol(); ++i) {
       curdirection[i] = firstlpsol[i] - solvals[i];
@@ -883,9 +916,8 @@ void HighsMipSolverData::evaluateRootNode() {
     }
 
     rootlpsolobj = lp.getObjective();
+    if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
 
-    if (lp.unscaledDualFeasible(status))
-      mipsolver.mipdata_->lower_bound = lp.getObjective();
     total_lp_iterations = lp.getNumLpIterations();
 
     lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));

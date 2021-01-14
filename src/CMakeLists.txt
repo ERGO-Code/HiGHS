@@ -107,6 +107,7 @@ set(sources
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsRedcostFixing.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
@@ -425,6 +426,7 @@ target_sources(libhighs PRIVATE
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsRedcostFixing.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
