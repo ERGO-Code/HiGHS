@@ -156,7 +156,7 @@ class HighsLpRelaxation {
                            std::vector<int>& inds, std::vector<double>& vals,
                            double& rhs);
 
-  Status resolveLp();
+  Status resolveLp(HighsDomain* domain = nullptr);
 
   Status run(bool resolve_on_error = true);
 

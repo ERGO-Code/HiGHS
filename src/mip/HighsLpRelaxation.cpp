@@ -559,101 +559,123 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
 }
 
-HighsLpRelaxation::Status HighsLpRelaxation::resolveLp() {
+HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
   fractionalints.clear();
 
-  status = run();
+  bool solveagain;
+  do {
+    solveagain = false;
+    if( domain )
+      flushDomain(*domain);
+    status = run();
 
-  switch (status) {
-    case Status::UnscaledInfeasible:
-    case Status::UnscaledDualFeasible:
-    case Status::UnscaledPrimalFeasible:
-    case Status::Optimal: {
-      std::unordered_map<int, std::pair<double, int>> fracints;
-      const HighsSolution& sol = lpsolver.getSolution();
+    switch (status) {
+      case Status::UnscaledInfeasible:
+      case Status::UnscaledDualFeasible:
+      case Status::UnscaledPrimalFeasible:
+      case Status::Optimal: {
+        std::unordered_map<int, std::pair<double, int>> fracints;
+        const HighsSolution& sol = lpsolver.getSolution();
 
-      HighsCDouble objsum = 0;
-      bool roundable = true;
-      for (int i = 0; i != mipsolver.numCol(); ++i) {
-        if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
+        HighsCDouble objsum = 0;
+        bool roundable = true;
 
-        // for the fractionality we assume that LP bounds are not violated
-        // bounds that are violated by the unscaled LP are indicated by the
-        // return status already
-        double val =
-            std::max(std::min(sol.col_value[i], lpsolver.getLp().colUpper_[i]),
-                     lpsolver.getLp().colLower_[i]);
-        double intval = std::floor(val + 0.5);
+        for (int i : mipsolver.mipdata_->integral_cols) {
+          // for the fractionality we assume that LP bounds are not violated
+          // bounds that are violated by the unscaled LP are indicated by the
+          // return status already
+          double val = std::max(
+              std::min(sol.col_value[i], lpsolver.getLp().colUpper_[i]),
+              lpsolver.getLp().colLower_[i]);
+          double intval = std::floor(val + 0.5);
 
-        if (std::abs(val - intval) > mipsolver.mipdata_->feastol) {
-          int col = i;
-          if (roundable && mipsolver.mipdata_->uplocks[col] != 0 &&
-              mipsolver.mipdata_->downlocks[col] != 0)
-            roundable = false;
+          if (std::abs(val - intval) > mipsolver.mipdata_->feastol) {
+            int col = i;
+            if (roundable && mipsolver.mipdata_->uplocks[col] != 0 &&
+                mipsolver.mipdata_->downlocks[col] != 0)
+              roundable = false;
 
-          const HighsCliqueTable::Substitution* subst =
-              mipsolver.mipdata_->cliquetable.getSubstitution(col);
-          while (subst != nullptr) {
-            col = subst->replace.col;
-            if (subst->replace.val == 0) val = 1.0 - val;
+            const HighsCliqueTable::Substitution* subst =
+                mipsolver.mipdata_->cliquetable.getSubstitution(col);
+            while (subst != nullptr) {
+              if (lpsolver.getLp().colLower_[subst->replace.col] ==
+                  lpsolver.getLp().colUpper_[subst->replace.col])
+              {
+                if( domain )
+                  domain->fixCol( col, subst->replace.weight(lpsolver.getLp().colLower_));
+                else
+                  break;
+              }
 
-            subst = mipsolver.mipdata_->cliquetable.getSubstitution(col);
+              assert(lpsolver.getLp().colLower_[subst->replace.col] !=
+                     lpsolver.getLp().colUpper_[subst->replace.col]);
+              col = subst->replace.col;
+              if (subst->replace.val == 0) val = 1.0 - val;
+
+              subst = mipsolver.mipdata_->cliquetable.getSubstitution(col);
+            }
+            auto& pair = fracints[col];
+            pair.first += val;
+            pair.second += 1;
           }
-          auto& pair = fracints[col];
-          pair.first += val;
-          pair.second += 1;
-        }
-      }
-
-      for (const auto& it : fracints) {
-        fractionalints.emplace_back(it.first,
-                                    it.second.first / (double)it.second.second);
-      }
-
-      if (roundable && !fractionalints.empty()) {
-        std::vector<double> roundsol = sol.col_value;
-
-        for (const std::pair<int, double>& fracint : fractionalints) {
-          int col = fracint.first;
-
-          if (mipsolver.mipdata_->uplocks[col] == 0 &&
-              (mipsolver.colCost(col) < 0 ||
-               mipsolver.mipdata_->downlocks[col] != 0))
-            roundsol[col] = std::ceil(fracint.second);
-          else
-            roundsol[col] = std::floor(fracint.second);
         }
 
-        const auto& cliquesubst =
-            mipsolver.mipdata_->cliquetable.getSubstitutions();
-        for (int k = cliquesubst.size() - 1; k >= 0; --k) {
-          if (cliquesubst[k].replace.val == 0)
-            roundsol[cliquesubst[k].substcol] =
-                1 - roundsol[cliquesubst[k].replace.col];
-          else
-            roundsol[cliquesubst[k].substcol] =
-                roundsol[cliquesubst[k].replace.col];
+        if (domain && !domain->getChangedCols().empty()) {
+          printf("resolving due to fixings of substituted columns\n");
+          solveagain = true;
+          continue;
+        }
+
+        for (const auto& it : fracints) {
+          fractionalints.emplace_back(
+              it.first, it.second.first / (double)it.second.second);
+        }
+
+        if (roundable && !fractionalints.empty()) {
+          std::vector<double> roundsol = sol.col_value;
+
+          for (const std::pair<int, double>& fracint : fractionalints) {
+            int col = fracint.first;
+
+            if (mipsolver.mipdata_->uplocks[col] == 0 &&
+                (mipsolver.colCost(col) < 0 ||
+                 mipsolver.mipdata_->downlocks[col] != 0))
+              roundsol[col] = std::ceil(fracint.second);
+            else
+              roundsol[col] = std::floor(fracint.second);
+          }
+
+          const auto& cliquesubst =
+              mipsolver.mipdata_->cliquetable.getSubstitutions();
+          for (int k = cliquesubst.size() - 1; k >= 0; --k) {
+            if (cliquesubst[k].replace.val == 0)
+              roundsol[cliquesubst[k].substcol] =
+                  1 - roundsol[cliquesubst[k].replace.col];
+            else
+              roundsol[cliquesubst[k].substcol] =
+                  roundsol[cliquesubst[k].replace.col];
+          }
+
+          for (int i = 0; i != mipsolver.numCol(); ++i)
+            objsum += roundsol[i] * mipsolver.colCost(i);
+
+          mipsolver.mipdata_->addIncumbent(roundsol, double(objsum), 'S');
+          objsum = 0;
         }
 
         for (int i = 0; i != mipsolver.numCol(); ++i)
-          objsum += roundsol[i] * mipsolver.colCost(i);
+          objsum += sol.col_value[i] * mipsolver.colCost(i);
 
-        mipsolver.mipdata_->addIncumbent(roundsol, double(objsum), 'S');
-        objsum = 0;
+        objective = double(objsum);
+        break;
       }
-
-      for (int i = 0; i != mipsolver.numCol(); ++i)
-        objsum += sol.col_value[i] * mipsolver.colCost(i);
-
-      objective = double(objsum);
-      break;
+      case Status::Infeasible:
+        objective = HIGHS_CONST_INF;
+        break;
+      default:
+        break;
     }
-    case Status::Infeasible:
-      objective = HIGHS_CONST_INF;
-      break;
-    default:
-      break;
-  }
+  } while (solveagain);
 
   return status;
 }

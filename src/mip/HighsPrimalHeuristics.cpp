@@ -108,9 +108,8 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
 
     nfixed = 0;
     ntotal = 0;
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
+    for (int i : mipsolver.mipdata_->integral_cols) {
       // skip fixed and continuous variables
-      if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
       if (mipsolver.mipdata_->domain.colLower_[i] ==
           mipsolver.mipdata_->domain.colUpper_[i])
         continue;
@@ -428,9 +427,8 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& relaxationsol) {
 
   int nfixed = 0;
   int ntotal = 0;
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
+  for (int i : mipsolver.mipdata_->integral_cols) {
     // skip fixed and continuous variables
-    if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
     if (mipsolver.mipdata_->domain.colLower_[i] ==
         mipsolver.mipdata_->domain.colUpper_[i])
       continue;

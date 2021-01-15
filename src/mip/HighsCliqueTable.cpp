@@ -1140,9 +1140,8 @@ void HighsCliqueTable::separateCliques(const HighsMipSolver& mipsolver,
   data.feastol = feastol;
   const HighsDomain& globaldom = mipsolver.mipdata_->domain;
 
-  int numcols = globaldom.colLower_.size();
-  assert(int(numcliquesvar.size()) == 2 * numcols);
-  for (int i = 0; i != numcols; ++i) {
+  assert(numcliquesvar.size() == 2 * globaldom.colLower_.size());
+  for (int i : mipsolver.mipdata_->integral_cols) {
     if (colsubstituted[i]) continue;
 #ifdef ADD_ZERO_WEIGHT_VARS
     if (numcliquesvar[CliqueVar(i, 0).index()] != 0) {

@@ -207,6 +207,14 @@ void HighsMipSolver::run() {
     mipdata_->evaluateRootNode();
   }
   if (mipdata_->nodequeue.empty()) {
+    bool havesolution = mipdata_->upper_bound != HIGHS_CONST_INF;
+
+    if (modelstatus_ == HighsModelStatus::NOTSET) {
+      if (havesolution)
+        modelstatus_ = HighsModelStatus::OPTIMAL;
+      else
+        modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+    }
     mipdata_->printDisplayLine();
     HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                       ML_MINIMAL, "\nSolving stopped with status: %s\n",
@@ -352,6 +360,7 @@ void HighsMipSolver::run() {
       search.resetLocalDomain();
 
       mipdata_->domain.clearChangedCols();
+      mipdata_->removeFixedIndices();
     }
 
     // remove the iteration limit when installing a new node

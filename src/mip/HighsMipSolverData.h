@@ -66,6 +66,7 @@ struct HighsMipSolverData {
   std::vector<int> downlocks;
   std::vector<int> integer_cols;
   std::vector<int> implint_cols;
+  std::vector<int> integral_cols;
   std::vector<int> continuous_cols;
   double objintscale;
 
@@ -112,6 +113,7 @@ struct HighsMipSolverData {
     domain.addCutpool(cutpool);
   }
 
+  void removeFixedIndices();
   void init();
   void basisTransfer();
   void checkObjIntegrality();

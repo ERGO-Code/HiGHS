@@ -1157,8 +1157,8 @@ class AggregationHeuristic {
   void detectContinuousBounds() {
     // count number of continuous variables
     numcontinuous.assign(lp.numRow_, 0);
-    for (int i = 0; i != lp.numCol_; ++i) {
-      if (mip.variableType(i) != HighsVarType::CONTINUOUS) continue;
+    for (int i : mip.mipdata_->continuous_cols) {
+      assert(mip.variableType(i) == HighsVarType::CONTINUOUS);
 
       int start = lp.Astart_[i];
       int end = lp.Astart_[i + 1];
@@ -1175,8 +1175,8 @@ class AggregationHeuristic {
     collbscale.resize(lp.numCol_);
     bounddistance.assign(lp.numCol_, 0.0);
 
-    for (int i = 0; i != lp.numCol_; ++i) {
-      if (mip.variableType(i) != HighsVarType::CONTINUOUS) continue;
+    for (int i : mip.mipdata_->continuous_cols) {
+      assert(mip.variableType(i) == HighsVarType::CONTINUOUS);
 
       int start = lp.Astart_[i];
       int end = lp.Astart_[i + 1];
@@ -1264,7 +1264,7 @@ class AggregationHeuristic {
     // now only count the number of continuous variables
     // not at their bound
     numcontinuous.assign(lp.numRow_, 0);
-    for (int i = 0; i != lp.numCol_; ++i) {
+    for (int i : mip.mipdata_->continuous_cols) {
       if (bounddistance[i] == 0.0) continue;
 
       int start = lp.Astart_[i];
@@ -2216,8 +2216,7 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
   }
 
   if (!propdomain.getChangedCols().empty()) {
-    lp->flushDomain(propdomain);
-    status = lp->resolveLp();
+    status = lp->resolveLp(&propdomain);
 
     if (!lp->scaledOptimal(status)) return 0;
   }
@@ -2243,8 +2242,7 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
   }
 
   if (!propdomain.getChangedCols().empty()) {
-    lp->flushDomain(propdomain);
-    status = lp->resolveLp();
+    status = lp->resolveLp(&propdomain);
   }
 
   if (lp->scaledOptimal(status)) {
@@ -2255,7 +2253,7 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
 
     if (ncuts > 0) {
       lp->addCuts(cutset);
-      status = lp->resolveLp();
+      status = lp->resolveLp(&propdomain);
       mipdata.cutpool.ageLPRows(*lp);
     }
     return ncuts;

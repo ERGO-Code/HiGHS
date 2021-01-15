@@ -4,10 +4,11 @@
 
 void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
   if (lurkingColLower.empty()) return;
-  auto applyLurkingBounds = [&](int col, int k) {
+
+  for (int col : mipsolver.mipdata_->integral_cols) {
     for (auto it =
-             lurkingColLower[k].lower_bound(mipsolver.mipdata_->upper_limit);
-         it != lurkingColLower[k].end(); ++it) {
+             lurkingColLower[col].lower_bound(mipsolver.mipdata_->upper_limit);
+         it != lurkingColLower[col].end(); ++it) {
       if (it->second > mipsolver.mipdata_->domain.colLower_[col])
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::Lower, col, (double)it->second,
@@ -15,18 +16,14 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
     }
 
     for (auto it =
-             lurkingColUpper[k].lower_bound(mipsolver.mipdata_->upper_limit);
-         it != lurkingColUpper[k].end(); ++it) {
+             lurkingColUpper[col].lower_bound(mipsolver.mipdata_->upper_limit);
+         it != lurkingColUpper[col].end(); ++it) {
       if (it->second < mipsolver.mipdata_->domain.colUpper_[col])
         mipsolver.mipdata_->domain.changeBound(
             HighsBoundType::Upper, col, (double)it->second,
             HighsDomain::Reason::unspecified());
     }
-  };
-
-  int k = 0;
-  for (int col : mipsolver.mipdata_->integer_cols) applyLurkingBounds(col, k++);
-  for (int col : mipsolver.mipdata_->implint_cols) applyLurkingBounds(col, k++);
+  }
 
   mipsolver.mipdata_->domain.propagate();
 }
@@ -38,7 +35,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
   double gap = mipsolver.mipdata_->upper_limit - lpobjective;
   double tolerance = 10 * mipsolver.mipdata_->feastol;
   assert(!localdomain.infeasible());
-  auto propagateRedCost = [&](int col) {
+  for (int col : mipsolver.mipdata_->integral_cols) {
     // lpobj + (col - bnd) * redcost <= cutoffbound
     // (col - bnd) * redcost <= gap
     // redcost * col <= gap + redcost * bnd
@@ -48,7 +45,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
     //      col <= gap/redcost + lb
     // Therefore for a tightening to be possible we need:
     //   redcost >= / <=  gap * (ub - lb)
-    if (localdomain.colUpper_[col] == localdomain.colLower_[col]) return;
+    if (localdomain.colUpper_[col] == localdomain.colLower_[col]) continue;
 
     double threshold =
         (localdomain.colUpper_[col] - localdomain.colLower_[col]) * gap +
@@ -66,6 +63,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
 
       localdomain.changeBound(HighsBoundType::Upper, col, newub,
                               HighsDomain::Reason::unspecified());
+      if (localdomain.infeasible()) return;
     } else if ((localdomain.colLower_[col] == -HIGHS_CONST_INF &&
                 lpredcost[col] < -tolerance) ||
                lpredcost[col] < -threshold) {
@@ -78,24 +76,20 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
 
       localdomain.changeBound(HighsBoundType::Lower, col, newlb,
                               HighsDomain::Reason::unspecified());
+      if (localdomain.infeasible()) return;
     }
-  };
+  }
 
-  for (int col : mipsolver.mipdata_->integer_cols) {
-    propagateRedCost(col);
-    if (localdomain.infeasible()) return;
-  }
-  for (int col : mipsolver.mipdata_->implint_cols) {
-    propagateRedCost(col);
-    if (localdomain.infeasible()) return;
-  }
   localdomain.propagate();
 }
 
 void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
                                         const std::vector<double>& lpredcost,
                                         double lpobjective) {
-  auto addLurkingBounds = [&](int col, int k) {
+  lurkingColLower.resize(mipsolver.numCol());
+  lurkingColUpper.resize(mipsolver.numCol());
+
+  for (int col : mipsolver.mipdata_->integral_cols) {
     if (lpredcost[col] > mipsolver.mipdata_->feastol) {
       // col <= (cutoffbound - lpobj)/redcost + lb
       // so for lurkub = lb to ub - 1 we can compute the necessary cutoff bound
@@ -118,8 +112,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         bool useful = true;
 
         // check if we already have a better lurking bound stored
-        auto pos = lurkingColUpper[k].lower_bound(requiredcutoffbound);
-        for (auto it = pos; it != lurkingColUpper[k].end(); ++it) {
+        auto pos = lurkingColUpper[col].lower_bound(requiredcutoffbound);
+        for (auto it = pos; it != lurkingColUpper[col].end(); ++it) {
           if (it->second <= lurkub) {
             useful = false;
             break;
@@ -131,13 +125,13 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         // we have no better lurking bound stored store this lurking bound and
         // check if it dominates one that is already stored
         auto it =
-            lurkingColUpper[k].emplace_hint(pos, requiredcutoffbound, lurkub);
+            lurkingColUpper[col].emplace_hint(pos, requiredcutoffbound, lurkub);
 
-        auto i = lurkingColUpper[k].begin();
+        auto i = lurkingColUpper[col].begin();
         while (i != it) {
           if (i->second >= lurkub) {
             auto del = i++;
-            lurkingColUpper[k].erase(del);
+            lurkingColUpper[col].erase(del);
           } else {
             ++i;
           }
@@ -167,8 +161,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         bool useful = true;
 
         // check if we already have a better lurking bound stored
-        auto pos = lurkingColLower[k].lower_bound(requiredcutoffbound);
-        for (auto it = pos; it != lurkingColLower[k].end(); ++it) {
+        auto pos = lurkingColLower[col].lower_bound(requiredcutoffbound);
+        for (auto it = pos; it != lurkingColLower[col].end(); ++it) {
           if (it->second >= lurklb) {
             useful = false;
             break;
@@ -180,27 +174,18 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         // we have no better lurking bound stored store this lurking bound and
         // check if it dominates one that is already stored
         auto it =
-            lurkingColLower[k].emplace_hint(pos, requiredcutoffbound, lurklb);
+            lurkingColLower[col].emplace_hint(pos, requiredcutoffbound, lurklb);
 
-        auto i = lurkingColLower[k].begin();
+        auto i = lurkingColLower[col].begin();
         while (i != it) {
           if (i->second <= lurklb) {
             auto del = i++;
-            lurkingColLower[k].erase(del);
+            lurkingColLower[col].erase(del);
           } else {
             ++i;
           }
         }
       }
     }
-  };
-
-  lurkingColLower.resize(mipsolver.mipdata_->integer_cols.size() +
-                         mipsolver.mipdata_->implint_cols.size());
-  lurkingColUpper.resize(mipsolver.mipdata_->integer_cols.size() +
-                         mipsolver.mipdata_->implint_cols.size());
-
-  int k = 0;
-  for (int col : mipsolver.mipdata_->integer_cols) addLurkingBounds(col, k++);
-  for (int col : mipsolver.mipdata_->implint_cols) addLurkingBounds(col, k++);
+  }
 }

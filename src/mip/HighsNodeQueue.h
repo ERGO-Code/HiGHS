@@ -92,6 +92,23 @@ class HighsNodeQueue {
 
   OpenNode popBestBoundNode();
 
+  size_t numNodesUp(int col) const { return colLowerNodes[col].size(); }
+
+  size_t numNodesDown(int col) const { return colUpperNodes[col].size(); }
+
+  size_t numNodesUp(int col, double val) const {
+    auto it = colLowerNodes[col].upper_bound(val);
+    if (it == colLowerNodes[col].begin()) return colLowerNodes[col].size();
+    return std::distance(colLowerNodes[col].upper_bound(val),
+                         colLowerNodes[col].end());
+  }
+
+  size_t numNodesDown(int col, double val) const {
+    auto it = colUpperNodes[col].lower_bound(val);
+    if (it == colUpperNodes[col].end()) return colUpperNodes[col].size();
+    return std::distance(colUpperNodes[col].begin(), it);
+  }
+
   double pruneInfeasibleNodes(HighsDomain& globaldomain, double feastol);
 
   double getBestLowerBound();

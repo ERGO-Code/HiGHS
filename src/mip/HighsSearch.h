@@ -42,6 +42,7 @@ class HighsSearch {
     Random,
     BestCost,
     WorstCost,
+    Disjunction,
   };
 
  private:
@@ -92,10 +93,6 @@ class HighsSearch {
   void setLpRelaxation(HighsLpRelaxation* lp) { this->lp = lp; }
 
   double checkSol(const std::vector<double>& sol, bool& integerfeasible) const;
-
-  void heuristicSearch();
-
-  void heuristicSearchNew();
 
   void createNewNode();
 
