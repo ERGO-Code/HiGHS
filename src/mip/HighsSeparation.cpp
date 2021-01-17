@@ -2413,7 +2413,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
 
       // if the objective improved considerably we continue
       if ((lp->getObjective() - firstobj) <=
-          std::max((lastobj - firstobj), 0.0) * 1.01)
+          std::max((lastobj - firstobj), 0.0) * 1.05)
         break;
     }
 
