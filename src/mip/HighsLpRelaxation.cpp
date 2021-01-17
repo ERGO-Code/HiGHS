@@ -565,8 +565,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
   bool solveagain;
   do {
     solveagain = false;
-    if( domain )
-      flushDomain(*domain);
+    if (domain) flushDomain(*domain);
     status = run();
 
     switch (status) {
@@ -599,10 +598,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
                 mipsolver.mipdata_->cliquetable.getSubstitution(col);
             while (subst != nullptr) {
               if (lpsolver.getLp().colLower_[subst->replace.col] ==
-                  lpsolver.getLp().colUpper_[subst->replace.col])
-              {
-                if( domain )
-                  domain->fixCol( col, subst->replace.weight(lpsolver.getLp().colLower_));
+                  lpsolver.getLp().colUpper_[subst->replace.col]) {
+                if (domain)
+                  domain->fixCol(
+                      col, subst->replace.weight(lpsolver.getLp().colLower_));
                 else
                   break;
               }
