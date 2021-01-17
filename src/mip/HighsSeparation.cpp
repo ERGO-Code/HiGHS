@@ -1525,8 +1525,15 @@ class AggregationHeuristic {
               assert(std::abs(double(baseval + scale * LBvalue[k])) < 1e-10);
               continue;
             }
-            assert(mip.variableType(LBindex[k]) != HighsVarType::CONTINUOUS);
-            vectorsum.add(LBindex[k], scale * LBvalue[k]);
+
+            if (mip.mipdata_->domain.colLower_[LBindex[k]] ==
+                mip.mipdata_->domain.colUpper_[LBindex[k]]) {
+              rhs -= mip.mipdata_->domain.colLower_[LBindex[k]] *
+                     (scale * LBvalue[k]);
+            } else {
+              assert(mip.variableType(LBindex[k]) != HighsVarType::CONTINUOUS);
+              vectorsum.add(LBindex[k], scale * LBvalue[k]);
+            }
           }
         } else if (simplelbdist - mip.mipdata_->feastol <= bounddistance[col]) {
           // use  the simple lower bound for complementation and then relax
@@ -1590,8 +1597,15 @@ class AggregationHeuristic {
               assert(std::abs(double(baseval + scale * UBvalue[k])) < 1e-10);
               continue;
             }
-            assert(mip.variableType(UBindex[k]) != HighsVarType::CONTINUOUS);
-            vectorsum.add(UBindex[k], scale * UBvalue[k]);
+
+            if (mip.mipdata_->domain.colLower_[UBindex[k]] ==
+                mip.mipdata_->domain.colUpper_[UBindex[k]]) {
+              rhs -= mip.mipdata_->domain.colLower_[UBindex[k]] *
+                     (scale * UBvalue[k]);
+            } else {
+              assert(mip.variableType(UBindex[k]) != HighsVarType::CONTINUOUS);
+              vectorsum.add(UBindex[k], scale * UBvalue[k]);
+            }
           }
         }
       }
