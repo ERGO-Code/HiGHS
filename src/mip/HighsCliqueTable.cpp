@@ -514,6 +514,7 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
     }
 
     processInfeasibleVertices(globaldom);
+    if (globaldom.infeasible()) return false;
 
     commonclique = findCommonCliqueRecurse(cliquesetroot[v1.index()],
                                            cliquesetroot[v2.index()]);
@@ -541,7 +542,9 @@ bool HighsCliqueTable::processNewEdge(HighsDomain& globaldom, CliqueVar v1,
 
     processInfeasibleVertices(globaldom);
 
-    if (globaldom.isFixed(v1.col) || globaldom.isFixed(v2.col)) return true;
+    if (globaldom.isFixed(v1.col) || globaldom.isFixed(v2.col) ||
+        globaldom.infeasible())
+      return true;
 
     Substitution substitution;
     if (v2.col < v1.col) {
