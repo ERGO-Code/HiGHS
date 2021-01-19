@@ -237,46 +237,5 @@ HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
   HighsMipSolver solver(use_options, lp);
   solver.run();
 
-  const auto& solution = solver.presolve_.data_.recovered_solution_;
-
-  if (int(solution.col_value.size()) == lp.numCol_) {
-    printf("checking recovered solution\n");
-    double boundviol = 0.0;
-    double intviol = 0.0;
-    double rowviol = 0.0;
-    HighsCDouble obj = lp.offset_;
-    for (int i = 0; i != lp.numCol_; ++i) {
-      obj += lp.colCost_[i] * solution.col_value[i];
-
-      boundviol = std::max(boundviol, lp.colLower_[i] - solution.col_value[i]);
-      boundviol = std::max(boundviol, solution.col_value[i] - lp.colUpper_[i]);
-
-      if (lp.integrality_[i] == HighsVarType::INTEGER) {
-        double intval = std::floor(solution.col_value[i] + 0.5);
-        intviol = std::max(std::abs(intval - solution.col_value[i]), intviol);
-      }
-    }
-
-    for (int i = 0; i != lp.numRow_; ++i) {
-      rowviol = std::max(rowviol, lp.rowLower_[i] - solution.row_value[i]);
-      rowviol = std::max(rowviol, solution.row_value[i] - lp.rowUpper_[i]);
-    }
-
-    bool feasible = boundviol <= use_options.mip_feasibility_tolerance &&
-                    intviol <= use_options.mip_feasibility_tolerance &&
-                    rowviol <= use_options.mip_feasibility_tolerance;
-    HighsPrintMessage(output, message_level, ML_MINIMAL,
-                      "solution is %s, violations:\n",
-                      feasible ? "feasible" : "infeasible");
-    HighsPrintMessage(output, message_level, ML_MINIMAL,
-                      "  bounds:      %.14g\n", boundviol);
-    HighsPrintMessage(output, message_level, ML_MINIMAL,
-                      "  integrality: %.14g\n", intviol);
-    HighsPrintMessage(output, message_level, ML_MINIMAL,
-                      "  contraints:  %.14g\n", rowviol);
-    HighsPrintMessage(output, message_level, ML_MINIMAL,
-                      "objective function value: %.14g\n", double(obj));
-  }
-
   return HighsStatus::OK;
 }

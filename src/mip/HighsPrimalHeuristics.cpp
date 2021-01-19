@@ -37,9 +37,8 @@ void HighsPrimalHeuristics::solveSubMip(std::vector<double> colLower,
   submipsolver.run();
 
   if (submipsolver.modelstatus_ != HighsModelStatus::PRIMAL_INFEASIBLE &&
-      !submipsolver.presolve_.data_.recovered_solution_.col_value.empty()) {
-    mipsolver.mipdata_->trySolution(
-        submipsolver.presolve_.data_.recovered_solution_.col_value, 'L');
+      !submipsolver.solution_.empty()) {
+    mipsolver.mipdata_->trySolution(submipsolver.solution_, 'L');
   }
 
   if (submipsolver.mipdata_) {

@@ -154,8 +154,10 @@ HighsPostsolveStatus HighsMipSolver::runPostsolve() {
 
 void HighsMipSolver::run() {
   modelstatus_ = HighsModelStatus::NOTSET;
+  orig_model_ = model_;
   // std::cout << options_mip_->presolve << std::endl;
   timer_.start(timer_.solve_clock);
+  timer_.start(timer_.presolve_clock);
   if (options_mip_->presolve != "off") {
     HighsPresolveStatus presolve_status = runPresolve();
     switch (presolve_status) {
@@ -169,6 +171,7 @@ void HighsMipSolver::run() {
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL,
                           "Presolve: Model detected to be unbounded\n");
+        timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Infeasible:
@@ -176,12 +179,14 @@ void HighsMipSolver::run() {
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL,
                           "Presolve: Model detected to be infeasible\n");
+        timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Timeout:
         modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
         HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                           ML_MINIMAL, "Time limit reached during presolve\n");
+        timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::ReducedToEmpty:
@@ -189,8 +194,8 @@ void HighsMipSolver::run() {
         reportPresolveReductions(*options_mip_, *model_, true);
         mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
         mipdata_->init();
-        runPostsolve();
-        timer_.stop(timer_.solve_clock);
+        timer_.stop(timer_.presolve_clock);
+        cleanupSolve();
         return;
       case HighsPresolveStatus::NotReduced:
         reportPresolveReductions(*options_mip_, *model_, false);
@@ -203,37 +208,12 @@ void HighsMipSolver::run() {
   mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
   mipdata_->init();
   mipdata_->runSetup();
+  timer_.stop(timer_.presolve_clock);
   if (modelstatus_ == HighsModelStatus::NOTSET) {
     mipdata_->evaluateRootNode();
   }
   if (mipdata_->nodequeue.empty()) {
-    bool havesolution = mipdata_->upper_bound != HIGHS_CONST_INF;
-
-    if (modelstatus_ == HighsModelStatus::NOTSET) {
-      if (havesolution)
-        modelstatus_ = HighsModelStatus::OPTIMAL;
-      else
-        modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-    }
-    mipdata_->printDisplayLine();
-    HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                      ML_MINIMAL, "\nSolving stopped with status: %s\n",
-                      utilHighsModelStatusToString(modelstatus_).c_str());
-    bool haveSolution = mipdata_->upper_bound != HIGHS_CONST_INF;
-    if (mipdata_->modelcleanup) {
-      model_ = mipdata_->modelcleanup->origmodel;
-      if (haveSolution)
-        mipdata_->modelcleanup->recoverSolution(mipdata_->incumbent);
-    }
-    if (haveSolution) {
-      if (options_mip_->presolve != "off")
-        runPostsolve();
-      else if (!mipdata_->getSolution().empty()) {
-        presolve_.data_.recovered_solution_.col_value = mipdata_->getSolution();
-        calculateRowValues(*model_, presolve_.data_.recovered_solution_);
-      }
-    }
-    timer_.stop(timer_.solve_clock);
+    cleanupSolve();
     return;
   }
 
@@ -434,8 +414,14 @@ void HighsMipSolver::run() {
     if (limit_reached) break;
   }
 
-  mipdata_->printDisplayLine();
+  cleanupSolve();
+}
+
+void HighsMipSolver::cleanupSolve() {
+  timer_.start(timer_.postsolve_clock);
   bool havesolution = mipdata_->upper_bound != HIGHS_CONST_INF;
+  dual_bound_ = mipdata_->lower_bound + model_->offset_;
+  primal_bound_ = mipdata_->upper_bound + model_->offset_;
 
   if (modelstatus_ == HighsModelStatus::NOTSET) {
     if (havesolution)
@@ -443,10 +429,6 @@ void HighsMipSolver::run() {
     else
       modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
   }
-
-  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
-                    ML_MINIMAL, "\nSolving stopped with status: %s\n",
-                    utilHighsModelStatusToString(modelstatus_).c_str());
 
   if (mipdata_->modelcleanup) {
     model_ = mipdata_->modelcleanup->origmodel;
@@ -463,7 +445,84 @@ void HighsMipSolver::run() {
     }
   }
 
+  model_ = orig_model_;
+
+  timer_.stop(timer_.postsolve_clock);
   timer_.stop(timer_.solve_clock);
+
+  const auto& solution = presolve_.data_.recovered_solution_;
+  std::string solutionstatus = "-";
+  bound_violation_ = 0;
+  row_violation_ = 0;
+  integrality_violation_ = 0;
+
+  if (int(solution.col_value.size()) == model_->numCol_) {
+    HighsCDouble obj = model_->offset_;
+    for (int i = 0; i != model_->numCol_; ++i) {
+      obj += model_->colCost_[i] * solution.col_value[i];
+
+      bound_violation_ = std::max(bound_violation_,
+                                  model_->colLower_[i] - solution.col_value[i]);
+      bound_violation_ = std::max(bound_violation_,
+                                  solution.col_value[i] - model_->colUpper_[i]);
+
+      if (model_->integrality_[i] == HighsVarType::INTEGER) {
+        double intval = std::floor(solution.col_value[i] + 0.5);
+        integrality_violation_ = std::max(
+            std::abs(intval - solution.col_value[i]), integrality_violation_);
+      }
+    }
+
+    for (int i = 0; i != model_->numRow_; ++i) {
+      row_violation_ = std::max(row_violation_,
+                                model_->rowLower_[i] - solution.row_value[i]);
+      row_violation_ = std::max(row_violation_,
+                                solution.row_value[i] - model_->rowUpper_[i]);
+    }
+
+    bool feasible =
+        bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
+        integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
+        row_violation_ <= options_mip_->mip_feasibility_tolerance;
+    solutionstatus = feasible ? "feasible" : "infeasible";
+    solution_ = std::move(presolve_.data_.recovered_solution_.col_value);
+    solution_objective_ = double(obj);
+  }
+  HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                    ML_MINIMAL,
+                    "\nSolving report\n"
+                    "  Status            %s\n"
+                    "  Primal bound      %.10g\n"
+                    "  Dual bound        %.10g\n"
+                    "  Solution status   %s\n",
+                    utilHighsModelStatusToString(modelstatus_).c_str(),
+                    primal_bound_, dual_bound_, solutionstatus.c_str());
+  if (solutionstatus != "-")
+    HighsPrintMessage(options_mip_->output, options_mip_->message_level,
+                      ML_MINIMAL,
+                      "                    %.10g (objective)\n"
+                      "                    %.10g (bound viol.)\n"
+                      "                    %.10g (int. viol.)\n"
+                      "                    %.10g (row viol.)\n",
+                      solution_objective_, bound_violation_,
+                      integrality_violation_, row_violation_);
+  HighsPrintMessage(
+      options_mip_->output, options_mip_->message_level, ML_MINIMAL,
+      "  Timing            %.2f (total)\n"
+      "                    %.2f (presolve)\n"
+      "                    %.2f (postsolve)\n"
+      "  Nodes             %llu\n"
+      "  LP iterations     %llu (total)\n"
+      "                    %llu (strong br.)\n"
+      "                    %llu (separation)\n"
+      "                    %llu (heuristics)\n",
+      timer_.read(timer_.solve_clock), timer_.read(timer_.presolve_clock),
+      timer_.read(timer_.postsolve_clock),
+      (long long unsigned)mipdata_->num_nodes,
+      (long long unsigned)mipdata_->total_lp_iterations,
+      (long long unsigned)mipdata_->sb_lp_iterations,
+      (long long unsigned)mipdata_->sepa_lp_iterations,
+      (long long unsigned)mipdata_->heuristic_lp_iterations);
 
   assert(modelstatus_ != HighsModelStatus::NOTSET);
 }

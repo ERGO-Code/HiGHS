@@ -445,6 +445,11 @@ void HighsMipSolverData::runSetup() {
     maxAbsRowCoef[i] = maxabsval;
   }
 
+  if (model.numCol_ == 0) {
+    mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
+    return;
+  }
+
   // compute row activities and propagate all rows once
   domain.computeRowActivities();
   domain.propagate();
@@ -452,11 +457,6 @@ void HighsMipSolverData::runSetup() {
     mipsolver.modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     lower_bound = HIGHS_CONST_INF;
     pruned_treeweight = 1.0;
-    return;
-  }
-
-  if (model.numCol_ == 0) {
-    mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
     return;
   }
 
@@ -786,6 +786,7 @@ void HighsMipSolverData::evaluateRootNode() {
   lp.resolveLp();
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
+  size_t firstlpiters = maxrootlpiters;
 
   lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
   lp.getLpSolver().setHighsLogfile();
@@ -814,6 +815,7 @@ void HighsMipSolverData::evaluateRootNode() {
       mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
     lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
     total_lp_iterations = lp.getNumLpIterations();
+    sepa_lp_iterations = total_lp_iterations - firstlpiters;
     pruned_treeweight = 1.0;
     num_nodes = 1;
     num_leaves = 1;
@@ -836,6 +838,7 @@ void HighsMipSolverData::evaluateRootNode() {
   sepa.setLpRelaxation(&lp);
 
   total_lp_iterations = lp.getNumLpIterations();
+  sepa_lp_iterations = total_lp_iterations - firstlpiters;
 
   while (lp.scaledOptimal(status) && !lp.getFractionalIntegers().empty() &&
          stall < 3) {
@@ -852,6 +855,7 @@ void HighsMipSolverData::evaluateRootNode() {
       pruned_treeweight = 1.0;
       lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
       total_lp_iterations = lp.getNumLpIterations();
+      sepa_lp_iterations = total_lp_iterations - firstlpiters;
       num_nodes = 1;
       num_leaves = 1;
       return;
@@ -887,6 +891,7 @@ void HighsMipSolverData::evaluateRootNode() {
           pruned_treeweight = 1.0;
           lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
           total_lp_iterations = lp.getNumLpIterations();
+          sepa_lp_iterations = total_lp_iterations - firstlpiters;
           num_nodes = 1;
           num_leaves = 1;
           return;
@@ -938,6 +943,7 @@ void HighsMipSolverData::evaluateRootNode() {
     if (lp.unscaledDualFeasible(status)) lower_bound = lp.getObjective();
 
     total_lp_iterations = lp.getNumLpIterations();
+    sepa_lp_iterations = total_lp_iterations - firstlpiters;
 
     lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
 
@@ -960,6 +966,7 @@ void HighsMipSolverData::evaluateRootNode() {
 
   status = lp.resolveLp(&domain);
   total_lp_iterations = lp.getNumLpIterations();
+  sepa_lp_iterations = total_lp_iterations - firstlpiters;
   if (status == HighsLpRelaxation::Status::Optimal &&
       lp.getFractionalIntegers().empty()) {
     mipsolver.modelstatus_ = HighsModelStatus::OPTIMAL;
