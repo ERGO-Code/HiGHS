@@ -305,7 +305,7 @@ bool HighsPrimalHeuristics::linesearchRounding(
   while (alpha < 1.0) {
     double nextalpha = 1.0;
     bool reachedpoint2 = true;
-    printf("trying alpha = %g\n", alpha);
+    // printf("trying alpha = %g\n", alpha);
     for (int i = 0; i != numintcols; ++i) {
       int col = mipsolver.mipdata_->integer_cols[i];
       if (mipsolver.mipdata_->uplocks[col] == 0) {
@@ -495,8 +495,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
                                  objinds.size(), objinds.data(), objval.data());
   }
 
-  lprelax.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
-  lprelax.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
+  // lprelax.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
+  // lprelax.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
 
   lprelax.getLpSolver().setHighsOptionValue("simplex_strategy",
                                             SIMPLEX_STRATEGY_PRIMAL);
@@ -583,6 +583,8 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.setHighsOptionValue("solver", "ipm");
   ipm.setHighsOptionValue("run_crossover", false);
   ipm.setHighsOptionValue("presolve", "off");
+  ipm.setHighsLogfile(nullptr);
+  ipm.setHighsOutput(nullptr);
   HighsLp lpmodel(
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);
