@@ -620,7 +620,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
         }
 
         if (domain && !domain->getChangedCols().empty()) {
-          printf("resolving due to fixings of substituted columns\n");
+          // printf("resolving due to fixings of substituted columns\n");
           solveagain = true;
           continue;
         }
