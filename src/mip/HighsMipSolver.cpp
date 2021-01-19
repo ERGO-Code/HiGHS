@@ -329,6 +329,7 @@ void HighsMipSolver::run() {
     if (mipdata_->domain.infeasible()) {
       mipdata_->nodequeue.clear();
       mipdata_->pruned_treeweight = 1.0;
+      mipdata_->lower_bound = std::min(HIGHS_CONST_INF, mipdata_->upper_bound);
       break;
     }
 
@@ -379,6 +380,8 @@ void HighsMipSolver::run() {
         if (mipdata_->domain.infeasible()) {
           mipdata_->nodequeue.clear();
           mipdata_->pruned_treeweight = 1.0;
+          mipdata_->lower_bound =
+              std::min(HIGHS_CONST_INF, mipdata_->upper_bound);
           break;
         }
 
