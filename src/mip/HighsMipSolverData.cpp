@@ -997,6 +997,7 @@ void HighsMipSolverData::evaluateRootNode() {
     }
 
     if (nodequeue.empty()) {
+      lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
       pruned_treeweight = 1.0;
       num_nodes = 1;
       num_leaves = 1;
