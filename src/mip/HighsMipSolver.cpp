@@ -194,6 +194,8 @@ void HighsMipSolver::run() {
         reportPresolveReductions(*options_mip_, *model_, true);
         mipdata_ = decltype(mipdata_)(new HighsMipSolverData(*this));
         mipdata_->init();
+        mipdata_->upper_bound = presolve_.data_.presolve_[0].objShift;
+        mipdata_->lower_bound = presolve_.data_.presolve_[0].objShift;
         timer_.stop(timer_.presolve_clock);
         cleanupSolve();
         return;
