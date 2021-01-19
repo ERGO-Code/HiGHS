@@ -215,25 +215,6 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
 }
 
 HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
-  FILE* output = use_options.output;
-  const int message_level = use_options.message_level;
-
-  // Highs highs(use_options);
-  // const HighsOptions& options = highs.getHighsOptions();
-  // HighsStatus read_status = highs.readModel(options.model_file);
-  // reportLpStatsOrError(output, message_level, read_status, highs.getLp());
-  // if (read_status == HighsStatus::Error) return HighsStatus::Error;
-  // HighsLp lp = highs.getLp();
-  // printf("running aggregator (nnz = %lu)\n", lp.Avalue_.size());
-  // presolve::HAggregator aggregator(lp.rowLower_, lp.rowUpper_, lp.colCost_,
-  //                                  lp.offset_, lp.integrality_, lp.colLower_,
-  //                                  lp.colUpper_);
-
-  // aggregator.fromCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
-  // aggregator.run();
-  // aggregator.toCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
-  // printf("aggregator finished (nnz = %lu)\n", lp.Avalue_.size());
-
   HighsMipSolver solver(use_options, lp);
   solver.run();
 
