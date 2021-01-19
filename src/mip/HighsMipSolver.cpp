@@ -494,18 +494,18 @@ void HighsMipSolver::cleanupSolve() {
                     ML_MINIMAL,
                     "\nSolving report\n"
                     "  Status            %s\n"
-                    "  Primal bound      %.10g\n"
-                    "  Dual bound        %.10g\n"
+                    "  Primal bound      %.12g\n"
+                    "  Dual bound        %.12g\n"
                     "  Solution status   %s\n",
                     utilHighsModelStatusToString(modelstatus_).c_str(),
                     primal_bound_, dual_bound_, solutionstatus.c_str());
   if (solutionstatus != "-")
     HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                       ML_MINIMAL,
-                      "                    %.10g (objective)\n"
-                      "                    %.10g (bound viol.)\n"
-                      "                    %.10g (int. viol.)\n"
-                      "                    %.10g (row viol.)\n",
+                      "                    %.12g (objective)\n"
+                      "                    %.12g (bound viol.)\n"
+                      "                    %.12g (int. viol.)\n"
+                      "                    %.12g (row viol.)\n",
                       solution_objective_, bound_violation_,
                       integrality_violation_, row_violation_);
   HighsPrintMessage(
