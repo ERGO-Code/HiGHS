@@ -277,25 +277,25 @@ int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
                          double* Rvalue, int Rlen, double rhs, bool integral) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
-  size_t sh = support_hash(Rindex, Rlen);
+  // size_t sh = support_hash(Rindex, Rlen);
 
   // try to replace another cut with equal support that has an age > 0
-  int rowindex = replaceSupportDuplicate(sh, Rindex, Rvalue, Rlen, rhs);
+  // int rowindex = replaceSupportDuplicate(sh, Rindex, Rvalue, Rlen, rhs);
 
   // if no such cut exists we append the new cut
-  if (rowindex == -1) {
-    rowindex = matrix_.addRow(Rindex, Rvalue, Rlen);
-    supportmap.emplace(sh, rowindex);
+  // if (rowindex == -1) {
+  int rowindex = matrix_.addRow(Rindex, Rvalue, Rlen);
+  // supportmap.emplace(sh, rowindex);
 
-    if (rowindex == int(rhs_.size())) {
-      rhs_.resize(rowindex + 1);
-      ages_.resize(rowindex + 1);
-      modification_.resize(rowindex + 1);
-      rownormalization_.resize(rowindex + 1);
-      maxabscoef_.resize(rowindex + 1);
-      rowintegral.resize(rowindex + 1);
-    }
+  if (rowindex == int(rhs_.size())) {
+    rhs_.resize(rowindex + 1);
+    ages_.resize(rowindex + 1);
+    modification_.resize(rowindex + 1);
+    rownormalization_.resize(rowindex + 1);
+    maxabscoef_.resize(rowindex + 1);
+    rowintegral.resize(rowindex + 1);
   }
+  //}
 
   // set the right hand side and reset the age
   rhs_[rowindex] = rhs;
