@@ -2129,10 +2129,11 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
   double minval = HIGHS_CONST_INF;
   double maxval = 0;
   int len = 0;
+  const double droptol = mip.mipdata_->feastol * mip.mipdata_->feastol;
   for (int j : vectorsum.getNonzeros()) {
     double val = std::abs(vectorsum.getValue(j));
 
-    if (val <= mip.mipdata_->epsilon) {
+    if (val <= droptol) {
       vectorsum.chgValue(j, 0.0);
       continue;
     }
