@@ -2404,7 +2404,8 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
   const HighsMipSolver& mipsolver = lp->getMipSolver();
 
   if (lp->scaledOptimal(status) && !lp->getFractionalIntegers().empty()) {
-    double firstobj = lp->getObjective();  // mipsolver.mipdata_->rootlpsolobj);
+    // double firstobj = lp->getObjective();
+    double firstobj = mipsolver.mipdata_->rootlpsolobj;
 
     while (lp->getObjective() < mipsolver.mipdata_->upper_limit) {
       double lastobj = lp->getObjective();
@@ -2427,7 +2428,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
 
       // if the objective improved considerably we continue
       if ((lp->getObjective() - firstobj) <=
-          std::max((lastobj - firstobj), mipsolver.mipdata_->feastol) * 1.05)
+          std::max((lastobj - firstobj), mipsolver.mipdata_->feastol) * 1.01)
         break;
     }
 
