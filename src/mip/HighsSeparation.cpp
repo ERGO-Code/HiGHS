@@ -2102,12 +2102,18 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
     int rowlen;
     const int* rowinds;
     const double* rowvals;
+    double maxabsrowcoef;
     if (j < mip.numRow()) {
       mip.mipdata_->getRow(j, rowlen, rowinds, rowvals);
+      maxabsrowcoef = mip.mipdata_->maxAbsRowCoef[j];
     } else {
       int cut = lp.getCutIndex(j);
       cutpool.getCut(cut, rowlen, rowinds, rowvals);
+      maxabsrowcoef = cutpool.getMaxAbsCutCoef(cut);
     }
+
+    if (std::abs(aggval) * maxabsrowcoef <= 100 * mip.mipdata_->feastol)
+      continue;
 
     HighsCDouble scale = aggval;
 
