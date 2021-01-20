@@ -17,25 +17,55 @@ static size_t support_hash(const int* Rindex, const int Rlen) {
   return state;
 }
 
-int HighsCutPool::replaceSupportDuplicate(size_t hash, int* Rindex,
-                                          double* Rvalue, int Rlen,
-                                          double rhs) {
+static void printCut(const int* Rindex, const double* Rvalue, int Rlen,
+                     double rhs) {
+  for (int i = 0; i != Rlen; ++i) {
+    if (Rvalue[i] > 0)
+      printf("+%g<x%d> ", Rvalue[i], Rindex[i]);
+    else
+      printf("-%g<x%d> ", -Rvalue[i], Rindex[i]);
+  }
+
+  printf("<= %g\n", rhs);
+}
+
+bool HighsCutPool::isDuplicate(size_t hash, double norm, int* Rindex,
+                               double* Rvalue, int Rlen, double rhs) {
   auto range = supportmap.equal_range(hash);
+  const double* ARvalue = matrix_.getARvalue();
+  const int* ARindex = matrix_.getARindex();
   for (auto it = range.first; it != range.second; ++it) {
     int rowindex = it->second;
     int start = matrix_.getRowStart(rowindex);
     int end = matrix_.getRowEnd(rowindex);
 
     if (end - start != Rlen) continue;
-    if (std::equal(Rindex, Rindex + Rlen, &matrix_.getARindex()[start])) {
-      if (ages_[rowindex] > 0) {
-        matrix_.replaceRowValues(rowindex, Rvalue);
-        return rowindex;
-      }
+    if (std::equal(Rindex, Rindex + Rlen, &ARindex[start])) {
+      HighsCDouble dotprod = 0.0;
+
+      for (int i = 0; i != Rlen; ++i) dotprod += Rvalue[i] * ARvalue[start + i];
+
+      double parallelism = double(dotprod) * rownormalization_[rowindex] * norm;
+
+      // printf("\n\ncuts with same support and parallelism %g:\n",
+      // parallelism); printf("CUT1: "); printCut(Rindex, Rvalue, Rlen, rhs);
+      // printf("CUT2: ");
+      // printCut(Rindex, ARvalue + start, Rlen, rhs_[rowindex]);
+      // printf("\n");
+
+      if (parallelism >= 1 - 1e-6) return true;
+
+      //{
+      //  if (ages_[rowindex] >= 0) {
+      //    matrix_.replaceRowValues(rowindex, Rvalue);
+      //    return rowindex;
+      //  } else
+      //    return -2;
+      //}
     }
   }
 
-  return -1;
+  return false;
 }
 
 double HighsCutPool::getParallelism(int row1, int row2) const {
@@ -277,32 +307,7 @@ int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
                          double* Rvalue, int Rlen, double rhs, bool integral) {
   mipsolver.mipdata_->debugSolution.checkCut(Rindex, Rvalue, Rlen, rhs);
 
-  // size_t sh = support_hash(Rindex, Rlen);
-
-  // try to replace another cut with equal support that has an age > 0
-  // int rowindex = replaceSupportDuplicate(sh, Rindex, Rvalue, Rlen, rhs);
-
-  // if no such cut exists we append the new cut
-  // if (rowindex == -1) {
-  int rowindex = matrix_.addRow(Rindex, Rvalue, Rlen);
-  // supportmap.emplace(sh, rowindex);
-
-  if (rowindex == int(rhs_.size())) {
-    rhs_.resize(rowindex + 1);
-    ages_.resize(rowindex + 1);
-    modification_.resize(rowindex + 1);
-    rownormalization_.resize(rowindex + 1);
-    maxabscoef_.resize(rowindex + 1);
-    rowintegral.resize(rowindex + 1);
-  }
-  //}
-
-  // set the right hand side and reset the age
-  rhs_[rowindex] = rhs;
-  ages_[rowindex] = 0;
-  rowintegral[rowindex] = integral;
-  ++modification_[rowindex];
-
+  size_t sh = support_hash(Rindex, Rlen);
   // compute 1/||a|| for the cut
   // as it is only computed once
   // we use HighsCDouble to compute it as accurately as possible
@@ -313,7 +318,31 @@ int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
     maxabscoef = std::max(maxabscoef, std::abs(Rvalue[i]));
   }
   norm.renormalize();
-  rownormalization_[rowindex] = 1.0 / double(sqrt(norm));
+  double normalization = 1.0 / double(sqrt(norm));
+  // try to replace another cut with equal support that has an age > 0
+
+  if (isDuplicate(sh, normalization, Rindex, Rvalue, Rlen, rhs)) return -1;
+
+  // if no such cut exists we append the new cut
+  int rowindex = matrix_.addRow(Rindex, Rvalue, Rlen);
+  supportmap.emplace(sh, rowindex);
+
+  if (rowindex == int(rhs_.size())) {
+    rhs_.resize(rowindex + 1);
+    ages_.resize(rowindex + 1);
+    modification_.resize(rowindex + 1);
+    rownormalization_.resize(rowindex + 1);
+    maxabscoef_.resize(rowindex + 1);
+    rowintegral.resize(rowindex + 1);
+  }
+
+  // set the right hand side and reset the age
+  rhs_[rowindex] = rhs;
+  ages_[rowindex] = 0;
+  rowintegral[rowindex] = integral;
+  ++modification_[rowindex];
+
+  rownormalization_[rowindex] = normalization;
   maxabscoef_[rowindex] = maxabscoef;
 
   for (HighsDomain::CutpoolPropagation* propagationdomain : propagationDomains)

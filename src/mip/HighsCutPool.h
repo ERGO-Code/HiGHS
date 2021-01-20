@@ -56,7 +56,7 @@ class HighsCutPool {
   int agelim_;
   int nrounds_;
 
-  int replaceSupportDuplicate(size_t hash, int* Rindex, double* Rvalue,
+  bool isDuplicate(size_t hash, double norm, int* Rindex, double* Rvalue,
                               int Rlen, double rhs);
 
  public:
