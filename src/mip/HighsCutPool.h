@@ -57,7 +57,7 @@ class HighsCutPool {
   int nrounds_;
 
   bool isDuplicate(size_t hash, double norm, int* Rindex, double* Rvalue,
-                              int Rlen, double rhs);
+                   int Rlen, double rhs);
 
  public:
   HighsCutPool(int ncols, int agelim)
