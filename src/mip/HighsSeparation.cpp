@@ -2085,14 +2085,14 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
   assert(std::all_of(vectorsum.nonzeroflag.begin(), vectorsum.nonzeroflag.end(),
                      [](uint8_t f) { return f == 0; }));
 
-  double sum = 0.0;
+  double maxaggval = 0.0;
   for (int k = 0; k != naggrinds; ++k) {
     double val = std::abs(aggrvals[aggrinds[k]]);
-    sum += val;
+    maxaggval = std::max(maxaggval, val);
   }
 
   int expscal;
-  std::frexp(sum, &expscal);
+  std::frexp(maxaggval, &expscal);
 
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
@@ -2132,7 +2132,7 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
   for (int j : vectorsum.getNonzeros()) {
     double val = std::abs(vectorsum.getValue(j));
 
-    if (val <= 1e-12) {
+    if (val <= mip.mipdata_->epsilon) {
       vectorsum.chgValue(j, 0.0);
       continue;
     }
@@ -2142,6 +2142,8 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
 
     if (val > maxval) maxval = val;
   }
+
+  // printf("minval: %g, maxval: %g\n", minval, maxval);
 
   /* reject baserows that have a too large dynamism */
   if (maxval <= 1e6 * minval) {
