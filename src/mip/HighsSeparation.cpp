@@ -1867,8 +1867,22 @@ class AggregationHeuristic {
         assert(nextRindex[a] == baseinds[b]);
         double val = double(basevals[b] + nextaggscale * nextRvalue[a]);
         if (std::abs(val) > 1e-10) {
-          tmpinds.push_back(baseinds[b]);
-          tmpvals.push_back(val);
+          if (std::abs(val) <= mip.mipdata_->feastol) {
+            if (val < 0) {
+              if (domain.colUpper_[baseinds[b]] == HIGHS_CONST_INF)
+                return false;
+
+              rhs -= val * domain.colUpper_[baseinds[b]];
+            } else {
+              if (domain.colLower_[baseinds[b]] == -HIGHS_CONST_INF)
+                return false;
+
+              rhs -= val * domain.colLower_[baseinds[b]];
+            }
+          } else {
+            tmpinds.push_back(baseinds[b]);
+            tmpvals.push_back(val);
+          }
         }
         ++a;
         ++b;
@@ -2390,7 +2404,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
   const HighsMipSolver& mipsolver = lp->getMipSolver();
 
   if (lp->scaledOptimal(status) && !lp->getFractionalIntegers().empty()) {
-    double firstobj = lp->getObjective();// mipsolver.mipdata_->rootlpsolobj;
+    double firstobj = lp->getObjective();  // mipsolver.mipdata_->rootlpsolobj);
 
     while (lp->getObjective() < mipsolver.mipdata_->upper_limit) {
       double lastobj = lp->getObjective();

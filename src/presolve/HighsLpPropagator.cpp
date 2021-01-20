@@ -394,8 +394,8 @@ void HighsLpPropagator::computeRowActivities() {
   propagateflags_.resize(rowLower_.size());
   propagateinds_.reserve(rowLower_.size());
 
+  assert(ARstart_.size() == rowLower_.size() + 1);
   const int numrow = rowLower_.size();
-
   for (int i = 0; i != numrow; ++i) {
     if (!flagRow[i]) continue;
     int start = ARstart_[i];

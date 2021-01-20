@@ -54,6 +54,7 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
 
 void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
   int numcuts = cutset.numCuts();
+  assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
   if (numcuts > 0) {
     status = Status::NotSet;
     currentbasisstored = false;
@@ -63,11 +64,13 @@ void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
     lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
                      cutset.ARvalue_.size(), cutset.ARstart_.data(),
                      cutset.ARindex_.data(), cutset.ARvalue_.data());
+    assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
     cutset.clear();
   }
 }
 
 void HighsLpRelaxation::removeCuts(int ndelcuts, std::vector<int>& deletemask) {
+  assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
   if (ndelcuts > 0) {
     HighsBasis basis = lpsolver.getBasis();
     int nlprows = lpsolver.getNumRows();
@@ -80,6 +83,8 @@ void HighsLpRelaxation::removeCuts(int ndelcuts, std::vector<int>& deletemask) {
       }
     }
 
+    assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
+
     basis.row_status.resize(basis.row_status.size() - ndelcuts);
     lp2cutpoolindex.resize(lp2cutpoolindex.size() - ndelcuts);
     lpsolver.setBasis(basis);
@@ -88,9 +93,11 @@ void HighsLpRelaxation::removeCuts(int ndelcuts, std::vector<int>& deletemask) {
 }
 
 void HighsLpRelaxation::removeCuts() {
+  assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
   int nlprows = lpsolver.getNumRows();
   lpsolver.deleteRows(mipsolver.numRow(), nlprows - 1);
   lp2cutpoolindex.clear();
+  assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
 }
 
 void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
@@ -465,9 +472,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
   if (callstatus == HighsStatus::Error) {
     lpsolver.clearSolver();
+    if (resolve_on_error) {
+      // simplex solver returned with an error, try to resolve from scratch with
+      // presolve
+      lpsolver.setHighsOptionValue("presolve", "on");
+      auto retval = run(false);
+      lpsolver.setHighsOptionValue("presolve", "off");
+      return retval;
+    }
     recoverBasis();
-    if (resolve_on_error) return run(false);
-
     return Status::Error;
   }
 
@@ -507,6 +520,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                       HighsMessageType::WARNING,
                       "LP failed to reliably determine infeasibility");
 
+      // printf("error: unreliable infeasiblities, modelstatus = %d (scaled
+      // %d)\n",
+      //        (int)lpsolver.getModelStatus(),
+      //        (int)lpsolver.getModelStatus(true));
       return Status::Error;
     case HighsModelStatus::OPTIMAL:
       assert(info.max_primal_infeasibility >= 0);
@@ -516,6 +533,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         return Status::Optimal;
 
       if (resolve_on_error) {
+        // printf(
+        //     "error: optimal with unscaled infeasibilities (primal:%g, "
+        //     "dual:%g)\n",
+        //     info.max_primal_infeasibility, info.max_dual_infeasibility);
         int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
         lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
         HighsBasis basis = lpsolver.getBasis();
@@ -535,6 +556,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       return Status::UnscaledInfeasible;
     case HighsModelStatus::REACHED_ITERATION_LIMIT: {
       if (resolve_on_error) {
+        // printf(
+        //     "error: lpsolver reached iteration limit, resolving with basis "
+        //     "from ipm\n");
         Highs ipm;
         ipm.passModel(lpsolver.getLp());
         ipm.setHighsOptionValue("solver", "ipm");
@@ -544,6 +568,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         lpsolver.setBasis(ipm.getBasis());
         return run(false);
       }
+
+      // printf("error: lpsolver reached iteration limit\n");
       return Status::Error;
     }
     // case HighsModelStatus::PRIMAL_DUAL_INFEASIBLE:
@@ -552,6 +578,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     //    return Status::Infeasible;
     //  return Status::Error;
     default:
+      // printf("error: lpsolver stopped with unexpected status %d\n",
+      //        (int)scaledmodelstatus);
       HighsLogMessage(
           mipsolver.options_mip_->logfile, HighsMessageType::WARNING,
           "LP solved to unexpected status (%d)", (int)scaledmodelstatus);

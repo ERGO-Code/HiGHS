@@ -101,7 +101,8 @@ void HighsCutPool::ageLPRows(HighsLpRelaxation& lprelaxation) {
   int nlprows = lprelaxation.getNumLpRows();
   int nummodelrows = lprelaxation.getNumModelRows();
   std::vector<int> deletemask;
-
+  assert(lprelaxation.getLpSolver().getLp().numRow_ ==
+         (int)lprelaxation.getLpSolver().getLp().rowLower_.size());
   int agelim;
   if (nrounds_ % std::max(agelim_ / 2, 2) == 0)
     agelim = std::min(agelim_, nrounds_);
@@ -127,6 +128,8 @@ void HighsCutPool::ageLPRows(HighsLpRelaxation& lprelaxation) {
   }
 
   lprelaxation.removeCuts(ndelcuts, deletemask);
+  assert(lprelaxation.getLpSolver().getLp().numRow_ ==
+         (int)lprelaxation.getLpSolver().getLp().rowLower_.size());
 }
 
 void HighsCutPool::ageNonLPRows() {
