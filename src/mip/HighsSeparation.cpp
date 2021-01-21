@@ -2093,10 +2093,13 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
 
   int expscal;
   std::frexp(maxaggval, &expscal);
+  double mincontribution = 100 * mip.mipdata_->feastol * maxaggval;
 
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
     double aggval = std::ldexp(aggrvals[j], -expscal);
+
+    // skip rows with a weight smaller or equal to the feasibility tolerance
     if (std::abs(aggval) <= mip.mipdata_->feastol) continue;
 
     int rowlen;
@@ -2112,8 +2115,8 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
       maxabsrowcoef = cutpool.getMaxAbsCutCoef(cut);
     }
 
-    if (std::abs(aggval) * maxabsrowcoef <= 100 * mip.mipdata_->feastol)
-      continue;
+    // skip rows whoes largest coefficient contribution is small
+    if (std::abs(aggrvals[j]) * maxabsrowcoef <= mincontribution) continue;
 
     HighsCDouble scale = aggval;
 
@@ -2150,10 +2153,12 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
     if (val > maxval) maxval = val;
   }
 
-  // printf("minval: %g, maxval: %g\n", minval, maxval);
+  double density = len / (double)mip.numCol();
 
-  /* reject baserows that have a too large dynamism */
-  if (maxval <= 1e6 * minval) {
+  /* reject baserows that have a too large dynamism or are too dense */
+  if (maxval * mip.mipdata_->feastol <= minval && density <= 0.3) {
+    // printf("minval: %g, maxval: %g, len: %d, density: %g\n", minval, maxval,
+    // len, density);
     rhs_.push_back(double(rhs));
     for (int j : vectorsum.getNonzeros()) {
       double val = vectorsum.getValue(j);
