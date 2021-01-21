@@ -2093,7 +2093,7 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
 
   int expscal;
   std::frexp(maxaggval, &expscal);
-  double mincontribution = 100 * mip.mipdata_->feastol * maxaggval;
+  double mincontribution = 10 * mip.mipdata_->feastol * maxaggval;
 
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
