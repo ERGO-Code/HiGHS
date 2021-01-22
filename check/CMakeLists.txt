@@ -20,6 +20,7 @@ set(TEST_SOURCES
     TestSort.cpp
     TestSetup.cpp
     TestFilereader.cpp
+    TestHighsGFkSolve.cpp
     TestInfo.cpp
     TestBasis.cpp
     TestBasisSolves.cpp
