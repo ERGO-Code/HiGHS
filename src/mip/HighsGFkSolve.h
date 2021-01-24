@@ -311,8 +311,34 @@ class HighsGFkSolve {
     std::vector<std::pair<int, unsigned int>> solution;
     solution.reserve(numCol);
     int numFactorRows = factorRowPerm.size();
-    int basisSwapIndex = numFactorRows;
+
+    // create vector for swapping different columns into the basis
+    // For each column we want to iterate one basic solution where the
+    // column is basic
+    std::vector<std::pair<int, int>> basisSwaps;
     assert(iterstack.empty());
+    for (int i = numFactorRows - 1; i >= 0; --i) {
+      int row = factorRowPerm[i];
+      iterstack.push_back(rowroot[row]);
+
+      while (!iterstack.empty()) {
+        int rowpos = iterstack.back();
+        iterstack.pop_back();
+        assert(rowpos != -1);
+
+        if (ARleft[rowpos] != -1) iterstack.push_back(ARleft[rowpos]);
+        if (ARright[rowpos] != -1) iterstack.push_back(ARright[rowpos]);
+
+        int col = Acol[rowpos];
+        if (colBasisStatus[col] != 0) continue;
+
+        colBasisStatus[col] = -1;
+        basisSwaps.emplace_back(i, col);
+      }
+    }
+
+    int basisSwapPos = 0;
+
     bool performedBasisSwap;
     do {
       performedBasisSwap = false;
@@ -348,32 +374,16 @@ class HighsGFkSolve {
 
       reportSolution(solution);
 
-      while (!iterstack.empty() || basisSwapIndex > 0) {
-        if (iterstack.empty()) {
-          --basisSwapIndex;
-          int row = factorRowPerm[basisSwapIndex];
-          iterstack.push_back(rowroot[row]);
-        }
-        int currBasicCol = factorColPerm[basisSwapIndex];
-
-        while (!iterstack.empty()) {
-          int rowpos = iterstack.back();
-          iterstack.pop_back();
-          assert(rowpos != -1);
-
-          if (ARleft[rowpos] != -1) iterstack.push_back(ARleft[rowpos]);
-          if (ARright[rowpos] != -1) iterstack.push_back(ARright[rowpos]);
-
-          int col = Acol[rowpos];
-          if (colBasisStatus[col] != 0) continue;
-          factorColPerm[basisSwapIndex] = col;
-          colBasisStatus[col] = 1;
-          colBasisStatus[currBasicCol] = -1;
-          performedBasisSwap = true;
-          break;
-        }
-
-        if (performedBasisSwap) break;
+      if (basisSwapPos < (int)basisSwaps.size()) {
+        int basisIndex = basisSwaps[basisSwapPos].first;
+        int enteringCol = basisSwaps[basisSwapPos].second;
+        int leavingCol = factorColPerm[basisIndex];
+        assert(colBasisStatus[leavingCol] == 1);
+        factorColPerm[basisIndex] = enteringCol;
+        colBasisStatus[enteringCol] = 1;
+        colBasisStatus[leavingCol] = 0;
+        performedBasisSwap = true;
+        ++basisSwapPos;
       }
     } while (performedBasisSwap);
   }
