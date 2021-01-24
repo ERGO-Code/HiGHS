@@ -38,24 +38,26 @@ struct HighsGFk;
 
 template <>
 struct HighsGFk<2> {
-  static constexpr int powk(int a) { return a * a; }
-  static constexpr int inverse(int a) { return 1; }
+  static constexpr unsigned int powk(unsigned int a) { return a * a; }
+  static constexpr unsigned int inverse(unsigned int a) { return 1; }
 };
 
 template <>
 struct HighsGFk<3> {
-  static constexpr int powk(int a) { return a * a * a; }
-  static constexpr int inverse(int a) { return a; }
+  static constexpr unsigned int powk(unsigned int a) { return a * a * a; }
+  static constexpr unsigned int inverse(unsigned int a) { return a; }
 };
 
 template <int k>
 struct HighsGFk {
-  static constexpr int powk(int a) {
+  static constexpr unsigned int powk(unsigned int a) {
     return k & 1 == 0 ? HighsGFk<2>::powk(HighsGFk<k / 2>::powk(a))
                       : HighsGFk<k - 1>::powk(a) * a;
   }
 
-  static int inverse(int a) { return HighsGFk<k - 2>::powk(a) % k; }
+  static unsigned int inverse(unsigned int a) {
+    return HighsGFk<k - 2>::powk(a) % k;
+  }
 };
 
 class HighsGFkSolve {
@@ -111,7 +113,7 @@ class HighsGFkSolve {
 
   int findNonzero(int row, int col);
 
-  void addNonzero(int row, int col, int val);
+  void addNonzero(int row, int col, unsigned int val);
 
   int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
 
@@ -220,7 +222,7 @@ class HighsGFkSolve {
       assert(Avalue[pivot] > 0);
       assert(Avalue[pivot] < k);
 
-      int pivotInverse = HighsGFk<k>::inverse(Avalue[pivot]);
+      unsigned int pivotInverse = HighsGFk<k>::inverse(Avalue[pivot]);
       assert((Avalue[pivot] * pivotInverse) % k == 1);
 
       rowpositions.clear();
@@ -239,7 +241,7 @@ class HighsGFkSolve {
         int row = Arow[coliter];
         if (rowUsed[row]) continue;
 
-        int pivotRowScale = pivotInverse * (k - Avalue[coliter]);
+        unsigned int pivotRowScale = pivotInverse * (k - Avalue[coliter]);
 
         rhs[row] = (rhs[row] + pivotRowScale * rhs[pivotRow]) % k;
 
@@ -247,12 +249,14 @@ class HighsGFkSolve {
           int nonzeroPos = findNonzero(Arow[coliter], Acol[pivotRowPos]);
 
           if (nonzeroPos == -1) {
-            int val = (pivotRowScale * Avalue[pivotRowPos]) % k;
+            assert(Acol[pivotRowPos] != pivotCol);
+            unsigned int val = (pivotRowScale * Avalue[pivotRowPos]) % k;
             if (val != 0) addNonzero(row, Acol[pivotRowPos], val);
           } else {
             Avalue[nonzeroPos] =
                 (Avalue[nonzeroPos] + pivotRowScale * Avalue[pivotRowPos]) % k;
-            if (Avalue[nonzeroPos] == 0) dropIfZero(nonzeroPos);
+            assert(Acol[pivotRowPos] != pivotCol || Avalue[nonzeroPos] == 0);
+            dropIfZero(nonzeroPos);
           }
         }
       }
@@ -265,6 +269,7 @@ class HighsGFkSolve {
       if (numPivot == maxPivot) break;
 
       for (int i = 0; i != pivotRowLen; ++i) {
+        assert(Arow[rowpositions[i]] == pivotRow);
         int col = Acol[rowpositions[i]];
         int oldsize = rowposColsizes[i];
 
@@ -299,70 +304,35 @@ class HighsGFkSolve {
       if (rhs[i] != 0) return;
     }
 
-    // setup the CSR format but use the row permutation for indexing for
-    // efficiently performing the solves
-    std::vector<int> ARvalue;
-    std::vector<int> ARindex;
-    std::vector<int> ARstart;
-
-    int numFactorRows = factorRowPerm.size();
-
-    ARstart.resize(numFactorRows + 1);
-    ARvalue.reserve(numNonzeros());
-    ARindex.reserve(numNonzeros());
-
-    for (int i = 0; i != numFactorRows; ++i) {
-      int row = factorRowPerm[i];
-      iterstack.clear();
-
-      assert(rowsize[row] != 0);
-      assert(rowroot[row] != -1);
-      iterstack.push_back(rowroot[row]);
-
-      while (!iterstack.empty()) {
-        int pos = iterstack.back();
-        assert(Arow[pos] == row);
-        iterstack.pop_back();
-
-        if (ARleft[pos] != -1) iterstack.push_back(ARleft[pos]);
-        if (ARright[pos] != -1) iterstack.push_back(ARright[pos]);
-
-        assert(Avalue[pos] > 0 && Avalue[pos] < k);
-
-        ARvalue.push_back(Avalue[pos]);
-        ARindex.push_back(Acol[pos]);
-      }
-
-      ARstart[i + 1] = ARvalue.size();
-    }
-
     // now iterate a subset of the basic solutions.
     // When a column leaves the basis we do not allow it to enter again so that
     // we iterate at most one solution for each nonbasic column
-    std::vector<unsigned int> solution(numCol, 0);
-    std::vector<int> solutionIndices;
-    solutionIndices.reserve(numCol);
+
+    std::vector<std::pair<int, unsigned int>> solution;
+    solution.reserve(numCol);
+    int numFactorRows = factorRowPerm.size();
     int nextBasisSwapRow = numFactorRows - 1;
     bool performedBasisSwap;
     do {
       performedBasisSwap = false;
-      for (int i : solutionIndices) solution[i] = 0;
-      solutionIndices.clear();
+      solution.clear();
 
       for (int i = numFactorRows - 1; i >= 0; --i) {
-        int col = factorColPerm[i];
         int row = factorRowPerm[i];
 
-        unsigned int solval = rhs[row];
+        unsigned int solval = 0;
 
-        int colValInverse = 0;
-        for (int j = ARstart[i]; j != ARstart[i + 1]; ++j) {
-          if (ARindex[j] == col) {
-            colValInverse = HighsGFk<k>::inverse(ARvalue[j]);
-            assert((ARvalue[j] * colValInverse) % k == 1);
-          } else
-            solval += ARvalue[j] * (k - solution[ARindex[j]]);
+        for (const std::pair<int, unsigned int>& solentry : solution) {
+          int pos = findNonzero(row, solentry.first);
+          if (pos != -1) solval += Avalue[pos] * solentry.second;
         }
+
+        solval = rhs[row] + k - (solval % k);
+
+        int col = factorColPerm[i];
+        int pos = findNonzero(row, col);
+        assert(pos != -1);
+        unsigned int colValInverse = HighsGFk<k>::inverse(Avalue[pos]);
 
         assert(solval >= 0);
         assert(colValInverse != 0);
@@ -372,23 +342,28 @@ class HighsGFkSolve {
         assert(solval >= 0 && solval < k);
 
         // only record nonzero solution values
-        if (solval != 0) {
-          solutionIndices.push_back(col);
-          solution[col] = solval;
-        }
+        if (solval != 0) solution.emplace_back(col, solval);
       }
 
-      reportSolution(solution, solutionIndices);
+      reportSolution(solution);
 
       while (nextBasisSwapRow >= 0) {
+        int basisSwapRow = factorRowPerm[nextBasisSwapRow];
         int currBasicCol = factorColPerm[nextBasisSwapRow];
-        for (int i = ARstart[nextBasisSwapRow];
-             i != ARstart[nextBasisSwapRow + 1]; ++i) {
-          int col = ARindex[i];
 
+        iterstack.clear();
+        iterstack.push_back(rowroot[basisSwapRow]);
+
+        while (!iterstack.empty()) {
+          int rowpos = iterstack.back();
+          iterstack.pop_back();
+          assert(rowpos != -1);
+
+          if (ARleft[rowpos] != -1) iterstack.push_back(ARleft[rowpos]);
+          if (ARright[rowpos] != -1) iterstack.push_back(ARright[rowpos]);
+
+          int col = Acol[rowpos];
           if (colBasisStatus[col] != 0) continue;
-
-          assert(col != currBasicCol);
           factorColPerm[nextBasisSwapRow] = col;
           colBasisStatus[col] = 1;
           colBasisStatus[currBasicCol] = -1;

@@ -64,7 +64,7 @@ int HighsGFkSolve::findNonzero(int row, int col) {
   return -1;
 }
 
-void HighsGFkSolve::addNonzero(int row, int col, int val) {
+void HighsGFkSolve::addNonzero(int row, int col, unsigned int val) {
   assert(findNonzero(row, col) == -1);
   int pos;
   if (freeslots.empty()) {
