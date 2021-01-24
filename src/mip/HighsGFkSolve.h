@@ -311,7 +311,8 @@ class HighsGFkSolve {
     std::vector<std::pair<int, unsigned int>> solution;
     solution.reserve(numCol);
     int numFactorRows = factorRowPerm.size();
-    int nextBasisSwapRow = numFactorRows - 1;
+    int basisSwapIndex = numFactorRows;
+    assert(iterstack.empty());
     bool performedBasisSwap;
     do {
       performedBasisSwap = false;
@@ -347,12 +348,13 @@ class HighsGFkSolve {
 
       reportSolution(solution);
 
-      while (nextBasisSwapRow >= 0) {
-        int basisSwapRow = factorRowPerm[nextBasisSwapRow];
-        int currBasicCol = factorColPerm[nextBasisSwapRow];
-
-        iterstack.clear();
-        iterstack.push_back(rowroot[basisSwapRow]);
+      while (!iterstack.empty() || basisSwapIndex > 0) {
+        if (iterstack.empty()) {
+          --basisSwapIndex;
+          int row = factorRowPerm[basisSwapIndex];
+          iterstack.push_back(rowroot[row]);
+        }
+        int currBasicCol = factorColPerm[basisSwapIndex];
 
         while (!iterstack.empty()) {
           int rowpos = iterstack.back();
@@ -364,7 +366,7 @@ class HighsGFkSolve {
 
           int col = Acol[rowpos];
           if (colBasisStatus[col] != 0) continue;
-          factorColPerm[nextBasisSwapRow] = col;
+          factorColPerm[basisSwapIndex] = col;
           colBasisStatus[col] = 1;
           colBasisStatus[currBasicCol] = -1;
           performedBasisSwap = true;
@@ -372,8 +374,6 @@ class HighsGFkSolve {
         }
 
         if (performedBasisSwap) break;
-
-        --nextBasisSwapRow;
       }
     } while (performedBasisSwap);
   }
