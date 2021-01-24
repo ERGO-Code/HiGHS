@@ -9,6 +9,18 @@
 #include "mip/HighsPseudocost.h"
 #include "util/HighsCDouble.h"
 
+void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver, int& len,
+                                   const int*& inds,
+                                   const double*& vals) const {
+  switch (origin) {
+    case kCutPool:
+      mipsolver.mipdata_->cutpool.getCut(index, len, inds, vals);
+      break;
+    case kModel:
+      mipsolver.mipdata_->getRow(index, len, inds, vals);
+  };
+}
+
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   HighsLp lpmodel = *mipsolver.model_;

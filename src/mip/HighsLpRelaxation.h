@@ -23,9 +23,28 @@ class HighsLpRelaxation {
   };
 
  private:
+  struct LpRow {
+    enum Origin {
+      kModel,
+      kCutPool,
+    };
+
+    Origin origin;
+    int index;
+
+    void get(const HighsMipSolver& mipsolver, int& len, const int*& inds,
+             const double*& vals) const;
+
+    static LpRow cut(int index) { return LpRow{kCutPool, index}; }
+    static LpRow model(int index) { return LpRow{kModel, index}; }
+  };
+
   const HighsMipSolver& mipsolver;
   Highs lpsolver;
   std::vector<int> lp2cutpoolindex;
+
+  std::vector<LpRow> lprows;
+
   std::vector<std::pair<int, double>> fractionalints;
   std::vector<double> dualproofvals;
   std::vector<int> dualproofinds;
