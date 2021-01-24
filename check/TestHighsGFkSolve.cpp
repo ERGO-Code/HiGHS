@@ -1,8 +1,10 @@
 
-#include "catch.hpp"
-#define private public
+#include <numeric>
 #include <random>
 
+#include "catch.hpp"
+
+#define private public
 #include "mip/HighsGFkSolve.h"
 
 template <int k>
