@@ -113,7 +113,7 @@ static bool separatePureBinaryKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 1e-5) {
+  if (double(viol) > 2 * feastol) {
     // printf("found pure 0-1 cover cut with violation %g\n", double(viol));
     return true;
   }
@@ -142,7 +142,7 @@ static bool separateMixedBinaryKnapsackCover(
 
   int p = coversize;
   for (int i = 0; i != coversize; ++i) {
-    if (vals[cover[i]] - lambda < 0) {
+    if (vals[cover[i]] - lambda <= mip.mipdata_->epsilon) {
       p = i;
       break;
     }
@@ -181,7 +181,7 @@ static bool separateMixedBinaryKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 1e-5) {
+  if (double(viol) > 2 * mip.mipdata_->feastol) {
     // printf("found mixed 0-1 cover cut with violation %g\n", double(viol));
     return true;
   }
@@ -357,7 +357,7 @@ static bool separateMixedIntegerKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 1e-5) {
+  if (double(viol) > 2 * mip.mipdata_->feastol) {
     // printf("found mixed integer cover cut with violation %g\n",
     // double(viol));
     // printf("al: %g  r: %g  eta: %g  mu: %g  lambda: %g\n", al, double(r),
@@ -2048,7 +2048,7 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
   int expscal;
   std::frexp(maxaggval, &expscal);
   --expscal;
-  double minweight = 1000 * mip.mipdata_->feastol;
+  const double minweight = 1000 * mip.mipdata_->feastol;
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
     double aggval = std::ldexp(aggrvals[j], -expscal);
@@ -2059,7 +2059,6 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
     int rowlen;
     const int* rowinds;
     const double* rowvals;
-    double maxabsrowcoef = lp.getMaxAbsRowVal(j);
     lp.getRow(j, rowlen, rowinds, rowvals);
 
     HighsCDouble scale = aggval;
