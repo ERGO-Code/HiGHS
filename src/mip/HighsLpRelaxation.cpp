@@ -369,7 +369,7 @@ void HighsLpRelaxation::storeDualInfProof() {
 
   int expscal;
   frexp(maxval, &expscal);
-
+  --expscal;
   for (int i = 0; i != lp.numRow_; ++i) {
     dualray[i] = std::ldexp(dualray[i], -expscal);
     if (std::abs(dualray[i]) <= mipsolver.mipdata_->feastol) {

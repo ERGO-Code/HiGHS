@@ -2047,23 +2047,20 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
 
   int expscal;
   std::frexp(maxaggval, &expscal);
-  double mincontribution = 10 * mip.mipdata_->feastol * maxaggval;
-
+  --expscal;
+  double minweight = 1000 * mip.mipdata_->feastol;
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
     double aggval = std::ldexp(aggrvals[j], -expscal);
 
-    // skip rows with a weight smaller or equal to the feasibility tolerance
-    if (std::abs(aggval) <= mip.mipdata_->feastol) continue;
+    // skip rows with a weight smaller than 1000 times feastol
+    if (std::abs(aggval) < minweight) continue;
 
     int rowlen;
     const int* rowinds;
     const double* rowvals;
     double maxabsrowcoef = lp.getMaxAbsRowVal(j);
     lp.getRow(j, rowlen, rowinds, rowvals);
-
-    // skip rows whoes largest coefficient contribution is small
-    if (std::abs(aggrvals[j]) * maxabsrowcoef <= mincontribution) continue;
 
     HighsCDouble scale = aggval;
 
@@ -2094,18 +2091,23 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
       continue;
     }
 
-    ++len;
+    if (j < mip.numCol()) ++len;
     if (val < minval) minval = val;
 
     if (val > maxval) maxval = val;
   }
 
-  double density = len / (double)mip.numCol();
+  int maxlen = 1000 + 0.1 * (mip.numCol());
 
   /* reject baserows that have a too large dynamism or are too dense */
-  if (maxval * mip.mipdata_->feastol <= minval && density <= 0.3) {
-    // printf("minval: %g, maxval: %g, len: %d, density: %g\n", minval, maxval,
-    // len, density);
+  if (maxval * mip.mipdata_->feastol <= minval && len <= maxlen) {
+    // printf(
+    //    "minval: %g, maxval: %g, minaggscale: %g  maxagg: %g (scaled:%g) len:
+    //    "
+    //    "%d, "
+    //    "density: %g\n",
+    //    minval, maxval, minaggval, maxaggval, std::ldexp(maxaggval, -expscal),
+    //    len, density);
     rhs_.push_back(double(rhs));
     for (int j : vectorsum.getNonzeros()) {
       double val = vectorsum.getValue(j);
