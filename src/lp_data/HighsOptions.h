@@ -559,14 +559,14 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("mip_lp_age_limit",
                                      "maximal age of dynamic LP rows before "
                                      "they are removed from the LP relaxation",
-                                     advanced, &mip_lp_age_limit, 0, 5,
+                                     advanced, &mip_lp_age_limit, 0, 10,
                                      std::numeric_limits<int16_t>::max());
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "mip_lp_age_limit",
         "maximal age of rows in the cutpool before they are deleted", advanced,
-        &mip_pool_age_limit, 0, 20, std::numeric_limits<int16_t>::max());
+        &mip_pool_age_limit, 0, 10, std::numeric_limits<int16_t>::max());
     records.push_back(record_int);
 
     record_int =
