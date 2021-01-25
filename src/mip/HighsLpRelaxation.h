@@ -35,13 +35,18 @@ class HighsLpRelaxation {
     void get(const HighsMipSolver& mipsolver, int& len, const int*& inds,
              const double*& vals) const;
 
+    int getRowLen(const HighsMipSolver& mipsolver) const;
+
+    bool isIntegral(const HighsMipSolver& mipsolver) const;
+
+    double getMaxAbsVal(const HighsMipSolver& mipsolver) const;
+
     static LpRow cut(int index) { return LpRow{kCutPool, index}; }
     static LpRow model(int index) { return LpRow{kModel, index}; }
   };
 
   const HighsMipSolver& mipsolver;
   Highs lpsolver;
-  std::vector<int> lp2cutpoolindex;
 
   std::vector<LpRow> lprows;
 
@@ -55,6 +60,7 @@ class HighsLpRelaxation {
   std::shared_ptr<const HighsBasis> basischeckpoint;
   bool currentbasisstored;
   size_t numlpiters;
+  size_t epochs;
   Status status;
 
   void storeDualInfProof();
@@ -68,9 +74,34 @@ class HighsLpRelaxation {
 
   HighsLpRelaxation(const HighsLpRelaxation& other);
 
-  int getCutIndex(int lpindex) const {
-    return lp2cutpoolindex[lpindex - mipsolver.numRow()];
+  void loadModel();
+
+  void getRow(int row, int& len, const int*& inds, const double*& vals) const {
+    if (row < mipsolver.numRow())
+      assert(lprows[row].origin == LpRow::Origin::kModel);
+    else
+      assert(lprows[row].origin == LpRow::Origin::kCutPool);
+    lprows[row].get(mipsolver, len, inds, vals);
   }
+
+  bool isRowIntegral(int row) const {
+    assert(row < (int)lprows.size());
+    return lprows[row].isIntegral(mipsolver);
+  }
+
+  int getRowLen(int row) const { return lprows[row].getRowLen(mipsolver); }
+
+  double getMaxAbsRowVal(int row) const {
+    return lprows[row].getMaxAbsVal(mipsolver);
+  }
+
+  double slackUpper(int row) const;
+
+  double slackLower(int row) const;
+
+  double rowLower(int row) const { return lpsolver.getLp().rowLower_[row]; }
+
+  double rowUpper(int row) const { return lpsolver.getLp().rowUpper_[row]; }
 
   Status getStatus() const { return status; }
 
@@ -149,15 +180,15 @@ class HighsLpRelaxation {
 
   void addCuts(HighsCutSet& cutset);
 
+  void performAging();
+
+  void removeObsoleteRows();
+
   void removeCuts(int ndelcuts, std::vector<int>& deletemask);
 
   void removeCuts();
 
   void flushDomain(HighsDomain& domain, bool continuous = false);
-
-  double rowLower(int row) const { return lpsolver.getLp().rowLower_[row]; }
-
-  double rowUpper(int row) const { return lpsolver.getLp().rowUpper_[row]; }
 
   void getDualProof(const int*& inds, const double*& vals, double& rhs,
                     int& len) {

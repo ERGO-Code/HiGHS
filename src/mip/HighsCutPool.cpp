@@ -97,42 +97,9 @@ double HighsCutPool::getParallelism(int row1, int row2) const {
   return dotprod * rownormalization_[row1] * rownormalization_[row2];
 }
 
-void HighsCutPool::ageLPRows(HighsLpRelaxation& lprelaxation) {
-  int nlprows = lprelaxation.getNumLpRows();
-  int nummodelrows = lprelaxation.getNumModelRows();
-  std::vector<int> deletemask;
-  assert(lprelaxation.getLpSolver().getLp().numRow_ ==
-         (int)lprelaxation.getLpSolver().getLp().rowLower_.size());
-  int agelim;
-  if (nrounds_ % std::max(agelim_ / 2, 2) == 0)
-    agelim = std::min(agelim_, nrounds_);
-  else
-    agelim = HIGHS_CONST_I_INF;
+void HighsCutPool::lpCutRemoved(int cut) { ages_[cut] = 0; }
 
-  int ndelcuts = 0;
-  for (int i = nummodelrows; i != nlprows; ++i) {
-    int cut = lprelaxation.getCutIndex(i);
-    assert(rhs_[cut] == lprelaxation.getLpSolver().getLp().rowUpper_[i]);
-    if (lprelaxation.getLpSolver().getBasis().row_status[i] ==
-        HighsBasisStatus::BASIC) {
-      --ages_[cut];
-      if (ages_[cut] < -agelim) {
-        if (ndelcuts == 0) deletemask.resize(nlprows);
-        ++ndelcuts;
-        deletemask[i] = 1;
-        ages_[cut] = 1;
-      }
-    } else {
-      ages_[cut] = -1;
-    }
-  }
-
-  lprelaxation.removeCuts(ndelcuts, deletemask);
-  assert(lprelaxation.getLpSolver().getLp().numRow_ ==
-         (int)lprelaxation.getLpSolver().getLp().rowLower_.size());
-}
-
-void HighsCutPool::ageNonLPRows() {
+void HighsCutPool::performAging() {
   int numcuts = matrix_.getNumRows();
   for (int i = 0; i != numcuts; ++i) {
     if (ages_[i] < 0) continue;
@@ -146,38 +113,6 @@ void HighsCutPool::ageNonLPRows() {
   }
 }
 
-void HighsCutPool::removeObsoleteRows(HighsLpRelaxation& lprelaxation) {
-  int nlprows = lprelaxation.getNumLpRows();
-  int nummodelrows = lprelaxation.getNumModelRows();
-  std::vector<int> deletemask;
-
-  int ndelcuts = 0;
-  for (int i = nummodelrows; i != nlprows; ++i) {
-    int cut = lprelaxation.getCutIndex(i);
-    if (lprelaxation.getLpSolver().getBasis().row_status[i] ==
-        HighsBasisStatus::BASIC) {
-      if (ndelcuts == 0) deletemask.resize(nlprows);
-      ++ndelcuts;
-      deletemask[i] = 1;
-      ages_[cut] = 1;
-    }
-  }
-
-  lprelaxation.removeCuts(ndelcuts, deletemask);
-}
-
-void HighsCutPool::removeAllRows(HighsLpRelaxation& lprelaxation) {
-  int nlprows = lprelaxation.getNumLpRows();
-  int nummodelrows = lprelaxation.getNumModelRows();
-
-  for (int i = nummodelrows; i != nlprows; ++i) {
-    int cut = lprelaxation.getCutIndex(i);
-    ages_[cut] = 1;
-  }
-
-  lprelaxation.removeCuts();
-}
-
 void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                             HighsCutSet& cutset, double feastol) {
   int nrows = matrix_.getNumRows();
@@ -188,8 +123,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   std::vector<std::pair<double, int>> efficacious_cuts;
 
-  int agelim = std::min(nrounds_, agelim_);
-  ++nrounds_;
+  int agelim = std::min(epochs, size_t(agelim_));
+  ++epochs;
 
   for (int i = 0; i < nrows; ++i) {
     // cuts with an age of -1 are already in the LP and are therefore skipped

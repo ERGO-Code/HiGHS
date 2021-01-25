@@ -21,13 +21,79 @@ void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver, int& len,
   };
 }
 
+int HighsLpRelaxation::LpRow::getRowLen(const HighsMipSolver& mipsolver) const {
+  switch (origin) {
+    case kCutPool:
+      return mipsolver.mipdata_->cutpool.getRowLength(index);
+    case kModel:
+      return mipsolver.mipdata_->ARstart_[index + 1] -
+             mipsolver.mipdata_->ARstart_[index];
+  };
+
+  assert(false);
+  return -1;
+}
+
+bool HighsLpRelaxation::LpRow::isIntegral(
+    const HighsMipSolver& mipsolver) const {
+  switch (origin) {
+    case kCutPool:
+      return mipsolver.mipdata_->cutpool.cutIsIntegral(index);
+    case kModel:
+      return mipsolver.mipdata_->rowintegral[index];
+  };
+
+  assert(false);
+  return false;
+}
+
+double HighsLpRelaxation::LpRow::getMaxAbsVal(
+    const HighsMipSolver& mipsolver) const {
+  switch (origin) {
+    case kCutPool:
+      return mipsolver.mipdata_->cutpool.getMaxAbsCutCoef(index);
+    case kModel:
+      return mipsolver.mipdata_->maxAbsRowCoef[index];
+  };
+
+  assert(false);
+  return 0.0;
+}
+
+double HighsLpRelaxation::slackLower(int row) const {
+  double rowlower = rowLower(row);
+  if (rowlower != -HIGHS_CONST_INF) return rowlower;
+
+  switch (lprows[row].origin) {
+    case LpRow::kCutPool:
+      return mipsolver.mipdata_->domain.getMinCutActivity(
+          mipsolver.mipdata_->cutpool, lprows[row].index);
+    case LpRow::kModel:
+      return mipsolver.mipdata_->domain.getMinActivity(lprows[row].index);
+  };
+
+  assert(false);
+  return -HIGHS_CONST_INF;
+}
+
+double HighsLpRelaxation::slackUpper(int row) const {
+  double rowupper = rowUpper(row);
+  switch (lprows[row].origin) {
+    case LpRow::kCutPool:
+      return rowupper;
+    case LpRow::kModel:
+      if (rowupper != HIGHS_CONST_INF) return rowupper;
+      return mipsolver.mipdata_->domain.getMaxActivity(lprows[row].index);
+  };
+
+  assert(false);
+  return HIGHS_CONST_INF;
+}
+
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
-  HighsLp lpmodel = *mipsolver.model_;
-  lpmodel.integrality_.clear();
   lpsolver.setHighsLogfile();
   lpsolver.setHighsOutput();
-  lpsolver.passModel(std::move(lpmodel));
   lpsolver.setHighsOptionValue(
       "primal_feasibility_tolerance",
       mipsolver.options_mip_->mip_feasibility_tolerance);
@@ -36,12 +102,13 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
       mipsolver.options_mip_->mip_feasibility_tolerance * 0.1);
   status = Status::NotSet;
   numlpiters = 0;
+  epochs = 0;
   currentbasisstored = false;
 }
 
 HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
     : mipsolver(other.mipsolver),
-      lp2cutpoolindex(other.lp2cutpoolindex),
+      lprows(other.lprows),
       fractionalints(other.fractionalints),
       objective(other.objective),
       basischeckpoint(other.basischeckpoint),
@@ -52,6 +119,17 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
   numlpiters = 0;
+  epochs = 0;
+}
+
+void HighsLpRelaxation::loadModel() {
+  HighsLp lpmodel = *mipsolver.model_;
+  lpmodel.colLower_ = mipsolver.mipdata_->domain.colLower_;
+  lpmodel.colUpper_ = mipsolver.mipdata_->domain.colUpper_;
+  lprows.reserve(lpmodel.numRow_);
+  for (int i = 0; i != lpmodel.numRow_; ++i) lprows.push_back(LpRow::model(i));
+  lpmodel.integrality_.clear();
+  lpsolver.passModel(std::move(lpmodel));
 }
 
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
@@ -67,18 +145,41 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
 void HighsLpRelaxation::addCuts(HighsCutSet& cutset) {
   int numcuts = cutset.numCuts();
   assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
+  assert(lpsolver.getLp().numRow_ == (int)lprows.size());
   if (numcuts > 0) {
     status = Status::NotSet;
     currentbasisstored = false;
     basischeckpoint.reset();
-    lp2cutpoolindex.insert(lp2cutpoolindex.end(), cutset.cutindices.begin(),
-                           cutset.cutindices.end());
+
+    lprows.reserve(lprows.size() + numcuts);
+    for (int i = 0; i != numcuts; ++i)
+      lprows.push_back(LpRow::cut(cutset.cutindices[i]));
+
     lpsolver.addRows(numcuts, cutset.lower_.data(), cutset.upper_.data(),
                      cutset.ARvalue_.size(), cutset.ARstart_.data(),
                      cutset.ARindex_.data(), cutset.ARvalue_.data());
     assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
     cutset.clear();
   }
+}
+
+void HighsLpRelaxation::removeObsoleteRows() {
+  int nlprows = getNumLpRows();
+  int nummodelrows = getNumModelRows();
+  std::vector<int> deletemask;
+
+  int ndelcuts = 0;
+  for (int i = nummodelrows; i != nlprows; ++i) {
+    assert(lprows[i].origin == LpRow::Origin::kCutPool);
+    if (lpsolver.getBasis().row_status[i] == HighsBasisStatus::BASIC) {
+      if (ndelcuts == 0) deletemask.resize(nlprows);
+      ++ndelcuts;
+      deletemask[i] = 1;
+      mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
+    }
+  }
+
+  removeCuts(ndelcuts, deletemask);
 }
 
 void HighsLpRelaxation::removeCuts(int ndelcuts, std::vector<int>& deletemask) {
@@ -89,8 +190,7 @@ void HighsLpRelaxation::removeCuts(int ndelcuts, std::vector<int>& deletemask) {
     lpsolver.deleteRows(deletemask.data());
     for (int i = mipsolver.numRow(); i != nlprows; ++i) {
       if (deletemask[i] >= 0) {
-        lp2cutpoolindex[deletemask[i] - mipsolver.numRow()] =
-            lp2cutpoolindex[i - mipsolver.numRow()];
+        lprows[deletemask[i]] = lprows[i];
         basis.row_status[deletemask[i]] = basis.row_status[i];
       }
     }
@@ -98,7 +198,9 @@ void HighsLpRelaxation::removeCuts(int ndelcuts, std::vector<int>& deletemask) {
     assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
 
     basis.row_status.resize(basis.row_status.size() - ndelcuts);
-    lp2cutpoolindex.resize(lp2cutpoolindex.size() - ndelcuts);
+    lprows.resize(lprows.size() - ndelcuts);
+
+    assert(lpsolver.getLp().numRow_ == (int)lprows.size());
     lpsolver.setBasis(basis);
     lpsolver.run();
   }
@@ -107,9 +209,47 @@ void HighsLpRelaxation::removeCuts(int ndelcuts, std::vector<int>& deletemask) {
 void HighsLpRelaxation::removeCuts() {
   assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
   int nlprows = lpsolver.getNumRows();
-  lpsolver.deleteRows(mipsolver.numRow(), nlprows - 1);
-  lp2cutpoolindex.clear();
+  int modelrows = mipsolver.numRow();
+
+  lpsolver.deleteRows(modelrows, nlprows - 1);
+  for (int i = modelrows; i != nlprows; ++i) {
+    if (lprows[i].origin == LpRow::Origin::kCutPool)
+      mipsolver.mipdata_->cutpool.lpCutRemoved(lprows[i].index);
+  }
+  lprows.resize(modelrows);
   assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
+}
+
+void HighsLpRelaxation::performAging() {
+  assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
+
+  int agelimit = mipsolver.options_mip_->mip_lp_age_limit;
+
+  ++epochs;
+  if (epochs % std::max(agelimit / 2, 2) != 0)
+    agelimit = HIGHS_CONST_I_INF;
+  else if ((int)epochs < agelimit)
+    agelimit = epochs;
+
+  int nlprows = getNumLpRows();
+  int nummodelrows = getNumModelRows();
+  std::vector<int> deletemask;
+
+  int ndelcuts = 0;
+  for (int i = nummodelrows; i != nlprows; ++i) {
+    assert(lprows[i].origin == LpRow::Origin::kCutPool);
+    if (lpsolver.getBasis().row_status[i] == HighsBasisStatus::BASIC) {
+      if (mipsolver.mipdata_->cutpool.ageLpCut(lprows[i].index, agelimit)) {
+        if (ndelcuts == 0) deletemask.resize(nlprows);
+        ++ndelcuts;
+        deletemask[i] = 1;
+      }
+    } else {
+      mipsolver.mipdata_->cutpool.resetAge(lprows[i].index);
+    }
+  }
+
+  removeCuts(ndelcuts, deletemask);
 }
 
 void HighsLpRelaxation::flushDomain(HighsDomain& domain, bool continuous) {
