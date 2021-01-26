@@ -2094,16 +2094,15 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
       continue;
     }
 
-    if (j < mip.numCol()) ++len;
+    ++len;
     if (val < minval) minval = val;
 
     if (val > maxval) maxval = val;
   }
 
-  int maxlen = 1000 + 0.1 * (mip.numCol());
-
+  double density = len / (double)mip.numCol();
   /* reject baserows that have a too large dynamism or are too dense */
-  if (maxval * mip.mipdata_->feastol <= minval && len <= maxlen) {
+  if (maxval * mip.mipdata_->feastol <= minval && density <= 0.3) {
     // printf(
     //    "minval: %g, maxval: %g, minaggscale: %g  maxagg: %g (scaled:%g) len:
     //    "
