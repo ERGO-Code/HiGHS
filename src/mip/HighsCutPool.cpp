@@ -97,7 +97,7 @@ double HighsCutPool::getParallelism(int row1, int row2) const {
   return dotprod * rownormalization_[row1] * rownormalization_[row2];
 }
 
-void HighsCutPool::lpCutRemoved(int cut) { ages_[cut] = 0; }
+void HighsCutPool::lpCutRemoved(int cut) { ages_[cut] = 1; }
 
 void HighsCutPool::performAging() {
   int numcuts = matrix_.getNumRows();
@@ -123,8 +123,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   std::vector<std::pair<double, int>> efficacious_cuts;
 
-  int agelim = std::min(epochs, size_t(agelim_));
-  ++epochs;
+  int agelim = std::min(numSepaRounds, size_t(agelim_));
+  ++numSepaRounds;
 
   for (int i = 0; i < nrows; ++i) {
     // cuts with an age of -1 are already in the LP and are therefore skipped

@@ -113,7 +113,7 @@ static bool separatePureBinaryKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 2 * feastol) {
+  if (double(viol) > 10 * feastol) {
     // printf("found pure 0-1 cover cut with violation %g\n", double(viol));
     return true;
   }
@@ -181,7 +181,7 @@ static bool separateMixedBinaryKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 2 * mip.mipdata_->feastol) {
+  if (double(viol) > 10 * mip.mipdata_->feastol) {
     // printf("found mixed 0-1 cover cut with violation %g\n", double(viol));
     return true;
   }
@@ -357,7 +357,7 @@ static bool separateMixedIntegerKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 2 * mip.mipdata_->feastol) {
+  if (double(viol) > 10 * mip.mipdata_->feastol) {
     // printf("found mixed integer cover cut with violation %g\n",
     // double(viol));
     // printf("al: %g  r: %g  eta: %g  mu: %g  lambda: %g\n", al, double(r),
@@ -2047,14 +2047,18 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
 
   int expscal;
   std::frexp(maxaggval, &expscal);
-  --expscal;
-  const double minweight = 1000 * mip.mipdata_->feastol;
+
+  double mincontribution = 10 * mip.mipdata_->feastol * maxaggval;
+
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
     double aggval = std::ldexp(aggrvals[j], -expscal);
 
     // skip rows with a weight smaller than 1000 times feastol
-    if (std::abs(aggval) < minweight) continue;
+    if (std::abs(aggval) <= mip.mipdata_->feastol) continue;
+
+    if (lp.getMaxAbsRowVal(j) * std::abs(aggrvals[j]) <= mincontribution)
+      continue;
 
     int rowlen;
     const int* rowinds;

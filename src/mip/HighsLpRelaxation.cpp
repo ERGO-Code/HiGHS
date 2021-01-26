@@ -223,12 +223,12 @@ void HighsLpRelaxation::removeCuts() {
 void HighsLpRelaxation::performAging() {
   assert(lpsolver.getLp().numRow_ == (int)lpsolver.getLp().rowLower_.size());
 
-  int agelimit = mipsolver.options_mip_->mip_lp_age_limit;
+  size_t agelimit = mipsolver.options_mip_->mip_lp_age_limit;
 
   ++epochs;
-  if (epochs % std::max(agelimit / 2, 2) != 0)
+  if (epochs % std::max(size_t(agelimit) / 2u, size_t(2)) != 0)
     agelimit = HIGHS_CONST_I_INF;
-  else if ((int)epochs < agelimit)
+  else if (epochs < agelimit)
     agelimit = epochs;
 
   int nlprows = getNumLpRows();
@@ -369,7 +369,7 @@ void HighsLpRelaxation::storeDualInfProof() {
 
   int expscal;
   frexp(maxval, &expscal);
-  --expscal;
+
   for (int i = 0; i != lp.numRow_; ++i) {
     dualray[i] = std::ldexp(dualray[i], -expscal);
     if (std::abs(dualray[i]) <= mipsolver.mipdata_->feastol) {

@@ -54,14 +54,14 @@ class HighsCutPool {
   std::vector<HighsDomain::CutpoolPropagation*> propagationDomains;
 
   int agelim_;
-  size_t epochs;
+  size_t numSepaRounds;
 
   bool isDuplicate(size_t hash, double norm, int* Rindex, double* Rvalue,
                    int Rlen, double rhs);
 
  public:
   HighsCutPool(int ncols, int agelim)
-      : matrix_(ncols), agelim_(agelim), epochs(0) {}
+      : matrix_(ncols), agelim_(agelim), numSepaRounds(0) {}
   const HighsDynamicRowMatrix& getMatrix() const { return matrix_; }
 
   const std::vector<double>& getRhs() const { return rhs_; }
@@ -77,7 +77,7 @@ class HighsCutPool {
     assert(ages_[cut] < 0);
     --ages_[cut];
     if (ages_[cut] < -agelimit) {
-      ages_[cut] = 0;
+      ages_[cut] = 1;
       return true;
     }
 
@@ -104,6 +104,8 @@ class HighsCutPool {
   }
 
   void setAgeLimit(int agelim) { agelim_ = agelim; }
+
+  size_t getNumSeparationRounds() const { return numSepaRounds; }
 
   void separate(const std::vector<double>& sol, HighsDomain& domprop,
                 HighsCutSet& cutset, double feastol);
