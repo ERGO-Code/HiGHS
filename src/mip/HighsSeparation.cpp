@@ -142,7 +142,7 @@ static bool separateMixedBinaryKnapsackCover(
 
   int p = coversize;
   for (int i = 0; i != coversize; ++i) {
-    if (vals[cover[i]] - lambda < 0) {
+    if (vals[cover[i]] - lambda <= mip.mipdata_->epsilon) {
       p = i;
       break;
     }
