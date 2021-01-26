@@ -130,6 +130,7 @@ void HighsLpRelaxation::loadModel() {
   for (int i = 0; i != lpmodel.numRow_; ++i) lprows.push_back(LpRow::model(i));
   lpmodel.integrality_.clear();
   lpsolver.passModel(std::move(lpmodel));
+  mipsolver.mipdata_->domain.clearChangedCols();
 }
 
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
