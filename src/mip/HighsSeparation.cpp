@@ -113,7 +113,7 @@ static bool separatePureBinaryKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 1e-5) {
+  if (double(viol) > 10 * feastol) {
     // printf("found pure 0-1 cover cut with violation %g\n", double(viol));
     return true;
   }
@@ -181,7 +181,7 @@ static bool separateMixedBinaryKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 1e-5) {
+  if (double(viol) > 10 * mip.mipdata_->feastol) {
     // printf("found mixed 0-1 cover cut with violation %g\n", double(viol));
     return true;
   }
@@ -357,7 +357,7 @@ static bool separateMixedIntegerKnapsackCover(
     viol += vals[i] * solvals[i];
   }
 
-  if (double(viol) > 1e-5) {
+  if (double(viol) > 10 * mip.mipdata_->feastol) {
     // printf("found mixed integer cover cut with violation %g\n",
     // double(viol));
     // printf("al: %g  r: %g  eta: %g  mu: %g  lambda: %g\n", al, double(r),
@@ -370,13 +370,14 @@ static bool separateMixedIntegerKnapsackCover(
 }
 
 static bool transformBaseEquation(
-    const HighsMipSolver& mip, const HighsDomain& domain,
+    const HighsLpRelaxation& lp, const HighsDomain& domain,
     const HighsSolution& lpsol, const int* Rindex, const double* Rvalue,
     int Rlen, double scale, HighsCDouble& rhs,
     std::vector<int8_t>& complementation, std::vector<int>& inds,
     std::vector<double>& vals, std::vector<double>& upper,
     std::vector<double>& solvals, int& nbin, int& nint, int& ncont,
     int& nunbndint) {
+  const HighsMipSolver& mip = lp.getMipSolver();
   complementation.clear();
   inds.clear();
   vals.clear();
@@ -402,12 +403,7 @@ static bool transformBaseEquation(
     int col = Rindex[j];
     if (col >= mip.numCol()) {
       int row = col - mip.numCol();
-      bool rowintegral;
-      if (row < mip.numRow())
-        rowintegral = mip.mipdata_->rowintegral[row];
-      else
-        rowintegral = mip.mipdata_->cutpool.cutIsIntegral(
-            mip.mipdata_->lp.getCutIndex(row));
+      bool rowintegral = lp.isRowIntegral(row);
       double val = Rvalue[j] * scale;
       if (false && rowintegral) {
         // todo
@@ -1188,10 +1184,7 @@ class AggregationHeuristic {
         int row = lp.Aindex_[j];
         if (numcontinuous[row] != 1) continue;
 
-        int rowlen =
-            row < mip.model_->numRow_
-                ? mip.mipdata_->ARstart_[row + 1] - mip.mipdata_->ARstart_[row]
-                : cutpool.getRowLength(lprelaxation.getCutIndex(row));
+        int rowlen = lprelaxation.getRowLen(row);
         if (rowlen != 2) continue;
         switch (rowtype[row]) {
           case RowType::Unusuable:
@@ -1288,10 +1281,7 @@ class AggregationHeuristic {
     const int* Rindex;
     const double* Rvalue;
     int Rlen;
-    if (row < mip.model_->numRow_)
-      mip.mipdata_->getRow(row, Rlen, Rindex, Rvalue);
-    else
-      cutpool.getCut(lprelaxation.getCutIndex(row), Rlen, Rindex, Rvalue);
+    lprelaxation.getRow(row, Rlen, Rindex, Rvalue);
 
     baseinds.insert(baseinds.end(), Rindex, Rindex + Rlen);
 
@@ -1385,12 +1375,7 @@ class AggregationHeuristic {
           else
             UBconst = lp.rowUpper_[UBrow];
 
-          if (UBrow < mip.numRow()) {
-            mip.mipdata_->getRow(UBrow, UBlen, UBindex, UBvalue);
-          } else {
-            int cut = lprelaxation.getCutIndex(UBrow);
-            cutpool.getCut(cut, UBlen, UBindex, UBvalue);
-          }
+          lprelaxation.getRow(UBrow, UBlen, UBindex, UBvalue);
 
           HighsCDouble scale = HighsCDouble(-baseval) / UBscale;
 
@@ -1446,12 +1431,7 @@ class AggregationHeuristic {
           else
             LBconst = lp.rowLower_[LBrow];
 
-          if (LBrow < mip.numRow()) {
-            mip.mipdata_->getRow(LBrow, LBlen, LBindex, LBvalue);
-          } else {
-            int cut = lprelaxation.getCutIndex(LBrow);
-            cutpool.getCut(cut, LBlen, LBindex, LBvalue);
-          }
+          lprelaxation.getRow(LBrow, LBlen, LBindex, LBvalue);
 
           HighsCDouble scale = HighsCDouble(-baseval) / LBscale;
 
@@ -1502,12 +1482,7 @@ class AggregationHeuristic {
           else
             LBconst = lp.rowLower_[LBrow];
 
-          if (LBrow < mip.numRow()) {
-            mip.mipdata_->getRow(LBrow, LBlen, LBindex, LBvalue);
-          } else {
-            int cut = lprelaxation.getCutIndex(LBrow);
-            cutpool.getCut(cut, LBlen, LBindex, LBvalue);
-          }
+          lprelaxation.getRow(LBrow, LBlen, LBindex, LBvalue);
 
           HighsCDouble scale = HighsCDouble(-baseval) / LBscale;
 
@@ -1568,12 +1543,7 @@ class AggregationHeuristic {
           else
             UBconst = lp.rowUpper_[UBrow];
 
-          if (UBrow < mip.numRow()) {
-            mip.mipdata_->getRow(UBrow, UBlen, UBindex, UBvalue);
-          } else {
-            int cut = lprelaxation.getCutIndex(UBrow);
-            cutpool.getCut(cut, UBlen, UBindex, UBvalue);
-          }
+          lprelaxation.getRow(UBrow, UBlen, UBindex, UBvalue);
 
           HighsCDouble scale = HighsCDouble(-baseval) / UBscale;
           // the ub constraint does add a slack variable as the inequality
@@ -1716,18 +1686,11 @@ class AggregationHeuristic {
 
           assert(rowtype[row] == RowType::Leq || rowtype[row] == RowType::Geq);
 
-          if (row < mip.numRow()) {
-            if (rowtype[row] == RowType::Leq)
-              Rside = lp.rowUpper_[row];
-            else
-              Rside = -lp.rowLower_[row];
-            mip.mipdata_->getRow(row, Rlen, Rindex, Rvalue);
-          } else {
-            assert(rowtype[row] == RowType::Leq);
-            int cut = lprelaxation.getCutIndex(row);
-            cutpool.getCut(cut, Rlen, Rindex, Rvalue);
+          lprelaxation.getRow(row, Rlen, Rindex, Rvalue);
+          if (rowtype[row] == RowType::Leq)
             Rside = lp.rowUpper_[row];
-          }
+          else
+            Rside = -lp.rowLower_[row];
 
           rhs -= vals[i] * Rside;
 
@@ -1839,12 +1802,8 @@ class AggregationHeuristic {
       assert(rowtype[nextaggrow] == RowType::Eq || nextaggscale > 0);
       baserhs += nextaggscale * lp.rowUpper_[nextaggrow];
     }
-    if (nextaggrow < mip.numRow())
-      mip.mipdata_->getRow(nextaggrow, nextRlen, nextRindex, nextRvalue);
-    else
-      cutpool.getCut(lprelaxation.getCutIndex(nextaggrow), nextRlen, nextRindex,
-                     nextRvalue);
 
+    lprelaxation.getRow(nextaggrow, nextRlen, nextRindex, nextRvalue);
     tmpinds.clear();
     tmpvals.clear();
 
@@ -1967,9 +1926,9 @@ static void doSeparate(const HighsDomain& domain, const HighsLpRelaxation& lp,
 
     rhs = baserows.rhs_[i];
     success = transformBaseEquation(
-        mip, domain, lpsol, &baserows.ARindex_[start],
-        &baserows.ARvalue_[start], end - start, 1.0, rhs, complementation, inds,
-        vals, upper, solvals, nbin, nint, ncont, nunbndint);
+        lp, domain, lpsol, &baserows.ARindex_[start], &baserows.ARvalue_[start],
+        end - start, 1.0, rhs, complementation, inds, vals, upper, solvals,
+        nbin, nint, ncont, nunbndint);
     if (success)
       success = generateCut(mip, upper, nbin, nint, ncont, nunbndint, solvals,
                             complementation, inds, vals, rhs, cutintegral);
@@ -1981,9 +1940,9 @@ static void doSeparate(const HighsDomain& domain, const HighsLpRelaxation& lp,
 
     rhs = baserows.rhs_[i];
     success = transformBaseEquation(
-        mip, domain, lpsol, &baserows.ARindex_[start],
-        &baserows.ARvalue_[start], end - start, -1.0, rhs, complementation,
-        inds, vals, upper, solvals, nbin, nint, ncont, nunbndint);
+        lp, domain, lpsol, &baserows.ARindex_[start], &baserows.ARvalue_[start],
+        end - start, -1.0, rhs, complementation, inds, vals, upper, solvals,
+        nbin, nint, ncont, nunbndint);
 
     if (success)
       success = generateCut(mip, upper, nbin, nint, ncont, nunbndint, solvals,
@@ -2042,12 +2001,7 @@ static void tableauaggregator(HighsLpRelaxation& lp,
       // todo, cuts off solutions
       int row = -basisinds[i] - 1;
 
-      bool rowintegral;
-      if (row < mip.numRow())
-        rowintegral = mip.mipdata_->rowintegral[row];
-      else
-        rowintegral = cutpool.cutIsIntegral(lp.getCutIndex(row));
-
+      bool rowintegral = lp.isRowIntegral(row);
       if (!rowintegral) continue;
 
       double solval = lpsol.row_value[row];
@@ -2093,30 +2047,23 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
 
   int expscal;
   std::frexp(maxaggval, &expscal);
+
   double mincontribution = 10 * mip.mipdata_->feastol * maxaggval;
 
   for (int k = 0; k != naggrinds; ++k) {
     int j = aggrinds[k];
     double aggval = std::ldexp(aggrvals[j], -expscal);
 
-    // skip rows with a weight smaller or equal to the feasibility tolerance
+    // skip rows with a weight smaller than 1000 times feastol
     if (std::abs(aggval) <= mip.mipdata_->feastol) continue;
+
+    if (lp.getMaxAbsRowVal(j) * std::abs(aggrvals[j]) <= mincontribution)
+      continue;
 
     int rowlen;
     const int* rowinds;
     const double* rowvals;
-    double maxabsrowcoef;
-    if (j < mip.numRow()) {
-      mip.mipdata_->getRow(j, rowlen, rowinds, rowvals);
-      maxabsrowcoef = mip.mipdata_->maxAbsRowCoef[j];
-    } else {
-      int cut = lp.getCutIndex(j);
-      cutpool.getCut(cut, rowlen, rowinds, rowvals);
-      maxabsrowcoef = cutpool.getMaxAbsCutCoef(cut);
-    }
-
-    // skip rows whoes largest coefficient contribution is small
-    if (std::abs(aggrvals[j]) * maxabsrowcoef <= mincontribution) continue;
+    lp.getRow(j, rowlen, rowinds, rowvals);
 
     HighsCDouble scale = aggval;
 
@@ -2154,11 +2101,15 @@ void HighsSeparation::BaseRows::addAggregation(const HighsLpRelaxation& lp,
   }
 
   double density = len / (double)mip.numCol();
-
   /* reject baserows that have a too large dynamism or are too dense */
   if (maxval * mip.mipdata_->feastol <= minval && density <= 0.3) {
-    // printf("minval: %g, maxval: %g, len: %d, density: %g\n", minval, maxval,
-    // len, density);
+    // printf(
+    //    "minval: %g, maxval: %g, minaggscale: %g  maxagg: %g (scaled:%g) len:
+    //    "
+    //    "%d, "
+    //    "density: %g\n",
+    //    minval, maxval, minaggval, maxaggval, std::ldexp(maxaggval, -expscal),
+    //    len, density);
     rhs_.push_back(double(rhs));
     for (int j : vectorsum.getNonzeros()) {
       double val = vectorsum.getValue(j);
@@ -2200,19 +2151,12 @@ void HighsSeparation::BaseRows::retransformAndAddCut(
 
       assert(slacktype_[row] == 1 || slacktype_[row] == -1);
 
-      if (row < mip.numRow()) {
-        if (slacktype_[row] == 1)
-          Rside = lp.rowUpper(row);
-        else
-          Rside = -lp.rowLower(row);
-        mip.mipdata_->getRow(row, Rlen, Rindex, Rvalue);
-      } else {
-        int cut = lp.getCutIndex(row);
-        assert(slacktype_[row] == 1);
-        cutpool.getCut(cut, Rlen, Rindex, Rvalue);
+      if (slacktype_[row] == 1)
         Rside = lp.rowUpper(row);
-      }
+      else
+        Rside = -lp.rowLower(row);
 
+      lp.getRow(row, Rlen, Rindex, Rvalue);
       rhs -= vals[i] * Rside;
 
       double slackval = -slacktype_[row] * vals[i];
@@ -2309,7 +2253,7 @@ int HighsSeparation::separationRound(HighsDomain& propdomain,
     if (ncuts > 0) {
       lp->addCuts(cutset);
       status = lp->resolveLp(&propdomain);
-      mipdata.cutpool.ageLPRows(*lp);
+      lp->performAging();
     }
     return ncuts;
   }
@@ -2449,7 +2393,7 @@ void HighsSeparation::separate(HighsDomain& propdomain) {
     // printf("done separating\n");
   } else {
     // printf("no separation, just aging. status: %d\n", (int)status);
-    mipsolver.mipdata_->cutpool.ageLPRows(*lp);
-    mipsolver.mipdata_->cutpool.ageNonLPRows();
+    lp->performAging();
+    mipsolver.mipdata_->cutpool.performAging();
   }
 }

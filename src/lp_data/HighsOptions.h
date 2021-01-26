@@ -289,6 +289,8 @@ struct HighsOptionsStruct {
   // Options for MIP solver
   int mip_max_nodes;
   int mip_max_leaves;
+  int mip_lp_age_limit;
+  int mip_pool_age_limit;
   int mip_report_level;
   double mip_feasibility_tolerance;
   double mip_epsilon;
@@ -552,6 +554,19 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "mip_max_leaves", "MIP solver max number of leave nodes", advanced,
         &mip_max_leaves, 0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("mip_lp_age_limit",
+                                     "maximal age of dynamic LP rows before "
+                                     "they are removed from the LP relaxation",
+                                     advanced, &mip_lp_age_limit, 0, 10,
+                                     std::numeric_limits<int16_t>::max());
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        "mip_lp_age_limit",
+        "maximal age of rows in the cutpool before they are deleted", advanced,
+        &mip_pool_age_limit, 0, 10, std::numeric_limits<int16_t>::max());
     records.push_back(record_int);
 
     record_int =

@@ -224,6 +224,18 @@ class HighsDomain {
 
   void tightenCoefficients(int* inds, double* vals, int len, double& rhs) const;
 
+  double getMinActivity(int row) const {
+    return activitymininf_[row] == 0 ? double(activitymin_[row])
+                                     : -HIGHS_CONST_INF;
+  }
+
+  double getMaxActivity(int row) const {
+    return activitymaxinf_[row] == 0 ? double(activitymax_[row])
+                                     : HIGHS_CONST_INF;
+  }
+
+  double getMinCutActivity(const HighsCutPool& cutpool, int cut);
+
   bool isBinary(int col) const {
     return mipsolver->variableType(col) != HighsVarType::CONTINUOUS &&
            colLower_[col] == 0.0 && colUpper_[col] == 1.0;

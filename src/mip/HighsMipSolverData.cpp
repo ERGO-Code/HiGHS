@@ -294,7 +294,8 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   cleanedUpModel.numRow_ = numreducedrow;
 
   mipsolver.mipdata_->rowMatrixSet = false;
-  mipsolver.mipdata_->cutpool = HighsCutPool(cleanedUpModel.numCol_, 10);
+  mipsolver.mipdata_->cutpool = HighsCutPool(
+      cleanedUpModel.numCol_, mipsolver.options_mip_->mip_pool_age_limit);
   mipsolver.mipdata_->domain = HighsDomain(mipsolver);
   mipsolver.mipdata_->domain.addCutpool(mipsolver.mipdata_->cutpool);
   mipsolver.mipdata_->pseudocost = HighsPseudocost(cleanedUpModel.numCol_);
@@ -302,11 +303,6 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
                                           rIndex);
   mipsolver.mipdata_->implications.rebuild(cleanedUpModel.numCol_, cIndex,
                                            rIndex);
-
-  HighsLp lpmodel = cleanedUpModel;
-  lpmodel.integrality_.clear();
-  mipsolver.mipdata_->lp.getLpSolver().clearSolver();
-  mipsolver.mipdata_->lp.getLpSolver().passModel(std::move(lpmodel));
 
   reportPresolveReductions(*mipsolver.options_mip_, *origmodel, cleanedUpModel);
 }
@@ -780,6 +776,7 @@ void HighsMipSolverData::evaluateRootNode() {
   HighsPrintMessage(mipsolver.options_mip_->output,
                     mipsolver.options_mip_->message_level, ML_MINIMAL,
                     "\nsolving root node LP relaxation\n");
+  lp.loadModel();
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
   lp.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
   lp.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
@@ -962,7 +959,7 @@ void HighsMipSolverData::evaluateRootNode() {
 
   // remove inactive cuts and resolve final root LP without iteration limit
   lp.setIterationLimit();
-  cutpool.removeObsoleteRows(lp);
+  lp.removeObsoleteRows();
 
   status = lp.resolveLp(&domain);
   total_lp_iterations = lp.getNumLpIterations();

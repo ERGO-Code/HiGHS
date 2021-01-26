@@ -989,6 +989,34 @@ void HighsDomain::tightenCoefficients(int* inds, double* vals, int len,
   }
 }
 
+double HighsDomain::getMinCutActivity(const HighsCutPool& cutpool, int cut) {
+  for (auto& cutpoolprop : cutpoolpropagation) {
+    if (cutpoolprop.cutpool == &cutpool) {
+      if (cutpool.getModificationCount(cut) !=
+          cutpoolprop.activitycutversion_[cut]) {
+        cutpoolprop.activitycutversion_[cut] =
+            cutpoolprop.cutpool->getModificationCount(cut);
+        int start = cutpoolprop.cutpool->getMatrix().getRowStart(cut);
+        if (start == -1) {
+          cutpoolprop.activitycuts_[cut] = 0;
+          return -HIGHS_CONST_INF;
+        }
+        int end = cutpoolprop.cutpool->getMatrix().getRowEnd(cut);
+        const int* arindex = cutpoolprop.cutpool->getMatrix().getARindex();
+        const double* arvalue = cutpoolprop.cutpool->getMatrix().getARvalue();
+        computeMinActivity(start, end, arindex, arvalue,
+                           cutpoolprop.activitycutsinf_[cut],
+                           cutpoolprop.activitycuts_[cut]);
+      }
+      return cutpoolprop.activitycutsinf_[cut] == 0
+                 ? double(cutpoolprop.activitycuts_[cut])
+                 : -HIGHS_CONST_INF;
+    }
+  }
+
+  return -HIGHS_CONST_INF;
+}
+
 bool HighsDomain::isFixing(const HighsDomainChange& domchg) const {
   double otherbound = domchg.boundtype == HighsBoundType::Upper
                           ? colLower_[domchg.column]
