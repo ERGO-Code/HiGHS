@@ -564,7 +564,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        "mip_lp_age_limit",
+        "mip_pool_age_limit",
         "maximal age of rows in the cutpool before they are deleted", advanced,
         &mip_pool_age_limit, 0, 10, std::numeric_limits<int16_t>::max());
     records.push_back(record_int);
