@@ -1,10 +1,8 @@
 # Define library.
 # Outdated CMake approach: update in progress
 if (NOT FAST_BUILD)
-include_directories(ipm/ipx/src)
-include_directories(ipm/ipx/include)
-include_directories(ipm/basiclu/src)
-include_directories(ipm/basiclu/include)
+  set(IPX_ON ON)
+endif()
 
 if (IPX_ON)
 set(basiclu_sources
@@ -70,6 +68,13 @@ set(ipx_sources
     ipm/ipx/src/timer.cc
     ipm/ipx/src/utils.cc)
 endif()
+
+# Outdated CMake approach: update in progress
+if (NOT FAST_BUILD)
+include_directories(ipm/ipx/src)
+include_directories(ipm/ipx/include)
+include_directories(ipm/basiclu/src)
+include_directories(ipm/basiclu/include)
 
 set(sources
     ../external/filereaderlp/reader.cpp
@@ -390,7 +395,8 @@ install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
 else() 
 
 # FAST_BUILD is set to on.
-# At the moment used only for gradually updating the CMake targets build and install / export.
+# At the moment used only for gradually updating the CMake targets build and
+# install / export.
 # Define library in modern CMake using target_*()
 # No interfaces (apart from c); No ipx; New (short) ctest instances.
 add_library(libhighs)
@@ -451,6 +457,16 @@ target_sources(libhighs PRIVATE
 target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
                            presolve/ util/ test/ interfaces/ ../external/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
+
+# on UNIX system the 'lib' prefix is automatically added
+set_target_properties(libhighs PROPERTIES
+    OUTPUT_NAME "highs"
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+if (UNIX)
+    set_target_properties(libhighs PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/lib")
+endif()
 
 set(headers_fast_build_
     ../external/filereaderlp/builder.hpp
@@ -521,6 +537,14 @@ set(headers_fast_build_
     interfaces/highs_c_api.h
 )
 
+
+if(IPX_ON)
+    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
+        ${ipx_headers})
+else()
+    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapperEmpty.h )
+endif()
+
 #set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsModelObject.h")
 
 # set the install rpath to the installed destination
@@ -534,15 +558,27 @@ foreach ( file ${headers_fast_build_} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
-if (${HiGHSRELEASE} ON)
-    target_compile_options(libhighs PRIVATE "-O3" "-DNDEBUG")
-endif()
 
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
-set_target_properties(libhighs PROPERTIES
-    OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+if (IPX_ON)
+    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
+
+    target_include_directories(libhighs PUBLIC ipm/ipx/src
+        ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
+
+    if (UNIX)
+        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+        target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    endif()
+
+endif()
+
+    set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+        "${CMAKE_INSTALL_PREFIX}/lib")
 
 endif()

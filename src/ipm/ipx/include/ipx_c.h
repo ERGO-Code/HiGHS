@@ -25,10 +25,15 @@ extern "C"{
     /* The remaining functions call their equivalent method of LpSolver for the
        object pointed to by @self. See src/lp_solver.h for documentation of the
        methods. */
-    ipxint ipx_solve(void* self, ipxint num_var, const double* obj,
-                     const double* lb, const double* ub, ipxint num_constr,
-                     const ipxint* Ap, const ipxint* Ai, const double* Ax,
-                     const double* rhs, const char* constr_type);
+    ipxint ipx_load_model(void* self, ipxint num_var, const double* obj,
+                          const double* lb, const double* ub, ipxint num_constr,
+                          const ipxint* Ap, const ipxint* Ai, const double* Ax,
+                          const double* rhs, const char* constr_type);
+    ipxint ipx_load_ipm_starting_point(void* self, const double* x,
+                                       const double* xl, const double* xu,
+                                       const double* slack, const double* y,
+                                       const double* zl, const double* zu);
+    ipxint ipx_solve(void* self);
     struct ipx_info ipx_get_info(void* self);
     ipxint ipx_get_interior_solution(void* self, double* x, double* xl,
                                      double* xu, double* slack, double* y,

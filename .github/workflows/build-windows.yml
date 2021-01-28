@@ -28,7 +28,7 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config RELEASE
+      run: cmake --build . --parallel --config RELEASE
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
@@ -62,7 +62,7 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config RELEASE
+      run: cmake --build . --parallel --config RELEASE
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
@@ -97,7 +97,7 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config DEBUG
+      run: cmake --build . --parallel --config DEBUG
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
@@ -131,7 +131,7 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config DEBUG
+      run: cmake --build . --parallel --config DEBUG
 
     - name: Test
       working-directory: ${{runner.workspace}}/build

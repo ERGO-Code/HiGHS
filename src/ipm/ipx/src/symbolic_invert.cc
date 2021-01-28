@@ -39,7 +39,6 @@ static std::vector<Int> Matching(const Model& model,
                                           work.data(), work2.data(),
                                           work3.data());
             assert(matched);
-            (void)(matched);
         }
     }
     for (Int j : basis) {
@@ -49,7 +48,6 @@ static std::vector<Int> Matching(const Model& model,
                                           work.data(), work2.data(),
                                           work3.data());
             assert(matched);
-            (void)(matched);
         }
     }
     return jmatch;
@@ -133,7 +131,7 @@ void SymbolicInvert(const Model& model, const std::vector<Int>& basis,
                     Int* rowcounts, Int* colcounts) {
     const SparseMatrix& AI = model.AI();
     const Int m = AI.rows();
-    assert((int)basis.size() == m);
+    assert(basis.size() == m);
 
     // jmatch is a permutation of basis such that B = AI[:,jmatch] has a
     // zero-free diagonal.
