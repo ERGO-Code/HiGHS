@@ -458,6 +458,16 @@ target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/
                            presolve/ util/ test/ interfaces/ ../external/)
 target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
 
+# on UNIX system the 'lib' prefix is automatically added
+set_target_properties(libhighs PROPERTIES
+    OUTPUT_NAME "highs"
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+if (UNIX)
+    set_target_properties(libhighs PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/lib")
+endif()
+
 set(headers_fast_build_
     ../external/filereaderlp/builder.hpp
     ../external/filereaderlp/model.hpp
@@ -527,9 +537,12 @@ set(headers_fast_build_
     interfaces/highs_c_api.h
 )
 
+
 if(IPX_ON)
     set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
         ${ipx_headers})
+else()
+    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapperEmpty.h )
 endif()
 
 #set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsModelObject.h")
@@ -549,10 +562,6 @@ install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 # target_compile_options(libhighs PRIVATE "-Wall")
 # target_compile_options(libhighs PRIVATE "-Wunused")
 
-# on UNIX system the 'lib' prefix is automatically added
-set_target_properties(libhighs PROPERTIES
-    OUTPUT_NAME "highs"
-    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 if (IPX_ON)
     target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
