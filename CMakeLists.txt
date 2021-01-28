@@ -466,10 +466,16 @@ endif()
 # Dashboards later on.
 # include(CTest)
 
-install(TARGETS libhighs EXPORT highs-targets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        PUBLIC_HEADER DESTINATION include)
+if (UNIX)
+    install(TARGETS libhighs EXPORT highs-targets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+            PUBLIC_HEADER DESTINATION include)
+elseif (WIN32)
+    install(TARGETS libhighs EXPORT highs-targets
+            LIBRARY DESTINATION bin
+            PUBLIC_HEADER DESTINATION include)
+endif()
 
 # if (IPX_ON)
 #     install(TARGETS ipx EXPORT highs-targets
