@@ -20,6 +20,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsSolution.h"
 #include "util/HighsUtils.h"
 
 void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
@@ -54,7 +55,7 @@ void printMinorIterationDetails(const double iteration, const double col,
 
 bool initialize(const HighsLp& lp, HighsSolution& solution,
                 std::vector<double>& lambda) {
-  if (!isSolutionConsistent(lp, solution)) {
+  if (!isSolutionRightSize(lp, solution)) {
     // clear and resize solution.
     solution.col_value.clear();
     solution.col_dual.clear();
