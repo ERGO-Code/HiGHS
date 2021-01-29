@@ -2,16 +2,52 @@
 # means, adding the subdirectories for all CMake projects in this tree, and
 # finding external libraries and turning them into imported targets.
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.15)
 
-project(HIGHS LANGUAGES CXX C)
+project(HIGHS VERSION 1.0 LANGUAGES CXX C)
 
-set(HIGHS_VERSION_MAJOR 1)
-set(HIGHS_VERSION_MINOR 0)
+# use C++11 standard
+set(CMAKE_CXX_STANDARD 11)
+
+### Require out-of-source builds
+file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
+if(EXISTS "${LOC_PATH}")
+    message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file). 
+    Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
+endif()
+
+# Use OpenMP if version is high enough.
+option(OPENMP "OpenMP" OFF)
+find_package(OpenMP 3.0)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "Linking with OpenMP... ")
+    set(OPENMP ON)
+endif()
+
+# Fast build: No interfaces (apart from c); No ipx; New (short) ctest instances, 
+# static library and exe without PIC. Used for gradually updating the CMake 
+# targets build and install / export.
+
+# Note: Not ON by default yet
+option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
+
+# set the correct rpath for OS X
+set(CMAKE_MACOSX_RPATH ON)
+
+option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
+
+if (NOT FAST_BUILD)
+
 set(HIGHS_VERSION_PATCH 0)
 
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE} -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
+
+# uncomment for memory debugging
+# set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address")
+# set (CMAKE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_LINKER_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer -fsanitize=address")
+# set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+# set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 
 find_package(PkgConfig)
 
@@ -26,7 +62,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 
-option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
 find_program(GIT git)
 if((GIT) AND (EXISTS ${HIGHS_SOURCE_DIR}/.git))
@@ -50,17 +85,83 @@ if(EXT_PRESOLVE_DIR)
     include_directories(${EXT_PRESOLVE_DIR}/external)
 endif()
 
-# whether to use OpenMP
-option(OPENMP "OpenMP" ON)
-if(OPENMP)
-    find_package(OpenMP)
-    if(OPENMP_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    else()
-        set(OPENMP OFF)
-    endif()
+
+option(DEBUGSOL "check the debug solution" OFF)
+
+if(DEBUGSOL)
+  add_definitions("-DHIGHS_DEBUGSOL")
 endif()
-message(STATUS "OpenMP: " ${OPENMP})
+# For the moment keep above coverage part in case we are testing at CI.
+option(CI "CI extended tests" ON)
+
+# Coverage part
+# 'make coverage' to start the coverage process
+option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
+if (HIGHS_COVERAGE)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_C_FLAGS_DEBUG    "${CMAKE_C_FLAGS_DEBUG}    -O0 --coverage")
+    set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG}  -O0 --coverage")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O0 --coverage")
+  endif ()
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG}   -fprofile-arcs -ftest-coverage -Xclang -coverage-cfg-checksum -Xclang -coverage-no-function-names-in-data -Xclang -coverage-version='408*'")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage -Xclang -coverage-cfg-checksum -Xclang -coverage-no-function-names-in-data -Xclang -coverage-version='408*'")
+  endif ()
+endif ()
+
+if (HIGHS_COVERAGE)
+  if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    message(FATAL_ERROR "Warning: to enable coverage, you must compile in DEBUG mode")
+  endif ()
+endif ()
+
+if (HIGHS_COVERAGE)
+  if (WIN32)
+    message(FATAL_ERROR "Error: code coverage analysis is only available under Linux for now.")
+  endif ()
+  
+  find_program(GCOV_PATH gcov)
+  find_program(LCOV_PATH lcov)
+  find_program(GENHTML_PATH genhtml)
+
+  if (NOT GCOV_PATH)
+    message(FATAL_ERROR "gcov not found! Please install lcov and gcov. Aborting...")
+  endif ()
+  
+  if (NOT LCOV_PATH)
+    message(FATAL_ERROR "lcov not found! Please install lcov and gcov. Aborting...")
+  endif ()
+  
+  if (NOT GENHTML_PATH)
+    message(FATAL_ERROR "genhtml not found! Please install lcov and gcov. Aborting...")
+  endif ()
+  
+  # Capturing lcov counters and generating report
+  if (NOT CI)
+    add_custom_target(coverage
+                    COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
+                    COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
+                    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
+                    COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+                    COMMAND ${LCOV_PATH} --remove "*/usr/include/*" --output-file ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+                    COMMAND ${GENHTML_PATH} -o ${CMAKE_BINARY_DIR}/coverage ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+                    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/coverage.info.cleaned
+            VERBATIM
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    COMMENT "Resetting code coverage counters to zero.
+    Processing code coverage counters and generating report.
+    You can zip the directory ${CMAKE_BINARY_DIR}/coverage and upload the content to a web server.")
+  else()
+    add_custom_target(ci_cov
+                    COMMAND ${LCOV_PATH} --directory ${CMAKE_BINARY_DIR} --zerocounters
+                    COMMAND ${LCOV_PATH} --capture --initial --directory ${CMAKE_BINARY_DIR}/bin --output-file ${CMAKE_BINARY_DIR}/coverage.info
+                    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR} ${CMAKE_CTEST_COMMAND} -LE "(LONG|FAIL)" || true
+                    COMMAND ${LCOV_PATH} --capture --directory ${CMAKE_BINARY_DIR}/bin --directory ${CMAKE_BINARY_DIR}/src --directory ${CMAKE_BINARY_DIR}/app --directory ${CMAKE_BINARY_DIR}/check --output-file ${CMAKE_BINARY_DIR}/coverage.info
+		    VERBATIM
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    COMMENT "Resetting code coverage counters to zero.")
+  endif()
+endif ()
 
 option(SCIP_DEV "SCIP  development" OFF)
 if (NOT (${SCIP_DEV} STREQUAL  "OFF"))
@@ -87,11 +188,7 @@ if (OSI_FOUND)
     include_directories(${OSITEST_INCLUDE_DIRS})
 endif (OSI_FOUND)
 
-option(IPN_ON OFF)
-if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5))
-    set(IPX_ON ON)
-endif()
-
+set(IPX_ON ON)
 include(CheckLanguage)
 check_language("Fortran")
 if(CMAKE_Fortran_COMPILER)
@@ -147,11 +244,6 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/src/test
     ${HIGHS_SOURCE_DIR}/src/util)
 
-# set the correct rpath for OS X
-set(CMAKE_MACOSX_RPATH ON)
-
-# use C++11 standard
-set(CMAKE_CXX_STANDARD 11)
 
 # explicitly switch on colored output for ninja
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -205,3 +297,206 @@ enable_testing()
 add_subdirectory(app)
 add_subdirectory(check)
 add_subdirectory(src)
+
+
+else()
+
+message(STATUS "FAST_BUILD set to on.
+ Note: The HiGHS team is preparing for our first official release. If you
+       experience any issues please let us know via email or on GitHub.")
+
+# todo: remove patch once release is official. 
+# add here to avoid compile errors.
+set(HIGHS_VERSION_PATCH 0)
+
+option(EXP "Experimental mode: run unit tests with doctest." OFF)
+option(IPX "Use interior point solver" OFF)
+
+# todo: ig branch ipx-m 
+if (IPX)
+    set(IPX_ON ON)
+else()
+    set(IPX_ON OFF)
+endif()
+
+configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+
+set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
+
+# condition added to src/CMakeLists.txt
+add_subdirectory(src)
+
+option(JULIA "Build library only for Julia" OFF)
+
+if (NOT JULIA)
+    # No changes in app/ apart from a relative path
+    add_subdirectory(app)
+
+    # Until MIP solver is in library object also and tested. Switch becayse at the 
+    # moment breaks binary builder for julia interface.
+    # set(MIP OFF)
+    target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
+    target_sources(highs PRIVATE 
+        src/mip/HighsMipSolver.cpp
+        src/mip/HighsMipSolverData.cpp
+        src/mip/HighsDomain.cpp
+        src/mip/HighsDynamicRowMatrix.cpp
+        src/mip/HighsLpRelaxation.cpp
+        src/mip/HighsSeparation.cpp
+        src/mip/HighsSearch.cpp
+        src/mip/HighsCutPool.cpp
+        src/mip/HighsCliqueTable.cpp
+        src/mip/HighsImplications.cpp
+        src/mip/HighsNodeQueue.cpp)
+endif()
+
+# check/ not added here, instead define fewer tests: 
+# build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
+if (NOT JULIA)
+    enable_testing()
+endif()
+
+# Check whether targets build OK.
+add_test(NAME highs-lib-build
+         COMMAND ${CMAKE_COMMAND}
+                 --build ${HIGHS_BINARY_DIR}
+                 --target libhighs
+         )
+
+set_tests_properties(highs-lib-build
+                     PROPERTIES
+                     RESOURCE_LOCK libhighs)
+
+add_test(NAME highs-exe-build
+         COMMAND ${CMAKE_COMMAND}
+                 --build ${HIGHS_BINARY_DIR}
+                 --target highs
+         )
+
+set_tests_properties(highs-exe-build
+                     PROPERTIES
+                     RESOURCE_LOCK highs)
+
+set(successInstances
+    "25fv47\;2888\; 5.5018458883\;"
+    "80bau3b\;3760\; 9.8722419241\;"
+    "greenbea\;5249\;-7.2555248130\;")
+
+set(optionsInstances
+    "adlittle\;81\; 2.2549496316\;")
+
+set(infeasibleInstances
+    "bgetam\;        infeasible")
+
+set(unboundedInstances
+     "gas11\;         unbounded")
+     
+# define settings
+set(settings
+    ""
+    "--presolve=off"
+    "--parallel=on")
+
+# define function to add tests
+# More Modern CMake: avoid macros if you can
+function(add_instance_tests instances solutionstatus setting)
+# loop over the instances
+foreach(instance ${${instances}})
+    # add default tests
+    # treat the instance as a tuple (list) of two values
+    list(GET instance 0 name)
+    list(GET instance 1 iter)
+
+    if(${solutionstatus} STREQUAL "Optimal")
+        list(GET instance 2 optval)
+    endif()
+
+    # specify the instance and the settings load command
+    set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
+
+    add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+            ${inst})
+
+    set_tests_properties (${name}${setting} PROPERTIES
+            DEPENDS unit_tests_all)
+    set_tests_properties (${name}${setting} PROPERTIES
+            PASS_REGULAR_EXPRESSION
+            "Model   status      : ${solutionstatus}")
+
+    if(${solutionstatus} STREQUAL "Optimal")
+        if(${setting} STREQUAL "--presolve=off")
+            set_tests_properties (${name}${setting} PROPERTIES
+                    PASS_REGULAR_EXPRESSION
+                    "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
+        else()
+            set_tests_properties (${name}${setting} PROPERTIES
+                    PASS_REGULAR_EXPRESSION
+                    "Objective value     : ${optval}")
+        endif()
+    endif()
+endforeach(instance)
+
+endfunction()
+
+if (NOT JULIA)
+    # add tests for success and fail instances
+    add_instance_tests(successInstances "Optimal" " ")
+    add_instance_tests(failInstances "Fail" " ")
+    add_instance_tests(infeasibleInstances "Infeasible" " ")
+    add_instance_tests(unboundedInstances "Unbounded" " ")
+
+    if (IPX_ON)
+        set(settings ${settings} "--solver=ipm")
+    endif()
+    foreach(setting ${settings})
+        add_instance_tests(optionsInstances "Optimal" ${setting})
+    endforeach()
+endif()
+
+if (EXP) 
+    add_executable(doctest)
+    #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
+    target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
+
+    if (IPX_ON AND NOT APPLE)
+        # triggers hanging on macOS
+        target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
+    endif()
+
+    target_include_directories(doctest PRIVATE external)
+    target_link_libraries(doctest libhighs)
+endif()
+
+
+if (UNIX)
+    install(TARGETS libhighs EXPORT highs-targets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+            PUBLIC_HEADER DESTINATION include)
+elseif (WIN32)
+    install(TARGETS libhighs EXPORT highs-targets
+            LIBRARY DESTINATION bin
+            PUBLIC_HEADER DESTINATION include)
+endif()
+
+
+endif()
+
+# Modern CMake link in FAST_BUILD mode
+# All uses of target_link_libraries with a target must be either 
+# all-keyword or all-plain.
+if (OPENMP)
+    if (FAST_BUILD)
+        target_link_libraries(libhighs PUBLIC OpenMP::OpenMP_CXX)
+    else()
+        target_link_libraries(libhighs OpenMP::OpenMP_CXX)
+    endif()
+endif()
+
+# # Comment out for scaffold/ tests
+# add_subdirectory(scaffold)
+
+# # Only needed if it defines a target like a main executable. For methods stick
+# # to header-only.
+# add_subdirectory(dev_presolve)
+

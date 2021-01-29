@@ -27,6 +27,8 @@ enum class SimplexSolutionStatus {
   OUT_OF_TIME
 };
 
+enum class SimplexAlgorithm { PRIMAL = 0, DUAL };
+
 enum SimplexStrategy {
   SIMPLEX_STRATEGY_MIN = 0,
   SIMPLEX_STRATEGY_CHOOSE = SIMPLEX_STRATEGY_MIN,
@@ -35,7 +37,20 @@ enum SimplexStrategy {
   SIMPLEX_STRATEGY_DUAL_TASKS,
   SIMPLEX_STRATEGY_DUAL_MULTI,
   SIMPLEX_STRATEGY_PRIMAL,
-  SIMPLEX_STRATEGY_MAX = SIMPLEX_STRATEGY_PRIMAL
+  SIMPLEX_STRATEGY_MAX = SIMPLEX_STRATEGY_PRIMAL,
+  SIMPLEX_STRATEGY_NUM
+};
+
+enum SimplexSolvePhase {
+  SOLVE_PHASE_MIN = -3,
+  SOLVE_PHASE_ERROR = SOLVE_PHASE_MIN,  // -3
+  SOLVE_PHASE_EXIT,                     // -2,
+  SOLVE_PHASE_UNKNOWN,                  // -1
+  SOLVE_PHASE_OPTIMAL,                  // 0
+  SOLVE_PHASE_1,                        // 1
+  SOLVE_PHASE_2,                        // 2
+  SOLVE_PHASE_CLEANUP = 4,
+  SOLVE_PHASE_MAX = SOLVE_PHASE_CLEANUP
 };
 
 enum DualSimplexCleanupStrategy {
@@ -51,8 +66,9 @@ enum SimplexScaleStrategy {
   SIMPLEX_SCALE_STRATEGY_OFF = SIMPLEX_SCALE_STRATEGY_MIN,
   SIMPLEX_SCALE_STRATEGY_HIGHS,
   SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED,
-  SIMPLEX_SCALE_STRATEGY_HSOL,
-  SIMPLEX_SCALE_STRATEGY_MAX = SIMPLEX_SCALE_STRATEGY_HSOL
+  SIMPLEX_SCALE_STRATEGY_015,
+  SIMPLEX_SCALE_STRATEGY_0157,
+  SIMPLEX_SCALE_STRATEGY_MAX = SIMPLEX_SCALE_STRATEGY_0157
 };
 
 enum SimplexCrashStrategy {
@@ -72,20 +88,25 @@ enum SimplexCrashStrategy {
 };
 
 enum SimplexDualEdgeWeightStrategy {
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN = 0,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN = -1,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_CHOOSE =
+      SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
   SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
   SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE,
   SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL,
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX =
+      SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL
 };
 
 enum SimplexPrimalEdgeWeightStrategy {
-  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN = 0,
-  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG = SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
+  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN = -1,
+  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_CHOOSE =
+      SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
+  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
   SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DEVEX,
-  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX = SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DEVEX
+  SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX =
+      SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DEVEX
 };
 
 enum SimplexPriceStrategy {
@@ -94,8 +115,16 @@ enum SimplexPriceStrategy {
   SIMPLEX_PRICE_STRATEGY_ROW,
   SIMPLEX_PRICE_STRATEGY_ROW_SWITCH,
   SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
-  SIMPLEX_PRICE_STRATEGY_ROW_ULTRA,
-  SIMPLEX_PRICE_STRATEGY_MAX = SIMPLEX_PRICE_STRATEGY_ROW_ULTRA
+  SIMPLEX_PRICE_STRATEGY_MAX = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH
+};
+
+enum SimplexDualChuzcStrategy {
+  SIMPLEX_DUAL_CHUZC_STRATEGY_MIN = 0,
+  SIMPLEX_DUAL_CHUZC_STRATEGY_CHOOSE = SIMPLEX_DUAL_CHUZC_STRATEGY_MIN,
+  SIMPLEX_DUAL_CHUZC_STRATEGY_QUAD,
+  SIMPLEX_DUAL_CHUZC_STRATEGY_HEAP,
+  SIMPLEX_DUAL_CHUZC_STRATEGY_BOTH,
+  SIMPLEX_DUAL_CHUZC_STRATEGY_MAX = SIMPLEX_DUAL_CHUZC_STRATEGY_BOTH
 };
 
 // Not an enum class since invert_hint is used in so many places
@@ -118,11 +147,94 @@ enum class PriceMode { ROW = 0, COL };
 
 const int PARALLEL_THREADS_DEFAULT = 8;
 const int DUAL_TASKS_MIN_THREADS = 3;
-const int DUAL_MULTI_MIN_THREADS = 1;//2;
+const int DUAL_MULTI_MIN_THREADS = 1;  // 2;
 
 // TODO: Set this false tactically to make mip interface more
 // efficient by preventing reinversion on optimality in phase 1 or
 // phase 2
 const bool invert_if_row_out_negative = true;
 
+/** Simplex nonbasicFlag status for columns and rows. Don't use enum
+    class since they are used as int to replace conditional statements
+    by multiplication */
+const int NONBASIC_FLAG_TRUE = 1;   // Nonbasic
+const int NONBASIC_FLAG_FALSE = 0;  // Basic
+
+/** Simplex nonbasicMove status for columns and rows. Don't use enum
+    class since they are used in conditional statements */
+const int NONBASIC_MOVE_UP = 1;   // Free to move (only) up
+const int NONBASIC_MOVE_DN = -1;  // Free to move (only) down
+const int NONBASIC_MOVE_ZE = 0;   // Fixed or free to move up and down
+//
+// Relation between HiGHS basis and Simplex basis
+//
+// Data structures
+// ===============
+//
+// HiGHS basis consists of vectors
+//
+// * col_status[numCol]
+// * row_status[numRow]
+//
+// Simplex basis consists of vectors
+//
+// * nonbasicMove[numTot]
+// * basicIndex[numRow]
+// * nonbasicFlag[numTot]
+//
+// where nonbasicFlag is duplicate information but is used to identify
+// whether a particular variable is basic or nonbasic.
+//
+// Basic variables
+// ===============
+//
+// Highs: *_status value of BASIC
+//
+// <=>
+//
+// Simplex: nonbasicFlag value of NONBASIC_FLAG_FALSE
+//
+// Nonbasic variables
+// ==================
+//
+// Relations complicated by the fact that
+//
+// * HiGHS   rows have bounds [ l,  u]
+// * Simplex rows have bounds [-u, -l]
+//
+// Nonbasic columns
+// ================
+//
+// Highs: col_status value of LOWER - at lower bound
+// <=>
+// Simplex: nonbasicMove value of NONBASIC_MOVE_UP - [l, Inf] column free to
+// move up and negative dual
+//
+// Highs: col_status value of ZERO - at zero
+// =>
+// Simplex: nonbasicMove value of NONBASIC_MOVE_ZE - free variable treated
+// specially in simplex
+//
+// Highs: col_status value of UPPER - at upper bound
+// =>
+// Simplex: Either
+// * nonbasicMove value of NONBASIC_MOVE_DN - [-Inf, u] column free to move down
+// and positive dual
+// * nonbasicMove value of NONBASIC_MOVE_ZE - [   l, u] column ?? and free dual
+//
+// Simplex: nonbasicMove value of NONBASIC_MOVE_DN - [-Inf, u] column free to
+// move down and positive dual
+// =>
+// Highs: col_status value of UPPER - at upper bound
+//
+// Simplex: nonbasicMove value of NONBASIC_MOVE_ZE - [l, u] column ?? and free
+// dual
+// =>
+// Highs: Either
+// * col_status value of UPPER - at upper bound
+// * col_status value of ZERO - at zero
+//
+// Nonbasic rows
+// =============
+//
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

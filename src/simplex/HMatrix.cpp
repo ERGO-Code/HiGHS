@@ -12,13 +12,13 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HMatrix.h"
-#include "HConfig.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdio>
-#include <algorithm>
 
+#include "HConfig.h"
 #include "lp_data/HConst.h"
 #include "simplex/HVector.h"
 
@@ -90,9 +90,6 @@ void HMatrix::setup(int numCol_, int numRow_, const int* Astart_,
   }
   // Initialise the density of the PRICE result
   //  row_apDensity = 0;
-#ifdef HiGHSDEV
-  assert(setup_ok(nonbasicFlag_));
-#endif
 }
 
 void HMatrix::setup_lgBs(int numCol_, int numRow_, const int* Astart_,
@@ -140,6 +137,9 @@ void HMatrix::update(int columnIn, int columnOut) {
       int iFind = ARstart[iRow];
       int iSwap = --AR_Nend[iRow];
       while (ARindex[iFind] != columnIn) iFind++;
+      // todo @ Julian : this assert can fail
+      assert(iFind >= 0 && iFind < int(ARindex.size()));
+      assert(iSwap >= 0 && iSwap < int(ARindex.size()));
       swap(ARindex[iFind], ARindex[iSwap]);
       swap(ARvalue[iFind], ARvalue[iSwap]);
     }
@@ -208,20 +208,24 @@ void HMatrix::priceByColumn(HVector& row_ap, const HVector& row_ep) const {
   row_ap.count = ap_count;
 }
 
-void HMatrix::priceByRowSparseResult(HVector& row_ap, const HVector& row_ep) const {
+void HMatrix::priceByRowSparseResult(HVector& row_ap,
+                                     const HVector& row_ep) const {
   // Vanilla hyper-sparse row-wise PRICE
-  // Set up parameters so that priceByRowSparseResultWithSwitch runs as vanilla hyper-sparse
-  // PRICE
+  // Set up parameters so that priceByRowSparseResultWithSwitch runs as vanilla
+  // hyper-sparse PRICE
   const double historical_density =
       -0.1;      // Historical density always forces hyper-sparse PRICE
   int fm_i = 0;  // Always start from first index of row_ep
   const double switch_density = 1.1;  // Never switch to standard row-wise PRICE
-  priceByRowSparseResultWithSwitch(row_ap, row_ep, historical_density, fm_i, switch_density);
+  priceByRowSparseResultWithSwitch(row_ap, row_ep, historical_density, fm_i,
+                                   switch_density);
 }
 
-void HMatrix::priceByRowSparseResultWithSwitch(HVector& row_ap, const HVector& row_ep,
-					       double historical_density, int from_i,
-					       double switch_density) const {
+void HMatrix::priceByRowSparseResultWithSwitch(HVector& row_ap,
+                                               const HVector& row_ep,
+                                               double historical_density,
+                                               int from_i,
+                                               double switch_density) const {
   // (Continue) hyper-sparse row-wise PRICE with possible switches to
   // standard row-wise PRICE either immediately based on historical
   // density or during hyper-sparse PRICE if there is too much fill-in
@@ -242,7 +246,8 @@ void HMatrix::priceByRowSparseResultWithSwitch(HVector& row_ap, const HVector& r
       // Possibly switch to standard row-wise price
       int iRowNNz = AR_Nend[iRow] - ARstart[iRow];
       double lc_dsty = (1.0 * ap_count) / numCol;
-      bool price_by_row_sw = ap_count + iRowNNz >= numCol || lc_dsty > switch_density;
+      bool price_by_row_sw =
+          ap_count + iRowNNz >= numCol || lc_dsty > switch_density;
       if (price_by_row_sw) break;
       double multiplier = ep_array[iRow];
       for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
@@ -324,7 +329,7 @@ void HMatrix::priceByRowSparseResultRemoveCancellation(HVector& row_ap) const {
 }
 
 #ifdef HiGHSDEV
-bool HMatrix::setup_ok(const int* nonbasicFlag_) {
+bool HMatrix::debugRowMatrix(const int* nonbasicFlag_) {
   printf("Checking row-wise matrix\n");
   for (int row = 0; row < numRow; row++) {
     for (int el = ARstart[row]; el < AR_Nend[row]; el++) {
@@ -347,16 +352,17 @@ bool HMatrix::setup_ok(const int* nonbasicFlag_) {
   }
   return true;
 }
-bool HMatrix::price_er_ck(HVector& row_ap, const HVector& row_ep) const {
-  return price_er_ck_core(row_ap, row_ep);
+bool HMatrix::debugPriceResult(HVector& row_ap, const HVector& row_ep) const {
+  return debugPriceResultCore(row_ap, row_ep);
 }
 
-bool HMatrix::price_er_ck_core(HVector& row_ap, const HVector& row_ep) const {
+bool HMatrix::debugPriceResultCore(HVector& row_ap,
+                                   const HVector& row_ep) const {
   // Alias
   int* ap_index = &row_ap.index[0];
   double* ap_array = &row_ap.array[0];
 
-  //  printf("HMatrix::price_er_ck      , count = %d\n", ap_count);
+  //  printf("HMatrix::debugPriceResult      , count = %d\n", ap_count);
   HVector lc_row_ap;
   lc_row_ap.setup(numCol);
   //  int *lc_ap_index = &lc_row_ap.index[0];

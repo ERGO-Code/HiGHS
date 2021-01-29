@@ -29,9 +29,12 @@
 class HFactor;
 
 /**
- * Limit on the number of column slices for parallel calculations. SIP uses num_threads-2 slices; PAMI uses num_threads-1 slices
+ * Limit on the number of column slices for parallel calculations. SIP uses
+ * num_threads-2 slices; PAMI uses num_threads-1 slices
  */
-const int HIGHS_SLICED_LIMIT = HIGHS_THREAD_LIMIT;//Was 100, but can't see why this should be higher than HIGHS_THREAD_LIMIT;
+const int HIGHS_SLICED_LIMIT =
+    HIGHS_THREAD_LIMIT;  // Was 100, but can't see why this should be higher
+                         // than HIGHS_THREAD_LIMIT;
 
 /**
  * Parameters controlling number of Devex iterations.
@@ -75,6 +78,8 @@ class HDual {
    */
   HighsStatus solve();
 
+  const SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
+
  public:
   /**
    * @brief Set solver options from simplex options
@@ -86,7 +91,7 @@ class HDual {
    * Copy dimensions and pointers to matrix, factor and solver-related
    * model data, plus tolerances. Sets up local std::vectors (columnDSE,
    * columnBFRT, column, row_ep and row_ap), scalars for their average
-   * density and buffers for dualRow and dualRHS. 
+   * density and buffers for dualRow and dualRHS.
    */
   void init();
 
@@ -104,8 +109,9 @@ class HDual {
    * TODO generalise call slice_matrix[i].setup_lgBs so slice can be
    * used with non-logical initial basis
    */
-  void initSlice(const int init_sliced_num  //!< Ideal number of slices - true number
-		                            //!< is modified in light of limits
+  void initSlice(
+      const int init_sliced_num  //!< Ideal number of slices - true number
+                                 //!< is modified in light of limits
   );
 
   /**
@@ -155,7 +161,8 @@ class HDual {
   void iterateMulti();  // in HDualMulti.cpp
 
   /**
-   * @brief Pass the data for the serial iteration analysis, report and rebuild report
+   * @brief Pass the data for the serial iteration analysis, report and rebuild
+   * report
    */
   void iterationAnalysisData();
 
@@ -165,7 +172,8 @@ class HDual {
   void iterationAnalysis();
 
   /**
-   * @brief Pass the data for the PAMI iteration analysis for a minor iteration, report and rebuild report
+   * @brief Pass the data for the PAMI iteration analysis for a minor iteration,
+   * report and rebuild report
    */
   void iterationAnalysisMinorData();
 
@@ -187,7 +195,7 @@ class HDual {
   /**
    * @brief Single line report after rebuild
    */
-  void reportRebuild(const int rebuild_invert_hint=-1);
+  void reportRebuild(const int rebuild_invert_hint = -1);
 
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
@@ -201,7 +209,8 @@ class HDual {
   bool acceptDualSteepestEdgeWeight(const double updated_edge_weight);
 
   /**
-   * @brief Determine whether the updated_edge_weight error should trigger a new Devex framework
+   * @brief Determine whether the updated_edge_weight error should trigger a new
+   * Devex framework
    */
   bool newDevexFramework(const double updated_edge_weight);
 
@@ -267,28 +276,17 @@ class HDual {
    * @brief Initialise a Devex framework: reference set is all basic
    * variables
    */
-  void initialiseDevexFramework(const bool parallel=false);
+  void initialiseDevexFramework(const bool parallel = false);
 
   /**
    * @brief Interpret the dual edge weight strategy as setting of a mode and
    * other actions
    */
   void interpretDualEdgeWeightStrategy(
-				       const int simplex_dual_edge_weight_strategy
-				       );
+      const int simplex_dual_edge_weight_strategy);
 
-  /**
-   * @brief Interpret the PRICE strategy as setting of a mode and other actions
-   */
-  /*
-  void interpretPriceStrategy(
-			      const int simplex_price_strategy
-			      );
-  */
-
-#ifdef HiGHSDEV
-  double checkDualObjectiveValue(const char* message, int phase = 2);
-#endif
+  bool reachedExactDualObjectiveValueUpperBound();
+  double computeExactDualObjectiveValue();
 
   /**
    * @brief PAMI: Choose the indices of a good set of rows to leave the
@@ -378,17 +376,34 @@ class HDual {
    */
   void majorRollback();
 
+  // private:
+  HighsStatus returnFromSolve(const HighsStatus return_status);
+  void saveDualRay();
+  bool getNonsingularInverse();
+  bool getBacktrackingBasis(vector<double>& scattered_edge_weights);
+  void putBacktrackingBasis();
+  void putBacktrackingBasis(const vector<int>& basicIndex_before_compute_factor,
+                            const vector<double>& scattered_edge_weights);
+
+  void assessPhase1Optimality();
+  void exitPhase1ResetDuals();
+  void reportOnPossibleLpDualInfeasibility();
+
   bool checkNonUnitWeightError(std::string message);
   bool dualInfoOk(const HighsLp& lp);
+  bool bailoutReturn();
+  bool bailoutOnTimeIterations();
+  bool bailoutOnDualObjective();
 
-  int Crash_Mode = 0;  //!< Crash mode. TODO: handle this otherwise
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
                        //!< calling function
 
   // Devex scalars
-  int num_devex_iterations = 0;  //!< Number of Devex iterations with the current framework
+  int num_devex_iterations =
+      0;  //!< Number of Devex iterations with the current framework
   bool new_devex_framework = false;  //!< Set a new Devex framework
-  bool minor_new_devex_framework = false; //!< Set a new Devex framework in PAMI minor iterations
+  bool minor_new_devex_framework =
+      false;  //!< Set a new Devex framework in PAMI minor iterations
 
   // Model
   HighsModelObject& workHMO;
@@ -397,8 +412,7 @@ class HDual {
   int solver_num_tot;
 
   const HMatrix* matrix;
-  //  const HFactor* factor; //FactorTimer frig const
-  HFactor* factor;
+  const HFactor* factor;
   HighsSimplexAnalysis* analysis;
 
   const int* jMove;
@@ -458,6 +472,8 @@ class HDual {
   // (Local) value of computed weight
   double computed_edge_weight;
 
+  bool check_invert_condition = false;
+
   // Partitioned coefficient matrix
   int slice_num;
   int slice_PRICE;
@@ -513,29 +529,25 @@ class HDual {
   MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
 #ifdef HiGHSDEV
-  const bool rp_iter_da = false;//true;//
-  const bool rp_reinvert_syntheticClock = false;//true;//
-  const bool rp_numericalTrouble = false;//true;//
-#endif  
+  const bool rp_reinvert_syntheticClock = false;  // true;//
+  const bool rp_numericalTrouble = false;         // true;//
+#endif
   const double original_multi_build_syntheticTick_mu = 1.5;
-  const double multi_build_syntheticTick_mu =
-        1.0;
-  //original_multi_build_syntheticTick_mu;//
+  const double multi_build_syntheticTick_mu = 1.0;
+  // original_multi_build_syntheticTick_mu;//
   const double numerical_trouble_tolerance = 1e-7;
   const double original_multi_numerical_trouble_tolerance = 1e-8;
-  const double multi_numerical_trouble_tolerance =
-    1e-7;
-  //original_multi_numerical_trouble_tolerance;
-  
+  const double multi_numerical_trouble_tolerance = 1e-7;
+  // original_multi_numerical_trouble_tolerance;
+
   const int synthetic_tick_reinversion_min_update_count = 50;
   const int original_multi_synthetic_tick_reinversion_min_update_count = 201;
   const int multi_synthetic_tick_reinversion_min_update_count =
-        synthetic_tick_reinversion_min_update_count;
-  //original_multi_synthetic_tick_reinversion_min_update_count;
+      synthetic_tick_reinversion_min_update_count;
+  // original_multi_synthetic_tick_reinversion_min_update_count;
 
   double build_syntheticTick;
   double total_syntheticTick;
-
 };
 
 #endif /* SIMPLEX_HDUAL_H_ */

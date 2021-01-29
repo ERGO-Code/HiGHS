@@ -18,9 +18,10 @@
 #include <cmath>
 #include <vector>
 
-//#include "HConfig.h"
-#include "simplex/HighsSimplexAnalysis.h"
-#include "simplex/FactorTimer.h"
+#include "HConfig.h"
+#include "io/HighsIO.h"
+#include "lp_data/HConst.h"
+#include "lp_data/HighsAnalysis.h"
 
 using std::max;
 using std::min;
@@ -35,7 +36,20 @@ enum UPDATE_METHOD {
   UPDATE_METHOD_APF = 4
 };
 /**
- * Necessary threshholds for historical density to trigger
+ * Limits and default value of pivoting threshold
+ */
+const double min_pivot_threshold = 8e-4;
+const double default_pivot_threshold = 0.1;
+const double pivot_threshold_change_factor = 5.0;
+const double max_pivot_threshold = 0.5;
+/**
+ * Limits and default value of minimum absolute pivot
+ */
+const double min_pivot_tolerance = 0;
+const double default_pivot_tolerance = 1e-10;
+const double max_pivot_tolerance = 1.0;
+/**
+ * Necessary thresholds for historical density to trigger
  * hyper-sparse TRANs,
  */
 const double hyperFTRANL = 0.15;
@@ -43,11 +57,11 @@ const double hyperFTRANU = 0.10;
 const double hyperBTRANL = 0.10;
 const double hyperBTRANU = 0.15;
 /**
- * Necessary threshhold for RHS density to trigger hyper-sparse TRANs,
+ * Necessary threshold for RHS density to trigger hyper-sparse TRANs,
  */
 const double hyperCANCEL = 0.05;
 /**
- * Threshhold for result density for it to be considered as
+ * Threshold for result density for it to be considered as
  * hyper-sparse - only for reporting
  */
 const double hyperRESULT = 0.10;
@@ -98,51 +112,44 @@ class HFactor {
    * factor and Update buffer, allocated space for Markowitz matrices,
    * count-link-list, L factor and U factor
    */
-  void setup(int numCol,            //!< Number of columns
-             int numRow,            //!< Number of rows
-             const int* Astart,     //!< Column starts of constraint matrix
-             const int* Aindex,     //!< Row indices of constraint matrix
-             const double* Avalue,  //!< Row values of constraint matrix
-             int* baseIndex,        //!< Indices of basic variables
-	     HighsSimplexAnalysis* analysis = NULL,
-             int updateMethod =
-                 UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
+  void setup(
+      int numCol,            //!< Number of columns
+      int numRow,            //!< Number of rows
+      const int* Astart,     //!< Column starts of constraint matrix
+      const int* Aindex,     //!< Row indices of constraint matrix
+      const double* Avalue,  //!< Row values of constraint matrix
+      int* baseIndex,        //!< Indices of basic variables
+      int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN, FILE* logfile = NULL,
+      FILE* output = NULL, int message_level = ML_NONE,
+      double pivot_threshold = default_pivot_threshold,  //!< Pivoting threshold
+      double pivot_tolerance = default_pivot_tolerance,  //!< Min absolute pivot
+      const bool use_original_HFactor_logic = true,
+      int updateMethod =
+          UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
-
-#ifdef HiGHSDEV
-  /**
-   * @brief Change the update method
-   *
-   * Only called in HighsSimplexInterface::change_update_method, which
-   * is only called in HTester.cpp Should only be compiled when
-   * HiGHSDEV=on
-   */
-  void change(int updateMethod  //!< New update method
-  );
-#endif
 
   /**
    * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank
    * deficiency.
    *
-   * @return 0 if successful, otherwise rankDeficiency>0
+   * @return 0 if successful, otherwise rank_deficiency>0
    *
    */
-  int build();
+  int build(HighsTimerClock* factor_timer_clock_pointer = NULL);
 
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
-  void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
-             double hist_dsty  //!< Historical density of the result
-             ); // FactorTimer frig const;
+  void ftran(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
+             double historical_density,  //!< Historical density of the result
+             HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
-  void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
-             double hist_dsty  //!< Historical density of the result
-             ); // FactorTimer frig const;
+  void btran(HVector& vector,            //!< RHS vector \f$\mathbf{b}\f$
+             double historical_density,  //!< Historical density of the result
+             HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
   /**
    * @brief Update according to
@@ -154,19 +161,16 @@ class HFactor {
               int* hint     //!< Reinversion status
   );
 
-#ifdef HiGHSDEV
   /**
-   * @brief Data used for reporting in HTester.cpp. Should only be
-   * compiled when HiGHSDEV=on
+   * @brief Sets pivoting threshold
    */
-  int BtotalX;
-
+  bool setPivotThreshold(
+      const double new_pivot_threshold = default_pivot_threshold);
   /**
-   * @brief Data used for reporting in HTester.cpp. Should only be
-   * compiled when HiGHSDEV=on
+   * @brief Sets minimum absolute pivot
    */
-  int FtotalX;
-#endif
+  bool setMinAbsPivot(
+      const double new_pivot_tolerance = default_pivot_tolerance);
 
   /**
    * @brief Wall clock time for INVERT
@@ -183,7 +187,7 @@ class HFactor {
   /**
    * @brief Degree of rank deficiency in \f$B\f$
    */
-  int rankDeficiency;
+  int rank_deficiency;
 
   /**
    * @brief Rows not pivoted on
@@ -196,28 +200,24 @@ class HFactor {
   vector<int> noPvC;
 
   /**
-   * @brief Gets noPvR when HFactor.h cannot be included
+   * @brief Gets baseIndex since it is private
    */
-  vector<int>& getNoPvR() { return noPvR; }
+  const int* getBaseIndex() const { return baseIndex; }
 
   /**
-   * @brief Gets noPvC when HFactor.h cannot be included
+   * @brief Gets Astart since it is private
    */
-  const int* getNoPvC() const { return &noPvC[0]; }
+  const int* getAstart() const { return Astart; }
 
-  // TODO Understand why handling noPvC and noPvR in what seem to be
-  // different ways ends up equivalent.
-  //  vector<int>& getNoPvC() {return noPvC;}
-
-#ifdef HiGHSDEV
   /**
-   * @brief Checks \f$B^{-1}\mathbf{a}_i=\mathbf{e}_i\f$ for each column \f$i\f$
-   *
-   * Should only be compiled when HiGHSDEV=on
+   * @brief Gets Aindex since it is private
    */
-  void checkInvert();
-#endif
-  void reportTimer();
+  const int* getAindex() const { return Aindex; }
+
+  /**
+   * @brief Gets Avalue since it is private
+   */
+  const double* getAvalue() const { return Avalue; }
 
   // Properties of data held in HFactor.h. To "have" them means that
   // they are assigned.
@@ -239,13 +239,20 @@ class HFactor {
   // Problem size, coefficient matrix and update method
   int numRow;
   int numCol;
+
  private:
   const int* Astart;
   const int* Aindex;
   const double* Avalue;
   int* baseIndex;
   int updateMethod;
-  HighsSimplexAnalysis* analysis;
+  bool use_original_HFactor_logic;
+  int highs_debug_level;
+  FILE* logfile;
+  FILE* output;
+  int message_level;
+  double pivot_threshold;
+  double pivot_tolerance;
 
   // Working buffer
   int nwork;
@@ -325,45 +332,38 @@ class HFactor {
   vector<int> PFindex;
   vector<double> PFvalue;
 
-  // Record of maximum number of OMP threads. If OMP is available then
-  // it's set to the correct positive number in HFactor::setup()
-  int omp_max_threads = 0; 
-
-#ifdef HiGHSDEV
-  // Timer
-  HighsTimer timer_;
-  // Values of iClock for factor timing clocks
-  vector<int> clock_;
-#endif
-
   // Implementation
   void buildSimple();
   //    void buildKernel();
   int buildKernel();
   void buildHandleRankDeficiency();
-  void buildRpRankDeficiency();
+  void buildReportRankDeficiency();
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void btranL(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void ftranU(HVector& vector, double hist_dsty); // FactorTimer frig const;
-  void btranU(HVector& vector, double hist_dsty); // FactorTimer frig const;
+  void ftranL(HVector& vector, double historical_density,
+              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void btranL(HVector& vector, double historical_density,
+              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void ftranU(HVector& vector, double historical_density,
+              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
+  void btranU(HVector& vector, double historical_density,
+              HighsTimerClock* factor_timer_clock_pointer = NULL) const;
 
-  void ftranFT(HVector& vector); // FactorTimer frig const;
-  void btranFT(HVector& vector); // FactorTimer frig const;
-  void ftranPF(HVector& vector); // FactorTimer frig const;
-  void btranPF(HVector& vector); // FactorTimer frig const;
-  void ftranMPF(HVector& vector); // FactorTimer frig const;
-  void btranMPF(HVector& vector); // FactorTimer frig const;
-  void ftranAPF(HVector& vector); // FactorTimer frig const;
-  void btranAPF(HVector& vector); // FactorTimer frig const;
+  void ftranFT(HVector& vector) const;
+  void btranFT(HVector& vector) const;
+  void ftranPF(HVector& vector) const;
+  void btranPF(HVector& vector) const;
+  void ftranMPF(HVector& vector) const;
+  void btranMPF(HVector& vector) const;
+  void ftranAPF(HVector& vector) const;
+  void btranAPF(HVector& vector) const;
 
-  void updateCFT(HVector* aq, HVector* ep, int* iRow);//, int* hint);
-  void updateFT(HVector* aq, HVector* ep, int iRow);//, int* hint);
+  void updateCFT(HVector* aq, HVector* ep, int* iRow);
+  void updateFT(HVector* aq, HVector* ep, int iRow);
   void updatePF(HVector* aq, int iRow, int* hint);
   void updateMPF(HVector* aq, HVector* ep, int iRow, int* hint);
-  void updateAPF(HVector* aq, HVector* ep, int iRow);//, int* hint);
+  void updateAPF(HVector* aq, HVector* ep, int iRow);
 
   /**
    * Local in-line functions
@@ -382,7 +382,7 @@ class HFactor {
     double maxValue = 0;
     for (int k = MCstart[iCol]; k < MCstart[iCol] + MCcountA[iCol]; k++)
       maxValue = max(maxValue, fabs(MCvalue[k]));
-    MCminpivot[iCol] = maxValue * 0.1;
+    MCminpivot[iCol] = maxValue * pivot_threshold;
   }
 
   double colDelete(const int iCol, const int iRow) {

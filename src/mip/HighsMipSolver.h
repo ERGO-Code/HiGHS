@@ -12,38 +12,57 @@
 
 #include "Highs.h"
 #include "lp_data/HighsOptions.h"
-#include "mip/SolveMip.h"
 
-enum class HighsMipStatus {
-  kOptimal,
-  kTimeout,
-  kError,
-  kNodeOptimal,
-  kNodeInfeasible,
-  kNodeUnbounded,
-  kNodeNotOptimal,
-  kNodeError,
-  kRootNodeNotOptimal,
-  kRootNodeError,
-  kUnderDevelopment,
-  kTreeExhausted
-};
+struct HighsMipSolverData;
+class HighsCutPool;
 
-class HighsMipSolver : Highs {
+class HighsMipSolver {
  public:
-  HighsMipSolver(const HighsOptions& options, const HighsLp& lp)
-      : options_mip_(options), mip_(lp) {}
+  const HighsOptions* options_mip_;
+  const HighsLp* model_;
+  HighsModelStatus modelstatus_;
+  bool submip;
+  const HighsBasis* rootbasis;
 
-  HighsMipStatus runMipSolver();
+  std::unique_ptr<HighsMipSolverData> mipdata_;
 
- private:
-  HighsMipStatus solveRootNode();
-  HighsMipStatus solveNode(Node& node, bool hotstart = true);
-  HighsMipStatus solveTree(Node& root);
+  void run();
 
-  Tree tree_;
-  const HighsOptions options_mip_;
-  const HighsLp mip_;
+  int numCol() const { return model_->numCol_; }
+
+  int numRow() const { return model_->numRow_; }
+
+  int numNonzero() const { return model_->Aindex_.size(); }
+
+  const double* colCost() const { return model_->colCost_.data(); }
+
+  double colCost(int col) const { return model_->colCost_[col]; }
+
+  const double* rowLower() const { return model_->rowLower_.data(); }
+
+  double rowLower(int col) const { return model_->rowLower_[col]; }
+
+  const double* rowUpper() const { return model_->rowUpper_.data(); }
+
+  double rowUpper(int col) const { return model_->rowUpper_[col]; }
+
+  const HighsVarType* variableType() const {
+    return model_->integrality_.data();
+  }
+
+  HighsVarType variableType(int col) const { return model_->integrality_[col]; }
+
+  HighsMipSolver(const HighsOptions& options, const HighsLp& lp,
+                 bool submip = false);
+
+  ~HighsMipSolver();
+
+  void setModel(const HighsLp& model) { model_ = &model; }
+
+  HighsTimer timer_;
+  PresolveComponent presolve_;
+  HighsPresolveStatus runPresolve();
+  HighsPostsolveStatus runPostsolve();
 };
 
 #endif

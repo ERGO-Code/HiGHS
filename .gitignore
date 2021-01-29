@@ -50,6 +50,7 @@ build/
 buildDebug/
 [Bb]in/
 [Oo]bj/
+test/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -85,7 +86,10 @@ buildDebug/
 Makefile
 Makefile_opt_sw
 ml.mps
+ml.lp
+ml.ems
 options_file
+*.pbm
 
 # Visual C++ cache files
 ipch/
@@ -241,6 +245,11 @@ test2.out
 #SCIP interface
 lpi_highs.cpp
 
+# Model written with HiGHSDEV=on
+HighsRunModel.mps
+
+# Website
+htdocs/
 
 #HiGHS options files
 *.set

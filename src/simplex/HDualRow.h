@@ -20,6 +20,9 @@
 #include "lp_data/HighsModelObject.h"
 
 class HVector;
+const double initial_total_change = 1e-12;
+const double initial_remain_theta = 1e100;
+const double max_select_theta = 1e18;
 
 /**
  * @brief Dual simplex ratio test for HiGHS
@@ -56,7 +59,7 @@ class HDualRow {
    * Offset of numCol is used when packing row_ep
    */
   void chooseMakepack(const HVector* row,  //!< Row to be packed
-                       const int offset     //!< Offset for indices
+                      const int offset     //!< Offset for indices
   );
   /**
    * @brief Determine the possible variables - candidates for CHUZC
@@ -69,16 +72,34 @@ class HDualRow {
    * @brief Join pack of possible candidates in this row with possible
    * candidates in otherRow
    */
-  void chooseJoinpack(
-      const HDualRow* otherRow  //!< Other row to join with this
+  void chooseJoinpack(const HDualRow* otherRow  //!< Other row to join with this
   );
   /**
    * @brief Chooses the entering variable via BFRT and EXPAND
    *
-   * Can fail when there are excessive dual vaules due to EXPAND
-   * perturbation not being relatively too small
+   * Can fail when there are excessive dual values due to EXPAND
+   * perturbation not being relatively too small, returns positive if
+   * dual uboundedness is suspected
    */
-  bool chooseFinal();
+  int chooseFinal();
+
+  /**
+   * @brief Identifies the groups of degenerate nodes in BFRT after a
+   * heap sort of ratios
+   */
+  bool chooseFinalWorkGroupQuad();
+  bool chooseFinalWorkGroupHeap();
+
+  void chooseFinalLargeAlpha(
+      int& breakIndex, int& breakGroup, int pass_workCount,
+      const std::vector<std::pair<int, double>>& pass_workData,
+      const std::vector<int>& pass_workGroup);
+
+  void reportWorkDataAndGroup(
+      const std::string message, const int reportWorkCount,
+      const std::vector<std::pair<int, double>>& reportWorkData,
+      const std::vector<int>& reportWorkGroup);
+  bool compareWorkDataAndGroup();
 
   /**
    * @brief Update bounds when flips have occurred, and accumulate the
@@ -91,7 +112,7 @@ class HDualRow {
    */
   void updateDual(
       double theta  //!< Multiple of pivotal row to add int to duals
-      //      int columnOut  //!< Index of leaving column
+                    //      int columnOut  //!< Index of leaving column
   );
   /**
    * @brief Create a list of nonbasic free columns
@@ -103,7 +124,7 @@ class HDualRow {
    * prevent their dual values from being changed
    */
   void createFreemove(HVector* row_ep  //!< Row of \f$B^{-1}\f$ to be used to
-                                        //!< compute pivotal row entry
+                                       //!< compute pivotal row entry
   );
   /**
    * @brief Reset the nonbasicMove values for free columns
@@ -119,19 +140,20 @@ class HDualRow {
   /**
    * @brief Compute (contribution to) the Devex weight
    */
-  void computeDevexWeight(const int slice=-1);
+  void computeDevexWeight(const int slice = -1);
 
-  HighsModelObject& workHMO;         //!< Local copy of pointer to model
-  int workSize = -1;                 //!< Size of the HDualRow slice: Initialise it here to avoid compiler warning
+  HighsModelObject& workHMO;  //!< Local copy of pointer to model
+  int workSize = -1;  //!< Size of the HDualRow slice: Initialise it here to
+                      //!< avoid compiler warning
   const int* workNumTotPermutation;  //!< Pointer to model->numTotPermutation();
-  const int* workMove;      //!< Pointer to workHMO.simplex_basis_.nonbasicMove_;
-  const double* workDual;   //!< Pointer to workHMO.simplex_info_.workDual_;
+  const int* workMove;     //!< Pointer to workHMO.simplex_basis_.nonbasicMove_;
+  const double* workDual;  //!< Pointer to workHMO.simplex_info_.workDual_;
   const double* workRange;  //!< Pointer to workHMO.simplex_info_.workRange_;
-  const int* work_devex_index; //!< Pointer to workHMO.simplex_info_.devex_index;
+  const int*
+      work_devex_index;  //!< Pointer to workHMO.simplex_info_.devex_index;
 
   // Freelist:
   std::set<int> freeList;  //!< Freelist itself
-  int freeListSize = 0;    //!< Number of entries in freeList
 
   // packed data:
   int packCount;                  //!< number of packed indices/values
@@ -140,7 +162,7 @@ class HDualRow {
 
   // (Local) value of computed weight
   double computed_edge_weight;
-  
+
   double workDelta;  //!< Local copy of dual.deltaPrimal
   double workAlpha;  //!< Original copy of pivotal computed row-wise
   double workTheta;  //!< Original copy of dual step workDual[workPivot] /
@@ -148,10 +170,18 @@ class HDualRow {
   int workPivot;     //!< Index of the column entering the basis
   int workCount;     //!< Number of BFRT flips
 
-  std::vector<std::pair<int, double> >
+  std::vector<std::pair<int, double>>
       workData;  //!< Index-Value pairs for ratio test
   std::vector<int>
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
+
+  // Independent identifiers for heap-based sort in BFRT
+  int alt_workCount;
+  std::vector<std::pair<int, double>> original_workData;
+  std::vector<std::pair<int, double>> sorted_workData;
+  std::vector<int> alt_workGroup;
+
+  HighsSimplexAnalysis* analysis;
 };
 
 #endif /* SIMPLEX_HDUALROW_H_ */

@@ -11,13 +11,14 @@
  * @brief HiGHS main
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "HConfig.h"
 #include "Highs.h"
 #include "HighsIO.h"
 #include "HighsMipSolver.h"
 #include "HighsOptions.h"
 #include "HighsRuntimeOptions.h"
 #include "HighsTimer.h"
-#include "LoadProblem.h"
+#include "presolve/HAggregator.h"
 
 void printHighsVersionCopyright(FILE* output, const int message_level,
                                 const char* message = nullptr);
@@ -25,10 +26,8 @@ void reportLpStatsOrError(FILE* output, int message_level,
                           const HighsStatus read_status, const HighsLp& lp);
 void reportSolvedLpStats(FILE* output, int message_level,
                          const HighsStatus run_status, const Highs& highs);
-HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
-                         FILE* output, int message_level, bool run_quiet);
-HighsStatus callMipSolver(const HighsOptions& options, const HighsLp& lp,
-                          FILE* output, int message_level, bool run_quiet);
+HighsStatus callLpSolver(HighsOptions& options, const HighsLp& lp);
+HighsStatus callMipSolver(HighsOptions& options, const HighsLp& lp);
 
 int main(int argc, char** argv) {
   printHighsVersionCopyright(stdout, ML_ALWAYS);
@@ -38,33 +37,28 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  // Set message level.
-  FILE* output;
-  int message_level;
-  output = options.output;
-  message_level = options.message_level;
-
-  bool run_quiet = false;  // true;//
-  if (run_quiet) {
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "In main: running highs.run() quietly\n");
-  }
-
-  output = options.output;
-  message_level = options.message_level;
-
-  // Load problem.
-  HighsLp lp;
-  HighsStatus read_status = loadLpFromFile(options, lp);
-  reportLpStatsOrError(output, message_level, read_status, lp);
-  if (read_status == HighsStatus::Error) return (int)HighsStatus::Error;
+  Highs highs;
+  HighsStatus read_status = highs.readModel(options.model_file);
+  reportLpStatsOrError(options.output, options.message_level, read_status,
+                       highs.getLp());
+  if (read_status == HighsStatus::Error)
+    return 1;  // todo: change to read error
 
   // Run LP or MIP solver.
+  const HighsLp& lp = highs.getLp();
   HighsStatus run_status = HighsStatus::Error;
-  if (!options.mip) {
-    run_status = callLpSolver(options, lp, output, message_level, run_quiet);
+  bool is_mip = false;
+  for (int i = 0; i < (int)lp.integrality_.size(); i++)
+    if (lp.integrality_[i] == HighsVarType::INTEGER) {
+      is_mip = true;
+      break;
+    }
+
+  if (options.solver == "simplex" || options.solver == "ipm" ||
+      (!is_mip && options.presolve != "mip")) {
+    run_status = callLpSolver(options, lp);
   } else {
-    run_status = callMipSolver(options, lp, output, message_level, run_quiet);
+    run_status = callMipSolver(options, lp);
   }
 
   return (int)run_status;
@@ -77,7 +71,7 @@ void printHighsVersionCopyright(FILE* output, const int message_level,
                     HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR,
                     HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
   HighsPrintMessage(output, message_level, ML_ALWAYS,
-                    "Copyright (c) 2019 ERGO-Code under MIT licence terms\n\n");
+                    "Copyright (c) 2020 ERGO-Code under MIT licence terms\n\n");
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   if (message != nullptr) {
@@ -124,15 +118,17 @@ void reportLpStatsOrError(FILE* output, int message_level,
                       lp.numCol_);
     HighsPrintMessage(output, message_level, ML_ALWAYS, "Nonzeros : %d\n",
                       lp.Avalue_.size());
-    if (lp.numInt_)
+    int num_int = 0;
+    for (unsigned int i = 0; i < lp.integrality_.size(); i++)
+      if (lp.integrality_[i] != HighsVarType::CONTINUOUS) num_int++;
+    if (num_int)
       HighsPrintMessage(output, message_level, ML_ALWAYS, "Integer  : %d\n",
-                        lp.numInt_);
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "\n");
+                        num_int);
   }
 }
 
 void reportSolvedLpStats(FILE* output, int message_level,
-                         const HighsStatus run_status, const Highs& highs) {
+                         const HighsStatus run_status, Highs& highs) {
   if (run_status == HighsStatus::Error) {
     std::string statusname = HighsStatusToString(run_status);
     HighsPrintMessage(output, message_level, ML_ALWAYS, "HiGHS status: %s\n",
@@ -161,14 +157,12 @@ void reportSolvedLpStats(FILE* output, int message_level,
     HighsPrintMessage(output, message_level, ML_ALWAYS,
                       "Model   status      : %s\n",
                       highs.highsModelStatusToString(model_status).c_str());
-    /*
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "Primal  status      : %s\n",
-                      highs.highsPrimalDualStatusToString(highs_info.primal_status).c_str());
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "Dual    status      : %s\n",
-                      highs.highsPrimalDualStatusToString(highs_info.dual_status).c_str());
-    */
+    HighsPrintMessage(
+        output, message_level, ML_ALWAYS, "Primal  status      : %s\n",
+        highs.primalDualStatusToString(highs_info.primal_status).c_str());
+    HighsPrintMessage(
+        output, message_level, ML_ALWAYS, "Dual    status      : %s\n",
+        highs.primalDualStatusToString(highs_info.dual_status).c_str());
     HighsPrintMessage(output, message_level, ML_ALWAYS,
                       "Simplex   iterations: %d\n",
                       highs_info.simplex_iteration_count);
@@ -185,108 +179,104 @@ void reportSolvedLpStats(FILE* output, int message_level,
       highs.getHighsInfoValue("objective_function_value",
                               objective_function_value);
       HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "Objective value     : %13.6e\n",
+                        "Objective value     : %17.10e\n",
                         objective_function_value);
     }
-
+    double run_time = highs.getHighsRunTime();
+    HighsPrintMessage(output, message_level, ML_ALWAYS,
+                      "HiGHS run time      : %13.2f\n", run_time);
     // Possibly write the solution to a file
     const HighsOptions& options = highs.getHighsOptions();
     if (options.write_solution_to_file)
       highs.writeSolution(options.solution_file, options.write_solution_pretty);
   }
-
-  /*
-  highs.writeSolution("", true);
-  highs.writeSolution("", false);
-  highs.writeHighsInfo("");
-  highs.writeHighsInfo("HighsInfo.html");
-  */
 }
 
-HighsStatus callLpSolver(const HighsOptions& options, const HighsLp& lp,
-                         FILE* output, int message_level, bool run_quiet) {
+HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
+  FILE* output = use_options.output;
+  const int message_level = use_options.message_level;
+
   // Solve LP case.
-  Highs highs;
-  HighsStatus return_status = highs.passHighsOptions(options);
-  if (return_status != HighsStatus::OK) {
-    if (return_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "HighsStatus::Warning return from passHighsOptions\n");
-#endif
-    } else {
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "In main: fail return from passHighsOptions\n");
-      return return_status;
-    }
-  }
+  Highs highs(use_options);
+  const HighsOptions& options = highs.getHighsOptions();
 
-  if (run_quiet) {
-    highs.setHighsLogfile(NULL);
-    highs.setHighsOutput(NULL);
-  }
-
-  HighsStatus init_status = highs.passModel(lp);
-  if (init_status != HighsStatus::OK) {
-    if (init_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "HighsStatus::Warning return setting HighsLp\n");
-#endif
-    } else {
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "Error setting HighsLp\n");
-      return HighsStatus::Error;
-    }
-  }
-
-  /*
-  HighsStatus write_status;
-  write_status = highs.writeModel("write.mps");
-  if (write_status != HighsStatus::OK) {
-    if (write_status == HighsStatus::Warning) {
-#ifdef HiGHSDEV
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "HighsStatus::Warning return from highs.writeModel\n");
-#endif
-    } else {
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
-                        "Error return from highs.writeModel\n");
-    }
-  }
-  */
-
-  // Write all the options to an options file
-  // highs.writeHighsOptions("Highs.set", false);
-  // Write all the options as HTML
-  // highs.writeHighsOptions("Highs.html", false);
-  // Possibly report options settings
-  highs.writeHighsOptions("");  //, false);
-
-  if (run_quiet)
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "Before calling highs.run()\n");
+  // // Load problem.
+  highs.passModel(lp);
+  // HighsStatus read_status = highs.readModel(options.model_file);
+  // reportLpStatsOrError(output, message_level, read_status, highs.getLp());
+  // if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
   // Run HiGHS.
+  highs.setBasis();
   HighsStatus run_status = highs.run();
-
-  if (run_quiet)
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
-                      "After calling highs.run()\n");
 
   reportSolvedLpStats(output, message_level, run_status, highs);
   return run_status;
 }
 
-HighsStatus callMipSolver(const HighsOptions& options, const HighsLp& lp,
-                          FILE* output, int message_level, bool run_quiet) {
-  HighsMipSolver solver(options, lp);
-  HighsMipStatus status = solver.runMipSolver();
-  switch (status) {
-    case HighsMipStatus::kOptimal:
-      return HighsStatus::OK;
-    default:
-      break;
+HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
+  FILE* output = use_options.output;
+  const int message_level = use_options.message_level;
+
+  // Highs highs(use_options);
+  // const HighsOptions& options = highs.getHighsOptions();
+  // HighsStatus read_status = highs.readModel(options.model_file);
+  // reportLpStatsOrError(output, message_level, read_status, highs.getLp());
+  // if (read_status == HighsStatus::Error) return HighsStatus::Error;
+  // HighsLp lp = highs.getLp();
+  // printf("running aggregator (nnz = %lu)\n", lp.Avalue_.size());
+  // presolve::HAggregator aggregator(lp.rowLower_, lp.rowUpper_, lp.colCost_,
+  //                                  lp.offset_, lp.integrality_, lp.colLower_,
+  //                                  lp.colUpper_);
+
+  // aggregator.fromCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  // aggregator.run();
+  // aggregator.toCSC(lp.Avalue_, lp.Aindex_, lp.Astart_);
+  // printf("aggregator finished (nnz = %lu)\n", lp.Avalue_.size());
+
+  HighsMipSolver solver(use_options, lp);
+  solver.run();
+
+  const auto& solution = solver.presolve_.data_.recovered_solution_;
+
+  if (int(solution.col_value.size()) == lp.numCol_) {
+    printf("checking recovered solution\n");
+    double boundviol = 0.0;
+    double intviol = 0.0;
+    double rowviol = 0.0;
+    HighsCDouble obj = lp.offset_;
+    for (int i = 0; i != lp.numCol_; ++i) {
+      obj += lp.colCost_[i] * solution.col_value[i];
+
+      boundviol = std::max(boundviol, lp.colLower_[i] - solution.col_value[i]);
+      boundviol = std::max(boundviol, solution.col_value[i] - lp.colUpper_[i]);
+
+      if (lp.integrality_[i] == HighsVarType::INTEGER) {
+        double intval = std::floor(solution.col_value[i] + 0.5);
+        intviol = std::max(std::abs(intval - solution.col_value[i]), intviol);
+      }
+    }
+
+    for (int i = 0; i != lp.numRow_; ++i) {
+      rowviol = std::max(rowviol, lp.rowLower_[i] - solution.row_value[i]);
+      rowviol = std::max(rowviol, solution.row_value[i] - lp.rowUpper_[i]);
+    }
+
+    bool feasible = boundviol <= use_options.mip_feasibility_tolerance &&
+                    intviol <= use_options.mip_feasibility_tolerance &&
+                    rowviol <= use_options.mip_feasibility_tolerance;
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "solution is %s, violations:\n",
+                      feasible ? "feasible" : "infeasible");
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  bounds:      %.14g\n", boundviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  integrality: %.14g\n", intviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "  contraints:  %.14g\n", rowviol);
+    HighsPrintMessage(output, message_level, ML_MINIMAL,
+                      "objective function value: %.14g\n", double(obj));
   }
-  return HighsStatus::Error;
+
+  return HighsStatus::OK;
 }

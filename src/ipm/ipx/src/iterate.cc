@@ -64,12 +64,12 @@ void Iterate::Initialize(const Vector& x, const Vector& xl, const Vector& xu,
     const Int n = model_.cols();
     const Vector& lb = model_.lb();
     const Vector& ub = model_.ub();
-    assert((int)x.size() == n+m);
-    assert((int)xl.size() == n+m);
-    assert((int)xu.size() == n+m);
-    assert((int)y.size() == m);
-    assert((int)zl.size() == n+m);
-    assert((int)zu.size() == n+m);
+    assert(x.size() == n+m);
+    assert(xl.size() == n+m);
+    assert(xu.size() == n+m);
+    assert(y.size() == m);
+    assert(zl.size() == n+m);
+    assert(zu.size() == n+m);
     x_ = x; xl_ = xl; xu_ = xu; y_ = y; zl_ = zl; zu_ = zu;
 
     // Set variable statuses.
@@ -323,9 +323,9 @@ void Iterate::DropToComplementarity(Vector& x, Vector& y, Vector& z) const {
     const Vector& ub = model_.ub();
     assert(postprocessed_);
 
-    assert((int)x.size() == n+m);
-    assert((int)y.size() == m);
-    assert((int)z.size() == n+m);
+    assert(x.size() == n+m);
+    assert(y.size() == m);
+    assert(z.size() == n+m);
     y = y_;
     for (Int j = 0; j < n+m; j++) {
         const double xlj = xl_[j];
@@ -429,8 +429,6 @@ void Iterate::ResidualsFromDropping(double* pres, double* dres) const {
                     zdrop = zl_[j]-zu_[j]; // inactive
             }
             break;
-        default:
-            break;
         }
         double amax = 0.0;
         for (Int p = AI.begin(j); p < AI.begin(j+1); p++)
@@ -519,8 +517,6 @@ void Iterate::assert_consistency() {
             assert(false);
         }
     }
-    (void)(lb);
-    (void)(ub);
 }
  
 void Iterate::Evaluate() const {

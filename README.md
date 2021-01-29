@@ -1,6 +1,6 @@
 # HiGHS - Linear optimization software
 
-[![Build Status](https://travis-ci.org/ERGO-Code/HiGHS.svg?branch=master)](https://travis-ci.org/ERGO-Code/HiGHS)
+[![Build Status](https://github.com/ERGO-Code/HiGHS/workflows/build/badge.svg)](https://github.com/ERGO-Code/HiGHS/actions?query=workflow%3Abuild+branch%3Amaster)
 
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear programming (LP) problems of the form
@@ -48,6 +48,7 @@ Then compile the code using
     make
 
 This installs the executable `bin/highs`. 
+The minimum CMake version required is 3.15.
 
 Testing
 -------
@@ -74,7 +75,7 @@ Usage:
 
       --model_file arg       File of model to solve.
       --presolve arg         Presolve: "choose" by default - "on"/"off" are alternatives.
-      --solver arg           Solver: "choose" by default - "simplex"/"ipm" are alternatives.
+      --solver arg           Solver: "choose" by default - "simplex"/"ipm"/"mip" are alternatives.
       --parallel arg         Parallel solve: "choose" by default - "on"/"off" are alternatives.
       --time_limit arg       Run time limit (double).
       --options_file arg     File containing HiGHS options.
@@ -84,7 +85,7 @@ Usage:
 Language interfaces and further documentation
 ---------------------------------------------
 
-There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. Documentation beyond what is in this file is "work in progress", but we expect to have some available before the end of 2019. However, we are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
+There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. Documentation beyond what is in this file is "work in progress", but we expect to have some available before summer 2020. However, we are happy to give a reasonable level of support via email sent to highsopt@gmail.com. 
 
 Parallel code
 -------------
@@ -173,6 +174,7 @@ gmsgenus.run
 gmsgenux.out
 /path/to/libhighs.so his 1 1
 ```
+
 OSI
 ---
 - `OSI_ROOT`:

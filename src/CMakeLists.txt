@@ -1,8 +1,8 @@
 # Define library.
-include_directories(ipm/ipx/src)
-include_directories(ipm/ipx/include)
-include_directories(ipm/basiclu/src)
-include_directories(ipm/basiclu/include)
+# Outdated CMake approach: update in progress
+if (NOT FAST_BUILD)
+  set(IPX_ON ON)
+endif()
 
 if (IPX_ON)
 set(basiclu_sources
@@ -33,8 +33,7 @@ set(basiclu_sources
     ipm/basiclu/src/lu_dfs.c
     ipm/basiclu/src/lu_garbage_perm.c
     ipm/basiclu/src/lu_residual_test.c
-    ipm/basiclu/src/lu_solve_for_update.c
-    ipm/basiclu/src/lu_timer.c)
+    ipm/basiclu/src/lu_solve_for_update.c)
 
 
 set(ipx_sources
@@ -71,7 +70,15 @@ set(ipx_sources
     ipm/ipx/src/utils.cc)
 endif()
 
+# Outdated CMake approach: update in progress
+if (NOT FAST_BUILD)
+include_directories(ipm/ipx/src)
+include_directories(ipm/ipx/include)
+include_directories(ipm/basiclu/src)
+include_directories(ipm/basiclu/include)
+
 set(sources
+    ../external/filereaderlp/reader.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -79,48 +86,65 @@ set(sources
     io/HighsIO.cpp
     io/HMPSIO.cpp
     io/HMpsFF.cpp
-    io/HToyIO.cpp
     io/LoadOptions.cpp
-    io/LoadProblem.cpp
     lp_data/Highs.cpp
+    lp_data/HighsDebug.cpp
     lp_data/HighsInfo.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModelUtils.cpp
-    lp_data/HighsModelBuilder.cpp
+    lp_data/HighsRanging.cpp
     lp_data/HighsSolution.cpp
+    lp_data/HighsSolutionDebug.cpp
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/HighsMipSolver.cpp
-    mip/SolveMip.cpp
-    presolve/ICrash.cpp
-    presolve/ICrashUtil.cpp
+    mip/HighsMipSolverData.cpp
+    mip/HighsDomain.cpp
+    mip/HighsDynamicRowMatrix.cpp
+    mip/HighsLpRelaxation.cpp
+    mip/HighsSeparation.cpp
+    mip/HighsSearch.cpp
+    mip/HighsCutPool.cpp
+    mip/HighsCliqueTable.cpp
+    mip/HighsImplications.cpp
+    mip/HighsNodeQueue.cpp
     presolve/Presolve.cpp
+    presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
+    presolve/PresolveUtils.cpp
     presolve/HPreData.cpp
+    presolve/HAggregator.cpp
+    presolve/HighsLpPropagator.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
     simplex/HDualRow.cpp
     simplex/HDualMulti.cpp
     simplex/HFactor.cpp
+    simplex/HFactorDebug.cpp
     simplex/HighsSimplexAnalysis.cpp
     simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
     simplex/HPrimal.cpp
     simplex/HQPrimal.cpp
-#    simplex/HRanging.cpp
     simplex/HSimplex.cpp
+    simplex/HSimplexDebug.cpp
+    simplex/HSimplexReport.cpp
     simplex/HVector.cpp
-    test/KktCheck.cpp
-    test/KktChStep.cpp
+    test/DevKkt.cpp
+    test/KktCh2.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
+    util/HighsMatrixPic.cpp
     util/stringutil.cpp
     interfaces/highs_c_api.cpp)
 
 set(headers
+    ../external/filereaderlp/builder.hpp
+    ../external/filereaderlp/model.hpp
+    ../external/filereaderlp/reader.hpp
     ipm/IpxStatus.h
     io/Filereader.h
     io/FilereaderLp.h
@@ -128,12 +152,12 @@ set(headers
     io/FilereaderMps.h
     io/HMpsFF.h
     io/HMPSIO.h
-    io/HToyIO_C.h
-    io/HToyIO.h
     io/HighsIO.h
-    io/LoadProblem.h
     io/LoadOptions.h
     lp_data/HConst.h
+    lp_data/HStruct.h
+    lp_data/HighsAnalysis.h
+    lp_data/HighsDebug.h
     lp_data/HighsInfo.h
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h
@@ -141,11 +165,25 @@ set(headers
     lp_data/HighsModelObject.h
     lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
+    lp_data/HighsRanging.h
     lp_data/HighsSolution.h
+    lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
-    lp_data/HighsModelBuilder.h
+    mip/HighsCliqueTable.h
+    mip/HighsCutPool.h
+    mip/HighsDomain.h
+    mip/HighsDomainChange.h
+    mip/HighsDynamicRowMatrix.h
+    mip/HighsImplications.h
+    mip/HighsLpRelaxation.h
     mip/HighsMipSolver.h
+    mip/HighsMipSolverData.h
+    mip/HighsNodeQueue.h
+    mip/HighsPseudocost.h
+    mip/HighsSearch.h
+    mip/HighsSeparation.h
+    mip/HighsSparseVectorSum.h
     mip/SolveMip.h
     simplex/HApp.h
     simplex/FactorTimer.h
@@ -154,27 +192,32 @@ set(headers
     simplex/HDualRow.h
     simplex/HDualRHS.h
     simplex/HFactor.h
+    simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
     simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
     simplex/HPrimal.h
     simplex/HQPrimal.h
-#    simplex/HRanging.h
     simplex/HSimplex.h
+    simplex/HSimplexReport.h
+    simplex/HSimplexDebug.h
     simplex/SimplexConst.h
-    presolve/ICrash.h
-    presolve/ICrashUtil.h
+    simplex/SimplexStruct.h
     presolve/Presolve.h
+    presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
+    presolve/PresolveUtils.h
     presolve/HPreData.h
     simplex/HVector.h
-    test/KktCheck.h
-    test/KktChStep.h
+    test/DevKkt.h
+    test/KktCh2.h
     util/stringutil.h
+    util/HighsComponent.h
     util/HighsRandom.h
     util/HighsSort.h
     util/HighsTimer.h
     util/HighsUtils.h
+    util/HighsMatrixPic.h
     Highs.h
     interfaces/highs_c_api.h
 )
@@ -349,3 +392,194 @@ install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake"
     DESTINATION lib/cmake/highs)
 install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" 
     DESTINATION lib/pkg-config)
+
+else() 
+
+# FAST_BUILD is set to on.
+# At the moment used only for gradually updating the CMake targets build and
+# install / export.
+# Define library in modern CMake using target_*()
+# No interfaces (apart from c); No ipx; New (short) ctest instances.
+add_library(libhighs)
+
+target_sources(libhighs PRIVATE 
+    ../external/filereaderlp/reader.cpp
+    io/Filereader.cpp
+    io/FilereaderLp.cpp
+    io/FilereaderEms.cpp
+    io/FilereaderMps.cpp
+    io/HighsIO.cpp
+    io/HMPSIO.cpp
+    io/HMpsFF.cpp
+    io/LoadOptions.cpp
+    lp_data/Highs.cpp
+    lp_data/HighsDebug.cpp
+    lp_data/HighsInfo.cpp
+    lp_data/HighsLp.cpp
+    lp_data/HighsLpUtils.cpp
+    lp_data/HighsModelUtils.cpp
+    lp_data/HighsRanging.cpp
+    lp_data/HighsSolution.cpp
+    lp_data/HighsSolutionDebug.cpp
+    lp_data/HighsSolve.cpp
+    lp_data/HighsStatus.cpp
+    lp_data/HighsOptions.cpp
+    presolve/Presolve.cpp
+    presolve/PresolveComponent.cpp
+    presolve/PresolveAnalysis.cpp
+    presolve/PresolveUtils.cpp
+    presolve/HPreData.cpp
+    presolve/HAggregator.cpp
+    presolve/HighsLpPropagator.cpp
+    simplex/HCrash.cpp
+    simplex/HDual.cpp
+    simplex/HDualRHS.cpp
+    simplex/HDualRow.cpp
+    simplex/HDualMulti.cpp
+    simplex/HFactor.cpp
+    simplex/HFactorDebug.cpp
+    simplex/HighsSimplexAnalysis.cpp
+    simplex/HighsSimplexInterface.cpp
+    simplex/HMatrix.cpp
+    simplex/HPrimal.cpp
+    simplex/HQPrimal.cpp
+    simplex/HSimplex.cpp
+    simplex/HSimplexDebug.cpp
+    simplex/HSimplexReport.cpp
+    simplex/HVector.cpp
+    test/KktCh2.cpp
+    test/DevKkt.cpp
+    util/HighsSort.cpp
+    util/HighsUtils.cpp
+    util/HighsMatrixPic.cpp
+    util/stringutil.cpp
+    interfaces/highs_c_api.cpp)
+
+target_include_directories(libhighs PUBLIC . ipm/ io/ lp_data/ mip/ simplex/ 
+                           presolve/ util/ test/ interfaces/ ../external/)
+target_include_directories(libhighs PUBLIC ${HIGHS_BINARY_DIR})
+
+# on UNIX system the 'lib' prefix is automatically added
+set_target_properties(libhighs PROPERTIES
+    OUTPUT_NAME "highs"
+    MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+if (UNIX)
+    set_target_properties(libhighs PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${HIGHS_BINARY_DIR}/lib")
+endif()
+
+set(headers_fast_build_
+    ../external/filereaderlp/builder.hpp
+    ../external/filereaderlp/model.hpp
+    ../external/filereaderlp/reader.hpp
+    ipm/IpxStatus.h
+    io/Filereader.h
+    io/FilereaderLp.h
+    io/FilereaderEms.h
+    io/FilereaderMps.h
+    io/HMpsFF.h
+    io/HMPSIO.h
+    io/HighsIO.h
+    io/LoadOptions.h
+    lp_data/HConst.h
+    lp_data/HStruct.h
+    lp_data/HighsAnalysis.h
+    lp_data/HighsDebug.h
+    lp_data/HighsInfo.h
+    lp_data/HighsLp.h
+    lp_data/HighsLpUtils.h
+    lp_data/HighsModelUtils.h
+    lp_data/HighsModelObject.h
+    lp_data/HighsModelObjectUtils.h
+    lp_data/HighsOptions.h
+    lp_data/HighsRanging.h
+    lp_data/HighsSolution.h
+    lp_data/HighsSolutionDebug.h
+    lp_data/HighsSolve.h
+    lp_data/HighsStatus.h
+    simplex/HApp.h
+    simplex/FactorTimer.h
+    simplex/HCrash.h
+    simplex/HDual.h
+    simplex/HDualRow.h
+    simplex/HDualRHS.h
+    simplex/HFactor.h
+    simplex/HFactorDebug.h
+    simplex/HighsSimplexAnalysis.h
+    simplex/HighsSimplexInterface.h
+    simplex/HMatrix.h
+    simplex/HPrimal.h
+    simplex/HQPrimal.h
+    simplex/HSimplex.h
+    simplex/HSimplexReport.h
+    simplex/HSimplexDebug.h
+    simplex/SimplexConst.h
+    simplex/SimplexStruct.h
+    presolve/Presolve.h
+    presolve/PresolveComponent.h
+    presolve/PresolveAnalysis.h
+    presolve/PresolveUtils.h
+    presolve/HAggregator.h
+    presolve/HPreData.h
+    simplex/HVector.h
+    test/DevKkt.h
+    test/KktCh2.h
+    util/stringutil.h
+    util/HighsCDouble.h
+    util/HighsComponent.h
+    util/HighsHash.h
+    util/HighsRandom.h
+    util/HighsSort.h
+    util/HighsTimer.h
+    util/HighsUtils.h
+    util/HighsMatrixPic.h
+    Highs.h
+    interfaces/highs_c_api.h
+)
+
+
+if(IPX_ON)
+    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapper.h ${basiclu_headers}
+        ${ipx_headers})
+else()
+    set(headers_fast_build_ ${headers_fast_build_} ipm/IpxWrapperEmpty.h )
+endif()
+
+#set_target_properties(libhighs PROPERTIES PUBLIC_HEADER "src/Highs.h;src/lp_data/HighsLp.h;src/lp_data/HighsModelObject.h")
+
+# set the install rpath to the installed destination
+set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+    "${CMAKE_INSTALL_PREFIX}/lib")
+
+# install the header files of highs
+foreach ( file ${headers_fast_build_} )
+    get_filename_component( dir ${file} DIRECTORY )
+    install( FILES ${file} DESTINATION include/${dir} )
+endforeach()
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
+
+
+# target_compile_options(libhighs PRIVATE "-Wall")
+# target_compile_options(libhighs PRIVATE "-Wunused")
+
+
+if (IPX_ON)
+    target_sources(libhighs PRIVATE ${basiclu_sources} ${ipx_sources})
+
+    target_include_directories(libhighs PUBLIC ipm/ipx/src
+        ipm/ipx/include ipm/basiclu/src ipm/basiclu/include)
+
+    if (UNIX)
+        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+        target_compile_options(libhighs PRIVATE "-Wno-return-type-c-linkage")
+        target_compile_options(libhighs PRIVATE "-Wno-return-type" "-Wno-switch")
+        target_compile_options(libhighs PRIVATE "-Wno-defaulted-function-deleted")
+    endif()
+
+endif()
+
+    set_target_properties(libhighs PROPERTIES INSTALL_RPATH
+        "${CMAKE_INSTALL_PREFIX}/lib")
+
+endif()

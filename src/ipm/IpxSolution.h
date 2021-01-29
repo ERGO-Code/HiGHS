@@ -15,6 +15,7 @@
 #define IPM_IPX_SOLUTION_H_
 
 #include <stdint.h>
+
 #include <vector>
 typedef int64_t ipxint;
 

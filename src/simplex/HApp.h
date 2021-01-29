@@ -23,18 +23,19 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsSolution.h"
+#include "lp_data/HighsSolve.h"
 #include "lp_data/HighsStatus.h"
 #include "simplex/HDual.h"
 #include "simplex/HPrimal.h"
 #include "simplex/HQPrimal.h"
-#include "util/HighsUtils.h"
-#include "lp_data/HighsSolution.h"
-#include "lp_data/HighsSolve.h"
-//#include "HRanging.h"
 #include "simplex/HSimplex.h"
+#include "simplex/HSimplexDebug.h"
+#include "simplex/HSimplexReport.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
+#include "util/HighsUtils.h"
 
 #ifdef OPENMP
 #include "omp.h"
@@ -43,26 +44,28 @@
 #ifdef HiGHSDEV
 void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  
+
   printf("grep_kernel,%s,%s,%d,%d,%d,",
-	 highs_model_object.lp_.model_name_.c_str(),
-	 highs_model_object.lp_.lp_name_.c_str(),
-	 simplex_info.num_invert,
-	 simplex_info.num_kernel,
-	 simplex_info.num_major_kernel);
-  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_dim/simplex_info.num_kernel);
-  printf(",%g,%g,",
-	 simplex_info.running_average_kernel_dim,
-	 simplex_info.max_kernel_dim);
-  if (simplex_info.num_invert) printf("Fill-in,%g", simplex_info.sum_invert_fill_factor/simplex_info.num_invert);
+         highs_model_object.lp_.model_name_.c_str(),
+         highs_model_object.lp_.lp_name_.c_str(), simplex_info.num_invert,
+         simplex_info.num_kernel, simplex_info.num_major_kernel);
+  if (simplex_info.num_kernel)
+    printf("%g", simplex_info.sum_kernel_dim / simplex_info.num_kernel);
+  printf(",%g,%g,", simplex_info.running_average_kernel_dim,
+         simplex_info.max_kernel_dim);
+  if (simplex_info.num_invert)
+    printf("Fill-in,%g",
+           simplex_info.sum_invert_fill_factor / simplex_info.num_invert);
   printf(",");
-  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_fill_factor/simplex_info.num_kernel);
+  if (simplex_info.num_kernel)
+    printf("%g", simplex_info.sum_kernel_fill_factor / simplex_info.num_kernel);
   printf(",");
-  if (simplex_info.num_major_kernel) printf("%g", simplex_info.sum_major_kernel_fill_factor/simplex_info.num_major_kernel);
-  printf(",%g,%g,%g\n",
-	 simplex_info.running_average_invert_fill_factor,
-	 simplex_info.running_average_kernel_fill_factor,
-	 simplex_info.running_average_major_kernel_fill_factor);
+  if (simplex_info.num_major_kernel)
+    printf("%g", simplex_info.sum_major_kernel_fill_factor /
+                     simplex_info.num_major_kernel);
+  printf(",%g,%g,%g\n", simplex_info.running_average_invert_fill_factor,
+         simplex_info.running_average_kernel_fill_factor,
+         simplex_info.running_average_major_kernel_fill_factor);
 }
 #endif
 
@@ -75,7 +78,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  HighsTimer& timer = highs_model_object.timer_;
   FILE* logfile = highs_model_object.options_.logfile;
 
   // Assumes that the LP has a positive number of rows, since
@@ -84,120 +86,143 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   assert(positive_num_row);
   if (!positive_num_row) {
     HighsLogMessage(logfile, HighsMessageType::ERROR,
-		    "runSimplexSolver called for LP with non-positive (%d) number of constraints",
-		    highs_model_object.lp_.numRow_);
+                    "runSimplexSolver called for LP with non-positive (%d) "
+                    "number of constraints",
+                    highs_model_object.lp_.numRow_);
     return HighsStatus::Error;
   }
+#ifdef HiGHSDEV
+  HighsSimplexAnalysis& analysis = highs_model_object.simplex_analysis_;
+  analysis.simplexTimerStart(SimplexTotalClock);
+#endif
+  // Indicate that dual and primal rays are not known
+  highs_model_object.simplex_lp_status_.has_dual_ray = false;
+  highs_model_object.simplex_lp_status_.has_primal_ray = false;
 
-  // Set simplex options from HiGHS options.
-  // ToDo: Should only be done when not hot-starting since strategy
-  // knowledge based on run-time experience should be preserved.
-  setSimplexOptions(highs_model_object);
-
-  SimplexTimer simplex_timer;
-  simplex_timer.initialiseSimplexClocks(highs_model_object);
-  //
   // Transition to the best possible simplex basis and solution
   call_status = transition(highs_model_object);
   return_status = interpretCallStatus(call_status, return_status, "transition");
   if (return_status == HighsStatus::Error) return return_status;
 #ifdef HiGHSDEV
-  // reportSimplexLpStatus(simplex_lp_status, "After transition");
+    // reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
-
-  // Determine whether the solution is optimal
-  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
-  if ((scaled_solution_params.num_primal_infeasibilities == 0) &&
-      (scaled_solution_params.num_dual_infeasibilities == 0)) {
-    // Simplex solution is optimal
+  HighsSolutionParams& scaled_solution_params =
+      highs_model_object.scaled_solution_params_;
+  // Determine whether the scaled solution is optimal
+  if (scaled_solution_params.num_primal_infeasibilities == 0 &&
+      scaled_solution_params.num_dual_infeasibilities == 0) {
+    // No scaled primal or dual infeasiblities => Optimal
     highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
-    scaled_solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-    scaled_solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  }
-  //
-  // Given a simplex basis and solution, use the number of primal and
-  // dual infeasibilities to determine whether the simplex solver is
-  // needed and, if so, possibly which variant to use.
-  //
-  // 1. If it is "CHOOSE", in which case an approapriate stratgy is
-  // used
-  //
-  // 2. If re-solving choose the strategy appropriate to primal or
-  // dual feasibility
-  //
-  int simplex_strategy = highs_model_object.options_.simplex_strategy;
-  // Determine what dual simplex strategy should be used if there is a choice of dual strategy
-  // Determine the initial choice of simplex strategy 
-  // If the simplex strategy is to choose, then choose dual simplex for now
-  if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE) simplex_strategy = SIMPLEX_STRATEGY_DUAL;
-  //
-  // Set min/max_threads to correspond to serial code. They will be
-  // set to other values if parallel options are used.
-  simplex_info.min_threads = 1;
-  simplex_info.max_threads = 1;
-  // Record the min/max minimum number of HiGHS threads in the options
-  const int highs_min_threads = highs_model_object.options_.highs_min_threads;
-  const int highs_max_threads = highs_model_object.options_.highs_max_threads;
-  int omp_max_threads = 0;
+    scaled_solution_params.primal_status =
+        PrimalDualStatus::STATUS_FEASIBLE_POINT;
+    scaled_solution_params.dual_status =
+        PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  } else {
+    // Not optimal
+    //
+    // Given a simplex basis and solution, use the number of primal and
+    // dual infeasibilities to determine which simplex variant to use.
+    //
+    // 1. If it is "CHOOSE", in which case an approapriate stratgy is
+    // used
+    //
+    // 2. If re-solving choose the strategy appropriate to primal or
+    // dual feasibility
+    //
+    int simplex_strategy = highs_model_object.options_.simplex_strategy;
+    if (scaled_solution_params.num_primal_infeasibilities > 0) {
+      // Not primal feasible, so use dual simplex if choice is permitted
+      if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+        simplex_strategy = SIMPLEX_STRATEGY_DUAL;
+    } else {
+      // Primal feasible - so must be dual infeasible
+      assert(scaled_solution_params.num_dual_infeasibilities > 0);
+      // Use primal simplex if choice is permitted
+      if (simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+        simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
+    }
+    // Set min/max_threads to correspond to serial code. They will be
+    // set to other values if parallel options are used.
+    simplex_info.min_threads = 1;
+    simplex_info.max_threads = 1;
+    // Record the min/max minimum number of HiGHS threads in the options
+    const int highs_min_threads = highs_model_object.options_.highs_min_threads;
+    const int highs_max_threads = highs_model_object.options_.highs_max_threads;
+    int omp_max_threads = 0;
 #ifdef OPENMP
-  omp_max_threads = omp_get_max_threads();
+    omp_max_threads = omp_get_max_threads();
 #endif
-  if (highs_model_object.options_.parallel == on_string && simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
-    // The parallel strategy is on and the simplex strategy is dual so use PAMI if there are enough OMP threads
-    if (omp_max_threads >= DUAL_MULTI_MIN_THREADS) simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
-  }
-  //
-  // If parallel stratgies are used, the minimum number of HiGHS threads used
-  // will be set to be at least the minimum required for the strategy
-  //
-  // All this is independent of the number of OMP threads available,
-  // since code with multiple HiGHS threads can be run in serial.
-  if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
-    simplex_info.min_threads = max(DUAL_TASKS_MIN_THREADS, highs_min_threads);
-    simplex_info.max_threads = max(simplex_info.min_threads, highs_max_threads);
-  } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
-    simplex_info.min_threads = max(DUAL_MULTI_MIN_THREADS, highs_min_threads);
-    simplex_info.max_threads = max(simplex_info.min_threads, highs_max_threads);
-  }
-  // Set the number of HiGHS threads to be used to be the maximum
-  // number to be used
-  simplex_info.num_threads = simplex_info.max_threads;
-  // Give a warning if the number of threads to be used is fewer than
-  // the minimum number of HiGHS threads allowed
-  if (simplex_info.num_threads < highs_min_threads) {
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
-		    "Using %d HiGHS threads for parallel strategy rather than minimum number (%d) specified in options",
-		    simplex_info.num_threads, highs_min_threads);
-  }
-  // Give a warning if the number of threads to be used is more than
-  // the maximum number of HiGHS threads allowed
-  if (simplex_info.num_threads > highs_max_threads) {
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
-		    "Using %d HiGHS threads for parallel strategy rather than maximum number (%d) specified in options",
-		    simplex_info.num_threads, highs_max_threads);
-  }
-  // Give a warning if the number of threads to be used is fewer than
-  // the number of OMP threads available
-  if (simplex_info.num_threads > omp_max_threads) {
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
-		    "Number of OMP threads available = %d < %d = Number of HiGHS threads to be used: Parallel performance will be less than anticipated",
-		    omp_max_threads, simplex_info.num_threads);
-  }
-  if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) {
+    if (highs_model_object.options_.parallel == on_string &&
+        simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
+      // The parallel strategy is on and the simplex strategy is dual so use
+      // PAMI if there are enough OMP threads
+      if (omp_max_threads >= DUAL_MULTI_MIN_THREADS)
+        simplex_strategy = SIMPLEX_STRATEGY_DUAL_MULTI;
+    }
+    //
+    // If parallel stratgies are used, the minimum number of HiGHS threads used
+    // will be set to be at least the minimum required for the strategy
+    //
+    // All this is independent of the number of OMP threads available,
+    // since code with multiple HiGHS threads can be run in serial.
+#ifdef OPENMP
+    if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
+      simplex_info.min_threads = max(DUAL_TASKS_MIN_THREADS, highs_min_threads);
+      simplex_info.max_threads =
+          max(simplex_info.min_threads, highs_max_threads);
+    } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
+      simplex_info.min_threads = max(DUAL_MULTI_MIN_THREADS, highs_min_threads);
+      simplex_info.max_threads =
+          max(simplex_info.min_threads, highs_max_threads);
+    }
+#endif
+    // Set the number of HiGHS threads to be used to be the maximum
+    // number to be used
+    simplex_info.num_threads = simplex_info.max_threads;
+    // Give a warning if the number of threads to be used is fewer than
+    // the minimum number of HiGHS threads allowed
+    if (simplex_info.num_threads < highs_min_threads) {
+      HighsLogMessage(
+          logfile, HighsMessageType::WARNING,
+          "Using %d HiGHS threads for parallel strategy rather than "
+          "minimum number (%d) specified in options",
+          simplex_info.num_threads, highs_min_threads);
+    }
+    // Give a warning if the number of threads to be used is more than
+    // the maximum number of HiGHS threads allowed
+    if (simplex_info.num_threads > highs_max_threads) {
+      HighsLogMessage(
+          logfile, HighsMessageType::WARNING,
+          "Using %d HiGHS threads for parallel strategy rather than "
+          "maximum number (%d) specified in options",
+          simplex_info.num_threads, highs_max_threads);
+    }
+    // Give a warning if the number of threads to be used is fewer than
+    // the number of OMP threads available
+    if (simplex_info.num_threads > omp_max_threads) {
+      HighsLogMessage(
+          logfile, HighsMessageType::WARNING,
+          "Number of OMP threads available = %d < %d = Number of HiGHS threads "
+          "to be used: Parallel performance will be less than anticipated",
+          omp_max_threads, simplex_info.num_threads);
+    }
+    // Simplex strategy is now fixed - so set the value to be referred
+    // to in the simplex solver
     simplex_info.simplex_strategy = simplex_strategy;
     // Official start of solver Start the solve clock - because
     // setupForSimplexSolve has simplex computations
-    timer.start(timer.solve_clock);
-#ifdef HiGHSDEV
-    timer.start(simplex_info.clock_[SimplexTotalClock]);
-#endif
+    SimplexAlgorithm algorithm = SimplexAlgorithm::DUAL;
+    if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL)
+      algorithm = SimplexAlgorithm::PRIMAL;
+    reportSimplexPhaseIterations(highs_model_object, algorithm, true);
     if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
       HighsLogMessage(logfile, HighsMessageType::INFO,
-		      "Using primal simplex solver");
+                      "Using primal simplex solver");
       HQPrimal primal_solver(highs_model_object);
       call_status = primal_solver.solve();
-      return_status = interpretCallStatus(call_status, return_status, "HQPrimal::solve");
+      return_status =
+          interpretCallStatus(call_status, return_status, "HQPrimal::solve");
       if (return_status == HighsStatus::Error) return return_status;
     } else {
       // Use dual simplex solver
@@ -206,108 +231,93 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       // Solve, depending on the particular strategy
       if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
         // Parallel - SIP
-	HighsLogMessage(logfile, HighsMessageType::INFO,
-			"Using parallel simplex solver - SIP with %d threads", simplex_info.num_threads);
+        HighsLogMessage(logfile, HighsMessageType::INFO,
+                        "Using parallel simplex solver - SIP with %d threads",
+                        simplex_info.num_threads);
         // writePivots("tasks");
         call_status = dual_solver.solve();
-	return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
-	if (return_status == HighsStatus::Error) return return_status;
+        return_status =
+            interpretCallStatus(call_status, return_status, "HDual::solve");
+        if (return_status == HighsStatus::Error) return return_status;
       } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
         // Parallel - PAMI
-	HighsLogMessage(logfile, HighsMessageType::INFO,
-			"Using parallel simplex solver - PAMI with %d threads", simplex_info.num_threads);
-        // writePivots("multi");
-        // if (opt.partitionFile.size() > 0)
-        // {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
-	call_status = dual_solver.solve();
-	  return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
-	  if (return_status == HighsStatus::Error) return return_status;
+        HighsLogMessage(logfile, HighsMessageType::INFO,
+                        "Using parallel simplex solver - PAMI with %d threads",
+                        simplex_info.num_threads);
+        call_status = dual_solver.solve();
+        return_status =
+            interpretCallStatus(call_status, return_status, "HDual::solve");
+        if (return_status == HighsStatus::Error) return return_status;
       } else {
         // Serial
-	HighsLogMessage(logfile, HighsMessageType::INFO,
-			"Using dual simplex solver - serial");
+        HighsLogMessage(logfile, HighsMessageType::INFO,
+                        "Using dual simplex solver - serial");
         call_status = dual_solver.solve();
-	return_status = interpretCallStatus(call_status, return_status, "HDual::solve");
-	if (return_status == HighsStatus::Error) return return_status;
+        return_status =
+            interpretCallStatus(call_status, return_status, "HDual::solve");
+        if (return_status == HighsStatus::Error) return return_status;
+      }
+
+      int& num_scaled_primal_infeasibilities =
+          simplex_info.num_primal_infeasibilities;
+      if (highs_model_object.scaled_model_status_ ==
+              HighsModelStatus::OPTIMAL &&
+          num_scaled_primal_infeasibilities) {
+        // If Phase 2 primal simplex solver creates primal
+        // infeasibilities it doesn't check and may claim
+        // optimality. Try again with serial dual solver
+        HighsLogMessage(
+            logfile, HighsMessageType::WARNING,
+            "Phase 2 primal simplex clean-up infeasibilities: Pr %d(Max %9.4g, "
+            "Sum %9.4g) so re-solving",
+            num_scaled_primal_infeasibilities,
+            highs_model_object.scaled_solution_params_.max_primal_infeasibility,
+            highs_model_object.scaled_solution_params_
+                .sum_primal_infeasibilities);
+        call_status = dual_solver.solve();
+        return_status =
+            interpretCallStatus(call_status, return_status, "HDual::solve");
+        if (return_status == HighsStatus::Error) return return_status;
+        if (highs_model_object.scaled_model_status_ ==
+                HighsModelStatus::OPTIMAL &&
+            num_scaled_primal_infeasibilities) {
+          // Still optimal with primal infeasibilities
+          highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+        }
       }
     }
-    if (simplex_info.dual_phase1_iteration_count +
-            simplex_info.dual_phase2_iteration_count +
-            simplex_info.primal_phase1_iteration_count +
-            simplex_info.primal_phase2_iteration_count !=
-        scaled_solution_params.simplex_iteration_count)
-      printf("Iteration total error \n");
 
-    if (highs_model_object.options_.simplex_initial_condition_check) {
-      timer.start(simplex_info.clock_[BasisConditionClock]);
-      double basis_condition = computeBasisCondition(highs_model_object);
-      timer.stop(simplex_info.clock_[BasisConditionClock]);
-      HighsLogMessage(logfile, HighsMessageType::INFO,
-                      "Final basis condition estimate is %g", basis_condition);
+    computeSimplexInfeasible(highs_model_object);
+    copySimplexInfeasible(highs_model_object);
+
+    scaled_solution_params.objective_function_value =
+        simplex_info.primal_objective_value;
+
+    if (highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL) {
+      highs_model_object.scaled_solution_params_.primal_status =
+          PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      highs_model_object.scaled_solution_params_.dual_status =
+          PrimalDualStatus::STATUS_FEASIBLE_POINT;
     }
+    debugBasisCondition(highs_model_object, "Final");
 
     // Official finish of solver
-    timer.stop(timer.solve_clock);
-
-    scaled_solution_params.objective_function_value = simplex_info.primal_objective_value;
-#ifdef HiGHSDEV
-    timer.stop(simplex_info.clock_[SimplexTotalClock]);
-    reportSimplexProfiling(highs_model_object);
-
-    if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
-      HighsLogMessage(logfile, HighsMessageType::INFO,
-                      "Iterations [Ph1 %d; Ph2 %d] Total %d",
-                      simplex_info.primal_phase1_iteration_count,
-                      simplex_info.primal_phase2_iteration_count,
-                      scaled_solution_params.simplex_iteration_count);
-    } else {
-      HighsLogMessage(logfile, HighsMessageType::INFO,
-                      "Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d",
-                      simplex_info.dual_phase1_iteration_count,
-                      simplex_info.dual_phase2_iteration_count,
-                      simplex_info.primal_phase2_iteration_count,
-                      scaled_solution_params.simplex_iteration_count);
-    }
-    int omp_max_threads = 0;
-#ifdef OPENMP
-    omp_max_threads = omp_get_max_threads();
-#endif
-    if (omp_max_threads <= 1 && simplex_info.report_HFactor_clock)
-      highs_model_object.factor_.reportTimer();
-#endif
+    reportSimplexPhaseIterations(highs_model_object, algorithm);
   }
 
-  if (simplex_info.analyse_lp_solution) {
-    // Analyse the simplex basic solution, assuming that the scaled solution params are known
-    const bool report = true;
-    call_status = analyseSimplexBasicSolution(highs_model_object,
-					      highs_model_object.scaled_solution_params_,
-					      report);
-    return_status = interpretCallStatus(call_status, return_status, "analyseSimplexBasicSolution");
-    if (return_status == HighsStatus::Error) return return_status;
-
 #ifdef HiGHSDEV
-    // For debugging, it's good to be able to check what comes out of
-    // the solver. This is done fully by analyseHighsBasicSolution,
-    // which computes the primal and dual residuals so isn't cheap.
-    //
-    // Copy the solution and basis
-    HighsSimplexInterface simplex_interface(highs_model_object);
-    simplex_interface.convertSimplexToHighsSolution();
-    simplex_interface.convertSimplexToHighsBasis();
-    call_status = 
-      analyseHighsBasicSolution(logfile,
-				highs_model_object, "to check simplex basic solution");
-    return_status = interpretCallStatus(call_status, return_status, "analyseHighsBasicSolution");
-    if (return_status == HighsStatus::Error) return return_status;
-    // Invalidate the basis to make sure it is set again later
-    // without HiGHSDEV
-    highs_model_object.basis_.valid_ = false;
+  analysis.simplexTimerStop(SimplexTotalClock);
 #endif
-  }
-  return_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+  // Reaches here whether optimal or not
+  if (debugSimplexBasicSolution("After runSimplexSolver", highs_model_object) ==
+      HighsDebugStatus::LOGICAL_ERROR)
+    return HighsStatus::Error;
+
+  return_status =
+      highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 #ifdef HiGHSDEV
-  //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
+  //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex
+  //  solver");
 #endif
   return return_status;
 }
@@ -320,58 +330,74 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
     double new_dual_feasibility_tolerance;
 #ifdef HiGHSDEV
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		    "tryToSolveUnscaledLp pass %1d:", pass);
+                    "tryToSolveUnscaledLp pass %1d:", pass);
 #endif
-    // Deduce the unscaled solution parameters, and new fasibility tolerances if not primal and/or dual feasible
-    call_status =
-      getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(highs_model_object, 
-								      highs_model_object.unscaled_solution_params_,
-								      new_primal_feasibility_tolerance,
-								      new_dual_feasibility_tolerance);
-    return_status = interpretCallStatus(call_status, return_status,
-					"getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution");
+    // Deduce the unscaled solution parameters, and new fasibility tolerances if
+    // not primal and/or dual feasible
+    call_status = getNewInfeasibilityTolerancesFromSimplexBasicSolution(
+        highs_model_object, highs_model_object.unscaled_solution_params_,
+        new_primal_feasibility_tolerance, new_dual_feasibility_tolerance);
+    return_status = interpretCallStatus(
+        call_status, return_status,
+        "getNewInfeasibilityTolerancesFromSimplexBasicSolution");
     if (return_status == HighsStatus::Error) return return_status;
-    int num_unscaled_primal_infeasibilities = highs_model_object.unscaled_solution_params_.num_primal_infeasibilities;
-    int num_unscaled_dual_infeasibilities = highs_model_object.unscaled_solution_params_.num_dual_infeasibilities;
-    // Set the model and solution status according to the unscaled solution parameters
-    if (num_unscaled_primal_infeasibilities==0 && num_unscaled_dual_infeasibilities==0)
+    int num_unscaled_primal_infeasibilities =
+        highs_model_object.unscaled_solution_params_.num_primal_infeasibilities;
+    int num_unscaled_dual_infeasibilities =
+        highs_model_object.unscaled_solution_params_.num_dual_infeasibilities;
+    // Set the model and solution status according to the unscaled solution
+    // parameters
+    if (num_unscaled_primal_infeasibilities == 0 &&
+        num_unscaled_dual_infeasibilities == 0) {
       highs_model_object.unscaled_model_status_ = HighsModelStatus::OPTIMAL;
+      highs_model_object.unscaled_solution_params_.primal_status =
+          PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      highs_model_object.unscaled_solution_params_.dual_status =
+          PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      return HighsStatus::OK;
+    }
 
-    if (highs_model_object.unscaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
-
-    //Not optimal
-    assert(num_unscaled_primal_infeasibilities > 0 || num_unscaled_dual_infeasibilities > 0);
+    // Not optimal
+    assert(num_unscaled_primal_infeasibilities > 0 ||
+           num_unscaled_dual_infeasibilities > 0);
 
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		    "Have %d primal and %d dual unscaled infeasibilities",
-		    num_unscaled_primal_infeasibilities,
-		    num_unscaled_dual_infeasibilities);
+                    "Have %d primal and %d dual unscaled infeasibilities",
+                    num_unscaled_primal_infeasibilities,
+                    num_unscaled_dual_infeasibilities);
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		    "Possibly re-solve with feasibility tolerances of %g primal and %g dual",
-		    new_primal_feasibility_tolerance,
-		    new_dual_feasibility_tolerance);
+                    "Possibly re-solve with feasibility tolerances of %g "
+                    "primal and %g dual",
+                    new_primal_feasibility_tolerance,
+                    new_dual_feasibility_tolerance);
     const bool refinement = false;
     if (refinement) {
-      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		      "Re-solving with refined tolerances");
-      highs_model_object.scaled_solution_params_.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
-      highs_model_object.scaled_solution_params_.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+      HighsLogMessage(highs_model_object.options_.logfile,
+                      HighsMessageType::INFO,
+                      "Re-solving with refined tolerances");
+      highs_model_object.scaled_solution_params_.primal_feasibility_tolerance =
+          new_primal_feasibility_tolerance;
+      highs_model_object.scaled_solution_params_.dual_feasibility_tolerance =
+          new_dual_feasibility_tolerance;
 
       HighsOptions save_options = highs_model_object.options_;
       HighsOptions& options = highs_model_object.options_;
       options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
       call_status = runSimplexSolver(highs_model_object);
       options = save_options;
-      return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+      return_status =
+          interpretCallStatus(call_status, return_status, "runSimplexSolver");
       if (return_status == HighsStatus::Error) return return_status;
       // Assess success according to the scaled model status, unless
       // something worse has happened earlier
-      call_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+      call_status = highsStatusFromHighsModelStatus(
+          highs_model_object.scaled_model_status_);
       return_status = interpretCallStatus(call_status, return_status);
       if (return_status == HighsStatus::Error) return return_status;
     } else {
-      HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
-		      "Not re-solving with refined tolerances");
+      HighsLogMessage(highs_model_object.options_.logfile,
+                      HighsMessageType::INFO,
+                      "Not re-solving with refined tolerances");
       return return_status;
     }
   }
@@ -392,24 +418,36 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
-  // Reset unscaled and scaled model status and solution params - except for iteration counts
+  // Reset unscaled and scaled model status and solution params - except for
+  // iteration counts
   resetModelStatusAndSolutionParams(highs_model_object);
-  HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
-  simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
-			 highs_model_object.scaled_solution_params_.simplex_iteration_count);
+  // Set the value of simplex_info_.run_quiet to suppress computation
+  // that is just for reporting
+  //  setRunQuiet(highs_model_object);
+  //  printf("Forcing simplex_info_.run_quiet true for testing\n");
+  //  highs_model_object.simplex_info_.run_quiet = true;
+
   if (!highs_model_object.lp_.numRow_) {
     // Unconstrained LP so solve directly
     call_status = solveUnconstrainedLp(highs_model_object);
-    return_status = interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
-    if (return_status == HighsStatus::Error) return return_status;
+    return_status =
+        interpretCallStatus(call_status, return_status, "solveUnconstrainedLp");
+    return return_status;
   }
+  HighsSimplexAnalysis& simplex_analysis = highs_model_object.simplex_analysis_;
+  simplex_analysis.setup(highs_model_object.lp_, highs_model_object.options_,
+                         highs_model_object.iteration_counts_.simplex);
+  //  SimplexTimer simplex_timer;
+  //  simplex_timer.initialiseSimplexClocks(highs_model_object);
   // (Try to) solve the scaled LP
   call_status = runSimplexSolver(highs_model_object);
-  return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+  return_status =
+      interpretCallStatus(call_status, return_status, "runSimplexSolver");
   if (return_status == HighsStatus::Error) return return_status;
 #ifdef HiGHSDEV
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  if (simplex_info.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
+  if (simplex_info.analyse_invert_form)
+    reportAnalyseInvertForm(highs_model_object);
 #endif
 
   double cost_scale = highs_model_object.scale_.cost_;
@@ -431,22 +469,33 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
       // the required tolerances. Can't handle cost scaling
       //
       call_status = tryToSolveUnscaledLp(highs_model_object);
-      return_status = interpretCallStatus(call_status, return_status, "runSimplexSolver");
+      return_status =
+          interpretCallStatus(call_status, return_status, "runSimplexSolver");
       if (return_status == HighsStatus::Error) return return_status;
     } else {
       // If scaling hasn't been used, then the original LP has been
       // solved to the required tolerances
-      highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
-      highs_model_object.unscaled_solution_params_ = highs_model_object.scaled_solution_params_;
+      highs_model_object.unscaled_model_status_ =
+          highs_model_object.scaled_model_status_;
+      highs_model_object.unscaled_solution_params_ =
+          highs_model_object.scaled_solution_params_;
     }
   } else {
-      // If the solution isn't optimal, then clear the scaled solution infeasibility parameters
-    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
-    invalidateSolutionInfeasibilityParams(highs_model_object.scaled_solution_params_);
+    // If the solution isn't optimal, then clear the scaled solution
+    // infeasibility parameters
+    highs_model_object.unscaled_model_status_ =
+        highs_model_object.scaled_model_status_;
+    invalidateSolutionInfeasibilityParams(
+        highs_model_object.scaled_solution_params_);
   }
-    
+
 #ifdef HiGHSDEV
+  // Report profiling and analysis for the application of the simplex
+  // method to this LP problem
+  reportSimplexProfiling(highs_model_object);
+  if (simplex_info.report_HFactor_clock) simplex_analysis.reportFactorTimer();
   if (simplex_info.analyse_iterations) simplex_analysis.summaryReport();
+  simplex_analysis.summaryReportFactor();
 #endif
 
   // Deduce the HiGHS basis and solution from the simplex basis and solution
@@ -454,12 +503,13 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
 
-  copySolutionIterationCountAndObjectiveParams(highs_model_object.scaled_solution_params_,
-					       highs_model_object.unscaled_solution_params_);
-  
+  copySolutionObjectiveParams(highs_model_object.scaled_solution_params_,
+                              highs_model_object.unscaled_solution_params_);
+
   // Assess success according to the scaled model status, unless
   // something worse has happened earlier
-  call_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
+  call_status =
+      highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
   return_status = interpretCallStatus(call_status, return_status);
   return return_status;
 }

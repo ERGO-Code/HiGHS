@@ -109,7 +109,7 @@ std::string StatusString(Int status) {
         {IPX_STATUS_not_run, "not run"},
         {IPX_STATUS_solved, "solved"},
         {IPX_STATUS_stopped, "stopped"},
-        {IPX_STATUS_invalid_input, "invalid input"},
+        {IPX_STATUS_no_model, "no model"},
         {IPX_STATUS_out_of_memory, "out of memory"},
         {IPX_STATUS_internal_error, "internal error"},
         {IPX_STATUS_optimal, "optimal"},

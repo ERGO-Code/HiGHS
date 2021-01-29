@@ -15,18 +15,28 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/i
 set(TEST_SOURCES
     TestMain.cpp
     TestOptions.cpp
-    TestPresolve.cpp
     TestIO.cpp
     TestSort.cpp
     TestSetup.cpp
     TestFilereader.cpp
     TestInfo.cpp
+    TestBasis.cpp
     TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
+    TestRays.cpp
+    TestRanging.cpp
     Avgas.cpp)
 
-if (IPX_ON) 
+if (NOT APPLE)
+    # Bug with updated IPX code and gas11. Maybe somehow related to the rpath on 
+    # macOS (Lukas). Only triggered by gas11 with no presolve which is strange. 
+    # may be an interface related issue which will pop up soon. 
+    # works OK on linux. The test was added to doctest for macOS but still hanging.
+    set(TEST_SOURCES ${TEST_SOURCES} TestSpecialLps.cpp TestLpSolvers.cpp)
+endif()
+
+if (IPX_ON)
     set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 endif()
 
@@ -41,7 +51,7 @@ if (OSI_FOUND AND BUILD_TESTING)
 	target_link_libraries(osi_unit_tests OsiHighs Catch ${OSITEST_LIBRARIES} CoinUtils)
 	target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS} ${HIGHS_SOURCE_DIR}/src/interfaces)
 	target_compile_options(osi_unit_tests PUBLIC ${OSITEST_CFLAGS_OTHER})
-    endif (OSITEST_FOUND AND BUILD_TESTING)
+    endif (OSITEST_FOUND)
 endif()
 
 if(FORTRAN_FOUND)
@@ -56,6 +66,7 @@ if(FORTRAN_FOUND)
 # check the C API
 add_executable(capi_unit_tests TestCAPI.c)
 target_link_libraries(capi_unit_tests libhighs)
+add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
@@ -83,7 +94,7 @@ add_test(NAME osi-unit-test-build
                  --build ${HIGHS_BINARY_DIR}
                  --target osi_unit_tests
          )
-         
+
 # Avoid that several build jobs try to concurretly build.
 set_tests_properties(osi-unit-test-build
 PROPERTIES
@@ -129,18 +140,17 @@ endif (GAMS_FOUND)
 #
 # define the set of feasible instances
 set(successInstances
-    "25fv47\;2888\; 5.501846\;"
-    "80bau3b\;3760\; 9.872242\;"
-    "adlittle\;81\; 2.254950\;"
-    "afiro\;21\;-4.647531\;"
-    "etamacro\;507\;-7.557152\;"
-    "greenbea\;5249\;-7.255525\;"
-    "pilot87\;9919\; 3.017103\;"
-    "shell\;624\; 1.208825\;"
-    "stair\;555\;-2.512670\;"
-    "standata\;74\; 1.257699\;"
-    "standgub\;67\; 1.257699\;"
-    "standmps\;215\; 1.406017\;"
+    "25fv47\;2888\; 5.5018458883\;"
+    "80bau3b\;3760\; 9.8722419241\;"
+    "adlittle\;81\; 2.2549496316\;"
+    "afiro\;21\;-4.6475314286\;"
+    "etamacro\;507\;-7.5571523130\;"
+    "greenbea\;5249\;-7.2555248130\;"
+    "shell\;624\; 1.2088253460\;"
+    "stair\;555\;-2.5126695119\;"
+    "standata\;74\; 1.2576995000\;"
+    "standgub\;67\; 1.2576995000\;"
+    "standmps\;215\; 1.4060175000\;"
     )
 
 set(infeasibleInstances
@@ -160,6 +170,19 @@ set(unboundedInstances
     )
 
 set(failInstances
+    )
+ 
+set(mipInstances 
+    "small_mip\;3.2368421\;"
+    "flugpl\;1201500\;"
+    "lseu\;1120\;"
+    "egout\;(568.1007|568.1006999)\;"
+    "gt2\;21166\;"
+    "rgn\;82.1999992\;"
+    "bell5\;(8966406.49152|8966406.491519)\;"
+    "sp150x300d\;(69|68.9999999)\;"
+    "p0548\;(8691|8690.9999999)\;"
+    "dcmulti\;188182\;"
     )
 
 # define settings
@@ -220,31 +243,24 @@ add_instancetests(failInstances "Fail")
 add_instancetests(infeasibleInstances "Infeasible")
 add_instancetests(unboundedInstances "Unbounded")
 
-# todo: test objective value
+foreach(instance ${mipInstances})
+    list(GET instance 0 name)
+    list(GET instance 1 optval)
+    # specify the instance and the settings load command
+    set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
-# todo: test iteration count
+    foreach(setting ${settings})
+        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+              ${inst})
 
-# manually add presolve tests until we fix presolve
-set(setting "--presolve=on")
+        set_tests_properties (${name}${setting} PROPERTIES
+                DEPENDS unit_tests_all)
 
-set(inst "${HIGHS_SOURCE_DIR}/check/instances/adlittle.mps")
-add_test(NAME "presolve-adlittle" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-adlittle" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Optimal")
-set_tests_properties ("presolve-adlittle" PROPERTIES DEPENDS unit_tests_all)
+        set_tests_properties (${name}${setting} PROPERTIES
+                PASS_REGULAR_EXPRESSION
+                "objective function value: ${optval}"
+                FAIL_REGULAR_EXPRESSION
+                "solution is infeasible")
 
-set(inst "${HIGHS_SOURCE_DIR}/check/instances/scrs8.mps")
-add_test(NAME "presolve-scrs8" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-scrs8" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Optimal")
-set_tests_properties ("presolve-scrs8" PROPERTIES DEPENDS unit_tests_all)
-
-
-set(inst "${HIGHS_SOURCE_DIR}/check/instances/woodinfe.mps")
-add_test(NAME "presolve-woodinfe" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-woodinfe" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Infeasible")
-set_tests_properties ("presolve-woodinfe" PROPERTIES DEPENDS unit_tests_all)
-
-
-set(inst "${HIGHS_SOURCE_DIR}/check/instances/gas11.mps")
-add_test(NAME "presolve-gas11" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-gas11" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status      : Unbounded")
-set_tests_properties ("presolve-gas11" PROPERTIES DEPENDS unit_tests_all)
+    endforeach(setting)
+endforeach()

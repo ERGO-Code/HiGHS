@@ -21,13 +21,14 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
-#include "test/KktChStep.h"
+#include "test/KktCh2.h"
 
 using std::pair;
 using std::stack;
 using std::string;
 using std::vector;
 
+namespace presolve {
 struct change {
   int type;
   int row;
@@ -37,6 +38,7 @@ struct change {
 class HPreData {
  public:
   HPreData();
+  virtual ~HPreData() = default;
 
   // Model data
   int numCol;
@@ -53,7 +55,10 @@ class HPreData {
   vector<double> colUpper;
   vector<double> rowLower;
   vector<double> rowUpper;
+  vector<HighsVarType> integrality;
 
+  // during postsolve hold the reduced solution, then at the end of postsolve
+  // they hold the recovered. passed to dev kkt checker.
   vector<double> colValue;
   vector<double> colDual;
   vector<double> rowValue;
@@ -85,16 +90,11 @@ class HPreData {
   vector<HighsBasisStatus> row_status;
 
   vector<double> colCostAtEl;
-  vector<double> rowLowerAtEl;
-  vector<double> rowUpperAtEl;
 
-  void print(int k);
-  void printAR(int i);
   void makeARCopy();
   void makeACopy();
   double getaij(int i, int j);
   bool isZeroA(int i, int j);
-  void printSolution();
   double getRowValue(int i);
 
   stack<double> postValue;
@@ -103,10 +103,33 @@ class HPreData {
   vector<int> rIndex;
   vector<int> cIndex;
 
-  KktChStep chk;
+  dev_kkt_check::KktChStep chk2;
 
   stack<change> chng;
   stack<pair<int, vector<double>>> oldBounds;  //(j, l, u)
 };
+
+struct MainLoop {
+  int rows;
+  int cols;
+  int nnz;
+};
+
+struct DevStats {
+  int n_loops = 0;
+  std::vector<MainLoop> loops;
+};
+
+struct PresolveStats {
+  DevStats dev;
+
+  int n_rows_removed = 0;
+  int n_cols_removed = 0;
+  int n_nnz_removed = 0;
+};
+
+void initPresolve(PresolveStats& stats);
+
+}  // namespace presolve
 
 #endif /* PRESOLVE_HPREDATA_H_ */

@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -31,6 +32,7 @@
 #include <vector>
 
 #include "io/HighsIO.h"
+#include "lp_data/HighsLp.h"  // for OBJSENSE_MINIMIZE and OBJSENSE_MAXIMIZE
 #include "util/stringutil.h"
 
 using Triplet = std::tuple<int, int, double>;
@@ -39,22 +41,35 @@ enum class FreeFormatParserReturnCode {
   SUCCESS,
   PARSERERROR,
   FILENOTFOUND,
-  FIXED_FORMAT
+  FIXED_FORMAT,
+  TIMEOUT,
 };
+
+namespace free_format_parser {
+
+// private:
+using wall_clock = std::chrono::high_resolution_clock;
+using time_point = wall_clock::time_point;
+
+double getWallTime();
 
 class HMpsFF {
  public:
   HMpsFF() {}
   FreeFormatParserReturnCode loadProblem(FILE* logfile,
-					 const std::string filename,
+                                         const std::string filename,
                                          HighsLp& lp);
 
+  double time_limit = HIGHS_CONST_INF;
+
  private:
+  double start_time;
+
   int numRow;
   int numCol;
   int nnz;
 
-  int objSense;
+  ObjSense objSense = ObjSense::MINIMIZE;  // Minimization by default
   double objOffset = 0;
 
   std::vector<int> Astart;
@@ -69,7 +84,13 @@ class HMpsFF {
   std::vector<std::string> rowNames;
   std::vector<std::string> colNames;
 
-  std::vector<int> col_integrality;
+  std::vector<HighsVarType> col_integrality;
+
+  // Keep track of columns that are binary by default, being columns
+  // that are defined as integer by markers in the column section, or
+  // as binary by having a BV flag in the BOUNDS section, and without
+  // any LI or UI flags in the BOUNDS section
+  std::vector<bool> col_binary;
 
   /// load LP from MPS file as transposed triplet matrix
   int parseFile(std::string filename);
@@ -79,6 +100,9 @@ class HMpsFF {
   const bool handle_bv_in_bounds = false;
 
   enum class parsekey {
+    OBJSENSE,
+    MAX,
+    MIN,
     ROWS,
     COLS,
     RHS,
@@ -88,7 +112,8 @@ class HMpsFF {
     END,
     FAIL,
     COMMENT,
-    FIXED_FORMAT
+    FIXED_FORMAT,
+    TIMEOUT
   };
 
   enum class boundtype { LE, EQ, GE, FR };
@@ -107,6 +132,7 @@ class HMpsFF {
                                   std::string& word) const;
 
   HMpsFF::parsekey parseDefault(std::ifstream& file) const;
+  HMpsFF::parsekey parseObjsense(FILE* logfile, std::ifstream& file);
   HMpsFF::parsekey parseRows(FILE* logfile, std::ifstream& file);
   HMpsFF::parsekey parseCols(FILE* logfile, std::ifstream& file);
   HMpsFF::parsekey parseRhs(FILE* logfile, std::ifstream& file);
@@ -114,4 +140,5 @@ class HMpsFF {
   HMpsFF::parsekey parseBounds(FILE* logfile, std::ifstream& file);
 };
 
+}  // namespace free_format_parser
 #endif /* IO_HMPSFF_H_ */

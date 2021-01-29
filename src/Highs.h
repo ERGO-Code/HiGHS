@@ -14,16 +14,12 @@
 #ifndef HIGHS_H_
 #define HIGHS_H_
 
-#include "lp_data/HighsLp.h"
-#include "lp_data/HighsModelObject.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsInfo.h"
-#include "lp_data/HighsStatus.h"
-#include "presolve/ICrash.h"
-#include "presolve/Presolve.h"
-#include "util/HighsTimer.h"
-
 #include <sstream>
+
+#include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsRanging.h"
+#include "lp_data/HighsSolutionDebug.h"
+#include "presolve/PresolveComponent.h"
 
 /**
  * @brief Class to set parameters and run HiGHS
@@ -41,20 +37,36 @@ class Highs {
    */
 
   /**
-   * @brief Clears the vector of HighsModelObjects (hmos), creates a
-   * HighsModelObject for this LP and makes it the first of the vector
-   * of HighsModelObjects
+   * @brief Every model loading module eventually uses passModel to
+   * communicate the model to HiGHS. It clears the vector of
+   * HighsModelObjects (hmos), creates a HighsModelObject for this LP
+   * and makes it the first of the vector of HighsModelObjects
    */
-  HighsStatus passModel(
-      const HighsLp& lp  //!< The HighsLp instance for this LP
+  HighsStatus passModel(HighsLp lp  //!< The HighsLp instance for this LP
   );
+
+  HighsStatus passModel(const int num_col, const int num_row, const int num_nz,
+                        const double* costs, const double* col_lower,
+                        const double* col_upper, const double* row_lower,
+                        const double* row_upper, const int* astart,
+                        const int* aindex, const double* avalue);
 
   /**
    * @brief reads in a model and initializes the HighsModelObject
    */
-  HighsStatus readModel(
-			const std::string filename  //!< the filename
+  HighsStatus readModel(const std::string filename  //!< the filename
   );
+
+  /**
+   * @brief reads in a basis
+   */
+  HighsStatus readBasis(const std::string filename  //!< the filename
+  );
+
+  /**
+   * @brief Clears the current model
+   */
+  HighsStatus clearModel();
 
   /**
    * @brief Solves the model according to the specified options
@@ -64,10 +76,10 @@ class Highs {
   /**
    * @brief writes the current solution to a file
    */
-  HighsStatus writeSolution(
-			    const std::string filename,  //!< the filename
-			    const bool pretty=false      //!< Write in pretty (human-readable) format
-			    ) const;
+  HighsStatus writeSolution(const std::string filename,  //!< the filename
+                            const bool pretty = false)
+      const;  //!< Write in pretty (human-readable) format
+
   /**
    * Methods for HiGHS option input/output
    */
@@ -77,96 +89,92 @@ class Highs {
    * legal and, for bool/int/double, only if it's of the correct type
    */
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const bool value           //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const bool value            //!< The option value
+  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const int value            //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const int value             //!< The option value
+  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const double value         //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const double value          //!< The option value
+  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const std::string value    //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const std::string value     //!< The option value
+  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  const char* value          //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      const char* value           //!< The option value
+  );
 
-  HighsStatus setHighsLogfile(
-			      FILE* logfile                  //!< The log file
-			      );
+  HighsStatus setHighsLogfile(FILE* logfile = NULL  //!< The log file
+  );
 
-  HighsStatus setHighsOutput(
-			     FILE* output                  //!< The log file
-			     );
+  HighsStatus setHighsOutput(FILE* output = NULL  //!< The log file
+  );
 
-  HighsStatus readHighsOptions(
-			       const std::string filename  //!< The filename
-			       );
+  HighsStatus readHighsOptions(const std::string filename  //!< The filename
+  );
 
-  HighsStatus passHighsOptions(
-			       const HighsOptions& options  //!< The options
-			       );
+  HighsStatus passHighsOptions(const HighsOptions& options  //!< The options
+  );
 
-   /**
+  const HighsOptions& getHighsOptions();
+
+  /**
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
    */
   HighsStatus getHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  bool& value                //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      bool& value                 //!< The option value
+  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  int& value                 //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      int& value                  //!< The option value
+  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  double& value              //!< The option value
-				  );
+      const std::string& option,  //!< The option name
+      double& value               //!< The option value
+  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option, //!< The option name
-                                  std::string& value         //!< The option value
-				  );
-  
+      const std::string& option,  //!< The option name
+      std::string& value          //!< The option value
+  );
+
   const HighsOptions& getHighsOptions() const;
-  
+
+  HighsStatus resetHighsOptions();
+
   HighsStatus writeHighsOptions(
-				const std::string filename,  //!< The filename
-				const bool report_only_non_default_values=true
-				);
-  
-   /**
-   * @brief Gets an option value as int/double, and only if it's of the correct type.
+      const std::string filename,  //!< The filename
+      const bool report_only_non_default_values = true);
+
+  /**
+   * @brief Gets an option value as int/double, and only if it's of the correct
+   * type.
    */
 
   const HighsInfo& getHighsInfo() const;
 
-  HighsStatus getHighsInfoValue(
-				const std::string& info, //!< The info name
-				int& value               //!< The info value
-				);
-  
-  HighsStatus getHighsInfoValue(
-				const std::string& info, //!< The info name
-				double& value            //!< The info value
-				) const;
-  
-  HighsStatus writeHighsInfo(
-			     const std::string filename  //!< The filename
-			     );
+  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
+                                int& value                //!< The info value
+  );
+
+  HighsStatus getHighsInfoValue(const std::string& info,  //!< The info name
+                                double& value) const;     //!< The info value
+
+  HighsStatus writeHighsInfo(const std::string filename  //!< The filename
+  );
   /**
    * Methods for model output
    */
@@ -178,25 +186,47 @@ class Highs {
   const HighsLp& getLp() const;
 
   /**
-   * @brief Returns the HighsSolution 
+   * @brief Returns the HighsSolution
    */
   const HighsSolution& getSolution() const;
 
-  const ICrashInfo& getICrashInfo() const;
-
   /**
-   * @brief Returns the HighsBasis 
+   * @brief Returns the HighsBasis
    */
   const HighsBasis& getBasis() const;
 
   /**
    * @brief Returns the current model status
    */
-  const HighsModelStatus& getModelStatus(
-					 const bool scaled_model=false
-					 ) const;
+  const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
 
-  // todo: getRangingInformation(..)
+  /**
+   * @brief Returns the objective function value (if known)
+   */
+  double getObjectiveValue() { return info_.objective_function_value; }
+
+  /**
+   * @brief Returns the simplex iteration count (if known)
+   */
+  int getSimplexIterationCount() { return info_.simplex_iteration_count; }
+
+  /**
+   * @brief Indicates whether a dual unbounded ray exdists, and gets
+   * it if it does and dual_ray is not NULL
+   */
+  HighsStatus getDualRay(bool& has_dual_ray, double* dual_ray_value = NULL);
+
+  /**
+   * @brief Indicates whether a primal unbounded ray exdists, and gets
+   * it if it does and primal_ray is not NULL
+   */
+  HighsStatus getPrimalRay(bool& has_primal_ray,
+                           double* primal_ray_value = NULL);
+
+  /**
+   * @brief Gets the ranging information for the current LP
+   */
+  HighsStatus getRanging(HighsRanging& ranging);
 
   /**
    * Methods for operations with the invertible representation of the
@@ -210,87 +240,95 @@ class Highs {
    * required by SCIP, non-negative entries are indices of columns,
    * and negative entries are -(row_index+1).
    */
-  HighsStatus getBasicVariables(
-				int* basic_variables  //!< Basic variables
-				);
+  HighsStatus getBasicVariables(int* basic_variables  //!< Basic variables
+  );
   /**
    * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
   HighsStatus getBasisInverseRow(
-				 const int row,          //!< Index of row required
-				 double* row_vector,     //!< Row required
-				 int* row_num_nz = NULL, //!< Number of nonzeros
-				 int* row_indices = NULL //!< Indices of nonzeros
-				 );  
+      const int row,           //!< Index of row required
+      double* row_vector,      //!< Row required
+      int* row_num_nz = NULL,  //!< Number of nonzeros
+      int* row_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
    * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
   HighsStatus getBasisInverseCol(
-				 const int col,          //!< Index of column required
-				 double* col_vector,     //!< Column required
-				 int* col_num_nz = NULL, //!< Number of nonzeros
-				 int* col_indices = NULL //!< Indices of nonzeros
-);
+      const int col,           //!< Index of column required
+      double* col_vector,      //!< Column required
+      int* col_num_nz = NULL,  //!< Number of nonzeros
+      int* col_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
-   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector
+   * \f$\mathbf{b}\f$
    */
   HighsStatus getBasisSolve(
-			    const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
-			    double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$
-			    int* solution_num_nz = NULL, //!< Number of nonzeros
-			    int* solution_indices = NULL //!< Indices of nonzeros
-			    );
+      const double* rhs,            //!< RHS \f$\mathbf{b}\f$
+      double* solution_vector,      //!< Solution  \f$\mathbf{x}\f$
+      int* solution_num_nz = NULL,  //!< Number of nonzeros
+      int* solution_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
-   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector
+   * \f$\mathbf{b}\f$
    */
   HighsStatus getBasisTransposeSolve(
-				     const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
-				     double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$ 
-				     int* solution_nz = NULL,     //!< Number of nonzeros
-				     int* solution_indices = NULL //!< Indices of nonzeros
-				     );
+      const double* rhs,            //!< RHS \f$\mathbf{b}\f$
+      double* solution_vector,      //!< Solution  \f$\mathbf{x}\f$
+      int* solution_nz = NULL,      //!< Number of nonzeros
+      int* solution_indices = NULL  //!< Indices of nonzeros
+  );
 
   /**
    * @brief Forms a row of \f$B^{-1}A\f$
    */
-  HighsStatus getReducedRow(
-			       const int row,          //!< Index of row required
-			       double* row_vector,     //!< Row required
-			       int* row_num_nz = NULL, //!< Number of nonzeros
-			       int* row_indices = NULL //!< Indices of nonzeros
-			       );
+  HighsStatus getReducedRow(const int row,            //!< Index of row required
+                            double* row_vector,       //!< Row required
+                            int* row_num_nz = NULL,   //!< Number of nonzeros
+                            int* row_indices = NULL,  //!< Indices of nonzeros
+                            const double* pass_basis_inverse_row_vector =
+                                NULL  //!< Necessary row of \f$B^{-1}\f$
+  );
 
   /**
    * @brief Forms a column of \f$B^{-1}A\f$
    */
-  HighsStatus getReducedColumn(
-			       const int col,          //!< Index of column required
-			       double* col_vector,     //!< Column required
-			       int* col_num_nz = NULL, //!< Number of nonzeros
-			       int* col_indices = NULL //!< Indices of nonzeros
-			       );
+  HighsStatus getReducedColumn(const int col,  //!< Index of column required
+                               double* col_vector,      //!< Column required
+                               int* col_num_nz = NULL,  //!< Number of nonzeros
+                               int* col_indices = NULL  //!< Indices of nonzeros
+  );
 
-  
   /**
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumCols() { return lp_.numCol_; }
+  int getNumCols() const { return lp_.numCol_; }
 
   /**
    * @brief Get the number of rows in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumRows() { return lp_.numRow_; }
+  int getNumRows() const { return lp_.numRow_; }
 
   /**
    * @brief Get the number of entries in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumEntries() { if (lp_.numCol_) return lp_.Astart_[lp_.numCol_]; return 0; }
+  int getNumEntries() {
+    if (lp_.numCol_) return lp_.Astart_[lp_.numCol_];
+    return 0;
+  }
+
+  /**
+   * @brief Get the objective sense of the model
+   */
+  bool getObjectiveSense(ObjSense& sense);
 
   /**
    * @brief Get multiple columns from the model given by an interval
@@ -403,17 +441,21 @@ class Highs {
   /**
    * @brief Get a matrix coefficient
    */
-  bool getCoeff(
-		const int row, //!< Row of coefficient to be got
-		const int col, //!< Column of coefficient to be got
-		double& value   //!< Coefficient
-		);
+  bool getCoeff(const int row,  //!< Row of coefficient to be got
+                const int col,  //!< Column of coefficient to be got
+                double& value   //!< Coefficient
+  );
 
   /**
    * @brief writes out current model
    */
-  HighsStatus writeModel(
-			 const std::string filename  //!< the filename
+  HighsStatus writeModel(const std::string filename  //!< the filename
+  );
+
+  /**
+   * @brief writes out current basis
+   */
+  HighsStatus writeBasis(const std::string filename  //!< the filename
   );
 
   /**
@@ -423,7 +465,7 @@ class Highs {
   /**
    * @brief Change the objective sense of the model
    */
-  bool changeObjectiveSense(const int sense  //!< New objective sense
+  bool changeObjectiveSense(const ObjSense sense  //!< New objective sense
   );
 
   /**
@@ -531,11 +573,10 @@ class Highs {
   /**
    * @brief Change a matrix coefficient
    */
-  bool changeCoeff(
-		   const int row,     //!< Row of coefficient to be changed
-		   const int col,     //!< Column of coefficient to be changed
-		   const double value //!< Coefficient
-		   );
+  bool changeCoeff(const int row,      //!< Row of coefficient to be changed
+                   const int col,      //!< Column of coefficient to be changed
+                   const double value  //!< Coefficient
+  );
   /**
    * @brief Adds a row to the model
    */
@@ -592,7 +633,6 @@ class Highs {
           values  //!< Array of size num_new_nz with row values for all columns
   );
 
-
   /**
    * @brief Delete multiple columns from the model given by an interval
    */
@@ -606,17 +646,19 @@ class Highs {
    * @brief Delete multiple columns from the model given by a set
    */
   bool deleteCols(
-		  const int num_set_entries,  //!< The number of indides in the set
-		  const int* set              //!< Array of size num_set_entries with indices of columns
-                                              //!< to delete
-		  );
+      const int num_set_entries,  //!< The number of indides in the set
+      const int* set  //!< Array of size num_set_entries with indices of columns
+                      //!< to delete
+  );
 
   /**
    * @brief Delete multiple columns from the model given by a mask
    */
-  bool deleteCols(int* mask  //!< Full length array with 1 => delete; !0 => not. The new index of any column
-			     //!not deleted is returned in place of the value 0.
-		  );
+  bool deleteCols(
+      int* mask  //!< Full length array with 1 => delete; !0 => not. The new
+                 //!< index of any column
+                 //! not deleted is returned in place of the value 0.
+  );
 
   /**
    * @brief Delete multiple rows from the model given by an interval
@@ -631,18 +673,34 @@ class Highs {
    * @brief Delete multiple rows from the model given by a set
    */
   bool deleteRows(
-		  const int num_set_entries, //!< The number of indides in the set
-		  const int* set             //!< Array of size num_set_entries with indices of columns
-                                             //!< to delete
-		  );
+      const int num_set_entries,  //!< The number of indides in the set
+      const int* set  //!< Array of size num_set_entries with indices of columns
+                      //!< to delete
+  );
 
   /**
    * @brief Delete multiple rows from the model given by a mask
    */
-  bool deleteRows(
-		  int* mask  //!< Full length array with 1 => delete; 0 => not. The new index of any row
-			     //!< not deleted is returned in place of the value 0.
-		  );
+  bool deleteRows(int* mask  //!< Full length array with 1 => delete; 0 => not.
+                             //!< The new index of any row not deleted is
+                             //!< returned in place of the value 0.
+  );
+
+  /**
+   * @brief Scale a matrix column (and cost) by a constant - flipping bounds if
+   * the constant is negative
+   */
+  bool scaleCol(const int col,         //!< Column to change
+                const double scaleval  //!< Scaling value
+  );
+
+  /**
+   * @brief Scale a matrix row by a constant - flipping bounds if the constant
+   * is negative
+   */
+  bool scaleRow(const int row,         //!< Row to change
+                const double scaleval  //!< Scaling value
+  );
 
   /**
    * Other methods for specialist applications
@@ -661,48 +719,63 @@ class Highs {
   // col_value, col_dual and row_dual set. If any of them are not set the
   // solution in Highs does not get updated.
   HighsStatus setSolution(
-			  const HighsSolution& solution //!< Solution to be used
-			  );
+      const HighsSolution& solution  //!< Solution to be used
+  );
 
   /**
    * @brief Uses the HighsBasis passed to set the basis for the
    * LP of the (first?) HighsModelObject
    */
-  HighsStatus setBasis(
-		       const HighsBasis& basis //!< Basis to be used
-		       );
-
-  // todo: getRangingInformation(..)
+  HighsStatus setBasis(const HighsBasis& basis  //!< Basis to be used
+  );
 
   /**
-   * @brief Clear data associated with solving the model: basis, solution and internal data etc
+   * @brief Clears the HighsBasis for the LP of the HighsModelObject
+   */
+  HighsStatus setBasis();
+
+  /**
+   * @brief Gets the value of infinity used by HiGHS
+   */
+  double getHighsInfinity();
+
+  /**
+   * @brief Gets the run time of HiGHS
+   */
+  double getHighsRunTime();
+  /**
+   * @brief Clear data associated with solving the model: basis, solution and
+   * internal data etc
    */
   HighsStatus clearSolver();
 
 #ifdef HiGHSDEV
   /**
-   * @brief Report the model status, solution and basis vector sizes and basis validity
+   * @brief Report the model status, solution and basis vector sizes and basis
+   * validity
    */
   void reportModelStatusSolutionBasis(const std::string message,
-				      const HighsModelStatus model_status,
-				      const HighsLp &lp,
-				      const HighsSolution &solution,
-				      const HighsBasis &basis);
+                                      const int hmo_ix = -1);
 #endif
 
-  std::string highsModelStatusToString(const HighsModelStatus model_status) const;
-  
-  std::string highsPrimalDualStatusToString(const int primal_dual_status);
-  
+  std::string highsModelStatusToString(
+      const HighsModelStatus model_status) const;
+
+  std::string primalDualStatusToString(const int primal_dual_status);
+
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
 #endif
+  void getPresolveReductionCounts(int& rows, int& cols, int& nnz) const;
+  PresolveComponentInfo getPresolveInfo() const { return presolve_.info_; }
+  void setPresolveOptions(const PresolveComponentOptions& options) {
+    presolve_.options_ = options;
+  }
 
  private:
   HighsSolution solution_;
   HighsBasis basis_;
   HighsLp lp_;
-  ICrashInfo icrash_info_;
 
   HighsTimer timer_;
 
@@ -726,23 +799,43 @@ class Highs {
   // it's set to the correct positive number in Highs::run()
   int omp_max_threads = 0;
 
-  HighsStatus runLpSolver(HighsModelObject& model, const string message);
+  HighsStatus runLpSolver(const int model_index, const string message);
 
-  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
-  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
+  PresolveComponent presolve_;
+  HighsPresolveStatus runPresolve();
+  HighsPostsolveStatus runPostsolve();
 
-  HighsStatus openWriteFile(const string filename,
-			    const string method_name,
-			    FILE*& file, bool& html) const;
+  HighsStatus openWriteFile(const string filename, const string method_name,
+                            FILE*& file, bool& html) const;
 
-  bool haveHmo(const string method_name);
+  HighsStatus getUseModelStatus(
+      HighsModelStatus& use_model_status,
+      const double unscaled_primal_feasibility_tolerance,
+      const double unscaled_dual_feasibility_tolerance,
+      const bool rerun_from_logical_basis = false);
 
-  bool updateHighsSolutionBasis();
+  bool unscaledOptimal(const double unscaled_primal_feasibility_tolerance,
+                       const double unscaled_dual_feasibility_tolerance,
+                       const bool report = false);
+
+  bool haveHmo(const string method_name) const;
+
+  void newHighsBasis();
+  void forceHighsSolutionBasisSize();
   bool getHighsModelStatusAndInfo(const int solved_hmo);
 
-  void underDevelopmentLogMessage(const string method_name);
+  HighsStatus reset();
 
-  friend class HighsMipSolver; 
+  void clearModelStatus();
+  void clearSolution();
+  void clearBasis();
+  void clearInfo();
+
+  void underDevelopmentLogMessage(const string method_name);
+  HighsStatus returnFromRun(const HighsStatus return_status);
+  HighsStatus returnFromHighs(const HighsStatus return_status);
+
+  friend class HighsMipSolver;
 };
 
 #endif

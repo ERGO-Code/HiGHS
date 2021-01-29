@@ -14,83 +14,89 @@
 #ifndef SIMPLEX_HSIMPLEX_H_
 #define SIMPLEX_HSIMPLEX_H_
 
-#include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
-#include "lp_data/HighsOptions.h"
-#include "lp_data/HighsStatus.h"
+
+enum class LpAction {
+  DUALISE = 0,
+  PERMUTE,
+  SCALE,
+  NEW_COSTS,
+  NEW_BOUNDS,
+  NEW_BASIS,
+  NEW_COLS,
+  NEW_ROWS,
+  DEL_COLS,
+  DEL_ROWS,
+  DEL_ROWS_BASIS_OK,
+  SCALED_COL,
+  SCALED_ROW,
+  BACKTRACKING
+};
 
 void setSimplexOptions(
-	     HighsModelObject& highs_model_object  //!< Model object in which simplex
-	                                           //!< options are to be set
-	     );
+    HighsModelObject& highs_model_object  //!< Model object in which simplex
+                                          //!< options are to be set
+);
 
-HighsStatus transition(
-		       HighsModelObject& highs_model_object  //!< Model object
-		       );
+int initialiseSimplexLpBasisAndFactor(HighsModelObject& highs_model_object,
+                                      const bool only_from_known_basis = false);
 
-bool basisConditionOk(HighsModelObject& highs_model_object, const std::string message);
+HighsStatus transition(HighsModelObject& highs_model_object  //!< Model object
+);
+
+void setNonbasicFlag(const HighsLp& simplex_lp, vector<int>& nonbasicFlag,
+                     const HighsBasisStatus* col_status = NULL,
+                     const HighsBasisStatus* row_status = NULL);
+
+void setNonbasicMove(const HighsLp& simplex_lp, const HighsScale& scale,
+                     const bool have_highs_basis, const HighsBasis& basis,
+                     const bool have_highs_solution,
+                     const HighsSolution& solution,
+                     SimplexBasis& simplex_basis);
+
+void initialiseNonbasicWorkValue(const HighsLp& simplex_lp,
+                                 const SimplexBasis& simplex_basis,
+                                 HighsSimplexInfo& simplex_info);
+
+bool basisConditionOk(HighsModelObject& highs_model_object,
+                      const double tolerance);
+
+// Methods not requiring HighsModelObject
 
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
                      const double dual_tolerance);
 
-// Methods not requiring HighsModelObject
+void appendNonbasicColsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewCol);
+void appendNonbasicColsToBasis(HighsLp& lp, SimplexBasis& basis,
+                               int XnumNewCol);
 
-void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewCol);
-void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNewCol);
+void appendBasicRowsToBasis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
+void appendBasicRowsToBasis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow);
 
-void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
-void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow);
+void reportBasis(const HighsOptions options, const HighsLp& lp,
+                 const HighsBasis& basis);
+void reportBasis(const HighsOptions options, const HighsLp& lp,
+                 const SimplexBasis& simplex_basis);
 
-bool basisOk(FILE* logfile, const HighsLp& lp, const HighsBasis& basis);
-bool basisOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis);
-
-bool nonbasicFlagOk(FILE* logfile, const HighsLp& lp, SimplexBasis& simplex_basis);
-
-#ifdef HiGHSDEV
-void report_basis(HighsLp& lp, HighsBasis& basis);
-void report_basis(HighsLp& lp, SimplexBasis& simplex_basis);
-#endif
-
-/*
-// Increment iteration count (here!) and (possibly) store the pivots for
-// debugging NLA
-void record_pivots(int columnIn, int columnOut, double alpha) {
-  // NB This is where the iteration count is updated!
-  if (columnIn >= 0) scaled_solution_params.simplex_iteration_count++;
-#ifdef HiGHSDEV
-  historyColumnIn.push_back(columnIn);
-  historyColumnOut.push_back(columnOut);
-  historyAlpha.push_back(alpha);
-#endif
-}
-#ifdef HiGHSDEV
-// Store and write out the pivots for debugging NLA
-void writePivots(const char* suffix) {
-  string filename = "z-" + simplex_lp_->model_name_ + "-" + suffix;
-  ofstream output(filename.c_str());
-  int count = historyColumnIn.size();
-  double current_run_highs_time = timer_->readRunHighsClock();
-  output << simplex_lp_->model_name_ << " " << count << "\t" <<
-current_run_highs_time << endl; output << setprecision(12); for (int i = 0; i <
-count; i++) { output << historyColumnIn[i] << "\t"; output <<
-historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
-  }
-  output.close();
-}
-#endif
-*/
 void computeDualObjectiveValue(HighsModelObject& highs_model_object,
                                int phase = 2);
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
+
+int setSourceOutFmBd(const HighsModelObject& highs_model_object,
+                     const int column_out);
+
 #ifdef HiGHSDEV
-void getPrimalValue(const HighsModelObject& highs_model_object, vector<double>& primal_value);
+void getPrimalValue(const HighsModelObject& highs_model_object,
+                    vector<double>& primal_value);
 void analysePrimalObjectiveValue(const HighsModelObject& highs_model_object);
 #endif
 
 void initialiseSimplexLpDefinition(HighsModelObject& highs_model);
 void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model);
+void extendSimplexLpRandomVectors(HighsModelObject& highs_model_object,
+                                  const int num_new_col, const int num_new_row);
 
 // SCALE:
 
@@ -103,98 +109,80 @@ void scaleFactorRanges(HighsModelObject& highs_model_object,
                        double& min_row_scale, double& max_row_scale);
 
 void scaleSimplexLp(HighsModelObject& highs_model);
+bool equilibrationScaleMatrix(HighsModelObject& highs_model);
+bool maxValueScaleMatrix(HighsModelObject& highs_model);
 
+HighsStatus deleteScale(const HighsOptions& options, vector<double>& scale,
+                        const HighsIndexCollection& index_collection);
 // PERMUTE:
 
 void permuteSimplexLp(HighsModelObject& highs_model);
 
+#ifdef HiGHSDEV
+// Only used to analyse the row and column status after Crash
 void initialise_basic_index(HighsModelObject& highs_model_object);
+#endif
 
-void allocate_work_and_base_arrays(HighsModelObject& highs_model_object);
+void allocateWorkAndBaseArrays(HighsModelObject& highs_model_object);
 
-void initialise_from_nonbasic(HighsModelObject& highs_model_object);
+void initialiseValueAndNonbasicMove(HighsModelObject& highs_model_object);
 
-void replace_from_nonbasic(HighsModelObject& highs_model_object);
+void initialisePhase2ColBound(HighsModelObject& highs_model_object);
 
-void initialise_with_logical_basis(HighsModelObject& highs_model_object);
+void initialisePhase2RowBound(HighsModelObject& highs_model_object);
 
-void initialise_value_from_nonbasic(HighsModelObject& highs_model_object,
-                                    int firstvar, int lastvar);
+void initialiseBound(HighsModelObject& highs_model_object, int phase = 2);
 
-void initialise_value(HighsModelObject& highs_model_object);
+void initialisePhase2ColCost(HighsModelObject& highs_model_object);
 
-void initialise_phase2_col_bound(HighsModelObject& highs_model_object,
-                                 int firstcol, int lastcol);
+void initialisePhase2RowCost(HighsModelObject& highs_model_object);
 
-void initialise_phase2_row_bound(HighsModelObject& highs_model_object,
-                                 int firstrow, int lastrow);
-
-void initialise_bound(HighsModelObject& highs_model_object, int phase = 2);
-
-void initialise_phase2_col_cost(HighsModelObject& highs_model_object,
-                                int firstcol, int lastcol);
-
-void initialise_phase2_row_cost(HighsModelObject& highs_model_object,
-                                int firstrow, int lastrow);
-
-void initialise_cost(HighsModelObject& highs_model_object, int perturb = 0);
-
-int get_nonbasicMove(HighsModelObject& highs_model_object, int var);
-
-void populate_work_arrays(HighsModelObject& highs_model_object);
-
-void replace_with_logical_basis(HighsModelObject& highs_model_object);
-
-void replace_with_new_basis(HighsModelObject& highs_model_object,
-                            const int* XbasicIndex);
-
-void setup_num_basic_logicals(HighsModelObject& highs_model_object);
+void initialiseCost(HighsModelObject& highs_model_object, int perturb = 0);
 
 #ifdef HiGHSDEV
 void reportSimplexProfiling(HighsModelObject& highs_model_object);
 
 #endif
-
+void setRunQuiet(HighsModelObject& highs_model_object);
 /**
  * @brief Get the Hager condition number estimate for the basis matrix of a
  * model
  */
-double computeBasisCondition(HighsModelObject& highs_model_object);
-
-bool work_arrays_ok(HighsModelObject& highs_model_object, int phase);
-
-bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object,
-                                         int var);
-
-bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object);
-
-bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase);
+double computeBasisCondition(const HighsModelObject& highs_model_object);
 
 void flip_bound(HighsModelObject& highs_model_object, int iCol);
 
-int compute_factor(HighsModelObject& highs_model_object);
+void simplexHandleRankDeficiency(HighsModelObject& highs_model_object);
+
+int computeFactor(HighsModelObject& highs_model_object);
 
 // Compute the primal values (in baseValue) and set the lower and upper bounds
 // of basic variables
 void computePrimal(HighsModelObject& highs_model_object);
 
-void computePrimalInfeasible(HighsModelObject& highs_model_object,
-                             const bool report = false);
+void computeSimplexInfeasible(HighsModelObject& highs_model_object);
+void computeSimplexPrimalInfeasible(HighsModelObject& highs_model_object);
+void computeSimplexDualInfeasible(HighsModelObject& highs_model_object);
 
-void computeDualInfeasible(HighsModelObject& highs_model_object,
-                           const bool report = false);
+void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object);
 
-void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
-				    const bool report = false);
+void computeSimplexLpDualInfeasible(HighsModelObject& highs_model_object);
 
-void choosePriceTechnique(const int price_strategy, const double row_ep_density, bool& use_col_price, bool& use_row_price_w_switch);
+void copySimplexInfeasible(HighsModelObject& highs_model_object);
+void copySimplexDualInfeasible(HighsModelObject& highs_model_object);
+void copySimplexPrimalInfeasible(HighsModelObject& highs_model_object);
 
-void computeTableauRowFromPiP(HighsModelObject& highs_model_object, const HVector& row_ep, HVector& row_ap);
+void choosePriceTechnique(const int price_strategy, const double row_ep_density,
+                          bool& use_col_price, bool& use_row_price_w_switch);
+
+void computeTableauRowFromPiP(HighsModelObject& highs_model_object,
+                              const HVector& row_ep, HVector& row_ap);
 
 void computeDual(HighsModelObject& highs_model_object);
 
 void correctDual(HighsModelObject& highs_model_object,
-                  int* free_infeasibility_count);
+                 int* free_infeasibility_count);
+void correctDual(HighsModelObject& highs_model_object);
 
 // Record the shift in the cost of a particular column
 void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount);
@@ -215,81 +203,62 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
                    int columnOut);
 
 bool reinvertOnNumericalTrouble(const std::string method_name,
-				const HighsModelObject& highs_model_object,
-				double& numerical_trouble_measure,
-				const double alpha_from_col,
-				const double alpha_from_row,
-				const double numerical_trouble_tolerance);
-
-// Wrapper for analyseSimplexBasicSolution when
-// not used to get suggested feasibility tolerances
-HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object,
-					const bool report=false);
-
-HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object, 
-					const HighsSolutionParams& scaled_solution_params,
-					const bool report=false);
-
-HighsStatus analyseSimplexBasicSolution(const HighsModelObject& highs_model_object, 
-					const HighsSolutionParams& unscaled_solution_params,
-					const HighsSolutionParams& scaled_solution_params,
-					const bool report=false);
-
-HighsStatus getScaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-								       HighsSolutionParams& scaled_solution_params);
-
-HighsStatus getUnscaledPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-									 HighsSolutionParams& unscaled_solution_params);
-
-HighsStatus getPrimalDualInfeasibilitiesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-								 HighsSolutionParams& unscaled_solution_params,
-								 HighsSolutionParams& scaled_solution_params);
+                                HighsModelObject& highs_model_object,
+                                double& numerical_trouble_measure,
+                                const double alpha_from_col,
+                                const double alpha_from_row,
+                                const double numerical_trouble_tolerance);
 
 // Analyse the unscaled solution from a Simplex basic solution to get
 // suggested feasibility tolerances for resolving the scaled LP
 // This sets highs_model_object.unscaled_solution_params_
-HighsStatus getNewPrimalDualInfeasibilityTolerancesFromSimplexBasicSolution(const HighsModelObject& highs_model_object,
-									    HighsSolutionParams& get_unscaled_solution_params,
-									    double& new_scaled_primal_feasibility_tolerance,
-									    double& new_scaled_dual_feasibility_tolerance);
+HighsStatus getNewInfeasibilityTolerancesFromSimplexBasicSolution(
+    const HighsModelObject& highs_model_object,
+    HighsSolutionParams& get_unscaled_solution_params,
+    double& new_scaled_primal_feasibility_tolerance,
+    double& new_scaled_dual_feasibility_tolerance);
 
-HighsStatus getPrimalDualInfeasibilitiesAndNewTolerancesFromSimplexBasicSolution(FILE* logfile,
-										 const HighsLp& lp,
-										 const HighsScale& scale,
-										 const SimplexBasis& basis,
-										 const HighsSimplexInfo& simplex_info,
-										 const HighsModelStatus scaled_model_status,
-										 const HighsSolutionParams& unscaled_solution_params,
-										 const HighsSolutionParams& scaled_solution_params,
-										 HighsSolutionParams& get_unscaled_solution_params,
-										 HighsSolutionParams& get_scaled_solution_params,
-										 double& new_scaled_primal_feasibility_tolerance,
-										 double& new_scaled_dual_feasibility_tolerance);
+HighsStatus getInfeasibilitiesAndNewTolerances(
+    const HighsOptions& options, const HighsLp& lp, const HighsScale& scale,
+    const SimplexBasis& basis, const HighsSimplexInfo& simplex_info,
+    const HighsModelStatus scaled_model_status,
+    const HighsSolutionParams& unscaled_solution_params,
+    const HighsSolutionParams& scaled_solution_params,
+    HighsSolutionParams& get_unscaled_solution_params,
+    HighsSolutionParams& get_scaled_solution_params,
+    double& new_scaled_primal_feasibility_tolerance,
+    double& new_scaled_dual_feasibility_tolerance);
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase);
 
 void reportSimplexLpStatus(
-			   HighsSimplexLpStatus&    
-			   simplex_lp_status,       // !< Status of simplex LP to be reported
-			   const char* message = "" // !< Message to be written in report
-			   );
-
-void invalidateSimplexLpBasis(
-			      HighsSimplexLpStatus&
-			      simplex_lp_status  // !< Status of simplex LP whose basis is to be invalidated
-			      );
-
-void invalidateSimplexLp(
-			 HighsSimplexLpStatus&
-			 simplex_lp_status  // !< Status of simplex LP to be invalidated
-			 );
-
-void updateSimplexLpStatus(
-			   HighsSimplexLpStatus&
-			   simplex_lp_status, // !< Status of simplex LP to be updated
-			   LpAction action    // !< Action prompting update
+    HighsSimplexLpStatus&
+        simplex_lp_status,    // !< Status of simplex LP to be reported
+    const char* message = ""  // !< Message to be written in report
 );
 
-bool simplexInfoOk(const HighsLp& lp, const HighsLp& simplex_lp, const HighsSimplexInfo& simplex_info);
+void invalidateSimplexLpBasisArtifacts(
+    HighsSimplexLpStatus&
+        simplex_lp_status  // !< Status of simplex LP whose
+                           // basis artifacts are to be invalidated
+);
+
+void invalidateSimplexLpBasis(
+    HighsSimplexLpStatus& simplex_lp_status  // !< Status of simplex LP whose
+                                             // basis is to be invalidated
+);
+
+void invalidateSimplexLp(
+    HighsSimplexLpStatus&
+        simplex_lp_status  // !< Status of simplex LP to be invalidated
+);
+
+void updateSimplexLpStatus(
+    HighsSimplexLpStatus&
+        simplex_lp_status,  // !< Status of simplex LP to be updated
+    LpAction action         // !< Action prompting update
+);
+
+bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 #endif  // SIMPLEX_HSIMPLEX_H_

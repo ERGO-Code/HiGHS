@@ -15,6 +15,7 @@
 #define PRESOLVE_PRESOLVE_H_
 
 #include <list>
+#include <map>
 #include <stack>
 #include <stdexcept>
 #include <string>
@@ -22,13 +23,17 @@
 #include <vector>
 
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsSolution.h"
+#include "presolve/HAggregator.h"
 #include "presolve/HPreData.h"
 #include "presolve/PresolveAnalysis.h"
+#include "test/DevKkt.h"
 
 using std::list;
 using std::string;
 
 enum class HighsPostsolveStatus {
+  NotPresolved = -1,
   ReducedSolutionEmpty,
   ReducedSolutionDimenionsError,
   SolutionRecovered,
@@ -45,43 +50,90 @@ enum class HighsPresolveStatus {
   Empty,
   Reduced,
   ReducedToEmpty,
-  NullError
+  Timeout,
+  NullError,
+  OptionsError,
 };
+
+namespace presolve {
+
+enum class Presolver {
+  kMainEmpty,
+  kMainRowSingletons,
+  kMainForcing,
+  kMainColSingletons,
+  kMainDoubletonEq,
+  kMainDominatedCols,
+  kMainSingletonsOnly,
+  kMainMipDualFixing,
+};
+
+const std::map<Presolver, std::string> kPresolverNames{
+    {Presolver::kMainEmpty, "Empty & fixed ()"},
+    {Presolver::kMainRowSingletons, "Row singletons ()"},
+    {Presolver::kMainForcing, "Forcing rows ()"},
+    {Presolver::kMainColSingletons, "Col singletons ()"},
+    {Presolver::kMainDoubletonEq, "Doubleton eq ()"},
+    {Presolver::kMainDominatedCols, "Dominated Cols()"},
+    {Presolver::kMainSingletonsOnly, "Singletons only()"},
+    {Presolver::kMainMipDualFixing, "Dual fixing ()"}};
 
 class Presolve : public HPreData {
  public:
-  Presolve(HighsTimer& timer_ref) : timer(timer_ref) {
-    tol = 0.0000001;
-    noPostSolve = false;
-    objShift = 0;
-    hasChange = true;
-    iKKTcheck = 0;
-    iPrint = 0;
-    countsFile = "";
-  }
+  Presolve(HighsTimer& timer_ref) : timer(timer_ref) {}
+  virtual ~Presolve() {}
 
   HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
-                                 HighsSolution& recovered_solution);
+                                 const HighsBasis& reduced_basis,
+                                 HighsSolution& recovered_solution,
+                                 HighsBasis& recovered_basis);
 
-  void setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status,
-                    const std::vector<HighsBasisStatus>& pass_row_status);
-  const std::vector<HighsBasisStatus>& getRowStatus() { return row_status; }
-  const std::vector<HighsBasisStatus>& getColStatus() { return col_status; }
+  HighsPostsolveStatus primalPostsolve(
+      const std::vector<double>& reduced_solution,
+      HighsSolution& recovered_solution);
 
-  void load(const HighsLp& lp);
+  void setNumericalTolerances();
+  void load(const HighsLp& lp, bool mip = false);
   // todo: clear the public from below.
   string modelName;
 
+  // Options
+  std::vector<Presolver> order;
+
+  struct AggregatorCall {
+    HAggregator::PostsolveStack postsolveStack;
+    std::vector<double> colCostAtCall;
+    std::vector<double> ARvalueAtCall;
+    std::vector<int> ARindexAtCall;
+    std::vector<int> ARstartAtCall;
+  };
+
+  std::vector<AggregatorCall> aggregatorStack;
+
+  int max_iterations = 0;
+
+  void setTimeLimit(const double limit) {
+    assert(limit < inf && limit > 0);
+    timer.time_limit = limit;
+  }
+
+  int iPrint = 0;
+  int message_level;
+  FILE* output;
+  double objShift;
+
  private:
-  int iPrint;
-  int iKKTcheck;
+  int iKKTcheck = 0;
   int presolve(int print);
 
   const bool report_postsolve = false;
 
-  double objShift;
   void initializeVectors();
+  void runAggregator();
+  void runPropagator();
+  void detectImpliedIntegers();
+  void applyMipDualFixing();
   void setProblemStatus(const int s);
   void reportTimes();
 
@@ -112,12 +164,13 @@ class Presolve : public HPreData {
     Empty = 3,
     Optimal = 4,
     Reduced = 5,
+    Timeout = 6,
   };
 
  private:
-  bool hasChange;
+  bool mip;
+  bool hasChange = true;
   int status = 0;  // 0 is unassigned, see enum stat
-  friend class PresolveInfo;
 
   list<int> singRow;  // singleton rows
   list<int> singCol;  // singleton columns
@@ -133,13 +186,15 @@ class Presolve : public HPreData {
   vector<double> colUpperOriginal;
 
   // functions
-  void setPrimalValue(int j, double value);
+  void setPrimalValue(const int j, const double value);
   void checkForChanges(int iteration);
   void resizeProblem();
   void resizeImpliedBounds();
 
   // easy transformations
-  void removeIfFixed(int j);
+  void removeFixedCol(int j);
+  void removeEmpty();
+  void removeFixed();
   void removeEmptyRow(int i);
   void removeEmptyColumn(int j);
   void removeRow(int i);
@@ -151,7 +206,7 @@ class Presolve : public HPreData {
   int getSingColElementIndexInA(int j);
 
   // forcing constraints
-  void removeForcingConstraints(int mainIter);
+  void removeForcingConstraints();
   pair<double, double> getImpliedRowBounds(int row);
   void setVariablesToBoundForForcingRow(const int row, const bool isLower);
   void dominatedConstraintProcedure(const int i, const double g,
@@ -178,6 +233,7 @@ class Presolve : public HPreData {
   void removeColumnSingletons();
   bool removeIfImpliedFree(int col, int i, int k);
   void removeFreeColumnSingleton(const int col, const int row, const int k);
+  void removeZeroCostColumnSingleton(const int col, const int row, const int k);
   bool removeColumnSingletonInDoubletonInequality(const int col, const int i,
                                                   const int k);
   void removeSecondColumnSingletonInDoubletonRow(const int j, const int i);
@@ -209,26 +265,38 @@ class Presolve : public HPreData {
   void countRemovedRows(PresolveRule rule);
   void countRemovedCols(PresolveRule rule);
 
-  double tol;
+  double tol = 0.0000001;
+  const double default_primal_feasiblility_tolerance = 1e-7;
+  const double default_dual_feasiblility_tolerance = 1e-7;
+  const double default_small_matrix_value = 1e-9;
+  double inconsistent_bounds_tolerance;
+  double fixed_column_tolerance;
+  double doubleton_equation_bound_tolerance;
+  double doubleton_inequality_bound_tolerance;
+  double presolve_small_matrix_value;
+  double empty_row_bound_tolerance;
+  double dominated_column_tolerance;
+  double weakly_dominated_column_tolerance;
 
   // postsolve
-  bool noPostSolve;
+  bool noPostSolve = false;
 
-  void addChange(PresolveRule type, int row, int col);
-  void fillStackRowBounds(int col);
+  void addChange(const PresolveRule type, const int row, const int col);
+  void fillStackRowBounds(const int col);
   void setKKTcheckerData();
 
-  void getBoundOnLByZj(int row, int j, double* lo, double* up, double colLow,
-                       double colUpp);
-  double getRowDualPost(int row, int col);
-  double getColumnDualPost(int col);
-  string getDualsForcingRow(int row, vector<int>& fRjs);
-  void getDualsSingletonRow(int row, int col);
-  void getDualsDoubletonEquation(int row, int col);
+  void getBoundOnLByZj(const int row, const int j, double* lo, double* up,
+                       const double colLow, const double colUpp);
+  double getRowDualPost(const int row, const int col);
+  double getColumnDualPost(const int col);
+  void roundIntegerBounds(int col);
+  string getDualsForcingRow(const int row, vector<int>& fRjs);
+  void getDualsSingletonRow(const int row, const int col);
+  void getDualsDoubletonEquation(const int row, const int col);
   void recordCounts(const string fileName);
   void trimA();
 
-  void setBasisElement(change c);
+  void setBasisElement(const change c);
 
   // test basis matrix singularity
   //
@@ -240,38 +308,25 @@ class Presolve : public HPreData {
   //	int testBasisMatrixSingularity();
   //
 
-  string countsFile;
+  // Dev presolve
+  // April 2020
+  void reportDevMainLoop();
+  void reportDevMidMainLoop();
+  PresolveStats stats;
+  int runPresolvers(const std::vector<Presolver>& order);
+
+  void checkKkt(const bool final = false);
+  dev_kkt_check::State initState(const bool intermediate = false);
+
+  void caseTwoSingletonsDoubletonInequality(const int row, const int x,
+                                            const int y);
+
+  // August 2020
+  void removeSingletonsOnly();
+  bool isKnapsack(const int col) const;
+  void removeKnapsack(const int col);
 };
 
-// comment out whole class and see what the issue is.
-
-// Class for easy communication between Presolve and Highs. A single
-// instance of PresolveInfo handles a single presolve execution on one
-// LP.
-class PresolveInfo {
- public:
-  PresolveInfo() {}
-  // option_presolve : off_string means don't presolve.
-  PresolveInfo(std::string option_presolve, const HighsLp& lp, HighsTimer& timer) {
-    if (option_presolve != off_string) {
-      lp_ = &lp;
-      presolve_.push_back(Presolve(timer));
-    }
-  }
-
-  HighsLp& getReducedProblem();
-  HighsPresolveStatus presolve_status_;
-  HighsPostsolveStatus postsolve_status_;
-
- public:
-  // Original problem is lp_.
-  const HighsLp* lp_;
-  std::vector<Presolve> presolve_;
-  HighsLp reduced_lp_;
-
-  // todo: make reduced one const.
-  HighsSolution reduced_solution_;
-  HighsSolution recovered_solution_;
-};
+}  // namespace presolve
 
 #endif /* PRESOLVE_HPRESOLVE_H_ */
