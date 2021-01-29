@@ -109,6 +109,8 @@ set(sources
     mip/HighsCliqueTable.cpp
     mip/HighsImplications.cpp
     mip/HighsNodeQueue.cpp
+    presolve/ICrash.cpp
+    presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
@@ -202,6 +204,8 @@ set(headers
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
+    presolve/ICrash.h
+    presolve/ICrashUtil.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
@@ -423,6 +427,8 @@ target_sources(libhighs PRIVATE
     lp_data/HighsSolve.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
+    presolve/ICrash.cpp
+    presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
@@ -515,6 +521,8 @@ set(headers_fast_build_
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
+    presolve/ICrash.h
+    presolve/ICrashUtil.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h

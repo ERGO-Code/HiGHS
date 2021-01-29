@@ -19,6 +19,7 @@
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsRanging.h"
 #include "lp_data/HighsSolutionDebug.h"
+#include "presolve/ICrash.h"
 #include "presolve/PresolveComponent.h"
 
 /**
@@ -189,6 +190,8 @@ class Highs {
    * @brief Returns the HighsSolution
    */
   const HighsSolution& getSolution() const;
+
+  const ICrashInfo& getICrashInfo() const;
 
   /**
    * @brief Returns the HighsBasis
@@ -776,6 +779,7 @@ class Highs {
   HighsSolution solution_;
   HighsBasis basis_;
   HighsLp lp_;
+  ICrashInfo icrash_info_;
 
   HighsTimer timer_;
 

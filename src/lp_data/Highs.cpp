@@ -493,6 +493,31 @@ basis_.valid_, hmos_[0].basis_.valid_);
   // original LP
   int solved_hmo = original_hmo;
 
+  if (options_.icrash) {
+    ICrashStrategy strategy = ICrashStrategy::kICA;
+    bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
+    if (!strategy_ok) {
+      HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+                        "ICrash error: unknown strategy.\n");
+      return HighsStatus::Error;
+    }
+    ICrashOptions icrash_options{
+        options_.icrash_dualize,
+        strategy,
+        options_.icrash_starting_weight,
+        options_.icrash_iterations,
+        options_.icrash_approximate_minimization_iterations,
+        options_.icrash_exact,
+        options_.icrash_breakpoints,
+        options_.logfile,
+        options_.output,
+        options_.message_level};
+
+    // todo: timing. some strange compile issue.
+    HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
+    return icrash_status;
+  }
+
   if (!basis_.valid_ && options_.presolve != off_string) {
     // No HiGHS basis so consider presolve
     //
@@ -893,6 +918,8 @@ basis_.valid_, hmos_[0].basis_.valid_);
 const HighsLp& Highs::getLp() const { return lp_; }
 
 const HighsSolution& Highs::getSolution() const { return solution_; }
+
+const ICrashInfo& Highs::getICrashInfo() const { return icrash_info_; }
 
 const HighsBasis& Highs::getBasis() const { return basis_; }
 
