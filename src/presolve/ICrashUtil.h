@@ -18,7 +18,7 @@
 #include <vector>
 
 class HighsLp;
-class HighsSolution;
+struct HighsSolution;
 
 // Calculates value of A^t*v in result.
 void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,

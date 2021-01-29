@@ -18,6 +18,7 @@
 #include <cmath>
 
 #include "io/HighsIO.h"
+#include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 

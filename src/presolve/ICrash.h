@@ -28,6 +28,7 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
+#include "lp_data/HStruct.h"
 
 enum class ICrashStrategy {
   kPenalty,

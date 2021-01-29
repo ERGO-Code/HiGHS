@@ -17,14 +17,14 @@
 #include <vector>
 
 #include "HConfig.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HStruct.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsUtils.h"
 
-class HighsLp;
 struct HighsScale;
 struct HighsBasis;
-struct HighsSolution;
 class HighsOptions;
 
 using std::vector;
