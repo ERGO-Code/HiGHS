@@ -188,9 +188,9 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     double sparsity = 1.0 - (end - start) / (double)domain.colLower_.size();
     ages_[i] = 0;
-    double efficacy = double(1e-2 * sparsity + viol / sqrt(double(rownorm)));
+    double score = double(sparsity * (1e-3 + viol / sqrt(double(rownorm))));
 
-    efficacious_cuts.emplace_back(efficacy, i);
+    efficacious_cuts.emplace_back(score, i);
   }
 
   std::sort(efficacious_cuts.begin(), efficacious_cuts.end(),
