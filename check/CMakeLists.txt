@@ -24,6 +24,7 @@ set(TEST_SOURCES
     TestInfo.cpp
     TestBasis.cpp
     TestBasisSolves.cpp
+    TestHighsIntegers.cpp
     TestHSet.cpp
     TestLpValidation.cpp
     TestLpModification.cpp

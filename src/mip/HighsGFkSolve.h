@@ -51,8 +51,8 @@ struct HighsGFk<3> {
 template <int k>
 struct HighsGFk {
   static constexpr unsigned int powk(unsigned int a) {
-    return k & 1 == 0 ? HighsGFk<2>::powk(HighsGFk<k / 2>::powk(a))
-                      : HighsGFk<k - 1>::powk(a) * a;
+    return (k & 1) == 0 ? HighsGFk<2>::powk(HighsGFk<k / 2>::powk(a))
+                        : HighsGFk<k - 1>::powk(a) * a;
   }
 
   static unsigned int inverse(unsigned int a) {
@@ -143,8 +143,12 @@ class HighsGFkSolve {
 
     for (int i = 0; i != numCol; ++i) {
       for (int j = Astart[i]; j != Astart[i + 1]; ++j) {
-        unsigned int val = ((unsigned int)std::abs(Aval[j])) % k;
+        assert(Aval[j] == (int64_t)Aval[j]);
+        int64_t val = ((int64_t)Aval[j]) % k;
         if (val == 0) continue;
+
+        if (val < 0) val += k;
+        assert(val >= 0);
 
         Avalue.push_back(val);
         Acol.push_back(i);

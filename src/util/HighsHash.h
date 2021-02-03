@@ -29,6 +29,13 @@ struct HighsPairHasher {
 };
 
 struct HighsVectorHasher {
+  template <typename U, typename V>
+  size_t operator()(const std::vector<std::pair<U, V>>& vec) const {
+    size_t hash = vec.size();
+    for (const auto& x : vec) hash_combine(hash, HighsPairHasher()(x));
+    return hash;
+  }
+
   template <typename T>
   size_t operator()(const std::vector<T>& vec) const {
     size_t hash = vec.size();

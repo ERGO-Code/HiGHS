@@ -4,6 +4,7 @@
 #include <unordered_set>
 
 #include "lp_data/HighsLpUtils.h"
+#include "mip/HighsCutGeneration.h"
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsHash.h"
 
@@ -277,8 +278,8 @@ bool HighsPrimalHeuristics::tryRoundedPoint(const std::vector<double>& point,
       double rhs;
       if (lprelax.computeDualInfProof(mipsolver.mipdata_->domain, inds, vals,
                                       rhs)) {
-        HighsSeparation::computeAndAddConflictCut(mipsolver, localdom, inds,
-                                                  vals, rhs);
+        HighsCutGeneration cutGen(lprelax, mipsolver.mipdata_->cutpool);
+        cutGen.generateConflict(localdom, inds, vals, rhs);
       }
       return false;
     } else if (lprelax.unscaledPrimalFeasible(st)) {
@@ -382,8 +383,8 @@ void HighsPrimalHeuristics::randomizedRounding(
       double rhs;
       if (lprelax.computeDualInfProof(mipsolver.mipdata_->domain, inds, vals,
                                       rhs)) {
-        HighsSeparation::computeAndAddConflictCut(mipsolver, localdom, inds,
-                                                  vals, rhs);
+        HighsCutGeneration cutGen(lprelax, mipsolver.mipdata_->cutpool);
+        cutGen.generateConflict(localdom, inds, vals, rhs);
       }
 
     } else if (lprelax.unscaledPrimalFeasible(st))

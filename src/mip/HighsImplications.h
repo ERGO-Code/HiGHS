@@ -10,6 +10,7 @@
 #include "mip/HighsDomainChange.h"
 
 class HighsCliqueTable;
+class HighsLpRelaxation;
 
 class HighsImplications {
   std::vector<HighsDomainChange> implications;
@@ -99,6 +100,12 @@ class HighsImplications {
 
   void rebuild(int ncols, const std::vector<int>& cIndex,
                const std::vector<int>& rIndex);
+
+  void separateImpliedBounds(const HighsLpRelaxation& lpRelaxation,
+                             const std::vector<double>& sol,
+                             HighsCutPool& cutpool, double feastol);
+
+  void cleanupVarbounds(int col);
 };
 
 #endif

@@ -502,7 +502,8 @@ void HighsMipSolverData::runSetup() {
     }
   }
 
-  if (!domain.getChangedCols().empty()) lp.flushDomain(domain, true);
+  for (int col : domain.getChangedCols()) implications.cleanupVarbounds(col);
+  domain.clearChangedCols();
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   // lp.getLpSolver().setHighsOptionValue("dual_simplex_cleanup_strategy", 0);
@@ -532,6 +533,7 @@ void HighsMipSolverData::runSetup() {
         integral_cols.push_back(i);
     }
   }
+  nodequeue.setNumCol(mipsolver.numCol());
 
   debugSolution.activate();
 }
@@ -741,8 +743,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
   double lb = mipsolver.mipdata_->lower_bound + offset;
   double ub = HIGHS_CONST_INF;
   double gap = HIGHS_CONST_INF;
-  int lpcuts =
-      mipsolver.mipdata_->lp.getNumLpRows() - mipsolver.model_->numRow_;
+  int lpcuts = mipsolver.mipdata_->lp.numRows() - mipsolver.model_->numRow_;
 
   if (upper_bound != HIGHS_CONST_INF) {
     ub = upper_bound + offset;
@@ -831,7 +832,7 @@ void HighsMipSolverData::evaluateRootNode() {
 
   HighsLpRelaxation::Status status = lp.getStatus();
 
-  HighsSeparation sepa;
+  HighsSeparation sepa(mipsolver);
   sepa.setLpRelaxation(&lp);
 
   total_lp_iterations = lp.getNumLpIterations();
@@ -976,8 +977,6 @@ void HighsMipSolverData::evaluateRootNode() {
     rootlpsol = lp.getLpSolver().getSolution().col_value;
     rootlpsolobj = lp.getObjective();
     lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
-
-    nodequeue.setNumCol(mipsolver.numCol());
 
     // add the root node to the nodequeue to initialize the search
     nodequeue.emplaceNode(std::vector<HighsDomainChange>(), lp.getObjective(),

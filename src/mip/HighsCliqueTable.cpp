@@ -701,6 +701,7 @@ void HighsCliqueTable::extractCliques(
             constant -= globaldom.colUpper_[col];
             implics.addVLB(col, bincol, -double(coef), -double(constant));
           } else {
+            constant += globaldom.colLower_[col];
             implics.addVUB(col, bincol, double(coef), double(constant));
           }
         }

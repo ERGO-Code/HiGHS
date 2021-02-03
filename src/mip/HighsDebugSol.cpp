@@ -12,34 +12,38 @@ HighsDebugSol::HighsDebugSol(HighsMipSolver& mipsolver)
   this->mipsolver = &mipsolver;
   debugSolObjective = HIGHS_CONST_INF;
   debugSolActive = false;
-  if (mipsolver.submip) return;
-  if (!mipsolver.options_mip_->mip_debug_solution_file.empty()) {
-    HighsPrintMessage(mipsolver.options_mip_->output,
-                      mipsolver.options_mip_->message_level, ML_MINIMAL,
+}
+
+void HighsDebugSol::activate() {
+  if (!mipsolver->submip &&
+      debugSolObjective <= mipsolver->mipdata_->upper_limit &&
+      !mipsolver->options_mip_->mip_debug_solution_file.empty()) {
+    HighsPrintMessage(mipsolver->options_mip_->output,
+                      mipsolver->options_mip_->message_level, ML_MINIMAL,
                       "reading debug solution file %s\n",
-                      mipsolver.options_mip_->mip_debug_solution_file.c_str());
-    std::ifstream file(mipsolver.options_mip_->mip_debug_solution_file);
+                      mipsolver->options_mip_->mip_debug_solution_file.c_str());
+    std::ifstream file(mipsolver->options_mip_->mip_debug_solution_file);
     if (file) {
       std::string varname;
       double varval;
       std::map<std::string, int> nametoidx;
 
-      if (mipsolver.model_->col_names_.empty()) {
-        for (int i = 0; i != mipsolver.model_->numCol_; ++i)
+      if (mipsolver->model_->col_names_.empty()) {
+        for (int i = 0; i != mipsolver->model_->numCol_; ++i)
           nametoidx["C" + std::to_string(i)] = i;
       } else {
-        for (int i = 0; i != mipsolver.model_->numCol_; ++i)
-          nametoidx[mipsolver.model_->col_names_[i]] = i;
+        for (int i = 0; i != mipsolver->model_->numCol_; ++i)
+          nametoidx[mipsolver->model_->col_names_[i]] = i;
       }
 
-      debugSolution.resize(mipsolver.model_->numCol_, 0.0);
+      debugSolution.resize(mipsolver->model_->numCol_, 0.0);
       while (!file.eof()) {
         file >> varname;
         auto it = nametoidx.find(varname);
         if (it != nametoidx.end()) {
           file >> varval;
-          HighsPrintMessage(mipsolver.options_mip_->output,
-                            mipsolver.options_mip_->message_level, ML_MINIMAL,
+          HighsPrintMessage(mipsolver->options_mip_->output,
+                            mipsolver->options_mip_->message_level, ML_MINIMAL,
                             "%s = %g\n", varname.c_str(), varval);
           debugSolution[it->second] = varval;
         }
@@ -48,39 +52,53 @@ HighsDebugSol::HighsDebugSol(HighsMipSolver& mipsolver)
       }
 
       HighsCDouble debugsolobj = 0.0;
-      for (int i = 0; i != mipsolver.model_->numCol_; ++i)
-        debugsolobj += mipsolver.model_->colCost_[i] * debugSolution[i];
+      for (int i = 0; i != mipsolver->model_->numCol_; ++i)
+        debugsolobj += mipsolver->model_->colCost_[i] * debugSolution[i];
 
       debugSolObjective = double(debugsolobj);
+      debugSolActive = true;
+      printf("debug sol active\n");
+      registerDomain(mipsolver->mipdata_->domain);
     } else {
-      HighsLogMessage(mipsolver.options_mip_->logfile,
+      HighsLogMessage(mipsolver->options_mip_->logfile,
                       HighsMessageType::WARNING,
                       "debug solution: could not open file '%s'\n",
-                      mipsolver.options_mip_->mip_debug_solution_file.c_str());
-      FilereaderMps().writeModelToFile(*mipsolver.options_mip_, "debug_mip.mps",
-                                       *mipsolver.model_);
+                      mipsolver->options_mip_->mip_debug_solution_file.c_str());
+      HighsLp model = *mipsolver->model_;
+      model.colLower_ = mipsolver->mipdata_->domain.colLower_;
+      model.colUpper_ = mipsolver->mipdata_->domain.colUpper_;
+      FilereaderMps().writeModelToFile(*mipsolver->options_mip_,
+                                       "debug_mip.mps", model);
     }
   }
 }
 
-void HighsDebugSol::activate() {
-  if (mipsolver->submip ||
-      debugSolObjective > mipsolver->mipdata_->upper_limit ||
-      (int)debugSolution.size() != mipsolver->numCol())
-    debugSolActive = false;
-  else
-    debugSolActive = true;
+void HighsDebugSol::registerDomain(const HighsDomain& domain) {
+  conflictingBounds.emplace(&domain, std::set<HighsDomainChange>());
+
+  if (!debugSolActive) return;
+
+  for (int i = 0; i != mipsolver->numCol(); ++i) {
+    assert(domain.colLower_[i] <=
+           debugSolution[i] + mipsolver->mipdata_->feastol);
+    assert(domain.colUpper_[i] >=
+           debugSolution[i] - mipsolver->mipdata_->feastol);
+  }
 }
 
 void HighsDebugSol::newIncumbentFound() {
-  if (debugSolObjective > mipsolver->mipdata_->upper_limit)
+  if (debugSolActive && debugSolObjective > mipsolver->mipdata_->upper_limit) {
+    printf("debug sol inactive\n");
     debugSolActive = false;
+  }
 }
 
 void HighsDebugSol::boundChangeAdded(const HighsDomain& domain,
                                      const HighsDomainChange& domchg,
                                      bool branching) {
   if (!debugSolActive) return;
+
+  if (conflictingBounds.count(&domain) == 0) return;
 
   if (domchg.boundtype == HighsBoundType::Lower) {
     if (domchg.boundval <=
@@ -103,6 +121,9 @@ void HighsDebugSol::boundChangeAdded(const HighsDomain& domain,
 void HighsDebugSol::boundChangeRemoved(const HighsDomain& domain,
                                        const HighsDomainChange& domchg) {
   if (!debugSolActive) return;
+
+  if (conflictingBounds.count(&domain) == 0) return;
+
   conflictingBounds[&domain].erase(domchg);
 }
 
@@ -119,11 +140,15 @@ void HighsDebugSol::checkCut(const int* Rindex, const double* Rvalue, int Rlen,
 }
 
 void HighsDebugSol::resetDomain(const HighsDomain& domain) {
-  conflictingBounds.erase(&domain);
+  if (conflictingBounds.count(&domain) == 0) return;
+
+  conflictingBounds[&domain].clear();
 }
 
 void HighsDebugSol::nodePruned(const HighsDomain& localdomain) {
   if (!debugSolActive) return;
+
+  if (conflictingBounds.count(&localdomain) == 0) return;
 
   assert(!conflictingBounds[&localdomain].empty());
 }
@@ -138,6 +163,22 @@ void HighsDebugSol::checkClique(const HighsCliqueTable::CliqueVar* clq,
     violation += (int)(clq[i].weight(debugSolution) + 0.5);
 
   assert(violation <= 0);
+}
+
+void HighsDebugSol::checkVub(int col, int vubcol, double vubcoef,
+                             double vubconstant) const {
+  if (!debugSolActive) return;
+
+  assert(debugSolution[col] <= debugSolution[vubcol] * vubcoef + vubconstant +
+                                   mipsolver->mipdata_->feastol);
+}
+
+void HighsDebugSol::checkVlb(int col, int vlbcol, double vlbcoef,
+                             double vlbconstant) const {
+  if (!debugSolActive) return;
+
+  assert(debugSolution[col] >= debugSolution[vlbcol] * vlbcoef + vlbconstant -
+                                   mipsolver->mipdata_->feastol);
 }
 
 #endif

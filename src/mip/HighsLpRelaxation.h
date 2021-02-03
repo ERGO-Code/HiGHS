@@ -95,6 +95,10 @@ class HighsLpRelaxation {
     return lprows[row].getMaxAbsVal(mipsolver);
   }
 
+  const HighsLp& getLp() const { return lpsolver.getLp(); }
+
+  const HighsSolution& getSolution() const { return lpsolver.getSolution(); }
+
   double slackUpper(int row) const;
 
   double slackLower(int row) const;
@@ -102,6 +106,30 @@ class HighsLpRelaxation {
   double rowLower(int row) const { return lpsolver.getLp().rowLower_[row]; }
 
   double rowUpper(int row) const { return lpsolver.getLp().rowUpper_[row]; }
+
+  double colLower(int col) const {
+    return col < lpsolver.getLp().numCol_
+               ? lpsolver.getLp().colLower_[col]
+               : slackLower(col - lpsolver.getLp().numCol_);
+  }
+
+  double colUpper(int col) const {
+    return col < lpsolver.getLp().numCol_
+               ? lpsolver.getLp().colUpper_[col]
+               : slackUpper(col - lpsolver.getLp().numCol_);
+  }
+
+  bool isColIntegral(int col) const {
+    return col < lpsolver.getLp().numCol_
+               ? mipsolver.variableType(col) != HighsVarType::CONTINUOUS
+               : isRowIntegral(col - lpsolver.getLp().numCol_);
+  }
+
+  double solutionValue(int col) const {
+    return col < lpsolver.getLp().numCol_
+               ? getSolution().col_value[col]
+               : getSolution().row_value[col - lpsolver.getLp().numCol_];
+  }
 
   Status getStatus() const { return status; }
 
@@ -176,7 +204,9 @@ class HighsLpRelaxation {
 
   int getNumModelRows() const { return mipsolver.numRow(); }
 
-  int getNumLpRows() const { return lpsolver.getNumRows(); }
+  int numRows() const { return lpsolver.getNumRows(); }
+
+  int numCols() const { return lpsolver.getNumCols(); }
 
   void addCuts(HighsCutSet& cutset);
 

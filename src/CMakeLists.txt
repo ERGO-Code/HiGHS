@@ -100,10 +100,17 @@ set(sources
     mip/HighsDynamicRowMatrix.cpp
     mip/HighsLpRelaxation.cpp
     mip/HighsSeparation.cpp
+    mip/HighsSeparator.cpp
+    mip/HighsTableauSeparator.cpp
+    mip/HighsModkSeparator.cpp
+    mip/HighsPathSeparator.cpp
+    mip/HighsCutGeneration.cpp
     mip/HighsSearch.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
     mip/HighsGFkSolve.cpp
+    mip/HighsTransformedLp.cpp
+    mip/HighsLpAggregator.cpp
     mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
@@ -421,10 +428,17 @@ target_sources(libhighs PRIVATE
     mip/HighsDynamicRowMatrix.cpp
     mip/HighsLpRelaxation.cpp
     mip/HighsSeparation.cpp
+    mip/HighsSeparator.cpp
+    mip/HighsTableauSeparator.cpp
+    mip/HighsModkSeparator.cpp
+    mip/HighsPathSeparator.cpp
+    mip/HighsCutGeneration.cpp
     mip/HighsSearch.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
     mip/HighsGFkSolve.cpp
+    mip/HighsTransformedLp.cpp
+    mip/HighsLpAggregator.cpp
     mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp

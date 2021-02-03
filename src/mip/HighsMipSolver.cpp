@@ -221,7 +221,8 @@ void HighsMipSolver::run() {
 
   std::shared_ptr<const HighsBasis> basis;
   HighsSearch search{*this, mipdata_->pseudocost};
-  HighsSeparation sepa;
+  mipdata_->debugSolution.registerDomain(search.getLocalDomain());
+  HighsSeparation sepa(*this);
 
   search.setLpRelaxation(&mipdata_->lp);
   sepa.setLpRelaxation(&mipdata_->lp);
@@ -339,6 +340,9 @@ void HighsMipSolver::run() {
                         ML_MINIMAL, "added %d global bound changes\n",
                         (int)mipdata_->domain.getChangedCols().size());
       mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
+      for( int col : mipdata_->domain.getChangedCols() )
+        mipdata_->implications.cleanupVarbounds(col);
+
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
       search.resetLocalDomain();
 

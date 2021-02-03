@@ -17,9 +17,11 @@
 #define UTIL_HIGHSCDOUBLE_H_
 
 #include <cmath>
+#include <cstdint>
 
 /// A compensated double number achieving roughly quad precision on the
 /// supported operations
+
 class HighsCDouble {
  private:
   double hi;
@@ -262,6 +264,26 @@ class HighsCDouble {
     res.hi *= 0.5;
     res.lo *= 0.5;
     return res;
+  }
+
+  friend HighsCDouble floor(const HighsCDouble& x) {
+    double floor_x = std::floor(double(x));
+    HighsCDouble res;
+
+    two_sum(res.hi, res.lo, floor_x, std::floor(double(x - floor_x)));
+    return res;
+  }
+
+  friend HighsCDouble ceil(const HighsCDouble& x) {
+    double ceil_x = std::ceil(double(x));
+    HighsCDouble res;
+
+    two_sum(res.hi, res.lo, ceil_x, std::ceil(double(x - ceil_x)));
+    return res;
+  }
+
+  friend HighsCDouble round(const HighsCDouble& x) {
+    return floor(x + 0.5);
   }
 };
 

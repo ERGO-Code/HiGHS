@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
@@ -8,43 +7,29 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file mip/HighsLpAggregator.h
- * @brief Class that implements a separation loop
+/**@file mip/HighsTableauSeparator.h
+ * @brief Class for separating cuts from the LP tableaux rows
  *
  * @author Leona Gottwald
  */
 
-#ifndef MIP_HIGHS_SEPARATION_H_
-#define MIP_HIGHS_SEPARATION_H_
+#ifndef MIP_HIGHS_TABLEAU_SEPARATOR_H_
+#define MIP_HIGHS_TABLEAU_SEPARATOR_H_
 
-#include <cstdint>
-#include <vector>
-
-#include "mip/HighsCutPool.h"
-#include "mip/HighsLpRelaxation.h"
 #include "mip/HighsSeparator.h"
 
-class HighsMipSolver;
-class HighsImplications;
-class HighsCliqueTable;
-
-class HighsSeparation {
- public:
-  int separationRound(HighsDomain& propdomain,
-                      HighsLpRelaxation::Status& status);
-
-  void separate(HighsDomain& propdomain);
-
-  void setLpRelaxation(HighsLpRelaxation* lp) { this->lp = lp; }
-
-  HighsSeparation(const HighsMipSolver& mipsolver);
-
+/// Helper class to compute single-row relaxations from the current LP
+/// relaxation by substituting bounds and aggregating rows
+class HighsTableauSeparator : public HighsSeparator {
  private:
-  int implBoundClock;
-  int cliqueClock;
-  std::vector<std::unique_ptr<HighsSeparator>> separators;
-  HighsCutSet cutset;
-  HighsLpRelaxation* lp;
+ public:
+  void separateLpSolution(HighsLpRelaxation& lpRelaxation,
+                          HighsLpAggregator& lpAggregator,
+                          HighsTransformedLp& transLp,
+                          HighsCutPool& cutpool) override;
+
+  HighsTableauSeparator(const HighsMipSolver& mipsolver)
+      : HighsSeparator(mipsolver, "Tableau sepa", "Tbl") {}
 };
 
 #endif

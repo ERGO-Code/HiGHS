@@ -70,7 +70,7 @@ class HighsMipSolver {
 
   void setModel(const HighsLp& model) { model_ = &model; }
 
-  HighsTimer timer_;
+  mutable HighsTimer timer_;
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve();
   HighsPostsolveStatus runPostsolve();

@@ -2,6 +2,7 @@
 
 #include <numeric>
 
+#include "mip/HighsCutGeneration.h"
 #include "mip/HighsMipSolverData.h"
 
 HighsSearch::HighsSearch(HighsMipSolver& mipsolver,
@@ -136,8 +137,10 @@ void HighsSearch::addBoundExceedingConflict() {
     if (lp->computeDualProof(mipsolver.mipdata_->domain,
                              mipsolver.mipdata_->upper_limit, inds, vals,
                              rhs)) {
-      HighsSeparation::computeAndAddConflictCut(mipsolver, localdom, inds, vals,
-                                                rhs);
+      HighsCutGeneration cutGen(*lp, mipsolver.mipdata_->cutpool);
+      mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(), inds.size(), rhs);
+      cutGen.generateConflict(localdom, inds, vals, rhs);
+
       // int cutind = cutpool.addCut(inds.data(), vals.data(), inds.size(),
       // rhs); localdom.cutAdded(cutind);
     }
@@ -159,8 +162,9 @@ void HighsSearch::addInfeasibleConflict() {
     //  }
     //}
     // int oldnumcuts = cutpool.getNumCuts();
-    HighsSeparation::computeAndAddConflictCut(mipsolver, localdom, inds, vals,
-                                              rhs);
+    HighsCutGeneration cutGen(*lp, mipsolver.mipdata_->cutpool);
+    mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(), inds.size(), rhs);
+    cutGen.generateConflict(localdom, inds, vals, rhs);
 
     // if (cutpool.getNumCuts() > oldnumcuts) {
     //  printf(
@@ -535,7 +539,10 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
                             nodestack.back().lower_bound,
                             nodestack.back().estimate, getCurrentDepth());
     } else
+    {
+      mipsolver.mipdata_->debugSolution.nodePruned(localdom);
       treeweight += std::pow(0.5, getCurrentDepth() - 1);
+    }
     nodestack.back().opensubtrees = 0;
 
     backtrack();
@@ -943,12 +950,23 @@ bool HighsSearch::branch() {
     lp->getLpSolver().setHighsOptionValue("presolve", "off");
 
     if (currnode.opensubtrees != 0) {
-      printf(
-          "WARNING: all integers colls are fixed, LP may be unstable, possibly "
-          "pruning optimal solution, lp status: scaled=%d unscaled=%d\n",
-          (int)lp->getLpSolver().getModelStatus(true),
-          (int)lp->getLpSolver().getModelStatus(false));
-      currnode.opensubtrees = 0;
+      Highs ipm;
+      ipm.passModel(lp->getLp()); ipm.setHighsOptionValue("solver", "ipm");
+      ipm.setHighsOutput();
+      ipm.setHighsLogfile();
+      ipm.run();
+      lp->getLpSolver().clearSolver();
+      lp->getLpSolver().setBasis(ipm.getBasis());
+      evaluateNode();
+      if(currnode.opensubtrees != 0)
+      {
+        //printf(
+        //    "WARNING: all integers colls are fixed, LP may be unstable, possibly "
+        //    "pruning optimal solution, lp status: scaled=%d unscaled=%d\n",
+        //    (int)lp->getLpSolver().getModelStatus(true),
+        //    (int)lp->getLpSolver().getModelStatus(false));
+        currnode.opensubtrees = 0;
+      }
     }
     return false;
   }

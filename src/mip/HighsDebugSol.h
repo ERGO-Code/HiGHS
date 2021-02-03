@@ -41,6 +41,8 @@ struct HighsDebugSol {
 
   void activate();
 
+  void registerDomain(const HighsDomain& domain);
+
   void boundChangeAdded(const HighsDomain& domain,
                         const HighsDomainChange& domchg,
                         bool branching = false);
@@ -55,6 +57,10 @@ struct HighsDebugSol {
   void checkCut(const int* Rindex, const double* Rvalue, int Rlen, double rhs);
 
   void checkClique(const HighsCliqueTable::CliqueVar* clq, int clqlen);
+
+  void checkVub(int col, int vubcol, double vubcoef, double vubconstant) const;
+
+  void checkVlb(int col, int vlbcol, double vlbcoef, double vlbconstant) const;
 };
 
 #else
@@ -64,6 +70,8 @@ struct HighsDebugSol {
   void newIncumbentFound() const {}
 
   void activate() {}
+
+  void registerDomain(const HighsDomain& domain) const {}
 
   void boundChangeAdded(const HighsDomain& domain,
                         const HighsDomainChange& domchg,
@@ -80,6 +88,12 @@ struct HighsDebugSol {
                 double rhs) const {}
 
   void checkClique(const HighsCliqueTable::CliqueVar* clq, int clqlen) const {}
+
+  void checkVub(int col, int vubcol, double vubcoef, double vubconstant) const {
+  }
+
+  void checkVlb(int col, int vlbcol, double vlbcoef, double vlbconstant) const {
+  }
 };
 #endif
 

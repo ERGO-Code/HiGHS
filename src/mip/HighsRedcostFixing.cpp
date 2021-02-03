@@ -32,7 +32,8 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
                                           HighsDomain& localdomain,
                                           const std::vector<double>& lpredcost,
                                           double lpobjective) {
-  double gap = mipsolver.mipdata_->upper_limit - lpobjective;
+  HighsCDouble gap =
+      HighsCDouble(mipsolver.mipdata_->upper_limit) - lpobjective;
   double tolerance = 10 * mipsolver.mipdata_->feastol;
   assert(!localdomain.infeasible());
   for (int col : mipsolver.mipdata_->integral_cols) {
@@ -47,9 +48,10 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
     //   redcost >= / <=  gap * (ub - lb)
     if (localdomain.colUpper_[col] == localdomain.colLower_[col]) continue;
 
-    double threshold =
-        (localdomain.colUpper_[col] - localdomain.colLower_[col]) * gap +
-        tolerance;
+    double threshold = double((HighsCDouble(localdomain.colUpper_[col]) -
+                               localdomain.colLower_[col]) *
+                                  gap +
+                              tolerance);
 
     if ((localdomain.colUpper_[col] == HIGHS_CONST_INF &&
          lpredcost[col] > tolerance) ||
@@ -57,8 +59,9 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       assert(localdomain.colLower_[col] != -HIGHS_CONST_INF);
       assert(lpredcost[col] > tolerance);
       double newub =
-          std::floor(gap / lpredcost[col] + localdomain.colLower_[col] +
-                     mipsolver.mipdata_->feastol);
+          double(floor(gap / lpredcost[col] + localdomain.colLower_[col] +
+                       mipsolver.mipdata_->feastol));
+      if (newub >= localdomain.colUpper_[col]) continue;
       assert(newub < localdomain.colUpper_[col]);
 
       localdomain.changeBound(HighsBoundType::Upper, col, newub,
@@ -70,8 +73,10 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
       assert(localdomain.colUpper_[col] != HIGHS_CONST_INF);
       assert(lpredcost[col] < -tolerance);
       double newlb =
-          std::ceil(gap / lpredcost[col] + localdomain.colUpper_[col] -
-                    mipsolver.mipdata_->feastol);
+          double(ceil(gap / lpredcost[col] + localdomain.colUpper_[col] -
+                      mipsolver.mipdata_->feastol));
+
+      if (newlb >= localdomain.colUpper_[col]) continue;
       assert(newlb > localdomain.colLower_[col]);
 
       localdomain.changeBound(HighsBoundType::Lower, col, newlb,
