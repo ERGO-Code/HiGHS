@@ -672,7 +672,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
   return true;
 }
 
-bool HighsCutGeneration::postprocessCut() {
+bool HighsCutGeneration::postprocessCut(bool checkViolation) {
   double maxAbsValue;
   if (integralSupport) {
     if (integralCoefficients) return true;
@@ -682,7 +682,7 @@ bool HighsCutGeneration::postprocessCut() {
     for (int i = 0; i != rowlen; ++i)
       maxAbsValue = std::max(std::abs(vals[i]), maxAbsValue);
 
-    double minCoefficientValue = std::max(maxAbsValue * feastol, epsilon);
+    double minCoefficientValue = std::max(maxAbsValue * 100 * feastol, epsilon);
 
     for (int i = 0; i != rowlen; ++i) {
       if (vals[i] == 0) continue;
@@ -777,7 +777,7 @@ bool HighsCutGeneration::postprocessCut() {
     for (int i = 0; i != rowlen; ++i)
       maxAbsValue = std::max(std::abs(vals[i]), maxAbsValue);
 
-    double minCoefficientValue = maxAbsValue * feastol;
+    double minCoefficientValue = maxAbsValue * 100 * feastol;
 
     // now remove small coefficients and determine the smallest absolute
     // coefficient of an integral variable
@@ -814,12 +814,12 @@ bool HighsCutGeneration::postprocessCut() {
     }
   }
 
-  // check if the cut is violated enough in the transformed space before
-  // cleaning up
-  HighsCDouble violation = -rhs;
-  for (int i = 0; i != rowlen; ++i) violation += solval[i] * vals[i];
+  if (checkViolation) {
+    HighsCDouble violation = -rhs;
+    for (int i = 0; i != rowlen; ++i) violation += solval[i] * vals[i];
 
-  if (violation <= 10 * feastol) return false;
+    if (violation <= 10 * feastol) return false;
+  }
 
   HighsCDouble maxact = 0.0;
   for (int i = 0; i != rowlen; ++i) {
@@ -1017,8 +1017,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   }
 
   // apply cut postprocessing including scaling and removal of small
-  // coefficients
-  if (!postprocessCut()) return false;
+  // coeffiicents
+  if (!postprocessCut(true)) return false;
 
   // transform the cut back into the original space, i.e. remove the bound
   // substitution and replace implicit slack variables
@@ -1165,7 +1165,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
   // apply cut postprocessing including scaling and removal of small
   // coefficients
-  if (!postprocessCut()) return false;
+  if (!postprocessCut(false)) return false;
 
   // remove zeros in place
   for (int i = rowlen - 1; i >= 0; --i) {
