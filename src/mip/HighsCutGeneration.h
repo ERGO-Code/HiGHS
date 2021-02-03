@@ -38,6 +38,7 @@ class HighsCutGeneration {
   HighsCDouble lambda;
   std::vector<double> upper;
   std::vector<double> solval;
+  std::vector<uint8_t> complementation;
   const double feastol;
   const double epsilon;
 

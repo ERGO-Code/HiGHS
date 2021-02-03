@@ -904,14 +904,28 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
   if (numZeros != 0) {
     // remove zeros in place
-    for (int i = rowlen - 1; i >= 0; --i) {
-      if (vals[i] == 0.0) {
-        --rowlen;
-        inds[i] = inds[rowlen];
-        vals[i] = vals[rowlen];
-        upper[i] = upper[rowlen];
-        solval[i] = solval[rowlen];
-        if (--numZeros == 0) break;
+    if (complementation.empty()) {
+      for (int i = rowlen - 1; i >= 0; --i) {
+        if (vals[i] == 0.0) {
+          --rowlen;
+          inds[i] = inds[rowlen];
+          vals[i] = vals[rowlen];
+          upper[i] = upper[rowlen];
+          solval[i] = solval[rowlen];
+          if (--numZeros == 0) break;
+        }
+      }
+    } else {
+      for (int i = rowlen - 1; i >= 0; --i) {
+        if (vals[i] == 0.0) {
+          --rowlen;
+          inds[i] = inds[rowlen];
+          vals[i] = vals[rowlen];
+          upper[i] = upper[rowlen];
+          solval[i] = solval[rowlen];
+          complementation[i] = complementation[rowlen];
+          if (--numZeros == 0) break;
+        }
       }
     }
   }
@@ -947,7 +961,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   this->inds = inds_.data();
   this->vals = vals_.data();
   this->rhs = rhs_;
-
+  complementation.clear();
   bool hasUnboundedInts = false;
   bool hasGeneralInts = false;
   bool hasContinuous = false;
@@ -1027,7 +1041,10 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   this->rhs = proofrhs;
   rowlen = proofinds.size();
 
-  std::vector<uint8_t> complementation(rowlen);
+  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
+      inds, vals, rowlen, proofrhs);
+
+  complementation.assign(rowlen, 0);
 
   upper.resize(rowlen);
   solval.resize(rowlen);
@@ -1143,6 +1160,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   }
 
   proofvals.resize(rowlen);
+  proofinds.resize(rowlen);
   proofrhs = (double)rhs;
 
   bool cutintegral = integralSupport && integralCoefficients;
