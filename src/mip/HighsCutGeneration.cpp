@@ -814,6 +814,13 @@ bool HighsCutGeneration::postprocessCut() {
     }
   }
 
+  // check if the cut is violated enough in the transformed space before
+  // cleaning up
+  HighsCDouble violation = -rhs;
+  for (int i = 0; i != rowlen; ++i) violation += solval[i] * vals[i];
+
+  if (violation <= 10 * feastol) return false;
+
   HighsCDouble maxact = 0.0;
   for (int i = 0; i != rowlen; ++i) {
     if (vals[i] > 0) {
@@ -1009,13 +1016,6 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     }
   }
 
-  // check if the cut is violated enough in the transformed space before
-  // cleaning up
-  HighsCDouble violation = -rhs;
-  for (int i = 0; i != rowlen; ++i) violation += solval[i] * vals[i];
-
-  if (violation <= 10 * feastol) return false;
-
   // apply cut postprocessing including scaling and removal of small
   // coefficients
   if (!postprocessCut()) return false;
@@ -1036,7 +1036,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                                                rowlen, rhs_);
 
   // finally determine the violation of the cut in the original space
-  violation = -rhs_;
+  HighsCDouble violation = -rhs_;
   const auto& sol = lpRelaxation.getSolution().col_value;
   for (int i = 0; i != rowlen; ++i) violation += sol[inds[i]] * vals_[i];
 

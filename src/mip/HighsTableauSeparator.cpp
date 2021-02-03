@@ -43,7 +43,6 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   const HighsMipSolver& mip = lpRelaxation.getMipSolver();
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
-  size_t maxbaserowlen = 100 + 0.1 * (mip.numCol() + mip.numRow());
 
   for (int i = 0; i != int(basisinds.size()); ++i) {
     double fractionality;
@@ -74,8 +73,6 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
-
-    //if (baseRowInds.size() > maxbaserowlen) continue;
 
     double rhs = 0;
     cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
