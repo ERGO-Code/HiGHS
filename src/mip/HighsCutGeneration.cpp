@@ -1154,6 +1154,10 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
     }
   }
 
+  // apply cut postprocessing including scaling and removal of small
+  // coefficients
+  if (!postprocessCut()) return false;
+
   // remove the complementation
   for (int i = 0; i != rowlen; ++i) {
     if (complementation[i]) {
@@ -1162,10 +1166,6 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
     } else
       rhs += globaldomain.colLower_[inds[i]] * vals[i];
   }
-
-  // apply cut postprocessing including scaling and removal of small
-  // coefficients
-  if (!postprocessCut()) return false;
 
   // remove zeros in place
   for (int i = rowlen - 1; i >= 0; --i) {
