@@ -963,11 +963,13 @@ void HighsDomain::tightenCoefficients(int* inds, double* vals, int len,
     }
   }
 
-  if (maxactivity - rhs > mipsolver->mipdata_->feastol) {
+  HighsCDouble maxabscoef = maxactivity - rhs;
+  if (maxabscoef > mipsolver->mipdata_->feastol) {
     HighsCDouble upper = rhs;
-    HighsCDouble maxabscoef = double(maxactivity - rhs);
     int tightened = 0;
     for (int i = 0; i != len; ++i) {
+      if (mipsolver->variableType(inds[i]) == HighsVarType::CONTINUOUS)
+        continue;
       if (vals[i] > maxabscoef) {
         HighsCDouble delta = vals[i] - maxabscoef;
         upper -= delta * colUpper_[inds[i]];
