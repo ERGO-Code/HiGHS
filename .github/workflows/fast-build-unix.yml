@@ -29,7 +29,7 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config $BUILD_TYPE
+      run: cmake --build . --parallel --config $BUILD_TYPE
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
@@ -53,14 +53,19 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE
+      run: cmake -DFAST_BUILD=ON -DEXP=ON -DIPX=ON $GITHUB_WORKSPACE 
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . 
+      run: cmake --build . --parallel
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: ctest
+
+    - name: Doctest
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: ./doctest

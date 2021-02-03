@@ -189,11 +189,6 @@ if (OSI_FOUND)
 endif (OSI_FOUND)
 
 set(IPX_ON ON)
-#option(IPX_ON OFF)
-#if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5))
-#    set(IPX_ON ON)
-#endif()
-
 include(CheckLanguage)
 check_language("Fortran")
 if(CMAKE_Fortran_COMPILER)
@@ -450,6 +445,9 @@ if (NOT JULIA)
     add_instance_tests(infeasibleInstances "Infeasible" " ")
     add_instance_tests(unboundedInstances "Unbounded" " ")
 
+    if (IPX_ON)
+        set(settings ${settings} "--solver=ipm")
+    endif()
     foreach(setting ${settings})
         add_instance_tests(optionsInstances "Optimal" ${setting})
     endforeach()
@@ -459,12 +457,16 @@ if (EXP)
     add_executable(doctest)
     #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
     target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
+
+    if (IPX_ON AND NOT APPLE)
+        # triggers hanging on macOS
+        target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
+    endif()
+
     target_include_directories(doctest PRIVATE external)
     target_link_libraries(doctest libhighs)
 endif()
 
-# Dashboards later on.
-# include(CTest)
 
 if (UNIX)
     install(TARGETS libhighs EXPORT highs-targets
@@ -477,12 +479,6 @@ elseif (WIN32)
             PUBLIC_HEADER DESTINATION include)
 endif()
 
-# if (IPX_ON)
-#     install(TARGETS ipx EXPORT highs-targets
-#             LIBRARY DESTINATION lib
-#             ARCHIVE DESTINATION lib
-#             INCLUDES DESTINATION include)
-# endif()
 
 endif()
 

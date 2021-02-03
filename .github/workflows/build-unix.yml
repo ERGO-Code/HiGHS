@@ -1,4 +1,4 @@
-name: build
+name: build-unix
 
 on: ["push"]
 
@@ -26,7 +26,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-         cmake --build . --config DEBUG
+         cmake --build . --parallel --config DEBUG
 
 
     - name: Test
@@ -51,14 +51,14 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RELEASE
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RELEASE -DFAST_BUILD=OFF
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
-         cmake --build . --config RELEASE
+         cmake --build . --parallel --config RELEASE
 
 
     - name: Test

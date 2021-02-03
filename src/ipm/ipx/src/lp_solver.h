@@ -14,7 +14,7 @@ namespace ipx {
 
 class LpSolver {
 public:
-    // Solves an LP problem in the form given in the reference documentation.
+    // Loads an LP model in the form given in the reference documentation.
     // @num_var: number of variables, must be > 0.
     // @obj: size num_var array of objective coefficients.
     // @lb: size num_var array of variable lower bounds, can have -INFINITY.
@@ -23,10 +23,54 @@ public:
     // @Ap, @Ai, @Ax: constraint matrix in CSC format; indices can be unsorted.
     // @rhs: size num_constr array of right-hand side entries.
     // @constr_type: size num_constr array of entries '>', '<' and '='.
+    // Returns:
+    //  0
+    //  IPX_ERROR_argument_null
+    //  IPX_ERROR_invalid_dimension
+    //  IPX_ERROR_invalid_matrix
+    //  IPX_ERROR_invalid_vector
+    Int LoadModel(Int num_var, const double* obj, const double* lb,
+                  const double* ub, Int num_constr, const Int* Ap,
+                  const Int* Ai, const double* Ax, const double* rhs,
+                  const char* constr_type);
+
+    // Loads a primal-dual point as starting point for the IPM.
+    // @x: size num_var array
+    // @xl: size num_var array, must satisfy xl[j] >= 0 for all j and
+    //      xl[j] == INFINITY iff lb[j] == -INFINITY.
+    // @xu: size num_var array, must satisfy xu[j] >= 0 for all j and
+    //      xu[j] == INFINITY iff ub[j] == INFINITY.
+    // @slack: size num_constr array, must satisfy
+    //         slack[i] == 0 if constr_type[i] == '='
+    //         slack[i] >= 0 if constr_type[i] == '<'
+    //         slack[i] <= 0 if constr_type[i] == '>'
+    // @y: size num_constr array, must satisfy
+    //     y[i] >= 0 if constr_type[i] == '>'
+    //     y[i] <= 0 if constr_type[i] == '<'
+    // @zl: size num_var array, must satsify zl[j] >= 0 for all j and
+    //      zl[j] == 0 if lb[j] == -INFINITY
+    // @zu: size num_var array, must satsify zu[j] >= 0 for all j and
+    //      zu[j] == 0 if ub[j] == INFINITY
+    // When a starting point was loading successfully (return value 0), then
+    // the next call to Solve() will start the IPM from that point, except that
+    // primal and dual slacks with value 0 are made positive if necessary. The
+    // IPM will skip the initial iterations and start directly with basis
+    // preconditioning.
+    // At the moment loading a starting point is not possible when the model was
+    // dualized during preprocessing. See parameters to turn dualization off.
+    // Returns:
+    // 0                            success
+    // IPX_ERROR_argument_null      an argument was NULL
+    // IPX_ERROR_invalid_vector     a sign condition was violated
+    // IPX_ERROR_not_implemented    the model was dualized during preprocessing
+    Int LoadIPMStartingPoint(const double* x, const double* xl,
+                             const double* xu, const double* slack,
+                             const double* y, const double* zl,
+                             const double* zu);
+
+    // Solves the model that is currently loaded in the object.
     // Returns GetInfo().status.
-    Int Solve(Int num_var, const double* obj, const double* lb,
-              const double* ub, Int num_constr, const Int* Ap, const Int* Ai,
-              const double* Ax, const double* rhs, const char* constr_type);
+    Int Solve();
 
     // Returns the solver info from the last call to Solve(). See the reference
     // documentation for the meaning of Info values.
@@ -58,6 +102,9 @@ public:
 
     // Discards the model and solution (if any) but keeps the parameters.
     void ClearModel();
+
+    // Discards the starting point (if any).
+    void ClearIPMStartingPoint();
 
     // -------------------------------------------------------------------------
     // The remaining methods are for debugging.
@@ -101,8 +148,10 @@ public:
     Int SymbolicInvert(Int* rowcounts, Int* colcounts);
 
 private:
+    void ClearSolution();
     void InteriorPointSolve();
     void RunIPM();
+    void MakeIPMStartingPointValid();
     void ComputeStartingPoint(IPM& ipm);
     void RunInitialIPM(IPM& ipm);
     void BuildStartingBasis();
@@ -121,6 +170,9 @@ private:
     // If crossover was not run or failed, then basic_statuses_ is empty.
     Vector x_crossover_, y_crossover_, z_crossover_;
     std::vector<Int> basic_statuses_;
+
+    // IPM starting point provided by user (presolved).
+    Vector x_start_, xl_start_, xu_start_, y_start_, zl_start_, zu_start_;
 };
 
 }  // namespace ipx

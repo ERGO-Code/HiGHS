@@ -124,8 +124,6 @@ static void PostprocessDependencies(Iterate* iterate, Basis* p_basis,
         assert(zl[n+i] == 0.0);
         assert(zu[n+i] == 0.0);
     }
-    (void)(zl);
-    (void)(zu);
 }
 
 void StartingBasis(Iterate* iterate, Basis* p_basis, Info* info) {
