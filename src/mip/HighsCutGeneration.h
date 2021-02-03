@@ -58,7 +58,7 @@ class HighsCutGeneration {
 
   bool cmirCutGenerationHeuristic();
 
-  bool postprocessCut(bool checkViolation);
+  bool postprocessCut();
 
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
                                 bool& hasContinuous);

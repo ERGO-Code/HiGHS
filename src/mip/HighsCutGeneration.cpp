@@ -672,7 +672,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic() {
   return true;
 }
 
-bool HighsCutGeneration::postprocessCut(bool checkViolation) {
+bool HighsCutGeneration::postprocessCut() {
   double maxAbsValue;
   if (integralSupport) {
     if (integralCoefficients) return true;
@@ -812,13 +812,6 @@ bool HighsCutGeneration::postprocessCut(bool checkViolation) {
           vals[i] = std::ldexp(vals[i], expshift);
       }
     }
-  }
-
-  if (checkViolation) {
-    HighsCDouble violation = -rhs;
-    for (int i = 0; i != rowlen; ++i) violation += solval[i] * vals[i];
-
-    if (violation <= 10 * feastol) return false;
   }
 
   HighsCDouble maxact = 0.0;
@@ -1016,9 +1009,16 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     }
   }
 
+  // check the violation before post-processing and discard the cut if not
+  // violated enough
+  HighsCDouble violation = -rhs;
+  for (int i = 0; i != rowlen; ++i) violation += solval[i] * vals[i];
+
+  if (violation <= 10 * feastol) return false;
+
   // apply cut postprocessing including scaling and removal of small
   // coeffiicents
-  if (!postprocessCut(true)) return false;
+  if (!postprocessCut()) return false;
 
   // transform the cut back into the original space, i.e. remove the bound
   // substitution and replace implicit slack variables
@@ -1036,7 +1036,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                                                rowlen, rhs_);
 
   // finally determine the violation of the cut in the original space
-  HighsCDouble violation = -rhs_;
+  violation = -rhs_;
   const auto& sol = lpRelaxation.getSolution().col_value;
   for (int i = 0; i != rowlen; ++i) violation += sol[inds[i]] * vals_[i];
 
@@ -1165,7 +1165,7 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
   // apply cut postprocessing including scaling and removal of small
   // coefficients
-  if (!postprocessCut(false)) return false;
+  if (!postprocessCut()) return false;
 
   // remove zeros in place
   for (int i = rowlen - 1; i >= 0; --i) {
