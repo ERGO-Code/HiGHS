@@ -1019,8 +1019,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 
   if (violation <= 10 * feastol) return false;
 
-  // lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-  //    inds, vals, rowlen, rhs_);
+  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
+      inds, vals, rowlen, rhs_);
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
@@ -1178,8 +1178,8 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   // if the cut is violated above the feasibility tolerance we add it
   if (violation <= feastol) return false;
 
-  // lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
-  //    proofinds.data(), proofvals.data(), proofinds.size(), proofrhs);
+  lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
+      proofinds.data(), proofvals.data(), rowlen, proofrhs);
 
   int cutindex =
       cutpool.addCut(lpRelaxation.getMipSolver(), proofinds.data(),
