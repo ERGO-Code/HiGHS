@@ -834,8 +834,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   hasGeneralInts = false;
   int numZeros = 0;
 
-  HighsCDouble maxact = 0.0;
-  bool maxactinf = false;
+  double maxact = -feastol;
   for (int i = 0; i != rowlen; ++i) {
     if (std::abs(vals[i]) <= feastol) {
       if (vals[i] < 0) {
@@ -853,7 +852,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
       if (vals[i] > 0) {
         if (upper[i] == HIGHS_CONST_INF)
-          maxactinf = true;
+          maxact = HIGHS_CONST_INF;
         else
           maxact += vals[i] * upper[i];
       }
@@ -861,8 +860,8 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
       if (upper[i] == HIGHS_CONST_INF) {
         hasUnboundedInts = true;
         hasGeneralInts = true;
-        if (vals[i] > 0.0) maxactinf = true;
-        if (maxactinf) break;
+        if (vals[i] > 0.0) maxact = HIGHS_CONST_INF;
+        if (maxact == HIGHS_CONST_INF) break;
       } else if (upper[i] != 1.0) {
         hasGeneralInts = true;
       }
@@ -930,26 +929,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
     }
   }
 
-  if (!maxactinf) {
-    double maxabscoef = double(maxact - rhs);
-    if (maxabscoef <= feastol) return false;
-
-    int ntightened = 0;
-    for (int i = 0; i != rowlen; ++i) {
-      if (!lpRelaxation.isColIntegral(inds[i])) continue;
-
-      if (vals[i] > maxabscoef) {
-        HighsCDouble delta = vals[i] - maxabscoef;
-        rhs -= delta * upper[i];
-        vals[i] = maxabscoef;
-        ++ntightened;
-      } else if (vals[i] < -maxabscoef) {
-        vals[i] = -maxabscoef;
-      }
-    }
-  }
-
-  return true;
+  return maxact > rhs;
 }
 
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
