@@ -8,11 +8,16 @@
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsSplay.h"
 
+#define ESTIMATE_WEIGHT (1.0 / 128.0)
+#define LOWERBOUND_WEIGHT (127.0 / 128.0)
+
 void HighsNodeQueue::link_estim(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
+    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
+                               ESTIMATE_WEIGHT * nodes[n].estimate,
+                           n);
   };
 
   assert(node != -1);
@@ -24,7 +29,9 @@ void HighsNodeQueue::unlink_estim(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
+    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
+                               ESTIMATE_WEIGHT * nodes[n].estimate,
+                           n);
   };
 
   assert(estimroot != -1);
@@ -254,12 +261,13 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightestimate; };
   auto get_key = [&](int n) {
-    return std::make_tuple(nodes[n].lower_bound, nodes[n].estimate, n);
+    return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
+                               ESTIMATE_WEIGHT * nodes[n].estimate,
+                           n);
   };
 
-  estimroot =
-      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_INF, 0),
-                  estimroot, get_left, get_right, get_key);
+  estimroot = highs_splay(std::make_tuple(-HIGHS_CONST_INF, 0), estimroot,
+                          get_left, get_right, get_key);
   int bestestimnode = estimroot;
 
   unlink(bestestimnode);
