@@ -4,23 +4,7 @@
 
 #include "lp_data/HighsLpUtils.h"
 #include "presolve/HAggregator.h"
-
-static int64_t gcd(int64_t a, int64_t b) {
-  int h;
-  if (a < 0) a = -a;
-  if (b < 0) b = -b;
-
-  if (a == 0) return b;
-  if (b == 0) return a;
-
-  do {
-    h = a % b;
-    a = b;
-    b = h;
-  } while (b != 0);
-
-  return a;
-}
+#include "util/HighsIntegers.h"
 
 bool HighsMipSolverData::trySolution(const std::vector<double>& solution,
                                      char source) {
@@ -1057,7 +1041,7 @@ void HighsMipSolverData::checkObjIntegrality() {
         currgcd = intval < 0 ? -intval : intval;
         continue;
       }
-      currgcd = gcd(intval, currgcd);
+      currgcd = HighsIntegers::gcd(intval, currgcd);
       if (currgcd == 1) break;
     }
 

@@ -108,7 +108,7 @@ void HighsCutPool::performAging() {
 
   int agelim = agelim_;
   int numActiveCuts = getNumCuts() - numLpCuts;
-  while (agelim > 2 && numActiveCuts > softlimit_) {
+  while (agelim > 1 && numActiveCuts > softlimit_) {
     numActiveCuts -= ageDistribution[agelim];
     --agelim;
   }
@@ -142,7 +142,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
   int agelim = agelim_;
 
   int numCuts = getNumCuts() - numLpCuts;
-  while (agelim > 2 && numCuts > softlimit_) {
+  while (agelim > 1 && numCuts > softlimit_) {
     numCuts -= ageDistribution[agelim];
     --agelim;
   }

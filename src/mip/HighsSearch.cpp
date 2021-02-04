@@ -138,7 +138,8 @@ void HighsSearch::addBoundExceedingConflict() {
                              mipsolver.mipdata_->upper_limit, inds, vals,
                              rhs)) {
       HighsCutGeneration cutGen(*lp, mipsolver.mipdata_->cutpool);
-      mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(), inds.size(), rhs);
+      mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
+                                                 inds.size(), rhs);
       cutGen.generateConflict(localdom, inds, vals, rhs);
 
       // int cutind = cutpool.addCut(inds.data(), vals.data(), inds.size(),
@@ -163,7 +164,8 @@ void HighsSearch::addInfeasibleConflict() {
     //}
     // int oldnumcuts = cutpool.getNumCuts();
     HighsCutGeneration cutGen(*lp, mipsolver.mipdata_->cutpool);
-    mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(), inds.size(), rhs);
+    mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
+                                               inds.size(), rhs);
     cutGen.generateConflict(localdom, inds, vals, rhs);
 
     // if (cutpool.getNumCuts() > oldnumcuts) {
@@ -538,8 +540,7 @@ void HighsSearch::openNodesToQueue(HighsNodeQueue& nodequeue) {
       nodequeue.emplaceNode(localdom.getReducedDomainChangeStack(),
                             nodestack.back().lower_bound,
                             nodestack.back().estimate, getCurrentDepth());
-    } else
-    {
+    } else {
       mipsolver.mipdata_->debugSolution.nodePruned(localdom);
       treeweight += std::pow(0.5, getCurrentDepth() - 1);
     }
@@ -951,19 +952,19 @@ bool HighsSearch::branch() {
 
     if (currnode.opensubtrees != 0) {
       Highs ipm;
-      ipm.passModel(lp->getLp()); ipm.setHighsOptionValue("solver", "ipm");
+      ipm.passModel(lp->getLp());
+      ipm.setHighsOptionValue("solver", "ipm");
       ipm.setHighsOutput();
       ipm.setHighsLogfile();
       ipm.run();
       lp->getLpSolver().clearSolver();
       lp->getLpSolver().setBasis(ipm.getBasis());
       evaluateNode();
-      if(currnode.opensubtrees != 0)
-      {
-        //printf(
-        //    "WARNING: all integers colls are fixed, LP may be unstable, possibly "
-        //    "pruning optimal solution, lp status: scaled=%d unscaled=%d\n",
-        //    (int)lp->getLpSolver().getModelStatus(true),
+      if (currnode.opensubtrees != 0) {
+        // printf(
+        //    "WARNING: all integers colls are fixed, LP may be unstable,
+        //    possibly " "pruning optimal solution, lp status: scaled=%d
+        //    unscaled=%d\n", (int)lp->getLpSolver().getModelStatus(true),
         //    (int)lp->getLpSolver().getModelStatus(false));
         currnode.opensubtrees = 0;
       }

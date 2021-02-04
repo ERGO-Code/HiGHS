@@ -250,6 +250,7 @@ void HighsMipSolver::run() {
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
+    size_t lastLbNode = mipdata_->num_nodes;
     bool limit_reached = false;
     while (true) {
       if (mipdata_->heuristic_lp_iterations <
@@ -340,7 +341,7 @@ void HighsMipSolver::run() {
                         ML_MINIMAL, "added %d global bound changes\n",
                         (int)mipdata_->domain.getChangedCols().size());
       mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
-      for( int col : mipdata_->domain.getChangedCols() )
+      for (int col : mipdata_->domain.getChangedCols())
         mipdata_->implications.cleanupVarbounds(col);
 
       mipdata_->domain.setDomainChangeStack(std::vector<HighsDomainChange>());
@@ -358,7 +359,15 @@ void HighsMipSolver::run() {
       // printf("popping node from nodequeue (length = %d)\n",
       // (int)nodequeue.size());
       assert(!search.hasNode());
-      search.installNode(mipdata_->nodequeue.popBestNode());
+
+      if (mipdata_->num_nodes - lastLbNode >= 1000) {
+        search.installNode(mipdata_->nodequeue.popBestBoundNode());
+        lastLbNode = mipdata_->num_nodes;
+      } else {
+        search.installNode(mipdata_->nodequeue.popBestNode());
+        if (search.getCurrentLowerBound() == mipdata_->lower_bound)
+          lastLbNode = mipdata_->num_nodes;
+      }
 
       assert(search.hasNode());
 

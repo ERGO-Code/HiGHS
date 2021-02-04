@@ -281,18 +281,17 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
   HighsCDouble upper = upperbound;
 
   for (int i = 0; i != lp.numRow_; ++i) {
-    if (row_dual[i] < -mipsolver.mipdata_->feastol) {
+    if (row_dual[i] < 0) {
       if (lp.rowLower_[i] != -HIGHS_CONST_INF)
         upper += row_dual[i] * lp.rowLower_[i];
       else
         row_dual[i] = 0;
-    } else if (row_dual[i] > mipsolver.mipdata_->feastol) {
+    } else if (row_dual[i] > 0) {
       if (lp.rowUpper_[i] != HIGHS_CONST_INF)
         upper += row_dual[i] * lp.rowUpper_[i];
       else
         row_dual[i] = 0;
-    } else
-      row_dual[i] = 0;
+    }
   }
 
   inds.clear();
@@ -371,26 +370,22 @@ void HighsLpRelaxation::storeDualInfProof() {
     maxval = std::max(maxval, std::abs(dualray[i]));
 
   int expscal;
-  frexp(maxval, &expscal);
+  std::frexp(maxval, &expscal);
 
   for (int i = 0; i != lp.numRow_; ++i) {
     dualray[i] = std::ldexp(dualray[i], -expscal);
-    if (dualray[i] < -mipsolver.mipdata_->epsilon) {
+    if (dualray[i] < 0) {
       if (lp.rowUpper_[i] == HIGHS_CONST_INF) dualray[i] = 0.0;
-    } else if (dualray[i] > mipsolver.mipdata_->epsilon) {
+    } else if (dualray[i] > 0) {
       if (lp.rowLower_[i] == -HIGHS_CONST_INF) dualray[i] = 0.0;
-    } else {
-      dualray[i] = 0.0;
     }
   }
 
   for (int i = 0; i != lp.numRow_; ++i) {
-    if (dualray[i] == 0.0) continue;
-
     if (dualray[i] < 0) {
       assert(lp.rowUpper_[i] != HIGHS_CONST_INF);
       upper -= dualray[i] * lp.rowUpper_[i];
-    } else {
+    } else if (dualray[i] > 0) {
       assert(lp.rowLower_[i] != -HIGHS_CONST_INF);
       upper -= dualray[i] * lp.rowLower_[i];
     }

@@ -8,8 +8,8 @@
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsSplay.h"
 
-#define ESTIMATE_WEIGHT (1.0 / 128.0)
-#define LOWERBOUND_WEIGHT (127.0 / 128.0)
+#define ESTIMATE_WEIGHT   (1. / 8.)
+#define LOWERBOUND_WEIGHT (7. / 8.)
 
 void HighsNodeQueue::link_estim(int node) {
   auto get_left = [&](int n) -> int& { return nodes[n].leftestimate; };
@@ -17,7 +17,7 @@ void HighsNodeQueue::link_estim(int node) {
   auto get_key = [&](int n) {
     return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
-                           n);
+                           -int(nodes[n].domchgstack.size()), n);
   };
 
   assert(node != -1);
@@ -31,7 +31,7 @@ void HighsNodeQueue::unlink_estim(int node) {
   auto get_key = [&](int n) {
     return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
-                           n);
+                           -int(nodes[n].domchgstack.size()), n);
   };
 
   assert(estimroot != -1);
@@ -263,11 +263,12 @@ HighsNodeQueue::OpenNode HighsNodeQueue::popBestNode() {
   auto get_key = [&](int n) {
     return std::make_tuple(LOWERBOUND_WEIGHT * nodes[n].lower_bound +
                                ESTIMATE_WEIGHT * nodes[n].estimate,
-                           n);
+                           -int(nodes[n].domchgstack.size()), n);
   };
 
-  estimroot = highs_splay(std::make_tuple(-HIGHS_CONST_INF, 0), estimroot,
-                          get_left, get_right, get_key);
+  estimroot =
+      highs_splay(std::make_tuple(-HIGHS_CONST_INF, -HIGHS_CONST_I_INF, 0),
+                  estimroot, get_left, get_right, get_key);
   int bestestimnode = estimroot;
 
   unlink(bestestimnode);
