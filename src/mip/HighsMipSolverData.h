@@ -102,7 +102,8 @@ struct HighsMipSolverData {
 
   HighsMipSolverData(HighsMipSolver& mipsolver)
       : mipsolver(mipsolver),
-        cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit),
+        cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit,
+                mipsolver.options_mip_->mip_pool_soft_limit),
         domain(mipsolver),
         lp(mipsolver),
         pseudocost(mipsolver.numCol()),

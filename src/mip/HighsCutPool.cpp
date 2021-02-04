@@ -97,19 +97,36 @@ double HighsCutPool::getParallelism(int row1, int row2) const {
   return dotprod * rownormalization_[row1] * rownormalization_[row2];
 }
 
-void HighsCutPool::lpCutRemoved(int cut) { ages_[cut] = 1; }
+void HighsCutPool::lpCutRemoved(int cut) {
+  ages_[cut] = 1;
+  ++ageDistribution[1];
+}
 
 void HighsCutPool::performAging() {
-  int numcuts = matrix_.getNumRows();
-  for (int i = 0; i != numcuts; ++i) {
+  int cutIndexEnd = matrix_.getNumRows();
+
+  int agelim = agelim_;
+  int numActiveCuts = getNumCuts();
+  int reduced = 0;
+  while (agelim > 2 && numActiveCuts > softlimit_) {
+    numActiveCuts -= ageDistribution[agelim];
+    --agelim;
+    ++reduced;
+  }
+
+  for (int i = 0; i != cutIndexEnd; ++i) {
     if (ages_[i] < 0) continue;
-    ++ages_[i];
-    if (ages_[i] > agelim_) {
+
+    ageDistribution[ages_[i]] -= 1;
+    ages_[i] += 1;
+
+    if (ages_[i] > agelim) {
       ++modification_[i];
       matrix_.removeRow(i);
       ages_[i] = -1;
       rhs_[i] = HIGHS_CONST_INF;
-    }
+    } else
+      ageDistribution[ages_[i]] += 1;
   }
 }
 
@@ -123,8 +140,15 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   std::vector<std::pair<double, int>> efficacious_cuts;
 
-  int agelim = std::min(numSepaRounds, size_t(agelim_));
-  ++numSepaRounds;
+  int agelim = agelim_;
+
+  int numCuts = getNumCuts();
+  int reduced = 0;
+  while (agelim > 2 && numCuts > softlimit_) {
+    numCuts -= ageDistribution[agelim];
+    --agelim;
+    ++reduced;
+  }
 
   for (int i = 0; i < nrows; ++i) {
     // cuts with an age of -1 are already in the LP and are therefore skipped
@@ -144,6 +168,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     // if the cut is not violated more than feasibility tolerance
     // we skip it and increase its age, otherwise we reset its age
+    ageDistribution[ages_[i]] -= 1;
     if (double(viol) <= feastol) {
       ++ages_[i];
       if (ages_[i] >= agelim) {
@@ -162,7 +187,8 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
             break;
           }
         }
-      }
+      } else
+        ageDistribution[ages_[i]] += 1;
       continue;
     }
 
@@ -188,6 +214,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     double sparsity = 1.0 - (end - start) / (double)domain.colLower_.size();
     ages_[i] = 0;
+    ++ageDistribution[0];
     double score = double(sparsity * (1e-3 + viol / sqrt(double(rownorm))));
 
     efficacious_cuts.emplace_back(score, i);
@@ -213,6 +240,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
     if (discard) continue;
 
+    --ageDistribution[ages_[p.second]];
     ages_[p.second] = -1;
     cutset.cutindices.push_back(p.second);
     selectednnz += matrix_.getRowEnd(p.second) - matrix_.getRowStart(p.second);
@@ -278,6 +306,7 @@ int HighsCutPool::addCut(const HighsMipSolver& mipsolver, int* Rindex,
   // set the right hand side and reset the age
   rhs_[rowindex] = rhs;
   ages_[rowindex] = 0;
+  ++ageDistribution[0];
   rowintegral[rowindex] = integral;
   ++modification_[rowindex];
 

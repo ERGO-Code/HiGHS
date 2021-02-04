@@ -295,7 +295,8 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
 
   mipsolver.mipdata_->rowMatrixSet = false;
   mipsolver.mipdata_->cutpool = HighsCutPool(
-      cleanedUpModel.numCol_, mipsolver.options_mip_->mip_pool_age_limit);
+      cleanedUpModel.numCol_, mipsolver.options_mip_->mip_pool_age_limit,
+      mipsolver.options_mip_->mip_pool_soft_limit);
   mipsolver.mipdata_->domain = HighsDomain(mipsolver);
   mipsolver.mipdata_->domain.addCutpool(mipsolver.mipdata_->cutpool);
   mipsolver.mipdata_->pseudocost = HighsPseudocost(cleanedUpModel.numCol_);

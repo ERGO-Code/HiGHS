@@ -291,6 +291,7 @@ struct HighsOptionsStruct {
   int mip_max_leaves;
   int mip_lp_age_limit;
   int mip_pool_age_limit;
+  int mip_pool_soft_limit;
   int mip_report_level;
   double mip_feasibility_tolerance;
   double mip_epsilon;
@@ -566,7 +567,14 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "mip_pool_age_limit",
         "maximal age of rows in the cutpool before they are deleted", advanced,
-        &mip_pool_age_limit, 0, 10, std::numeric_limits<int16_t>::max());
+        &mip_pool_age_limit, 0, 30, 1000);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("mip_pool_soft_limit",
+                                     "soft limit on the number of rows in the "
+                                     "cutpool for dynamic age adjustment",
+                                     advanced, &mip_pool_soft_limit, 1, 5000,
+                                     HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
     record_int =
