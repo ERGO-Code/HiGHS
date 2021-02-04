@@ -55,6 +55,7 @@ class HighsCutPool {
 
   int agelim_;
   int softlimit_;
+  int numLpCuts;
   std::vector<int> ageDistribution;
 
   bool isDuplicate(size_t hash, double norm, int* Rindex, double* Rvalue,
@@ -62,7 +63,7 @@ class HighsCutPool {
 
  public:
   HighsCutPool(int ncols, int agelim, int softlimit)
-      : matrix_(ncols), agelim_(agelim), softlimit_(softlimit){
+      : matrix_(ncols), agelim_(agelim), softlimit_(softlimit), numLpCuts(0) {
     ageDistribution.resize(agelim_ + 1);
   }
   const HighsDynamicRowMatrix& getMatrix() const { return matrix_; }

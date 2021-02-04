@@ -99,6 +99,7 @@ double HighsCutPool::getParallelism(int row1, int row2) const {
 
 void HighsCutPool::lpCutRemoved(int cut) {
   ages_[cut] = 1;
+  --numLpCuts;
   ++ageDistribution[1];
 }
 
@@ -106,12 +107,10 @@ void HighsCutPool::performAging() {
   int cutIndexEnd = matrix_.getNumRows();
 
   int agelim = agelim_;
-  int numActiveCuts = getNumCuts();
-  int reduced = 0;
+  int numActiveCuts = getNumCuts() - numLpCuts;
   while (agelim > 2 && numActiveCuts > softlimit_) {
     numActiveCuts -= ageDistribution[agelim];
     --agelim;
-    ++reduced;
   }
 
   for (int i = 0; i != cutIndexEnd; ++i) {
@@ -142,12 +141,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
 
   int agelim = agelim_;
 
-  int numCuts = getNumCuts();
-  int reduced = 0;
+  int numCuts = getNumCuts() - numLpCuts;
   while (agelim > 2 && numCuts > softlimit_) {
     numCuts -= ageDistribution[agelim];
     --agelim;
-    ++reduced;
   }
 
   for (int i = 0; i < nrows; ++i) {
@@ -241,6 +238,7 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     if (discard) continue;
 
     --ageDistribution[ages_[p.second]];
+    ++numLpCuts;
     ages_[p.second] = -1;
     cutset.cutindices.push_back(p.second);
     selectednnz += matrix_.getRowEnd(p.second) - matrix_.getRowStart(p.second);
