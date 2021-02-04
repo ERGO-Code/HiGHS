@@ -573,7 +573,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt("mip_pool_soft_limit",
                                      "soft limit on the number of rows in the "
                                      "cutpool for dynamic age adjustment",
-                                     advanced, &mip_pool_soft_limit, 1, 2000,
+                                     advanced, &mip_pool_soft_limit, 1, 5000,
                                      HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
