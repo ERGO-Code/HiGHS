@@ -178,7 +178,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     while (currPathLen != maxPathLen) {
       lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
       int baseRowLen = baseRowInds.size();
-      bool useSubstitutionRow = false;
+      bool addedSubstitutionRows = false;
 
       int bestOutArcCol = -1;
       double outArcColVal = 0.0;
@@ -195,16 +195,13 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           continue;
 
         if (colSubstitutions[col].first != -1) {
-          if (!useSubstitutionRow ||
-              transLp.boundDistance(col) > outArcColBoundDist) {
-            useSubstitutionRow = true;
-            bestOutArcCol = col;
-            outArcColVal = baseRowVals[j];
-            outArcColBoundDist = transLp.boundDistance(col);
-          }
+          addedSubstitutionRows = true;
+          lpAggregator.addRow(colSubstitutions[col].first,
+                              -baseRowVals[j] / colSubstitutions[col].second);
+          continue;
         }
 
-        if (useSubstitutionRow) continue;
+        if (addedSubstitutionRows) continue;
 
         if (baseRowVals[j] < 0) {
           if (colInArcs[col].first == colInArcs[col].second) continue;
@@ -225,6 +222,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         }
       }
 
+      if (addedSubstitutionRows) continue;
+
       double rhs = 0;
 
       bool success = cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
@@ -235,43 +234,35 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       success =
           success || cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
 
-      if (success ||
-          (!useSubstitutionRow && bestOutArcCol == -1 && bestInArcCol == -1))
-        break;
+      if (success || (bestOutArcCol == -1 && bestInArcCol == -1)) break;
+
       ++currPathLen;
+      // we prefer to use an out edge if the bound distances are equal in
+      // feasibility tolerance otherwise we choose an inArc. This tie breaking
+      // is arbitrary, but we should direct the substitution to prefer one
+      // direction to increase diversity.
+      if (bestInArcCol == -1 ||
+          (bestOutArcCol != -1 &&
+           outArcColBoundDist >= inArcColBoundDist - mip.mipdata_->feastol)) {
+        std::uniform_int_distribution<int> dist(
+            colInArcs[bestOutArcCol].first,
+            colInArcs[bestOutArcCol].second - 1);
+        int inArcRow = dist(randgen);
 
-      if (useSubstitutionRow) {
-        lpAggregator.addRow(
-            colSubstitutions[bestOutArcCol].first,
-            -outArcColVal / colSubstitutions[bestOutArcCol].second);
+        int row = inArcRows[inArcRow].first;
+        double weight = -outArcColVal / inArcRows[inArcRow].second;
+
+        lpAggregator.addRow(row, weight);
       } else {
-        // we prefer to use an out edge if the bound distances are equal in
-        // feasibility tolerance otherwise we choose an inArc. This tie breaking
-        // is arbitrary, but we should direct the substitution to prefer one
-        // direction to increase diversity.
-        if (bestInArcCol == -1 ||
-            (bestOutArcCol != -1 &&
-             outArcColBoundDist >= inArcColBoundDist - mip.mipdata_->feastol)) {
-          std::uniform_int_distribution<int> dist(
-              colInArcs[bestOutArcCol].first,
-              colInArcs[bestOutArcCol].second - 1);
-          int inArcRow = dist(randgen);
+        std::uniform_int_distribution<int> dist(
+            colOutArcs[bestInArcCol].first,
+            colOutArcs[bestInArcCol].second - 1);
+        int outArcRow = dist(randgen);
 
-          int row = inArcRows[inArcRow].first;
-          double weight = -outArcColVal / inArcRows[inArcRow].second;
+        int row = outArcRows[outArcRow].first;
+        double weight = -inArcColVal / outArcRows[outArcRow].second;
 
-          lpAggregator.addRow(row, weight);
-        } else {
-          std::uniform_int_distribution<int> dist(
-              colOutArcs[bestInArcCol].first,
-              colOutArcs[bestInArcCol].second - 1);
-          int outArcRow = dist(randgen);
-
-          int row = outArcRows[outArcRow].first;
-          double weight = -inArcColVal / outArcRows[outArcRow].second;
-
-          lpAggregator.addRow(row, weight);
-        }
+        lpAggregator.addRow(row, weight);
       }
     }
 
