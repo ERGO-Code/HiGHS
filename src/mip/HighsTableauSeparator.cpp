@@ -66,10 +66,30 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                     nonzeroWeights.data()) != HighsStatus::OK)
       continue;
 
-    for (int j = 0; j != numNonzeroWeights; ++j) {
-      int row = nonzeroWeights[j];
-      if (std::abs(rowWeights[row]) <= mip.mipdata_->epsilon) continue;
-      lpAggregator.addRow(row, rowWeights[row]);
+    if (numNonzeroWeights == 1) {
+      lpAggregator.addRow(nonzeroWeights[0], 1);
+    } else {
+      double maxAbsWeight = 0.0;
+      for (int j = 0; j != numNonzeroWeights; ++j) {
+        int row = nonzeroWeights[j];
+        maxAbsWeight = std::max(std::abs(rowWeights[row]), maxAbsWeight);
+      }
+
+      int expshift = 0;
+      if (maxAbsWeight > 10 || maxAbsWeight < 0.1) {
+        std::frexp(maxAbsWeight, &expshift);
+        expshift = -expshift;
+      }
+
+      for (int j = 0; j != numNonzeroWeights; ++j) {
+        int row = nonzeroWeights[j];
+        double weight = std::ldexp(rowWeights[row], expshift);
+        if (std::abs(weight) <= mip.mipdata_->epsilon) continue;
+        if (lpRelaxation.getMaxAbsRowVal(row) * std::abs(weight) <=
+            10 * mip.mipdata_->feastol)
+          continue;
+        lpAggregator.addRow(row, weight);
+      }
     }
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, false);
