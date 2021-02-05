@@ -1163,10 +1163,10 @@ void HEkk::initialiseBound(const SimplexAlgorithm algorithm,
         max_abs_upper = max(abs_upper, max_abs_upper);
       }
     }
-    printf(
-        "Nonzero finite lower bounds in [%9.4g, %9.4g]; upper bounds in "
-        "[%9.4g, %9.4g]\n",
-        min_abs_lower, max_abs_lower, min_abs_upper, max_abs_upper);
+    // printf(
+    //     "Nonzero finite lower bounds in [%9.4g, %9.4g]; upper bounds in "
+    //     "[%9.4g, %9.4g]\n",
+    //     min_abs_lower, max_abs_lower, min_abs_upper, max_abs_upper);
 
     const double base =
         simplex_info_.primal_simplex_bound_perturbation_multiplier * 5e-7;

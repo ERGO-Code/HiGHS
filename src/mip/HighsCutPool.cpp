@@ -234,13 +234,15 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
                        }) -
       efficacious_cuts.begin();
 
-  if (numefficacious < 0.05 * efficacious_cuts.size()) {
+  int lowerThreshold = 0.05 * efficacious_cuts.size();
+  int upperThreshold = efficacious_cuts.size() - 1;
+
+  if (numefficacious <= lowerThreshold) {
     numefficacious = std::max(efficacious_cuts.size() / 2, size_t{1});
     minScoreFactor =
         efficacious_cuts[numefficacious - 1].first / bestObservedScore;
-  } else if (numefficacious > (int)efficacious_cuts.size() / 2) {
-    minScoreFactor =
-        efficacious_cuts[efficacious_cuts.size() / 2].first / bestObservedScore;
+  } else if (numefficacious > upperThreshold) {
+    minScoreFactor = efficacious_cuts[upperThreshold].first / bestObservedScore;
   }
 
   efficacious_cuts.resize(numefficacious);

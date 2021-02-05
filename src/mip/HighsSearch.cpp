@@ -943,19 +943,33 @@ bool HighsSearch::branch() {
   }
 
   if (currnode.branchingdecision.column == -1) {
-    lp->getLpSolver().clearSolver();
     lp->setIterationLimit();
+
+    lp->getLpSolver().clearSolver();
     lp->getLpSolver().setHighsOptionValue("presolve", "on");
     evaluateNode();
+
+    if (currnode.opensubtrees == 0) {
+      lp->getLpSolver().setHighsOptionValue("presolve", "off");
+      return false;
+    }
+
+    lp->getLpSolver().clearSolver();
+    lp->getLpSolver().setHighsOptionValue("simplex_strategy",
+                                          SIMPLEX_STRATEGY_PRIMAL);
+    evaluateNode();
+    lp->getLpSolver().setHighsOptionValue("simplex_strategy",
+                                          SIMPLEX_STRATEGY_DUAL);
     lp->getLpSolver().setHighsOptionValue("presolve", "off");
 
-    if (currnode.opensubtrees != 0) {
-      Highs ipm;
-      ipm.passModel(lp->getLp());
-      ipm.setHighsOptionValue("solver", "ipm");
-      ipm.setHighsOutput();
-      ipm.setHighsLogfile();
-      ipm.run();
+    if (currnode.opensubtrees == 0) return false;
+
+    Highs ipm;
+    ipm.passModel(lp->getLp());
+    ipm.setHighsOptionValue("solver", "ipm");
+    ipm.run();
+
+    if (ipm.getBasis().valid_) {
       lp->getLpSolver().clearSolver();
       lp->getLpSolver().setBasis(ipm.getBasis());
       evaluateNode();
