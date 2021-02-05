@@ -944,7 +944,6 @@ bool HighsSearch::branch() {
 
   if (currnode.branchingdecision.column == -1) {
     lp->getLpSolver().clearSolver();
-    lp->removeCuts();
     lp->setIterationLimit();
     lp->getLpSolver().setHighsOptionValue("presolve", "on");
     evaluateNode();

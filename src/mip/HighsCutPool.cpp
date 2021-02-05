@@ -217,9 +217,32 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     efficacious_cuts.emplace_back(score, i);
   }
 
+  if (efficacious_cuts.empty()) return;
+
   std::sort(efficacious_cuts.begin(), efficacious_cuts.end(),
             [](const std::pair<double, int>& a,
                const std::pair<double, int>& b) { return a.first > b.first; });
+
+  bestObservedScore = std::max(efficacious_cuts[0].first, bestObservedScore);
+  double minScore = minScoreFactor * bestObservedScore;
+
+  int numefficacious =
+      std::upper_bound(efficacious_cuts.begin(), efficacious_cuts.end(),
+                       minScore,
+                       [](double mscore, std::pair<double, int> const& c) {
+                         return mscore > c.first;
+                       }) -
+      efficacious_cuts.begin();
+
+  if (numefficacious < 0.05 * efficacious_cuts.size()) {
+    numefficacious = std::max(efficacious_cuts.size() / 2, size_t{1});
+    minScoreFactor =
+        efficacious_cuts[numefficacious - 1].first / bestObservedScore;
+  } else if (numefficacious > 0.5 * efficacious_cuts.size())
+    minScoreFactor =
+        efficacious_cuts[numefficacious / 2].first / bestObservedScore;
+
+  efficacious_cuts.resize(numefficacious);
 
   int selectednnz = 0;
 

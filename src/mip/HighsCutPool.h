@@ -53,6 +53,9 @@ class HighsCutPool {
   std::unordered_multimap<size_t, int> supportmap;
   std::vector<HighsDomain::CutpoolPropagation*> propagationDomains;
 
+  double bestObservedScore;
+  double minScoreFactor;
+
   int agelim_;
   int softlimit_;
   int numLpCuts;
@@ -65,6 +68,8 @@ class HighsCutPool {
   HighsCutPool(int ncols, int agelim, int softlimit)
       : matrix_(ncols), agelim_(agelim), softlimit_(softlimit), numLpCuts(0) {
     ageDistribution.resize(agelim_ + 1);
+    minScoreFactor = 0.9;
+    bestObservedScore = 0.0;
   }
   const HighsDynamicRowMatrix& getMatrix() const { return matrix_; }
 

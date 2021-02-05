@@ -719,7 +719,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
         "| %8s | %8s\n",
         "time", "open nodes", "nodes", "leaves", "lpiters", "dual bound",
-        "primal bound", "cutpool", "lpcuts", "gap", "progress");
+        "primal bound", "cutpool", "lpcuts", "gap", "explored");
   }
 
   ++num_disp_lines;
