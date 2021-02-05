@@ -238,9 +238,10 @@ void HighsCutPool::separate(const std::vector<double>& sol, HighsDomain& domain,
     numefficacious = std::max(efficacious_cuts.size() / 2, size_t{1});
     minScoreFactor =
         efficacious_cuts[numefficacious - 1].first / bestObservedScore;
-  } else if (numefficacious > 0.5 * efficacious_cuts.size())
+  } else if (numefficacious > (int)efficacious_cuts.size() / 2) {
     minScoreFactor =
-        efficacious_cuts[numefficacious / 2].first / bestObservedScore;
+        efficacious_cuts[efficacious_cuts.size() / 2].first / bestObservedScore;
+  }
 
   efficacious_cuts.resize(numefficacious);
 
