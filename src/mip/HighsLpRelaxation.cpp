@@ -601,18 +601,21 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
   if (callstatus == HighsStatus::Error) {
     // first try to use the primal simplex solver starting from the last basis
-    if (lpsolver.getHighsOptions().simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
-      lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_PRIMAL);
-      recoverBasis();
-      auto retval = run(false);
-      lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);
-
-      return retval;
-    }
-
     if (resolve_on_error) {
+      if (lpsolver.getHighsOptions().simplex_strategy ==
+          SIMPLEX_STRATEGY_DUAL) {
+        lpsolver.setHighsOptionValue("simplex_strategy",
+                                     SIMPLEX_STRATEGY_PRIMAL);
+        recoverBasis();
+        auto retval = run(true);
+
+        lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);
+
+        return retval;
+      }
       // still an error: now try to solve with presolve from scratch
       lpsolver.clearSolver();
+      lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);
       lpsolver.setHighsOptionValue("presolve", "on");
       auto retval = run(false);
       lpsolver.setHighsOptionValue("presolve", "off");
@@ -622,11 +625,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
     recoverBasis();
 
-    // printf("callstatus error\n");
     return Status::Error;
   }
 
   HighsModelStatus scaledmodelstatus = lpsolver.getModelStatus(true);
+  if (scaledmodelstatus == HighsModelStatus::MODEL_EMPTY)
+    scaledmodelstatus = lpsolver.getModelStatus();
 
   switch (scaledmodelstatus) {
     case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
@@ -643,24 +647,26 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       hasdualproof = false;
 
       int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
-      if (scalestrategy != 0) {
-        lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
-        HighsBasis basis = lpsolver.getBasis();
-        lpsolver.clearSolver();
-        lpsolver.setBasis(basis);
-        auto tmp = run(false);
-        lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
-        return tmp;
-      } else if (lpsolver.getModelStatus() ==
-                 HighsModelStatus::PRIMAL_INFEASIBLE) {
-        // the LP was solved from the basis without scaling and highs still
-        // says infeasible trust the LP solver in this case
-        return Status::Infeasible;
+
+      if (resolve_on_error) {
+        if (scalestrategy != 0) {
+          lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
+          HighsBasis basis = lpsolver.getBasis();
+          lpsolver.clearSolver();
+          lpsolver.setBasis(basis);
+          auto tmp = run(true);
+          lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
+          return tmp;
+        }
+
+        // trust the primal simplex result without scaling
+        if (lpsolver.getModelStatus() == HighsModelStatus::PRIMAL_INFEASIBLE)
+          return Status::Infeasible;
       }
 
-      HighsLogMessage(mipsolver.options_mip_->logfile,
-                      HighsMessageType::WARNING,
-                      "LP failed to reliably determine infeasibility");
+      // HighsLogMessage(mipsolver.options_mip_->logfile,
+      //                 HighsMessageType::WARNING,
+      //                 "LP failed to reliably determine infeasibility");
 
       // printf("error: unreliable infeasiblities, modelstatus = %d (scaled
       // %d)\n",
@@ -681,13 +687,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         //     "dual:%g)\n",
         //     info.max_primal_infeasibility, info.max_dual_infeasibility);
         int scalestrategy = lpsolver.getHighsOptions().simplex_scale_strategy;
-        lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
-        HighsBasis basis = lpsolver.getBasis();
-        lpsolver.clearSolver();
-        lpsolver.setBasis(basis);
-        auto tmp = run(false);
-        lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
-        return tmp;
+        if (scalestrategy != 0) {
+          lpsolver.setHighsOptionValue("simplex_scale_strategy", 0);
+          HighsBasis basis = lpsolver.getBasis();
+          lpsolver.clearSolver();
+          lpsolver.setBasis(basis);
+          auto tmp = run(true);
+          lpsolver.setHighsOptionValue("simplex_scale_strategy", scalestrategy);
+          return tmp;
+        }
       }
 
       if (info.max_primal_infeasibility <= mipsolver.mipdata_->feastol)

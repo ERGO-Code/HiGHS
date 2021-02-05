@@ -130,7 +130,8 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
     double coef = 0.0;
 
     int h = std::floor(hfrac + 0.5);
-    if (std::abs(hfrac - h) <= 1e-10 && h <= cplussize - 1) {
+    if (h != 0 && std::abs(hfrac - h) * std::max(1.0, abar) <= epsilon &&
+        h <= cplussize - 1) {
       halfintegral = true;
       coef = 0.5;
     }
