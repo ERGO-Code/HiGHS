@@ -600,11 +600,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   numlpiters += std::max(0, info.simplex_iteration_count);
 
   if (callstatus == HighsStatus::Error) {
+    lpsolver.clearSolver();
     // first try to use the primal simplex solver starting from the last basis
     if (lpsolver.getHighsOptions().simplex_strategy == SIMPLEX_STRATEGY_DUAL) {
       lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_PRIMAL);
       recoverBasis();
-      auto retval = run(false);
+      auto retval = run(resolve_on_error);
       lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);
 
       return retval;
@@ -612,7 +613,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
     if (resolve_on_error) {
       // still an error: now try to solve with presolve from scratch
-      lpsolver.clearSolver();
       lpsolver.setHighsOptionValue("simplex_strategy", SIMPLEX_STRATEGY_DUAL);
       lpsolver.setHighsOptionValue("presolve", "on");
       auto retval = run(false);
