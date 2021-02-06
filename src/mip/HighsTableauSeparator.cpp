@@ -84,10 +84,10 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       for (int j = 0; j != numNonzeroWeights; ++j) {
         int row = nonzeroWeights[j];
         double weight = std::ldexp(rowWeights[row], expshift);
-        if (std::abs(weight) <= mip.mipdata_->epsilon) continue;
-        if (lpRelaxation.getMaxAbsRowVal(row) * std::abs(weight) <=
-            10 * mip.mipdata_->feastol)
-          continue;
+        // if (std::abs(weight) <= mip.mipdata_->epsilon) continue;
+        // if (lpRelaxation.getMaxAbsRowVal(row) * std::abs(weight) <=
+        //    10 * mip.mipdata_->feastol)
+        //  continue;
         lpAggregator.addRow(row, weight);
       }
     }

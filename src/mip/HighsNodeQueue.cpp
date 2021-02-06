@@ -8,7 +8,7 @@
 #include "mip/HighsMipSolverData.h"
 #include "util/HighsSplay.h"
 
-#define ESTIMATE_WEIGHT   (1. / 8.)
+#define ESTIMATE_WEIGHT (1. / 8.)
 #define LOWERBOUND_WEIGHT (7. / 8.)
 
 void HighsNodeQueue::link_estim(int node) {
