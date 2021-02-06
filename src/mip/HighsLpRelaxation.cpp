@@ -136,9 +136,24 @@ void HighsLpRelaxation::loadModel() {
 double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
   HighsCDouble estimate = objective;
 
-  for (const std::pair<int, double>& f : fractionalints)
-    estimate += std::min(ps.getPseudocostUp(f.first, f.second),
-                         ps.getPseudocostDown(f.first, f.second));
+  if (!fractionalints.empty()) {
+    // because the pseudocost may be zero, we add an offset to the pseudocost so
+    // that we always have some part of the estimate depending on the
+    // fractionality.
+
+    HighsCDouble increase = 0.0;
+
+    double offset = ps.getAvgPseudocost();
+
+    if (offset == 0.0)
+      offset = std::max(std::abs(objective), 1.0) /
+               mipsolver.mipdata_->integral_cols.size();
+
+    for (const std::pair<int, double>& f : fractionalints)
+      increase += std::min(ps.getPseudocostUp(f.first, f.second, offset),
+                           ps.getPseudocostDown(f.first, f.second, offset));
+    estimate += double(increase) * 0.5;
+  }
 
   return double(estimate);
 }
