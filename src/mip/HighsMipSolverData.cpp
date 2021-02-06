@@ -964,8 +964,8 @@ void HighsMipSolverData::evaluateRootNode() {
     lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
 
     // add the root node to the nodequeue to initialize the search
-    nodequeue.emplaceNode(std::vector<HighsDomainChange>(), lp.getObjective(),
-                          lp.getObjective(), 1);
+    nodequeue.emplaceNode(std::vector<HighsDomainChange>(), lower_bound,
+                          lp.getObjective(), lp.getObjective(), 1);
     heuristics.RENS(rootlpsol);
     heuristics.flushStatistics();
     if (upper_limit == HIGHS_CONST_INF && !mipsolver.submip) {
