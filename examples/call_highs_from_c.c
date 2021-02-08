@@ -25,18 +25,18 @@ void minimal_api() {
   //
   // The matrix A is represented in packed column-wise form: only its
   // nonzeros are stored
-  // 
+  //
   // * The number of nonzeros in A is nnz
-  // 
+  //
   // * The row indices of the nonnzeros in A are stored column-by-column
   // in aindex
-  // 
+  //
   // * The values of the nonnzeros in A are stored column-by-column in
   // avalue
-  // 
+  //
   // * The position in aindex/avalue of the index/value of the first
   // nonzero in each column is stored in astart
-  // 
+  //
   // Note that astart[0] must be zero
   //
   // After a successful call to Highs_call, the primal and dual
@@ -61,9 +61,9 @@ void minimal_api() {
   //        8 <= 2x_0 +  x_1
   // 0 <= x_0 <= 3; 1 <= x_1
 
-  int numcol = 2;
-  int numrow = 3;
-  int nnz = 5;
+  const int numcol = 2;
+  const int numrow = 3;
+  const int nnz = 5;
 
   // Define the column costs, lower bounds and upper bounds
   double colcost[numcol] = {2.0, 3.0};
@@ -85,7 +85,7 @@ void minimal_api() {
   int* colbasisstatus = (int*)malloc(sizeof(int) * numcol);
   int* rowbasisstatus = (int*)malloc(sizeof(int) * numrow);
 
-  int modelstatus; 
+  int modelstatus;
 
   int status = Highs_call(numcol, numrow, nnz,
 			  colcost, collower, colupper,
@@ -94,7 +94,7 @@ void minimal_api() {
 			  colvalue, coldual, rowvalue, rowdual,
 			  colbasisstatus, rowbasisstatus,
 			  &modelstatus);
-            
+
   assert(status == 0);
 
   printf("Run status = %d; Model status = %d\n", status, modelstatus);
@@ -131,9 +131,9 @@ void full_api() {
 
   highs = Highs_create();
 
-  int numcol = 2;
-  int numrow = 3;
-  int nnz = 5;
+  const int numcol = 2;
+  const int numrow = 3;
+  const int nnz = 5;
   int i;
 
   // Define the column costs, lower bounds and upper bounds
@@ -162,18 +162,21 @@ void full_api() {
   // Add three rows to the 2-column LP
   assert( Highs_addRows(highs, numrow, rowlower, rowupper, nnz, arstart, arindex, arvalue) );
 
-  int* sense;
-  Highs_getObjectiveSense(highs, sense);
-  printf("LP problem has objective sense = %d\n", *sense);
+  int sense;
+  Highs_getObjectiveSense(highs, &sense);
+  printf("LP problem has objective sense = %d\n", sense);
+  assert(sense == 1);
 
-  *sense *= -1;
-  Highs_changeObjectiveSense(highs, *sense);
+  sense *= -1;
+  Highs_changeObjectiveSense(highs, sense);
+  assert(sense == -1);
 
-  *sense *= -1;
-  Highs_changeObjectiveSense(highs, *sense);
+  sense *= -1;
+  Highs_changeObjectiveSense(highs, sense);
 
-  Highs_getObjectiveSense(highs, sense);
-  printf("LP problem has old objective sense = %d\n", *sense);
+  Highs_getObjectiveSense(highs, &sense);
+  printf("LP problem has old objective sense = %d\n", sense);
+  assert(sense == 1);
 
   int simplex_scale_strategy;
   Highs_getHighsIntOptionValue(highs, "simplex_scale_strategy", &simplex_scale_strategy);
@@ -181,13 +184,29 @@ void full_api() {
   simplex_scale_strategy = 3;
   Highs_setHighsIntOptionValue(highs, "simplex_scale_strategy", simplex_scale_strategy);
 
+  // There are some functions to check what type of option value you should
+  // provide.
+  int option_type;
+  int ret;
+  ret = Highs_getHighsOptionType(highs, "simplex_scale_strategy", &option_type);
+  assert(ret == 0);
+  assert(option_type == 1);
+  ret = Highs_getHighsOptionType(highs, "bad_option", &option_type);
+  assert(ret != 0);
+
   double primal_feasibility_tolerance;
   Highs_getHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", &primal_feasibility_tolerance);
   printf("primal_feasibility_tolerance = %g: setting it to 1e-6\n", primal_feasibility_tolerance);
   primal_feasibility_tolerance = 1e-6;
   Highs_setHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
 
+  Highs_runQuiet(highs);
+  printf("Running quietly...\n");
   int status = Highs_run(highs);
+  printf("Running loudly...\n");
+  Highs_setHighsLogfile(highs, stdout);
+  Highs_setHighsOutput(highs, stdout);
+
   // Get the model status
   const int scaled_model = 0;
   int modelstatus = Highs_getModelStatus(highs, scaled_model);
@@ -207,7 +226,7 @@ void full_api() {
   if (modelstatus == 9) {
     printf("Solution primal status = %s\n", Highs_primalDualStatusToChar(highs, primal_status));
     printf("Solution dual status = %s\n", Highs_primalDualStatusToChar(highs, dual_status));
-    // Get the primal and dual solution 
+    // Get the primal and dual solution
     Highs_getSolution(highs, colvalue, coldual, rowvalue, rowdual);
     // Get the basis
     Highs_getBasis(highs, colbasisstatus, rowbasisstatus);
@@ -245,8 +264,8 @@ void full_api() {
   Highs_destroy(highs);
 }
 
-int main() { 
+int main() {
   minimal_api();
   full_api();
-  return 0; 
+  return 0;
 }
