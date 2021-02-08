@@ -6,41 +6,9 @@
 #include <limits>
 #include <map>
 #include <memory>
-#include <stdexcept>
 #include <vector>
 
-void inline lpassert(bool condition) {
-   if (!condition) {
-      throw std::invalid_argument("File not existant or illegal file format.");
-   }
-}
-
-#define LP_MAX_NAME_LENGTH 255
-#define LP_MAX_LINE_LENGTH 560
-
-const std::string LP_KEYWORD_MIN[] = {"minimize", "min", "minimum"};
-const std::string LP_KEYWORD_MAX[] = {"maximize", "max", "maximum"};
-const std::string LP_KEYWORD_ST[] = {"subject to", "such that", "st", "s.t."};
-const std::string LP_KEYWORD_BOUNDS[] = {"bounds", "bound"};
-const std::string LP_KEYWORD_INF[] = {"infinity", "inf"};
-const std::string LP_KEYWORD_FREE[] = {"free"};
-const std::string LP_KEYWORD_GEN[] = {"general", "generals", "gen"};
-const std::string LP_KEYWORD_BIN[] = {"binary", "binaries", "bin"};
-const std::string LP_KEYWORD_SEMI[] = {"semi-continuous", "semi", "semis"};
-const std::string LP_KEYWORD_SOS[] = {"sos"};
-const std::string LP_KEYWORD_END[] = {"end"};
-
-const int LP_KEYWORD_MIN_N = 3;
-const int LP_KEYWORD_MAX_N = 3;
-const int LP_KEYWORD_ST_N = 4;
-const int LP_KEYWORD_BOUNDS_N = 2;
-const int LP_KEYWORD_INF_N = 2;
-const int LP_KEYWORD_FREE_N = 1;
-const int LP_KEYWORD_GEN_N = 3;
-const int LP_KEYWORD_BIN_N = 3;
-const int LP_KEYWORD_SEMI_N = 3;
-const int LP_KEYWORD_SOS_N = 1;
-const int LP_KEYWORD_END_N = 1;
+#include "def.hpp"
 
 enum class RawTokenType {
    NONE,
@@ -177,7 +145,7 @@ private:
 
 public:
    Reader(std::string filename) : file(fopen(filename.c_str(), "r")) {
-      lpassert(file != NULL);
+      lpassert(file != nullptr);
    };
 
    ~Reader() {
@@ -193,10 +161,10 @@ Model readinstance(std::string filename) {
 }
 
 bool isstrequalnocase(const std::string str1, const std::string str2) {
-   unsigned int len = str1.size();
+   size_t len = str1.size();
     if (str2.size() != len)
         return false;
-    for (unsigned int i = 0; i < len; ++i)
+    for (size_t i = 0; i < len; ++i)
         if (tolower(str1[i]) != tolower(str2[i]))
             return false;
     return true;
@@ -274,7 +242,7 @@ void Reader::processnonesec() {
 
 void Reader::parseexpression(std::vector<std::unique_ptr<ProcessedToken>>& tokens, std::shared_ptr<Expression> expr, unsigned int& i) {
    if (tokens.size() - i >= 1 && tokens[0]->type == ProcessedTokenType::CONID) {
-      expr->name = ((ProcessedConsIdToken*)tokens[0].get())->name;
+      expr->name = ((ProcessedConsIdToken*)tokens[i].get())->name;
       i++;
    }
 
@@ -702,6 +670,13 @@ void Reader::processtokens() {
          continue;
       }
 
+      // + [
+      if (rawtokens.size() - i >= 2 && rawtokens[i]->istype(RawTokenType::PLUS) &&rawtokens[i+1]->istype(RawTokenType::PLUS)) {
+         processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedToken(ProcessedTokenType::BRKOP)));
+         i += 2;
+         continue;
+      }
+
       // +
       if (rawtokens[i]->istype(RawTokenType::PLUS)) {
          processedtokens.push_back(std::unique_ptr<ProcessedToken>(new ProcessedConstantToken(1.0)));
@@ -824,8 +799,19 @@ void Reader::readnexttoken(bool& done) {
       this->linebufferpos = this->linebuffer;
       this->linebufferrefill = false;
 
-      // fgets returns NULL if end of file reached (EOF following a \n)
-      if (eof == NULL) {
+      unsigned int linelength;
+      for (linelength=0; linelength<LP_MAX_LINE_LENGTH; linelength++) {
+         if (this->linebuffer[linelength] == '\r') {
+            this->linebuffer[linelength] = '\n';
+         }
+         if (this->linebuffer[linelength] == '\n') {
+            break;
+         }
+      }
+      lpassert(this->linebuffer[linelength] == '\n');
+
+      // fgets returns nullptr if end of file reached (EOF following a \n)
+      if (eof == nullptr) {
          this->rawtokens.push_back(std::unique_ptr<RawToken>(new RawToken(RawTokenType::FLEND)));
          done = true;
          return;
