@@ -106,7 +106,7 @@ void FilereaderLp::writeToFileLineend(FILE* file) {
 
 HighsStatus FilereaderLp::writeModelToFile(const HighsOptions& options,
                                            const std::string filename,
-                                           HighsLp& model) {
+                                           const HighsLp& model) {
   FILE* file = fopen(filename.c_str(), "w");
 
   // write comment at the start of the file

@@ -42,6 +42,7 @@ class HighsSearch {
     Random,
     BestCost,
     WorstCost,
+    Disjunction,
   };
 
  private:
@@ -93,10 +94,6 @@ class HighsSearch {
 
   double checkSol(const std::vector<double>& sol, bool& integerfeasible) const;
 
-  void heuristicSearch();
-
-  void heuristicSearchNew();
-
   void createNewNode();
 
   void cutoffNode();
@@ -110,8 +107,6 @@ class HighsSearch {
   void setHeuristic(bool inheuristic) { this->inheuristic = inheuristic; }
 
   void addBoundExceedingConflict();
-
-  void reducedCostFixing();
 
   void resetLocalDomain();
 

@@ -46,7 +46,7 @@ class HighsCutPool {
   HighsDynamicRowMatrix matrix_;
   std::vector<double> rhs_;
   std::vector<unsigned> modification_;
-  std::vector<int> ages_;
+  std::vector<int16_t> ages_;
   std::vector<double> rownormalization_;
   std::vector<double> maxabscoef_;
   std::vector<uint8_t> rowintegral;
@@ -54,14 +54,14 @@ class HighsCutPool {
   std::vector<HighsDomain::CutpoolPropagation*> propagationDomains;
 
   int agelim_;
-  int nrounds_;
+  size_t numSepaRounds;
 
-  int replaceSupportDuplicate(size_t hash, int* Rindex, double* Rvalue,
-                              int Rlen, double rhs);
+  bool isDuplicate(size_t hash, double norm, int* Rindex, double* Rvalue,
+                   int Rlen, double rhs);
 
  public:
   HighsCutPool(int ncols, int agelim)
-      : matrix_(ncols), agelim_(agelim), nrounds_(0) {}
+      : matrix_(ncols), agelim_(agelim), numSepaRounds(0) {}
   const HighsDynamicRowMatrix& getMatrix() const { return matrix_; }
 
   const std::vector<double>& getRhs() const { return rhs_; }
@@ -73,11 +73,22 @@ class HighsCutPool {
       ages_[cut] = 0;
   }
 
+  bool ageLpCut(int cut, int agelimit) {
+    assert(ages_[cut] < 0);
+    --ages_[cut];
+    if (ages_[cut] < -agelimit) {
+      ages_[cut] = 1;
+      return true;
+    }
+
+    return false;
+  }
+
   double getParallelism(int row1, int row2) const;
 
-  void ageLPRows(HighsLpRelaxation& lprelaxation);
+  void performAging();
 
-  void ageNonLPRows();
+  void lpCutRemoved(int cut);
 
   void addPropagationDomain(HighsDomain::CutpoolPropagation* domain) {
     propagationDomains.push_back(domain);
@@ -94,9 +105,7 @@ class HighsCutPool {
 
   void setAgeLimit(int agelim) { agelim_ = agelim; }
 
-  void removeObsoleteRows(HighsLpRelaxation& lprelaxation);
-
-  void removeAllRows(HighsLpRelaxation& lprelaxation);
+  size_t getNumSeparationRounds() const { return numSepaRounds; }
 
   void separate(const std::vector<double>& sol, HighsDomain& domprop,
                 HighsCutSet& cutset, double feastol);
@@ -109,14 +118,14 @@ class HighsCutPool {
 
   double getMaxAbsCutCoef(int cut) const { return maxabscoef_[cut]; }
 
-  int addCut(int* Rindex, double* Rvalue, int Rlen, double rhs,
-             bool integral = false);
+  int addCut(const HighsMipSolver& mipsolver, int* Rindex, double* Rvalue,
+             int Rlen, double rhs, bool integral = false);
 
   int getRowLength(int row) const {
     return matrix_.getRowEnd(row) - matrix_.getRowStart(row);
   }
 
-  unsigned getModificationCount(int cut) { return modification_[cut]; }
+  unsigned getModificationCount(int cut) const { return modification_[cut]; }
 
   void getCut(int cut, int& cutlen, const int*& cutinds,
               const double*& cutvals) const {

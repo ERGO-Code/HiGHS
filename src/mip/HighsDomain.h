@@ -186,13 +186,13 @@ class HighsDomain {
     changeBound({boundtype, col, boundval}, reason);
   }
 
-  void fixCol(int col, double val) {
+  void fixCol(int col, double val, Reason reason = Reason::unspecified()) {
     assert(infeasible_ == 0);
     if (colLower_[col] < val)
-      changeBound({HighsBoundType::Lower, col, val}, Reason::unspecified());
+      changeBound({HighsBoundType::Lower, col, val}, reason);
 
     if (infeasible_ == 0 && colUpper_[col] > val)
-      changeBound({HighsBoundType::Upper, col, val}, Reason::unspecified());
+      changeBound({HighsBoundType::Upper, col, val}, reason);
   }
 
   HighsDomainChange backtrack();
@@ -223,6 +223,18 @@ class HighsDomain {
   void propagate();
 
   void tightenCoefficients(int* inds, double* vals, int len, double& rhs) const;
+
+  double getMinActivity(int row) const {
+    return activitymininf_[row] == 0 ? double(activitymin_[row])
+                                     : -HIGHS_CONST_INF;
+  }
+
+  double getMaxActivity(int row) const {
+    return activitymaxinf_[row] == 0 ? double(activitymax_[row])
+                                     : HIGHS_CONST_INF;
+  }
+
+  double getMinCutActivity(const HighsCutPool& cutpool, int cut);
 
   bool isBinary(int col) const {
     return mipsolver->variableType(col) != HighsVarType::CONTINUOUS &&

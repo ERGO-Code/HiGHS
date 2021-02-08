@@ -214,7 +214,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
 
 HighsStatus FilereaderEms::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
-                                            HighsLp& model) {
+                                            const HighsLp& model) {
   std::ofstream f;
   f.open(filename, std::ios::out);
   int num_nz = model.Astart_[model.numCol_];

@@ -103,9 +103,12 @@ set(sources
     mip/HighsSearch.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
+    mip/HighsGFkSolve.cpp
+    mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsRedcostFixing.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp
@@ -169,7 +172,9 @@ set(headers
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
+    mip/HighsDebugSol.h
     mip/HighsMipSolver.h
+    mip/HighsGFkSolve.h
     mip/SolveMip.h
     simplex/HApp.h
     simplex/FactorTimer.h
@@ -419,9 +424,12 @@ target_sources(libhighs PRIVATE
     mip/HighsSearch.cpp
     mip/HighsCutPool.cpp
     mip/HighsCliqueTable.cpp
+    mip/HighsGFkSolve.cpp
+    mip/HighsDebugSol.cpp
     mip/HighsImplications.cpp
     mip/HighsPrimalHeuristics.cpp
     mip/HighsNodeQueue.cpp
+    mip/HighsRedcostFixing.cpp
     presolve/Presolve.cpp
     presolve/PresolveComponent.cpp
     presolve/PresolveAnalysis.cpp

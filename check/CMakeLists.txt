@@ -20,6 +20,7 @@ set(TEST_SOURCES
     TestSort.cpp
     TestSetup.cpp
     TestFilereader.cpp
+    TestHighsGFkSolve.cpp
     TestInfo.cpp
     TestBasis.cpp
     TestBasisSolves.cpp
@@ -254,9 +255,9 @@ foreach(instance ${mipInstances})
 
         set_tests_properties (${name}${setting} PROPERTIES
                 PASS_REGULAR_EXPRESSION
-                "objective function value: ${optval}"
+                "Status            Optimal\n  Primal bound      ${optval}.*\n  Dual bound        ${optval}.*\n  Solution status   feasible\n                    ${optval}.* \\(objective\\)"
                 FAIL_REGULAR_EXPRESSION
-                "solution is infeasible")
+                "Solution status   infeasible")
 
     endforeach(setting)
 endforeach()

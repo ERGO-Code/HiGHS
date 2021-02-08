@@ -6,19 +6,17 @@
 
 #include "mip/HighsCliqueTable.h"
 #include "mip/HighsCutPool.h"
+#include "mip/HighsDebugSol.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPrimalHeuristics.h"
 #include "mip/HighsPseudocost.h"
+#include "mip/HighsRedcostFixing.h"
 #include "mip/HighsSearch.h"
 #include "mip/HighsSeparation.h"
 #include "util/HighsTimer.h"
-
-#ifdef HIGHS_DEBUGSOL
-extern std::vector<double> highsDebugSolution;
-#endif
 
 struct HighsMipSolverData {
   HighsMipSolver& mipsolver;
@@ -29,6 +27,8 @@ struct HighsMipSolverData {
   HighsCliqueTable cliquetable;
   HighsImplications implications;
   HighsPrimalHeuristics heuristics;
+  HighsRedcostFixing redcostfixing;
+
   struct Substitution {
     int substcol;
     int staycol;
@@ -66,6 +66,7 @@ struct HighsMipSolverData {
   std::vector<int> downlocks;
   std::vector<int> integer_cols;
   std::vector<int> implint_cols;
+  std::vector<int> integral_cols;
   std::vector<int> continuous_cols;
   double objintscale;
 
@@ -97,18 +98,22 @@ struct HighsMipSolverData {
 
   HighsNodeQueue nodequeue;
 
+  HighsDebugSol debugSolution;
+
   HighsMipSolverData(HighsMipSolver& mipsolver)
       : mipsolver(mipsolver),
-        cutpool(mipsolver.numCol(), 10),
+        cutpool(mipsolver.numCol(), mipsolver.options_mip_->mip_pool_age_limit),
         domain(mipsolver),
         lp(mipsolver),
         pseudocost(mipsolver.numCol()),
         cliquetable(mipsolver.numCol()),
-        implications(domain, cliquetable),
-        heuristics(mipsolver) {
+        implications(mipsolver),
+        heuristics(mipsolver),
+        debugSolution(mipsolver) {
     domain.addCutpool(cutpool);
   }
 
+  void removeFixedIndices();
   void init();
   void basisTransfer();
   void checkObjIntegrality();

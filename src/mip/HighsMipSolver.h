@@ -20,7 +20,16 @@ class HighsMipSolver {
  public:
   const HighsOptions* options_mip_;
   const HighsLp* model_;
+  const HighsLp* orig_model_;
   HighsModelStatus modelstatus_;
+  std::vector<double> solution_;
+  double solution_objective_;
+  double bound_violation_;
+  double integrality_violation_;
+  double row_violation_;
+  double dual_bound_;
+  double primal_bound_;
+
   bool submip;
   const HighsBasis* rootbasis;
 
@@ -65,6 +74,7 @@ class HighsMipSolver {
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve();
   HighsPostsolveStatus runPostsolve();
+  void cleanupSolve();
 };
 
 #endif

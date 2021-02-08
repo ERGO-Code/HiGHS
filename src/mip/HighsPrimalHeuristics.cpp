@@ -37,9 +37,8 @@ void HighsPrimalHeuristics::solveSubMip(std::vector<double> colLower,
   submipsolver.run();
 
   if (submipsolver.modelstatus_ != HighsModelStatus::PRIMAL_INFEASIBLE &&
-      !submipsolver.presolve_.data_.recovered_solution_.col_value.empty()) {
-    mipsolver.mipdata_->trySolution(
-        submipsolver.presolve_.data_.recovered_solution_.col_value, 'L');
+      !submipsolver.solution_.empty()) {
+    mipsolver.mipdata_->trySolution(submipsolver.solution_, 'L');
   }
 
   if (submipsolver.mipdata_) {
@@ -84,6 +83,11 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
     if (heur.currentNodePruned()) {
       ++nbacktracks;
       // printf("backtrack1\n");
+      if (mipsolver.mipdata_->domain.infeasible()) {
+        lp_iterations += heur.getLocalLpIterations();
+        return;
+      }
+
       if (!heur.backtrack()) break;
       continue;
     }
@@ -103,9 +107,8 @@ void HighsPrimalHeuristics::RINS(const std::vector<double>& relaxationsol) {
 
     nfixed = 0;
     ntotal = 0;
-    for (int i = 0; i != mipsolver.numCol(); ++i) {
+    for (int i : mipsolver.mipdata_->integral_cols) {
       // skip fixed and continuous variables
-      if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
       if (mipsolver.mipdata_->domain.colLower_[i] ==
           mipsolver.mipdata_->domain.colUpper_[i])
         continue;
@@ -302,7 +305,7 @@ bool HighsPrimalHeuristics::linesearchRounding(
   while (alpha < 1.0) {
     double nextalpha = 1.0;
     bool reachedpoint2 = true;
-    printf("trying alpha = %g\n", alpha);
+    // printf("trying alpha = %g\n", alpha);
     for (int i = 0; i != numintcols; ++i) {
       int col = mipsolver.mipdata_->integer_cols[i];
       if (mipsolver.mipdata_->uplocks[col] == 0) {
@@ -360,7 +363,7 @@ void HighsPrimalHeuristics::randomizedRounding(
     intval = std::min(localdom.colUpper_[i], intval);
     intval = std::max(localdom.colLower_[i], intval);
 
-    localdom.fixCol(i, intval);
+    localdom.fixCol(i, intval, HighsDomain::Reason::branching());
     if (localdom.infeasible()) return;
     localdom.propagate();
     if (localdom.infeasible()) return;
@@ -423,9 +426,8 @@ void HighsPrimalHeuristics::RENS(const std::vector<double>& relaxationsol) {
 
   int nfixed = 0;
   int ntotal = 0;
-  for (int i = 0; i != mipsolver.numCol(); ++i) {
+  for (int i : mipsolver.mipdata_->integral_cols) {
     // skip fixed and continuous variables
-    if (mipsolver.variableType(i) == HighsVarType::CONTINUOUS) continue;
     if (mipsolver.mipdata_->domain.colLower_[i] ==
         mipsolver.mipdata_->domain.colUpper_[i])
       continue;
@@ -493,8 +495,8 @@ void HighsPrimalHeuristics::feasibilityPump() {
                                  objinds.size(), objinds.data(), objval.data());
   }
 
-  lprelax.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
-  lprelax.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
+  // lprelax.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
+  // lprelax.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
 
   lprelax.getLpSolver().setHighsOptionValue("simplex_strategy",
                                             SIMPLEX_STRATEGY_PRIMAL);
@@ -581,6 +583,8 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.setHighsOptionValue("solver", "ipm");
   ipm.setHighsOptionValue("run_crossover", false);
   ipm.setHighsOptionValue("presolve", "off");
+  ipm.setHighsLogfile(nullptr);
+  ipm.setHighsOutput(nullptr);
   HighsLp lpmodel(
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);

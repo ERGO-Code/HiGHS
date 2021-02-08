@@ -4,6 +4,8 @@
 #include "mip/HighsMipSolverData.h"
 
 bool HighsImplications::computeImplications(int col, bool val) {
+  HighsDomain& globaldomain = mipsolver.mipdata_->domain;
+  HighsCliqueTable& cliquetable = mipsolver.mipdata_->cliquetable;
   globaldomain.propagate();
   if (globaldomain.infeasible()) return true;
   const auto& domchgstack = globaldomain.getDomainChangeStack();
@@ -67,8 +69,27 @@ bool HighsImplications::computeImplications(int col, bool val) {
     else
       clique[1] = HighsCliqueTable::CliqueVar(i->column, 1);
 
-    cliquetable.addClique(globaldomain, clique, 2);
+    cliquetable.addClique(mipsolver, clique, 2);
     if (globaldomain.infeasible() || globaldomain.isFixed(col)) return true;
+  }
+
+  // store variable bounds derived from implications
+  for (auto i = implications.begin() + implstart; i != binstart; ++i) {
+    if (i->boundtype == HighsBoundType::Lower) {
+      if (val == 1)
+        addVLB(i->column, col, i->boundval - globaldomain.colLower_[i->column],
+               globaldomain.colLower_[i->column]);
+      else
+        addVLB(i->column, col, globaldomain.colLower_[i->column] - i->boundval,
+               i->boundval);
+    } else {
+      if (val == 1)
+        addVUB(i->column, col, i->boundval - globaldomain.colUpper_[i->column],
+               globaldomain.colUpper_[i->column]);
+      else
+        addVUB(i->column, col, globaldomain.colUpper_[i->column] - i->boundval,
+               i->boundval);
+    }
   }
 
   implications.erase(binstart, implications.end());
@@ -80,9 +101,10 @@ bool HighsImplications::computeImplications(int col, bool val) {
 }
 
 bool HighsImplications::runProbing(int col, int& numboundchgs) {
+  HighsDomain& globaldomain = mipsolver.mipdata_->domain;
   if (globaldomain.isBinary(col) && !implicationsCached(col, 1) &&
       !implicationsCached(col, 0) &&
-      cliquetable.getSubstitution(col) == nullptr) {
+      mipsolver.mipdata_->cliquetable.getSubstitution(col) == nullptr) {
     bool infeasible;
 
     infeasible = computeImplications(col, 1);
@@ -148,4 +170,96 @@ bool HighsImplications::runProbing(int col, int& numboundchgs) {
   }
 
   return false;
+}
+
+void HighsImplications::addVUB(int col, int vubcol, double vubcoef,
+                               double vubconstant) {
+  VarBound vub{vubcoef, vubconstant};
+
+  if (vub.minValue() >=
+      mipsolver.mipdata_->domain.colUpper_[col] - mipsolver.mipdata_->feastol)
+    return;
+
+  auto insertresult = vubs[col].emplace(vubcol, vub);
+
+  if (!insertresult.second) {
+    VarBound& currentvub = insertresult.first->second;
+    double minbound_current = currentvub.constant - std::abs(currentvub.coef);
+    double minbound_new = vubconstant - std::abs(vubcoef);
+    if (minbound_new < minbound_current - mipsolver.mipdata_->feastol) {
+      currentvub.coef = vubcoef;
+      currentvub.constant = vubconstant;
+    }
+  }
+}
+
+void HighsImplications::addVLB(int col, int vlbcol, double vlbcoef,
+                               double vlbconstant) {
+  VarBound vlb{vlbcoef, vlbconstant};
+
+  if (vlb.maxValue() <=
+      mipsolver.mipdata_->domain.colLower_[col] + mipsolver.mipdata_->feastol)
+    return;
+
+  auto insertresult = vlbs[col].emplace(vlbcol, vlb);
+
+  if (!insertresult.second) {
+    VarBound& currentvlb = insertresult.first->second;
+    double maxbound_current = currentvlb.constant + std::abs(currentvlb.coef);
+    double maxbound_new = vlbconstant + std::abs(vlbcoef);
+    if (maxbound_new > maxbound_current + 1e-6) {
+      currentvlb.coef = vlbcoef;
+      currentvlb.constant = vlbconstant;
+    }
+  }
+}
+
+void HighsImplications::rebuild(int ncols,
+                                const std::vector<int>& orig2reducedcol,
+                                const std::vector<int>& orig2reducedrow) {
+  std::vector<std::map<int, VarBound>> oldvubs;
+  std::vector<std::map<int, VarBound>> oldvlbs;
+
+  oldvlbs.swap(vlbs);
+  oldvubs.swap(vubs);
+
+  colsubstituted.clear();
+  colsubstituted.shrink_to_fit();
+  implicationmap.clear();
+  implicationmap.shrink_to_fit();
+
+  implicationmap.resize(2 * ncols, {-1, 0});
+  colsubstituted.resize(ncols);
+  vubs.clear();
+  vubs.shrink_to_fit();
+  vubs.resize(ncols);
+  vlbs.clear();
+  vlbs.shrink_to_fit();
+  vlbs.resize(ncols);
+  int oldncols = oldvubs.size();
+
+  for (int i = 0; i != oldncols; ++i) {
+    int newi = orig2reducedcol[i];
+
+    if (newi == -1) continue;
+
+    for (const std::pair<int, VarBound>& oldvub : oldvubs[i]) {
+      if (orig2reducedcol[oldvub.first] == -1) continue;
+
+      addVUB(newi, orig2reducedcol[oldvub.first], oldvub.second.coef,
+             oldvub.second.constant);
+    }
+
+    for (const std::pair<int, VarBound>& oldvlb : oldvlbs[i]) {
+      if (orig2reducedcol[oldvlb.first] == -1) continue;
+
+      addVLB(newi, orig2reducedcol[oldvlb.first], oldvlb.second.coef,
+             oldvlb.second.constant);
+    }
+
+    // todo also add old implications once implications can be added
+    // incrementally for now we discard the old implications as they might be
+    // weaker then newly computed ones and adding them would block computation
+    // of new implications
+  }
 }

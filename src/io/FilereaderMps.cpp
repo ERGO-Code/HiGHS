@@ -80,6 +80,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 
 HighsStatus FilereaderMps::writeModelToFile(const HighsOptions& options,
                                             const std::string filename,
-                                            HighsLp& model) {
+                                            const HighsLp& model) {
   return writeLpAsMPS(options, filename, model);
 }
