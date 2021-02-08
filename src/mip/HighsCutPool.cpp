@@ -10,11 +10,7 @@
 #include "util/HighsHash.h"
 
 static size_t support_hash(const int* Rindex, const int Rlen) {
-  size_t state = 42;
-
-  for (int i = 0; i != Rlen; ++i) hash_combine(state, size_t(Rindex[i]));
-
-  return state;
+  return HighsHashHelpers::vector_hash(Rindex, Rlen);
 }
 
 static void printCut(const int* Rindex, const double* Rvalue, int Rlen,
