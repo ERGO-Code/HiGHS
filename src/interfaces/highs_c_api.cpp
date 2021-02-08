@@ -192,6 +192,22 @@ int Highs_getModelStatus(void* highs, const int scaled_model) {
   return (int)((Highs*)highs)->getModelStatus(scaled_model);
 }
 
+int Highs_getDualRay(void* highs, int* has_dual_ray, double* dual_ray_value) {
+  bool v;
+  int retcode = (int)((Highs*)highs)->getDualRay(v, dual_ray_value);
+  *has_dual_ray = (int)v;
+  return retcode;
+}
+
+int Highs_getPrimalRay(void* highs, int* has_primal_ray,
+                       double* primal_ray_value) {
+  bool v;
+  int retcode =
+    (int)((Highs*)highs)->getPrimalRay(v, primal_ray_value);
+  *has_primal_ray = (int)v;
+  return retcode;
+}
+
 double Highs_getObjectiveValue(void* highs) {
   return ((Highs*)highs)->getObjectiveValue();
 }
@@ -382,6 +398,11 @@ int Highs_changeRowsBoundsBySet(void* highs, const int num_set_entries,
 int Highs_changeRowsBoundsByMask(void* highs, const int* mask,
                                  const double* lower, const double* upper) {
   return ((Highs*)highs)->changeRowsBounds(mask, lower, upper);
+}
+
+int Highs_changeCoeff(void* highs, const int row, const int col,
+                      const double value) {
+  return ((Highs*)highs)->changeCoeff(row, col, value);
 }
 
 int Highs_getObjectiveSense(void* highs, int* sense) {

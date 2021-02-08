@@ -238,6 +238,24 @@ int Highs_getModelStatus(
 );
 
 /**
+ * @brief Returns an unbounded dual ray that is a certificate of primal infeasibility.
+ */
+int Highs_getDualRay(
+    void* highs,            //!< HiGHS object reference
+    int* has_dual_ray,      //!< TRUE if the dual ray exists
+    double* dual_ray_value  //!< array of length [numrow], filled with an unbounded ray
+);
+
+/**
+ * @brief Returns an unbounded primal ray that is a certificate of dual infeasibility.
+ */
+int Highs_getPrimalRay(
+    void* highs,                //!< HiGHS object reference
+    int* has_primal_ray,        //!< TRUE if the primal ray exists
+    double* primal_ray_value    //!< array of length [numcol], filled with an unbounded ray
+);
+
+/**
  * @brief Returns the objective function value (if known)
  */
 double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference,
@@ -525,6 +543,16 @@ int Highs_changeRowsBoundsByMask(
     const int* mask,      //!< Full length array with 1 => change; 0 => not
     const double* lower,  //!< Full length array of new lower bounds
     const double* upper   //!< Full length array of new upper bounds
+);
+
+/**
+ * @brief Change a coefficient in the constraint matrix.
+ */
+int Highs_changeCoeff(
+    void* highs,        //!< HiGHS object reference
+    const int row,      //!< The index of the row to change
+    const int col,      //!< The index of the column to change
+    const double value  //!< The new coefficient
 );
 
 /**
