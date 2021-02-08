@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -210,8 +210,7 @@ int Highs_getDualRay(void* highs, int* has_dual_ray, double* dual_ray_value) {
 int Highs_getPrimalRay(void* highs, int* has_primal_ray,
                        double* primal_ray_value) {
   bool v;
-  int retcode =
-    (int)((Highs*)highs)->getPrimalRay(v, primal_ray_value);
+  int retcode = (int)((Highs*)highs)->getPrimalRay(v, primal_ray_value);
   *has_primal_ray = (int)v;
   return retcode;
 }
