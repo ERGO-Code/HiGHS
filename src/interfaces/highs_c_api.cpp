@@ -84,9 +84,17 @@ int Highs_passLp(void* highs, const int numcol, const int numrow,
 int Highs_clearModel(void* highs) { return (int)((Highs*)highs)->clearModel(); }
 
 int Highs_runQuiet(void* highs) {
-  int return_status = (int)((Highs*)highs)->setHighsLogfile(NULL);
+  int return_status = Highs_setHighsLogfile(highs, NULL);
   if (return_status) return return_status;
-  return (int)((Highs*)highs)->setHighsOutput(NULL);
+  return Highs_setHighsOutput(highs, NULL);
+}
+
+int Highs_setHighsLogfile(void* highs, void* logfile) {
+  return (int)((Highs*)highs)->setHighsLogfile((FILE*)logfile);
+}
+
+int Highs_setHighsOutput(void* highs, void* outputfile) {
+  return (int)((Highs*)highs)->setHighsOutput((FILE*)outputfile);
 }
 
 int Highs_setHighsBoolOptionValue(void* highs, const char* option,
@@ -190,6 +198,22 @@ void Highs_getBasis(void* highs, int* colstatus, int* rowstatus) {
 
 int Highs_getModelStatus(void* highs, const int scaled_model) {
   return (int)((Highs*)highs)->getModelStatus(scaled_model);
+}
+
+int Highs_getDualRay(void* highs, int* has_dual_ray, double* dual_ray_value) {
+  bool v;
+  int retcode = (int)((Highs*)highs)->getDualRay(v, dual_ray_value);
+  *has_dual_ray = (int)v;
+  return retcode;
+}
+
+int Highs_getPrimalRay(void* highs, int* has_primal_ray,
+                       double* primal_ray_value) {
+  bool v;
+  int retcode =
+    (int)((Highs*)highs)->getPrimalRay(v, primal_ray_value);
+  *has_primal_ray = (int)v;
+  return retcode;
 }
 
 double Highs_getObjectiveValue(void* highs) {
@@ -382,6 +406,11 @@ int Highs_changeRowsBoundsBySet(void* highs, const int num_set_entries,
 int Highs_changeRowsBoundsByMask(void* highs, const int* mask,
                                  const double* lower, const double* upper) {
   return ((Highs*)highs)->changeRowsBounds(mask, lower, upper);
+}
+
+int Highs_changeCoeff(void* highs, const int row, const int col,
+                      const double value) {
+  return ((Highs*)highs)->changeCoeff(row, col, value);
 }
 
 int Highs_getObjectiveSense(void* highs, int* sense) {
