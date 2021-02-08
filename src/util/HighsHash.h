@@ -11,8 +11,11 @@
 #include <utility>
 
 struct HighsHashHelpers {
+  using i16 = std::int16_t;
+  using u16 = std::uint16_t;
   using u32 = std::uint32_t;
   using u64 = std::uint64_t;
+
   /// mersenne prime 2^31 - 1
   static constexpr u32 M31() { return u32{0x7fffffff}; };
 
@@ -162,10 +165,10 @@ struct HighsHashHelpers {
   }
 
   template <typename T>
-  static size_t vector_hash(const T* vals, size_t numvals) {
-    std::array<uint32_t, 2> pair;
-    uint64_t hash = 0;
-    constexpr uint64_t a = uint64_t{0x45694844fe407};
+  static u64 vector_hash(const T* vals, size_t numvals) {
+    std::array<u32, 2> pair;
+    u64 hash = 0;
+    constexpr u64 a = u64{0x45694844fe407};
 
     const char* dataptr = (const char*)vals;
     const char* dataend = (const char*)(vals + numvals);
@@ -223,7 +226,6 @@ struct HighsHashHelpers {
         case 3:
         case 2:
         case 1:
-
           std::memcpy(&pair[0], dataptr, chunksize);
           chunkhash += pair_hash_1(pair[0], pair[1]);
           dataptr += chunksize;
@@ -239,7 +241,7 @@ struct HighsHashHelpers {
             typename std::enable_if<(sizeof(T) <= 8) && (sizeof(T) >= 4),
                                     int>::type = 0>
   static size_t hash(const T& val) {
-    std::array<uint32_t, 2> bytes;
+    std::array<u32, 2> bytes;
     std::memcpy(&bytes[0], &val, sizeof(T));
     return pair_hash_1(bytes[0], bytes[1]) >> 32;
   }
@@ -248,7 +250,7 @@ struct HighsHashHelpers {
             typename std::enable_if<(sizeof(T) >= 12) && (sizeof(T) <= 16),
                                     int>::type = 0>
   static size_t hash(const T& val) {
-    std::array<uint32_t, 4> bytes;
+    std::array<u32, 4> bytes;
     std::memcpy(&bytes[0], &val, sizeof(T));
     return (pair_hash_1(bytes[0], bytes[1]) +
             pair_hash_2(bytes[2], bytes[3])) >>
@@ -259,7 +261,7 @@ struct HighsHashHelpers {
             typename std::enable_if<(sizeof(T) >= 20) && (sizeof(T) <= 24),
                                     int>::type = 0>
   static size_t hash(const T& val) {
-    std::array<uint32_t, 6> bytes;
+    std::array<u32, 6> bytes;
     std::memcpy(&bytes[0], &val, sizeof(T));
     return (pair_hash_1(bytes[0], bytes[1]) + pair_hash_2(bytes[2], bytes[3]) +
             pair_hash_3(bytes[4], bytes[5])) >>
@@ -270,7 +272,7 @@ struct HighsHashHelpers {
             typename std::enable_if<(sizeof(T) >= 28) && (sizeof(T) <= 32),
                                     int>::type = 0>
   static size_t hash(const T& val) {
-    std::array<uint32_t, 8> bytes;
+    std::array<u32, 8> bytes;
     std::memcpy(&bytes[0], &val);
     return (pair_hash_1(bytes[0], bytes[1]) + pair_hash_2(bytes[2], bytes[3]) +
             pair_hash_3(bytes[4], bytes[5]) +
@@ -288,7 +290,7 @@ struct HighsHashHelpers {
     return 0.61803398874989484;
   }
 
-  static uint32_t double_hash_code(double val) {
+  static u32 double_hash_code(double val) {
     // we multiply by some irrational number, so that the buckets in which we
     // put the real numbers do not break on a power of two pattern. E.g.
     // consider the use case for detecting parallel rows when we have two
@@ -322,9 +324,8 @@ struct HighsHashHelpers {
     // epsilon. Therefore the most significant 15 bits of the mantissa and the
     // sign is encoded in the 16 lower bits of the hashcode and the upper 16bits
     // encode the sign and value of the exponent.
-    uint32_t hashvalue = (uint32_t)(uint16_t)(int16_t)exponent;
-    hashvalue = (hashvalue << 16) |
-                (uint32_t)(uint16_t)(int16_t)std::ldexp(hashbits, 15);
+    u32 hashvalue = (u32)(u16)(i16)exponent;
+    hashvalue = (hashvalue << 16) | (u32)(u16)(i16)std::ldexp(hashbits, 15);
 
     return hashvalue;
   }
