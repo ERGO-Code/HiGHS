@@ -151,6 +151,14 @@ int Highs_getHighsStringOptionValue(void* highs, const char* option,
   return retcode;
 }
 
+int Highs_getHighsOptionType(void* highs, const char* option, int* type) {
+  HighsOptionType t;
+  int retcode =
+      (int)((Highs*)highs)->getHighsOptionType(std::string(option), t);
+  *type = (int)t;
+  return retcode;
+}
+
 int Highs_resetHighsOptions(void* highs) {
   return (int)((Highs*)highs)->resetHighsOptions();
 }

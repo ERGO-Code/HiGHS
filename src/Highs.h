@@ -151,6 +151,14 @@ class Highs {
       std::string& value          //!< The option value
   );
 
+  /**
+   * @brief Get the type expected by an option
+   */
+  HighsStatus getHighsOptionType(
+      const std::string& option,  //!< The option name
+      HighsOptionType& type       //!< The option type
+  );
+
   const HighsOptions& getHighsOptions() const;
 
   HighsStatus resetHighsOptions();

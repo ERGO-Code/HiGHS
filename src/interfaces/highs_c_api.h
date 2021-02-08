@@ -202,6 +202,14 @@ int Highs_getHighsStringOptionValue(
 );
 
 /*
+ * @brief Get the type expected by an option
+ */
+int Highs_getHighsOptionType(void* highs,         //!< HiGHS object reference
+                             const char* option,  //!< The name of the option
+                             int* type            //!< The type of the option.
+);
+
+/*
  * @brief
  */
 int Highs_resetHighsOptions(void* highs  //!< HiGHS object reference
