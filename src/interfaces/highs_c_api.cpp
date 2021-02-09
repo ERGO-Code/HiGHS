@@ -97,6 +97,14 @@ int Highs_setHighsOutput(void* highs, void* outputfile) {
   return (int)((Highs*)highs)->setHighsOutput((FILE*)outputfile);
 }
 
+void* Highs_getHighsLogfile(void* highs) {
+  return (void*)((Highs*)highs)->getHighsOptions().logfile;
+}
+
+void* Highs_getHighsOutput(void* highs) {
+  return (void*)((Highs*)highs)->getHighsOptions().output;
+}
+
 int Highs_setHighsBoolOptionValue(void* highs, const char* option,
                                   const int value) {
   return (int)((Highs*)highs)

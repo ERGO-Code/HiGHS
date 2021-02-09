@@ -93,6 +93,18 @@ int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
 );
 
 /*
+ * @brief Gets the logfile for printing.
+ */
+void* Highs_getHighsLogfile(void* highs  //!< HiGHS object reference
+);
+
+/*
+ * @brief Gets the output for printing.
+ */
+void* Highs_getHighsOutput(void* highs  //!< HiGHS object reference
+);
+
+/*
  * @brief Runs HiGHS
  */
 int Highs_run(void* highs  //!< HiGHS object reference
