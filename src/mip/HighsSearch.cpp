@@ -223,9 +223,28 @@ int HighsSearch::selectBranchingCandidate() {
   std::vector<int> evalqueue;
   evalqueue.resize(numfrac);
   std::iota(evalqueue.begin(), evalqueue.end(), 0);
+
+  auto numNodesUp = [&](int k) {
+    if (mipsolver.mipdata_->domain.isBinary(fracints[k].first))
+      return mipsolver.mipdata_->nodequeue.numNodesUp(fracints[k].first);
+
+    return mipsolver.mipdata_->nodequeue.numNodesUp(fracints[k].first,
+                                                    fracints[k].second);
+  };
+
+  auto numNodesDown = [&](int k) {
+    if (mipsolver.mipdata_->domain.isBinary(fracints[k].first))
+      return mipsolver.mipdata_->nodequeue.numNodesDown(fracints[k].first);
+
+    return mipsolver.mipdata_->nodequeue.numNodesDown(fracints[k].first,
+                                                      fracints[k].second);
+  };
+
   auto selectBestScore = [&]() {
     int best = -1;
     double bestscore = -1.0;
+    double bestnodes = -1.0;
+    size_t bestnumnodes = 0;
     for (int k : evalqueue) {
       double score;
       if ((upscore[k] == 0.0 && upscorereliable[k]) ||
@@ -237,9 +256,21 @@ int HighsSearch::selectBranchingCandidate() {
                     : pseudocost.getScore(fracints[k].first, upscore[k],
                                           downscore[k]);
 
-      if (score > bestscore) {
+      size_t upnodes = numNodesUp(k);
+      size_t downnodes = numNodesDown(k);
+      double nodes = 0;
+      size_t numnodes = upnodes + downnodes;
+      if (upnodes != 0 || downnodes != 0)
+        nodes =
+            (downnodes / (double)(numnodes)) * (upnodes / (double)(numnodes));
+      if (score > bestscore ||
+          (score > bestscore - mipsolver.mipdata_->feastol &&
+           std::make_pair(nodes, numnodes) >
+               std::make_pair(bestnodes, bestnumnodes))) {
         bestscore = score;
         best = k;
+        bestnodes = nodes;
+        bestnumnodes = numnodes;
       }
     }
 

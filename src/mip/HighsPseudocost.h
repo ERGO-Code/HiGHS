@@ -114,27 +114,14 @@ class HighsPseudocost {
   }
 
   double getScore(int col, double upcost, double downcost) const {
-    // each column is assigned a random hash based on the seed
-    // for which we compute a random number in [0,1e-5]
-    // This number is then added to the final score for random tie breaking
-    unsigned hash = (unsigned(col) + seed) * 0x9e3779b9u;
-    double randomval =
-        1e-5 * hash / (double)std::numeric_limits<unsigned>::max();
-    return randomval + upcost * downcost;
+    return upcost * downcost;
   }
 
   double getScore(int col, double frac) const {
-    // each column is assigned a random hash based on the seed
-    // for which we compute a random number in [0,1e-5]
-    // This number is then added to the final score for random tie breaking
-    unsigned hash = (unsigned(col) + seed) * 0x9e3779b9u;
-    double randomval =
-        1e-5 * hash / (double)std::numeric_limits<unsigned>::max();
-
     double upcost = getPseudocostUp(col, frac);
     double downcost = getPseudocostDown(col, frac);
 
-    return randomval + (upcost * downcost);
+    return upcost * downcost;
   }
 };
 
