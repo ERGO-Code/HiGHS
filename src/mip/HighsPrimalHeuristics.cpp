@@ -612,7 +612,7 @@ void HighsPrimalHeuristics::centralRounding() {
 }
 
 void HighsPrimalHeuristics::clique() {
-  std::unordered_map<int, double> entries;
+  HighsHashTable<int, double> entries;
   double offset = 0.0;
 
   HighsDomain& globaldom = mipsolver.mipdata_->domain;
@@ -633,15 +633,15 @@ void HighsPrimalHeuristics::clique() {
   std::vector<double> profits;
   std::vector<HighsCliqueTable::CliqueVar> objvars;
 
-  for (const std::pair<int, double>& entry : entries) {
-    double objprofit = -entry.second;
+  for (const auto& entry : entries) {
+    double objprofit = -entry.value();
     if (objprofit < 0) {
       offset += objprofit;
       profits.push_back(-objprofit);
-      objvars.emplace_back(entry.first, 0);
+      objvars.emplace_back(entry.key(), 0);
     } else {
       profits.push_back(objprofit);
-      objvars.emplace_back(entry.first, 1);
+      objvars.emplace_back(entry.key(), 1);
     }
   }
 

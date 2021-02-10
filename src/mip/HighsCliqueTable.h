@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "util/HighsHash.h"
 
 class HighsCutPool;
 class HighsDomain;
@@ -65,6 +66,7 @@ class HighsCliqueTable {
   std::vector<int> freeslots;
   std::vector<Clique> cliques;
   std::vector<int> cliquesetroot;
+  std::vector<int> sizeTwoCliquesetRoot;
   std::vector<int> numcliquesvar;
   std::vector<int> redundantconstraints;
   std::vector<CliqueVar> infeasvertexstack;
@@ -76,6 +78,10 @@ class HighsCliqueTable {
   std::vector<uint16_t> cliquehits;
   std::vector<int> cliquehitinds;
   std::vector<int> stack;
+
+  // HighsHashTable<std::pair<CliqueVar, CliqueVar>> invertedEdgeCache;
+  HighsHashTable<std::pair<CliqueVar, CliqueVar>, int> sizeTwoCliques;
+
   std::mt19937 randgen;
   int nfixings;
 
@@ -85,7 +91,7 @@ class HighsCliqueTable {
 
   void link(int node);
 
-  int findCommonCliqueRecurse(int& r1, int& r2);
+  int findCommonCliqueId(CliqueVar v1, CliqueVar v2);
 
   int runCliqueSubsumption(HighsDomain& globaldom,
                            std::vector<CliqueVar>& clique);
@@ -128,6 +134,7 @@ class HighsCliqueTable {
  public:
   HighsCliqueTable(int ncols) {
     cliquesetroot.resize(2 * ncols, -1);
+    sizeTwoCliquesetRoot.resize(2 * ncols, -1);
     numcliquesvar.resize(2 * ncols, 0);
     colsubstituted.resize(ncols);
     nfixings = 0;
@@ -180,16 +187,14 @@ class HighsCliqueTable {
 
   bool haveCommonClique(CliqueVar v1, CliqueVar v2) {
     if (v1.col == v2.col) return false;
-    return findCommonCliqueRecurse(cliquesetroot[v1.index()],
-                                   cliquesetroot[v2.index()]) != -1;
+    return findCommonCliqueId(v1, v2) != -1;
   }
 
   std::pair<const CliqueVar*, int> findCommonClique(CliqueVar v1,
                                                     CliqueVar v2) {
     std::pair<const CliqueVar*, int> c{nullptr, 0};
     if (v1 == v2) return c;
-    int clq = findCommonCliqueRecurse(cliquesetroot[v1.index()],
-                                      cliquesetroot[v2.index()]);
+    int clq = findCommonCliqueId(v1, v2);
     if (clq == -1) return c;
 
     c.first = &cliqueentries[cliques[clq].start];

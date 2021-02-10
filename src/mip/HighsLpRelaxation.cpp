@@ -1,13 +1,12 @@
 #include "mip/HighsLpRelaxation.h"
 
-#include <unordered_map>
-
 #include "mip/HighsCutPool.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsPseudocost.h"
 #include "util/HighsCDouble.h"
+#include "util/HighsHash.h"
 
 void HighsLpRelaxation::LpRow::get(const HighsMipSolver& mipsolver, int& len,
                                    const int*& inds,
@@ -765,7 +764,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
       case Status::UnscaledDualFeasible:
       case Status::UnscaledPrimalFeasible:
       case Status::Optimal: {
-        std::unordered_map<int, std::pair<double, int>> fracints;
+        HighsHashTable<int, std::pair<double, int>> fracints;
         const HighsSolution& sol = lpsolver.getSolution();
 
         HighsCDouble objsum = 0;
@@ -819,7 +818,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
 
         for (const auto& it : fracints) {
           fractionalints.emplace_back(
-              it.first, it.second.first / (double)it.second.second);
+              it.key(), it.value().first / (double)it.value().second);
         }
 
         if (roundable && !fractionalints.empty()) {

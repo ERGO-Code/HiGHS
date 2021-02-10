@@ -21,6 +21,7 @@
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
+#include "util/HighsHash.h"
 #include "util/HighsIntegers.h"
 
 template <int k, typename FoundModKCut>
@@ -164,9 +165,10 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   std::vector<int> tmpinds;
   std::vector<double> tmpvals;
 
-  std::unordered_set<std::vector<std::pair<int, unsigned int>>,
-                     HighsVectorHasher, HighsVectorEqual>
-      usedWeights;
+  HighsHashTable<std::vector<std::pair<int, unsigned int>>> usedWeights;
+  // std::unordered_set<std::vector<std::pair<int, unsigned int>>,
+  //                   HighsVectorHasher, HighsVectorEqual>
+  //    usedWeights;
   int k;
   auto foundCut = [&](std::vector<std::pair<int, unsigned int>>& weights) {
     // cuts which come from a single row can already be found with the
@@ -174,7 +176,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     if (weights.size() <= 1) return;
 
     std::sort(weights.begin(), weights.end());
-    if (!usedWeights.emplace(weights).second) return;
+    if (!usedWeights.insert(weights)) return;
 
     for (const auto& w : weights) {
       int row = integralScales[w.first].first;

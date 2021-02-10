@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 #include "mip/HighsDomainChange.h"

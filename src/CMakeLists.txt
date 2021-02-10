@@ -144,6 +144,7 @@ set(sources
     test/DevKkt.cpp
     test/KktCh2.cpp
     util/HighsSort.cpp
+    util/HighsHash.cpp
     util/HighsUtils.cpp
     util/HighsMatrixPic.cpp
     util/HSet.cpp
@@ -472,6 +473,7 @@ target_sources(libhighs PRIVATE
     test/KktCh2.cpp
     test/DevKkt.cpp
     util/HighsSort.cpp
+    util/HighsHash.cpp
     util/HighsUtils.cpp
     util/HighsMatrixPic.cpp
     util/HSet.cpp

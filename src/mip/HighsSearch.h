@@ -11,6 +11,7 @@
 #include "mip/HighsNodeQueue.h"
 #include "mip/HighsPseudocost.h"
 #include "mip/HighsSeparation.h"
+#include "util/HighsHash.h"
 
 class HighsMipSolver;
 class HighsImplications;
@@ -72,11 +73,11 @@ class HighsSearch {
   };
 
   std::vector<NodeData> nodestack;
-  std::unordered_map<int, int> reliableatnode;
+  HighsHashTable<int, int> reliableatnode;
 
   bool branchingVarReliableAtNode(int col) const {
     auto it = reliableatnode.find(col);
-    if (it == reliableatnode.end() || it->second != 3) return false;
+    if (it == nullptr || *it != 3) return false;
 
     return true;
   }
