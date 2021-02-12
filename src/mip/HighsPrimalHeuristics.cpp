@@ -32,6 +32,7 @@ void HighsPrimalHeuristics::solveSubMip(std::vector<double> colLower,
       mipsolver.timer_.read(mipsolver.timer_.solve_clock);
   submipoptions.dual_objective_value_upper_bound =
       mipsolver.mipdata_->upper_limit;
+  submipoptions.presolve = "on";
   // setup solver and run it
   HighsMipSolver submipsolver(submipoptions, submip, true);
   submipsolver.rootbasis = &mipsolver.mipdata_->firstrootbasis;
