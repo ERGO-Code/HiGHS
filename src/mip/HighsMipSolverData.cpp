@@ -766,7 +766,8 @@ void HighsMipSolverData::evaluateRootNode() {
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
   lp.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
   lp.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
-  lp.resolveLp();
+  HighsLpRelaxation::Status status = lp.resolveLp();
+
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
   maxrootlpiters = lp.getNumLpIterations();
   size_t firstlpiters = maxrootlpiters;
@@ -794,7 +795,8 @@ void HighsMipSolverData::evaluateRootNode() {
     heuristics.flushStatistics();
   }
 
-  if (mipsolver.mipdata_->domain.infeasible() ||
+  if (status == HighsLpRelaxation::Status::Infeasible ||
+      mipsolver.mipdata_->domain.infeasible() ||
       mipsolver.mipdata_->lower_bound > mipsolver.mipdata_->upper_limit) {
     lower_bound = std::min(HIGHS_CONST_INF, upper_bound);
     total_lp_iterations = lp.getNumLpIterations();
@@ -814,8 +816,6 @@ void HighsMipSolverData::evaluateRootNode() {
   int stall = 0;
   double smoothprogress = 0.0;
   int nseparounds = 0;
-
-  HighsLpRelaxation::Status status = lp.getStatus();
 
   HighsSeparation sepa(mipsolver);
   sepa.setLpRelaxation(&lp);
