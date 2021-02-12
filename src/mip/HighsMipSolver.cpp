@@ -250,7 +250,7 @@ void HighsMipSolver::run() {
 
     // perform the dive and put the open nodes to the queue
     size_t plungestart = mipdata_->num_nodes;
-    size_t lastLbNode = mipdata_->num_nodes;
+    size_t lastLbLeave = mipdata_->num_leaves;
     bool limit_reached = false;
     while (true) {
       if (mipdata_->heuristic_lp_iterations <
@@ -360,13 +360,13 @@ void HighsMipSolver::run() {
       // (int)nodequeue.size());
       assert(!search.hasNode());
 
-      if (mipdata_->num_nodes - lastLbNode >= 1000) {
+      if (mipdata_->num_leaves - lastLbLeave >= 10) {
         search.installNode(mipdata_->nodequeue.popBestBoundNode());
-        lastLbNode = mipdata_->num_nodes;
+        lastLbLeave = mipdata_->num_leaves;
       } else {
         search.installNode(mipdata_->nodequeue.popBestNode());
         if (search.getCurrentLowerBound() == mipdata_->lower_bound)
-          lastLbNode = mipdata_->num_nodes;
+          lastLbLeave = mipdata_->num_leaves;
       }
 
       assert(search.hasNode());

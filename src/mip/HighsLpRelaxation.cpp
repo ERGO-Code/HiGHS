@@ -143,15 +143,15 @@ double HighsLpRelaxation::computeBestEstimate(const HighsPseudocost& ps) const {
     // fractionality.
 
     HighsCDouble increase = 0.0;
+    double offset = mipsolver.mipdata_->feastol *
+                    std::max(std::abs(objective), 1.0) /
+                    mipsolver.mipdata_->integral_cols.size();
 
-    double offset = 0.1 * ps.getAvgPseudocost() / mipsolver.mipdata_->integral_cols.size();
-
-    if (offset == 0.0)
-      offset = mipsolver.mipdata_->epsilon * std::max(std::abs(objective), 1.0);
-
-    for (const std::pair<int, double>& f : fractionalints)
+    for (const std::pair<int, double>& f : fractionalints) {
       increase += std::min(ps.getPseudocostUp(f.first, f.second, offset),
                            ps.getPseudocostDown(f.first, f.second, offset));
+    }
+
     estimate += double(increase);
   }
 

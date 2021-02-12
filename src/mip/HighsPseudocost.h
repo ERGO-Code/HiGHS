@@ -85,16 +85,36 @@ class HighsPseudocost {
 
   double getPseudocostUp(int col, double frac, double offset) const {
     double up = std::ceil(frac) - frac;
-    double cost =
-        nsamplesup[col] == 0 ? 0 : pseudocostup[col] / nsamplesup[col];
+    double cost;
 
+    if (nsamplesup[col] < minreliable) {
+      double weightPs = nsamplesup[col] == 0 ? 0
+                                             : 0.75 + 0.25 * nsamplesup[col] /
+                                                          (double)minreliable;
+      cost = nsamplesup[col] == 0
+                 ? 0
+                 : weightPs * pseudocostup[col] / nsamplesup[col];
+      cost += (1.0 - weightPs) * getAvgPseudocost();
+    } else
+      cost = pseudocostup[col] / nsamplesup[col];
     return up * (offset + cost);
   }
 
   double getPseudocostDown(int col, double frac, double offset) const {
     double down = frac - std::floor(frac);
-    double cost =
-        nsamplesdown[col] == 0 ? 0 : pseudocostdown[col] / nsamplesdown[col];
+    double cost;
+
+    if (nsamplesdown[col] < minreliable) {
+      double weightPs =
+          nsamplesdown[col] == 0
+              ? 0
+              : 0.75 + 0.25 * nsamplesdown[col] / (double)minreliable;
+      cost = nsamplesdown[col] == 0
+                 ? 0
+                 : weightPs * pseudocostdown[col] / nsamplesdown[col];
+      cost += (1.0 - weightPs) * getAvgPseudocost();
+    } else
+      cost = pseudocostdown[col] / nsamplesdown[col];
 
     return down * (offset + cost);
   }
