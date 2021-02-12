@@ -61,7 +61,9 @@ struct HighsGFk {
 };
 
 class HighsGFkSolve {
-#ifndef HIGHS_UNIT_TEST
+#ifdef HIGHS_UNIT_TEST
+ public:
+#else
  private:
 #endif
   int numCol;
