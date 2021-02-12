@@ -3,8 +3,6 @@
 #include <random>
 
 #include "catch.hpp"
-
-#define HIGHS_UNIT_TEST
 #include "mip/HighsGFkSolve.h"
 
 template <int k>
@@ -27,11 +25,10 @@ void testGFkSolve(const std::vector<int>& Avalue,
         --nnz;
         REQUIRE(pos == -1);
       } else {
-        assert(GFkSolve.Avalue[pos] == (unsigned int)val);
         REQUIRE(pos != -1);
-        REQUIRE(GFkSolve.Avalue[pos] == (unsigned int)val);
-        REQUIRE(GFkSolve.Arow[pos] == Aindex[j]);
-        REQUIRE(GFkSolve.Acol[pos] == i);
+        REQUIRE(GFkSolve.getAvalue()[pos] == (unsigned int)val);
+        REQUIRE(GFkSolve.getArow()[pos] == Aindex[j]);
+        REQUIRE(GFkSolve.getAcol()[pos] == i);
       }
     }
   }

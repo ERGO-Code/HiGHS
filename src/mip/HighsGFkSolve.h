@@ -61,11 +61,6 @@ struct HighsGFk {
 };
 
 class HighsGFkSolve {
-#ifdef HIGHS_UNIT_TEST
- public:
-#else
- private:
-#endif
   int numCol;
   int numRow;
 
@@ -115,13 +110,16 @@ class HighsGFkSolve {
 
   void storeRowPositions(int pos);
 
-  int findNonzero(int row, int col);
-
   void addNonzero(int row, int col, unsigned int val);
 
-  int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
-
  public:
+  // access to triplets and find nonzero function for unit test
+  const std::vector<int>& getArow() const { return Arow; }
+  const std::vector<int>& getAcol() const { return Acol; }
+  const std::vector<unsigned>& getAvalue() const { return Avalue; }
+  int numNonzeros() const { return int(Avalue.size() - freeslots.size()); }
+  int findNonzero(int row, int col);
+
   template <unsigned int k, typename T>
   void fromCSC(const std::vector<T>& Aval, const std::vector<int>& Aindex,
                const std::vector<int>& Astart, int numRow) {
