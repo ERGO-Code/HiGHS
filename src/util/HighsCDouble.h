@@ -282,9 +282,7 @@ class HighsCDouble {
     return res;
   }
 
-  friend HighsCDouble round(const HighsCDouble& x) {
-    return floor(x + 0.5);
-  }
+  friend HighsCDouble round(const HighsCDouble& x) { return floor(x + 0.5); }
 };
 
 #endif

@@ -2,8 +2,8 @@
 #define HIGHS_SPARSE_VECTOR_SUM_H_
 
 #include <algorithm>
-#include <cstdint>
 #include <cassert>
+#include <cstdint>
 #include <vector>
 
 #include "util/HighsCDouble.h"
@@ -83,7 +83,7 @@ class HighsSparseVectorSum {
       int pos = nonzeroinds[i];
       double val = double(values[pos]);
 
-      if( isZero(pos, val) ) {
+      if (isZero(pos, val)) {
         values[pos] = 0.0;
         nonzeroflag[pos] = 0;
         --numNz;
