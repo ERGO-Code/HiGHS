@@ -180,10 +180,31 @@ set(headers
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
     lp_data/HighsStatus.h
+    mip/HighsCliqueTable.h
+    mip/HighsCutGeneration.h
+    mip/HighsCutPool.h
     mip/HighsDebugSol.h
-    mip/HighsMipSolver.h
+    mip/HighsDomainChange.h
+    mip/HighsDomain.h
+    mip/HighsDynamicRowMatrix.h
     mip/HighsGFkSolve.h
-    mip/SolveMip.h
+    mip/HighsImplications.h
+    mip/HighsLpAggregator.h
+    mip/HighsLpRelaxation.h
+    mip/HighsMipSolverData.h
+    mip/HighsMipSolver.h
+    mip/HighsModkSeparator.h
+    mip/HighsNodeQueue.h
+    mip/HighsPathSeparator.h
+    mip/HighsPrimalHeuristics.h
+    mip/HighsPseudocost.h
+    mip/HighsRedcostFixing.h
+    mip/HighsSearch.h
+    mip/HighsSeparation.h
+    mip/HighsSeparator.h
+    mip/HighsSparseVectorSum.h
+    mip/HighsTableauSeparator.h
+    mip/HighsTransformedLp.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
@@ -202,22 +223,28 @@ set(headers
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
-    presolve/Presolve.h
-    presolve/PresolveComponent.h
-    presolve/PresolveAnalysis.h
-    presolve/PresolveUtils.h
+    presolve/HAggregator.h
+    presolve/HighsLpPropagator.h
     presolve/HPreData.h
+    presolve/PresolveAnalysis.h
+    presolve/PresolveComponent.h
+    presolve/Presolve.h
+    presolve/PresolveUtils.h
     simplex/HVector.h
     test/DevKkt.h
     test/KktCh2.h
-    util/stringutil.h
+    util/HighsCDouble.h
     util/HighsComponent.h
+    util/HighsHash.h
+    util/HighsIntegers.h
+    util/HighsMatrixPic.h
     util/HighsRandom.h
     util/HighsSort.h
+    util/HighsSplay.h
     util/HighsTimer.h
     util/HighsUtils.h
-    util/HighsMatrixPic.h
     util/HSet.h
+    util/stringutil.h
     Highs.h
     interfaces/highs_c_api.h
 )
