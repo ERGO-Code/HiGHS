@@ -27,10 +27,8 @@ jobs:
         make install
     - name: Compile and test C example
       shell: bash
-      working-directory: $GITHUB_WORKSPACE/examples
       run: |
-        pwd
-        g++ call_highs_from_c.c \
+        g++ $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
           -o c_example \
           -I ${{runner.workspace}}/install/include \
           -L ${{runner.workspace}}/install/lib -lhighs
