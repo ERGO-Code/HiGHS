@@ -27,7 +27,11 @@ jobs:
         make install
     - name: Compile and test C example
       shell: bash
-      working-directory: ${{runner.workspace}}/examples
+      working-directory: $GITHUB_WORKSPACE/examples
       run: |
-        g++ -o c_example call_highs_from_c.c -I ../install/include -L ../install/lib -lhighs
-        LD_LIBRARY_PATH=../install/lib ./c_example
+        pwd
+        g++ call_highs_from_c.c \
+          -o c_example \
+          -I ${{runner.workspace}}/install/include \
+          -L ${{runner.workspace}}/install/lib -lhighs
+        LD_LIBRARY_PATH=${{runner.workspace}}/install/lib ./c_example
