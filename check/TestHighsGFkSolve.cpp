@@ -19,14 +19,17 @@ void testGFkSolve(const std::vector<int>& Avalue,
   int nnz = Avalue.size();
   for (int i = 0; i != numCol; ++i) {
     for (int j = Astart[i]; j != Astart[i + 1]; ++j) {
-      unsigned int val = ((unsigned int)std::abs(Avalue[j])) % k;
+      int val = Avalue[j] % k;
+      if (val < 0) val += k;
+      REQUIRE(val >= 0);
       int pos = GFkSolve.findNonzero(Aindex[j], i);
       if (val == 0) {
         --nnz;
         REQUIRE(pos == -1);
       } else {
+        assert(GFkSolve.Avalue[pos] == (unsigned int)val);
         REQUIRE(pos != -1);
-        REQUIRE(GFkSolve.Avalue[pos] == val);
+        REQUIRE(GFkSolve.Avalue[pos] == (unsigned int)val);
         REQUIRE(GFkSolve.Arow[pos] == Aindex[j]);
         REQUIRE(GFkSolve.Acol[pos] == i);
       }
@@ -45,17 +48,18 @@ void testGFkSolve(const std::vector<int>& Avalue,
           REQUIRE(solentry.second > 0);
           REQUIRE(solentry.second < k);
           for (int j = Astart[solentry.first]; j != Astart[solentry.first + 1];
-               ++j)
-            solSums[Aindex[j]] =
-                (solSums[Aindex[j]] + std::abs(Avalue[j]) * solentry.second) %
+               ++j) {
+            int64_t val =
+                (solSums[Aindex[j]] + (Avalue[j] * (int64_t)solentry.second)) %
                 k;
+            if (val < 0) val += k;
+            solSums[Aindex[j]] = val;
+          }
         }
 
-        for (int i = 0; i < numRow - 1; ++i) {
-          REQUIRE(solSums[i] % k == 0);
-        }
+        for (int i = 0; i < numRow - 1; ++i) REQUIRE(solSums[i] == 0);
 
-        REQUIRE(solSums[numRow - 1] % k == k - 1);
+        REQUIRE(solSums[numRow - 1] == k - 1);
       });
 }
 
