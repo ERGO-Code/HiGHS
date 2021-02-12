@@ -1,0 +1,32 @@
+# This tests the C example, and it uses a similar build script to the one used
+# by JuMP when building HiGHS:
+# https://github.com/JuliaPackaging/Yggdrasil/blob/master/H/HiGHS/build_tarballs.jl
+name: test-c-example
+on: ["push", "pull_request"]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Create Build Environment
+      run: |
+        mkdir ${{runner.workspace}}/build
+        mkdir ${{runner.workspace}}/install
+    - name: Build HiGHS library
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: |
+        cmake \
+          -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=ON \
+          -DFAST_BUILD=ON \
+          -DIPX=OFF ..
+        cmake --build . --config Release --parallel
+        make install
+    - name: Compile and test C example
+      shell: bash
+      working-directory: ${{runner.workspace}}/examples
+      run: |
+        g++ -o c_example call_highs_from_c.c -I ../install/include -L ../install/lib -lhighs
+        LD_LIBRARY_PATH=../install/lib ./c_example
