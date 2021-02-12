@@ -16,6 +16,7 @@
 #ifndef MIP_HIGHS_SEPARATOR_H_
 #define MIP_HIGHS_SEPARATOR_H_
 
+#include <cstddef>
 #include <cstdint>
 
 class HighsLpRelaxation;
