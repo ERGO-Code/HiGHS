@@ -541,6 +541,11 @@ class HighsHashTable {
   using iterator = HashTableIterator<Entry>;
 
   HighsHashTable() { makeEmptyTable(128); }
+  HighsHashTable(u32 minCapacity) {
+    u32 initCapacity =
+        1u << (u32)std::ceil(std::log2(std::max(128.0, 8 * minCapacity / 7.0)));
+    makeEmptyTable(initCapacity);
+  }
 
   iterator end() {
     u32 capacity = tableSizeMask + 1;
@@ -683,7 +688,7 @@ class HighsHashTable {
     if (findPosition(key, meta, startPos, maxPos, pos))
       return entryArray[pos].value();
 
-    if (numElements == ((tableSizeMask + 1) * 15) / 16 || pos == maxPos) {
+    if (numElements == ((tableSizeMask + 1) * 7) / 8 || pos == maxPos) {
       growTable();
       return (*this)[key];
     }
@@ -726,7 +731,7 @@ class HighsHashTable {
     u8 meta;
     if (findPosition(entry.key(), meta, startPos, maxPos, pos)) return false;
 
-    if (numElements == ((tableSizeMask + 1) * 15) / 16 || pos == maxPos) {
+    if (numElements == ((tableSizeMask + 1) * 7) / 8 || pos == maxPos) {
       growTable();
       return insert(std::move(entry));
     }

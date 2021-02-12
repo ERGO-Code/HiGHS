@@ -102,6 +102,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
   status = Status::NotSet;
   numlpiters = 0;
   epochs = 0;
+  maxNumFractional = 0;
   currentbasisstored = false;
 }
 
@@ -119,6 +120,7 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
   lpsolver.setBasis(other.lpsolver.getBasis());
   numlpiters = 0;
   epochs = 0;
+  maxNumFractional = 0;
 }
 
 void HighsLpRelaxation::loadModel() {
@@ -764,7 +766,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
       case Status::UnscaledDualFeasible:
       case Status::UnscaledPrimalFeasible:
       case Status::Optimal: {
-        HighsHashTable<int, std::pair<double, int>> fracints;
+        HighsHashTable<int, std::pair<double, int>> fracints(maxNumFractional);
         const HighsSolution& sol = lpsolver.getSolution();
 
         HighsCDouble objsum = 0;
@@ -809,6 +811,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
             pair.second += 1;
           }
         }
+
+        maxNumFractional = std::max(fracints.size(), maxNumFractional);
 
         if (domain && !domain->getChangedCols().empty()) {
           // printf("resolving due to fixings of substituted columns\n");

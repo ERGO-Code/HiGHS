@@ -61,6 +61,7 @@ class HighsLpRelaxation {
   bool currentbasisstored;
   size_t numlpiters;
   size_t epochs;
+  size_t maxNumFractional;
   Status status;
 
   void storeDualInfProof();
