@@ -4,7 +4,7 @@
 
 #include "catch.hpp"
 
-#define private public
+#define HIGHS_UNIT_TEST
 #include "mip/HighsGFkSolve.h"
 
 template <int k>
