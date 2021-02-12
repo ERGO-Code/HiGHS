@@ -138,6 +138,14 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
+HighsStatus Highs::getHighsOptionType(const std::string& option,
+                                      HighsOptionType& type) {
+  if (getOptionType(options_.logfile, option, options_.records, type) ==
+      OptionStatus::OK)
+    return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
 HighsStatus Highs::resetHighsOptions() {
   resetOptions(options_.records);
   return HighsStatus::OK;

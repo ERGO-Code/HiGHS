@@ -589,6 +589,16 @@ OptionStatus getOptionValue(FILE* logfile, const std::string& name,
   return OptionStatus::OK;
 }
 
+OptionStatus getOptionType(FILE* logfile, const std::string& name,
+                           const std::vector<OptionRecord*>& option_records,
+                           HighsOptionType& type) {
+  int index;
+  OptionStatus status = getOptionIndex(logfile, name, option_records, index);
+  if (status != OptionStatus::OK) return status;
+  type = option_records[index]->type;
+  return OptionStatus::OK;
+}
+
 void resetOptions(std::vector<OptionRecord*>& option_records) {
   int num_options = option_records.size();
   for (int index = 0; index < num_options; index++) {

@@ -291,11 +291,18 @@ TEST_CASE("highs-options", "[highs_options]") {
   return_status = highs.writeHighsOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::OK);
 
+  HighsOptionType highs_option_type;
+
   bool get_mps_parser_type_free;
   return_status = highs.getHighsOptionValue("mps_parser_type_free",
                                             get_mps_parser_type_free);
   REQUIRE(return_status == HighsStatus::OK);
   REQUIRE(get_mps_parser_type_free == false);
+
+  return_status =
+      highs.getHighsOptionType("mps_parser_type_free", highs_option_type);
+  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(highs_option_type == HighsOptionType::BOOL);
 
   int get_allowed_simplex_matrix_scale_factor;
   return_status =
@@ -305,16 +312,30 @@ TEST_CASE("highs-options", "[highs_options]") {
   REQUIRE(get_allowed_simplex_matrix_scale_factor ==
           allowed_simplex_matrix_scale_factor);
 
+  return_status = highs.getHighsOptionType(
+      "allowed_simplex_matrix_scale_factor", highs_option_type);
+  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(highs_option_type == HighsOptionType::INT);
+
   double get_small_matrix_value;
   return_status =
       highs.getHighsOptionValue("small_matrix_value", get_small_matrix_value);
   REQUIRE(return_status == HighsStatus::OK);
   REQUIRE(get_small_matrix_value == small_matrix_value);
 
+  return_status =
+      highs.getHighsOptionType("small_matrix_value", highs_option_type);
+  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(highs_option_type == HighsOptionType::DOUBLE);
+
   std::string get_model_file;
   return_status = highs.getHighsOptionValue("model_file", get_model_file);
   REQUIRE(return_status == HighsStatus::OK);
   REQUIRE(get_model_file == model_file);
+
+  return_status = highs.getHighsOptionType("model_file", highs_option_type);
+  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(highs_option_type == HighsOptionType::STRING);
 
   HighsOptions options = highs.getHighsOptions();
   REQUIRE(options.model_file == model_file);
