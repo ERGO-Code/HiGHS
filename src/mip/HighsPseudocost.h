@@ -87,7 +87,7 @@ class HighsPseudocost {
     double up = std::ceil(frac) - frac;
     double cost;
 
-    if (nsamplesup[col] < minreliable) {
+    if (nsamplesup[col] == 0 || nsamplesup[col] < minreliable) {
       double weightPs = nsamplesup[col] == 0 ? 0
                                              : 0.75 + 0.25 * nsamplesup[col] /
                                                           (double)minreliable;
@@ -104,7 +104,7 @@ class HighsPseudocost {
     double down = frac - std::floor(frac);
     double cost;
 
-    if (nsamplesdown[col] < minreliable) {
+    if (nsamplesdown[col] == 0 || nsamplesdown[col] < minreliable) {
       double weightPs =
           nsamplesdown[col] == 0
               ? 0

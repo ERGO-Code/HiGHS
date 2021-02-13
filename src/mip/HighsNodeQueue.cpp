@@ -190,11 +190,13 @@ double HighsNodeQueue::performBounding(double upper_limit) {
 
   auto get_left = [&](int n) -> int& { return nodes[n].leftlower; };
   auto get_right = [&](int n) -> int& { return nodes[n].rightlower; };
-  auto get_key = [&](int n) { return std::make_pair(nodes[n].lower_bound, n); };
+  auto get_key = [&](int n) {
+    return std::make_tuple(nodes[n].lower_bound, nodes[n].lp_objective, n);
+  };
 
   // split the lower bound tree along the bounding value
-  lowerroot = highs_splay(std::make_pair(upper_limit, 0), lowerroot, get_left,
-                          get_right, get_key);
+  lowerroot = highs_splay(std::make_tuple(upper_limit, -HIGHS_CONST_INF, 0),
+                          lowerroot, get_left, get_right, get_key);
   int delroot;
 
   if (nodes[lowerroot].lower_bound < upper_limit) {
