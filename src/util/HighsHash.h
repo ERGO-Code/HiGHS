@@ -142,7 +142,7 @@ struct HighsHashHelpers {
   template <typename T,
             typename std::enable_if<HighsHashable<T>::value, int>::type = 0>
   static u64 vector_hash(const T* vals, size_t numvals) {
-    std::array<u32, 2> pair;
+    std::array<u32, 2> pair{};
     u64 hash = 0;
     int k = 0;
 
