@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -585,12 +585,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                   (int)num_row, (int)num_col, (int)Ap[num_col]);
 
   ipx::Int load_status =
-      lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row, &Ap[0],
-                &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
-          
+      lps.LoadModel(num_col, &objective[0], &col_lb[0], &col_ub[0], num_row,
+                    &Ap[0], &Ai[0], &Av[0], &rhs[0], &constraint_type[0]);
+
   // todo: handle load error
-  ipx::Int solve_status =
-      lps.Solve();
+  ipx::Int solve_status = lps.Solve();
 
   // Get solver and solution information.
   // Struct ipx_info defined in ipx/include/ipx_info.h

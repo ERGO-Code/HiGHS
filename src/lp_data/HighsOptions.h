@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -191,6 +191,10 @@ OptionStatus getOptionValue(FILE* logfile, const std::string& name,
 OptionStatus getOptionValue(FILE* logfile, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
+
+OptionStatus getOptionType(FILE* logfile, const std::string& name,
+                           const std::vector<OptionRecord*>& option_records,
+                           HighsOptionType& type);
 
 void resetOptions(std::vector<OptionRecord*>& option_records);
 
