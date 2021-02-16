@@ -140,17 +140,17 @@ endif (GAMS_FOUND)
 #
 # define the set of feasible instances
 set(successInstances
-    "25fv47\;2888\; 5.5018458883\;"
-    "80bau3b\;3760\; 9.8722419241\;"
-    "adlittle\;81\; 2.2549496316\;"
+    "25fv47\;2888\;5.5018458883\;"
+    "80bau3b\;3760\;9.8722419241\;"
+    "adlittle\;81\;2.2549496316\;"
     "afiro\;21\;-4.6475314286\;"
     "etamacro\;507\;-7.5571523130\;"
     "greenbea\;5249\;-7.2555248130\;"
-    "shell\;624\; 1.2088253460\;"
+    "shell\;624\;1.2088253460\;"
     "stair\;555\;-2.5126695119\;"
-    "standata\;74\; 1.2576995000\;"
-    "standgub\;67\; 1.2576995000\;"
-    "standmps\;215\; 1.4060175000\;"
+    "standata\;74\;1.2576995000\;"
+    "standgub\;67\;1.2576995000\;"
+    "standmps\;215\;1.4060175000\;"
     )
 
 set(infeasibleInstances
@@ -189,7 +189,6 @@ set(mipInstances
 set(settings
     "--presolve=off"
     "--presolve=on"
-#    "--parallel=on"
     )
 
 # define a macro to add tests
