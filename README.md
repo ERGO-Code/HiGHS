@@ -11,7 +11,7 @@ It is written in C++ with OpenMP directives, and has been developed and tested o
 
 HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier.
 
-Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com. 
+Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com.
 
 Reference
 ---------
@@ -47,7 +47,7 @@ Then compile the code using
 
     make
 
-This installs the executable `bin/highs`. 
+This installs the executable `bin/highs`.
 The minimum CMake version required is 3.15.
 
 Testing
@@ -85,7 +85,7 @@ Usage:
 Language interfaces and further documentation
 ---------------------------------------------
 
-There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. Documentation beyond what is in this file is "work in progress", but we expect to have some available before summer 2020. However, we are happy to give a reasonable level of support via email sent to highsopt@gmail.com. 
+There are HiGHS interfaces for C, C#, FORTRAN, and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. Documentation beyond what is in this file is "work in progress", but we expect to have some available before summer 2020. However, we are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
 Parallel code
 -------------
@@ -174,6 +174,11 @@ gmsgenus.run
 gmsgenux.out
 /path/to/libhighs.so his 1 1
 ```
+
+Julia
+-----
+
+- A Julia interface is available at https://github.com/jump-dev/HiGHS.jl.
 
 OSI
 ---

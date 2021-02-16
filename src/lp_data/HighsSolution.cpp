@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -38,20 +38,19 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
       solution_params.dual_feasibility_tolerance;
 
   // solution_params are the values computed in this method.
-  int& num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  int& num_primal_infeasibility = solution_params.num_primal_infeasibility;
   double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  double& sum_primal_infeasibilities =
-      solution_params.sum_primal_infeasibilities;
-  int& num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibility;
+  int& num_dual_infeasibility = solution_params.num_dual_infeasibility;
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  double& sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
 
-  num_primal_infeasibilities = 0;
+  num_primal_infeasibility = 0;
   max_primal_infeasibility = 0;
-  sum_primal_infeasibilities = 0;
-  num_dual_infeasibilities = 0;
+  sum_primal_infeasibility = 0;
+  num_dual_infeasibility = 0;
   max_dual_infeasibility = 0;
-  sum_dual_infeasibilities = 0;
+  sum_dual_infeasibility = 0;
 
   double primal_infeasibility;
   double dual_infeasibility;
@@ -80,12 +79,26 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
     dual *= (int)lp.sense_;
 
     double primal_residual = std::max(lower - value, value - upper);
-    primal_infeasibility = std::max(primal_residual, 0.);
-    if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
-    max_primal_infeasibility =
-        std::max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
+    // @primal_infeasibility calculation
+    primal_infeasibility = 0;
+    if (value < lower - primal_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + primal_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    }
+    if (primal_infeasibility > 0) {
+      if (primal_infeasibility > primal_feasibility_tolerance)
+        num_primal_infeasibility++;
+      max_primal_infeasibility =
+          std::max(primal_infeasibility, max_primal_infeasibility);
+      sum_primal_infeasibility += primal_infeasibility;
+    }
+    //    primal_infeasibility = std::max(primal_residual, 0.);
+    //    if (primal_infeasibility > primal_feasibility_tolerance)
+    //      num_primal_infeasibility++;
+    //    max_primal_infeasibility =
+    //        std::max(primal_infeasibility, max_primal_infeasibility);
+    //    sum_primal_infeasibility += primal_infeasibility;
 
     if (status != HighsBasisStatus::BASIC) {
       // Nonbasic variable: look for dual infeasibility
@@ -110,10 +123,10 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
         dual_infeasibility = fabs(dual);
       }
       if (dual_infeasibility > dual_feasibility_tolerance)
-        num_dual_infeasibilities++;
+        num_dual_infeasibility++;
       max_dual_infeasibility =
           std::max(dual_infeasibility, max_dual_infeasibility);
-      sum_dual_infeasibilities += dual_infeasibility;
+      sum_dual_infeasibility += dual_infeasibility;
     }
   }
 }
@@ -197,206 +210,6 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
   }
 }
 
-#ifdef HiGHSDEV
-void analyseSimplexAndHighsSolutionDifferences(
-    const HighsModelObject& highs_model_object) {
-  const HighsSolution& solution = highs_model_object.solution_;
-  const HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  const HighsSolutionParams& scaled_solution_params =
-      highs_model_object.scaled_solution_params_;
-  const SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  const HighsScale& scale = highs_model_object.scale_;
-
-  const double scaled_primal_feasibility_tolerance =
-      scaled_solution_params.primal_feasibility_tolerance;
-  const double scaled_dual_feasibility_tolerance =
-      scaled_solution_params.dual_feasibility_tolerance;
-
-  // Go through the columns, finding the differences in nonbasic column values
-  // and duals
-  int num_nonbasic_col_value_differences = 0;
-  double sum_nonbasic_col_value_differences = 0;
-  int num_nonbasic_col_dual_differences = 0;
-  double sum_nonbasic_col_dual_differences = 0;
-  for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-    int iVar = iCol;
-    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
-      // Consider this nonbasic column
-      double local_col_value = simplex_info.workValue_[iVar] * scale.col_[iCol];
-      double local_col_dual = (int)simplex_lp.sense_ *
-                              simplex_info.workDual_[iVar] /
-                              (scale.col_[iCol] / scale.cost_);
-      double value_difference =
-          fabs(local_col_value - solution.col_value[iCol]);
-      double dual_difference = fabs(local_col_dual - solution.col_dual[iCol]);
-      if (value_difference > scaled_primal_feasibility_tolerance)
-        num_nonbasic_col_value_differences++;
-      sum_nonbasic_col_value_differences += value_difference;
-      if (value_difference > scaled_dual_feasibility_tolerance)
-        num_nonbasic_col_dual_differences++;
-      sum_nonbasic_col_dual_differences += dual_difference;
-    }
-  }
-  // Go through the rows, finding the differences in nonbasic and
-  // basic row values and duals, as well as differences in basic
-  // column values and duals
-  int num_nonbasic_row_value_differences = 0;
-  double sum_nonbasic_row_value_differences = 0;
-  int num_nonbasic_row_dual_differences = 0;
-  double sum_nonbasic_row_dual_differences = 0;
-  int num_basic_col_value_differences = 0;
-  double sum_basic_col_value_differences = 0;
-  int num_basic_col_dual_differences = 0;
-  double sum_basic_col_dual_differences = 0;
-  int num_basic_row_value_differences = 0;
-  double sum_basic_row_value_differences = 0;
-  int num_basic_row_dual_differences = 0;
-  double sum_basic_row_dual_differences = 0;
-
-  for (int ix = 0; ix < simplex_lp.numRow_; ix++) {
-    int iRow = ix;
-    int iVar = simplex_lp.numCol_ + iRow;
-    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
-      // Consider this nonbasic row
-      double local_row_value =
-          -simplex_info.workValue_[iVar] / scale.row_[iRow];
-      double local_row_dual = (int)simplex_lp.sense_ *
-                              simplex_info.workDual_[iVar] *
-                              (scale.row_[iRow] * scale.cost_);
-      double value_difference =
-          fabs(local_row_value - solution.row_value[iRow]);
-      double dual_difference = fabs(local_row_dual - solution.row_dual[iRow]);
-      if (value_difference > scaled_primal_feasibility_tolerance)
-        num_nonbasic_row_value_differences++;
-      sum_nonbasic_row_value_differences += value_difference;
-      if (value_difference > scaled_dual_feasibility_tolerance)
-        num_nonbasic_row_dual_differences++;
-      sum_nonbasic_row_dual_differences += dual_difference;
-    }
-    // Consider the basic variable associated with this row index
-    iVar = simplex_basis.basicIndex_[ix];
-    if (iVar < simplex_lp.numCol_) {
-      // Consider this basic column
-      int iCol = iVar;
-      double local_col_value = simplex_info.baseValue_[ix] * scale.col_[iCol];
-      double local_col_dual = 0;
-      double value_difference =
-          fabs(local_col_value - solution.col_value[iCol]);
-      double dual_difference = fabs(local_col_dual - solution.col_dual[iCol]);
-      if (value_difference > scaled_primal_feasibility_tolerance)
-        num_basic_col_value_differences++;
-      sum_basic_col_value_differences += value_difference;
-      if (value_difference > scaled_dual_feasibility_tolerance)
-        num_basic_col_dual_differences++;
-      sum_basic_col_dual_differences += dual_difference;
-    } else {
-      // Consider this basic row
-      iRow = iVar - simplex_lp.numCol_;
-      double local_row_value = -simplex_info.baseValue_[ix] / scale.row_[iRow];
-      double local_row_dual = 0;
-      double value_difference =
-          fabs(local_row_value - solution.row_value[iRow]);
-      double dual_difference = fabs(local_row_dual - solution.row_dual[iRow]);
-      if (value_difference > scaled_primal_feasibility_tolerance)
-        num_basic_row_value_differences++;
-      sum_basic_row_value_differences += value_difference;
-      if (value_difference > scaled_dual_feasibility_tolerance)
-        num_basic_row_dual_differences++;
-      sum_basic_row_dual_differences += dual_difference;
-    }
-  }
-  double acceptable_difference_sum =
-      scaled_primal_feasibility_tolerance + scaled_dual_feasibility_tolerance;
-  bool significant_nonbasic_value_differences =
-      sum_nonbasic_col_value_differences + sum_nonbasic_row_value_differences >
-      0;
-  bool significant_basic_value_differences =
-      sum_basic_col_value_differences + sum_basic_row_value_differences >
-      2 * acceptable_difference_sum;
-  bool significant_nonbasic_col_dual_differences =
-      sum_nonbasic_col_dual_differences > acceptable_difference_sum;
-  bool significant_nonbasic_row_dual_differences =
-      sum_nonbasic_row_dual_differences > acceptable_difference_sum;
-  bool significant_basic_dual_differences =
-      sum_basic_col_dual_differences + sum_basic_row_dual_differences > 0;
-  if (significant_nonbasic_value_differences ||
-      significant_basic_value_differences ||
-      significant_nonbasic_col_dual_differences ||
-      significant_nonbasic_row_dual_differences ||
-      significant_basic_dual_differences) {
-    printf(
-        "In transition(): There are significant value and dual differences\n");
-    /*
-      printf("   nonbasic_value_differences = %d\n",
-      significant_nonbasic_value_differences); printf(" basic_value_differences
-      = %d\n", significant_basic_value_differences); printf("
-      nonbasic_col_dual_differences = %d\n",
-      significant_nonbasic_col_dual_differences); printf("
-      nonbasic_row_dual_differences = %d\n",
-      significant_nonbasic_row_dual_differences); printf("
-      basic_dual_differences = %d\n", significant_basic_dual_differences);
-      */
-  } else {
-    printf(
-        "In transition(): There are no significant value and dual "
-        "differences\n");
-  }
-  if (significant_nonbasic_value_differences) {
-    if (sum_nonbasic_col_value_differences > 0)
-      printf("Nonbasic column value differences: %6d (%11.4g)\n",
-             num_nonbasic_col_value_differences,
-             sum_nonbasic_col_value_differences);
-    if (sum_nonbasic_row_value_differences > 0)
-      printf("Nonbasic row    value differences: %6d (%11.4g)\n",
-             num_nonbasic_row_value_differences,
-             sum_nonbasic_row_value_differences);
-  }
-  if (significant_basic_value_differences) {
-    if (sum_basic_col_value_differences > acceptable_difference_sum)
-      printf("Basic    column value differences: %6d (%11.4g)\n",
-             num_basic_col_value_differences, sum_basic_col_value_differences);
-    if (sum_basic_row_value_differences > acceptable_difference_sum)
-      printf("Basic    row    value differences: %6d (%11.4g)\n",
-             num_basic_row_value_differences, sum_basic_row_value_differences);
-  }
-  if (significant_nonbasic_col_dual_differences)
-    printf("Nonbasic column  dual differences: %6d (%11.4g)\n",
-           num_nonbasic_col_dual_differences,
-           sum_nonbasic_col_dual_differences);
-  if (significant_nonbasic_row_dual_differences)
-    printf("Nonbasic row     dual differences: %6d (%11.4g)\n",
-           num_nonbasic_row_dual_differences,
-           sum_nonbasic_row_dual_differences);
-  if (significant_basic_dual_differences) {
-    if (sum_basic_col_dual_differences > 0)
-      printf("Basic    column  dual differences: %6d (%11.4g)\n",
-             num_basic_col_dual_differences, sum_basic_col_dual_differences);
-    if (sum_basic_row_dual_differences > 0)
-      printf("Basic    row     dual differences: %6d (%11.4g)\n",
-             num_basic_row_dual_differences, sum_basic_row_dual_differences);
-  }
-  printf(
-      "grep_transition,%s,%.15g,%d,%g,%d,%g,%s,%d,%g,%d,%g,%d,%g,%d,%g,Primal,%"
-      "d,%g,%d,%g,Dual,%d,%g,%d,%g\n",
-      simplex_lp.model_name_.c_str(), simplex_info.primal_objective_value,
-      scaled_solution_params.num_primal_infeasibilities,
-      scaled_solution_params.sum_primal_infeasibilities,
-      scaled_solution_params.num_dual_infeasibilities,
-      scaled_solution_params.sum_dual_infeasibilities,
-      utilHighsModelStatusToString(highs_model_object.scaled_model_status_)
-          .c_str(),
-      num_nonbasic_col_value_differences, sum_nonbasic_col_value_differences,
-      num_nonbasic_row_value_differences, sum_nonbasic_row_value_differences,
-      num_basic_col_value_differences, sum_basic_col_value_differences,
-      num_basic_row_value_differences, sum_basic_row_value_differences,
-      num_nonbasic_col_dual_differences, sum_nonbasic_col_dual_differences,
-      num_nonbasic_row_dual_differences, sum_nonbasic_row_dual_differences,
-      num_basic_col_dual_differences, sum_basic_col_dual_differences,
-      num_basic_row_dual_differences, sum_basic_row_dual_differences);
-}
-#endif
-
 #ifdef IPX_ON
 HighsStatus ipxSolutionToHighsSolution(
     FILE* logfile, const HighsLp& lp, const std::vector<double>& rhs,
@@ -408,8 +221,10 @@ HighsStatus ipxSolutionToHighsSolution(
   // Resize the HighsSolution
   highs_solution.col_value.resize(lp.numCol_);
   highs_solution.row_value.resize(lp.numRow_);
-  //  highs_solution.col_dual.resize(lp.numCol_);
-  //  highs_solution.row_dual.resize(lp.numRow_);
+  // No dual values are known, but ensure that the vectors are sized
+  // and assigned
+  highs_solution.col_dual.assign(lp.numCol_, 0.0);
+  highs_solution.row_dual.assign(lp.numRow_, 0.0);
 
   const std::vector<double>& ipx_col_value = ipx_x;
   const std::vector<double>& ipx_row_value = ipx_slack_vars;
@@ -759,20 +574,8 @@ std::string iterationsToString(const HighsIterationCounts& iterations_counts) {
 }
 
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object) {
-  resetModelStatusAndSolutionParams(
-      highs_model_object.unscaled_model_status_,
-      highs_model_object.unscaled_solution_params_,
-      highs_model_object.options_);
-}
-
-void resetTwoModelStatusAndSolutionParams(
-    HighsModelObject& highs_model_object) {
-  resetModelStatusAndSolutionParams(
-      highs_model_object.unscaled_model_status_,
-      highs_model_object.unscaled_solution_params_,
-      highs_model_object.options_);
-  resetModelStatusAndSolutionParams(highs_model_object.scaled_model_status_,
-                                    highs_model_object.scaled_solution_params_,
+  resetModelStatusAndSolutionParams(highs_model_object.unscaled_model_status_,
+                                    highs_model_object.solution_params_,
                                     highs_model_object.options_);
 }
 
@@ -819,12 +622,12 @@ void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
 // instance.
 void invalidateSolutionInfeasibilityParams(
     HighsSolutionParams& solution_params) {
-  solution_params.num_primal_infeasibilities = illegal_infeasibility_count;
+  solution_params.num_primal_infeasibility = illegal_infeasibility_count;
   solution_params.max_primal_infeasibility = illegal_infeasibility_measure;
-  solution_params.sum_primal_infeasibilities = illegal_infeasibility_measure;
-  solution_params.num_dual_infeasibilities = illegal_infeasibility_count;
+  solution_params.sum_primal_infeasibility = illegal_infeasibility_measure;
+  solution_params.num_dual_infeasibility = illegal_infeasibility_count;
   solution_params.max_dual_infeasibility = illegal_infeasibility_measure;
-  solution_params.sum_dual_infeasibilities = illegal_infeasibility_measure;
+  solution_params.sum_dual_infeasibility = illegal_infeasibility_measure;
 }
 
 void copySolutionObjectiveParams(
@@ -841,16 +644,14 @@ void copyFromSolutionParams(HighsInfo& highs_info,
   highs_info.objective_function_value =
       solution_params.objective_function_value;
   highs_info.num_primal_infeasibilities =
-      solution_params.num_primal_infeasibilities;
+      solution_params.num_primal_infeasibility;
   highs_info.max_primal_infeasibility =
       solution_params.max_primal_infeasibility;
   highs_info.sum_primal_infeasibilities =
-      solution_params.sum_primal_infeasibilities;
-  highs_info.num_dual_infeasibilities =
-      solution_params.num_dual_infeasibilities;
+      solution_params.sum_primal_infeasibility;
+  highs_info.num_dual_infeasibilities = solution_params.num_dual_infeasibility;
   highs_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  highs_info.sum_dual_infeasibilities =
-      solution_params.sum_dual_infeasibilities;
+  highs_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibility;
 }
 
 bool isBasisConsistent(const HighsLp& lp, const HighsBasis& basis) {

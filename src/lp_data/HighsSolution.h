@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -35,11 +35,6 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
 void refineBasis(const HighsLp& lp, const HighsSolution& solution,
                  HighsBasis& basis);
 
-#ifdef HiGHSDEV
-void analyseSimplexAndHighsSolutionDifferences(
-    const HighsModelObject& highs_model_object);
-#endif
-
 #ifdef IPX_ON
 HighsStatus ipxSolutionToHighsSolution(
     FILE* logfile, const HighsLp& lp, const std::vector<double>& rhs,
@@ -56,7 +51,6 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 
 std::string iterationsToString(const HighsIterationCounts& iterations_counts);
 
-void resetTwoModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
 void resetModelStatusAndSolutionParams(HighsModelObject& highs_model_object);
 void resetModelStatusAndSolutionParams(HighsModelStatus& model_status,
                                        HighsSolutionParams& solution_params,
