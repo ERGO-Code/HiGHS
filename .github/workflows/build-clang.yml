@@ -28,7 +28,7 @@ jobs:
       run: |
          export CC=clang
          export CC=clang++
-         cmake --build . --config DEBUG
+         cmake --build . --parallel --config DEBUG
 
 
     - name: Test
@@ -62,7 +62,7 @@ jobs:
       run: |
          export CC=clang
          export CC=clang++
-         cmake --build . --config RELEASE
+         cmake --build . --parallel --config RELEASE
 
 
     - name: Test

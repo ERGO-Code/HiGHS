@@ -29,19 +29,19 @@ struct Variable {
 
 struct LinTerm {
    std::shared_ptr<Variable> var;
-   double coef;
+   double coef = 1.0;
 };
 
 struct QuadTerm {
    std::shared_ptr<Variable> var1;
    std::shared_ptr<Variable> var2;
-   double coef;
+   double coef = 1.0;
 };
 
 struct Expression {
    std::vector<std::shared_ptr<LinTerm>> linterms;
    std::vector<std::shared_ptr<QuadTerm>> quadterms; 
-   double offset = 0;
+   double offset = 0.0;
    std::string name = "";
 };
 

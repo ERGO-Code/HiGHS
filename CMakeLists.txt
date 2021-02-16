@@ -28,16 +28,13 @@ endif()
 # static library and exe without PIC. Used for gradually updating the CMake 
 # targets build and install / export.
 
-# Note: Not ON by default. Still need to fix the exe generation dir: rename from 
-# app/ to bin/
-option(EXP "Experimental mode: run unit tests with doctest." OFF)
+# Note: Not ON by default yet
 option(FAST_BUILD "Fast build: only build static lib and exe and quick test." OFF)
-
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
+
+option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
 if (NOT FAST_BUILD)
 
@@ -65,7 +62,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 
-option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
 find_program(GIT git)
 if((GIT) AND (EXISTS ${HIGHS_SOURCE_DIR}/.git))
@@ -193,11 +189,6 @@ if (OSI_FOUND)
 endif (OSI_FOUND)
 
 set(IPX_ON ON)
-#option(IPX_ON OFF)
-#if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5))
-#    set(IPX_ON ON)
-#endif()
-
 include(CheckLanguage)
 check_language("Fortran")
 if(CMAKE_Fortran_COMPILER)
@@ -309,24 +300,61 @@ add_subdirectory(src)
 
 
 else()
-message(STATUS "FAST BUILD set to on.
+
+message(STATUS "FAST_BUILD set to on.
  Note: The HiGHS team is preparing for our first official release. If you
        experience any issues please let us know via email or on GitHub.")
 
 # todo: remove patch once release is official. 
 # add here to avoid compile errors.
 set(HIGHS_VERSION_PATCH 0)
+
+option(EXP "Experimental mode: run unit tests with doctest." OFF)
+option(IPX "Use interior point solver" OFF)
+
+# todo: ig branch ipx-m 
+if (IPX)
+    set(IPX_ON ON)
+else()
+    set(IPX_ON OFF)
+endif()
+
 configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
+
+set(CMAKE_PLATFORM_USES_PATH_WHEN_NO_SONAME FALSE)
 
 # condition added to src/CMakeLists.txt
 add_subdirectory(src)
 
-# No changes in app/ apart from a relative path
-add_subdirectory(app)
+option(JULIA "Build library only for Julia" OFF)
+
+if (NOT JULIA)
+    # No changes in app/ apart from a relative path
+    add_subdirectory(app)
+
+    # Until MIP solver is in library object also and tested. Switch becayse at the 
+    # moment breaks binary builder for julia interface.
+    # set(MIP OFF)
+    target_include_directories(highs PUBLIC ${HIGHS_SOURCE_DIR})
+    target_sources(highs PRIVATE 
+        src/mip/HighsMipSolver.cpp
+        src/mip/HighsMipSolverData.cpp
+        src/mip/HighsDomain.cpp
+        src/mip/HighsDynamicRowMatrix.cpp
+        src/mip/HighsLpRelaxation.cpp
+        src/mip/HighsSeparation.cpp
+        src/mip/HighsSearch.cpp
+        src/mip/HighsCutPool.cpp
+        src/mip/HighsCliqueTable.cpp
+        src/mip/HighsImplications.cpp
+        src/mip/HighsNodeQueue.cpp)
+endif()
 
 # check/ not added here, instead define fewer tests: 
 # build, 3 feas, 1 infeas, 1 unbounded. 1 parallel, 1 no presolve
-enable_testing()
+if (NOT JULIA)
+    enable_testing()
+endif()
 
 # Check whether targets build OK.
 add_test(NAME highs-lib-build
@@ -410,26 +438,47 @@ endforeach(instance)
 
 endfunction()
 
-# add tests for success and fail instances
-add_instance_tests(successInstances "Optimal" " ")
-add_instance_tests(failInstances "Fail" " ")
-add_instance_tests(infeasibleInstances "Infeasible" " ")
-add_instance_tests(unboundedInstances "Unbounded" " ")
+if (NOT JULIA)
+    # add tests for success and fail instances
+    add_instance_tests(successInstances "Optimal" " ")
+    add_instance_tests(failInstances "Fail" " ")
+    add_instance_tests(infeasibleInstances "Infeasible" " ")
+    add_instance_tests(unboundedInstances "Unbounded" " ")
 
-foreach(setting ${settings})
-    add_instance_tests(optionsInstances "Optimal" ${setting})
-endforeach()
+    if (IPX_ON)
+        set(settings ${settings} "--solver=ipm")
+    endif()
+    foreach(setting ${settings})
+        add_instance_tests(optionsInstances "Optimal" ${setting})
+    endforeach()
+endif()
 
 if (EXP) 
     add_executable(doctest)
     #target_sources(doctest PRIVATE check/doctest/TestPresolveColumnSingletons.cpp)
     target_sources(doctest PRIVATE check/doctest/TestPresolveIssue.cpp)
+
+    if (IPX_ON AND NOT APPLE)
+        # triggers hanging on macOS
+        target_sources(doctest PRIVATE check/doctest/TestGas11.cpp)
+    endif()
+
     target_include_directories(doctest PRIVATE external)
     target_link_libraries(doctest libhighs)
 endif()
 
-# Dashboards later on.
-# include(CTest)
+
+if (UNIX)
+    install(TARGETS libhighs EXPORT highs-targets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+            PUBLIC_HEADER DESTINATION include)
+elseif (WIN32)
+    install(TARGETS libhighs EXPORT highs-targets
+            LIBRARY DESTINATION bin
+            PUBLIC_HEADER DESTINATION include)
+endif()
+
 
 endif()
 

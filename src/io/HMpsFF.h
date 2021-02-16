@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -68,6 +68,7 @@ class HMpsFF {
   int numRow;
   int numCol;
   int nnz;
+  std::string mpsName;
 
   ObjSense objSense = ObjSense::MINIMIZE;  // Minimization by default
   double objOffset = 0;
@@ -100,6 +101,7 @@ class HMpsFF {
   const bool handle_bv_in_bounds = false;
 
   enum class parsekey {
+    NAME,
     OBJSENSE,
     MAX,
     MIN,
@@ -131,7 +133,7 @@ class HMpsFF {
   HMpsFF::parsekey checkFirstWord(std::string& strline, int& start, int& end,
                                   std::string& word) const;
 
-  HMpsFF::parsekey parseDefault(std::ifstream& file) const;
+  HMpsFF::parsekey parseDefault(std::ifstream& file);
   HMpsFF::parsekey parseObjsense(FILE* logfile, std::ifstream& file);
   HMpsFF::parsekey parseRows(FILE* logfile, std::ifstream& file);
   HMpsFF::parsekey parseCols(FILE* logfile, std::ifstream& file);

@@ -14,21 +14,49 @@
 
 namespace ipx {
 
-Int LpSolver::Solve(Int num_var, const double* obj, const double* lb,
-                    const double* ub, Int num_constr, const Int* Ap,
-                    const Int* Ai, const double* Ax, const double* rhs,
-                    const char* constr_type) {
+Int LpSolver::LoadModel(Int num_var, const double* obj, const double* lb,
+                        const double* ub, Int num_constr, const Int* Ap,
+                        const Int* Ai, const double* Ax, const double* rhs,
+                        const char* constr_type) {
     ClearModel();
+    Int errflag = model_.Load(control_, num_constr, num_var, Ap, Ai, Ax, rhs,
+                              constr_type, obj, lb, ub);
+    model_.GetInfo(&info_);
+    return errflag;
+}
+
+Int LpSolver::LoadIPMStartingPoint(const double* x, const double* xl,
+                                   const double* xu, const double* slack,
+                                   const double* y, const double* zl,
+                                   const double* zu) {
+    const Int m = model_.rows();
+    const Int n = model_.cols();
+    x_start_.resize(n+m);
+    xl_start_.resize(n+m);
+    xu_start_.resize(n+m);
+    y_start_.resize(m);
+    zl_start_.resize(n+m);
+    zu_start_.resize(n+m);
+    Int errflag = model_.PresolveIPMStartingPoint(x, xl, xu, slack, y, zl, zu,
+                                                  x_start_, xl_start_,
+                                                  xu_start_, y_start_,
+                                                  zl_start_, zu_start_);
+    if (errflag) {
+        ClearIPMStartingPoint();
+        return errflag;
+    }
+    MakeIPMStartingPointValid();
+    return 0;
+}
+
+Int LpSolver::Solve() {
+    if (model_.empty())
+        return info_.status = IPX_STATUS_no_model;
+    ClearSolution();
     control_.ResetTimer();
     control_.OpenLogfile();
     control_.Log() << "IPX version 1.0\n";
     try {
-        model_.Load(control_, num_constr, num_var, Ap, Ai, Ax, rhs, constr_type,
-                    obj, lb, ub, &info_);
-        if (info_.errflag) {
-            control_.CloseLogfile();
-            return info_.status = IPX_STATUS_invalid_input;
-        }
         InteriorPointSolve();
         if ((info_.status_ipm == IPX_STATUS_optimal ||
              info_.status_ipm == IPX_STATUS_imprecise) && control_.crossover())
@@ -62,7 +90,7 @@ Int LpSolver::Solve(Int num_var, const double* obj, const double* lb,
         }
         PrintSummary();
     }
-    catch (const std::bad_alloc&) {
+    catch (std::bad_alloc) {
         control_.Log() << " out of memory\n";
         info_.status = IPX_STATUS_out_of_memory;
     }
@@ -111,15 +139,18 @@ void LpSolver::SetParameters(Parameters new_parameters) {
 }
 
 void LpSolver::ClearModel() {
-    info_ = Info();
     model_.clear();
-    iterate_.reset(nullptr);
-    basis_.reset(nullptr);
-    x_crossover_.resize(0);
-    y_crossover_.resize(0);
-    z_crossover_.resize(0);
-    basic_statuses_.clear();
-    basic_statuses_.shrink_to_fit();
+    ClearSolution();
+    ClearIPMStartingPoint();
+}
+
+void LpSolver::ClearIPMStartingPoint() {
+    x_start_.resize(0);
+    xl_start_.resize(0);
+    xu_start_.resize(0);
+    y_start_.resize(0);
+    zl_start_.resize(0);
+    zu_start_.resize(0);
 }
 
 Int LpSolver::GetIterate(double* x, double* y, double* zl, double* zu,
@@ -217,6 +248,20 @@ Int LpSolver::SymbolicInvert(Int* rowcounts, Int* colcounts) {
     return 0;
 }
 
+void LpSolver::ClearSolution() {
+    iterate_.reset(nullptr);
+    basis_.reset(nullptr);
+    x_crossover_.resize(0);
+    y_crossover_.resize(0);
+    z_crossover_.resize(0);
+    basic_statuses_.clear();
+    basic_statuses_.shrink_to_fit();
+    info_ = Info();
+    // Restore info entries that belong to model.
+    model_.GetInfo(&info_);
+
+}
+
 void LpSolver::InteriorPointSolve() {
     control_.Log() << "Interior Point Solve\n";
 
@@ -245,16 +290,79 @@ void LpSolver::InteriorPointSolve() {
 void LpSolver::RunIPM() {
     IPM ipm(control_);
 
-    ComputeStartingPoint(ipm);
-    if (info_.status_ipm != IPX_STATUS_not_run)
-        return;
-    RunInitialIPM(ipm);
-    if (info_.status_ipm != IPX_STATUS_not_run)
-        return;
+    if (x_start_.size() != 0) {
+        control_.Log() << " Using starting point provided by user."
+            " Skipping initial iterations.\n";
+        iterate_->Initialize(x_start_, xl_start_, xu_start_,
+                             y_start_, zl_start_, zu_start_);
+    }
+    else {
+        ComputeStartingPoint(ipm);
+        if (info_.status_ipm != IPX_STATUS_not_run)
+            return;
+        RunInitialIPM(ipm);
+        if (info_.status_ipm != IPX_STATUS_not_run)
+            return;
+    }
     BuildStartingBasis();
     if (info_.status_ipm != IPX_STATUS_not_run)
         return;
     RunMainIPM(ipm);
+}
+
+void LpSolver::MakeIPMStartingPointValid() {
+    const Int m = model_.rows();
+    const Int n = model_.cols();
+    const Vector& lb = model_.lb();
+    const Vector& ub = model_.ub();
+    Vector& xl = xl_start_;
+    Vector& xu = xu_start_;
+    Vector& zl = zl_start_;
+    Vector& zu = zu_start_;
+
+    Int numComplementarityProducts = 0;
+    double sumComplementarityProducts = 0.0;
+    for (Int j = 0; j < n+m; ++j) {
+        if (xl[j] > 0.0 && zl[j] > 0.0) {
+            sumComplementarityProducts += xl[j] * zl[j];
+            numComplementarityProducts++;
+        }
+        if (xu[j] > 0.0 && zu[j] > 0.0) {
+            sumComplementarityProducts += xu[j] * zu[j];
+            numComplementarityProducts++;
+        }
+    }
+    const double mu = numComplementarityProducts ?
+        sumComplementarityProducts / numComplementarityProducts : 1.0;
+
+    for (Int j = 0; j < n+m; ++j) {
+        if (std::isfinite(lb[j])) {
+            assert(std::isfinite(xl[j]) && xl[j] >= 0.0);
+            assert(std::isfinite(zl[j]) && zl[j] >= 0.0);
+            if (xl[j] == 0.0 && zl[j] == 0.0)
+                xl[j] = zl[j] = std::sqrt(mu);
+            else if (xl[j] == 0.0)
+                xl[j] = mu / zl[j];
+            else if (zl[j] == 0.0)
+                zl[j] = mu / xl[j];
+        } else {
+            assert(xl[j] == INFINITY);
+            assert(zl[j] == 0.0);
+        }
+        if (std::isfinite(ub[j])) {
+            assert(std::isfinite(xu[j]) && xu[j] >= 0.0);
+            assert(std::isfinite(zu[j]) && zu[j] >= 0.0);
+            if (xu[j] == 0.0 && zu[j] == 0.0)
+                xu[j] = zu[j] = std::sqrt(mu);
+            else if (xu[j] == 0.0)
+                xu[j] = mu / zu[j];
+            else if (zu[j] == 0.0)
+                zu[j] = mu / xu[j];
+        } else {
+            assert(xu[j] == INFINITY);
+            assert(zu[j] == 0.0);
+        }
+    }
 }
 
 void LpSolver::ComputeStartingPoint(IPM& ipm) {
@@ -377,8 +485,6 @@ void LpSolver::RunCrossover() {
             crossover.time_primal() + crossover.time_dual();
         info_.updates_crossover =
             crossover.primal_pivots() + crossover.dual_pivots();
-        info_.pushes_crossover =
-            crossover.primal_pushes() + crossover.dual_pushes();
         if (info_.status_crossover != IPX_STATUS_optimal) {
             // Crossover failed. Discard solution.
             x_crossover_.resize(0);
@@ -391,7 +497,7 @@ void LpSolver::RunCrossover() {
     // Recompute vertex solution and set basic statuses.
     basis_->ComputeBasicSolution(x_crossover_, y_crossover_, z_crossover_);
     basic_statuses_.resize(n+m);
-    for (Int j = 0; j < (Int) basic_statuses_.size(); j++) {
+    for (Int j = 0; j < basic_statuses_.size(); j++) {
         if (basis_->IsBasic(j)) {
             basic_statuses_[j] = IPX_basic;
         } else {

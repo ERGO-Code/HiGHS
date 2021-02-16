@@ -1,6 +1,5 @@
 // Copyright (c) 2018 ERGO-Code. See license.txt for license.
 
-#include <algorithm>
 #include "guess_basis.h"
 #include <cassert>
 #include <cmath>
@@ -187,7 +186,7 @@ static void ProcessRemaining(const Control& control, const Model& model,
         } else {
             num_failed++;
         }
-        if (num_failed >= 10*(m - (Int) basis->size()))
+        if (num_failed >= 10*(m-basis->size()))
             break;
     }
     for (Int i = 0; i < m; i++) {
@@ -228,7 +227,7 @@ std::vector<Int> GuessBasis(const Control& control, const Model& model,
         if (rownumber[i] < 0)
             basis.push_back(n+i);
     }
-    assert((int)basis.size() == m);
+    assert(basis.size() == m);
     return basis;
 }
 
