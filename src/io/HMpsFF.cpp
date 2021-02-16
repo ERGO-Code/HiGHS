@@ -418,9 +418,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(FILE* logfile,
     if (end_marker < 9) {
       std::string name = strline.substr(0, 10);
       name = trim(name);
-      if (name.size() > 8)
-        return HMpsFF::parsekey::FAIL;
-      else
+      if (name.size() <= 8)
         return HMpsFF::parsekey::FIXED_FORMAT;
     }
 
