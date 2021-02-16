@@ -25,7 +25,8 @@ class FilereaderEms : public Filereader {
   FilereaderRetcode readModelFromFile(const HighsOptions& options,
                                       HighsLp& model);
   HighsStatus writeModelToFile(const HighsOptions& options,
-                               const std::string filename, const HighsLp& model);
+                               const std::string filename,
+                               const HighsLp& model);
 };
 
 #endif
