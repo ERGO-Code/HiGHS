@@ -475,34 +475,52 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
     }
     // Look at the basic primal infeasibilities
 
-    double scaled_lower = simplex_info.baseLower_[ix];
-    double scaled_upper = simplex_info.baseUpper_[ix];
-    double scaled_value = simplex_info.baseValue_[ix];
-    // @primal_infeasibility calculation
-    double scaled_primal_infeasibility = 0;
-    if (scaled_value < scaled_lower - primal_feasibility_tolerance) {
-      scaled_primal_infeasibility = scaled_lower - scaled_value;
-    } else if (scaled_value > scaled_upper + primal_feasibility_tolerance) {
-      scaled_primal_infeasibility = scaled_value - scaled_upper;
+    const bool report = false;
+    double scaled_lower;
+    double scaled_upper;
+    double scaled_value;
+    double scaled_primal_infeasibility;
+    if (report) {
+      scaled_lower = simplex_info.baseLower_[ix];
+      scaled_upper = simplex_info.baseUpper_[ix];
+      scaled_value = simplex_info.baseValue_[ix];
+      // @primal_infeasibility calculation
+      scaled_primal_infeasibility = 0;
+      if (scaled_value < scaled_lower - primal_feasibility_tolerance) {
+        scaled_primal_infeasibility = scaled_lower - scaled_value;
+      } else if (scaled_value > scaled_upper + primal_feasibility_tolerance) {
+        scaled_primal_infeasibility = scaled_value - scaled_upper;
+      }
     }
-    double primal_infeasibility = scaled_primal_infeasibility * scale_mu;
-    if (primal_infeasibility > primal_feasibility_tolerance) {
+    double lower = simplex_info.baseLower_[ix] * scale_mu;
+    double value = simplex_info.baseValue_[ix] * scale_mu;
+    double upper = simplex_info.baseUpper_[ix] * scale_mu;
+    // @primal_infeasibility calculation
+    double primal_infeasibility = 0;
+    if (value < lower - primal_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + primal_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    }
+    if (primal_infeasibility > 0) {
       num_primal_infeasibility++;
       if (get_new_scaled_feasibility_tolerances) {
         double multiplier = primal_feasibility_tolerance / scale_mu;
-        //         HighsLogMessage(logfile, HighsMessageType::INFO,
-        //                        "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g]
-        //                        %11.4g
-        //         s=%11.4g %11.4g: Mu = %g", iVar, iCol, iRow, scaled_lower,
-        //         scaled_value, scaled_upper, scaled_primal_infeasibility,
-        //         scale_mu, primal_infeasibility, multiplier);
+        if (report) {
+          HighsLogMessage(options.logfile, HighsMessageType::INFO,
+                          "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g "
+                          "s=%11.4g %11.4g: Mu = %g",
+                          iVar, iCol, iRow, scaled_lower, scaled_value,
+                          scaled_upper, scaled_primal_infeasibility, scale_mu,
+                          primal_infeasibility, multiplier);
+        }
         new_primal_feasibility_tolerance =
             min(multiplier, new_primal_feasibility_tolerance);
       }
+      max_primal_infeasibility =
+          max(primal_infeasibility, max_primal_infeasibility);
+      sum_primal_infeasibility += primal_infeasibility;
     }
-    max_primal_infeasibility =
-        max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibility += primal_infeasibility;
   }
 }
 

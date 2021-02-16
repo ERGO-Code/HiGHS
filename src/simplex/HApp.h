@@ -119,8 +119,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
 
   int num_unscaled_primal_infeasibility =
       solution_params.num_primal_infeasibility;
-  int num_unscaled_dual_infeasibility =
-      solution_params.num_dual_infeasibility;
+  int num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibility;
   // Set the model and solution status according to the unscaled solution
   // parameters
   if (num_unscaled_primal_infeasibility == 0 &&

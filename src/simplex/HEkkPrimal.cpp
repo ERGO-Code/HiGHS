@@ -107,8 +107,7 @@ HighsStatus HEkkPrimal::solve() {
       ekk_instance_.computeSimplexPrimalInfeasible();
       num_primal_infeasibility =
           ekk_instance_.simplex_info_.num_primal_infeasibility;
-      solvePhase =
-          num_primal_infeasibility > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
+      solvePhase = num_primal_infeasibility > 0 ? SOLVE_PHASE_1 : SOLVE_PHASE_2;
       if (simplex_info.backtracking_) {
         // Backtracking
         ekk_instance_.initialiseCost(SimplexAlgorithm::PRIMAL, solvePhase);
@@ -2110,11 +2109,9 @@ void HEkkPrimal::iterationAnalysisData() {
   analysis->pivot_value_from_row = alpha_row;
   analysis->numerical_trouble = numericalTrouble;
   analysis->objective_value = simplex_info.updated_primal_objective_value;
-  analysis->num_primal_infeasibility =
-      simplex_info.num_primal_infeasibility;
+  analysis->num_primal_infeasibility = simplex_info.num_primal_infeasibility;
   analysis->num_dual_infeasibility = simplex_info.num_dual_infeasibility;
-  analysis->sum_primal_infeasibility =
-      simplex_info.sum_primal_infeasibility;
+  analysis->sum_primal_infeasibility = simplex_info.sum_primal_infeasibility;
   analysis->sum_dual_infeasibility = simplex_info.sum_dual_infeasibility;
   if ((analysis->edge_weight_mode == DualEdgeWeightMode::DEVEX) &&
       (num_devex_iterations == 0))

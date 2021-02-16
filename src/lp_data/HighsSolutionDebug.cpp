@@ -234,8 +234,7 @@ void debugHighsBasicSolutionPrimalDualInfeasibilitiesAndErrors(
   // solution_params are the values computed in this method.
   int& num_primal_infeasibility = solution_params.num_primal_infeasibility;
   double& max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  double& sum_primal_infeasibility =
-      solution_params.sum_primal_infeasibility;
+  double& sum_primal_infeasibility = solution_params.sum_primal_infeasibility;
   int& num_dual_infeasibility = solution_params.num_dual_infeasibility;
   double& max_dual_infeasibility = solution_params.max_dual_infeasibility;
   double& sum_dual_infeasibility = solution_params.sum_dual_infeasibility;
@@ -721,24 +720,22 @@ HighsDebugStatus debugCompareSolutionInfeasibilityParams(
                            solution_params0.num_primal_infeasibility,
                            solution_params1.num_primal_infeasibility),
                        return_status);
-  return_status =
-      debugWorseStatus(debugCompareSolutionParamValue(
-                           "sum_primal_infeasibility", options,
-                           solution_params0.sum_primal_infeasibility,
-                           solution_params1.sum_primal_infeasibility),
-                       return_status);
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamValue("sum_primal_infeasibility", options,
+                                     solution_params0.sum_primal_infeasibility,
+                                     solution_params1.sum_primal_infeasibility),
+      return_status);
   return_status = debugWorseStatus(
       debugCompareSolutionParamValue("max_primal_infeasibility", options,
                                      solution_params0.max_primal_infeasibility,
                                      solution_params1.max_primal_infeasibility),
       return_status);
 
-  return_status =
-      debugWorseStatus(debugCompareSolutionParamInteger(
-                           "num_dual_infeasibility", options,
-                           solution_params0.num_dual_infeasibility,
-                           solution_params1.num_dual_infeasibility),
-                       return_status);
+  return_status = debugWorseStatus(
+      debugCompareSolutionParamInteger("num_dual_infeasibility", options,
+                                       solution_params0.num_dual_infeasibility,
+                                       solution_params1.num_dual_infeasibility),
+      return_status);
   return_status = debugWorseStatus(
       debugCompareSolutionParamValue("sum_dual_infeasibility", options,
                                      solution_params0.sum_dual_infeasibility,

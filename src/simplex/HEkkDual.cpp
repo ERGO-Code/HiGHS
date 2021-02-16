@@ -1203,10 +1203,8 @@ void HEkkDual::iterationAnalysisData() {
   // its sign according to the LP sense
   if (solvePhase == SOLVE_PHASE_2)
     analysis->objective_value *= (int)ekk_instance_.simplex_lp_.sense_;
-  analysis->num_primal_infeasibility =
-      simplex_info.num_primal_infeasibility;
-  analysis->sum_primal_infeasibility =
-      simplex_info.sum_primal_infeasibility;
+  analysis->num_primal_infeasibility = simplex_info.num_primal_infeasibility;
+  analysis->sum_primal_infeasibility = simplex_info.sum_primal_infeasibility;
   if (solvePhase == SOLVE_PHASE_1) {
     analysis->num_dual_infeasibility =
         analysis->num_dual_phase_1_lp_dual_infeasibility;

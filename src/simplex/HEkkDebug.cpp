@@ -266,8 +266,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                       "ekkDebugSimplex - %s: Iteration %d Should have %d not "
                       "%d primal infeasibilities",
                       message.c_str(), iteration_count,
-                      num_primal_infeasibility,
-                      info_num_primal_infeasibility);
+                      num_primal_infeasibility, info_num_primal_infeasibility);
       assert(!illegal_num_primal_infeasibility);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -299,8 +298,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
                       "ekkDebugSimplex - %s: Iteration %d Should have %g not "
                       "%g sum primal infeasibilities",
                       message.c_str(), iteration_count,
-                      sum_primal_infeasibility,
-                      info_sum_primal_infeasibility);
+                      sum_primal_infeasibility, info_sum_primal_infeasibility);
       assert(!illegal_sum_primal_infeasibility);
       return HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -385,13 +383,15 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
       num_dual_infeasibility > 0;
   if (illegal_dual_infeasibility) {
     // Dual simplex or optimal but has dual infeasibilities
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "ekkDebugSimplex - %s: Iteration %d Should be dual "
-                    "feasible, but num / max / "
-                    "sum dual infeasibility is %d / %g / %g; Phase = %d; status = %s",
-                    message.c_str(), iteration_count, num_dual_infeasibility,
-                    max_dual_infeasibility, sum_dual_infeasibility, phase,
-		    utilHighsModelStatusToString(ekk_instance.scaled_model_status_).c_str());
+    HighsLogMessage(
+        options.logfile, HighsMessageType::ERROR,
+        "ekkDebugSimplex - %s: Iteration %d Should be dual "
+        "feasible, but num / max / "
+        "sum dual infeasibility is %d / %g / %g; Phase = %d; status = %s",
+        message.c_str(), iteration_count, num_dual_infeasibility,
+        max_dual_infeasibility, sum_dual_infeasibility, phase,
+        utilHighsModelStatusToString(ekk_instance.scaled_model_status_)
+            .c_str());
     assert(!illegal_dual_infeasibility);
     return HighsDebugStatus::LOGICAL_ERROR;
   }

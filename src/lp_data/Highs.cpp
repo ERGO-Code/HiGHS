@@ -366,8 +366,8 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-  const int min_highs_debug_level = // HIGHS_DEBUG_LEVEL_MIN;
-    //   HIGHS_DEBUG_LEVEL_CHEAP;
+  const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
+                                     //   HIGHS_DEBUG_LEVEL_CHEAP;
       HIGHS_DEBUG_LEVEL_COSTLY;
   //      HIGHS_DEBUG_LEVEL_EXPENSIVE;
   //  HIGHS_DEBUG_LEVEL_MAX;

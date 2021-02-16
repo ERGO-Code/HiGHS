@@ -464,11 +464,9 @@ HighsSolutionParams HEkk::getSolutionParams() {
       simplex_info_.max_primal_infeasibility;
   solution_params.sum_primal_infeasibility =
       simplex_info_.sum_primal_infeasibility;
-  solution_params.num_dual_infeasibility =
-      simplex_info_.num_dual_infeasibility;
+  solution_params.num_dual_infeasibility = simplex_info_.num_dual_infeasibility;
   solution_params.max_dual_infeasibility = simplex_info_.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibility =
-      simplex_info_.sum_dual_infeasibility;
+  solution_params.sum_dual_infeasibility = simplex_info_.sum_dual_infeasibility;
   return solution_params;
 }
 
