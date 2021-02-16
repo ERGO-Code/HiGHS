@@ -16,7 +16,6 @@ struct IPM::Step {
     Step& operator+=(const Step& rhs) {
         x += rhs.x; xl += rhs.xl; xu += rhs.xu;
         y += rhs.y; zl += rhs.zl; zu += rhs.zu;
-        return *this;
     }
 };
 
@@ -427,7 +426,6 @@ void IPM::StepSizes(const Step& step) {
     }
     step_primal_ = std::min(alphap, 1.0-1e-6);
     step_dual_   = std::min(alphad, 1.0-1e-6);
-    (void)(mu);
 }
 
 void IPM::MakeStep(const Step& step) {

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -80,7 +80,7 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
 
 // SCALE:
 
-void initialiseScale(HighsModelObject& highs_model);
+// void initialiseScale(HighsModelObject& highs_model);
 
 void initialiseScale(const HighsLp& lp, HighsScale& scale);
 
@@ -93,10 +93,9 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
                                 HighsScale& scale);
 bool isBasisRightSize(const HighsLp& lp, const SimplexBasis& basis);
 
-void computeDualObjectiveValue(HighsModelObject& highs_model_object,
-                               int phase = 2);
-
-void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
-
+/*
+void computeDualObjectiveValue(HighsModelObject& highs_model_object, int phase =
+2); void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
 double computeBasisCondition(const HighsModelObject& highs_model_object);
+*/
 #endif  // SIMPLEX_HSIMPLEX_H_

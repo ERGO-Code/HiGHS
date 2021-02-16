@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -80,7 +80,7 @@ HighsStatus getHighsRanging(HighsRanging& ranging,
   const double H_TT = 1e-13;
   const double H_INF = HIGHS_CONST_INF;
   const double objective =
-      highs_model_object.unscaled_solution_params_.objective_function_value;
+      highs_model_object.solution_params_.objective_function_value;
 
   // Code written for minimization problems. Maximization problems are
   // solved by using negated costs in the simplex solver and

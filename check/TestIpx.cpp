@@ -45,8 +45,11 @@ TEST_CASE("afiro", "[highs_ipx]") {
   lps.SetParameters(parameters);
 
   // Solve the LP.
-  Int status =
-      lps.Solve(num_var, obj, lb, ub, num_constr, Ap, Ai, Ax, rhs, constr_type);
+  Int load_status = lps.LoadModel(num_var, obj, lb, ub, num_constr, Ap, Ai, Ax,
+                                  rhs, constr_type);
+  REQUIRE(load_status == 0);
+
+  Int status = lps.Solve();
   bool is_solved = status == IPX_STATUS_solved;
   REQUIRE(is_solved);
 

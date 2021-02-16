@@ -5,7 +5,7 @@
 #define IPX_STATUS_not_run                  0
 #define IPX_STATUS_solved                   1000
 #define IPX_STATUS_stopped                  1005
-#define IPX_STATUS_invalid_input            1002
+#define IPX_STATUS_no_model                 1006
 #define IPX_STATUS_out_of_memory            1003
 #define IPX_STATUS_internal_error           1004
 
@@ -42,6 +42,8 @@
 #define IPX_ERROR_basis_repair_search       305
 #define IPX_ERROR_basis_too_ill_conditioned 306
 
+#define IPX_ERROR_lapack_chol               401
+#define IPX_ERROR_not_implemented           901
 #define IPX_ERROR_interrupt_time            999
 
 #define IPX_basic                            0

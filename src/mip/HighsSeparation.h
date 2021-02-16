@@ -1,21 +1,14 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file mip/HighsLpAggregator.h
- * @brief Class that implements a separation loop
- *
- * @author Leona Gottwald
- */
-
-#ifndef MIP_HIGHS_SEPARATION_H_
-#define MIP_HIGHS_SEPARATION_H_
+#ifndef HIGHS_SEPARATION_H_
+#define HIGHS_SEPARATION_H_
 
 #include <cstdint>
 #include <vector>

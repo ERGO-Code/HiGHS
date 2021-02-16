@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2020 at the University of Edinburgh    */
+/*    Written and engineered 2008-2021 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -209,10 +209,10 @@ class HighsSimplexAnalysis {
   double factor_pivot_threshold = 0;
   double numerical_trouble = 0;
   double objective_value = 0;
-  int num_primal_infeasibilities = 0;
-  int num_dual_infeasibilities = 0;
-  double sum_primal_infeasibilities = 0;
-  double sum_dual_infeasibilities = 0;
+  int num_primal_infeasibility = 0;
+  int num_dual_infeasibility = 0;
+  double sum_primal_infeasibility = 0;
+  double sum_dual_infeasibility = 0;
   // This triple is an original infeasiblility record, so it includes max,
   // but it's only used for reporting
   int num_dual_phase_1_lp_dual_infeasibility = 0;
