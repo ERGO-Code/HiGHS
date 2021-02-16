@@ -377,22 +377,22 @@ set_tests_properties(highs-exe-build
                      RESOURCE_LOCK highs)
 
 set(successInstances
-    "25fv47\;2888\; 5.5018458883\;"
-    "80bau3b\;3760\; 9.8722419241\;"
+    "25fv47\;2888\;5.5018458883\;"
+    "80bau3b\;3760\;9.8722419241\;"
     "greenbea\;5249\;-7.2555248130\;")
 
 set(optionsInstances
     "adlittle\;81\; 2.2549496316\;")
 
 set(infeasibleInstances
-    "bgetam\;        infeasible")
+    "bgetam\;infeasible")
 
 set(unboundedInstances
-     "gas11\;         unbounded")
+     "gas11\;unbounded")
      
 # define settings
 set(settings
-    ""
+    "--presolve=on"
     "--presolve=off"
     "--parallel=on")
 
