@@ -30,7 +30,6 @@ HighsStatus callLpSolver(HighsOptions& options, const HighsLp& lp);
 HighsStatus callMipSolver(HighsOptions& options, const HighsLp& lp);
 
 int main(int argc, char** argv) {
-  printHighsVersionCopyright(stdout, ML_ALWAYS);
 
     Highs model;
     double inf = model.getHighsInfinity();
@@ -42,6 +41,8 @@ int main(int argc, char** argv) {
     model.setHighsOptionValue("presolve", "on");  // Doesn't happen with "off"
     model.run();
     return 0;
+
+  printHighsVersionCopyright(stdout, ML_ALWAYS);
 
   // Load user options.
   HighsOptions options;

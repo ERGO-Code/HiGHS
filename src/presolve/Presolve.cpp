@@ -2384,6 +2384,7 @@ void Presolve::removeColumnSingletons() {
           const bool result_di =
               removeColumnSingletonInDoubletonInequality(col, i, k);
           if (result_di) {
+            if (status) return;
             it = singCol.erase(it);
             continue;
           }
