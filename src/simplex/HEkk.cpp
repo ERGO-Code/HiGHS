@@ -1888,8 +1888,6 @@ void HEkk::computeSimplexPrimalInfeasible() {
       } else if (value > upper + scaled_primal_feasibility_tolerance) {
         primal_infeasibility = value - upper;
       }
-      // This is needed so that HEkkDual and HDual run identically
-      //    primal_infeasibility = max(lower - value, value - upper);
       if (primal_infeasibility > 0) {
         if (primal_infeasibility > scaled_primal_feasibility_tolerance)
           num_primal_infeasibility++;
@@ -1911,8 +1909,6 @@ void HEkk::computeSimplexPrimalInfeasible() {
     } else if (value > upper + scaled_primal_feasibility_tolerance) {
       primal_infeasibility = value - upper;
     }
-    // This is needed so that HEkkDual and HDual run identically
-    //    primal_infeasibility = max(lower - value, value - upper);
     if (primal_infeasibility > 0) {
       if (primal_infeasibility > scaled_primal_feasibility_tolerance)
         num_primal_infeasibility++;

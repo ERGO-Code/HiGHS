@@ -482,7 +482,13 @@ bool debugBasicSolutionVariable(
   off_bound_nonbasic = 0;
   double primal_residual = std::max(lower - value, value - upper);
   // @primal_infeasibility calculation
-  primal_infeasibility = std::max(primal_residual, 0.);
+  primal_infeasibility = 0;
+  if (value < lower - primal_feasibility_tolerance) {
+    primal_infeasibility = lower - value;
+  } else if (value > upper + primal_feasibility_tolerance) {
+    primal_infeasibility = value - upper;
+  }
+  //  primal_infeasibility = std::max(primal_residual, 0.);
   // ToDo Strange: nonbasic_flag seems to be inverted???
   if (status == HighsBasisStatus::BASIC) {
     // Basic variable: look for primal infeasibility

@@ -79,14 +79,27 @@ void getPrimalDualInfeasibilities(const HighsLp& lp, const HighsBasis& basis,
     // Flip dual according to lp.sense_
     dual *= (int)lp.sense_;
 
-    // @primal_infeasibility calculation
     double primal_residual = std::max(lower - value, value - upper);
-    primal_infeasibility = std::max(primal_residual, 0.);
-    if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibility++;
-    max_primal_infeasibility =
-        std::max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibility += primal_infeasibility;
+    // @primal_infeasibility calculation
+    primal_infeasibility = 0;
+    if (value < lower - primal_feasibility_tolerance) {
+      primal_infeasibility = lower - value;
+    } else if (value > upper + primal_feasibility_tolerance) {
+      primal_infeasibility = value - upper;
+    }
+    if (primal_infeasibility > 0) {
+      if (primal_infeasibility > primal_feasibility_tolerance)
+	num_primal_infeasibility++;
+      max_primal_infeasibility =
+	std::max(primal_infeasibility, max_primal_infeasibility);
+      sum_primal_infeasibility += primal_infeasibility;
+    }
+    //    primal_infeasibility = std::max(primal_residual, 0.);
+    //    if (primal_infeasibility > primal_feasibility_tolerance)
+    //      num_primal_infeasibility++;
+    //    max_primal_infeasibility =
+    //        std::max(primal_infeasibility, max_primal_infeasibility);
+    //    sum_primal_infeasibility += primal_infeasibility;
 
     if (status != HighsBasisStatus::BASIC) {
       // Nonbasic variable: look for dual infeasibility
