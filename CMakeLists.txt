@@ -36,9 +36,7 @@ set(CMAKE_MACOSX_RPATH ON)
 
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 
 if (NOT FAST_BUILD)
 
@@ -62,6 +60,8 @@ set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 find_program(GIT git)
 if((GIT) AND (EXISTS ${HIGHS_SOURCE_DIR}/.git))
     execute_process(
@@ -377,8 +377,8 @@ set_tests_properties(highs-exe-build
                      RESOURCE_LOCK highs)
 
 set(successInstances
-    "25fv47\;2888\;5.5018458883\;"
-    "80bau3b\;3760\;9.8722419241\;"
+    "25fv47\;2888\; 5.5018458883\;"
+    "80bau3b\;3760\; 9.8722419241\;"
     "greenbea\;5249\;-7.2555248130\;")
 
 set(optionsInstances
@@ -392,7 +392,7 @@ set(unboundedInstances
      
 # define settings
 set(settings
-    "--presolve=on"
+    ""
     "--presolve=off"
     "--parallel=on")
 
