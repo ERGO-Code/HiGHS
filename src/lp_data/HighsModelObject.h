@@ -31,7 +31,6 @@ class HighsModelObject {
       : lp_(lp),
         options_(options),
         timer_(timer),
-        simplex_analysis_(timer),
         ekk_instance_(options, timer) {}
 
   HighsLp& lp_;
@@ -41,21 +40,12 @@ class HighsModelObject {
   HighsModelStatus unscaled_model_status_ = HighsModelStatus::NOTSET;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
 
-  HighsSolutionParams unscaled_solution_params_;
-  HighsSolutionParams scaled_solution_params_;
+  HighsSolutionParams solution_params_;
   HighsIterationCounts iteration_counts_;
   HighsBasis basis_;
   HighsSolution solution_;
 
-  HighsLp simplex_lp_;
-  SimplexBasis simplex_basis_;
-  HighsSimplexInfo simplex_info_;
-  HighsSimplexLpStatus simplex_lp_status_;
   HighsScale scale_;
-  HMatrix matrix_;
-  HFactor factor_;
-  HighsSimplexAnalysis simplex_analysis_;
-  HighsRandom random_;
   HEkk ekk_instance_;
 };
 

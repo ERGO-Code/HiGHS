@@ -84,8 +84,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
 
   // Copy solution data into the HMO
-  HighsSolutionParams& solution_params =
-      highs_model_object.unscaled_solution_params_;
+  HighsSolutionParams& solution_params = highs_model_object.solution_params_;
   highs_model_object.scaled_model_status_ = ekk_instance.scaled_model_status_;
   solution_params.objective_function_value =
       ekk_instance.simplex_info_.primal_objective_value;
@@ -118,14 +117,13 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   // LP is solved to optimailty
   assert(ekk_instance.scaled_model_status_ == HighsModelStatus::OPTIMAL);
 
-  int num_unscaled_primal_infeasibilities =
-      solution_params.num_primal_infeasibilities;
-  int num_unscaled_dual_infeasibilities =
-      solution_params.num_dual_infeasibilities;
+  int num_unscaled_primal_infeasibility =
+      solution_params.num_primal_infeasibility;
+  int num_unscaled_dual_infeasibility = solution_params.num_dual_infeasibility;
   // Set the model and solution status according to the unscaled solution
   // parameters
-  if (num_unscaled_primal_infeasibilities == 0 &&
-      num_unscaled_dual_infeasibilities == 0) {
+  if (num_unscaled_primal_infeasibility == 0 &&
+      num_unscaled_dual_infeasibility == 0) {
     // Optimal
     highs_model_object.unscaled_model_status_ = HighsModelStatus::OPTIMAL;
     solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
@@ -133,17 +131,17 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
   } else {
     // Not optimal - should try refinement
     highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
-    assert(num_unscaled_primal_infeasibilities > 0 ||
-           num_unscaled_dual_infeasibilities > 0);
+    assert(num_unscaled_primal_infeasibility > 0 ||
+           num_unscaled_dual_infeasibility > 0);
     HighsLogMessage(highs_model_object.options_.logfile, HighsMessageType::INFO,
                     "Have num/max/sum primal (%d/%g/%g) and dual (%d/%g/%g) "
                     "unscaled infeasibilities",
-                    num_unscaled_primal_infeasibilities,
+                    num_unscaled_primal_infeasibility,
                     solution_params.max_primal_infeasibility,
-                    solution_params.sum_primal_infeasibilities,
-                    num_unscaled_dual_infeasibilities,
+                    solution_params.sum_primal_infeasibility,
+                    num_unscaled_dual_infeasibility,
                     solution_params.max_dual_infeasibility,
-                    solution_params.sum_dual_infeasibilities);
+                    solution_params.sum_dual_infeasibility);
     if (ekk_instance.scaled_model_status_ == HighsModelStatus::OPTIMAL)
       HighsLogMessage(
           highs_model_object.options_.logfile, HighsMessageType::INFO,

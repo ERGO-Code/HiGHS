@@ -1190,17 +1190,17 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header,
   } else {
     if (solve_phase == 1) {
       HighsPrintMessage(output, message_level, this_message_level,
-                        " Ph1: %d(%g)", num_primal_infeasibilities,
-                        sum_primal_infeasibilities);
+                        " Ph1: %d(%g)", num_primal_infeasibility,
+                        sum_primal_infeasibility);
     } else {
       HighsPrintMessage(output, message_level, this_message_level,
-                        " Pr: %d(%g)", num_primal_infeasibilities,
-                        sum_primal_infeasibilities);
+                        " Pr: %d(%g)", num_primal_infeasibility,
+                        sum_primal_infeasibility);
     }
-    if (sum_dual_infeasibilities > 0) {
+    if (sum_dual_infeasibility > 0) {
       HighsPrintMessage(output, message_level, this_message_level,
-                        "; Du: %d(%g)", num_dual_infeasibilities,
-                        sum_dual_infeasibilities);
+                        "; Du: %d(%g)", num_dual_infeasibility,
+                        sum_dual_infeasibility);
     }
   }
 }

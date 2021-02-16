@@ -177,6 +177,39 @@ HighsDebugStatus debugDualChuzcFail(
   return HighsDebugStatus::OK;
 }
 
+HighsDebugStatus debugNonbasicFlagConsistent(
+    const HighsOptions& options, const HighsLp& simplex_lp,
+    const SimplexBasis& simplex_basis) {
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
+    return HighsDebugStatus::NOT_CHECKED;
+  HighsDebugStatus return_status = HighsDebugStatus::OK;
+  int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const bool right_size = (int)simplex_basis.nonbasicFlag_.size() == numTot;
+  if (!right_size) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "nonbasicFlag size error");
+    assert(right_size);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  int num_basic_variables = 0;
+  for (int var = 0; var < numTot; var++) {
+    if (simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_FALSE) {
+      num_basic_variables++;
+    } else {
+      assert(simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_TRUE);
+    }
+  }
+  bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
+  if (!right_num_basic_variables) {
+    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+                    "nonbasicFlag has %d, not %d basic variables",
+                    num_basic_variables, simplex_lp.numRow_);
+    assert(right_num_basic_variables);
+    return_status = HighsDebugStatus::LOGICAL_ERROR;
+  }
+  return return_status;
+}
+
 // Methods for HMO
 
 const double excessive_absolute_primal_norm = 1e12;
@@ -252,6 +285,7 @@ const double freelist_excessive_pct_num_entries = 25.0;
 const double freelist_large_pct_num_entries = 10.0;
 const double freelist_fair_pct_num_entries = 1.0;
 
+/*
 HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   // Non-trivially expensive check that the .simplex_lp, if valid is .lp scaled
   // according to .scale
@@ -1576,39 +1610,6 @@ HighsDebugStatus debugSimplexBasisCorrect(
   return return_status;
 }
 
-HighsDebugStatus debugNonbasicFlagConsistent(
-    const HighsOptions& options, const HighsLp& simplex_lp,
-    const SimplexBasis& simplex_basis) {
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
-    return HighsDebugStatus::NOT_CHECKED;
-  HighsDebugStatus return_status = HighsDebugStatus::OK;
-  int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  const bool right_size = (int)simplex_basis.nonbasicFlag_.size() == numTot;
-  if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag size error");
-    assert(right_size);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  int num_basic_variables = 0;
-  for (int var = 0; var < numTot; var++) {
-    if (simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_FALSE) {
-      num_basic_variables++;
-    } else {
-      assert(simplex_basis.nonbasicFlag_[var] == NONBASIC_FLAG_TRUE);
-    }
-  }
-  bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
-  if (!right_num_basic_variables) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag has %d, not %d basic variables",
-                    num_basic_variables, simplex_lp.numRow_);
-    assert(right_num_basic_variables);
-    return_status = HighsDebugStatus::LOGICAL_ERROR;
-  }
-  return return_status;
-}
-
 HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
                                  const int phase) {
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP)
@@ -2018,3 +2019,4 @@ void debugReportReinvertOnNumericalTrouble(
                     "   Numerical trouble or wrong sign and not reinverting");
   }
 }
+*/

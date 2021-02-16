@@ -188,12 +188,12 @@ struct HighsSimplexInfo {
   bool costs_perturbed = false;
   bool bounds_perturbed = false;
 
-  int num_primal_infeasibilities = -1;
+  int num_primal_infeasibility = -1;
   double max_primal_infeasibility;
-  double sum_primal_infeasibilities;
-  int num_dual_infeasibilities = -1;
+  double sum_primal_infeasibility;
+  int num_dual_infeasibility = -1;
   double max_dual_infeasibility;
-  double sum_dual_infeasibilities;
+  double sum_dual_infeasibility;
 
   // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;

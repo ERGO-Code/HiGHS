@@ -697,8 +697,8 @@ HighsStatus Highs::getRowsInterface(
 
 HighsStatus Highs::getCoefficientInterface(const int Xrow, const int Xcol,
                                            double& value) {
-  if (Xrow < 0 || Xrow > lp_.numRow_) return HighsStatus::Error;
-  if (Xcol < 0 || Xcol > lp_.numCol_) return HighsStatus::Error;
+  if (Xrow < 0 || Xrow >= lp_.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol >= lp_.numCol_) return HighsStatus::Error;
   value = 0;
   for (int el = lp_.Astart_[Xcol]; el < lp_.Astart_[Xcol + 1]; el++) {
     if (lp_.Aindex_[el] == Xrow) {
@@ -836,7 +836,8 @@ HighsStatus Highs::changeColBoundsInterface(
     }
   }
   if (highs_model_object.basis_.valid_) {
-    // Update status of nonbasic variables whose bounds have changed
+    // Update HiGHS basis status and (any) simplex move status of
+    // nonbasic variables whose bounds have changed
     return_status =
         interpretCallStatus(setNonbasicStatusInterface(index_collection, true),
                             return_status, "setNonbasicStatusInterface");
@@ -908,7 +909,8 @@ HighsStatus Highs::changeRowBoundsInterface(
     }
   }
   if (highs_model_object.basis_.valid_) {
-    // Update status of nonbasic variables whose bounds have changed
+    // Update HiGHS basis status and (any) simplex move status of
+    // nonbasic variables whose bounds have changed
     return_status =
         interpretCallStatus(setNonbasicStatusInterface(index_collection, false),
                             return_status, "setNonbasicStatusInterface");
@@ -928,8 +930,8 @@ HighsStatus Highs::changeCoefficientInterface(const int Xrow, const int Xcol,
   HighsModelObject& highs_model_object = hmos_[0];
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsLp& lp = highs_model_object.lp_;
-  if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
-  if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
+  if (Xrow < 0 || Xrow >= lp.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol >= lp.numCol_) return HighsStatus::Error;
   HighsSimplexLpStatus& simplex_lp_status = ekk_instance.simplex_lp_status_;
   bool& valid_simplex_lp = simplex_lp_status.valid;
   // Check that if there is no simplex LP then there is no matrix or scaling

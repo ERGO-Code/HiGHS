@@ -28,9 +28,9 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   HighsOptions& options = model.options_;
-  // Reset unscaled and scaled model status and solution params - except for
+  // Reset unscaled model status and solution params - except for
   // iteration counts
-  resetTwoModelStatusAndSolutionParams(model);
+  resetModelStatusAndSolutionParams(model);
   HighsLogMessage(options.logfile, HighsMessageType::INFO, message.c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
@@ -50,15 +50,14 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     if (return_status == HighsStatus::Error) return return_status;
     // Set the scaled model status and solution params for completeness
     model.scaled_model_status_ = model.unscaled_model_status_;
-    model.scaled_solution_params_ = model.unscaled_solution_params_;
   } else if (options.solver == ipm_string) {
     // Use IPM
 #ifdef IPX_ON
     bool imprecise_solution;
-    call_status = solveLpIpx(
-        options, model.timer_, model.lp_, imprecise_solution, model.basis_,
-        model.solution_, model.iteration_counts_, model.unscaled_model_status_,
-        model.unscaled_solution_params_);
+    call_status =
+        solveLpIpx(options, model.timer_, model.lp_, imprecise_solution,
+                   model.basis_, model.solution_, model.iteration_counts_,
+                   model.unscaled_model_status_, model.solution_params_);
     return_status =
         interpretCallStatus(call_status, return_status, "solveLpIpx");
     if (return_status == HighsStatus::Error) return return_status;
@@ -85,7 +84,6 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     } else {
       // Set the scaled model status and solution params for completeness
       model.scaled_model_status_ = model.unscaled_model_status_;
-      model.scaled_solution_params_ = model.unscaled_solution_params_;
     }
 #else
     HighsLogMessage(options.logfile, HighsMessageType::ERROR,
@@ -105,7 +103,9 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     }
   }
   // Possibly analyse the HiGHS basic solution
-  debugHighsBasicSolution(message, model);
+  //
+  // NB IPX may not yield a basic solution
+  if (model.basis_.valid_) debugHighsBasicSolution(message, model);
 
   return return_status;
 }
@@ -116,8 +116,8 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   return (solveUnconstrainedLp(
       highs_model_object.options_, highs_model_object.lp_,
       highs_model_object.unscaled_model_status_,
-      highs_model_object.unscaled_solution_params_,
-      highs_model_object.solution_, highs_model_object.basis_));
+      highs_model_object.solution_params_, highs_model_object.solution_,
+      highs_model_object.basis_));
 }
 
 // Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution
@@ -151,12 +151,12 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   bool infeasible = false;
   bool unbounded = false;
 
-  solution_params.num_primal_infeasibilities = 0;
+  solution_params.num_primal_infeasibility = 0;
   solution_params.max_primal_infeasibility = 0;
-  solution_params.sum_primal_infeasibilities = 0;
-  solution_params.num_dual_infeasibilities = 0;
+  solution_params.sum_primal_infeasibility = 0;
+  solution_params.num_dual_infeasibility = 0;
   solution_params.max_dual_infeasibility = 0;
-  solution_params.sum_dual_infeasibilities = 0;
+  solution_params.sum_dual_infeasibility = 0;
 
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     double cost = lp.colCost_[iCol];
@@ -221,10 +221,10 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
     solution.col_dual[iCol] = (int)lp.sense_ * dual;
     basis.col_status[iCol] = status;
     objective += value * cost;
-    solution_params.sum_primal_infeasibilities += primal_infeasibility;
+    solution_params.sum_primal_infeasibility += primal_infeasibility;
     if (primal_infeasibility > primal_feasibility_tolerance) {
       infeasible = true;
-      solution_params.num_primal_infeasibilities++;
+      solution_params.num_primal_infeasibility++;
       solution_params.max_primal_infeasibility =
           max(primal_infeasibility, solution_params.max_primal_infeasibility);
     }

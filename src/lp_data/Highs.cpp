@@ -366,23 +366,28 @@ HighsStatus Highs::writeBasis(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with callSolveLp(..)
 HighsStatus Highs::run() {
-#ifdef HiGHSDEV
-  const int min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
-      HIGHS_DEBUG_LEVEL_CHEAP;
-  //    HIGHS_DEBUG_LEVEL_COSTLY;
-  //      HIGHS_DEBUG_LEVEL_EXPENSIVE;
+  const int min_highs_debug_level = HIGHS_DEBUG_LEVEL_MIN;
+  //  HIGHS_DEBUG_LEVEL_CHEAP;
+  //  HIGHS_DEBUG_LEVEL_COSTLY;
+  //  HIGHS_DEBUG_LEVEL_EXPENSIVE;
   //  HIGHS_DEBUG_LEVEL_MAX;
-  if (options_.highs_debug_level < min_highs_debug_level) {
+#ifdef HiGHSDEV
+  min_highs_debug_level =  // HIGHS_DEBUG_LEVEL_MIN;
+                           //  HIGHS_DEBUG_LEVEL_CHEAP;
+      HIGHS_DEBUG_LEVEL_COSTLY;
+  //  HIGHS_DEBUG_LEVEL_EXPENSIVE;
+  //  HIGHS_DEBUG_LEVEL_MAX;
+  if (options_.highs_debug_level < min_highs_debug_level)
     printf(
         "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
         "from %d to %d\n",
         options_.highs_debug_level, min_highs_debug_level);
-    options_.highs_debug_level = min_highs_debug_level;
-  }
   writeModel("HighsRunModel.mps");
   //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
   //  "LpMatrix", lp_);
 #endif
+  if (options_.highs_debug_level < min_highs_debug_level)
+    options_.highs_debug_level = min_highs_debug_level;
 
 #ifdef OPENMP
   omp_max_threads = omp_get_max_threads();
@@ -577,11 +582,12 @@ HighsStatus Highs::run() {
         call_status = callSolveLp(solved_hmo, "Solving the presolved LP");
         timer_.stop(timer_.solve_clock);
         this_solve_presolved_lp_time += timer_.read(timer_.solve_clock);
-        if (hmos_[solved_hmo].simplex_lp_status_.valid) {
+        if (hmos_[solved_hmo].ekk_instance_.simplex_lp_status_.valid) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
           factor_pivot_threshold =
-              hmos_[solved_hmo].simplex_info_.factor_pivot_threshold;
+              hmos_[solved_hmo]
+                  .ekk_instance_.simplex_info_.factor_pivot_threshold;
         }
         // Restore the dual objective cut-off
         options_.dual_objective_value_upper_bound =
@@ -693,7 +699,7 @@ HighsStatus Highs::run() {
           //
           // The original model hasn't been solved, so set up its solution
           // parameters
-          resetTwoModelStatusAndSolutionParams(hmos_[original_hmo]);
+          resetModelStatusAndSolutionParams(hmos_[original_hmo]);
           // Set solution and its status
           hmos_[original_hmo].solution_ = presolve_.data_.recovered_solution_;
 
@@ -1538,8 +1544,6 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
   HighsStatus call_status;
   if (!haveHmo("getCoeff")) return false;
   call_status = getCoefficientInterface(row, col, value);
-  assert(1 == 0);
-  call_status = HighsStatus::Error;
   return_status =
       interpretCallStatus(call_status, return_status, "getCoefficient");
   if (return_status == HighsStatus::Error) return false;
@@ -1682,9 +1686,7 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
   HighsSolution& solution = solution_;
   HighsBasis& basis = basis_;
   int unscaled_primal_status = info_.primal_status;
-  int scaled_primal_status = unscaled_primal_status;
   int unscaled_dual_status = info_.dual_status;
-  int scaled_dual_status = unscaled_dual_status;
   HighsLp& lp = lp_;
   if (hmo_ix >= 0) {
     assert(hmo_ix < (int)hmos_.size());
@@ -1692,24 +1694,20 @@ void Highs::reportModelStatusSolutionBasis(const std::string message,
     scaled_model_status = hmos_[hmo_ix].scaled_model_status_;
     solution = hmos_[hmo_ix].solution_;
     basis = hmos_[hmo_ix].basis_;
-    unscaled_primal_status =
-        hmos_[hmo_ix].unscaled_solution_params_.primal_status;
-    scaled_primal_status = hmos_[hmo_ix].scaled_solution_params_.primal_status;
-    unscaled_dual_status = hmos_[hmo_ix].unscaled_solution_params_.dual_status;
-    scaled_dual_status = hmos_[hmo_ix].scaled_solution_params_.dual_status;
+    unscaled_primal_status = hmos_[hmo_ix].solution_params_.primal_status;
+    unscaled_dual_status = hmos_[hmo_ix].solution_params_.dual_status;
     lp = hmos_[hmo_ix].lp_;
   }
   printf(
       "\n%s\nModel status = %s; Scaled model status = %s; LP(%d, %d); solution "
-      "([%d:%d] %d, %d; [%d:%d] %d, %d); basis %d "
+      "([%d] %d, %d; [%d] %d, %d); basis %d "
       "(%d, %d)\n\n",
       message.c_str(), utilHighsModelStatusToString(model_status).c_str(),
       utilHighsModelStatusToString(scaled_model_status).c_str(), lp.numCol_,
-      lp.numRow_, unscaled_primal_status, scaled_primal_status,
-      (int)solution.col_value.size(), (int)solution.row_value.size(),
-      unscaled_dual_status, scaled_dual_status, (int)solution.col_dual.size(),
-      (int)solution.row_dual.size(), basis.valid_, (int)basis.col_status.size(),
-      (int)basis.row_status.size());
+      lp.numRow_, unscaled_primal_status, (int)solution.col_value.size(),
+      (int)solution.row_value.size(), unscaled_dual_status,
+      (int)solution.col_dual.size(), (int)solution.row_dual.size(),
+      basis.valid_, (int)basis.col_status.size(), (int)basis.row_status.size());
 }
 #endif
 
@@ -1920,18 +1918,17 @@ bool Highs::getHighsModelStatusAndInfo(const int solved_hmo) {
   model_status_ = hmos_[solved_hmo].unscaled_model_status_;
   scaled_model_status_ = hmos_[solved_hmo].scaled_model_status_;
 
-  HighsSolutionParams& solution_params =
-      hmos_[solved_hmo].unscaled_solution_params_;
+  HighsSolutionParams& solution_params = hmos_[solved_hmo].solution_params_;
 
   info_.primal_status = solution_params.primal_status;
   info_.dual_status = solution_params.dual_status;
   info_.objective_function_value = solution_params.objective_function_value;
-  info_.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  info_.num_primal_infeasibilities = solution_params.num_primal_infeasibility;
   info_.max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  info_.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
-  info_.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  info_.sum_primal_infeasibilities = solution_params.sum_primal_infeasibility;
+  info_.num_dual_infeasibilities = solution_params.num_dual_infeasibility;
   info_.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  info_.sum_dual_infeasibilities = solution_params.sum_dual_infeasibility;
   return true;
 }
 
