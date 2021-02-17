@@ -571,7 +571,6 @@ set(headers_fast_build_
     mip/HighsSearch.h
     mip/HighsSeparation.h
     mip/HighsSparseVectorSum.h
-    mip/SolveMip.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
