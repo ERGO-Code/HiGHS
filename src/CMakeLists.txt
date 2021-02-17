@@ -584,10 +584,7 @@ set(headers_fast_build_
     simplex/HFactor.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
-    simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
-    simplex/HPrimal.h
-    simplex/HQPrimal.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
