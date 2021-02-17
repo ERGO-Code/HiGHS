@@ -993,7 +993,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.scaleRow(highs.getNumRows() - 1, -2.0));
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
-
 }
 
 TEST_CASE("LP-getcols", "[highs_data]") {
@@ -1006,14 +1005,16 @@ TEST_CASE("LP-getcols", "[highs_data]") {
   int num_cols;
   int num_nz;
   int matrix_start[2] = {-1, -1};
-  highs.getCols(0, 1, num_cols, NULL, NULL, NULL, num_nz, matrix_start, NULL, NULL);
+  highs.getCols(0, 1, num_cols, NULL, NULL, NULL, num_nz, matrix_start, NULL,
+                NULL);
   REQUIRE(num_cols == 2);
   REQUIRE(num_nz == 2);
   REQUIRE(matrix_start[0] == 0);
   REQUIRE(matrix_start[1] == 1);
   int matrix_indices[2] = {-1, -1};
   double matrix_values[2] = {0.0, 0.0};
-  highs.getCols(0, 1, num_cols, NULL, NULL, NULL, num_nz, matrix_start, matrix_indices, matrix_values);
+  highs.getCols(0, 1, num_cols, NULL, NULL, NULL, num_nz, matrix_start,
+                matrix_indices, matrix_values);
   REQUIRE(matrix_indices[0] == 0);
   REQUIRE(matrix_indices[1] == 0);
   REQUIRE(matrix_values[0] == 1.0);
@@ -1040,7 +1041,8 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   REQUIRE(matrix_start[1] == 1);
   int matrix_indices[2] = {-1, -1};
   double matrix_values[2] = {0.0, 0.0};
-  highs.getRows(0, 1, num_rows, NULL, NULL, num_nz, matrix_start, matrix_indices, matrix_values);
+  highs.getRows(0, 1, num_rows, NULL, NULL, num_nz, matrix_start,
+                matrix_indices, matrix_values);
   REQUIRE(matrix_indices[0] == 0);
   REQUIRE(matrix_indices[1] == 1);
   REQUIRE(matrix_values[0] == 1.0);
