@@ -993,4 +993,56 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(highs.scaleRow(highs.getNumRows() - 1, -2.0));
 
   callRun(highs, options.logfile, "highs.run()", HighsStatus::OK);
+
+}
+
+TEST_CASE("LP-getcols", "[highs_data]") {
+  Highs highs;
+  highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
+  highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
+  int aindex[2] = {0, 1};
+  double avalue[2] = {1.0, -1.0};
+  highs.addRow(0.0, 0.0, 2, aindex, avalue);
+  int num_cols;
+  int num_nz;
+  int matrix_start[2] = {-1, -1};
+  highs.getCols(0, 1, num_cols, NULL, NULL, NULL, num_nz, matrix_start, NULL, NULL);
+  REQUIRE(num_cols == 2);
+  REQUIRE(num_nz == 2);
+  REQUIRE(matrix_start[0] == 0);
+  REQUIRE(matrix_start[1] == 1);
+  int matrix_indices[2] = {-1, -1};
+  double matrix_values[2] = {0.0, 0.0};
+  highs.getCols(0, 1, num_cols, NULL, NULL, NULL, num_nz, matrix_start, matrix_indices, matrix_values);
+  REQUIRE(matrix_indices[0] == 0);
+  REQUIRE(matrix_indices[1] == 0);
+  REQUIRE(matrix_values[0] == 1.0);
+  REQUIRE(matrix_values[1] == -1.0);
+}
+
+TEST_CASE("LP-getrows", "[highs_data]") {
+  Highs highs;
+  highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
+  highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
+  int aindex = 0;
+  double avalue = 1.0;
+  highs.addRow(0.0, 0.0, 1, &aindex, &avalue);
+  aindex = 1;
+  avalue = -2.0;
+  highs.addRow(0.0, 0.0, 1, &aindex, &avalue);
+  int num_rows;
+  int num_nz;
+  int matrix_start[2] = {-1, -1};
+  highs.getRows(0, 1, num_rows, NULL, NULL, num_nz, matrix_start, NULL, NULL);
+  REQUIRE(num_rows == 2);
+  REQUIRE(num_nz == 2);
+  REQUIRE(matrix_start[0] == 0);
+  REQUIRE(matrix_start[1] == 1);
+  int matrix_indices[2] = {-1, -1};
+  double matrix_values[2] = {0.0, 0.0};
+  highs.getRows(0, 1, num_rows, NULL, NULL, num_nz, matrix_start, matrix_indices, matrix_values);
+  REQUIRE(matrix_indices[0] == 0);
+  REQUIRE(matrix_indices[1] == 1);
+  REQUIRE(matrix_values[0] == 1.0);
+  REQUIRE(matrix_values[1] == -2.0);
 }
