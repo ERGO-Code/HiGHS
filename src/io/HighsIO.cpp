@@ -26,10 +26,10 @@ void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void highsOutputUser(const HighsIo& io,
-		     const HighsMessageType type,
-		     const char* format, ...) {
-  if (!io.output_flag || (io.logging_file == NULL && !io.log_to_console)) return;
+void highsOutputUser(const HighsIo& io, const HighsMessageType type,
+                     const char* format, ...) {
+  if (!io.output_flag || (io.logging_file == NULL && !io.log_to_console))
+    return;
   va_list argptr;
   va_start(argptr, format);
   if (printmsgcb == NULL) {
@@ -38,7 +38,7 @@ void highsOutputUser(const HighsIo& io,
     vfprintf(io.logging_file, format, argptr);
     if (io.log_to_console) {
       if (type != HighsMessageType::INFO)
-	fprintf(io.logging_file, "%-7s: ", HighsMessageTypeTag[(int)type]);
+        fprintf(io.logging_file, "%-7s: ", HighsMessageTypeTag[(int)type]);
       va_start(argptr, format);
       vfprintf(stdout, format, argptr);
     }
@@ -54,9 +54,8 @@ void highsOutputUser(const HighsIo& io,
   va_end(argptr);
 }
 
-void highsOutputDev(const HighsIo& io,
-    const HighsMessageType type, 
-    const char* format, ...) {
+void highsOutputDev(const HighsIo& io, const HighsMessageType type,
+                    const char* format, ...) {
   if (io.logging_file == NULL || !io.output_dev) return;
   va_list argptr;
   va_start(argptr, format);

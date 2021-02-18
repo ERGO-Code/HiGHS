@@ -90,8 +90,8 @@ HighsStatus Highs::setHighsOutput(FILE* output) {
 
 HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
-    HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
-                    "Empty file name so not reading options");
+    highsOutputUser(options_.io, HighsMessageType::WARNING,
+                    "Empty file name so not reading options\n");
     return HighsStatus::Warning;
   }
   options_.options_file = filename;
@@ -278,8 +278,8 @@ HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   Filereader* reader = Filereader::getFilereader(filename);
   if (reader == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Model file %s not supported", filename.c_str());
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "Model file %s not supported\n", filename.c_str());
     return HighsStatus::Error;
   }
 
@@ -326,8 +326,8 @@ HighsStatus Highs::readBasis(const std::string filename) {
   if (return_status != HighsStatus::OK) return return_status;
   // Basis read OK: check whether it's consistent with the LP
   if (!isBasisConsistent(lp_, read_basis)) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "readBasis: invalid basis");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "readBasis: invalid basis\n");
     return HighsStatus::Error;
   }
   // Update the HiGHS basis and invalidate any simplex basis for the model
@@ -351,8 +351,8 @@ HighsStatus Highs::writeModel(const std::string filename) {
   } else {
     Filereader* writer = Filereader::getFilereader(filename);
     if (writer == NULL) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Model file %s not supported", filename.c_str());
+      highsOutputUser(options_.io, HighsMessageType::ERROR,
+                      "Model file %s not supported\n", filename.c_str());
       return HighsStatus::Error;
     }
     return_status =
@@ -417,8 +417,8 @@ HighsStatus Highs::run() {
     // model_file
     if (options_.model_file.compare(FILENAME_DEFAULT) == 0) {
       // model_file is still default value, so return with error
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "No model can be loaded in run()");
+      highsOutputUser(options_.io, HighsMessageType::ERROR,
+                      "No model can be loaded in run()\n");
       return_status = HighsStatus::Error;
       return returnFromRun(return_status);
     } else {
@@ -498,8 +498,8 @@ HighsStatus Highs::run() {
     // If using IPX to solve the reduced LP, crossover must be run
     // since a basic solution is required by postsolve
     if (options_.solver == ipm_string && !options_.run_crossover) {
-      HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
-                      "Forcing IPX to use crossover after presolve");
+      highsOutputUser(options_.io, HighsMessageType::WARNING,
+                      "Forcing IPX to use crossover after presolve\n");
       options_.run_crossover = true;
     }
 
@@ -625,8 +625,8 @@ HighsStatus Highs::run() {
         } else {
           model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
         }
-        HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                        "Problem status detected on presolve: %s",
+        highsOutputUser(options_.io, HighsMessageType::INFO,
+                        "Problem status detected on presolve: %s\n",
                         highsModelStatusToString(model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
@@ -771,7 +771,7 @@ HighsStatus Highs::run() {
           postsolve_iteration_count =
               info_.simplex_iteration_count - iteration_count0;
         } else {
-          HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
+          highsOutputUser(options_.io, HighsMessageType::ERROR,
                           "Postsolve return status is %d\n",
                           (int)postsolve_status);
           model_status_ = HighsModelStatus::POSTSOLVE_ERROR;
@@ -928,8 +928,8 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
 HighsStatus Highs::getBasicVariables(int* basic_variables) {
   if (!haveHmo("getBasicVariables")) return HighsStatus::Error;
   if (basic_variables == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasicVariables: basic_variables is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getBasicVariables: basic_variables is NULL\n");
     return HighsStatus::Error;
   }
   return getBasicVariablesInterface(basic_variables);
@@ -939,23 +939,23 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
                                       int* row_num_nz, int* row_indices) {
   if (!haveHmo("getBasisInverseRow")) return HighsStatus::Error;
   if (row_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisInverseRow: row_vector is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getBasisInverseRow: row_vector is NULL\n");
     return HighsStatus::Error;
   }
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
   int numRow = hmos_[0].lp_.numRow_;
   if (row < 0 || row >= numRow) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Row index %d out of range [0, %d] in getBasisInverseRow",
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "Row index %d out of range [0, %d] in getBasisInverseRow\n",
                     row, numRow - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getBasisInverseRow");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "No invertible representation for getBasisInverseRow\n");
     return HighsStatus::Error;
   }
   // Compute a row i of the inverse of the basis matrix by solving B^Tx=e_i
@@ -970,24 +970,24 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
                                       int* col_num_nz, int* col_indices) {
   if (!haveHmo("getBasisInverseCol")) return HighsStatus::Error;
   if (col_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisInverseCol: col_vector is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getBasisInverseCol: col_vector is NULL\n");
     return HighsStatus::Error;
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
   int numRow = hmos_[0].lp_.numRow_;
   if (col < 0 || col >= numRow) {
-    HighsLogMessage(
-        options_.logfile, HighsMessageType::ERROR,
-        "Column index %d out of range [0, %d] in getBasisInverseCol", col,
+    highsOutputUser(
+        options_.io, HighsMessageType::ERROR,
+        "Column index %d out of range [0, %d] in getBasisInverseCol\n", col,
         numRow - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getBasisInverseCol");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "No invertible representation for getBasisInverseCol\n");
     return HighsStatus::Error;
   }
   // Compute a col i of the inverse of the basis matrix by solving Bx=e_i
@@ -1002,21 +1002,21 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
                                  int* solution_num_nz, int* solution_indices) {
   if (!haveHmo("getBasisSolve")) return HighsStatus::Error;
   if (Xrhs == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisSolve: Xrhs is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getBasisSolve: Xrhs is NULL\n");
     return HighsStatus::Error;
   }
   if (solution_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisSolve: solution_vector is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getBasisSolve: solution_vector is NULL\n");
     return HighsStatus::Error;
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getBasisSolve");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "No invertible representation for getBasisSolve\n");
     return HighsStatus::Error;
   }
   int numRow = hmos_[0].lp_.numRow_;
@@ -1034,21 +1034,22 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
                                           int* solution_indices) {
   if (!haveHmo("getBasisTransposeSolve")) return HighsStatus::Error;
   if (Xrhs == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisTransposeSolve: Xrhs is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getBasisTransposeSolve: Xrhs is NULL\n");
     return HighsStatus::Error;
   }
   if (solution_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getBasisTransposeSolve: solution_vector is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getBasisTransposeSolve: solution_vector is NULL\n");
     return HighsStatus::Error;
   }
   // solution_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getBasisTransposeSolve");
+    highsOutputUser(
+        options_.io, HighsMessageType::ERROR,
+        "No invertible representation for getBasisTransposeSolve\n");
     return HighsStatus::Error;
   }
   int numRow = hmos_[0].lp_.numRow_;
@@ -1065,23 +1066,23 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                                  const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
   if (row_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getReducedRow: row_vector is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getReducedRow: row_vector is NULL\n");
     return HighsStatus::Error;
   }
   // row_indices can be NULL - it's the trigger that determines
   // whether they are identified or not pass_basis_inverse_row_vector
   // NULL - it's the trigger to determine whether it's computed or not
   if (row < 0 || row >= hmos_[0].lp_.numRow_) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Row index %d out of range [0, %d] in getReducedRow", row,
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "Row index %d out of range [0, %d] in getReducedRow\n", row,
                     hmos_[0].lp_.numRow_ - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getReducedRow");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "No invertible representation for getReducedRow\n");
     return HighsStatus::Error;
   }
   HighsLp& lp = hmos_[0].lp_;
@@ -1119,22 +1120,23 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                                     int* col_num_nz, int* col_indices) {
   if (!haveHmo("getReducedColumn")) return HighsStatus::Error;
   if (col_vector == NULL) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "getReducedColumn: col_vector is NULL");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "getReducedColumn: col_vector is NULL\n");
     return HighsStatus::Error;
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
   if (col < 0 || col >= hmos_[0].lp_.numCol_) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Column index %d out of range [0, %d] in getReducedColumn",
-                    col, hmos_[0].lp_.numCol_ - 1);
+    highsOutputUser(
+        options_.io, HighsMessageType::ERROR,
+        "Column index %d out of range [0, %d] in getReducedColumn\n", col,
+        hmos_[0].lp_.numCol_ - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "No invertible representation for getReducedColumn");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "No invertible representation for getReducedColumn\n");
     return HighsStatus::Error;
   }
   HighsLp& lp = hmos_[0].lp_;
@@ -1177,8 +1179,8 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   // Check the user-supplied basis
   if (!isBasisConsistent(lp_, basis)) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "setBasis: invalid basis");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "setBasis: invalid basis\n");
     return HighsStatus::Error;
   }
   // Update the HiGHS basis
@@ -1950,8 +1952,8 @@ HighsStatus Highs::openWriteFile(const string filename,
   } else {
     file = fopen(filename.c_str(), "w");
     if (file == 0) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Cannot open writeable file \"%s\" in %s",
+      highsOutputUser(options_.io, HighsMessageType::ERROR,
+                      "Cannot open writeable file \"%s\" in %s\n",
                       filename.c_str(), method_name.c_str());
       return HighsStatus::Error;
     }
@@ -2037,8 +2039,8 @@ bool Highs::haveHmo(const string method_name) const {
   bool have_hmo = hmos_.size() > 0;
 #ifdef HiGHSDEV
   if (!have_hmo)
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Method %s called without any HighsModelObject",
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "Method %s called without any HighsModelObject\n",
                     method_name.c_str());
 #endif
   assert(have_hmo);
@@ -2192,9 +2194,9 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   const bool consistent = debugBasisConsistent(options_, lp_, basis_) !=
                           HighsDebugStatus::LOGICAL_ERROR;
   if (!consistent) {
-    HighsLogMessage(
-        options_.logfile, HighsMessageType::ERROR,
-        "returnFromHighs: Supposed to be a HiGHS basis, but not consistent");
+    highsOutputUser(
+        options_.io, HighsMessageType::ERROR,
+        "returnFromHighs: Supposed to be a HiGHS basis, but not consistent\n");
     assert(consistent);
     return_status = HighsStatus::Error;
   }
@@ -2203,8 +2205,8 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     bool simplex_lp_ok =
         ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
     if (!simplex_lp_ok) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "returnFromHighs: Simplex LP not OK");
+      highsOutputUser(options_.io, HighsMessageType::ERROR,
+                      "returnFromHighs: Simplex LP not OK\n");
       assert(simplex_lp_ok);
       return_status = HighsStatus::Error;
     }
@@ -2213,10 +2215,10 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   return return_status;
 }
 void Highs::underDevelopmentLogMessage(const string method_name) {
-  HighsLogMessage(
-      options_.logfile, HighsMessageType::WARNING,
-      "Method %s is still under development and behaviour may be unpredictable",
-      method_name.c_str());
+  highsOutputUser(options_.io, HighsMessageType::WARNING,
+                  "Method %s is still under development and behaviour may be "
+                  "unpredictable\n",
+                  method_name.c_str());
 }
 
 void Highs::getPresolveReductionCounts(int& rows, int& cols, int& nnz) const {

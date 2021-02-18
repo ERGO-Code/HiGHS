@@ -76,7 +76,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   AnIterCostlyDseFq = 0;
   AnIterNumCostlyDseIt = 0;
   // Copy messaging parameter from options
-  messaging(options.logfile, options.output, options.message_level);
+  messaging(options.logfile, options.output, options.message_level, options.io);
   // Initialise the densities
   col_aq_density = 0;
   row_ep_density = 0;
@@ -272,10 +272,12 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
 }
 
 void HighsSimplexAnalysis::messaging(FILE* logfile_, FILE* output_,
-                                     const int message_level_) {
+                                     const int message_level_,
+                                     const HighsIo& io_) {
   logfile = logfile_;
   output = output_;
   message_level = message_level_;
+  io = io_;
 }
 
 void HighsSimplexAnalysis::updateOperationResultDensity(
@@ -438,11 +440,11 @@ bool HighsSimplexAnalysis::switchToDevex() {
         (lcNumIter > AnIterFracNumTot_ItBfSw * numTot);
 
     if (switch_to_devex) {
-      HighsLogMessage(
-          logfile, HighsMessageType::INFO,
+      highsOutputUser(
+          io, HighsMessageType::INFO,
           "Switch from DSE to Devex after %d costly DSE iterations of %d with "
           "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
-          "%11.4g; DSE = %11.4g",
+          "%11.4g; DSE = %11.4g\n",
           AnIterNumCostlyDseIt, lcNumIter, col_aq_density, row_ep_density,
           row_ap_density, row_DSE_density);
     }
@@ -457,7 +459,7 @@ bool HighsSimplexAnalysis::switchToDevex() {
     switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
                       dse_weight_error_measure > dse_weight_error_threshold;
     if (switch_to_devex) {
-      HighsLogMessage(logfile, HighsMessageType::INFO,
+      highsOutputUser(io, HighsMessageType::INFO,
                       "Switch from DSE to Devex with log error measure of %g > "
                       "%g = threshold",
                       dse_weight_error_measure, dse_weight_error_threshold);

@@ -242,8 +242,8 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
   else
     method_name = "Crossover";
   if (status == IPX_STATUS_not_run) {
-    highsOutputUser(options.io, HighsMessageType::WARNING,
-                    "Ipx: %s not run\n", method_name.c_str());
+    highsOutputUser(options.io, HighsMessageType::WARNING, "Ipx: %s not run\n",
+                    method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_optimal) {
     highsOutputUser(options.io, HighsMessageType::INFO, "Ipx: %s optimal\n",

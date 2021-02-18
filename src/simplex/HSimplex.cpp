@@ -34,8 +34,8 @@ void scaleAndPassLpToEkk(HighsModelObject& highs_model_object) {
       highs_model_object.lp_.numCol_ > 0;
   const bool force_no_scaling = false;  // true;//
   if (force_no_scaling) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Forcing no scaling");
+    highsOutputUser(options.io, HighsMessageType::WARNING,
+                    "Forcing no scaling\n");
     scale_lp = false;
   }
   if (scale_lp) {
@@ -505,9 +505,9 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
       if (get_new_scaled_feasibility_tolerances) {
         double multiplier = primal_feasibility_tolerance / scale_mu;
         if (report) {
-          HighsLogMessage(options.logfile, HighsMessageType::INFO,
+          highsOutputUser(options.io, HighsMessageType::INFO,
                           "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g "
-                          "s=%11.4g %11.4g: Mu = %g",
+                          "s=%11.4g %11.4g: Mu = %g\n",
                           iVar, iCol, iRow, scaled_lower, scaled_value,
                           scaled_upper, scaled_primal_infeasibility, scale_mu,
                           primal_infeasibility, multiplier);
@@ -577,10 +577,10 @@ void scaleSimplexLp(const HighsOptions& options, HighsLp& lp,
   if (no_scaling) {
     // No matrix scaling, but possible cost scaling
     if (options.highs_debug_level)
-      HighsLogMessage(
-          options.logfile, HighsMessageType::INFO,
+      highsOutputUser(
+          options.io, HighsMessageType::INFO,
           "Scaling: Matrix has [min, max] values of [%g, %g] within "
-          "[%g, %g] so no scaling performed",
+          "[%g, %g] so no scaling performed\n",
           original_matrix_min_value, original_matrix_max_value,
           no_scaling_original_matrix_min_value,
           no_scaling_original_matrix_max_value);
@@ -830,17 +830,17 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   const double geomean_row_equilibration =
       exp(sum_log_row_equilibration / numRow);
   if (options.highs_debug_level) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::INFO,
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
         "Scaling: Original equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
-        "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)",
+        "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)\n",
         min_original_col_equilibration, geomean_original_col_equilibration,
         max_original_col_equilibration, min_original_row_equilibration,
         geomean_original_row_equilibration, max_original_row_equilibration);
-    HighsLogMessage(
-        options.logfile, HighsMessageType::INFO,
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
         "Scaling: Final    equilibration: min/mean/max %11.4g/%11.4g/%11.4g "
-        "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)",
+        "(cols); min/mean/max %11.4g/%11.4g/%11.4g (rows)\n",
         min_col_equilibration, geomean_col_equilibration, max_col_equilibration,
         min_row_equilibration, geomean_row_equilibration,
         max_row_equilibration);
@@ -876,35 +876,38 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   const double matrix_value_ratio_improvement =
       original_matrix_value_ratio / matrix_value_ratio;
   if (options.highs_debug_level) {
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
+    highsOutputUser(options.io, HighsMessageType::INFO,
                     "Scaling: Extreme equilibration improvement = ( %11.4g + "
-                    "%11.4g) / ( %11.4g + %11.4g) = %11.4g / %11.4g = %11.4g",
+                    "%11.4g) / ( %11.4g + %11.4g) = %11.4g / %11.4g = %11.4g\n",
                     original_col_ratio, original_row_ratio, col_ratio,
                     row_ratio, (original_col_ratio + original_row_ratio),
                     (col_ratio + row_ratio), extreme_equilibration_improvement);
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
+    highsOutputUser(options.io, HighsMessageType::INFO,
                     "Scaling:    Mean equilibration improvement = ( %11.4g * "
-                    "%11.4g) / ( %11.4g * %11.4g) = %11.4g / %11.4g = %11.4g",
+                    "%11.4g) / ( %11.4g * %11.4g) = %11.4g / %11.4g = %11.4g\n",
                     geomean_original_col, geomean_original_row, geomean_col,
                     geomean_row, (geomean_original_col * geomean_original_row),
                     (geomean_col * geomean_row),
                     mean_equilibration_improvement);
-    HighsLogMessage(
-        options.logfile, HighsMessageType::INFO,
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
         "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
-        "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g",
+        "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
         matrix_min_value, matrix_max_value, matrix_value_ratio,
         original_matrix_min_value, original_matrix_max_value,
         original_matrix_value_ratio, matrix_value_ratio_improvement);
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                    "Scaling: Improves    mean equilibration by a factor %0.4g",
-                    mean_equilibration_improvement);
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                    "Scaling: Improves extreme equilibration by a factor %0.4g",
-                    extreme_equilibration_improvement);
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                    "Scaling: Improves max/min matrix values by a factor %0.4g",
-                    matrix_value_ratio_improvement);
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
+        "Scaling: Improves    mean equilibration by a factor %0.4g\n",
+        mean_equilibration_improvement);
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
+        "Scaling: Improves extreme equilibration by a factor %0.4g\n",
+        extreme_equilibration_improvement);
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
+        "Scaling: Improves max/min matrix values by a factor %0.4g\n",
+        matrix_value_ratio_improvement);
   }
   const bool possibly_abandon_scaling =
       simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_HIGHS_FORCED;
@@ -926,42 +929,42 @@ bool equilibrationScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
       }
     }
     if (options.highs_debug_level)
-      HighsLogMessage(
-          options.logfile, HighsMessageType::INFO,
+      highsOutputUser(
+          options.io, HighsMessageType::INFO,
           "Scaling: Improvement factor %0.4g < %0.4g required, so no "
-          "scaling applied",
+          "scaling applied\n",
           improvement_factor, improvement_factor_required);
     initialiseScale(lp, scale);
     return false;
   } else {
     if (options.highs_debug_level) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::INFO,
-          "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP",
+      highsOutputUser(
+          options.io, HighsMessageType::INFO,
+          "Scaling: Improvement factor is %0.4g >= %0.4g so scale LP\n",
           improvement_factor, improvement_factor_required);
       if (extreme_equilibration_improvement < 1.0) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::WARNING,
-            "Scaling: Applying scaling with extreme improvement of %0.4g",
+        highsOutputUser(
+            options.io, HighsMessageType::WARNING,
+            "Scaling: Applying scaling with extreme improvement of %0.4g\n",
             extreme_equilibration_improvement);
       }
       if (mean_equilibration_improvement < 1.0) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::WARNING,
-            "Scaling: Applying scaling with mean improvement of %0.4g",
+        highsOutputUser(
+            options.io, HighsMessageType::WARNING,
+            "Scaling: Applying scaling with mean improvement of %0.4g\n",
             mean_equilibration_improvement);
       }
       if (matrix_value_ratio_improvement < 1.0) {
-        HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+        highsOutputUser(options.io, HighsMessageType::WARNING,
                         "Scaling: Applying scaling with matrix value ratio "
-                        "improvement of %0.4g",
+                        "improvement of %0.4g\n",
                         matrix_value_ratio_improvement);
       }
       if (improvement_factor < 10 * improvement_factor_required) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::WARNING,
+        highsOutputUser(
+            options.io, HighsMessageType::WARNING,
             "Scaling: Applying scaling with improvement factor %0.4g "
-            "< 10*(%0.4g) improvement",
+            "< 10*(%0.4g) improvement\n",
             improvement_factor, improvement_factor_required);
       }
     }
@@ -1059,14 +1062,14 @@ bool maxValueScaleSimplexMatrix(const HighsOptions& options, HighsLp& lp,
   const double matrix_value_ratio_improvement =
       original_matrix_value_ratio / matrix_value_ratio;
   if (options.highs_debug_level) {
-    HighsLogMessage(options.logfile, HighsMessageType::INFO,
+    highsOutputUser(options.io, HighsMessageType::INFO,
                     "Scaling: Factors are in [%0.4g, %0.4g] for columns and in "
-                    "[%0.4g, %0.4g] for rows",
+                    "[%0.4g, %0.4g] for rows\n",
                     min_col_scale, max_col_scale, min_row_scale, max_row_scale);
-    HighsLogMessage(
-        options.logfile, HighsMessageType::INFO,
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
         "Scaling: Yields [min, max, ratio] matrix values of [%0.4g, %0.4g, "
-        "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g",
+        "%0.4g]; Originally [%0.4g, %0.4g, %0.4g]: Improvement of %0.4g\n",
         matrix_min_value, matrix_max_value, matrix_value_ratio,
         original_matrix_min_value, original_matrix_max_value,
         original_matrix_value_ratio, matrix_value_ratio_improvement);

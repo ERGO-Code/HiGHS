@@ -16,8 +16,7 @@
 
 #include "simplex/HSimplex.h"
 
-void reportSimplexPhaseIterations(const HighsIo& io,
-				  const int iteration_count,
+void reportSimplexPhaseIterations(const HighsIo& io, const int iteration_count,
                                   const HighsSimplexInfo& simplex_info,
                                   const bool initialise) {
   if (simplex_info.run_quiet) return;

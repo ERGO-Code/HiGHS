@@ -31,7 +31,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndSolutionParams(model);
-  HighsLogMessage(options.logfile, HighsMessageType::INFO, message.c_str());
+  highsOutputUser(options.io, HighsMessageType::INFO, message.c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -63,9 +63,9 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     if (return_status == HighsStatus::Error) return return_status;
     if (imprecise_solution) {
       // IPX+crossover has not obtained a solution satisfying the tolerances.
-      HighsLogMessage(
-          options.logfile, HighsMessageType::WARNING,
-          "Imprecise solution returned from IPX so use simplex to clean up");
+      highsOutputUser(
+          options.io, HighsMessageType::WARNING,
+          "Imprecise solution returned from IPX so use simplex to clean up\n");
       // Reset the return status (that should be HighsStatus::Warning)
       // since it will now be determined by the outcome of the simplex
       // solve
@@ -77,8 +77,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
           interpretCallStatus(call_status, return_status, "solveLpSimplex");
       if (return_status == HighsStatus::Error) return return_status;
       if (!isSolutionRightSize(model.lp_, model.solution_)) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Inconsistent solution returned from solver");
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+                        "Inconsistent solution returned from solver\n");
         return HighsStatus::Error;
       }
     } else {
@@ -86,8 +86,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       model.scaled_model_status_ = model.unscaled_model_status_;
     }
 #else
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Model cannot be solved with IPM");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "Model cannot be solved with IPM\n");
     return HighsStatus::Error;
 #endif
   } else {
@@ -97,8 +97,8 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
         interpretCallStatus(call_status, return_status, "solveLpSimplex");
     if (return_status == HighsStatus::Error) return return_status;
     if (!isSolutionRightSize(model.lp_, model.solution_)) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Inconsistent solution returned from solver");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Inconsistent solution returned from solver\n");
       return HighsStatus::Error;
     }
   }
@@ -133,8 +133,8 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   assert(lp.numRow_ == 0);
   if (lp.numRow_ != 0) return HighsStatus::Error;
 
-  HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                  "Solving an unconstrained LP with %d columns", lp.numCol_);
+  highsOutputUser(options.io, HighsMessageType::INFO,
+                  "Solving an unconstrained LP with %d columns\n", lp.numCol_);
 
   solution.col_value.assign(lp.numCol_, 0);
   solution.col_dual.assign(lp.numCol_, 0);

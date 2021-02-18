@@ -42,15 +42,11 @@ enum HighsPrintMessageLevel {
 };
 
 // Printing format: must contain exactly one "\n" at end of format
-void highsOutputUser(
-    const HighsIo& io,
-    const HighsMessageType type,
-    const char* format, ...);
+void highsOutputUser(const HighsIo& io, const HighsMessageType type,
+                     const char* format, ...);
 
-void highsOutputDev(
-    const HighsIo& io,
-    const HighsMessageType type, 
-    const char* format, ...);
+void highsOutputDev(const HighsIo& io, const HighsMessageType type,
+                    const char* format, ...);
 
 /**
  * @brief Used to direct printed output to FILE* output, according

@@ -79,7 +79,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
     // the few wierdos who want lp.Astart_[0] to be positive. Hence
     // it's not permitted!
     if (lp.Astart_[0]) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "LP has nonzero value (%d) for the start of column 0\n",
                       lp.Astart_[0]);
       return HighsStatus::Error;
@@ -101,8 +101,8 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
   else
     return_status = HighsStatus::OK;
 #ifdef HiGHSDEV
-  HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                  "assess_lp returns HighsStatus = %s",
+  highsOutputUser(options.io, HighsMessageType::INFO,
+                  "assess_lp returns HighsStatus = %s\n",
                   HighsStatusToString(return_status).c_str());
 #endif
   return return_status;
@@ -120,7 +120,7 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
   // Assess column-related dimensions
   bool legal_num_col = lp.numCol_ >= 0;
   if (!legal_num_col) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+    highsOutputUser(options.io, HighsMessageType::ERROR,
                     "LP has illegal number of cols = %d\n", lp.numCol_);
     error_found = true;
   } else {
@@ -134,19 +134,19 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     bool legal_col_upper_size = col_lower_size >= lp.numCol_;
 
     if (!legal_col_cost_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "LP has illegal colCost size = %d < %d\n", col_cost_size,
                       lp.numCol_);
       error_found = true;
     }
     if (!legal_col_lower_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "LP has illegal colLower size = %d < %d\n",
                       col_lower_size, lp.numCol_);
       error_found = true;
     }
     if (!legal_col_upper_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "LP has illegal colUpper size = %d < %d\n",
                       col_upper_size, lp.numCol_);
       error_found = true;
@@ -154,7 +154,7 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     if (check_matrix_start_size) {
       bool legal_matrix_start_size = matrix_start_size >= lp.numCol_ + 1;
       if (!legal_matrix_start_size) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+        highsOutputUser(options.io, HighsMessageType::ERROR,
                         "LP has illegal Astart size = %d < %d\n",
                         matrix_start_size, lp.numCol_ + 1);
         error_found = true;
@@ -165,7 +165,7 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
   // Assess row-related dimensions
   bool legal_num_row = lp.numRow_ >= 0;
   if (!legal_num_row) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+    highsOutputUser(options.io, HighsMessageType::ERROR,
                     "LP has illegal number of rows = %d\n", lp.numRow_);
     error_found = true;
   } else {
@@ -174,13 +174,13 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     bool legal_row_lower_size = row_lower_size >= lp.numRow_;
     bool legal_row_upper_size = row_lower_size >= lp.numRow_;
     if (!legal_row_lower_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "LP has illegal rowLower size = %d < %d\n",
                       row_lower_size, lp.numRow_);
       error_found = true;
     }
     if (!legal_row_upper_size) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "LP has illegal rowUpper size = %d < %d\n",
                       row_upper_size, lp.numRow_);
       error_found = true;
@@ -192,7 +192,7 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     int lp_num_nz = lp.Astart_[lp.numCol_];
     bool legal_num_nz = lp_num_nz >= 0;
     if (!legal_num_nz) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "LP has illegal number of nonzeros = %d\n", lp_num_nz);
       error_found = true;
     } else {
@@ -201,13 +201,13 @@ HighsStatus assessLpDimensions(const HighsOptions& options, const HighsLp& lp) {
       bool legal_matrix_index_size = matrix_index_size >= lp_num_nz;
       bool legal_matrix_value_size = matrix_value_size >= lp_num_nz;
       if (!legal_matrix_index_size) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+        highsOutputUser(options.io, HighsMessageType::ERROR,
                         "LP has illegal Aindex size = %d < %d\n",
                         matrix_index_size, lp_num_nz);
         error_found = true;
       }
       if (!legal_matrix_value_size) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+        highsOutputUser(options.io, HighsMessageType::ERROR,
                         "LP has illegal Avalue size = %d < %d\n",
                         matrix_value_size, lp_num_nz);
         error_found = true;
@@ -277,9 +277,9 @@ HighsStatus assessCosts(const HighsOptions& options, const int ml_col_os,
     double abs_cost = fabs(cost[data_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Col  %12d has |cost| of %12g >= %12g", ml_col, abs_cost,
-                      infinite_cost);
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Col  %12d has |cost| of %12g >= %12g\n", ml_col,
+                      abs_cost, infinite_cost);
       error_found = !allow_infinite_costs;
     }
   }
@@ -370,39 +370,39 @@ HighsStatus assessBounds(const HighsOptions& options, const char* type,
     bool legalLowerUpperBound = lower[data_ix] <= upper[data_ix];
     if (!legalLowerUpperBound) {
       // Leave inconsistent bounds to be used to deduce infeasibility
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                      "%3s  %12d has inconsistent bounds [%12g, %12g]", type,
+      highsOutputUser(options.io, HighsMessageType::WARNING,
+                      "%3s  %12d has inconsistent bounds [%12g, %12g]\n", type,
                       ml_ix, lower[data_ix], upper[data_ix]);
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
     bool legalLowerBound = lower[data_ix] < infinite_bound;
     if (!legalLowerBound) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "%3s  %12d has lower bound of %12g >= %12g", type, ml_ix,
-                      lower[data_ix], infinite_bound);
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "%3s  %12d has lower bound of %12g >= %12g\n", type,
+                      ml_ix, lower[data_ix], infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
     bool legalUpperBound = upper[data_ix] > -infinite_bound;
     if (!legalUpperBound) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "%3s  %12d has upper bound of %12g <= %12g", type, ml_ix,
-                      upper[data_ix], -infinite_bound);
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "%3s  %12d has upper bound of %12g <= %12g\n", type,
+                      ml_ix, upper[data_ix], -infinite_bound);
       error_found = true;
     }
   }
   if (num_infinite_lower_bound) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::INFO,
-        "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity", type,
-        num_infinite_lower_bound, -infinite_bound);
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
+        "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity\n",
+        type, num_infinite_lower_bound, -infinite_bound);
   }
   if (num_infinite_upper_bound) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::INFO,
-        "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity", type,
-        num_infinite_upper_bound, infinite_bound);
+    highsOutputUser(
+        options.io, HighsMessageType::INFO,
+        "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity\n",
+        type, num_infinite_upper_bound, infinite_bound);
   }
 
   if (error_found)
@@ -430,8 +430,8 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
 
   // Return a error if the first start is not zero
   if (Astart[0]) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Matrix starts do not begin with 0");
+    highsOutputUser(options.io, HighsMessageType::WARNING,
+                    "Matrix starts do not begin with 0\n");
     return HighsStatus::Error;
   }
   // Assess the starts
@@ -441,17 +441,17 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
     int this_start = Astart[ix];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "Matrix packed vector %d has illegal start of %d < %d = "
-                      "previous start",
+                      "previous start\n",
                       ix, this_start, previous_start);
       return HighsStatus::Error;
     }
     bool this_start_too_big = this_start > num_nz;
     if (this_start_too_big) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "Matrix packed vector %d has illegal start of %d > %d = "
-                      "number of nonzeros",
+                      "number of nonzeros\n",
                       ix, this_start, num_nz);
       return HighsStatus::Error;
     }
@@ -477,28 +477,28 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       // Check that the index is non-negative
       bool legal_component = component >= 0;
       if (!legal_component) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Matrix packed vector %d, entry %d, is illegal index %d", ix, el,
+        highsOutputUser(
+            options.io, HighsMessageType::ERROR,
+            "Matrix packed vector %d, entry %d, is illegal index %d\n", ix, el,
             component);
         return HighsStatus::Error;
       }
       // Check that the index does not exceed the vector dimension
       legal_component = component < vec_dim;
       if (!legal_component) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+        highsOutputUser(options.io, HighsMessageType::ERROR,
                         "Matrix packed vector %d, entry %d, is illegal index "
-                        "%12d >= %d = vector dimension",
+                        "%12d >= %d = vector dimension\n",
                         ix, el, component, vec_dim);
         return HighsStatus::Error;
       }
       // Check that the index has not already ocurred
       legal_component = check_vector[component] == 0;
       if (!legal_component) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Matrix packed vector %d, entry %d, is duplicate index %d", ix, el,
-            component);
+        highsOutputUser(
+            options.io, HighsMessageType::ERROR,
+            "Matrix packed vector %d, entry %d, is duplicate index %d\n", ix,
+            el, component);
         return HighsStatus::Error;
       }
       // Indicate that the index has occurred
@@ -509,18 +509,18 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
       // Check that the value is not zero
       bool zero_value = abs_value == 0;
       if (zero_value) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Matrix packed vector %d, entry %d, is zero", ix, el);
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+                        "Matrix packed vector %d, entry %d, is zero\n", ix, el);
         return HighsStatus::Error;
       }
       */
       // Check that the value is not too large
       bool large_value = abs_value > large_matrix_value;
       if (large_value) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Matrix packed vector %d, entry %d, is large value |%g| >= %g", ix,
-            el, abs_value, large_matrix_value);
+        highsOutputUser(
+            options.io, HighsMessageType::ERROR,
+            "Matrix packed vector %d, entry %d, is large value |%g| >= %g\n",
+            ix, el, abs_value, large_matrix_value);
         return HighsStatus::Error;
       }
       bool ok_value = abs_value > small_matrix_value;
@@ -554,15 +554,15 @@ HighsStatus assessMatrix(const HighsOptions& options, const int vec_dim,
         if (check_vector[component]) error_found = true;
       }
       if (error_found)
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "assessMatrix: check_vector not zeroed");
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+                        "assessMatrix: check_vector not zeroed\n");
     }
 #endif
   }
   if (num_small_values) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+    highsOutputUser(options.io, HighsMessageType::WARNING,
                     "Matrix packed vector contains %d |values| in [%g, %g] "
-                    "less than %g: ignored",
+                    "less than %g: ignored\n",
                     num_small_values, min_small_value, max_small_value,
                     small_matrix_value);
     warning_found = true;
@@ -584,9 +584,9 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     double residual = lp.colLower_[iCol] - lp.colUpper_[iCol];
     if (residual > options.primal_feasibility_tolerance) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "Column %d has inconsistent bounds [%g, %g] (residual = "
-                      "%g) after presolve ",
+                      "%g) after presolve\n",
                       iCol, lp.colLower_[iCol], lp.colUpper_[iCol], residual);
       return HighsStatus::Error;
     } else if (residual > 0) {
@@ -600,9 +600,9 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     double residual = lp.rowLower_[iRow] - lp.rowUpper_[iRow];
     if (residual > options.primal_feasibility_tolerance) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+      highsOutputUser(options.io, HighsMessageType::ERROR,
                       "Row %d has inconsistent bounds [%g, %g] (residual = %g) "
-                      "after presolve ",
+                      "after presolve\n",
                       iRow, lp.rowLower_[iRow], lp.rowUpper_[iRow], residual);
       return HighsStatus::Error;
     } else if (residual > 0) {
@@ -614,9 +614,9 @@ HighsStatus cleanBounds(const HighsOptions& options, HighsLp& lp) {
     }
   }
   if (num_change) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+    highsOutputUser(options.io, HighsMessageType::WARNING,
                     "Resolved %d inconsistent bounds (maximum residual = "
-                    "%9.4g) after presolve ",
+                    "%9.4g) after presolve\n",
                     num_change, max_residual);
     return HighsStatus::Warning;
   }
@@ -1791,14 +1791,14 @@ HighsStatus writeBasisFile(const HighsOptions& options, const HighsBasis& basis,
                            const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   if (basis.valid_ == false) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "writeBasisFile: Cannot write an invalid basis");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "writeBasisFile: Cannot write an invalid basis\n");
     return HighsStatus::Error;
   }
   std::ofstream outFile(filename);
   if (outFile.fail()) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "writeBasisFile: Cannot open writeable file \"%s\"",
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "writeBasisFile: Cannot open writeable file \"%s\"\n",
                     filename.c_str());
     return HighsStatus::Error;
   }
@@ -1825,8 +1825,8 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
   HighsStatus return_status = HighsStatus::OK;
   std::ifstream inFile(filename);
   if (inFile.fail()) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "readBasisFile: Cannot open readable file \"%s\"",
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "readBasisFile: Cannot open readable file \"%s\"\n",
                     filename.c_str());
     return HighsStatus::Error;
   }
@@ -1839,14 +1839,14 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
     int basis_numCol = (int)basis.col_status.size();
     int basis_numRow = (int)basis.row_status.size();
     if (numCol != basis_numCol) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "readBasisFile: Basis file is for %d columns, not %d",
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "readBasisFile: Basis file is for %d columns, not %d\n",
                       numCol, basis_numCol);
       return HighsStatus::Error;
     }
     if (numRow != basis_numRow) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "readBasisFile: Basis file is for %d rows, not %d",
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "readBasisFile: Basis file is for %d rows, not %d\n",
                       numRow, basis_numRow);
       return HighsStatus::Error;
     }
@@ -1860,15 +1860,15 @@ HighsStatus readBasisFile(const HighsOptions& options, HighsBasis& basis,
       basis.row_status[iRow] = (HighsBasisStatus)int_status;
     }
     if (inFile.eof()) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "readBasisFile: Reached end of file before reading complete basis");
+      highsOutputUser(
+          options.io, HighsMessageType::ERROR,
+          "readBasisFile: Reached end of file before reading complete basis\n");
       return_status = HighsStatus::Error;
     }
   } else {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "readBasisFile: Cannot read basis file for HiGHS version %d",
+    highsOutputUser(
+        options.io, HighsMessageType::ERROR,
+        "readBasisFile: Cannot read basis file for HiGHS version %d\n",
         highs_version_number);
     return_status = HighsStatus::Error;
   }
@@ -2285,10 +2285,10 @@ bool isLessInfeasibleDSECandidate(const HighsOptions& options,
   if (!all_unit_nonzeros) logic0 = "does not have";
   std::string logic1 = "is not";
   if (LiDSE_candidate) logic1 = "is";
-  HighsLogMessage(
-      options.logfile, HighsMessageType::INFO,
+  highsOutputUser(
+      options.io, HighsMessageType::INFO,
       "LP %s %s all |entries|=1; max column count = %d (limit %d); average "
-      "column count = %0.2g (limit %d): So %s a candidate for LiDSE",
+      "column count = %0.2g (limit %d): So %s a candidate for LiDSE\n",
       lp.model_name_.c_str(), logic0.c_str(), max_col_num_en,
       max_allowed_col_num_en, average_col_num_en, max_average_col_num_en,
       logic1.c_str());

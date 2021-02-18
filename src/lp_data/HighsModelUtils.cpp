@@ -195,9 +195,9 @@ HighsStatus normaliseNames(const HighsOptions& options,
     // Construct names, either because they are empty names, or
     // because the existing names are too long
 
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+    highsOutputUser(options.io, HighsMessageType::WARNING,
                     "There are empty or excessively-long %s names: using "
-                    "constructed names with prefix %s",
+                    "constructed names with prefix %s\n",
                     name_type.c_str(), name_prefix.c_str());
     for (int ix = 0; ix < num_name; ix++)
       names[ix] = name_prefix + std::to_string(ix);

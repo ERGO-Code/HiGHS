@@ -80,7 +80,8 @@ HighsStatus HEkk::solve() {
   // Initial solve according to strategy
   if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     algorithm = "primal";
-    reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_, true);
+    reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_,
+                                 true);
     HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                     "Using EKK primal simplex solver");
     HEkkPrimal primal_solver(*this);
@@ -91,7 +92,8 @@ HighsStatus HEkk::solve() {
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
     algorithm = "dual";
-    reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_, true);
+    reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_,
+                                 true);
     HEkkDual dual_solver(*this);
     dual_solver.options();
     //

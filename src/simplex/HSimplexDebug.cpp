@@ -48,22 +48,21 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
   right_size = (int)scale.col_.size() == lp.numCol_ && right_size;
   right_size = (int)scale.row_.size() == lp.numRow_ && right_size;
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "scale size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR, "scale size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   // Take a copy of the original LP
   HighsLp check_lp = lp;
   if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Error scaling check LP");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   const bool simplex_lp_data_ok = check_lp == simplex_lp;
   if (!simplex_lp_data_ok) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Check LP and simplex LP not equal");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "debugSimplexLp: Check LP and simplex LP not equal\n");
     assert(simplex_lp_data_ok);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -73,8 +72,8 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
         debugDebugToHighsStatus(ekkDebugBasisCorrect(ekk_instance)) !=
         HighsStatus::Error;
     if (!simplex_basis_correct) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Supposed to be a Simplex basis, but incorrect");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Supposed to be a Simplex basis, but incorrect\n");
       assert(simplex_basis_correct);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -84,9 +83,9 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object) {
     const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
                                options, factor)) != HighsStatus::Error;
     if (!invert_ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Supposed to be a Simplex basis inverse, but too inaccurate");
+      highsOutputUser(
+          options.io, HighsMessageType::ERROR,
+          "Supposed to be a Simplex basis inverse, but too inaccurate\n");
       assert(invert_ok);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -105,16 +104,16 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   // Check consistency of nonbasicFlag
   if (debugNonbasicFlagConsistent(options, simplex_lp, simplex_basis) ==
       HighsDebugStatus::LOGICAL_ERROR) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag inconsistent");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "nonbasicFlag inconsistent\n");
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   const bool right_size =
       (int)simplex_basis.basicIndex_.size() == simplex_lp.numRow_;
   // Check consistency of basicIndex
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "basicIndex size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "basicIndex size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -130,12 +129,13 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
       // Nonzero value for localNonbasicFlag entry means that column is either
       if (flag == NONBASIC_FLAG_TRUE) {
         // Nonbasic...
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Entry basicIndex_[%d] = %d is not basic", iRow, iCol);
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+                        "Entry basicIndex_[%d] = %d is not basic\n", iRow,
+                        iCol);
       } else {
         // .. or is -1 since it has already been found in basicIndex
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Entry basicIndex_[%d] = %d is already basic", iRow,
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+                        "Entry basicIndex_[%d] = %d is already basic\n", iRow,
                         iCol);
         assert(flag == -1);
       }
@@ -186,8 +186,8 @@ HighsDebugStatus debugNonbasicFlagConsistent(
   int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   const bool right_size = (int)simplex_basis.nonbasicFlag_.size() == numTot;
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "nonbasicFlag size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -201,8 +201,8 @@ HighsDebugStatus debugNonbasicFlagConsistent(
   }
   bool right_num_basic_variables = num_basic_variables == simplex_lp.numRow_;
   if (!right_num_basic_variables) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicFlag has %d, not %d basic variables",
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "nonbasicFlag has %d, not %d basic variables\n",
                     num_basic_variables, simplex_lp.numRow_);
     assert(right_num_basic_variables);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
@@ -305,22 +305,22 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
   right_size = (int)scale.col_.size() == lp.numCol_ && right_size;
   right_size = (int)scale.row_.size() == lp.numRow_ && right_size;
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "scale size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "scale size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
   // Take a copy of the original LP
   HighsLp check_lp = lp;
   if (applyScalingToLp(options, check_lp, scale) != HighsStatus::OK) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Error scaling check LP");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "debugSimplexLp: Error scaling check LP\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
   const bool simplex_lp_data_ok = check_lp == simplex_lp;
   if (!simplex_lp_data_ok) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "debugSimplexLp: Check LP and simplex LP not equal");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "debugSimplexLp: Check LP and simplex LP not equal\n");
     assert(simplex_lp_data_ok);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -330,8 +330,8 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
         debugDebugToHighsStatus(debugSimplexBasisCorrect(highs_model_object)) !=
         HighsStatus::Error;
     if (!simplex_basis_correct) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Supposed to be a Simplex basis, but incorrect");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Supposed to be a Simplex basis, but incorrect\n");
       assert(simplex_basis_correct);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -341,9 +341,8 @@ HighsDebugStatus debugSimplexLp(const HighsModelObject& highs_model_object) {
     const bool invert_ok = debugDebugToHighsStatus(debugCheckInvert(
                                options, factor)) != HighsStatus::Error;
     if (!invert_ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Supposed to be a Simplex basis inverse, but too inaccurate");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+          "Supposed to be a Simplex basis inverse, but too inaccurate\n");
       assert(invert_ok);
       return_status = HighsDebugStatus::LOGICAL_ERROR;
     }
@@ -360,8 +359,8 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isBasisRightSize(simplex_lp, simplex_basis);
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Simplex basis size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "Simplex basis size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -388,9 +387,8 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
       numCol == simplex_lp.numCol_ && numRow == simplex_lp.numRow_;
   assert(dimension_ok);
   if (!dimension_ok) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "LP-SimplexLP dimension incompatibility (%d, %d) != (%d, %d)", numCol,
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+        "LP-SimplexLP dimension incompatibility (%d, %d) != (%d, %d)\n", numCol,
         simplex_lp.numCol_, numRow, simplex_lp.numRow_);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -403,8 +401,8 @@ HighsDebugStatus debugSimplexInfoBasisRightSize(
   right_size = (int)simplex_info.workRange_.size() == numTot && right_size;
   right_size = (int)simplex_info.workValue_.size() == numTot && right_size;
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "simplex_info work vector size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "simplex_info work vector size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -516,16 +514,15 @@ HighsDebugStatus debugComputeDual(const HighsModelObject& highs_model_object,
   return_status = HighsDebugStatus::OK;
   // Comment on the norm of the basic costs being zero
   if (have_basic_costs && !basic_costs_norm) {
-    HighsLogMessage(
-        highs_model_object.options_.logfile, HighsMessageType::WARNING,
-        "ComputeDual:   basic cost norm is = %9.4g", basic_costs_norm);
+    highsOutputUser(highs_model_object.options_.io, HighsMessageType::WARNING,
+        "ComputeDual:   basic cost norm is = %9.4g\n", basic_costs_norm);
     return_status = HighsDebugStatus::WARNING;
   }
   // Comment on the norm of the nonbasic duals being zero
   if (!computed_dual_absolute_nonbasic_dual_norm) {
-    HighsLogMessage(highs_model_object.options_.logfile,
+    highsOutputUser(highs_model_object.options_.io,
                     HighsMessageType::WARNING,
-                    "ComputeDual:   nonbasic dual norm is = %9.4g",
+                    "ComputeDual:   nonbasic dual norm is = %9.4g\n",
                     computed_dual_absolute_nonbasic_dual_norm);
     return_status = HighsDebugStatus::WARNING;
   }
@@ -957,8 +954,8 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
   bool right_size = (int)simplex_basis.nonbasicMove_.size() == numTot;
   // Check consistency of nonbasicMove
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "nonbasicMove size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "nonbasicMove size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -1017,9 +1014,8 @@ HighsDebugStatus debugNonbasicMove(const HighsModelObject& highs_model_object) {
       num_fixed_variable_move_errors;
 
   if (num_errors) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "There are %d nonbasicMove errors: %d free; %d lower; %d upper; %d "
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+        "There are %d nonbasicMove errors: %d free; %d lower; %d upper; %d \n"
         "boxed; %d fixed",
         num_errors, num_free_variable_move_errors,
         num_lower_bounded_variable_move_errors,
@@ -1098,17 +1094,17 @@ HighsDebugStatus debugCleanup(HighsModelObject& highs_model_object,
   // Comment on the norm of the nonbasic duals being zero
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (!cleanup_absolute_nonbasic_dual_norm) {
-    HighsLogMessage(highs_model_object.options_.logfile,
+    highsOutputUser(highs_model_object.options_.io,
                     HighsMessageType::WARNING,
-                    "DualCleanup:   dual norm is = %9.4g",
+                    "DualCleanup:   dual norm is = %9.4g\n",
                     cleanup_absolute_nonbasic_dual_norm);
     return_status = HighsDebugStatus::WARNING;
   }
   // Comment on the norm of the change being zero
   if (!cleanup_absolute_nonbasic_dual_change_norm) {
-    HighsLogMessage(highs_model_object.options_.logfile,
+    highsOutputUser(highs_model_object.options_.io,
                     HighsMessageType::WARNING,
-                    "DualCleanup:   dual norm is = %9.4g",
+                    "DualCleanup:   dual norm is = %9.4g\n",
                     cleanup_absolute_nonbasic_dual_change_norm);
     return_status = HighsDebugStatus::WARNING;
   }
@@ -1591,8 +1587,8 @@ HighsDebugStatus debugSimplexBasisCorrect(
       debugBasisConsistent(options, simplex_lp, simplex_basis) !=
       HighsDebugStatus::LOGICAL_ERROR;
   if (!consistent) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Supposed to be a Simplex basis, but not consistent");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "Supposed to be a Simplex basis, but not consistent\n");
     assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -1601,9 +1597,8 @@ HighsDebugStatus debugSimplexBasisCorrect(
   const bool correct_nonbasicMove =
       debugNonbasicMove(highs_model_object) != HighsDebugStatus::LOGICAL_ERROR;
   if (!correct_nonbasicMove) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "Supposed to be a Simplex basis, but nonbasicMove is incorrect");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+        "Supposed to be a Simplex basis, but nonbasicMove is incorrect\n");
     assert(correct_nonbasicMove);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -1628,27 +1623,26 @@ HighsDebugStatus debugOkForSolve(const HighsModelObject& highs_model_object,
        simplex_lp_status.has_invert;
   if (!ok) {
     if (!simplex_lp_status.has_basis)
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Not OK to solve since simplex_lp_status.has_basis = %d",
-                      simplex_lp_status.has_basis);
-    if (!simplex_lp_status.has_matrix)
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Not OK to solve since simplex_lp_status.has_matrix = %d",
-                      simplex_lp_status.has_matrix);
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_basis =
+%d\n", simplex_lp_status.has_basis); if (!simplex_lp_status.has_matrix)
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_matrix =
+%d\n", simplex_lp_status.has_matrix);
     //    if (!simplex_lp_status.has_factor_arrays)
-    //      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+    //      highsOutputUser(options.io, HighsMessageType::ERROR,
     //                  "Not OK to solve since
-    //      simplex_lp_status.has_factor_arrays = %d",
+    //      simplex_lp_status.has_factor_arrays = %d\n",
     //             simplex_lp_status.has_factor_arrays);
     if (!simplex_lp_status.has_dual_steepest_edge_weights)
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Not OK to solve since "
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Not OK to solve since \n"
                       "simplex_lp_status.has_dual_steepest_edge_weights = %d",
                       simplex_lp_status.has_dual_steepest_edge_weights);
     if (!simplex_lp_status.has_invert)
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Not OK to solve since simplex_lp_status.has_invert = %d",
-                      simplex_lp_status.has_invert);
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Not OK to solve since simplex_lp_status.has_invert =
+%d\n", simplex_lp_status.has_invert);
   }
   if (highs_model_object.options_.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
     return return_status;
@@ -1686,21 +1680,17 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
         ok = simplex_info.workLower_[var] == simplex_lp.colLower_[col];
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "For col %d, simplex_info.workLower_ should be %g but is %g", col,
-              simplex_lp.colLower_[col], simplex_info.workLower_[var]);
-          return ok;
+          highsOutputUser(options.io, HighsMessageType::ERROR,
+              "For col %d, simplex_info.workLower_ should be %g but is %g\n",
+col, simplex_lp.colLower_[col], simplex_info.workLower_[var]); return ok;
         }
       }
       if (!highs_isInfinity(simplex_info.workUpper_[var])) {
         ok = simplex_info.workUpper_[var] == simplex_lp.colUpper_[col];
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "For col %d, simplex_info.workUpper_ should be %g but is %g", col,
-              simplex_lp.colUpper_[col], simplex_info.workUpper_[var]);
-          return ok;
+          highsOutputUser(options.io, HighsMessageType::ERROR,
+              "For col %d, simplex_info.workUpper_ should be %g but is %g\n",
+col, simplex_lp.colUpper_[col], simplex_info.workUpper_[var]); return ok;
         }
       }
     }
@@ -1709,21 +1699,17 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       if (!highs_isInfinity(-simplex_info.workLower_[var])) {
         ok = simplex_info.workLower_[var] == -simplex_lp.rowUpper_[row];
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "For row %d, simplex_info.workLower_ should be %g but is %g", row,
-              -simplex_lp.rowUpper_[row], simplex_info.workLower_[var]);
-          return ok;
+          highsOutputUser(options.io, HighsMessageType::ERROR,
+              "For row %d, simplex_info.workLower_ should be %g but is %g\n",
+row, -simplex_lp.rowUpper_[row], simplex_info.workLower_[var]); return ok;
         }
       }
       if (!highs_isInfinity(simplex_info.workUpper_[var])) {
         ok = simplex_info.workUpper_[var] == -simplex_lp.rowLower_[row];
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "For row %d, simplex_info.workUpper_ should be %g but is %g", row,
-              -simplex_lp.rowLower_[row], simplex_info.workUpper_[var]);
-          return ok;
+          highsOutputUser(options.io, HighsMessageType::ERROR,
+              "For row %d, simplex_info.workUpper_ should be %g but is %g\n",
+row, -simplex_lp.rowLower_[row], simplex_info.workUpper_[var]); return ok;
         }
       }
     }
@@ -1733,9 +1719,8 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
     ok = simplex_info.workRange_[var] ==
          (simplex_info.workUpper_[var] - simplex_info.workLower_[var]);
     if (!ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "For variable %d, simplex_info.workRange_ should be %g = %g - %g "
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+          "For variable %d, simplex_info.workRange_ should be %g = %g - %g \n"
           "but is %g",
           var, simplex_info.workUpper_[var] - simplex_info.workLower_[var],
           simplex_info.workUpper_[var], simplex_info.workLower_[var],
@@ -1751,9 +1736,8 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       ok = simplex_info.workCost_[var] ==
            (int)simplex_lp.sense_ * simplex_lp.colCost_[col];
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "For col %d, simplex_info.workLower_ should be %g but is %g", col,
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+            "For col %d, simplex_info.workLower_ should be %g but is %g\n", col,
             simplex_lp.colLower_[col], simplex_info.workCost_[var]);
         return ok;
       }
@@ -1762,11 +1746,9 @@ bool debugWorkArraysOk(const HighsModelObject& highs_model_object,
       int var = simplex_lp.numCol_ + row;
       ok = simplex_info.workCost_[var] == 0.;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "For row %d, simplex_info.workCost_ should be zero but is %g", row,
-            simplex_info.workCost_[var]);
-        return ok;
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+            "For row %d, simplex_info.workCost_ should be zero but is %g\n",
+row, simplex_info.workCost_[var]); return ok;
       }
     }
   }
@@ -1794,9 +1776,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         // Fixed variable
         ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
+          highsOutputUser(options.io, HighsMessageType::ERROR,
+              "Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, \n"
               "%11g] so nonbasic "
               "move should be zero but is %d",
               var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1806,8 +1787,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         }
         ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
         if (!ok) {
-          HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                          "Fixed variable %d (simplex_lp.numCol_ = %d) so "
+          highsOutputUser(options.io, HighsMessageType::ERROR,
+                          "Fixed variable %d (simplex_lp.numCol_ = %d) so \n"
                           "simplex_info.work value should be %g but "
                           "is %g",
                           var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1819,9 +1800,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         ok = (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) ||
              (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN);
         if (!ok) {
-          HighsLogMessage(
-              options.logfile, HighsMessageType::ERROR,
-              "Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
+          highsOutputUser(options.io, HighsMessageType::ERROR,
+              "Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, \n"
               "%11g] range %g so "
               "nonbasic move should be up/down but is  %d",
               var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1833,25 +1813,19 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
         if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
           ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
           if (!ok) {
-            HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                            "Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                            "NONBASIC_MOVE_UP so work "
-                            "value should be %g but is %g",
-                            var, simplex_lp.numCol_,
-                            simplex_info.workLower_[var],
-                            simplex_info.workValue_[var]);
+            highsOutputUser(options.io, HighsMessageType::ERROR,
+                            "Boxed variable %d (simplex_lp.numCol_ = %d) with
+\n" "NONBASIC_MOVE_UP so work " "value should be %g but is %g", var,
+simplex_lp.numCol_, simplex_info.workLower_[var], simplex_info.workValue_[var]);
             return ok;
           }
         } else {
           ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
           if (!ok) {
-            HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                            "Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                            "NONBASIC_MOVE_DN so work "
-                            "value should be %g but is %g",
-                            var, simplex_lp.numCol_,
-                            simplex_info.workUpper_[var],
-                            simplex_info.workValue_[var]);
+            highsOutputUser(options.io, HighsMessageType::ERROR,
+                            "Boxed variable %d (simplex_lp.numCol_ = %d) with
+\n" "NONBASIC_MOVE_DN so work " "value should be %g but is %g", var,
+simplex_lp.numCol_, simplex_info.workUpper_[var], simplex_info.workValue_[var]);
             return ok;
           }
         }
@@ -1860,9 +1834,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       // Infinite upper bound
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Finite lower bound and infinite upper bound variable %d "
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+            "Finite lower bound and infinite upper bound variable %d \n"
             "(simplex_lp.numCol_ = "
             "%d) [%11g, %11g, %11g] so nonbasic move should be up=%2d but is  "
             "%d",
@@ -1873,9 +1846,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Finite lower bound and infinite upper bound variable %d "
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+            "Finite lower bound and infinite upper bound variable %d \n"
             "(simplex_lp.numCol_ = "
             "%d) so work value should be %g but is %g",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1888,9 +1860,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
     if (!highs_isInfinity(simplex_info.workUpper_[var])) {
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Finite upper bound and infinite lower bound variable %d "
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+            "Finite upper bound and infinite lower bound variable %d \n"
             "(simplex_lp.numCol_ = "
             "%d) [%11g, %11g, %11g] so nonbasic move should be down but is  "
             "%d",
@@ -1901,9 +1872,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Finite upper bound and infinite lower bound variable %d "
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+            "Finite upper bound and infinite lower bound variable %d \n"
             "(simplex_lp.numCol_ = "
             "%d) so work value should be %g but is %g",
             var, simplex_lp.numCol_, simplex_info.workUpper_[var],
@@ -1914,9 +1884,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       // Infinite upper bound
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] "
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+            "Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] \n"
             "so nonbasic "
             "move should be zero but is  %d",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
@@ -1926,9 +1895,8 @@ bool debugOneNonbasicMoveVsWorkArraysOk(
       }
       ok = simplex_info.workValue_[var] == 0.0;
       if (!ok) {
-        HighsLogMessage(
-            options.logfile, HighsMessageType::ERROR,
-            "Free variable %d (simplex_lp.numCol_ = %d) so work value should "
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+            "Free variable %d (simplex_lp.numCol_ = %d) so work value should \n"
             "be zero but "
             "is %g",
             var, simplex_lp.numCol_, simplex_info.workValue_[var]);
@@ -1950,17 +1918,16 @@ bool debugAllNonbasicMoveVsWorkArraysOk(
   bool ok;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int var = 0; var < numTot; ++var) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::ERROR,
-        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var] "
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var]
+\n"
         "= %2d",
         var, simplex_basis.nonbasicFlag_[var]);
     if (!simplex_basis.nonbasicFlag_[var]) continue;
     ok = debugOneNonbasicMoveVsWorkArraysOk(highs_model_object, var);
     if (!ok) {
-      HighsLogMessage(
-          options.logfile, HighsMessageType::ERROR,
-          "Error in NonbasicMoveVsWorkArrays for nonbasic variable %d", var);
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+          "Error in NonbasicMoveVsWorkArrays for nonbasic variable %d\n", var);
       assert(ok);
       return ok;
     }
@@ -1999,24 +1966,25 @@ void debugReportReinvertOnNumericalTrouble(
   } else {
     adjective = "clearly satisfies";
   }
-  HighsLogMessage(highs_model_object.options_.logfile,
+  highsOutputUser(highs_model_object.options_.io,
                   HighsMessageType::WARNING,
-                  "%s (%s) [Iter %d; Update %d] Col: %11.4g; Row: %11.4g; Diff "
+                  "%s (%s) [Iter %d; Update %d] Col: %11.4g; Row: %11.4g; Diff
+\n"
                   "= %11.4g: Measure %11.4g %s %11.4g",
                   method_name.c_str(), model_name.c_str(), iteration_count,
                   update_count, abs_alpha_from_col, abs_alpha_from_row,
                   abs_alpha_diff, numerical_trouble_measure, adjective.c_str(),
                   numerical_trouble_tolerance);
   if (wrong_sign) {
-    HighsLogMessage(highs_model_object.options_.logfile,
+    highsOutputUser(highs_model_object.options_.io,
                     HighsMessageType::WARNING,
-                    "   Incompatible signs for Col: %11.4g and Row: %11.4g",
+                    "   Incompatible signs for Col: %11.4g and Row: %11.4g\n",
                     alpha_from_col, alpha_from_row);
   }
   if ((numerical_trouble || wrong_sign) && !reinvert) {
-    HighsLogMessage(highs_model_object.options_.logfile,
+    highsOutputUser(highs_model_object.options_.io,
                     HighsMessageType::WARNING,
-                    "   Numerical trouble or wrong sign and not reinverting");
+                    "   Numerical trouble or wrong sign and not reinverting\n");
   }
 }
 */

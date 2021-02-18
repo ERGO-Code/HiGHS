@@ -39,8 +39,8 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   if (!basis.valid_) return return_status;
   bool consistent = isBasisConsistent(lp, basis);
   if (!consistent) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HiGHS basis inconsistency");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "HiGHS basis inconsistency\n");
     assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -55,8 +55,8 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isBasisRightSize(lp, basis);
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HiGHS basis size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "HiGHS basis size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -71,8 +71,8 @@ HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isSolutionRightSize(lp, solution);
   if (!right_size) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HiGHS solution size error");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "HiGHS solution size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   }

@@ -94,7 +94,8 @@ class HighsSimplexAnalysis {
 
   void setup(const HighsLp& lp, const HighsOptions& options,
              const int simplex_iteration_count);
-  void messaging(FILE* logfile_, FILE* output_, const int message_level_);
+  void messaging(FILE* logfile_, FILE* output_, const int message_level_,
+                 const HighsIo& io_);
   void iterationReport();
   void invertReport();
   void invertReport(const bool header);
@@ -164,6 +165,7 @@ class HighsSimplexAnalysis {
   std::string lp_name_;
 
   // Local copies of IO data
+  HighsIo io;
   FILE* logfile;
   FILE* output;
   int message_level;

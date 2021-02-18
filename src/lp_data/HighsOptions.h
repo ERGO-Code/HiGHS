@@ -533,14 +533,14 @@ class HighsOptions : public HighsOptionsStruct {
                                      ML_MINIMAL, ML_MAX);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool("output_flag",
-                                     "Enables or disables solver output",
-                                     advanced, &output_flag, true);
+    record_bool =
+        new OptionRecordBool("output_flag", "Enables or disables solver output",
+                             advanced, &output_flag, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("log_to_console",
-                                     "Enables or disables console logging",
-                                     advanced, &log_to_console, true);
+                                       "Enables or disables console logging",
+                                       advanced, &log_to_console, true);
     records.push_back(record_bool);
 
     record_string =
@@ -548,9 +548,8 @@ class HighsOptions : public HighsOptionsStruct {
                                &solution_file, FILENAME_DEFAULT);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(log_file_string, "Log file", advanced,
-                               &log_file, "Highs.log");
+    record_string = new OptionRecordString(log_file_string, "Log file",
+                                           advanced, &log_file, "Highs.log");
     records.push_back(record_string);
 
     record_bool =
@@ -624,9 +623,9 @@ class HighsOptions : public HighsOptionsStruct {
     // Advanced options
     advanced = true;
 
-    record_bool = new OptionRecordBool("output_dev",
-                                       "Output development messages",
-                                       advanced, &output_dev, false);
+    record_bool =
+        new OptionRecordBool("output_dev", "Output development messages",
+                             advanced, &output_dev, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("run_crossover",
