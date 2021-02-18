@@ -26,6 +26,34 @@ void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
+void HighsOutputUser(HighsIo& io,
+		     const HighsMessageType type,
+		     const char* format, ...) {
+  if (!io.output_flag || (io.logging_file == NULL && !io.log_to_console)) return;
+  va_list argptr;
+  va_start(argptr, format);
+  if (printmsgcb == NULL) {
+    if (type != HighsMessageType::INFO)
+      fprintf(io.logging_file, "%-7s: ", HighsMessageTypeTag[(int)type]);
+    vfprintf(io.logging_file, format, argptr);
+    if (io.log_to_console) {
+      if (type != HighsMessageType::INFO)
+	fprintf(io.logging_file, "%-7s: ", HighsMessageTypeTag[(int)type]);
+      va_start(argptr, format);
+      vfprintf(stdout, format, argptr);
+    }
+  } else {
+    int len;
+    len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+    if (len >= (int)sizeof(msgbuffer)) {
+      // Output was truncated: for now just ensure string is null-terminated
+      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    }
+    printmsgcb(0, msgbuffer, msgcb_data);
+  }
+  va_end(argptr);
+}
+
 void HighsOutputUser(
     FILE* pass_output,
     const bool output_flag,

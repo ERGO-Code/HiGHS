@@ -20,27 +20,24 @@
 #include "HighsTimer.h"
 #include "presolve/HAggregator.h"
 
-void printHighsVersionCopyright(FILE* output, const int message_level,
-                                const char* message = nullptr);
-void reportLpStatsOrError(FILE* output, int message_level,
-                          const HighsStatus read_status, const HighsLp& lp);
-void reportSolvedLpStats(FILE* output, int message_level,
-                         const HighsStatus run_status, const Highs& highs);
+void printHighsVersionCopyright(HighsIo& io, const char* message = nullptr);
+void reportLpStatsOrError(HighsIo& io, const HighsStatus read_status, const HighsLp& lp);
+void reportSolvedLpStats(HighsIo& io, const HighsStatus run_status, const Highs& highs);
 HighsStatus callLpSolver(HighsOptions& options, const HighsLp& lp);
 HighsStatus callMipSolver(HighsOptions& options, const HighsLp& lp);
 
 int main(int argc, char** argv) {
-  printHighsVersionCopyright(stdout, ML_ALWAYS);
 
   // Load user options.
   HighsOptions options;
+  printHighsVersionCopyright(options.io);
+
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
   Highs highs;
   highs.setHighsOptionValue("output_dev", true);
   HighsStatus read_status = highs.readModel(options.model_file);
-  reportLpStatsOrError(options.output, options.message_level, read_status,
-                       highs.getLp());
+  reportLpStatsOrError(options.io, read_status, highs.getLp());
   if (read_status == HighsStatus::Error)
     return 1;  // todo: change to read error
 
@@ -64,77 +61,75 @@ int main(int argc, char** argv) {
   return (int)run_status;
 }
 
-void printHighsVersionCopyright(FILE* output, const int message_level,
-                                const char* message) {
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
+void printHighsVersionCopyright(HighsIo& io, const char* message) {
+  HighsOutputUser(io, HighsMessageType::INFO,
                     "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
                     HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR,
                     HIGHS_VERSION_PATCH, HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
-                    "Copyright (c) 2020 ERGO-Code under MIT licence terms\n\n");
+  HighsOutputUser(io, HighsMessageType::INFO,
+                    "Copyright (c) 2021 ERGO-Code under MIT licence terms\n\n");
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   if (message != nullptr) {
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "In %s\n", message);
+    HighsOutputUser(io, HighsMessageType::INFO, "In %s\n", message);
   }
 #ifdef OPENMP
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
+  HighsOutputUser(io, HighsMessageType::INFO,
                     "OPENMP           is     defined\n");
 #else
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
+  HighsOutputUser(io, HighsMessageType::INFO,
                     "OPENMP           is not defined\n");
 #endif
 
 #ifdef SCIP_DEV
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
+  HighsOutputUser(io, HighsMessageType::INFO,
                     "SCIP_DEV         is     defined\n");
 #else
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
+  HighsOutputUser(io, HighsMessageType::INFO,
                     "SCIP_DEV         is not defined\n");
 #endif
 
 #ifdef HiGHSDEV
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
+  HighsOutputUser(io, HighsMessageType::INFO,
                     "HiGHSDEV         is     defined\n");
 #else
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
+  HighsOutputUser(io, HighsMessageType::INFO,
                     "HiGHSDEV         is not defined\n");
 #endif
-  HighsPrintMessage(output, message_level, ML_ALWAYS,
+  HighsOutputUser(io, HighsMessageType::INFO,
                     "Built with CMAKE_BUILD_TYPE=%s\n", CMAKE_BUILD_TYPE);
 #endif
 }
 
-void reportLpStatsOrError(FILE* output, int message_level,
-                          const HighsStatus read_status, const HighsLp& lp) {
+void reportLpStatsOrError(HighsIo& io, const HighsStatus read_status, const HighsLp& lp) {
   if (read_status == HighsStatus::Error) {
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "Error loading file\n");
+    HighsOutputUser(io, HighsMessageType::INFO, "Error loading file\n");
   } else {
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "LP       : %s\n",
+    HighsOutputUser(io, HighsMessageType::INFO, "LP       : %s\n",
                       lp.model_name_.c_str());
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "Rows     : %d\n",
+    HighsOutputUser(io, HighsMessageType::INFO, "Rows     : %d\n",
                       lp.numRow_);
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "Cols     : %d\n",
+    HighsOutputUser(io, HighsMessageType::INFO, "Cols     : %d\n",
                       lp.numCol_);
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "Nonzeros : %d\n",
+    HighsOutputUser(io, HighsMessageType::INFO, "Nonzeros : %d\n",
                       lp.Avalue_.size());
     int num_int = 0;
     for (unsigned int i = 0; i < lp.integrality_.size(); i++)
       if (lp.integrality_[i] != HighsVarType::CONTINUOUS) num_int++;
     if (num_int)
-      HighsPrintMessage(output, message_level, ML_ALWAYS, "Integer  : %d\n",
+      HighsOutputUser(io, HighsMessageType::INFO, "Integer  : %d\n",
                         num_int);
   }
 }
 
-void reportSolvedLpStats(FILE* output, int message_level,
+void reportSolvedLpStats(HighsIo& io,
                          const HighsStatus run_status, Highs& highs) {
   if (run_status == HighsStatus::Error) {
     std::string statusname = HighsStatusToString(run_status);
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "HiGHS status: %s\n",
+    HighsOutputUser(io, HighsMessageType::INFO, "HiGHS status: %s\n",
                       statusname.c_str());
   } else {
-    HighsPrintMessage(output, message_level, ML_ALWAYS, "\n");
+    HighsOutputUser(io, HighsMessageType::INFO, "\n");
     HighsModelStatus model_status = highs.getModelStatus();
     HighsModelStatus scaled_model_status = highs.getModelStatus(true);
     HighsInfo highs_info = highs.getHighsInfo();
@@ -143,47 +138,45 @@ void reportSolvedLpStats(FILE* output, int message_level,
         // The scaled model has been solved to optimality, but not the
         // unscaled model, flag this up, but report the scaled model
         // status
-        HighsPrintMessage(output, message_level, ML_ALWAYS,
+        HighsOutputUser(io, HighsMessageType::INFO,
                           "Primal infeasibility: %10.3e (%d)\n",
                           highs_info.max_primal_infeasibility,
                           highs_info.num_primal_infeasibilities);
-        HighsPrintMessage(output, message_level, ML_ALWAYS,
+        HighsOutputUser(io, HighsMessageType::INFO,
                           "Dual   infeasibility: %10.3e (%d)\n",
                           highs_info.max_dual_infeasibility,
                           highs_info.num_dual_infeasibilities);
         model_status = scaled_model_status;
       }
     }
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
+    HighsOutputUser(io, HighsMessageType::INFO,
                       "Model   status      : %s\n",
                       highs.highsModelStatusToString(model_status).c_str());
-    HighsPrintMessage(
-        output, message_level, ML_ALWAYS, "Primal  status      : %s\n",
+    HighsOutputUser(io,  HighsMessageType::INFO, "Primal  status      : %s\n",
         highs.primalDualStatusToString(highs_info.primal_status).c_str());
-    HighsPrintMessage(
-        output, message_level, ML_ALWAYS, "Dual    status      : %s\n",
+    HighsOutputUser(io,  HighsMessageType::INFO, "Dual    status      : %s\n",
         highs.primalDualStatusToString(highs_info.dual_status).c_str());
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
+    HighsOutputUser(io, HighsMessageType::INFO,
                       "Simplex   iterations: %d\n",
                       highs_info.simplex_iteration_count);
     if (highs_info.ipm_iteration_count)
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
+      HighsOutputUser(io, HighsMessageType::INFO,
                         "IPM       iterations: %d\n",
                         highs_info.ipm_iteration_count);
     if (highs_info.crossover_iteration_count)
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
+      HighsOutputUser(io, HighsMessageType::INFO,
                         "Crossover iterations: %d\n",
                         highs_info.crossover_iteration_count);
     if (model_status == HighsModelStatus::OPTIMAL) {
       double objective_function_value;
       highs.getHighsInfoValue("objective_function_value",
                               objective_function_value);
-      HighsPrintMessage(output, message_level, ML_ALWAYS,
+      HighsOutputUser(io, HighsMessageType::INFO,
                         "Objective value     : %17.10e\n",
                         objective_function_value);
     }
     double run_time = highs.getHighsRunTime();
-    HighsPrintMessage(output, message_level, ML_ALWAYS,
+    HighsOutputUser(io, HighsMessageType::INFO,
                       "HiGHS run time      : %13.2f\n", run_time);
     // Possibly write the solution to a file
     const HighsOptions& options = highs.getHighsOptions();
@@ -193,9 +186,6 @@ void reportSolvedLpStats(FILE* output, int message_level,
 }
 
 HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
-  FILE* output = use_options.output;
-  const int message_level = use_options.message_level;
-
   // Solve LP case.
   Highs highs(use_options);
   //  const HighsOptions& options = highs.getHighsOptions();
@@ -210,7 +200,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   highs.setBasis();
   HighsStatus run_status = highs.run();
 
-  reportSolvedLpStats(output, message_level, run_status, highs);
+  reportSolvedLpStats(use_options.io, run_status, highs);
   return run_status;
 }
 

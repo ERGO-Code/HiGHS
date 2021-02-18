@@ -317,7 +317,7 @@ struct HighsOptionsStruct {
   void (*logmsgcb)(HighsMessageType type, const char* msg,
                    void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
-
+  HighsIo io;
   virtual ~HighsOptionsStruct() {}
 };
 
@@ -761,6 +761,10 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     logging_file = fopen(log_file.c_str(), "w");
+    io.logging_file = logging_file;
+    io.output_flag = &output_flag;
+    io.log_to_console = &log_to_console;
+    io.output_dev = &output_dev;
   }
 
   void deleteRecords() {

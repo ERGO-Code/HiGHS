@@ -24,6 +24,13 @@ class HighsOptions;
 enum class HighsMessageType { INFO, WARNING, ERROR };
 const char* const HighsMessageTypeTag[] = {"INFO", "WARNING", "ERROR"};
 
+struct HighsIo {
+  FILE* logging_file;
+  bool* output_flag;
+  bool* log_to_console;
+  bool* output_dev;
+};
+
 enum HighsPrintMessageLevel {
   ML_MIN = 0,
   ML_NONE = ML_MIN,
@@ -34,14 +41,18 @@ enum HighsPrintMessageLevel {
   ML_MAX = ML_ALWAYS
 };
 
+// Printing format: must contain exactly one "\n" at end of format
+void HighsOutputUser(
+    HighsIo& io,
+    const HighsMessageType type,
+    const char* format, ...);
+
 void HighsOutputUser(
     FILE* pass_output,
     const bool output_flag,
     const bool log_to_console,
     const HighsMessageType type, 
-    const char* format,  //!< Printing format: must contain exactly one "\n" at
-    //!< end of format
-    ...);
+    const char* format, ...);
 
 void HighsOutputDev(
     FILE* pass_output,
@@ -49,9 +60,7 @@ void HighsOutputDev(
     const bool log_to_console,
     const bool output_dev,
     const HighsMessageType type, 
-    const char* format,  //!< Printing format: must contain exactly one "\n" at
-    //!< end of format
-    ...);
+    const char* format, ...);
 
 /**
  * @brief Used to direct printed output to FILE* output, according
@@ -61,9 +70,7 @@ void HighsPrintMessage(
     FILE* pass_output, const int message_level,
     const int level,  //!< The message level: Use | operator to display at
     //!< level NONE, VERBOSE, DETAILED, MINIMAL
-    const char* format,  //!< Printing format: must contain exactly one "\n" at
-    //!< end of format
-    ...);
+    const char* format, ...);
 
 /**
  * @brief Used to direct _single-line_ logging output to FILE* logfile,
@@ -71,9 +78,7 @@ void HighsPrintMessage(
  */
 void HighsLogMessage(FILE* pass_logfile,
                      const HighsMessageType type,  //!< The message type
-                     const char* format,  //!< Printing format: must not contain
-                                          //!< "\n", even at the end of format
-                     ...);
+                     const char* format, ...);
 
 /*
  * @brief sets the file used for HighsLogMessage

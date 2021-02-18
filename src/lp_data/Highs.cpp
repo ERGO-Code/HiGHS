@@ -394,14 +394,6 @@ HighsStatus Highs::run() {
   //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
   //  "LpMatrix", lp_);
 #endif
-  HighsOutputUser(options_.logging_file, options_.output_flag, options_.log_to_console,
-		  HighsMessageType::INFO,
-		  "Testing HighsOutputUser: Debug level = %d\n", options_.highs_debug_level);
-
-  HighsOutputDev(options_.logging_file, options_.output_flag, options_.log_to_console, true,
-		  HighsMessageType::WARNING,
-		  "Testing HighsOutputDev:  Debug level = %d\n", options_.highs_debug_level);
-
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
 
