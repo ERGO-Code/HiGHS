@@ -40,7 +40,7 @@ Highs::Highs() {
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const bool value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -48,7 +48,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const int value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -56,7 +56,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const double value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -64,7 +64,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const std::string value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -72,7 +72,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const char* value) {
-  if (setOptionValue(options_.logfile, option, options_.records, value) ==
+  if (setOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -100,7 +100,7 @@ HighsStatus Highs::readHighsOptions(const std::string filename) {
 }
 
 HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
-  if (passOptions(options_.logfile, options, options_) == OptionStatus::OK)
+  if (passOptions(options_.io, options, options_) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
@@ -108,14 +108,14 @@ HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
 const HighsOptions& Highs::getHighsOptions() { return options_; }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
-  if (getOptionValue(options_.logfile, option, options_.records, value) ==
+  if (getOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option, int& value) {
-  if (getOptionValue(options_.logfile, option, options_.records, value) ==
+  if (getOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -123,7 +123,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option, int& value) {
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        double& value) {
-  if (getOptionValue(options_.logfile, option, options_.records, value) ==
+  if (getOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -131,7 +131,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        std::string& value) {
-  if (getOptionValue(options_.logfile, option, options_.records, value) ==
+  if (getOptionValue(options_.io, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -139,7 +139,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::getHighsOptionType(const std::string& option,
                                       HighsOptionType& type) {
-  if (getOptionType(options_.logfile, option, options_.records, type) ==
+  if (getOptionType(options_.io, option, options_.records, type) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -290,7 +290,7 @@ HighsStatus Highs::readModel(const std::string filename) {
       reader->readModelFromFile(this->options_, model);
   delete reader;
   if (call_code != FilereaderRetcode::OK) {
-    interpretFilereaderRetcode(this->options_.logfile, filename.c_str(),
+    interpretFilereaderRetcode(this->options_.io, filename.c_str(),
                                call_code);
     return_status = interpretCallStatus(HighsStatus::Error, return_status,
                                         "readModelFromFile");
@@ -462,7 +462,7 @@ HighsStatus Highs::run() {
 
   HighsSetIO(options_);
 #ifdef HiGHSDEV
-  if (checkOptions(options_.logfile, options_.records) != OptionStatus::OK) {
+  if (checkOptions(options_.io, options_.records) != OptionStatus::OK) {
     return_status = HighsStatus::Error;
     return returnFromRun(return_status);
   }

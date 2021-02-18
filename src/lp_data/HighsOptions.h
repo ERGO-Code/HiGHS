@@ -128,71 +128,71 @@ class OptionRecordString : public OptionRecord {
 
 inline const char* bool2string(bool b);
 
-bool commandLineOffChooseOnOk(FILE* logfile, const string& value);
-bool commandLineSolverOk(FILE* logfile, const string& value);
+bool commandLineOffChooseOnOk(const HighsIo& io, const string& value);
+bool commandLineSolverOk(const HighsIo& io, const string& value);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(FILE* logfile, const std::string& name,
+OptionStatus getOptionIndex(const HighsIo& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             int& index);
 
-OptionStatus checkOptions(FILE* logfile,
+OptionStatus checkOptions(const HighsIo& io,
                           const std::vector<OptionRecord*>& option_records);
-OptionStatus checkOption(FILE* logfile, const OptionRecordInt& option);
-OptionStatus checkOption(FILE* logfile, const OptionRecordDouble& option);
+OptionStatus checkOption(const HighsIo& io, const OptionRecordInt& option);
+OptionStatus checkOption(const HighsIo& io, const OptionRecordDouble& option);
 
-OptionStatus checkOptionValue(FILE* logfile,
+OptionStatus checkOptionValue(const HighsIo& io,
                               std::vector<OptionRecord*>& option_records,
                               const int value);
-OptionStatus checkOptionValue(FILE* logfile,
+OptionStatus checkOptionValue(const HighsIo& io,
                               std::vector<OptionRecord*>& option_records,
                               const double value);
-OptionStatus checkOptionValue(FILE* logfile,
+OptionStatus checkOptionValue(const HighsIo& io,
                               std::vector<OptionRecord*>& option_records,
                               const std::string value);
 
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const bool value);
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const int value);
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const double value);
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(HighsIo& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const std::string value);
-OptionStatus setOptionValue(FILE* logfile, const std::string& name,
+OptionStatus setOptionValue(HighsIo& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const char* value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordInt& option,
+OptionStatus setOptionValue(const HighsIo& io, OptionRecordInt& option,
                             const int value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordDouble& option,
+OptionStatus setOptionValue(const HighsIo& io, OptionRecordDouble& option,
                             const double value);
-OptionStatus setOptionValue(FILE* logfile, OptionRecordString& option,
+OptionStatus setOptionValue(const HighsIo& io, OptionRecordString& option,
                             std::string const value);
 
-OptionStatus passOptions(FILE* logfile, const HighsOptions& from_options,
+OptionStatus passOptions(const HighsIo& io, const HighsOptions& from_options,
                          HighsOptions& to_options);
 
-OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             bool& value);
-OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             int& value);
-OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             double& value);
-OptionStatus getOptionValue(FILE* logfile, const std::string& name,
+OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
-OptionStatus getOptionType(FILE* logfile, const std::string& name,
+OptionStatus getOptionType(const HighsIo& io, const std::string& name,
                            const std::vector<OptionRecord*>& option_records,
                            HighsOptionType& type);
 

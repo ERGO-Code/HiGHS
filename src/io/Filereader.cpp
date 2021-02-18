@@ -42,25 +42,25 @@ Filereader* Filereader::getFilereader(const std::string filename) {
   return reader;
 }
 
-void interpretFilereaderRetcode(FILE* logfile, const std::string filename,
+void interpretFilereaderRetcode(const HighsIo& io, const std::string filename,
                                 const FilereaderRetcode code) {
   switch (code) {
     case FilereaderRetcode::OK:
       break;
     case FilereaderRetcode::FILENOTFOUND:
-      HighsLogMessage(logfile, HighsMessageType::ERROR, "File %s not found",
+      highsOutputUser(io, HighsMessageType::ERROR, "File %s not found",
                       filename.c_str());
       break;
     case FilereaderRetcode::PARSERERROR:
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
+      highsOutputUser(io, HighsMessageType::ERROR,
                       "Parser error reading %s", filename.c_str());
       break;
     case FilereaderRetcode::NOT_IMPLEMENTED:
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
+      highsOutputUser(io, HighsMessageType::ERROR,
                       "Parser not implemented for %s", filename.c_str());
       break;
     case FilereaderRetcode::TIMEOUT:
-      HighsLogMessage(logfile, HighsMessageType::ERROR,
+      highsOutputUser(io, HighsMessageType::ERROR,
                       "Parser reached timeout.", filename.c_str());
       break;
   }

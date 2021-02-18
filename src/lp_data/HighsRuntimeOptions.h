@@ -71,28 +71,28 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
 
     if (result.count(presolve_string)) {
       std::string value = result[presolve_string].as<std::string>();
-      if (setOptionValue(options.logfile, presolve_string, options.records,
+      if (setOptionValue(options.io, presolve_string, options.records,
                          value) != OptionStatus::OK)
         return false;
     }
 
     if (result.count(solver_string)) {
       std::string value = result[solver_string].as<std::string>();
-      if (setOptionValue(options.logfile, solver_string, options.records,
+      if (setOptionValue(options.io, solver_string, options.records,
                          value) != OptionStatus::OK)
         return false;
     }
 
     if (result.count(parallel_string)) {
       std::string value = result[parallel_string].as<std::string>();
-      if (setOptionValue(options.logfile, parallel_string, options.records,
+      if (setOptionValue(options.io, parallel_string, options.records,
                          value) != OptionStatus::OK)
         return false;
     }
 
     if (result.count(time_limit_string)) {
       double value = result[time_limit_string].as<double>();
-      if (setOptionValue(options.logfile, time_limit_string, options.records,
+      if (setOptionValue(options.io, time_limit_string, options.records,
                          value) != OptionStatus::OK)
         return false;
     }

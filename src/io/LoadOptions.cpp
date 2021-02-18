@@ -29,21 +29,21 @@ bool loadOptionsFromFile(HighsOptions& options) {
 
       int equals = line.find_first_of("=");
       if (equals < 0 || equals >= (int)line.size() - 1) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Error on line %d of options file.", line_count);
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+                        "Error on line %d of options file.\n", line_count);
         return false;
       }
       option = line.substr(0, equals);
       value = line.substr(equals + 1, line.size() - equals);
       trim(option);
       trim(value);
-      if (setOptionValue(options.logfile, option, options.records, value) !=
+      if (setOptionValue(options.io, option, options.records, value) !=
           OptionStatus::OK)
         return false;
     }
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Options file not found.");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "Options file not found.\n");
     return false;
   }
 
