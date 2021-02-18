@@ -278,12 +278,14 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   int lpos = -1;
   int bestlCplusend = -1;
   double bestlVal = 0.0;
+  bool bestlAtUpper = true;
 
   for (int i = 0; i != coversize; ++i) {
     int j = cover[i];
     double ub = upper[j];
 
-    if (solval[j] >= ub - feastol) continue;
+    bool atUpper = solval[j] >= ub - feastol;
+    if (atUpper && !bestlAtUpper) continue;
 
     double mju = ub * vals[j];
     HighsCDouble mu = mju - lambda;
@@ -309,10 +311,11 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 
     double jlVal = double(mcplus + eta * vals[j]);
 
-    if (jlVal > bestlVal) {
+    if (jlVal > bestlVal || (!atUpper && bestlAtUpper)) {
       lpos = i;
       bestlCplusend = cplusend;
       bestlVal = jlVal;
+      bestlAtUpper = atUpper;
     }
   }
 
@@ -1040,59 +1043,21 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   solval.resize(rowlen);
 
   HighsDomain& globaldomain = lpRelaxation.getMipSolver().mipdata_->domain;
-  HighsNodeQueue& nodequeue = lpRelaxation.getMipSolver().mipdata_->nodequeue;
-  std::vector<std::pair<size_t, int>> nonzeroSolvals;
-  nonzeroSolvals.reserve(rowlen);
   for (int i = 0; i != rowlen; ++i) {
     int col = inds[i];
 
     upper[i] = globaldomain.colUpper_[col] - globaldomain.colLower_[col];
-    size_t numAffectedNodes;
+
     if (vals[i] < 0 && globaldomain.colUpper_[col] != HIGHS_CONST_INF) {
       rhs -= globaldomain.colUpper_[col] * vals[i];
       vals[i] = -vals[i];
       complementation[i] = 1;
 
-      if (globaldomain.isBinary(col))
-        numAffectedNodes = nodequeue.numNodesDown(col);
-      else
-        numAffectedNodes =
-            nodequeue.numNodesDown(col, localdomain.colUpper_[col]);
       solval[i] = globaldomain.colUpper_[col] - localdomain.colUpper_[col];
     } else {
       rhs -= globaldomain.colLower_[col] * vals[i];
       complementation[i] = 0;
       solval[i] = localdomain.colLower_[col] - globaldomain.colLower_[col];
-
-      if (globaldomain.isBinary(col))
-        numAffectedNodes = nodequeue.numNodesUp(col);
-      else
-        numAffectedNodes =
-            nodequeue.numNodesUp(col, localdomain.colLower_[col]);
-    }
-
-    if (solval[i] > feastol) nonzeroSolvals.emplace_back(numAffectedNodes, i);
-  }
-
-  std::sort(
-      nonzeroSolvals.begin(), nonzeroSolvals.end(),
-      [&](std::pair<size_t, int> const& a, std::pair<size_t, int> const& b) {
-        if (a.first > b.first) return true;
-        if (a.first < b.first) return false;
-        return vals[a.second] * solval[a.second] >
-               vals[b.second] * solval[b.second];
-      });
-  HighsCDouble capacity = rhs;
-  int nzSolvalsLen = nonzeroSolvals.size();
-  for (int i = 0; i != nzSolvalsLen; ++i) {
-    int j = nonzeroSolvals[i].second;
-    double contribution = solval[j] * vals[j];
-    HighsCDouble reducedCapacity = capacity - contribution;
-    if (reducedCapacity >= 0) {
-      capacity = reducedCapacity;
-    } else {
-      solval[j] = double(capacity / vals[j]);
-      capacity = 0;
     }
   }
 
@@ -1154,19 +1119,6 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
   proofrhs = (double)rhs;
 
   bool cutintegral = integralSupport && integralCoefficients;
-
-  // finally determine the violation of the local domain
-  HighsCDouble violation = -proofrhs;
-
-  for (int i = 0; i != rowlen; ++i) {
-    if (vals[i] < 0)
-      violation += localdomain.colUpper_[inds[i]] * proofvals[i];
-    else
-      violation += localdomain.colLower_[inds[i]] * proofvals[i];
-  }
-
-  // if the cut is violated above the feasibility tolerance we add it
-  if (violation <= feastol) return false;
 
   lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
       proofinds.data(), proofvals.data(), rowlen, proofrhs);
