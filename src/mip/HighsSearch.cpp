@@ -150,9 +150,6 @@ void HighsSearch::addBoundExceedingConflict() {
       mipsolver.mipdata_->debugSolution.checkCut(inds.data(), vals.data(),
                                                  inds.size(), rhs);
       cutGen.generateConflict(localdom, inds, vals, rhs);
-
-      // int cutind = cutpool.addCut(inds.data(), vals.data(), inds.size(),
-      // rhs); localdom.cutAdded(cutind);
     }
   }
 }
@@ -766,6 +763,7 @@ void HighsSearch::evaluateNode() {
                 mipsolver, localdom, lp->getLpSolver().getSolution().col_dual,
                 lp->getObjective());
             if (localdom.infeasible()) {
+              addBoundExceedingConflict();
               localdom.clearChangedCols();
               prune = true;
             } else if (!localdom.getChangedCols().empty()) {
