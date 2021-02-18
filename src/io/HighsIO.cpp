@@ -26,7 +26,7 @@ void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void HighsOutputUser(const HighsIo& io,
+void highsOutputUser(const HighsIo& io,
 		     const HighsMessageType type,
 		     const char* format, ...) {
   if (!io.output_flag || (io.logging_file == NULL && !io.log_to_console)) return;
@@ -54,7 +54,7 @@ void HighsOutputUser(const HighsIo& io,
   va_end(argptr);
 }
 
-void HighsOutputDev(const HighsIo& io,
+void highsOutputDev(const HighsIo& io,
     const HighsMessageType type, 
     const char* format, ...) {
   if (io.logging_file == NULL || !io.output_dev) return;
