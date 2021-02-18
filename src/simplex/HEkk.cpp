@@ -80,10 +80,7 @@ HighsStatus HEkk::solve() {
   // Initial solve according to strategy
   if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     algorithm = "primal";
-    reportSimplexPhaseIterations(options_.logfile, 
-				 options_.output_flag,
-				 options_.log_to_console,
-				 iteration_count_, simplex_info_, true);
+    reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_, true);
     HighsLogMessage(options_.logfile, HighsMessageType::INFO,
                     "Using EKK primal simplex solver");
     HEkkPrimal primal_solver(*this);
@@ -94,10 +91,7 @@ HighsStatus HEkk::solve() {
         interpretCallStatus(call_status, return_status, "HEkkPrimal::solve");
   } else {
     algorithm = "dual";
-    reportSimplexPhaseIterations(options_.logging_file, 
-				 options_.output_flag,
-				 options_.log_to_console,
-				 iteration_count_, simplex_info_, true);
+    reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_, true);
     HEkkDual dual_solver(*this);
     dual_solver.options();
     //
@@ -122,10 +116,7 @@ HighsStatus HEkk::solve() {
     return_status =
         interpretCallStatus(call_status, return_status, "HEkkDual::solve");
   }
-  reportSimplexPhaseIterations(options_.logging_file,
-			       options_.output_flag,
-			       options_.log_to_console,
-			       iteration_count_, simplex_info_);
+  reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_);
   if (return_status == HighsStatus::Error) return return_status;
   HighsLogMessage(
       options_.logfile, HighsMessageType::INFO,
