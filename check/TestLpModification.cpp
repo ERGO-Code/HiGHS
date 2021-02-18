@@ -6,9 +6,10 @@
 
 const bool dev_run = false;
 
-void HighsStatusReport(const HighsIo& io, std::string message, HighsStatus status) {
-  highsOutputUser(io, HighsMessageType::INFO,
-                  "%s: HighsStatus = %d - %s\n", message.c_str(), (int)status,
+void HighsStatusReport(const HighsIo& io, std::string message,
+                       HighsStatus status) {
+  highsOutputUser(io, HighsMessageType::INFO, "%s: HighsStatus = %d - %s\n",
+                  message.c_str(), (int)status,
                   HighsStatusToString(status).c_str());
 }
 
@@ -381,8 +382,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
                               &ARstart[0], &ARindex[0], &ARvalue[0]));
 
   return_status = avgas_highs.writeModel("");
-  HighsStatusReport(options.io, "avgas_highs.writeModel(\"\")",
-                    return_status);
+  HighsStatusReport(options.io, "avgas_highs.writeModel(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::OK);
 
   Highs highs(options);

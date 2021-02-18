@@ -52,16 +52,16 @@ void interpretFilereaderRetcode(const HighsIo& io, const std::string filename,
                       filename.c_str());
       break;
     case FilereaderRetcode::PARSERERROR:
-      highsOutputUser(io, HighsMessageType::ERROR,
-                      "Parser error reading %s", filename.c_str());
+      highsOutputUser(io, HighsMessageType::ERROR, "Parser error reading %s",
+                      filename.c_str());
       break;
     case FilereaderRetcode::NOT_IMPLEMENTED:
       highsOutputUser(io, HighsMessageType::ERROR,
                       "Parser not implemented for %s", filename.c_str());
       break;
     case FilereaderRetcode::TIMEOUT:
-      highsOutputUser(io, HighsMessageType::ERROR,
-                      "Parser reached timeout.", filename.c_str());
+      highsOutputUser(io, HighsMessageType::ERROR, "Parser reached timeout.",
+                      filename.c_str());
       break;
   }
 }

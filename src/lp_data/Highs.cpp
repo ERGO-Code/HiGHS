@@ -290,8 +290,7 @@ HighsStatus Highs::readModel(const std::string filename) {
       reader->readModelFromFile(this->options_, model);
   delete reader;
   if (call_code != FilereaderRetcode::OK) {
-    interpretFilereaderRetcode(this->options_.io, filename.c_str(),
-                               call_code);
+    interpretFilereaderRetcode(this->options_.io, filename.c_str(), call_code);
     return_status = interpretCallStatus(HighsStatus::Error, return_status,
                                         "readModelFromFile");
     if (return_status == HighsStatus::Error) return return_status;

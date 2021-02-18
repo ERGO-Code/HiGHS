@@ -40,8 +40,8 @@ TEST_CASE("internal-options", "[highs_options]") {
                                  options.records, "False");
   REQUIRE(return_status == OptionStatus::OK);
 
-  return_status = setOptionValue(options.io, "mps_parser_type_free",
-                                 options.records, "F");
+  return_status =
+      setOptionValue(options.io, "mps_parser_type_free", options.records, "F");
   REQUIRE(return_status == OptionStatus::OK);
 
   bool mps_parser_type_free = false;
@@ -55,19 +55,17 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   // Check setting int options
 
-  return_status =
-      setOptionValue(options.io, "allowed_simplex_matrix_scale_factor",
-                     options.records, -1);
+  return_status = setOptionValue(
+      options.io, "allowed_simplex_matrix_scale_factor", options.records, -1);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  return_status =
-      setOptionValue(options.io, "allowed_simplex_matrix_scale_factor",
-                     options.records, 25);
+  return_status = setOptionValue(
+      options.io, "allowed_simplex_matrix_scale_factor", options.records, 25);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   std::string allowed_simplex_matrix_scale_factor_string = "1e-7";
-  return_status = setOptionValue(options.io,
-      "allowed_simplex_matrix_scale_factor", options.records,
+  return_status = setOptionValue(
+      options.io, "allowed_simplex_matrix_scale_factor", options.records,
       allowed_simplex_matrix_scale_factor_string);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
@@ -82,8 +80,8 @@ TEST_CASE("internal-options", "[highs_options]") {
   }
 
   double allowed_simplex_matrix_scale_factor_double = 1e-7;
-  return_status = setOptionValue(options.io, 
-      "allowed_simplex_matrix_scale_factor", options.records,
+  return_status = setOptionValue(
+      options.io, "allowed_simplex_matrix_scale_factor", options.records,
       allowed_simplex_matrix_scale_factor_double);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
@@ -100,20 +98,20 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   // Check setting double options
 
-  return_status = setOptionValue(options.io, "large_matrix_value",
-                                 options.records, -1);
+  return_status =
+      setOptionValue(options.io, "large_matrix_value", options.records, -1);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  return_status = setOptionValue(options.io, "large_matrix_value",
-                                 options.records, "1");
+  return_status =
+      setOptionValue(options.io, "large_matrix_value", options.records, "1");
   REQUIRE(return_status == OptionStatus::OK);
 
-  return_status = setOptionValue(options.io, "small_matrix_value",
-                                 options.records, -1);
+  return_status =
+      setOptionValue(options.io, "small_matrix_value", options.records, -1);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  return_status = setOptionValue(options.io, "small_matrix_value",
-                                 options.records, "1e-6");
+  return_status =
+      setOptionValue(options.io, "small_matrix_value", options.records, "1e-6");
   REQUIRE(return_status == OptionStatus::OK);
 
   double small_matrix_value = 1e-7;
@@ -123,13 +121,13 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   // Check setting string options
 
-  return_status = setOptionValue(options.io, presolve_string,
-                                 options.records, "ml.mps");
+  return_status =
+      setOptionValue(options.io, presolve_string, options.records, "ml.mps");
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   std::string model_file = "ml.mps";
-  return_status = setOptionValue(options.io, presolve_string,
-                                 options.records, model_file);
+  return_status =
+      setOptionValue(options.io, presolve_string, options.records, model_file);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   return_status =
@@ -137,12 +135,12 @@ TEST_CASE("internal-options", "[highs_options]") {
   REQUIRE(return_status == OptionStatus::OK);
 
   std::string presolve = "choose";
-  return_status = setOptionValue(options.io, presolve_string,
-                                 options.records, presolve);
+  return_status =
+      setOptionValue(options.io, presolve_string, options.records, presolve);
   REQUIRE(return_status == OptionStatus::OK);
 
-  return_status = setOptionValue(options.io, model_file_string,
-                                 options.records, model_file);
+  return_status = setOptionValue(options.io, model_file_string, options.records,
+                                 model_file);
   REQUIRE(return_status == OptionStatus::OK);
 
   if (dev_run) reportOptions(stdout, options.records);
@@ -168,8 +166,8 @@ TEST_CASE("internal-options", "[highs_options]") {
   REQUIRE(get_small_matrix_value == small_matrix_value);
 
   std::string get_model_file;
-  return_status = getOptionValue(options.io, "model_file", options.records,
-                                 get_model_file);
+  return_status =
+      getOptionValue(options.io, "model_file", options.records, get_model_file);
   REQUIRE(return_status == OptionStatus::OK);
   REQUIRE(get_model_file == model_file);
 

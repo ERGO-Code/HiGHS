@@ -109,9 +109,10 @@ bool assessIndexCollection(const HighsOptions& options,
     int prev_set_entry = -1;
     for (int k = 0; k < index_collection.set_num_entries_; k++) {
       if (set[k] < 0 || set[k] > set_entry_upper) {
-        highsOutputUser(options.io, HighsMessageType::ERROR,
-                        "Index set entry set[%d] = %d is out of bounds [0, %d]\n",
-                        k, set[k], set_entry_upper);
+        highsOutputUser(
+            options.io, HighsMessageType::ERROR,
+            "Index set entry set[%d] = %d is out of bounds [0, %d]\n", k,
+            set[k], set_entry_upper);
         return false;
       }
       if (set[k] <= prev_set_entry) {
@@ -233,8 +234,8 @@ bool intUserDataNotNull(const HighsIo& io, const int* user_data,
                         const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    highsOutputUser(io, HighsMessageType::ERROR,
-                    "User-supplied %s are NULL\n", name.c_str());
+    highsOutputUser(io, HighsMessageType::ERROR, "User-supplied %s are NULL\n",
+                    name.c_str());
     null_data = true;
   }
   assert(!null_data);
@@ -245,8 +246,8 @@ bool doubleUserDataNotNull(const HighsIo& io, const double* user_data,
                            const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    highsOutputUser(io, HighsMessageType::ERROR,
-                    "User-supplied %s are NULL\n", name.c_str());
+    highsOutputUser(io, HighsMessageType::ERROR, "User-supplied %s are NULL\n",
+                    name.c_str());
     null_data = true;
   }
   assert(!null_data);
