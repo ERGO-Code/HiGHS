@@ -1155,6 +1155,19 @@ bool HighsCutGeneration::generateConflict(HighsDomain& localdomain,
 
   bool cutintegral = integralSupport && integralCoefficients;
 
+  // finally determine the violation of the local domain
+  HighsCDouble violation = -proofrhs;
+
+  for (int i = 0; i != rowlen; ++i) {
+    if (vals[i] < 0)
+      violation += localdomain.colUpper_[inds[i]] * proofvals[i];
+    else
+      violation += localdomain.colLower_[inds[i]] * proofvals[i];
+  }
+
+  // if the cut is violated above the feasibility tolerance we add it
+  if (violation <= feastol) return false;
+
   lpRelaxation.getMipSolver().mipdata_->domain.tightenCoefficients(
       proofinds.data(), proofvals.data(), rowlen, proofrhs);
 
