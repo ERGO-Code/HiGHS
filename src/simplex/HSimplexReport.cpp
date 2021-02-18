@@ -16,7 +16,10 @@
 
 #include "simplex/HSimplex.h"
 
-void reportSimplexPhaseIterations(FILE* logfile, const int iteration_count,
+void reportSimplexPhaseIterations(FILE* logging_file,
+				  const bool output_flag,
+				  const bool log_to_console,
+				  const int iteration_count,
                                   const HighsSimplexInfo& simplex_info,
                                   const bool initialise) {
   if (simplex_info.run_quiet) return;
@@ -76,7 +79,7 @@ void reportSimplexPhaseIterations(FILE* logfile, const int iteration_count,
     iteration_report << "PrSwap " << delta_primal_bound_swap << "; ";
   }
 
-  HighsLogMessage(logfile, HighsMessageType::INFO,
-                  "Simplex iterations: %sTotal %d",
+  HighsOutputUser(logging_file, output_flag, log_to_console, HighsMessageType::INFO,
+                  "Simplex iterations: %sTotal %d\n",
                   iteration_report.str().c_str(), delta_iteration_count);
 }

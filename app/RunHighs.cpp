@@ -36,8 +36,8 @@ int main(int argc, char** argv) {
   HighsOptions options;
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
-
   Highs highs;
+  highs.setHighsOptionValue("output_dev", true);
   HighsStatus read_status = highs.readModel(options.model_file);
   reportLpStatsOrError(options.output, options.message_level, read_status,
                        highs.getLp());
@@ -198,7 +198,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
 
   // Solve LP case.
   Highs highs(use_options);
-  const HighsOptions& options = highs.getHighsOptions();
+  //  const HighsOptions& options = highs.getHighsOptions();
 
   // // Load problem.
   highs.passModel(lp);
