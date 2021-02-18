@@ -536,13 +536,11 @@ HighsStatus Highs::getColsInterface(
             num_nz + lp.Astart_[col] - lp.Astart_[out_from_col];
       num_col++;
     }
-    if (col_matrix_index != NULL || col_matrix_value != NULL) {
-      for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col + 1];
-           el++) {
-        if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.Aindex_[el];
-        if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.Avalue_[el];
-        num_nz++;
-      }
+    for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col + 1];
+         el++) {
+      if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.Aindex_[el];
+      if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.Avalue_[el];
+      num_nz++;
     }
     if (out_to_col == col_dim - 1 || in_to_col == col_dim - 1) break;
   }
@@ -1425,17 +1423,19 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   has_primal_ray = ekk_instance.simplex_lp_status_.has_primal_ray;
   if (has_primal_ray && primal_ray_value != NULL) {
     int col = ekk_instance.simplex_info_.primal_ray_col_;
+    assert(ekk_instance.simplex_basis_.nonbasicFlag_[col] ==
+           NONBASIC_FLAG_TRUE);
     // Get this pivotal column
     vector<double> rhs;
     vector<double> column;
     column.assign(numRow, 0);
     rhs.assign(numRow, 0);
-    int rhs_sign = ekk_instance.simplex_info_.primal_ray_sign_;
+    int primal_ray_sign = ekk_instance.simplex_info_.primal_ray_sign_;
     if (col < numCol) {
       for (int iEl = lp.Astart_[col]; iEl < lp.Astart_[col + 1]; iEl++)
-        rhs[lp.Aindex_[iEl]] = rhs_sign * lp.Avalue_[iEl];
+        rhs[lp.Aindex_[iEl]] = primal_ray_sign * lp.Avalue_[iEl];
     } else {
-      rhs[col - numCol] = rhs_sign;
+      rhs[col - numCol] = primal_ray_sign;
     }
     int* column_num_nz = 0;
     basisSolveInterface(rhs, &column[0], column_num_nz, NULL, false);
@@ -1446,6 +1446,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       int iCol = ekk_instance.simplex_basis_.basicIndex_[iRow];
       if (iCol < numCol) primal_ray_value[iCol] = column[iRow];
     }
+    if (col < numCol) primal_ray_value[col] = -primal_ray_sign;
   }
   return HighsStatus::OK;
 }

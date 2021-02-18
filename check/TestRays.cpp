@@ -153,7 +153,6 @@ void checkPrimalRayValue(Highs& highs, const vector<double>& primal_ray_value) {
       row_ray_value[lp.Aindex_[iEl]] +=
           primal_ray_value[iCol] * lp.Avalue_[iEl];
   }
-
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (primal_ray_value[iCol] > 0) {
       // Upper bound must be infinite
@@ -396,3 +395,64 @@ TEST_CASE("Rays-forest6", "[highs_test_rays]") { testInfeasibleMps("forest6"); }
 TEST_CASE("Rays-box1", "[highs_test_rays]") { testInfeasibleMps("box1"); }
 
 TEST_CASE("Rays-bgetam", "[highs_test_rays]") { testInfeasibleMps("bgetam"); }
+
+TEST_CASE("Rays-464a", "[highs_test_rays]") {
+  // The model is:
+  //    min -x - y
+  //         x - y == 0
+  //
+  // which has a primal ray: [d, d], for all d > 0.
+  Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+  double inf = highs.getHighsInfinity();
+  highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
+  highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
+  int aindex[2] = {0, 1};
+  double avalue[2] = {1.0, -1.0};
+  highs.addRow(0.0, 0.0, 2, aindex, avalue);
+  highs.setHighsOptionValue("presolve", "off");
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::PRIMAL_UNBOUNDED);
+  bool has_ray = false;
+  vector<double> ray_value;
+  ray_value.assign(2, NAN);
+  highs.getPrimalRay(has_ray, &ray_value[0]);
+  checkPrimalRayValue(highs, ray_value);
+  REQUIRE(has_ray);
+  REQUIRE(ray_value[0] == ray_value[1]);
+  REQUIRE(ray_value[0] > 0);
+}
+
+TEST_CASE("Rays-464b", "[highs_test_rays]") {
+  // The model is:
+  //    min -x - y
+  //         x - y == 0
+  //         x,  y >= 0
+  //
+  // which has a primal ray: [d, d], for all d > 0.
+  Highs highs;
+  if (!dev_run) {
+    highs.setHighsLogfile();
+    highs.setHighsOutput();
+  }
+  double inf = highs.getHighsInfinity();
+  highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
+  highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);
+  int aindex[2] = {0, 1};
+  double avalue[2] = {1.0, -1.0};
+  highs.addRow(0.0, 0.0, 2, aindex, avalue);
+  highs.setHighsOptionValue("presolve", "off");
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::PRIMAL_UNBOUNDED);
+  bool has_ray = false;
+  vector<double> ray_value;
+  ray_value.assign(2, NAN);
+  highs.getPrimalRay(has_ray, &ray_value[0]);
+  checkPrimalRayValue(highs, ray_value);
+  REQUIRE(has_ray);
+  REQUIRE(ray_value[0] == ray_value[1]);
+  REQUIRE(ray_value[0] > 0);
+}

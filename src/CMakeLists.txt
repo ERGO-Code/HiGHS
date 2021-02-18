@@ -553,6 +553,7 @@ set(headers_fast_build_
     lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRanging.h
+    lp_data/HighsRuntimeOptions.h
     lp_data/HighsSolution.h
     lp_data/HighsSolutionDebug.h
     lp_data/HighsSolve.h
@@ -571,25 +572,25 @@ set(headers_fast_build_
     mip/HighsSearch.h
     mip/HighsSeparation.h
     mip/HighsSparseVectorSum.h
-    mip/SolveMip.h
     simplex/HApp.h
     simplex/FactorTimer.h
     simplex/HCrash.h
-    simplex/HDual.h
-    simplex/HDualRow.h
-    simplex/HDualRHS.h
+    simplex/HEkk.h
+    simplex/HEkkDebug.h
+    simplex/HEkkDual.h
+    simplex/HEkkDualRHS.h
+    simplex/HEkkDualRow.h
+    simplex/HEkkPrimal.h
     simplex/HFactor.h
     simplex/HFactorDebug.h
     simplex/HighsSimplexAnalysis.h
-    simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
-    simplex/HPrimal.h
-    simplex/HQPrimal.h
     simplex/HSimplex.h
     simplex/HSimplexReport.h
     simplex/HSimplexDebug.h
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
+    simplex/SimplexTimer.h
     presolve/Presolve.h
     presolve/PresolveComponent.h
     presolve/PresolveAnalysis.h
