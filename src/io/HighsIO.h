@@ -34,6 +34,25 @@ enum HighsPrintMessageLevel {
   ML_MAX = ML_ALWAYS
 };
 
+void HighsOutputUser(
+    FILE* pass_output,
+    const bool output_flag,
+    const bool log_to_console,
+    const HighsMessageType type, 
+    const char* format,  //!< Printing format: must contain exactly one "\n" at
+    //!< end of format
+    ...);
+
+void HighsOutputDev(
+    FILE* pass_output,
+    const bool output_flag,
+    const bool log_to_console,
+    const bool output_dev,
+    const HighsMessageType type, 
+    const char* format,  //!< Printing format: must contain exactly one "\n" at
+    //!< end of format
+    ...);
+
 /**
  * @brief Used to direct printed output to FILE* output, according
  * to whether the level bit is set in messageLevel

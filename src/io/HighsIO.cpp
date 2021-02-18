@@ -26,11 +26,61 @@ void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
+void HighsOutputUser(
+    FILE* pass_output,
+    const bool output_flag,
+    const bool log_to_console,
+    const HighsMessageType type,
+    const char* format, ...) {
+  if (!output_flag || (pass_output == NULL && !log_to_console)) return;
+  va_list argptr;
+  va_start(argptr, format);
+  if (printmsgcb == NULL) {
+    if (type != HighsMessageType::INFO)
+      fprintf(pass_output, "%-7s: ", HighsMessageTypeTag[(int)type]);
+    vfprintf(pass_output, format, argptr);
+    if (log_to_console) {
+      if (type != HighsMessageType::INFO)
+	fprintf(pass_output, "%-7s: ", HighsMessageTypeTag[(int)type]);
+      va_start(argptr, format);
+      vfprintf(stdout, format, argptr);
+    }
+  } else {
+    int len;
+    len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+    if (len >= (int)sizeof(msgbuffer)) {
+      // Output was truncated: for now just ensure string is null-terminated
+      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    }
+    printmsgcb(0, msgbuffer, msgcb_data);
+  }
+  va_end(argptr);
+}
+
+void HighsOutputDev(
+    FILE* pass_output,
+    const bool output_flag,
+    const bool log_to_console,
+    const bool output_dev,
+    const HighsMessageType type, 
+    const char* format, ...) {
+  if (pass_output == NULL || !output_dev) return;
+  va_list argptr;
+  va_start(argptr, format);
+  if (type != HighsMessageType::INFO)
+    fprintf(pass_output, "%-7s: ", HighsMessageTypeTag[(int)type]);
+  vfprintf(pass_output, format, argptr);
+  if (log_to_console) {
+    if (type != HighsMessageType::INFO)
+      fprintf(stdout, "%-7s: ", HighsMessageTypeTag[(int)type]);
+    va_start(argptr, format);
+    vfprintf(stdout, format, argptr);
+  }
+}
+
 void HighsPrintMessage(FILE* pass_output, const int pass_message_level,
                        const int level, const char* format, ...) {
-  if (pass_output == NULL) {
-    return;
-  }
+  if (pass_output == NULL) return;
   if (pass_message_level & level) {
     va_list argptr;
     va_start(argptr, format);

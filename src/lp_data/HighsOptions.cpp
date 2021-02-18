@@ -412,8 +412,14 @@ OptionStatus setOptionValue(FILE* logfile, const std::string& name,
                           ((OptionRecordDouble*)option_records[index])[0],
                           atof(value.c_str()));
   } else {
-    return setOptionValue(
+    OptionStatus option_status = setOptionValue(
         logfile, ((OptionRecordString*)option_records[index])[0], value);
+    if (name.compare(log_file_string)) {
+      // Changing the name of the logging file
+      if (logfile != NULL) fclose(logfile);
+      if (!value.compare("")) logfile = fopen(value.c_str(), "w");
+    }
+    return option_status;
   }
 }
 

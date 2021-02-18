@@ -230,7 +230,8 @@ const string parallel_string = "parallel";
 const string time_limit_string = "time_limit";
 const string options_file_string = "options_file";
 
-// enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
+// String for logging file option
+const string log_file_string = "log_file";
 
 struct HighsOptionsStruct {
   // Options read from the command line
@@ -264,10 +265,14 @@ struct HighsOptionsStruct {
   int highs_max_threads;
   int message_level;
   std::string solution_file;
+  std::string log_file;
   bool write_solution_to_file;
   bool write_solution_pretty;
+  bool output_flag;
+  bool log_to_console;
 
   // Advanced options
+  bool output_dev;
   bool run_crossover;
   bool mps_parser_type_free;
   int keep_n_rows;
@@ -306,6 +311,7 @@ struct HighsOptionsStruct {
   // Options for HighsPrintMessage and HighsLogMessage
   FILE* logfile = stdout;
   FILE* output = stdout;
+  FILE* logging_file = NULL;
 
   void (*printmsgcb)(int level, const char* msg, void* msgcb_data) = NULL;
   void (*logmsgcb)(HighsMessageType type, const char* msg,
@@ -527,9 +533,24 @@ class HighsOptions : public HighsOptionsStruct {
                                      ML_MINIMAL, ML_MAX);
     records.push_back(record_int);
 
+    record_bool = new OptionRecordBool("output_flag",
+                                     "Enables or disables solver output",
+                                     advanced, &output_flag, true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("log_to_console",
+                                     "Enables or disables console logging",
+                                     advanced, &log_to_console, true);
+    records.push_back(record_bool);
+
     record_string =
         new OptionRecordString("solution_file", "Solution file", advanced,
                                &solution_file, FILENAME_DEFAULT);
+    records.push_back(record_string);
+
+    record_string =
+        new OptionRecordString(log_file_string, "Log file", advanced,
+                               &log_file, "Highs.log");
     records.push_back(record_string);
 
     record_bool =
@@ -602,6 +623,11 @@ class HighsOptions : public HighsOptionsStruct {
 
     // Advanced options
     advanced = true;
+
+    record_bool = new OptionRecordBool("output_dev",
+                                       "Output development messages",
+                                       advanced, &output_dev, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("run_crossover",
                                        "Run the crossover routine for IPX",
@@ -733,6 +759,8 @@ class HighsOptions : public HighsOptionsStruct {
                              "Use LiDSE if LP has right properties", advanced,
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
+
+    logging_file = fopen(log_file.c_str(), "w");
   }
 
   void deleteRecords() {
