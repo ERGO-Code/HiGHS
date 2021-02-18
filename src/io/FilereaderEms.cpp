@@ -39,8 +39,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       indices_from_one = true;
     }
     if (!f) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "n_rows not found in EMS file");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "n_rows not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
     }
     f >> numRow;
@@ -48,8 +48,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "n_columns") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "n_columns not found in EMS file");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "n_columns not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
     }
     f >> numCol;
@@ -57,8 +57,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "n_matrix_elements") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "n_matrix_elements not found in EMS file");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "n_matrix_elements not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
     }
     f >> AcountX;
@@ -70,8 +70,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "matrix") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "matrix not found in EMS file");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "matrix not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
     }
     model.Astart_.resize(numCol + 1);
@@ -94,8 +94,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "column_bounds") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "column_bounds not found in EMS file");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "column_bounds not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
     }
     model.colLower_.reserve(numCol);
@@ -115,8 +115,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "row_bounds") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "row_bounds not found in EMS file");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "row_bounds not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
     }
     model.rowLower_.reserve(numRow);
@@ -135,8 +135,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "") std::getline(f, line);
     if (trim(line) != "column_costs") {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "column_costs not found in EMS file");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "column_costs not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
     }
     model.colCost_.reserve(numCol);
@@ -199,14 +199,14 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
       // OK if file just ends after the integer_columns section without
       // end_linear
       if (!f) return FilereaderRetcode::OK;
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "names not found in EMS file");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "names not found in EMS file\n");
       return FilereaderRetcode::PARSERERROR;
     }
     f.close();
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "EMS file not found");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "EMS file not found\n");
     return FilereaderRetcode::FILENOTFOUND;
   }
   return FilereaderRetcode::OK;

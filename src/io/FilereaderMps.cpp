@@ -42,14 +42,14 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       case FreeFormatParserReturnCode::FILENOTFOUND:
         return FilereaderRetcode::FILENOTFOUND;
       case FreeFormatParserReturnCode::FIXED_FORMAT:
-        HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+        highsOutputUser(options.io, HighsMessageType::WARNING,
                         "Free format reader has detected row/col names with "
-                        "spaces: switching to fixed format parser");
+                        "spaces: switching to fixed format parser\n");
         break;
       case FreeFormatParserReturnCode::TIMEOUT:
-        HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+        highsOutputUser(options.io, HighsMessageType::WARNING,
                         "Free format reader reached time_limit while parsing "
-                        "the input file");
+                        "the input file\n");
         return FilereaderRetcode::TIMEOUT;
     }
   }
@@ -62,15 +62,15 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
               model.rowLower_, model.rowUpper_, model.integrality_,
               model.col_names_, model.row_names_, options.keep_n_rows);
   if (namesWithSpaces(model.numCol_, model.col_names_)) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Model has column names with spaces");
+    highsOutputUser(options.io, HighsMessageType::WARNING,
+                    "Model has column names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numCol_, model.col_names_, true);
 #endif
   }
   if (namesWithSpaces(model.numRow_, model.row_names_)) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Model has row names with spaces");
+    highsOutputUser(options.io, HighsMessageType::WARNING,
+                    "Model has row names with spaces\n");
 #ifdef HiGHSDEV
     namesWithSpaces(model.numRow_, model.row_names_, true);
 #endif

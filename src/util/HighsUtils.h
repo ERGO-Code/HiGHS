@@ -94,9 +94,9 @@ void updateIndexCollectionOutInIndex(
 
 int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
 
-bool intUserDataNotNull(FILE* logfile, const int* user_data,
+bool intUserDataNotNull(const HighsIo& io, const int* user_data,
                         const std::string name);
-bool doubleUserDataNotNull(FILE* logfile, const double* user_data,
+bool doubleUserDataNotNull(const HighsIo& io, const double* user_data,
                            const std::string name);
 
 double getNorm2(const std::vector<double> values);

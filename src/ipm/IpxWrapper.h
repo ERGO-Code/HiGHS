@@ -744,11 +744,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
         &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
 
     // Convert the IPX basic solution to a HiGHS basic solution
-    ipxBasicSolutionToHighsBasicSolution(options.logfile, lp, rhs,
+    ipxBasicSolutionToHighsBasicSolution(options.io, lp, rhs,
                                          constraint_type, ipx_solution,
                                          highs_basis, highs_solution);
   } else {
-    ipxSolutionToHighsSolution(options.logfile, lp, rhs, constraint_type,
+    ipxSolutionToHighsSolution(options.io, lp, rhs, constraint_type,
                                num_col, num_row, x, slack, highs_solution);
     highs_basis.valid_ = false;
   }

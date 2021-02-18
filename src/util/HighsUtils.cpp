@@ -64,24 +64,24 @@ bool assessIndexCollection(const HighsOptions& options,
     // Changing by interval: check the parameters and that check set and mask
     // are false
     if (index_collection.is_set_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both interval and set");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index collection is both interval and set\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both interval and mask");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index collection is both interval and mask\n");
       return false;
     }
     if (index_collection.from_ < 0) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval lower limit is %d < 0",
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index interval lower limit is %d < 0\n",
                       index_collection.from_);
       return false;
     }
     if (index_collection.to_ > index_collection.dimension_ - 1) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index interval upper limit is %d > %d",
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index interval upper limit is %d > %d\n",
                       index_collection.to_, index_collection.dimension_ - 1);
       return false;
     }
@@ -89,18 +89,18 @@ bool assessIndexCollection(const HighsOptions& options,
     // Changing by set: check the parameters and check that interval and mask
     // are false
     if (index_collection.is_interval_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both set and interval");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index collection is both set and interval\n");
       return false;
     }
     if (index_collection.is_mask_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both set and mask");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index collection is both set and mask\n");
       return false;
     }
     if (index_collection.set_ == NULL) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index set is NULL");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index set is NULL\n");
       return false;
     }
     // Check that the values in the vector of integers are ascending
@@ -109,15 +109,15 @@ bool assessIndexCollection(const HighsOptions& options,
     int prev_set_entry = -1;
     for (int k = 0; k < index_collection.set_num_entries_; k++) {
       if (set[k] < 0 || set[k] > set_entry_upper) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                        "Index set entry set[%d] = %d is out of bounds [0, %d]",
+        highsOutputUser(options.io, HighsMessageType::ERROR,
+                        "Index set entry set[%d] = %d is out of bounds [0, %d]\n",
                         k, set[k], set_entry_upper);
         return false;
       }
       if (set[k] <= prev_set_entry) {
-        HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+        highsOutputUser(options.io, HighsMessageType::ERROR,
                         "Index set entry set[%d] = %d is not greater than "
-                        "previous entry %d",
+                        "previous entry %d\n",
                         k, set[k], prev_set_entry);
         return false;
       }
@@ -127,24 +127,24 @@ bool assessIndexCollection(const HighsOptions& options,
     // Changing by mask: check the parameters and check that set and interval
     // are false
     if (index_collection.mask_ == NULL) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index mask is NULL");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index mask is NULL\n");
       return false;
     }
     if (index_collection.is_interval_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both mask and interval");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index collection is both mask and interval\n");
       return false;
     }
     if (index_collection.is_set_) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Index collection is both mask and set");
+      highsOutputUser(options.io, HighsMessageType::ERROR,
+                      "Index collection is both mask and set\n");
       return false;
     }
   } else {
     // No method defined
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Undefined index collection");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "Undefined index collection\n");
     return false;
   }
   return true;
@@ -163,8 +163,8 @@ bool limitsForIndexCollection(const HighsOptions& options,
     from_k = 0;
     to_k = index_collection.dimension_ - 1;
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Undefined index collection");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "Undefined index collection\n");
     return false;
   }
   return true;
@@ -229,24 +229,24 @@ int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection) {
   }
 }
 
-bool intUserDataNotNull(FILE* logfile, const int* user_data,
+bool intUserDataNotNull(const HighsIo& io, const int* user_data,
                         const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "User-supplied %s are NULL", name.c_str());
+    highsOutputUser(io, HighsMessageType::ERROR,
+                    "User-supplied %s are NULL\n", name.c_str());
     null_data = true;
   }
   assert(!null_data);
   return null_data;
 }
 
-bool doubleUserDataNotNull(FILE* logfile, const double* user_data,
+bool doubleUserDataNotNull(const HighsIo& io, const double* user_data,
                            const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
-                    "User-supplied %s are NULL", name.c_str());
+    highsOutputUser(io, HighsMessageType::ERROR,
+                    "User-supplied %s are NULL\n", name.c_str());
     null_data = true;
   }
   assert(!null_data);
