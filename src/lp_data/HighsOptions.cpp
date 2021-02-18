@@ -414,7 +414,7 @@ OptionStatus setOptionValue(FILE* logfile, const std::string& name,
   } else {
     OptionStatus option_status = setOptionValue(
         logfile, ((OptionRecordString*)option_records[index])[0], value);
-    if (name.compare(log_file_string)) {
+    if (!name.compare(log_file_string)) {
       // Changing the name of the logging file
       if (logfile != NULL) fclose(logfile);
       if (!value.compare("")) logfile = fopen(value.c_str(), "w");

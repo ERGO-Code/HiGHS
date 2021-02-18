@@ -186,48 +186,48 @@ HighsStatus reportIpxSolveStatus(const HighsOptions& options,
                                  const ipx::Int solve_status,
                                  const ipx::Int error_flag) {
   if (solve_status == IPX_STATUS_solved) {
-    HighsLogMessage(options.logfile, HighsMessageType::INFO, "Ipx: Solved");
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::INFO, "Ipx: Solved\n");
     return HighsStatus::OK;
   } else if (solve_status == IPX_STATUS_stopped) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING, "Ipx: Stopped");
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING, "Ipx: Stopped\n");
     return HighsStatus::Warning;
   } else if (solve_status == IPX_STATUS_no_model) {
     if (error_flag == IPX_ERROR_argument_null) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - argument_null");
+      HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                      "Ipx: Invalid input - argument_null\n");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_dimension) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - invalid dimension");
+      HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                      "Ipx: Invalid input - invalid dimension\n");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_matrix) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - invalid matrix");
+      HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                      "Ipx: Invalid input - invalid matrix\n");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_vector) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - invalid vector");
+      HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                      "Ipx: Invalid input - invalid vector\n");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_basis) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - invalid basis");
+      HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                      "Ipx: Invalid input - invalid basis\n");
       return HighsStatus::Error;
     } else {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                      "Ipx: Invalid input - unrecognised error");
+      HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                      "Ipx: Invalid input - unrecognised error\n");
       return HighsStatus::Error;
     }
   } else if (solve_status == IPX_STATUS_out_of_memory) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Ipx: Out of memory");
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                    "Ipx: Out of memory\n");
     return HighsStatus::Error;
   } else if (solve_status == IPX_STATUS_internal_error) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Ipx: Internal error %d", (int)error_flag);
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                    "Ipx: Internal error %d\n", (int)error_flag);
     return HighsStatus::Error;
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Ipx: unrecognised solve status = %d", (int)solve_status);
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                    "Ipx: unrecognised solve status = %d\n", (int)solve_status);
     return HighsStatus::Error;
   }
   return HighsStatus::Error;
@@ -242,48 +242,48 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
   else
     method_name = "Crossover";
   if (status == IPX_STATUS_not_run) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Ipx: %s not run", method_name.c_str());
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                    "Ipx: %s not run\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_optimal) {
-    HighsLogMessage(options.logfile, HighsMessageType::INFO, "Ipx: %s optimal",
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::INFO, "Ipx: %s optimal\n",
                     method_name.c_str());
     return HighsStatus::OK;
   } else if (status == IPX_STATUS_imprecise) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Ipx: %s imprecise", method_name.c_str());
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                    "Ipx: %s imprecise\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_primal_infeas) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Ipx: %s primal infeasible", method_name.c_str());
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                    "Ipx: %s primal infeasible\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_dual_infeas) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Ipx: %s dual infeasible", method_name.c_str());
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                    "Ipx: %s dual infeasible\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_time_limit) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Ipx: %s reached time limit", method_name.c_str());
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                    "Ipx: %s reached time limit\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_iter_limit) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Ipx: %s reached iteration limit", method_name.c_str());
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                    "Ipx: %s reached iteration limit\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_no_progress) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Ipx: %s no progress", method_name.c_str());
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                    "Ipx: %s no progress\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_failed) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s failed",
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR, "Ipx: %s failed\n",
                     method_name.c_str());
     return HighsStatus::Error;
   } else if (status == IPX_STATUS_debug) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s debug",
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR, "Ipx: %s debug\n",
                     method_name.c_str());
     return HighsStatus::Error;
   } else {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Ipx: %s unrecognised status", method_name.c_str());
+    HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR,
+                    "Ipx: %s unrecognised status\n", method_name.c_str());
     return HighsStatus::Error;
   }
   return HighsStatus::Error;
@@ -293,10 +293,10 @@ bool ipxStatusError(const bool status_error, const HighsOptions& options,
                     std::string message, const int value = -1) {
   if (status_error) {
     if (value < 0) {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s",
+      HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR, "Ipx: %s\n",
                       message.c_str());
     } else {
-      HighsLogMessage(options.logfile, HighsMessageType::ERROR, "Ipx: %s %d",
+      HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::ERROR, "Ipx: %s %d\n",
                       message.c_str(), value);
     }
     fflush(NULL);
@@ -484,14 +484,14 @@ bool illegalIpxStoppedCrossoverStatus(ipx::Info& ipx_info,
 
 void reportIpmNoProgress(const HighsOptions& options,
                          const ipx::Info& ipx_info) {
-  HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                  "No progress: primal objective value       = %11.4g",
+  HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                  "No progress: primal objective value       = %11.4g\n",
                   ipx_info.pobjval);
-  HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                  "No progress: max absolute primal residual = %11.4g",
+  HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                  "No progress: max absolute primal residual = %11.4g\n",
                   ipx_info.abs_presidual);
-  HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                  "No progress: max absolute   dual residual = %11.4g",
+  HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::WARNING,
+                  "No progress: max absolute   dual residual = %11.4g\n",
                   ipx_info.abs_dresidual);
 }
 
@@ -580,8 +580,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   IpxStatus result = fillInIpxData(lp, num_col, objective, col_lb, col_ub,
                                    num_row, Ap, Ai, Av, rhs, constraint_type);
   if (result != IpxStatus::OK) return HighsStatus::Error;
-  HighsLogMessage(options.logfile, HighsMessageType::INFO,
-                  "IPX model has %d rows, %d columns and %d nonzeros",
+  HighsOutputUser(options.logging_file, options.output_flag, options.log_to_console, HighsMessageType::INFO,
+                  "IPX model has %d rows, %d columns and %d nonzeros\n",
                   (int)num_row, (int)num_col, (int)Ap[num_col]);
 
   ipx::Int load_status =
