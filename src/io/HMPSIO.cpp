@@ -27,7 +27,7 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
+FilereaderRetcode readMPS(const HighsIo& io, const std::string filename,
                           int mxNumRow, int mxNumCol, int& numRow, int& numCol,
                           ObjSense& objSense, double& objOffset,
                           vector<int>& Astart, vector<int>& Aindex,
@@ -191,7 +191,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
   Astart.push_back(Aindex.size());
 
   if (num_alien_entries)
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
+    highsOutputUser(io, HighsMessageType::WARNING,
                     "COLUMNS section entries contain %8d with row not in ROWS  "
                     "  section: ignored",
                     num_alien_entries);
@@ -221,7 +221,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
           name = field_5;
         }
         num_alien_entries++;
-        HighsLogMessage(logfile, HighsMessageType::INFO,
+        highsOutputUser(io, HighsMessageType::INFO,
                         "RHS     section contains row %-8s not in ROWS    "
                         "section, line: %s",
                         name.c_str(), line);
@@ -241,7 +241,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
     save_flag1 = flag[1];
   }
   if (num_alien_entries)
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
+    highsOutputUser(io, HighsMessageType::WARNING,
                     "RHS     section entries contain %8d with row not in ROWS  "
                     "  section: ignored",
                     num_alien_entries);
@@ -314,7 +314,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
     }
   }
   if (num_alien_entries)
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
+    highsOutputUser(io, HighsMessageType::WARNING,
                     "RANGES  section entries contain %8d with row not in ROWS  "
                     "  section: ignored",
                     num_alien_entries);
@@ -380,7 +380,7 @@ FilereaderRetcode readMPS(FILE* logfile, const std::string filename,
     }
   }
   if (num_alien_entries)
-    HighsLogMessage(logfile, HighsMessageType::WARNING,
+    highsOutputUser(io, HighsMessageType::WARNING,
                     "BOUNDS  section entries contain %8d with col not in "
                     "COLUMNS section: ignored",
                     num_alien_entries);
@@ -499,7 +499,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
   bool use_free_format = free_format;
   if (!free_format) {
     if (max_name_length > 8) {
-      HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+      highsOutputUser(options.io, HighsMessageType::WARNING,
                       "Maximum name length is %d so using free format rather "
                       "than fixed format",
                       max_name_length);
@@ -508,7 +508,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
     }
   }
   HighsStatus write_status = writeMPS(
-      options.logfile, filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
+      options.io, filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
       lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_,
       lp.colUpper_, lp.rowLower_, lp.rowUpper_, lp.integrality_,
       local_col_names, local_row_names, use_free_format);
@@ -518,7 +518,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
 }
 
 HighsStatus writeMPS(
-    FILE* logfile, const std::string filename, const int& numRow,
+    const HighsIo& io, const std::string filename, const int& numRow,
     const int& numCol, const ObjSense& objSense, const double& objOffset,
     const vector<int>& Astart, const vector<int>& Aindex,
     const vector<double>& Avalue, const vector<double>& colCost,
@@ -535,7 +535,7 @@ HighsStatus writeMPS(
 #endif
   FILE* file = fopen(filename.c_str(), "w");
   if (file == 0) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR, "Cannot open file %s",
+    highsOutputUser(io, HighsMessageType::ERROR, "Cannot open file %s",
                     filename.c_str());
     return HighsStatus::Error;
   }
@@ -547,7 +547,7 @@ HighsStatus writeMPS(
   int max_row_name_length = maxNameLength(numRow, row_names);
   int max_name_length = std::max(max_col_name_length, max_row_name_length);
   if (!use_free_format && max_name_length > 8) {
-    HighsLogMessage(logfile, HighsMessageType::ERROR,
+    highsOutputUser(io, HighsMessageType::ERROR,
                     "Cannot write fixed MPS with names of length (up to) %d",
                     max_name_length);
     return HighsStatus::Error;

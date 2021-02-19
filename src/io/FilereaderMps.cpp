@@ -56,7 +56,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 
   // else use fixed format parser
   FilereaderRetcode return_code =
-      readMPS(options.logfile, filename, -1, -1, model.numRow_, model.numCol_,
+      readMPS(options.io, filename, -1, -1, model.numRow_, model.numCol_,
               model.sense_, model.offset_, model.Astart_, model.Aindex_,
               model.Avalue_, model.colCost_, model.colLower_, model.colUpper_,
               model.rowLower_, model.rowUpper_, model.integrality_,
