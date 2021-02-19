@@ -33,7 +33,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
       parser.time_limit = options.time_limit;
 
     FreeFormatParserReturnCode result =
-        parser.loadProblem(options.logfile, filename, model);
+        parser.loadProblem(options.io, filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::SUCCESS:
         return FilereaderRetcode::OK;
