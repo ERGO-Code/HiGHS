@@ -128,7 +128,8 @@ class HMpsFF {
   std::unordered_map<std::string, int> rowname2idx;
   std::unordered_map<std::string, int> colname2idx;
 
-  FreeFormatParserReturnCode parse(const HighsIo& io, const std::string& filename);
+  FreeFormatParserReturnCode parse(const HighsIo& io,
+                                   const std::string& filename);
   /// checks first word of strline and wraps it by it_begin and it_end
   HMpsFF::parsekey checkFirstWord(std::string& strline, int& start, int& end,
                                   std::string& word) const;

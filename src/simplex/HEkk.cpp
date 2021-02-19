@@ -82,8 +82,8 @@ HighsStatus HEkk::solve() {
     algorithm = "primal";
     reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_,
                                  true);
-    HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                    "Using EKK primal simplex solver");
+    highsOutputUser(options_.io, HighsMessageType::INFO,
+                    "Using EKK primal simplex solver\n");
     HEkkPrimal primal_solver(*this);
     workEdWt_ = NULL;
     workEdWtFull_ = NULL;
@@ -99,18 +99,18 @@ HighsStatus HEkk::solve() {
     //
     // Solve, depending on the particular strategy
     if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
-      HighsLogMessage(
-          options_.logfile, HighsMessageType::INFO,
-          "Using EKK parallel dual simplex solver - SIP with %d threads",
+      highsOutputUser(
+          options_.io, HighsMessageType::INFO,
+          "Using EKK parallel dual simplex solver - SIP with %d threads\n",
           simplex_info_.num_threads);
     } else if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
-      HighsLogMessage(
-          options_.logfile, HighsMessageType::INFO,
-          "Using EKK parallel dual simplex solver - PAMI with %d threads",
+      highsOutputUser(
+          options_.io, HighsMessageType::INFO,
+          "Using EKK parallel dual simplex solver - PAMI with %d threads\n",
           simplex_info_.num_threads);
     } else {
-      HighsLogMessage(options_.logfile, HighsMessageType::INFO,
-                      "Using EKK dual simplex solver - serial");
+      highsOutputUser(options_.io, HighsMessageType::INFO,
+                      "Using EKK dual simplex solver - serial\n");
     }
     workEdWt_ = dual_solver.getWorkEdWt();
     workEdWtFull_ = dual_solver.getWorkEdWtFull();
@@ -120,10 +120,10 @@ HighsStatus HEkk::solve() {
   }
   reportSimplexPhaseIterations(options_.io, iteration_count_, simplex_info_);
   if (return_status == HighsStatus::Error) return return_status;
-  HighsLogMessage(
-      options_.logfile, HighsMessageType::INFO,
+  highsOutputUser(
+      options_.io, HighsMessageType::INFO,
       "EKK %s simplex solver returns %d primal and %d dual infeasibilities: "
-      "Status %s",
+      "Status %s\n",
       algorithm.c_str(), simplex_info_.num_primal_infeasibility,
       simplex_info_.num_dual_infeasibility,
       utilHighsModelStatusToString(scaled_model_status_).c_str());
@@ -239,8 +239,8 @@ HighsStatus HEkk::setBasis(const HighsBasis& basis) {
   // with errors :-) ...
   if (debugBasisConsistent(options_, simplex_lp_, basis) ==
       HighsDebugStatus::LOGICAL_ERROR) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Supposed to be a Highs basis, but not valid");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::Error;
   }
   int num_col = simplex_lp_.numCol_;
@@ -309,8 +309,8 @@ HighsStatus HEkk::setBasis(const SimplexBasis& basis) {
   // with errors :-) ...
   if (debugBasisConsistent(options_, simplex_lp_, basis) ==
       HighsDebugStatus::LOGICAL_ERROR) {
-    HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                    "Supposed to be a Highs basis, but not valid");
+    highsOutputUser(options_.io, HighsMessageType::ERROR,
+                    "Supposed to be a Highs basis, but not valid\n");
     return HighsStatus::Error;
   }
   simplex_basis_.nonbasicFlag_ = basis.nonbasicFlag_;
@@ -408,8 +408,8 @@ int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
   // otherwise set a logical basis
   if (!simplex_lp_status_.has_basis) {
     if (only_from_known_basis) {
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Simplex basis should be known but isn't");
+      highsOutputUser(options_.io, HighsMessageType::ERROR,
+                      "Simplex basis should be known but isn't\n");
       return -(int)HighsStatus::Error;
     }
     setBasis();
@@ -419,8 +419,8 @@ int HEkk::initialiseSimplexLpBasisAndFactor(const bool only_from_known_basis) {
     // Basis is rank deficient
     if (only_from_known_basis) {
       // If only this basis should be used, then return error
-      HighsLogMessage(options_.logfile, HighsMessageType::ERROR,
-                      "Supposed to be a full-rank basis, but incorrect");
+      highsOutputUser(options_.io, HighsMessageType::ERROR,
+                      "Supposed to be a full-rank basis, but incorrect\n");
       return rank_deficiency;
     }
     // Account for rank deficiency by correcing nonbasicFlag
@@ -636,26 +636,26 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // Give a warning if the number of threads to be used is fewer than
   // the minimum number of HiGHS threads allowed
   if (simplex_info.num_threads < highs_min_threads) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+    highsOutputUser(options.io, HighsMessageType::WARNING,
                     "Using %d HiGHS threads for parallel strategy rather than "
-                    "minimum number (%d) specified in options",
+                    "minimum number (%d) specified in options\n",
                     simplex_info.num_threads, highs_min_threads);
   }
   // Give a warning if the number of threads to be used is more than
   // the maximum number of HiGHS threads allowed
   if (simplex_info.num_threads > highs_max_threads) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
+    highsOutputUser(options.io, HighsMessageType::WARNING,
                     "Using %d HiGHS threads for parallel strategy rather than "
-                    "maximum number (%d) specified in options",
+                    "maximum number (%d) specified in options\n",
                     simplex_info.num_threads, highs_max_threads);
   }
   // Give a warning if the number of threads to be used is fewer than
   // the number of OMP threads available
   if (simplex_info.num_threads > omp_max_threads) {
-    HighsLogMessage(
-        options.logfile, HighsMessageType::WARNING,
+    highsOutputUser(
+        options.io, HighsMessageType::WARNING,
         "Number of OMP threads available = %d < %d = Number of HiGHS threads "
-        "to be used: Parallel performance will be less than anticipated",
+        "to be used: Parallel performance will be less than anticipated\n",
         omp_max_threads, simplex_info.num_threads);
   }
   // Simplex strategy is now fixed - so set the value to be referred
@@ -665,8 +665,8 @@ void HEkk::chooseSimplexStrategyThreads(const HighsOptions& options,
   // setupForSimplexSolve has simplex computations
 
   if (simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
-    HighsLogMessage(options.logfile, HighsMessageType::WARNING,
-                    "Primal simplex solver unavailable");
+    highsOutputUser(options.io, HighsMessageType::WARNING,
+                    "Primal simplex solver unavailable\n");
     simplex_strategy = SIMPLEX_STRATEGY_DUAL;
   }
 }
@@ -732,9 +732,9 @@ bool HEkk::getNonsingularInverse(const int solve_phase) {
     int use_simplex_update_limit = simplex_info_.update_limit;
     int new_simplex_update_limit = simplex_update_count / 2;
     simplex_info_.update_limit = new_simplex_update_limit;
-    HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
+    highsOutputUser(options_.io, HighsMessageType::WARNING,
                     "Rank deficiency of %d after %d simplex updates, so "
-                    "backtracking: max updates reduced from %d to %d",
+                    "backtracking: max updates reduced from %d to %d\n",
                     rank_deficiency, simplex_update_count,
                     use_simplex_update_limit, new_simplex_update_limit);
   } else {
@@ -1775,8 +1775,8 @@ bool HEkk::reinvertOnNumericalTrouble(
                 max_pivot_threshold);
     }
     if (new_pivot_threshold) {
-      HighsLogMessage(options_.logfile, HighsMessageType::WARNING,
-                      "   Increasing Markowitz threshold to %g",
+      highsOutputUser(options_.io, HighsMessageType::WARNING,
+                      "   Increasing Markowitz threshold to %g\n",
                       new_pivot_threshold);
       simplex_info_.factor_pivot_threshold = new_pivot_threshold;
       factor_.setPivotThreshold(new_pivot_threshold);

@@ -335,9 +335,10 @@ OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::DOUBLE) {
-    highsOutputUser(io, HighsMessageType::ERROR,
-                    "setOptionValue: Option \"%s\" cannot be assigned a double\n",
-                    name.c_str());
+    highsOutputUser(
+        io, HighsMessageType::ERROR,
+        "setOptionValue: Option \"%s\" cannot be assigned a double\n",
+        name.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
   return setOptionValue(io, ((OptionRecordDouble*)option_records[index])[0],

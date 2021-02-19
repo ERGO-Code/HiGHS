@@ -501,7 +501,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIo& io,
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        highsOutputUser(io, HighsMessageType::WARNING,
+        highsOutputUser(
+            io, HighsMessageType::WARNING,
             "COLUMNS section contains row %s not in ROWS section: ignored\n",
             marker.c_str());
         continue;
@@ -619,7 +620,8 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIo& io, std::ifstream& file) {
     }
 
     if (mit == rowname2idx.end()) {
-      highsOutputUser(io, HighsMessageType::WARNING,
+      highsOutputUser(
+          io, HighsMessageType::WARNING,
           "RHS section contains row %s not in ROWS section: ignored\n",
           marker.c_str());
     } else {
@@ -649,7 +651,8 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIo& io, std::ifstream& file) {
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        highsOutputUser(io, HighsMessageType::WARNING,
+        highsOutputUser(
+            io, HighsMessageType::WARNING,
             "RHS section contains row %s not in ROWS section: ignored\n",
             marker.c_str());
         continue;
@@ -710,19 +713,24 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIo& io, std::ifstream& file) {
     if (key != parsekey::NONE) {
       if (num_mi)
         highsOutputUser(io, HighsMessageType::INFO,
-                        "Number of MI entries in BOUNDS section is %d\n", num_mi);
+                        "Number of MI entries in BOUNDS section is %d\n",
+                        num_mi);
       if (num_pl)
         highsOutputUser(io, HighsMessageType::INFO,
-                        "Number of PL entries in BOUNDS section is %d\n", num_pl);
+                        "Number of PL entries in BOUNDS section is %d\n",
+                        num_pl);
       if (num_bv)
         highsOutputUser(io, HighsMessageType::INFO,
-                        "Number of BV entries in BOUNDS section is %d\n", num_bv);
+                        "Number of BV entries in BOUNDS section is %d\n",
+                        num_bv);
       if (num_li)
         highsOutputUser(io, HighsMessageType::INFO,
-                        "Number of LI entries in BOUNDS section is %d\n", num_li);
+                        "Number of LI entries in BOUNDS section is %d\n",
+                        num_li);
       if (num_ui)
         highsOutputUser(io, HighsMessageType::INFO,
-                        "Number of UI entries in BOUNDS section is %d\n", num_ui);
+                        "Number of UI entries in BOUNDS section is %d\n",
+                        num_ui);
       // Assign bounds to columns that remain binary by default
       for (int colidx = 0; colidx < numCol; colidx++) {
         if (col_binary[colidx]) {
@@ -799,7 +807,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIo& io, std::ifstream& file) {
 
     auto mit = colname2idx.find(marker);
     if (mit == colname2idx.end()) {
-      highsOutputUser(io, HighsMessageType::WARNING,
+      highsOutputUser(
+          io, HighsMessageType::WARNING,
           "BOUNDS section contains col %s not in COLS section: ignored\n",
           marker.c_str());
       continue;
@@ -945,7 +954,8 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsIo& io, std::ifstream& file) {
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      highsOutputUser(io, HighsMessageType::WARNING,
+      highsOutputUser(
+          io, HighsMessageType::WARNING,
           "RANGES section contains row %s not in ROWS    section: ignored\n",
           marker.c_str());
       continue;
@@ -972,7 +982,8 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsIo& io, std::ifstream& file) {
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        highsOutputUser(io, HighsMessageType::WARNING,
+        highsOutputUser(
+            io, HighsMessageType::WARNING,
             "RANGES section contains row %s not in ROWS    section: ignored\n",
             marker.c_str());
         continue;
