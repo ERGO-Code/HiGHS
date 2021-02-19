@@ -21,8 +21,8 @@ class HighsOptions;
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum class HighsMessageType { INFO, WARNING, ERROR };
-const char* const HighsMessageTypeTag[] = {"INFO", "WARNING", "ERROR"};
+enum class HighsMessageType { VERBOSE, INFO, WARNING, ERROR };
+const char* const HighsMessageTypeTag[] = {"", "", "WARNING: ", "ERROR: "};
 
 struct HighsIo {
   FILE* logging_file;

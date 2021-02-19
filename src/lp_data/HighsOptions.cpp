@@ -67,7 +67,7 @@ OptionStatus getOptionIndex(const HighsIo& io, const std::string& name,
   for (index = 0; index < num_options; index++)
     if (option_records[index]->name == name) return OptionStatus::OK;
   highsOutputUser(io, HighsMessageType::ERROR,
-                  "getOptionIndex: Option \"%s\" is unknown", name.c_str());
+                  "getOptionIndex: Option \"%s\" is unknown\n", name.c_str());
   return OptionStatus::UNKNOWN_OPTION;
 }
 
@@ -85,7 +85,7 @@ OptionStatus checkOptions(const HighsIo& io,
       if (check_name == name) {
         highsOutputUser(io, HighsMessageType::ERROR,
                         "checkOptions: Option %d (\"%s\") has the same name as "
-                        "option %d \"%s\"",
+                        "option %d \"%s\"\n",
                         index, name.c_str(), check_index, check_name.c_str());
         error_found = true;
       }
@@ -103,7 +103,7 @@ OptionStatus checkOptions(const HighsIo& io,
           if (check_option.value == value_pointer) {
             highsOutputUser(io, HighsMessageType::ERROR,
                             "checkOptions: Option %d (\"%s\") has the same "
-                            "value pointer as option %d (\"%s\")",
+                            "value pointer as option %d (\"%s\")\n",
                             index, option.name.c_str(), check_index,
                             check_option.name.c_str());
             error_found = true;
@@ -124,7 +124,7 @@ OptionStatus checkOptions(const HighsIo& io,
           if (check_option.value == value_pointer) {
             highsOutputUser(io, HighsMessageType::ERROR,
                             "checkOptions: Option %d (\"%s\") has the same "
-                            "value pointer as option %d (\"%s\")",
+                            "value pointer as option %d (\"%s\")\n",
                             index, option.name.c_str(), check_index,
                             check_option.name.c_str());
             error_found = true;
@@ -146,7 +146,7 @@ OptionStatus checkOptions(const HighsIo& io,
           if (check_option.value == value_pointer) {
             highsOutputUser(io, HighsMessageType::ERROR,
                             "checkOptions: Option %d (\"%s\") has the same "
-                            "value pointer as option %d (\"%s\")",
+                            "value pointer as option %d (\"%s\")\n",
                             index, option.name.c_str(), check_index,
                             check_option.name.c_str());
             error_found = true;
@@ -167,7 +167,7 @@ OptionStatus checkOptions(const HighsIo& io,
           if (check_option.value == value_pointer) {
             highsOutputUser(io, HighsMessageType::ERROR,
                             "checkOptions: Option %d (\"%s\") has the same "
-                            "value pointer as option %d (\"%s\")",
+                            "value pointer as option %d (\"%s\")\n",
                             index, option.name.c_str(), check_index,
                             check_option.name.c_str());
             error_found = true;
@@ -177,7 +177,7 @@ OptionStatus checkOptions(const HighsIo& io,
     }
   }
   if (error_found) return OptionStatus::ILLEGAL_VALUE;
-  highsOutputUser(io, HighsMessageType::INFO, "checkOptions: Options are OK");
+  highsOutputUser(io, HighsMessageType::INFO, "checkOptions: Options are OK\n");
   return OptionStatus::OK;
 }
 
@@ -185,7 +185,7 @@ OptionStatus checkOption(const HighsIo& io, const OptionRecordInt& option) {
   if (option.lower_bound > option.upper_bound) {
     highsOutputUser(
         io, HighsMessageType::ERROR,
-        "checkOption: Option \"%s\" has inconsistent bounds [%d, %d]",
+        "checkOption: Option \"%s\" has inconsistent bounds [%d, %d]\n",
         option.name.c_str(), option.lower_bound, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -193,7 +193,7 @@ OptionStatus checkOption(const HighsIo& io, const OptionRecordInt& option) {
       option.default_value > option.upper_bound) {
     highsOutputUser(io, HighsMessageType::ERROR,
                     "checkOption: Option \"%s\" has default value %d "
-                    "inconsistent with bounds [%d, %d]",
+                    "inconsistent with bounds [%d, %d]\n",
                     option.name.c_str(), option.default_value,
                     option.lower_bound, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
@@ -202,7 +202,7 @@ OptionStatus checkOption(const HighsIo& io, const OptionRecordInt& option) {
   if (value < option.lower_bound || value > option.upper_bound) {
     highsOutputUser(io, HighsMessageType::ERROR,
                     "checkOption: Option \"%s\" has value %d inconsistent with "
-                    "bounds [%d, %d]",
+                    "bounds [%d, %d]\n",
                     option.name.c_str(), value, option.lower_bound,
                     option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
@@ -214,7 +214,7 @@ OptionStatus checkOption(const HighsIo& io, const OptionRecordDouble& option) {
   if (option.lower_bound > option.upper_bound) {
     highsOutputUser(
         io, HighsMessageType::ERROR,
-        "checkOption: Option \"%s\" has inconsistent bounds [%g, %g]",
+        "checkOption: Option \"%s\" has inconsistent bounds [%g, %g]\n",
         option.name.c_str(), option.lower_bound, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -222,7 +222,7 @@ OptionStatus checkOption(const HighsIo& io, const OptionRecordDouble& option) {
       option.default_value > option.upper_bound) {
     highsOutputUser(io, HighsMessageType::ERROR,
                     "checkOption: Option \"%s\" has default value %g "
-                    "inconsistent with bounds [%g, %g]",
+                    "inconsistent with bounds [%g, %g]\n",
                     option.name.c_str(), option.default_value,
                     option.lower_bound, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
@@ -231,7 +231,7 @@ OptionStatus checkOption(const HighsIo& io, const OptionRecordDouble& option) {
   if (value < option.lower_bound || value > option.upper_bound) {
     highsOutputUser(io, HighsMessageType::ERROR,
                     "checkOption: Option \"%s\" has value %g inconsistent with "
-                    "bounds [%g, %g]",
+                    "bounds [%g, %g]\n",
                     option.name.c_str(), value, option.lower_bound,
                     option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
@@ -244,13 +244,13 @@ OptionStatus checkOptionValue(const HighsIo& io, OptionRecordInt& option,
   if (value < option.lower_bound) {
     highsOutputUser(io, HighsMessageType::WARNING,
                     "checkOptionValue: Value %d for option \"%s\" is below "
-                    "lower bound of %d",
+                    "lower bound of %d\n",
                     value, option.name.c_str(), option.lower_bound);
     return OptionStatus::ILLEGAL_VALUE;
   } else if (value > option.upper_bound) {
     highsOutputUser(io, HighsMessageType::WARNING,
                     "checkOptionValue: Value %d for option \"%s\" is above "
-                    "upper bound of %d",
+                    "upper bound of %d\n",
                     value, option.name.c_str(), option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -262,13 +262,13 @@ OptionStatus checkOptionValue(const HighsIo& io, OptionRecordDouble& option,
   if (value < option.lower_bound) {
     highsOutputUser(io, HighsMessageType::WARNING,
                     "checkOptionValue: Value %g for option \"%s\" is below "
-                    "lower bound of %g",
+                    "lower bound of %g\n",
                     value, option.name.c_str(), option.lower_bound);
     return OptionStatus::ILLEGAL_VALUE;
   } else if (value > option.upper_bound) {
     highsOutputUser(io, HighsMessageType::WARNING,
                     "checkOptionValue: Value %g for option \"%s\" is above "
-                    "upper bound of %g",
+                    "upper bound of %g\n",
                     value, option.name.c_str(), option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -301,7 +301,7 @@ OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::BOOL) {
     highsOutputUser(io, HighsMessageType::ERROR,
-                    "setOptionValue: Option \"%s\" cannot be assigned a bool",
+                    "setOptionValue: Option \"%s\" cannot be assigned a bool\n",
                     name.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -318,7 +318,7 @@ OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::INT) {
     highsOutputUser(io, HighsMessageType::ERROR,
-                    "setOptionValue: Option \"%s\" cannot be assigned an int",
+                    "setOptionValue: Option \"%s\" cannot be assigned an int\n",
                     name.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -336,7 +336,7 @@ OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::DOUBLE) {
     highsOutputUser(io, HighsMessageType::ERROR,
-                    "setOptionValue: Option \"%s\" cannot be assigned a double",
+                    "setOptionValue: Option \"%s\" cannot be assigned a double\n",
                     name.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -361,7 +361,7 @@ OptionStatus setOptionValue(HighsIo& io, const std::string& name,
     if (!return_status) {
       highsOutputUser(
           io, HighsMessageType::ERROR,
-          "setOptionValue: Value \"%s\" cannot be interpreted as a bool",
+          "setOptionValue: Value \"%s\" cannot be interpreted as a bool\n",
           value.c_str());
       return OptionStatus::ILLEGAL_VALUE;
     }
@@ -384,12 +384,12 @@ OptionStatus setOptionValue(HighsIo& io, const std::string& name,
       highsOutputUser(
           io, HighsMessageType::ERROR,
           "setOptionValue: Value = \"%s\" converts via sscanf as %d "
-          "by scanning %d of %d characters",
+          "by scanning %d of %d characters\n",
           value.c_str(), value_int, scanned_num_char, value_num_char);
       /*
         highsOutputUser(io, HighsMessageType::ERROR,
                         "setOptionValue: Value = \"%s\" converts via atoi as %d
-        " "so is %g as double, but as %g via atof", value.c_str(), value_int,
+        " "so is %g as double, but as %g via atof\n", value.c_str(), value_int,
         value_int_double, value_double);
       */
       return OptionStatus::ILLEGAL_VALUE;
@@ -526,7 +526,7 @@ OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
   if (type != HighsOptionType::BOOL) {
     highsOutputUser(
         io, HighsMessageType::ERROR,
-        "getOptionValue: Option \"%s\" requires value of type %s, not bool",
+        "getOptionValue: Option \"%s\" requires value of type %s, not bool\n",
         name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -545,7 +545,7 @@ OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
   if (type != HighsOptionType::INT) {
     highsOutputUser(
         io, HighsMessageType::ERROR,
-        "getOptionValue: Option \"%s\" requires value of type %s, not int",
+        "getOptionValue: Option \"%s\" requires value of type %s, not int\n",
         name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -564,7 +564,7 @@ OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
   if (type != HighsOptionType::DOUBLE) {
     highsOutputUser(
         io, HighsMessageType::ERROR,
-        "getOptionValue: Option \"%s\" requires value of type %s, not double",
+        "getOptionValue: Option \"%s\" requires value of type %s, not double\n",
         name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -583,7 +583,7 @@ OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
   if (type != HighsOptionType::STRING) {
     highsOutputUser(
         io, HighsMessageType::ERROR,
-        "getOptionValue: Option \"%s\" requires value of type %s, not string",
+        "getOptionValue: Option \"%s\" requires value of type %s, not string\n",
         name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }

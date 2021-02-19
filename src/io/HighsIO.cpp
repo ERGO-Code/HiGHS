@@ -15,7 +15,7 @@
 
 #include <cstdarg>
 #include <cstdio>
-#include <ctime>
+//#include <ctime>
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
@@ -30,15 +30,15 @@ void highsOutputUser(const HighsIo& io, const HighsMessageType type,
                      const char* format, ...) {
   if (!io.output_flag || (io.logging_file == NULL && !io.log_to_console))
     return;
+  // highsOutputUser should not be passed HighsMessageType::VERBOSE
+  assert(type != HighsMessageType::VERBOSE);
   va_list argptr;
   va_start(argptr, format);
   if (printmsgcb == NULL) {
-    if (type != HighsMessageType::INFO)
-      fprintf(io.logging_file, "%-7s: ", HighsMessageTypeTag[(int)type]);
+    fprintf(io.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
     vfprintf(io.logging_file, format, argptr);
     if (io.log_to_console) {
-      if (type != HighsMessageType::INFO)
-        fprintf(io.logging_file, "%-7s: ", HighsMessageTypeTag[(int)type]);
+      fprintf(io.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
       va_start(argptr, format);
       vfprintf(stdout, format, argptr);
     }
@@ -59,12 +59,10 @@ void highsOutputDev(const HighsIo& io, const HighsMessageType type,
   if (io.logging_file == NULL || !io.output_dev) return;
   va_list argptr;
   va_start(argptr, format);
-  if (type != HighsMessageType::INFO)
-    fprintf(io.logging_file, "%-7s: ", HighsMessageTypeTag[(int)type]);
+  fprintf(io.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
   vfprintf(io.logging_file, format, argptr);
   if (io.log_to_console) {
-    if (type != HighsMessageType::INFO)
-      fprintf(stdout, "%-7s: ", HighsMessageTypeTag[(int)type]);
+    fprintf(stdout, "%-9s", HighsMessageTypeTag[(int)type]);
     va_start(argptr, format);
     vfprintf(stdout, format, argptr);
   }
@@ -97,22 +95,16 @@ void HighsLogMessage(FILE* pass_logfile, HighsMessageType type,
     return;
   }
 
-  time_t rawtime;
-  struct tm* timeinfo;
-
-  time(&rawtime);
-  timeinfo = localtime(&rawtime);
   va_list argptr;
   va_start(argptr, format);
 
   if (logmsgcb == NULL) {
-    fprintf(pass_logfile, "%-7s: ", HighsMessageTypeTag[(int)type]);
+    fprintf(pass_logfile, "%-9s", HighsMessageTypeTag[(int)type]);
     vfprintf(pass_logfile, format, argptr);
     fprintf(pass_logfile, "\n");
   } else {
     int len;
-    len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ",
-                   timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
+    len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
                    HighsMessageTypeTag[(int)type]);
     if (len < (int)sizeof(msgbuffer))
       len +=

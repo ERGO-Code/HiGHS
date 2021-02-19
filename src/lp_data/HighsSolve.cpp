@@ -31,7 +31,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndSolutionParams(model);
-  highsOutputUser(options.io, HighsMessageType::INFO, message.c_str());
+  highsOutputUser(options.io, HighsMessageType::INFO, (message+"\n").c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified

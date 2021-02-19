@@ -143,7 +143,7 @@ HighsStatus solveLpSimplex(HighsModelObject& highs_model_object) {
                     solution_params.max_dual_infeasibility,
                     solution_params.sum_dual_infeasibility);
     if (ekk_instance.scaled_model_status_ == HighsModelStatus::OPTIMAL)
-      HighsLogMessage(highs_model_object.options_.io,
+      highsOutputUser(highs_model_object.options_.io,
 		      HighsMessageType::INFO,
           "Possibly re-solve with feasibility tolerances of %g "
           "primal and %g dual\n",
