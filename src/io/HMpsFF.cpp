@@ -207,7 +207,9 @@ HMpsFF::parsekey HMpsFF::parseDefault(std::ifstream& file) {
     HMpsFF::parsekey key = checkFirstWord(strline, s, e, word);
     if (key == HMpsFF::parsekey::NAME) {
       // Save name of the MPS file
-      mpsName = first_word(strline, e);
+      if (e < strline.length()) {
+        mpsName = first_word(strline, e);
+      }
       return HMpsFF::parsekey::NONE;
     }
     return key;
