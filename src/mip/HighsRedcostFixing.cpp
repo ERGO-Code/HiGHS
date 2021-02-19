@@ -85,7 +85,7 @@ void HighsRedcostFixing::propagateRedCost(const HighsMipSolver& mipsolver,
           double(ceil(gap / lpredcost[col] + localdomain.colUpper_[col] -
                       mipsolver.mipdata_->feastol));
 
-      if (newlb >= localdomain.colUpper_[col]) continue;
+      if (newlb <= localdomain.colLower_[col]) continue;
       assert(newlb > localdomain.colLower_[col]);
 
       localdomain.changeBound(HighsBoundType::Lower, col, newlb,
