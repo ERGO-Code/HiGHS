@@ -272,7 +272,7 @@ struct HighsOptionsStruct {
   bool log_to_console;
 
   // Advanced options
-  bool output_dev;
+  int output_dev;
   bool run_crossover;
   bool mps_parser_type_free;
   int keep_n_rows;
@@ -623,10 +623,10 @@ class HighsOptions : public HighsOptionsStruct {
     // Advanced options
     advanced = true;
 
-    record_bool =
-        new OptionRecordBool("output_dev", "Output development messages",
-                             advanced, &output_dev, false);
-    records.push_back(record_bool);
+    record_int =
+        new OptionRecordInt("output_dev", "Output development messages: 0 => none; 1 => info; 2 => verbose",
+			    advanced, &output_dev, 0, 0, 2);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool("run_crossover",
                                        "Run the crossover routine for IPX",

@@ -28,7 +28,7 @@ struct HighsIo {
   FILE* logging_file;
   bool* output_flag;
   bool* log_to_console;
-  bool* output_dev;
+  int* output_dev;
 };
 
 enum HighsPrintMessageLevel {
