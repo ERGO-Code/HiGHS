@@ -301,9 +301,14 @@ bool testAllDeleteKeep(int num_row) {
 
 void messageReportLp(const char* message, const HighsLp& lp) {
   HighsOptions options;
-  options.output = stdout;
-  options.message_level = ML_ALWAYS;
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+  bool output_flag = true;
+  bool log_to_console = false;
+  int output_dev = OUTPUT_DEV_INFO;
+  options.io.logging_file = stdout;
+  options.io.output_flag = &output_flag;
+  options.io.log_to_console = &log_to_console;
+  options.io.output_dev = &output_dev;
+  highsOutputDev(options.io, HighsMessageType::VERBOSE, 
                     "\nReporting LP: %s\n", message);
   reportLp(options, lp, 2);
 }
@@ -312,9 +317,14 @@ void messageReportMatrix(const char* message, const int num_col,
                          const int num_nz, const int* start, const int* index,
                          const double* value) {
   HighsOptions options;
-  options.output = stdout;
-  options.message_level = ML_ALWAYS;
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+  bool output_flag = true;
+  bool log_to_console = false;
+  int output_dev = OUTPUT_DEV_INFO;
+  options.io.logging_file = stdout;
+  options.io.output_flag = &output_flag;
+  options.io.log_to_console = &log_to_console;
+  options.io.output_dev = &output_dev;
+  highsOutputDev(options.io, HighsMessageType::VERBOSE, 
                     "\nReporting Matrix: %s\n", message);
   reportMatrix(options, message, num_col, num_nz, start, index, value);
 }

@@ -60,14 +60,28 @@ void highsOutputUser(const HighsIo& io, const HighsMessageType type,
 
 void highsOutputDev(const HighsIo& io, const HighsMessageType type,
                     const char* format, ...) {
-  if (io.logging_file == NULL || !io.output_dev) return;
+  if (io.logging_file == NULL || !*io.output_dev) return;
+  assert(*io.output_dev > OUTPUT_DEV_MIN);
+  if (type == HighsMessageType::VERBOSE && *io.output_dev < OUTPUT_DEV_VERBOSE) return;
+  assert(*io.output_dev == OUTPUT_DEV_INFO || *io.output_dev == OUTPUT_DEV_VERBOSE);
   va_list argptr;
   va_start(argptr, format);
-  vfprintf(io.logging_file, format, argptr);
-  if (io.log_to_console) {
-    va_start(argptr, format);
-    vfprintf(stdout, format, argptr);
+  if (logmsgcb == NULL) {
+    vfprintf(io.logging_file, format, argptr);
+    if (io.log_to_console) {
+      va_start(argptr, format);
+      vfprintf(stdout, format, argptr);
+    }
+  } else {
+    int len;
+    len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+    if (len >= (int)sizeof(msgbuffer)) {
+      // Output was truncated: for now just ensure string is null-terminated
+      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    }
+    logmsgcb(type, msgbuffer, msgcb_data);
   }
+  va_end(argptr);
 }
 
 void HighsPrintMessage(FILE* pass_output, const int pass_message_level,

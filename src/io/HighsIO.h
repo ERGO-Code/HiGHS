@@ -23,6 +23,13 @@ class HighsOptions;
  */
 enum class HighsMessageType { VERBOSE, INFO, WARNING, ERROR };
 const char* const HighsMessageTypeTag[] = {"", "", "WARNING: ", "ERROR: "};
+enum OutputDevLevel {
+		     OUTPUT_DEV_MIN = 0,
+		     OUTPUT_DEV_NONE = OUTPUT_DEV_MIN, // 0
+		     OUTPUT_DEV_INFO, // 1
+		     OUTPUT_DEV_VERBOSE, // 2
+		     OUTPUT_DEV_MAX = OUTPUT_DEV_VERBOSE
+};
 
 struct HighsIo {
   FILE* logging_file;

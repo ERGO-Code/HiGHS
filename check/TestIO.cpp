@@ -24,8 +24,8 @@ static void mylogmsgcb(HighsMessageType type, const char* msg,
 TEST_CASE("msgcb", "[highs_io]") {
   int dummydata = 42;
   bool output_flag = true;
-  bool log_to_console = true;
-  int output_dev = 0;
+  bool log_to_console = false;
+  int output_dev = OUTPUT_DEV_INFO;
   HighsIo io;
   io.logging_file = stdout;
   io.output_flag = &output_flag;
@@ -34,22 +34,22 @@ TEST_CASE("msgcb", "[highs_io]") {
 
   HighsSetMessageCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
 
-  int message_level = ML_MINIMAL;
-  HighsPrintMessage(stdout, message_level, 4, "Hi %s!", "HiGHS");
+  highsOutputDev(io, HighsMessageType::INFO, "Hi %s!", "HiGHS");
   REQUIRE(strcmp(printedmsg, "Hi HiGHS!") == 0);
   REQUIRE(receiveddata == &dummydata);
 
-  /* printed at level 4 when level is 3 should not print */
+  // Check that nothing is printed if the type is VERBOSE when
+  // output_dev is OUTPUT_DEV_INFO;
   *printedmsg = '\0';
-  message_level = 3;
-  HighsPrintMessage(stdout, message_level, 4, "Hi %s!", "HiGHS");
+  highsOutputDev(io, HighsMessageType::VERBOSE, "Hi %s!", "HiGHS");
   REQUIRE(*printedmsg == '\0');
 
   {
     char longmsg[sizeof(printedmsg)];
     memset(longmsg, 'H', sizeof(longmsg));
-    longmsg[sizeof(longmsg) - 1] = '\0';
-    HighsPrintMessage(stdout, message_level, 2, longmsg);
+    longmsg[sizeof(longmsg) - 2] = '\0';
+    longmsg[sizeof(longmsg) - 1] = '\n';
+    highsOutputDev(io, HighsMessageType::INFO, longmsg);
     REQUIRE(strncmp(printedmsg, "HHHH", 4) == 0);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }

@@ -625,7 +625,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "output_dev",
         "Output development messages: 0 => none; 1 => info; 2 => verbose",
-        advanced, &output_dev, 0, 0, 2);
+        advanced, &output_dev, OUTPUT_DEV_MIN, OUTPUT_DEV_NONE, OUTPUT_DEV_MAX);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("run_crossover",
