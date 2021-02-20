@@ -27,8 +27,8 @@ void HighsDebugSol::activate() {
   if (!mipsolver->submip &&
       debugSolObjective <= mipsolver->mipdata_->upper_limit &&
       !mipsolver->options_mip_->mip_debug_solution_file.empty()) {
-    HighsPrintMessage(mipsolver->options_mip_->output,
-                      mipsolver->options_mip_->message_level, ML_MINIMAL,
+    highsOutputDev(mipsolver->options_mip_->io,
+                      HighsMessageType::INFO,
                       "reading debug solution file %s\n",
                       mipsolver->options_mip_->mip_debug_solution_file.c_str());
     std::ifstream file(mipsolver->options_mip_->mip_debug_solution_file);
@@ -51,8 +51,8 @@ void HighsDebugSol::activate() {
         auto it = nametoidx.find(varname);
         if (it != nametoidx.end()) {
           file >> varval;
-          HighsPrintMessage(mipsolver->options_mip_->output,
-                            mipsolver->options_mip_->message_level, ML_MINIMAL,
+          highsOutputDev(mipsolver->options_mip_->io,
+			 HighsMessageType::INFO,
                             "%s = %g\n", varname.c_str(), varval);
           debugSolution[it->second] = varval;
         }

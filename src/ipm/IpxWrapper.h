@@ -540,14 +540,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (options.output == NULL) parameters.display = 0;
   // Set debug according to message_level
   parameters.debug = 0;
-  if (options.message_level % HighsPrintMessageLevel::ML_MINIMAL == 0) {
-    // Default options.message_level is
-    // HighsPrintMessageLevel::ML_MINIMAL, yielding default setting
-    // debug = 0
+  if (options.output_dev == OUTPUT_DEV_NONE) {
+    // Default options.output_dev setting is OUTPUT_DEV_NONE, yielding
+    // default setting debug = 0
     parameters.debug = 0;
-  } else if (options.message_level % HighsPrintMessageLevel::ML_DETAILED == 0) {
+  } else if (options.output_dev == OUTPUT_DEV_INFO) {
     parameters.debug = 3;
-  } else if (options.message_level % HighsPrintMessageLevel::ML_VERBOSE == 0) {
+  } else if (options.output_dev == OUTPUT_DEV_VERBOSE) {
     parameters.debug = 4;
   }
   // Just test feasibility and optimality tolerances for now

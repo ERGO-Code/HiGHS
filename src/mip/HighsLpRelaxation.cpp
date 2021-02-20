@@ -372,8 +372,8 @@ void HighsLpRelaxation::storeDualInfProof() {
   lpsolver.getDualRay(hasdualproof);
 
   if (!hasdualproof) {
-    HighsPrintMessage(mipsolver.options_mip_->output,
-                      mipsolver.options_mip_->message_level, ML_VERBOSE,
+    highsOutputDev(mipsolver.options_mip_->io,
+		   HighsMessageType::VERBOSE,
                       "no dual ray stored\n");
     return;
   }
