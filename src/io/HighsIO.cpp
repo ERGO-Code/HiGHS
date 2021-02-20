@@ -119,3 +119,19 @@ void HighsSetIO(HighsOptions& options) {
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;
 }
+
+void highsReportIo(const HighsIo& io) {
+  printf("\nHighs IO settings\n");
+  if (io.logging_file == NULL) {
+    printf("   logging_file = NULL\n");
+  } else {
+    printf("   logging_file = Not NULL\n");
+  }
+  
+  bool output_flag = *io.output_flag;
+  bool log_to_console = *io.log_to_console;
+  int output_dev = *io.output_dev;
+  printf("   output_flag = %d\n", output_flag);
+  printf("   log_to_console = %d\n", log_to_console);
+  printf("   output_dev = %d\n\n", output_dev);
+}

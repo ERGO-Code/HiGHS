@@ -84,4 +84,6 @@ void HighsSetMessageCallback(
 void HighsSetIO(HighsOptions& options  //!< the options
 );
 
+void highsReportIo(const HighsIo& io);
+
 #endif

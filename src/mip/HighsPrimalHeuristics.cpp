@@ -594,8 +594,9 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.setHighsOptionValue("solver", "ipm");
   ipm.setHighsOptionValue("run_crossover", false);
   ipm.setHighsOptionValue("presolve", "off");
-  ipm.setHighsLogfile(nullptr);
-  ipm.setHighsOutput(nullptr);
+  ipm.setHighsOptionValue("output_flag", false);
+  //  ipm.setHighsLogfile(nullptr);
+  //  ipm.setHighsOutput(nullptr);
   HighsLp lpmodel(
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);

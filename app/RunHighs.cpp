@@ -202,6 +202,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
 }
 
 HighsStatus callMipSolver(HighsOptions& use_options, const HighsLp& lp) {
+  use_options.output_dev = OUTPUT_DEV_INFO;
   HighsMipSolver solver(use_options, lp);
   solver.run();
 

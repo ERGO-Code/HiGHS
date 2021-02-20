@@ -538,6 +538,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Set display according to output
   parameters.display = 1;
   if (options.output == NULL) parameters.display = 0;
+  if (!options.output_flag) parameters.display = 0;
   // Set debug according to message_level
   parameters.debug = 0;
   if (options.output_dev == OUTPUT_DEV_NONE) {
