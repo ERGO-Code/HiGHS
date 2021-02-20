@@ -41,6 +41,9 @@ enum HighsPrintMessageLevel {
   ML_MAX = ML_ALWAYS
 };
 
+/**
+ * @brief For _single-line_ user logging with message type notification
+ */
 // Printing format: must contain exactly one "\n" at end of format
 void highsOutputUser(const HighsIo& io, const HighsMessageType type,
                      const char* format, ...);
@@ -57,34 +60,6 @@ void HighsPrintMessage(
     const int level,  //!< The message level: Use | operator to display at
     //!< level NONE, VERBOSE, DETAILED, MINIMAL
     const char* format, ...);
-
-/**
- * @brief Used to direct _single-line_ logging output to FILE* logfile,
- * with timestamp and message type notification
- */
-void HighsLogMessage(FILE* pass_logfile,
-                     const HighsMessageType type,  //!< The message type
-                     const char* format, ...);
-
-/*
- * @brief sets the file used for HighsLogMessage
- */
-void HighsSetLogfile(FILE* logfile  //!< The output file: default stdout
-);
-
-/*
- * @brief sets the file used for HighsPrintMessage
- */
-void HighsSetOutput(FILE* output  //!< The output file: default stdout
-);
-
-/*
- * @brief sets the level used for HighsPrintMessage
- */
-void HighsSetMessagelevel(
-    int level  //!< The message level: Use | operator to display at level NONE,
-               //!< VERBOSE, DETAILED, MINIMAL. default NONE
-);
 
 /*
  * @brief sets the callbacks used to print output and and log

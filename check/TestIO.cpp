@@ -23,6 +23,14 @@ static void mylogmsgcb(HighsMessageType type, const char* msg,
 
 TEST_CASE("msgcb", "[highs_io]") {
   int dummydata = 42;
+  bool output_flag = true;
+  bool log_to_console = true;
+  int output_dev = 0;
+  HighsIo io;
+  io.logging_file = stdout;
+  io.output_flag = &output_flag;
+  io.log_to_console = &log_to_console;
+  io.output_dev = &output_dev;
 
   HighsSetMessageCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
 
@@ -46,7 +54,7 @@ TEST_CASE("msgcb", "[highs_io]") {
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }
 
-  HighsLogMessage(stdout, HighsMessageType::INFO, "Hello %s!", "HiGHS");
+  highsOutputUser(io, HighsMessageType::INFO, "Hello %s!\n", "HiGHS");
   REQUIRE(strlen(printedmsg) > 9);
   REQUIRE(strcmp(printedmsg, "         Hello HiGHS!\n") == 0);
   REQUIRE(receiveddata == &dummydata);
@@ -54,8 +62,9 @@ TEST_CASE("msgcb", "[highs_io]") {
   {
     char longmsg[sizeof(printedmsg)];
     memset(longmsg, 'H', sizeof(longmsg));
-    longmsg[sizeof(longmsg) - 1] = '\0';
-    HighsLogMessage(stdout, HighsMessageType::WARNING, longmsg);
+    longmsg[sizeof(longmsg) - 2] = '\0';
+    longmsg[sizeof(longmsg) - 1] = '\n';
+    highsOutputUser(io, HighsMessageType::WARNING, longmsg);
     REQUIRE(strstr(printedmsg, "HHHH") != NULL);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }

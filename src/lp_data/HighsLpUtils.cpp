@@ -2186,7 +2186,7 @@ void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
     elemdelta = -elemdelta;
     elemsignchar = '+';
   }
-  HighsPrintMessage(options.logfile, options.message_level, ML_ALWAYS,
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
                     "elements %d(%c%d)\n",
                     num_row_to, (num_row_from - num_row_to), num_col_to,
@@ -2214,7 +2214,7 @@ void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
     num_els_to = num_els_from;
     message = "- Not reduced";
   }
-  HighsPrintMessage(options.logfile, options.message_level, ML_ALWAYS,
+  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
                     "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
                     "elements %d(-%d) %s\n",
                     num_row_to, (num_row_from - num_row_to), num_col_to,

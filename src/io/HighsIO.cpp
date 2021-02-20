@@ -34,7 +34,7 @@ void highsOutputUser(const HighsIo& io, const HighsMessageType type,
   assert(type != HighsMessageType::VERBOSE);
   va_list argptr;
   va_start(argptr, format);
-  if (printmsgcb == NULL) {
+  if (logmsgcb == NULL) {
     fprintf(io.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
     vfprintf(io.logging_file, format, argptr);
     if (io.log_to_console) {
@@ -44,12 +44,16 @@ void highsOutputUser(const HighsIo& io, const HighsMessageType type,
     }
   } else {
     int len;
-    len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+    len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
+                   HighsMessageTypeTag[(int)type]);
+    if (len < (int)sizeof(msgbuffer))
+      len +=
+          vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
     if (len >= (int)sizeof(msgbuffer)) {
       // Output was truncated: for now just ensure string is null-terminated
       msgbuffer[sizeof(msgbuffer) - 1] = '\0';
     }
-    printmsgcb(0, msgbuffer, msgcb_data);
+    logmsgcb(type, msgbuffer, msgcb_data);
   }
   va_end(argptr);
 }
@@ -59,10 +63,8 @@ void highsOutputDev(const HighsIo& io, const HighsMessageType type,
   if (io.logging_file == NULL || !io.output_dev) return;
   va_list argptr;
   va_start(argptr, format);
-  fprintf(io.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
   vfprintf(io.logging_file, format, argptr);
   if (io.log_to_console) {
-    fprintf(stdout, "%-9s", HighsMessageTypeTag[(int)type]);
     va_start(argptr, format);
     vfprintf(stdout, format, argptr);
   }
@@ -87,38 +89,6 @@ void HighsPrintMessage(FILE* pass_output, const int pass_message_level,
     }
     va_end(argptr);
   }
-}
-
-void HighsLogMessage(FILE* pass_logfile, HighsMessageType type,
-                     const char* format, ...) {
-  if (pass_logfile == NULL) {
-    return;
-  }
-
-  va_list argptr;
-  va_start(argptr, format);
-
-  if (logmsgcb == NULL) {
-    fprintf(pass_logfile, "%-9s", HighsMessageTypeTag[(int)type]);
-    vfprintf(pass_logfile, format, argptr);
-    fprintf(pass_logfile, "\n");
-  } else {
-    int len;
-    len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
-                   HighsMessageTypeTag[(int)type]);
-    if (len < (int)sizeof(msgbuffer))
-      len +=
-          vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
-    if (len < (int)sizeof(msgbuffer) - 1) {
-      msgbuffer[len] = '\n';
-      ++len;
-      msgbuffer[len] = '\0';
-    } else
-      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
-    logmsgcb(type, msgbuffer, msgcb_data);
-  }
-
-  va_end(argptr);
 }
 
 void HighsSetMessageCallback(

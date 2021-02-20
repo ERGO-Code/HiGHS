@@ -156,11 +156,10 @@ void solveHyper(const int Hsize, const int* Hlookup, const int* HpivotIndex,
 void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
                     const int* Aindex_, const double* Avalue_, int* baseIndex_,
                     double pivot_threshold_, double pivot_tolerance_,
-                    int highs_debug_level_,
-		    bool output_flag_, FILE* logfile_, 
-		    bool log_to_console_, int output_dev_,
+                    int highs_debug_level_, bool output_flag_,
+                    FILE* logging_file_, bool log_to_console_, int output_dev_,
                     const bool use_original_HFactor_logic_,
-		    const int updateMethod_) {
+                    const int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -173,7 +172,7 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   pivot_tolerance =
       max(min_pivot_tolerance, min(pivot_tolerance_, max_pivot_tolerance));
   highs_debug_level = highs_debug_level_;
-  io.logging_file = logfile_;
+  io.logging_file = logging_file_;
   io.output_flag = &output_flag_;
   io.log_to_console = &log_to_console_;
   io.output_dev = &output_dev_;
@@ -380,8 +379,9 @@ void HFactor::buildSimple() {
         iRow = lc_iRow;
       } else {
         highsOutputUser(io, HighsMessageType::ERROR,
-            "INVERT Error: Found a logical column with pivot already in row %d\n",
-            lc_iRow);
+                        "INVERT Error: Found a logical column with pivot "
+                        "already in row %d\n",
+                        lc_iRow);
         MRcountb4[lc_iRow]++;
         Bindex[BcountX] = lc_iRow;
         Bvalue[BcountX++] = 1.0;
@@ -398,7 +398,8 @@ void HFactor::buildSimple() {
         iRow = lc_iRow;
       } else {
         if (unit_col)
-          highsOutputUser(io, HighsMessageType::ERROR,
+          highsOutputUser(
+              io, HighsMessageType::ERROR,
               "INVERT Error: Found a second unit column with pivot in row %d\n",
               lc_iRow);
         for (int k = start; k < start + count; k++) {

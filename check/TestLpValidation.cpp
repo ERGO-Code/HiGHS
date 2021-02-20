@@ -16,7 +16,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   options.message_level = ML_ALWAYS;
   if (!dev_run) {
     options.output = NULL;
-    options.logfile = NULL;
+    options.output_flag = false;
   }
 
   Avgas avgas;

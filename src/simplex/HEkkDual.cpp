@@ -481,7 +481,8 @@ void HEkkDual::initSlice(const int initial_num_slice) {
   if (slice_num < 1) slice_num = 1;
   assert(slice_num <= HIGHS_SLICED_LIMIT);
   if (slice_num > HIGHS_SLICED_LIMIT) {
-    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+    highsOutputUser(
+        ekk_instance_.options_.io, HighsMessageType::WARNING,
         "WARNING: %d = slice_num > HIGHS_SLICED_LIMIT = %d so truncating "
         "slice_num\n",
         slice_num, HIGHS_SLICED_LIMIT);
@@ -670,7 +671,8 @@ void HEkkDual::solvePhase1() {
     if (ekk_instance_.simplex_info_.costs_perturbed) {
       // Clean up perturbation
       cleanup();
-      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+      highsOutputUser(
+          ekk_instance_.options_.io, HighsMessageType::WARNING,
           "Cleaning up cost perturbation when unbounded in phase 1\n");
       if (dualInfeasCount == 0) {
         // No dual infeasibilities and (since unbounded) at least zero
@@ -2291,7 +2293,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+      highsOutputUser(
+          ekk_instance_.options_.io, HighsMessageType::WARNING,
           "Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iCol, exact_dual, simplex_info.workDual_[iCol], residual);
     dual_objective += simplex_info.workValue_[iCol] * exact_dual;
@@ -2304,14 +2307,16 @@ double HEkkDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+      highsOutputUser(
+          ekk_instance_.options_.io, HighsMessageType::WARNING,
           "Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iRow, exact_dual, simplex_info.workDual_[iVar], residual);
     dual_objective += simplex_info.workValue_[iVar] * exact_dual;
   }
   double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
   if (relative_delta > 1e-3)
-    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+    highsOutputUser(
+        ekk_instance_.options_.io, HighsMessageType::WARNING,
         "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g\n",
         norm_dual, norm_delta_dual, relative_delta);
   return dual_objective;

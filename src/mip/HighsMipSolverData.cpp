@@ -773,7 +773,8 @@ void HighsMipSolverData::evaluateRootNode() {
                     "\nsolving root node LP relaxation\n");
   lp.loadModel();
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
-  lp.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
+  lp.getLpSolver().setHighsOptionValue("log_file",
+                                       mipsolver.options_mip_->log_file);
   lp.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
   HighsLpRelaxation::Status status = lp.resolveLp();
 

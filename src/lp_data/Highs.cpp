@@ -78,10 +78,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::setHighsLogfile(FILE* logfile) {
-  options_.logfile = logfile;
-  return HighsStatus::OK;
-}
+HighsStatus Highs::setHighsLogfile(FILE* logfile) { return HighsStatus::OK; }
 
 HighsStatus Highs::setHighsOutput(FILE* output) {
   options_.output = output;

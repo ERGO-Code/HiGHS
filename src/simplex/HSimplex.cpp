@@ -446,9 +446,10 @@ void getUnscaledInfeasibilitiesAndNewTolerances(
           //          highsOutputUser(options.io, HighsMessageType::INFO,
           //                          "Var %6d (%6d, %6d): [%11.4g, %11.4g,
           //                          %11.4g] %11.4g
-          //          s=%11.4g %11.4g: Mu = %g\n", iVar, iCol, iRow, scaled_lower,
-          //          scaled_value, scaled_upper, scaled_dual_infeasibility,
-          //          scale_mu, dual_infeasibility, multiplier);
+          //          s=%11.4g %11.4g: Mu = %g\n", iVar, iCol, iRow,
+          //          scaled_lower, scaled_value, scaled_upper,
+          //          scaled_dual_infeasibility, scale_mu, dual_infeasibility,
+          //          multiplier);
           new_dual_feasibility_tolerance =
               min(multiplier, new_dual_feasibility_tolerance);
         }

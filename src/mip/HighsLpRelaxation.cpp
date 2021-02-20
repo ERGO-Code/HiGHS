@@ -753,9 +753,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     default:
       // printf("error: lpsolver stopped with unexpected status %d\n",
       //        (int)scaledmodelstatus);
-      highsOutputUser(
-          mipsolver.options_mip_->io, HighsMessageType::WARNING,
-          "LP solved to unexpected status (%d)\n", (int)scaledmodelstatus);
+      highsOutputUser(mipsolver.options_mip_->io, HighsMessageType::WARNING,
+                      "LP solved to unexpected status (%d)\n",
+                      (int)scaledmodelstatus);
       return Status::Error;
   }
 }

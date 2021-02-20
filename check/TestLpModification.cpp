@@ -369,7 +369,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   if (!dev_run) {
     avgas_highs.setHighsLogfile();
     avgas_highs.setHighsOutput();
-    options.logfile = NULL;
+    options.output_flag = false;
   }
   return_status = avgas_highs.passModel(avgas_lp);
   HighsStatusReport(options.io, "avgas_highs.passModel(avgas_lp)",

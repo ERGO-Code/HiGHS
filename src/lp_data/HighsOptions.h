@@ -308,8 +308,7 @@ struct HighsOptionsStruct {
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
-  // Options for HighsPrintMessage and HighsLogMessage
-  FILE* logfile = stdout;
+  // Options for HighsPrintMessage
   FILE* output = stdout;
   FILE* logging_file = NULL;
 

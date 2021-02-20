@@ -571,7 +571,8 @@ void HEkkPrimal::rebuild() {
   if (simplex_info.num_primal_infeasibility > 0) {
     // Primal infeasibilities so should be in phase 1
     if (solvePhase == SOLVE_PHASE_2) {
-      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+      highsOutputUser(
+          ekk_instance_.options_.io, HighsMessageType::WARNING,
           "HEkkPrimal::rebuild switching back to phase 1 from phase 2\n");
       solvePhase = SOLVE_PHASE_1;
     }
@@ -2211,7 +2212,8 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
     bool removed_nonbasic_free_column =
         nonbasic_free_col_set.remove(variable_in);
     if (!removed_nonbasic_free_column) {
-      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::ERROR,
+      highsOutputUser(
+          ekk_instance_.options_.io, HighsMessageType::ERROR,
           "HEkkPrimal::phase1update failed to remove nonbasic free column %d\n",
           variable_in);
       assert(removed_nonbasic_free_column);
