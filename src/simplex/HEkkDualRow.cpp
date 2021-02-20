@@ -227,8 +227,8 @@ int HEkkDualRow::chooseFinal() {
 
   int move_out = workDelta < 0 ? -1 : 1;
   if (breakIndex < 0) {
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-                    "Suspected dual unboundedness identified in chooseFinal");
+    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+                    "Suspected dual unboundedness identified in chooseFinal\n");
     return 1;
   }
   assert(breakIndex >= 0);

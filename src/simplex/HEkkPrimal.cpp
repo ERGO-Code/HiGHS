@@ -24,9 +24,9 @@ HighsStatus HEkkPrimal::solve() {
   // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
   if (!positive_num_row) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
+    highsOutputUser(options.io, HighsMessageType::ERROR,
                     "HEkkPrimal::solve called for LP with non-positive (%d) "
-                    "number of constraints",
+                    "number of constraints\n",
                     ekk_instance_.simplex_lp_.numRow_);
     assert(positive_num_row);
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
@@ -35,8 +35,8 @@ HighsStatus HEkkPrimal::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::Warning);
 
   if (!simplex_lp_status.has_invert) {
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "HEkkPrimal::solve called without INVERT");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "HEkkPrimal::solve called without INVERT\n");
     assert(simplex_lp_status.has_fresh_invert);
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
@@ -274,8 +274,8 @@ void HEkkPrimal::initialise() {
       ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
   FILE* output = ekk_instance_.options_.output;
   if (num_free_col) {
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
-                    "HEkkPrimal:: LP has %d free columns", num_free_col);
+    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::INFO,
+                    "HEkkPrimal:: LP has %d free columns\n", num_free_col);
     nonbasic_free_col_set.setup(num_free_col, num_tot, output, debug);
   }
   // Set up the hyper-sparse CHUZC data
@@ -571,9 +571,8 @@ void HEkkPrimal::rebuild() {
   if (simplex_info.num_primal_infeasibility > 0) {
     // Primal infeasibilities so should be in phase 1
     if (solvePhase == SOLVE_PHASE_2) {
-      HighsLogMessage(
-          ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-          "HEkkPrimal::rebuild switching back to phase 1 from phase 2");
+      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+          "HEkkPrimal::rebuild switching back to phase 1 from phase 2\n");
       solvePhase = SOLVE_PHASE_1;
     }
     phase1ComputeDual();
@@ -659,8 +658,8 @@ void HEkkPrimal::iterate() {
   if (solvePhase == SOLVE_PHASE_1) {
     phase1ChooseRow();
     if (row_out < 0) {
-      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-                      "Primal phase 1 choose row failed");
+      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::ERROR,
+                      "Primal phase 1 choose row failed\n");
       solvePhase = SOLVE_PHASE_ERROR;
       return;
     }
@@ -2212,9 +2211,8 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
     bool removed_nonbasic_free_column =
         nonbasic_free_col_set.remove(variable_in);
     if (!removed_nonbasic_free_column) {
-      HighsLogMessage(
-          ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-          "HEkkPrimal::phase1update failed to remove nonbasic free column %d",
+      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::ERROR,
+          "HEkkPrimal::phase1update failed to remove nonbasic free column %d\n",
           variable_in);
       assert(removed_nonbasic_free_column);
     }

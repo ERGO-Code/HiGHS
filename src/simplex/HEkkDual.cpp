@@ -62,9 +62,9 @@ HighsStatus HEkkDual::solve() {
   // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
   if (!positive_num_row) {
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
+    highsOutputUser(options.io, HighsMessageType::ERROR,
                     "HEkkDual::solve called for LP with non-positive (%d) "
-                    "number of constraints",
+                    "number of constraints\n",
                     ekk_instance_.simplex_lp_.numRow_);
     assert(positive_num_row);
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
@@ -83,8 +83,8 @@ HighsStatus HEkkDual::solve() {
 
   bool dual_info_ok = dualInfoOk(ekk_instance_.simplex_lp_);
   if (!dual_info_ok) {
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-                    "HPrimalDual::solve has error in dual information");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "HPrimalDual::solve has error in dual information\n");
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
 
@@ -125,8 +125,8 @@ HighsStatus HEkkDual::solve() {
                                perturb_costs);
   assert(simplex_lp_status.has_invert);
   if (!simplex_lp_status.has_invert) {
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::ERROR,
-                    "HPrimalDual:: Should enter solve with INVERT");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "HPrimalDual:: Should enter solve with INVERT\n");
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
   }
   // Consider initialising edge weights
@@ -321,8 +321,8 @@ HighsStatus HEkkDual::solve() {
     // primal unboundedness Cleanup with phase 1 for new primal code
     ekk_instance_.computePrimalObjectiveValue();
 
-    HighsLogMessage(options.logfile, HighsMessageType::ERROR,
-                    "Primal simplex solver unavailable");
+    highsOutputUser(options.io, HighsMessageType::ERROR,
+                    "Primal simplex solver unavailable\n");
     //    if (scaled_model_status == HighsModelStatus::OPTIMAL) {
     //      if
     //      (ekk_instance_.simplex_info_..num_primal_infeasibility) {
@@ -438,9 +438,9 @@ void HEkkDual::initParallel() {
     const int pass_num_slice = num_threads - 2;
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
-      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
+      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
                       "SIP trying to use using %d slices due to number of "
-                      "threads (%d) being too small: results unpredictable",
+                      "threads (%d) being too small: results unpredictable\n",
                       pass_num_slice, num_threads);
     }
     initSlice(pass_num_slice);
@@ -460,9 +460,9 @@ void HEkkDual::initParallel() {
     const int pass_num_slice = max(multi_num - 1, 1);
     assert(pass_num_slice > 0);
     if (pass_num_slice <= 0) {
-      HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::WARNING,
+      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
                       "PAMI trying to use using %d slices due to number of "
-                      "threads (%d) being too small: results unpredictable",
+                      "threads (%d) being too small: results unpredictable\n",
                       pass_num_slice, num_threads);
     }
     initSlice(pass_num_slice);
@@ -481,10 +481,9 @@ void HEkkDual::initSlice(const int initial_num_slice) {
   if (slice_num < 1) slice_num = 1;
   assert(slice_num <= HIGHS_SLICED_LIMIT);
   if (slice_num > HIGHS_SLICED_LIMIT) {
-    HighsLogMessage(
-        ekk_instance_.options_.logfile, HighsMessageType::WARNING,
+    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
         "WARNING: %d = slice_num > HIGHS_SLICED_LIMIT = %d so truncating "
-        "slice_num",
+        "slice_num\n",
         slice_num, HIGHS_SLICED_LIMIT);
     slice_num = HIGHS_SLICED_LIMIT;
   }
@@ -671,9 +670,8 @@ void HEkkDual::solvePhase1() {
     if (ekk_instance_.simplex_info_.costs_perturbed) {
       // Clean up perturbation
       cleanup();
-      HighsLogMessage(
-          ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-          "Cleaning up cost perturbation when unbounded in phase 1");
+      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+          "Cleaning up cost perturbation when unbounded in phase 1\n");
       if (dualInfeasCount == 0) {
         // No dual infeasibilities and (since unbounded) at least zero
         // phase 1 objective so go to phase 2
@@ -1983,9 +1981,9 @@ void HEkkDual::assessPhase1Optimality() {
   //
   // What if the dual objective is positive but tiny?
   if (fabs(simplex_info.dual_objective_value) <= primal_feasibility_tolerance)
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
+    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::INFO,
                     "Optimal in phase 1 but not jumping to phase 2 since "
-                    "dual objective is %10.4g: Costs perturbed = %d",
+                    "dual objective is %10.4g: Costs perturbed = %d\n",
                     simplex_info.dual_objective_value,
                     ekk_instance_.simplex_info_.costs_perturbed);
   if (ekk_instance_.simplex_info_.costs_perturbed) {
@@ -1998,9 +1996,9 @@ void HEkkDual::assessPhase1Optimality() {
       if (simplex_info.dual_objective_value == 0) {
         // No dual infeasibilities (with respect to phase 2 bounds) so
         // go to phase 2
-        HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
+        highsOutputUser(ekk_instance_.options_.io, HighsMessageType::INFO,
                         "LP is dual feasible after removing cost perturbations "
-                        "so go to phase 2");
+                        "so go to phase 2\n");
       } else {
         // LP is dual infeasible if the dual objective is sufficiently
         // positive, so no conclusions on the primal LP can be deduced
@@ -2119,9 +2117,9 @@ void HEkkDual::reportOnPossibleLpDualInfeasibility() {
   } else {
     lp_dual_status = "feasible";
   }
-  HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
+  highsOutputUser(ekk_instance_.options_.io, HighsMessageType::INFO,
                   "LP is dual %s with dual phase 1 objective %10.4g and num / "
-                  "max / sum dual infeasibilities = %d / %9.4g / %9.4g",
+                  "max / sum dual infeasibilities = %d / %9.4g / %9.4g\n",
                   lp_dual_status.c_str(), simplex_info.dual_objective_value,
                   analysis.num_dual_phase_1_lp_dual_infeasibility,
                   analysis.max_dual_phase_1_lp_dual_infeasibility,
@@ -2243,9 +2241,9 @@ bool HEkkDual::reachedExactDualObjectiveValueUpperBound() {
     } else {
       action = "No   DualUB bailout";
     }
-    HighsLogMessage(ekk_instance_.options_.logfile, HighsMessageType::INFO,
+    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::INFO,
                     "%s on iteration %d: Density %11.4g; Frequency %d: "
-                    "Residual(Perturbed = %g; Exact = %g)",
+                    "Residual(Perturbed = %g; Exact = %g)\n",
                     action.c_str(), ekk_instance_.iteration_count_,
                     use_row_ap_density, check_frequency,
                     perturbed_value_residual, exact_value_residual);
@@ -2293,9 +2291,8 @@ double HEkkDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      HighsLogMessage(
-          ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-          "Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g",
+      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+          "Col %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iCol, exact_dual, simplex_info.workDual_[iCol], residual);
     dual_objective += simplex_info.workValue_[iCol] * exact_dual;
   }
@@ -2307,17 +2304,15 @@ double HEkkDual::computeExactDualObjectiveValue() {
     norm_dual += fabs(exact_dual);
     norm_delta_dual += residual;
     if (residual > 1e10)
-      HighsLogMessage(
-          ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-          "Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g",
+      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+          "Row %4d: ExactDual = %11.4g; WorkDual = %11.4g; Residual = %11.4g\n",
           iRow, exact_dual, simplex_info.workDual_[iVar], residual);
     dual_objective += simplex_info.workValue_[iVar] * exact_dual;
   }
   double relative_delta = norm_delta_dual / std::max(norm_dual, 1.0);
   if (relative_delta > 1e-3)
-    HighsLogMessage(
-        ekk_instance_.options_.logfile, HighsMessageType::WARNING,
-        "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g",
+    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::WARNING,
+        "||exact dual vector|| = %g; ||delta dual vector|| = %g: ratio = %g\n",
         norm_dual, norm_delta_dual, relative_delta);
   return dual_objective;
 }
