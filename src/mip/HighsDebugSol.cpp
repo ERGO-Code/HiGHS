@@ -69,7 +69,7 @@ void HighsDebugSol::activate() {
       printf("debug sol active\n");
       registerDomain(mipsolver->mipdata_->domain);
     } else {
-      HighsLogMessage(mipsolver->options_mip_->logfile,
+      highsOutputUser(mipsolver->options_mip_->io,
                       HighsMessageType::WARNING,
                       "debug solution: could not open file '%s'\n",
                       mipsolver->options_mip_->mip_debug_solution_file.c_str());
