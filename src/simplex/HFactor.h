@@ -137,13 +137,15 @@ class HFactor {
       const int* Aindex,     //!< Row indices of constraint matrix
       const double* Avalue,  //!< Row values of constraint matrix
       int* baseIndex,        //!< Indices of basic variables
-      int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN, FILE* logfile = NULL,
-      FILE* output = NULL, int message_level = ML_NONE,
       double pivot_threshold = default_pivot_threshold,  //!< Pivoting threshold
       double pivot_tolerance = default_pivot_tolerance,  //!< Min absolute pivot
+      int highs_debug_level = HIGHS_DEBUG_LEVEL_MIN,
+      bool output_flag = false,
+      FILE* logfile = NULL,
+      bool log_to_console = true,
+      int output_dev = 0,
       const bool use_original_HFactor_logic = true,
-      int updateMethod =
-          UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
+      const int updateMethod = UPDATE_METHOD_FT
   );
 
   /**
@@ -263,14 +265,15 @@ class HFactor {
   const int* Aindex;
   const double* Avalue;
   int* baseIndex;
-  int updateMethod;
-  bool use_original_HFactor_logic;
-  int highs_debug_level;
-  FILE* logfile;
-  FILE* output;
-  int message_level;
   double pivot_threshold;
   double pivot_tolerance;
+  int highs_debug_level;
+  HighsIo io;
+  bool use_original_HFactor_logic;
+  int updateMethod;
+
+  FILE* output;
+  int message_level;
 
   // Working buffer
   int nwork;

@@ -864,9 +864,13 @@ int HEkk::computeFactor() {
     factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
                   &simplex_lp_.Astart_[0], &simplex_lp_.Aindex_[0],
                   &simplex_lp_.Avalue_[0], &simplex_basis_.basicIndex_[0],
-                  options_.highs_debug_level, options_.logfile, options_.output,
-                  options_.message_level, simplex_info_.factor_pivot_threshold,
-                  options_.factor_pivot_tolerance);
+                  simplex_info_.factor_pivot_threshold,
+                  options_.factor_pivot_tolerance,
+		  options_.highs_debug_level,
+		  options_.output_flag,
+		  options_.logging_file,
+		  options_.log_to_console,
+		  options_.output_dev);
     simplex_lp_status_.has_factor_arrays = true;
   }
   analysis_.simplexTimerStart(InvertClock);
