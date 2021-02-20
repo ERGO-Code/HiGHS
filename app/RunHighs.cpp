@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
   Highs highs;
-  highs.setHighsOptionValue("output_dev", 1);
+  //  highs.setHighsOptionValue("output_dev", 1);
   HighsStatus read_status = highs.readModel(options.model_file);
   reportLpStatsOrError(options.io, read_status, highs.getLp());
   if (read_status == HighsStatus::Error)

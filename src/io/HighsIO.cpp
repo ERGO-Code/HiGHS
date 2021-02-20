@@ -28,7 +28,7 @@ char msgbuffer[65536];
 
 void highsOutputUser(const HighsIo& io, const HighsMessageType type,
                      const char* format, ...) {
-  if (!io.output_flag || (io.logging_file == NULL && !io.log_to_console))
+  if (!*io.output_flag || (io.logging_file == NULL && !*io.log_to_console))
     return;
   // highsOutputUser should not be passed HighsMessageType::VERBOSE
   assert(type != HighsMessageType::VERBOSE);
@@ -37,7 +37,7 @@ void highsOutputUser(const HighsIo& io, const HighsMessageType type,
   if (logmsgcb == NULL) {
     fprintf(io.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
     vfprintf(io.logging_file, format, argptr);
-    if (io.log_to_console) {
+    if (*io.log_to_console) {
       fprintf(io.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
       va_start(argptr, format);
       vfprintf(stdout, format, argptr);
@@ -68,7 +68,7 @@ void highsOutputDev(const HighsIo& io, const HighsMessageType type,
   va_start(argptr, format);
   if (logmsgcb == NULL) {
     vfprintf(io.logging_file, format, argptr);
-    if (io.log_to_console) {
+    if (*io.log_to_console) {
       va_start(argptr, format);
       vfprintf(stdout, format, argptr);
     }

@@ -386,7 +386,7 @@ HighsStatus Highs::run() {
         "Highs::run() HiGHSDEV define so switching options_.highs_debug_level "
         "from %d to %d\n",
         options_.highs_debug_level, min_highs_debug_level);
-  writeModel("HighsRunModel.mps");
+  //  writeModel("HighsRunModel.mps");
   //  if (lp_.numRow_>0 && lp_.numCol_>0) writeLpMatrixPicToFile(options_,
   //  "LpMatrix", lp_);
 #endif
