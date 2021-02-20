@@ -21,7 +21,7 @@ class HighsOptions;
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum class HighsMessageType { VERBOSE, INFO, WARNING, ERROR };
+enum class HighsMessageType { INFO = 1, VERBOSE, WARNING, ERROR };
 const char* const HighsMessageTypeTag[] = {"", "", "WARNING: ", "ERROR: "};
 enum OutputDevLevel {
 		     OUTPUT_DEV_MIN = 0,
