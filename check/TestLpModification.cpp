@@ -310,7 +310,7 @@ void messageReportLp(const char* message, const HighsLp& lp) {
   options.io.output_dev = &output_dev;
   highsOutputDev(options.io, HighsMessageType::VERBOSE, 
                     "\nReporting LP: %s\n", message);
-  reportLp(options, lp, 2);
+  reportLp(options, lp, HighsMessageType::VERBOSE);
 }
 
 void messageReportMatrix(const char* message, const int num_col,
@@ -335,7 +335,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   testAllDeleteKeep(10);
 
   HighsOptions options;
-  options.message_level = ML_ALWAYS;
+  options.output_dev = OUTPUT_DEV_VERBOSE;
 
   Avgas avgas;
   const int avgas_num_col = 8;

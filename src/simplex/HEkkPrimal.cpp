@@ -56,8 +56,7 @@ HighsStatus HEkkPrimal::solve() {
   const bool near_optimal = simplex_info.num_primal_infeasibility == 0 &&
                             simplex_info.sum_dual_infeasibility < 1;
   if (near_optimal)
-    HighsPrintMessage(
-        options.output, options.message_level, ML_DETAILED,
+    highsOutputDev(options.io, HighsMessageType::DETAILED,
         "Primal feasible and num / max / sum dual infeasibilities are %d / %g "
         "/ %g, so near-optimal\n",
         simplex_info.num_dual_infeasibility,
@@ -67,7 +66,7 @@ HighsStatus HEkkPrimal::solve() {
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
   if (!perturb_bounds)
-    HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+    highsOutputDev(options.io, HighsMessageType::DETAILED,
                       "Near-optimal, so don't use bound perturbation\n");
   if (perturb_bounds &&
       simplex_info.primal_simplex_bound_perturbation_multiplier) {
@@ -295,8 +294,7 @@ void HEkkPrimal::solvePhase1() {
   simplex_lp_status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
   if (ekk_instance_.bailoutReturn()) return;
-  HighsPrintMessage(ekk_instance_.options_.output,
-                    ekk_instance_.options_.message_level, ML_DETAILED,
+  highsOutputDev(ekk_instance_.options_.io, HighsMessageType::DETAILED,
                     "primal-phase1-start\n");
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
@@ -362,7 +360,7 @@ void HEkkPrimal::solvePhase2() {
   simplex_lp_status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
   if (ekk_instance_.bailoutReturn()) return;
-  HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+  highsOutputDev(options.io, HighsMessageType::DETAILED,
                     "primal-phase2-start\n");
   phase2UpdatePrimal(true);
 
@@ -407,11 +405,11 @@ void HEkkPrimal::solvePhase2() {
     return;
   }
   if (solvePhase == SOLVE_PHASE_1) {
-    HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+    highsOutputDev(options.io, HighsMessageType::DETAILED,
                       "primal-return-phase1\n");
   } else if (variable_in == -1) {
     // There is no candidate in CHUZC, even after rebuild so probably optimal
-    HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+    highsOutputDev(options.io, HighsMessageType::DETAILED,
                       "primal-phase-2-optimal\n");
     // Remove any bound perturbations and see if basis is still primal feasible
     cleanup();
@@ -422,7 +420,7 @@ void HEkkPrimal::solvePhase2() {
     } else {
       // There are no dual infeasiblities so optimal!
       solvePhase = SOLVE_PHASE_OPTIMAL;
-      HighsPrintMessage(options.output, options.message_level, ML_DETAILED,
+      highsOutputDev(options.io, HighsMessageType::DETAILED,
                         "problem-optimal\n");
       scaled_model_status = HighsModelStatus::OPTIMAL;
       ekk_instance_.computeDualObjectiveValue();  // Why?
@@ -431,7 +429,7 @@ void HEkkPrimal::solvePhase2() {
     assert(row_out < 0);
 
     // There is no candidate in CHUZR, so probably primal unbounded
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+    highsOutputDev(options.io, HighsMessageType::INFO,
                       "primal-phase-2-unbounded\n");
     if (ekk_instance_.simplex_info_.bounds_perturbed) {
       // If the bounds have been perturbed, clean up and return
@@ -442,7 +440,7 @@ void HEkkPrimal::solvePhase2() {
       solvePhase = SOLVE_PHASE_EXIT;
       if (scaled_model_status == HighsModelStatus::PRIMAL_INFEASIBLE) {
         assert(1 == 0);
-        HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+        highsOutputDev(options.io, HighsMessageType::INFO,
                           "problem-primal-dual-infeasible\n");
         scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
       } else {
@@ -450,7 +448,7 @@ void HEkkPrimal::solvePhase2() {
         savePrimalRay();
         // Model status should be unset
         assert(scaled_model_status == HighsModelStatus::NOTSET);
-        HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+        highsOutputDev(options.io, HighsMessageType::INFO,
                           "problem-primal-unbounded\n");
         scaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
       }
@@ -465,8 +463,7 @@ void HEkkPrimal::solvePhase2() {
 void HEkkPrimal::cleanup() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   if (!simplex_info.bounds_perturbed) return;
-  HighsPrintMessage(ekk_instance_.options_.output,
-                    ekk_instance_.options_.message_level, ML_DETAILED,
+  highsOutputDev(ekk_instance_.options_.io, HighsMessageType::DETAILED,
                     "primal-cleanup-shift\n");
   // Remove perturbation
   ekk_instance_.initialiseBound(SimplexAlgorithm::PRIMAL, solvePhase, false);
@@ -881,9 +878,7 @@ bool HEkkPrimal::useVariableIn() {
     if (theta_dual_small) theta_dual_size = "; too small";
     std::string theta_dual_sign = "";
     if (theta_dual_sign_error) theta_dual_sign = "; sign error";
-    HighsPrintMessage(
-        ekk_instance_.options_.output, ekk_instance_.options_.message_level,
-        ML_ALWAYS,
+    highsOutputDev(ekk_instance_.options_.io, HighsMessageType::INFO,
         "Chosen entering variable %d (Iter = %d; Update = %d) has computed "
         "(updated) dual of %10.4g (%10.4g) so don't use it%s%s\n",
         variable_in, ekk_instance_.iteration_count_, simplex_info.update_count,
@@ -2337,9 +2332,7 @@ void HEkkPrimal::shiftBound(const bool lower, const int iVar,
   }
   double error = fabs(-new_infeasibility - feasibility);
   if (report)
-    HighsPrintMessage(
-        ekk_instance_.options_.output, ekk_instance_.options_.message_level,
-        ML_VERBOSE,
+    highsOutputDev(ekk_instance_.options_.io, HighsMessageType::VERBOSE,
         "Value(%4d) = %10.4g exceeds %s = %10.4g by %9.4g, so shift bound by "
         "%9.4g to %10.4g: infeasibility %10.4g with error %g\n",
         iVar, value, type.c_str(), old_bound, infeasibility, shift, bound,

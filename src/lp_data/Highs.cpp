@@ -342,7 +342,7 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
   if (filename == "") {
     // Empty file name: report model on stdout
-    reportLp(options_, model, 2);
+    reportLp(options_, model, HighsMessageType::VERBOSE);
     return_status = HighsStatus::OK;
   } else {
     Filereader* writer = Filereader::getFilereader(filename);
@@ -463,7 +463,7 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
 #endif
-  HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+  highsOutputDev(options_.io, HighsMessageType::VERBOSE,
                     "Solving %s\n", lp_.model_name_.c_str());
 
   double this_presolve_time = -1;
@@ -641,14 +641,14 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::Timeout: {
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+        highsOutputDev(options_.io, HighsMessageType::ERROR,
                           "Presolve reached timeout\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         return HighsStatus::Warning;
       }
       case HighsPresolveStatus::OptionsError: {
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+        highsOutputDev(options_.io, HighsMessageType::ERROR,
                           "Presolve options error.\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         return HighsStatus::Warning;
@@ -656,7 +656,7 @@ HighsStatus Highs::run() {
       default: {
         // case HighsPresolveStatus::Error
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        HighsPrintMessage(options_.output, options_.message_level, ML_ALWAYS,
+        highsOutputDev(options_.io, HighsMessageType::ERROR,
                           "Presolve failed.\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         // Transfer the model status to the scaled model status and orriginal
@@ -696,7 +696,7 @@ HighsStatus Highs::run() {
         presolve_.info_.postsolve_time = this_postsolve_time;
 
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-          HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+          highsOutputDev(options_.io, HighsMessageType::VERBOSE,
                             "Postsolve finished\n");
           //
           // Now hot-start the simplex solver for the original_hmo:
@@ -732,7 +732,7 @@ HighsStatus Highs::run() {
           HighsOptions& options = hmos_[solved_hmo].options_;
           HighsOptions save_options = options;
           const bool full_logging = false;
-          if (full_logging) options.message_level = ML_ALWAYS;
+          if (full_logging) options.output_dev = OUTPUT_DEV_VERBOSE;
           // Force the use of simplex to clean up if IPM has been used
           // to solve the presolved problem
           if (options.solver == ipm_string) options.solver = simplex_string;
@@ -833,57 +833,57 @@ HighsStatus Highs::run() {
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+    highsOutputDev(options_.io, HighsMessageType::INFO,
                       "Postsolve  : \n");
   } else {
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+    highsOutputDev(options_.io, HighsMessageType::INFO,
                       "Postsolve  : %d\n", postsolve_iteration_count);
   }
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+  highsOutputDev(options_.io, HighsMessageType::INFO,
                     "Time       : %8.2f\n", this_solve_time);
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+  highsOutputDev(options_.io, HighsMessageType::INFO,
                     "Time Pre   : %8.2f\n", this_presolve_time);
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+  highsOutputDev(options_.io, HighsMessageType::INFO,
                     "Time PreLP : %8.2f\n", this_solve_presolved_lp_time);
-  HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+  highsOutputDev(options_.io, HighsMessageType::INFO,
                     "Time PostLP: %8.2f\n", this_solve_original_lp_time);
   if (this_solve_time > 0) {
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+    highsOutputDev(options_.io, HighsMessageType::INFO,
                       "For LP %16s",
                       hmos_[original_hmo].lp_.model_name_.c_str());
     double sum_time = 0;
     if (this_presolve_time > 0) {
       sum_time += this_presolve_time;
       int pct = (100 * this_presolve_time) / this_solve_time;
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+      highsOutputDev(options_.io, HighsMessageType::INFO,
                         ": Presolve %8.2f (%3d%%)", this_presolve_time, pct);
     }
     if (this_solve_presolved_lp_time > 0) {
       sum_time += this_solve_presolved_lp_time;
       int pct = (100 * this_solve_presolved_lp_time) / this_solve_time;
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+      highsOutputDev(options_.io, HighsMessageType::INFO,
                         ": Solve presolved LP %8.2f (%3d%%)",
                         this_solve_presolved_lp_time, pct);
     }
     if (this_postsolve_time > 0) {
       sum_time += this_postsolve_time;
       int pct = (100 * this_postsolve_time) / this_solve_time;
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+      highsOutputDev(options_.io, HighsMessageType::INFO,
                         ": Postsolve %8.2f (%3d%%)", this_postsolve_time, pct);
     }
     if (this_solve_original_lp_time > 0) {
       sum_time += this_solve_original_lp_time;
       int pct = (100 * this_solve_original_lp_time) / this_solve_time;
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+      highsOutputDev(options_.io, HighsMessageType::INFO,
                         ": Solve original LP %8.2f (%3d%%)",
                         this_solve_original_lp_time, pct);
     }
-    HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+    highsOutputDev(options_.io, HighsMessageType::INFO,
                       "\n");
     double rlv_time_difference =
         fabs(sum_time - this_solve_time) / this_solve_time;
     if (rlv_time_difference > 0.1)
-      HighsPrintMessage(options_.output, options_.message_level, ML_MINIMAL,
+      highsOutputDev(options_.io, HighsMessageType::INFO,
                         "Strange: Solve time = %g; Sum times = %g: relative "
                         "difference = %g\n",
                         this_solve_time, sum_time, rlv_time_difference);
@@ -1741,12 +1741,12 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
     double left = options_.time_limit - start_presolve;
     if (left <= 0) {
-      HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+      highsOutputDev(options_.io, HighsMessageType::ERROR,
                         "Time limit reached while reading in matrix\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+    highsOutputDev(options_.io, HighsMessageType::VERBOSE,
                       "Time limit set: reading matrix took %.2g, presolve "
                       "time left: %.2g\n",
                       start_presolve, left);
@@ -1760,21 +1760,19 @@ HighsPresolveStatus Highs::runPresolve() {
     double time_init = current - start_presolve;
     double left = presolve_.options_.time_limit - time_init;
     if (left <= 0) {
-      HighsPrintMessage(
-          options_.output, options_.message_level, ML_VERBOSE,
+      highsOutputDev(options_.io, HighsMessageType::ERROR,
           "Time limit reached while copying matrix into presolve.\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+    highsOutputDev(options_.io, HighsMessageType::VERBOSE,
                       "Time limit set: copying matrix took %.2g, presolve "
                       "time left: %.2g\n",
                       time_init, left);
     presolve_.options_.time_limit = options_.time_limit;
   }
 
-  presolve_.data_.presolve_[0].message_level = options_.message_level;
-  presolve_.data_.presolve_[0].output = options_.output;
+  presolve_.data_.presolve_[0].io_options = options_.io;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 

@@ -13,7 +13,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   //  HighsTimer timer;
   HighsStatus return_status;
   bool return_bool;
-  options.message_level = ML_ALWAYS;
+  options.output_dev = OUTPUT_DEV_VERBOSE;
   if (!dev_run) {
     options.output = NULL;
     options.output_flag = false;
@@ -50,7 +50,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   return_status = assessLp(lp, options);
   REQUIRE(return_status == HighsStatus::OK);
-  //  reportLp(lp, 2);
+  //  reportLp(lp, HighsMessageType::VERBOSE);
 
   const double my_infinity = 1e30;
   Highs highs(options);
@@ -86,7 +86,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
   XcolUpper[0] = my_infinity;
-  //  reportLp(lp, 2);
+  //  reportLp(lp, HighsMessageType::VERBOSE);
 
   // Try to add a column with illegal cost
   bool require_return_bool;
@@ -146,7 +146,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
                     XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_bool);
 
-  //  reportLp(lp, 2);
+  //  reportLp(lp, HighsMessageType::VERBOSE);
 
   // Add a couple of non-empty columns with some small and large values
   XnumNewCol = 2;
@@ -192,7 +192,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
                     XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_bool);
 
-  //  reportLp(lp, 2);
+  //  reportLp(lp, HighsMessageType::VERBOSE);
 
   if (!dev_run) {
     highs.setHighsLogfile();

@@ -159,9 +159,10 @@ HighsStatus changeBounds(const HighsOptions& options, vector<double>& lower,
  */
 void reportLp(const HighsOptions& options,
               const HighsLp& lp,          //!< LP whose data are to be reported
-              const int report_level = 0  //!< 0 => scalar [dimensions];
-                                          //!< 1 => vector[costs/bounds];
-                                          //!< 2 => vector+matrix
+              const HighsMessageType report_level = HighsMessageType::INFO
+	                                  //!< INFO => scalar [dimensions];
+                                          //!< DETAILED => vector[costs/bounds];
+                                          //!< VERBOSE => vector+matrix
 );
 /**
  * @brief Report the brief data of an LP

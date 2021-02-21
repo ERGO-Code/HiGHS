@@ -1536,12 +1536,13 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
 //
 // Report the whole LP
 void reportLp(const HighsOptions& options, const HighsLp& lp,
-              const int report_level) {
+              const HighsMessageType report_level) {
   reportLpBrief(options, lp);
-  if (report_level >= 1) {
+  if ((int)report_level >= (int)HighsMessageType::DETAILED) {
     reportLpColVectors(options, lp);
     reportLpRowVectors(options, lp);
-    if (report_level >= 2) reportLpColMatrix(options, lp);
+    if ((int)report_level >= (int)HighsMessageType::VERBOSE)
+      reportLpColMatrix(options, lp);
   }
 }
 
@@ -1558,15 +1559,15 @@ void reportLpDimensions(const HighsOptions& options, const HighsLp& lp) {
     lp_num_nz = 0;
   else
     lp_num_nz = lp.Astart_[lp.numCol_];
-  HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+  highsOutputDev(options.io, HighsMessageType::INFO,
                     "LP has %d columns, %d rows", lp.numCol_, lp.numRow_);
   int num_int = getNumInt(lp);
   if (num_int) {
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+    highsOutputDev(options.io, HighsMessageType::INFO,
                       ", %d nonzeros and %d integer columns\n", lp_num_nz,
                       num_int);
   } else {
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+    highsOutputDev(options.io, HighsMessageType::INFO,
                       " and %d nonzeros\n", lp_num_nz, num_int);
   }
 }
@@ -1574,13 +1575,13 @@ void reportLpDimensions(const HighsOptions& options, const HighsLp& lp) {
 // Report the LP objective sense
 void reportLpObjSense(const HighsOptions& options, const HighsLp& lp) {
   if (lp.sense_ == ObjSense::MINIMIZE)
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+    highsOutputDev(options.io, HighsMessageType::INFO,
                       "Objective sense is minimize\n");
   else if (lp.sense_ == ObjSense::MAXIMIZE)
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+    highsOutputDev(options.io, HighsMessageType::INFO,
                       "Objective sense is maximize\n");
   else
-    HighsPrintMessage(options.output, options.message_level, ML_MINIMAL,
+    highsOutputDev(options.io, HighsMessageType::INFO,
                       "Objective sense is ill-defined as %d\n", lp.sense_);
 }
 
@@ -1614,21 +1615,22 @@ void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
   bool have_integer_columns = getNumInt(lp);
   bool have_col_names = lp.col_names_.size();
 
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+  highsOutputDev(options.io, HighsMessageType::VERBOSE,
                     "  Column        Lower        Upper         Cost       "
                     "Type        Count");
   if (have_integer_columns)
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+    highsOutputDev(options.io, HighsMessageType::VERBOSE,
                       "  Discrete");
   if (have_col_names)
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+    highsOutputDev(options.io, HighsMessageType::VERBOSE,
                       "  Name");
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE, "\n");
+  highsOutputDev(options.io, HighsMessageType::VERBOSE,
+		    "\n");
 
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
     count = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+    highsOutputDev(options.io, HighsMessageType::VERBOSE,
                       "%8d %12g %12g %12g         %2s %12d", iCol,
                       lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol],
                       type.c_str(), count);
@@ -1641,13 +1643,14 @@ void reportLpColVectors(const HighsOptions& options, const HighsLp& lp) {
           integer_column = "Integer";
         }
       }
-      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+      highsOutputDev(options.io, HighsMessageType::VERBOSE,
                         "  %-8s", integer_column.c_str());
     }
     if (have_col_names)
-      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+      highsOutputDev(options.io, HighsMessageType::VERBOSE,
                         "  %-s", lp.col_names_[iCol].c_str());
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE, "\n");
+    highsOutputDev(options.io, HighsMessageType::VERBOSE,
+		      "\n");
   }
 }
 
@@ -1663,25 +1666,26 @@ void reportLpRowVectors(const HighsOptions& options, const HighsLp& lp) {
     for (int el = 0; el < lp.Astart_[lp.numCol_]; el++) count[lp.Aindex_[el]]++;
   }
 
-  HighsPrintMessage(
-      options.output, options.message_level, ML_VERBOSE,
+  highsOutputDev(options.io, HighsMessageType::VERBOSE,
       "     Row        Lower        Upper       Type        Count");
   if (have_row_names)
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+    highsOutputDev(options.io, HighsMessageType::VERBOSE,
                       "  Name");
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE, "\n");
+  highsOutputDev(options.io, HighsMessageType::VERBOSE,
+		    "\n");
 
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
     std::string name = "";
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+    highsOutputDev(options.io, HighsMessageType::VERBOSE,
                       "%8d %12g %12g         %2s %12d", iRow,
                       lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(),
                       count[iRow]);
     if (have_row_names)
-      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+      highsOutputDev(options.io, HighsMessageType::VERBOSE,
                         "  %-s", lp.row_names_[iRow].c_str());
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE, "\n");
+    highsOutputDev(options.io, HighsMessageType::VERBOSE,
+		      "\n");
   }
 }
 
@@ -1704,17 +1708,17 @@ void reportMatrix(const HighsOptions& options, const std::string message,
                   const int num_col, const int num_nz, const int* start,
                   const int* index, const double* value) {
   if (num_col <= 0) return;
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+  highsOutputDev(options.io, HighsMessageType::VERBOSE,
                     "%6s Index              Value\n", message.c_str());
   for (int col = 0; col < num_col; col++) {
-    HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+    highsOutputDev(options.io, HighsMessageType::VERBOSE,
                       "    %8d Start   %10d\n", col, start[col]);
     int to_el = (col < num_col - 1 ? start[col + 1] : num_nz);
     for (int el = start[col]; el < to_el; el++)
-      HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+      highsOutputDev(options.io, HighsMessageType::VERBOSE,
                         "          %8d %12g\n", index[el], value[el]);
   }
-  HighsPrintMessage(options.output, options.message_level, ML_VERBOSE,
+  highsOutputDev(options.io, HighsMessageType::VERBOSE,
                     "             Start   %10d\n", num_nz);
 }
 
@@ -2186,7 +2190,7 @@ void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
     elemdelta = -elemdelta;
     elemsignchar = '+';
   }
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+  highsOutputUser(options.io, HighsMessageType::INFO,
                     "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
                     "elements %d(%c%d)\n",
                     num_row_to, (num_row_from - num_row_to), num_col_to,
@@ -2214,7 +2218,7 @@ void reportPresolveReductions(const HighsOptions& options, const HighsLp& lp,
     num_els_to = num_els_from;
     message = "- Not reduced";
   }
-  HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+  highsOutputUser(options.io, HighsMessageType::INFO,
                     "Presolve : Reductions: rows %d(-%d); columns %d(-%d); "
                     "elements %d(-%d) %s\n",
                     num_row_to, (num_row_from - num_row_to), num_col_to,

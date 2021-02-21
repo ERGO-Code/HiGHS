@@ -943,7 +943,6 @@ HighsStatus Highs::changeCoefficientInterface(const int Xrow, const int Xcol,
     double scaledXnewValue = XnewValue * scale.row_[Xrow] * scale.col_[Xcol];
     changeLpMatrixCoefficient(simplex_lp, Xrow, Xcol, scaledXnewValue);
   }
-  // simplex_lp.reportLp();
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if it's a new row
@@ -951,7 +950,6 @@ HighsStatus Highs::changeCoefficientInterface(const int Xrow, const int Xcol,
   highs_model_object.unscaled_model_status_ =
       highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
-  //  simplex_lp.reportLp();
   return HighsStatus::OK;
 }
 

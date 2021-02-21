@@ -1712,7 +1712,7 @@ void HEkk::correctDual(int* free_infeasibility_count) {
           shift_dual_objective_value_change += local_dual_objective_change;
           num_shift++;
           sum_shift += fabs(shift);
-          HighsPrintMessage(options_.output, options_.message_level, ML_VERBOSE,
+          highsOutputDev(options_.io, HighsMessageType::VERBOSE,
                             "Move %s: cost shift = %g; objective change = %g\n",
                             direction.c_str(), shift,
                             local_dual_objective_change);
@@ -1721,13 +1721,11 @@ void HEkk::correctDual(int* free_infeasibility_count) {
     }
   }
   if (num_flip)
-    HighsPrintMessage(
-        options_.output, options_.message_level, ML_VERBOSE,
+    highsOutputDev(options_.io, HighsMessageType::VERBOSE,
         "Performed %d flip(s): total = %g; objective change = %g\n", num_flip,
         sum_flip, flip_dual_objective_value_change);
   if (num_shift)
-    HighsPrintMessage(
-        options_.output, options_.message_level, ML_DETAILED,
+    highsOutputDev(options_.io, HighsMessageType::DETAILED,
         "Performed %d cost shift(s): total = %g; objective change = %g\n",
         num_shift, sum_shift, shift_dual_objective_value_change);
   *free_infeasibility_count = workCount;

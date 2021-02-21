@@ -66,7 +66,7 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   const int num_tot = num_col + num_row;
   const int iteration_count = ekk_instance.iteration_count_;
   std::string value_adjective;
-  int report_level;
+  HighsMessageType report_level;
 
   // Check the nonbasic flags are all NONBASIC_FLAG_TRUE or NONBASIC_FLAG_FALSE
   for (int iVar = 0; iVar < num_tot; iVar++) {
@@ -235,20 +235,19 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   // Report on basic dual values
   if (max_basic_dual > excessive_basic_dual) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsMessageType::INFO;
     return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
   } else if (max_basic_dual > large_basic_dual) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsMessageType::DETAILED;
     return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsMessageType::VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
   if (max_basic_dual > 2 * max_max_basic_dual) {
-    HighsPrintMessage(
-        options.output, options.message_level, report_level,
+    highsOutputDev(options.io, report_level,
         "ekkDebugSimplex - %s: Iteration %d %-9s max   basic dual = %9.4g\n",
         message.c_str(), iteration_count, value_adjective.c_str(),
         max_basic_dual);
@@ -444,20 +443,19 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   if (max_primal_residual > excessive_residual_error) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsMessageType::INFO;
     return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
   } else if (max_primal_residual > large_residual_error) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsMessageType::DETAILED;
     return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsMessageType::VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
   if (max_primal_residual > 2 * max_max_primal_residual) {
-    HighsPrintMessage(
-        options.output, options.message_level, report_level,
+    highsOutputDev(options.io, report_level,
         "ekkDebugSimplex - %s: Iteration %d %-9s max primal residual = %9.4g\n",
         message.c_str(), iteration_count, value_adjective.c_str(),
         max_primal_residual);
@@ -465,20 +463,19 @@ HighsDebugStatus ekkDebugSimplex(const std::string message,
   }
   if (max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
-    report_level = ML_ALWAYS;
+    report_level = HighsMessageType::INFO;
     return_status = debugWorseStatus(HighsDebugStatus::ERROR, return_status);
   } else if (max_dual_residual > large_residual_error) {
     value_adjective = "Large";
-    report_level = ML_DETAILED;
+    report_level = HighsMessageType::DETAILED;
     return_status = debugWorseStatus(HighsDebugStatus::WARNING, return_status);
   } else {
     value_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsMessageType::VERBOSE;
     return_status = debugWorseStatus(HighsDebugStatus::OK, return_status);
   }
   if (max_dual_residual > 2 * max_max_dual_residual) {
-    HighsPrintMessage(
-        options.output, options.message_level, report_level,
+    highsOutputDev(options.io, report_level,
         "ekkDebugSimplex - %s: Iteration %d %-9s max   dual residual = %9.4g\n",
         message.c_str(), iteration_count, value_adjective.c_str(),
         max_dual_residual);
@@ -1096,7 +1093,7 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
     return HighsDebugStatus::NOT_CHECKED;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   std::string error_adjective;
-  int report_level;
+  HighsMessageType report_level;
   double updated_dual_absolute_error = fabs(updated_dual - computed_dual);
   double updated_dual_relative_error =
       updated_dual_absolute_error / max(abs(computed_dual), 1.0);
@@ -1110,34 +1107,33 @@ HighsDebugStatus ekkDebugUpdatedDual(const HighsOptions& options,
   if (updated_dual_relative_error > updated_dual_large_relative_error ||
       updated_dual_absolute_error > updated_dual_large_absolute_error) {
     error_adjective = "Large";
-    report_level = ML_ALWAYS;
+    report_level = HighsMessageType::INFO;
     return_status = HighsDebugStatus::LARGE_ERROR;
   } else if (updated_dual_relative_error > updated_dual_small_relative_error ||
              updated_dual_absolute_error > updated_dual_small_absolute_error) {
     error_adjective = "Small";
-    report_level = ML_DETAILED;
+    report_level = HighsMessageType::DETAILED;
     return_status = HighsDebugStatus::SMALL_ERROR;
   } else {
     error_adjective = "OK";
-    report_level = ML_VERBOSE;
+    report_level = HighsMessageType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
   if (sign_error) {
-    report_level = ML_ALWAYS;
+    report_level = HighsMessageType::INFO;
     return_status = HighsDebugStatus::LARGE_ERROR;
   }
-  HighsPrintMessage(
-      options.output, options.message_level, report_level,
+  highsOutputDev(options.io, report_level,
       "UpdatedDual:  %-9s absolute (%9.4g) or relative (%9.4g) error in "
       "updated dual value",
       error_adjective.c_str(), updated_dual_absolute_error,
       updated_dual_relative_error);
   if (sign_error) {
-    HighsPrintMessage(options.output, options.message_level, report_level,
+    highsOutputDev(options.io, report_level,
                       ": Also sign error with (%9.4g, %9.4g)\n", updated_dual,
                       computed_dual);
   } else {
-    HighsPrintMessage(options.output, options.message_level, report_level,
+    highsOutputDev(options.io, report_level,
                       "\n");
   }
   return return_status;
@@ -1162,8 +1158,7 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
       check_num_free_col++;
   }
   if (check_num_free_col != num_free_col) {
-    HighsPrintMessage(
-        options.output, options.message_level, ML_ALWAYS,
+    highsOutputDev(options.io, HighsMessageType::INFO,
         "NonbasicFreeColumnData: Number of free columns should be %d, not %d\n",
         check_num_free_col, num_free_col);
     return HighsDebugStatus::LOGICAL_ERROR;
@@ -1172,7 +1167,7 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
   // Debug HSet nonbasic_free_col
   bool nonbasic_free_col_ok = nonbasic_free_col_set.debug();
   if (!nonbasic_free_col_ok) {
-    HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+    highsOutputDev(options.io, HighsMessageType::INFO,
                       "NonbasicFreeColumnData: HSet error\n");
     return HighsDebugStatus::LOGICAL_ERROR;
   }
@@ -1188,8 +1183,7 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
     if (nonbasic_free) check_num_nonbasic_free_col++;
   }
   if (check_num_nonbasic_free_col != num_nonbasic_free_col) {
-    HighsPrintMessage(
-        options.output, options.message_level, ML_ALWAYS,
+    highsOutputDev(options.io, HighsMessageType::INFO,
         "NonbasicFreeColumnData: Set should have %d entries, not %d\n",
         check_num_nonbasic_free_col, num_nonbasic_free_col);
     return HighsDebugStatus::LOGICAL_ERROR;
@@ -1204,7 +1198,7 @@ HighsDebugStatus ekkDebugNonbasicFreeColumnSet(
         simplex_info.workLower_[iVar] <= -HIGHS_CONST_INF &&
         simplex_info.workUpper_[iVar] >= HIGHS_CONST_INF;
     if (!nonbasic_free) {
-      HighsPrintMessage(options.output, options.message_level, ML_ALWAYS,
+      highsOutputDev(options.io, HighsMessageType::INFO,
                         "NonbasicFreeColumnData: Variable %d in nonbasic free "
                         "set has nonbasicFlag = %d and bounds [%g, %g]\n",
                         iVar, simplex_basis.nonbasicFlag_[iVar],

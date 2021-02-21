@@ -30,7 +30,8 @@ void highsOutputUser(const HighsIo& io, const HighsMessageType type,
                      const char* format, ...) {
   if (!*io.output_flag || (io.logging_file == NULL && !*io.log_to_console))
     return;
-  // highsOutputUser should not be passed HighsMessageType::VERBOSE
+  // highsOutputUser should not be passed HighsMessageType::DETAILED or HighsMessageType::VERBOSE
+  assert(type != HighsMessageType::DETAILED);
   assert(type != HighsMessageType::VERBOSE);
   va_list argptr;
   va_start(argptr, format);
@@ -61,9 +62,11 @@ void highsOutputUser(const HighsIo& io, const HighsMessageType type,
 void highsOutputDev(const HighsIo& io, const HighsMessageType type,
                     const char* format, ...) {
   if (io.logging_file == NULL || !*io.output_dev) return;
-  assert(*io.output_dev > OUTPUT_DEV_MIN);
+  // Always report HighsMessageType INFO, WARNING or ERROR 
+  // Report HighsMessageType DETAILED if *io.output_dev >= OUTPUT_DEV_DETAILED
+  // Report HighsMessageType VERBOSE if *io.output_dev >= OUTPUT_DEV_VERBOSE
+  if (type == HighsMessageType::DETAILED && *io.output_dev < OUTPUT_DEV_DETAILED) return;
   if (type == HighsMessageType::VERBOSE && *io.output_dev < OUTPUT_DEV_VERBOSE) return;
-  assert(*io.output_dev == OUTPUT_DEV_INFO || *io.output_dev == OUTPUT_DEV_VERBOSE);
   va_list argptr;
   va_start(argptr, format);
   if (logmsgcb == NULL) {
@@ -82,27 +85,6 @@ void highsOutputDev(const HighsIo& io, const HighsMessageType type,
     logmsgcb(type, msgbuffer, msgcb_data);
   }
   va_end(argptr);
-}
-
-void HighsPrintMessage(FILE* pass_output, const int pass_message_level,
-                       const int level, const char* format, ...) {
-  if (pass_output == NULL) return;
-  if (pass_message_level & level) {
-    va_list argptr;
-    va_start(argptr, format);
-    if (printmsgcb == NULL)
-      vfprintf(pass_output, format, argptr);
-    else {
-      int len;
-      len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
-      if (len >= (int)sizeof(msgbuffer)) {
-        // Output was truncated: for now just ensure string is null-terminated
-        msgbuffer[sizeof(msgbuffer) - 1] = '\0';
-      }
-      printmsgcb(level, msgbuffer, msgcb_data);
-    }
-    va_end(argptr);
-  }
 }
 
 void HighsSetMessageCallback(

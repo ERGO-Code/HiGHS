@@ -21,13 +21,14 @@ class HighsOptions;
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum class HighsMessageType { INFO = 1, VERBOSE, WARNING, ERROR };
-const char* const HighsMessageTypeTag[] = {"", "", "WARNING: ", "ERROR: "};
+enum class HighsMessageType { INFO = 1, DETAILED, VERBOSE, WARNING, ERROR };
+const char* const HighsMessageTypeTag[] = {"", "", "", "WARNING: ", "ERROR: "};
 enum OutputDevLevel {
 		     OUTPUT_DEV_MIN = 0,
 		     OUTPUT_DEV_NONE = OUTPUT_DEV_MIN, // 0
-		     OUTPUT_DEV_INFO, // 1
-		     OUTPUT_DEV_VERBOSE, // 2
+		     OUTPUT_DEV_INFO,                  // 1
+		     OUTPUT_DEV_DETAILED,              // 2
+		     OUTPUT_DEV_VERBOSE,               // 3
 		     OUTPUT_DEV_MAX = OUTPUT_DEV_VERBOSE
 };
 
@@ -55,18 +56,11 @@ enum HighsPrintMessageLevel {
 void highsOutputUser(const HighsIo& io, const HighsMessageType type,
                      const char* format, ...);
 
+/**
+ * @brief For development logging
+ */
 void highsOutputDev(const HighsIo& io, const HighsMessageType type,
                     const char* format, ...);
-
-/**
- * @brief Used to direct printed output to FILE* output, according
- * to whether the level bit is set in messageLevel
- */
-void HighsPrintMessage(
-    FILE* pass_output, const int message_level,
-    const int level,  //!< The message level: Use | operator to display at
-    //!< level NONE, VERBOSE, DETAILED, MINIMAL
-    const char* format, ...);
 
 /*
  * @brief sets the callbacks used to print output and and log

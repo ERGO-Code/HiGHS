@@ -88,8 +88,7 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
     presolve_.options_.time_limit = options_mip_->time_limit;
   }
 
-  presolve_.data_.presolve_[0].message_level = options_mip_->message_level;
-  presolve_.data_.presolve_[0].output = options_mip_->output;
+  presolve_.data_.presolve_[0].io_options = options_mip_->io;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
