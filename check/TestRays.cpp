@@ -213,7 +213,7 @@ void testInfeasibleMps(const std::string model) {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
 
@@ -243,7 +243,7 @@ void testUnboundedMps(const std::string model,
                       const ObjSense sense = ObjSense::MINIMIZE) {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
 
@@ -280,7 +280,7 @@ void testUnboundedMps(const std::string model,
 TEST_CASE("Rays", "[highs_test_rays]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   std::string model_file;
@@ -404,7 +404,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   double inf = highs.getHighsInfinity();
@@ -435,7 +435,7 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   // which has a primal ray: [d, d], for all d > 0.
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   double inf = highs.getHighsInfinity();

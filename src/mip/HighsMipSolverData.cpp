@@ -222,8 +222,8 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   int numstrengthened = aggregator.strengthenInequalities();
 
   if (numstrengthened != 0)
-    highsOutputDev(mipsolver.options_mip_->io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(mipsolver.options_mip_->log_options,  
+		      HighsLogType::INFO,
                       "strengthened %d coefficients\n", numstrengthened);
 
   // printf("removed redundant rows: %d removed rows, %d nonzeros\n", nremoved,
@@ -722,8 +722,8 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 void HighsMipSolverData::printDisplayLine(char first) {
   double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
-    highsOutputDev(mipsolver.options_mip_->io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(mipsolver.options_mip_->log_options,  
+		      HighsLogType::INFO,
         "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
         "| %8s | %8s\n",
         "time", "open nodes", "nodes", "leaves", "lpiters", "dual bound",
@@ -743,8 +743,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
     lb = std::min(ub, lb);
     gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
 
-    highsOutputDev(mipsolver.options_mip_->io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(mipsolver.options_mip_->log_options,  
+		      HighsLogType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %7.2f%% | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
@@ -752,8 +752,8 @@ void HighsMipSolverData::printDisplayLine(char first) {
         ub, mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
         100 * double(pruned_treeweight));
   } else {
-    highsOutputDev(mipsolver.options_mip_->io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(mipsolver.options_mip_->log_options,  
+		      HighsLogType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %8.2f | %7.2f%%\n",
         first, mipsolver.timer_.read(mipsolver.timer_.solve_clock),
@@ -765,13 +765,13 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
 void HighsMipSolverData::evaluateRootNode() {
   // solve the first root lp
-  highsOutputDev(mipsolver.options_mip_->io_options,  
-		    HighsMessageType::INFO,
+  highsLogDev(mipsolver.options_mip_->log_options,  
+		    HighsLogType::INFO,
                     "\nsolving root node LP relaxation\n");
   lp.loadModel();
   lp.getLpSolver().setHighsOptionValue("presolve", "on");
   
-  //  lp.getLpSolver().setHighsOptionValue("output_dev", OUTPUT_DEV_INFO);
+  //  lp.getLpSolver().setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
   //  lp.getLpSolver().setHighsOptionValue("log_file", mipsolver.options_mip_->log_file);
   //  lp.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
   HighsLpRelaxation::Status status = lp.resolveLp();
@@ -781,10 +781,10 @@ void HighsMipSolverData::evaluateRootNode() {
   size_t firstlpiters = maxrootlpiters;
 
   lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
-  //  lp.getLpSolver().setHighsLogfile();
+  //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
   //  lp.getLpSolver().setHighsOutput();
   //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
-  //  lp.getLpSolver().setHighsOptionValue("output_dev", 0);
+  //  lp.getLpSolver().setHighsOptionValue("log_dev_level", 0);
   lp.getLpSolver().setHighsOptionValue("parallel", "off");
 
   firstlpsol = lp.getLpSolver().getSolution().col_value;
@@ -1000,24 +1000,24 @@ bool HighsMipSolverData::checkLimits() const {
   const HighsOptions& options = *mipsolver.options_mip_;
   if (options.mip_max_nodes != HIGHS_CONST_I_INF &&
       num_nodes >= size_t(options.mip_max_nodes)) {
-    highsOutputDev(options.io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(options.log_options,  
+		      HighsLogType::INFO,
                       "reached node limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
     return true;
   }
   if (options.mip_max_leaves != HIGHS_CONST_I_INF &&
       num_leaves >= size_t(options.mip_max_leaves)) {
-    highsOutputDev(options.io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(options.log_options,  
+		      HighsLogType::INFO,
                       "reached leave node limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
     return true;
   }
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
-    highsOutputDev(options.io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(options.log_options,  
+		      HighsLogType::INFO,
                       "reached time limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
     return true;
@@ -1060,8 +1060,8 @@ void HighsMipSolverData::checkObjIntegrality() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    highsOutputDev(mipsolver.options_mip_->io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(mipsolver.options_mip_->log_options,  
+		      HighsLogType::INFO,
                       "objective is always integral with scale %g\n",
                       objintscale);
   }
@@ -1112,8 +1112,8 @@ void HighsMipSolverData::runProbing() {
         ++nfixed;
     }
 
-    highsOutputDev(mipsolver.options_mip_->io_options,  
-		      HighsMessageType::INFO,
+    highsLogDev(mipsolver.options_mip_->log_options,  
+		      HighsLogType::INFO,
                       "%d probing evaluations: %d fixed binary variables, %d "
                       "bound changes\n",
                       nprobed, nfixed,

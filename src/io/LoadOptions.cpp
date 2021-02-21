@@ -29,7 +29,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
 
       int equals = line.find_first_of("=");
       if (equals < 0 || equals >= (int)line.size() - 1) {
-        highsOutputUser(options.io_options, HighsMessageType::ERROR,
+        highsLogUser(options.log_options, HighsLogType::ERROR,
                         "Error on line %d of options file.\n", line_count);
         return false;
       }
@@ -37,12 +37,12 @@ bool loadOptionsFromFile(HighsOptions& options) {
       value = line.substr(equals + 1, line.size() - equals);
       trim(option);
       trim(value);
-      if (setOptionValue(options.io_options, option, options.records, value) !=
+      if (setOptionValue(options.log_options, option, options.records, value) !=
           OptionStatus::OK)
         return false;
     }
   } else {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
                     "Options file not found.\n");
     return false;
   }

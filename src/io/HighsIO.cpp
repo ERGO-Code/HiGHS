@@ -21,32 +21,32 @@
 #include "lp_data/HighsOptions.h"
 
 void (*printmsgcb)(int, const char*, void*) = NULL;
-void (*logmsgcb)(HighsMessageType, const char*, void*) = NULL;
+void (*logmsgcb)(HighsLogType, const char*, void*) = NULL;
 void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void highsOutputUser(const HighsIoOptions& io_options, const HighsMessageType type,
+void highsLogUser(const HighsLogOptions& log_options, const HighsLogType type,
                      const char* format, ...) {
-  if (!*io_options.output_flag || (io_options.logging_file == NULL && !*io_options.log_to_console))
+  if (!*log_options.output_flag || (log_options.log_file_stream == NULL && !*log_options.log_to_console))
     return;
-  // highsOutputUser should not be passed HighsMessageType::DETAILED or HighsMessageType::VERBOSE
-  assert(type != HighsMessageType::DETAILED);
-  assert(type != HighsMessageType::VERBOSE);
+  // highsLogUser should not be passed HighsLogType::DETAILED or HighsLogType::VERBOSE
+  assert(type != HighsLogType::DETAILED);
+  assert(type != HighsLogType::VERBOSE);
   va_list argptr;
   va_start(argptr, format);
   if (logmsgcb == NULL) {
-    fprintf(io_options.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
-    vfprintf(io_options.logging_file, format, argptr);
-    if (*io_options.log_to_console) {
-      fprintf(io_options.logging_file, "%-9s", HighsMessageTypeTag[(int)type]);
+    fprintf(log_options.log_file_stream, "%-9s", HighsLogTypeTag[(int)type]);
+    vfprintf(log_options.log_file_stream, format, argptr);
+    if (*log_options.log_to_console) {
+      fprintf(log_options.log_file_stream, "%-9s", HighsLogTypeTag[(int)type]);
       va_start(argptr, format);
       vfprintf(stdout, format, argptr);
     }
   } else {
     int len;
     len = snprintf(msgbuffer, sizeof(msgbuffer), "%-9s",
-                   HighsMessageTypeTag[(int)type]);
+                   HighsLogTypeTag[(int)type]);
     if (len < (int)sizeof(msgbuffer))
       len +=
           vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
@@ -59,19 +59,19 @@ void highsOutputUser(const HighsIoOptions& io_options, const HighsMessageType ty
   va_end(argptr);
 }
 
-void highsOutputDev(const HighsIoOptions& io_options, const HighsMessageType type,
+void highsLogDev(const HighsLogOptions& log_options, const HighsLogType type,
                     const char* format, ...) {
-  if (io_options.logging_file == NULL || !*io_options.output_dev) return;
-  // Always report HighsMessageType INFO, WARNING or ERROR 
-  // Report HighsMessageType DETAILED if *io_options.output_dev >= OUTPUT_DEV_DETAILED
-  // Report HighsMessageType VERBOSE if *io_options.output_dev >= OUTPUT_DEV_VERBOSE
-  if (type == HighsMessageType::DETAILED && *io_options.output_dev < OUTPUT_DEV_DETAILED) return;
-  if (type == HighsMessageType::VERBOSE && *io_options.output_dev < OUTPUT_DEV_VERBOSE) return;
+  if (log_options.log_file_stream == NULL || !*log_options.log_dev_level) return;
+  // Always report HighsLogType INFO, WARNING or ERROR 
+  // Report HighsLogType DETAILED if *log_options.log_dev_level >= LOG_DEV_LEVEL_DETAILED
+  // Report HighsLogType VERBOSE if *log_options.log_dev_level >= LOG_DEV_LEVEL_VERBOSE
+  if (type == HighsLogType::DETAILED && *log_options.log_dev_level < LOG_DEV_LEVEL_DETAILED) return;
+  if (type == HighsLogType::VERBOSE && *log_options.log_dev_level < LOG_DEV_LEVEL_VERBOSE) return;
   va_list argptr;
   va_start(argptr, format);
   if (logmsgcb == NULL) {
-    vfprintf(io_options.logging_file, format, argptr);
-    if (*io_options.log_to_console) {
+    vfprintf(log_options.log_file_stream, format, argptr);
+    if (*log_options.log_to_console) {
       va_start(argptr, format);
       vfprintf(stdout, format, argptr);
     }
@@ -87,29 +87,29 @@ void highsOutputDev(const HighsIoOptions& io_options, const HighsMessageType typ
   va_end(argptr);
 }
 
-void highsSetMessageCallback(
+void highsSetLogCallback(
     void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
-    void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
+    void (*logmsgcb_)(HighsLogType type, const char* msg, void* msgcb_data),
     void* msgcb_data_) {
   printmsgcb = printmsgcb_;
   logmsgcb = logmsgcb_;
   msgcb_data = msgcb_data_;
 }
 
-void highsSetMessageCallback(HighsOptions& options) {
+void highsSetLogCallback(HighsOptions& options) {
   printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;
 }
 
-void highsReportIoOptions(const HighsIoOptions& io_options) {
+void highsReportLogOptions(const HighsLogOptions& log_options) {
   printf("\nHighs IO settings\n");
-  if (io_options.logging_file == NULL) {
-    printf("   logging_file = NULL\n");
+  if (log_options.log_file_stream == NULL) {
+    printf("   log_file_stream = NULL\n");
   } else {
-    printf("   logging_file = Not NULL\n");
+    printf("   log_file_stream = Not NULL\n");
   }
-  printf("   output_flag = %d\n", *io_options.output_flag);
-  printf("   log_to_console = %d\n", *io_options.log_to_console);
-  printf("   output_dev = %d\n\n", *io_options.output_dev);
+  printf("   output_flag = %d\n", *log_options.output_flag);
+  printf("   log_to_console = %d\n", *log_options.log_to_console);
+  printf("   log_dev_level = %d\n\n", *log_options.log_dev_level);
 }

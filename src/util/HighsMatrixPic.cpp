@@ -95,8 +95,8 @@ HighsStatus writeRmatrixPicToFile(const HighsOptions& options,
   assert(num_pixel_wide <= max_num_pixel_wide);
   assert(num_pixel_deep <= max_num_pixel_deep);
 
-  highsOutputUser(
-      options.io_options, HighsMessageType::INFO,
+  highsLogUser(
+      options.log_options, HighsLogType::INFO,
       "Representing LP constraint matrix sparsity pattern %dx%d .pbm file,"
       " mapping entries in square of size %d onto one pixel\n",
       num_pixel_wide, num_pixel_deep, dim_per_pixel);

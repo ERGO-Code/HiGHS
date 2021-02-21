@@ -21,35 +21,35 @@ class HighsOptions;
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum class HighsMessageType { INFO = 1, DETAILED, VERBOSE, WARNING, ERROR };
-const char* const HighsMessageTypeTag[] = {"", "", "", "WARNING: ", "ERROR: "};
-enum OutputDevLevel {
-		     OUTPUT_DEV_MIN = 0,
-		     OUTPUT_DEV_NONE = OUTPUT_DEV_MIN, // 0
-		     OUTPUT_DEV_INFO,                  // 1
-		     OUTPUT_DEV_DETAILED,              // 2
-		     OUTPUT_DEV_VERBOSE,               // 3
-		     OUTPUT_DEV_MAX = OUTPUT_DEV_VERBOSE
+enum class HighsLogType { INFO = 1, DETAILED, VERBOSE, WARNING, ERROR };
+const char* const HighsLogTypeTag[] = {"", "", "", "WARNING: ", "ERROR: "};
+enum LogDevLevel {
+		     LOG_DEV_LEVEL_MIN = 0,
+		     LOG_DEV_LEVEL_NONE = LOG_DEV_LEVEL_MIN, // 0
+		     LOG_DEV_LEVEL_INFO,                  // 1
+		     LOG_DEV_LEVEL_DETAILED,              // 2
+		     LOG_DEV_LEVEL_VERBOSE,               // 3
+		     LOG_DEV_LEVEL_MAX = LOG_DEV_LEVEL_VERBOSE
 };
 
-struct HighsIoOptions {
-  FILE* logging_file;
+struct HighsLogOptions {
+  FILE* log_file_stream;
   bool* output_flag;
   bool* log_to_console;
-  int* output_dev;
+  int* log_dev_level;
 };
 
 /**
  * @brief For _single-line_ user logging with message type notification
  */
 // Printing format: must contain exactly one "\n" at end of format
-void highsOutputUser(const HighsIoOptions& io_options, const HighsMessageType type,
+void highsLogUser(const HighsLogOptions& log_options, const HighsLogType type,
                      const char* format, ...);
 
 /**
  * @brief For development logging
  */
-void highsOutputDev(const HighsIoOptions& io_options, const HighsMessageType type,
+void highsLogDev(const HighsLogOptions& log_options, const HighsLogType type,
                     const char* format, ...);
 
 /*
@@ -57,17 +57,22 @@ void highsOutputDev(const HighsIoOptions& io_options, const HighsMessageType typ
  *
  * Set to NULL to reset to default, which is to print to logfile and output file
  */
-void highsSetMessageCallback(
+void highsSetLogCallback(
     void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
-    void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
+    void (*logmsgcb_)(HighsLogType type, const char* msg, void* msgcb_data),
     void* msgcb_data_);
 
 /*
  * @brief sets callbacks from options
  */
-void highsSetMessageCallback(HighsOptions& options  //!< the options
+void highsSetLogCallback(HighsOptions& options  //!< the options
 );
 
-void highsReportIoOptions(const HighsIoOptions& io_options);
+void highsSetLogOptions(HighsLogOptions& log_options,
+			FILE* log_file_stream_ = NULL,
+			const bool* output_flag_ = NULL,
+			const bool* log_to_console_ = NULL,
+			const int* log_dev_level = NULL);
+void highsReportLogOptions(const HighsLogOptions& log_options);
 
 #endif

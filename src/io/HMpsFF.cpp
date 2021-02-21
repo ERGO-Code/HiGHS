@@ -12,10 +12,10 @@
 
 namespace free_format_parser {
 
-FreeFormatParserReturnCode HMpsFF::loadProblem(const HighsIoOptions& io_options,
+FreeFormatParserReturnCode HMpsFF::loadProblem(const HighsLogOptions& log_options,
                                                const std::string filename,
                                                HighsLp& lp) {
-  FreeFormatParserReturnCode result = parse(io_options, filename);
+  FreeFormatParserReturnCode result = parse(log_options, filename);
   if (result != FreeFormatParserReturnCode::SUCCESS) return result;
 
   colCost.assign(numCol, 0);
@@ -86,7 +86,7 @@ int HMpsFF::fillMatrix() {
   return 0;
 }
 
-FreeFormatParserReturnCode HMpsFF::parse(const HighsIoOptions& io_options,
+FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
                                          const std::string& filename) {
   std::ifstream f;
   HMpsFF::parsekey keyword = HMpsFF::parsekey::NONE;
@@ -102,22 +102,22 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsIoOptions& io_options,
            keyword != HMpsFF::parsekey::TIMEOUT) {
       switch (keyword) {
         case HMpsFF::parsekey::OBJSENSE:
-          keyword = parseObjsense(io_options, f);
+          keyword = parseObjsense(log_options, f);
           break;
         case HMpsFF::parsekey::ROWS:
-          keyword = parseRows(io_options, f);
+          keyword = parseRows(log_options, f);
           break;
         case HMpsFF::parsekey::COLS:
-          keyword = parseCols(io_options, f);
+          keyword = parseCols(log_options, f);
           break;
         case HMpsFF::parsekey::RHS:
-          keyword = parseRhs(io_options, f);
+          keyword = parseRhs(log_options, f);
           break;
         case HMpsFF::parsekey::BOUNDS:
-          keyword = parseBounds(io_options, f);
+          keyword = parseBounds(log_options, f);
           break;
         case HMpsFF::parsekey::RANGES:
-          keyword = parseRanges(io_options, f);
+          keyword = parseRanges(log_options, f);
           break;
         case HMpsFF::parsekey::FAIL:
           f.close();
@@ -223,7 +223,7 @@ double getWallTime() {
       .count();
 }
 
-HMpsFF::parsekey HMpsFF::parseObjsense(const HighsIoOptions& io_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseObjsense(const HighsLogOptions& log_options, std::ifstream& file) {
   std::string strline, word;
 
   while (getline(file, strline)) {
@@ -251,7 +251,7 @@ HMpsFF::parsekey HMpsFF::parseObjsense(const HighsIoOptions& io_options, std::if
   return HMpsFF::parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRows(const HighsIoOptions& io_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRows(const HighsLogOptions& log_options, std::ifstream& file) {
   std::string strline, word;
   size_t nrows = 0;
   bool hasobj = false;
@@ -275,7 +275,7 @@ HMpsFF::parsekey HMpsFF::parseRows(const HighsIoOptions& io_options, std::ifstre
     if (key != HMpsFF::parsekey::NONE) {
       numRow = int(nrows);
       if (!hasobj) {
-        highsOutputUser(io_options, HighsMessageType::WARNING,
+        highsLogUser(log_options, HighsLogType::WARNING,
                         "No objective row found\n");
         rowname2idx.emplace("artificial_empty_objective", -1);
       };
@@ -347,7 +347,7 @@ HMpsFF::parsekey HMpsFF::parseRows(const HighsIoOptions& io_options, std::ifstre
   return HMpsFF::parsekey::FAIL;
 }
 
-typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIoOptions& io_options,
+typename HMpsFF::parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
                                             std::ifstream& file) {
   std::string colname = "";
   std::string strline, word;
@@ -465,14 +465,14 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIoOptions& io_options,
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      highsOutputUser(io_options, HighsMessageType::ERROR,
+      highsLogUser(log_options, HighsLogType::ERROR,
                       "No coefficient given for column %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      highsOutputUser(io_options, HighsMessageType::WARNING,
+      highsLogUser(log_options, HighsLogType::WARNING,
                       "COLUMNS section contains row %s not in ROWS section\n",
                       marker.c_str());
     } else {
@@ -487,7 +487,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIoOptions& io_options,
       // parse second coefficient
       marker = first_word(strline, end);
       if (word == "") {
-        highsOutputUser(io_options, HighsMessageType::ERROR,
+        highsLogUser(log_options, HighsLogType::ERROR,
                         "No coefficient given for column %s\n", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
@@ -503,8 +503,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIoOptions& io_options,
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        highsOutputUser(
-            io_options, HighsMessageType::WARNING,
+        highsLogUser(
+            log_options, HighsLogType::WARNING,
             "COLUMNS section contains row %s not in ROWS section: ignored\n",
             marker.c_str());
         continue;
@@ -520,7 +520,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIoOptions& io_options,
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRhs(const HighsIoOptions& io_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRhs(const HighsLogOptions& log_options, std::ifstream& file) {
   std::string strline;
 
   auto parsename = [this](const std::string& name, int& rowidx) {
@@ -594,7 +594,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIoOptions& io_options, std::ifstrea
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      highsOutputUser(io_options, HighsMessageType::ERROR,
+      highsLogUser(log_options, HighsLogType::ERROR,
                       "No bound given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
@@ -613,7 +613,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIoOptions& io_options, std::ifstrea
         word = first_word(strline, end_marker);
         end = first_word_end(strline, end_marker);
         if (word == "") {
-          highsOutputUser(io_options, HighsMessageType::ERROR,
+          highsLogUser(log_options, HighsLogType::ERROR,
                           "No bound given for SIF row %s\n", marker.c_str());
           return HMpsFF::parsekey::FAIL;
         }
@@ -622,8 +622,8 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIoOptions& io_options, std::ifstrea
     }
 
     if (mit == rowname2idx.end()) {
-      highsOutputUser(
-          io_options, HighsMessageType::WARNING,
+      highsLogUser(
+          log_options, HighsLogType::WARNING,
           "RHS section contains row %s not in ROWS section: ignored\n",
           marker.c_str());
     } else {
@@ -636,7 +636,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIoOptions& io_options, std::ifstrea
       // parse second coefficient
       marker = first_word(strline, end);
       if (word == "") {
-        highsOutputUser(io_options, HighsMessageType::ERROR,
+        highsLogUser(log_options, HighsLogType::ERROR,
                         "No coefficient given for rhs of row %s\n",
                         marker.c_str());
         return HMpsFF::parsekey::FAIL;
@@ -653,8 +653,8 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIoOptions& io_options, std::ifstrea
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        highsOutputUser(
-            io_options, HighsMessageType::WARNING,
+        highsLogUser(
+            log_options, HighsLogType::WARNING,
             "RHS section contains row %s not in ROWS section: ignored\n",
             marker.c_str());
         continue;
@@ -669,7 +669,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIoOptions& io_options, std::ifstrea
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseBounds(const HighsIoOptions& io_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseBounds(const HighsLogOptions& log_options, std::ifstream& file) {
   std::string strline, word;
 
   int num_mi = 0;
@@ -714,23 +714,23 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIoOptions& io_options, std::ifst
     // start of new section?
     if (key != parsekey::NONE) {
       if (num_mi)
-        highsOutputUser(io_options, HighsMessageType::INFO,
+        highsLogUser(log_options, HighsLogType::INFO,
                         "Number of MI entries in BOUNDS section is %d\n",
                         num_mi);
       if (num_pl)
-        highsOutputUser(io_options, HighsMessageType::INFO,
+        highsLogUser(log_options, HighsLogType::INFO,
                         "Number of PL entries in BOUNDS section is %d\n",
                         num_pl);
       if (num_bv)
-        highsOutputUser(io_options, HighsMessageType::INFO,
+        highsLogUser(log_options, HighsLogType::INFO,
                         "Number of BV entries in BOUNDS section is %d\n",
                         num_bv);
       if (num_li)
-        highsOutputUser(io_options, HighsMessageType::INFO,
+        highsLogUser(log_options, HighsLogType::INFO,
                         "Number of LI entries in BOUNDS section is %d\n",
                         num_li);
       if (num_ui)
-        highsOutputUser(io_options, HighsMessageType::INFO,
+        highsLogUser(log_options, HighsLogType::INFO,
                         "Number of UI entries in BOUNDS section is %d\n",
                         num_ui);
       // Assign bounds to columns that remain binary by default
@@ -809,8 +809,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIoOptions& io_options, std::ifst
 
     auto mit = colname2idx.find(marker);
     if (mit == colname2idx.end()) {
-      highsOutputUser(
-          io_options, HighsMessageType::WARNING,
+      highsLogUser(
+          log_options, HighsLogType::WARNING,
           "BOUNDS section contains col %s not in COLS section: ignored\n",
           marker.c_str());
       continue;
@@ -840,7 +840,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIoOptions& io_options, std::ifst
       // binary: BV
       {
         if (!islb || !isub) {
-          highsOutputUser(io_options, HighsMessageType::ERROR,
+          highsLogUser(log_options, HighsLogType::ERROR,
                           "BV row %s but [islb, isub] = [%1d, %1d]\n",
                           marker.c_str(), islb, isub);
           assert(islb && isub);
@@ -863,7 +863,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIoOptions& io_options, std::ifst
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      highsOutputUser(io_options, HighsMessageType::ERROR,
+      highsLogUser(log_options, HighsLogType::ERROR,
                       "No bound given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
@@ -873,7 +873,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIoOptions& io_options, std::ifst
       int i_value = static_cast<int>(value);
       double dl = value - i_value;
       if (dl)
-        highsOutputUser(io_options, HighsMessageType::ERROR,
+        highsLogUser(log_options, HighsLogType::ERROR,
                         "Bound for LI/UI row %s is %g: not integer\n",
                         marker.c_str(), value);
       // Bound marker LI or UI defines the column as integer
@@ -888,7 +888,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIoOptions& io_options, std::ifst
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRanges(const HighsIoOptions& io_options, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRanges(const HighsLogOptions& log_options, std::ifstream& file) {
   std::string strline, word;
 
   auto parsename = [this](const std::string& name, int& rowidx) {
@@ -949,15 +949,15 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsIoOptions& io_options, std::ifst
     end = first_word_end(strline, end_marker);
 
     if (word == "") {
-      highsOutputUser(io_options, HighsMessageType::ERROR,
+      highsLogUser(log_options, HighsLogType::ERROR,
                       "No range given for row %s\n", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
 
     auto mit = rowname2idx.find(marker);
     if (mit == rowname2idx.end()) {
-      highsOutputUser(
-          io_options, HighsMessageType::WARNING,
+      highsLogUser(
+          log_options, HighsLogType::WARNING,
           "RANGES section contains row %s not in ROWS    section: ignored\n",
           marker.c_str());
       continue;
@@ -977,15 +977,15 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsIoOptions& io_options, std::ifst
       end = first_word_end(strline, end_marker);
 
       if (word == "") {
-        highsOutputUser(io_options, HighsMessageType::ERROR,
+        highsLogUser(log_options, HighsLogType::ERROR,
                         "No range given for row %s\n", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
-        highsOutputUser(
-            io_options, HighsMessageType::WARNING,
+        highsLogUser(
+            log_options, HighsLogType::WARNING,
             "RANGES section contains row %s not in ROWS    section: ignored\n",
             marker.c_str());
         continue;
@@ -996,7 +996,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(const HighsIoOptions& io_options, std::ifst
       addrhs(value, rowidx);
 
       if (!is_end(strline, end)) {
-        highsOutputUser(io_options, HighsMessageType::ERROR,
+        highsLogUser(log_options, HighsLogType::ERROR,
                         "Unknown specifiers in RANGES section for row %s\n",
                         marker.c_str());
         return HMpsFF::parsekey::FAIL;

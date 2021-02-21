@@ -424,7 +424,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
 

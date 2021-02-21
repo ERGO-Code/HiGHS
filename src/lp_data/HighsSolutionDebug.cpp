@@ -39,7 +39,7 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   if (!basis.valid_) return return_status;
   bool consistent = isBasisConsistent(lp, basis);
   if (!consistent) {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
                     "HiGHS basis inconsistency\n");
     assert(consistent);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
@@ -55,7 +55,7 @@ HighsDebugStatus debugBasisRightSize(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isBasisRightSize(lp, basis);
   if (!right_size) {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
                     "HiGHS basis size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
@@ -71,7 +71,7 @@ HighsDebugStatus debugSolutionRightSize(const HighsOptions& options,
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   bool right_size = isSolutionRightSize(lp, solution);
   if (!right_size) {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
                     "HiGHS solution size error\n");
     assert(right_size);
     return_status = HighsDebugStatus::LOGICAL_ERROR;
@@ -578,21 +578,21 @@ bool debugBasicSolutionVariable(
 HighsDebugStatus debugAnalysePrimalDualErrors(
     const HighsOptions& options, HighsPrimalDualErrors& primal_dual_errors) {
   std::string value_adjective;
-  HighsMessageType report_level;
+  HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   const bool force_report =
       options.highs_debug_level >= HIGHS_DEBUG_LEVEL_COSTLY;
   if (primal_dual_errors.num_nonzero_basic_duals) {
     value_adjective = "Error";
-    report_level = HighsMessageType::ERROR;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   } else {
     value_adjective = "";
-    report_level = HighsMessageType::VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (force_report) report_level = HighsMessageType::INFO;
-  highsOutputDev(options.io_options, report_level,
+  if (force_report) report_level = HighsLogType::INFO;
+  highsLogDev(options.log_options, report_level,
                     "PrDuErrors : %-9s Nonzero basic duals:       num = %2d; "
                     "max = %9.4g; sum = %9.4g\n",
                     value_adjective.c_str(),
@@ -602,15 +602,15 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
 
   if (primal_dual_errors.num_off_bound_nonbasic) {
     value_adjective = "Error";
-    report_level = HighsMessageType::ERROR;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::LOGICAL_ERROR;
   } else {
     value_adjective = "";
-    report_level = HighsMessageType::VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (force_report) report_level = HighsMessageType::INFO;
-  highsOutputDev(options.io_options, report_level,
+  if (force_report) report_level = HighsLogType::INFO;
+  highsLogDev(options.log_options, report_level,
                     "PrDuErrors : %-9s Off-bound nonbasic values: num = %2d; "
                     "max = %9.4g; sum = %9.4g\n",
                     value_adjective.c_str(),
@@ -620,19 +620,19 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
 
   if (primal_dual_errors.max_primal_residual > excessive_residual_error) {
     value_adjective = "Excessive";
-    report_level = HighsMessageType::ERROR;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (primal_dual_errors.max_primal_residual > large_residual_error) {
     value_adjective = "Large";
-    report_level = HighsMessageType::DETAILED;
+    report_level = HighsLogType::DETAILED;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "";
-    report_level = HighsMessageType::VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (force_report) report_level = HighsMessageType::INFO;
-  highsOutputDev(options.io_options, report_level,
+  if (force_report) report_level = HighsLogType::INFO;
+  highsLogDev(options.log_options, report_level,
                     "PrDuErrors : %-9s Primal residual:           num = %2d; "
                     "max = %9.4g; sum = %9.4g\n",
                     value_adjective.c_str(),
@@ -642,19 +642,19 @@ HighsDebugStatus debugAnalysePrimalDualErrors(
 
   if (primal_dual_errors.max_dual_residual > excessive_residual_error) {
     value_adjective = "Excessive";
-    report_level = HighsMessageType::ERROR;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (primal_dual_errors.max_dual_residual > large_residual_error) {
     value_adjective = "Large";
-    report_level = HighsMessageType::DETAILED;
+    report_level = HighsLogType::DETAILED;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "";
-    report_level = HighsMessageType::VERBOSE;
+    report_level = HighsLogType::VERBOSE;
     return_status = HighsDebugStatus::OK;
   }
-  if (force_report) report_level = HighsMessageType::INFO;
-  highsOutputDev(options.io_options, report_level,
+  if (force_report) report_level = HighsLogType::INFO;
+  highsLogDev(options.log_options, report_level,
                     "PrDuErrors : %-9s Dual residual:             num = %2d; "
                     "max = %9.4g; sum = %9.4g\n",
                     value_adjective.c_str(),
@@ -756,21 +756,21 @@ HighsDebugStatus debugCompareSolutionParamValue(const string name,
   if (v0 == v1) return HighsDebugStatus::OK;
   double delta = highsRelativeDifference(v0, v1);
   std::string value_adjective;
-  HighsMessageType report_level;
+  HighsLogType report_level;
   HighsDebugStatus return_status = HighsDebugStatus::OK;
   if (delta > excessive_relative_solution_param_error) {
     value_adjective = "Excessive";
-    report_level = HighsMessageType::ERROR;
+    report_level = HighsLogType::ERROR;
     return_status = HighsDebugStatus::ERROR;
   } else if (delta > large_relative_solution_param_error) {
     value_adjective = "Large";
-    report_level = HighsMessageType::DETAILED;
+    report_level = HighsLogType::DETAILED;
     return_status = HighsDebugStatus::WARNING;
   } else {
     value_adjective = "OK";
-    report_level = HighsMessageType::VERBOSE;
+    report_level = HighsLogType::VERBOSE;
   }
-  highsOutputDev(options.io_options, report_level,
+  highsLogDev(options.log_options, report_level,
                     "SolutionPar:  %-9s relative difference of %9.4g for %s\n",
                     value_adjective.c_str(), delta, name.c_str());
   return return_status;
@@ -780,7 +780,7 @@ HighsDebugStatus debugCompareSolutionParamInteger(const string name,
                                                   const HighsOptions& options,
                                                   const int v0, const int v1) {
   if (v0 == v1) return HighsDebugStatus::OK;
-  highsOutputDev(options.io_options, HighsMessageType::ERROR,
+  highsLogDev(options.log_options, HighsLogType::ERROR,
                     "SolutionPar:  difference of %d for %s\n", v1 - v0,
                     name.c_str());
   return HighsDebugStatus::LOGICAL_ERROR;
@@ -790,9 +790,9 @@ void debugReportHighsBasicSolution(const string message,
                                    const HighsOptions& options,
                                    const HighsSolutionParams& solution_params,
                                    const HighsModelStatus model_status) {
-  highsOutputDev(options.io_options, HighsMessageType::INFO,
+  highsLogDev(options.log_options, HighsLogType::INFO,
                     "\nHiGHS basic solution: %s\n", message.c_str());
-  highsOutputDev(options.io_options, HighsMessageType::INFO,
+  highsLogDev(options.log_options, HighsLogType::INFO,
       "Infeas:                Pr %d(Max %.4g, Sum %.4g); Du %d(Max %.4g, "
       "Sum %.4g); Status: %s\n",
       solution_params.num_primal_infeasibility,

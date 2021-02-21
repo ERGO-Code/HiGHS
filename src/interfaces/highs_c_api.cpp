@@ -84,9 +84,7 @@ int Highs_passLp(void* highs, const int numcol, const int numrow,
 int Highs_clearModel(void* highs) { return (int)((Highs*)highs)->clearModel(); }
 
 int Highs_runQuiet(void* highs) {
-  int return_status = Highs_setHighsLogfile(highs, NULL);
-  if (return_status) return return_status;
-  return Highs_setHighsOutput(highs, NULL);
+  return (int)((Highs*)highs)->setHighsOptionValue("output_flag", false);
 }
 
 int Highs_setHighsLogfile(void* highs, void* logfile) {

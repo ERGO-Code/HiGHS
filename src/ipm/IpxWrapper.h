@@ -186,47 +186,47 @@ HighsStatus reportIpxSolveStatus(const HighsOptions& options,
                                  const ipx::Int solve_status,
                                  const ipx::Int error_flag) {
   if (solve_status == IPX_STATUS_solved) {
-    highsOutputUser(options.io_options, HighsMessageType::INFO, "Ipx: Solved\n");
+    highsLogUser(options.log_options, HighsLogType::INFO, "Ipx: Solved\n");
     return HighsStatus::OK;
   } else if (solve_status == IPX_STATUS_stopped) {
-    highsOutputUser(options.io_options, HighsMessageType::WARNING, "Ipx: Stopped\n");
+    highsLogUser(options.log_options, HighsLogType::WARNING, "Ipx: Stopped\n");
     return HighsStatus::Warning;
   } else if (solve_status == IPX_STATUS_no_model) {
     if (error_flag == IPX_ERROR_argument_null) {
-      highsOutputUser(options.io_options, HighsMessageType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::ERROR,
                       "Ipx: Invalid input - argument_null\n");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_dimension) {
-      highsOutputUser(options.io_options, HighsMessageType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::ERROR,
                       "Ipx: Invalid input - invalid dimension\n");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_matrix) {
-      highsOutputUser(options.io_options, HighsMessageType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::ERROR,
                       "Ipx: Invalid input - invalid matrix\n");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_vector) {
-      highsOutputUser(options.io_options, HighsMessageType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::ERROR,
                       "Ipx: Invalid input - invalid vector\n");
       return HighsStatus::Error;
     } else if (error_flag == IPX_ERROR_invalid_basis) {
-      highsOutputUser(options.io_options, HighsMessageType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::ERROR,
                       "Ipx: Invalid input - invalid basis\n");
       return HighsStatus::Error;
     } else {
-      highsOutputUser(options.io_options, HighsMessageType::ERROR,
+      highsLogUser(options.log_options, HighsLogType::ERROR,
                       "Ipx: Invalid input - unrecognised error\n");
       return HighsStatus::Error;
     }
   } else if (solve_status == IPX_STATUS_out_of_memory) {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
                     "Ipx: Out of memory\n");
     return HighsStatus::Error;
   } else if (solve_status == IPX_STATUS_internal_error) {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
                     "Ipx: Internal error %d\n", (int)error_flag);
     return HighsStatus::Error;
   } else {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
                     "Ipx: unrecognised solve status = %d\n", (int)solve_status);
     return HighsStatus::Error;
   }
@@ -242,47 +242,47 @@ HighsStatus reportIpxIpmCrossoverStatus(const HighsOptions& options,
   else
     method_name = "Crossover";
   if (status == IPX_STATUS_not_run) {
-    highsOutputUser(options.io_options, HighsMessageType::WARNING, "Ipx: %s not run\n",
+    highsLogUser(options.log_options, HighsLogType::WARNING, "Ipx: %s not run\n",
                     method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_optimal) {
-    highsOutputUser(options.io_options, HighsMessageType::INFO, "Ipx: %s optimal\n",
+    highsLogUser(options.log_options, HighsLogType::INFO, "Ipx: %s optimal\n",
                     method_name.c_str());
     return HighsStatus::OK;
   } else if (status == IPX_STATUS_imprecise) {
-    highsOutputUser(options.io_options, HighsMessageType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::WARNING,
                     "Ipx: %s imprecise\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_primal_infeas) {
-    highsOutputUser(options.io_options, HighsMessageType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::WARNING,
                     "Ipx: %s primal infeasible\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_dual_infeas) {
-    highsOutputUser(options.io_options, HighsMessageType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::WARNING,
                     "Ipx: %s dual infeasible\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_time_limit) {
-    highsOutputUser(options.io_options, HighsMessageType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::WARNING,
                     "Ipx: %s reached time limit\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_iter_limit) {
-    highsOutputUser(options.io_options, HighsMessageType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::WARNING,
                     "Ipx: %s reached iteration limit\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_no_progress) {
-    highsOutputUser(options.io_options, HighsMessageType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::WARNING,
                     "Ipx: %s no progress\n", method_name.c_str());
     return HighsStatus::Warning;
   } else if (status == IPX_STATUS_failed) {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR, "Ipx: %s failed\n",
+    highsLogUser(options.log_options, HighsLogType::ERROR, "Ipx: %s failed\n",
                     method_name.c_str());
     return HighsStatus::Error;
   } else if (status == IPX_STATUS_debug) {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR, "Ipx: %s debug\n",
+    highsLogUser(options.log_options, HighsLogType::ERROR, "Ipx: %s debug\n",
                     method_name.c_str());
     return HighsStatus::Error;
   } else {
-    highsOutputUser(options.io_options, HighsMessageType::ERROR,
+    highsLogUser(options.log_options, HighsLogType::ERROR,
                     "Ipx: %s unrecognised status\n", method_name.c_str());
     return HighsStatus::Error;
   }
@@ -293,10 +293,10 @@ bool ipxStatusError(const bool status_error, const HighsOptions& options,
                     std::string message, const int value = -1) {
   if (status_error) {
     if (value < 0) {
-      highsOutputUser(options.io_options, HighsMessageType::ERROR, "Ipx: %s\n",
+      highsLogUser(options.log_options, HighsLogType::ERROR, "Ipx: %s\n",
                       message.c_str());
     } else {
-      highsOutputUser(options.io_options, HighsMessageType::ERROR, "Ipx: %s %d\n",
+      highsLogUser(options.log_options, HighsLogType::ERROR, "Ipx: %s %d\n",
                       message.c_str(), value);
     }
     fflush(NULL);
@@ -484,13 +484,13 @@ bool illegalIpxStoppedCrossoverStatus(ipx::Info& ipx_info,
 
 void reportIpmNoProgress(const HighsOptions& options,
                          const ipx::Info& ipx_info) {
-  highsOutputUser(options.io_options, HighsMessageType::WARNING,
+  highsLogUser(options.log_options, HighsLogType::WARNING,
                   "No progress: primal objective value       = %11.4g\n",
                   ipx_info.pobjval);
-  highsOutputUser(options.io_options, HighsMessageType::WARNING,
+  highsLogUser(options.log_options, HighsLogType::WARNING,
                   "No progress: max absolute primal residual = %11.4g\n",
                   ipx_info.abs_presidual);
-  highsOutputUser(options.io_options, HighsMessageType::WARNING,
+  highsLogUser(options.log_options, HighsLogType::WARNING,
                   "No progress: max absolute   dual residual = %11.4g\n",
                   ipx_info.abs_dresidual);
 }
@@ -538,15 +538,15 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Set display according to output
   parameters.display = 1;
   if (!options.output_flag) parameters.display = 0;
-  // Modify parameters.debug according to output_dev
+  // Modify parameters.debug according to log_dev_level
   parameters.debug = 0;
-  if (options.output_dev == OUTPUT_DEV_DETAILED) {
-    // Default options.output_dev setting is OUTPUT_DEV_NONE, yielding
+  if (options.log_dev_level == LOG_DEV_LEVEL_DETAILED) {
+    // Default options.log_dev_level setting is LOG_DEV_LEVEL_NONE, yielding
     // default setting debug = 0
     parameters.debug = 0;
-  } else if (options.output_dev == OUTPUT_DEV_INFO) {
+  } else if (options.log_dev_level == LOG_DEV_LEVEL_INFO) {
     parameters.debug = 3;
-  } else if (options.output_dev == OUTPUT_DEV_VERBOSE) {
+  } else if (options.log_dev_level == LOG_DEV_LEVEL_VERBOSE) {
     parameters.debug = 4;
   }
   // Just test feasibility and optimality tolerances for now
@@ -579,7 +579,7 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   IpxStatus result = fillInIpxData(lp, num_col, objective, col_lb, col_ub,
                                    num_row, Ap, Ai, Av, rhs, constraint_type);
   if (result != IpxStatus::OK) return HighsStatus::Error;
-  highsOutputUser(options.io_options, HighsMessageType::INFO,
+  highsLogUser(options.log_options, HighsLogType::INFO,
                   "IPX model has %d rows, %d columns and %d nonzeros\n",
                   (int)num_row, (int)num_col, (int)Ap[num_col]);
 
@@ -743,11 +743,11 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
         &ipx_solution.ipx_row_status[0], &ipx_solution.ipx_col_status[0]);
 
     // Convert the IPX basic solution to a HiGHS basic solution
-    ipxBasicSolutionToHighsBasicSolution(options.io_options, lp, rhs, constraint_type,
+    ipxBasicSolutionToHighsBasicSolution(options.log_options, lp, rhs, constraint_type,
                                          ipx_solution, highs_basis,
                                          highs_solution);
   } else {
-    ipxSolutionToHighsSolution(options.io_options, lp, rhs, constraint_type, num_col,
+    ipxSolutionToHighsSolution(options.log_options, lp, rhs, constraint_type, num_col,
                                num_row, x, slack, highs_solution);
     highs_basis.valid_ = false;
   }

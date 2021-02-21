@@ -94,7 +94,7 @@ class HighsSimplexAnalysis {
 
   void setup(const HighsLp& lp, const HighsOptions& options,
              const int simplex_iteration_count);
-  void messaging(const HighsIoOptions& io_options_);
+  void messaging(const HighsLogOptions& log_options_);
   void iterationReport();
   void invertReport();
   void invertReport(const bool header);
@@ -164,7 +164,7 @@ class HighsSimplexAnalysis {
   std::string lp_name_;
 
   // Local copies of IO data
-  HighsIoOptions io_options;
+  HighsLogOptions log_options;
 
   // Interpreted shortcuts from bit settings in highs_analysis_level
   bool analyse_lp_data;
@@ -257,17 +257,17 @@ class HighsSimplexAnalysis {
  private:
   void iterationReport(const bool header);
   void reportAlgorithmPhaseIterationObjective(const bool header,
-                                              const HighsMessageType this_message_type);
-  void reportInfeasibility(const bool header, const HighsMessageType this_message_type);
-  void reportThreads(const bool header, const HighsMessageType this_message_type);
-  void reportMulti(const bool header, const HighsMessageType this_message_type);
-  void reportOneDensity(const HighsMessageType this_message_type, const double density);
+                                              const HighsLogType this_message_type);
+  void reportInfeasibility(const bool header, const HighsLogType this_message_type);
+  void reportThreads(const bool header, const HighsLogType this_message_type);
+  void reportMulti(const bool header, const HighsLogType this_message_type);
+  void reportOneDensity(const HighsLogType this_message_type, const double density);
   void reportOneDensity(const double density);
-  void reportDensity(const bool header, const HighsMessageType this_message_type);
-  void reportInvert(const bool header, const HighsMessageType this_message_type);
-  //  void reportCondition(const bool header, const HighsMessageType this_message_type);
-  void reportIterationData(const bool header, const HighsMessageType this_message_type);
-  void reportFreeListSize(const bool header, const HighsMessageType this_message_type);
+  void reportDensity(const bool header, const HighsLogType this_message_type);
+  void reportInvert(const bool header, const HighsLogType this_message_type);
+  //  void reportCondition(const bool header, const HighsLogType this_message_type);
+  void reportIterationData(const bool header, const HighsLogType this_message_type);
+  void reportFreeListSize(const bool header, const HighsLogType this_message_type);
   int intLog10(const double v);
   bool dualAlgorithm();
 
@@ -297,8 +297,8 @@ class HighsSimplexAnalysis {
   double max_average_log_high_dual_steepest_edge_weight_error = 0;
   double max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
 
-  const HighsMessageType iteration_report_message_type = HighsMessageType::VERBOSE;
-  const HighsMessageType invert_report_message_type = HighsMessageType::INFO;
+  const HighsLogType iteration_report_message_type = HighsLogType::VERBOSE;
+  const HighsLogType invert_report_message_type = HighsLogType::INFO;
   int num_invert_report_since_last_header = -1;
   int num_iteration_report_since_last_header = -1;
 

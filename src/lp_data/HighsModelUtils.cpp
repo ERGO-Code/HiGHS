@@ -195,7 +195,7 @@ HighsStatus normaliseNames(const HighsOptions& options,
     // Construct names, either because they are empty names, or
     // because the existing names are too long
 
-    highsOutputUser(options.io_options, HighsMessageType::WARNING,
+    highsLogUser(options.log_options, HighsLogType::WARNING,
                     "There are empty or excessively-long %s names: using "
                     "constructed names with prefix %s\n",
                     name_type.c_str(), name_prefix.c_str());

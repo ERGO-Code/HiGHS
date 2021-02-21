@@ -65,7 +65,7 @@ void ekk_scipLpi3(Highs& highs) {
 TEST_CASE("Ekk", "[highs_test_ekk]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   HighsLp lp;
@@ -78,7 +78,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 
     REQUIRE(highs.setHighsOptionValue(
                 "simplex_strategy", SIMPLEX_STRATEGY_DUAL) == HighsStatus::OK);
-    highs.setHighsOptionValue("output_dev", OUTPUT_DEV_DETAILED);
+    highs.setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_DETAILED);
     REQUIRE(highs.run() == HighsStatus::OK);
   } else {
     //    ekk_distillation(highs);
@@ -90,7 +90,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   ekk_distillation(highs);

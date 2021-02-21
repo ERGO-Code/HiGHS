@@ -40,7 +40,7 @@ Highs::Highs() {
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const bool value) {
-  if (setOptionValue(options_.io_options, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -48,7 +48,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const int value) {
-  if (setOptionValue(options_.io_options, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -56,7 +56,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const double value) {
-  if (setOptionValue(options_.io_options, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -64,7 +64,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const std::string value) {
-  if (setOptionValue(options_.io_options, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -72,7 +72,7 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const char* value) {
-  if (setOptionValue(options_.io_options, option, options_.records, value) ==
+  if (setOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -84,7 +84,7 @@ HighsStatus Highs::setHighsOutput(FILE* output) { return HighsStatus::OK; }
 
 HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
-    highsOutputUser(options_.io_options, HighsMessageType::WARNING,
+    highsLogUser(options_.log_options, HighsLogType::WARNING,
                     "Empty file name so not reading options\n");
     return HighsStatus::Warning;
   }
@@ -94,7 +94,7 @@ HighsStatus Highs::readHighsOptions(const std::string filename) {
 }
 
 HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
-  if (passOptions(options_.io_options, options, options_) == OptionStatus::OK)
+  if (passOptions(options_.log_options, options, options_) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
@@ -102,14 +102,14 @@ HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
 const HighsOptions& Highs::getHighsOptions() { return options_; }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option, bool& value) {
-  if (getOptionValue(options_.io_options, option, options_.records, value) ==
+  if (getOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option, int& value) {
-  if (getOptionValue(options_.io_options, option, options_.records, value) ==
+  if (getOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -117,7 +117,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option, int& value) {
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        double& value) {
-  if (getOptionValue(options_.io_options, option, options_.records, value) ==
+  if (getOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -125,7 +125,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                        std::string& value) {
-  if (getOptionValue(options_.io_options, option, options_.records, value) ==
+  if (getOptionValue(options_.log_options, option, options_.records, value) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -133,7 +133,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 
 HighsStatus Highs::getHighsOptionType(const std::string& option,
                                       HighsOptionType& type) {
-  if (getOptionType(options_.io_options, option, options_.records, type) ==
+  if (getOptionType(options_.log_options, option, options_.records, type) ==
       OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
@@ -272,7 +272,7 @@ HighsStatus Highs::readModel(const std::string filename) {
   HighsStatus return_status = HighsStatus::OK;
   Filereader* reader = Filereader::getFilereader(filename);
   if (reader == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "Model file %s not supported\n", filename.c_str());
     return HighsStatus::Error;
   }
@@ -284,7 +284,7 @@ HighsStatus Highs::readModel(const std::string filename) {
       reader->readModelFromFile(this->options_, model);
   delete reader;
   if (call_code != FilereaderRetcode::OK) {
-    interpretFilereaderRetcode(this->options_.io_options, filename.c_str(), call_code);
+    interpretFilereaderRetcode(this->options_.log_options, filename.c_str(), call_code);
     return_status = interpretCallStatus(HighsStatus::Error, return_status,
                                         "readModelFromFile");
     if (return_status == HighsStatus::Error) return return_status;
@@ -319,7 +319,7 @@ HighsStatus Highs::readBasis(const std::string filename) {
   if (return_status != HighsStatus::OK) return return_status;
   // Basis read OK: check whether it's consistent with the LP
   if (!isBasisConsistent(lp_, read_basis)) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "readBasis: invalid basis\n");
     return HighsStatus::Error;
   }
@@ -339,12 +339,12 @@ HighsStatus Highs::writeModel(const std::string filename) {
 
   if (filename == "") {
     // Empty file name: report model on stdout
-    reportLp(options_, model, HighsMessageType::VERBOSE);
+    reportLp(options_, model, HighsLogType::VERBOSE);
     return_status = HighsStatus::OK;
   } else {
     Filereader* writer = Filereader::getFilereader(filename);
     if (writer == NULL) {
-      highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+      highsLogUser(options_.log_options, HighsLogType::ERROR,
                       "Model file %s not supported\n", filename.c_str());
       return HighsStatus::Error;
     }
@@ -410,7 +410,7 @@ HighsStatus Highs::run() {
     // model_file
     if (options_.model_file.compare(FILENAME_DEFAULT) == 0) {
       // model_file is still default value, so return with error
-      highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+      highsLogUser(options_.log_options, HighsLogType::ERROR,
                       "No model can be loaded in run()\n");
       return_status = HighsStatus::Error;
       return returnFromRun(return_status);
@@ -453,14 +453,14 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
 
-  highsSetMessageCallback(options_);
+  highsSetLogCallback(options_);
 #ifdef HiGHSDEV
-  if (checkOptions(options_.io_options, options_.records) != OptionStatus::OK) {
+  if (checkOptions(options_.log_options, options_.records) != OptionStatus::OK) {
     return_status = HighsStatus::Error;
     return returnFromRun(return_status);
   }
 #endif
-  highsOutputDev(options_.io_options, HighsMessageType::VERBOSE,
+  highsLogDev(options_.log_options, HighsLogType::VERBOSE,
                     "Solving %s\n", lp_.model_name_.c_str());
 
   double this_presolve_time = -1;
@@ -491,7 +491,7 @@ HighsStatus Highs::run() {
     // If using IPX to solve the reduced LP, crossover must be run
     // since a basic solution is required by postsolve
     if (options_.solver == ipm_string && !options_.run_crossover) {
-      highsOutputUser(options_.io_options, HighsMessageType::WARNING,
+      highsLogUser(options_.log_options, HighsLogType::WARNING,
                       "Forcing IPX to use crossover after presolve\n");
       options_.run_crossover = true;
     }
@@ -618,7 +618,7 @@ HighsStatus Highs::run() {
         } else {
           model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
         }
-        highsOutputUser(options_.io_options, HighsMessageType::INFO,
+        highsLogUser(options_.log_options, HighsLogType::INFO,
                         "Problem status detected on presolve: %s\n",
                         highsModelStatusToString(model_status_).c_str());
 
@@ -638,14 +638,14 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::Timeout: {
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        highsOutputDev(options_.io_options, HighsMessageType::ERROR,
+        highsLogDev(options_.log_options, HighsLogType::ERROR,
                           "Presolve reached timeout\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         return HighsStatus::Warning;
       }
       case HighsPresolveStatus::OptionsError: {
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        highsOutputDev(options_.io_options, HighsMessageType::ERROR,
+        highsLogDev(options_.log_options, HighsLogType::ERROR,
                           "Presolve options error.\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         return HighsStatus::Warning;
@@ -653,7 +653,7 @@ HighsStatus Highs::run() {
       default: {
         // case HighsPresolveStatus::Error
         model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-        highsOutputDev(options_.io_options, HighsMessageType::ERROR,
+        highsLogDev(options_.log_options, HighsLogType::ERROR,
                           "Presolve failed.\n");
         if (run_highs_clock_already_running) timer_.stopRunHighsClock();
         // Transfer the model status to the scaled model status and orriginal
@@ -693,7 +693,7 @@ HighsStatus Highs::run() {
         presolve_.info_.postsolve_time = this_postsolve_time;
 
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-          highsOutputDev(options_.io_options, HighsMessageType::VERBOSE,
+          highsLogDev(options_.log_options, HighsLogType::VERBOSE,
                             "Postsolve finished\n");
           //
           // Now hot-start the simplex solver for the original_hmo:
@@ -729,7 +729,7 @@ HighsStatus Highs::run() {
           HighsOptions& options = hmos_[solved_hmo].options_;
           HighsOptions save_options = options;
           const bool full_logging = false;
-          if (full_logging) options.output_dev = OUTPUT_DEV_VERBOSE;
+          if (full_logging) options.log_dev_level = LOG_DEV_LEVEL_VERBOSE;
           // Force the use of simplex to clean up if IPM has been used
           // to solve the presolved problem
           if (options.solver == ipm_string) options.solver = simplex_string;
@@ -764,7 +764,7 @@ HighsStatus Highs::run() {
           postsolve_iteration_count =
               info_.simplex_iteration_count - iteration_count0;
         } else {
-          highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+          highsLogUser(options_.log_options, HighsLogType::ERROR,
                           "Postsolve return status is %d\n",
                           (int)postsolve_status);
           model_status_ = HighsModelStatus::POSTSOLVE_ERROR;
@@ -830,57 +830,57 @@ HighsStatus Highs::run() {
   double lp_solve_final_time = timer_.readRunHighsClock();
   double this_solve_time = lp_solve_final_time - initial_time;
   if (postsolve_iteration_count < 0) {
-    highsOutputDev(options_.io_options, HighsMessageType::INFO,
+    highsLogDev(options_.log_options, HighsLogType::INFO,
                       "Postsolve  : \n");
   } else {
-    highsOutputDev(options_.io_options, HighsMessageType::INFO,
+    highsLogDev(options_.log_options, HighsLogType::INFO,
                       "Postsolve  : %d\n", postsolve_iteration_count);
   }
-  highsOutputDev(options_.io_options, HighsMessageType::INFO,
+  highsLogDev(options_.log_options, HighsLogType::INFO,
                     "Time       : %8.2f\n", this_solve_time);
-  highsOutputDev(options_.io_options, HighsMessageType::INFO,
+  highsLogDev(options_.log_options, HighsLogType::INFO,
                     "Time Pre   : %8.2f\n", this_presolve_time);
-  highsOutputDev(options_.io_options, HighsMessageType::INFO,
+  highsLogDev(options_.log_options, HighsLogType::INFO,
                     "Time PreLP : %8.2f\n", this_solve_presolved_lp_time);
-  highsOutputDev(options_.io_options, HighsMessageType::INFO,
+  highsLogDev(options_.log_options, HighsLogType::INFO,
                     "Time PostLP: %8.2f\n", this_solve_original_lp_time);
   if (this_solve_time > 0) {
-    highsOutputDev(options_.io_options, HighsMessageType::INFO,
+    highsLogDev(options_.log_options, HighsLogType::INFO,
                       "For LP %16s",
                       hmos_[original_hmo].lp_.model_name_.c_str());
     double sum_time = 0;
     if (this_presolve_time > 0) {
       sum_time += this_presolve_time;
       int pct = (100 * this_presolve_time) / this_solve_time;
-      highsOutputDev(options_.io_options, HighsMessageType::INFO,
+      highsLogDev(options_.log_options, HighsLogType::INFO,
                         ": Presolve %8.2f (%3d%%)", this_presolve_time, pct);
     }
     if (this_solve_presolved_lp_time > 0) {
       sum_time += this_solve_presolved_lp_time;
       int pct = (100 * this_solve_presolved_lp_time) / this_solve_time;
-      highsOutputDev(options_.io_options, HighsMessageType::INFO,
+      highsLogDev(options_.log_options, HighsLogType::INFO,
                         ": Solve presolved LP %8.2f (%3d%%)",
                         this_solve_presolved_lp_time, pct);
     }
     if (this_postsolve_time > 0) {
       sum_time += this_postsolve_time;
       int pct = (100 * this_postsolve_time) / this_solve_time;
-      highsOutputDev(options_.io_options, HighsMessageType::INFO,
+      highsLogDev(options_.log_options, HighsLogType::INFO,
                         ": Postsolve %8.2f (%3d%%)", this_postsolve_time, pct);
     }
     if (this_solve_original_lp_time > 0) {
       sum_time += this_solve_original_lp_time;
       int pct = (100 * this_solve_original_lp_time) / this_solve_time;
-      highsOutputDev(options_.io_options, HighsMessageType::INFO,
+      highsLogDev(options_.log_options, HighsLogType::INFO,
                         ": Solve original LP %8.2f (%3d%%)",
                         this_solve_original_lp_time, pct);
     }
-    highsOutputDev(options_.io_options, HighsMessageType::INFO,
+    highsLogDev(options_.log_options, HighsLogType::INFO,
                       "\n");
     double rlv_time_difference =
         fabs(sum_time - this_solve_time) / this_solve_time;
     if (rlv_time_difference > 0.1)
-      highsOutputDev(options_.io_options, HighsMessageType::INFO,
+      highsLogDev(options_.log_options, HighsLogType::INFO,
                         "Strange: Solve time = %g; Sum times = %g: relative "
                         "difference = %g\n",
                         this_solve_time, sum_time, rlv_time_difference);
@@ -921,7 +921,7 @@ HighsStatus Highs::getRanging(HighsRanging& ranging) {
 HighsStatus Highs::getBasicVariables(int* basic_variables) {
   if (!haveHmo("getBasicVariables")) return HighsStatus::Error;
   if (basic_variables == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getBasicVariables: basic_variables is NULL\n");
     return HighsStatus::Error;
   }
@@ -932,7 +932,7 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
                                       int* row_num_nz, int* row_indices) {
   if (!haveHmo("getBasisInverseRow")) return HighsStatus::Error;
   if (row_vector == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getBasisInverseRow: row_vector is NULL\n");
     return HighsStatus::Error;
   }
@@ -940,14 +940,14 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* row_vector,
   // whether they are identified or not
   int numRow = hmos_[0].lp_.numRow_;
   if (row < 0 || row >= numRow) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "Row index %d out of range [0, %d] in getBasisInverseRow\n",
                     row, numRow - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "No invertible representation for getBasisInverseRow\n");
     return HighsStatus::Error;
   }
@@ -963,7 +963,7 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
                                       int* col_num_nz, int* col_indices) {
   if (!haveHmo("getBasisInverseCol")) return HighsStatus::Error;
   if (col_vector == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getBasisInverseCol: col_vector is NULL\n");
     return HighsStatus::Error;
   }
@@ -971,15 +971,15 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* col_vector,
   // whether they are identified or not
   int numRow = hmos_[0].lp_.numRow_;
   if (col < 0 || col >= numRow) {
-    highsOutputUser(
-        options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(
+        options_.log_options, HighsLogType::ERROR,
         "Column index %d out of range [0, %d] in getBasisInverseCol\n", col,
         numRow - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "No invertible representation for getBasisInverseCol\n");
     return HighsStatus::Error;
   }
@@ -995,12 +995,12 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
                                  int* solution_num_nz, int* solution_indices) {
   if (!haveHmo("getBasisSolve")) return HighsStatus::Error;
   if (Xrhs == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getBasisSolve: Xrhs is NULL\n");
     return HighsStatus::Error;
   }
   if (solution_vector == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getBasisSolve: solution_vector is NULL\n");
     return HighsStatus::Error;
   }
@@ -1008,7 +1008,7 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
   // whether they are identified or not
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "No invertible representation for getBasisSolve\n");
     return HighsStatus::Error;
   }
@@ -1027,12 +1027,12 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
                                           int* solution_indices) {
   if (!haveHmo("getBasisTransposeSolve")) return HighsStatus::Error;
   if (Xrhs == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getBasisTransposeSolve: Xrhs is NULL\n");
     return HighsStatus::Error;
   }
   if (solution_vector == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getBasisTransposeSolve: solution_vector is NULL\n");
     return HighsStatus::Error;
   }
@@ -1040,8 +1040,8 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
   // whether they are identified or not
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    highsOutputUser(
-        options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(
+        options_.log_options, HighsLogType::ERROR,
         "No invertible representation for getBasisTransposeSolve\n");
     return HighsStatus::Error;
   }
@@ -1059,7 +1059,7 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
                                  const double* pass_basis_inverse_row_vector) {
   if (!haveHmo("getReducedRow")) return HighsStatus::Error;
   if (row_vector == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getReducedRow: row_vector is NULL\n");
     return HighsStatus::Error;
   }
@@ -1067,14 +1067,14 @@ HighsStatus Highs::getReducedRow(const int row, double* row_vector,
   // whether they are identified or not pass_basis_inverse_row_vector
   // NULL - it's the trigger to determine whether it's computed or not
   if (row < 0 || row >= hmos_[0].lp_.numRow_) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "Row index %d out of range [0, %d] in getReducedRow\n", row,
                     hmos_[0].lp_.numRow_ - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "No invertible representation for getReducedRow\n");
     return HighsStatus::Error;
   }
@@ -1113,22 +1113,22 @@ HighsStatus Highs::getReducedColumn(const int col, double* col_vector,
                                     int* col_num_nz, int* col_indices) {
   if (!haveHmo("getReducedColumn")) return HighsStatus::Error;
   if (col_vector == NULL) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "getReducedColumn: col_vector is NULL\n");
     return HighsStatus::Error;
   }
   // col_indices can be NULL - it's the trigger that determines
   // whether they are identified or not
   if (col < 0 || col >= hmos_[0].lp_.numCol_) {
-    highsOutputUser(
-        options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(
+        options_.log_options, HighsLogType::ERROR,
         "Column index %d out of range [0, %d] in getReducedColumn\n", col,
         hmos_[0].lp_.numCol_ - 1);
     return HighsStatus::Error;
   }
   bool has_invert = hmos_[0].ekk_instance_.simplex_lp_status_.has_invert;
   if (!has_invert) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "No invertible representation for getReducedColumn\n");
     return HighsStatus::Error;
   }
@@ -1172,7 +1172,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   // Check the user-supplied basis
   if (!isBasisConsistent(lp_, basis)) {
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "setBasis: invalid basis\n");
     return HighsStatus::Error;
   }
@@ -1738,12 +1738,12 @@ HighsPresolveStatus Highs::runPresolve() {
   if (options_.time_limit > 0 && options_.time_limit < HIGHS_CONST_INF) {
     double left = options_.time_limit - start_presolve;
     if (left <= 0) {
-      highsOutputDev(options_.io_options, HighsMessageType::ERROR,
+      highsLogDev(options_.log_options, HighsLogType::ERROR,
                         "Time limit reached while reading in matrix\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    highsOutputDev(options_.io_options, HighsMessageType::VERBOSE,
+    highsLogDev(options_.log_options, HighsLogType::VERBOSE,
                       "Time limit set: reading matrix took %.2g, presolve "
                       "time left: %.2g\n",
                       start_presolve, left);
@@ -1757,19 +1757,19 @@ HighsPresolveStatus Highs::runPresolve() {
     double time_init = current - start_presolve;
     double left = presolve_.options_.time_limit - time_init;
     if (left <= 0) {
-      highsOutputDev(options_.io_options, HighsMessageType::ERROR,
+      highsLogDev(options_.log_options, HighsLogType::ERROR,
           "Time limit reached while copying matrix into presolve.\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    highsOutputDev(options_.io_options, HighsMessageType::VERBOSE,
+    highsLogDev(options_.log_options, HighsLogType::VERBOSE,
                       "Time limit set: copying matrix took %.2g, presolve "
                       "time left: %.2g\n",
                       time_init, left);
     presolve_.options_.time_limit = options_.time_limit;
   }
 
-  presolve_.data_.presolve_[0].io_options = options_.io_options;
+  presolve_.data_.presolve_[0].log_options = options_.log_options;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
@@ -1943,7 +1943,7 @@ HighsStatus Highs::openWriteFile(const string filename,
   } else {
     file = fopen(filename.c_str(), "w");
     if (file == 0) {
-      highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+      highsLogUser(options_.log_options, HighsLogType::ERROR,
                       "Cannot open writeable file \"%s\" in %s\n",
                       filename.c_str(), method_name.c_str());
       return HighsStatus::Error;
@@ -2030,7 +2030,7 @@ bool Highs::haveHmo(const string method_name) const {
   bool have_hmo = hmos_.size() > 0;
 #ifdef HiGHSDEV
   if (!have_hmo)
-    highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(options_.log_options, HighsLogType::ERROR,
                     "Method %s called without any HighsModelObject\n",
                     method_name.c_str());
 #endif
@@ -2185,8 +2185,8 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   const bool consistent = debugBasisConsistent(options_, lp_, basis_) !=
                           HighsDebugStatus::LOGICAL_ERROR;
   if (!consistent) {
-    highsOutputUser(
-        options_.io_options, HighsMessageType::ERROR,
+    highsLogUser(
+        options_.log_options, HighsLogType::ERROR,
         "returnFromHighs: Supposed to be a HiGHS basis, but not consistent\n");
     assert(consistent);
     return_status = HighsStatus::Error;
@@ -2196,7 +2196,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
     bool simplex_lp_ok =
         ekkDebugSimplexLp(hmos_[0]) != HighsDebugStatus::LOGICAL_ERROR;
     if (!simplex_lp_ok) {
-      highsOutputUser(options_.io_options, HighsMessageType::ERROR,
+      highsLogUser(options_.log_options, HighsLogType::ERROR,
                       "returnFromHighs: Simplex LP not OK\n");
       assert(simplex_lp_ok);
       return_status = HighsStatus::Error;
@@ -2206,7 +2206,7 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
   return return_status;
 }
 void Highs::underDevelopmentLogMessage(const string method_name) {
-  highsOutputUser(options_.io_options, HighsMessageType::WARNING,
+  highsLogUser(options_.log_options, HighsLogType::WARNING,
                   "Method %s is still under development and behaviour may be "
                   "unpredictable\n",
                   method_name.c_str());

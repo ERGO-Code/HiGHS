@@ -32,8 +32,8 @@ HighsMipSolver::~HighsMipSolver() = default;
 HighsPresolveStatus HighsMipSolver::runPresolve() {
   // todo: commented out parts or change Highs::runPresolve to operate on a
   // parameter LP rather than Highs::lp_. Not sure which approach is preferable.
-  highsOutputDev(options_mip_->io_options, 
-                    HighsMessageType::INFO, "\nrunning MIP presolve\n");
+  highsLogDev(options_mip_->log_options, 
+                    HighsLogType::INFO, "\nrunning MIP presolve\n");
   const HighsLp& lp_ = *(model_);
 
   // Exit if the problem is empty or if presolve is set to off.
@@ -51,14 +51,14 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
       options_mip_->time_limit < HIGHS_CONST_INF) {
     double left = options_mip_->time_limit - start_presolve;
     if (left <= 0) {
-      highsOutputDev(options_mip_->io_options, 
-                        HighsMessageType::VERBOSE,
+      highsLogDev(options_mip_->log_options, 
+                        HighsLogType::VERBOSE,
                         "Time limit reached while reading in matrix\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    highsOutputDev(options_mip_->io_options, 
-                      HighsMessageType::VERBOSE,
+    highsLogDev(options_mip_->log_options, 
+                      HighsLogType::VERBOSE,
                       "Time limit set: reading matrix took %.2g, presolve "
                       "time left: %.2g\n",
                       start_presolve, left);
@@ -74,21 +74,21 @@ HighsPresolveStatus HighsMipSolver::runPresolve() {
     double time_init = current - start_presolve;
     double left = presolve_.options_.time_limit - time_init;
     if (left <= 0) {
-      highsOutputDev(options_mip_->io_options, 
-			HighsMessageType::VERBOSE,
+      highsLogDev(options_mip_->log_options, 
+			HighsLogType::VERBOSE,
           "Time limit reached while copying matrix into presolve.\n");
       return HighsPresolveStatus::Timeout;
     }
 
-    highsOutputDev(options_mip_->io_options, 
-                      HighsMessageType::VERBOSE,
+    highsLogDev(options_mip_->log_options, 
+                      HighsLogType::VERBOSE,
                       "Time limit set: copying matrix took %.2g, presolve "
                       "time left: %.2g\n",
                       time_init, left);
     presolve_.options_.time_limit = options_mip_->time_limit;
   }
 
-  presolve_.data_.presolve_[0].io_options = options_mip_->io_options;
+  presolve_.data_.presolve_[0].log_options = options_mip_->log_options;
 
   HighsPresolveStatus presolve_return_status = presolve_.run();
 
@@ -167,24 +167,24 @@ void HighsMipSolver::run() {
         break;
       case HighsPresolveStatus::Unbounded:
         modelstatus_ = HighsModelStatus::PRIMAL_UNBOUNDED;
-        highsOutputDev(options_mip_->io_options, 
-                          HighsMessageType::INFO,
+        highsLogDev(options_mip_->log_options, 
+                          HighsLogType::INFO,
                           "Presolve: Model detected to be unbounded\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Infeasible:
         modelstatus_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-        highsOutputDev(options_mip_->io_options, 
-                          HighsMessageType::INFO,
+        highsLogDev(options_mip_->log_options, 
+                          HighsLogType::INFO,
                           "Presolve: Model detected to be infeasible\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
       case HighsPresolveStatus::Timeout:
         modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
-        highsOutputDev(options_mip_->io_options, 
-                          HighsMessageType::INFO, "Time limit reached during presolve\n");
+        highsLogDev(options_mip_->log_options, 
+                          HighsLogType::INFO, "Time limit reached during presolve\n");
         timer_.stop(timer_.presolve_clock);
         timer_.stop(timer_.solve_clock);
         return;
@@ -231,8 +231,8 @@ void HighsMipSolver::run() {
 
   mipdata_->printDisplayLine();
 
-  highsOutputDev(options_mip_->io_options, 
-                    HighsMessageType::INFO, "\nstarting tree search\n");
+  highsLogDev(options_mip_->log_options, 
+                    HighsLogType::INFO, "\nstarting tree search\n");
 
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
@@ -336,8 +336,8 @@ void HighsMipSolver::run() {
 
     // if global propagation found bound changes, we update the local domain
     if (!mipdata_->domain.getChangedCols().empty()) {
-      highsOutputDev(options_mip_->io_options, 
-                        HighsMessageType::INFO, "added %d global bound changes\n",
+      highsLogDev(options_mip_->log_options, 
+                        HighsLogType::INFO, "added %d global bound changes\n",
                         (int)mipdata_->domain.getChangedCols().size());
       mipdata_->cliquetable.cleanupFixed(mipdata_->domain);
       for (int col : mipdata_->domain.getChangedCols())
@@ -505,8 +505,8 @@ void HighsMipSolver::cleanupSolve() {
     solution_ = std::move(presolve_.data_.recovered_solution_.col_value);
     solution_objective_ = double(obj);
   }
-  highsOutputDev(options_mip_->io_options, 
-                    HighsMessageType::INFO,
+  highsLogDev(options_mip_->log_options, 
+                    HighsLogType::INFO,
                     "\nSolving report\n"
                     "  Status            %s\n"
                     "  Primal bound      %.12g\n"
@@ -515,16 +515,16 @@ void HighsMipSolver::cleanupSolve() {
                     utilHighsModelStatusToString(modelstatus_).c_str(),
                     primal_bound_, dual_bound_, solutionstatus.c_str());
   if (solutionstatus != "-")
-    highsOutputDev(options_mip_->io_options, 
-                      HighsMessageType::INFO,
+    highsLogDev(options_mip_->log_options, 
+                      HighsLogType::INFO,
                       "                    %.12g (objective)\n"
                       "                    %.12g (bound viol.)\n"
                       "                    %.12g (int. viol.)\n"
                       "                    %.12g (row viol.)\n",
                       solution_objective_, bound_violation_,
                       integrality_violation_, row_violation_);
-  highsOutputDev(options_mip_->io_options, 
-		    HighsMessageType::INFO,
+  highsLogDev(options_mip_->log_options, 
+		    HighsLogType::INFO,
       "  Timing            %.2f (total)\n"
       "                    %.2f (presolve)\n"
       "                    %.2f (postsolve)\n"

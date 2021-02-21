@@ -15,7 +15,7 @@ TEST_CASE("highs-info", "[highs_info]") {
 
   Highs highs;
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   const HighsInfo& highs_info = highs.getHighsInfo();

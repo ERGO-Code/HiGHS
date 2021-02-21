@@ -652,7 +652,7 @@ HighsStatus Highs::getRowsInterface(
     // If the matrix start vector is null then don't get values of
     // indices, otherwise both are meaningless
     if (row_matrix_index != NULL || row_matrix_value != NULL) {
-      highsOutputUser(highs_model_object.options_.io_options, HighsMessageType::ERROR,
+      highsLogUser(highs_model_object.options_.log_options, HighsLogType::ERROR,
                       "Cannot supply meaningful row matrix indices/values with "
                       "null starts\n");
       return HighsStatus::Error;
@@ -730,7 +730,7 @@ HighsStatus Highs::changeCostsInterface(HighsIndexCollection& index_collection,
   HEkk& ekk_instance = highs_model_object.ekk_instance_;
   HighsOptions& options = highs_model_object.options_;
   bool null_data =
-      doubleUserDataNotNull(options.io_options, usr_col_cost, "column costs");
+      doubleUserDataNotNull(options.log_options, usr_col_cost, "column costs");
   if (null_data) return HighsStatus::Error;
   int num_usr_col_cost = dataSizeOfIndexCollection(index_collection);
   // If a non-positive number of costs (may) need changing nothing needs to be
@@ -785,10 +785,10 @@ HighsStatus Highs::changeColBoundsInterface(
   HighsOptions& options = highs_model_object.options_;
   bool null_data = false;
   null_data =
-      doubleUserDataNotNull(options.io_options, usr_col_lower, "column lower bounds") ||
+      doubleUserDataNotNull(options.log_options, usr_col_lower, "column lower bounds") ||
       null_data;
   null_data =
-      doubleUserDataNotNull(options.io_options, usr_col_upper, "column upper bounds") ||
+      doubleUserDataNotNull(options.log_options, usr_col_upper, "column upper bounds") ||
       null_data;
   if (null_data) return HighsStatus::Error;
   int num_usr_col_bounds = dataSizeOfIndexCollection(index_collection);
@@ -857,10 +857,10 @@ HighsStatus Highs::changeRowBoundsInterface(
   HighsOptions& options = highs_model_object.options_;
   bool null_data = false;
   null_data =
-      doubleUserDataNotNull(options.io_options, usr_row_lower, "row lower bounds") ||
+      doubleUserDataNotNull(options.log_options, usr_row_lower, "row lower bounds") ||
       null_data;
   null_data =
-      doubleUserDataNotNull(options.io_options, usr_row_upper, "row upper bounds") ||
+      doubleUserDataNotNull(options.log_options, usr_row_upper, "row upper bounds") ||
       null_data;
   if (null_data) return HighsStatus::Error;
   int num_usr_row_bounds = dataSizeOfIndexCollection(index_collection);
@@ -1227,8 +1227,8 @@ HighsStatus Highs::getBasicVariablesInterface(int* basic_variables) {
                                           return_status, "setBasis");
       if (return_status == HighsStatus::Error) return return_status;
     } else {
-      highsOutputUser(
-          options_.io_options, HighsMessageType::ERROR,
+      highsLogUser(
+          options_.log_options, HighsLogType::ERROR,
           "getBasicVariables called without a simplex or HiGHS basis\n");
       // Arguable that a warning should be issued and a logical basis
       // set up

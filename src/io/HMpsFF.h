@@ -56,7 +56,7 @@ double getWallTime();
 class HMpsFF {
  public:
   HMpsFF() {}
-  FreeFormatParserReturnCode loadProblem(const HighsIoOptions& io_options,
+  FreeFormatParserReturnCode loadProblem(const HighsLogOptions& log_options,
                                          const std::string filename,
                                          HighsLp& lp);
 
@@ -128,19 +128,19 @@ class HMpsFF {
   std::unordered_map<std::string, int> rowname2idx;
   std::unordered_map<std::string, int> colname2idx;
 
-  FreeFormatParserReturnCode parse(const HighsIoOptions& io_options,
+  FreeFormatParserReturnCode parse(const HighsLogOptions& log_options,
                                    const std::string& filename);
   /// checks first word of strline and wraps it by it_begin and it_end
   HMpsFF::parsekey checkFirstWord(std::string& strline, int& start, int& end,
                                   std::string& word) const;
 
   HMpsFF::parsekey parseDefault(std::ifstream& file);
-  HMpsFF::parsekey parseObjsense(const HighsIoOptions& io_options, std::ifstream& file);
-  HMpsFF::parsekey parseRows(const HighsIoOptions& io_options, std::ifstream& file);
-  HMpsFF::parsekey parseCols(const HighsIoOptions& io_options, std::ifstream& file);
-  HMpsFF::parsekey parseRhs(const HighsIoOptions& io_options, std::ifstream& file);
-  HMpsFF::parsekey parseRanges(const HighsIoOptions& io_options, std::ifstream& file);
-  HMpsFF::parsekey parseBounds(const HighsIoOptions& io_options, std::ifstream& file);
+  HMpsFF::parsekey parseObjsense(const HighsLogOptions& log_options, std::ifstream& file);
+  HMpsFF::parsekey parseRows(const HighsLogOptions& log_options, std::ifstream& file);
+  HMpsFF::parsekey parseCols(const HighsLogOptions& log_options, std::ifstream& file);
+  HMpsFF::parsekey parseRhs(const HighsLogOptions& log_options, std::ifstream& file);
+  HMpsFF::parsekey parseRanges(const HighsLogOptions& log_options, std::ifstream& file);
+  HMpsFF::parsekey parseBounds(const HighsLogOptions& log_options, std::ifstream& file);
 };
 
 }  // namespace free_format_parser

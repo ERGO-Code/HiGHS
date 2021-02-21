@@ -15,7 +15,7 @@ static void myprintmsgcb(int level, const char* msg, void* msgcb_data) {
   receiveddata = msgcb_data;
 }
 
-static void mylogmsgcb(HighsMessageType type, const char* msg,
+static void mylogmsgcb(HighsLogType type, const char* msg,
                        void* msgcb_data) {
   strcpy(printedmsg, msg);
   receiveddata = msgcb_data;
@@ -25,23 +25,23 @@ TEST_CASE("msgcb", "[highs_io]") {
   int dummydata = 42;
   bool output_flag = true;
   bool log_to_console = false;
-  int output_dev = OUTPUT_DEV_INFO;
-  HighsIoOptions io_options;
-  io_options.logging_file = stdout;
-  io_options.output_flag = &output_flag;
-  io_options.log_to_console = &log_to_console;
-  io_options.output_dev = &output_dev;
+  int log_dev_level = LOG_DEV_LEVEL_INFO;
+  HighsLogOptions log_options;
+  log_options.log_file_stream = stdout;
+  log_options.output_flag = &output_flag;
+  log_options.log_to_console = &log_to_console;
+  log_options.log_dev_level = &log_dev_level;
 
-  highsSetMessageCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
+  highsSetLogCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
 
-  highsOutputDev(io_options, HighsMessageType::INFO, "Hi %s!", "HiGHS");
+  highsLogDev(log_options, HighsLogType::INFO, "Hi %s!", "HiGHS");
   REQUIRE(strcmp(printedmsg, "Hi HiGHS!") == 0);
   REQUIRE(receiveddata == &dummydata);
 
   // Check that nothing is printed if the type is VERBOSE when
-  // output_dev is OUTPUT_DEV_INFO;
+  // log_dev_level is LOG_DEV_LEVEL_INFO;
   *printedmsg = '\0';
-  highsOutputDev(io_options, HighsMessageType::VERBOSE, "Hi %s!", "HiGHS");
+  highsLogDev(log_options, HighsLogType::VERBOSE, "Hi %s!", "HiGHS");
   REQUIRE(*printedmsg == '\0');
 
   {
@@ -49,12 +49,12 @@ TEST_CASE("msgcb", "[highs_io]") {
     memset(longmsg, 'H', sizeof(longmsg));
     longmsg[sizeof(longmsg) - 2] = '\0';
     longmsg[sizeof(longmsg) - 1] = '\n';
-    highsOutputDev(io_options, HighsMessageType::INFO, longmsg);
+    highsLogDev(log_options, HighsLogType::INFO, longmsg);
     REQUIRE(strncmp(printedmsg, "HHHH", 4) == 0);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }
 
-  highsOutputUser(io_options, HighsMessageType::INFO, "Hello %s!\n", "HiGHS");
+  highsLogUser(log_options, HighsLogType::INFO, "Hello %s!\n", "HiGHS");
   REQUIRE(strlen(printedmsg) > 9);
   REQUIRE(strcmp(printedmsg, "         Hello HiGHS!\n") == 0);
   REQUIRE(receiveddata == &dummydata);
@@ -64,7 +64,7 @@ TEST_CASE("msgcb", "[highs_io]") {
     memset(longmsg, 'H', sizeof(longmsg));
     longmsg[sizeof(longmsg) - 2] = '\0';
     longmsg[sizeof(longmsg) - 1] = '\n';
-    highsOutputUser(io_options, HighsMessageType::WARNING, longmsg);
+    highsLogUser(log_options, HighsLogType::WARNING, longmsg);
     REQUIRE(strstr(printedmsg, "HHHH") != NULL);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }

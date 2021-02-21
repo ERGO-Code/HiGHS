@@ -26,7 +26,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   const HighsInfo& info = highs.getHighsInfo();
@@ -102,7 +102,7 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   status = highs.readModel(filename);
@@ -134,7 +134,7 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   status = highs.readModel(filename);
@@ -200,7 +200,7 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
 
   Highs highs(options);
   if (!dev_run) {
-    highs.setHighsLogfile();
+    highs.setHighsOptionValue("output_flag", false);
     highs.setHighsOutput();
   }
   status = highs.readModel(filename);
@@ -237,7 +237,7 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   HighsLp lp;
   free_format_parser::HMpsFF parser{};
   FreeFormatParserReturnCode result =
-      parser.loadProblem(options.io_options, filename, lp);
+      parser.loadProblem(options.log_options, filename, lp);
   REQUIRE(result == FreeFormatParserReturnCode::SUCCESS);
 
   HighsLp primal;
@@ -247,7 +247,7 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
 
   Highs highs_lp;
   if (!dev_run) {
-    highs_lp.setHighsLogfile();
+    highs_lp.setHighsOptionValue("output_flag", false);
     highs_lp.setHighsOutput();
   }
   HighsModelStatus model_status;
@@ -259,7 +259,7 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
 
   Highs highs_primal;
   if (!dev_run) {
-    highs_primal.setHighsLogfile();
+    highs_primal.setHighsOptionValue("output_flag", false);
     highs_primal.setHighsOutput();
   }
   status = highs_primal.passModel(primal);
@@ -281,7 +281,7 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   REQUIRE(status == HighsStatus::OK);
   Highs highs_dual;
   if (!dev_run) {
-    highs_dual.setHighsLogfile();
+    highs_dual.setHighsOptionValue("output_flag", false);
     highs_dual.setHighsOutput();
   }
   status = assessLp(dual, options);

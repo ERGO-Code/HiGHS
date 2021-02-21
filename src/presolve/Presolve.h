@@ -120,7 +120,7 @@ class Presolve : public HPreData {
   }
 
   int iPrint = 0;
-  HighsIoOptions io_options;
+  HighsLogOptions log_options;
   double objShift;
 
  private:

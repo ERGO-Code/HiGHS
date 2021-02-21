@@ -128,71 +128,71 @@ class OptionRecordString : public OptionRecord {
 
 inline const char* bool2string(bool b);
 
-bool commandLineOffChooseOnOk(const HighsIoOptions& io_options, const string& value);
-bool commandLineSolverOk(const HighsIoOptions& io_options, const string& value);
+bool commandLineOffChooseOnOk(const HighsLogOptions& log_options, const string& value);
+bool commandLineSolverOk(const HighsLogOptions& log_options, const string& value);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus getOptionIndex(const HighsLogOptions& log_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             int& index);
 
-OptionStatus checkOptions(const HighsIoOptions& io_options,
+OptionStatus checkOptions(const HighsLogOptions& log_options,
                           const std::vector<OptionRecord*>& option_records);
-OptionStatus checkOption(const HighsIoOptions& io_options, const OptionRecordInt& option);
-OptionStatus checkOption(const HighsIoOptions& io_options, const OptionRecordDouble& option);
+OptionStatus checkOption(const HighsLogOptions& log_options, const OptionRecordInt& option);
+OptionStatus checkOption(const HighsLogOptions& log_options, const OptionRecordDouble& option);
 
-OptionStatus checkOptionValue(const HighsIoOptions& io_options,
+OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               std::vector<OptionRecord*>& option_records,
                               const int value);
-OptionStatus checkOptionValue(const HighsIoOptions& io_options,
+OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               std::vector<OptionRecord*>& option_records,
                               const double value);
-OptionStatus checkOptionValue(const HighsIoOptions& io_options,
+OptionStatus checkOptionValue(const HighsLogOptions& log_options,
                               std::vector<OptionRecord*>& option_records,
                               const std::string value);
 
-OptionStatus setOptionValue(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus setOptionValue(const HighsLogOptions& log_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const bool value);
-OptionStatus setOptionValue(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus setOptionValue(const HighsLogOptions& log_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const int value);
-OptionStatus setOptionValue(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus setOptionValue(const HighsLogOptions& log_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const double value);
-OptionStatus setOptionValue(HighsIoOptions& io_options, const std::string& name,
+OptionStatus setOptionValue(HighsLogOptions& log_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const std::string value);
-OptionStatus setOptionValue(HighsIoOptions& io_options, const std::string& name,
+OptionStatus setOptionValue(HighsLogOptions& log_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const char* value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
-OptionStatus setOptionValue(const HighsIoOptions& io_options, OptionRecordInt& option,
+OptionStatus setOptionValue(const HighsLogOptions& log_options, OptionRecordInt& option,
                             const int value);
-OptionStatus setOptionValue(const HighsIoOptions& io_options, OptionRecordDouble& option,
+OptionStatus setOptionValue(const HighsLogOptions& log_options, OptionRecordDouble& option,
                             const double value);
-OptionStatus setOptionValue(const HighsIoOptions& io_options, OptionRecordString& option,
+OptionStatus setOptionValue(const HighsLogOptions& log_options, OptionRecordString& option,
                             std::string const value);
 
-OptionStatus passOptions(const HighsIoOptions& io_options, const HighsOptions& from_options,
+OptionStatus passOptions(const HighsLogOptions& log_options, const HighsOptions& from_options,
                          HighsOptions& to_options);
 
-OptionStatus getOptionValue(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus getOptionValue(const HighsLogOptions& log_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             bool& value);
-OptionStatus getOptionValue(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus getOptionValue(const HighsLogOptions& log_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             int& value);
-OptionStatus getOptionValue(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus getOptionValue(const HighsLogOptions& log_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             double& value);
-OptionStatus getOptionValue(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus getOptionValue(const HighsLogOptions& log_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
-OptionStatus getOptionType(const HighsIoOptions& io_options, const std::string& name,
+OptionStatus getOptionType(const HighsLogOptions& log_options, const std::string& name,
                            const std::vector<OptionRecord*>& option_records,
                            HighsOptionType& type);
 
@@ -272,7 +272,7 @@ struct HighsOptionsStruct {
   bool log_to_console;
 
   // Advanced options
-  int output_dev;
+  int log_dev_level;
   bool run_crossover;
   bool mps_parser_type_free;
   int keep_n_rows;
@@ -309,14 +309,14 @@ struct HighsOptionsStruct {
   std::string mip_debug_solution_file;
 #endif
   // HiGHS log FILE*
-  FILE* logging_file = NULL;
+  FILE* log_file_stream = NULL;
 
   // Logging callback identifiers
   void (*printmsgcb)(int level, const char* msg, void* msgcb_data) = NULL;
-  void (*logmsgcb)(HighsMessageType type, const char* msg,
+  void (*logmsgcb)(HighsLogType type, const char* msg,
                    void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
-  HighsIoOptions io_options;
+  HighsLogOptions log_options;
   virtual ~HighsOptionsStruct() {}
 };
 
@@ -616,9 +616,9 @@ class HighsOptions : public HighsOptionsStruct {
     advanced = true;
 
     record_int = new OptionRecordInt(
-        "output_dev",
+        "log_dev_level",
         "Output development messages: 0 => none; 1 => info; 2 => verbose",
-        advanced, &output_dev, OUTPUT_DEV_MIN, OUTPUT_DEV_NONE, OUTPUT_DEV_MAX);
+        advanced, &log_dev_level, LOG_DEV_LEVEL_MIN, LOG_DEV_LEVEL_NONE, LOG_DEV_LEVEL_MAX);
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool("run_crossover",
@@ -752,11 +752,11 @@ class HighsOptions : public HighsOptionsStruct {
                              &less_infeasible_DSE_choose_row, true);
     records.push_back(record_bool);
 
-    logging_file = fopen(log_file.c_str(), "w");
-    io_options.logging_file = logging_file;
-    io_options.output_flag = &output_flag;
-    io_options.log_to_console = &log_to_console;
-    io_options.output_dev = &output_dev;
+    log_file_stream = fopen(log_file.c_str(), "w");
+    log_options.log_file_stream = log_file_stream;
+    log_options.output_flag = &output_flag;
+    log_options.log_to_console = &log_to_console;
+    log_options.log_dev_level = &log_dev_level;
   }
 
   void deleteRecords() {
