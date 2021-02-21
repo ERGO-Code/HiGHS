@@ -264,7 +264,7 @@ class HFactor {
   double pivot_threshold;
   double pivot_tolerance;
   int highs_debug_level;
-  HighsIo io;
+  HighsIoOptions io;
   bool use_original_HFactor_logic;
   int updateMethod;
 

@@ -12,7 +12,7 @@
 
 namespace free_format_parser {
 
-FreeFormatParserReturnCode HMpsFF::loadProblem(const HighsIo& io,
+FreeFormatParserReturnCode HMpsFF::loadProblem(const HighsIoOptions& io,
                                                const std::string filename,
                                                HighsLp& lp) {
   FreeFormatParserReturnCode result = parse(io, filename);
@@ -86,7 +86,7 @@ int HMpsFF::fillMatrix() {
   return 0;
 }
 
-FreeFormatParserReturnCode HMpsFF::parse(const HighsIo& io,
+FreeFormatParserReturnCode HMpsFF::parse(const HighsIoOptions& io,
                                          const std::string& filename) {
   std::ifstream f;
   HMpsFF::parsekey keyword = HMpsFF::parsekey::NONE;
@@ -223,7 +223,7 @@ double getWallTime() {
       .count();
 }
 
-HMpsFF::parsekey HMpsFF::parseObjsense(const HighsIo& io, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseObjsense(const HighsIoOptions& io, std::ifstream& file) {
   std::string strline, word;
 
   while (getline(file, strline)) {
@@ -251,7 +251,7 @@ HMpsFF::parsekey HMpsFF::parseObjsense(const HighsIo& io, std::ifstream& file) {
   return HMpsFF::parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRows(const HighsIo& io, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRows(const HighsIoOptions& io, std::ifstream& file) {
   std::string strline, word;
   size_t nrows = 0;
   bool hasobj = false;
@@ -347,7 +347,7 @@ HMpsFF::parsekey HMpsFF::parseRows(const HighsIo& io, std::ifstream& file) {
   return HMpsFF::parsekey::FAIL;
 }
 
-typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIo& io,
+typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIoOptions& io,
                                             std::ifstream& file) {
   std::string colname = "";
   std::string strline, word;
@@ -520,7 +520,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(const HighsIo& io,
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRhs(const HighsIo& io, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRhs(const HighsIoOptions& io, std::ifstream& file) {
   std::string strline;
 
   auto parsename = [this](const std::string& name, int& rowidx) {
@@ -669,7 +669,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(const HighsIo& io, std::ifstream& file) {
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseBounds(const HighsIo& io, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseBounds(const HighsIoOptions& io, std::ifstream& file) {
   std::string strline, word;
 
   int num_mi = 0;
@@ -888,7 +888,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(const HighsIo& io, std::ifstream& file) {
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRanges(const HighsIo& io, std::ifstream& file) {
+HMpsFF::parsekey HMpsFF::parseRanges(const HighsIoOptions& io, std::ifstream& file) {
   std::string strline, word;
 
   auto parsename = [this](const std::string& name, int& rowidx) {

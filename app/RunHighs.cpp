@@ -20,10 +20,10 @@
 #include "HighsTimer.h"
 #include "presolve/HAggregator.h"
 
-void printHighsVersionCopyright(HighsIo& io, const char* message = nullptr);
-void reportLpStatsOrError(HighsIo& io, const HighsStatus read_status,
+void printHighsVersionCopyright(HighsIoOptions& io, const char* message = nullptr);
+void reportLpStatsOrError(HighsIoOptions& io, const HighsStatus read_status,
                           const HighsLp& lp);
-void reportSolvedLpStats(HighsIo& io, const HighsStatus run_status,
+void reportSolvedLpStats(HighsIoOptions& io, const HighsStatus run_status,
                          const Highs& highs);
 HighsStatus callLpSolver(HighsOptions& options, const HighsLp& lp);
 HighsStatus callMipSolver(HighsOptions& options, const HighsLp& lp);
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
   return (int)run_status;
 }
 
-void printHighsVersionCopyright(HighsIo& io, const char* message) {
+void printHighsVersionCopyright(HighsIoOptions& io, const char* message) {
   highsOutputUser(io, HighsMessageType::INFO,
                   "Running HiGHS %d.%d.%d [date: %s, git hash: %s]\n",
                   HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR, HIGHS_VERSION_PATCH,
@@ -102,7 +102,7 @@ void printHighsVersionCopyright(HighsIo& io, const char* message) {
 #endif
 }
 
-void reportLpStatsOrError(HighsIo& io, const HighsStatus read_status,
+void reportLpStatsOrError(HighsIoOptions& io, const HighsStatus read_status,
                           const HighsLp& lp) {
   if (read_status == HighsStatus::Error) {
     highsOutputUser(io, HighsMessageType::INFO, "Error loading file\n");
@@ -121,7 +121,7 @@ void reportLpStatsOrError(HighsIo& io, const HighsStatus read_status,
   }
 }
 
-void reportSolvedLpStats(HighsIo& io, const HighsStatus run_status,
+void reportSolvedLpStats(HighsIoOptions& io, const HighsStatus run_status,
                          Highs& highs) {
   if (run_status == HighsStatus::Error) {
     std::string statusname = HighsStatusToString(run_status);

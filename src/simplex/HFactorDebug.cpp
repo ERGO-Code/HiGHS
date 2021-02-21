@@ -156,7 +156,7 @@ HighsDebugStatus debugCheckInvert(const HighsOptions& options,
 }
 
 void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
-                               const HighsIo& io, 
+                               const HighsIoOptions& io, 
                                const int numRow, const vector<int>& permute,
                                const vector<int>& iwork, const int* baseIndex,
                                const int rank_deficiency,
@@ -218,7 +218,7 @@ void debugReportRankDeficiency(const int call_id, const int highs_debug_level,
 }
 
 void debugReportRankDeficientASM(
-    const int highs_debug_level, const HighsIo& io, 
+    const int highs_debug_level, const HighsIoOptions& io, 
     const int numRow, const vector<int>& MCstart, const vector<int>& MCcountA,
     const vector<int>& MCindex, const vector<double>& MCvalue,
     const vector<int>& iwork, const int rank_deficiency,
@@ -282,7 +282,7 @@ void debugReportRankDeficientASM(
 }
 
 void debugReportMarkSingC(const int call_id, const int highs_debug_level,
-                          const HighsIo& io, 
+                          const HighsIoOptions& io, 
                           const int numRow, const vector<int>& iwork,
                           const int* baseIndex) {
   if (highs_debug_level == HIGHS_DEBUG_LEVEL_NONE) return;
@@ -312,7 +312,7 @@ void debugReportMarkSingC(const int call_id, const int highs_debug_level,
   }
 }
 
-void debugLogRankDeficiency(const int highs_debug_level, const HighsIo& io,
+void debugLogRankDeficiency(const int highs_debug_level, const HighsIoOptions& io,
                              const int rank_deficiency,
                             const int basis_matrix_num_el,
                             const int invert_num_el, const int& kernel_dim,
@@ -326,7 +326,7 @@ void debugLogRankDeficiency(const int highs_debug_level, const HighsIo& io,
       kernel_num_el, nwork);
 }
 
-void debugPivotValueAnalysis(const int highs_debug_level, const HighsIo& io,
+void debugPivotValueAnalysis(const int highs_debug_level, const HighsIoOptions& io,
                               const int numRow,
                              const vector<double>& UpivotValue) {
   if (highs_debug_level < HIGHS_DEBUG_LEVEL_CHEAP) return;

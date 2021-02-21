@@ -27,7 +27,7 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-FilereaderRetcode readMPS(const HighsIo& io, const std::string filename,
+FilereaderRetcode readMPS(const HighsIoOptions& io, const std::string filename,
                           int mxNumRow, int mxNumCol, int& numRow, int& numCol,
                           ObjSense& objSense, double& objOffset,
                           vector<int>& Astart, vector<int>& Aindex,
@@ -518,7 +518,7 @@ HighsStatus writeLpAsMPS(const HighsOptions& options,
 }
 
 HighsStatus writeMPS(
-    const HighsIo& io, const std::string filename, const int& numRow,
+    const HighsIoOptions& io, const std::string filename, const int& numRow,
     const int& numCol, const ObjSense& objSense, const double& objOffset,
     const vector<int>& Astart, const vector<int>& Aindex,
     const vector<double>& Avalue, const vector<double>& colCost,

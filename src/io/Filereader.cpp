@@ -42,7 +42,7 @@ Filereader* Filereader::getFilereader(const std::string filename) {
   return reader;
 }
 
-void interpretFilereaderRetcode(const HighsIo& io, const std::string filename,
+void interpretFilereaderRetcode(const HighsIoOptions& io, const std::string filename,
                                 const FilereaderRetcode code) {
   switch (code) {
     case FilereaderRetcode::OK:

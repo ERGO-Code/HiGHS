@@ -32,7 +32,7 @@ enum OutputDevLevel {
 		     OUTPUT_DEV_MAX = OUTPUT_DEV_VERBOSE
 };
 
-struct HighsIo {
+struct HighsIoOptions {
   FILE* logging_file;
   bool* output_flag;
   bool* log_to_console;
@@ -43,13 +43,13 @@ struct HighsIo {
  * @brief For _single-line_ user logging with message type notification
  */
 // Printing format: must contain exactly one "\n" at end of format
-void highsOutputUser(const HighsIo& io, const HighsMessageType type,
+void highsOutputUser(const HighsIoOptions& io, const HighsMessageType type,
                      const char* format, ...);
 
 /**
  * @brief For development logging
  */
-void highsOutputDev(const HighsIo& io, const HighsMessageType type,
+void highsOutputDev(const HighsIoOptions& io, const HighsMessageType type,
                     const char* format, ...);
 
 /*
@@ -68,6 +68,6 @@ void highsSetMessageCallback(
 void highsSetMessageCallback(HighsOptions& options  //!< the options
 );
 
-void highsReportIoOptions(const HighsIo& io);
+void highsReportIoOptions(const HighsIoOptions& io);
 
 #endif

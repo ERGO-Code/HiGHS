@@ -128,71 +128,71 @@ class OptionRecordString : public OptionRecord {
 
 inline const char* bool2string(bool b);
 
-bool commandLineOffChooseOnOk(const HighsIo& io, const string& value);
-bool commandLineSolverOk(const HighsIo& io, const string& value);
+bool commandLineOffChooseOnOk(const HighsIoOptions& io, const string& value);
+bool commandLineSolverOk(const HighsIoOptions& io, const string& value);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(const HighsIo& io, const std::string& name,
+OptionStatus getOptionIndex(const HighsIoOptions& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             int& index);
 
-OptionStatus checkOptions(const HighsIo& io,
+OptionStatus checkOptions(const HighsIoOptions& io,
                           const std::vector<OptionRecord*>& option_records);
-OptionStatus checkOption(const HighsIo& io, const OptionRecordInt& option);
-OptionStatus checkOption(const HighsIo& io, const OptionRecordDouble& option);
+OptionStatus checkOption(const HighsIoOptions& io, const OptionRecordInt& option);
+OptionStatus checkOption(const HighsIoOptions& io, const OptionRecordDouble& option);
 
-OptionStatus checkOptionValue(const HighsIo& io,
+OptionStatus checkOptionValue(const HighsIoOptions& io,
                               std::vector<OptionRecord*>& option_records,
                               const int value);
-OptionStatus checkOptionValue(const HighsIo& io,
+OptionStatus checkOptionValue(const HighsIoOptions& io,
                               std::vector<OptionRecord*>& option_records,
                               const double value);
-OptionStatus checkOptionValue(const HighsIo& io,
+OptionStatus checkOptionValue(const HighsIoOptions& io,
                               std::vector<OptionRecord*>& option_records,
                               const std::string value);
 
-OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
+OptionStatus setOptionValue(const HighsIoOptions& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const bool value);
-OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
+OptionStatus setOptionValue(const HighsIoOptions& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const int value);
-OptionStatus setOptionValue(const HighsIo& io, const std::string& name,
+OptionStatus setOptionValue(const HighsIoOptions& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const double value);
-OptionStatus setOptionValue(HighsIo& io, const std::string& name,
+OptionStatus setOptionValue(HighsIoOptions& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const std::string value);
-OptionStatus setOptionValue(HighsIo& io, const std::string& name,
+OptionStatus setOptionValue(HighsIoOptions& io, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const char* value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
-OptionStatus setOptionValue(const HighsIo& io, OptionRecordInt& option,
+OptionStatus setOptionValue(const HighsIoOptions& io, OptionRecordInt& option,
                             const int value);
-OptionStatus setOptionValue(const HighsIo& io, OptionRecordDouble& option,
+OptionStatus setOptionValue(const HighsIoOptions& io, OptionRecordDouble& option,
                             const double value);
-OptionStatus setOptionValue(const HighsIo& io, OptionRecordString& option,
+OptionStatus setOptionValue(const HighsIoOptions& io, OptionRecordString& option,
                             std::string const value);
 
-OptionStatus passOptions(const HighsIo& io, const HighsOptions& from_options,
+OptionStatus passOptions(const HighsIoOptions& io, const HighsOptions& from_options,
                          HighsOptions& to_options);
 
-OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
+OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             bool& value);
-OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
+OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             int& value);
-OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
+OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             double& value);
-OptionStatus getOptionValue(const HighsIo& io, const std::string& name,
+OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value);
 
-OptionStatus getOptionType(const HighsIo& io, const std::string& name,
+OptionStatus getOptionType(const HighsIoOptions& io, const std::string& name,
                            const std::vector<OptionRecord*>& option_records,
                            HighsOptionType& type);
 
@@ -316,7 +316,7 @@ struct HighsOptionsStruct {
   void (*logmsgcb)(HighsMessageType type, const char* msg,
                    void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
-  HighsIo io;
+  HighsIoOptions io;
   virtual ~HighsOptionsStruct() {}
 };
 

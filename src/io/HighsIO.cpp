@@ -26,7 +26,7 @@ void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void highsOutputUser(const HighsIo& io, const HighsMessageType type,
+void highsOutputUser(const HighsIoOptions& io, const HighsMessageType type,
                      const char* format, ...) {
   if (!*io.output_flag || (io.logging_file == NULL && !*io.log_to_console))
     return;
@@ -59,7 +59,7 @@ void highsOutputUser(const HighsIo& io, const HighsMessageType type,
   va_end(argptr);
 }
 
-void highsOutputDev(const HighsIo& io, const HighsMessageType type,
+void highsOutputDev(const HighsIoOptions& io, const HighsMessageType type,
                     const char* format, ...) {
   if (io.logging_file == NULL || !*io.output_dev) return;
   // Always report HighsMessageType INFO, WARNING or ERROR 
@@ -102,7 +102,7 @@ void highsSetMessageCallback(HighsOptions& options) {
   msgcb_data = options.msgcb_data;
 }
 
-void highsReportIoOptions(const HighsIo& io) {
+void highsReportIoOptions(const HighsIoOptions& io) {
   printf("\nHighs IO settings\n");
   if (io.logging_file == NULL) {
     printf("   logging_file = NULL\n");

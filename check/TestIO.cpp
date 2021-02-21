@@ -26,7 +26,7 @@ TEST_CASE("msgcb", "[highs_io]") {
   bool output_flag = true;
   bool log_to_console = false;
   int output_dev = OUTPUT_DEV_INFO;
-  HighsIo io;
+  HighsIoOptions io;
   io.logging_file = stdout;
   io.output_flag = &output_flag;
   io.log_to_console = &log_to_console;

@@ -6,14 +6,14 @@
 
 const bool dev_run = false;
 
-void HighsStatusReport(const HighsIo& io, std::string message,
+void HighsStatusReport(const HighsIoOptions& io, std::string message,
                        HighsStatus status) {
   highsOutputUser(io, HighsMessageType::INFO, "%s: HighsStatus = %d - %s\n",
                   message.c_str(), (int)status,
                   HighsStatusToString(status).c_str());
 }
 
-void callRun(Highs& highs, const HighsIo& io, std::string message,
+void callRun(Highs& highs, const HighsIoOptions& io, std::string message,
              const HighsStatus require_return_status) {
   HighsStatus return_status = highs.run();
   HighsStatusReport(io, message, return_status);

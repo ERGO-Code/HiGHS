@@ -230,7 +230,7 @@ int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection) {
   }
 }
 
-bool intUserDataNotNull(const HighsIo& io, const int* user_data,
+bool intUserDataNotNull(const HighsIoOptions& io, const int* user_data,
                         const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {
@@ -242,7 +242,7 @@ bool intUserDataNotNull(const HighsIo& io, const int* user_data,
   return null_data;
 }
 
-bool doubleUserDataNotNull(const HighsIo& io, const double* user_data,
+bool doubleUserDataNotNull(const HighsIoOptions& io, const double* user_data,
                            const std::string name) {
   bool null_data = false;
   if (user_data == NULL) {

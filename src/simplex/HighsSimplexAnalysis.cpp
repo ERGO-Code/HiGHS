@@ -271,7 +271,7 @@ void HighsSimplexAnalysis::setup(const HighsLp& lp, const HighsOptions& options,
   }
 }
 
-void HighsSimplexAnalysis::messaging(const HighsIo& io_) { io = io_;}
+void HighsSimplexAnalysis::messaging(const HighsIoOptions& io_) { io = io_;}
 
 void HighsSimplexAnalysis::updateOperationResultDensity(
     const double local_density, double& density) {
