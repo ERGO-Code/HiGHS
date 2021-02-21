@@ -271,17 +271,21 @@ void HEkkPrimal::initialise() {
   // debug option
   const bool debug =
       ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
-  FILE* output = ekk_instance_.options_.output;
   if (num_free_col) {
     highsOutputUser(ekk_instance_.options_.io, HighsMessageType::INFO,
                     "HEkkPrimal:: LP has %d free columns\n", num_free_col);
-    nonbasic_free_col_set.setup(num_free_col, num_tot, output, debug);
+    nonbasic_free_col_set.setup(num_free_col, num_tot,
+				ekk_instance_.options_.output_flag,
+				ekk_instance_.options_.logging_file,
+				debug);
   }
   // Set up the hyper-sparse CHUZC data
   hyper_chuzc_candidate.resize(1 + max_num_hyper_chuzc_candidates);
   hyper_chuzc_measure.resize(1 + max_num_hyper_chuzc_candidates);
   hyper_chuzc_candidate_set.setup(max_num_hyper_chuzc_candidates, num_tot,
-                                  output, debug);
+				ekk_instance_.options_.output_flag,
+				ekk_instance_.options_.logging_file,
+                                debug);
 }
 
 void HEkkPrimal::solvePhase1() {

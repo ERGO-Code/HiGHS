@@ -14,10 +14,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsStatus return_status;
   bool return_bool;
   options.output_dev = OUTPUT_DEV_VERBOSE;
-  if (!dev_run) {
-    options.output = NULL;
-    options.output_flag = false;
-  }
+  if (!dev_run) options.output_flag = false;
 
   Avgas avgas;
   const int avgas_num_col = 8;

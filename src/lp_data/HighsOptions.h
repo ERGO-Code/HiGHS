@@ -230,7 +230,7 @@ const string parallel_string = "parallel";
 const string time_limit_string = "time_limit";
 const string options_file_string = "options_file";
 
-// String for logging file option
+// String for HiGHS log file option
 const string log_file_string = "log_file";
 
 struct HighsOptionsStruct {
@@ -267,6 +267,7 @@ struct HighsOptionsStruct {
   std::string log_file;
   bool write_solution_to_file;
   bool write_solution_pretty;
+  // Control of HiGHS log
   bool output_flag;
   bool log_to_console;
 
@@ -307,10 +308,10 @@ struct HighsOptionsStruct {
 #ifdef HIGHS_DEBUGSOL
   std::string mip_debug_solution_file;
 #endif
-  // Options for HighsPrintMessage
-  FILE* output = stdout;
+  // HiGHS log FILE*
   FILE* logging_file = NULL;
 
+  // Logging callback identifiers
   void (*printmsgcb)(int level, const char* msg, void* msgcb_data) = NULL;
   void (*logmsgcb)(HighsMessageType type, const char* msg,
                    void* msgcb_data) = NULL;

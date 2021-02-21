@@ -15,7 +15,8 @@
 
 #include <cassert>
 
-bool HSet::setup(const int size, const int max_entry, FILE* output,
+bool HSet::setup(const int size, const int max_entry,
+		 const bool output_flag, FILE* log_file,
                  const bool debug, const bool allow_assert) {
   setup_ = false;
   if (size <= 0) return false;
@@ -23,7 +24,8 @@ bool HSet::setup(const int size, const int max_entry, FILE* output,
   max_entry_ = max_entry;
   debug_ = debug;
   allow_assert_ = allow_assert;
-  output_ = output;
+  output_flag_ = output_flag;
+  log_file_ = log_file;
   entry_.resize(size);
   pointer_.assign(max_entry_ + 1, no_pointer);
   count_ = 0;
@@ -92,14 +94,14 @@ bool HSet::in(const int entry) const {
 
 bool HSet::debug() const {
   if (!setup_) {
-    if (output_ != NULL) fprintf(output_, "HSet: ERROR setup_ not called\n");
+    if (output_flag_) fprintf(log_file_, "HSet: ERROR setup_ not called\n");
     if (allow_assert_) assert(setup_);
     return false;
   }
   bool max_entry_ok = max_entry_ >= min_entry;
   if (!max_entry_ok) {
-    if (output_ != NULL) {
-      fprintf(output_, "HSet: ERROR max_entry_ = %d < %d\n", max_entry_,
+    if (output_flag_) {
+      fprintf(log_file_, "HSet: ERROR max_entry_ = %d < %d\n", max_entry_,
               min_entry);
       print();
     }
@@ -109,8 +111,8 @@ bool HSet::debug() const {
   int size = entry_.size();
   bool size_count_ok = size >= count_;
   if (!size_count_ok) {
-    if (output_ != NULL) {
-      fprintf(output_,
+    if (output_flag_) {
+      fprintf(log_file_,
               "HSet: ERROR entry_.size() = %d is less than count_ = %d\n", size,
               count_);
       print();
@@ -125,8 +127,8 @@ bool HSet::debug() const {
     if (pointer == no_pointer) continue;
     bool pointer_ok = pointer >= 0 && pointer < count_;
     if (!pointer_ok) {
-      if (output_ != NULL) {
-        fprintf(output_, "HSet: ERROR pointer_[%d] = %d is not in [0, %d]\n",
+      if (output_flag_) {
+        fprintf(log_file_, "HSet: ERROR pointer_[%d] = %d is not in [0, %d]\n",
                 ix, pointer, count_);
         print();
       }
@@ -137,8 +139,8 @@ bool HSet::debug() const {
     int entry = entry_[pointer];
     bool entry_ok = entry == ix;
     if (!entry_ok) {
-      if (output_ != NULL) {
-        fprintf(output_, "HSet: ERROR entry_[%d] is %d, not %d\n", pointer,
+      if (output_flag_) {
+        fprintf(log_file_, "HSet: ERROR entry_[%d] is %d, not %d\n", pointer,
                 entry, ix);
         print();
       }
@@ -148,8 +150,8 @@ bool HSet::debug() const {
   }
   bool count_ok = count == count_;
   if (!count_ok) {
-    if (output_ != NULL) {
-      fprintf(output_, "HSet: ERROR pointer_ has %d pointers, not %d\n", count,
+    if (output_flag_) {
+      fprintf(log_file_, "HSet: ERROR pointer_ has %d pointers, not %d\n", count,
               count_);
       print();
     }
@@ -161,23 +163,23 @@ bool HSet::debug() const {
 
 void HSet::print() const {
   if (!setup_) return;
-  if (output_ == NULL) return;
+  if (log_file_ == NULL) return;
   int size = entry_.size();
-  fprintf(output_, "\nSet(%d, %d):\n", size, max_entry_);
-  fprintf(output_, "Pointers: Pointers|");
+  fprintf(log_file_, "\nSet(%d, %d):\n", size, max_entry_);
+  fprintf(log_file_, "Pointers: Pointers|");
   for (int ix = 0; ix <= max_entry_; ix++) {
-    if (pointer_[ix] != no_pointer) fprintf(output_, " %4d", pointer_[ix]);
+    if (pointer_[ix] != no_pointer) fprintf(log_file_, " %4d", pointer_[ix]);
   }
-  fprintf(output_, "\n");
-  fprintf(output_, "          Entries |");
+  fprintf(log_file_, "\n");
+  fprintf(log_file_, "          Entries |");
   for (int ix = 0; ix <= max_entry_; ix++) {
-    if (pointer_[ix] != no_pointer) fprintf(output_, " %4d", ix);
+    if (pointer_[ix] != no_pointer) fprintf(log_file_, " %4d", ix);
   }
-  fprintf(output_, "\n");
-  fprintf(output_, "Entries:  Indices |");
-  for (int ix = 0; ix < count_; ix++) fprintf(output_, " %4d", ix);
-  fprintf(output_, "\n");
-  fprintf(output_, "          Entries |");
-  for (int ix = 0; ix < count_; ix++) fprintf(output_, " %4d", entry_[ix]);
-  fprintf(output_, "\n");
+  fprintf(log_file_, "\n");
+  fprintf(log_file_, "Entries:  Indices |");
+  for (int ix = 0; ix < count_; ix++) fprintf(log_file_, " %4d", ix);
+  fprintf(log_file_, "\n");
+  fprintf(log_file_, "          Entries |");
+  for (int ix = 0; ix < count_; ix++) fprintf(log_file_, " %4d", entry_[ix]);
+  fprintf(log_file_, "\n");
 }

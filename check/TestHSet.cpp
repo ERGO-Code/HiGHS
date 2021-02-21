@@ -14,9 +14,11 @@ TEST_CASE("HSet", "[highs_test_hset]") {
   // Don't allow asserts so that debugging can be tested without
   // throwing an assert!
   bool allow_assert = false;
-  FILE* output = NULL;
-  if (dev_run) output = stdout;
-  REQUIRE(set.setup(size, max_entry, output, debug, allow_assert));
+  FILE* log_file = NULL;
+  if (dev_run) log_file = stdout;
+  bool output_flag = false;
+  if (dev_run) output_flag = true;
+  REQUIRE(set.setup(size, max_entry, output_flag, log_file, debug, allow_assert));
   //  set.print();
   REQUIRE(!set.add(-1));
   REQUIRE(set.add(0));
