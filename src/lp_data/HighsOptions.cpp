@@ -27,20 +27,20 @@ std::string optionEntryType2string(const HighsOptionType type) {
   }
 }
 
-bool commandLineOffChooseOnOk(const HighsIoOptions& io, const string& value) {
+bool commandLineOffChooseOnOk(const HighsIoOptions& io_options, const string& value) {
   if (value == off_string || value == choose_string || value == on_string)
     return true;
-  highsOutputUser(io, HighsMessageType::WARNING,
+  highsOutputUser(io_options, HighsMessageType::WARNING,
                   "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
                   value.c_str(), off_string.c_str(), choose_string.c_str(),
                   on_string.c_str());
   return false;
 }
 
-bool commandLineSolverOk(const HighsIoOptions& io, const string& value) {
+bool commandLineSolverOk(const HighsIoOptions& io_options, const string& value) {
   if (value == simplex_string || value == choose_string || value == ipm_string)
     return true;
-  highsOutputUser(io, HighsMessageType::WARNING,
+  highsOutputUser(io_options, HighsMessageType::WARNING,
                   "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
                   value.c_str(), simplex_string.c_str(), choose_string.c_str(),
                   ipm_string.c_str());
@@ -60,18 +60,18 @@ bool boolFromString(const std::string value, bool& bool_value) {
   return true;
 }
 
-OptionStatus getOptionIndex(const HighsIoOptions& io, const std::string& name,
+OptionStatus getOptionIndex(const HighsIoOptions& io_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             int& index) {
   int num_options = option_records.size();
   for (index = 0; index < num_options; index++)
     if (option_records[index]->name == name) return OptionStatus::OK;
-  highsOutputUser(io, HighsMessageType::ERROR,
+  highsOutputUser(io_options, HighsMessageType::ERROR,
                   "getOptionIndex: Option \"%s\" is unknown\n", name.c_str());
   return OptionStatus::UNKNOWN_OPTION;
 }
 
-OptionStatus checkOptions(const HighsIoOptions& io,
+OptionStatus checkOptions(const HighsIoOptions& io_options,
                           const std::vector<OptionRecord*>& option_records) {
   bool error_found = false;
   int num_options = option_records.size();
@@ -83,7 +83,7 @@ OptionStatus checkOptions(const HighsIoOptions& io,
       if (check_index == index) continue;
       std::string check_name = option_records[check_index]->name;
       if (check_name == name) {
-        highsOutputUser(io, HighsMessageType::ERROR,
+        highsOutputUser(io_options, HighsMessageType::ERROR,
                         "checkOptions: Option %d (\"%s\") has the same name as "
                         "option %d \"%s\"\n",
                         index, name.c_str(), check_index, check_name.c_str());
@@ -101,7 +101,7 @@ OptionStatus checkOptions(const HighsIoOptions& io,
             ((OptionRecordBool*)option_records[check_index])[0];
         if (check_option.type == HighsOptionType::BOOL) {
           if (check_option.value == value_pointer) {
-            highsOutputUser(io, HighsMessageType::ERROR,
+            highsOutputUser(io_options, HighsMessageType::ERROR,
                             "checkOptions: Option %d (\"%s\") has the same "
                             "value pointer as option %d (\"%s\")\n",
                             index, option.name.c_str(), check_index,
@@ -113,7 +113,7 @@ OptionStatus checkOptions(const HighsIoOptions& io,
     } else if (type == HighsOptionType::INT) {
       // Check int option
       OptionRecordInt& option = ((OptionRecordInt*)option_records[index])[0];
-      if (checkOption(io, option) != OptionStatus::OK) error_found = true;
+      if (checkOption(io_options, option) != OptionStatus::OK) error_found = true;
       // Check that there are no other options with the same value pointers
       int* value_pointer = option.value;
       for (int check_index = 0; check_index < num_options; check_index++) {
@@ -122,7 +122,7 @@ OptionStatus checkOptions(const HighsIoOptions& io,
             ((OptionRecordInt*)option_records[check_index])[0];
         if (check_option.type == HighsOptionType::INT) {
           if (check_option.value == value_pointer) {
-            highsOutputUser(io, HighsMessageType::ERROR,
+            highsOutputUser(io_options, HighsMessageType::ERROR,
                             "checkOptions: Option %d (\"%s\") has the same "
                             "value pointer as option %d (\"%s\")\n",
                             index, option.name.c_str(), check_index,
@@ -135,7 +135,7 @@ OptionStatus checkOptions(const HighsIoOptions& io,
       // Check double option
       OptionRecordDouble& option =
           ((OptionRecordDouble*)option_records[index])[0];
-      if (checkOption(io, option) != OptionStatus::OK) error_found = true;
+      if (checkOption(io_options, option) != OptionStatus::OK) error_found = true;
       // Check that there are no other options with the same value pointers
       double* value_pointer = option.value;
       for (int check_index = 0; check_index < num_options; check_index++) {
@@ -144,7 +144,7 @@ OptionStatus checkOptions(const HighsIoOptions& io,
             ((OptionRecordDouble*)option_records[check_index])[0];
         if (check_option.type == HighsOptionType::DOUBLE) {
           if (check_option.value == value_pointer) {
-            highsOutputUser(io, HighsMessageType::ERROR,
+            highsOutputUser(io_options, HighsMessageType::ERROR,
                             "checkOptions: Option %d (\"%s\") has the same "
                             "value pointer as option %d (\"%s\")\n",
                             index, option.name.c_str(), check_index,
@@ -165,7 +165,7 @@ OptionStatus checkOptions(const HighsIoOptions& io,
             ((OptionRecordString*)option_records[check_index])[0];
         if (check_option.type == HighsOptionType::STRING) {
           if (check_option.value == value_pointer) {
-            highsOutputUser(io, HighsMessageType::ERROR,
+            highsOutputUser(io_options, HighsMessageType::ERROR,
                             "checkOptions: Option %d (\"%s\") has the same "
                             "value pointer as option %d (\"%s\")\n",
                             index, option.name.c_str(), check_index,
@@ -177,21 +177,21 @@ OptionStatus checkOptions(const HighsIoOptions& io,
     }
   }
   if (error_found) return OptionStatus::ILLEGAL_VALUE;
-  highsOutputUser(io, HighsMessageType::INFO, "checkOptions: Options are OK\n");
+  highsOutputUser(io_options, HighsMessageType::INFO, "checkOptions: Options are OK\n");
   return OptionStatus::OK;
 }
 
-OptionStatus checkOption(const HighsIoOptions& io, const OptionRecordInt& option) {
+OptionStatus checkOption(const HighsIoOptions& io_options, const OptionRecordInt& option) {
   if (option.lower_bound > option.upper_bound) {
     highsOutputUser(
-        io, HighsMessageType::ERROR,
+        io_options, HighsMessageType::ERROR,
         "checkOption: Option \"%s\" has inconsistent bounds [%d, %d]\n",
         option.name.c_str(), option.lower_bound, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
   if (option.default_value < option.lower_bound ||
       option.default_value > option.upper_bound) {
-    highsOutputUser(io, HighsMessageType::ERROR,
+    highsOutputUser(io_options, HighsMessageType::ERROR,
                     "checkOption: Option \"%s\" has default value %d "
                     "inconsistent with bounds [%d, %d]\n",
                     option.name.c_str(), option.default_value,
@@ -200,7 +200,7 @@ OptionStatus checkOption(const HighsIoOptions& io, const OptionRecordInt& option
   }
   int value = *option.value;
   if (value < option.lower_bound || value > option.upper_bound) {
-    highsOutputUser(io, HighsMessageType::ERROR,
+    highsOutputUser(io_options, HighsMessageType::ERROR,
                     "checkOption: Option \"%s\" has value %d inconsistent with "
                     "bounds [%d, %d]\n",
                     option.name.c_str(), value, option.lower_bound,
@@ -210,17 +210,17 @@ OptionStatus checkOption(const HighsIoOptions& io, const OptionRecordInt& option
   return OptionStatus::OK;
 }
 
-OptionStatus checkOption(const HighsIoOptions& io, const OptionRecordDouble& option) {
+OptionStatus checkOption(const HighsIoOptions& io_options, const OptionRecordDouble& option) {
   if (option.lower_bound > option.upper_bound) {
     highsOutputUser(
-        io, HighsMessageType::ERROR,
+        io_options, HighsMessageType::ERROR,
         "checkOption: Option \"%s\" has inconsistent bounds [%g, %g]\n",
         option.name.c_str(), option.lower_bound, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
   if (option.default_value < option.lower_bound ||
       option.default_value > option.upper_bound) {
-    highsOutputUser(io, HighsMessageType::ERROR,
+    highsOutputUser(io_options, HighsMessageType::ERROR,
                     "checkOption: Option \"%s\" has default value %g "
                     "inconsistent with bounds [%g, %g]\n",
                     option.name.c_str(), option.default_value,
@@ -229,7 +229,7 @@ OptionStatus checkOption(const HighsIoOptions& io, const OptionRecordDouble& opt
   }
   double value = *option.value;
   if (value < option.lower_bound || value > option.upper_bound) {
-    highsOutputUser(io, HighsMessageType::ERROR,
+    highsOutputUser(io_options, HighsMessageType::ERROR,
                     "checkOption: Option \"%s\" has value %g inconsistent with "
                     "bounds [%g, %g]\n",
                     option.name.c_str(), value, option.lower_bound,
@@ -239,16 +239,16 @@ OptionStatus checkOption(const HighsIoOptions& io, const OptionRecordDouble& opt
   return OptionStatus::OK;
 }
 
-OptionStatus checkOptionValue(const HighsIoOptions& io, OptionRecordInt& option,
+OptionStatus checkOptionValue(const HighsIoOptions& io_options, OptionRecordInt& option,
                               const int value) {
   if (value < option.lower_bound) {
-    highsOutputUser(io, HighsMessageType::WARNING,
+    highsOutputUser(io_options, HighsMessageType::WARNING,
                     "checkOptionValue: Value %d for option \"%s\" is below "
                     "lower bound of %d\n",
                     value, option.name.c_str(), option.lower_bound);
     return OptionStatus::ILLEGAL_VALUE;
   } else if (value > option.upper_bound) {
-    highsOutputUser(io, HighsMessageType::WARNING,
+    highsOutputUser(io_options, HighsMessageType::WARNING,
                     "checkOptionValue: Value %d for option \"%s\" is above "
                     "upper bound of %d\n",
                     value, option.name.c_str(), option.upper_bound);
@@ -257,16 +257,16 @@ OptionStatus checkOptionValue(const HighsIoOptions& io, OptionRecordInt& option,
   return OptionStatus::OK;
 }
 
-OptionStatus checkOptionValue(const HighsIoOptions& io, OptionRecordDouble& option,
+OptionStatus checkOptionValue(const HighsIoOptions& io_options, OptionRecordDouble& option,
                               const double value) {
   if (value < option.lower_bound) {
-    highsOutputUser(io, HighsMessageType::WARNING,
+    highsOutputUser(io_options, HighsMessageType::WARNING,
                     "checkOptionValue: Value %g for option \"%s\" is below "
                     "lower bound of %g\n",
                     value, option.name.c_str(), option.lower_bound);
     return OptionStatus::ILLEGAL_VALUE;
   } else if (value > option.upper_bound) {
-    highsOutputUser(io, HighsMessageType::WARNING,
+    highsOutputUser(io_options, HighsMessageType::WARNING,
                     "checkOptionValue: Value %g for option \"%s\" is above "
                     "upper bound of %g\n",
                     value, option.name.c_str(), option.upper_bound);
@@ -275,32 +275,32 @@ OptionStatus checkOptionValue(const HighsIoOptions& io, OptionRecordDouble& opti
   return OptionStatus::OK;
 }
 
-OptionStatus checkOptionValue(const HighsIoOptions& io, OptionRecordString& option,
+OptionStatus checkOptionValue(const HighsIoOptions& io_options, OptionRecordString& option,
                               const std::string value) {
   // Setting a string option. For some options only particular values
   // are permitted, so check them
   if (option.name == presolve_string) {
-    if (!commandLineOffChooseOnOk(io, value) && value != "mip")
+    if (!commandLineOffChooseOnOk(io_options, value) && value != "mip")
       return OptionStatus::ILLEGAL_VALUE;
   } else if (option.name == solver_string) {
-    if (!commandLineSolverOk(io, value)) return OptionStatus::ILLEGAL_VALUE;
+    if (!commandLineSolverOk(io_options, value)) return OptionStatus::ILLEGAL_VALUE;
   } else if (option.name == parallel_string) {
-    if (!commandLineOffChooseOnOk(io, value))
+    if (!commandLineOffChooseOnOk(io_options, value))
       return OptionStatus::ILLEGAL_VALUE;
   }
   return OptionStatus::OK;
 }
 
-OptionStatus setOptionValue(const HighsIoOptions& io, const std::string& name,
+OptionStatus setOptionValue(const HighsIoOptions& io_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const bool value) {
   int index;
   //  printf("setOptionValue: \"%s\" with bool %d\n", name.c_str(), value);
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::BOOL) {
-    highsOutputUser(io, HighsMessageType::ERROR,
+    highsOutputUser(io_options, HighsMessageType::ERROR,
                     "setOptionValue: Option \"%s\" cannot be assigned a bool\n",
                     name.c_str());
     return OptionStatus::ILLEGAL_VALUE;
@@ -308,50 +308,50 @@ OptionStatus setOptionValue(const HighsIoOptions& io, const std::string& name,
   return setOptionValue(((OptionRecordBool*)option_records[index])[0], value);
 }
 
-OptionStatus setOptionValue(const HighsIoOptions& io, const std::string& name,
+OptionStatus setOptionValue(const HighsIoOptions& io_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const int value) {
   int index;
   //  printf("setOptionValue: \"%s\" with int %d\n", name.c_str(), value);
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::INT) {
-    highsOutputUser(io, HighsMessageType::ERROR,
+    highsOutputUser(io_options, HighsMessageType::ERROR,
                     "setOptionValue: Option \"%s\" cannot be assigned an int\n",
                     name.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
-  return setOptionValue(io, ((OptionRecordInt*)option_records[index])[0],
+  return setOptionValue(io_options, ((OptionRecordInt*)option_records[index])[0],
                         value);
 }
 
-OptionStatus setOptionValue(const HighsIoOptions& io, const std::string& name,
+OptionStatus setOptionValue(const HighsIoOptions& io_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const double value) {
   int index;
   //  printf("setOptionValue: \"%s\" with double %g\n", name.c_str(), value);
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::DOUBLE) {
     highsOutputUser(
-        io, HighsMessageType::ERROR,
+        io_options, HighsMessageType::ERROR,
         "setOptionValue: Option \"%s\" cannot be assigned a double\n",
         name.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
-  return setOptionValue(io, ((OptionRecordDouble*)option_records[index])[0],
+  return setOptionValue(io_options, ((OptionRecordDouble*)option_records[index])[0],
                         value);
 }
 
-OptionStatus setOptionValue(HighsIoOptions& io, const std::string& name,
+OptionStatus setOptionValue(HighsIoOptions& io_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const std::string value) {
   int index;
   //  printf("setOptionValue: \"%s\" with value string %s\n", name.c_str(),
   //  value.c_str());
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type == HighsOptionType::BOOL) {
@@ -361,7 +361,7 @@ OptionStatus setOptionValue(HighsIoOptions& io, const std::string& name,
     //    %d\n", name.c_str(), value_bool, value.c_str(), return_status);
     if (!return_status) {
       highsOutputUser(
-          io, HighsMessageType::ERROR,
+          io_options, HighsMessageType::ERROR,
           "setOptionValue: Value \"%s\" cannot be interpreted as a bool\n",
           value.c_str());
       return OptionStatus::ILLEGAL_VALUE;
@@ -383,50 +383,50 @@ OptionStatus setOptionValue(HighsIoOptions& io, const std::string& name,
     */
     if (!converted_ok) {
       highsOutputUser(
-          io, HighsMessageType::ERROR,
+          io_options, HighsMessageType::ERROR,
           "setOptionValue: Value = \"%s\" converts via sscanf as %d "
           "by scanning %d of %d characters\n",
           value.c_str(), value_int, scanned_num_char, value_num_char);
       /*
-        highsOutputUser(io, HighsMessageType::ERROR,
+        highsOutputUser(io_options, HighsMessageType::ERROR,
                         "setOptionValue: Value = \"%s\" converts via atoi as %d
         " "so is %g as double, but as %g via atof\n", value.c_str(), value_int,
         value_int_double, value_double);
       */
       return OptionStatus::ILLEGAL_VALUE;
     }
-    return setOptionValue(io, ((OptionRecordInt*)option_records[index])[0],
+    return setOptionValue(io_options, ((OptionRecordInt*)option_records[index])[0],
                           value_int);
   } else if (type == HighsOptionType::DOUBLE) {
     int value_int = atoi(value.c_str());
     double value_double = atof(value.c_str());
     double value_int_double = value_int;
     if (value_double == value_int_double) {
-      highsOutputUser(io, HighsMessageType::INFO,
+      highsOutputUser(io_options, HighsMessageType::INFO,
                       "setOptionValue: Value = \"%s\" converts via atoi as %d "
                       "so is %g as double, and %g via atof\n",
                       value.c_str(), value_int, value_int_double, value_double);
     }
-    return setOptionValue(io, ((OptionRecordDouble*)option_records[index])[0],
+    return setOptionValue(io_options, ((OptionRecordDouble*)option_records[index])[0],
                           atof(value.c_str()));
   } else {
     OptionStatus option_status = setOptionValue(
-        io, ((OptionRecordString*)option_records[index])[0], value);
+        io_options, ((OptionRecordString*)option_records[index])[0], value);
     if (!name.compare(log_file_string)) {
       // Changing the name of the logging file
-      if (io.logging_file != NULL) fclose(io.logging_file);
-      if (!value.compare("")) io.logging_file = fopen(value.c_str(), "w");
+      if (io_options.logging_file != NULL) fclose(io_options.logging_file);
+      if (!value.compare("")) io_options.logging_file = fopen(value.c_str(), "w");
     }
     return option_status;
   }
 }
 
-OptionStatus setOptionValue(HighsIoOptions& io, const std::string& name,
+OptionStatus setOptionValue(HighsIoOptions& io_options, const std::string& name,
                             std::vector<OptionRecord*>& option_records,
                             const char* value) {
   // Handles values passed as explicit values in quotes
   std::string value_as_string(value);
-  return setOptionValue(io, name, option_records, value_as_string);
+  return setOptionValue(io_options, name, option_records, value_as_string);
 }
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value) {
@@ -434,31 +434,31 @@ OptionStatus setOptionValue(OptionRecordBool& option, const bool value) {
   return OptionStatus::OK;
 }
 
-OptionStatus setOptionValue(const HighsIoOptions& io, OptionRecordInt& option,
+OptionStatus setOptionValue(const HighsIoOptions& io_options, OptionRecordInt& option,
                             const int value) {
-  OptionStatus return_status = checkOptionValue(io, option, value);
+  OptionStatus return_status = checkOptionValue(io_options, option, value);
   if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
   return OptionStatus::OK;
 }
 
-OptionStatus setOptionValue(const HighsIoOptions& io, OptionRecordDouble& option,
+OptionStatus setOptionValue(const HighsIoOptions& io_options, OptionRecordDouble& option,
                             const double value) {
-  OptionStatus return_status = checkOptionValue(io, option, value);
+  OptionStatus return_status = checkOptionValue(io_options, option, value);
   if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
   return OptionStatus::OK;
 }
 
-OptionStatus setOptionValue(const HighsIoOptions& io, OptionRecordString& option,
+OptionStatus setOptionValue(const HighsIoOptions& io_options, OptionRecordString& option,
                             const std::string value) {
-  OptionStatus return_status = checkOptionValue(io, option, value);
+  OptionStatus return_status = checkOptionValue(io_options, option, value);
   if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
   return OptionStatus::OK;
 }
 
-OptionStatus passOptions(const HighsIoOptions& io, const HighsOptions& from_options,
+OptionStatus passOptions(const HighsIoOptions& io_options, const HighsOptions& from_options,
                          HighsOptions& to_options) {
   // (Attempt to) set option value from the HighsOptions passed in
   OptionStatus return_status;
@@ -471,19 +471,19 @@ OptionStatus passOptions(const HighsIoOptions& io, const HighsOptions& from_opti
     if (type == HighsOptionType::INT) {
       int value = *(((OptionRecordInt*)from_options.records[index])[0].value);
       return_status = checkOptionValue(
-          io, ((OptionRecordInt*)to_options.records[index])[0], value);
+          io_options, ((OptionRecordInt*)to_options.records[index])[0], value);
       if (return_status != OptionStatus::OK) return return_status;
     } else if (type == HighsOptionType::DOUBLE) {
       double value =
           *(((OptionRecordDouble*)from_options.records[index])[0].value);
       return_status = checkOptionValue(
-          io, ((OptionRecordDouble*)to_options.records[index])[0], value);
+          io_options, ((OptionRecordDouble*)to_options.records[index])[0], value);
       if (return_status != OptionStatus::OK) return return_status;
     } else if (type == HighsOptionType::STRING) {
       std::string value =
           *(((OptionRecordString*)from_options.records[index])[0].value);
       return_status = checkOptionValue(
-          io, ((OptionRecordString*)to_options.records[index])[0], value);
+          io_options, ((OptionRecordString*)to_options.records[index])[0], value);
       if (return_status != OptionStatus::OK) return return_status;
     }
   }
@@ -498,35 +498,35 @@ OptionStatus passOptions(const HighsIoOptions& io, const HighsOptions& from_opti
     } else if (type == HighsOptionType::INT) {
       int value = *(((OptionRecordInt*)from_options.records[index])[0].value);
       return_status = setOptionValue(
-          io, ((OptionRecordInt*)to_options.records[index])[0], value);
+          io_options, ((OptionRecordInt*)to_options.records[index])[0], value);
       if (return_status != OptionStatus::OK) return return_status;
     } else if (type == HighsOptionType::DOUBLE) {
       double value =
           *(((OptionRecordDouble*)from_options.records[index])[0].value);
       return_status = setOptionValue(
-          io, ((OptionRecordDouble*)to_options.records[index])[0], value);
+          io_options, ((OptionRecordDouble*)to_options.records[index])[0], value);
       if (return_status != OptionStatus::OK) return return_status;
     } else {
       std::string value =
           *(((OptionRecordString*)from_options.records[index])[0].value);
       return_status = setOptionValue(
-          io, ((OptionRecordString*)to_options.records[index])[0], value);
+          io_options, ((OptionRecordString*)to_options.records[index])[0], value);
       if (return_status != OptionStatus::OK) return return_status;
     }
   }
   return OptionStatus::OK;
 }
 
-OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
+OptionStatus getOptionValue(const HighsIoOptions& io_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             bool& value) {
   int index;
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::BOOL) {
     highsOutputUser(
-        io, HighsMessageType::ERROR,
+        io_options, HighsMessageType::ERROR,
         "getOptionValue: Option \"%s\" requires value of type %s, not bool\n",
         name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
@@ -536,16 +536,16 @@ OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
   return OptionStatus::OK;
 }
 
-OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
+OptionStatus getOptionValue(const HighsIoOptions& io_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             int& value) {
   int index;
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::INT) {
     highsOutputUser(
-        io, HighsMessageType::ERROR,
+        io_options, HighsMessageType::ERROR,
         "getOptionValue: Option \"%s\" requires value of type %s, not int\n",
         name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
@@ -555,16 +555,16 @@ OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
   return OptionStatus::OK;
 }
 
-OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
+OptionStatus getOptionValue(const HighsIoOptions& io_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             double& value) {
   int index;
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::DOUBLE) {
     highsOutputUser(
-        io, HighsMessageType::ERROR,
+        io_options, HighsMessageType::ERROR,
         "getOptionValue: Option \"%s\" requires value of type %s, not double\n",
         name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
@@ -574,16 +574,16 @@ OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
   return OptionStatus::OK;
 }
 
-OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
+OptionStatus getOptionValue(const HighsIoOptions& io_options, const std::string& name,
                             const std::vector<OptionRecord*>& option_records,
                             std::string& value) {
   int index;
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::STRING) {
     highsOutputUser(
-        io, HighsMessageType::ERROR,
+        io_options, HighsMessageType::ERROR,
         "getOptionValue: Option \"%s\" requires value of type %s, not string\n",
         name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
@@ -593,11 +593,11 @@ OptionStatus getOptionValue(const HighsIoOptions& io, const std::string& name,
   return OptionStatus::OK;
 }
 
-OptionStatus getOptionType(const HighsIoOptions& io, const std::string& name,
+OptionStatus getOptionType(const HighsIoOptions& io_options, const std::string& name,
                            const std::vector<OptionRecord*>& option_records,
                            HighsOptionType& type) {
   int index;
-  OptionStatus status = getOptionIndex(io, name, option_records, index);
+  OptionStatus status = getOptionIndex(io_options, name, option_records, index);
   if (status != OptionStatus::OK) return status;
   type = option_records[index]->type;
   return OptionStatus::OK;

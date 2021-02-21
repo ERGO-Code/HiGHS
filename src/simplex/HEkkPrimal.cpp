@@ -24,7 +24,7 @@ HighsStatus HEkkPrimal::solve() {
   // Assumes that the LP has a positive number of rows
   bool positive_num_row = ekk_instance_.simplex_lp_.numRow_ > 0;
   if (!positive_num_row) {
-    highsOutputUser(options.io, HighsMessageType::ERROR,
+    highsOutputUser(options.io_options, HighsMessageType::ERROR,
                     "HEkkPrimal::solve called for LP with non-positive (%d) "
                     "number of constraints\n",
                     ekk_instance_.simplex_lp_.numRow_);
@@ -35,7 +35,7 @@ HighsStatus HEkkPrimal::solve() {
     return ekk_instance_.returnFromSolve(HighsStatus::Warning);
 
   if (!simplex_lp_status.has_invert) {
-    highsOutputUser(options.io, HighsMessageType::ERROR,
+    highsOutputUser(options.io_options, HighsMessageType::ERROR,
                     "HEkkPrimal::solve called without INVERT\n");
     assert(simplex_lp_status.has_fresh_invert);
     return ekk_instance_.returnFromSolve(HighsStatus::Error);
@@ -56,7 +56,7 @@ HighsStatus HEkkPrimal::solve() {
   const bool near_optimal = simplex_info.num_primal_infeasibility == 0 &&
                             simplex_info.sum_dual_infeasibility < 1;
   if (near_optimal)
-    highsOutputDev(options.io, HighsMessageType::DETAILED,
+    highsOutputDev(options.io_options, HighsMessageType::DETAILED,
         "Primal feasible and num / max / sum dual infeasibilities are %d / %g "
         "/ %g, so near-optimal\n",
         simplex_info.num_dual_infeasibility,
@@ -66,7 +66,7 @@ HighsStatus HEkkPrimal::solve() {
   // Perturb bounds according to whether the solution is near-optimnal
   const bool perturb_bounds = !near_optimal;
   if (!perturb_bounds)
-    highsOutputDev(options.io, HighsMessageType::DETAILED,
+    highsOutputDev(options.io_options, HighsMessageType::DETAILED,
                       "Near-optimal, so don't use bound perturbation\n");
   if (perturb_bounds &&
       simplex_info.primal_simplex_bound_perturbation_multiplier) {
@@ -272,7 +272,7 @@ void HEkkPrimal::initialise() {
   const bool debug =
       ekk_instance_.options_.highs_debug_level > HIGHS_DEBUG_LEVEL_CHEAP;
   if (num_free_col) {
-    highsOutputUser(ekk_instance_.options_.io, HighsMessageType::INFO,
+    highsOutputUser(ekk_instance_.options_.io_options, HighsMessageType::INFO,
                     "HEkkPrimal:: LP has %d free columns\n", num_free_col);
     nonbasic_free_col_set.setup(num_free_col, num_tot,
 				ekk_instance_.options_.output_flag,
@@ -298,7 +298,7 @@ void HEkkPrimal::solvePhase1() {
   simplex_lp_status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
   if (ekk_instance_.bailoutReturn()) return;
-  highsOutputDev(ekk_instance_.options_.io, HighsMessageType::DETAILED,
+  highsOutputDev(ekk_instance_.options_.io_options, HighsMessageType::DETAILED,
                     "primal-phase1-start\n");
   // If there's no backtracking basis, save the initial basis in case of
   // backtracking
@@ -364,7 +364,7 @@ void HEkkPrimal::solvePhase2() {
   simplex_lp_status.has_dual_objective_value = false;
   // Possibly bail out immediately if iteration limit is current value
   if (ekk_instance_.bailoutReturn()) return;
-  highsOutputDev(options.io, HighsMessageType::DETAILED,
+  highsOutputDev(options.io_options, HighsMessageType::DETAILED,
                     "primal-phase2-start\n");
   phase2UpdatePrimal(true);
 
@@ -409,11 +409,11 @@ void HEkkPrimal::solvePhase2() {
     return;
   }
   if (solvePhase == SOLVE_PHASE_1) {
-    highsOutputDev(options.io, HighsMessageType::DETAILED,
+    highsOutputDev(options.io_options, HighsMessageType::DETAILED,
                       "primal-return-phase1\n");
   } else if (variable_in == -1) {
     // There is no candidate in CHUZC, even after rebuild so probably optimal
-    highsOutputDev(options.io, HighsMessageType::DETAILED,
+    highsOutputDev(options.io_options, HighsMessageType::DETAILED,
                       "primal-phase-2-optimal\n");
     // Remove any bound perturbations and see if basis is still primal feasible
     cleanup();
@@ -424,7 +424,7 @@ void HEkkPrimal::solvePhase2() {
     } else {
       // There are no dual infeasiblities so optimal!
       solvePhase = SOLVE_PHASE_OPTIMAL;
-      highsOutputDev(options.io, HighsMessageType::DETAILED,
+      highsOutputDev(options.io_options, HighsMessageType::DETAILED,
                         "problem-optimal\n");
       scaled_model_status = HighsModelStatus::OPTIMAL;
       ekk_instance_.computeDualObjectiveValue();  // Why?
@@ -433,7 +433,7 @@ void HEkkPrimal::solvePhase2() {
     assert(row_out < 0);
 
     // There is no candidate in CHUZR, so probably primal unbounded
-    highsOutputDev(options.io, HighsMessageType::INFO,
+    highsOutputDev(options.io_options, HighsMessageType::INFO,
                       "primal-phase-2-unbounded\n");
     if (ekk_instance_.simplex_info_.bounds_perturbed) {
       // If the bounds have been perturbed, clean up and return
@@ -444,7 +444,7 @@ void HEkkPrimal::solvePhase2() {
       solvePhase = SOLVE_PHASE_EXIT;
       if (scaled_model_status == HighsModelStatus::PRIMAL_INFEASIBLE) {
         assert(1 == 0);
-        highsOutputDev(options.io, HighsMessageType::INFO,
+        highsOutputDev(options.io_options, HighsMessageType::INFO,
                           "problem-primal-dual-infeasible\n");
         scaled_model_status = HighsModelStatus::PRIMAL_DUAL_INFEASIBLE;
       } else {
@@ -452,7 +452,7 @@ void HEkkPrimal::solvePhase2() {
         savePrimalRay();
         // Model status should be unset
         assert(scaled_model_status == HighsModelStatus::NOTSET);
-        highsOutputDev(options.io, HighsMessageType::INFO,
+        highsOutputDev(options.io_options, HighsMessageType::INFO,
                           "problem-primal-unbounded\n");
         scaled_model_status = HighsModelStatus::PRIMAL_UNBOUNDED;
       }
@@ -467,7 +467,7 @@ void HEkkPrimal::solvePhase2() {
 void HEkkPrimal::cleanup() {
   HighsSimplexInfo& simplex_info = ekk_instance_.simplex_info_;
   if (!simplex_info.bounds_perturbed) return;
-  highsOutputDev(ekk_instance_.options_.io, HighsMessageType::DETAILED,
+  highsOutputDev(ekk_instance_.options_.io_options, HighsMessageType::DETAILED,
                     "primal-cleanup-shift\n");
   // Remove perturbation
   ekk_instance_.initialiseBound(SimplexAlgorithm::PRIMAL, solvePhase, false);
@@ -573,7 +573,7 @@ void HEkkPrimal::rebuild() {
     // Primal infeasibilities so should be in phase 1
     if (solvePhase == SOLVE_PHASE_2) {
       highsOutputUser(
-          ekk_instance_.options_.io, HighsMessageType::WARNING,
+          ekk_instance_.options_.io_options, HighsMessageType::WARNING,
           "HEkkPrimal::rebuild switching back to phase 1 from phase 2\n");
       solvePhase = SOLVE_PHASE_1;
     }
@@ -660,7 +660,7 @@ void HEkkPrimal::iterate() {
   if (solvePhase == SOLVE_PHASE_1) {
     phase1ChooseRow();
     if (row_out < 0) {
-      highsOutputUser(ekk_instance_.options_.io, HighsMessageType::ERROR,
+      highsOutputUser(ekk_instance_.options_.io_options, HighsMessageType::ERROR,
                       "Primal phase 1 choose row failed\n");
       solvePhase = SOLVE_PHASE_ERROR;
       return;
@@ -882,7 +882,7 @@ bool HEkkPrimal::useVariableIn() {
     if (theta_dual_small) theta_dual_size = "; too small";
     std::string theta_dual_sign = "";
     if (theta_dual_sign_error) theta_dual_sign = "; sign error";
-    highsOutputDev(ekk_instance_.options_.io, HighsMessageType::INFO,
+    highsOutputDev(ekk_instance_.options_.io_options, HighsMessageType::INFO,
         "Chosen entering variable %d (Iter = %d; Update = %d) has computed "
         "(updated) dual of %10.4g (%10.4g) so don't use it%s%s\n",
         variable_in, ekk_instance_.iteration_count_, simplex_info.update_count,
@@ -2212,7 +2212,7 @@ void HEkkPrimal::removeNonbasicFreeColumn() {
         nonbasic_free_col_set.remove(variable_in);
     if (!removed_nonbasic_free_column) {
       highsOutputUser(
-          ekk_instance_.options_.io, HighsMessageType::ERROR,
+          ekk_instance_.options_.io_options, HighsMessageType::ERROR,
           "HEkkPrimal::phase1update failed to remove nonbasic free column %d\n",
           variable_in);
       assert(removed_nonbasic_free_column);
@@ -2336,7 +2336,7 @@ void HEkkPrimal::shiftBound(const bool lower, const int iVar,
   }
   double error = fabs(-new_infeasibility - feasibility);
   if (report)
-    highsOutputDev(ekk_instance_.options_.io, HighsMessageType::VERBOSE,
+    highsOutputDev(ekk_instance_.options_.io_options, HighsMessageType::VERBOSE,
         "Value(%4d) = %10.4g exceeds %s = %10.4g by %9.4g, so shift bound by "
         "%9.4g to %10.4g: infeasibility %10.4g with error %g\n",
         iVar, value, type.c_str(), old_bound, infeasibility, shift, bound,

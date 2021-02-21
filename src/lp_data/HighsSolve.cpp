@@ -31,7 +31,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndSolutionParams(model);
-  highsOutputUser(options.io, HighsMessageType::INFO, (message + "\n").c_str());
+  highsOutputUser(options.io_options, HighsMessageType::INFO, (message + "\n").c_str());
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
   // loaded or modified
@@ -64,7 +64,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
     if (imprecise_solution) {
       // IPX+crossover has not obtained a solution satisfying the tolerances.
       highsOutputUser(
-          options.io, HighsMessageType::WARNING,
+          options.io_options, HighsMessageType::WARNING,
           "Imprecise solution returned from IPX so use simplex to clean up\n");
       // Reset the return status (that should be HighsStatus::Warning)
       // since it will now be determined by the outcome of the simplex
@@ -77,7 +77,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
           interpretCallStatus(call_status, return_status, "solveLpSimplex");
       if (return_status == HighsStatus::Error) return return_status;
       if (!isSolutionRightSize(model.lp_, model.solution_)) {
-        highsOutputUser(options.io, HighsMessageType::ERROR,
+        highsOutputUser(options.io_options, HighsMessageType::ERROR,
                         "Inconsistent solution returned from solver\n");
         return HighsStatus::Error;
       }
@@ -86,7 +86,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
       model.scaled_model_status_ = model.unscaled_model_status_;
     }
 #else
-    highsOutputUser(options.io, HighsMessageType::ERROR,
+    highsOutputUser(options.io_options, HighsMessageType::ERROR,
                     "Model cannot be solved with IPM\n");
     return HighsStatus::Error;
 #endif
@@ -97,7 +97,7 @@ HighsStatus solveLp(HighsModelObject& model, const string message) {
         interpretCallStatus(call_status, return_status, "solveLpSimplex");
     if (return_status == HighsStatus::Error) return return_status;
     if (!isSolutionRightSize(model.lp_, model.solution_)) {
-      highsOutputUser(options.io, HighsMessageType::ERROR,
+      highsOutputUser(options.io_options, HighsMessageType::ERROR,
                       "Inconsistent solution returned from solver\n");
       return HighsStatus::Error;
     }
@@ -133,7 +133,7 @@ HighsStatus solveUnconstrainedLp(const HighsOptions& options, const HighsLp& lp,
   assert(lp.numRow_ == 0);
   if (lp.numRow_ != 0) return HighsStatus::Error;
 
-  highsOutputUser(options.io, HighsMessageType::INFO,
+  highsOutputUser(options.io_options, HighsMessageType::INFO,
                   "Solving an unconstrained LP with %d columns\n", lp.numCol_);
 
   solution.col_value.assign(lp.numCol_, 0);

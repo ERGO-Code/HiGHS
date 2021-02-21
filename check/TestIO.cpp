@@ -26,22 +26,22 @@ TEST_CASE("msgcb", "[highs_io]") {
   bool output_flag = true;
   bool log_to_console = false;
   int output_dev = OUTPUT_DEV_INFO;
-  HighsIoOptions io;
-  io.logging_file = stdout;
-  io.output_flag = &output_flag;
-  io.log_to_console = &log_to_console;
-  io.output_dev = &output_dev;
+  HighsIoOptions io_options;
+  io_options.logging_file = stdout;
+  io_options.output_flag = &output_flag;
+  io_options.log_to_console = &log_to_console;
+  io_options.output_dev = &output_dev;
 
   highsSetMessageCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
 
-  highsOutputDev(io, HighsMessageType::INFO, "Hi %s!", "HiGHS");
+  highsOutputDev(io_options, HighsMessageType::INFO, "Hi %s!", "HiGHS");
   REQUIRE(strcmp(printedmsg, "Hi HiGHS!") == 0);
   REQUIRE(receiveddata == &dummydata);
 
   // Check that nothing is printed if the type is VERBOSE when
   // output_dev is OUTPUT_DEV_INFO;
   *printedmsg = '\0';
-  highsOutputDev(io, HighsMessageType::VERBOSE, "Hi %s!", "HiGHS");
+  highsOutputDev(io_options, HighsMessageType::VERBOSE, "Hi %s!", "HiGHS");
   REQUIRE(*printedmsg == '\0');
 
   {
@@ -49,12 +49,12 @@ TEST_CASE("msgcb", "[highs_io]") {
     memset(longmsg, 'H', sizeof(longmsg));
     longmsg[sizeof(longmsg) - 2] = '\0';
     longmsg[sizeof(longmsg) - 1] = '\n';
-    highsOutputDev(io, HighsMessageType::INFO, longmsg);
+    highsOutputDev(io_options, HighsMessageType::INFO, longmsg);
     REQUIRE(strncmp(printedmsg, "HHHH", 4) == 0);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }
 
-  highsOutputUser(io, HighsMessageType::INFO, "Hello %s!\n", "HiGHS");
+  highsOutputUser(io_options, HighsMessageType::INFO, "Hello %s!\n", "HiGHS");
   REQUIRE(strlen(printedmsg) > 9);
   REQUIRE(strcmp(printedmsg, "         Hello HiGHS!\n") == 0);
   REQUIRE(receiveddata == &dummydata);
@@ -64,7 +64,7 @@ TEST_CASE("msgcb", "[highs_io]") {
     memset(longmsg, 'H', sizeof(longmsg));
     longmsg[sizeof(longmsg) - 2] = '\0';
     longmsg[sizeof(longmsg) - 1] = '\n';
-    highsOutputUser(io, HighsMessageType::WARNING, longmsg);
+    highsOutputUser(io_options, HighsMessageType::WARNING, longmsg);
     REQUIRE(strstr(printedmsg, "HHHH") != NULL);
     REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
   }

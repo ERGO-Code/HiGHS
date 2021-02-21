@@ -43,13 +43,13 @@ struct HighsIoOptions {
  * @brief For _single-line_ user logging with message type notification
  */
 // Printing format: must contain exactly one "\n" at end of format
-void highsOutputUser(const HighsIoOptions& io, const HighsMessageType type,
+void highsOutputUser(const HighsIoOptions& io_options, const HighsMessageType type,
                      const char* format, ...);
 
 /**
  * @brief For development logging
  */
-void highsOutputDev(const HighsIoOptions& io, const HighsMessageType type,
+void highsOutputDev(const HighsIoOptions& io_options, const HighsMessageType type,
                     const char* format, ...);
 
 /*
@@ -68,6 +68,6 @@ void highsSetMessageCallback(
 void highsSetMessageCallback(HighsOptions& options  //!< the options
 );
 
-void highsReportIoOptions(const HighsIoOptions& io);
+void highsReportIoOptions(const HighsIoOptions& io_options);
 
 #endif

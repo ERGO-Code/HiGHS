@@ -10,7 +10,7 @@ const bool dev_run = false;
 TEST_CASE("internal-options", "[highs_options]") {
   HighsOptions options;
   options.output_flag = false;
-  OptionStatus return_status = checkOptions(options.io, options.records);
+  OptionStatus return_status = checkOptions(options.io_options, options.records);
   REQUIRE(return_status == OptionStatus::OK);
 
   options.options_file = std::string(HIGHS_DIR) + "/check/sample_options_file";
@@ -23,54 +23,54 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   if (dev_run) reportOptions(stdout, options.records, true);
 
-  return_status = checkOptions(options.io, options.records);
+  return_status = checkOptions(options.io_options, options.records);
   REQUIRE(return_status == OptionStatus::OK);
 
   // Check setting boolean options
   std::string setting_string = "fixed";
-  return_status = setOptionValue(options.io, "mps_parser_type_free",
+  return_status = setOptionValue(options.io_options, "mps_parser_type_free",
                                  options.records, setting_string);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  return_status = setOptionValue(options.io, "mps_parser_type_free",
+  return_status = setOptionValue(options.io_options, "mps_parser_type_free",
                                  options.records, "fixed");
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
-  return_status = setOptionValue(options.io, "mps_parser_type_free",
+  return_status = setOptionValue(options.io_options, "mps_parser_type_free",
                                  options.records, "False");
   REQUIRE(return_status == OptionStatus::OK);
 
   return_status =
-      setOptionValue(options.io, "mps_parser_type_free", options.records, "F");
+      setOptionValue(options.io_options, "mps_parser_type_free", options.records, "F");
   REQUIRE(return_status == OptionStatus::OK);
 
   bool mps_parser_type_free = false;
-  return_status = setOptionValue(options.io, "mps_parser_type_free",
+  return_status = setOptionValue(options.io_options, "mps_parser_type_free",
                                  options.records, mps_parser_type_free);
   REQUIRE(return_status == OptionStatus::OK);
 
   return_status =
-      setOptionValue(options.io, "mps_parser_type", options.records, true);
+      setOptionValue(options.io_options, "mps_parser_type", options.records, true);
   REQUIRE(return_status == OptionStatus::UNKNOWN_OPTION);
 
   // Check setting int options
 
   return_status = setOptionValue(
-      options.io, "allowed_simplex_matrix_scale_factor", options.records, -1);
+      options.io_options, "allowed_simplex_matrix_scale_factor", options.records, -1);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   return_status = setOptionValue(
-      options.io, "allowed_simplex_matrix_scale_factor", options.records, 25);
+      options.io_options, "allowed_simplex_matrix_scale_factor", options.records, 25);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   std::string allowed_simplex_matrix_scale_factor_string = "1e-7";
   return_status = setOptionValue(
-      options.io, "allowed_simplex_matrix_scale_factor", options.records,
+      options.io_options, "allowed_simplex_matrix_scale_factor", options.records,
       allowed_simplex_matrix_scale_factor_string);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   return_status =
-      setOptionValue(options.io, "allowed_simplex_matrix_scale_factor",
+      setOptionValue(options.io_options, "allowed_simplex_matrix_scale_factor",
                      options.records, "3.14159");
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
@@ -81,13 +81,13 @@ TEST_CASE("internal-options", "[highs_options]") {
 
   double allowed_simplex_matrix_scale_factor_double = 1e-7;
   return_status = setOptionValue(
-      options.io, "allowed_simplex_matrix_scale_factor", options.records,
+      options.io_options, "allowed_simplex_matrix_scale_factor", options.records,
       allowed_simplex_matrix_scale_factor_double);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   int allowed_simplex_matrix_scale_factor = 12;
   return_status =
-      setOptionValue(options.io, "allowed_simplex_matrix_scale_factor",
+      setOptionValue(options.io_options, "allowed_simplex_matrix_scale_factor",
                      options.records, allowed_simplex_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::OK);
 
@@ -99,79 +99,79 @@ TEST_CASE("internal-options", "[highs_options]") {
   // Check setting double options
 
   return_status =
-      setOptionValue(options.io, "large_matrix_value", options.records, -1);
+      setOptionValue(options.io_options, "large_matrix_value", options.records, -1);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   return_status =
-      setOptionValue(options.io, "large_matrix_value", options.records, "1");
+      setOptionValue(options.io_options, "large_matrix_value", options.records, "1");
   REQUIRE(return_status == OptionStatus::OK);
 
   return_status =
-      setOptionValue(options.io, "small_matrix_value", options.records, -1);
+      setOptionValue(options.io_options, "small_matrix_value", options.records, -1);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   return_status =
-      setOptionValue(options.io, "small_matrix_value", options.records, "1e-6");
+      setOptionValue(options.io_options, "small_matrix_value", options.records, "1e-6");
   REQUIRE(return_status == OptionStatus::OK);
 
   double small_matrix_value = 1e-7;
-  return_status = setOptionValue(options.io, "small_matrix_value",
+  return_status = setOptionValue(options.io_options, "small_matrix_value",
                                  options.records, small_matrix_value);
   REQUIRE(return_status == OptionStatus::OK);
 
   // Check setting string options
 
   return_status =
-      setOptionValue(options.io, presolve_string, options.records, "ml.mps");
+      setOptionValue(options.io_options, presolve_string, options.records, "ml.mps");
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   std::string model_file = "ml.mps";
   return_status =
-      setOptionValue(options.io, presolve_string, options.records, model_file);
+      setOptionValue(options.io_options, presolve_string, options.records, model_file);
   REQUIRE(return_status == OptionStatus::ILLEGAL_VALUE);
 
   return_status =
-      setOptionValue(options.io, presolve_string, options.records, "off");
+      setOptionValue(options.io_options, presolve_string, options.records, "off");
   REQUIRE(return_status == OptionStatus::OK);
 
   std::string presolve = "choose";
   return_status =
-      setOptionValue(options.io, presolve_string, options.records, presolve);
+      setOptionValue(options.io_options, presolve_string, options.records, presolve);
   REQUIRE(return_status == OptionStatus::OK);
 
-  return_status = setOptionValue(options.io, model_file_string, options.records,
+  return_status = setOptionValue(options.io_options, model_file_string, options.records,
                                  model_file);
   REQUIRE(return_status == OptionStatus::OK);
 
   if (dev_run) reportOptions(stdout, options.records);
 
   bool get_mps_parser_type_free;
-  return_status = getOptionValue(options.io, "mps_parser_type_free",
+  return_status = getOptionValue(options.io_options, "mps_parser_type_free",
                                  options.records, get_mps_parser_type_free);
   REQUIRE(return_status == OptionStatus::OK);
   REQUIRE(get_mps_parser_type_free == false);
 
   int get_allowed_simplex_matrix_scale_factor;
   return_status =
-      getOptionValue(options.io, "allowed_simplex_matrix_scale_factor",
+      getOptionValue(options.io_options, "allowed_simplex_matrix_scale_factor",
                      options.records, get_allowed_simplex_matrix_scale_factor);
   REQUIRE(return_status == OptionStatus::OK);
   REQUIRE(get_allowed_simplex_matrix_scale_factor ==
           allowed_simplex_matrix_scale_factor);
 
   double get_small_matrix_value;
-  return_status = getOptionValue(options.io, "small_matrix_value",
+  return_status = getOptionValue(options.io_options, "small_matrix_value",
                                  options.records, get_small_matrix_value);
   REQUIRE(return_status == OptionStatus::OK);
   REQUIRE(get_small_matrix_value == small_matrix_value);
 
   std::string get_model_file;
   return_status =
-      getOptionValue(options.io, "model_file", options.records, get_model_file);
+      getOptionValue(options.io_options, "model_file", options.records, get_model_file);
   REQUIRE(return_status == OptionStatus::OK);
   REQUIRE(get_model_file == model_file);
 
-  return_status = checkOptions(options.io, options.records);
+  return_status = checkOptions(options.io_options, options.records);
   REQUIRE(return_status == OptionStatus::OK);
 }
 

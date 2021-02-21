@@ -212,7 +212,7 @@ void refineBasis(const HighsLp& lp, const HighsSolution& solution,
 
 #ifdef IPX_ON
 HighsStatus ipxSolutionToHighsSolution(
-    const HighsIoOptions& io, const HighsLp& lp, const std::vector<double>& rhs,
+    const HighsIoOptions& io_options, const HighsLp& lp, const std::vector<double>& rhs,
     const std::vector<char>& constraint_type, const int ipx_num_col,
     const int ipx_num_row, const std::vector<double>& ipx_x,
     const std::vector<double>& ipx_slack_vars,
@@ -296,7 +296,7 @@ HighsStatus ipxSolutionToHighsSolution(
 }
 
 HighsStatus ipxBasicSolutionToHighsBasicSolution(
-    const HighsIoOptions& io, const HighsLp& lp, const std::vector<double>& rhs,
+    const HighsIoOptions& io_options, const HighsLp& lp, const std::vector<double>& rhs,
     const std::vector<char>& constraint_type, const IpxSolution& ipx_solution,
     HighsBasis& highs_basis, HighsSolution& highs_solution) {
   // Resize the HighsSolution and HighsBasis
@@ -374,7 +374,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 #endif
     assert(!unrecognised);
     if (unrecognised) {
-      highsOutputUser(io, HighsMessageType::ERROR,
+      highsOutputUser(io_options, HighsMessageType::ERROR,
                       "Unrecognised ipx_col_status value from IPX\n");
       return HighsStatus::Error;
     }
@@ -501,7 +501,7 @@ HighsStatus ipxBasicSolutionToHighsBasicSolution(
 #endif
     assert(!unrecognised);
     if (unrecognised) {
-      highsOutputUser(io, HighsMessageType::ERROR,
+      highsOutputUser(io_options, HighsMessageType::ERROR,
                       "Unrecognised ipx_row_status value from IPX\n");
       return HighsStatus::Error;
     }

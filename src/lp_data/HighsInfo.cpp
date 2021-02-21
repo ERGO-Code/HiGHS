@@ -43,7 +43,7 @@ InfoStatus getInfoIndex(const HighsOptions& options, const std::string& name,
   int num_info = info_records.size();
   for (index = 0; index < num_info; index++)
     if (info_records[index]->name == name) return InfoStatus::OK;
-  highsOutputUser(options.io, HighsMessageType::ERROR,
+  highsOutputUser(options.io_options, HighsMessageType::ERROR,
                   "getInfoIndex: Info \"%s\" is unknown\n", name.c_str());
   return InfoStatus::UNKNOWN_INFO;
 }
@@ -61,7 +61,7 @@ InfoStatus checkInfo(const HighsOptions& options,
       std::string check_name = info_records[check_index]->name;
       if (check_name == name) {
         highsOutputUser(
-            options.io, HighsMessageType::ERROR,
+            options.io_options, HighsMessageType::ERROR,
             "checkInfo: Info %d (\"%s\") has the same name as info %d \"%s\"\n",
             index, name.c_str(), check_index, check_name.c_str());
         error_found = true;
@@ -78,7 +78,7 @@ InfoStatus checkInfo(const HighsOptions& options,
             ((InfoRecordInt*)info_records[check_index])[0];
         if (check_info.type == HighsInfoType::INT) {
           if (check_info.value == value_pointer) {
-            highsOutputUser(options.io, HighsMessageType::ERROR,
+            highsOutputUser(options.io_options, HighsMessageType::ERROR,
                             "checkInfo: Info %d (\"%s\") has the same value "
                             "pointer as info %d (\"%s\")\n",
                             index, info.name.c_str(), check_index,
@@ -98,7 +98,7 @@ InfoStatus checkInfo(const HighsOptions& options,
             ((InfoRecordDouble*)info_records[check_index])[0];
         if (check_info.type == HighsInfoType::DOUBLE) {
           if (check_info.value == value_pointer) {
-            highsOutputUser(options.io, HighsMessageType::ERROR,
+            highsOutputUser(options.io_options, HighsMessageType::ERROR,
                             "checkInfo: Info %d (\"%s\") has the same value "
                             "pointer as info %d (\"%s\")\n",
                             index, info.name.c_str(), check_index,
@@ -110,7 +110,7 @@ InfoStatus checkInfo(const HighsOptions& options,
     }
   }
   if (error_found) return InfoStatus::ILLEGAL_VALUE;
-  highsOutputUser(options.io, HighsMessageType::INFO,
+  highsOutputUser(options.io_options, HighsMessageType::INFO,
                   "checkInfo: Info are OK\n");
   return InfoStatus::OK;
 }
@@ -124,7 +124,7 @@ InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::INT) {
     highsOutputUser(
-        options.io, HighsMessageType::ERROR,
+        options.io_options, HighsMessageType::ERROR,
         "getInfoValue: Info \"%s\" requires value of type %s, not int\n",
         name.c_str(), infoEntryType2string(type).c_str());
     return InfoStatus::ILLEGAL_VALUE;
@@ -143,7 +143,7 @@ InfoStatus getInfoValue(const HighsOptions& options, const std::string& name,
   HighsInfoType type = info_records[index]->type;
   if (type != HighsInfoType::DOUBLE) {
     highsOutputUser(
-        options.io, HighsMessageType::ERROR,
+        options.io_options, HighsMessageType::ERROR,
         "getInfoValue: Info \"%s\" requires value of type %s, not double\n",
         name.c_str(), infoEntryType2string(type).c_str());
     return InfoStatus::ILLEGAL_VALUE;

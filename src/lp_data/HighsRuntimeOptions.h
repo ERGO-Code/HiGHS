@@ -71,28 +71,28 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
 
     if (result.count(presolve_string)) {
       std::string value = result[presolve_string].as<std::string>();
-      if (setOptionValue(options.io, presolve_string, options.records, value) !=
+      if (setOptionValue(options.io_options, presolve_string, options.records, value) !=
           OptionStatus::OK)
         return false;
     }
 
     if (result.count(solver_string)) {
       std::string value = result[solver_string].as<std::string>();
-      if (setOptionValue(options.io, solver_string, options.records, value) !=
+      if (setOptionValue(options.io_options, solver_string, options.records, value) !=
           OptionStatus::OK)
         return false;
     }
 
     if (result.count(parallel_string)) {
       std::string value = result[parallel_string].as<std::string>();
-      if (setOptionValue(options.io, parallel_string, options.records, value) !=
+      if (setOptionValue(options.io_options, parallel_string, options.records, value) !=
           OptionStatus::OK)
         return false;
     }
 
     if (result.count(time_limit_string)) {
       double value = result[time_limit_string].as<double>();
-      if (setOptionValue(options.io, time_limit_string, options.records,
+      if (setOptionValue(options.io_options, time_limit_string, options.records,
                          value) != OptionStatus::OK)
         return false;
     }
@@ -108,7 +108,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     }
 
   } catch (const cxxopts::OptionException& e) {
-    highsOutputUser(options.io, HighsMessageType::ERROR,
+    highsOutputUser(options.io_options, HighsMessageType::ERROR,
                     "Error parsing options: %s\n", e.what());
     return false;
   }

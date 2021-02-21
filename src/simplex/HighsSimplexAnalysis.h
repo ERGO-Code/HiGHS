@@ -94,7 +94,7 @@ class HighsSimplexAnalysis {
 
   void setup(const HighsLp& lp, const HighsOptions& options,
              const int simplex_iteration_count);
-  void messaging(const HighsIoOptions& io_);
+  void messaging(const HighsIoOptions& io_options_);
   void iterationReport();
   void invertReport();
   void invertReport(const bool header);
@@ -164,7 +164,7 @@ class HighsSimplexAnalysis {
   std::string lp_name_;
 
   // Local copies of IO data
-  HighsIoOptions io;
+  HighsIoOptions io_options;
 
   // Interpreted shortcuts from bit settings in highs_analysis_level
   bool analyse_lp_data;

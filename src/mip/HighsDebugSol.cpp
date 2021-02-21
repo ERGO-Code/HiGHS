@@ -27,7 +27,7 @@ void HighsDebugSol::activate() {
   if (!mipsolver->submip &&
       debugSolObjective <= mipsolver->mipdata_->upper_limit &&
       !mipsolver->options_mip_->mip_debug_solution_file.empty()) {
-    highsOutputDev(mipsolver->options_mip_->io,
+    highsOutputDev(mipsolver->options_mip_->io_options,
                       HighsMessageType::INFO,
                       "reading debug solution file %s\n",
                       mipsolver->options_mip_->mip_debug_solution_file.c_str());
@@ -51,7 +51,7 @@ void HighsDebugSol::activate() {
         auto it = nametoidx.find(varname);
         if (it != nametoidx.end()) {
           file >> varval;
-          highsOutputDev(mipsolver->options_mip_->io,
+          highsOutputDev(mipsolver->options_mip_->io_options,
 			 HighsMessageType::INFO,
                             "%s = %g\n", varname.c_str(), varval);
           debugSolution[it->second] = varval;
@@ -69,7 +69,7 @@ void HighsDebugSol::activate() {
       printf("debug sol active\n");
       registerDomain(mipsolver->mipdata_->domain);
     } else {
-      highsOutputUser(mipsolver->options_mip_->io, HighsMessageType::WARNING,
+      highsOutputUser(mipsolver->options_mip_->io_options, HighsMessageType::WARNING,
                       "debug solution: could not open file '%s'\n",
                       mipsolver->options_mip_->mip_debug_solution_file.c_str());
       HighsLp model = *mipsolver->model_;

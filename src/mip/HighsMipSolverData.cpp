@@ -222,7 +222,7 @@ HighsMipSolverData::ModelCleanup::ModelCleanup(HighsMipSolver& mipsolver) {
   int numstrengthened = aggregator.strengthenInequalities();
 
   if (numstrengthened != 0)
-    highsOutputDev(mipsolver.options_mip_->io,  
+    highsOutputDev(mipsolver.options_mip_->io_options,  
 		      HighsMessageType::INFO,
                       "strengthened %d coefficients\n", numstrengthened);
 
@@ -722,7 +722,7 @@ void HighsMipSolverData::addIncumbent(const std::vector<double>& sol,
 void HighsMipSolverData::printDisplayLine(char first) {
   double offset = mipsolver.model_->offset_;
   if (num_disp_lines % 20 == 0) {
-    highsOutputDev(mipsolver.options_mip_->io,  
+    highsOutputDev(mipsolver.options_mip_->io_options,  
 		      HighsMessageType::INFO,
         "   %7s | %10s | %10s | %10s | %10s | %-14s | %-14s | %7s | %7s "
         "| %8s | %8s\n",
@@ -743,7 +743,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
     lb = std::min(ub, lb);
     gap = 100 * (ub - lb) / std::max(1.0, std::abs(ub));
 
-    highsOutputDev(mipsolver.options_mip_->io,  
+    highsOutputDev(mipsolver.options_mip_->io_options,  
 		      HighsMessageType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %7.2f%% | %7.2f%%\n",
@@ -752,7 +752,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
         ub, mipsolver.mipdata_->cutpool.getNumCuts(), lpcuts, gap,
         100 * double(pruned_treeweight));
   } else {
-    highsOutputDev(mipsolver.options_mip_->io,  
+    highsOutputDev(mipsolver.options_mip_->io_options,  
 		      HighsMessageType::INFO,
         " %c %6.1fs | %10lu | %10lu | %10lu | %10lu | %-14.9g | %-14.9g | "
         "%7d | %7d | %8.2f | %7.2f%%\n",
@@ -765,7 +765,7 @@ void HighsMipSolverData::printDisplayLine(char first) {
 
 void HighsMipSolverData::evaluateRootNode() {
   // solve the first root lp
-  highsOutputDev(mipsolver.options_mip_->io,  
+  highsOutputDev(mipsolver.options_mip_->io_options,  
 		    HighsMessageType::INFO,
                     "\nsolving root node LP relaxation\n");
   lp.loadModel();
@@ -1000,7 +1000,7 @@ bool HighsMipSolverData::checkLimits() const {
   const HighsOptions& options = *mipsolver.options_mip_;
   if (options.mip_max_nodes != HIGHS_CONST_I_INF &&
       num_nodes >= size_t(options.mip_max_nodes)) {
-    highsOutputDev(options.io,  
+    highsOutputDev(options.io_options,  
 		      HighsMessageType::INFO,
                       "reached node limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
@@ -1008,7 +1008,7 @@ bool HighsMipSolverData::checkLimits() const {
   }
   if (options.mip_max_leaves != HIGHS_CONST_I_INF &&
       num_leaves >= size_t(options.mip_max_leaves)) {
-    highsOutputDev(options.io,  
+    highsOutputDev(options.io_options,  
 		      HighsMessageType::INFO,
                       "reached leave node limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_ITERATION_LIMIT;
@@ -1016,7 +1016,7 @@ bool HighsMipSolverData::checkLimits() const {
   }
   if (mipsolver.timer_.read(mipsolver.timer_.solve_clock) >=
       options.time_limit) {
-    highsOutputDev(options.io,  
+    highsOutputDev(options.io_options,  
 		      HighsMessageType::INFO,
                       "reached time limit\n");
     mipsolver.modelstatus_ = HighsModelStatus::REACHED_TIME_LIMIT;
@@ -1060,7 +1060,7 @@ void HighsMipSolverData::checkObjIntegrality() {
 
     if (currgcd != 0) objintscale /= currgcd;
 
-    highsOutputDev(mipsolver.options_mip_->io,  
+    highsOutputDev(mipsolver.options_mip_->io_options,  
 		      HighsMessageType::INFO,
                       "objective is always integral with scale %g\n",
                       objintscale);
@@ -1112,7 +1112,7 @@ void HighsMipSolverData::runProbing() {
         ++nfixed;
     }
 
-    highsOutputDev(mipsolver.options_mip_->io,  
+    highsOutputDev(mipsolver.options_mip_->io_options,  
 		      HighsMessageType::INFO,
                       "%d probing evaluations: %d fixed binary variables, %d "
                       "bound changes\n",

@@ -16,7 +16,7 @@
 
 #include "simplex/HSimplex.h"
 
-void reportSimplexPhaseIterations(const HighsIoOptions& io, const int iteration_count,
+void reportSimplexPhaseIterations(const HighsIoOptions& io_options, const int iteration_count,
                                   const HighsSimplexInfo& simplex_info,
                                   const bool initialise) {
   if (simplex_info.run_quiet) return;
@@ -76,7 +76,7 @@ void reportSimplexPhaseIterations(const HighsIoOptions& io, const int iteration_
     iteration_report << "PrSwap " << delta_primal_bound_swap << "; ";
   }
 
-  highsOutputUser(io, HighsMessageType::INFO,
+  highsOutputUser(io_options, HighsMessageType::INFO,
                   "Simplex iterations: %sTotal %d\n",
                   iteration_report.str().c_str(), delta_iteration_count);
 }

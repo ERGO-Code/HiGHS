@@ -94,9 +94,9 @@ void updateIndexCollectionOutInIndex(
 
 int dataSizeOfIndexCollection(const HighsIndexCollection& index_collection);
 
-bool intUserDataNotNull(const HighsIoOptions& io, const int* user_data,
+bool intUserDataNotNull(const HighsIoOptions& io_options, const int* user_data,
                         const std::string name);
-bool doubleUserDataNotNull(const HighsIoOptions& io, const double* user_data,
+bool doubleUserDataNotNull(const HighsIoOptions& io_options, const double* user_data,
                            const std::string name);
 
 double getNorm2(const std::vector<double> values);

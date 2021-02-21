@@ -108,7 +108,7 @@ bool HEkk::switchToDevex() {
 
     if (switch_to_devex) {
       highsOutputUser(
-          options_.io, HighsMessageType::INFO,
+          options_.io_options, HighsMessageType::INFO,
           "Switch from DSE to Devex after %d costly DSE iterations of %d with "
           "densities C_Aq = %11.4g; R_Ep = %11.4g; R_Ap = "
           "%11.4g; DSE = %11.4g\n",
@@ -126,7 +126,7 @@ bool HEkk::switchToDevex() {
     switch_to_devex = simplex_info_.allow_dual_steepest_edge_to_devex_switch &&
                       local_measure > local_threshold;
     if (switch_to_devex) {
-      highsOutputUser(options_.io, HighsMessageType::INFO,
+      highsOutputUser(options_.io_options, HighsMessageType::INFO,
                       "Switch from DSE to Devex with log error measure of %g > "
                       "%g = threshold\n",
                       local_measure, local_threshold);

@@ -26,7 +26,7 @@ enum class FilereaderRetcode {
   TIMEOUT
 };
 
-void interpretFilereaderRetcode(const HighsIoOptions& io, const std::string filename,
+void interpretFilereaderRetcode(const HighsIoOptions& io_options, const std::string filename,
                                 const FilereaderRetcode code);
 std::string extractModelName(const std::string filename);
 
