@@ -773,7 +773,6 @@ void HighsMipSolverData::evaluateRootNode() {
   
   //  lp.getLpSolver().setHighsOptionValue("log_dev_level", LOG_DEV_LEVEL_INFO);
   //  lp.getLpSolver().setHighsOptionValue("log_file", mipsolver.options_mip_->log_file);
-  //  lp.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
   HighsLpRelaxation::Status status = lp.resolveLp();
 
   lp.getLpSolver().setHighsOptionValue("presolve", "off");
@@ -781,8 +780,6 @@ void HighsMipSolverData::evaluateRootNode() {
   size_t firstlpiters = maxrootlpiters;
 
   lp.setIterationLimit(std::max(10000, int(50 * maxrootlpiters)));
-  //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
-  //  lp.getLpSolver().setHighsOutput();
   //  lp.getLpSolver().setHighsOptionValue("output_flag", false);
   //  lp.getLpSolver().setHighsOptionValue("log_dev_level", 0);
   lp.getLpSolver().setHighsOptionValue("parallel", "off");

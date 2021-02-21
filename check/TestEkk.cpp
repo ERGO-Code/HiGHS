@@ -66,7 +66,6 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   HighsLp lp;
   const bool from_file = true;
@@ -91,7 +90,6 @@ TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   ekk_distillation(highs);
   ekk_blending(highs);

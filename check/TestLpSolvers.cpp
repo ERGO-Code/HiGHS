@@ -242,7 +242,6 @@ TEST_CASE("LP-solver", "[highs_lp_solver]") {
   Highs highs(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
 
   // Read mps
@@ -320,7 +319,6 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   Highs highs(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   const HighsInfo& info = highs.getHighsInfo();
 

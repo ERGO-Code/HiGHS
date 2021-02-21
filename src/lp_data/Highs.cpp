@@ -78,10 +78,6 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus Highs::setHighsLogfile(FILE* logfile) { return HighsStatus::OK; }
-
-HighsStatus Highs::setHighsOutput(FILE* output) { return HighsStatus::OK; }
-
 HighsStatus Highs::readHighsOptions(const std::string filename) {
   if (filename.size() <= 0) {
     highsLogUser(options_.log_options, HighsLogType::WARNING,

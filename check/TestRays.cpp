@@ -214,7 +214,6 @@ void testInfeasibleMps(const std::string model) {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
 
   REQUIRE(highs.setHighsOptionValue("presolve", "off") == HighsStatus::OK);
@@ -244,7 +243,6 @@ void testUnboundedMps(const std::string model,
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
 
   std::string model_file;
@@ -281,7 +279,6 @@ TEST_CASE("Rays", "[highs_test_rays]") {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   std::string model_file;
   HighsLp lp;
@@ -405,7 +402,6 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   double inf = highs.getHighsInfinity();
   highs.addCol(-1.0, -inf, inf, 0, NULL, NULL);
@@ -436,7 +432,6 @@ TEST_CASE("Rays-464b", "[highs_test_rays]") {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   double inf = highs.getHighsInfinity();
   highs.addCol(-1.0, 0.0, inf, 0, NULL, NULL);

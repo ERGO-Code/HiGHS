@@ -27,7 +27,6 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   Highs highs(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   const HighsInfo& info = highs.getHighsInfo();
 
@@ -103,7 +102,6 @@ TEST_CASE("filereader-free-format-parser", "[highs_filereader]") {
   Highs highs(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
@@ -135,7 +133,6 @@ TEST_CASE("filereader-read-mps-ems-lp", "[highs_filereader]") {
   Highs highs(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
@@ -201,7 +198,6 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   Highs highs(options);
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::OK);
@@ -248,7 +244,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   Highs highs_lp;
   if (!dev_run) {
     highs_lp.setHighsOptionValue("output_flag", false);
-    highs_lp.setHighsOutput();
   }
   HighsModelStatus model_status;
   status = highs_lp.passModel(lp);
@@ -260,7 +255,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   Highs highs_primal;
   if (!dev_run) {
     highs_primal.setHighsOptionValue("output_flag", false);
-    highs_primal.setHighsOutput();
   }
   status = highs_primal.passModel(primal);
   REQUIRE(status == HighsStatus::OK);
@@ -282,7 +276,6 @@ TEST_CASE("filereader-dualize", "[highs_data]") {
   Highs highs_dual;
   if (!dev_run) {
     highs_dual.setHighsOptionValue("output_flag", false);
-    highs_dual.setHighsOutput();
   }
   status = assessLp(dual, options);
   REQUIRE(status == HighsStatus::OK);

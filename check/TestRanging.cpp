@@ -7,12 +7,8 @@ const bool dev_run = false;
 
 HighsStatus quietRun(Highs& highs) {
   highs.setHighsOptionValue("output_flag", false);
-  highs.setHighsOutput();
   HighsStatus call_status = highs.run();
-  if (dev_run) {
-    highs.setHighsOptionValue("output_flag", true);
-    highs.setHighsOutput(stdout);
-  }
+  if (dev_run) highs.setHighsOptionValue("output_flag", true);
   return call_status;
 }
 
@@ -501,7 +497,6 @@ TEST_CASE("Ranging-min", "[highs_test_ranging]") {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   HighsLp lp;
   HighsModelStatus require_model_status;
@@ -524,7 +519,6 @@ TEST_CASE("Ranging-max", "[highs_test_ranging]") {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   HighsLp lp;
   HighsModelStatus require_model_status;

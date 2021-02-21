@@ -193,7 +193,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
 
   const HighsLp& internal_lp = highs.getLp();

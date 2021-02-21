@@ -505,9 +505,6 @@ void HighsPrimalHeuristics::feasibilityPump() {
                                  objinds.size(), objinds.data(), objval.data());
   }
 
-  // lprelax.getLpSolver().setHighsLogfile(mipsolver.options_mip_->logfile);
-  // lprelax.getLpSolver().setHighsOutput(mipsolver.options_mip_->output);
-
   lprelax.getLpSolver().setHighsOptionValue("simplex_strategy",
                                             SIMPLEX_STRATEGY_PRIMAL);
   lprelax.getLpSolver().setHighsOptionValue(
@@ -594,8 +591,6 @@ void HighsPrimalHeuristics::centralRounding() {
   ipm.setHighsOptionValue("run_crossover", false);
   ipm.setHighsOptionValue("presolve", "off");
   ipm.setHighsOptionValue("output_flag", false);
-  //  ipm.setHighsLogfile(nullptr);
-  //  ipm.setHighsOutput(nullptr);
   HighsLp lpmodel(
       *mipsolver.model_);  // mipsolver.mipdata_->lp.getLpSolver().getLp());
   lpmodel.colCost_.assign(lpmodel.numCol_, 0.0);

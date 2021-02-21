@@ -73,26 +73,6 @@ int Highs_clearModel(void* highs  //!< HiGHS object reference
 );
 
 /*
- * @brief Sets the Logfile and Output to NULL
- */
-int Highs_runQuiet(void* highs  //!< HiGHS object reference
-);
-
-/*
- * @brief Sets the logfile for printing.
- */
-int Highs_setHighsLogfile(void* highs,   //!< HiGHS object reference
-                          void* logfile  //!< File handle of the logfile
-);
-
-/*
- * @brief Sets the output for printing.
- */
-int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
-                         void* outputfile  //!< File handle of the output file
-);
-
-/*
  * @brief Runs HiGHS
  */
 int Highs_run(void* highs  //!< HiGHS object reference

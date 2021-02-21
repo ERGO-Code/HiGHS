@@ -179,7 +179,6 @@ TEST_CASE("highs-options", "[highs_options]") {
   Highs highs;
   if (!dev_run) {
     highs.setHighsOptionValue("output_flag", false);
-    highs.setHighsOutput();
   }
   HighsStatus return_status = highs.writeHighsOptions("Highs.set");
   REQUIRE(return_status == HighsStatus::OK);

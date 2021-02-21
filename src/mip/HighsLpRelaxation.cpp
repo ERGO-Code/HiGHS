@@ -101,7 +101,6 @@ double HighsLpRelaxation::slackUpper(int row) const {
 HighsLpRelaxation::HighsLpRelaxation(const HighsMipSolver& mipsolver)
     : mipsolver(mipsolver) {
   lpsolver.setHighsOptionValue("output_flag", false);
-  lpsolver.setHighsOutput();
   lpsolver.setHighsOptionValue("output_flag", false);
   //  lpsolver.setHighsOptionValue("log_dev_level", 0);
   lpsolver.setHighsOptionValue(
@@ -125,7 +124,6 @@ HighsLpRelaxation::HighsLpRelaxation(const HighsLpRelaxation& other)
       basischeckpoint(other.basischeckpoint),
       currentbasisstored(other.currentbasisstored) {
   lpsolver.setHighsOptionValue("output_flag", false);
-  lpsolver.setHighsOutput();
   lpsolver.passHighsOptions(other.lpsolver.getHighsOptions());
   lpsolver.passModel(other.lpsolver.getLp());
   lpsolver.setBasis(other.lpsolver.getBasis());
@@ -737,7 +735,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         Highs ipm;
         ipm.passModel(lpsolver.getLp());
         ipm.setHighsOptionValue("solver", "ipm");
-        ipm.setHighsOutput();
         ipm.setHighsOptionValue("output_flag", false);
         ipm.run();
         lpsolver.setBasis(ipm.getBasis());
