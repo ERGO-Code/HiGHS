@@ -36,11 +36,15 @@ void highsLogUser(const HighsLogOptions& log_options, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   if (logmsgcb == NULL) {
-    fprintf(log_options.log_file_stream, "%-9s", HighsLogTypeTag[(int)type]);
-    vfprintf(log_options.log_file_stream, format, argptr);
-    if (*log_options.log_to_console) {
+    if (log_options.log_file_stream != NULL) {
+      // Write to log file stream
       fprintf(log_options.log_file_stream, "%-9s", HighsLogTypeTag[(int)type]);
+      vfprintf(log_options.log_file_stream, format, argptr);
       va_start(argptr, format);
+    }
+    if (*log_options.log_to_console && log_options.log_file_stream != stdout) {
+      // Write to stdout unless log file stream is stdout
+      fprintf(log_options.log_file_stream, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(stdout, format, argptr);
     }
   } else {
@@ -70,9 +74,13 @@ void highsLogDev(const HighsLogOptions& log_options, const HighsLogType type,
   va_list argptr;
   va_start(argptr, format);
   if (logmsgcb == NULL) {
-    vfprintf(log_options.log_file_stream, format, argptr);
-    if (*log_options.log_to_console) {
+    if (log_options.log_file_stream != NULL) {
+      // Write to log file stream
+      vfprintf(log_options.log_file_stream, format, argptr);
       va_start(argptr, format);
+    }      
+    if (*log_options.log_to_console && log_options.log_file_stream != stdout) {
+      // Write to stdout unless log file stream is stdout
       vfprintf(stdout, format, argptr);
     }
   } else {
@@ -100,6 +108,24 @@ void highsSetLogCallback(HighsOptions& options) {
   printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;
+}
+
+void highsSetLogOptions(HighsLogOptions& log_options,
+			const bool* output_flag_,
+			FILE* log_file_stream_,
+			const bool* log_to_console_,
+			const int* log_dev_level_) {
+  bool output_flag = true;
+  if (output_flag_ != NULL) output_flag = *output_flag_;
+  log_options.output_flag = &output_flag;
+  log_options.log_file_stream = log_file_stream_;
+  bool log_to_console = true;
+  if (log_to_console_ != NULL) log_to_console = *log_to_console_;
+  log_options.log_to_console = &log_to_console;
+
+  int log_dev_level = LOG_DEV_LEVEL_NONE;
+  if (log_dev_level_ != NULL) log_dev_level = *log_dev_level_;
+  log_options.log_dev_level = &log_dev_level;
 }
 
 void highsReportLogOptions(const HighsLogOptions& log_options) {

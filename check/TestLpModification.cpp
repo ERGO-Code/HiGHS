@@ -304,10 +304,7 @@ void messageReportLp(const char* message, const HighsLp& lp) {
   bool output_flag = true;
   bool log_to_console = false;
   int log_dev_level = LOG_DEV_LEVEL_INFO;
-  options.log_options.log_file_stream = stdout;
-  options.log_options.output_flag = &output_flag;
-  options.log_options.log_to_console = &log_to_console;
-  options.log_options.log_dev_level = &log_dev_level;
+  highsSetLogOptions(options.log_options, &output_flag, stdout, &log_to_console, &log_dev_level);
   highsLogDev(options.log_options, HighsLogType::VERBOSE, 
                     "\nReporting LP: %s\n", message);
   reportLp(options, lp, HighsLogType::VERBOSE);

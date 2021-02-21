@@ -69,8 +69,8 @@ void highsSetLogCallback(HighsOptions& options  //!< the options
 );
 
 void highsSetLogOptions(HighsLogOptions& log_options,
-			FILE* log_file_stream_ = NULL,
 			const bool* output_flag_ = NULL,
+			FILE* log_file_stream_ = NULL,
 			const bool* log_to_console_ = NULL,
 			const int* log_dev_level = NULL);
 void highsReportLogOptions(const HighsLogOptions& log_options);
