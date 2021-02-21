@@ -39,16 +39,6 @@ struct HighsIo {
   int* output_dev;
 };
 
-enum HighsPrintMessageLevel {
-  ML_MIN = 0,
-  ML_NONE = ML_MIN,
-  ML_VERBOSE = 1,
-  ML_DETAILED = 2,
-  ML_MINIMAL = 4,
-  ML_ALWAYS = ML_VERBOSE | ML_DETAILED | ML_MINIMAL,
-  ML_MAX = ML_ALWAYS
-};
-
 /**
  * @brief For _single-line_ user logging with message type notification
  */
@@ -67,17 +57,17 @@ void highsOutputDev(const HighsIo& io, const HighsMessageType type,
  *
  * Set to NULL to reset to default, which is to print to logfile and output file
  */
-void HighsSetMessageCallback(
+void highsSetMessageCallback(
     void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
     void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
     void* msgcb_data_);
 
 /*
- * @brief sets output options
+ * @brief sets callbacks from options
  */
-void HighsSetIO(HighsOptions& options  //!< the options
+void highsSetMessageCallback(HighsOptions& options  //!< the options
 );
 
-void highsReportIo(const HighsIo& io);
+void highsReportIoOptions(const HighsIo& io);
 
 #endif

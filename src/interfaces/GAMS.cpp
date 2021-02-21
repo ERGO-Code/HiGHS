@@ -123,7 +123,7 @@ static int setupOptions(gamshighs_t* gh) {
   gh->options->printmsgcb = gevprint;
   gh->options->logmsgcb = gevlog;
   gh->options->msgcb_data = (void*)gh->gev;
-  HighsSetIO(*gh->options);
+  highsSetMessageCallback(*gh->options);
 
   return 0;
 }

@@ -263,7 +263,6 @@ struct HighsOptionsStruct {
   int ipm_iteration_limit;
   int highs_min_threads;
   int highs_max_threads;
-  int message_level;
   std::string solution_file;
   std::string log_file;
   bool write_solution_to_file;
@@ -523,13 +522,6 @@ class HighsOptions : public HighsOptionsStruct {
         "highs_max_threads", "Maximum number of threads in parallel execution",
         advanced, &highs_max_threads, 1, HIGHS_THREAD_LIMIT,
         HIGHS_THREAD_LIMIT);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt("message_level",
-                                     "HiGHS message level: bit-mask 1 => "
-                                     "VERBOSE; 2 => DETAILED 4 => MINIMAL",
-                                     advanced, &message_level, ML_MIN,
-                                     ML_MINIMAL, ML_MAX);
     records.push_back(record_int);
 
     record_bool =

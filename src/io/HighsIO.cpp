@@ -87,7 +87,7 @@ void highsOutputDev(const HighsIo& io, const HighsMessageType type,
   va_end(argptr);
 }
 
-void HighsSetMessageCallback(
+void highsSetMessageCallback(
     void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
     void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
     void* msgcb_data_) {
@@ -96,24 +96,20 @@ void HighsSetMessageCallback(
   msgcb_data = msgcb_data_;
 }
 
-void HighsSetIO(HighsOptions& options) {
+void highsSetMessageCallback(HighsOptions& options) {
   printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;
 }
 
-void highsReportIo(const HighsIo& io) {
+void highsReportIoOptions(const HighsIo& io) {
   printf("\nHighs IO settings\n");
   if (io.logging_file == NULL) {
     printf("   logging_file = NULL\n");
   } else {
     printf("   logging_file = Not NULL\n");
   }
-  
-  bool output_flag = *io.output_flag;
-  bool log_to_console = *io.log_to_console;
-  int output_dev = *io.output_dev;
-  printf("   output_flag = %d\n", output_flag);
-  printf("   log_to_console = %d\n", log_to_console);
-  printf("   output_dev = %d\n\n", output_dev);
+  printf("   output_flag = %d\n", *io.output_flag);
+  printf("   log_to_console = %d\n", *io.log_to_console);
+  printf("   output_dev = %d\n\n", *io.output_dev);
 }

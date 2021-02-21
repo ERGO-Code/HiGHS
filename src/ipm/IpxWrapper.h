@@ -539,9 +539,9 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   parameters.display = 1;
   if (options.output == NULL) parameters.display = 0;
   if (!options.output_flag) parameters.display = 0;
-  // Set debug according to message_level
+  // Modify parameters.debug according to output_dev
   parameters.debug = 0;
-  if (options.output_dev == OUTPUT_DEV_NONE) {
+  if (options.output_dev == OUTPUT_DEV_DETAILED) {
     // Default options.output_dev setting is OUTPUT_DEV_NONE, yielding
     // default setting debug = 0
     parameters.debug = 0;

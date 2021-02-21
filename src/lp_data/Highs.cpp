@@ -456,7 +456,7 @@ HighsStatus Highs::run() {
     return returnFromRun(return_status);
   }
 
-  HighsSetIO(options_);
+  highsSetMessageCallback(options_);
 #ifdef HiGHSDEV
   if (checkOptions(options_.io, options_.records) != OptionStatus::OK) {
     return_status = HighsStatus::Error;

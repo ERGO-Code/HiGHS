@@ -32,7 +32,7 @@ TEST_CASE("msgcb", "[highs_io]") {
   io.log_to_console = &log_to_console;
   io.output_dev = &output_dev;
 
-  HighsSetMessageCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
+  highsSetMessageCallback(myprintmsgcb, mylogmsgcb, (void*)&dummydata);
 
   highsOutputDev(io, HighsMessageType::INFO, "Hi %s!", "HiGHS");
   REQUIRE(strcmp(printedmsg, "Hi HiGHS!") == 0);

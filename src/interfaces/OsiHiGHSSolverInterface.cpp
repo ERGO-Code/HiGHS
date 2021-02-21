@@ -59,7 +59,7 @@ static void logtomessagehandler(HighsMessageType type, const char* msg,
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
     //  : status(HighsStatus::Init) {
     : status(HighsStatus::OK) {
-  HighsSetMessageCallback(printtomessagehandler, logtomessagehandler,
+  highsSetMessageCallback(printtomessagehandler, logtomessagehandler,
                           (void*)handler_);
 
   HighsOptions& options = this->highs->options_;
@@ -68,7 +68,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
   this->highs = new Highs();
   this->dummy_solution = new HighsSolution;
 
-  // because HiGHS calls HiGHSSetIO with the Options, which overwrites
+  // Because HiGHS calls highsSetMessageCallback with the options, which overwrites
   // the previous setting
   this->highs->options_.printmsgcb = printtomessagehandler;
   this->highs->options_.logmsgcb = logtomessagehandler;
@@ -82,7 +82,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
     : OsiSolverInterface(original),
       //      status(HighsStatus::Init)
       status(HighsStatus::OK) {
-  HighsSetMessageCallback(printtomessagehandler, logtomessagehandler,
+  highsSetMessageCallback(printtomessagehandler, logtomessagehandler,
                           (void*)handler_);
 
   HighsOptions& options = this->highs->options_;
@@ -91,7 +91,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
   this->highs = new Highs();
   this->dummy_solution = new HighsSolution;
 
-  // because HiGHS calls HiGHSSetIO with the Options, whichoverwrites the
+  // Because HiGHS calls highsSetMessageCallback with the options, whichoverwrites the
   // previous setting
   this->highs->options_.printmsgcb = printtomessagehandler;
   this->highs->options_.logmsgcb = logtomessagehandler;
@@ -106,7 +106,7 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   highsOutputDev(options.io, HighsMessageType::INFO,
       "Calling OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface()\n");
 
-  HighsSetMessageCallback(NULL, NULL, NULL);
+  highsSetMessageCallback(NULL, NULL, NULL);
 
   delete this->highs;
 
@@ -904,11 +904,11 @@ void OsiHiGHSSolverInterface::passInMessageHandler(
     CoinMessageHandler* handler) {
   OsiSolverInterface::passInMessageHandler(handler);
 
-  HighsSetMessageCallback(printtomessagehandler, logtomessagehandler,
+  highsSetMessageCallback(printtomessagehandler, logtomessagehandler,
                           (void*)handler);
 
-  // because HiGHS calls HiGHSSetIO with the Options, whichoverwrites the
-  // previous setting
+  // Because HiGHS calls highsSetMessageCallback with the options,
+  // which overwrites the previous setting
   this->highs->options_.printmsgcb = printtomessagehandler;
   this->highs->options_.logmsgcb = logtomessagehandler;
   this->highs->options_.msgcb_data = (void*)handler_;

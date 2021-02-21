@@ -190,7 +190,7 @@ HighsStatus callLpSolver(HighsOptions& use_options, const HighsLp& lp) {
   // // Load problem.
   highs.passModel(lp);
   // HighsStatus read_status = highs.readModel(options.model_file);
-  // reportLpStatsOrError(output, message_level, read_status, highs.getLp());
+  // reportLpStatsOrError(options.io, read_status, highs.getLp());
   // if (read_status == HighsStatus::Error) return HighsStatus::Error;
 
   // Run HiGHS.

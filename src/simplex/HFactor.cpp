@@ -179,9 +179,6 @@ void HFactor::setup(int numCol_, int numRow_, const int* Astart_,
   use_original_HFactor_logic = use_original_HFactor_logic_;
   updateMethod = updateMethod_;
 
-  output = stdout;
-  message_level = 0;
-
   // Allocate for working buffer
   iwork.reserve(numRow * 2);
   dwork.assign(numRow, 0);

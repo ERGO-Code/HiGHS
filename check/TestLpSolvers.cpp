@@ -324,8 +324,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   }
   const HighsInfo& info = highs.getHighsInfo();
 
-  //  status = highs.setHighsOptionValue("message_level", 7);REQUIRE(status ==
-  //  HighsStatus::OK);
+  //  status = highs.setHighsOptionValue("output_dev", OUTPUT_DEV_VERBOSE);
 
   double error;
   filename = std::string(HIGHS_DIR) + "/check/instances/e226.mps";

@@ -268,9 +268,6 @@ class HFactor {
   bool use_original_HFactor_logic;
   int updateMethod;
 
-  FILE* output;
-  int message_level;
-
   // Working buffer
   int nwork;
   vector<int> iwork;
