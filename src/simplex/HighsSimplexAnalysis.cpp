@@ -13,6 +13,7 @@
  */
 #include <cmath>
 //#include <cstdio>
+#include <iomanip>
 #include "HConfig.h"
 #include "simplex/FactorTimer.h"
 #include "simplex/HEkkDebug.h"
@@ -280,7 +281,7 @@ void HighsSimplexAnalysis::updateOperationResultDensity(
 }
 
 void HighsSimplexAnalysis::iterationReport() {
-  if ((int)invert_report_message_type < *log_options.log_dev_level) return;
+  if ((int)iteration_report_log_type > *log_options.log_dev_level) return;
   const bool header = (num_iteration_report_since_last_header < 0) ||
                       (num_iteration_report_since_last_header > 49);
   if (header) {
@@ -291,7 +292,6 @@ void HighsSimplexAnalysis::iterationReport() {
 }
 
 void HighsSimplexAnalysis::invertReport() {
-  if ((int)invert_report_message_type < *log_options.log_dev_level) return;
   const bool header = (num_invert_report_since_last_header < 0) ||
                       (num_invert_report_since_last_header > 49) ||
                       (num_iteration_report_since_last_header >= 0);
@@ -306,20 +306,20 @@ void HighsSimplexAnalysis::invertReport() {
 }
 
 void HighsSimplexAnalysis::invertReport(const bool header) {
-  if ((int)invert_report_message_type < *log_options.log_dev_level) return;
-  reportAlgorithmPhaseIterationObjective(header, invert_report_message_type);
+  analysis_log = std::stringstream();
+  reportAlgorithmPhaseIterationObjective(header);
   if (analyse_simplex_data) {
     if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
       // Report on threads and PAMI
-      reportThreads(header, invert_report_message_type);
-      reportMulti(header, invert_report_message_type);
+      reportThreads(header, invert_report_log_type);
+      reportMulti(header, invert_report_log_type);
     }
-    reportDensity(header, invert_report_message_type);
-    reportInvert(header, invert_report_message_type);
-    //  reportCondition(header, invert_report_message_type);
+    reportDensity(header, invert_report_log_type);
+    reportInvert(header, invert_report_log_type);
+    //  reportCondition(header, invert_report_log_type);
   }
-  reportInfeasibility(header, invert_report_message_type);
-  highsLogDev(log_options, invert_report_message_type, "\n");
+  reportInfeasibility(header);
+  highsLogUser(log_options, invert_report_log_type, "%s\n", analysis_log.str().c_str());
   if (!header) num_invert_report_since_last_header++;
 }
 
@@ -1145,17 +1145,32 @@ void HighsSimplexAnalysis::reportInvertFormData() {
 }
 
 void HighsSimplexAnalysis::iterationReport(const bool header) {
-  if ((int)invert_report_message_type < *log_options.log_dev_level) return;
+  if ((int)iteration_report_log_type > *log_options.log_dev_level) return;
   if (!header && entering_variable < 0) return;
   reportAlgorithmPhaseIterationObjective(header,
-                                         iteration_report_message_type);
+                                         iteration_report_log_type);
   if (analyse_simplex_data) {
-    reportDensity(header, iteration_report_message_type);
-    reportIterationData(header, iteration_report_message_type);
+    reportDensity(header, iteration_report_log_type);
+    reportIterationData(header, iteration_report_log_type);
   }
-  highsLogDev(log_options, iteration_report_message_type,
+  highsLogDev(log_options, iteration_report_log_type,
                     "\n");
   if (!header) num_iteration_report_since_last_header++;
+}
+
+void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(const bool header) {
+  if (header) {
+    analysis_log << "       Iteration        Objective    ";
+  } else {
+    std::string algorithm;
+    if (dualAlgorithm()) {
+      algorithm = "Du";
+    } else {
+      algorithm = "Pr";
+    }
+    analysis_log << highsFormatToString("%2sPh%1d %10d %20.10e", algorithm.c_str(), solve_phase,
+                      simplex_iteration_count, objective_value);
+  }
 }
 
 void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
@@ -1193,6 +1208,27 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header,
     }
     if (sum_dual_infeasibility > 0) {
       highsLogDev(log_options, this_message_type,
+                        "; Du: %d(%g)", num_dual_infeasibility,
+                        sum_dual_infeasibility);
+    }
+  }
+}
+
+void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
+  if (header) {
+    analysis_log << " Infeasibilities num(sum)";
+  } else {
+    if (solve_phase == 1) {
+      analysis_log << highsFormatToString(
+                        " Ph1: %d(%g)", num_primal_infeasibility,
+                        sum_primal_infeasibility);
+    } else {
+      analysis_log << highsFormatToString(
+			" Pr: %d(%g)", num_primal_infeasibility,
+                        sum_primal_infeasibility);
+    }
+    if (sum_dual_infeasibility > 0) {
+      analysis_log << highsFormatToString(
                         "; Du: %d(%g)", num_dual_infeasibility,
                         sum_dual_infeasibility);
     }

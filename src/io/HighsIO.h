@@ -21,8 +21,8 @@ class HighsOptions;
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum class HighsLogType { INFO = 1, DETAILED, VERBOSE, WARNING, ERROR };
-const char* const HighsLogTypeTag[] = {"", "", "", "WARNING: ", "ERROR: "};
+enum class HighsLogType { INFO = 0, DETAILED, VERBOSE, WARNING, ERROR };
+const char* const HighsLogTypeTag[] = {"", "", "", "WARNING: ", "ERROR:   "};
 enum LogDevLevel {
 		     LOG_DEV_LEVEL_MIN = 0,
 		     LOG_DEV_LEVEL_NONE = LOG_DEV_LEVEL_MIN, // 0
@@ -74,5 +74,7 @@ void highsSetLogOptions(HighsLogOptions& log_options,
 			const bool* log_to_console_ = NULL,
 			const int* log_dev_level = NULL);
 void highsReportLogOptions(const HighsLogOptions& log_options);
+
+std::string highsFormatToString(const char* format, ...);
 
 #endif

@@ -15,6 +15,8 @@
 #ifndef SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 #define SIMPLEX_HIGHSSIMPLEXANALYSIS_H_
 
+#include <sstream>
+
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "simplex/HVector.h"
@@ -254,10 +256,15 @@ class HighsSimplexAnalysis {
   vector<double> predicted_density_tolerance;
   vector<TranStageAnalysis> tran_stage;
 
+  std::stringstream analysis_log;
+ 
+
  private:
   void iterationReport(const bool header);
+  void reportAlgorithmPhaseIterationObjective(const bool header);
   void reportAlgorithmPhaseIterationObjective(const bool header,
                                               const HighsLogType this_message_type);
+  void reportInfeasibility(const bool header);
   void reportInfeasibility(const bool header, const HighsLogType this_message_type);
   void reportThreads(const bool header, const HighsLogType this_message_type);
   void reportMulti(const bool header, const HighsLogType this_message_type);
@@ -297,8 +304,8 @@ class HighsSimplexAnalysis {
   double max_average_log_high_dual_steepest_edge_weight_error = 0;
   double max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
 
-  const HighsLogType iteration_report_message_type = HighsLogType::VERBOSE;
-  const HighsLogType invert_report_message_type = HighsLogType::INFO;
+  const HighsLogType iteration_report_log_type = HighsLogType::VERBOSE;
+  const HighsLogType invert_report_log_type = HighsLogType::INFO;
   int num_invert_report_since_last_header = -1;
   int num_iteration_report_since_last_header = -1;
 

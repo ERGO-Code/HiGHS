@@ -15,7 +15,6 @@
 
 #include <cstdarg>
 #include <cstdio>
-//#include <ctime>
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
@@ -33,18 +32,21 @@ void highsLogUser(const HighsLogOptions& log_options, const HighsLogType type,
   // highsLogUser should not be passed HighsLogType::DETAILED or HighsLogType::VERBOSE
   assert(type != HighsLogType::DETAILED);
   assert(type != HighsLogType::VERBOSE);
+  const bool prefix = type == HighsLogType::WARNING || type == HighsLogType::ERROR;
   va_list argptr;
   va_start(argptr, format);
   if (logmsgcb == NULL) {
     if (log_options.log_file_stream != NULL) {
       // Write to log file stream
-      fprintf(log_options.log_file_stream, "%-9s", HighsLogTypeTag[(int)type]);
+      if (prefix)
+	fprintf(log_options.log_file_stream, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(log_options.log_file_stream, format, argptr);
       va_start(argptr, format);
     }
     if (*log_options.log_to_console && log_options.log_file_stream != stdout) {
       // Write to stdout unless log file stream is stdout
-      fprintf(log_options.log_file_stream, "%-9s", HighsLogTypeTag[(int)type]);
+      if (prefix)
+	fprintf(stdout, "%-9s", HighsLogTypeTag[(int)type]);
       vfprintf(stdout, format, argptr);
     }
   } else {
@@ -66,8 +68,10 @@ void highsLogUser(const HighsLogOptions& log_options, const HighsLogType type,
 void highsLogDev(const HighsLogOptions& log_options, const HighsLogType type,
                     const char* format, ...) {
   if (log_options.log_file_stream == NULL || !*log_options.log_dev_level) return;
-  // Always report HighsLogType INFO, WARNING or ERROR 
+  // Always report HighsLogType INFO, WARNING or ERROR
+  //
   // Report HighsLogType DETAILED if *log_options.log_dev_level >= LOG_DEV_LEVEL_DETAILED
+  //
   // Report HighsLogType VERBOSE if *log_options.log_dev_level >= LOG_DEV_LEVEL_VERBOSE
   if (type == HighsLogType::DETAILED && *log_options.log_dev_level < LOG_DEV_LEVEL_DETAILED) return;
   if (type == HighsLogType::VERBOSE && *log_options.log_dev_level < LOG_DEV_LEVEL_VERBOSE) return;
@@ -138,4 +142,17 @@ void highsReportLogOptions(const HighsLogOptions& log_options) {
   printf("   output_flag = %d\n", *log_options.output_flag);
   printf("   log_to_console = %d\n", *log_options.log_to_console);
   printf("   log_dev_level = %d\n\n", *log_options.log_dev_level);
+}
+
+std::string highsFormatToString(const char* format, ...) {
+  va_list argptr;
+  va_start(argptr, format);
+  int len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
+  if (len >= (int)sizeof(msgbuffer)) {
+    // Output was truncated: for now just ensure string is null-terminated
+    msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+  }
+  va_end(argptr);
+  std::string local_string(msgbuffer);
+  return local_string;
 }
