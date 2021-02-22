@@ -228,12 +228,11 @@ void HighsMipSolver::run() {
   sepa.setLpRelaxation(&mipdata_->lp);
 
   mipdata_->lower_bound = mipdata_->nodequeue.getBestLowerBound();
-  search.installNode(mipdata_->nodequeue.popBestBoundNode());
-
-  mipdata_->printDisplayLine();
 
   HighsPrintMessage(options_mip_->output, options_mip_->message_level,
                     ML_MINIMAL, "\nstarting tree search\n");
+  mipdata_->printDisplayLine();
+  search.installNode(mipdata_->nodequeue.popBestBoundNode());
 
   while (search.hasNode()) {
     // set iteration limit for each lp solve during the dive to 10 times the
