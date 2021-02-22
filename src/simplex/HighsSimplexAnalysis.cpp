@@ -311,12 +311,12 @@ void HighsSimplexAnalysis::invertReport(const bool header) {
   if (analyse_simplex_data) {
     if (simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
       // Report on threads and PAMI
-      reportThreads(header, invert_report_log_type);
-      reportMulti(header, invert_report_log_type);
+      reportThreads(header);
+      reportMulti(header);
     }
-    reportDensity(header, invert_report_log_type);
-    reportInvert(header, invert_report_log_type);
-    //  reportCondition(header, invert_report_log_type);
+    reportDensity(header);
+    reportInvert(header);
+    //  reportCondition(header);
   }
   reportInfeasibility(header);
   highsLogUser(log_options, invert_report_log_type, "%s\n", analysis_log.str().c_str());
@@ -983,11 +983,11 @@ void HighsSimplexAnalysis::summaryReport() {
         printf("|  %3d ", pct);
       }
       printf("|");
-      reportOneDensity(
+      printOneDensity(
           lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_FTRAN]);
-      reportOneDensity(
+      printOneDensity(
           lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_BTRAN_EP]);
-      reportOneDensity(
+      printOneDensity(
           lcAnIter.AnIterTraceDensity[ANALYSIS_OPERATION_TYPE_PRICE_AP]);
       double use_row_DSE_density;
       if (rp_dual_steepest_edge) {
@@ -998,7 +998,7 @@ void HighsSimplexAnalysis::summaryReport() {
         } else {
           use_row_DSE_density = 0;
         }
-        reportOneDensity(use_row_DSE_density);
+        printOneDensity(use_row_DSE_density);
       }
       printf(" |  %3s ", str_dual_edge_weight_mode.c_str());
       if (rp_dual_steepest_edge) {
@@ -1010,7 +1010,7 @@ void HighsSimplexAnalysis::summaryReport() {
         } else {
           use_costly_dse = 0;
         }
-        reportOneDensity(use_costly_dse);
+        printOneDensity(use_costly_dse);
       }
       printf("\n");
       fmIter = toIter;
@@ -1145,16 +1145,14 @@ void HighsSimplexAnalysis::reportInvertFormData() {
 }
 
 void HighsSimplexAnalysis::iterationReport(const bool header) {
-  if ((int)iteration_report_log_type > *log_options.log_dev_level) return;
+  analysis_log = std::stringstream();
   if (!header && entering_variable < 0) return;
-  reportAlgorithmPhaseIterationObjective(header,
-                                         iteration_report_log_type);
+  reportAlgorithmPhaseIterationObjective(header);
   if (analyse_simplex_data) {
-    reportDensity(header, iteration_report_log_type);
-    reportIterationData(header, iteration_report_log_type);
+    reportDensity(header);
+    reportIterationData(header);
   }
-  highsLogDev(log_options, iteration_report_log_type,
-                    "\n");
+  highsLogDev(log_options, iteration_report_log_type, "%s\n", analysis_log.str().c_str());
   if (!header) num_iteration_report_since_last_header++;
 }
 
@@ -1170,47 +1168,6 @@ void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(const bool hea
     }
     analysis_log << highsFormatToString("%2sPh%1d %10d %20.10e", algorithm.c_str(), solve_phase,
                       simplex_iteration_count, objective_value);
-  }
-}
-
-void HighsSimplexAnalysis::reportAlgorithmPhaseIterationObjective(
-    const bool header, const HighsLogType this_message_type) {
-  if (header) {
-    highsLogDev(log_options, this_message_type,
-                      "       Iteration        Objective    ");
-  } else {
-    std::string algorithm;
-    if (dualAlgorithm()) {
-      algorithm = "Du";
-    } else {
-      algorithm = "Pr";
-    }
-    highsLogDev(log_options, this_message_type,
-                      "%2sPh%1d %10d %20.10e", algorithm.c_str(), solve_phase,
-                      simplex_iteration_count, objective_value);
-  }
-}
-
-void HighsSimplexAnalysis::reportInfeasibility(const bool header,
-                                               const HighsLogType this_message_type) {
-  if (header) {
-    highsLogDev(log_options, this_message_type,
-                      " Infeasibilities num(sum)");
-  } else {
-    if (solve_phase == 1) {
-      highsLogDev(log_options, this_message_type,
-                        " Ph1: %d(%g)", num_primal_infeasibility,
-                        sum_primal_infeasibility);
-    } else {
-      highsLogDev(log_options, this_message_type,
-                        " Pr: %d(%g)", num_primal_infeasibility,
-                        sum_primal_infeasibility);
-    }
-    if (sum_dual_infeasibility > 0) {
-      highsLogDev(log_options, this_message_type,
-                        "; Du: %d(%g)", num_dual_infeasibility,
-                        sum_dual_infeasibility);
-    }
   }
 }
 
@@ -1235,45 +1192,42 @@ void HighsSimplexAnalysis::reportInfeasibility(const bool header) {
   }
 }
 
-void HighsSimplexAnalysis::reportThreads(const bool header,
-                                         const HighsLogType this_message_type) {
+void HighsSimplexAnalysis::reportThreads(const bool header) {
   assert(analyse_simplex_data);
   if (header) {
-    highsLogDev(log_options, this_message_type, "  Threads");
+    analysis_log << highsFormatToString("  Threads");
   } else if (num_threads > 0) {
-    highsLogDev(log_options, this_message_type, " %2d|%2d|%2d",
+    analysis_log << highsFormatToString(" %2d|%2d|%2d",
                       min_threads, num_threads, max_threads);
   } else {
-    highsLogDev(log_options, this_message_type, "   |  |  ");
+    analysis_log << highsFormatToString("   |  |  ");
   }
 }
 
-void HighsSimplexAnalysis::reportMulti(const bool header,
-                                       const HighsLogType this_message_type) {
+void HighsSimplexAnalysis::reportMulti(const bool header) {
   assert(analyse_simplex_data);
   if (header) {
-    highsLogDev(log_options, this_message_type, "  Multi");
+    analysis_log << highsFormatToString("  Multi");
   } else if (average_fraction_of_possible_minor_iterations_performed >= 0) {
-    highsLogDev(log_options, this_message_type, "   %3d%%",
+    analysis_log << highsFormatToString("   %3d%%",
         (int)(100 * average_fraction_of_possible_minor_iterations_performed));
   } else {
-    highsLogDev(log_options, this_message_type, "       ");
-  }
-}
-
-void HighsSimplexAnalysis::reportOneDensity(const HighsLogType this_message_type,
-                                            const double density) {
-  assert(analyse_simplex_data);
-  const int log_10_density = intLog10(density);
-  if (log_10_density > -99) {
-    highsLogDev(log_options, this_message_type, " %4d",
-                      log_10_density);
-  } else {
-    highsLogDev(log_options, this_message_type, "     ");
+    analysis_log << highsFormatToString("       ");
   }
 }
 
 void HighsSimplexAnalysis::reportOneDensity(const double density) {
+  assert(analyse_simplex_data);
+  const int log_10_density = intLog10(density);
+  if (log_10_density > -99) {
+    analysis_log << highsFormatToString(" %4d",
+                      log_10_density);
+  } else {
+    analysis_log << highsFormatToString("     ");
+  }
+}
+
+void HighsSimplexAnalysis::printOneDensity(const double density) {
   assert(analyse_simplex_data);
   const int log_10_density = intLog10(density);
   if (log_10_density > -99) {
@@ -1283,50 +1237,46 @@ void HighsSimplexAnalysis::reportOneDensity(const double density) {
   }
 }
 
-void HighsSimplexAnalysis::reportDensity(const bool header,
-                                         const HighsLogType this_message_type) {
+void HighsSimplexAnalysis::reportDensity(const bool header) {
   assert(analyse_simplex_data);
   const bool rp_dual_steepest_edge =
       edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
   if (header) {
-    highsLogDev(log_options, this_message_type,
-                      " C_Aq R_Ep R_Ap");
+    analysis_log << highsFormatToString(" C_Aq R_Ep R_Ap");
     if (rp_dual_steepest_edge) {
-      highsLogDev(log_options, this_message_type, "  DSE");
+      analysis_log << highsFormatToString("  DSE");
     } else {
-      highsLogDev(log_options, this_message_type, "     ");
+      analysis_log << highsFormatToString("     ");
     }
   } else {
-    reportOneDensity(this_message_type, col_aq_density);
-    reportOneDensity(this_message_type, row_ep_density);
-    reportOneDensity(this_message_type, row_ap_density);
+    reportOneDensity(col_aq_density);
+    reportOneDensity(row_ep_density);
+    reportOneDensity(row_ap_density);
     double use_row_DSE_density;
     if (rp_dual_steepest_edge) {
       use_row_DSE_density = row_DSE_density;
     } else {
       use_row_DSE_density = 0;
     }
-    reportOneDensity(this_message_type, use_row_DSE_density);
+    reportOneDensity(use_row_DSE_density);
   }
 }
 
-void HighsSimplexAnalysis::reportInvert(const bool header,
-                                        const HighsLogType this_message_type) {
+void HighsSimplexAnalysis::reportInvert(const bool header) {
   if (header) {
-    highsLogDev(log_options, this_message_type, " Inv");
+    analysis_log << highsFormatToString(" Inv");
   } else {
-    highsLogDev(log_options, this_message_type, "  %2d",
+    analysis_log << highsFormatToString("  %2d",
                       rebuild_reason);
   }
 }
 /*
-void HighsSimplexAnalysis::reportCondition(const bool header,
-                                           const HighsLogType this_message_type) {
+void HighsSimplexAnalysis::reportCondition(const bool header) {
   assert(analyse_simplex_data);
   if (header) {
-    highsLogDev(log_options, this_message_type, "       k(B)");
+    analysis_log << highsFormatToString("       k(B)");
   } else {
-    highsLogDev(log_options, this_message_type, " %10.4g",
+    analysis_log << highsFormatToString(" %10.4g",
                       basis_condition);
   }
 }
@@ -1341,21 +1291,17 @@ void HighsSimplexAnalysis::reportCondition(const bool header,
 // * primal_delta - delta_primal
 // * dual_step    - theta_dual
 // * primal_step  - theta_primal
-void HighsSimplexAnalysis::reportIterationData(const bool header,
-                                               const HighsLogType this_message_type) {
+void HighsSimplexAnalysis::reportIterationData(const bool header) {
   if (header) {
-    highsLogDev(log_options, this_message_type,
-                      "     EnC     LvC     LvR        ThDu        ThPr        "
+    analysis_log << highsFormatToString("     EnC     LvC     LvR        ThDu        ThPr        "
                       "DlPr       NumCk          Aa");
   } else if (pivotal_row_index >= 0) {
-    highsLogDev(log_options, this_message_type,
-                      " %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %11.4g",
+    analysis_log << highsFormatToString(" %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %11.4g",
                       entering_variable, leaving_variable, pivotal_row_index,
                       dual_step, primal_step, primal_delta, numerical_trouble,
                       pivot_value_from_column);
   } else {
-    highsLogDev(log_options, this_message_type,
-        " %7d %7d %7d %11.4g %11.4g                                    ",
+    analysis_log << highsFormatToString(" %7d %7d %7d %11.4g %11.4g                                    ",
         entering_variable, leaving_variable, pivotal_row_index, dual_step,
         primal_step);
   }

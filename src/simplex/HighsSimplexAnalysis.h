@@ -262,19 +262,16 @@ class HighsSimplexAnalysis {
  private:
   void iterationReport(const bool header);
   void reportAlgorithmPhaseIterationObjective(const bool header);
-  void reportAlgorithmPhaseIterationObjective(const bool header,
-                                              const HighsLogType this_message_type);
   void reportInfeasibility(const bool header);
-  void reportInfeasibility(const bool header, const HighsLogType this_message_type);
-  void reportThreads(const bool header, const HighsLogType this_message_type);
-  void reportMulti(const bool header, const HighsLogType this_message_type);
-  void reportOneDensity(const HighsLogType this_message_type, const double density);
+  void reportThreads(const bool header);
+  void reportMulti(const bool header);
   void reportOneDensity(const double density);
-  void reportDensity(const bool header, const HighsLogType this_message_type);
-  void reportInvert(const bool header, const HighsLogType this_message_type);
-  //  void reportCondition(const bool header, const HighsLogType this_message_type);
-  void reportIterationData(const bool header, const HighsLogType this_message_type);
-  void reportFreeListSize(const bool header, const HighsLogType this_message_type);
+  void printOneDensity(const double density);
+  void reportDensity(const bool header);
+  void reportInvert(const bool header);
+  //  void reportCondition(const bool header);
+  void reportIterationData(const bool header);
+  void reportFreeListSize(const bool header);
   int intLog10(const double v);
   bool dualAlgorithm();
 
