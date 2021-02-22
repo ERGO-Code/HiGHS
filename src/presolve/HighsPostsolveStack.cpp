@@ -2,8 +2,9 @@
 
 #include <numeric>
 
-void presolve::HighsPostsolveStack::initializeIndexMaps(int numRow,
-                                                        int numCol) {
+namespace presolve {
+
+void HighsPostsolveStack::initializeIndexMaps(int numRow, int numCol) {
   origRowIndex.resize(numRow);
   std::iota(origRowIndex.begin(), origRowIndex.end(), 0);
 
@@ -11,7 +12,7 @@ void presolve::HighsPostsolveStack::initializeIndexMaps(int numRow,
   std::iota(origColIndex.begin(), origColIndex.end(), 0);
 }
 
-void presolve::HighsPostsolveStack::compressIndexMaps(
+void HighsPostsolveStack::compressIndexMaps(
     const std::vector<int>& newRowIndex, const std::vector<int>& newColIndex) {
   // loop over rows, decrease row counter for deleted rows (marked with -1),
   // store original index at new index position otherwise
@@ -36,7 +37,7 @@ void presolve::HighsPostsolveStack::compressIndexMaps(
   origColIndex.resize(numCol);
 }
 
-void presolve::HighsPostsolveStack::FreeColSubstitution::undo(
+void HighsPostsolveStack::FreeColSubstitution::undo(
     const std::vector<std::pair<int, double>>& rowValues,
     const std::vector<std::pair<int, double>>& colValues,
     HighsSolution& solution, HighsBasis& basis) {
@@ -72,7 +73,7 @@ void presolve::HighsPostsolveStack::FreeColSubstitution::undo(
   basis.row_status[row] = HighsBasisStatus::NONBASIC;
 }
 
-void presolve::HighsPostsolveStack::DoubletonEquation::undo(
+void HighsPostsolveStack::DoubletonEquation::undo(
     const std::vector<std::pair<int, double>>& colValues,
     HighsSolution& solution, HighsBasis& basis) {
   // retrieve the row and column index, the row side and the two
@@ -185,8 +186,8 @@ void presolve::HighsPostsolveStack::DoubletonEquation::undo(
   // possible from the solution values.
 }
 
-void presolve::HighsPostsolveStack::EqualityRowAddition::undo(
-    HighsSolution& solution, HighsBasis& basis) {
+void HighsPostsolveStack::EqualityRowAddition::undo(HighsSolution& solution,
+                                                    HighsBasis& basis) {
   // compute the primal value of the row without the added equation
   solution.row_value[row] =
       double(solution.row_value[row] -
@@ -203,8 +204,16 @@ void presolve::HighsPostsolveStack::EqualityRowAddition::undo(
              solution.row_dual[addedEqRow]);
 }
 
-void presolve::HighsPostsolveStack::SingletonRow::undo(HighsSolution& solution,
-                                                       HighsBasis& basis) {
+void HighsPostsolveStack::ForcingColumn::undo(
+    const std::vector<std::pair<int, double>>& colValues,
+    HighsSolution& solution, HighsBasis& basis) {
+  int col;
+  for (const auto& colVal : colValues) {
+  }
+}
+
+void HighsPostsolveStack::SingletonRow::undo(HighsSolution& solution,
+                                             HighsBasis& basis) {
   // nothing to do if the rows dual value is zero in the dual solution or
   // there is no dual solution
   solution.row_value[row] = coef * solution.col_value[col];
@@ -251,7 +260,7 @@ void presolve::HighsPostsolveStack::SingletonRow::undo(HighsSolution& solution,
 }
 
 // column fixed to lower or upper bound
-void presolve::HighsPostsolveStack::FixedCol::undo(
+void HighsPostsolveStack::FixedCol::undo(
     const std::vector<std::pair<int, double>>& colValues,
     HighsSolution& solution, HighsBasis& basis) {
   // set solution value
@@ -272,7 +281,7 @@ void presolve::HighsPostsolveStack::FixedCol::undo(
         atLower ? HighsBasisStatus::LOWER : HighsBasisStatus::UPPER;
 }
 
-void presolve::HighsPostsolveStack::RedundantRow::undo(
+void HighsPostsolveStack::RedundantRow::undo(
     const std::vector<std::pair<int, double>>& rowValues,
     HighsSolution& solution, HighsBasis& basis) {
   // compute primal solution value
@@ -291,7 +300,7 @@ void presolve::HighsPostsolveStack::RedundantRow::undo(
     basis.row_status[row] = HighsBasisStatus::BASIC;
 }
 
-void presolve::HighsPostsolveStack::ForcingRow::undo(
+void HighsPostsolveStack::ForcingRow::undo(
     const std::vector<std::pair<int, double>>& rowValues,
     HighsSolution& solution, HighsBasis& basis) {
   solution.row_value[row] = side;
@@ -332,8 +341,8 @@ void presolve::HighsPostsolveStack::ForcingRow::undo(
   }
 }
 
-void presolve::HighsPostsolveStack::DuplicateRow::undo(HighsSolution& solution,
-                                                       HighsBasis& basis) {
+void HighsPostsolveStack::DuplicateRow::undo(HighsSolution& solution,
+                                             HighsBasis& basis) {
   if (!rowUpperTightened && !rowLowerTightened) {
     // simple case of row2 being redundant, in which case it just gets a
     // dual multiplier of 0 and is made basic
@@ -396,7 +405,102 @@ void presolve::HighsPostsolveStack::DuplicateRow::undo(HighsSolution& solution,
   }
 }
 
-void presolve::HighsPostsolveStack::DuplicateColumn::undo(
-    HighsSolution& solution, HighsBasis& basis) {
-  // todo
+void HighsPostsolveStack::DuplicateColumn::undo(HighsSolution& solution,
+                                                HighsBasis& basis,
+                                                double feastol) {
+  // the column dual of the duplicate column is easily computed by scaling
+  // since col * colScale yields the coefficient values and cost of the
+  // duplicate column.
+  if (!solution.col_dual.empty())
+    solution.col_dual[duplicateCol] = solution.col_dual[col] * colScale;
+
+  if (!basis.col_status.empty()) {
+    // do postsolve using basis status if a basis is available:
+    // if the merged column is nonbasic, we can just set both columns
+    // to the corresponding basis status and value
+    solution.col_dual[duplicateCol] = solution.col_dual[col] * colScale;
+    if (basis.col_status[col] == HighsBasisStatus::LOWER) {
+      solution.col_value[col] = colLower;
+      if (colScale > 0) {
+        basis.col_status[duplicateCol] = HighsBasisStatus::LOWER;
+        solution.col_value[duplicateCol] = duplicateColLower;
+      } else {
+        basis.col_status[duplicateCol] = HighsBasisStatus::UPPER;
+        solution.col_value[duplicateCol] = duplicateColUpper;
+      }
+      // nothing else to do
+      return;
+    }
+
+    if (basis.col_status[col] == HighsBasisStatus::UPPER) {
+      solution.col_value[col] = colUpper;
+      if (colScale > 0) {
+        basis.col_status[duplicateCol] = HighsBasisStatus::UPPER;
+        solution.col_value[duplicateCol] = duplicateColUpper;
+      } else {
+        basis.col_status[duplicateCol] = HighsBasisStatus::LOWER;
+        solution.col_value[duplicateCol] = duplicateColLower;
+      }
+      // nothing else to do
+      return;
+    }
+
+    assert(basis.col_status[col] == HighsBasisStatus::BASIC);
+  }
+
+  // either no basis for postsolve, or column status is basic. One of
+  // the two columns must become nonbasic. In case of integrality it is simpler
+  // to choose col, since it has a coefficient of +1 in the equation y = col +
+  // colScale * duplicateCol where the merged column is y and is currently using
+  // the index of col. The duplicateCol can have a positive or negative
+  // coefficient. So for postsolve, we first start out with col sitting at the
+  // lower bound and compute the corresponding value for the duplicate column as
+  // (y - colLower)/colScale. Then the following things might happen:
+  // - case 1: the value computed for duplicateCol is within the bounds
+  // - case 1.1: duplicateCol is continuous -> accept value, make col nonbasic
+  // at lower and duplicateCol basic
+  // - case 1.2: duplicateCol is integer -> accept value if integer feasible,
+  // otherwise round down and compute value of col as
+  // col = y - colScale * duplicateCol
+  // - case 2: the value for duplicateCol violates the column bounds: make it
+  // sit at the bound that is violated
+  //           and compute the value of col as col = y - colScale * duplicateCol
+  //           for basis postsolve col is basic and duplicateCol nonbasic at
+  //           lower/upper depending on which bound is violated.
+
+  double mergeVal = solution.col_value[col];
+  solution.col_value[duplicateCol] =
+      double((HighsCDouble(mergeVal) - colLower) / colScale);
+
+  bool recomputeCol = false;
+
+  if (solution.col_value[duplicateCol] > duplicateColUpper) {
+    solution.col_value[duplicateCol] = duplicateColUpper;
+    recomputeCol = true;
+    if (!basis.col_status.empty())
+      basis.col_status[duplicateCol] = HighsBasisStatus::UPPER;
+  } else if (solution.col_value[duplicateCol] < duplicateColLower) {
+    solution.col_value[duplicateCol] = duplicateColLower;
+    recomputeCol = true;
+    if (!basis.col_status.empty())
+      basis.col_status[duplicateCol] = HighsBasisStatus::LOWER;
+  } else if (duplicateColIntegral) {
+    double roundVal = std::round(solution.col_value[duplicateCol]);
+    if (std::abs(roundVal - solution.col_value[duplicateCol]) > feastol) {
+      solution.col_value[duplicateCol] =
+          std::floor(solution.col_value[duplicateCol]);
+      recomputeCol = true;
+    }
+  }
+
+  if (recomputeCol) {
+    solution.col_value[col] =
+        mergeVal - colScale * solution.col_value[duplicateCol];
+  } else if (!basis.col_status.empty()) {
+    // setting col to its lower bound yielded a feasible value for duplicateCol
+    basis.col_status[duplicateCol] = basis.col_status[col];
+    basis.col_status[col] = HighsBasisStatus::LOWER;
+  }
 }
+
+}  // namespace presolve

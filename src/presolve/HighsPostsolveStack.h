@@ -80,6 +80,15 @@ class HighsPostsolveStack {
     void undo(HighsSolution& solution, HighsBasis& basis);
   };
 
+  struct ForcingColumn {
+    double colCost;
+    int col;
+    bool atInfiniteUpper;
+
+    void undo(const std::vector<std::pair<int, double>>& colValues,
+              HighsSolution& solution, HighsBasis& basis);
+  };
+
   struct SingletonRow {
     double coef;
     int row;
@@ -128,22 +137,20 @@ class HighsPostsolveStack {
   };
 
   struct DuplicateColumn {
+    double colScale;
     double colLower;
     double colUpper;
     double duplicateColLower;
     double duplicateColUpper;
-    double duplicateColScale;
     int col;
     int duplicateCol;
     bool colIntegral;
     bool duplicateColIntegral;
 
-    void undo(HighsSolution& solution, HighsBasis& basis);
+    void undo(HighsSolution& solution, HighsBasis& basis, double feastol);
   };
 
-  // todo: doubleton inequality with column singleton
-
-  /// tags for discriminated union
+  /// tags for reduction
   enum class ReductionType : uint8_t {
     kFreeColSubstitution,
     kDoubletonEquation,
@@ -274,18 +281,17 @@ class HighsPostsolveStack {
     reductions.push_back(ReductionType::kDuplicateRow);
   }
 
-  void duplicateColumn(int col, bool colIntegral, double colLower,
-                       double colUpper, int duplicateCol,
-                       bool duplicateColIntegral, double duplicateColLower,
-                       double duplicateColUpper, double duplicateColScale) {
-    reductionValues.push(DuplicateColumn{colLower, colUpper, duplicateColLower,
-                                         duplicateColUpper, duplicateColScale,
-                                         col, duplicateCol, colIntegral,
-                                         duplicateColIntegral});
+  void duplicateColumn(double colScale, double colLower, double colUpper,
+                       double duplicateColLower, double duplicateColUpper,
+                       int col, int duplicateCol, bool colIntegral,
+                       bool duplicateColIntegral) {
+    reductionValues.push(DuplicateColumn{
+        colScale, colLower, colUpper, duplicateColLower, duplicateColUpper, col,
+        duplicateCol, colIntegral, duplicateColIntegral});
     reductions.push_back(ReductionType::kDuplicateColumn);
   }
 
-  void undo(HighsSolution& solution, HighsBasis& basis) {
+  void undo(HighsSolution& solution, HighsBasis& basis, HighsOptions& options) {
     reductionValues.resetPosition();
 
     for (int i = reductions.size() - 1; i >= 0; --i) {
@@ -347,11 +353,13 @@ class HighsPostsolveStack {
         case ReductionType::kDuplicateColumn: {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis);
+          reduction.undo(solution, basis, options.primal_feasibility_tolerance);
         }
       }
     }
   }
+
+  size_t numReductions() const { return reductions.size(); }
 };
 
 }  // namespace presolve
