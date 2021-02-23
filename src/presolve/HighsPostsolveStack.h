@@ -291,7 +291,7 @@ class HighsPostsolveStack {
     reductions.push_back(ReductionType::kDuplicateColumn);
   }
 
-  void undo(HighsSolution& solution, HighsBasis& basis, HighsOptions& options) {
+  void undo(HighsSolution& solution, HighsBasis& basis, double feastol) {
     reductionValues.resetPosition();
 
     for (int i = reductions.size() - 1; i >= 0; --i) {
@@ -353,7 +353,7 @@ class HighsPostsolveStack {
         case ReductionType::kDuplicateColumn: {
           DuplicateColumn reduction;
           reductionValues.pop(reduction);
-          reduction.undo(solution, basis, options.primal_feasibility_tolerance);
+          reduction.undo(solution, basis, feastol);
         }
       }
     }

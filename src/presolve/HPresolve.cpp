@@ -61,16 +61,6 @@ void HPresolve::debugPrintSubMatrix(int row, int col) {
 }
 #endif
 
-double HPresolve::dualRowLower(int col) const {
-  return model->colUpper_[col] == HIGHS_CONST_INF ? -model->colCost_[col]
-                                                  : -HIGHS_CONST_INF;
-}
-
-double HPresolve::dualRowUpper(int col) const {
-  return model->colLower_[col] == -HIGHS_CONST_INF ? -model->colCost_[col]
-                                                   : HIGHS_CONST_INF;
-}
-
 void HPresolve::addLocks(int pos) {
   int row = Arow[pos];
   int col = Acol[pos];
@@ -516,6 +506,11 @@ void HPresolve::markColDeleted(int col) {
 }
 
 void HPresolve::changeColUpper(int col, double newUpper) {
+  if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+    newUpper = std::floor(newUpper + options->mip_feasibility_tolerance);
+    if (newUpper == model->colUpper_[col]) return;
+  }
+
   double oldUpper = model->colUpper_[col];
   model->colUpper_[col] = newUpper;
   for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
@@ -526,6 +521,11 @@ void HPresolve::changeColUpper(int col, double newUpper) {
 }
 
 void HPresolve::changeColLower(int col, double newLower) {
+  if (model->integrality_[col] != HighsVarType::CONTINUOUS) {
+    newLower = std::ceil(newLower - options->mip_feasibility_tolerance);
+    if (newLower == model->colLower_[col]) return;
+  }
+
   double oldLower = model->colLower_[col];
   model->colLower_[col] = newLower;
   for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
@@ -763,6 +763,8 @@ bool HPresolve::checkFillin(HighsHashTable<int, int>& fillinCache, int row,
 }
 
 void HPresolve::substitute(int row, int col) {
+  assert(!rowDeleted[row]);
+  assert(!colDeleted[col]);
   int pos = findNonzero(row, col);
   assert(pos != -1);
 
@@ -772,6 +774,9 @@ void HPresolve::substitute(int row, int col) {
   double side = model->rowUpper_[row];
   assert(side != HIGHS_CONST_INF && side == model->rowLower_[row]);
   assert(isImpliedFree(col));
+
+  markRowDeleted(row);
+  markColDeleted(col);
 
   // substitute the column in each row where it occurs
   for (int coliter = colhead[col]; coliter != -1;) {
@@ -1243,9 +1248,8 @@ HPresolve::Result HPresolve::singletonCol(HighsPostsolveStack& postSolveStack,
     postSolveStack.freeColSubstitution(row, col, model->rowUpper_[row],
                                        model->colCost_[col], getRowVector(row),
                                        getColumnVector(col));
-    markRowDeleted(row);
-    markColDeleted(col);
-    substitute(row, col);
+    // todo, check integrality of coefficients and allow this
+    if (model->integrality_[col] != HighsVarType::INTEGER) substitute(row, col);
   }
 
   // todo: check for zero cost singleton and remove
@@ -1449,6 +1453,7 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolveStack,
         // todo: forcing column, since this implies colDualLower >= 0 and we
         // already checked that colDualUpper <= 0
         //
+        printf("forcing column of size %d\n", colsize[col]);
       }
       return checkLimits(postsolveStack);
     }
@@ -1536,6 +1541,8 @@ HPresolve::Result HPresolve::colPresolve(HighsPostsolveStack& postsolveStack,
       }
     }
   }
+
+  return Result::Ok;
 }
 
 HPresolve::Result HPresolve::initialRowAndColPresolve(
@@ -1558,6 +1565,22 @@ HPresolve::Result HPresolve::initialRowAndColPresolve(
   }
 
   return checkLimits(postSolveStack);
+}
+
+HPresolve::Result HPresolve::fastPresolveLoop(
+    HighsPostsolveStack& postsolveStack) {
+  do {
+    storeCurrentProblemSize();
+
+    HPRESOLVE_CHECKED_CALL(presolveChangedRows(postsolveStack));
+
+    HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postsolveStack));
+
+    HPRESOLVE_CHECKED_CALL(presolveColSingletons(postsolveStack));
+
+    HPRESOLVE_CHECKED_CALL(presolveChangedCols(postsolveStack));
+
+  } while (problemSizeReduction() > 0.05);
 }
 
 HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolveStack) {
@@ -1588,7 +1611,30 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolveStack) {
   //    - stop
   //
 
-  HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolveStack));
+  HPRESOLVE_CHECKED_CALL(initialRowAndColPresolve(postsolveStack));
+
+  while (true) {
+    HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolveStack));
+
+    storeCurrentProblemSize();
+
+    HPRESOLVE_CHECKED_CALL(detectParallelRowsAndCols(postsolveStack));
+
+    if (problemSizeReduction() > 0)
+      HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolveStack));
+
+    storeCurrentProblemSize();
+
+    HPRESOLVE_CHECKED_CALL(aggregator(postsolveStack));
+
+    if (problemSizeReduction() > 0.05) continue;
+
+    HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolveStack));
+
+    // todo sparsify
+
+    break;
+  }
 
   return Result::Ok;
 }
@@ -1597,6 +1643,19 @@ HPresolve::Result HPresolve::checkLimits(HighsPostsolveStack& postsolveStack) {
   // todo: check timelimit
   return postsolveStack.numReductions() >= reductionLimit ? Result::Stopped
                                                           : Result::Ok;
+}
+
+void HPresolve::storeCurrentProblemSize() {
+  oldNumCol = model->numCol_ - numDeletedCols;
+  oldNumRow = model->numRow_ - numDeletedRows;
+}
+
+double HPresolve::problemSizeReduction() {
+  double reduction =
+      oldNumCol + oldNumRow -
+      (model->numCol_ + model->numRow_ - numDeletedRows - numDeletedCols);
+
+  return 100 * reduction / (oldNumRow + oldNumCol);
 }
 
 HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolveStack) {
@@ -1626,12 +1685,18 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
   std::vector<std::pair<int, double>> aggr_cands;
   aggr_cands.reserve(colsize.size());
 
+  int nonzerosCheckedSinceLastSubstitution = 0;
+  int nonzerosRemoved = 0;
+
+  std::pair<int, int> lastCheckedEq;
   int numsubst = 0;
   int numsubstint = 0;
   while (iter != equations.end()) {
+    if (nonzerosCheckedSinceLastSubstitution > 1000) break;
     // extract sparsest equation
-    int sparsesteq = iter->second;
+    lastCheckedEq = *iter;
     ++iter;
+    int sparsesteq = lastCheckedEq.second;
 
     // extract aggregation candidates from equation. rule out integers if
     // integrality of coefficients does not work out, then rule out columns that
@@ -1640,6 +1705,8 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
     int ncont = 0;
 
     storeRow(sparsesteq);
+
+    nonzerosCheckedSinceLastSubstitution += rowsize[sparsesteq];
 
     aggr_cands.clear();
     double row_numerics_threshold = 0;
@@ -1690,15 +1757,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         }
       }
 
-      if (!suitable) {
-        // make sure that we do not try this equation again by deleting it from
-        // the set of equations
-
-        // TODO do not erase, but just move iterator
-        equations.erase(eqiters[sparsesteq]);
-        eqiters[sparsesteq] = equations.end();
-        continue;
-      }
+      if (!suitable) continue;
 
       // candidates with the coefficient equal to the minimal absolute
       // coefficient value are suitable for substitution, other candidates are
@@ -1730,15 +1789,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         aggr_cands.end());
 
     // check if any candidates are left
-    if (aggr_cands.empty()) {
-      // make sure that we do not try this equation again by deleting it from
-      // the set of equations
-
-      // TODO do not erase, but just move iterator
-      equations.erase(eqiters[sparsesteq]);
-      eqiters[sparsesteq] = equations.end();
-      continue;
-    }
+    if (aggr_cands.empty()) continue;
 
     // now sort the candidates to prioritize sparse columns, tiebreak by
     // preferring columns with a larger coefficient in this row which is better
@@ -1768,15 +1819,7 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
     }
 
     // if we have found no suitable candidate we continue with the next equation
-    if (chosencand == -1) {
-      // make sure that we do not try this equation again by deleting it from
-      // the set of equations
-
-      // TODO do not erase, but just move iterator
-      equations.erase(eqiters[sparsesteq]);
-      eqiters[sparsesteq] = equations.end();
-      continue;
-    }
+    if (chosencand == -1) continue;
 
     // finally perform the substitution with the chosen candidate and update the
     // iterator to point to the next sparsest equation
@@ -1792,9 +1835,16 @@ HPresolve::Result HPresolve::aggregator(HighsPostsolveStack& postSolveStack) {
         getColumnVector(chosencand));
     substitute(sparsesteq, chosencand);
 
-    iter = equations.begin();
+    HPRESOLVE_CHECKED_CALL(removeRowSingletons(postSolveStack));
+    HPRESOLVE_CHECKED_CALL(removeDoubletonEquations(postSolveStack));
+    HPRESOLVE_CHECKED_CALL(checkLimits(postSolveStack));
+
+    nonzerosCheckedSinceLastSubstitution = 0;
+
+    iter = equations.upper_bound(lastCheckedEq);
   }
 
+  return checkLimits(postSolveStack);
   // printf("performed %d(%d int) substitutions\n", numsubst, numsubstint);
 }
 
@@ -1823,6 +1873,16 @@ void HPresolve::substitute(int substcol, int staycol, double offset,
     addToMatrix(colrow, staycol, scale * colval);
     // printf("after substitution: ");
     // debugPrintRow(colrow);
+
+    // check if this is an equation row and it now has a different size
+    if (model->rowLower_[colrow] == model->rowUpper_[colrow] &&
+        eqiters[colrow] != equations.end() &&
+        eqiters[colrow]->first != rowsize[colrow]) {
+      // if that is the case reinsert it into the equation set that is ordered
+      // by sparsity
+      equations.erase(eqiters[colrow]);
+      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
+    }
   }
 
   // substitute column in the objective function
@@ -1864,6 +1924,15 @@ void HPresolve::fixColToLower(HighsPostsolveStack& postsolveStack, int col) {
       model->rowUpper_[colrow] -= colval * fixval;
 
     unlink(colpos);
+
+    if (model->rowLower_[colrow] == model->rowUpper_[colrow] &&
+        eqiters[colrow] != equations.end() &&
+        eqiters[colrow]->first != rowsize[colrow]) {
+      // if that is the case reinsert it into the equation set that is ordered
+      // by sparsity
+      equations.erase(eqiters[colrow]);
+      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
+    }
   }
 
   model->offset_ += model->colCost_[col] * fixval;
@@ -1897,6 +1966,15 @@ void HPresolve::fixColToUpper(HighsPostsolveStack& postsolveStack, int col) {
       model->rowUpper_[colrow] -= colval * fixval;
 
     unlink(colpos);
+
+    if (model->rowLower_[colrow] == model->rowUpper_[colrow] &&
+        eqiters[colrow] != equations.end() &&
+        eqiters[colrow]->first != rowsize[colrow]) {
+      // if that is the case reinsert it into the equation set that is ordered
+      // by sparsity
+      equations.erase(eqiters[colrow]);
+      eqiters[colrow] = equations.emplace(rowsize[colrow], colrow).first;
+    }
   }
 
   model->offset_ += model->colCost_[col] * fixval;
@@ -1971,6 +2049,8 @@ HPresolve::Result HPresolve::presolveChangedCols(
     HPRESOLVE_CHECKED_CALL(colPresolve(postSolveStack, col));
     changedColFlag[col] = colDeleted[col];
   }
+
+  return Result::Ok;
 }
 
 HPresolve::Result HPresolve::removeDoubletonEquations(
@@ -1997,9 +2077,11 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
         HPRESOLVE_CHECKED_CALL(doubletonEq(postSolveStack, eqrow));
         break;
       default:
-        return HPresolve::Result::Ok;
+        return Result::Ok;
     }
   }
+
+  return Result::Ok;
 }
 
 int HPresolve::strengthenInequalities() {
@@ -2758,16 +2840,49 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         break;
       } else if (model->rowLower_[i] == model->rowUpper_[i]) {
         // row i is equation and parallel (except for singletons)
-        // to the row parallelRowCand
+        // add to the row parallelRowCand
+
+        postsolveStack.equalityRowAddition(parallelRowCand, i, -rowScale);
+        for (const HighsSliceNonzero& rowNz : getStoredRow()) {
+          int pos = findNonzero(parallelRowCand, rowNz.index());
+          if (pos != -1)
+            unlink(pos);  // all common nonzeros are cancelled, as the rows are
+                          // parallel
+          else            // might introduce a singleton
+            addToMatrix(parallelRowCand, rowNz.index(),
+                        -rowScale * rowNz.value());
+        }
+
+        // parallelRowCand is now a singleton row, doubleton equation, or a row
+        // that contains only singletons and we let the normal row presolve
+        // handle the cases
+        rowPresolve(postsolveStack, parallelRowCand);
 
       } else if (model->rowLower_[parallelRowCand] ==
                  model->rowUpper_[parallelRowCand]) {
-        // the row parallelRowCand is an equation, add to other row
+        // the row parallelRowCand is an equation; add it to the other row
+        double scale = -rowMax[i].first / rowMax[parallelRowCand].first;
+        postsolveStack.equalityRowAddition(i, parallelRowCand, scale);
+        for (const HighsSliceNonzero& rowNz : getRowVector(parallelRowCand)) {
+          int pos = findNonzero(i, rowNz.index());
+          if (pos != -1)
+            unlink(pos);  // all common nonzeros are cancelled, as the rows are
+                          // parallel
+          else            // might introduce a singleton
+            addToMatrix(i, rowNz.index(), scale * rowNz.value());
+        }
 
+        rowPresolve(postsolveStack, i);
       } else {
         assert(numSingleton == 1);
         assert(numSingletonCandidate == 1);
-        // todo
+        // todo: two inequalities with one singleton. check whether the rows can
+        // be converted to equations by introducing a shared slack variable
+        // which is the case if the singletons have similar properties
+        // (objective sign, bounds, scaled coefficient) and the scaled right
+        // hand sides match. Then the case reduces to adding one equation to the
+        // other and substituting one of the singletons due to the resulting
+        // doubleton equation.
       }
 
       last = it;

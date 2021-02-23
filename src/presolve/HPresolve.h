@@ -114,6 +114,10 @@ class HPresolve {
   int numDeletedRows;
   int numDeletedCols;
 
+  // store old problem sizes to compute percentage redunctions in presolve loop
+  int oldNumCol;
+  int oldNumRow;
+
   enum class Result {
     Ok,
     PrimalInfeasible,
@@ -205,18 +209,18 @@ class HPresolve {
 
   void changeRowDualLower(int row, double newLower, int originCol);
 
+  Result fastPresolveLoop(HighsPostsolveStack& postsolveStack);
+
   Result presolve(HighsPostsolveStack& postsolveStack);
 
   Result checkLimits(HighsPostsolveStack& postsolveStack);
 
+  void storeCurrentProblemSize();
+
+  double problemSizeReduction();
+
  public:
   HPresolve();
-
-  // lower and upper bounds of the row in the dual problem that corresponds to
-  // the given column
-  double dualRowLower(int col) const;
-
-  double dualRowUpper(int col) const;
 
   void addLocks(int pos);
 
