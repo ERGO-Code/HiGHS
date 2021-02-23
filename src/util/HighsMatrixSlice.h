@@ -23,30 +23,13 @@
 template <typename StorageFormat>
 class HighsMatrixSlice;
 
-struct HighsEmptySlice : public HighsMatrixSlice<HighsEmptySlice> {
-  using HighsMatrixSlice<HighsEmptySlice>::HighsMatrixSlice;
-};
-struct HighsCompressedSlice : public HighsMatrixSlice<HighsCompressedSlice> {
-  using HighsMatrixSlice<HighsCompressedSlice>::HighsMatrixSlice;
-};
-struct HighsIndexedSlice : public HighsMatrixSlice<HighsIndexedSlice> {
-  using HighsMatrixSlice<HighsIndexedSlice>::HighsMatrixSlice;
-};
-struct HighsTripletListSlice : public HighsMatrixSlice<HighsTripletListSlice> {
-  using HighsMatrixSlice<HighsTripletListSlice>::HighsMatrixSlice;
-};
-struct HighsTripletTreeSliceInOrder
-    : public HighsMatrixSlice<HighsTripletTreeSliceInOrder> {
-  using HighsMatrixSlice<HighsTripletTreeSliceInOrder>::HighsMatrixSlice;
-};
-struct HighsTripletTreeSlicePreOrder
-    : public HighsMatrixSlice<HighsTripletTreeSlicePreOrder> {
-  using HighsMatrixSlice<HighsTripletTreeSlicePreOrder>::HighsMatrixSlice;
-};
-struct HighsTripletPositionSlice
-    : public HighsMatrixSlice<HighsTripletPositionSlice> {
-  using HighsMatrixSlice<HighsTripletPositionSlice>::HighsMatrixSlice;
-};
+struct HighsEmptySlice;
+struct HighsCompressedSlice;
+struct HighsIndexedSlice;
+struct HighsTripletListSlice;
+struct HighsTripletTreeSliceInOrder;
+struct HighsTripletTreeSlicePreOrder;
+struct HighsTripletPositionSlice;
 
 class HighsSliceNonzero {
   template <typename>
@@ -65,11 +48,11 @@ class HighsSliceNonzero {
 };
 
 template <>
-class HighsMatrixSlice<HighsEmptySlice> {
-  using iterator = int;
+struct HighsMatrixSlice<HighsEmptySlice> {
+  using iterator = const HighsSliceNonzero*;
 
-  static constexpr int begin() { return 0; }
-  static constexpr int end() { return 0; }
+  static constexpr const HighsSliceNonzero* begin() { return nullptr; }
+  static constexpr const HighsSliceNonzero* end() { return nullptr; }
 };
 
 template <>
@@ -307,6 +290,8 @@ class HighsMatrixSlice<HighsTripletTreeSlicePreOrder> {
         if (nodeRight[currentNode] != -1)
           stack.push_back(nodeRight[currentNode]);
         currentNode = nodeLeft[currentNode];
+      } else if (nodeRight[currentNode] != -1) {
+        currentNode = nodeRight[currentNode];
       } else {
         currentNode = stack.back();
         stack.pop_back();
@@ -488,7 +473,7 @@ class HighsMatrixSlice<HighsTripletPositionSlice> {
 
     iterator(const int* node) : node(node) {}
     iterator(const int* nodeIndex, const double* nodeValue, const int* node)
-        : pos_(nodeIndex, nodeValue), currentNode(0) {}
+        : pos_(nodeIndex, nodeValue), node(node), currentNode(0) {}
     iterator() = default;
 
     iterator& operator++() {
@@ -523,13 +508,9 @@ class HighsMatrixSlice<HighsTripletPositionSlice> {
 
     int position() const { return currentNode; }
 
-    bool operator==(const iterator& rhs) const {
-      return currentNode == rhs.currentNode;
-    }
+    bool operator==(const iterator& rhs) const { return node == rhs.node; }
 
-    bool operator!=(const iterator& rhs) const {
-      return currentNode != rhs.currentNode;
-    }
+    bool operator!=(const iterator& rhs) const { return node != rhs.node; }
   };
 
   HighsMatrixSlice(const int* nodeIndex, const double* nodeValue,
@@ -539,9 +520,36 @@ class HighsMatrixSlice<HighsTripletPositionSlice> {
         nodePositions(nodePositions),
         len(len) {}
 
-  iterator begin() { return iterator{nodeIndex, nodeValue, nodePositions}; }
+  iterator begin() const {
+    return iterator{nodeIndex, nodeValue, nodePositions};
+  }
 
   iterator end() const { return iterator{nodePositions + len}; }
+};
+
+struct HighsEmptySlice : public HighsMatrixSlice<HighsEmptySlice> {
+  using HighsMatrixSlice<HighsEmptySlice>::HighsMatrixSlice;
+};
+struct HighsCompressedSlice : public HighsMatrixSlice<HighsCompressedSlice> {
+  using HighsMatrixSlice<HighsCompressedSlice>::HighsMatrixSlice;
+};
+struct HighsIndexedSlice : public HighsMatrixSlice<HighsIndexedSlice> {
+  using HighsMatrixSlice<HighsIndexedSlice>::HighsMatrixSlice;
+};
+struct HighsTripletListSlice : public HighsMatrixSlice<HighsTripletListSlice> {
+  using HighsMatrixSlice<HighsTripletListSlice>::HighsMatrixSlice;
+};
+struct HighsTripletTreeSliceInOrder
+    : public HighsMatrixSlice<HighsTripletTreeSliceInOrder> {
+  using HighsMatrixSlice<HighsTripletTreeSliceInOrder>::HighsMatrixSlice;
+};
+struct HighsTripletTreeSlicePreOrder
+    : public HighsMatrixSlice<HighsTripletTreeSlicePreOrder> {
+  using HighsMatrixSlice<HighsTripletTreeSlicePreOrder>::HighsMatrixSlice;
+};
+struct HighsTripletPositionSlice
+    : public HighsMatrixSlice<HighsTripletPositionSlice> {
+  using HighsMatrixSlice<HighsTripletPositionSlice>::HighsMatrixSlice;
 };
 
 #endif

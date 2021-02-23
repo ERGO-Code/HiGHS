@@ -69,6 +69,52 @@ class HighsLinearSumBounds {
     return numInfSumUpper[sum] == 0 ? double(sumUpper[sum] + offset)
                                     : HIGHS_CONST_INF;
   }
+
+  int getNumInfSumLower(int sum) const { return numInfSumLower[sum]; }
+
+  int getNumInfSumUpper(int sum) const { return numInfSumUpper[sum]; }
+
+  double getResidualSumLower(int sum, int var, double coefficient) const {
+    switch (numInfSumLower[sum]) {
+      case 0:
+        if (coefficient > 0)
+          return double(sumLower[sum] - varLower[var] * coefficient);
+        else
+          return double(sumLower[sum] - varUpper[var] * coefficient);
+        break;
+      case 1:
+        if (coefficient > 0)
+          return varLower[var] == -HIGHS_CONST_INF ? double(sumLower[sum])
+                                                   : -HIGHS_CONST_INF;
+        else
+          return varUpper[var] == HIGHS_CONST_INF ? double(sumLower[sum])
+                                                  : -HIGHS_CONST_INF;
+        break;
+      default:
+        return -HIGHS_CONST_INF;
+    }
+  }
+
+  double getResidualSumUpper(int sum, int var, double coefficient) const {
+    switch (numInfSumUpper[sum]) {
+      case 0:
+        if (coefficient > 0)
+          return double(sumUpper[sum] - varUpper[var] * coefficient);
+        else
+          return double(sumUpper[sum] - varLower[var] * coefficient);
+        break;
+      case 1:
+        if (coefficient > 0)
+          return varUpper[var] == HIGHS_CONST_INF ? double(sumUpper[sum])
+                                                  : HIGHS_CONST_INF;
+        else
+          return varLower[var] == -HIGHS_CONST_INF ? double(sumUpper[sum])
+                                                   : HIGHS_CONST_INF;
+        break;
+      default:
+        return HIGHS_CONST_INF;
+    }
+  }
 };
 
 #endif

@@ -106,9 +106,8 @@ void HighsPostsolveStack::DoubletonEquation::undo(
   // this depends on whether the bounds that are used in the basis
   // on the column that stayed have been computed from the bounds of the
   // substituted column
-  if ((!lowerTightened || basis.col_status[col] == HighsBasisStatus::UPPER) &&
-          (!upperTightened ||
-           basis.col_status[col] == HighsBasisStatus::LOWER) ||
+  if (((!lowerTightened || basis.col_status[col] == HighsBasisStatus::UPPER) &&
+       (!upperTightened || basis.col_status[col] == HighsBasisStatus::LOWER)) ||
       basis.col_status[col] == HighsBasisStatus::BASIC) {
     // there is no tightened bound that is used in the basic solution
     // hence we make the substituted column basic
@@ -156,6 +155,9 @@ void HighsPostsolveStack::DoubletonEquation::undo(
         basis.col_status[colSubst] = HighsBasisStatus::UPPER;
         solution.col_value[colSubst] = substUpper;
       }
+      break;
+    default:
+      assert(false);
   }
   // the substituted column has now a basis status lower or upper and has
   // been set to the exact bound value
@@ -207,9 +209,7 @@ void HighsPostsolveStack::EqualityRowAddition::undo(HighsSolution& solution,
 void HighsPostsolveStack::ForcingColumn::undo(
     const std::vector<std::pair<int, double>>& colValues,
     HighsSolution& solution, HighsBasis& basis) {
-  int col;
-  for (const auto& colVal : colValues) {
-  }
+  // todo
 }
 
 void HighsPostsolveStack::SingletonRow::undo(HighsSolution& solution,
@@ -241,14 +241,16 @@ void HighsPostsolveStack::SingletonRow::undo(HighsSolution& solution,
         basis.row_status[row] = HighsBasisStatus::UPPER;
 
       break;
-    case HighsBasisStatus::UPPER: {
+    case HighsBasisStatus::UPPER:
       if (coef > 0)
         // tightened upper bound comes from row lower bound
         basis.row_status[row] = HighsBasisStatus::UPPER;
       else
         // tightened lower bound comes from row upper bound
         basis.row_status[row] = HighsBasisStatus::LOWER;
-    }
+      break;
+    default:
+      assert(false);
   }
 
   // column becomes basic
@@ -402,6 +404,9 @@ void HighsPostsolveStack::DuplicateRow::undo(HighsSolution& solution,
         solution.row_dual[duplicateRow] = 0.0;
         basis.row_status[duplicateRow] = HighsBasisStatus::BASIC;
       }
+      break;
+    default:
+      assert(false);
   }
 }
 

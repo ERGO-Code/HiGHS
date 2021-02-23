@@ -110,6 +110,8 @@ class HPresolve {
   std::vector<uint8_t> rowDeleted;
   std::vector<uint8_t> colDeleted;
 
+  int numForcingRow = 0;
+
   // counters for number of deleted rows and columns
   int numDeletedRows;
   int numDeletedCols;
@@ -149,12 +151,6 @@ class HPresolve {
   bool isLowerImplied(int col);
 
   bool isUpperImplied(int col);
-
-  bool impliedRowBoundsValid(int row) const;
-
-  void invalidateImpliedRowBounds(int row);
-
-  void computeImpliedRowBounds(int row);
 
   int countFillin(int row);
 
@@ -220,8 +216,6 @@ class HPresolve {
   double problemSizeReduction();
 
  public:
-  HPresolve();
-
   void addLocks(int pos);
 
   void removeLocks(int pos);
