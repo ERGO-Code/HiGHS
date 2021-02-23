@@ -2502,14 +2502,18 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
   // Step 2: Compute hash values for rows and columns excluding singleton
   // columns
   for (int i = 0; i != nnz; ++i) {
-    if (Avalue[i] == 0.0 || colsize[Acol[i]] == 0) continue;
+    if (Avalue[i] == 0.0) continue;
     assert(!rowDeleted[Arow[i]] && !colDeleted[Acol[i]]);
-    HighsHashHelpers::sparse_combine(
-        rowHashes[Arow[i]], Acol[i],
-        HighsHashHelpers::double_hash_code(Avalue[i] / rowMax[Arow[i]].first));
-    HighsHashHelpers::sparse_combine(
-        colHashes[Acol[i]], Arow[i],
-        HighsHashHelpers::double_hash_code(Avalue[i] / colMax[Acol[i]].second));
+    if (colsize[Acol[i]] == 1) {
+      colHashes[Acol[i]] = Arow[i];
+    } else {
+      HighsHashHelpers::sparse_combine(rowHashes[Arow[i]], Acol[i],
+                                       HighsHashHelpers::double_hash_code(
+                                           Avalue[i] / rowMax[Arow[i]].first));
+      HighsHashHelpers::sparse_combine(colHashes[Acol[i]], Arow[i],
+                                       HighsHashHelpers::double_hash_code(
+                                           Avalue[i] / colMax[Acol[i]].second));
+    }
   }
 
   // Step 3: Loop over the rows and columns and put them into buckets using the
@@ -2585,12 +2589,12 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
 
       auto duplicateColUpperInf = [&]() {
         if (!checkDuplicateColImplBounds) return false;
-        return isUpperImplied(col);
+        return isUpperImplied(duplicateCol);
       };
 
       auto duplicateColLowerInf = [&]() {
         if (!checkDuplicateColImplBounds) return false;
-        return isLowerImplied(col);
+        return isLowerImplied(duplicateCol);
       };
 
       // Now check the if the variable types rule out domination in one
@@ -3047,13 +3051,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
     } else
       buckets.emplace_hint(last, rowHashes[i], i);
   }
-
-  if (numRowBuckets < model->numRow_)
-    printf("found candidates for up to %d parallel rows\n",
-           model->numRow_ - numRowBuckets);
-  if (numColBuckets < model->numCol_)
-    printf("found candidates for up to %d parallel cols\n",
-           model->numCol_ - numColBuckets);
 
   return Result::Ok;
 }
