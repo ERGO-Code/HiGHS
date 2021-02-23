@@ -91,6 +91,7 @@ struct HighsMipSolverData {
 
   HighsCDouble pruned_treeweight;
   size_t maxrootlpiters;
+  size_t firstrootlpiters;
   size_t num_nodes;
   size_t last_displeave;
   size_t num_leaves;
@@ -131,6 +132,8 @@ struct HighsMipSolverData {
   void runSetup();
   void runProbing();
   bool trySolution(const std::vector<double>& solution, char source = ' ');
+  bool rootSeparationRound(HighsSeparation& sepa, int& ncuts,
+                           HighsLpRelaxation::Status& status);
   void evaluateRootNode();
   void addIncumbent(const std::vector<double>& sol, double solobj, char source);
 
