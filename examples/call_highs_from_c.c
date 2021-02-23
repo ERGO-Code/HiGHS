@@ -200,12 +200,11 @@ void full_api() {
   primal_feasibility_tolerance = 1e-6;
   Highs_setHighsDoubleOptionValue(highs, "primal_feasibility_tolerance", primal_feasibility_tolerance);
 
-  Highs_runQuiet(highs);
+  Highs_setHighsBoolOptionValue(highs, "output_flag", 0);
   printf("Running quietly...\n");
   int status = Highs_run(highs);
   printf("Running loudly...\n");
-  Highs_setHighsLogfile(highs, stdout);
-  Highs_setHighsOutput(highs, stdout);
+  Highs_setHighsBoolOptionValue(highs, "output_flag", 1);
 
   // Get the model status
   const int scaled_model = 0;
