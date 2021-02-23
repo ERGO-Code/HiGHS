@@ -27,10 +27,26 @@ HighsDebugStatus ekkDebugSimplexLp(const HighsModelObject& highs_model_object);
 HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
                                       const HighsLp& simplex_lp,
                                       const SimplexBasis& simplex_basis);
-HighsDebugStatus debugDualChuzcFail(
+void debugDualChuzcFailNorms(
+    const int workCount, const std::vector<std::pair<int, double>>& workData,
+    double& workDataNorm, const int numVar, const double* workDual,
+    double& workDualNorm);
+
+HighsDebugStatus debugDualChuzcFailQuad0(
     const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const double* workDual,
-    const double selectTheta, const double remainTheta);
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const double remainTheta,
+    const bool force = false);
+
+HighsDebugStatus debugDualChuzcFailQuad1(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const bool force = false);
+
+HighsDebugStatus debugDualChuzcFailHeap(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const bool force = false);
 
 HighsDebugStatus debugNonbasicFlagConsistent(const HighsOptions& options,
                                              const HighsLp& simplex_lp,

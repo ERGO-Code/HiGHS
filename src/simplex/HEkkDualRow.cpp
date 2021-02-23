@@ -187,22 +187,27 @@ int HEkkDualRow::chooseFinal() {
     alt_workCount = workCount;
   }
   analysis->simplexTimerStart(Chuzc3Clock);
+  bool choose_ok;
   if (use_quad_sort) {
     // Use the O(n^2) quadratic sort for the candidates
     analysis->simplexTimerStart(Chuzc3a0Clock);
-    bool choose_ok = chooseFinalWorkGroupQuad();
+    choose_ok = chooseFinalWorkGroupQuad();
     analysis->simplexTimerStop(Chuzc3a0Clock);
-    if (!choose_ok) {
-      analysis->simplexTimerStop(Chuzc3Clock);
-      return -1;
-    }
   }
   if (use_heap_sort) {
     // Use the O(n log n) heap sort for the candidates
     analysis->simplexTimerStart(Chuzc3a1Clock);
-    chooseFinalWorkGroupHeap();
+    choose_ok = chooseFinalWorkGroupHeap();
     analysis->simplexTimerStop(Chuzc3a1Clock);
   }
+  if (!choose_ok) {
+    analysis->simplexTimerStop(Chuzc3Clock);
+    return -1;
+  }
+  // Make sure that there is at least one group according to sorting procedure
+  if (use_quad_sort) assert((int)workGroup.size() > 1);
+  if (use_heap_sort) assert((int)alt_workGroup.size() > 1);
+
   // 3. Choose large alpha
   analysis->simplexTimerStart(Chuzc3bClock);
   int breakIndex;
@@ -226,11 +231,6 @@ int HEkkDualRow::chooseFinal() {
   analysis->simplexTimerStart(Chuzc3cClock);
 
   int move_out = workDelta < 0 ? -1 : 1;
-  if (breakIndex < 0) {
-    highsLogUser(ekk_instance_.options_.log_options, HighsLogType::WARNING,
-                 "Suspected dual unboundedness identified in chooseFinal\n");
-    return 1;
-  }
   assert(breakIndex >= 0);
   if (use_quad_sort) {
     workPivot = workData[breakIndex].first;
@@ -326,8 +326,11 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
     // Check for no change in this loop - to prevent infinite loop
     if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) &&
         (prev_remainTheta == remainTheta)) {
-      debugDualChuzcFail(ekk_instance_.options_, workCount, workData, workDual,
-                         selectTheta, remainTheta);
+      int num_var =
+          ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
+      debugDualChuzcFailQuad0(ekk_instance_.options_, workCount, workData,
+                              num_var, workDual, selectTheta, remainTheta,
+                              true);
       return false;
     }
     // Record the initial values of workCount, remainTheta and selectTheta for
@@ -336,6 +339,14 @@ bool HEkkDualRow::chooseFinalWorkGroupQuad() {
     prev_remainTheta = remainTheta;
     prev_selectTheta = selectTheta;
     if (totalChange >= totalDelta || workCount == fullCount) break;
+  }
+  // Check that at least one group has been identified
+  if ((int)workGroup.size() <= 1) {
+    int num_var =
+        ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
+    debugDualChuzcFailQuad1(ekk_instance_.options_, workCount, workData,
+                            num_var, workDual, selectTheta, true);
+    return false;
   }
   return true;
 }
@@ -367,6 +378,15 @@ bool HEkkDualRow::chooseFinalWorkGroupHeap() {
   alt_workCount = 0;
   alt_workGroup.clear();
   alt_workGroup.push_back(alt_workCount);
+  if (heap_num_en <= 0) {
+    int num_var =
+        ekk_instance_.simplex_lp_.numCol_ + ekk_instance_.simplex_lp_.numRow_;
+    // No entries in heap = > failure
+    debugDualChuzcFailHeap(ekk_instance_.options_, alt_workCount,
+                           original_workData, num_var, workDual, selectTheta,
+                           true);
+    return false;
+  }
   int this_group_first_entry = alt_workCount;
   sorted_workData.resize(heap_num_en);
   for (int en = 1; en <= heap_num_en; en++) {

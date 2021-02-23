@@ -147,33 +147,92 @@ HighsDebugStatus debugBasisConsistent(const HighsOptions& options,
   return return_status;
 }
 
-HighsDebugStatus debugDualChuzcFail(
+void debugDualChuzcFailNorms(
+    const int workCount, const std::vector<std::pair<int, double>>& workData,
+    double& workDataNorm, const int numVar, const double* workDual,
+    double& workDualNorm) {
+  workDataNorm = 0;
+  for (int i = 0; i < workCount; i++) {
+    double value = workData[i].second;
+    workDataNorm += value * value;
+  }
+  workDataNorm = sqrt(workDataNorm);
+  workDualNorm = 0;
+  for (int iVar = 0; iVar < numVar; iVar++) {
+    double value = workDual[iVar];
+    workDualNorm += value * value;
+  }
+  workDualNorm = sqrt(workDualNorm);
+}
+
+HighsDebugStatus debugDualChuzcFailQuad0(
     const HighsOptions& options, const int workCount,
-    const std::vector<std::pair<int, double>>& workData, const double* workDual,
-    const double selectTheta, const double remainTheta) {
-  // Non-trivially expensive assessment of basis condition
-  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY)
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const double remainTheta,
+    const bool force) {
+  // Non-trivially expensive assessment of CHUZC failure
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
     return HighsDebugStatus::NOT_CHECKED;
 
   highsLogDev(options.log_options, HighsLogType::INFO,
               "DualChuzC:     No change in loop 2 so return error\n");
-  double workDataNorm = 0;
-  double dualNorm = 0;
-  for (int i = 0; i < workCount; i++) {
-    int iCol = workData[i].first;
-    double value = workData[i].second;
-    workDataNorm += value * value;
-    value = workDual[iCol];
-    dualNorm += value * value;
-  }
-  workDataNorm += sqrt(workDataNorm);
-  dualNorm += sqrt(dualNorm);
+  double workDataNorm;
+  double workDualNorm;
+  debugDualChuzcFailNorms(workCount, workData, workDataNorm, numVar, workDual,
+                          workDualNorm);
   highsLogDev(options.log_options, HighsLogType::INFO,
               "DualChuzC:     workCount = %d; selectTheta=%g; remainTheta=%g\n",
               workCount, selectTheta, remainTheta);
   highsLogDev(options.log_options, HighsLogType::INFO,
-              "DualChuzC:     workDataNorm = %g; dualNorm = %g\n", workDataNorm,
-              dualNorm);
+              "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
+              workDataNorm, workDualNorm);
+  return HighsDebugStatus::OK;
+}
+
+HighsDebugStatus debugDualChuzcFailQuad1(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const bool force) {
+  // Non-trivially expensive assessment of CHUZC failure
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  highsLogDev(
+      options.log_options, HighsLogType::INFO,
+      "DualChuzC:     No group identified in quad search so return error\n");
+  double workDataNorm;
+  double workDualNorm;
+  debugDualChuzcFailNorms(workCount, workData, workDataNorm, numVar, workDual,
+                          workDualNorm);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workCount = %d; selectTheta=%g\n", workCount,
+              selectTheta);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
+              workDataNorm, workDualNorm);
+  return HighsDebugStatus::OK;
+}
+
+HighsDebugStatus debugDualChuzcFailHeap(
+    const HighsOptions& options, const int workCount,
+    const std::vector<std::pair<int, double>>& workData, const int numVar,
+    const double* workDual, const double selectTheta, const bool force) {
+  // Non-trivially expensive assessment of CHUZC failure
+  if (options.highs_debug_level < HIGHS_DEBUG_LEVEL_COSTLY && !force)
+    return HighsDebugStatus::NOT_CHECKED;
+
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     No entries in heap so return error\n");
+  double workDataNorm;
+  double workDualNorm;
+  debugDualChuzcFailNorms(workCount, workData, workDataNorm, numVar, workDual,
+                          workDualNorm);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workCount = %d; selectTheta=%g\n", workCount,
+              selectTheta);
+  highsLogDev(options.log_options, HighsLogType::INFO,
+              "DualChuzC:     workDataNorm = %g; workDualNorm = %g\n",
+              workDataNorm, workDualNorm);
   return HighsDebugStatus::OK;
 }
 
