@@ -73,6 +73,26 @@ int Highs_clearModel(void* highs  //!< HiGHS object reference
 );
 
 /*
+ * @brief Sets the Logfile and Output to NULL - Deprecated
+ */
+int Highs_runQuiet(void* highs  //!< HiGHS object reference
+);
+
+/*
+ * @brief Sets the logfile for printing. - Deprecated
+ */
+int Highs_setHighsLogfile(void* highs,   //!< HiGHS object reference
+                          void* logfile  //!< File handle of the logfile
+);
+
+/*
+ * @brief Sets the output for printing. - Deprecated
+ */
+int Highs_setHighsOutput(void* highs,      //!< HiGHS object reference
+                         void* outputfile  //!< File handle of the output file
+);
+
+/*
  * @brief Runs HiGHS
  */
 int Highs_run(void* highs  //!< HiGHS object reference
@@ -261,13 +281,13 @@ int Highs_getPrimalRay(
 );
 
 /**
- * @brief Returns the objective function value (if known)
+ * @brief Returns the objective function value (if known) - Deprecated
  */
 double Highs_getObjectiveValue(void* highs  //!< HiGHS object reference,
 );
 
 /**
- * @brief Returns the simplex iteration count (if known)
+ * @brief Returns the simplex iteration count (if known) - Deprecated
  */
 int Highs_getIterationCount(void* highs  //!< HiGHS object reference,
 );

@@ -113,9 +113,11 @@ class Highs {
       const char* value           //!< The option value
   );
 
+  // Deprecated
   HighsStatus setHighsLogfile(FILE* logfile = NULL  //!< The log file
   );
 
+  // Deprecated
   HighsStatus setHighsOutput(FILE* output = NULL  //!< The log file
   );
 
@@ -209,12 +211,12 @@ class Highs {
   const HighsModelStatus& getModelStatus(const bool scaled_model = false) const;
 
   /**
-   * @brief Returns the objective function value (if known)
+   * @brief Returns the objective function value (if known) - Deprecated
    */
   double getObjectiveValue() { return info_.objective_function_value; }
 
   /**
-   * @brief Returns the simplex iteration count (if known)
+   * @brief Returns the simplex iteration count (if known) - Deprecated
    */
   int getSimplexIterationCount() { return info_.simplex_iteration_count; }
 
